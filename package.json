@@ -9,6 +9,8 @@
     "node": ">=24"
   },
   "scripts": {
+    "e2e": "cypress open --e2e --config-file src/test/webapp/e2e/cypress-config.ts",
+    "e2e:headless": "cypress run --headless --config-file src/test/webapp/e2e/cypress-config.ts",
     "test:component": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress open --e2e --config-file src/test/webapp/component/cypress-config.ts\"",
     "test:component:headless": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress run --headless --config-file src/test/webapp/component/cypress-config.ts\"",
     "dev": "npm-run-all --parallel dev:*",
