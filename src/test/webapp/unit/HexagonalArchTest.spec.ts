@@ -1,9 +1,9 @@
-import { TypeScriptProject } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptProject';
+import { BusinessContext } from '@/app/BusinessContext';
+import { SharedKernel } from '@/app/SharedKernel';
 import { RelativePath } from 'arch-unit-ts/dist/arch-unit/core/domain/RelativePath';
-import { classes, noClasses } from 'arch-unit-ts/dist/main';
-import { SharedKernel } from '@/SharedKernel';
-import { BusinessContext } from '@/BusinessContext';
+import { TypeScriptProject } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptProject';
 import { Architectures } from 'arch-unit-ts/dist/arch-unit/library/Architectures';
+import { classes, noClasses } from 'arch-unit-ts/dist/main';
 
 describe('HexagonalArchTest', () => {
   const srcProject = new TypeScriptProject(RelativePath.of('src/main/webapp/app'), '**/*FilesToExclude*', '**/*OtherFilesToExclude*');
@@ -23,7 +23,7 @@ describe('HexagonalArchTest', () => {
   }
 
   describe('BoundedContexts', () => {
-    it.each([...sharedKernels, ...businessContexts])('should %s not depend on other bounded context domains', (context) => {
+    it.each([...sharedKernels, ...businessContexts])('should %s not depend on other bounded context domains', context => {
       noClasses()
         .that()
         .resideInAnyPackage(context + '..')
@@ -44,7 +44,7 @@ describe('HexagonalArchTest', () => {
         .onlyHaveDependentClassesThat()
         .resideInAPackage('..secondary..')
         .because(
-        "To interact between two contexts, secondary from context 'A' should call a primary TypeScript adapter (naming convention starting with 'TypeScript') from context 'B'"
+          "To interact between two contexts, secondary from context 'A' should call a primary TypeScript adapter (naming convention starting with 'TypeScript') from context 'B'",
         )
         .check(srcProject.allClasses());
     });
@@ -60,7 +60,7 @@ describe('HexagonalArchTest', () => {
         .resideInAnyPackage('..domain..', ...sharedKernels)
         .because('Domain model should only depend on domains and a very limited set of external dependencies')
         .check(srcProject.allClasses());
-  });
+    });
 
     it.each([...sharedKernels, ...businessContexts])('should be an hexagonal architecture in context %s', context => {
       Architectures.layeredArchitecture()
@@ -120,7 +120,7 @@ describe('HexagonalArchTest', () => {
         .check(srcProject.allClasses());
     });
 
-    it.each([...sharedKernels, ...businessContexts])('should %s not depend on same context primary', (context) => {
+    it.each([...sharedKernels, ...businessContexts])('should %s not depend on same context primary', context => {
       noClasses()
         .that()
         .resideInAPackage(context + '.infrastructure.secondary..')

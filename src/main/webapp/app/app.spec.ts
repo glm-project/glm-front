@@ -19,7 +19,11 @@ describe('App Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([]), { provide: ComponentFixtureAutoDetect, useValue: true }, { provide: Oauth2AuthService, useValue: mockOauth2AuthService }],
+      providers: [
+        provideRouter([]),
+        { provide: ComponentFixtureAutoDetect, useValue: true },
+        { provide: Oauth2AuthService, useValue: mockOauth2AuthService },
+      ],
     }).compileComponents();
   });
 
