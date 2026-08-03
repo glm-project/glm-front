@@ -1,0 +1,12 @@
+{
+  "module" : "application-service-hexagonal-architecture-documentation",
+  "date" : "2026-08-03T08:43:23.879976100Z",
+  "properties" : {
+    "packageName" : "com.glm.glmfront",
+    "projectName" : "glmfront",
+    "baseName" : "glmfront",
+    "nodePackageManager" : "npm",
+    "endOfLine" : "lf",
+    "indentSize" : 2
+  }
+}
