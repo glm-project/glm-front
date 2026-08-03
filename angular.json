@@ -29,7 +29,7 @@
             ],
             "styles": ["src/main/webapp/styles.css", "@angular/material/prebuilt-themes/indigo-pink.css"],
             "scripts": [],
-            "allowedCommonJsDependencies": []
+            "allowedCommonJsDependencies": ["base64-js", "js-sha256", "keycloak-js"]
           },
           "configurations": {
             "production": {
