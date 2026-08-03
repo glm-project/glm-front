@@ -1,7 +1,16 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 
 import { App } from './app';
+import { Oauth2AuthService } from './auth/oauth2-auth.service';
+
+const mockOauth2AuthService = {
+  initAuthentication: vi.fn().mockReturnValue(of(true)),
+  isAuthenticated: true,
+  token: 'mock-token',
+  logout: vi.fn(),
+};
 
 describe('App Component', () => {
   let comp: App;
@@ -10,7 +19,7 @@ describe('App Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([]), { provide: ComponentFixtureAutoDetect, useValue: true }],
+      providers: [provideRouter([]), { provide: ComponentFixtureAutoDetect, useValue: true }, { provide: Oauth2AuthService, useValue: mockOauth2AuthService }],
     }).compileComponents();
   });
 
