@@ -133,3 +133,6 @@ Desktop.ini
 # Sonar
 ######################
 .scannerwork/
+# Angular
+.angular/
+.nx/
