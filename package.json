@@ -22,6 +22,7 @@
     "test:component": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress open --e2e --config-file src/test/webapp/component/cypress-config.ts\"",
     "test:component:headless": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress run --headless --config-file src/test/webapp/component/cypress-config.ts\"",
     "test:coverage": "ng test --coverage",
+    "test:e2e:headless": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress run --headless --config-file src/test/webapp/e2e/cypress-config.ts\"",
     "watch": "npm-run-all --parallel watch:*",
     "watch:ng": "ng build --watch --configuration development",
     "watch:test": "ng test --watch",
