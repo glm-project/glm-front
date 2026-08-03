@@ -17,6 +17,18 @@ export default typescript.config(
   },
   eslint.configs.recommended,
   {
+    files: ['src/test/webapp/e2e/**/*.ts'],
+    extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
+    languageOptions: {
+      parserOptions: {
+        project: ['src/test/webapp/e2e/tsconfig.json'],
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
+  {
     files: ['src/test/webapp/component/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
     languageOptions: {
