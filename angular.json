@@ -58,6 +58,22 @@
                   "with": "src/main/webapp/environments/environment.local.ts"
                 }
               ]
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/main/webapp/environments/environment.ts",
+                  "with": "src/main/webapp/environments/environment.local.ts"
+                },
+                {
+                  "replace": "src/main/webapp/app/auth/keycloak.provider.ts",
+                  "with": "src/main/webapp/app/auth/keycloak.provider.e2e.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -75,6 +91,9 @@
             },
             "development": {
               "buildTarget": "project:build:development"
+            },
+            "e2e": {
+              "buildTarget": "project:build:e2e"
             }
           },
           "defaultConfiguration": "development"

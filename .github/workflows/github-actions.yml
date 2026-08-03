@@ -1,0 +1,80 @@
+name: build
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || (github.ref == 'refs/heads/main' && github.sha) || github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  checks-and-unit-tests:
+    name: checks-and-unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: Node.js'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.18.0
+          cache: 'npm'
+      - name: 'Setup: install dependencies'
+        run: npm install
+      - name: 'Test: eslint'
+        run: npm run lint
+      - name: 'Test: prettier check'
+        run: npm run prettier:check
+      - name: 'Test: typescript check'
+        run: npx tsc --noEmit
+      - name: 'Test: run unit tests'
+        run: npm run test:coverage -- --watch=false
+
+  component-tests:
+    name: component-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: Node.js'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.18.0
+          cache: 'npm'
+      - name: 'Setup: cache Cypress binary'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: 'Setup: install dependencies'
+        run: npm install
+      - name: 'Test: run component tests'
+        run: npm run test:component:headless
+
+  e2e-tests:
+    name: e2e-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: Node.js'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.18.0
+          cache: 'npm'
+      - name: 'Setup: cache Cypress binary'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: 'Setup: install dependencies'
+        run: npm install
+      - name: 'Test: run e2e tests'
+        run: npm run test:e2e:headless

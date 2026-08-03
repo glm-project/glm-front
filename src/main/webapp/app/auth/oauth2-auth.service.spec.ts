@@ -44,14 +44,25 @@ describe('Oauth2 Auth Service', () => {
   afterEach(() => {
     consoleDebugMock.mockRestore();
     consoleErrorMock.mockRestore();
+    vi.useRealTimers();
   });
 
   describe('init authentication', () => {
+    const originalLocation = window.location;
+
     beforeEach(() => {
       Object.defineProperty(window, 'location', {
         value: {
           reload: vi.fn(),
         },
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        configurable: true,
       });
     });
 
