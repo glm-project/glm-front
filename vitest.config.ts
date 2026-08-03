@@ -10,9 +10,6 @@ export default defineConfig({
     globals: true,
     logHeapUsage: true,
     maxWorkers: 2,
-    // TEMPORARY DIAGNOSTIC - remove after CI investigation
-    testTimeout: 120000,
-    hookTimeout: 120000,
     environment: 'jsdom',
     cache: false,
     coverage: {
