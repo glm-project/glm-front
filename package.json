@@ -9,6 +9,8 @@
     "node": ">=24"
   },
   "scripts": {
+    "test:component": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress open --e2e --config-file src/test/webapp/component/cypress-config.ts\"",
+    "test:component:headless": "concurrently -k -s first -n dev,test \"npm run dev\" \"wait-on http://localhost:9000 && cypress run --headless --config-file src/test/webapp/component/cypress-config.ts\"",
     "dev": "npm-run-all --parallel dev:*",
     "dev:ng": "ng serve",
     "ng": "ng",
@@ -27,6 +29,10 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "cypress": "15.18.0",
+    "eslint-plugin-cypress": "6.4.3",
+    "concurrently": "10.0.4",
+    "wait-on": "9.0.10",
     "tailwindcss": "4.3.2",
     "@tailwindcss/postcss": "4.3.2",
     "postcss": "8.5.18",
