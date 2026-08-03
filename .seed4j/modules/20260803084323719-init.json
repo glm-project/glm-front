@@ -1,0 +1,12 @@
+{
+  "module" : "init",
+  "date" : "2026-08-03T08:43:23.719386500Z",
+  "properties" : {
+    "packageName" : "com.glm.glmfront",
+    "projectName" : "glmfront",
+    "baseName" : "glmfront",
+    "nodePackageManager" : "npm",
+    "endOfLine" : "lf",
+    "indentSize" : 2
+  }
+}
