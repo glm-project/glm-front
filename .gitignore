@@ -136,3 +136,7 @@ Desktop.ini
 # Angular
 .angular/
 .nx/
+
+.seed4j/
+
+cypress/

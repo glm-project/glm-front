@@ -5,5 +5,10 @@
     "isolatedModules": true,
     "types": ["vitest/globals", "node"]
   },
-  "include": ["src/main/webapp/**/*.spec.ts", "src/main/webapp/**/*.d.ts"]
+  "include": [
+    "src/main/webapp/**/*.spec.ts",
+    "src/main/webapp/**/*.d.ts",
+    "src/main/webapp/**/package-info.ts",
+    "src/test/webapp/unit/**/*.spec.ts"
+  ]
 }

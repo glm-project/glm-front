@@ -1,3 +1,3 @@
-import { BusinessContext } from "@/app/BusinessContext";
+import { BusinessContext } from '@/app/BusinessContext';
 
-class PackageInfo extends BusinessContext {}
+export class PackageInfo extends BusinessContext {}
