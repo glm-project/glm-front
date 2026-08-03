@@ -61,6 +61,7 @@
   },
   "type": "module",
   "dependencies": {
+    "arch-unit-ts": "1.0.12",
     "keycloak-js": "26.2.4",
     "@angular/animations": "21.2.19",
     "@angular/cdk": "21.2.14",
