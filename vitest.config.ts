@@ -18,7 +18,13 @@ export default defineConfig({
         autoUpdate: true,
         100: true,
       },
-      exclude: [...configDefaults.exclude, '*.html'],
+      exclude: [
+        ...configDefaults.exclude,
+        '*.html',
+        // Code spartan-ng vendorise par le generateur helm : non ecrit et non modifie par l'equipe.
+        // Le seuil a 100 % protege le code du projet, pas les dependances copiees dans le depot.
+        'src/main/webapp/app/design-system/**',
+      ],
       provider: 'istanbul',
       reportsDirectory: 'target/test-results/',
       reporter: ['html', 'json', 'json-summary', 'text', 'text-summary', 'lcov', 'clover'],
