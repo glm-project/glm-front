@@ -27,7 +27,7 @@
                 "output": "content"
               }
             ],
-            "styles": ["src/main/webapp/styles.css", "@angular/material/prebuilt-themes/indigo-pink.css"],
+            "styles": ["src/main/webapp/styles.css"],
             "scripts": [],
             "allowedCommonJsDependencies": ["base64-js", "js-sha256", "keycloak-js"]
           },
