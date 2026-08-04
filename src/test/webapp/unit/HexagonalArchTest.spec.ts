@@ -48,6 +48,17 @@ describe('HexagonalArchTest', () => {
         )
         .check(srcProject.allClasses());
     });
+
+    it('design system should not depend on business code', () => {
+      noClasses()
+        .that()
+        .resideInAnyPackage('..design-system..')
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(...businessContexts.map(context => context + '..'), '..domain..', '..application..', '..infrastructure..')
+        .because('The design system is a graphical shared kernel: it must stay extractable as a standalone library')
+        .check(srcProject.allClasses());
+    });
   });
 
   describe('Domain', () => {
