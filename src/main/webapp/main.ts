@@ -4,6 +4,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { httpAuthInterceptor } from './app/auth/http-auth.interceptor';
 import { keycloakProvider } from './app/auth/keycloak.provider';
+import { provideSpartanHlm } from './app/design-system';
 
 import { App } from './app/app';
 import { routes } from './app/app.route';
@@ -18,6 +19,7 @@ bootstrapApplication(App, {
   providers: [
     provideHttpClient(withInterceptors([httpAuthInterceptor])),
     provideRouter(routes),
+    provideSpartanHlm(),
     // seed4j-needle-main-ts-provider
     keycloakProvider,
   ],

@@ -1,9 +1,9 @@
-<header class="bg-primary text-primary-foreground flex h-16 items-center gap-4 px-4">
-  <button hlmBtn variant="ghost" size="icon" aria-label="Menu" [hlmDropdownMenuTrigger]="menu">
+<header data-selector="app-bar" class="bg-primary text-primary-foreground flex h-16 items-center gap-4 px-4">
+  <button hlmBtn variant="ghost" size="icon" aria-label="Menu" data-selector="app-bar-menu-trigger" [hlmDropdownMenuTrigger]="menu">
     <ng-icon name="lucideMenu" />
   </button>
   <ng-template #menu>
-    <hlm-dropdown-menu>
+    <hlm-dropdown-menu data-selector="app-bar-menu">
       <!-- seed4j-needle-angular-menu -->
     </hlm-dropdown-menu>
   </ng-template>

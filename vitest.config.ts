@@ -21,8 +21,7 @@ export default defineConfig({
       exclude: [
         ...configDefaults.exclude,
         '*.html',
-        // Code spartan-ng vendorise par le generateur helm : non ecrit et non modifie par l'equipe.
-        // Le seuil a 100 % protege le code du projet, pas les dependances copiees dans le depot.
+        // Vendored spartan-ng components: the 100% threshold protects project code, not copied dependencies.
         'src/main/webapp/app/design-system/**',
       ],
       provider: 'istanbul',

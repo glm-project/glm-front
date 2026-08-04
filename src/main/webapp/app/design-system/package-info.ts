@@ -1,3 +1,3 @@
-import { SharedKernel } from '@/app/SharedKernel';
+import { GraphicalKernel } from '@/app/GraphicalKernel';
 
-export class PackageInfo extends SharedKernel {}
+export class PackageInfo extends GraphicalKernel {}

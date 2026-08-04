@@ -84,10 +84,7 @@ export default typescript.config(
     },
   },
   {
-    // Composants spartan-ng generes par le CLI helm : code tiers copie dans le depot,
-    // ni ecrit ni maintenu par l'equipe. Les selecteurs sont imposes par la librairie,
-    // et le jeu de regles strictTypeChecked du projet ne s'y applique pas utilement.
-    // Override strictement limite au contexte design-system.
+    // Vendored spartan-ng components: third party code, selectors and typings are imposed by the library.
     files: ['src/main/webapp/app/design-system/**/*.ts'],
     rules: {
       '@angular-eslint/component-selector': 'off',
