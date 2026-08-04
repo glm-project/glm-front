@@ -6,15 +6,15 @@ import Login from './login/login';
 
 import { RouterModule } from '@angular/router';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { HlmButtonImports, HlmDropdownMenuImports } from '@/app/design-system';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideMenu } from '@ng-icons/lucide';
 
 @Component({
   selector: 'seed-root',
   templateUrl: './app.html',
-  imports: [RouterModule, MatMenuModule, MatToolbarModule, MatIconModule, MatButtonModule, NgOptimizedImage, Login],
+  imports: [RouterModule, HlmDropdownMenuImports, HlmButtonImports, NgIcon, NgOptimizedImage, Login],
+  providers: [provideIcons({ lucideMenu })],
   styleUrl: './app.css',
 })
 export class App implements OnInit {

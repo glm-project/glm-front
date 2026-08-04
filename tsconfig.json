@@ -5,7 +5,8 @@
     "paths": {
       "@/*": ["src/main/webapp/*"],
       "@/app/design-system/utils": ["./src/main/webapp/app/design-system/utils/src/index.ts"],
-      "@/app/design-system/button": ["./src/main/webapp/app/design-system/button/src/index.ts"]
+      "@/app/design-system/button": ["./src/main/webapp/app/design-system/button/src/index.ts"],
+      "@/app/design-system/dropdown-menu": ["./src/main/webapp/app/design-system/dropdown-menu/src/index.ts"]
     },
     "strict": true,
     "noImplicitOverride": true,
