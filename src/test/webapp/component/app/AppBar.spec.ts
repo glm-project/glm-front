@@ -5,7 +5,9 @@
  * navigateur.
  *
  * Les selecteurs s'appuient sur le contrat ARIA (`aria-label`, `role="menu"`, `aria-expanded`) et non
- * sur les classes generees par spartan, qui sont du code tiers susceptible de changer.
+ * sur les classes generees par spartan, qui sont du code tiers susceptible de changer ; l'assertion sur
+ * `ng-icon svg` est l'exception assumee a cette politique, car c'est la seule qui prouve que
+ * `provideIcons({ lucideMenu })` a reellement resolu l'icone.
  */
 describe('App bar', () => {
   beforeEach(() => {
@@ -14,6 +16,12 @@ describe('App bar', () => {
 
   it('display the application bar with its menu trigger and the logout button', () => {
     cy.get('header').should('be.visible');
+    cy.get('header').should('contain.text', 'glmfront');
+
+    // Sans l'import de `@spartan-ng/brain/hlm-tailwind-preset.css` dans `styles.css`, `bg-primary` n'est
+    // plus genere et la barre se peint sur un fond transparent : toutes les autres assertions passeraient
+    // quand meme. La forme negative evite d'etre fragile a la serialisation `oklch` -> `rgb`.
+    cy.get('header').should('not.have.css', 'background-color', 'rgba(0, 0, 0, 0)');
 
     cy.get('header button[aria-label="Menu"]').should('be.visible');
     cy.get('header button[aria-label="Menu"] ng-icon svg').should('exist');
