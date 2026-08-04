@@ -1,0 +1,5 @@
+{
+  "componentsPath": "src/main/webapp/app/design-system",
+  "importAlias": "@/app/design-system",
+  "style": "nova"
+}
