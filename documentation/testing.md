@@ -13,6 +13,11 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
 3. **E2E (Cypress)** — `src/test/webapp/e2e/<context>/*.spec.ts`, black-box through the full app. User
    journeys, not component detail.
 
+## Fixing a defect starts with a failing test
+
+First a test at the layer where the defect is observable, then the smallest test that reproduces it. Both go
+red before the fix and green after.
+
 ## Coverage is not negotiable
 
 The 100 % per-file threshold outranks any "not worth testing" judgement below. If you genuinely cannot
