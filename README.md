@@ -26,6 +26,22 @@ npm install
 
 ## Documentation
 
-- [Hexagonal architecture](documentation/hexagonal-architecture.md)
+Conventions, one document per topic:
+
+- [Testing](documentation/testing.md) — the three test layers, naming, what deserves a test and what does
+  not
+- [Architecture](documentation/architecture.md) — bounded contexts, the rules `arch-unit-ts` enforces, ports
+  and adapters, Keycloak wiring
+- [Code style](documentation/code-style.md) — naming, Angular idioms in use, linting and formatting
+- [Git and MR](documentation/git-and-mr.md) — branching, commit messages, MR descriptions
+
+Background and decisions:
+
+- [Hexagonal architecture](documentation/hexagonal-architecture.md) — the theory behind the layout
+- [Architecture Decision Records](documentation/adr/README.md) — structural decisions, the options weighed
+  and their price
+
+`CLAUDE.md` covers what an agent needs before it knows the task: commands, traps, and where each of these
+documents applies.
 
 <!-- seed4j-needle-documentation -->
