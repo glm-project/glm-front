@@ -33,7 +33,8 @@ Conventions, one document per topic:
 - [Architecture](documentation/architecture.md) — bounded contexts, the rules `arch-unit-ts` enforces, ports
   and adapters, Keycloak wiring
 - [Code style](documentation/code-style.md) — naming, Angular idioms in use, linting and formatting
-- [Git and MR](documentation/git-and-mr.md) — branching, commit messages, MR descriptions
+- [Git and MR](documentation/git-and-mr.md) — branching, commit messages and their granularity, MR
+  descriptions
 
 Background and decisions:
 
