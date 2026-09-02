@@ -1,0 +1,23 @@
+# Git and MR
+
+Trunk-based: short-lived branches off `main`, named `type/short-description` (e.g.
+`feat/add-perimeter-panel`, `docs/restructure-documentation`).
+
+Conventional Commits, scope optional and naming the affected area: `docs(documentation): link documentation
+from README`. No ticket tracker on this repository: never ask for an issue key, never put one in a scope.
+
+**Structural and behavioral changes never share a commit.** A rename, an extraction, a file move is
+`refactor:` or `chore:`, goes first, and leaves the tests green before and after — the existing tests are the
+net, no new test. What changes behavior is `feat:` or `fix:`, comes after, and carries its test. A task
+needing both produces two commits, in that order.
+
+**MR descriptions fit in a few bullets**: one sentence of context, one bullet per change (`file:line` plus
+the behavior), one bullet for what is still to be decided, one verification line. The detail lives in the
+commit messages and in the diff.
+
+Husky + lint-staged run `eslint --fix` and `prettier --write` on staged files. Do not bypass them with
+`--no-verify`.
+
+---
+
+New rules on this topic go here.

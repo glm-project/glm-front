@@ -1,0 +1,70 @@
+# Testing
+
+How we write tests here. The commands themselves live in `CLAUDE.md`.
+
+## Write the test first, at the layer that matches the change
+
+1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`oauth2-auth.service.spec.ts` beside
+   `oauth2-auth.service.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain logic, services,
+   interceptors, pipes — anything testable without a real DOM or router integration.
+2. **Component (Cypress)** — `src/test/webapp/component/<context>/*.spec.ts`, against the real dev server.
+   Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
+   `interceptForever` to control response timing).
+3. **E2E (Cypress)** — `src/test/webapp/e2e/<context>/*.spec.ts`, black-box through the full app. User
+   journeys, not component detail.
+
+## Fixing a defect starts with a failing test
+
+First a test at the layer where the defect is observable, then the smallest test that reproduces it. Both go
+red before the fix and green after.
+
+## Coverage is not negotiable
+
+The 100 % per-file threshold outranks any "not worth testing" judgement below. If you genuinely cannot
+cover a line, delete the line or restructure the code — never lower the threshold.
+
+## Tests are in English, start with "should", and tell a business story
+
+`it('should attach the bearer token to outgoing requests')`, not `it('testInterceptor')`. The reader grasps
+the intent from the name alone. Data and helpers carry the word **fixture** — `keycloakFixture`, not
+`SeededKeycloak`. The existing Cypress specs (`Home.spec.ts`) predate this rule and do not follow it; align
+them the next time you touch them.
+
+## Cypress specs follow given-when-then through named helpers
+
+Every action is a `whenXxx()`, every assertion a `thenXxx()` — a local const arrow or in `*.function.ts`.
+Setup, actions and assertions in blocks separated by blank lines. Assertions live in a helper, which keeps
+the reading thread and centralizes the selectors.
+
+## Select on `data-selector`, never on CSS classes or text
+
+Use the `dataSelector()` helper (`src/test/webapp/{component,e2e}/utils/DataSelector.ts`); it also accepts
+`data-cy`, `data-test` and `data-testid`. Classes are a styling concern and text is an i18n concern — both
+change without the behavior changing.
+
+## Mock at the boundary
+
+In unit and component specs, provide a test double for `Oauth2AuthService` (see `app.spec.ts`) rather than
+reaching a real Keycloak instance. Mock ports and I/O, not the domain logic under test.
+
+## We test observable business behavior, and the real runtime failure modes
+
+An HTTP call that genuinely fails, with graceful degradation: a legitimate test. Two things fall below that
+bar:
+
+- pure refactoring — the existing tests are the net;
+- the arithmetic helper extracted to support a display: it is the rendered result — visible, absent, its
+  value — that we test in Cypress; the helper is an implementation detail.
+
+Facing a mixed batch of refactoring + fix: zero tests for the refactoring, one behavior test for the fix of
+a real failure mode, red before and green after.
+
+**The rule above is a procedure, not an intention: every proposed assertion states, next to itself, what a
+behavior-preserving refactoring would break.** Written down — in the plan, in the message proposing the
+test, in the MR — not merely thought. Renaming the method under test, moving its file, changing a CSS
+class: if any of these turns the assertion red while no user sees a difference, it tests the implementation
+and it goes in the bin.
+
+---
+
+New rules on this topic go here.
