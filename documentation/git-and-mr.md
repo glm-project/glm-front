@@ -1,10 +1,10 @@
 # Git and MR
 
-Trunk-based: short-lived branches off `main`, named `type/jira-ref-short-description` (e.g.
-`feat/d1cainca-123-add-perimeter-panel`).
+Trunk-based: short-lived branches off `main`, named `type/short-description` (e.g.
+`feat/add-perimeter-panel`, `docs/restructure-documentation`).
 
-Conventional Commits with the Jira key as scope: `feat(D1CAINCA-123): add user authentication endpoint`. Ask
-for the key if you do not have it.
+Conventional Commits, scope optional and naming the affected area: `docs(documentation): link documentation
+from README`. No ticket tracker on this repository: never ask for an issue key, never put one in a scope.
 
 **MR descriptions fit in a few bullets**: one sentence of context, one bullet per change (`file:line` plus
 the behavior), one bullet for what is still to be decided, one verification line. The detail lives in the
