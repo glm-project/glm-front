@@ -3,10 +3,10 @@ import { InMemoryAuthentication } from '@/app/authentication/infrastructure/seco
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
-import Login from './login';
+import { GestionHeader } from './header';
 
-describe('Login', () => {
-  let fixture: ComponentFixture<Login>;
+describe('Gestion header', () => {
+  let fixture: ComponentFixture<GestionHeader>;
   let authentication: AuthenticationPort;
 
   beforeEach(async () => {
@@ -17,7 +17,9 @@ describe('Login', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Login);
+    fixture = TestBed.createComponent(GestionHeader);
+    fixture.componentRef.setInput('heading', 'glmfront');
+    await fixture.whenStable();
     authentication = TestBed.inject(AuthenticationPort);
   });
 
@@ -30,7 +32,7 @@ describe('Login', () => {
   });
 
   const whenClickingLogout = (): void => {
-    const logoutButton = fixture.debugElement.query(By.css('#btn-logout')).nativeElement as HTMLElement;
+    const logoutButton = fixture.debugElement.query(By.css('[data-selector="gestion-logout"]')).nativeElement as HTMLElement;
     logoutButton.click();
   };
 });
