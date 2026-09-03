@@ -15,7 +15,9 @@ src/main/webapp/
 A composition root wires: it names the shell, the routes, the environment and which adapter implements
 which port. It holds no business rule. `angular.json` gives each one a `build-<front>` and a
 `serve-<front>` target, differing only in `index`, `browser`, `outputPath`, `assets`, `budgets` and
-`fileReplacements`.
+`fileReplacements` — plus one exception worth its line: `allowedCommonJsDependencies` lists
+`keycloak-js` and its transitive CommonJS deps on the back-office target only. The pupitre does not
+inherit it, so the day `keycloak-js` reaches that bundle the build says so.
 
 **Dependencies point one way: a root imports from `app/`, never the reverse.** A file under `app/`
 reaching into `backoffice/` or `pupitre/` drags one front's concerns into the other's bundle — the

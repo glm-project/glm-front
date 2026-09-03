@@ -19,6 +19,11 @@ reached by an npm script naming the front. A suite is added by creating the conf
 fronts run **one dev server at a time**: two servers of one Angular project share a vite cache directory
 and break each other.
 
+The pupitre has an e2e suite and **no component suite**: the component layer tests rendering with the
+network intercepted, and an empty shell renders nothing and calls nothing — a spec there would restate
+its e2e smoke against the same served app. `test:component:headless` therefore covers the back-office
+alone today. The pupitre's first screen brings its config and its script with it.
+
 ## Fixing a defect starts with a failing test
 
 First a test at the layer where the defect is observable, then the smallest test that reproduces it. Both go
@@ -49,9 +54,9 @@ change without the behavior changing. It returns a comma-separated list of four 
 concatenated into a descendant selector — chain `.find()` instead.
 
 Each front's shell carries its marker as a host attribute (`host: { 'data-selector': 'pupitre-shell' }`),
-and its smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static `index.html`
-already, so the attribute appears only once Angular has bootstrapped — the one assertion a title check
-cannot make, because a title reads green on a blank page.
+and its **e2e** smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static
+`index.html` already, so the attribute appears only once Angular has bootstrapped — the one assertion a
+title check cannot make, because a title reads green on a blank page.
 
 ## Mock at the boundary
 
