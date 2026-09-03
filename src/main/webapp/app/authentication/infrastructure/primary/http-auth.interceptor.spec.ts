@@ -8,8 +8,12 @@ const URL = 'http://localhost:8080/api/dummy';
 const HTTP_METHOD = 'GET';
 const TOKEN = '1a2b3c';
 
+/*
+ * Hand-rolled rather than the in-memory adapter: a primary adapter may not depend on a secondary one,
+ * and the architecture test holds that for a spec too.
+ */
 class AuthenticationFixture extends AuthenticationPort {
-  constructor(private readonly bearerToken: string | undefined) {
+  constructor(private bearerToken: string | undefined) {
     super();
   }
 
@@ -22,7 +26,7 @@ class AuthenticationFixture extends AuthenticationPort {
   }
 
   override logout(): void {
-    // nothing to end: the fixture holds a token, not a session
+    this.bearerToken = undefined;
   }
 }
 

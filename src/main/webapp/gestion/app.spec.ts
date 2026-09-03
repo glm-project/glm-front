@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { InMemoryAuthentication } from '@/app/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
@@ -8,32 +9,14 @@ import { routes } from './app.route';
 describe('Gestion shell', () => {
   let comp: App;
   let fixture: ComponentFixture<App>;
-  let sessionStarted: boolean;
-
-  class AuthenticationFixture extends AuthenticationPort {
-    override authenticate(): Promise<void> {
-      sessionStarted = true;
-      return Promise.resolve();
-    }
-
-    override currentToken(): string | undefined {
-      return 'fixture-token';
-    }
-
-    override logout(): void {
-      // nothing to end: the fixture holds a token, not a session
-    }
-  }
 
   beforeEach(async () => {
-    sessionStarted = false;
-
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter(routes),
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: AuthenticationPort, useClass: AuthenticationFixture },
+        { provide: AuthenticationPort, useClass: InMemoryAuthentication },
       ],
     }).compileComponents();
 
@@ -46,7 +29,7 @@ describe('Gestion shell', () => {
     expect(comp.appName()).toBe('glmfront');
   });
 
-  it('should start the authentication session when it boots', () => {
-    expect(sessionStarted).toBe(true);
+  it('should hold a bearer token once it has booted', () => {
+    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
   });
 });
