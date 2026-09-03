@@ -108,9 +108,16 @@
             "index": "src/main/webapp/pupitre/index.html",
             "browser": "src/main/webapp/pupitre/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "assets": [],
+            "assets": [
+              {
+                "glob": "manifest.webmanifest",
+                "input": "src/main/webapp/pupitre",
+                "output": ""
+              }
+            ],
             "styles": ["src/main/webapp/styles.css", "@angular/material/prebuilt-themes/indigo-pink.css"],
-            "scripts": []
+            "scripts": [],
+            "serviceWorker": "src/main/webapp/pupitre/ngsw-config.json"
           },
           "configurations": {
             "production": {
