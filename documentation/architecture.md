@@ -12,12 +12,12 @@ src/main/webapp/
   pupitre/      # composition root: idem, on port 9001
 ```
 
-A composition root wires: it names the shell, the routes, the environment and which adapter implements
-which port. It holds no business rule. `angular.json` gives each one a `build-<front>` and a
-`serve-<front>` target, differing only in `index`, `browser`, `outputPath`, `assets`, `budgets` and
-`fileReplacements` — plus one exception worth its line: `allowedCommonJsDependencies` lists
-`keycloak-js` and its transitive CommonJS deps on the `gestion` target only. The pupitre does not
-inherit it, so the day `keycloak-js` reaches that bundle the build says so.
+A composition root wires: it names the shell, the routes, the environment, which adapter implements which
+port, and what its front puts in the shared chrome. It holds no business rule. `angular.json` gives each
+one a `build-<front>` and a `serve-<front>` target, differing only in `index`, `browser`, `outputPath`,
+`assets`, `budgets` and `fileReplacements` — plus one exception worth its line:
+`allowedCommonJsDependencies` lists `keycloak-js` and its transitive CommonJS deps on the `gestion` target
+only. The pupitre does not inherit it, so the day `keycloak-js` reaches that bundle the build says so.
 
 The two `index.html` differ on the same ground: gestion pulls Roboto and Material Icons from the Google
 Fonts CDN, the pupitre pulls nothing. **The pupitre is offline-first** — it runs on the shop floor, where a
@@ -26,7 +26,8 @@ remote stylesheet is a render it cannot make. Anything that front needs at boot 
 **Dependencies point one way: a root imports from `app/`, never the reverse.** A file under `app/`
 reaching into `gestion/` or `pupitre/` drags one front's concerns into the other's bundle — the
 boundary the split exists to draw. Screens that belong to a single front live at
-`app/<context>/infrastructure/primary/<front>/`, not in the root.
+`app/<context>/infrastructure/primary/<front>/`, not in the root — what a root may hold is composition:
+the shell, the routes, the providers, and how this front fills the chrome that `app/shared` provides.
 
 There is one `test` target for the whole tree: the coverage bar is a property of the repository, not of
 an application, and both roots are measured.
@@ -39,9 +40,10 @@ discovers contexts by scanning `**/package-info.ts` for a class extending `Busin
 (`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder naming alone is invisible to
 it.
 
-That invisibility has a live example: `app/login/` carries no `package-info.ts`, so no rule reaches it and
-the architecture test stays green over it. It is the last of the ungoverned folders, and the header work
-absorbs it. A new folder under `app/` without its `package-info.ts` joins it in that blind spot.
+Nothing under `app/` sits outside that scan today: `app/login/` was the last folder without a
+`package-info.ts`, and the header composition absorbed its logout button. A folder that arrives without one
+lands straight in the blind spot — the architecture test stays green over it because it checks nothing
+there.
 
 ```
 <context>/
@@ -85,6 +87,33 @@ graph invisible. Accepted cost: prop-drilling through the intermediaries.
 `providedIn: 'root'` would stay legitimate for genuine cross-cutting infrastructure, but nothing uses it
 today: an adapter behind a port is provided by the composition root that chooses it, so both
 authentication adapters are a bare `@Injectable()`.
+
+## Chrome shared by both fronts sits at an adapter address, and stays mute
+
+The header is `app/shared/infrastructure/primary/header/` — a primary adapter of the `shared` kernel, and
+the address matters. `app/shared/header/` would pass the architecture test just as well, and that is the
+trap: `withOptionalLayers(true)` skips a class sitting outside every declared layer, so it reads green
+because nothing bites. Measured at the adapter address, a header importing from
+`shared/infrastructure/secondary/` reddens _Primary should not depend on secondary_; at the short address
+it reddens nothing.
+
+The component is mute: no routing, no logout, no connectivity state. It holds a `heading` input and one
+projection slot, and it keeps the toolbar the gestion front already had — the chrome moves address here,
+it does not change form. What varies is composed by each front in its own root, `gestion/header/` and
+`pupitre/header/`, which put the nav and the logout button, or the connectivity sign, into that slot. A
+shared component that knew one front would pull its concerns into the other's bundle, which is the
+boundary the split exists to draw. One slot means one region: the gestion nav trigger sits with the
+actions, on the right.
+
+One address for the chrome is also what makes the open design-system question cheap: swapping what the bar
+is made of is one component, for both fronts at once.
+
+Each composition carries its own `data-selector` as a host attribute, the way the shells do.
+
+The pupitre's connectivity sign has **no producer yet**. Its state reads on the outcome of the last push,
+and the pupitre pushes nothing until it has a queue, so the composition root holds the only value that
+rule can yield — `pupitre/app.ts`, a named constant, which is where the queue will plug in. The
+disconnected rendering exists and is tested; nothing writes it in production yet.
 
 ## Ports are interfaces owned by the `domain`, implemented in `infrastructure/secondary`
 

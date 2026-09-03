@@ -22,9 +22,10 @@ fronts run **one dev server at a time**: two servers of one Angular project shar
 and break each other.
 
 The pupitre has an e2e suite and **no component suite**: the component layer tests rendering with the
-network intercepted, and an empty shell renders nothing and calls nothing — a spec there would restate
-its e2e smoke against the same served app. `test:component:headless` therefore covers `gestion`
-alone today. The pupitre's first screen brings its config and its script with it.
+network intercepted, and the pupitre still calls nothing — its header renders from an input alone, so a
+spec there would restate the e2e against the same served app, with no interception to earn its place.
+`test:component:headless` therefore covers `gestion` alone today. The pupitre's first screen brings its
+config and its script with it.
 
 ## Fixing a defect starts with a failing test
 
@@ -63,7 +64,7 @@ title check cannot make, because a title reads green on a blank page.
 ## Mock at the boundary
 
 Bind the port, never the library: a spec that needs authentication provides `AuthenticationPort` with
-`InMemoryAuthentication` (see `gestion/app.spec.ts`, `login.spec.ts`) rather than reaching a real Keycloak
+`InMemoryAuthentication` (see `gestion/app.spec.ts`, `gestion/header/header.spec.ts`) rather than reaching a real Keycloak
 instance. That double is production code, so the compiler holds it to the port's signature and the contract
 suite below holds it to the port's behavior. Mock ports and I/O, not the domain logic under test.
 
