@@ -23,6 +23,6 @@ export class App implements OnInit {
 
   ngOnInit(): void {
     this.appName.set('glmfront');
-    this.oauth2AuthService.initAuthentication();
+    this.oauth2AuthService.initAuthentication().subscribe();
   }
 }
