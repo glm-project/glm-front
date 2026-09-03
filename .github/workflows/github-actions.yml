@@ -26,6 +26,8 @@ jobs:
           cache: 'npm'
       - name: 'Setup: install dependencies'
         run: npm install
+      - name: 'Test: api types match the committed spec'
+        run: npm run api:types && git diff --exit-code
       - name: 'Test: eslint'
         run: npm run lint
       - name: 'Test: prettier check'
