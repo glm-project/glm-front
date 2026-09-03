@@ -1,0 +1,7 @@
+<glm-header [heading]="heading()">
+  @if (connected()) {
+  <span data-selector="pupitre-connected">En ligne</span>
+  } @else {
+  <span data-selector="pupitre-disconnected">Hors ligne</span>
+  }
+</glm-header>
