@@ -38,7 +38,7 @@ npx tsc --noEmit           # type-checks both fronts in one pass
 - Add `package-info.ts` before any new bounded context — otherwise `arch-unit-ts` silently checks nothing and the architecture drifts under a green build.
 - Never edit `src/test/webapp/unit/HexagonalArchTest.spec.ts` to make a build pass: a failure means the code deviates, so fix the code.
 - Keep the three `<!-- seed4j-needle-* -->` markers in `README.md` when editing it by hand — Seed4J module generators insert there. The code markers are gone on purpose: with two composition roots, an insertion point in the app cannot answer "gestion or pupitre?".
-- `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in `gestion/main.ts`): never re-attach it in an adapter. The pupitre wires neither an HTTP client nor an auth provider yet.
+- `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in `gestion/main.ts`): never re-attach it in an adapter. It reads `AuthenticationPort`, never an adapter — and the pupitre binds no adapter yet.
 - The `@/*` path alias resolves to `src/main/webapp/*`.
 
 ## Verification before claiming done

@@ -2,9 +2,15 @@
 
 ## Code carries its own intent
 
-**Naming replaces the comment.** When the urge to write a comment shows up, refactor: rename, extract a
-function or an object. A comment survives only if it carries a _why_ that cannot be deduced from the code —
-an external technical constraint. A design justification belongs in the naming, in the MR or in a README.
+**No comments. None.** Not even a _why_, not even an external constraint — that exemption is what every
+comment in this repo was written under. When the urge shows up, refactor: rename, extract a function or an
+object. The rationale that felt worth a comment goes in the commit message, in the MR, or as a rule in the
+topic doc that owns it — places that get read and updated, unlike a comment that drifts from the code it
+sits on. A comment you cannot relocate is a design you have not finished. Machine-readable directives
+(`eslint-disable`, `@ts-expect-error`, `prettier-ignore`) are not comments; they are instructions to a tool,
+and each still needs its own justification elsewhere. `local/no-comments` (`eslint.config.mjs`) fails the
+build on anything else under `src/`, TypeScript and templates alike, tests and generated files included —
+so this is a lint error and not a review argument.
 
 **A named function instead of an inline ternary.** `x !== undefined ? Foo.of(x) : undefined` becomes
 `toFoo(x?: Type): Foo | undefined`. The ternary hides the business intent.
@@ -22,8 +28,8 @@ literal.
 
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
-- `inject()`, never constructor injection (`gestion/app.ts:24`, `login.ts:12`, `oauth2-auth.service.ts:9`);
-- `signal()` for local component state (`App.appName`, `gestion/app.ts:23`);
+- `inject()`, never constructor injection (`gestion/app.ts:22`, `login.ts:12`, `KeycloakOidcAuthentication.ts:9`);
+- `signal()` for local component state (`App.appName`, `gestion/app.ts:21`);
 - standalone components, no `NgModule`;
 - component and directive selectors are prefixed `glm` (`glm-root`, `glm-login`) — enforced by
   `angular-eslint`;
