@@ -57,10 +57,10 @@ discovers contexts by scanning `**/package-info.ts` for a class extending `Busin
 (`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder naming alone is invisible to
 it.
 
-Nothing under `app/` sits outside that scan today: `app/login/` was the last folder without a
-`package-info.ts`, and the header composition absorbed its logout button. A folder that arrives without one
-lands straight in the blind spot — the architecture test stays green over it because it checks nothing
-there.
+One folder under `app/` sits outside that scan on purpose — `app/api/`, below. Everywhere else the absence
+is a defect: `app/login/` was the last folder to lack a `package-info.ts`, and the header composition
+absorbed its logout button. A context that arrives without one lands straight in the blind spot — the
+architecture test stays green over it because it checks nothing there.
 
 ```
 <context>/
@@ -74,6 +74,45 @@ there.
 
 Code genuinely shared across contexts belongs in a context extending `SharedKernel` (that is what `shared`
 is), not copied into each context.
+
+## The wire format lives at an address no `domain` can reach
+
+`app/api/` holds two files and no `package-info.ts`: `openapi.json`, a snapshot of the specification
+`glm-back` publishes at its own `documentation/openapi.json`, and `schema.d.ts`, generated from it by
+`openapi-typescript`. **The missing `package-info.ts` is the rule, not an oversight.** The folder belongs to
+no declared context, so `domain` — which may only depend on `domain` and shared kernels — cannot import it,
+while `infrastructure/secondary` can. Both directions were measured: an `import` of `@/app/api/schema` from
+`authentication/domain/` reddens _Domain should not depend on outside_, the same import from
+`authentication/infrastructure/secondary/` leaves the suite green. A shared kernel of wire types would be
+importable from every domain and the rule would be an intention.
+
+**`app/api/` must stay under `app/`.** `TypeScriptProject` populates itself with
+`addSourceFilesAtPaths('src/main/webapp/app/**/*.ts')`, and `isImportValid` drops any import ts-morph fails
+to resolve on a bare `console.warn`. Moved out, an import from a `domain` would vanish from the dependency
+graph and the check above would read green over it. The placement is the guard rail.
+
+Only `infrastructure/secondary` reads these types; the adapter translates them into hand-written domain
+classes. The generated file is a declaration file, so it emits no module: there is nothing to instrument and
+the 100 % coverage bar never sees it (measured — it appears in no coverage report). It is in eslint's
+`ignores` (`eslint.config.mjs`): measured at 319 errors without that entry, `local/no-comments` on every
+operation description springdoc wrote into the spec, and `strictTypeChecked` on shapes no one here chose.
+
+## The specification is pinned, not followed
+
+```
+back's code ──✓ back CI──▶ back's openapi.json ──npm run api:sync──▶ app/api/openapi.json ──✓ front CI──▶ schema.d.ts
+```
+
+`npm run api:sync` pulls the back's file through `gh api`, never `curl`: `gh` is authenticated, so the
+command survives the day `glm-back` turns private, which `raw.githubusercontent.com` would not.
+`npm run api:types` regenerates `schema.d.ts` and reformats it, so `prettier --check .` stays green without
+an entry in `.prettierignore`. Both the specification and the generated types are committed, and CI runs
+`npm run api:types && git diff --exit-code`: types that no longer match the committed specification fail the
+build.
+
+**The middle link stays manual, deliberately.** CI never reaches across repositories — a workflow reading
+`main` of `glm-back` would need a PAT held as a secret here, an Action's `GITHUB_TOKEN` being confined to its
+own repository. Refreshing the contract is a human gesture, and its diff is reviewed like any other.
 
 ## The rules the architecture test enforces
 
