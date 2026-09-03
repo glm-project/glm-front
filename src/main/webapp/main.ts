@@ -15,10 +15,5 @@ if (environment.production) {
 }
 
 bootstrapApplication(App, {
-  providers: [
-    provideHttpClient(withInterceptors([httpAuthInterceptor])),
-    provideRouter(routes),
-    // seed4j-needle-main-ts-provider
-    keycloakProvider,
-  ],
+  providers: [provideHttpClient(withInterceptors([httpAuthInterceptor])), provideRouter(routes), keycloakProvider],
 }).catch((err: unknown) => console.error(err));

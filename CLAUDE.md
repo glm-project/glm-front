@@ -31,7 +31,7 @@ npx tsc --noEmit           # type-check without emitting
 - Coverage is 100 % per file (`vitest.config.ts`, `coverage.thresholds`): one untested branch is a build failure, not a metric. Write the test alongside the code.
 - Add `package-info.ts` before any new bounded context — otherwise `arch-unit-ts` silently checks nothing and the architecture drifts under a green build.
 - Never edit `src/test/webapp/unit/HexagonalArchTest.spec.ts` to make a build pass: a failure means the code deviates, so fix the code.
-- Keep the `# seed4j-needle-*` markers (`app.route.ts`, `main.ts`, `README.md`) when editing those files by hand — Seed4J module generators insert there.
+- Keep the three `<!-- seed4j-needle-* -->` markers in `README.md` when editing it by hand — Seed4J module generators insert there. The code markers are gone on purpose: with two composition roots coming, an insertion point in the app cannot answer "back-office or pupitre?".
 - `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in `main.ts`): never re-attach it in an adapter.
 - The `@/*` path alias resolves to `src/main/webapp/*`.
 

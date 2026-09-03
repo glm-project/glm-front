@@ -12,7 +12,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
-  selector: 'seed-root',
+  selector: 'glm-root',
   templateUrl: './app.html',
   imports: [RouterModule, MatMenuModule, MatToolbarModule, MatIconModule, MatButtonModule, NgOptimizedImage, Login],
   styleUrl: './app.css',

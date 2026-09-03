@@ -5,8 +5,8 @@ actually checks.
 
 ## A bounded context starts with its `package-info.ts`
 
-Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context (currently `home`
-and `shared`). `src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning
+Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context (currently
+`shared` alone). `src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning
 `**/package-info.ts` for a class extending `BusinessContext` (`@/app/BusinessContext`) or `SharedKernel`
 (`@/app/SharedKernel`) — folder naming alone is invisible to it.
 

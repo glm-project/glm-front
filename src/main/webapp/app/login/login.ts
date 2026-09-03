@@ -4,7 +4,7 @@ import { Oauth2AuthService } from '../auth/oauth2-auth.service';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
-  selector: 'seed-login',
+  selector: 'glm-login',
   templateUrl: './login.html',
   imports: [MatButtonModule],
 })
