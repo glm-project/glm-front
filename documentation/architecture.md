@@ -193,8 +193,8 @@ no business rule to make it a bounded context.
 - **No token is a normal answer**, not a failure: offline the refresh fails and none is current. The
   `if (token)` in `httpAuthInterceptor` is the whole handling this needs.
 - **`keycloak-oidc`** is the `gestion` adapter (`keycloak-js`, standard flow, `onLoad: 'login-required'`,
-  silent refresh at `MIN_TOKEN_VALIDITY_SECONDS = 70`). **`in-memory`** is its Cypress sibling. Neither ever
-  imports the other: two siblings, and the composition root chooses.
+  silent refresh at `MIN_TOKEN_VALIDITY_SECONDS = 70`). **`in-memory`** is its Cypress sibling. **`device`**
+  is the pupitre's. None ever imports another: siblings, and the composition root chooses.
 - **The composition root owns the wiring.** `gestion/auth.provider.ts` builds the Keycloak instance from
   `gestion/environments/environment*.ts` (`keycloak.url` / `realm` / `client_id`) and binds the port to its
   adapter. No Keycloak URL, realm or client id anywhere else, no secret in the repo. The provider cannot
@@ -204,9 +204,21 @@ no business rule to make it a bounded context.
   build contains the in-memory adapter and none of keycloak-js. Cypress cannot substitute at the network
   layer instead: `onLoad: 'login-required'` redirects to Keycloak before the first request leaves the
   browser, so there is nothing to intercept.
-- The pupitre binds nothing yet: no HTTP client, no provider, no Keycloak block in its environments. It
-  authenticates through a device grant `keycloak-js` cannot perform, and gets its `auth.provider.ts` with
-  that adapter.
+- **The pupitre enrols through the `device` adapter**, hand-written: `keycloak-js` offers
+  `standard | implicit | hybrid` and no `device_code`, so there is no library to wrap. It runs the RFC 8628
+  device grant — `POST .../auth/device`, then poll `.../token` on the device code through
+  `authorization_pending` and `slow_down` — asks for `offline_access`, and renews on a timer 30 s before
+  expiry. `pupitre/auth.provider.ts` builds its `DeviceGrantConfiguration` from
+  `pupitre/environments/environment*.ts`, same shape as gestion's.
+- **The device adapter talks through `HttpBackend`, not `HttpClient`.** `HttpBackend` bypasses every
+  interceptor by design, which is the point: the pupitre's own auth-protocol traffic must not carry the
+  `Authorization: Bearer` header `httpAuthInterceptor` attaches to everything else.
+- **`authenticate()` never rejects.** Every HTTP failure maps to "no token", the normal answer above. A
+  rejection would surface as an uncaught exception and fail every Cypress spec that boots the pupitre
+  without a Keycloak behind it.
+- **Tokens live in memory only.** `offline_access` is requested so the session survives a shift, but nothing
+  is written to disk: a reload re-enrols. A long-lived refresh token in `localStorage` is reachable by any
+  XSS, and the shop floor's screens are shared.
 
 ---
 

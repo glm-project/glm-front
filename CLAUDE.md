@@ -41,7 +41,7 @@ npm run api:types          # regenerate app/api/schema.d.ts from it; CI fails on
 - Add `package-info.ts` before any new bounded context — otherwise `arch-unit-ts` silently checks nothing and the architecture drifts under a green build. `app/api/` is the one folder that must never get one: its absence is what forbids a `domain` from importing the generated wire types.
 - Never edit `src/test/webapp/unit/HexagonalArchTest.spec.ts` to make a build pass: a failure means the code deviates, so fix the code.
 - Keep the three `<!-- seed4j-needle-* -->` markers in `README.md` when editing it by hand — Seed4J module generators insert there. The code markers are gone on purpose: with two composition roots, an insertion point in the app cannot answer "gestion or pupitre?".
-- `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in `gestion/main.ts`): never re-attach it in an adapter. It reads `AuthenticationPort`, never an adapter — and the pupitre binds no adapter yet.
+- `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in both `main.ts`): never re-attach it in an adapter. It reads `AuthenticationPort`, never an adapter. The one thing that must escape it is the pupitre's own enrolment traffic, which is why `DeviceAuthentication` builds its `HttpClient` on `HttpBackend`.
 - The `@/*` path alias resolves to `src/main/webapp/*`, and `@test/*` to `src/test/webapp/*` — the second one is for specs reaching the shared test helpers, never for application code.
 
 ## Verification before claiming done
