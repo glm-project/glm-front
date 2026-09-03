@@ -12,7 +12,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'glm-root',
-  host: { 'data-selector': 'backoffice-shell' },
+  host: { 'data-selector': 'gestion-shell' },
   templateUrl: './app.html',
   imports: [RouterModule, MatMenuModule, MatToolbarModule, MatIconModule, MatButtonModule, NgOptimizedImage, Login],
   styleUrl: './app.css',

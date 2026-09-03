@@ -9,15 +9,15 @@
       "sourceRoot": "src",
       "prefix": "app",
       "architect": {
-        "build-backoffice": {
+        "build-gestion": {
           "builder": "@angular/build:application",
           "options": {
             "outputPath": {
-              "base": "target/classes/static/backoffice",
+              "base": "target/classes/static/gestion",
               "browser": ""
             },
-            "index": "src/main/webapp/backoffice/index.html",
-            "browser": "src/main/webapp/backoffice/main.ts",
+            "index": "src/main/webapp/gestion/index.html",
+            "browser": "src/main/webapp/gestion/main.ts",
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/main/webapp/content",
@@ -54,8 +54,8 @@
               "namedChunks": true,
               "fileReplacements": [
                 {
-                  "replace": "src/main/webapp/backoffice/environments/environment.ts",
-                  "with": "src/main/webapp/backoffice/environments/environment.local.ts"
+                  "replace": "src/main/webapp/gestion/environments/environment.ts",
+                  "with": "src/main/webapp/gestion/environments/environment.local.ts"
                 }
               ]
             },
@@ -66,34 +66,34 @@
               "namedChunks": true,
               "fileReplacements": [
                 {
-                  "replace": "src/main/webapp/backoffice/environments/environment.ts",
-                  "with": "src/main/webapp/backoffice/environments/environment.local.ts"
+                  "replace": "src/main/webapp/gestion/environments/environment.ts",
+                  "with": "src/main/webapp/gestion/environments/environment.local.ts"
                 },
                 {
-                  "replace": "src/main/webapp/backoffice/keycloak.provider.ts",
-                  "with": "src/main/webapp/backoffice/keycloak.provider.e2e.ts"
+                  "replace": "src/main/webapp/gestion/keycloak.provider.ts",
+                  "with": "src/main/webapp/gestion/keycloak.provider.e2e.ts"
                 }
               ]
             }
           },
           "defaultConfiguration": "production"
         },
-        "serve-backoffice": {
+        "serve-gestion": {
           "builder": "@angular/build:dev-server",
           "options": {
             "port": 9000,
-            "buildTarget": "project:build-backoffice",
+            "buildTarget": "project:build-gestion",
             "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {
-              "buildTarget": "project:build-backoffice:production"
+              "buildTarget": "project:build-gestion:production"
             },
             "development": {
-              "buildTarget": "project:build-backoffice:development"
+              "buildTarget": "project:build-gestion:development"
             },
             "e2e": {
-              "buildTarget": "project:build-backoffice:e2e"
+              "buildTarget": "project:build-gestion:e2e"
             }
           },
           "defaultConfiguration": "development"
@@ -173,7 +173,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "buildTarget": "project:build-backoffice:development",
+            "buildTarget": "project:build-gestion:development",
             "runnerConfig": "vitest.config.ts",
             "exclude": ["**/webapp/{e2e,component}/**"],
             "coverageInclude": ["src/main/webapp/**/*.ts"],
@@ -183,7 +183,7 @@
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n",
           "options": {
-            "buildTarget": "project:build-backoffice"
+            "buildTarget": "project:build-gestion"
           }
         }
       }

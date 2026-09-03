@@ -13,7 +13,7 @@ const mockOauth2AuthService = {
   logout: vi.fn(),
 };
 
-describe('Back-office shell', () => {
+describe('Gestion shell', () => {
   let comp: App;
   let fixture: ComponentFixture<App>;
 

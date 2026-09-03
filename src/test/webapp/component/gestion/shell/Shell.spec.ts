@@ -1,6 +1,6 @@
 import { dataSelector } from '../../utils/DataSelector';
 
-describe('Back-office shell', () => {
+describe('Gestion shell', () => {
   it('should show its header once booted', () => {
     whenVisitingTheRoot();
 
@@ -13,5 +13,5 @@ const whenVisitingTheRoot = (): void => {
 };
 
 const thenTheHeaderIsVisible = (): void => {
-  cy.get(dataSelector('backoffice-header')).should('be.visible');
+  cy.get(dataSelector('gestion-header')).should('be.visible');
 };

@@ -6,6 +6,6 @@
     "outDir": "./out-tsc/app",
     "types": []
   },
-  "files": ["src/main/webapp/backoffice/main.ts", "src/main/webapp/backoffice/keycloak.provider.e2e.ts", "src/main/webapp/pupitre/main.ts"],
+  "files": ["src/main/webapp/gestion/main.ts", "src/main/webapp/gestion/keycloak.provider.e2e.ts", "src/main/webapp/pupitre/main.ts"],
   "include": ["src/main/webapp/**/*.d.ts"]
 }

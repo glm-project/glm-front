@@ -21,7 +21,7 @@ and break each other.
 
 The pupitre has an e2e suite and **no component suite**: the component layer tests rendering with the
 network intercepted, and an empty shell renders nothing and calls nothing — a spec there would restate
-its e2e smoke against the same served app. `test:component:headless` therefore covers the back-office
+its e2e smoke against the same served app. `test:component:headless` therefore covers `gestion`
 alone today. The pupitre's first screen brings its config and its script with it.
 
 ## Fixing a defect starts with a failing test
