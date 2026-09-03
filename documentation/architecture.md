@@ -29,22 +29,32 @@ boundary the split exists to draw. Screens that belong to a single front live at
 `app/<context>/infrastructure/primary/<front>/`, not in the root — what a root may hold is composition:
 the shell, the routes, the providers, and how this front fills the chrome that `app/shared` provides.
 
-**Neither front imports the other**, and `eslint.config.mjs` holds that mechanically in both directions,
-over the two composition roots _and_ `app/<context>/infrastructure/primary/<front>/`. It takes two native
-rules, not one: `no-restricted-imports` covers static imports and re-exports, and `no-restricted-syntax` on
-`ImportExpression` covers the dynamic `import()` of a lazy route — which the first rule never sees, since it
-only registers `ImportDeclaration` and the two export forms. A lazy route is the likeliest leak, so the
-second rule is the one that matters. It matches the quoted and the backtick form, because a `TemplateLiteral`
-is not a `Literal` and a selector naming only the latter would miss half the vector. What both fronts need
-goes under `app/`.
+**Neither front imports the other, and `app/` imports neither** — `eslint.config.mjs` holds both
+mechanically. It takes two native rules, not one: `no-restricted-imports` covers static imports and
+re-exports, and `no-restricted-syntax` on `ImportExpression` covers the dynamic `import()` of a lazy route —
+which the first rule never sees, since it only registers `ImportDeclaration` and the two export forms. A lazy
+route is the likeliest leak, so the second rule is the one that matters. It matches the quoted and the
+backtick form, because a `TemplateLiteral` is not a `Literal` and a selector naming only the latter would
+miss half the vector. What both fronts need goes under `app/`.
+
+Three zones, the same pair of rules, a different forbidden path each: `app/**` may not name either front in
+any segment, `<front>/**` may not name the other, and `app/**/primary/<front>/**` may not name the other
+front nor reach one along a path that never passes through an `app/` segment. That last is the design point —
+a screen carries its own front's name in every path of its own zone, so the ban is narrowed by the `app/`
+segment rather than lifted: `@/app/…/primary/pupitre/Screen` passes, `@/pupitre/app.route` does not, and nor
+does any other spelling of it — a `../` climb, a leading `./`, or the `src/main/webapp/…` that `baseUrl`
+resolves. Order matters, because ESLint replaces the options of a repeated rule instead of merging them —
+which is why the zone restates the other-front ban it would otherwise lose.
 
 `arch-unit-ts` cannot take this job, which is why it falls to lint: it reads static imports only
 (`getImportDeclarations()`, ts-morph) and its root is `app/`, so `pupitre/app.route.ts` is invisible to it.
 
-Two gaps are known and left open. A path built at runtime — ``import(`@/${front}/x`)`` — is undecidable
-statically. And laundering through a barrel, where a third file re-exports across the boundary, resolves to a
-path neither rule matches; `eslint-plugin-boundaries` buys real path resolution and is the purchase to make
-the day that is observed, not before.
+Three gaps are known and left open. A path built at runtime — ``import(`@/${front}/x`)`` — is undecidable
+statically; laundering through a barrel, where a third file re-exports across the boundary, resolves to a
+path neither rule matches; and a `..` climbing back out through the `app/` segment that granted the
+exemption (`@/app/../pupitre/app.route`) buys back what the third zone forbids. All three want real path
+resolution rather than string matching; `eslint-plugin-boundaries` is the purchase to make the day one of
+them is observed, not before.
 
 There is one `test` target for the whole tree: the coverage bar is a property of the repository, not of
 an application, and both roots are measured.
