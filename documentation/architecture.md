@@ -28,6 +28,23 @@ reaching into `gestion/` or `pupitre/` drags one front's concerns into the other
 boundary the split exists to draw. Screens that belong to a single front live at
 `app/<context>/infrastructure/primary/<front>/`, not in the root.
 
+**Neither front imports the other**, and `eslint.config.mjs` holds that mechanically in both directions,
+over the two composition roots _and_ `app/<context>/infrastructure/primary/<front>/`. It takes two native
+rules, not one: `no-restricted-imports` covers static imports and re-exports, and `no-restricted-syntax` on
+`ImportExpression` covers the dynamic `import()` of a lazy route — which the first rule never sees, since it
+only registers `ImportDeclaration` and the two export forms. A lazy route is the likeliest leak, so the
+second rule is the one that matters. It matches the quoted and the backtick form, because a `TemplateLiteral`
+is not a `Literal` and a selector naming only the latter would miss half the vector. What both fronts need
+goes under `app/`.
+
+`arch-unit-ts` cannot take this job, which is why it falls to lint: it reads static imports only
+(`getImportDeclarations()`, ts-morph) and its root is `app/`, so `pupitre/app.route.ts` is invisible to it.
+
+Two gaps are known and left open. A path built at runtime — ``import(`@/${front}/x`)`` — is undecidable
+statically. And laundering through a barrel, where a third file re-exports across the boundary, resolves to a
+path neither rule matches; `eslint-plugin-boundaries` buys real path resolution and is the purchase to make
+the day that is observed, not before.
+
 There is one `test` target for the whole tree: the coverage bar is a property of the repository, not of
 an application, and both roots are measured.
 
