@@ -22,8 +22,8 @@ literal.
 
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
-- `inject()`, never constructor injection (`app.ts:22`, `login.ts:12`, `oauth2-auth.service.ts:9`);
-- `signal()` for local component state (`App.appName`, `app.ts:21`);
+- `inject()`, never constructor injection (`gestion/app.ts:24`, `login.ts:12`, `oauth2-auth.service.ts:9`);
+- `signal()` for local component state (`App.appName`, `gestion/app.ts:23`);
 - standalone components, no `NgModule`;
 - component and directive selectors are prefixed `glm` (`glm-root`, `glm-login`) — enforced by
   `angular-eslint`;

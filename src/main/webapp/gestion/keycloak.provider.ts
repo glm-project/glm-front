@@ -1,7 +1,7 @@
 import { Provider } from '@angular/core';
 import Keycloak from 'keycloak-js';
 
-import { environment } from '../../environments/environment';
+import { environment } from './environments/environment';
 
 export const keycloakProvider: Provider = {
   provide: Keycloak,

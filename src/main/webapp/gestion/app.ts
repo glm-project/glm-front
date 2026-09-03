@@ -1,8 +1,7 @@
+import { Oauth2AuthService } from '@/app/auth/oauth2-auth.service';
+import Login from '@/app/login/login';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
-
-import { Oauth2AuthService } from './auth/oauth2-auth.service';
-import Login from './login/login';
 
 import { RouterModule } from '@angular/router';
 
@@ -13,6 +12,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'glm-root',
+  host: { 'data-selector': 'gestion-shell' },
   templateUrl: './app.html',
   imports: [RouterModule, MatMenuModule, MatToolbarModule, MatIconModule, MatButtonModule, NgOptimizedImage, Login],
   styleUrl: './app.css',
