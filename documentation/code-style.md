@@ -25,7 +25,7 @@ literal.
 - `inject()`, never constructor injection (`app.ts:22`, `login.ts:12`, `oauth2-auth.service.ts:9`);
 - `signal()` for local component state (`App.appName`, `app.ts:21`);
 - standalone components, no `NgModule`;
-- component and directive selectors are prefixed `seed` (`seed-root`, `seed-login`) — enforced by
+- component and directive selectors are prefixed `glm` (`glm-root`, `glm-login`) — enforced by
   `angular-eslint`;
 - `private readonly` for injected collaborators.
 
