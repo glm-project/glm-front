@@ -1,5 +1,5 @@
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
 import { Component, inject } from '@angular/core';
-import { Oauth2AuthService } from '../auth/oauth2-auth.service';
 
 import { MatButtonModule } from '@angular/material/button';
 
@@ -9,9 +9,9 @@ import { MatButtonModule } from '@angular/material/button';
   imports: [MatButtonModule],
 })
 export default class Login {
-  private readonly oauth2AuthService = inject(Oauth2AuthService);
+  private readonly authentication = inject(AuthenticationPort);
 
   logout(): void {
-    this.oauth2AuthService.logout();
+    this.authentication.logout();
   }
 }

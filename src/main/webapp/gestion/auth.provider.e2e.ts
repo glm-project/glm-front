@@ -1,3 +1,5 @@
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { KeycloakOidcAuthentication } from '@/app/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { Provider } from '@angular/core';
 import Keycloak from 'keycloak-js';
 
@@ -17,7 +19,7 @@ const keycloakStub = {
   logout: () => Promise.resolve(),
 } as unknown as Keycloak;
 
-export const keycloakProvider: Provider = {
-  provide: Keycloak,
-  useFactory: () => keycloakStub,
-};
+export const authProvider: Provider[] = [
+  { provide: Keycloak, useFactory: () => keycloakStub },
+  { provide: AuthenticationPort, useClass: KeycloakOidcAuthentication },
+];

@@ -1,8 +1,7 @@
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable } from 'rxjs';
 
-import { Oauth2AuthService } from '@/app/auth/oauth2-auth.service';
 import { App } from './app';
 import { routes } from './app.route';
 
@@ -11,25 +10,30 @@ describe('Gestion shell', () => {
   let fixture: ComponentFixture<App>;
   let sessionStarted: boolean;
 
+  class AuthenticationFixture extends AuthenticationPort {
+    override authenticate(): Promise<void> {
+      sessionStarted = true;
+      return Promise.resolve();
+    }
+
+    override currentToken(): string | undefined {
+      return 'fixture-token';
+    }
+
+    override logout(): void {
+      // nothing to end: the fixture holds a token, not a session
+    }
+  }
+
   beforeEach(async () => {
     sessionStarted = false;
-    const authenticationFixture = {
-      initAuthentication: () =>
-        new Observable<boolean>(subscriber => {
-          sessionStarted = true;
-          subscriber.next(true);
-          subscriber.complete();
-        }),
-      token: 'fixture-token',
-      logout: vi.fn(),
-    };
 
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter(routes),
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: Oauth2AuthService, useValue: authenticationFixture },
+        { provide: AuthenticationPort, useClass: AuthenticationFixture },
       ],
     }).compileComponents();
 

@@ -1,4 +1,4 @@
-import { Oauth2AuthService } from '@/app/auth/oauth2-auth.service';
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
 import Login from '@/app/login/login';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
@@ -19,10 +19,10 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 })
 export class App implements OnInit {
   appName = signal('');
-  private readonly oauth2AuthService = inject(Oauth2AuthService);
+  private readonly authentication = inject(AuthenticationPort);
 
   ngOnInit(): void {
     this.appName.set('glmfront');
-    this.oauth2AuthService.initAuthentication().subscribe();
+    this.authentication.authenticate();
   }
 }

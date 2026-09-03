@@ -1,20 +1,33 @@
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
-import Keycloak from 'keycloak-js';
-import { Oauth2AuthService } from '../auth/oauth2-auth.service';
 import Login from './login';
 
 describe('Login', () => {
   let fixture: ComponentFixture<Login>;
 
-  let oauth2AuthService: Oauth2AuthService;
+  let authentication: AuthenticationPort;
+
+  class AuthenticationFixture extends AuthenticationPort {
+    override authenticate(): Promise<void> {
+      return Promise.resolve();
+    }
+
+    override currentToken(): string | undefined {
+      return 'fixture-token';
+    }
+
+    override logout(): void {
+      // spied on by the test
+    }
+  }
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: Keycloak, useValue: {} },
+        { provide: AuthenticationPort, useClass: AuthenticationFixture },
       ],
     }).compileComponents();
   });
@@ -22,15 +35,15 @@ describe('Login', () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(Login);
 
-    oauth2AuthService = TestBed.inject(Oauth2AuthService);
+    authentication = TestBed.inject(AuthenticationPort);
   });
 
   it('should log out on click on logout button', () => {
-    vi.spyOn(oauth2AuthService, 'logout').mockImplementation(vi.fn());
+    vi.spyOn(authentication, 'logout').mockImplementation(vi.fn());
 
     const logoutButton = fixture.debugElement.query(By.css('#btn-logout')).nativeElement as HTMLElement;
     logoutButton.click();
 
-    expect(oauth2AuthService.logout).toHaveBeenCalledWith();
+    expect(authentication.logout).toHaveBeenCalledWith();
   });
 });
