@@ -8,28 +8,42 @@ const TOOLING_DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|\/)/;
 
 const FRONTS = ['gestion', 'pupitre'];
 
-const lazyRouteSelectors = pathSegment => [
-  `ImportExpression > Literal[value=/${pathSegment}/]`,
-  `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${pathSegment}/]`,
+const namedAnywherePattern = fronts => `(^|\\/)(${fronts.join('|')})(\\/|$)`;
+const namedOutsideAppPattern = fronts => `^(?!.*(^|\\/)app\\/).*(^|\\/)(${fronts.join('|')})(\\/|$)`;
+
+const lazyRouteSelectors = forbiddenPathPattern => [
+  `ImportExpression > Literal[value=/${forbiddenPathPattern}/]`,
+  `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${forbiddenPathPattern}/]`,
 ];
 
-const forbidOtherFrontImports = front => {
-  const otherFronts = FRONTS.filter(candidate => candidate !== front);
-  const otherFrontSegment = `(^|\\/)(${otherFronts.join('|')})(\\/|$)`;
-  const message = `${front} must not import from ${otherFronts.join(' or ')}: each front ships its own bundle, and what both need belongs under app/.`;
-  return {
-    files: [`src/main/webapp/${front}/**/*.ts`, `src/main/webapp/app/**/primary/${front}/**/*.ts`],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [{ group: otherFronts.flatMap(other => [`**/${other}`, `**/${other}/**`]), message }] },
-      ],
-      'no-restricted-syntax': [
-        'error',
-        ...lazyRouteSelectors(otherFrontSegment).map(selector => ({ selector, message: `Lazy route: ${message}` })),
-      ],
-    },
-  };
+const boundary = (files, restrictions) => ({
+  files,
+  rules: {
+    'no-restricted-imports': ['error', { patterns: restrictions }],
+    'no-restricted-syntax': [
+      'error',
+      ...restrictions.flatMap(({ regex, message }) =>
+        lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
+      ),
+    ],
+  },
+});
+
+const otherFrontsOf = front => FRONTS.filter(candidate => candidate !== front);
+
+const noOtherFront = front => ({
+  regex: namedAnywherePattern(otherFrontsOf(front)),
+  message: `${front} must not import from ${otherFrontsOf(front).join(' or ')}: each front ships its own bundle, and what both need belongs under app/.`,
+});
+
+const noFrontAtAll = {
+  regex: namedAnywherePattern(FRONTS),
+  message: `app/ must not import from ${FRONTS.join(' or ')}: dependencies point one way, a root imports from app/ and never the reverse. Only app/<context>/infrastructure/primary/<front>/ may name a front, and only to reach its own zone.`,
+};
+
+const noCompositionRoot = {
+  regex: namedOutsideAppPattern(FRONTS),
+  message: `this zone may name its front to reach its own zone, never to leave app/: what ${FRONTS.join(' and ')} wire is their own, and app/ ships in both bundles. A path that names a front without passing through app/ is a composition root.`,
 };
 
 const local = {
@@ -145,7 +159,9 @@ export default typescript.config(
       'arrow-body-style': 'error',
     },
   },
-  ...FRONTS.map(forbidOtherFrontImports),
+  boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
+  ...FRONTS.map(front => boundary([`src/main/webapp/${front}/**/*.ts`], [noOtherFront(front)])),
+  ...FRONTS.map(front => boundary([`src/main/webapp/app/**/primary/${front}/**/*.ts`], [noOtherFront(front), noCompositionRoot])),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
