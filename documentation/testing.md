@@ -10,21 +10,26 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
    **port contract** is the one thing not co-located: it belongs to no single adapter, so it sits beside
    them all.
 2. **Component (Cypress)** — `src/test/webapp/component/<front>/<context>/*.spec.ts`, against the real dev
-   server. Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
-   `interceptForever` to control response timing).
-3. **E2E (Cypress)** — `src/test/webapp/e2e/<front>/<context>/*.spec.ts`, black-box through the full app.
-   User journeys, not component detail.
+   server. Rendering and browser behavior of one component, network intercepted.
+3. **Application (Cypress)** — `src/test/webapp/application/<front>/<context>/*.spec.ts`, driving the whole
+   front. User journeys, not component detail. **Not** end-to-end, which is why the folder does not say so:
+   there is no back end behind these, the network is intercepted here too, and the app is served with
+   `auth.provider.cypress.ts` in place of Keycloak. They test the application, and stop at its edges.
+
+Both Cypress layers share their helpers from `src/test/webapp/utils/`: `dataSelector` and `interceptForever`,
+the latter controlling response timing. The folder carries its own `tsconfig.json` because those helpers are
+Cypress-typed, where the Vitest specs next door are not.
 
 Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is
 reached by an npm script naming the front. A suite is added by creating the config and the
-`test:<layer>:headless:<front>` script that boots its server — the aggregates pick it up by glob. The
-fronts run **one dev server at a time**: two servers of one Angular project share a vite cache directory
-and break each other.
+`test:<layer>:headless:<front>` script that boots its front — `test:application` and `test:component` pick it
+up by glob. The fronts run **one front at a time**: two servers of one Angular project share a vite cache
+directory and break each other.
 
-The pupitre has an e2e suite and **no component suite**: the component layer tests rendering with the
-network intercepted, and the pupitre still calls nothing — its header renders from an input alone, so a
-spec there would restate the e2e against the same served app, with no interception to earn its place.
-`test:component:headless` therefore covers `gestion` alone today. The pupitre's first screen brings its
+The pupitre has an application suite and **no component suite**: the component layer tests one component
+with the network intercepted, and the pupitre still calls nothing — its header renders from an input alone,
+so a spec there would restate the application one against the same served app, with no interception to earn
+its place. `test:component` therefore covers `gestion` alone today. The pupitre's first screen brings its
 config and its script with it.
 
 ## Fixing a defect starts with a failing test
@@ -62,7 +67,7 @@ change without the behavior changing. It returns a comma-separated list of four 
 concatenated into a descendant selector — chain `.find()` instead.
 
 Each front's shell carries its marker as a host attribute (`host: { 'data-selector': 'pupitre-shell' }`),
-and its **e2e** smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static
+and its **application** smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static
 `index.html` already, so the attribute appears only once Angular has bootstrapped — the one assertion a
 title check cannot make, because a title reads green on a blank page.
 

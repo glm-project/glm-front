@@ -55,10 +55,10 @@ jobs:
       - name: 'Setup: install dependencies'
         run: npm install
       - name: 'Test: run component tests'
-        run: npm run test:component:headless
+        run: npm run test:component
 
-  e2e-tests:
-    name: e2e-tests
+  application-tests:
+    name: application-tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -76,5 +76,5 @@ jobs:
           key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: 'Setup: install dependencies'
         run: npm install
-      - name: 'Test: run e2e tests'
-        run: npm run test:e2e:headless
+      - name: 'Test: run application tests'
+        run: npm run test:application

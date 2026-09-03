@@ -15,12 +15,12 @@ ng test --watch=false --include 'src/main/webapp/pupitre/**/*.spec.ts'   # a sub
 ng test --watch=false --filter 'Pupitre shell'                           # a subset, by test name
 npm run test:coverage      # unit tests with Istanbul coverage report (target/test-results)
 
-npm run test:component:gestion    # Cypress component tests, interactive (boots the dev server first)
-npm run test:component:headless   # every component suite — this is what CI runs
-npm run test:e2e:gestion          # Cypress e2e, interactive (boots the dev server first)
-npm run test:e2e:pupitre
-npm run test:e2e:headless         # every e2e suite — this is what CI runs
-npm run e2e:gestion               # e2e alone, expects the app already on :9000 (`:pupitre` on :9001)
+npm run test:application          # every application suite, front booted for each — this is what CI runs
+npm run test:component            # every component suite, same deal
+npm run test:application:gestion  # one application suite, interactive (boots the front first)
+npm run test:application:pupitre
+npm run test:component:gestion    # one component suite, interactive
+npm run application:gestion       # Cypress alone, expects the front already on :9000 (`:pupitre` on :9001)
 
 npm run lint                # eslint .
 npm run prettier:check
@@ -31,7 +31,7 @@ npx tsc --noEmit           # type-checks both fronts in one pass
 ## Traps that cost
 
 - Run unit tests through `ng test`, never bare `npx vitest run`: the `@angular/build:unit-test` builder (`angular.json`) injects the zoneless TestBed environment and the JIT compiler setup, and without it specs fail on misleading errors (`TestBed.initTestEnvironment()`, JIT compiler not available). Pass a subset through `--include` or `--filter`, never as a positional argument — any positional makes the CLI reject `--watch` itself (`Error: Unknown argument: watch`).
-- **Two dev servers of this project cannot run at once.** The vite cache directory is `<cache>/<project>/vite` — keyed on the Angular project, not the target — so each server re-optimizes over the other and the browser fetches dead modules (measured: 3 failures in 8 runs). Serve one front at a time; that is why `npm run dev`, `npm start` and a both-fronts `serve:e2e` do not exist, and why the headless suites boot their server one after the other. This is the **dev server** only: `npm run watch` runs both `ng build --watch` in parallel, which was measured clean — that builder does not touch the vite cache.
+- **Two dev servers of this project cannot run at once.** The vite cache directory is `<cache>/<project>/vite` — keyed on the Angular project, not the target — so each server re-optimizes over the other and the browser fetches dead modules (measured: 3 failures in 8 runs). Serve one front at a time; that is why `npm run dev`, `npm start` and a both-fronts `serve:cypress` do not exist, and why the headless suites boot their server one after the other. This is the **dev server** only: `npm run watch` runs both `ng build --watch` in parallel, which was measured clean — that builder does not touch the vite cache.
 - `ng build` and `ng serve` no longer resolve: the targets are `build-gestion`, `serve-gestion`, `build-pupitre`, `serve-pupitre`, reached with `ng run project:<target>`. Use the npm scripts — they are the interface.
 - Composition lives in `src/main/webapp/{gestion,pupitre}/` — bootstrap, shell, routes, environments, providers — and never the reverse: a file under `app/` importing from a front is the boundary this split exists to forbid.
 - Coverage is 100 % per file (`vitest.config.ts`, `coverage.thresholds`): one untested branch is a build failure, not a metric. Write the test alongside the code.
@@ -52,8 +52,8 @@ npm run lint
 npm run prettier:check
 npx tsc --noEmit
 npm run test:coverage -- --watch=false
-npm run test:component:headless
-npm run test:e2e:headless
+npm run test:component
+npm run test:application
 ```
 
 Every summary that touches code or dependencies states:

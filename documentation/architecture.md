@@ -137,14 +137,14 @@ no business rule to make it a bounded context.
 - **No token is a normal answer**, not a failure: offline the refresh fails and none is current. The
   `if (token)` in `httpAuthInterceptor` is the whole handling this needs.
 - **`keycloak-oidc`** is the `gestion` adapter (`keycloak-js`, standard flow, `onLoad: 'login-required'`,
-  silent refresh at `MIN_TOKEN_VALIDITY_SECONDS = 70`). **`in-memory`** is its e2e sibling. Neither ever
+  silent refresh at `MIN_TOKEN_VALIDITY_SECONDS = 70`). **`in-memory`** is its Cypress sibling. Neither ever
   imports the other: two siblings, and the composition root chooses.
 - **The composition root owns the wiring.** `gestion/auth.provider.ts` builds the Keycloak instance from
   `gestion/environments/environment*.ts` (`keycloak.url` / `realm` / `client_id`) and binds the port to its
   adapter. No Keycloak URL, realm or client id anywhere else, no secret in the repo. The provider cannot
   live in `app/` — it reads a front's `environments/`.
 - **The swap is `fileReplacements`, never `if (environment.…)`.** A runtime flag would ship an
-  authentication bypass in the production bundle: a security line, not a style one. Measured: the `e2e`
+  authentication bypass in the production bundle: a security line, not a style one. Measured: the `cypress`
   build contains the in-memory adapter and none of keycloak-js. Cypress cannot substitute at the network
   layer instead: `onLoad: 'login-required'` redirects to Keycloak before the first request leaves the
   browser, so there is nothing to intercept.

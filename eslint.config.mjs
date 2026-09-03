@@ -35,11 +35,11 @@ export default typescript.config(
   },
   eslint.configs.recommended,
   {
-    files: ['src/test/webapp/e2e/**/*.ts'],
+    files: ['src/test/webapp/application/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
     languageOptions: {
       parserOptions: {
-        project: ['src/test/webapp/e2e/tsconfig.json'],
+        project: ['src/test/webapp/application/tsconfig.json'],
       },
     },
     rules: {
@@ -59,7 +59,16 @@ export default typescript.config(
     },
   },
   {
-    files: ['src/test/webapp/{unit,utils}/**/*.ts'],
+    files: ['src/test/webapp/utils/**/*.ts'],
+    extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
+    languageOptions: {
+      parserOptions: {
+        project: ['src/test/webapp/utils/tsconfig.json'],
+      },
+    },
+  },
+  {
+    files: ['src/test/webapp/unit/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
