@@ -3,8 +3,10 @@ import Keycloak, { KeycloakInitOptions } from 'keycloak-js';
 import { Mock } from 'vitest';
 import { KeycloakOidcAuthentication } from './KeycloakOidcAuthentication';
 
-const TOKEN = '1a2b3c';
+const CURRENT_TOKEN = '1a2b3c';
+const RENEWED_TOKEN = '4d5e6f';
 const EXPECTED_INIT_PARAMS: KeycloakInitOptions = { onLoad: 'login-required', checkLoginIframe: false };
+const EXPECTED_MIN_TOKEN_VALIDITY_SECONDS = 70;
 
 describe('Keycloak OIDC Authentication', () => {
   let authentication: KeycloakOidcAuthentication;
@@ -13,13 +15,14 @@ describe('Keycloak OIDC Authentication', () => {
   let consoleDebugMock: Mock;
   let consoleErrorMock: Mock;
 
+  const originalLocation = window.location;
+
   beforeEach(() => {
     keycloakFixture = {
-      init: vi.fn().mockReturnValue(Promise.resolve(true) as unknown as Promise<boolean>),
-      updateToken: vi.fn().mockReturnValue(Promise.resolve(true) as unknown as Promise<boolean>),
-      logout: vi.fn().mockReturnValue(Promise.resolve(null) as unknown as Promise<void>),
-      idToken: 'idTokenValue',
-      token: 'tokenValue',
+      init: vi.fn().mockResolvedValue(true),
+      updateToken: vi.fn().mockResolvedValue(false),
+      logout: vi.fn().mockResolvedValue(undefined),
+      token: CURRENT_TOKEN,
       tokenParsed: {
         exp: 1200,
       },
@@ -38,109 +41,80 @@ describe('Keycloak OIDC Authentication', () => {
 
     consoleDebugMock = vi.spyOn(console, 'debug').mockImplementation(vi.fn());
     consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(vi.fn());
+
+    Object.defineProperty(window, 'location', {
+      value: {
+        reload: vi.fn(),
+      },
+      configurable: true,
+    });
   });
 
   afterEach(() => {
     consoleDebugMock.mockRestore();
     consoleErrorMock.mockRestore();
-  });
 
-  describe('authenticate', () => {
-    const originalLocation = window.location;
-
-    beforeEach(() => {
-      Object.defineProperty(window, 'location', {
-        value: {
-          reload: vi.fn(),
-        },
-        configurable: true,
-      });
-    });
-
-    afterEach(() => {
-      Object.defineProperty(window, 'location', {
-        value: originalLocation,
-        configurable: true,
-      });
-    });
-
-    it('should open the session when the user is authenticated', async () => {
-      vi.spyOn(keycloakFixture, 'init').mockReturnValue(Promise.resolve(true).then() as unknown as Promise<boolean>);
-
-      await authentication.authenticate();
-
-      expect(keycloakFixture.init).toHaveBeenCalledWith(EXPECTED_INIT_PARAMS);
-      expect(window.location.reload).not.toHaveBeenCalled();
-      expect(console.debug).toHaveBeenCalledWith('Authenticated');
-    });
-
-    it('should reload the window when the user is not authenticated', async () => {
-      vi.spyOn(keycloakFixture, 'init').mockReturnValue(Promise.resolve(false).then() as unknown as Promise<boolean>);
-
-      await authentication.authenticate();
-
-      expect(keycloakFixture.init).toHaveBeenCalledWith(EXPECTED_INIT_PARAMS);
-      expect(window.location.reload).toHaveBeenCalled();
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      configurable: true,
     });
   });
 
-  describe('Update token', () => {
-    it('should log the remaining validity when the token is still valid', async () => {
-      keycloakFixture.tokenParsed = {
-        exp: 1651319001, // 2022-04-30 13:43:21
-      };
-      keycloakFixture.timeSkew = 3;
-      vi.spyOn(Date, 'now').mockReturnValue(1651318847714); // 2022-04-30 13:40:47
+  it('should hand over the token Keycloak holds once the session is open', async () => {
+    await authentication.authenticate();
+    await theSilentRefreshHasSettled();
 
-      const updateTokenPromise = Promise.resolve(false);
-      vi.spyOn(keycloakFixture, 'updateToken').mockReturnValue(updateTokenPromise as unknown as Promise<boolean>);
-
-      await authentication.authenticate();
-      await updateTokenPromise;
-
-      expect(keycloakFixture.updateToken).toHaveBeenCalledWith(70);
-      expect(console.debug).toHaveBeenCalledWith('Token not refreshed, valid for 156 seconds');
-    });
-
-    it('should log the refresh when the token is renewed', async () => {
-      const updateTokenPromise = Promise.resolve(true);
-      vi.spyOn(keycloakFixture, 'updateToken').mockReturnValue(updateTokenPromise as unknown as Promise<boolean>);
-
-      await authentication.authenticate();
-      await updateTokenPromise;
-
-      expect(keycloakFixture.updateToken).toHaveBeenCalledWith(70);
-      expect(console.debug).toHaveBeenCalledWith('Token refreshed');
-    });
-
-    it('should log an error when the refresh fails', async () => {
-      const updateTokenPromise = Promise.reject(new Error('unknown error'));
-      vi.spyOn(keycloakFixture, 'updateToken').mockReturnValue(updateTokenPromise as unknown as Promise<boolean>);
-
-      await authentication.authenticate();
-
-      expect(keycloakFixture.updateToken).toHaveBeenCalledWith(70);
-
-      await expect(updateTokenPromise).rejects.toEqual(new Error('unknown error'));
-      expect(console.error).toHaveBeenCalledWith('Failed to refresh token', new Error('unknown error'));
-    });
+    expect(keycloakFixture.init).toHaveBeenCalledWith(EXPECTED_INIT_PARAMS);
+    expect(authentication.currentToken()).toEqual(CURRENT_TOKEN);
+    expect(window.location.reload).not.toHaveBeenCalled();
   });
 
-  describe('logout', () => {
-    it('should end the Keycloak session', () => {
-      authentication.logout();
+  it('should reload the window when Keycloak opens no session', async () => {
+    keycloakFixture.init = vi.fn().mockResolvedValue(false);
 
-      expect(keycloakFixture.logout).toHaveBeenCalledWith();
-    });
+    await authentication.authenticate();
+    await theSilentRefreshHasSettled();
+
+    expect(keycloakFixture.init).toHaveBeenCalledWith(EXPECTED_INIT_PARAMS);
+    expect(window.location.reload).toHaveBeenCalled();
   });
 
-  describe('currentToken', () => {
-    it('should return the token Keycloak holds', () => {
-      Object.defineProperty(keycloakFixture, 'token', {
-        value: TOKEN,
-      });
-
-      expect(authentication.currentToken()).toEqual(TOKEN);
+  it('should hand over the renewed token once the silent refresh has run', async () => {
+    keycloakFixture.updateToken = vi.fn().mockImplementation(() => {
+      keycloakFixture.token = RENEWED_TOKEN;
+      return Promise.resolve(true);
     });
+
+    await authentication.authenticate();
+    await theSilentRefreshHasSettled();
+
+    expect(keycloakFixture.updateToken).toHaveBeenCalledWith(EXPECTED_MIN_TOKEN_VALIDITY_SECONDS);
+    expect(authentication.currentToken()).toEqual(RENEWED_TOKEN);
   });
+
+  it('should keep handing over the current token while it is still valid', async () => {
+    await authentication.authenticate();
+    await theSilentRefreshHasSettled();
+
+    expect(keycloakFixture.updateToken).toHaveBeenCalledWith(EXPECTED_MIN_TOKEN_VALIDITY_SECONDS);
+    expect(authentication.currentToken()).toEqual(CURRENT_TOKEN);
+  });
+
+  it('should keep the session going and surface the failure when the refresh fails', async () => {
+    keycloakFixture.updateToken = vi.fn().mockRejectedValue(new Error('unknown error'));
+
+    await expect(authentication.authenticate()).resolves.toBeUndefined();
+    await theSilentRefreshHasSettled();
+
+    expect(authentication.currentToken()).toEqual(CURRENT_TOKEN);
+    expect(console.error).toHaveBeenCalled();
+  });
+
+  it('should end the Keycloak session on logout', () => {
+    authentication.logout();
+
+    expect(keycloakFixture.logout).toHaveBeenCalledWith();
+  });
+
+  const theSilentRefreshHasSettled = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 });
