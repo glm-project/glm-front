@@ -3,6 +3,28 @@
 Read [`hexagonal-architecture.md`](hexagonal-architecture.md) for the _why_; what follows is what review
 actually checks.
 
+## One tree of contexts, two composition roots
+
+```
+src/main/webapp/
+  app/            # the contexts, shared by both fronts — the root arch-unit scans
+  backoffice/     # composition root: index.html, main.ts, shell, app.route.ts, environments, providers
+  pupitre/        # composition root: idem, on port 9001
+```
+
+A composition root wires: it names the shell, the routes, the environment and which adapter implements
+which port. It holds no business rule. `angular.json` gives each one a `build-<front>` and a
+`serve-<front>` target, differing only in `index`, `browser`, `outputPath`, `assets`, `budgets` and
+`fileReplacements`.
+
+**Dependencies point one way: a root imports from `app/`, never the reverse.** A file under `app/`
+reaching into `backoffice/` or `pupitre/` drags one front's concerns into the other's bundle — the
+boundary the split exists to draw. Screens that belong to a single front live at
+`app/<context>/infrastructure/primary/<front>/`, not in the root.
+
+There is one `test` target for the whole tree: the coverage bar is a property of the repository, not of
+an application, and both roots are measured.
+
 ## A bounded context starts with its `package-info.ts`
 
 Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context (currently
@@ -65,9 +87,14 @@ the alias the architecture test itself uses.
 - `Oauth2AuthService` (`src/main/webapp/app/auth/oauth2-auth.service.ts`) is the only wrapper around
   `keycloak-js`: `token`, `isAuthenticated`, `initAuthentication()` (redirect login,
   `onLoad: 'login-required'`), `logout()`, and the silent refresh (`MIN_TOKEN_VALIDITY_SECONDS = 70`).
-- Keycloak config comes from `environments/environment*.ts` (`keycloak.url` / `realm` / `client_id`) through
-  the DI token provided in `main.ts`. No Keycloak URL, realm or client id hardcoded anywhere else. No secret
-  in the repo.
+- Keycloak config comes from `backoffice/environments/environment*.ts` (`keycloak.url` / `realm` /
+  `client_id`) through the DI token provided in `backoffice/keycloak.provider.ts`. No Keycloak URL, realm or
+  client id hardcoded anywhere else. No secret in the repo.
+- The provider lives in the composition root, not in `app/`: which adapter implements the token contract is
+  a wiring decision, and it is swapped at build time by `fileReplacements` — never by an
+  `if (environment.…)`, which would ship an authentication bypass in the production bundle.
+- The pupitre has no authentication yet: no HTTP client, no provider, no Keycloak block in its
+  environments. It authenticates through a device grant `keycloak-js` cannot perform.
 
 ---
 
