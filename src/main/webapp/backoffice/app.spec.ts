@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 
 import { Oauth2AuthService } from '@/app/auth/oauth2-auth.service';
 import { App } from './app';
+import { routes } from './app.route';
 
 const mockOauth2AuthService = {
   initAuthentication: vi.fn().mockReturnValue(of(true)),
@@ -12,7 +13,7 @@ const mockOauth2AuthService = {
   logout: vi.fn(),
 };
 
-describe('App Component', () => {
+describe('Back-office shell', () => {
   let comp: App;
   let fixture: ComponentFixture<App>;
 
@@ -20,7 +21,7 @@ describe('App Component', () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        provideRouter([]),
+        provideRouter(routes),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: Oauth2AuthService, useValue: mockOauth2AuthService },
       ],

@@ -98,6 +98,78 @@
           },
           "defaultConfiguration": "development"
         },
+        "build-pupitre": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": {
+              "base": "target/classes/static/pupitre",
+              "browser": ""
+            },
+            "index": "src/main/webapp/pupitre/index.html",
+            "browser": "src/main/webapp/pupitre/main.ts",
+            "tsConfig": "tsconfig.app.json",
+            "assets": [],
+            "styles": ["src/main/webapp/styles.css", "@angular/material/prebuilt-themes/indigo-pink.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/main/webapp/pupitre/environments/environment.ts",
+                  "with": "src/main/webapp/pupitre/environments/environment.local.ts"
+                }
+              ]
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/main/webapp/pupitre/environments/environment.ts",
+                  "with": "src/main/webapp/pupitre/environments/environment.local.ts"
+                }
+              ]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-pupitre": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 9001,
+            "buildTarget": "project:build-pupitre",
+            "proxyConfig": "proxy.conf.json"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "project:build-pupitre:production"
+            },
+            "development": {
+              "buildTarget": "project:build-pupitre:development"
+            },
+            "e2e": {
+              "buildTarget": "project:build-pupitre:e2e"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
