@@ -190,8 +190,10 @@ no business rule to make it a bounded context.
   `currentToken()`, `logout()`. It is an **abstract class, and it imports nothing** — both forced. An
   interface leaves no runtime token to inject, and an rxjs import in `domain/` fails the architecture
   test, which is why the contract is a `Promise` and not an `Observable`.
-- **No token is a normal answer**, not a failure: offline the refresh fails and none is current. The
-  `if (token)` in `httpAuthInterceptor` is the whole handling this needs.
+- **No token is a normal answer**, not a failure: enrolment can be refused, and a token that has expired
+  with no renewal in hand leaves none current. The `if (token)` in `httpAuthInterceptor` is the whole
+  handling this needs. A **failed renewal is not** one of those moments: both adapters keep handing over the
+  token they hold until it truly expires, so a network blink costs nothing.
 - **`keycloak-oidc`** is the `gestion` adapter (`keycloak-js`, standard flow, `onLoad: 'login-required'`,
   silent refresh at `MIN_TOKEN_VALIDITY_SECONDS = 70`). **`in-memory`** is its Cypress sibling. **`device`**
   is the pupitre's. None ever imports another: siblings, and the composition root chooses.

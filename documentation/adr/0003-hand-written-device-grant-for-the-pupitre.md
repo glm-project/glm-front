@@ -38,7 +38,14 @@ It runs the grant itself: `POST .../auth/device` with `scope=openid offline_acce
 `.../token` on the device code, honouring `authorization_pending` and `slow_down` (+5 s) as "keep waiting"
 and treating every other refusal as the end. Absent an `interval` it claims every 5 s, the default RFC 8628
 §3.2 sets. It renews on a timer 30 s before expiry, retries a refused renewal after 60 s, and tells Keycloak
-to end the session on `logout()`.
+to end the session on `logout()`. Absent an `expires_in` it treats the token as lasting a minute, which is
+short enough to be wrong safely and long enough not to hammer the server.
+
+**A refused renewal does not drop the token.** The session remembers the instant its access token truly
+dies, and `currentToken()` answers until then, whatever the renewal did. The shop floor's network drops for
+seconds at a time; a pupitre that logged itself out on every blink would be unusable, and the token it holds
+stays valid whether or not we managed to replace it. This is what `keycloak-oidc` already does with its own
+refresh, so the port promises one thing and not two.
 
 Its `HttpClient` is built on `HttpBackend`, so the global `httpAuthInterceptor` never attaches a bearer
 token to the requests that exist to obtain one. `authenticate()` never rejects: every failure is "no token",
@@ -58,8 +65,9 @@ nothing is written to `localStorage` or a cookie. A reload re-enrols.
 
 ### Negative
 
-- We now own an OAuth client. Polling, back-off, renewal timing and revocation are ours to keep correct; the two defects this adapter shipped with — an absent `interval` polling flat out, and a `logout()` that let an in-flight enrolment reopen the session — were both found in review, not by the compiler, and a library would have had neither.
+- We now own an OAuth client, and the bill is already visible. Polling, back-off, renewal timing and revocation are ours to keep correct, and **the adapter was written with five defects in it**: an absent `interval` polling flat out; a `logout()` that let an in-flight enrolment reopen the session; a `logout()` that never stopped the polling loop, leaving an unenrolled pupitre claiming tokens for the rest of the shift; an absent `expires_in` making the renewal delay `NaN`, which `setTimeout` reads as zero — 45 499 renewals in 90 seconds; and a refused renewal throwing away an access token that had not expired. Every one was caught in review, none by the compiler, and a library would have had none of them. Two are timing bugs invisible without fake clocks, which is the class of defect that hides longest.
 - **Nothing displays the `user_code`.** The grant cannot complete in production until a pupitre screen shows it, and the pupitre has no screen yet — issue #11 specifies its first. The adapter deliberately parses only `device_code` and `interval` so there is no dead field pretending otherwise.
 - The polling loop has no client-side deadline. It stops when Keycloak says `expired_token`, which Keycloak does say, but RFC 8628 §3.5 puts that clock on the client and we do not keep one.
+- **Keeping the token through a refused renewal delays revocation.** Revoke a pupitre's session in Keycloak and the refresh is refused at once, but the access token it already holds is signed and unexpired, so the back end keeps accepting it until it dies — up to the token's lifetime. Cutting a pupitre off is therefore not instant, and the shorter that lifetime is configured in the realm, the shorter the window. This is the ordinary bearer-token trade and gestion has always made it; it is written here because a reader who finds the adapter serving a token whose renewal was refused should see a decision and not an oversight.
 - In-memory tokens mean a reload is a re-enrolment, and a re-enrolment needs a human to type a code again. The moment the pupitre is expected to survive a browser restart on its own, this decision reopens — and the answer will not be `localStorage`.
 - The adapter needs a device-grant client in the `glmproject` realm, carrying the `glmproject` client scope. That is infrastructure work outside this repository; without it the token has no `tenant` claim and the back end answers 403.
