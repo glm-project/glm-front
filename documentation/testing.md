@@ -4,9 +4,11 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
 
 ## Write the test first, at the layer that matches the change
 
-1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`KeycloakOidcAuthentication.spec.ts`
-   beside `KeycloakOidcAuthentication.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain
-   logic, services, interceptors, pipes — anything testable without a real DOM or router integration.
+1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`http-auth.interceptor.spec.ts` beside
+   `http-auth.interceptor.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain
+   logic, services, interceptors, pipes — anything testable without a real DOM or router integration. A
+   **port contract** is the one thing not co-located: it belongs to no single adapter, so it sits beside
+   them all.
 2. **Component (Cypress)** — `src/test/webapp/component/<front>/<context>/*.spec.ts`, against the real dev
    server. Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
    `interceptForever` to control response timing).
@@ -62,11 +64,32 @@ title check cannot make, because a title reads green on a blank page.
 
 Bind the port, never the library: a spec that needs authentication provides `AuthenticationPort` with
 `InMemoryAuthentication` (see `gestion/app.spec.ts`, `login.spec.ts`) rather than reaching a real Keycloak
-instance. That double is production code, type-checked against the same contract, so it cannot drift.
-Mock ports and I/O, not the domain logic under test.
+instance. That double is production code, so the compiler holds it to the port's signature and the contract
+suite below holds it to the port's behavior. Mock ports and I/O, not the domain logic under test.
 
 Hand-roll a double only where the architecture forbids the adapter: a spec inside a `primary` package may
 not import a `secondary` one, and `HexagonalArchTest` scans specs.
+
+## A secondary adapter is tested through its port, never through the library it wraps
+
+One suite per port, declared once and run against every implementation with `describe.each`
+(`secondary/AuthenticationPort.contract.spec.ts`). It asserts only what the port promises, so it reads the
+same for the in-memory adapter and for the Keycloak one — and it is what makes "the double cannot drift"
+true of behavior and not merely of types. Adapter-specific behavior goes in a `beyond the contract`
+describe next to it, still phrased as behavior.
+
+Where the adapter wraps a third-party SDK the double replaces **the external system, not the collaborator**:
+an object holding a session that mints, rotates and drops a token, not one `vi.fn()` per method. That is
+what buys the assertion. `expect(keycloak.updateToken).toHaveBeenCalledWith(70)` restates the adapter's own
+literal and reddens when the margin changes; `expect(authentication.currentToken())` states what a caller
+gets.
+
+**A fake answers on a round trip** — `setTimeout`, never a promise already resolved. Measured here: the
+eager first version of the Keycloak fake passed against an adapter whose refresh was never awaited; the same
+fake made to settle asynchronously went red. Resolving before the call returns hides exactly the defect this
+branch had already shipped once.
+
+The reasoning and its price are in [ADR 0002](adr/0002-port-contract-for-secondary-adapters.md).
 
 ## We test observable business behavior, and the real runtime failure modes
 
