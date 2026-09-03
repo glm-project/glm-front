@@ -63,12 +63,14 @@ const REFRESH_TOKEN_GRANT = 'refresh_token';
 const DEVICE_CODE = 'a-device-code';
 const DEVICE_TOKEN = 'device-token';
 const RENEWED_DEVICE_TOKEN = 'renewed-device-token';
+const RE_ENROLLED_DEVICE_TOKEN = 're-enrolled-device-token';
 const OFFLINE_REFRESH_TOKEN = 'offline-refresh-token';
 const TOKEN_LIFETIME_SECONDS = 300;
 const DEVICE_CODE_LIFETIME_SECONDS = 600;
 const NO_POLL_DELAY = 0;
 const NO_PACE_NAMED = undefined;
 const NO_LIFETIME_NAMED = undefined;
+const A_LIFETIME_ALREADY_SPENT = 0;
 
 type ServerAnswer = HttpEvent<unknown> | HttpErrorResponse;
 
@@ -99,12 +101,15 @@ const deviceAuthorizationFixture = (paceSeconds: number | undefined): unknown =>
 const authorizing: ServerTurn = () => anAnswerFixture(deviceAuthorizationFixture(NO_POLL_DELAY));
 const authorizingWithoutNamingAPace: ServerTurn = () => anAnswerFixture(deviceAuthorizationFixture(NO_PACE_NAMED));
 const granting: ServerTurn = () => anAnswerFixture(tokensFixture(DEVICE_TOKEN, TOKEN_LIFETIME_SECONDS));
+const grantingAgain: ServerTurn = () => anAnswerFixture(tokensFixture(RE_ENROLLED_DEVICE_TOKEN, TOKEN_LIFETIME_SECONDS));
 const grantingWithoutNamingALifetime: ServerTurn = () => anAnswerFixture(tokensFixture(DEVICE_TOKEN, NO_LIFETIME_NAMED));
+const grantingALifetimeAlreadySpent: ServerTurn = () => anAnswerFixture(tokensFixture(DEVICE_TOKEN, A_LIFETIME_ALREADY_SPENT));
 const renewing: ServerTurn = () => anAnswerFixture(tokensFixture(RENEWED_DEVICE_TOKEN, TOKEN_LIFETIME_SECONDS));
 const renewingWithoutNamingALifetime: ServerTurn = () => anAnswerFixture(tokensFixture(RENEWED_DEVICE_TOKEN, NO_LIFETIME_NAMED));
 const endingTheSession: ServerTurn = () => new HttpResponse({ status: 204 });
 const stillPending: ServerTurn = () => aRefusalFixture('authorization_pending');
 const askingToSlowDown: ServerTurn = () => aRefusalFixture('slow_down');
+const buryingTheRefreshToken: ServerTurn = () => aRefusalFixture('invalid_grant');
 const refusing =
   (reason: string): ServerTurn =>
   () =>
@@ -352,6 +357,7 @@ describe('Device Authentication, beyond the contract', () => {
   const A_SHIFT = 10 * 60 * 1000;
   const A_MOMENT_THE_TOKEN_OUTLIVES_ITS_RENEWAL = 280 * 1000;
   const ONE_CLAIM = 1;
+  const ONE_RENEWAL = 1;
   const A_SANE_NUMBER_OF_RENEWALS = 10;
   const NO_SESSION_ENDED = 0;
   const ONE_SESSION_ENDED = 1;
@@ -438,6 +444,17 @@ describe('Device Authentication, beyond the contract', () => {
     expect(authentication.currentToken()).toBeUndefined();
   });
 
+  it.each(['toString', 'constructor'])('should stop claiming when the enrolment is refused with %s', async refusal => {
+    const server = anAuthorizationServerFixture({ claims: [refusing(refusal)] });
+    const authentication = buildDeviceAuthentication(server);
+
+    await whenEnrolmentHasBegun(authentication);
+    await whenTheShiftGoesOn();
+
+    expect(server.claimsMade).toEqual(ONE_CLAIM);
+    expect(authentication.currentToken()).toBeUndefined();
+  });
+
   it('should hand over nothing when the refusal carries no reason to read', async () => {
     const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [outOfReach] }));
 
@@ -477,7 +494,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should keep handing over the token it had while the renewal is refused and the token still lives', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [refusing('invalid_grant')] }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [outOfReach] }));
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheRenewalHasFailedButTheTokenLives();
@@ -485,8 +502,8 @@ describe('Device Authentication, beyond the contract', () => {
     expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
   });
 
-  it('should hand over nothing once the token has died and the renewal keeps being refused', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [refusing('invalid_grant')] }));
+  it('should hand over nothing once the token has died and the authorization server stays out of reach', async () => {
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [outOfReach] }));
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
@@ -495,12 +512,41 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should hand over a renewed token once the network is back', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [refusing('invalid_grant'), renewing] }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [outOfReach, renewing] }));
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
     expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
+  });
+
+  it('should enrol again once the authorization server has buried its refresh token', async () => {
+    const authentication = buildDeviceAuthentication(
+      anAuthorizationServerFixture({ claims: [granting, grantingAgain], renewals: [buryingTheRefreshToken] }),
+    );
+
+    await givenAnEnrolledPupitre(authentication);
+    await whenTheShiftGoesOn();
+
+    expect(authentication.currentToken()).toEqual(RE_ENROLLED_DEVICE_TOKEN);
+  });
+
+  it('should stop asking to renew a refresh token the authorization server has buried', async () => {
+    const server = anAuthorizationServerFixture({ authorizations: [authorizing, outOfReach], renewals: [buryingTheRefreshToken] });
+    const authentication = buildDeviceAuthentication(server);
+
+    await givenAnEnrolledPupitre(authentication);
+    await whenTheShiftGoesOn();
+
+    expect(server.renewalsMade).toEqual(ONE_RENEWAL);
+  });
+
+  it('should hand over the token it was granted when the server names a lifetime already spent', async () => {
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [grantingALifetimeAlreadySpent] }));
+
+    await whenEnrolling(authentication);
+
+    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
   });
 
   it('should not hammer the authorization server when it names no token lifetime', async () => {

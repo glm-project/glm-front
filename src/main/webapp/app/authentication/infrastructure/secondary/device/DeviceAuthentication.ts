@@ -8,10 +8,11 @@ const OFFLINE_SCOPE = 'openid offline_access';
 const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 const REFRESH_TOKEN_GRANT = 'refresh_token';
 const SLOW_DOWN_EXTRA_SECONDS = 5;
-const EXTRA_SECONDS_WHEN_STILL_WAITING: Record<string, number | undefined> = {
-  authorization_pending: 0,
-  slow_down: SLOW_DOWN_EXTRA_SECONDS,
-};
+const EXTRA_SECONDS_WHEN_STILL_WAITING = new Map<string, number>([
+  ['authorization_pending', 0],
+  ['slow_down', SLOW_DOWN_EXTRA_SECONDS],
+]);
+const REFUSAL_NO_RETRY_WILL_FIX = 'invalid_grant';
 const SECONDS_BETWEEN_CLAIMS_UNLESS_TOLD = 5;
 const RENEWAL_MARGIN_SECONDS = 30;
 const SHORTEST_RENEWAL_DELAY_SECONDS = 5;
@@ -53,11 +54,14 @@ interface Session {
 
 const isGranted = (answer: GrantAnswer): answer is GrantedTokens => 'tokens' in answer;
 
+const isBeyondRenewal = (refusal: RefusedGrant): boolean => refusal.refusedBecause === REFUSAL_NO_RETRY_WILL_FIX;
+
 const reasonIn = (refusal: HttpErrorResponse): string => (refusal.error as OauthRefusal | null)?.error ?? NO_REASON_GIVEN;
 
 const pause = (seconds: number): Promise<void> => new Promise(resolve => setTimeout(resolve, seconds * MILLISECONDS_PER_SECOND));
 
-const isASaneLifetime = (seconds: number | undefined): seconds is number => seconds !== undefined && Number.isFinite(seconds);
+const isASaneLifetime = (seconds: number | undefined): seconds is number =>
+  seconds !== undefined && Number.isFinite(seconds) && seconds > 0;
 
 const lifetimeOf = ({ expires_in }: Tokens): number => (isASaneLifetime(expires_in) ? expires_in : SECONDS_A_TOKEN_LASTS_UNLESS_TOLD);
 
@@ -147,7 +151,7 @@ export class DeviceAuthentication extends AuthenticationPort {
         return answer.tokens;
       }
 
-      const extraSeconds = EXTRA_SECONDS_WHEN_STILL_WAITING[answer.refusedBecause];
+      const extraSeconds = EXTRA_SECONDS_WHEN_STILL_WAITING.get(answer.refusedBecause);
 
       if (extraSeconds === undefined) {
         return undefined;
@@ -194,6 +198,11 @@ export class DeviceAuthentication extends AuthenticationPort {
 
     if (isGranted(answer)) {
       this.open(sessionFrom(answer.tokens), secondsBeforeRenewing(answer.tokens));
+      return;
+    }
+
+    if (isBeyondRenewal(answer)) {
+      await this.authenticate();
       return;
     }
 
