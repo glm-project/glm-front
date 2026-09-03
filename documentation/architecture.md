@@ -19,6 +19,10 @@ which port. It holds no business rule. `angular.json` gives each one a `build-<f
 `keycloak-js` and its transitive CommonJS deps on the `gestion` target only. The pupitre does not
 inherit it, so the day `keycloak-js` reaches that bundle the build says so.
 
+The two `index.html` differ on the same ground: gestion pulls Roboto and Material Icons from the Google
+Fonts CDN, the pupitre pulls nothing. **The pupitre is offline-first** — it runs on the shop floor, where a
+remote stylesheet is a render it cannot make. Anything that front needs at boot ships in its bundle.
+
 **Dependencies point one way: a root imports from `app/`, never the reverse.** A file under `app/`
 reaching into `gestion/` or `pupitre/` drags one front's concerns into the other's bundle — the
 boundary the split exists to draw. Screens that belong to a single front live at

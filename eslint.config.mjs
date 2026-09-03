@@ -59,6 +59,15 @@ export default typescript.config(
     },
   },
   {
+    files: ['src/test/webapp/unit/**/*.ts'],
+    extends: [...typescript.configs.recommendedTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.spec.json'],
+      },
+    },
+  },
+  {
     files: ['src/main/webapp/**/*.ts'],
     extends: [...typescript.configs.strictTypeChecked, ...typescript.configs.stylistic, ...angular.configs.tsRecommended],
     languageOptions: {
@@ -70,9 +79,7 @@ export default typescript.config(
       },
     },
     processor: angular.processInlineTemplates,
-    plugins: { local },
     rules: {
-      'local/no-comments': 'error',
       '@angular-eslint/component-class-suffix': 'off',
       '@angular-eslint/component-selector': [
         'error',
@@ -106,5 +113,12 @@ export default typescript.config(
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
+  },
+  {
+    files: ['src/**/*.ts', 'src/**/*.html'],
+    plugins: { local },
+    rules: {
+      'local/no-comments': 'error',
+    },
   },
 );

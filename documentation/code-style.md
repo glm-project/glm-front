@@ -9,7 +9,8 @@ topic doc that owns it — places that get read and updated, unlike a comment th
 sits on. A comment you cannot relocate is a design you have not finished. Machine-readable directives
 (`eslint-disable`, `@ts-expect-error`, `prettier-ignore`) are not comments; they are instructions to a tool,
 and each still needs its own justification elsewhere. `local/no-comments` (`eslint.config.mjs`) fails the
-build on anything else under `src/main/webapp/`, so this is a lint error and not a review argument.
+build on anything else under `src/`, TypeScript and templates alike, tests and generated files included —
+so this is a lint error and not a review argument.
 
 **A named function instead of an inline ternary.** `x !== undefined ? Foo.of(x) : undefined` becomes
 `toFoo(x?: Type): Foo | undefined`. The ternary hides the business intent.
