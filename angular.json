@@ -100,7 +100,12 @@
         },
         "test": {
           "builder": "@angular/build:unit-test",
-          "options": { "runnerConfig": "vitest.config.ts", "exclude": ["**/webapp/{e2e,component}/**"] }
+          "options": {
+            "runnerConfig": "vitest.config.ts",
+            "exclude": ["**/webapp/{e2e,component}/**"],
+            "coverageInclude": ["src/main/webapp/**/*.ts"],
+            "coverageExclude": ["**/*.spec.ts", "**/main.ts", "**/environments/**", "**/*.provider*.ts", "**/package-info.ts"]
+          }
         },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n",

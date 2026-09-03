@@ -58,7 +58,7 @@ export default typescript.config(
         'error',
         {
           type: 'element',
-          prefix: 'seed',
+          prefix: 'glm',
           style: 'kebab-case',
         },
       ],
@@ -66,7 +66,7 @@ export default typescript.config(
         'error',
         {
           type: 'attribute',
-          prefix: 'seed',
+          prefix: 'glm',
           style: 'camelCase',
         },
       ],

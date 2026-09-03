@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 
 import tsconfigPaths from 'vite-tsconfig-paths';
-import { configDefaults, defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [tsconfigPaths()],
@@ -15,10 +15,10 @@ export default defineConfig({
     coverage: {
       thresholds: {
         perFile: true,
-        autoUpdate: true,
         100: true,
       },
-      exclude: [...configDefaults.exclude, '*.html'],
+      // `coverageInclude` / `coverageExclude` live in angular.json: scoping set here would be matched
+      // against on-disk paths, while the builder collects coverage under its own spec-bundle paths.
       provider: 'istanbul',
       reportsDirectory: 'target/test-results/',
       reporter: ['html', 'json', 'json-summary', 'text', 'text-summary', 'lcov', 'clover'],
