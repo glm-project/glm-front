@@ -17,7 +17,7 @@ describe('Pupitre shell', () => {
     await fixture.whenStable();
   });
 
-  it('should mount the outlet its screens are routed into', () => {
+  it('should give the screens it will route a place to render', () => {
     const shell = fixture.nativeElement as HTMLElement;
 
     expect(shell.querySelector('router-outlet')).not.toBeNull();
