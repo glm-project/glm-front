@@ -8,10 +8,6 @@ const URL = 'http://localhost:8080/api/dummy';
 const HTTP_METHOD = 'GET';
 const TOKEN = '1a2b3c';
 
-/*
- * Hand-rolled rather than the in-memory adapter: a primary adapter may not depend on a secondary one,
- * and the architecture test holds that for a spec too.
- */
 class AuthenticationFixture extends AuthenticationPort {
   constructor(private bearerToken: string | undefined) {
     super();

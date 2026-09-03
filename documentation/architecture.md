@@ -112,7 +112,9 @@ no business rule to make it a bounded context.
   live in `app/` — it reads a front's `environments/`.
 - **The swap is `fileReplacements`, never `if (environment.…)`.** A runtime flag would ship an
   authentication bypass in the production bundle: a security line, not a style one. Measured: the `e2e`
-  build contains the in-memory adapter and none of keycloak-js.
+  build contains the in-memory adapter and none of keycloak-js. Cypress cannot substitute at the network
+  layer instead: `onLoad: 'login-required'` redirects to Keycloak before the first request leaves the
+  browser, so there is nothing to intercept.
 - The pupitre binds nothing yet: no HTTP client, no provider, no Keycloak block in its environments. It
   authenticates through a device grant `keycloak-js` cannot perform, and gets its `auth.provider.ts` with
   that adapter.
