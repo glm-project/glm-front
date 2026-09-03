@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { PupitreHeader } from './header/header';
@@ -11,7 +12,13 @@ const NO_PUSH_HAS_FAILED_YET = true;
   templateUrl: './app.html',
   imports: [RouterModule, PupitreHeader],
 })
-export class App {
+export class App implements OnInit {
   readonly appName = signal('glmfront');
   readonly connected = signal(NO_PUSH_HAS_FAILED_YET);
+
+  private readonly authentication = inject(AuthenticationPort);
+
+  ngOnInit(): void {
+    void this.authentication.authenticate();
+  }
 }
