@@ -12,8 +12,6 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'glm-root',
-  // The attribute lands on the host only once Angular has bootstrapped, which is what the per-front
-  // smoke tests assert: `<glm-root>` itself is already in the static index.html.
   host: { 'data-selector': 'backoffice-shell' },
   templateUrl: './app.html',
   imports: [RouterModule, MatMenuModule, MatToolbarModule, MatIconModule, MatButtonModule, NgOptimizedImage, Login],

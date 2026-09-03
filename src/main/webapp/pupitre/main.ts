@@ -11,8 +11,7 @@ if (environment.production) {
   enableProdMode();
 }
 
-// No HTTP client and no authentication provider yet: the pupitre calls nothing, and its bearer token
-// comes from a device-grant adapter that does not exist. Both arrive with the governed auth context.
+// No authentication provider: the device-grant client this front needs does not exist in the realm yet.
 bootstrapApplication(App, {
   providers: [provideRouter(routes)],
 }).catch((err: unknown) => console.error(err));
