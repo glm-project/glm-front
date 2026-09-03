@@ -30,7 +30,7 @@ an application, and both roots are measured.
 ## A bounded context starts with its `package-info.ts`
 
 Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context (currently
-`shared` alone). `src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning
+`authentication` and `shared`, both shared kernels). `src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning
 `**/package-info.ts` for a class extending `BusinessContext` (`@/app/BusinessContext`) or `SharedKernel`
 (`@/app/SharedKernel`) — folder naming alone is invisible to it.
 
@@ -86,17 +86,28 @@ the alias the architecture test itself uses.
 
 ## Authentication wiring
 
-- `Oauth2AuthService` (`src/main/webapp/app/auth/oauth2-auth.service.ts`) is the only wrapper around
-  `keycloak-js`: `token`, `isAuthenticated`, `initAuthentication()` (redirect login,
-  `onLoad: 'login-required'`), `logout()`, and the silent refresh (`MIN_TOKEN_VALIDITY_SECONDS = 70`).
-- Keycloak config comes from `gestion/environments/environment*.ts` (`keycloak.url` / `realm` /
-  `client_id`) through the DI token provided in `gestion/keycloak.provider.ts`. No Keycloak URL, realm or
-  client id hardcoded anywhere else. No secret in the repo.
-- The provider lives in the composition root, not in `app/`: which adapter implements the token contract is
-  a wiring decision, and it is swapped at build time by `fileReplacements` — never by an
-  `if (environment.…)`, which would ship an authentication bypass in the production bundle.
-- The pupitre has no authentication yet: no HTTP client, no provider, no Keycloak block in its
-  environments. It authenticates through a device grant `keycloak-js` cannot perform.
+Authentication is a `SharedKernel` context, `app/authentication/`: the interceptor is global and there is
+no business rule to make it a bounded context.
+
+- **The port** (`domain/AuthenticationPort.ts`) says only what its callers need: `authenticate()`,
+  `currentToken()`, `logout()`. It is an **abstract class, and it imports nothing** — both forced. An
+  interface leaves no runtime token to inject, and an rxjs import in `domain/` fails the architecture
+  test, which is why the contract is a `Promise` and not an `Observable`.
+- **No token is a normal answer**, not a failure: offline the refresh fails and none is current. The
+  `if (token)` in `httpAuthInterceptor` is the whole handling this needs.
+- **`keycloak-oidc`** is the `gestion` adapter (`keycloak-js`, standard flow, `onLoad: 'login-required'`,
+  silent refresh at `MIN_TOKEN_VALIDITY_SECONDS = 70`). **`in-memory`** is its e2e sibling. Neither ever
+  imports the other: two siblings, and the composition root chooses.
+- **The composition root owns the wiring.** `gestion/auth.provider.ts` builds the Keycloak instance from
+  `gestion/environments/environment*.ts` (`keycloak.url` / `realm` / `client_id`) and binds the port to its
+  adapter. No Keycloak URL, realm or client id anywhere else, no secret in the repo. The provider cannot
+  live in `app/` — it reads a front's `environments/`.
+- **The swap is `fileReplacements`, never `if (environment.…)`.** A runtime flag would ship an
+  authentication bypass in the production bundle: a security line, not a style one. Measured: the `e2e`
+  build contains the in-memory adapter and none of keycloak-js.
+- The pupitre binds nothing yet: no HTTP client, no provider, no Keycloak block in its environments. It
+  authenticates through a device grant `keycloak-js` cannot perform, and gets its `auth.provider.ts` with
+  that adapter.
 
 ---
 
