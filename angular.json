@@ -9,15 +9,15 @@
       "sourceRoot": "src",
       "prefix": "app",
       "architect": {
-        "build": {
+        "build-backoffice": {
           "builder": "@angular/build:application",
           "options": {
             "outputPath": {
-              "base": "target/classes/static",
+              "base": "target/classes/static/backoffice",
               "browser": ""
             },
-            "index": "src/main/webapp/index.html",
-            "browser": "src/main/webapp/main.ts",
+            "index": "src/main/webapp/backoffice/index.html",
+            "browser": "src/main/webapp/backoffice/main.ts",
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/main/webapp/content",
@@ -54,8 +54,8 @@
               "namedChunks": true,
               "fileReplacements": [
                 {
-                  "replace": "src/main/webapp/environments/environment.ts",
-                  "with": "src/main/webapp/environments/environment.local.ts"
+                  "replace": "src/main/webapp/backoffice/environments/environment.ts",
+                  "with": "src/main/webapp/backoffice/environments/environment.local.ts"
                 }
               ]
             },
@@ -66,34 +66,34 @@
               "namedChunks": true,
               "fileReplacements": [
                 {
-                  "replace": "src/main/webapp/environments/environment.ts",
-                  "with": "src/main/webapp/environments/environment.local.ts"
+                  "replace": "src/main/webapp/backoffice/environments/environment.ts",
+                  "with": "src/main/webapp/backoffice/environments/environment.local.ts"
                 },
                 {
-                  "replace": "src/main/webapp/app/auth/keycloak.provider.ts",
-                  "with": "src/main/webapp/app/auth/keycloak.provider.e2e.ts"
+                  "replace": "src/main/webapp/backoffice/keycloak.provider.ts",
+                  "with": "src/main/webapp/backoffice/keycloak.provider.e2e.ts"
                 }
               ]
             }
           },
           "defaultConfiguration": "production"
         },
-        "serve": {
+        "serve-backoffice": {
+          "builder": "@angular/build:dev-server",
           "options": {
             "port": 9000,
-            "buildTarget": "project:build",
+            "buildTarget": "project:build-backoffice",
             "proxyConfig": "proxy.conf.json"
           },
-          "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "project:build:production"
+              "buildTarget": "project:build-backoffice:production"
             },
             "development": {
-              "buildTarget": "project:build:development"
+              "buildTarget": "project:build-backoffice:development"
             },
             "e2e": {
-              "buildTarget": "project:build:e2e"
+              "buildTarget": "project:build-backoffice:e2e"
             }
           },
           "defaultConfiguration": "development"
@@ -101,6 +101,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
+            "buildTarget": "project:build-backoffice:development",
             "runnerConfig": "vitest.config.ts",
             "exclude": ["**/webapp/{e2e,component}/**"],
             "coverageInclude": ["src/main/webapp/**/*.ts"],
@@ -110,7 +111,7 @@
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n",
           "options": {
-            "buildTarget": "project:build"
+            "buildTarget": "project:build-backoffice"
           }
         }
       }

@@ -2,8 +2,8 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { Oauth2AuthService } from '@/app/auth/oauth2-auth.service';
 import { App } from './app';
-import { Oauth2AuthService } from './auth/oauth2-auth.service';
 
 const mockOauth2AuthService = {
   initAuthentication: vi.fn().mockReturnValue(of(true)),

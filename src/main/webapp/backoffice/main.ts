@@ -1,12 +1,12 @@
+import { httpAuthInterceptor } from '@/app/auth/http-auth.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { httpAuthInterceptor } from './app/auth/http-auth.interceptor';
-import { keycloakProvider } from './app/auth/keycloak.provider';
+import { keycloakProvider } from './keycloak.provider';
 
-import { App } from './app/app';
-import { routes } from './app/app.route';
+import { App } from './app';
+import { routes } from './app.route';
 
 import { environment } from './environments/environment';
 
