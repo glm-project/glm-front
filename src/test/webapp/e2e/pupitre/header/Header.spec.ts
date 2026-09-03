@@ -1,4 +1,4 @@
-import { dataSelector } from '../../utils/DataSelector';
+import { dataSelector } from '../../../utils/DataSelector';
 
 describe('Pupitre header', () => {
   it('should show the connectivity sign to whoever walks past', () => {

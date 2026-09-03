@@ -1,5 +1,6 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
+import { dataSelector } from '@test/utils/DataSelector';
 import { PupitreHeader } from './header';
 
 describe('Pupitre header', () => {
@@ -15,31 +16,40 @@ describe('Pupitre header', () => {
   });
 
   it('should sign that the pupitre is connected', async () => {
-    await givenAConnectedPupitre();
+    givenAConnectedPupitre();
 
-    expect(showsSign('pupitre-connected')).toBe(true);
-    expect(showsSign('pupitre-disconnected')).toBe(false);
+    await whenRenderingTheHeader();
+
+    thenItSignsThePupitreIsOnline();
   });
 
   it('should sign that the pupitre is disconnected', async () => {
-    await givenADisconnectedPupitre();
+    givenADisconnectedPupitre();
 
-    expect(showsSign('pupitre-disconnected')).toBe(true);
-    expect(showsSign('pupitre-connected')).toBe(false);
+    await whenRenderingTheHeader();
+
+    thenItSignsThePupitreIsOffline();
   });
 
-  const givenAConnectedPupitre = (): Promise<void> => renderTheSignFor(true);
+  const givenAConnectedPupitre = (): void => fixture.componentRef.setInput('connected', true);
 
-  const givenADisconnectedPupitre = (): Promise<void> => renderTheSignFor(false);
+  const givenADisconnectedPupitre = (): void => fixture.componentRef.setInput('connected', false);
 
-  const renderTheSignFor = async (connected: boolean): Promise<void> => {
-    fixture.componentRef.setInput('connected', connected);
-    await fixture.whenStable();
+  const whenRenderingTheHeader = (): Promise<void> => fixture.whenStable();
+
+  const thenItSignsThePupitreIsOnline = (): void => {
+    expect(showsSign('pupitre-connected')).toBe(true);
+    expect(showsSign('pupitre-disconnected')).toBe(false);
   };
 
-  const showsSign = (selector: string): boolean => {
+  const thenItSignsThePupitreIsOffline = (): void => {
+    expect(showsSign('pupitre-disconnected')).toBe(true);
+    expect(showsSign('pupitre-connected')).toBe(false);
+  };
+
+  const showsSign = (sign: string): boolean => {
     const header = fixture.nativeElement as HTMLElement;
 
-    return header.querySelector(`[data-selector="${selector}"]`) !== null;
+    return header.querySelector(dataSelector(sign)) !== null;
   };
 });

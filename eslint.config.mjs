@@ -59,7 +59,7 @@ export default typescript.config(
     },
   },
   {
-    files: ['src/test/webapp/unit/**/*.ts'],
+    files: ['src/test/webapp/{unit,utils}/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {

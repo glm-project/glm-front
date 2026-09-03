@@ -3,6 +3,7 @@ import { InMemoryAuthentication } from '@/app/authentication/infrastructure/seco
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
+import { dataSelector } from '@test/utils/DataSelector';
 import { GestionHeader } from './header';
 
 describe('Gestion header', () => {
@@ -24,15 +25,21 @@ describe('Gestion header', () => {
   });
 
   it('should end the session on click on the logout button', async () => {
-    await authentication.authenticate();
+    await givenAnOpenSession();
 
     whenClickingLogout();
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenTheSessionIsOver();
   });
 
+  const givenAnOpenSession = (): Promise<void> => authentication.authenticate();
+
   const whenClickingLogout = (): void => {
-    const logoutButton = fixture.debugElement.query(By.css('[data-selector="gestion-logout"]')).nativeElement as HTMLElement;
+    const logoutButton = fixture.debugElement.query(By.css(dataSelector('gestion-logout'))).nativeElement as HTMLElement;
     logoutButton.click();
+  };
+
+  const thenTheSessionIsOver = (): void => {
+    expect(authentication.currentToken()).toBeUndefined();
   };
 });

@@ -43,15 +43,20 @@ cover a line, delete the line or restructure the code — never lower the thresh
 the intent from the name alone. Data and helpers carry the word **fixture** — `keycloakFixture`, not
 `SeededKeycloak`.
 
-## Cypress specs follow given-when-then through named helpers
+## Every spec follows given-when-then through named helpers
 
-Every action is a `whenXxx()`, every assertion a `thenXxx()` — a local const arrow or in `*.function.ts`.
-Setup, actions and assertions in blocks separated by blank lines. Assertions live in a helper, which keeps
-the reading thread and centralizes the selectors.
+Every state to arrange is a `givenXxx()`, every action a `whenXxx()`, every assertion a `thenXxx()` — a local
+const arrow or in `*.function.ts`. Setup, actions and assertions in blocks separated by blank lines.
+Assertions live in a helper, which keeps the reading thread and centralizes the selectors.
+
+Vitest specs are held to it as much as Cypress ones. What varies is where the seam falls: wiring the TestBed
+stays in `beforeEach` — it is plumbing, not a business precondition — while rendering with the inputs under
+test is the action (`pupitre/header/header.spec.ts`).
 
 ## Select on `data-selector`, never on CSS classes or text
 
-Use the `dataSelector()` helper (`src/test/webapp/{component,e2e}/utils/DataSelector.ts`); it also accepts
+Use the `dataSelector()` helper (`src/test/webapp/utils/DataSelector.ts`, reached from a co-located spec
+through the `@test/*` alias); it also accepts
 `data-cy`, `data-test` and `data-testid`. Classes are a styling concern and text is an i18n concern — both
 change without the behavior changing. It returns a comma-separated list of four selectors, so it cannot be
 concatenated into a descendant selector — chain `.find()` instead.

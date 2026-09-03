@@ -39,7 +39,7 @@ npx tsc --noEmit           # type-checks both fronts in one pass
 - Never edit `src/test/webapp/unit/HexagonalArchTest.spec.ts` to make a build pass: a failure means the code deviates, so fix the code.
 - Keep the three `<!-- seed4j-needle-* -->` markers in `README.md` when editing it by hand — Seed4J module generators insert there. The code markers are gone on purpose: with two composition roots, an insertion point in the app cannot answer "gestion or pupitre?".
 - `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in `gestion/main.ts`): never re-attach it in an adapter. It reads `AuthenticationPort`, never an adapter — and the pupitre binds no adapter yet.
-- The `@/*` path alias resolves to `src/main/webapp/*`.
+- The `@/*` path alias resolves to `src/main/webapp/*`, and `@test/*` to `src/test/webapp/*` — the second one is for specs reaching the shared test helpers, never for application code.
 
 ## Verification before claiming done
 
