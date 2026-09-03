@@ -210,8 +210,9 @@ no business rule to make it a bounded context.
   `standard | implicit | hybrid` and no `device_code`, so there is no library to wrap. It runs the RFC 8628
   device grant — `POST .../auth/device`, then poll `.../token` on the device code through
   `authorization_pending` and `slow_down` — asks for `offline_access`, and renews on a timer 30 s before
-  expiry. `pupitre/auth.provider.ts` builds its `DeviceGrantConfiguration` from
-  `pupitre/environments/environment*.ts`, same shape as gestion's.
+  expiry. A renewal refused with `invalid_grant` ends the session and starts a fresh enrolment; every other
+  refusal is retried, because those come back on their own. `pupitre/auth.provider.ts` builds its
+  `DeviceGrantConfiguration` from `pupitre/environments/environment*.ts`, same shape as gestion's.
 - **The device adapter talks through `HttpBackend`, not `HttpClient`.** `HttpBackend` bypasses every
   interceptor by design, which is the point: the pupitre's own auth-protocol traffic must not carry the
   `Authorization: Bearer` header `httpAuthInterceptor` attaches to everything else.
