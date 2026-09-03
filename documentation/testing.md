@@ -7,11 +7,22 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
 1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`oauth2-auth.service.spec.ts` beside
    `oauth2-auth.service.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain logic, services,
    interceptors, pipes — anything testable without a real DOM or router integration.
-2. **Component (Cypress)** — `src/test/webapp/component/<context>/*.spec.ts`, against the real dev server.
-   Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
+2. **Component (Cypress)** — `src/test/webapp/component/<front>/<context>/*.spec.ts`, against the real dev
+   server. Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
    `interceptForever` to control response timing).
-3. **E2E (Cypress)** — `src/test/webapp/e2e/<context>/*.spec.ts`, black-box through the full app. User
-   journeys, not component detail.
+3. **E2E (Cypress)** — `src/test/webapp/e2e/<front>/<context>/*.spec.ts`, black-box through the full app.
+   User journeys, not component detail.
+
+Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is
+reached by an npm script naming the front. A suite is added by creating the config and the
+`test:<layer>:headless:<front>` script that boots its server — the aggregates pick it up by glob. The
+fronts run **one dev server at a time**: two servers of one Angular project share a vite cache directory
+and break each other.
+
+The pupitre has an e2e suite and **no component suite**: the component layer tests rendering with the
+network intercepted, and an empty shell renders nothing and calls nothing — a spec there would restate
+its e2e smoke against the same served app. `test:component:headless` therefore covers `gestion`
+alone today. The pupitre's first screen brings its config and its script with it.
 
 ## Fixing a defect starts with a failing test
 
@@ -27,8 +38,7 @@ cover a line, delete the line or restructure the code — never lower the thresh
 
 `it('should attach the bearer token to outgoing requests')`, not `it('testInterceptor')`. The reader grasps
 the intent from the name alone. Data and helpers carry the word **fixture** — `keycloakFixture`, not
-`SeededKeycloak`. The existing Cypress specs (`Home.spec.ts`) predate this rule and do not follow it; align
-them the next time you touch them.
+`SeededKeycloak`.
 
 ## Cypress specs follow given-when-then through named helpers
 
@@ -40,7 +50,13 @@ the reading thread and centralizes the selectors.
 
 Use the `dataSelector()` helper (`src/test/webapp/{component,e2e}/utils/DataSelector.ts`); it also accepts
 `data-cy`, `data-test` and `data-testid`. Classes are a styling concern and text is an i18n concern — both
-change without the behavior changing.
+change without the behavior changing. It returns a comma-separated list of four selectors, so it cannot be
+concatenated into a descendant selector — chain `.find()` instead.
+
+Each front's shell carries its marker as a host attribute (`host: { 'data-selector': 'pupitre-shell' }`),
+and its **e2e** smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static
+`index.html` already, so the attribute appears only once Angular has bootstrapped — the one assertion a
+title check cannot make, because a title reads green on a blank page.
 
 ## Mock at the boundary
 
