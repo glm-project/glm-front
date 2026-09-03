@@ -55,30 +55,24 @@ const KEYCLOAK_URL = 'http://keycloak.test';
 const REALM = 'glmproject';
 const DEVICE_CLIENT_ID = 'pupitre_device';
 const OPENID_CONNECT = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect`;
+const DEVICE_AUTHORIZATION_ENDPOINT = `${OPENID_CONNECT}/auth/device`;
+const TOKEN_ENDPOINT = `${OPENID_CONNECT}/token`;
+const LOGOUT_ENDPOINT = `${OPENID_CONNECT}/logout`;
+const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
+const REFRESH_TOKEN_GRANT = 'refresh_token';
 const DEVICE_CODE = 'a-device-code';
 const DEVICE_TOKEN = 'device-token';
 const RENEWED_DEVICE_TOKEN = 'renewed-device-token';
 const OFFLINE_REFRESH_TOKEN = 'offline-refresh-token';
 const TOKEN_LIFETIME_SECONDS = 300;
-const EVERY_RENEWAL = Number.POSITIVE_INFINITY;
+const DEVICE_CODE_LIFETIME_SECONDS = 600;
 const NO_POLL_DELAY = 0;
-
-interface AuthorizationServerBehaviour {
-  unreachable?: boolean;
-  namesNoPollingPace?: boolean;
-  pendingPolls?: number;
-  slowsDownOnce?: boolean;
-  refusesWith?: string;
-  answersWithoutAReason?: boolean;
-  refusedRenewals?: number;
-  holdsTheGrant?: boolean;
-  holdsTheRenewal?: boolean;
-  refusesToEndTheSession?: boolean;
-}
-
-const NOTHING_UNUSUAL: AuthorizationServerBehaviour = {};
+const NO_PACE_NAMED = undefined;
+const NO_LIFETIME_NAMED = undefined;
 
 type ServerAnswer = HttpEvent<unknown> | HttpErrorResponse;
+
+type ServerTurn = () => ServerAnswer;
 
 const anAnswerFixture = (body: unknown): ServerAnswer => new HttpResponse({ status: 200, body });
 
@@ -88,23 +82,87 @@ const aNetworkFailureFixture = (): ServerAnswer => new HttpErrorResponse({ statu
 
 const onceTheRequestHasTravelled = (answer: ServerAnswer): Promise<ServerAnswer> => afterARoundTrip(() => Promise.resolve(answer));
 
-const tokensFixture = (accessToken: string): unknown => ({
+const tokensFixture = (accessToken: string, lifetimeSeconds: number | undefined): unknown => ({
   access_token: accessToken,
   refresh_token: OFFLINE_REFRESH_TOKEN,
-  expires_in: TOKEN_LIFETIME_SECONDS,
+  ...(lifetimeSeconds === undefined ? {} : { expires_in: lifetimeSeconds }),
 });
 
+const deviceAuthorizationFixture = (paceSeconds: number | undefined): unknown => ({
+  device_code: DEVICE_CODE,
+  user_code: 'WXYZ-ABCD',
+  verification_uri: DEVICE_AUTHORIZATION_ENDPOINT,
+  expires_in: DEVICE_CODE_LIFETIME_SECONDS,
+  ...(paceSeconds === undefined ? {} : { interval: paceSeconds }),
+});
+
+const authorizing: ServerTurn = () => anAnswerFixture(deviceAuthorizationFixture(NO_POLL_DELAY));
+const authorizingWithoutNamingAPace: ServerTurn = () => anAnswerFixture(deviceAuthorizationFixture(NO_PACE_NAMED));
+const granting: ServerTurn = () => anAnswerFixture(tokensFixture(DEVICE_TOKEN, TOKEN_LIFETIME_SECONDS));
+const grantingWithoutNamingALifetime: ServerTurn = () => anAnswerFixture(tokensFixture(DEVICE_TOKEN, NO_LIFETIME_NAMED));
+const renewing: ServerTurn = () => anAnswerFixture(tokensFixture(RENEWED_DEVICE_TOKEN, TOKEN_LIFETIME_SECONDS));
+const renewingWithoutNamingALifetime: ServerTurn = () => anAnswerFixture(tokensFixture(RENEWED_DEVICE_TOKEN, NO_LIFETIME_NAMED));
+const endingTheSession: ServerTurn = () => new HttpResponse({ status: 204 });
+const stillPending: ServerTurn = () => aRefusalFixture('authorization_pending');
+const askingToSlowDown: ServerTurn = () => aRefusalFixture('slow_down');
+const refusing =
+  (reason: string): ServerTurn =>
+  () =>
+    aRefusalFixture(reason);
+const outOfReach: ServerTurn = () => aNetworkFailureFixture();
+
+const namingAnotherClient: ServerTurn = () => aRefusalFixture('invalid_client');
+const askingForNoOfflineAccess: ServerTurn = () => aRefusalFixture('invalid_scope');
+const notTheGrantItIssued: ServerTurn = () => aRefusalFixture('invalid_grant');
+const noSuchEndpoint: ServerTurn = () => new HttpErrorResponse({ status: 404, error: null });
+
+interface AuthorizationServerBehaviour {
+  authorizations: ServerTurn[];
+  claims: ServerTurn[];
+  renewals: ServerTurn[];
+  logouts: ServerTurn[];
+}
+
+const AS_USUAL: AuthorizationServerBehaviour = {
+  authorizations: [authorizing],
+  claims: [granting],
+  renewals: [renewing],
+  logouts: [endingTheSession],
+};
+
+const NOTHING_UNUSUAL: Partial<AuthorizationServerBehaviour> = {};
+
+const scriptOf = (turns: ServerTurn[]): ServerTurn => {
+  let taken = 0;
+
+  return () => {
+    const turn = turns[Math.min(taken, turns.length - 1)];
+    taken += 1;
+    return turn();
+  };
+};
+
 class AuthorizationServerFixture implements HttpBackend {
+  claimsMade = 0;
+  renewalsMade = 0;
   sessionsEnded = 0;
 
-  private polls = 0;
-  private renewals = 0;
-  private releaseTheHeldRequest: () => void = () => undefined;
-  private readonly heldRequest: Promise<void>;
+  private readonly nextAuthorization: ServerTurn;
+  private readonly nextClaim: ServerTurn;
+  private readonly nextRenewal: ServerTurn;
+  private readonly nextLogout: ServerTurn;
 
-  constructor(private readonly behaviour: AuthorizationServerBehaviour) {
-    this.heldRequest = new Promise<void>(resolve => {
-      this.releaseTheHeldRequest = resolve;
+  private holdingTokenAnswers = false;
+  private releaseTheHeldAnswer: () => void = () => undefined;
+  private readonly heldAnswer: Promise<void>;
+
+  constructor(behaviour: AuthorizationServerBehaviour) {
+    this.nextAuthorization = scriptOf(behaviour.authorizations);
+    this.nextClaim = scriptOf(behaviour.claims);
+    this.nextRenewal = scriptOf(behaviour.renewals);
+    this.nextLogout = scriptOf(behaviour.logouts);
+    this.heldAnswer = new Promise<void>(resolve => {
+      this.releaseTheHeldAnswer = resolve;
     });
   }
 
@@ -114,104 +172,91 @@ class AuthorizationServerFixture implements HttpBackend {
     );
   }
 
-  answerTheHeldRequest(): void {
-    this.releaseTheHeldRequest();
+  holdsItsTokenAnswers(): void {
+    this.holdingTokenAnswers = true;
   }
 
-  private answer(request: HttpRequest<unknown>): Promise<ServerAnswer> {
-    const form = new URLSearchParams(request.serializeBody() as string);
-
-    if (request.url === `${OPENID_CONNECT}/auth/device`) {
-      return this.authorizeTheDevice(form);
-    }
-    if (request.url === `${OPENID_CONNECT}/logout`) {
-      return this.endTheSession(form);
-    }
-    return this.deliverTokens(form);
+  answersWhatItHeld(): void {
+    this.releaseTheHeldAnswer();
   }
 
-  private authorizeTheDevice(form: URLSearchParams): Promise<ServerAnswer> {
-    if (this.behaviour.unreachable === true) {
-      return onceTheRequestHasTravelled(aNetworkFailureFixture());
+  private async answer(request: HttpRequest<unknown>): Promise<ServerAnswer> {
+    const turn = this.turnFor(request.url, new URLSearchParams(request.serializeBody() as string));
+
+    if (this.holdingTokenAnswers && request.url === TOKEN_ENDPOINT) {
+      await this.heldAnswer;
     }
+
+    return onceTheRequestHasTravelled(turn());
+  }
+
+  private turnFor(url: string, form: URLSearchParams): ServerTurn {
     if (form.get('client_id') !== DEVICE_CLIENT_ID) {
-      return onceTheRequestHasTravelled(aRefusalFixture('invalid_client'));
+      return namingAnotherClient;
     }
+    if (url === DEVICE_AUTHORIZATION_ENDPOINT) {
+      return this.turnForAnAuthorization(form);
+    }
+    if (url === TOKEN_ENDPOINT) {
+      return this.turnForATokenRequest(form);
+    }
+    if (url === LOGOUT_ENDPOINT) {
+      return this.turnForALogout(form);
+    }
+    return noSuchEndpoint;
+  }
+
+  private turnForAnAuthorization(form: URLSearchParams): ServerTurn {
     if (!(form.get('scope') ?? '').includes('offline_access')) {
-      return onceTheRequestHasTravelled(aRefusalFixture('invalid_scope'));
+      return askingForNoOfflineAccess;
     }
-    return onceTheRequestHasTravelled(
-      anAnswerFixture({
-        device_code: DEVICE_CODE,
-        user_code: 'WXYZ-ABCD',
-        verification_uri: `${OPENID_CONNECT}/auth/device`,
-        expires_in: 600,
-        ...(this.behaviour.namesNoPollingPace === true ? {} : { interval: NO_POLL_DELAY }),
-      }),
-    );
+    return this.nextAuthorization;
   }
 
-  private deliverTokens(form: URLSearchParams): Promise<ServerAnswer> {
-    if (form.get('grant_type') === 'refresh_token') {
-      return this.renewTheSession(form);
+  private turnForATokenRequest(form: URLSearchParams): ServerTurn {
+    if (form.get('grant_type') === REFRESH_TOKEN_GRANT) {
+      return this.turnForARenewal(form);
     }
-    return this.grantOnTheDeviceCode(form);
+    return this.turnForAClaim(form);
   }
 
-  private async grantOnTheDeviceCode(form: URLSearchParams): Promise<ServerAnswer> {
-    this.polls += 1;
-    const refused = this.behaviour.refusesWith;
+  private turnForAClaim(form: URLSearchParams): ServerTurn {
+    this.claimsMade += 1;
 
-    if (this.behaviour.holdsTheGrant === true) {
-      await this.heldRequest;
+    if (form.get('grant_type') !== DEVICE_CODE_GRANT || form.get('device_code') !== DEVICE_CODE) {
+      return notTheGrantItIssued;
     }
-    if (this.behaviour.answersWithoutAReason === true) {
-      return onceTheRequestHasTravelled(aNetworkFailureFixture());
-    }
-    if (refused !== undefined) {
-      return onceTheRequestHasTravelled(aRefusalFixture(refused));
-    }
-    if (form.get('device_code') !== DEVICE_CODE) {
-      return onceTheRequestHasTravelled(aRefusalFixture('invalid_grant'));
-    }
-    if (this.polls === 1 && this.behaviour.slowsDownOnce === true) {
-      return onceTheRequestHasTravelled(aRefusalFixture('slow_down'));
-    }
-    if (this.polls <= (this.behaviour.pendingPolls ?? 0)) {
-      return onceTheRequestHasTravelled(aRefusalFixture('authorization_pending'));
-    }
-    return onceTheRequestHasTravelled(anAnswerFixture(tokensFixture(DEVICE_TOKEN)));
+    return this.nextClaim;
   }
 
-  private async renewTheSession(form: URLSearchParams): Promise<ServerAnswer> {
-    this.renewals += 1;
+  private turnForARenewal(form: URLSearchParams): ServerTurn {
+    this.renewalsMade += 1;
 
-    if (this.behaviour.holdsTheRenewal === true) {
-      await this.heldRequest;
-    }
     if (form.get('refresh_token') !== OFFLINE_REFRESH_TOKEN) {
-      return onceTheRequestHasTravelled(aRefusalFixture('invalid_grant'));
+      return notTheGrantItIssued;
     }
-    if (this.renewals <= (this.behaviour.refusedRenewals ?? 0)) {
-      return onceTheRequestHasTravelled(aRefusalFixture('invalid_grant'));
-    }
-    return onceTheRequestHasTravelled(anAnswerFixture(tokensFixture(RENEWED_DEVICE_TOKEN)));
+    return this.nextRenewal;
   }
 
-  private endTheSession(form: URLSearchParams): Promise<ServerAnswer> {
-    if (this.behaviour.refusesToEndTheSession === true) {
-      return onceTheRequestHasTravelled(aNetworkFailureFixture());
-    }
+  private turnForALogout(form: URLSearchParams): ServerTurn {
     if (form.get('refresh_token') !== OFFLINE_REFRESH_TOKEN) {
-      return onceTheRequestHasTravelled(aRefusalFixture('invalid_grant'));
+      return notTheGrantItIssued;
     }
-    this.sessionsEnded += 1;
-    return onceTheRequestHasTravelled(new HttpResponse({ status: 204 }));
+    return () => this.endTheSession();
+  }
+
+  private endTheSession(): ServerAnswer {
+    const answer = this.nextLogout();
+
+    if (!(answer instanceof HttpErrorResponse)) {
+      this.sessionsEnded += 1;
+    }
+    return answer;
   }
 }
 
-const anAuthorizationServerFixture = (behaviour: AuthorizationServerBehaviour = NOTHING_UNUSUAL): AuthorizationServerFixture =>
-  new AuthorizationServerFixture(behaviour);
+const anAuthorizationServerFixture = (behaviour: Partial<AuthorizationServerBehaviour> = NOTHING_UNUSUAL): AuthorizationServerFixture =>
+  new AuthorizationServerFixture({ ...AS_USUAL, ...behaviour });
 
 const buildInMemoryAuthentication = (): AuthenticationPort =>
   Injector.create({ providers: [InMemoryAuthentication] }).get(InMemoryAuthentication);
@@ -303,7 +348,13 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
 describe('Device Authentication, beyond the contract', () => {
   const A_TICK = 1000;
   const A_SLOWER_PACE = 6 * 1000;
+  const A_MINUTE_AND_A_HALF = 90 * 1000;
   const A_SHIFT = 10 * 60 * 1000;
+  const A_MOMENT_THE_TOKEN_OUTLIVES_ITS_RENEWAL = 280 * 1000;
+  const ONE_CLAIM = 1;
+  const A_SANE_NUMBER_OF_RENEWALS = 10;
+  const NO_SESSION_ENDED = 0;
+  const ONE_SESSION_ENDED = 1;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -330,6 +381,11 @@ describe('Device Authentication, beyond the contract', () => {
 
   const whenTheShiftGoesOn = (): Promise<void> => vi.advanceTimersByTimeAsync(A_SHIFT).then(() => undefined);
 
+  const whenAMinuteAndAHalfPasses = (): Promise<void> => vi.advanceTimersByTimeAsync(A_MINUTE_AND_A_HALF).then(() => undefined);
+
+  const whenTheRenewalHasFailedButTheTokenLives = (): Promise<void> =>
+    vi.advanceTimersByTimeAsync(A_MOMENT_THE_TOKEN_OUTLIVES_ITS_RENEWAL).then(() => undefined);
+
   const whenTheRequestHasLeft = (): Promise<void> => vi.advanceTimersByTimeAsync(A_TICK).then(() => undefined);
 
   const whenTheSlowerPaceHasPassed = (): Promise<void> => vi.advanceTimersByTimeAsync(A_SLOWER_PACE).then(() => undefined);
@@ -340,14 +396,14 @@ describe('Device Authentication, beyond the contract', () => {
     return whenTheRequestHasLeft();
   };
 
-  const whenTheHeldRequestAnswers = (server: AuthorizationServerFixture): Promise<void> => {
-    server.answerTheHeldRequest();
+  const whenTheHeldAnswerArrives = (server: AuthorizationServerFixture): Promise<void> => {
+    server.answersWhatItHeld();
 
     return whenTheRequestHasLeft();
   };
 
   it('should keep asking for as long as nobody has typed the code', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ pendingPolls: 2 }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [stillPending, stillPending, granting] }));
 
     await whenEnrolling(authentication);
 
@@ -355,7 +411,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should still enrol once it has been asked to slow down', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ slowsDownOnce: true }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [askingToSlowDown, granting] }));
 
     await whenEnrollingAtTheSlowerPace(authentication);
 
@@ -363,7 +419,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should hold its first claim back to the pace RFC 8628 sets when the server names none', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ namesNoPollingPace: true }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ authorizations: [authorizingWithoutNamingAPace] }));
 
     await whenEnrolmentHasBegun(authentication);
 
@@ -375,7 +431,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it.each(['access_denied', 'expired_token'])('should hand over nothing when the enrolment is refused with %s', async refusal => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ refusesWith: refusal }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [refusing(refusal)] }));
 
     await whenEnrolling(authentication);
 
@@ -383,7 +439,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should hand over nothing when the refusal carries no reason to read', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ answersWithoutAReason: true }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [outOfReach] }));
 
     await whenEnrolling(authentication);
 
@@ -391,11 +447,24 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should hand over nothing when the authorization server cannot be reached', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ unreachable: true }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ authorizations: [outOfReach] }));
 
     await whenEnrolling(authentication);
 
     expect(authentication.currentToken()).toBeUndefined();
+  });
+
+  it('should stop claiming once the enrolment is abandoned', async () => {
+    const server = anAuthorizationServerFixture({ authorizations: [authorizingWithoutNamingAPace], claims: [stillPending] });
+    const authentication = buildDeviceAuthentication(server);
+
+    await whenEnrolmentHasBegun(authentication);
+    await whenTheSlowerPaceHasPassed();
+
+    authentication.logout();
+    await whenTheShiftGoesOn();
+
+    expect(server.claimsMade).toEqual(ONE_CLAIM);
   });
 
   it('should hand over a renewed token before the enrolled one expires', async () => {
@@ -407,8 +476,17 @@ describe('Device Authentication, beyond the contract', () => {
     expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
   });
 
-  it('should hand over nothing while the renewal keeps being refused', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ refusedRenewals: EVERY_RENEWAL }));
+  it('should keep handing over the token it had while the renewal is refused and the token still lives', async () => {
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [refusing('invalid_grant')] }));
+
+    await givenAnEnrolledPupitre(authentication);
+    await whenTheRenewalHasFailedButTheTokenLives();
+
+    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
+  });
+
+  it('should hand over nothing once the token has died and the renewal keeps being refused', async () => {
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [refusing('invalid_grant')] }));
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
@@ -417,11 +495,25 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should hand over a renewed token once the network is back', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ refusedRenewals: 1 }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [refusing('invalid_grant'), renewing] }));
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
+    expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
+  });
+
+  it('should not hammer the authorization server when it names no token lifetime', async () => {
+    const server = anAuthorizationServerFixture({
+      claims: [grantingWithoutNamingALifetime],
+      renewals: [renewingWithoutNamingALifetime],
+    });
+    const authentication = buildDeviceAuthentication(server);
+
+    await givenAnEnrolledPupitre(authentication);
+    await whenAMinuteAndAHalfPasses();
+
+    expect(server.renewalsMade).toBeLessThan(A_SANE_NUMBER_OF_RENEWALS);
     expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
   });
 
@@ -434,7 +526,7 @@ describe('Device Authentication, beyond the contract', () => {
     authentication.logout();
     await whenTheRequestHasLeft();
 
-    expect(server.sessionsEnded).toEqual(1);
+    expect(server.sessionsEnded).toEqual(ONE_SESSION_ENDED);
   });
 
   it('should tell the authorization server nothing when no session was ever opened', async () => {
@@ -444,11 +536,11 @@ describe('Device Authentication, beyond the contract', () => {
     authentication.logout();
     await whenTheRequestHasLeft();
 
-    expect(server.sessionsEnded).toEqual(0);
+    expect(server.sessionsEnded).toEqual(NO_SESSION_ENDED);
   });
 
   it('should end the session locally even when the authorization server cannot be told', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ refusesToEndTheSession: true }));
+    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ logouts: [outOfReach] }));
 
     await givenAnEnrolledPupitre(authentication);
 
@@ -459,26 +551,28 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it('should hand over nothing once the session is ended, even with a renewal already in flight', async () => {
-    const server = anAuthorizationServerFixture({ holdsTheRenewal: true });
+    const server = anAuthorizationServerFixture();
     const authentication = buildDeviceAuthentication(server);
 
     await givenAnEnrolledPupitre(authentication);
+    server.holdsItsTokenAnswers();
     await whenTheShiftGoesOn();
 
     authentication.logout();
-    await whenTheHeldRequestAnswers(server);
+    await whenTheHeldAnswerArrives(server);
 
     expect(authentication.currentToken()).toBeUndefined();
   });
 
   it('should hand over nothing once the enrolment is abandoned, even with a claim already in flight', async () => {
-    const server = anAuthorizationServerFixture({ holdsTheGrant: true });
+    const server = anAuthorizationServerFixture();
     const authentication = buildDeviceAuthentication(server);
 
+    server.holdsItsTokenAnswers();
     await whenEnrolmentHasBegun(authentication);
 
     authentication.logout();
-    await whenTheHeldRequestAnswers(server);
+    await whenTheHeldAnswerArrives(server);
 
     expect(authentication.currentToken()).toBeUndefined();
   });

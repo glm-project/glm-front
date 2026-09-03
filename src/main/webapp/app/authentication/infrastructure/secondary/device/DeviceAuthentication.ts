@@ -16,6 +16,7 @@ const SECONDS_BETWEEN_CLAIMS_UNLESS_TOLD = 5;
 const RENEWAL_MARGIN_SECONDS = 30;
 const SHORTEST_RENEWAL_DELAY_SECONDS = 5;
 const SECONDS_BEFORE_RETRYING_A_RENEWAL = 60;
+const SECONDS_A_TOKEN_LASTS_UNLESS_TOLD = 60;
 const MILLISECONDS_PER_SECOND = 1000;
 const NO_REASON_GIVEN = 'no_reason_given';
 
@@ -27,7 +28,7 @@ interface DeviceAuthorization {
 interface Tokens {
   access_token: string;
   refresh_token: string;
-  expires_in: number;
+  expires_in?: number;
 }
 
 interface GrantedTokens {
@@ -45,9 +46,9 @@ interface OauthRefusal {
 }
 
 interface Session {
-  accessToken: string | undefined;
+  accessToken: string;
+  expiresAt: number;
   refreshToken: string;
-  secondsBeforeRenewing: number;
 }
 
 const isGranted = (answer: GrantAnswer): answer is GrantedTokens => 'tokens' in answer;
@@ -56,18 +57,20 @@ const reasonIn = (refusal: HttpErrorResponse): string => (refusal.error as Oauth
 
 const pause = (seconds: number): Promise<void> => new Promise(resolve => setTimeout(resolve, seconds * MILLISECONDS_PER_SECOND));
 
+const isASaneLifetime = (seconds: number | undefined): seconds is number => seconds !== undefined && Number.isFinite(seconds);
+
+const lifetimeOf = ({ expires_in }: Tokens): number => (isASaneLifetime(expires_in) ? expires_in : SECONDS_A_TOKEN_LASTS_UNLESS_TOLD);
+
+const secondsBeforeRenewing = (tokens: Tokens): number =>
+  Math.max(lifetimeOf(tokens) - RENEWAL_MARGIN_SECONDS, SHORTEST_RENEWAL_DELAY_SECONDS);
+
 const sessionFrom = (tokens: Tokens): Session => ({
   accessToken: tokens.access_token,
+  expiresAt: Date.now() + lifetimeOf(tokens) * MILLISECONDS_PER_SECOND,
   refreshToken: tokens.refresh_token,
-  secondsBeforeRenewing: Math.max(tokens.expires_in - RENEWAL_MARGIN_SECONDS, SHORTEST_RENEWAL_DELAY_SECONDS),
 });
 
-const nextSessionAfter = (session: Session, answer: GrantAnswer): Session => {
-  if (isGranted(answer)) {
-    return sessionFrom(answer.tokens);
-  }
-  return { accessToken: undefined, refreshToken: session.refreshToken, secondsBeforeRenewing: SECONDS_BEFORE_RETRYING_A_RENEWAL };
-};
+const hasExpired = (session: Session): boolean => Date.now() >= session.expiresAt;
 
 @Injectable()
 export class DeviceAuthentication extends AuthenticationPort {
@@ -88,17 +91,20 @@ export class DeviceAuthentication extends AuthenticationPort {
       return;
     }
 
-    const granted = await this.pollUntilGranted(device);
+    const granted = await this.pollUntilGranted(device, enrolment);
 
-    if (granted === undefined || this.enrolment !== enrolment) {
+    if (granted === undefined || this.isAbandoned(enrolment)) {
       return;
     }
 
-    this.open(sessionFrom(granted));
+    this.open(sessionFrom(granted), secondsBeforeRenewing(granted));
   }
 
   override currentToken(): string | undefined {
-    return this.session?.accessToken;
+    if (this.session === undefined || hasExpired(this.session)) {
+      return undefined;
+    }
+    return this.session.accessToken;
   }
 
   override logout(): void {
@@ -113,6 +119,10 @@ export class DeviceAuthentication extends AuthenticationPort {
     }
   }
 
+  private isAbandoned(enrolment: symbol): boolean {
+    return this.enrolment !== enrolment;
+  }
+
   private requestDeviceAuthorization(): Promise<DeviceAuthorization | undefined> {
     return firstValueFrom(
       this.transport
@@ -121,11 +131,15 @@ export class DeviceAuthentication extends AuthenticationPort {
     );
   }
 
-  private async pollUntilGranted(device: DeviceAuthorization): Promise<Tokens | undefined> {
+  private async pollUntilGranted(device: DeviceAuthorization, enrolment: symbol): Promise<Tokens | undefined> {
     let secondsBetweenClaims = device.interval ?? SECONDS_BETWEEN_CLAIMS_UNLESS_TOLD;
 
     for (;;) {
       await pause(secondsBetweenClaims);
+
+      if (this.isAbandoned(enrolment)) {
+        return undefined;
+      }
 
       const answer = await this.claimTokens(device.device_code);
 
@@ -164,17 +178,26 @@ export class DeviceAuthentication extends AuthenticationPort {
     return new HttpParams().set('client_id', this.server.clientId);
   }
 
-  private open(session: Session): void {
+  private open(session: Session, secondsBeforeTheRenewal: number): void {
+    clearTimeout(this.renewal);
+
     this.session = session;
-    this.renewal = setTimeout(() => void this.renewFrom(session), session.secondsBeforeRenewing * MILLISECONDS_PER_SECOND);
+    this.renewal = setTimeout(() => void this.renewFrom(session), secondsBeforeTheRenewal * MILLISECONDS_PER_SECOND);
   }
 
   private async renewFrom(session: Session): Promise<void> {
     const answer = await this.renewTokens(session.refreshToken);
 
-    if (this.session === session) {
-      this.open(nextSessionAfter(session, answer));
+    if (this.session !== session) {
+      return;
     }
+
+    if (isGranted(answer)) {
+      this.open(sessionFrom(answer.tokens), secondsBeforeRenewing(answer.tokens));
+      return;
+    }
+
+    this.open(session, SECONDS_BEFORE_RETRYING_A_RENEWAL);
   }
 
   private endServerSession(refreshToken: string): Promise<unknown> {
