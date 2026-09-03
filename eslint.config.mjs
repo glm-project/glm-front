@@ -4,6 +4,24 @@ import cypress from 'eslint-plugin-cypress';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
 
+const TOOLING_DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|\/)/;
+
+const local = {
+  rules: {
+    'no-comments': {
+      create: context => ({
+        Program: () =>
+          context.sourceCode
+            .getAllComments()
+            .filter(comment => !TOOLING_DIRECTIVE.test(comment.value))
+            .forEach(comment =>
+              context.report({ node: comment, message: 'Code carries its own intent: no comments — see documentation/code-style.md.' }),
+            ),
+      }),
+    },
+  },
+};
+
 export default typescript.config(
   {
     languageOptions: {
@@ -52,7 +70,9 @@ export default typescript.config(
       },
     },
     processor: angular.processInlineTemplates,
+    plugins: { local },
     rules: {
+      'local/no-comments': 'error',
       '@angular-eslint/component-class-suffix': 'off',
       '@angular-eslint/component-selector': [
         'error',
