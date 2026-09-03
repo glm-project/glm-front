@@ -4,9 +4,9 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
 
 ## Write the test first, at the layer that matches the change
 
-1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`oauth2-auth.service.spec.ts` beside
-   `oauth2-auth.service.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain logic, services,
-   interceptors, pipes — anything testable without a real DOM or router integration.
+1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`KeycloakOidcAuthentication.spec.ts`
+   beside `KeycloakOidcAuthentication.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain
+   logic, services, interceptors, pipes — anything testable without a real DOM or router integration.
 2. **Component (Cypress)** — `src/test/webapp/component/<front>/<context>/*.spec.ts`, against the real dev
    server. Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
    `interceptForever` to control response timing).
@@ -60,8 +60,13 @@ title check cannot make, because a title reads green on a blank page.
 
 ## Mock at the boundary
 
-In unit and component specs, provide a test double for `Oauth2AuthService` (see `app.spec.ts`) rather than
-reaching a real Keycloak instance. Mock ports and I/O, not the domain logic under test.
+Bind the port, never the library: a spec that needs authentication provides `AuthenticationPort` with
+`InMemoryAuthentication` (see `gestion/app.spec.ts`, `login.spec.ts`) rather than reaching a real Keycloak
+instance. That double is production code, type-checked against the same contract, so it cannot drift.
+Mock ports and I/O, not the domain logic under test.
+
+Hand-roll a double only where the architecture forbids the adapter: a spec inside a `primary` package may
+not import a `secondary` one, and `HexagonalArchTest` scans specs.
 
 ## We test observable business behavior, and the real runtime failure modes
 

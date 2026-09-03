@@ -29,10 +29,15 @@ an application, and both roots are measured.
 
 ## A bounded context starts with its `package-info.ts`
 
-Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context (currently
-`authentication` and `shared`, both shared kernels). `src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning
-`**/package-info.ts` for a class extending `BusinessContext` (`@/app/BusinessContext`) or `SharedKernel`
-(`@/app/SharedKernel`) — folder naming alone is invisible to it.
+Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context — currently
+`authentication` and `shared`, both shared kernels. `src/test/webapp/unit/HexagonalArchTest.spec.ts`
+discovers contexts by scanning `**/package-info.ts` for a class extending `BusinessContext`
+(`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder naming alone is invisible to
+it.
+
+That invisibility has a live example: `app/login/` carries no `package-info.ts`, so no rule reaches it and
+the architecture test stays green over it. It is the last of the ungoverned folders, and the header work
+absorbs it. A new folder under `app/` without its `package-info.ts` joins it in that blind spot.
 
 ```
 <context>/
@@ -71,8 +76,11 @@ components, a CSS custom property on their nearest common ancestor cascades on i
 
 **Two sibling components communicate through the parent page**: an output going up, a call coming back down
 through a template reference. A `providedIn: 'root'` service with a `Subject` would make the dependency
-graph invisible. Accepted cost: prop-drilling through the intermediaries. `providedIn: 'root'` stays for
-genuine cross-cutting infrastructure — that is what `Oauth2AuthService` is.
+graph invisible. Accepted cost: prop-drilling through the intermediaries.
+
+`providedIn: 'root'` would stay legitimate for genuine cross-cutting infrastructure, but nothing uses it
+today: an adapter behind a port is provided by the composition root that chooses it, so both
+authentication adapters are a bare `@Injectable()`.
 
 ## Ports are interfaces owned by the `domain`, implemented in `infrastructure/secondary`
 
