@@ -1,9 +1,9 @@
-import { httpAuthInterceptor } from '@/app/auth/http-auth.interceptor';
+import { httpAuthInterceptor } from '@/app/authentication/infrastructure/primary/http-auth.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { keycloakProvider } from './keycloak.provider';
+import { authProvider } from './auth.provider';
 
 import { App } from './app';
 import { routes } from './app.route';
@@ -15,5 +15,5 @@ if (environment.production) {
 }
 
 bootstrapApplication(App, {
-  providers: [provideHttpClient(withInterceptors([httpAuthInterceptor])), provideRouter(routes), keycloakProvider],
+  providers: [provideHttpClient(withInterceptors([httpAuthInterceptor])), provideRouter(routes), authProvider],
 }).catch((err: unknown) => console.error(err));

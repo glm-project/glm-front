@@ -70,8 +70,8 @@
                   "with": "src/main/webapp/gestion/environments/environment.local.ts"
                 },
                 {
-                  "replace": "src/main/webapp/gestion/keycloak.provider.ts",
-                  "with": "src/main/webapp/gestion/keycloak.provider.e2e.ts"
+                  "replace": "src/main/webapp/gestion/auth.provider.ts",
+                  "with": "src/main/webapp/gestion/auth.provider.e2e.ts"
                 }
               ]
             }

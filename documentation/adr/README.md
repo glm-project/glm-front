@@ -7,3 +7,5 @@ renumbers at merge time. The status below is the living one — update this line
 
 - [0001 — Documentation layout](0001-documentation-layout.md) — **Accepted** — minimal CLAUDE.md, topic docs
   under documentation/, local ADRs
+- [0002 — Port contract for secondary adapters](0002-port-contract-for-secondary-adapters.md) — **Accepted** —
+  one suite per port run against every adapter, fakes replace the external system

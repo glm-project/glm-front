@@ -1,13 +1,30 @@
+import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
 import { HttpClient, HttpRequest, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import Keycloak from 'keycloak-js';
 import { httpAuthInterceptor } from './http-auth.interceptor';
-import { Oauth2AuthService } from './oauth2-auth.service';
 
 const URL = 'http://localhost:8080/api/dummy';
 const HTTP_METHOD = 'GET';
 const TOKEN = '1a2b3c';
+
+class AuthenticationFixture extends AuthenticationPort {
+  constructor(private bearerToken: string | undefined) {
+    super();
+  }
+
+  override authenticate(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  override currentToken(): string | undefined {
+    return this.bearerToken;
+  }
+
+  override logout(): void {
+    this.bearerToken = undefined;
+  }
+}
 
 const buildHttpRequest = () => {
   const originalRequest: HttpRequest<unknown> = new HttpRequest<unknown>(HTTP_METHOD, URL);
@@ -16,33 +33,25 @@ const buildHttpRequest = () => {
   });
 };
 
-describe('httpAuthInterceptor', () => {
-  let httpTestingController: HttpTestingController;
-  let httpClient: HttpClient;
-  let oauth2AuthService: Oauth2AuthService;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(withInterceptors([httpAuthInterceptor])),
-        provideHttpClientTesting(),
-        Oauth2AuthService,
-        { provide: Keycloak, useValue: {} },
-      ],
-    });
-    httpTestingController = TestBed.inject(HttpTestingController);
-    httpClient = TestBed.inject(HttpClient);
-    oauth2AuthService = TestBed.inject(Oauth2AuthService);
+const givenAnAuthenticationHolding = (bearerToken: string | undefined): void => {
+  TestBed.configureTestingModule({
+    providers: [
+      provideHttpClient(withInterceptors([httpAuthInterceptor])),
+      provideHttpClientTesting(),
+      { provide: AuthenticationPort, useValue: new AuthenticationFixture(bearerToken) },
+    ],
   });
+};
 
+describe('httpAuthInterceptor', () => {
   describe('Bearer Token', () => {
     it('should add authorization bearer token in request when defined', () => {
-      vi.spyOn(oauth2AuthService, 'token', 'get').mockReturnValue(TOKEN);
+      givenAnAuthenticationHolding(TOKEN);
       const originalRequest = buildHttpRequest();
 
-      httpClient.request(originalRequest).subscribe();
+      TestBed.inject(HttpClient).request(originalRequest).subscribe();
 
-      const req = httpTestingController.expectOne(originalRequest.url);
+      const req = TestBed.inject(HttpTestingController).expectOne(originalRequest.url);
       expect(req.request.method).toEqual(HTTP_METHOD);
       expect(req.request.url).toEqual(URL);
       expect(req.request.headers.get('ContentType')).toBe('application/json');
@@ -50,12 +59,12 @@ describe('httpAuthInterceptor', () => {
     });
 
     it('should not add authorization bearer token in request when it is not defined', () => {
-      vi.spyOn(oauth2AuthService, 'token', 'get').mockReturnValue(undefined);
-      const originalRequest: HttpRequest<unknown> = buildHttpRequest();
+      givenAnAuthenticationHolding(undefined);
+      const originalRequest = buildHttpRequest();
 
-      httpClient.request(originalRequest).subscribe();
+      TestBed.inject(HttpClient).request(originalRequest).subscribe();
 
-      const req = httpTestingController.expectOne(originalRequest.url);
+      const req = TestBed.inject(HttpTestingController).expectOne(originalRequest.url);
       expect(req.request.headers.get('ContentType')).toBe('application/json');
       expect(req.request.headers.get('Authorization')).toBeFalsy();
     });
