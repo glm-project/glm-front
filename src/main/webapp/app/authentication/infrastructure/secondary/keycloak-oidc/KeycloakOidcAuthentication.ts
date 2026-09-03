@@ -11,13 +11,12 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
   override async authenticate(): Promise<void> {
     const authenticated = await this.keycloak.init({ onLoad: 'login-required', checkLoginIframe: false });
 
-    if (authenticated) {
-      console.debug('Authenticated');
-    } else {
+    if (!authenticated) {
       globalThis.location.reload();
+      return;
     }
 
-    this.refreshToken();
+    await this.refreshToken();
   }
 
   override currentToken(): string | undefined {
@@ -28,18 +27,7 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
     this.keycloak.logout();
   }
 
-  private refreshToken(): void {
-    this.keycloak
-      .updateToken(MIN_TOKEN_VALIDITY_SECONDS)
-      .then(refreshed => {
-        if (refreshed) {
-          console.debug('Token refreshed');
-        } else {
-          const exp = this.keycloak.tokenParsed!.exp!;
-          const timeSkew = this.keycloak.timeSkew!;
-          console.debug(`Token not refreshed, valid for ${Math.round(exp + timeSkew - Date.now() / 1000)} seconds`);
-        }
-      })
-      .catch((e: unknown) => console.error('Failed to refresh token', e));
+  private refreshToken(): Promise<unknown> {
+    return this.keycloak.updateToken(MIN_TOKEN_VALIDITY_SECONDS).catch((e: unknown) => console.error('Failed to refresh token', e));
   }
 }
