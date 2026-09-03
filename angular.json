@@ -59,7 +59,7 @@
                 }
               ]
             },
-            "e2e": {
+            "cypress": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
@@ -71,7 +71,7 @@
                 },
                 {
                   "replace": "src/main/webapp/gestion/auth.provider.ts",
-                  "with": "src/main/webapp/gestion/auth.provider.e2e.ts"
+                  "with": "src/main/webapp/gestion/auth.provider.cypress.ts"
                 }
               ]
             }
@@ -92,8 +92,8 @@
             "development": {
               "buildTarget": "project:build-gestion:development"
             },
-            "e2e": {
-              "buildTarget": "project:build-gestion:e2e"
+            "cypress": {
+              "buildTarget": "project:build-gestion:cypress"
             }
           },
           "defaultConfiguration": "development"
@@ -135,7 +135,7 @@
                 }
               ]
             },
-            "e2e": {
+            "cypress": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
@@ -164,8 +164,8 @@
             "development": {
               "buildTarget": "project:build-pupitre:development"
             },
-            "e2e": {
-              "buildTarget": "project:build-pupitre:e2e"
+            "cypress": {
+              "buildTarget": "project:build-pupitre:cypress"
             }
           },
           "defaultConfiguration": "development"
@@ -175,7 +175,7 @@
           "options": {
             "buildTarget": "project:build-gestion:development",
             "runnerConfig": "vitest.config.ts",
-            "exclude": ["**/webapp/{e2e,component}/**"],
+            "exclude": ["**/webapp/{application,component}/**"],
             "coverageInclude": ["src/main/webapp/**/*.ts"],
             "coverageExclude": ["**/*.spec.ts", "**/main.ts", "**/environments/**", "**/*.provider*.ts", "**/package-info.ts"]
           }

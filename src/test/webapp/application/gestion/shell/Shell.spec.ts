@@ -1,4 +1,4 @@
-import { dataSelector } from '../../utils/DataSelector';
+import { dataSelector } from '../../../utils/DataSelector';
 
 describe('Gestion shell', () => {
   it('should boot the gestion front on its own port', () => {

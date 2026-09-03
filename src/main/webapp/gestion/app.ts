@@ -1,20 +1,16 @@
 import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
-import Login from '@/app/login/login';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { GestionHeader } from './header/header';
 
 @Component({
   selector: 'glm-root',
   host: { 'data-selector': 'gestion-shell' },
   templateUrl: './app.html',
-  imports: [RouterModule, MatMenuModule, MatToolbarModule, MatIconModule, MatButtonModule, NgOptimizedImage, Login],
+  imports: [RouterModule, NgOptimizedImage, GestionHeader],
   styleUrl: './app.css',
 })
 export class App implements OnInit {

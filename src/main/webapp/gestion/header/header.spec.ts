@@ -3,10 +3,11 @@ import { InMemoryAuthentication } from '@/app/authentication/infrastructure/seco
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
-import Login from './login';
+import { dataSelector } from '@test/utils/DataSelector';
+import { GestionHeader } from './header';
 
-describe('Login', () => {
-  let fixture: ComponentFixture<Login>;
+describe('Gestion header', () => {
+  let fixture: ComponentFixture<GestionHeader>;
   let authentication: AuthenticationPort;
 
   beforeEach(async () => {
@@ -17,20 +18,28 @@ describe('Login', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Login);
+    fixture = TestBed.createComponent(GestionHeader);
+    fixture.componentRef.setInput('heading', 'glmfront');
+    await fixture.whenStable();
     authentication = TestBed.inject(AuthenticationPort);
   });
 
   it('should end the session on click on the logout button', async () => {
-    await authentication.authenticate();
+    await givenAnOpenSession();
 
     whenClickingLogout();
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenTheSessionIsOver();
   });
 
+  const givenAnOpenSession = (): Promise<void> => authentication.authenticate();
+
   const whenClickingLogout = (): void => {
-    const logoutButton = fixture.debugElement.query(By.css('#btn-logout')).nativeElement as HTMLElement;
+    const logoutButton = fixture.debugElement.query(By.css(dataSelector('gestion-logout'))).nativeElement as HTMLElement;
     logoutButton.click();
+  };
+
+  const thenTheSessionIsOver = (): void => {
+    expect(authentication.currentToken()).toBeUndefined();
   };
 });

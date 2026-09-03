@@ -11,6 +11,11 @@ from README`. No ticket tracker on this repository: never ask for an issue key, 
 net, no new test. What changes behavior is `feat:` or `fix:`, comes after, and carries its test. A task
 needing both produces two commits, in that order.
 
+A refactoring that **creates** a file brings that file's spec with it, in the same commit: the 100 % per-file
+bar leaves no other option, and a commit that is not green is not a commit. That is the one exception to "no
+new test" above, and it is bounded — the spec asserts the contract the extraction just gave the file, never
+a behaviour the change introduced.
+
 **MR descriptions fit in a few bullets**: one sentence of context, one bullet per change (`file:line` plus
 the behavior), one bullet for what is still to be decided, one verification line. The detail lives in the
 commit messages and in the diff.

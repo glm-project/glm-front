@@ -6,6 +6,6 @@
     "outDir": "./out-tsc/app",
     "types": []
   },
-  "files": ["src/main/webapp/gestion/main.ts", "src/main/webapp/gestion/auth.provider.e2e.ts", "src/main/webapp/pupitre/main.ts"],
+  "files": ["src/main/webapp/gestion/main.ts", "src/main/webapp/gestion/auth.provider.cypress.ts", "src/main/webapp/pupitre/main.ts"],
   "include": ["src/main/webapp/**/*.d.ts"]
 }

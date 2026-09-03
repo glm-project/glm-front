@@ -1,4 +1,4 @@
-import { dataSelector } from '../../utils/DataSelector';
+import { dataSelector } from '../../../utils/DataSelector';
 
 describe('Pupitre shell', () => {
   it('should boot the pupitre on its own port', () => {

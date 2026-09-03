@@ -28,10 +28,12 @@ literal.
 
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
-- `inject()`, never constructor injection (`gestion/app.ts:22`, `login.ts:12`, `KeycloakOidcAuthentication.ts:9`);
-- `signal()` for local component state (`App.appName`, `gestion/app.ts:21`);
+- `inject()`, never constructor injection (`gestion/app.ts:18`, `gestion/header/header.ts:19`,
+  `KeycloakOidcAuthentication.ts:9`);
+- `signal()` for local component state (`App.appName`, `gestion/app.ts:17`);
+- `input.required()` for what a parent gives a component (`shared/…/header/header.ts:12`);
 - standalone components, no `NgModule`;
-- component and directive selectors are prefixed `glm` (`glm-root`, `glm-login`) — enforced by
+- component and directive selectors are prefixed `glm` (`glm-root`, `glm-header`) — enforced by
   `angular-eslint`;
 - `private readonly` for injected collaborators.
 
