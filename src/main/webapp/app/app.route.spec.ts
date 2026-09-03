@@ -16,6 +16,4 @@ describe('AppRoutes', () => {
   it('should be defined', () => {
     expect(routes).toBeDefined();
   });
-
-  // seed4j-needle-angular-menu
 });
