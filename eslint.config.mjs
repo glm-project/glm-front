@@ -6,6 +6,32 @@ import typescript from 'typescript-eslint';
 
 const TOOLING_DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|\/)/;
 
+const FRONTS = ['gestion', 'pupitre'];
+
+const lazyRouteSelectors = pathSegment => [
+  `ImportExpression > Literal[value=/${pathSegment}/]`,
+  `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${pathSegment}/]`,
+];
+
+const forbidOtherFrontImports = front => {
+  const otherFronts = FRONTS.filter(candidate => candidate !== front);
+  const otherFrontSegment = `(^|\\/)(${otherFronts.join('|')})(\\/|$)`;
+  const message = `${front} must not import from ${otherFronts.join(' or ')}: each front ships its own bundle, and what both need belongs under app/.`;
+  return {
+    files: [`src/main/webapp/${front}/**/*.ts`, `src/main/webapp/app/**/primary/${front}/**/*.ts`],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: otherFronts.flatMap(other => [`**/${other}`, `**/${other}/**`]), message }] },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        ...lazyRouteSelectors(otherFrontSegment).map(selector => ({ selector, message: `Lazy route: ${message}` })),
+      ],
+    },
+  };
+};
+
 const local = {
   rules: {
     'no-comments': {
@@ -110,6 +136,7 @@ export default typescript.config(
       'arrow-body-style': 'error',
     },
   },
+  ...FRONTS.map(forbidOtherFrontImports),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
