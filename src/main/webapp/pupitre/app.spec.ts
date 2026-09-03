@@ -20,16 +20,27 @@ describe('Pupitre shell', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
   });
 
-  it('should give the screens it will route a place to render', () => {
+  it('should give the screens it will route a place to render', async () => {
+    await whenBootingTheShell();
+
+    thenItGivesTheRoutedScreensAPlaceToRender();
+  });
+
+  it('should enrol the pupitre as it boots', async () => {
+    await whenBootingTheShell();
+
+    thenItHoldsABearerToken();
+  });
+
+  const whenBootingTheShell = (): Promise<void> => fixture.whenStable();
+
+  const thenItGivesTheRoutedScreensAPlaceToRender = (): void => {
     const shell = fixture.nativeElement as HTMLElement;
 
     expect(shell.querySelector('router-outlet')).not.toBeNull();
-  });
+  };
 
-  it('should hold a bearer token once it has enrolled', () => {
-    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
-  });
+  const thenItHoldsABearerToken = (): void => expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
 });
