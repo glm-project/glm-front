@@ -13,8 +13,7 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
    server. Rendering and browser behavior, network intercepted (`component/utils/Interceptor.ts` provides
    `interceptForever` to control response timing).
 3. **E2E (Cypress)** — `src/test/webapp/e2e/<front>/<context>/*.spec.ts`, black-box through the full app.
-   User journeys, not component detail, and **no interception**: an e2e that stubs the network stops being
-   black-box. `interceptForever` therefore exists once, under `component/`, and not under `e2e/`.
+   User journeys, not component detail.
 
 Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is
 reached by an npm script naming the front. A suite is added by creating the config and the
