@@ -21,8 +21,8 @@ Measured while replacing them: both old specs stayed 9/9 green through a real be
 adapter — the refresh going from fire-and-forget to awaited, two log lines deleted. They were blind to the
 exact defect class that had already reached a green build on this branch once.
 
-Two more facts sharpened it. The Keycloak adapter is executed by no test but that one — every e2e binds
-`auth.provider.e2e.ts` — so its 100 % coverage measured a mock agreeing with the adapter, and none of the
+Two more facts sharpened it. The Keycloak adapter is executed by no test but that one — every application spec binds
+`auth.provider.cypress.ts` — so its 100 % coverage measured a mock agreeing with the adapter, and none of the
 failure modes that actually break Keycloak (wrong realm, blocked iframe, clock skew, expired refresh token)
 can arise from a mock. And MR 37's claim that the in-memory double _"cannot drift, it is type-checked against
 the same contract"_ holds for the signature alone: nothing asserted that the two adapters behave alike.

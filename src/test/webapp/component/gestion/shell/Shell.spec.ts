@@ -1,4 +1,4 @@
-import { dataSelector } from '../../utils/DataSelector';
+import { dataSelector } from '../../../utils/DataSelector';
 
 describe('Gestion shell', () => {
   it('should show its header once booted', () => {

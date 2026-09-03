@@ -61,11 +61,11 @@ export default typescript.config(
   },
   eslint.configs.recommended,
   {
-    files: ['src/test/webapp/e2e/**/*.ts'],
+    files: ['src/test/webapp/application/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
     languageOptions: {
       parserOptions: {
-        project: ['src/test/webapp/e2e/tsconfig.json'],
+        project: ['src/test/webapp/application/tsconfig.json'],
       },
     },
     rules: {
@@ -82,6 +82,15 @@ export default typescript.config(
     },
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
+  {
+    files: ['src/test/webapp/utils/**/*.ts'],
+    extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
+    languageOptions: {
+      parserOptions: {
+        project: ['src/test/webapp/utils/tsconfig.json'],
+      },
     },
   },
   {
