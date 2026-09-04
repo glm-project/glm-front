@@ -79,6 +79,25 @@ Tailwind's preflight resets `h1`–`h6` to inherit. And `color="primary"` / `col
 they are removed where they were gestion-only, and left on the shared header because `pupitre` still loads
 indigo-pink until the ticket that takes Material out of it lands.
 
+## An icon is an SVG the bundle carries, never a font a CDN serves
+
+`glm-icon` (`app/shared/design-system/infrastructure/primary/icon/`) is how a front draws one, and the set it
+offers is a single object — `DRAWINGS` — that is at once the argument to `provideIcons` and, through
+`keyof typeof`, the type of the `name` input. Naming an icon the design system does not carry is a compile
+error, and no name can be added without its drawing: the two cannot drift apart because they are one
+declaration. Both packages are pinned exactly at `34.0.0`. `@ng-icons/core` is the one carrying a framework
+peer range — `@angular/core >=21.0.0` — where `@ng-icons/lucide` declares none and follows its line; `34` is
+the last line admitting Angular 21, `35` raising that floor to 22.
+
+The icon sizes itself at `1em` and paints in `currentColor`, so it takes the size and the colour of whatever
+encloses it, and a caller names a type token rather than a pixel value. Inside a Material control there is
+nothing to name: `.mat-mdc-icon-button svg` hard-sizes the glyph to `--mat-icon-button-icon-size`, 24 px, and
+a class on the wrapper does not outrank it — which is why the gestion menu trigger names no size at all.
+`NgIcon` marks its own `<ng-icon>` element `aria-hidden` unless the caller says otherwise, and that is the
+right default: the accessible name belongs to the control, not to its glyph.
+
+The decision and its price are in [ADR 0005](adr/0005-icons-as-svg-the-bundle-carries.md).
+
 ## Three barriers, all in a tool that already runs
 
 - **`local/no-token-bypass`** (`eslint.config.mjs`), on `src/**/*.ts` and `src/**/*.html`: native Tailwind

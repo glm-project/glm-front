@@ -13,3 +13,5 @@ renumbers at merge time. The status below is the living one — update this line
   **Accepted** — RFC 8628 written by hand behind the port, tokens in memory only
 - [0004 — ngsw caches the pupitre shell and nothing else](0004-ngsw-caches-the-pupitre-shell-and-nothing-else.md) —
   **Accepted** — assetGroups only, pupitre only, no service-worker code and no offline write
+- [0005 — Draw icons from an SVG the bundle carries](0005-icons-as-svg-the-bundle-carries.md) — **Accepted** —
+  `glm-icon` over `@ng-icons`, one typed set, no icon font and no CDN link
