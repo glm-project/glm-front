@@ -1,5 +1,5 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
-import { KeycloakOidcAuthentication } from '@/app/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { KeycloakOidcAuthentication } from '@/app/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { Provider } from '@angular/core';
 import Keycloak from 'keycloak-js';
 

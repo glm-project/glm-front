@@ -31,7 +31,7 @@ that way.
 
 ## Decision
 
-The pupitre authenticates through `app/authentication/infrastructure/secondary/device/`, a third sibling
+The pupitre authenticates through `app/shared/authentication/infrastructure/secondary/device/`, a third sibling
 beside `keycloak-oidc` and `in-memory`, chosen by `pupitre/auth.provider.ts` like every other adapter.
 
 It runs the grant itself: `POST .../auth/device` with `scope=openid offline_access`, then poll
