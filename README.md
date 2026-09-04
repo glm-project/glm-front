@@ -44,7 +44,9 @@ Background and decisions:
 - [Architecture Decision Records](documentation/adr/README.md) — structural decisions, the options weighed
   and their price
 
-`CLAUDE.md` covers what an agent needs before it knows the task: commands, traps, and where each of these
-documents applies.
+[AGENTS.md](AGENTS.md) covers what an agent needs before it knows the task: commands, traps, and where
+each of these documents applies. Codex reads it directly; [CLAUDE.md](CLAUDE.md) imports it with
+`@AGENTS.md` for Claude Code. Maintain shared instructions in `AGENTS.md` and the topic documents so both
+tools use the same conventions.
 
 <!-- seed4j-needle-documentation -->
