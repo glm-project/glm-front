@@ -1,4 +1,4 @@
-import { httpAuthInterceptor } from '@/app/authentication/infrastructure/primary/http-auth.interceptor';
+import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';

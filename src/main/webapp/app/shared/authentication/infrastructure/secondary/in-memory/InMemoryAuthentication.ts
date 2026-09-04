@@ -1,4 +1,4 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Injectable } from '@angular/core';
 
 export const IN_MEMORY_TOKEN = 'in-memory-token';

@@ -1,4 +1,4 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { HttpBackend, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, firstValueFrom, map, of } from 'rxjs';

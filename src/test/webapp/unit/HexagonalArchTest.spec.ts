@@ -8,6 +8,11 @@ import { classes, noClasses } from 'arch-unit-ts/dist/main';
 describe('HexagonalArchTest', () => {
   const srcProject = new TypeScriptProject(RelativePath.of('src/main/webapp/app'), '**/*FilesToExclude*', '**/*OtherFilesToExclude*');
 
+  const packageInfos = srcProject
+    .allClasses()
+    .get()
+    .filter(typeScriptClass => typeScriptClass.getPath().get().endsWith('/package-info.ts'));
+
   const sharedKernels = packagesWithContext(SharedKernel.name);
   const businessContexts = packagesWithContext(BusinessContext.name);
 
@@ -16,8 +21,7 @@ describe('HexagonalArchTest', () => {
   }
 
   function packagesWithContext(contextName: string): string[] {
-    return srcProject
-      .filterClasses('**/package-info.ts')
+    return packageInfos
       .filter(typeScriptClass => typeScriptClass.hasImport(contextName))
       .map(typeScriptClass => typeScriptClass.packagePath.getDotsPath());
   }

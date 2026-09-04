@@ -1,4 +1,4 @@
-import { Header } from '@/app/shared/infrastructure/primary/header/header';
+import { Header } from '@/app/shared/design-system/infrastructure/primary/header/header';
 import { Component, input } from '@angular/core';
 
 @Component({

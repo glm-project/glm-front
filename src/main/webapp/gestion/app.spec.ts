@@ -1,5 +1,5 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
-import { InMemoryAuthentication } from '@/app/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 

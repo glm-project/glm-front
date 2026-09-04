@@ -27,7 +27,7 @@ remote stylesheet is a render it cannot make. Anything that front needs at boot 
 reaching into `gestion/` or `pupitre/` drags one front's concerns into the other's bundle — the
 boundary the split exists to draw. Screens that belong to a single front live at
 `app/<context>/infrastructure/primary/<front>/`, not in the root — what a root may hold is composition:
-the shell, the routes, the providers, and how this front fills the chrome that `app/shared` provides.
+the shell, the routes, the providers, and how this front fills the chrome that the design system provides.
 
 **Neither front imports the other, and `app/` imports neither** — `eslint.config.mjs` holds both
 mechanically. It takes two native rules, not one: `no-restricted-imports` covers static imports and
@@ -61,11 +61,24 @@ an application, and both roots are measured.
 
 ## A bounded context starts with its `package-info.ts`
 
-Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context — currently
-`authentication` and `shared`, both shared kernels. `src/test/webapp/unit/HexagonalArchTest.spec.ts`
-discovers contexts by scanning `**/package-info.ts` for a class extending `BusinessContext`
-(`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder naming alone is invisible to
-it.
+Business code lives under `src/main/webapp/app/`, one folder per bounded context — currently
+`shared/authentication` and `shared/design-system`, both shared kernels.
+`src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning every `package-info.ts` for a
+class extending `BusinessContext` (`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder
+naming alone is invisible to it.
+
+**The address says the nature: `app/shared/<name>/` is a shared kernel, `app/<name>/` a business context.**
+`app/shared/` is a namespace and holds no `package-info.ts` of its own — it is not a context, and nothing
+lives directly under it outside a nested kernel. That last clause is not decoration: a file dropped at
+`app/shared/x.ts` would belong to no declared context, which is the blind spot two paragraphs below.
+
+**That scan walks the whole tree, and it has to be written that way.** `TypeScriptProject.filterClasses` looks
+one level below the project root only — it maps over the root's direct sub-packages and keeps their own files,
+never recursing — so a context nested any deeper than `app/<name>/` is discovered by nobody. The spec filters
+`srcProject.allClasses()` on the file name instead, which is recursive. Measured on
+`app/shared/design-system/`: through `filterClasses` the kernel vanishes from the suite, taking its three
+per-context rules with it (11 tests down to 8), and `arch-unit-ts.json` carries `failOnEmptyShould: false`, so
+nothing complains.
 
 One folder under `app/` sits outside that scan on purpose — `app/api/`, below. Everywhere else the absence
 is a defect: `app/login/` was the last folder to lack a `package-info.ts`, and the header composition
@@ -82,8 +95,8 @@ architecture test stays green over it because it checks nothing there.
     secondary/               # adapters implementing domain ports (HTTP clients)
 ```
 
-Code genuinely shared across contexts belongs in a context extending `SharedKernel` (that is what `shared`
-is), not copied into each context.
+Code genuinely shared across contexts belongs in a context extending `SharedKernel` — `design-system` is one —
+not copied into each context.
 
 ## The wire format lives at an address no `domain` can reach
 
@@ -92,9 +105,9 @@ is), not copied into each context.
 `openapi-typescript`. **The missing `package-info.ts` is the rule, not an oversight.** The folder belongs to
 no declared context, so `domain` — which may only depend on `domain` and shared kernels — cannot import it,
 while `infrastructure/secondary` can. Both directions were measured: an `import` of `@/app/api/schema` from
-`authentication/domain/` reddens _Domain should not depend on outside_, the same import from
-`authentication/infrastructure/secondary/` leaves the suite green. A shared kernel of wire types would be
-importable from every domain and the rule would be an intention.
+`shared/authentication/domain/` reddens _Domain should not depend on outside_, the same import from
+`shared/authentication/infrastructure/secondary/` leaves the suite green. A shared kernel of wire types would
+be importable from every domain and the rule would be an intention.
 
 **`app/api/` must stay under `app/`.** `TypeScriptProject` populates itself with
 `addSourceFilesAtPaths('src/main/webapp/app/**/*.ts')`, and `isImportValid` drops any import ts-morph fails
@@ -140,10 +153,10 @@ outward instead of an adapter reaching inward.
 
 ## Everything lives as close as possible to where it is used
 
-Hoisting to a higher level — a global stylesheet, the `shared` kernel, a root-provided service — is only
+Hoisting to a higher level — a global stylesheet, a shared kernel, a root-provided service — is only
 justified when the need is genuinely shared; until then, the nearest common owner wins. Reuse an abstraction
-that already exists in `shared`; do not create a new one preemptively. For a value shared by two sibling
-components, a CSS custom property on their nearest common ancestor cascades on its own — that beats a
+that already exists under `app/shared/`; do not create a new one preemptively. For a value shared by two
+sibling components, a CSS custom property on their nearest common ancestor cascades on its own — that beats a
 `:root` entry in `styles.css`.
 
 **Two sibling components communicate through the parent page**: an output going up, a call coming back down
@@ -156,12 +169,16 @@ authentication adapters are a bare `@Injectable()`.
 
 ## Chrome shared by both fronts sits at an adapter address, and stays mute
 
-The header is `app/shared/infrastructure/primary/header/` — a primary adapter of the `shared` kernel, and
-the address matters. `app/shared/header/` would pass the architecture test just as well, and that is the
-trap: `withOptionalLayers(true)` skips a class sitting outside every declared layer, so it reads green
-because nothing bites. Measured at the adapter address, a header importing from
-`shared/infrastructure/secondary/` reddens _Primary should not depend on secondary_; at the short address
-it reddens nothing.
+The header is `app/shared/design-system/infrastructure/primary/header/` — a primary adapter of the
+`design-system` kernel, and both halves of the address matter. A mute bar carrying a title and a slot **is**
+a design-system component, and the day a second one arrives — an icon, a button — a header kernel of its own
+would have the chrome sitting in two contexts at once. It sits at the adapter address, not at the shorter
+`app/shared/design-system/header/`, which the architecture test only half covers. Measured at the new depth
+with a deliberate import from `design-system/infrastructure/secondary/`: the adapter address reddens
+_Primary should not depend on secondary_ **and** the layered check; the short address reddens the layered
+check alone, on its target side (_secondary adapters may not be accessed by any layer_). A class outside
+every declared layer is skipped as an origin, so the rules keyed on where a dependency comes from never see
+it, and `..primary..` does not match it either. Half the net, for a name one segment shorter.
 
 The component is mute: no routing, no logout, no connectivity state. It holds a `heading` input and one
 projection slot, and it keeps the toolbar the gestion front already had — the chrome moves address here,
@@ -193,8 +210,8 @@ the alias the architecture test itself uses.
 
 ## Authentication wiring
 
-Authentication is a `SharedKernel` context, `app/authentication/`: the interceptor is global and there is
-no business rule to make it a bounded context.
+Authentication is a `SharedKernel` context, `app/shared/authentication/`: the interceptor is global and there
+is no business rule to make it a bounded context.
 
 - **The port** (`domain/AuthenticationPort.ts`) says only what its callers need: `authenticate()`,
   `currentToken()`, `logout()`. It is an **abstract class, and it imports nothing** — both forced. An
