@@ -27,7 +27,7 @@ type Parametres<Op> = Op extends { parameters: { query?: infer Valeurs } }
     : { parametres?: NonNullable<Valeurs> }
   : never;
 
-type Corps<Op> = Op extends { requestBody: { content: { 'application/json': infer Envoi } } } ? { corps: Envoi } : { corps?: never };
+type Corps<Op> = Op extends { requestBody: { content: { 'application/json': infer Envoi } } } ? { body: Envoi } : { body?: never };
 
 type RequeteEnLecture<Route extends RouteEnLecture> = Chemin<Lecture<Route>> & Parametres<Lecture<Route>>;
 
@@ -38,31 +38,33 @@ type ValeurDeParametre = string | number | boolean | readonly (string | number |
 interface RequeteBrute {
   chemin?: Record<string, string>;
   parametres?: Record<string, unknown>;
-  corps?: unknown;
+  body?: unknown;
 }
 
-const urlDe = (route: string, chemin: Record<string, string> | undefined): string =>
+const buildUrlFor = (route: string, chemin: Record<string, string> | undefined): string =>
   Object.entries(chemin ?? {}).reduce((url, [nom, valeur]) => url.replace(`{${nom}}`, encodeURIComponent(valeur)), route);
 
-const renseignes = (parametres: Record<string, unknown> | undefined): [string, ValeurDeParametre][] =>
+const filterFilled = (parametres: Record<string, unknown> | undefined): [string, ValeurDeParametre][] =>
   Object.entries(parametres ?? {}).filter((entree): entree is [string, ValeurDeParametre] => entree[1] !== undefined);
 
-const parametresDe = (parametres: Record<string, unknown> | undefined): HttpParams =>
-  new HttpParams({ fromObject: Object.fromEntries(renseignes(parametres)) });
+const buildParamsFrom = (parametres: Record<string, unknown> | undefined): HttpParams =>
+  new HttpParams({ fromObject: Object.fromEntries(filterFilled(parametres)) });
 
 @Injectable()
 export class ClientApi {
   private readonly http = inject(HttpClient);
 
-  lire<Route extends RouteEnLecture>(route: Route, requete: RequeteEnLecture<Route>): Promise<Rendu<Lecture<Route>>> {
+  read<Route extends RouteEnLecture>(route: Route, requete: RequeteEnLecture<Route>): Promise<Rendu<Lecture<Route>>> {
     const { chemin, parametres } = requete as RequeteBrute;
 
-    return firstValueFrom(this.http.get<Rendu<Lecture<Route>>>(urlDe(route, chemin), { params: parametresDe(parametres) }));
+    return firstValueFrom(this.http.get<Rendu<Lecture<Route>>>(buildUrlFor(route, chemin), { params: buildParamsFrom(parametres) }));
   }
 
-  ecrire<Route extends RouteEnEcriture>(route: Route, requete: RequeteEnEcriture<Route>): Promise<Rendu<Ecriture<Route>>> {
-    const { chemin, parametres, corps } = requete as RequeteBrute;
+  write<Route extends RouteEnEcriture>(route: Route, requete: RequeteEnEcriture<Route>): Promise<Rendu<Ecriture<Route>>> {
+    const { chemin, parametres, body } = requete as RequeteBrute;
 
-    return firstValueFrom(this.http.post<Rendu<Ecriture<Route>>>(urlDe(route, chemin), corps, { params: parametresDe(parametres) }));
+    return firstValueFrom(
+      this.http.post<Rendu<Ecriture<Route>>>(buildUrlFor(route, chemin), body, { params: buildParamsFrom(parametres) }),
+    );
   }
 }

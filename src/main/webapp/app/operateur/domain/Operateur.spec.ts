@@ -28,10 +28,10 @@ describe('Operateur', () => {
     new Operateur('0a1b2c3d', 'Dupont', 'Jean', SANS_POSTE, matricule);
 
   const thenItAnswersTo = (operateur: Operateur, code: string): void => {
-    expect(operateur.repondAuCode(code)).toBe(true);
+    expect(operateur.matchesCode(code)).toBe(true);
   };
 
   const thenItStaysSilentOn = (operateur: Operateur, code: string): void => {
-    expect(operateur.repondAuCode(code)).toBe(false);
+    expect(operateur.matchesCode(code)).toBe(false);
   };
 });

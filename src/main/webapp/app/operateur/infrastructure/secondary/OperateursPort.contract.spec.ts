@@ -90,17 +90,17 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
     expect(jean.id).toBe(JEAN_DUPONT.id);
     expect(jean.nom).toBe('Dupont');
     expect(jean.prenom).toBe('Jean');
-    expect(jean.repondAuCode('049')).toBe(true);
+    expect(jean.matchesCode('049')).toBe(true);
     expect(jean.postes).toEqual([{ id: TOUR_1.id, libelle: 'Tour 1' }]);
   };
 
   const thenItReadAWholeWorkshopOf = (extrait: Extrait<Operateur>, nombre: number): void => {
     expect(extrait.elements).toHaveLength(nombre);
-    expect(extrait.estComplet()).toBe(true);
+    expect(extrait.isComplete()).toBe(true);
   };
 
   const thenItSaysItMissesSome = (extrait: Extrait<Operateur>, nombreTotal: number): void => {
     expect(extrait.nombreTotal).toBe(nombreTotal);
-    expect(extrait.estComplet()).toBe(false);
+    expect(extrait.isComplete()).toBe(false);
   };
 });
