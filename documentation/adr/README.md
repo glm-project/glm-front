@@ -15,3 +15,5 @@ renumbers at merge time. The status below is the living one — update this line
   **Accepted** — assetGroups only, pupitre only, no service-worker code and no offline write
 - [0005 — Draw icons from an SVG the bundle carries](0005-icons-as-svg-the-bundle-carries.md) — **Accepted** —
   `glm-icon` over `@ng-icons`, one typed set, no icon font and no CDN link
+- [0006 — Call the back through a typed client](0006-how-the-front-calls-the-back.md) — **Accepted** — a client
+  generic over `paths`, translation in the adapter, refusals on the stable code
