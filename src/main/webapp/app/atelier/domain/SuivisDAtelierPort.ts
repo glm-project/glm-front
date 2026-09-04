@@ -12,5 +12,5 @@ export interface Pointage {
 export abstract class SuivisDAtelierPort {
   abstract suivis(etats: readonly EtatDAtelier[]): Promise<Extrait<SuiviDAtelier>>;
 
-  abstract pointer(suiviId: string, pointage: Pointage): Promise<void>;
+  abstract recordPointage(suiviId: string, pointage: Pointage): Promise<void>;
 }

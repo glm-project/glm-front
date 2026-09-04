@@ -44,7 +44,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should open the working day of an operator arriving in the morning', async () => {
-    const arrivee = journees.sAssurerQueLOperateurEstArrive(JEAN);
+    const arrivee = journees.ensureOperateurArrived(JEAN);
 
     const requete = await whenTheServerAnswersOn(URL_DES_JOURNEES, acceptant);
 
@@ -53,7 +53,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should hand back when the working day it has to make sure of is already open', async () => {
-    const arrivee = journees.sAssurerQueLOperateurEstArrive(JEAN);
+    const arrivee = journees.ensureOperateurArrived(JEAN);
 
     await whenTheServerAnswersOn(URL_DES_JOURNEES, refusant(409, 'journee-de-travail-deja-ouverte', JOURNEE_DEJA_OUVERTE));
 
@@ -61,7 +61,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should refuse an arrival for an operator the referential does not hold', async () => {
-    const echec = echecDe(journees.sAssurerQueLOperateurEstArrive(JEAN));
+    const echec = echecDe(journees.ensureOperateurArrived(JEAN));
 
     await whenTheServerAnswersOn(URL_DES_JOURNEES, refusant(404, 'operateur-introuvable', OPERATEUR_INCONNU));
 
@@ -69,7 +69,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should put an operator back at work when he comes off a break', async () => {
-    const reprise = journees.sAssurerQueLOperateurEstPresent(JEAN);
+    const reprise = journees.ensureOperateurPresent(JEAN);
 
     const requete = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
 
@@ -78,7 +78,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should hand back when the operator it has to make sure of is already at work', async () => {
-    const reprise = journees.sAssurerQueLOperateurEstPresent(JEAN);
+    const reprise = journees.ensureOperateurPresent(JEAN);
 
     await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'transition-de-presence-interdite', DEJA_AU_TRAVAIL));
 
@@ -86,7 +86,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should refuse the very same transition when it is asked for as a gesture of its own', async () => {
-    const echec = echecDe(journees.pointerLaPresence(JEAN, 'PAUSE'));
+    const echec = echecDe(journees.recordPresence(JEAN, 'PAUSE'));
 
     await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'transition-de-presence-interdite', PAUSE_IMPOSSIBLE));
 
@@ -94,7 +94,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should record the departure that closes the working day', async () => {
-    const depart = journees.pointerLaPresence(JEAN, 'DEPART');
+    const depart = journees.recordPresence(JEAN, 'DEPART');
 
     const requete = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
 
@@ -103,7 +103,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should replay a presence another entry slipped in front of, and record it', async () => {
-    const pause = journees.pointerLaPresence(JEAN, 'PAUSE');
+    const pause = journees.recordPresence(JEAN, 'PAUSE');
 
     await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
     const rejeu = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
@@ -129,8 +129,8 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
     return requete;
   };
 
-  const thenItSent = (requete: TestRequest, corps: unknown): void => {
-    expect(requete.request.body).toEqual(corps);
+  const thenItSent = (requete: TestRequest, body: unknown): void => {
+    expect(requete.request.body).toEqual(body);
   };
 
   const thenItWasRefused = (echec: unknown, code: string, message: string): void => {

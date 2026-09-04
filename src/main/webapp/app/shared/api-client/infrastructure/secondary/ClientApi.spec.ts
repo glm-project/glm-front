@@ -33,7 +33,7 @@ describe('ClientApi', () => {
   });
 
   it('should hand back what the server answered on the route it was asked for', async () => {
-    const lecture = api.lire('/api/operateurs', { parametres: { size: PLEINE_PAGE } });
+    const lecture = api.read('/api/operateurs', { parametres: { size: PLEINE_PAGE } });
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DOPERATEURS);
 
@@ -42,7 +42,7 @@ describe('ClientApi', () => {
   });
 
   it('should repeat a parameter the caller gave several values', async () => {
-    const lecture = api.lire('/api/atelier/suivis', { parametres: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
+    const lecture = api.read('/api/atelier/suivis', { parametres: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DE_SUIVIS);
 
@@ -51,7 +51,7 @@ describe('ClientApi', () => {
   });
 
   it('should leave out a parameter the caller did not fill', async () => {
-    const lecture = api.lire('/api/operateurs', { parametres: { poste: AUCUN_POSTE, size: PLEINE_PAGE } });
+    const lecture = api.read('/api/operateurs', { parametres: { poste: AUCUN_POSTE, size: PLEINE_PAGE } });
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DOPERATEURS);
 
@@ -60,9 +60,9 @@ describe('ClientApi', () => {
   });
 
   it('should put the path parameters the caller gave into the URL', async () => {
-    const ecriture = api.ecrire('/api/atelier/suivis/{id}/pointages', {
+    const ecriture = api.write('/api/atelier/suivis/{id}/pointages', {
       chemin: { id: SUIVI_ID },
-      corps: { operateur: OPERATEUR_ID, type: 'DEBUT' },
+      body: { operateur: OPERATEUR_ID, type: 'DEBUT' },
     });
 
     const requete = await whenTheServerAnswers(UN_SUIVI);
@@ -72,7 +72,7 @@ describe('ClientApi', () => {
   });
 
   it('should send the body the caller gave to write', async () => {
-    const ecriture = api.ecrire('/api/atelier/journees/pointages', { corps: { operateur: OPERATEUR_ID, type: 'PAUSE' } });
+    const ecriture = api.write('/api/atelier/journees/pointages', { body: { operateur: OPERATEUR_ID, type: 'PAUSE' } });
 
     const requete = await whenTheServerAnswers({});
 
@@ -95,8 +95,8 @@ describe('ClientApi', () => {
     expect(requete.request.urlWithParams).toBe(url);
   };
 
-  const thenItSent = (requete: TestRequest, corps: unknown): void => {
-    expect(requete.request.body).toEqual(corps);
+  const thenItSent = (requete: TestRequest, body: unknown): void => {
+    expect(requete.request.body).toEqual(body);
   };
 
   const thenItHandedBack = (recu: unknown, attendu: unknown): void => {

@@ -8,11 +8,11 @@ export class ActiviteEnCours {
     readonly posteId?: string,
   ) {}
 
-  estDe(operateurId: string): boolean {
+  isFor(operateurId: string): boolean {
     return this.operateurId === operateurId;
   }
 
-  dureeA(maintenant: Date): number {
+  computeDureeAt(maintenant: Date): number {
     return maintenant.getTime() - this.depuis.getTime();
   }
 }

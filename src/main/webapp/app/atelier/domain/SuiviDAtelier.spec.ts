@@ -51,7 +51,7 @@ describe('SuiviDAtelier', () => {
   };
 
   const thenTheActivityIsOn = (suivi: SuiviDAtelier, operateurId: string): void => {
-    const activite = suivi.activiteDe(operateurId);
+    const activite = suivi.findActiviteFor(operateurId);
 
     expect(activite?.categorie).toBe('TRAVAIL');
     expect(activite?.depuis).toEqual(HUIT_HEURES);
@@ -59,11 +59,11 @@ describe('SuiviDAtelier', () => {
   };
 
   const thenNothingIsOpenFor = (suivi: SuiviDAtelier, operateurId: string): void => {
-    expect(suivi.activiteDe(operateurId)).toBeUndefined();
-    expect(suivi.dureeDe(operateurId, NEUF_HEURES_TRENTE)).toBeUndefined();
+    expect(suivi.findActiviteFor(operateurId)).toBeUndefined();
+    expect(suivi.computeDureeFor(operateurId, NEUF_HEURES_TRENTE)).toBeUndefined();
   };
 
   const thenItHasLastedFor = (suivi: SuiviDAtelier, operateurId: string, millisecondes: number): void => {
-    expect(suivi.dureeDe(operateurId, NEUF_HEURES_TRENTE)).toBe(millisecondes);
+    expect(suivi.computeDureeFor(operateurId, NEUF_HEURES_TRENTE)).toBe(millisecondes);
   };
 });

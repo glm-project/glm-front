@@ -15,11 +15,11 @@ export class SuiviDAtelier {
     return this.nom;
   }
 
-  activiteDe(operateurId: string): ActiviteEnCours | undefined {
-    return this.activites.find(activite => activite.estDe(operateurId));
+  findActiviteFor(operateurId: string): ActiviteEnCours | undefined {
+    return this.activites.find(activite => activite.isFor(operateurId));
   }
 
-  dureeDe(operateurId: string, maintenant: Date): number | undefined {
-    return this.activiteDe(operateurId)?.dureeA(maintenant);
+  computeDureeFor(operateurId: string, maintenant: Date): number | undefined {
+    return this.findActiviteFor(operateurId)?.computeDureeAt(maintenant);
   }
 }

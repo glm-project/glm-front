@@ -180,7 +180,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should record the operator starting to work on the element', async () => {
-    const pointage = suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN);
+    const pointage = suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN);
 
     const requete = await whenTheServerTakesTheClocking(acceptant);
 
@@ -189,7 +189,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should clock on no workstation in a company that has no machine park', async () => {
-    const pointage = suivis.pointer(SUIVI_ID, UN_DEBUT_SANS_MACHINE);
+    const pointage = suivis.recordPointage(SUIVI_ID, UN_DEBUT_SANS_MACHINE);
 
     const requete = await whenTheServerTakesTheClocking(acceptant);
 
@@ -198,7 +198,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should refuse a clocking the element cannot take, with the message the domain wrote', async () => {
-    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+    const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(refusant(409, 'transition-d-atelier-interdite', DEUX_DEBUTS_DE_SUITE));
 
@@ -206,7 +206,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should refuse a clocking on an element the workshop no longer holds', async () => {
-    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+    const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(refusant(404, 'suivi-d-atelier-introuvable', UN_ELEMENT_QUI_A_QUITTE_L_ATELIER));
 
@@ -214,7 +214,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should replay a clocking another entry slipped in front of, and record it', async () => {
-    const pointage = suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN);
+    const pointage = suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN);
 
     await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
     const rejeu = await whenTheServerTakesTheClocking(acceptant);
@@ -224,7 +224,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should refuse the clocking when the replay meets the same race', async () => {
-    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+    const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
     await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
@@ -233,7 +233,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should let a server breakdown through, since no business refused anything', async () => {
-    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+    const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(enPanne);
 
@@ -241,7 +241,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should let an invalid body through as a failure, since at the pupitre it comes from us', async () => {
-    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+    const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(refusantLeCorps);
 
@@ -249,7 +249,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   });
 
   it('should let a code none of its ports reaches through as a failure', async () => {
-    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+    const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(refusant(409, 'element-deja-engage', 'cet element est deja engage'));
 
@@ -273,8 +273,8 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     return requete;
   };
 
-  const thenItSent = (requete: TestRequest, corps: unknown): void => {
-    expect(requete.request.body).toEqual(corps);
+  const thenItSent = (requete: TestRequest, body: unknown): void => {
+    expect(requete.request.body).toEqual(body);
   };
 
   const thenItWasRefused = (echec: unknown, code: string, message: string): void => {
@@ -318,32 +318,32 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   };
 
   const thenJeanIsAtWorkOnTour1 = (extrait: Extrait<SuiviDAtelier>): void => {
-    const activite = extrait.elements[0].activiteDe(JEAN);
+    const activite = extrait.elements[0].findActiviteFor(JEAN);
 
     expect(activite?.categorie).toBe('TRAVAIL');
     expect(activite?.posteId).toBe(TOUR_1.id);
   };
 
   const thenJeanHasBeenOnItFor = (extrait: Extrait<SuiviDAtelier>, millisecondes: number): void => {
-    expect(extrait.elements[0].dureeDe(JEAN, NEUF_HEURES_TRENTE)).toBe(millisecondes);
+    expect(extrait.elements[0].computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBe(millisecondes);
   };
 
   const thenJeanIsAtWorkOnNoWorkstation = (extrait: Extrait<SuiviDAtelier>): void => {
-    expect(extrait.elements[0].activiteDe(JEAN)?.posteId).toBeUndefined();
+    expect(extrait.elements[0].findActiviteFor(JEAN)?.posteId).toBeUndefined();
   };
 
   const thenNobodyIsOnIt = (extrait: Extrait<SuiviDAtelier>): void => {
-    expect(extrait.elements[0].activiteDe(JEAN)).toBeUndefined();
-    expect(extrait.elements[0].dureeDe(JEAN, NEUF_HEURES_TRENTE)).toBeUndefined();
+    expect(extrait.elements[0].findActiviteFor(JEAN)).toBeUndefined();
+    expect(extrait.elements[0].computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBeUndefined();
   };
 
   const thenItReadAWholeWorkshopOf = (extrait: Extrait<SuiviDAtelier>, nombre: number): void => {
     expect(extrait.elements).toHaveLength(nombre);
-    expect(extrait.estComplet()).toBe(true);
+    expect(extrait.isComplete()).toBe(true);
   };
 
   const thenItSaysItMissesSome = (extrait: Extrait<SuiviDAtelier>, nombreTotal: number): void => {
     expect(extrait.nombreTotal).toBe(nombreTotal);
-    expect(extrait.estComplet()).toBe(false);
+    expect(extrait.isComplete()).toBe(false);
   };
 });

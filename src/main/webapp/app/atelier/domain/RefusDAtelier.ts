@@ -1,4 +1,4 @@
-export const CODES_QUE_LES_PORTS_ATTEIGNENT = [
+export const CODES_DE_REFUS_D_ATELIER = [
   'suivi-d-atelier-introuvable',
   'operateur-introuvable',
   'poste-de-travail-introuvable',
@@ -11,7 +11,7 @@ export const CODES_QUE_LES_PORTS_ATTEIGNENT = [
   'saisie-concurrente',
 ] as const;
 
-export type CodeDeRefusDAtelier = (typeof CODES_QUE_LES_PORTS_ATTEIGNENT)[number];
+export type CodeDeRefusDAtelier = (typeof CODES_DE_REFUS_D_ATELIER)[number];
 
 export class RefusDAtelier extends Error {
   constructor(

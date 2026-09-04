@@ -4,7 +4,7 @@ export class Extrait<T> {
     readonly nombreTotal: number,
   ) {}
 
-  estComplet(): boolean {
+  isComplete(): boolean {
     return this.elements.length === this.nombreTotal;
   }
 }

@@ -1,26 +1,26 @@
 import { CodeDeRefusDAtelier, RefusDAtelier } from '@/app/atelier/domain/RefusDAtelier';
-import { refusDAtelierDans } from './refusDAtelierDans';
+import { findRefusDAtelierIn } from './findRefusDAtelierIn';
 
 type Envoi = () => Promise<unknown>;
 
 const SAISIE_CONCURRENTE: CodeDeRefusDAtelier = 'saisie-concurrente';
 
-const porte = (refus: unknown, code: CodeDeRefusDAtelier): boolean => refus instanceof RefusDAtelier && refus.code === code;
+const matches = (refus: unknown, code: CodeDeRefusDAtelier): boolean => refus instanceof RefusDAtelier && refus.code === code;
 
-const envoyerUneFois = async (envoi: Envoi): Promise<void> => {
+const sendOnce = async (envoi: Envoi): Promise<void> => {
   try {
     await envoi();
   } catch (echec: unknown) {
-    throw refusDAtelierDans(echec) ?? echec;
+    throw findRefusDAtelierIn(echec) ?? echec;
   }
 };
 
-export const envoyer = async (envoi: Envoi): Promise<void> => {
+export const send = async (envoi: Envoi): Promise<void> => {
   try {
-    await envoyerUneFois(envoi);
+    await sendOnce(envoi);
   } catch (refus: unknown) {
-    if (porte(refus, SAISIE_CONCURRENTE)) {
-      await envoyerUneFois(envoi);
+    if (matches(refus, SAISIE_CONCURRENTE)) {
+      await sendOnce(envoi);
       return;
     }
 
@@ -28,11 +28,11 @@ export const envoyer = async (envoi: Envoi): Promise<void> => {
   }
 };
 
-export const envoyerEnAbsorbant = async (absorbe: CodeDeRefusDAtelier, envoi: Envoi): Promise<void> => {
+export const sendAbsorbing = async (absorbe: CodeDeRefusDAtelier, envoi: Envoi): Promise<void> => {
   try {
-    await envoyer(envoi);
+    await send(envoi);
   } catch (refus: unknown) {
-    if (porte(refus, absorbe)) {
+    if (matches(refus, absorbe)) {
       return;
     }
 
