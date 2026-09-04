@@ -1,0 +1,54 @@
+:root {
+  --mat-sys-primary: var(--color-accent);
+  --mat-sys-on-primary: var(--color-on-accent);
+  --mat-sys-surface: var(--color-surface);
+  --mat-sys-on-surface: var(--color-ink);
+  --mat-sys-surface-variant: var(--color-sunken);
+  --mat-sys-on-surface-variant: var(--color-ink-muted);
+  --mat-sys-background: var(--color-canvas);
+  --mat-sys-on-background: var(--color-ink);
+  --mat-sys-outline: var(--color-border-strong);
+  --mat-sys-outline-variant: var(--color-border);
+  --mat-sys-error: var(--color-nc);
+  --mat-sys-on-error: var(--color-on-accent);
+
+  --mat-sys-headline-small-font: var(--font-sans);
+  --mat-sys-headline-small-size: var(--text-title);
+  --mat-sys-headline-small-line-height: var(--text-title--line-height);
+
+  --mat-sys-title-large-font: var(--font-sans);
+  --mat-sys-title-large-size: var(--text-section);
+  --mat-sys-title-large-line-height: var(--text-section--line-height);
+
+  --mat-sys-title-medium-font: var(--font-sans);
+  --mat-sys-title-medium-size: var(--text-body);
+  --mat-sys-title-medium-line-height: var(--text-body--line-height);
+
+  --mat-sys-title-small-font: var(--font-sans);
+  --mat-sys-title-small-size: var(--text-body-sm);
+  --mat-sys-title-small-line-height: var(--text-body-sm--line-height);
+
+  --mat-sys-body-large-font: var(--font-sans);
+  --mat-sys-body-large-size: var(--text-body);
+  --mat-sys-body-large-line-height: var(--text-body--line-height);
+
+  --mat-sys-body-medium-font: var(--font-sans);
+  --mat-sys-body-medium-size: var(--text-body-sm);
+  --mat-sys-body-medium-line-height: var(--text-body-sm--line-height);
+
+  --mat-sys-body-small-font: var(--font-sans);
+  --mat-sys-body-small-size: var(--text-label);
+  --mat-sys-body-small-line-height: var(--text-label--line-height);
+
+  --mat-sys-label-large-font: var(--font-sans);
+  --mat-sys-label-large-size: var(--text-body-sm);
+  --mat-sys-label-large-line-height: var(--text-body-sm--line-height);
+
+  --mat-sys-label-medium-font: var(--font-sans);
+  --mat-sys-label-medium-size: var(--text-label);
+  --mat-sys-label-medium-line-height: var(--text-label--line-height);
+
+  --mat-sys-label-small-font: var(--font-sans);
+  --mat-sys-label-small-size: var(--text-label);
+  --mat-sys-label-small-line-height: var(--text-label--line-height);
+}
