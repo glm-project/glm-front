@@ -6,6 +6,41 @@ import typescript from 'typescript-eslint';
 
 const TOOLING_DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|\/)/;
 
+const TAILWIND_COLOR_FAMILIES = [
+  'slate',
+  'gray',
+  'zinc',
+  'neutral',
+  'stone',
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'emerald',
+  'teal',
+  'cyan',
+  'sky',
+  'blue',
+  'indigo',
+  'violet',
+  'purple',
+  'fuchsia',
+  'pink',
+  'rose',
+];
+
+const COLOR_UTILITY = '(?:bg|text|border|ring|outline|divide|shadow|decoration|caret|accent|fill|stroke|from|via|to)';
+
+const TOKEN_BYPASS = new RegExp(
+  `\\b${COLOR_UTILITY}-(?:${TAILWIND_COLOR_FAMILIES.join('|')})-\\d{2,3}\\b`
+    + `|\\b${COLOR_UTILITY}-(?:white|black)\\b`
+    + `|\\b${COLOR_UTILITY}-\\[#[0-9a-fA-F]{3,8}\\]`
+    + `|\\btext-\\[[\\d.]+(?:px|rem|em|pt)\\]`,
+  'g',
+);
+
 const FRONTS = ['gestion', 'pupitre'];
 
 const namedAnywherePattern = fronts => `(^|\\/)(${fronts.join('|')})(\\/|$)`;
@@ -57,6 +92,17 @@ const local = {
             .forEach(comment =>
               context.report({ node: comment, message: 'Code carries its own intent: no comments — see documentation/code-style.md.' }),
             ),
+      }),
+    },
+    'no-token-bypass': {
+      create: context => ({
+        Program: () =>
+          [...context.sourceCode.text.matchAll(TOKEN_BYPASS)].forEach(bypass =>
+            context.report({
+              loc: context.sourceCode.getLocFromIndex(bypass.index),
+              message: `'${bypass[0]}' steps outside the design tokens: name a role — see documentation/design-system.md.`,
+            }),
+          ),
       }),
     },
   },
@@ -171,6 +217,7 @@ export default typescript.config(
     plugins: { local },
     rules: {
       'local/no-comments': 'error',
+      'local/no-token-bypass': 'error',
     },
   },
 );
