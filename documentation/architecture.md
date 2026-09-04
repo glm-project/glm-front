@@ -19,9 +19,12 @@ one a `build-<front>` and a `serve-<front>` target, differing only in `index`, `
 `allowedCommonJsDependencies` lists `keycloak-js` and its transitive CommonJS deps on the `gestion` target
 only. The pupitre does not inherit it, so the day `keycloak-js` reaches that bundle the build says so.
 
-The two `index.html` differ on the same ground: gestion pulls Roboto and Material Icons from the Google
-Fonts CDN, the pupitre pulls nothing. **The pupitre is offline-first** — it runs on the shop floor, where a
-remote stylesheet is a render it cannot make. Anything that front needs at boot ships in its bundle.
+The two `index.html` agree on one thing worth its line: **neither names a third party.** The pupitre is
+offline-first — it runs on the shop floor, where a remote stylesheet is a render it cannot make — and gestion
+holds the same rule for a second reason, that a CDN `<link>` is a supply chain no integrity attribute can pin
+and a user's IP address handed to a stranger on every load. `ExternalRequestsTest`
+(`src/test/webapp/unit/`) reads both documents and fails on any origin it finds, absolute or
+protocol-relative. Anything a front needs at boot ships in its bundle.
 
 **Dependencies point one way: a root imports from `app/`, never the reverse.** A file under `app/`
 reaching into `gestion/` or `pupitre/` drags one front's concerns into the other's bundle — the

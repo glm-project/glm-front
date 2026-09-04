@@ -1,10 +1,10 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Header } from '@/app/shared/design-system/infrastructure/primary/header/header';
+import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, input } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 
 @Component({
@@ -12,7 +12,7 @@ import { MatMenuModule } from '@angular/material/menu';
   host: { 'data-selector': 'gestion-header' },
   templateUrl: './header.html',
   styleUrl: './header.css',
-  imports: [Header, MatButtonModule, MatIconModule, MatMenuModule, NgOptimizedImage],
+  imports: [Header, Icon, MatButtonModule, MatMenuModule, NgOptimizedImage],
 })
 export class GestionHeader {
   readonly heading = input.required<string>();

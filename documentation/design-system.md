@@ -23,9 +23,11 @@ distance.
 pupitre screen treats it as a computed residue that "must be seen without existing"; it is re-read when that
 is settled.
 
-`--font-sans` is a system stack — no webfont, no third-party request. Until the ticket that ends the external
-requests lands, `body` still names Roboto and `gestion/index.html` still links Google Fonts: the token is in
-place, the removal is not.
+`--font-sans` is a system stack and `body` names it: no `index.html` links a webfont any more, and
+`ExternalRequestsTest` (`src/test/webapp/unit/`) holds both documents to that. It is not yet the only stack.
+`indigo-pink.css` sits in the `styles` array of both build targets and hardcodes `Roboto` across its own
+`--mat-*-font` tokens, so a Material surface still asks for a font nobody loads and lands on the browser's
+generic `sans-serif`. That one ends with the prebuilt theme, not here.
 
 ## The one override a front gets is the scale
 
@@ -78,6 +80,30 @@ exists, so a heading gets its size from a token class (`text-title`, `text-secti
 Tailwind's preflight resets `h1`–`h6` to inherit. And `color="primary"` / `color="accent"` are inert under M3;
 they are removed where they were gestion-only, and left on the shared header because `pupitre` still loads
 indigo-pink until the ticket that takes Material out of it lands.
+
+## An icon is an SVG the bundle carries, never a font a CDN serves
+
+`glm-icon` (`app/shared/design-system/infrastructure/primary/icon/`) is how a front draws one, and the set it
+offers is a single object — `DRAWINGS` — that is at once the argument to `provideIcons` and, through
+`keyof typeof`, the type of the `name` input. Naming an icon the design system does not carry is a compile
+error, and no name can be added without its drawing: the two cannot drift apart because they are one
+declaration. Both packages are pinned exactly at `34.0.0`. `@ng-icons/core` is the one carrying a framework
+peer range — `@angular/core >=21.0.0` — where `@ng-icons/lucide` declares none and follows its line; `34` is
+the last line admitting Angular 21, `35` raising that floor to 22.
+
+The icon sizes itself at `1em` and paints in `currentColor`, so it takes the size and the colour of whatever
+encloses it, and a caller names a type token rather than a pixel value. Inside a Material control there is
+nothing to name: `.mat-mdc-icon-button svg` hard-sizes the glyph to `--mat-icon-button-icon-size`, 24 px, and
+a class on the wrapper does not outrank it — which is why the gestion menu trigger names no size at all.
+`NgIcon` marks its own `<ng-icon>` element `aria-hidden` unless the caller says otherwise, and that is the
+right default: the accessible name belongs to the control, not to its glyph.
+
+**`<mat-icon>foo</mat-icon>` renders the word `foo` now.** Material still puts `.material-icons` on the
+element — `_defaultFontSetClass` in `_icon-registry-chunk.mjs`, moved there out of `icon.mjs` in v21 — but
+the font behind that class came from the CDN `<link>` that is gone, so no ligature resolves. A Material
+component shipping its own icon is untouched; a hand-written ligature is not.
+
+The decision and its price are in [ADR 0005](adr/0005-icons-as-svg-the-bundle-carries.md).
 
 ## Three barriers, all in a tool that already runs
 
