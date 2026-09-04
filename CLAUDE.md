@@ -70,6 +70,7 @@ Every summary that touches code or dependencies states:
 - Before writing or changing a test → `documentation/testing.md`
 - Before adding a bounded context, a port, an adapter, or touching auth wiring → `documentation/architecture.md`
 - Before writing or refactoring component or service code → `documentation/code-style.md`
+- Before styling anything — a template class, a stylesheet, a token value → `documentation/design-system.md`
 - Before branching, committing or opening an MR → `documentation/git-and-mr.md`
 - Before proposing a structural choice (new dependency, new pattern, deviation from a convention) → `documentation/adr/README.md`
 
