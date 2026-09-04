@@ -27,7 +27,7 @@ remote stylesheet is a render it cannot make. Anything that front needs at boot 
 reaching into `gestion/` or `pupitre/` drags one front's concerns into the other's bundle — the
 boundary the split exists to draw. Screens that belong to a single front live at
 `app/<context>/infrastructure/primary/<front>/`, not in the root — what a root may hold is composition:
-the shell, the routes, the providers, and how this front fills the chrome that `app/shared` provides.
+the shell, the routes, the providers, and how this front fills the chrome that the design system provides.
 
 **Neither front imports the other, and `app/` imports neither** — `eslint.config.mjs` holds both
 mechanically. It takes two native rules, not one: `no-restricted-imports` covers static imports and
@@ -61,11 +61,19 @@ an application, and both roots are measured.
 
 ## A bounded context starts with its `package-info.ts`
 
-Business code lives under `src/main/webapp/app/`, one top-level folder per bounded context — currently
-`authentication` and `shared`, both shared kernels. `src/test/webapp/unit/HexagonalArchTest.spec.ts`
-discovers contexts by scanning `**/package-info.ts` for a class extending `BusinessContext`
-(`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder naming alone is invisible to
-it.
+Business code lives under `src/main/webapp/app/`, one folder per bounded context — currently
+`authentication` and `shared/design-system`, both shared kernels.
+`src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning every `package-info.ts` for a
+class extending `BusinessContext` (`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder
+naming alone is invisible to it.
+
+**That scan walks the whole tree, and it has to be written that way.** `TypeScriptProject.filterClasses` looks
+one level below the project root only — it maps over the root's direct sub-packages and keeps their own files,
+never recursing — so a context nested any deeper than `app/<name>/` is discovered by nobody. The spec filters
+`srcProject.allClasses()` on the file name instead, which is recursive. Measured on
+`app/shared/design-system/`: through `filterClasses` the kernel vanishes from the suite, taking its three
+per-context rules with it (11 tests down to 8), and `arch-unit-ts.json` carries `failOnEmptyShould: false`, so
+nothing complains.
 
 One folder under `app/` sits outside that scan on purpose — `app/api/`, below. Everywhere else the absence
 is a defect: `app/login/` was the last folder to lack a `package-info.ts`, and the header composition
@@ -82,8 +90,8 @@ architecture test stays green over it because it checks nothing there.
     secondary/               # adapters implementing domain ports (HTTP clients)
 ```
 
-Code genuinely shared across contexts belongs in a context extending `SharedKernel` (that is what `shared`
-is), not copied into each context.
+Code genuinely shared across contexts belongs in a context extending `SharedKernel` — `design-system` is one —
+not copied into each context.
 
 ## The wire format lives at an address no `domain` can reach
 
@@ -156,12 +164,16 @@ authentication adapters are a bare `@Injectable()`.
 
 ## Chrome shared by both fronts sits at an adapter address, and stays mute
 
-The header is `app/shared/infrastructure/primary/header/` — a primary adapter of the `shared` kernel, and
-the address matters. `app/shared/header/` would pass the architecture test just as well, and that is the
-trap: `withOptionalLayers(true)` skips a class sitting outside every declared layer, so it reads green
-because nothing bites. Measured at the adapter address, a header importing from
-`shared/infrastructure/secondary/` reddens _Primary should not depend on secondary_; at the short address
-it reddens nothing.
+The header is `app/shared/design-system/infrastructure/primary/header/` — a primary adapter of the
+`design-system` kernel, and both halves of the address matter. A mute bar carrying a title and a slot **is**
+a design-system component, and the day a second one arrives — an icon, a button — a header kernel of its own
+would have the chrome sitting in two contexts at once. It sits at the adapter address, not at the shorter
+`app/shared/design-system/header/`, which the architecture test only half covers. Measured at the new depth
+with a deliberate import from `design-system/infrastructure/secondary/`: the adapter address reddens
+_Primary should not depend on secondary_ **and** the layered check; the short address reddens the layered
+check alone, on its target side (_secondary adapters may not be accessed by any layer_). A class outside
+every declared layer is skipped as an origin, so the rules keyed on where a dependency comes from never see
+it, and `..primary..` does not match it either. Half the net, for a name one segment shorter.
 
 The component is mute: no routing, no logout, no connectivity state. It holds a `heading` input and one
 projection slot, and it keeps the toolbar the gestion front already had — the chrome moves address here,
