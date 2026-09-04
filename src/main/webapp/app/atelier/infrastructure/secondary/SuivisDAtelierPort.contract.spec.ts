@@ -1,11 +1,12 @@
 import { components } from '@/app/api/schema';
 import { ETATS_EN_ATELIER } from '@/app/atelier/domain/EtatDAtelier';
+import { RefusDAtelier } from '@/app/atelier/domain/RefusDAtelier';
 import { SuiviDAtelier } from '@/app/atelier/domain/SuiviDAtelier';
-import { SuivisDAtelierPort } from '@/app/atelier/domain/SuivisDAtelierPort';
+import { Pointage, SuivisDAtelierPort } from '@/app/atelier/domain/SuivisDAtelierPort';
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
 import { Extrait } from '@/app/shared/pagination/domain/Extrait';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { HttpSuivisDAtelier } from './http/HttpSuivisDAtelier';
 
@@ -62,6 +63,33 @@ const UN_ELEMENT_SANS_IDENTIFIANT = { nom: 'OF-2026-000045', etat: 'EN_ATTENTE',
 
 const unAtelierFixture = (nombre: number): RestSuiviDAtelier[] =>
   Array.from({ length: nombre }, (_, rang) => ({ ...UN_ELEMENT_QUE_PERSONNE_N_A_COMMENCE, id: `suivi-${rang}` }));
+
+const SUIVI_ID = UN_ELEMENT_QUE_JEAN_TRAVAILLE.id;
+const URL_DES_POINTAGES = `/api/atelier/suivis/${SUIVI_ID}/pointages`;
+const UN_DEBUT_DE_JEAN: Pointage = { operateurId: JEAN, type: 'DEBUT', posteId: TOUR_1.id };
+const UN_DEBUT_SANS_MACHINE: Pointage = { operateurId: JEAN, type: 'DEBUT' };
+const DEUX_DEBUTS_DE_SUITE = 'un DEBUT suppose une activite fermee';
+const UN_ELEMENT_QUI_A_QUITTE_L_ATELIER = "aucun suivi d'atelier ne porte cet identifiant";
+
+type TourDuServeur = (requete: TestRequest) => void;
+
+const acceptant: TourDuServeur = requete => requete.flush({}, { status: 201, statusText: 'Created' });
+
+const refusant =
+  (statut: number, code: string, message: string): TourDuServeur =>
+  requete =>
+    requete.flush(
+      { type: `urn:glm:erreur:atelier:${code}`, title: code.replaceAll('-', ' '), status: statut, message },
+      { status: statut, statusText: 'Refused' },
+    );
+
+const enPanne: TourDuServeur = requete => requete.flush(null, { status: 500, statusText: 'Internal Server Error' });
+
+const refusantLeCorps: TourDuServeur = requete =>
+  requete.flush(
+    { title: 'Bean validation error', status: 400, errors: { operateur: 'ne doit pas être nul' } },
+    { status: 400, statusText: 'Bad Request' },
+  );
 
 const adapters: [string, () => SuivisDAtelierPort][] = [['http', () => TestBed.inject(HttpSuivisDAtelier)]];
 
@@ -151,7 +179,114 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     await expect(lecture).rejects.toThrow('suivi.id');
   });
 
+  it('should record the operator starting to work on the element', async () => {
+    const pointage = suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN);
+
+    const requete = await whenTheServerTakesTheClocking(acceptant);
+
+    thenItSent(requete, { operateur: JEAN, type: 'DEBUT', poste: TOUR_1.id });
+    await pointage;
+  });
+
+  it('should clock on no workstation in a company that has no machine park', async () => {
+    const pointage = suivis.pointer(SUIVI_ID, UN_DEBUT_SANS_MACHINE);
+
+    const requete = await whenTheServerTakesTheClocking(acceptant);
+
+    thenItSent(requete, { operateur: JEAN, type: 'DEBUT' });
+    await pointage;
+  });
+
+  it('should refuse a clocking the element cannot take, with the message the domain wrote', async () => {
+    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+
+    await whenTheServerTakesTheClocking(refusant(409, 'transition-d-atelier-interdite', DEUX_DEBUTS_DE_SUITE));
+
+    thenItWasRefused(await echec, 'transition-d-atelier-interdite', DEUX_DEBUTS_DE_SUITE);
+  });
+
+  it('should refuse a clocking on an element the workshop no longer holds', async () => {
+    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+
+    await whenTheServerTakesTheClocking(refusant(404, 'suivi-d-atelier-introuvable', UN_ELEMENT_QUI_A_QUITTE_L_ATELIER));
+
+    thenItWasRefused(await echec, 'suivi-d-atelier-introuvable', UN_ELEMENT_QUI_A_QUITTE_L_ATELIER);
+  });
+
+  it('should replay a clocking another entry slipped in front of, and record it', async () => {
+    const pointage = suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN);
+
+    await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
+    const rejeu = await whenTheServerTakesTheClocking(acceptant);
+
+    thenItSent(rejeu, { operateur: JEAN, type: 'DEBUT', poste: TOUR_1.id });
+    await pointage;
+  });
+
+  it('should refuse the clocking when the replay meets the same race', async () => {
+    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+
+    await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
+    await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
+
+    thenItWasRefused(await echec, 'saisie-concurrente', 'une autre saisie est passee avant');
+  });
+
+  it('should let a server breakdown through, since no business refused anything', async () => {
+    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+
+    await whenTheServerTakesTheClocking(enPanne);
+
+    thenItFailedWithoutRefusing(await echec);
+  });
+
+  it('should let an invalid body through as a failure, since at the pupitre it comes from us', async () => {
+    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+
+    await whenTheServerTakesTheClocking(refusantLeCorps);
+
+    thenItFailedWithoutRefusing(await echec);
+  });
+
+  it('should let a code none of its ports reaches through as a failure', async () => {
+    const echec = echecDe(suivis.pointer(SUIVI_ID, UN_DEBUT_DE_JEAN));
+
+    await whenTheServerTakesTheClocking(refusant(409, 'element-deja-engage', 'cet element est deja engage'));
+
+    thenItFailedWithoutRefusing(await echec);
+  });
+
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+
+  const echecDe = (envoi: Promise<void>): Promise<unknown> =>
+    envoi.then(
+      () => undefined,
+      (echec: unknown) => echec,
+    );
+
+  const whenTheServerTakesTheClocking = async (tour: TourDuServeur): Promise<TestRequest> => {
+    await unTourDeBoucle();
+
+    const requete = serveur.expectOne(URL_DES_POINTAGES);
+    tour(requete);
+
+    return requete;
+  };
+
+  const thenItSent = (requete: TestRequest, corps: unknown): void => {
+    expect(requete.request.body).toEqual(corps);
+  };
+
+  const thenItWasRefused = (echec: unknown, code: string, message: string): void => {
+    expect(echec).toBeInstanceOf(RefusDAtelier);
+    expect((echec as RefusDAtelier).code).toBe(code);
+    expect((echec as RefusDAtelier).message).toBe(message);
+  };
+
+  const thenItFailedWithoutRefusing = (echec: unknown): void => {
+    expect(echec).toBeDefined();
+    expect(echec).not.toBeInstanceOf(RefusDAtelier);
+  };
 
   const whenTheWorkshopHolds = async (atelier: RestSuiviDAtelier[]): Promise<void> => {
     await unTourDeBoucle();

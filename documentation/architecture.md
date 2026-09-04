@@ -296,6 +296,27 @@ of `size=100`** (`PLAFOND_DE_PAGE`, the hard cap above which the back answers 50
 comes from the server's own `totalElementsCount` and `estComplet()` tells a caller whether anything was left
 behind. Truncating is acceptable because it is said; truncating in silence is not.
 
+## A refusal is an event, not a return value
+
+A business refusal comes back as a **rejected promise** carrying a refusal class of the context —
+`RefusDAtelier`, holding a code from an union bounded to what its ports can reach, and the message the back's
+domain wrote, which is shown as it is. `Promise<void>` means _accepted_: by the server today, by the offline
+queue of issue 53 tomorrow, which is exactly why a `Resultat<…>` was refused — a queued write hands back before
+the server has answered, and the result would have to be invented.
+
+A code the union does not know crosses as a technical failure, deliberately: widening the union is an act, and
+forgetting it fails loudly rather than branching wrongly.
+
+**Absorbing a refusal is a property of the operation, never of the route or of the status.**
+`sAssurerQueLOperateurEstArrive` swallows `journee-de-travail-deja-ouverte` and nothing else — seen from the
+domain it is one operation with two internal paths, not an error handled as a success.
+`sAssurerQueLOperateurEstPresent` swallows `transition-de-presence-interdite`. The very same 409 asked for as a
+gesture of its own, through `pointerLaPresence`, is a refusal the operator must see.
+
+**`saisie-concurrente` is replayed once, immediately, and then let through.** It is the one code where the entry
+was valid and someone else slipped in between the read and the write; replaying is re-issuing the identical
+`POST`, since the body is entirely known to the client.
+
 ---
 
 New rules on this topic go here.
