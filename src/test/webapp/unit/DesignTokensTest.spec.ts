@@ -1,15 +1,22 @@
 import { readFileSync } from 'node:fs';
 
 const TOKENS_STYLESHEET = 'src/main/webapp/styles.css';
+const PUPITRE_STYLESHEET = 'src/main/webapp/pupitre/styles.css';
 
 const WCAG_AA_NORMAL_TEXT = 4.5;
 const SRGB_LINEAR_SEGMENT_END = 0.03928;
 const CHANNEL_STARTS_AFTER_THE_HASH = [1, 3, 5];
 const COLOR_ROLE_DECLARATION = /--color-([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g;
+const STYLE_RULE = /([^{}]+)\{([^{}]*)\}/g;
 
 interface TextOnBackground {
   text: string;
   background: string;
+}
+
+interface StyleRule {
+  selector: string;
+  properties: string[];
 }
 
 const PAIRS_THE_SCREENS_SHOW: TextOnBackground[] = [
@@ -37,6 +44,8 @@ const PAIRS_THE_SCREENS_SHOW: TextOnBackground[] = [
   { text: 'on-accent', background: 'warn' },
 ];
 
+const ONLY_THE_ROOT_FONT_SIZE: StyleRule[] = [{ selector: 'html', properties: ['font-size'] }];
+
 const linearChannel = (channel: number): number => {
   const scaled = channel / 255;
   return scaled <= SRGB_LINEAR_SEGMENT_END ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4;
@@ -55,6 +64,12 @@ const hexOf = (roles: Map<string, string>, role: string): string => {
   return hex;
 };
 
+const propertiesOf = (declarations: string): string[] =>
+  declarations
+    .split(';')
+    .map(declaration => declaration.split(':')[0].trim())
+    .filter(property => property.length > 0);
+
 const givenTheColorRoles = (): Map<string, string> => {
   const declarations = readFileSync(TOKENS_STYLESHEET, 'utf8').matchAll(COLOR_ROLE_DECLARATION);
   return new Map([...declarations].map(([, role, hex]) => [role, hex]));
@@ -68,8 +83,18 @@ const whenMeasuringContrast = (roles: Map<string, string>, pair: TextOnBackgroun
   return (lighter + 0.05) / (darker + 0.05);
 };
 
+const whenReadingTheRulesOf = (stylesheet: string): StyleRule[] =>
+  [...readFileSync(stylesheet, 'utf8').matchAll(STYLE_RULE)].map(([, selector, declarations]) => ({
+    selector: selector.trim(),
+    properties: propertiesOf(declarations),
+  }));
+
 const thenItStaysReadable = (contrast: number): void => {
   expect(contrast).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+};
+
+const thenTheySetOnlyTheRootFontSize = (rules: StyleRule[]): void => {
+  expect(rules).toEqual(ONLY_THE_ROOT_FONT_SIZE);
 };
 
 describe('DesignTokensTest', () => {
@@ -80,6 +105,14 @@ describe('DesignTokensTest', () => {
       const contrast = whenMeasuringContrast(roles, pair);
 
       thenItStaysReadable(contrast);
+    });
+  });
+
+  describe('Pupitre scale', () => {
+    it('should scale the pupitre through the root font size alone', () => {
+      const rules = whenReadingTheRulesOf(PUPITRE_STYLESHEET);
+
+      thenTheySetOnlyTheRootFontSize(rules);
     });
   });
 });
