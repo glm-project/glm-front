@@ -37,6 +37,15 @@ literal.
   `angular-eslint`;
 - `private readonly` for injected collaborators.
 
+## Domain nouns in French, action verbs in English
+
+Business vocabulary stays in French — it is the ubiquitous language the domain speaks
+(`RefusDAtelier`, `SuiviDAtelier`, `PosteDeTravail`). The verb driving an action is English: `send`,
+`sendAbsorbing`, `findRefusDAtelierIn`, not `envoyer`, `envoyerEnAbsorbant`, `refusDAtelierDans`. A
+name that reads as a hidden verb behind a French preposition (`xxxDans`, `versXxx`, `xxxDe`) needs an
+explicit English verb instead of the preposition standing in for one. Constants and types carrying
+only domain nouns keep their French name (`CODES_DE_REFUS_D_ATELIER`, `CodeDeRefusDAtelier`).
+
 ## Linting and formatting
 
 ESLint is strict on `main/webapp/**`: `typescript-eslint` `strictTypeChecked` + `stylistic` +

@@ -19,11 +19,11 @@ describe('Extrait', () => {
   const unExtraitFixture = (elements: string[], nombreTotal: number): Extrait<string> => new Extrait(elements, nombreTotal);
 
   const thenItSaysItIsComplete = (extrait: Extrait<string>): void => {
-    expect(extrait.estComplet()).toBe(true);
+    expect(extrait.isComplete()).toBe(true);
   };
 
   const thenItSaysItIsPartialOf = (extrait: Extrait<string>, nombreTotal: number): void => {
-    expect(extrait.estComplet()).toBe(false);
+    expect(extrait.isComplete()).toBe(false);
     expect(extrait.nombreTotal).toBe(nombreTotal);
   };
 });

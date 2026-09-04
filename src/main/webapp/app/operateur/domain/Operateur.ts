@@ -9,7 +9,7 @@ export class Operateur {
     private readonly matricule?: string,
   ) {}
 
-  repondAuCode(code: string): boolean {
+  matchesCode(code: string): boolean {
     return this.matricule === code;
   }
 }

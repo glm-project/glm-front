@@ -4,30 +4,30 @@ import { EtatDAtelier } from '@/app/atelier/domain/EtatDAtelier';
 import { SuiviDAtelier } from '@/app/atelier/domain/SuiviDAtelier';
 import { Pointage, SuivisDAtelierPort } from '@/app/atelier/domain/SuivisDAtelierPort';
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
-import { obligatoire } from '@/app/shared/api-client/infrastructure/secondary/obligatoire';
+import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { Extrait } from '@/app/shared/pagination/domain/Extrait';
-import { extraitDe, PLAFOND_DE_PAGE } from '@/app/shared/pagination/infrastructure/secondary/extraitDe';
+import { buildExtraitFrom, PLAFOND_DE_PAGE } from '@/app/shared/pagination/infrastructure/secondary/buildExtraitFrom';
 import { inject, Injectable } from '@angular/core';
-import { envoyer } from '../envoiDAtelier';
+import { send } from '../envoiDAtelier';
 
 type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
 type RestActiviteEnCours = components['schemas']['RestActiviteEnCours'];
 
-const versActiviteEnCours = (activite: RestActiviteEnCours): ActiviteEnCours =>
+const toActiviteEnCours = (activite: RestActiviteEnCours): ActiviteEnCours =>
   new ActiviteEnCours(
-    obligatoire(activite.operateur, 'activite.operateur').id,
-    obligatoire(activite.categorie, 'activite.categorie'),
-    new Date(obligatoire(activite.depuis, 'activite.depuis')),
+    required(activite.operateur, 'activite.operateur').id,
+    required(activite.categorie, 'activite.categorie'),
+    new Date(required(activite.depuis, 'activite.depuis')),
     activite.poste?.id,
   );
 
-const versSuiviDAtelier = (suivi: RestSuiviDAtelier): SuiviDAtelier =>
+const toSuiviDAtelier = (suivi: RestSuiviDAtelier): SuiviDAtelier =>
   new SuiviDAtelier(
-    obligatoire(suivi.id, 'suivi.id'),
-    obligatoire(suivi.nom, 'suivi.nom'),
-    obligatoire(suivi.etat, 'suivi.etat'),
-    obligatoire(suivi.type, 'suivi.type'),
-    (suivi.activitesEnCours ?? []).map(versActiviteEnCours),
+    required(suivi.id, 'suivi.id'),
+    required(suivi.nom, 'suivi.nom'),
+    required(suivi.etat, 'suivi.etat'),
+    required(suivi.type, 'suivi.type'),
+    (suivi.activitesEnCours ?? []).map(toActiviteEnCours),
   );
 
 @Injectable()
@@ -35,16 +35,16 @@ export class HttpSuivisDAtelier extends SuivisDAtelierPort {
   private readonly api = inject(ClientApi);
 
   override async suivis(etats: readonly EtatDAtelier[]): Promise<Extrait<SuiviDAtelier>> {
-    const page = await this.api.lire('/api/atelier/suivis', { parametres: { etats: [...etats], size: PLAFOND_DE_PAGE } });
+    const page = await this.api.read('/api/atelier/suivis', { parametres: { etats: [...etats], size: PLAFOND_DE_PAGE } });
 
-    return extraitDe(page, versSuiviDAtelier);
+    return buildExtraitFrom(page, toSuiviDAtelier);
   }
 
-  override pointer(suiviId: string, pointage: Pointage): Promise<void> {
-    return envoyer(() =>
-      this.api.ecrire('/api/atelier/suivis/{id}/pointages', {
+  override recordPointage(suiviId: string, pointage: Pointage): Promise<void> {
+    return send(() =>
+      this.api.write('/api/atelier/suivis/{id}/pointages', {
         chemin: { id: suiviId },
-        corps: { operateur: pointage.operateurId, type: pointage.type, poste: pointage.posteId },
+        body: { operateur: pointage.operateurId, type: pointage.type, poste: pointage.posteId },
       }),
     );
   }
