@@ -261,6 +261,41 @@ is no business rule to make it a bounded context.
   is written to disk: a reload re-enrols. A long-lived refresh token in `localStorage` is reachable by any
   XSS, and the shop floor's screens are shared.
 
+## A secondary adapter reaches the API through `ClientApi`, never through `HttpClient`
+
+`app/shared/api-client/infrastructure/secondary/ClientApi.ts` is generic over `paths` of `schema.d.ts`: route,
+verb, `{id}` substitution, query parameters and answer are one type, so naming a route the API does not serve
+does not compile. The keys of `paths` start with `/api/` and serve as URLs as they are — **there is no base URL
+to configure**, here or in an environment. `lire` reads, `ecrire` writes; each takes the route and the `chemin`,
+`parametres` and `corps` that route accepts.
+
+It is built on `HttpClient`, so `httpAuthInterceptor` applies. The one thing that must escape an interceptor is
+the pupitre's own enrolment traffic, and that is why `DeviceAuthentication` builds on `HttpBackend` instead.
+
+Two guards live next to it, and both belong to the adapter, never to a domain class:
+
+- **`obligatoire(valeur, 'suivi.id')`** throws rather than let an `undefined` the business does not have reach a
+  domain class. `openapi.json` marks `required` on almost no response schema, so the generated type says
+  optional where the back always sends a value. Guard the fields the domain requires and nothing else; request
+  bodies are typed honestly and need no guard.
+- **`codeDErreur(echec)`** reads the `urn:glm:erreur:<contexte>:<code>` a `ProblemDetail` carries, with the
+  message the domain wrote. **Branch on that code, never on `status` + `title`** — the title is a French
+  sentence that gets reworded, and several contexts publish the same one. A context translates those URNs into
+  its own refusal class through a table in its own `infrastructure/secondary`.
+
+Wire enums are assigned straight to the domain unions, which repeat the same literals: structural typing already
+fails the build when the back adds a value, so no `Record` keyed by the generated union is needed.
+
+The reasoning and its price are in [ADR 0006](adr/0006-how-the-front-calls-the-back.md).
+
+## A read is one request, and the extract says what it left behind
+
+`app/shared/pagination/` carries `domain/Extrait<T>` — the one artefact of these two kernels a business domain
+imports — and `infrastructure/secondary/extraitDe`, which turns a `PageRest*` into it. **One read is one request
+of `size=100`** (`PLAFOND_DE_PAGE`, the hard cap above which the back answers 500), never a loop: `nombreTotal`
+comes from the server's own `totalElementsCount` and `estComplet()` tells a caller whether anything was left
+behind. Truncating is acceptable because it is said; truncating in silence is not.
+
 ---
 
 New rules on this topic go here.
