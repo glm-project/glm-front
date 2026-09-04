@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@theme {
+@theme static {
   --color-canvas: #f4f6f8;
   --color-surface: #ffffff;
   --color-sunken: #e9edf2;
