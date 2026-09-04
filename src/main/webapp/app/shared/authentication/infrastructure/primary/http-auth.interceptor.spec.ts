@@ -1,4 +1,4 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { HttpClient, HttpRequest, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';

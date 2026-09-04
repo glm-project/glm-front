@@ -1,4 +1,4 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
 import Keycloak from 'keycloak-js';

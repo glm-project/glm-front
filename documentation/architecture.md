@@ -62,10 +62,15 @@ an application, and both roots are measured.
 ## A bounded context starts with its `package-info.ts`
 
 Business code lives under `src/main/webapp/app/`, one folder per bounded context — currently
-`authentication` and `shared/design-system`, both shared kernels.
+`shared/authentication` and `shared/design-system`, both shared kernels.
 `src/test/webapp/unit/HexagonalArchTest.spec.ts` discovers contexts by scanning every `package-info.ts` for a
 class extending `BusinessContext` (`@/app/BusinessContext`) or `SharedKernel` (`@/app/SharedKernel`) — folder
 naming alone is invisible to it.
+
+**The address says the nature: `app/shared/<name>/` is a shared kernel, `app/<name>/` a business context.**
+`app/shared/` is a namespace and holds no `package-info.ts` of its own — it is not a context, and nothing
+lives directly under it outside a nested kernel. That last clause is not decoration: a file dropped at
+`app/shared/x.ts` would belong to no declared context, which is the blind spot two paragraphs below.
 
 **That scan walks the whole tree, and it has to be written that way.** `TypeScriptProject.filterClasses` looks
 one level below the project root only — it maps over the root's direct sub-packages and keeps their own files,
@@ -100,9 +105,9 @@ not copied into each context.
 `openapi-typescript`. **The missing `package-info.ts` is the rule, not an oversight.** The folder belongs to
 no declared context, so `domain` — which may only depend on `domain` and shared kernels — cannot import it,
 while `infrastructure/secondary` can. Both directions were measured: an `import` of `@/app/api/schema` from
-`authentication/domain/` reddens _Domain should not depend on outside_, the same import from
-`authentication/infrastructure/secondary/` leaves the suite green. A shared kernel of wire types would be
-importable from every domain and the rule would be an intention.
+`shared/authentication/domain/` reddens _Domain should not depend on outside_, the same import from
+`shared/authentication/infrastructure/secondary/` leaves the suite green. A shared kernel of wire types would
+be importable from every domain and the rule would be an intention.
 
 **`app/api/` must stay under `app/`.** `TypeScriptProject` populates itself with
 `addSourceFilesAtPaths('src/main/webapp/app/**/*.ts')`, and `isImportValid` drops any import ts-morph fails
@@ -148,10 +153,10 @@ outward instead of an adapter reaching inward.
 
 ## Everything lives as close as possible to where it is used
 
-Hoisting to a higher level — a global stylesheet, the `shared` kernel, a root-provided service — is only
+Hoisting to a higher level — a global stylesheet, a shared kernel, a root-provided service — is only
 justified when the need is genuinely shared; until then, the nearest common owner wins. Reuse an abstraction
-that already exists in `shared`; do not create a new one preemptively. For a value shared by two sibling
-components, a CSS custom property on their nearest common ancestor cascades on its own — that beats a
+that already exists under `app/shared/`; do not create a new one preemptively. For a value shared by two
+sibling components, a CSS custom property on their nearest common ancestor cascades on its own — that beats a
 `:root` entry in `styles.css`.
 
 **Two sibling components communicate through the parent page**: an output going up, a call coming back down
@@ -205,8 +210,8 @@ the alias the architecture test itself uses.
 
 ## Authentication wiring
 
-Authentication is a `SharedKernel` context, `app/authentication/`: the interceptor is global and there is
-no business rule to make it a bounded context.
+Authentication is a `SharedKernel` context, `app/shared/authentication/`: the interceptor is global and there
+is no business rule to make it a bounded context.
 
 - **The port** (`domain/AuthenticationPort.ts`) says only what its callers need: `authenticate()`,
   `currentToken()`, `logout()`. It is an **abstract class, and it imports nothing** — both forced. An

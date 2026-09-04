@@ -1,6 +1,6 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
-import { DeviceAuthentication } from '@/app/authentication/infrastructure/secondary/device/DeviceAuthentication';
-import { DeviceGrantConfiguration } from '@/app/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { DeviceAuthentication } from '@/app/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
+import { DeviceGrantConfiguration } from '@/app/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
 import { Provider } from '@angular/core';
 
 import { environment } from './environments/environment';

@@ -1,4 +1,4 @@
-import { AuthenticationPort } from '@/app/authentication/domain/AuthenticationPort';
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Header } from '@/app/shared/design-system/infrastructure/primary/header/header';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, input } from '@angular/core';
