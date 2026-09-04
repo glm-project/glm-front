@@ -57,7 +57,21 @@ and nothing fails. A `var()` cannot diverge from what it reads. `:root` (0,1,0) 
 Only the tokens that carry a role are pointed — the twelve colours and the ten typographic levels Material's
 components actually consume. The tonal variants below them keep azure-blue's values, and font weight and
 letter-spacing stay Material's: the design system has an opinion about _which grey_ and _how big_, not about
-the tracking of a chip label.
+the tracking of a chip label. `--mat-sys-on-error` reads `--color-on-accent` on purpose and not by accident:
+in this token set `on-accent` is the one foreground for every strong fill, which is why `DesignTokensTest`
+measures it on `accent`, `ok`, `nc`, `glm` and `warn` alike.
+
+Two things the bridge deliberately does **not** point.
+
+- **The family.** Every `--mat-sys-*-font` stays Roboto, because `styles.css` still says
+  `body { font-family: Roboto … }` and pointing the chrome alone renders the back-office in two typefaces.
+  The family is one decision for the whole page; the ten lines land in this file the day the page stops
+  naming Roboto, alongside the removal of the Google Fonts link.
+- **The composite shorthands.** M3 also ships `--mat-sys-body-large: 400 1rem / 1.5rem Roboto`, which an
+  override of the `-size` and `-line-height` parts cannot reach — and cannot be written as a bare `var()`
+  either, so the bridge's one-reference-per-line contract excludes it by construction. Only `mat-grid-list`
+  reads the shorthands, and gestion has none; the day one appears it will show azure-blue's size, and the
+  fix is the same as for any other family that jars — one more line, still a `var()`.
 
 Two consequences of the M2 → M3 move are worth knowing before reading a template. `.mat-typography` no longer
 exists, so a heading gets its size from a token class (`text-title`, `text-section`) or from nothing at all —
