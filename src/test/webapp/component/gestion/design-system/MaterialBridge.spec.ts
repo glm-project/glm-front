@@ -12,7 +12,7 @@ const whenVisitingTheRoot = (): void => {
   cy.visit('/');
 };
 
-const asTheBrowserResolvesIt = (window: Window, token: string): string => {
+const givenTheBrowsersValueOf = (window: Window, token: string): string => {
   const probe = window.document.createElement('span');
   probe.style.color = `var(${token})`;
   window.document.body.appendChild(probe);
@@ -24,7 +24,7 @@ const asTheBrowserResolvesIt = (window: Window, token: string): string => {
 const thenTheLogoutButtonWearsTheAccentOnASurface = (): void => {
   cy.window().then(window => {
     cy.get(dataSelector('gestion-logout'))
-      .should('have.css', 'color', asTheBrowserResolvesIt(window, '--color-accent'))
-      .and('have.css', 'background-color', asTheBrowserResolvesIt(window, '--color-surface'));
+      .should('have.css', 'color', givenTheBrowsersValueOf(window, '--color-accent'))
+      .and('have.css', 'background-color', givenTheBrowsersValueOf(window, '--color-surface'));
   });
 };

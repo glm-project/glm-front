@@ -9,7 +9,7 @@ const SRGB_LINEAR_SEGMENT_END = 0.03928;
 const CHANNEL_STARTS_AFTER_THE_HASH = [1, 3, 5];
 const COLOR_ROLE_DECLARATION = /--color-([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g;
 const STYLE_RULE = /([^{}]+)\{([^{}]*)\}/g;
-const THEME_AT_RULE = /@theme[^{]*/g;
+const THEME_AT_RULE = /(@theme[^{]*)\{([^{}]*)\}/g;
 const TOKEN_DECLARATION = /(--[a-z0-9-]+):/g;
 const MATERIAL_DECLARATION = /(--mat-sys-[a-z0-9-]+):\s*([^;]+);/g;
 const TOKEN_REFERENCE = /^var\((--[a-z0-9-]+)\)$/;
@@ -82,10 +82,10 @@ const propertiesOf = (declarations: string): string[] =>
     .map(declaration => declaration.split(':')[0].trim())
     .filter(property => property.length > 0);
 
-const givenTheColorRoles = (): Map<string, string> => {
-  const declarations = readFileSync(TOKENS_STYLESHEET, 'utf8').matchAll(COLOR_ROLE_DECLARATION);
-  return new Map([...declarations].map(([, role, hex]) => [role, hex]));
-};
+const matchesIn = (stylesheet: string, pattern: RegExp): RegExpExecArray[] => [...readFileSync(stylesheet, 'utf8').matchAll(pattern)];
+
+const givenTheColorRoles = (): Map<string, string> =>
+  new Map(matchesIn(TOKENS_STYLESHEET, COLOR_ROLE_DECLARATION).map(([, role, hex]) => [role, hex]));
 
 const whenMeasuringContrast = (roles: Map<string, string>, pair: TextOnBackground): number => {
   const text = relativeLuminance(hexOf(roles, pair.text));
@@ -95,25 +95,28 @@ const whenMeasuringContrast = (roles: Map<string, string>, pair: TextOnBackgroun
   return (lighter + 0.05) / (darker + 0.05);
 };
 
-const referencedTokenIn = (value: string): string => {
+const whatItPointsAt = (value: string): string => {
   const [, token] = TOKEN_REFERENCE.exec(value) ?? [];
   return token ?? value;
 };
 
-const givenTheTokensTheThemeDeclares = (): string[] =>
-  [...readFileSync(TOKENS_STYLESHEET, 'utf8').matchAll(TOKEN_DECLARATION)].map(([, token]) => token);
+const themeBlocksOf = (stylesheet: string): RegExpExecArray[] => matchesIn(stylesheet, THEME_AT_RULE);
 
-const whenReadingTheThemeAtRulesOf = (stylesheet: string): string[] =>
-  [...readFileSync(stylesheet, 'utf8').matchAll(THEME_AT_RULE)].map(([atRule]) => atRule.trim());
+const givenTheTokensTheThemeDeclares = (): string[] =>
+  themeBlocksOf(TOKENS_STYLESHEET)
+    .flatMap(([, , declarations]) => [...declarations.matchAll(TOKEN_DECLARATION)])
+    .map(([, token]) => token);
+
+const whenReadingTheThemeAtRules = (): string[] => themeBlocksOf(TOKENS_STYLESHEET).map(([, atRule]) => atRule.trim());
 
 const whenReadingTheMaterialBridge = (): Bridging[] =>
-  [...readFileSync(MATERIAL_BRIDGE_STYLESHEET, 'utf8').matchAll(MATERIAL_DECLARATION)].map(([, materialToken, value]) => ({
+  matchesIn(MATERIAL_BRIDGE_STYLESHEET, MATERIAL_DECLARATION).map(([, materialToken, value]) => ({
     materialToken,
     value: value.trim(),
   }));
 
 const whenReadingTheRulesOf = (stylesheet: string): StyleRule[] =>
-  [...readFileSync(stylesheet, 'utf8').matchAll(STYLE_RULE)].map(([, selector, declarations]) => ({
+  matchesIn(stylesheet, STYLE_RULE).map(([, selector, declarations]) => ({
     selector: selector.trim(),
     properties: propertiesOf(declarations),
   }));
@@ -126,7 +129,7 @@ const thenTheySetOnlyTheRootFontSize = (rules: StyleRule[]): void => {
   expect(rules).toEqual(ONLY_THE_ROOT_FONT_SIZE);
 };
 
-const thenTheyReachPlainCss = (atRules: string[]): void => {
+const thenTheyPublishEveryToken = (atRules: string[]): void => {
   expect(atRules).toEqual(A_THEME_THAT_PUBLISHES_EVERY_TOKEN);
 };
 
@@ -135,7 +138,7 @@ const thenNoneOfThemCopiesAValue = (bridgings: Bridging[]): void => {
 };
 
 const thenTheyAllPointAtOneOf = (bridgings: Bridging[], tokens: string[]): void => {
-  expect(bridgings.filter(({ value }) => !tokens.includes(referencedTokenIn(value)))).toEqual([]);
+  expect(bridgings.filter(({ value }) => !tokens.includes(whatItPointsAt(value)))).toEqual([]);
 };
 
 const thenItBridgesSomething = (bridgings: Bridging[]): void => {
@@ -163,9 +166,9 @@ describe('DesignTokensTest', () => {
 
   describe('Publication', () => {
     it('should publish every token, and not only those a utility class uses', () => {
-      const atRules = whenReadingTheThemeAtRulesOf(TOKENS_STYLESHEET);
+      const atRules = whenReadingTheThemeAtRules();
 
-      thenTheyReachPlainCss(atRules);
+      thenTheyPublishEveryToken(atRules);
     });
   });
 
