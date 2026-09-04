@@ -103,6 +103,30 @@ is never a string it sees. The way out is a motivated `eslint-disable-next-line`
 lets through as a tooling directive, with the justification in the commit message as everywhere else. No
 folder is exempt — the one place a hexadecimal is legitimate is `styles.css`, which eslint does not read.
 
+## Who may depend on the design system
+
+Two symmetric rules in `HexagonalArchTest`, under `describe('DesignSystem')`: the design system depends on
+**no business context**, and **only `primary` adapters** depend on the design system — not `domain`, not
+`application`, not `infrastructure.secondary`. `application` orchestrates and never renders; `secondary`
+speaks HTTP and has no use for a button.
+
+The second is the one that closes a hole. `Domain should not depend on outside` allows `..domain..` **and
+every shared kernel**, and the design system is a shared kernel — so a `domain` importing `Header` was legal.
+Measured: with that import planted, the suite was green at 11 tests.
+
+The first rule names the **business-context packages**, never layer globs. A rule forbidding the design
+system to reach `'..infrastructure..'` would redden on one of its own components importing another, since
+the design system lives in `infrastructure/primary/` itself. It is dormant today and knowingly so — there is
+no business context yet for it to catch — and it was proved by planting one, not by watching it pass.
+
+**Two things these rules do not reach.** They govern `src/main/webapp/app/`, the only tree the architecture
+test scans, so the composition roots fall outside: `gestion/header/header.ts` and `pupitre/header/header.ts`
+both import `Header` and neither is a primary adapter. That is the sanctioned composition of §5, not a leak
+— but widening the scan root would redden it, and the fix would be to allow the roots, never to weaken the
+rule. And `failOnEmptyShould: false` means a rule matching nothing passes in silence, which is why a third
+test asserts the design system was discovered at all: rename the folder and both rules would otherwise go on
+passing over an empty set.
+
 ---
 
 New rules on this topic go here.

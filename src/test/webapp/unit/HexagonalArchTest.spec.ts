@@ -15,6 +15,7 @@ describe('HexagonalArchTest', () => {
 
   const sharedKernels = packagesWithContext(SharedKernel.name);
   const businessContexts = packagesWithContext(BusinessContext.name);
+  const designSystem = sharedKernels.filter(kernel => kernel.endsWith('.design-system')).map(kernel => kernel + '..');
 
   function otherBusinessContextsDomains(context: string): string[] {
     return businessContexts.filter(other => context !== other).map(name => name + '.domain..');
@@ -50,6 +51,34 @@ describe('HexagonalArchTest', () => {
         .because(
           "To interact between two contexts, secondary from context 'A' should call a primary TypeScript adapter (naming convention starting with 'TypeScript') from context 'B'",
         )
+        .check(srcProject.allClasses());
+    });
+  });
+
+  describe('DesignSystem', () => {
+    it('should be discovered as a shared kernel, since both rules below govern nothing otherwise', () => {
+      expect(designSystem).toHaveLength(1);
+    });
+
+    it('should not depend on business contexts', () => {
+      noClasses()
+        .that()
+        .resideInAnyPackage(...designSystem)
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(...businessContexts.map(context => context + '..'))
+        .because('The design system is a shared kernel: it renders roles, it knows no business')
+        .check(srcProject.allClasses());
+    });
+
+    it('should only be depended on by primary adapters', () => {
+      classes()
+        .that()
+        .resideInAnyPackage(...designSystem)
+        .should()
+        .onlyHaveDependentClassesThat()
+        .resideInAPackage('..infrastructure.primary..')
+        .because('Only primary adapters render: application orchestrates and secondary speaks HTTP, neither has a use for a button')
         .check(srcProject.allClasses());
     });
   });

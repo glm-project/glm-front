@@ -142,7 +142,9 @@ own repository. Refreshing the contract is a human gesture, and its diff is revi
 - a context may not depend on another context's `domain`;
 - cross-context calls go through a primary adapter named with a `TypeScript` prefix, and such an adapter may
   only be depended on from a `secondary` package — never called directly by UI code;
-- `domain` depends only on `domain` and shared kernels — no Angular import;
+- `domain` depends only on `domain` and shared kernels — no Angular import — **with `design-system` carved
+  out of that allowance**, below;
+- the `design-system` kernel depends on no business context, and only `primary` adapters depend on it;
 - `application` may not depend on `infrastructure`, `secondary` may not depend on `application`, and
   `primary` and `secondary` never depend on each other;
 - in the layered check, ordering is `domain models/services → application → primary/secondary adapters`, and
@@ -150,6 +152,12 @@ own repository. Refreshing the contract is a human gesture, and its diff is revi
 
 A failure means the code deviates. A failing layered check is usually a DIP violation — the domain reaching
 outward instead of an adapter reaching inward.
+
+The `design-system` line is the one carve-out, and it exists because the line above it is too generous by
+exactly one kernel: `domain` may depend on shared kernels, and the design system is a shared kernel, so a
+`domain` importing a `glm-button` was legal. Measured before the rule landed — that import in place, the
+whole suite green at 11 tests. Who may depend on the design system, and what the rules deliberately do not
+reach, is in [the design system doc](design-system.md).
 
 ## Everything lives as close as possible to where it is used
 
