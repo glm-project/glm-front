@@ -13,13 +13,13 @@ import {
   PupitreLocal,
 } from '@/pupitre/contexts/atelier/domain/PupitreLocal';
 import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/TypeDePresence';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { SynchronisationDuPupitre } from './SynchronisationDuPupitre';
 
 const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurvenue: new Date().toISOString() });
 
 @Injectable()
-export class PupitreHorsLigne {
+export class PupitreHorsLigne implements OnDestroy {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournalDuPupitrePort);
   private readonly synchronisation = inject(SynchronisationDuPupitre);
@@ -38,6 +38,10 @@ export class PupitreHorsLigne {
   private saisie: Promise<void> = Promise.resolve();
 
   readonly connected = this.connexion.asReadonly();
+
+  ngOnDestroy(): void {
+    void this.finish();
+  }
 
   referentiel(): ReturnType<typeof projectPupitre> {
     return projectPupitre(this.vue());

@@ -11,7 +11,6 @@ import { ServeurDuPupitrePort } from '@/pupitre/contexts/atelier/domain/ServeurD
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { setTimeout as roundTrip } from 'node:timers';
-import { DesignationRuntime } from './DesignationRuntime';
 import { Designation } from './designation';
 
 interface KeyFixture {
@@ -69,7 +68,6 @@ describe('Designation keypad', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        DesignationRuntime,
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         {
@@ -83,7 +81,6 @@ describe('Designation keypad', () => {
     });
     fixture = TestBed.createComponent(Designation);
     designation = TestBed.inject(PupitreHorsLigne);
-    TestBed.inject(DesignationRuntime);
     fixture.detectChanges();
   });
   afterEach(() => {
