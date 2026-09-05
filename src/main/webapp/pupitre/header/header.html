@@ -1,7 +1,14 @@
-<glm-header [heading]="heading()">
+<header class="flex min-h-touch-lg items-center gap-4 bg-accent px-4 text-on-accent">
+  <span class="min-w-0 flex-1 truncate text-section" data-selector="header-heading">{{ heading() }}</span>
   @if (connected()) {
-  <span data-selector="pupitre-connected">En ligne</span>
+  <span class="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm" data-selector="pupitre-connected">
+    <span class="connectivity-indicator connectivity-indicator--connected" aria-hidden="true" data-selector="connectivity-indicator"></span>
+    En ligne
+  </span>
   } @else {
-  <span data-selector="pupitre-disconnected">Hors ligne</span>
+  <span class="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm" data-selector="pupitre-disconnected">
+    <span class="connectivity-indicator" aria-hidden="true" data-selector="connectivity-indicator"></span>
+    Hors ligne
+  </span>
   }
-</glm-header>
+</header>

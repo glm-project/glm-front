@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted. Gestion has since moved to the Material 3 `azure-blue` theme and its token bridge; pupitre retains
-`indigo-pink`.
+Accepted. Gestion has since moved to the Material 3 `azure-blue` theme and its token bridge; pupitre no
+longer loads a Material theme.
 
 ## Context
 
@@ -66,5 +66,5 @@ them out.
   and upgrading icons are now one move, not two.
 - Every new icon is a hand edit to `DRAWINGS` — deliberate, and the cost of the compile-time guarantee.
 - At adoption time this changed neither front's `indigo-pink.css`, which still named `Roboto` after the
-  remote font left. Gestion has since moved to `azure-blue`; pupitre retains that remaining prebuilt-theme
-  fallback.
+  remote font left. Gestion has since moved to `azure-blue`, and pupitre has since removed its prebuilt
+  theme.

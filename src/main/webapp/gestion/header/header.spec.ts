@@ -32,6 +32,16 @@ describe('Gestion header', () => {
     thenTheSessionIsOver();
   });
 
+  it('should show the heading supplied by gestion', () => {
+    thenItShowsTheHeading('glmfront');
+  });
+
+  const thenItShowsTheHeading = (heading: string): void => {
+    const header = fixture.nativeElement as HTMLElement;
+
+    expect(header.querySelector(dataSelector('header-heading'))?.textContent.trim()).toBe(heading);
+  };
+
   const givenAnOpenSession = (): Promise<void> => authentication.authenticate();
 
   const whenClickingLogout = (): void => {

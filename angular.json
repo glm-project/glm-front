@@ -119,11 +119,7 @@
                 "output": ""
               }
             ],
-            "styles": [
-              "src/main/webapp/styles.css",
-              "@angular/material/prebuilt-themes/indigo-pink.css",
-              "src/main/webapp/pupitre/styles.css"
-            ],
+            "styles": ["src/main/webapp/styles.css", "src/main/webapp/pupitre/styles.css"],
             "scripts": [],
             "serviceWorker": "src/main/webapp/pupitre/ngsw-config.json"
           },

@@ -14,7 +14,7 @@ const UNE_PAGE_DOPERATEURS = {
   totalElementsCount: 1,
 } satisfies components['schemas']['PageRestOperateur'];
 
-const UNE_PAGE_DE_SUIVIS = { content: [], totalElementsCount: 0 } satisfies components['schemas']['PageRestSuiviDAtelier'];
+const UNE_PAGE_DE_SUIVIS = { content: [], totalElementsCount: 0 } satisfies components['schemas']['PageRestSyntheseDeSuiviDAtelier'];
 
 const UN_SUIVI = { id: SUIVI_ID, etat: 'EN_COURS' } satisfies components['schemas']['RestSuiviDAtelier'];
 
