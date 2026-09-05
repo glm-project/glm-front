@@ -333,7 +333,9 @@ export class DeviceAuthentication extends AuthenticationPort {
     }
     if (this.session === session) {
       this.open(renewed, secondsBeforeRenewing(tokens));
+      return;
     }
+    await this.save(undefined, renewed);
   }
 
   private async reenrol(session: Session): Promise<void> {

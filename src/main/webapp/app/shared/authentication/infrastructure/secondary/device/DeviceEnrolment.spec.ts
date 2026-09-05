@@ -230,6 +230,34 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     http.expectOne(`${baseFixture}/logout`).flush({});
 
     thenSessionIs(authentication, undefined, 'entreprise-a');
+    await thenRestartHasNoCredential('entreprise-a');
+  });
+
+  it('should preserve a new company selected while an abandoned renewal is being removed', async () => {
+    givenSession(sessionFixture);
+    await whenRestoring();
+    stockage.beforeCommit = () => {
+      authentication.logout();
+      stockage.beforeCommit = () =>
+        givenSession({
+          ...sessionFixture,
+          tenant: 'entreprise-b',
+          accessToken: jwtFixture({ tenant: 'entreprise-b' }),
+          refreshToken: 'refresh-b',
+        });
+    };
+
+    await whenRenewing();
+    http.expectOne(`${baseFixture}/token`).flush({ access_token: rotatedFixture, refresh_token: 'refresh-2', expires_in: 300 });
+    await vi.advanceTimersByTimeAsync(3);
+    http.expectOne(`${baseFixture}/logout`).flush({});
+    const restarted = TestBed.runInInjectionContext(() => new DeviceAuthentication());
+    const boot = restarted.authenticate();
+    await vi.advanceTimersByTimeAsync(1);
+    await boot;
+
+    thenSessionIs(authentication, undefined, 'entreprise-a');
+    thenSessionIs(restarted, jwtFixture({ tenant: 'entreprise-b' }), 'entreprise-b');
   });
 
   it('should not adopt another tab’s renewal after local logout', async () => {
@@ -338,6 +366,14 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     thenPersistedRefreshIs('refresh-b');
   });
 
+  const thenRestartHasNoCredential = async (tenant: string | undefined): Promise<void> => {
+    const restarted: AuthenticationPort = TestBed.runInInjectionContext(() => new DeviceAuthentication());
+    const boot = restarted.authenticate();
+    await vi.advanceTimersByTimeAsync(1);
+    thenSessionIs(restarted, undefined, tenant);
+    http.expectOne(`${baseFixture}/auth/device`).error(new ProgressEvent('error'));
+    await boot;
+  };
   const givenSession = (session: typeof sessionFixture): void => {
     stockage.value = { session, tenant: session.tenant };
   };

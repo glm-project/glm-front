@@ -65,7 +65,10 @@ Presence remains an operator-level gesture; it is never fanned out into per-elem
 
 The device adapter persists the refresh credential, access-token expiry and company in the same IndexedDB
 store. It restores them at startup, serializes renewal across tabs and commits rotation before exposing the
-new credential. `invalid_grant` removes credentials while retaining the selected company and starts device
+new credential. If logout abandons a rotation during its commit, the adapter conditionally removes that
+rotated session too. Each removal compares the complete expected session, preserving a replacement enrolled
+meanwhile. Restart assertions observe authorization through its port, so changing the stored document layout
+does not alter the expected result. `invalid_grant` removes credentials while retaining the selected company and starts device
 enrolment again. The pupitre-specific interceptor also retires an authorization refused with 401/403;
 it first checks the durable session so a delayed refusal cannot retire a newer company. Local collection
 remains available from the cache. Disk storage does not make bearer tokens
