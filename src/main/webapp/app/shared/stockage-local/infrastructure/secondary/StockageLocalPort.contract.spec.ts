@@ -73,11 +73,7 @@ describe.each(adapters)('StockageLocalPort contract, honoured by %s', (_adapter,
     const second = whenTakingLock(buildStockage(), chronology);
     await whenTheSecondTabHasHadATurnToEnter();
 
-    try {
-      thenOnlyFirstTabHasEntered(chronology);
-    } finally {
-      await whenReleasingTheTabs(release, first, second);
-    }
+    await thenOnlyTheFirstTabRunsUntilReleased(chronology, release, first, second);
 
     thenTabsCompletedInOrder(chronology);
   });
@@ -121,6 +117,19 @@ describe.each(adapters)('StockageLocalPort contract, honoured by %s', (_adapter,
     release: new SignalFixture(),
     chronology: [],
   });
+
+  const thenOnlyTheFirstTabRunsUntilReleased = async (
+    chronology: string[],
+    release: SignalFixture,
+    first: Promise<void>,
+    second: Promise<void>,
+  ): Promise<void> => {
+    try {
+      thenOnlyFirstTabHasEntered(chronology);
+    } finally {
+      await whenReleasingTheTabs(release, first, second);
+    }
+  };
   const givenTheBrowserAbortsReads = (): void => {
     const get = IDBObjectStore.prototype.get;
     vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(function (this: IDBObjectStore, key: IDBValidKey | IDBKeyRange) {

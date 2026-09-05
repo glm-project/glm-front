@@ -110,7 +110,7 @@ const endingTheSession: ServerTurn = () => new HttpResponse({ status: 204 });
 const stillPending: ServerTurn = () => aRefusalFixture('authorization_pending');
 const askingToSlowDown: ServerTurn = () => aRefusalFixture('slow_down');
 const buryingTheRefreshToken: ServerTurn = () => aRefusalFixture('invalid_grant');
-const refusing =
+const refusalFixture =
   (reason: string): ServerTurn =>
   () =>
     aRefusalFixture(reason);
@@ -507,7 +507,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it.each(['access_denied', 'expired_token'])('should hand over nothing when the enrolment is refused with %s', async refusal => {
-    const authentication = givenAuthentication({ claims: [refusing(refusal)] });
+    const authentication = givenAuthentication({ claims: [refusalFixture(refusal)] });
 
     await whenEnrolling(authentication);
 
@@ -515,7 +515,7 @@ describe('Device Authentication, beyond the contract', () => {
   });
 
   it.each(['toString', 'constructor'])('should stop claiming when the enrolment is refused with %s', async refusal => {
-    const server = givenAuthorizationServer({ claims: [refusing(refusal)] });
+    const server = givenAuthorizationServer({ claims: [refusalFixture(refusal)] });
     const authentication = givenAuthenticationBackedBy(server);
 
     await whenEnrolmentHasBegun(authentication);

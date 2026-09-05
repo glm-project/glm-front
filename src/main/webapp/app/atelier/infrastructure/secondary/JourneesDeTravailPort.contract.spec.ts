@@ -25,7 +25,7 @@ interface PresenceAttempt {
 
 const acceptant: TourDuServeur = requete => requete.flush({}, { status: 201, statusText: 'Created' });
 
-const refusant =
+const refusalFixture =
   (statut: number, code: string, message: string): TourDuServeur =>
   requete =>
     requete.flush(
@@ -61,7 +61,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   it('should hand back when the working day it has to make sure of is already open', async () => {
     const arrivee = whenEnsuringJeanHasArrived();
 
-    await whenTheServerAnswersOn(URL_DES_JOURNEES, refusant(409, 'journee-de-travail-deja-ouverte', JOURNEE_DEJA_OUVERTE));
+    await whenTheServerAnswersOn(URL_DES_JOURNEES, refusalFixture(409, 'journee-de-travail-deja-ouverte', JOURNEE_DEJA_OUVERTE));
 
     await thenItCompletes(arrivee);
   });
@@ -69,7 +69,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   it('should refuse an arrival for an operator the referential does not hold', async () => {
     const echec = whenEnsuringJeanHasArrivedFails();
 
-    await whenTheServerAnswersOn(URL_DES_JOURNEES, refusant(404, 'operateur-introuvable', OPERATEUR_INCONNU));
+    await whenTheServerAnswersOn(URL_DES_JOURNEES, refusalFixture(404, 'operateur-introuvable', OPERATEUR_INCONNU));
 
     thenItWasRefused(await echec, 'operateur-introuvable', OPERATEUR_INCONNU);
   });
@@ -86,7 +86,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   it('should hand back when the operator it has to make sure of is already at work', async () => {
     const reprise = whenEnsuringJeanIsPresent();
 
-    await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'transition-de-presence-interdite', DEJA_AU_TRAVAIL));
+    await whenTheServerAnswersOn(URL_DES_PRESENCES, refusalFixture(409, 'transition-de-presence-interdite', DEJA_AU_TRAVAIL));
 
     await thenItCompletes(reprise);
   });
@@ -94,7 +94,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   it('should refuse the very same transition when it is asked for as a gesture of its own', async () => {
     const echec = whenRecordingJeanPausingFails();
 
-    await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'transition-de-presence-interdite', PAUSE_IMPOSSIBLE));
+    await whenTheServerAnswersOn(URL_DES_PRESENCES, refusalFixture(409, 'transition-de-presence-interdite', PAUSE_IMPOSSIBLE));
 
     thenItWasRefused(await echec, 'transition-de-presence-interdite', PAUSE_IMPOSSIBLE);
   });
@@ -111,7 +111,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   it('should replay a presence another entry slipped in front of, and record it', async () => {
     const pause = whenRecordingJeanPausing();
 
-    await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
+    await whenTheServerAnswersOn(URL_DES_PRESENCES, refusalFixture(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
     await whenTheServerAnswersOn(`/api/atelier/journees?operateur=${JEAN}&size=100`, acceptant);
     const rejeu = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
 
@@ -122,7 +122,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   it.each(['arrival', 'implicit resumption'])('should reread a concurrent %s before replaying', async gesture => {
     const { pending, route } = whenEnsuringPresence(gesture);
 
-    await whenTheServerAnswersOn(route, refusant(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
+    await whenTheServerAnswersOn(route, refusalFixture(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
     await whenTheServerAnswersOn(`/api/atelier/journees?operateur=${JEAN}&size=100`, acceptant);
     await whenTheServerAnswersOn(route, acceptant);
 

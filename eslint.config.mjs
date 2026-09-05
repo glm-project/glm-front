@@ -3,6 +3,7 @@ import angular from 'angular-eslint';
 import cypress from 'eslint-plugin-cypress';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
+import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
 
 const TOOLING_DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|\/)/;
 
@@ -105,6 +106,7 @@ const local = {
           ),
       }),
     },
+    'given-when-then': givenWhenThen,
   },
 };
 
@@ -218,6 +220,14 @@ export default typescript.config(
     rules: {
       'local/no-comments': 'error',
       'local/no-token-bypass': 'error',
+    },
+  },
+  {
+    files: ['src/**/*.spec.ts'],
+    ignores: ['src/test/webapp/unit/HexagonalArchTest.spec.ts'],
+    plugins: { local },
+    rules: {
+      'local/given-when-then': 'error',
     },
   },
 );

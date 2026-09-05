@@ -26,10 +26,14 @@ describe('Gestion shell', () => {
   });
 
   it('should have appName', () => {
-    expect(comp.appName()).toBe('glmfront');
+    thenItsNameIsGlmfront();
   });
 
   it('should hold a bearer token once it has booted', () => {
-    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
+    thenItHoldsABearerToken();
   });
+
+  const thenItsNameIsGlmfront = (): void => expect(comp.appName()).toBe('glmfront');
+
+  const thenItHoldsABearerToken = (): void => expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
 });

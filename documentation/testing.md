@@ -66,6 +66,12 @@ Vitest specs are held to it as much as Cypress ones. What varies is where the se
 stays in `beforeEach` — it is plumbing, not a business precondition — while rendering with the inputs under
 test is the action (`pupitre/header/header.spec.ts`).
 
+`local/given-when-then` enforces this shape on every `*.spec.ts`: scenario calls are named `givenXxx`,
+`whenXxx` or `thenXxx`, technical APIs stay behind those helpers, and assertions stay in `thenXxx` helpers.
+Data declarations and fixture construction remain readable in the scenario. `HexagonalArchTest.spec.ts` is
+the sole exception: its `arch-unit-ts` fluent DSL is itself the architecture rule being stated, and wrapping
+that DSL would only rename its vocabulary without hiding a test detail.
+
 ## Select on `data-selector`, never on CSS classes or text
 
 Use the `dataSelector()` helper (`src/test/webapp/utils/DataSelector.ts`, reached from a co-located spec
