@@ -29,8 +29,11 @@ Each front owns a Cypress config next to its specs, differing by `baseUrl` and `
 by an npm script naming the front. Add a suite with its config and the `test:<layer>:headless:<front>` script;
 the aggregate scripts pick it up by glob. `AGENTS.md` owns the one-server-at-a-time trap.
 
-The pupitre currently has no component suite because its rendered components add no browser integration
-beyond the application journeys. Add the suite when a component owns browser behavior worth isolating.
+The pupitre component suite uses the `component-cypress` build configuration with a test-only bootstrap.
+It renders the real designation keypad and application services with local port fixtures, independently of
+the enrolment and pointage composition. Its touchscreen tests inject native Chromium events through CDP;
+the helper accounts for the Cypress runner iframe position and scale. Production and application-test
+builds retain the regular pupitre bootstrap.
 
 ## Fixing a defect starts with a failing test
 

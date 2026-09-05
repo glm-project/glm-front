@@ -59,3 +59,23 @@ separate boundary.
 
 [ADR 0007](adr/0007-durable-offline-pupitre.md) records durability and synchronization. [ADR 0009](adr/0009-pupitre-domain-responsibilities.md)
 records the domain and application ownership split.
+
+## Designation screen integration
+
+`Designation` renders the keypad; its page provides one `DesignationDuPupitre` instance shared with the
+pointage view. The controller exposes the designated `operateur`, resolves through `PupitreHorsLigne` and
+owns the 30-second inactivity timer. It keeps the keypad unavailable while an asynchronous opening or
+closure is pending, and discards an opening completed after the designation has expired.
+
+The composition gates the keypad on enrolment and reference availability, then switches views on the
+same URL. The pointage view's “J'ai fini” action calls `finish()`. Every screen press, including blank
+chrome, goes through `registerPress()` before a business command: a `false` result consumes the entire
+press, including its subsequent click, because the deadline had already elapsed. Ignore repeated physical
+keydown events before calling this guard. Closing the designation must also dismiss the pointage popup.
+The keypad already handles its own pointer and physical keyboard events; its parent only needs to route
+presses outside it. These composition and pointage responsibilities belong to #75 and #76.
+
+The guard consumes a press that discovers an overdue deadline. If the expiry callback has already reset
+the keypad, the next press starts a fresh code. The stronger wording in #74 about the first press after
+OS sleep remains a contract question: this controller has no separate signal identifying an OS resume
+after the timer has already run. Do not infer one from an arbitrary timer-delay threshold.

@@ -1,0 +1,55 @@
+<div class="mx-auto flex h-full w-full max-w-xl flex-col justify-center gap-4 p-6">
+  <div
+    data-selector="code"
+    role="status"
+    aria-label="Matricule"
+    aria-live="polite"
+    tabindex="0"
+    class="min-h-touch-lg overflow-x-auto whitespace-nowrap rounded border border-border bg-sunken p-4 text-display text-ink"
+  >
+    @if (designation.unknownCode()) {
+    <span class="text-nc">Code inconnu</span>
+    } @else { {{ designation.code() }} }
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    @for (digit of digits; track digit) {
+    <button
+      type="button"
+      [attr.data-selector]="'digit-' + digit"
+      (pointerdown)="onTouch($event, digit)"
+      (click)="onClick(digit)"
+      class="min-h-touch-lg rounded border border-border-strong bg-surface p-5 text-display text-ink"
+    >
+      {{ digit }}
+    </button>
+    }
+    <button
+      type="button"
+      data-selector="erase"
+      (pointerdown)="onTouch($event, 'Backspace')"
+      (click)="onClick('Backspace')"
+      class="min-h-touch-lg rounded border border-border-strong bg-surface p-5 text-body text-ink"
+    >
+      Effacer
+    </button>
+    <button
+      type="button"
+      data-selector="digit-0"
+      (pointerdown)="onTouch($event, '0')"
+      (click)="onClick('0')"
+      class="min-h-touch-lg rounded border border-border-strong bg-surface p-5 text-display text-ink"
+    >
+      0
+    </button>
+    <button
+      type="button"
+      data-selector="validate"
+      [disabled]="designation.canValidate() === false"
+      (pointerdown)="onTouch($event, 'Enter')"
+      (click)="onClick('Enter')"
+      class="min-h-touch-lg rounded bg-accent p-5 text-body text-on-accent disabled:opacity-50"
+    >
+      Valider
+    </button>
+  </div>
+</div>
