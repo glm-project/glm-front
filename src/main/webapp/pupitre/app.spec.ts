@@ -1,6 +1,6 @@
-import { PupitreRuntime } from '@/app/atelier/infrastructure/primary/pupitre/PupitreRuntime';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
+import { PupitreRuntime } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/PupitreRuntime';
 import { signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';

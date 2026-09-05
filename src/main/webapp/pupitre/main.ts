@@ -1,5 +1,5 @@
 import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
-import { httpDeviceAuthorizationInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-device-authorization.interceptor';
+import { httpDeviceAuthorizationInterceptor } from '@/pupitre/shared/authentication/infrastructure/primary/http-device-authorization.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';

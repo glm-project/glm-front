@@ -1,5 +1,11 @@
-import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
-import { EvenementLocal, GesteLocal, PUPITRE_VIDE, PupitreLocal, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
+import { JournalDuPupitrePort } from '@/pupitre/contexts/atelier/domain/JournalDuPupitrePort';
+import {
+  EvenementLocal,
+  GesteLocal,
+  PUPITRE_VIDE,
+  PupitreLocal,
+  ReferentielDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/PupitreLocal';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 

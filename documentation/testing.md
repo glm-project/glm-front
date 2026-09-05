@@ -7,8 +7,9 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
 1. **Unit (Vitest)** — co-located `*.spec.ts` next to the source (`http-auth.interceptor.spec.ts` beside
    `http-auth.interceptor.ts`), plus the architecture test in `src/test/webapp/unit/`. Domain
    logic, services, interceptors, pipes — anything testable without a real DOM or router integration. A
-   **port contract** is the one thing not co-located: it belongs to no single adapter, so it sits beside
-   them all.
+   **port contract** is the one thing not co-located: it belongs to no single adapter. It normally sits
+   beside the adapters; a contract spanning both applications lives in `src/test/webapp/unit/` so production
+   code never imports an adapter from the other application.
 2. **Component (Cypress)** — `src/test/webapp/component/<front>/<context>/*.spec.ts`, against the real dev
    server. Rendering and browser behavior of one component, network intercepted.
 3. **Application (Cypress)** — `src/test/webapp/application/<front>/<context>/*.spec.ts`, driving the whole
@@ -94,11 +95,12 @@ not import a `secondary` one, and `HexagonalArchTest` scans specs.
 
 ## A secondary adapter is tested through its port, never through the library it wraps
 
-One suite per port, declared once and run against every implementation with `describe.each`
-(`secondary/AuthenticationPort.contract.spec.ts`). It asserts only what the port promises, so it reads the
-same for the in-memory adapter and for the Keycloak one — and it is what makes "the double cannot drift"
-true of behavior and not merely of types. Adapter-specific behavior goes in a `beyond the contract`
-describe next to it, still phrased as behavior.
+One suite per port, declared once and run against every implementation with `describe.each`. The
+authentication contract spans common, gestion and pupitre adapters, so it lives at
+`src/test/webapp/unit/AuthenticationPort.contract.spec.ts`; placing it under any production shared kernel
+would create imports toward application-specific adapters. It asserts only what the port promises, which
+makes "the double cannot drift" true of behavior and not merely of types. Adapter-specific behavior goes in
+a `beyond the contract` describe in that same cross-application suite.
 
 Where the adapter wraps a third-party SDK the double replaces **the external system, not the collaborator**:
 an object holding a session that mints, rotates and drops a token, not one `vi.fn()` per method. That is

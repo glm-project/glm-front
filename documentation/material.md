@@ -5,7 +5,7 @@ Angular Material consumes project roles through a CSS bridge; it does not own a 
 ## Gestion owns Material
 
 `gestion` loads the Material 3 `azure-blue` prebuilt theme, followed by
-`app/shared/design-system/infrastructure/primary/gestion/material-bridge.css`. Pupitre owns a Material-free
+`gestion/shared/design-system/infrastructure/primary/material-bridge.css`. Pupitre owns a Material-free
 header and loads no Material theme.
 
 Keep Material imports in gestion rendering code so pupitre remains independent of its theme and runtime.
