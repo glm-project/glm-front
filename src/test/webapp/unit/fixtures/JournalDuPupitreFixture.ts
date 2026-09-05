@@ -3,6 +3,19 @@ import { EvenementLocal, GesteLocal, PUPITRE_VIDE, PupitreLocal, ReferentielDuPu
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
+const acceptedPointageIdsFor = (suiviId: string, evenements: EvenementLocal[]): string[] =>
+  evenements
+    .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
+    .map(evenement => evenement.geste.id);
+
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: EvenementLocal[]): ReferentielDuPupitre => ({
+  ...referentiel,
+  suivis: referentiel.suivis.map(suivi => ({
+    ...suivi,
+    evenements: [...new Set([...suivi.evenements, ...acceptedPointageIdsFor(suivi.id, evenements)])],
+  })),
+});
+
 export class JournalDuPupitreFixture extends JournalDuPupitrePort {
   private readonly entreprises = new Map<string, PupitreLocal>();
   private readonly tails = new Map<string, Promise<unknown>>();
@@ -23,7 +36,7 @@ export class JournalDuPupitreFixture extends JournalDuPupitrePort {
     }));
   }
   override saveReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): Promise<PupitreLocal> {
-    return this.update(entreprise, state => ({ ...state, referentiel }));
+    return this.update(entreprise, state => ({ ...state, referentiel: includeAcceptedPointages(referentiel, state.evenements) }));
   }
   override saveResult(entreprise: string, resultat: EvenementLocal): Promise<PupitreLocal> {
     return this.update(entreprise, state => ({
