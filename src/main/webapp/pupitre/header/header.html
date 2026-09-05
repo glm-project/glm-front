@@ -1,7 +1,9 @@
-<glm-header [heading]="heading()">
+<mat-toolbar color="primary">
+  <span data-selector="header-heading">{{ heading() }}</span>
+  <span class="flex-auto"></span>
   @if (connected()) {
   <span data-selector="pupitre-connected">En ligne</span>
   } @else {
   <span data-selector="pupitre-disconnected">Hors ligne</span>
   }
-</glm-header>
+</mat-toolbar>

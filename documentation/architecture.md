@@ -88,9 +88,9 @@ Sibling components communicate through their parent page: output upward, invocat
 input or template reference. This keeps the dependency visible. A root service is reserved for genuinely
 cross-cutting infrastructure.
 
-Shared visual chrome belongs to the design-system primary adapter and stays business-mute. Each front
-composes its own navigation, logout or connectivity behavior into it. See [`design-system.md`](design-system.md)
-for the dependency boundary.
+Each front owns its header structure, styling and navigation, logout or connectivity behavior. Share visual
+primitives through the design-system primary adapter only when their contract is common. See
+[`design-system.md`](design-system.md).
 
 ## Load the branch that owns the change
 

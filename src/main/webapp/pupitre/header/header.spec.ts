@@ -21,6 +21,7 @@ describe('Pupitre header', () => {
     await whenRenderingTheHeader();
 
     thenItSignsThePupitreIsOnline();
+    thenItShowsTheHeading('glmfront');
   });
 
   it('should sign that the pupitre is disconnected', async () => {
@@ -45,6 +46,12 @@ describe('Pupitre header', () => {
   const thenItSignsThePupitreIsOffline = (): void => {
     expect(showsSign('pupitre-disconnected')).toBe(true);
     expect(showsSign('pupitre-connected')).toBe(false);
+  };
+
+  const thenItShowsTheHeading = (heading: string): void => {
+    const header = fixture.nativeElement as HTMLElement;
+
+    expect(header.querySelector(dataSelector('header-heading'))?.textContent.trim()).toBe(heading);
   };
 
   const showsSign = (sign: string): boolean => {
