@@ -20,7 +20,7 @@ export class DesignationOperateur {
   private saisie = '';
   private inconnu = false;
   private designated = false;
-  private resolving = false;
+  private resolution: ResolutionDesignation | undefined;
   private closing = false;
   private deadline: number | undefined;
   private generation = 0;
@@ -31,7 +31,7 @@ export class DesignationOperateur {
       code: this.saisie,
       unknownCode: this.inconnu,
       operateur: this.operateur(),
-      canValidate: this.saisie.length > 0 && this.canEdit(),
+      canValidate: this.saisie.length > 0 && this.canEdit() && this.resolution === undefined && !this.closing,
       deadline: this.deadline,
     };
   }
@@ -61,15 +61,13 @@ export class DesignationOperateur {
 
   beginResolution(now: number): ResolutionDesignation | undefined {
     if (!this.registerPress(now) || !this.snapshot().canValidate) return undefined;
-    this.resolving = true;
-    return { generation: this.generation, code: this.saisie };
+    this.resolution = { generation: this.generation, code: this.saisie };
+    return this.resolution;
   }
 
   completeResolution(resolution: ResolutionDesignation, now: number): boolean {
-    if (resolution.generation !== this.generation || this.hasExpired(now)) {
-      this.finish();
-      return false;
-    }
+    this.expire(now);
+    if (resolution.generation !== this.generation) return false;
     this.designated = true;
     this.saisie = '';
     return true;
@@ -85,7 +83,11 @@ export class DesignationOperateur {
   }
 
   endResolution(): void {
-    this.resolving = false;
+    this.resolution = undefined;
+  }
+
+  expire(now: number): void {
+    if (this.hasExpired(now)) this.finish();
   }
 
   finish(): void {
@@ -101,14 +103,19 @@ export class DesignationOperateur {
     return this.closing;
   }
 
-  openWindow(entreprise: string, vue: PupitreLocal, code: string): FenetreOperateur {
+  openWindow(entreprise: string, vue: PupitreLocal, code: string, now: number): FenetreOperateur {
     this.requireClosedWindow();
     this.fenetre = new FenetreOperateur(entreprise, vue, code);
+    if (this.resolution === undefined) {
+      this.designated = true;
+      this.deadline = now + INACTIVITE_DESIGNATION_MS;
+    }
     return this.fenetre;
   }
 
   releaseWindow(): void {
     this.fenetre = undefined;
+    this.designated = false;
   }
 
   completeClosure(): void {
@@ -120,13 +127,13 @@ export class DesignationOperateur {
   }
 
   requireClosedWindow(): void {
-    if (this.fenetre !== undefined) {
+    if (this.fenetre !== undefined || this.closing) {
       throw new Error('Une fenetre operateur est deja ouverte.');
     }
   }
 
-  requireWindow(): FenetreOperateur {
-    if (this.fenetre === undefined) {
+  requireWindow(now: number): FenetreOperateur {
+    if (!this.registerPress(now) || !this.designated || this.fenetre === undefined) {
       throw new Error('Aucune fenetre operateur ouverte.');
     }
     return this.fenetre;
@@ -138,7 +145,7 @@ export class DesignationOperateur {
   }
 
   private canEdit(): boolean {
-    return !this.resolving && !this.closing && !this.designated;
+    return (this.resolution === undefined || this.resolution.generation !== this.generation) && !this.designated;
   }
 
   private hasExpired(now: number): boolean {

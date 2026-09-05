@@ -67,8 +67,17 @@ designation. It receives time explicitly and owns the `FenetreOperateur` shared 
 `PupitreHorsLigne` coordinates local resolution and closure, and publishes the designation snapshot.
 `DesignationRuntime` only schedules the inactivity callback and releases the designation on destruction.
 Its provider belongs to the page, so it survives the switch from keypad to pointage. `Designation` translates
-touch and keyboard events and renders the application snapshot. The keypad remains unavailable while an
-opening or closure is pending, and a late resolution cannot reopen an expired designation.
+touch and keyboard events and renders the application snapshot.
+
+The domain checks and renews validity at each gesture's initiation, even when the screen's expiry callback
+has not run. Expiry immediately prevents new gestures; captures already initiated retain their operator and
+occurrence time and drain before the window is released. The next reference becomes visible after that
+drain. The application keeps a single closing operation in flight.
+
+A reset keypad accepts the first new digit while the previous closure or cancelled resolution is still
+pending. Validation stays unavailable until that operation finishes. A late resolution cannot reopen an
+expired designation or erase a new partial code. Timer callbacks ask the domain to check the current
+deadline instead of unconditionally closing a designation that may have been renewed.
 
 The composition gates the keypad on enrolment and reference availability, then switches views on the
 same URL. The pointage view's “J'ai fini” action calls `finish()`. Every screen press, including blank

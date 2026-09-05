@@ -32,6 +32,7 @@ export class PupitreHorsLigne {
   readonly unknownCode = computed(() => this.designationState().unknownCode);
   readonly operateur = computed(() => this.designationState().operateur);
   readonly canValidate = computed(() => this.designationState().canValidate);
+  private fermeture: Promise<void> | undefined;
   private saisie: Promise<void> = Promise.resolve();
 
   readonly connected = this.connexion.asReadonly();
@@ -63,8 +64,7 @@ export class PupitreHorsLigne {
     try {
       await this.openWindow(resolution.code);
       if (!this.designation.completeResolution(resolution, Date.now())) {
-        await this.finish();
-        await this.closeWindow();
+        await this.drainWindow();
       }
     } catch {
       this.designation.failResolution(resolution, Date.now());
@@ -74,24 +74,29 @@ export class PupitreHorsLigne {
     }
   }
 
-  async finish(): Promise<void> {
+  finish(): Promise<void> {
     this.designation.finish();
+    return this.settleDesignation();
+  }
+
+  expire(): Promise<void> {
+    this.designation.expire(Date.now());
+    return this.settleDesignation();
+  }
+
+  private settleDesignation(): Promise<void> {
     this.designationState.set(this.designation.snapshot());
-    if (this.designation.needsClosure()) {
-      try {
-        await this.closeWindow();
-      } finally {
-        this.designation.completeClosure();
-        this.designationState.set(this.designation.snapshot());
-      }
-    }
+    if (!this.designation.needsClosure()) return Promise.resolve();
+    this.fermeture ??= this.drainWindow().finally(() => {
+      this.designation.completeClosure();
+      this.designationState.set(this.designation.snapshot());
+      this.fermeture = undefined;
+    });
+    return this.fermeture;
   }
 
   private refreshDesignation(): void {
-    this.designationState.set(this.designation.snapshot());
-    if (this.designation.needsClosure()) {
-      void this.finish();
-    }
+    void this.settleDesignation();
   }
 
   async openWindow(code: string): Promise<OperateurDuPupitre> {
@@ -103,19 +108,20 @@ export class PupitreHorsLigne {
       throw new Error('L’entreprise du pupitre a change.');
     }
     this.designation.requireClosedWindow();
-    const fenetre = this.designation.openWindow(entreprise, vue, code);
+    const fenetre = this.designation.openWindow(entreprise, vue, code, Date.now());
     this.vue.set(fenetre.snapshot());
+    this.refreshDesignation();
     return fenetre.operateur;
   }
 
-  async closeWindow(): Promise<void> {
+  private async drainWindow(): Promise<void> {
     await this.saisie;
     this.designation.releaseWindow();
     await this.restore();
   }
 
   recordPointage(pointage: PointageDuPupitre): Promise<void> {
-    const fenetre = this.designation.requireWindow();
+    const fenetre = this.requireWindow();
     return this.enqueuePointage(fenetre, pointage);
   }
 
@@ -124,7 +130,7 @@ export class PupitreHorsLigne {
   }
 
   recordPresence(type: TypeDePresence): Promise<void> {
-    const fenetre = this.designation.requireWindow();
+    const fenetre = this.requireWindow();
     const gestes = fenetre.preparePresence(type, identity());
     return this.enqueue(fenetre, () => gestes);
   }
@@ -181,6 +187,14 @@ export class PupitreHorsLigne {
     }
     if (this.designation.window() === undefined) {
       this.vue.set(state);
+    }
+  }
+
+  private requireWindow(): FenetreOperateur {
+    try {
+      return this.designation.requireWindow(Date.now());
+    } finally {
+      this.refreshDesignation();
     }
   }
 

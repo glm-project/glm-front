@@ -12,7 +12,7 @@ export class DesignationRuntime implements OnDestroy {
       clearTimeout(this.timer);
       if (deadline !== undefined) {
         this.timer = setTimeout(() => {
-          void this.pupitre.finish();
+          void this.pupitre.expire();
         }, deadline - Date.now());
       }
     });

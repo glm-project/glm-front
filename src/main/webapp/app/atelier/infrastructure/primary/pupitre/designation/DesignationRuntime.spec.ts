@@ -192,25 +192,44 @@ describe('Designation du pupitre', () => {
     thenClosed();
   });
 
-  it('should wait for the previous window to close before accepting a new designation', async () => {
+  it('should keep the first digit after expiry while the previous window is still closing', async () => {
     whenEntering('049');
     await whenValidating();
     const resolve = givenDelayedClosure();
-    const closing = whenFinishing();
-    whenEntering('049');
+    await whenTimePasses(30_000);
+    await whenReadStarts();
+    whenEntering('9');
     await whenValidating();
-    thenCodeIs('');
+    thenCodeIs('9');
+    thenNoOperatorIsDesignated();
+    thenValidationIsUnavailable();
     whenClosingCompletes(resolve);
-    await whenResolutionCompletes(closing);
+    await whenCheckingExpiration();
+    thenCodeIs('9');
+    whenErasing();
     whenEntering('049');
     await whenValidating();
     thenOperatorIsDesignated();
   });
 
+  it('should refuse a new gesture after sleeping past the designation deadline without a timer callback', async () => {
+    whenEntering('049');
+    await whenValidating();
+
+    whenSleeping(31_000);
+
+    thenNewGestureIsRefused();
+  });
+
+  const thenNewGestureIsRefused = (): void => {
+    expect(() => designation.recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+  };
+
   const givenDelayedClosure = (): (() => void) => {
     const resolve = givenDelayedResolution();
     return () => resolve(referenceFixture);
   };
+  const whenCheckingExpiration = (): Promise<void> => designation.expire();
   const whenClosingCompletes = (resolve: () => void): void => resolve();
   const whenReadStarts = async (): Promise<void> => {
     await journal.readStarted;
@@ -280,6 +299,9 @@ describe('Designation du pupitre', () => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
     expect(() => TestBed.inject(PupitreHorsLigne).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+  };
+  const thenValidationIsUnavailable = (): void => {
+    expect(designation.canValidate()).toBe(false);
   };
   const thenPressIsRejected = (accepted: boolean): void => {
     expect(accepted).toBe(false);
