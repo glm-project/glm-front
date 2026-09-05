@@ -31,6 +31,7 @@ let serviceWorkerSessions: string[] = [];
 
 interface ServerStateFixture {
   authorizationRequests: number;
+  gestureResponsesReleased: boolean;
   referenceRequests: number;
   pushes: { authorization?: string; body: unknown }[];
 }
@@ -110,12 +111,15 @@ describe('Production pupitre offline restart', () => {
     thenTheControlledPupitreCanReachTheNetwork();
     whenAnnouncingTheNetworkReturn();
 
-    thenTheOriginalGestureIsAcceptedExactlyOnce();
+    thenTheOriginalGestureReachedTheServerExactlyOnce();
+    whenReleasingTheGestureResponse();
+    thenTheReplayHasSettledThroughTheJournalPort();
+    thenTheOriginalGestureIsAcceptedInTheJournal();
     thenTheReferenceIsRefreshedAfterReconnect();
     whenRestartingTheProductionPupitre();
     thenTheProductionPupitreIsOnline();
     thenTheReferenceIsRefreshedAfterTheFinalRestart();
-    thenTheOriginalGestureIsStillAcceptedExactlyOnce();
+    thenTheOriginalGestureStillReachedTheServerExactlyOnce();
     thenTheDeviceIsEnrolledOnce();
     thenTheJournalAndReferenceSurvivedEveryRestart();
   });
@@ -170,6 +174,10 @@ const whenAnnouncingTheNetworkReturn = (): void => {
     online.initEvent('online');
     window.dispatchEvent(online);
   });
+};
+
+const whenReleasingTheGestureResponse = (): void => {
+  cy.request('POST', '/__control/release-gesture-responses');
 };
 
 const thenTheProductionPupitreIsOnline = (): void => {
@@ -255,19 +263,31 @@ const thenThePendingJournalAndReferenceSurvivedTheOfflineRestart = (): void => {
     });
 };
 
-const thenTheOriginalGestureIsAcceptedExactlyOnce = (): void => {
-  thenServerState('pushes', 1)
-    .its('pushes')
-    .should('deep.equal', [
+const thenTheOriginalGestureReachedTheServerExactlyOnce = (): void => {
+  thenServerState('pushes', 1).should(state => {
+    expect(state.gestureResponsesReleased).to.equal(false);
+    expect(state.pushes).to.deep.equal([
       {
         authorization: `Bearer ${tokenFixture}`,
         body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1' },
       },
     ]);
+  });
 };
 
-const thenTheOriginalGestureIsStillAcceptedExactlyOnce = (): void => {
-  thenTheOriginalGestureIsAcceptedExactlyOnce();
+const thenTheReplayHasSettledThroughTheJournalPort = (): void => {
+  thenProductionFixture().then(fixture => fixture.waitForSynchronization());
+};
+
+const thenTheOriginalGestureIsAcceptedInTheJournal = (): void => {
+  thenProductionFixture()
+    .then(fixture => fixture.read(entrepriseFixture))
+    .its('evenements')
+    .should('deep.equal', [{ geste: gestureFixture, etat: 'ACCEPTE' }]);
+};
+
+const thenTheOriginalGestureStillReachedTheServerExactlyOnce = (): void => {
+  thenServerState().its('pushes').should('have.length', 1);
 };
 
 const thenTheJournalAndReferenceSurvivedEveryRestart = (): void => {

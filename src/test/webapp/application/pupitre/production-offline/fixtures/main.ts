@@ -8,6 +8,7 @@ import { createApplication } from '@angular/platform-browser';
 export interface ProductionPupitreFixture {
   prepare(entreprise: string, referentiel: ReferentielDuPupitre, geste: LocalGeste): Promise<void>;
   read(entreprise: string): Promise<LocalPupitreState>;
+  waitForSynchronization(): Promise<void>;
 }
 
 declare global {
@@ -27,6 +28,7 @@ createApplication({ providers: [authProvider, offlineProvider] })
         await journal.append(entreprise, [geste]);
       },
       read: entreprise => journal.read(entreprise),
+      waitForSynchronization: () => journal.synchronize(() => Promise.resolve()),
     };
   })
   .catch((failure: unknown) => console.error(failure));

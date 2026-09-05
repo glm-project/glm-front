@@ -106,21 +106,25 @@ through `PupitreJournalPort`; it does not replace the production bootstrap or kn
 The test waits for actual service-worker activation and control of a fresh production document. It disables
 HTTP caching, disconnects both the Chrome page and service-worker targets, and proves the same uncached probe
 succeeds online, fails offline and succeeds after restoration. A fresh controlled-client request also fails offline.
-The network restoration deliberately reconnects the worker before the page. This prevents Chrome's natural
-`online` event from starting a replay while the worker still has its offline CDP conditions.
+The network restoration deliberately reconnects the worker before the page. The fixture server then retains
+the gesture response without deduplicating requests. After both network probes succeed, the test releases that
+response, waits for the production synchronization lock through `PupitreJournalPort`, and observes the durable
+`ACCEPTE` state before restarting. This distinguishes server receipt from client acknowledgement without a sleep.
 
 During two offline document restarts, the production shell boots, shows disconnected state, and the public
 journal port still returns the exact reference and pending gesture. After reconnection and another restart,
 the server records one enrollment, one token exchange and exactly one gesture publication with its original
 UUID `59ef737b-c3dd-47f8-8e63-4d5526a17df3` and occurrence date `2026-09-05T08:00:00Z`.
-The local journal records acceptance. The server's eight reference requests show the expected refreshes.
+The local journal records acceptance. The server's ten reference requests show that the natural and synthetic
+triggers both completed while the synchronization lock prevented a second publication.
 
 The negative scenario serves the identical production files while denying the worker and its manifest.
 After the same verified network cut, a fresh document cannot load the pupitre shell. This demonstrates why
 the positive case depends on the service worker rather than the HTTP cache or fixture server.
 
 The aggregate build-and-browser command exited 0; the two JUnit suites totalled 3.224 seconds of test time.
-The final stronger probe assertions also passed independently. The whole-command duration includes building,
+The final acknowledgement-barrier runs totalled 3.276 seconds, and twelve consecutive positive runs passed.
+The whole-command duration includes building,
 server startup and Chrome startup and is recorded by the measured validation entry points.
 JSON server observations and JUnit XML live under `artifacts/production-offline/` and are uploaded by the
 required `production-offline-test` CI job. Fixture servers cleanly release ports 9010, 9011 and 9080.
@@ -140,9 +144,12 @@ The [subsequent CI run](https://github.com/glm-project/glm-front/actions/runs/33
 `production-offline-test` check and GitHub again reported `BLOCKED`. Its uploaded server evidence contained two
 identical gesture POSTs and eight reference requests. The failure exposed a restoration race: the page was
 reconnected before its service-worker target, so Chrome could announce `online` during that transition. The
-browser harness now restores worker connectivity before page connectivity; twelve consecutive targeted runs
-passed after the correction. Local negative checks also demonstrate type-error rejection, invalid workflow
-rejection, staged-secret rejection and a mutation score below its threshold.
+browser harness now restores worker connectivity before page connectivity. A later run,
+[33993128339](https://github.com/glm-project/glm-front/actions/runs/33993128339), reproduced the duplicate and
+showed that ordering alone did not prove client acknowledgement: the server observation could win before the
+HTTP response and `saveResult`. The explicit response barrier now closes that observation gap. Its failure path
+also returns 503 to pending responses before closing the fixture servers. Local negative checks demonstrate
+type-error rejection, invalid workflow rejection, staged-secret rejection and a mutation score below its threshold.
 
 The first real pre-commit and pre-push hooks exited 0 in 3.04 and 54.83 seconds respectively. Post-push inspection
 also exposed inherited Git environment variables leaking a test fixture into the invoking worktree's index.

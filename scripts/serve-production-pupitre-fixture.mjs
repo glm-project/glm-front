@@ -18,11 +18,13 @@ const tokenPayload = Buffer.from(JSON.stringify({ tenant: 'entreprise-a' })).toS
 const accessToken = `fixture.${tokenPayload}.signature`;
 const state = {
   authorizationRequests: 0,
+  gestureResponsesReleased: false,
   referenceRequests: 0,
   tokenRequests: 0,
   pushes: [],
 };
 const controlWaiters = [];
+const pendingGestureResponses = [];
 
 const operator = {
   id: 'operator-1',
@@ -152,6 +154,15 @@ const appServer = createServer(async (request, response) => {
     json(response, 200, { online: true });
     return;
   }
+  if (request.method === 'POST' && url.pathname === '/__control/release-gesture-responses') {
+    state.gestureResponsesReleased = true;
+    for (const pending of pendingGestureResponses.splice(0)) {
+      json(pending, 200, {});
+    }
+    recordEvidence();
+    json(response, 200, state);
+    return;
+  }
   if (url.pathname === '/__control') {
     const field = url.searchParams.get('until');
     const atLeast = Number(url.searchParams.get('atLeast') ?? '0');
@@ -174,6 +185,10 @@ const appServer = createServer(async (request, response) => {
     const body = JSON.parse(await readBody(request));
     state.pushes.push({ authorization: request.headers.authorization, body });
     recordEvidence();
+    if (!state.gestureResponsesReleased) {
+      pendingGestureResponses.push(response);
+      return;
+    }
     json(response, 200, {});
     return;
   }
@@ -224,6 +239,7 @@ const close = server => new Promise(resolveClosed => server.close(resolveClosed)
 const stop = async signal => {
   writeEvidence(signal);
   controlWaiters.splice(0).forEach(waiter => json(waiter.response, 503, { stopped: true }));
+  pendingGestureResponses.splice(0).forEach(response => json(response, 503, { stopped: true }));
   await Promise.all([close(appServer), close(authServer)]);
 };
 
