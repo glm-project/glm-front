@@ -1,17 +1,17 @@
 import { StockageLocalPort } from '@/app/shared/stockage-local/domain/StockageLocalPort';
-import { TestBed } from '@angular/core/testing';
+import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
+import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { IndexedDbStockageLocal } from './IndexedDbStockageLocal';
 
-const adapters = [['IndexedDB', () => TestBed.inject(IndexedDbStockageLocal)]] as const;
+const adapters = [['IndexedDB', () => new IndexedDbStockageLocal()]] as const;
 
 describe.each(adapters)('StockageLocalPort contract, honoured by %s', (_adapter, buildStockage) => {
   let stockage: StockageLocalPort;
 
   beforeEach(() => {
     vi.stubGlobal('indexedDB', new IDBFactory());
-    vi.stubGlobal('navigator', { locks: { request: async (_name: string, action: () => Promise<unknown>) => action() } });
-    TestBed.configureTestingModule({ providers: [IndexedDbStockageLocal] });
+    vi.stubGlobal('navigator', { locks: new BrowserLocksFixture() });
     stockage = buildStockage();
   });
 
@@ -30,7 +30,7 @@ describe.each(adapters)('StockageLocalPort contract, honoured by %s', (_adapter,
   });
 
   it('should preserve both gestures when two tabs write at the same time', async () => {
-    await Promise.all([whenAppending('premier'), whenAppending('second')]);
+    await Promise.all([whenAppending(stockage, 'premier'), whenAppending(buildStockage(), 'second')]);
 
     await thenItContains(stockage, 'atelier-a', ['premier', 'second']);
   });
@@ -64,8 +64,30 @@ describe.each(adapters)('StockageLocalPort contract, honoured by %s', (_adapter,
     await thenItFails(failed, 'cloned');
   });
 
-  it('should perform the synchronization under a browser lock', async () => {
-    const result = await stockage.lock('poussee', () => Promise.resolve('termine'));
+  it('should let only one tab synchronize at a time and release the next tab afterwards', async () => {
+    const entered = new SignalFixture();
+    const release = new SignalFixture();
+    const chronology: string[] = [];
+    const first = whenHoldingLock(stockage, entered, release, chronology);
+    await entered.promise;
+
+    const second = whenTakingLock(buildStockage(), chronology);
+    await new Promise(resolve => setTimeout(resolve));
+
+    try {
+      thenOnlyFirstTabHasEntered(chronology);
+    } finally {
+      release.release();
+      await Promise.all([first, second]);
+    }
+    thenTabsCompletedInOrder(chronology);
+  });
+
+  it('should release a failed synchronization so another tab can continue', async () => {
+    const failure = stockage.lock('poussee', () => Promise.reject(new Error('reseau')));
+
+    await thenItFails(failure, 'reseau');
+    const result = await buildStockage().lock('poussee', () => Promise.resolve('termine'));
 
     thenItCompleted(result);
   });
@@ -99,7 +121,27 @@ describe.each(adapters)('StockageLocalPort contract, honoured by %s', (_adapter,
   });
 
   const whenRecording = (key: string, gestes: string[]): Promise<string[]> => stockage.update(key, [], () => gestes);
-  const whenAppending = (geste: string): Promise<string[]> => stockage.update<string[]>('atelier-a', [], gestes => [...gestes, geste]);
+  const whenAppending = (store: StockageLocalPort, geste: string): Promise<string[]> =>
+    store.update<string[]>('atelier-a', [], gestes => [...gestes, geste]);
+  const whenHoldingLock = (store: StockageLocalPort, entered: SignalFixture, release: SignalFixture, chronology: string[]): Promise<void> =>
+    store.lock('poussee', async () => {
+      chronology.push('first entered');
+      entered.release();
+      await release.promise;
+      chronology.push('first completed');
+    });
+  const whenTakingLock = (store: StockageLocalPort, chronology: string[]): Promise<void> =>
+    store.lock('poussee', async () => {
+      chronology.push('second entered');
+      await new Promise(resolve => setTimeout(resolve));
+      chronology.push('second completed');
+    });
+  const thenOnlyFirstTabHasEntered = (chronology: string[]): void => {
+    expect(chronology).toEqual(['first entered']);
+  };
+  const thenTabsCompletedInOrder = (chronology: string[]): void => {
+    expect(chronology).toEqual(['first entered', 'first completed', 'second entered', 'second completed']);
+  };
   const thenItContains = async (store: StockageLocalPort, key: string, value: unknown): Promise<void> => {
     expect(await store.read(key)).toEqual(value);
   };

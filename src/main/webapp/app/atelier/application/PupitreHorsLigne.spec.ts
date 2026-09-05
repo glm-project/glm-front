@@ -1,10 +1,12 @@
-import { GesteLocal, PUPITRE_VIDE, PupitreLocal, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
+import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { GesteLocal, PUPITRE_VIDE, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { StockageLocalPort } from '@/app/shared/stockage-local/domain/StockageLocalPort';
-import { TestBed } from '@angular/core/testing';
+import { Injector } from '@angular/core';
+import { JournalDuPupitreFixture } from '@test/unit/fixtures/JournalDuPupitreFixture';
 import { PupitreHorsLigne } from './PupitreHorsLigne';
+import { SynchronisationDuPupitre } from './SynchronisationDuPupitre';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 const referenceFixture: ReferentielDuPupitre = {
@@ -28,42 +30,6 @@ class AuthenticationFixture extends AuthenticationPort {
   }
   override logout(): void {
     this.token = undefined;
-  }
-}
-
-class StockageFixture extends StockageLocalPort {
-  readonly documents = new Map<string, PupitreLocal>();
-  failWrite = false;
-  afterRead: (() => void) | undefined;
-  private readonly tails = new Map<string, Promise<void>>();
-
-  override async read<T>(cle: string): Promise<T | undefined> {
-    await roundTrip();
-    const value = structuredClone(this.documents.get(cle)) as T | undefined;
-    this.afterRead?.();
-    this.afterRead = undefined;
-    return value;
-  }
-  override async update<T>(cle: string, initial: T, change: (value: T) => T): Promise<T> {
-    await roundTrip();
-    if (this.failWrite) {
-      this.failWrite = false;
-      throw new Error('disque plein');
-    }
-    const updated = change((structuredClone(this.documents.get(cle)) as T | undefined) ?? initial);
-    this.documents.set(cle, structuredClone(updated) as PupitreLocal);
-    return updated;
-  }
-  override async lock<T>(cle: string, action: () => Promise<T>): Promise<T> {
-    const locked = (this.tails.get(cle) ?? Promise.resolve()).then(action);
-    this.tails.set(
-      cle,
-      locked.then(
-        () => undefined,
-        () => undefined,
-      ),
-    );
-    return locked;
   }
 }
 
@@ -105,25 +71,17 @@ class ServeurFixture extends ServeurDuPupitrePort {
 
 describe('PupitreHorsLigne', () => {
   let pupitre: PupitreHorsLigne;
-  let stockage: StockageFixture;
+  let journal: JournalDuPupitreFixture;
   let serveur: ServeurFixture;
   let authentication: AuthenticationFixture;
 
-  beforeEach(() => {
-    stockage = new StockageFixture();
+  beforeEach(async () => {
+    journal = new JournalDuPupitreFixture();
     serveur = new ServeurFixture();
     authentication = new AuthenticationFixture();
-    stockage.documents.set('atelier:entreprise-a', { ...PUPITRE_VIDE, referentiel: structuredClone(referenceFixture) });
+    await journal.saveReferentiel('entreprise-a', structuredClone(referenceFixture));
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    TestBed.configureTestingModule({
-      providers: [
-        PupitreHorsLigne,
-        { provide: StockageLocalPort, useValue: stockage },
-        { provide: ServeurDuPupitrePort, useValue: serveur },
-        { provide: AuthenticationPort, useValue: authentication },
-      ],
-    });
-    pupitre = TestBed.inject(PupitreHorsLigne);
+    pupitre = buildPupitre();
   });
 
   afterEach(async () => {
@@ -134,11 +92,11 @@ describe('PupitreHorsLigne', () => {
   it('should resolve an operator locally after a restart without a network', async () => {
     await whenOpening();
     await whenStarting();
-    await pupitre.closeWindow();
-    await pupitre.restore();
+    await whenRestarting();
+    await whenOpening();
 
     thenActivityIs('TRAVAIL');
-    thenQueueHas(3);
+    await thenQueueHas(3);
   });
 
   it('should commit arrival and implicit resumption before the first activity, only once per window', async () => {
@@ -147,21 +105,21 @@ describe('PupitreHorsLigne', () => {
     await Promise.all([whenStarting(), pupitre.recordPointage({ suiviId: 'piece', type: 'NON_CONFORMITE', posteId: 'tour' })]);
     await pupitre.recordPresence('PAUSE');
 
-    thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
     thenActivityIs('NON_CONFORMITE');
-    thenQueueHasUniqueStableIdentities();
+    await thenQueueHasUniqueStableIdentities();
   });
 
   it('should reject a gesture explicitly if local commit fails and accept the next retry durably', async () => {
     await whenOpening();
-    stockage.failWrite = true;
+    journal.failWrite = true;
 
     await thenFails(whenStarting(), 'disque plein');
-    thenQueueHas(0);
+    await thenQueueHas(0);
     thenNoActivity();
     await whenStarting();
 
-    thenQueueHas(3);
+    await thenQueueHas(3);
   });
 
   it('should retain the failed push and replay exactly the same identifiers and dates on reconnection', async () => {
@@ -171,7 +129,7 @@ describe('PupitreHorsLigne', () => {
 
     await pupitre.synchronize();
     thenConnectedIs(false);
-    thenPendingIs(1);
+    await thenPendingIs(1);
     await pupitre.synchronize();
 
     thenConnectedIs(true);
@@ -182,15 +140,15 @@ describe('PupitreHorsLigne', () => {
     await givenPendingArrival();
     authentication.token = 'autorise';
     serveur.beforeSend = () => {
-      stockage.failWrite = true;
+      journal.failWrite = true;
     };
 
     await thenFails(pupitre.synchronize(), 'disque plein');
-    thenPendingIs(1);
+    await thenPendingIs(1);
     await pupitre.synchronize();
 
     thenJournalIs([arriveeFixture, arriveeFixture]);
-    thenPendingIs(0);
+    await thenPendingIs(0);
   });
 
   it('should preserve a final refusal with its cause and continue subsequent gestures for the same operator', async () => {
@@ -206,7 +164,7 @@ describe('PupitreHorsLigne', () => {
     await pupitre.closeWindow();
 
     thenNoActivity();
-    thenPendingIs(0);
+    await thenPendingIs(0);
     await thenRefusalIs('suivi-d-atelier-cloture');
   });
 
@@ -224,7 +182,7 @@ describe('PupitreHorsLigne', () => {
 
     await pupitre.synchronize();
 
-    thenPendingIs(0);
+    await thenPendingIs(0);
     await thenRefusalIs('transition-de-presence-interdite');
   });
 
@@ -246,7 +204,7 @@ describe('PupitreHorsLigne', () => {
 
     await pupitre.synchronize();
 
-    thenPendingIs(0);
+    await thenPendingIs(0);
     thenConnectedIs(true);
     await thenRefusalIs('saisie-concurrente');
   });
@@ -258,7 +216,7 @@ describe('PupitreHorsLigne', () => {
 
     await pupitre.synchronize();
 
-    thenPendingIs(0);
+    await thenPendingIs(0);
   });
 
   it('should never activate a refreshed referential under the operator’s fingers', async () => {
@@ -292,7 +250,7 @@ describe('PupitreHorsLigne', () => {
     await thenFails(whenStarting(), 'fenetre operateur a change');
     await pupitre.synchronize();
 
-    thenOldCompanyPendingIs(3);
+    await thenOldCompanyPendingIs(3);
     thenJournalIs([]);
     await thenFails(pupitre.openWindow('inconnu'), 'Matricule absent');
   });
@@ -305,7 +263,7 @@ describe('PupitreHorsLigne', () => {
 
     await pupitre.synchronize();
 
-    thenNoCompanyBData();
+    await thenNoCompanyBData();
   });
 
   it('should stop a replay when authorization changes during the reread', async () => {
@@ -319,7 +277,7 @@ describe('PupitreHorsLigne', () => {
     await pupitre.synchronize();
 
     thenJournalIs([]);
-    thenOldCompanyPendingIs(1);
+    await thenOldCompanyPendingIs(1);
   });
 
   it('should finish acknowledging the old company response without sending its next event under another token', async () => {
@@ -331,7 +289,7 @@ describe('PupitreHorsLigne', () => {
 
     await pupitre.synchronize();
 
-    thenOldCompanyPendingIs(0);
+    await thenOldCompanyPendingIs(0);
   });
 
   it('should preserve gestures appended while a push is in flight', async () => {
@@ -345,8 +303,8 @@ describe('PupitreHorsLigne', () => {
     await Promise.all([pupitre.synchronize(), pupitre.synchronize()]);
     await pupitre.closeWindow();
 
-    thenQueueHas(4);
-    thenPendingIs(0);
+    await thenQueueHas(4);
+    await thenPendingIs(0);
   });
 
   it('should reject unknown codes, overlapping windows and unauthorized workstations', async () => {
@@ -356,7 +314,17 @@ describe('PupitreHorsLigne', () => {
     await thenFails(pupitre.openWindow('049'), 'deja ouverte');
     await thenFails(pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'interdit' }), 'habilitations');
 
-    thenQueueHas(0);
+    await thenQueueHas(0);
+  });
+
+  it('should clear the exposed reference when the durable company selection disappears', async () => {
+    await pupitre.restore();
+    thenMatriculeIs('049');
+    authentication.tenant = undefined;
+
+    await pupitre.synchronize();
+
+    thenNoReference();
   });
 
   it('should require an initial enrolment and an operator window', async () => {
@@ -370,7 +338,7 @@ describe('PupitreHorsLigne', () => {
   });
 
   it('should reject a window when the company changes while restoring it', async () => {
-    stockage.afterRead = () => {
+    journal.afterRead = () => {
       authentication.tenant = 'entreprise-b';
     };
 
@@ -378,7 +346,7 @@ describe('PupitreHorsLigne', () => {
   });
 
   it('should expose an empty diagnostic before any gesture or reference exists', async () => {
-    stockage.documents.clear();
+    authentication.tenant = 'entreprise-vide';
 
     await pupitre.restore();
 
@@ -391,17 +359,14 @@ describe('PupitreHorsLigne', () => {
     await whenOpening();
     authentication.token = 'autorise';
     serveur.beforeSend = () => {
-      stockage.failWrite = true;
+      journal.failWrite = true;
     };
 
     await whenStarting();
-    await roundTrip();
-    await roundTrip();
-    await roundTrip();
-    await roundTrip();
-    await roundTrip();
+    await thenFails(pupitre.synchronize(), 'disque plein');
+    await whenRestarting();
 
-    thenQueueHas(3);
+    await thenQueueHas(3);
   });
 
   it('should push a gesture accepted while the reference is being refreshed without waiting for the next minute', async () => {
@@ -415,24 +380,36 @@ describe('PupitreHorsLigne', () => {
     await pupitre.synchronize();
     await pupitre.closeWindow();
 
-    thenQueueHas(1);
-    thenPendingIs(0);
+    await thenQueueHas(1);
+    await thenPendingIs(0);
   });
 
+  const buildPupitre = (): PupitreHorsLigne =>
+    Injector.create({
+      providers: [
+        PupitreHorsLigne,
+        SynchronisationDuPupitre,
+        { provide: JournalDuPupitrePort, useValue: journal },
+        { provide: ServeurDuPupitrePort, useValue: serveur },
+        { provide: AuthenticationPort, useValue: authentication },
+      ],
+    }).get(PupitreHorsLigne);
+  const whenRestarting = async (): Promise<void> => {
+    await pupitre.synchronize();
+    pupitre = buildPupitre();
+    await pupitre.restore();
+  };
   const whenOpening = (): Promise<unknown> => pupitre.openWindow('049');
   const whenStarting = (): Promise<void> => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT' });
   const givenPendingArrival = async (): Promise<void> => {
-    await stockage.update<PupitreLocal>('atelier:entreprise-a', PUPITRE_VIDE, current => ({
-      ...current,
-      evenements: [{ geste: arriveeFixture, etat: 'EN_ATTENTE' }],
-    }));
+    await journal.append('entreprise-a', [arriveeFixture]);
   };
-  const thenQueueHas = (count: number): void => {
-    expect(stockage.documents.get('atelier:entreprise-a')?.evenements).toHaveLength(count);
+  const thenQueueHas = async (count: number): Promise<void> => {
+    expect((await journal.read('entreprise-a')).evenements).toHaveLength(count);
   };
-  const thenPendingIs = (count: number): void => thenOldCompanyPendingIs(count);
-  const thenOldCompanyPendingIs = (count: number): void => {
-    expect(stockage.documents.get('atelier:entreprise-a')?.evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
+  const thenPendingIs = (count: number): Promise<void> => thenOldCompanyPendingIs(count);
+  const thenOldCompanyPendingIs = async (count: number): Promise<void> => {
+    expect((await journal.read('entreprise-a')).evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
   };
   const thenActivityIs = (categorie: string): void => {
     expect(pupitre.referentiel()?.suivis[0].activites[0].categorie).toBe(categorie);
@@ -440,11 +417,11 @@ describe('PupitreHorsLigne', () => {
   const thenNoActivity = (): void => {
     expect(pupitre.referentiel()?.suivis[0].activites).toHaveLength(0);
   };
-  const thenNatureOrderIs = (natures: string[]): void => {
-    expect(stockage.documents.get('atelier:entreprise-a')?.evenements.map(event => event.geste.nature)).toEqual(natures);
+  const thenNatureOrderIs = async (natures: string[]): Promise<void> => {
+    expect((await journal.read('entreprise-a')).evenements.map(event => event.geste.nature)).toEqual(natures);
   };
-  const thenQueueHasUniqueStableIdentities = (): void => {
-    const gestes = stockage.documents.get('atelier:entreprise-a')?.evenements.map(event => event.geste) ?? [];
+  const thenQueueHasUniqueStableIdentities = async (): Promise<void> => {
+    const gestes = (await journal.read('entreprise-a')).evenements.map(event => event.geste);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(gestes[0].dateDeSurvenue).toBe(gestes[2].dateDeSurvenue);
     expect(gestes[1].dateDeSurvenue).toBe(gestes[2].dateDeSurvenue);
@@ -472,8 +449,8 @@ describe('PupitreHorsLigne', () => {
   const thenMatriculeIs = (code: string): void => {
     expect(pupitre.referentiel()?.operateurs[0].matricule).toBe(code);
   };
-  const thenNoCompanyBData = (): void => {
-    expect(stockage.documents.has('atelier:entreprise-b')).toBe(false);
+  const thenNoCompanyBData = async (): Promise<void> => {
+    expect(await journal.read('entreprise-b')).toEqual(PUPITRE_VIDE);
   };
   const thenNoReference = (): void => {
     expect(pupitre.referentiel()).toBeUndefined();

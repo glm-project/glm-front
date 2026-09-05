@@ -152,7 +152,7 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
 
   it('should reread the affected aggregate before the caller replays a concurrent gesture', async () => {
     const presence = serveur.reread(arriveeFixture);
-    http.expectOne('/api/atelier/journees?operateur=jean&size=100').flush({ content: [] });
+    http.expectOne(request => request.url === '/api/atelier/journees' && request.params.get('operateur') === 'jean').flush({ content: [] });
     await presence;
     const pointage = serveur.reread({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
     http.expectOne('/api/atelier/suivis/piece').flush(suiviFixture);
@@ -161,7 +161,8 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
 
   const whenPage = async (url: string, page: number, content: unknown[], totalElementsCount: number): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
-    const request = http.expectOne(`${url}?page=${page}&size=100`);
+    const request = http.expectOne(request => request.url === url && request.params.get('page') === String(page));
+    expect(request.request.params.has('operateur')).toBe(false);
     request.flush({ content, totalElementsCount });
   };
   const whenWrite = async (url: string, body: unknown): Promise<void> => {

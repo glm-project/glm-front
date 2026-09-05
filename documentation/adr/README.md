@@ -23,3 +23,5 @@ renumbers at merge time. The status below is the living one — update this line
 
 - [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — **Accepted** —
   named cohesive steps when long methods, nested logic or callbacks obscure the workflow
+- [0009 — Give operator windows and replay rules a domain owner](0009-pupitre-domain-responsibilities.md) — **Accepted** —
+  window and replay rules in `domain`, separate capture and exchange orchestration, company journal port
