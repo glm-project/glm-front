@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
-  'src/main/webapp/pupitre/contexts/atelier/application/PupitreHorsLigne.ts',
+  'src/main/webapp/pupitre/contexts/atelier/application/OfflinePupitre.ts',
   'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.ts',
   'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.spec.ts',
   'src/main/webapp/gestion/app.ts',
@@ -60,9 +60,9 @@ it('should preserve the existing boundaries between fronts', async () => {
 
 it('should reject business imports from app-specific shared code', async () => {
   const results = await whenLintingImports('src/main/webapp/pupitre/shared/authentication/package-info.ts', [
-    "import { PupitreLocal } from '@/pupitre/contexts/atelier/domain/PupitreLocal';",
-    "export { projectPupitre } from '../../contexts/atelier/domain/ProjectionDuPupitre';",
-    "export async function load() { return import('@/pupitre/contexts/atelier/domain/PupitreLocal'); }",
+    "import { LocalPupitreState } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';",
+    "export { projectPupitre } from '../../contexts/atelier/domain/PupitreProjection';",
+    "export async function load() { return import('@/pupitre/contexts/atelier/domain/LocalPupitreState'); }",
   ]);
 
   thenImportsAreRejected(results);

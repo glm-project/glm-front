@@ -1,4 +1,4 @@
-import { IdentiteDuGeste } from './PupitreLocal';
+import { IdentiteDuGeste } from './LocalPupitreState';
 import { TypeDePresence } from './TypeDePresence';
 
 export abstract class JourneesDeTravailPort {

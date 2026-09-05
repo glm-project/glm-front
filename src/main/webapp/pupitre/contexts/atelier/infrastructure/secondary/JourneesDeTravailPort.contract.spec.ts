@@ -1,4 +1,4 @@
-import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { JourneesDeTravailPort } from '@/pupitre/contexts/atelier/domain/JourneesDeTravailPort';
 import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
 import { provideHttpClient } from '@angular/common/http';
@@ -40,7 +40,7 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   let serveur: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), ClientApi, HttpJourneesDeTravail] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), ApiClient, HttpJourneesDeTravail] });
     journees = buildJournees();
     serveur = TestBed.inject(HttpTestingController);
   });

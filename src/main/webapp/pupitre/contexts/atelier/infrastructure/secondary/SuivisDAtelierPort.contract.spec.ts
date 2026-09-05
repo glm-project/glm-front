@@ -1,6 +1,6 @@
 import { components } from '@/app/generated/schema';
-import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
-import { Extrait } from '@/app/shared/pagination/domain/Extrait';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { Page } from '@/app/shared/pagination/domain/Page';
 import { ETATS_EN_ATELIER } from '@/pupitre/contexts/atelier/domain/EtatDAtelier';
 import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
 import { SuiviDAtelier } from '@/pupitre/contexts/atelier/domain/SuiviDAtelier';
@@ -112,7 +112,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   let toursDuServeur: TourDuServeur[];
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), ClientApi, HttpSuivisDAtelier] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), ApiClient, HttpSuivisDAtelier] });
     suivis = buildSuivis();
     serveur = TestBed.inject(HttpTestingController);
     atelierFixture = [];
@@ -291,7 +291,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   const givenTheServerRefusesTheBody = (): void => {
     toursDuServeur = [refusantLeCorps];
   };
-  const whenReadingTheWorkshop = async (): Promise<Extrait<SuiviDAtelier>> => {
+  const whenReadingTheWorkshop = async (): Promise<Page<SuiviDAtelier>> => {
     const lecture = suivis.suivis(ETATS_EN_ATELIER);
     await whenServerReturnsTheWorkshop();
     return lecture;
@@ -351,7 +351,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     });
   };
 
-  const thenItReadTheWaitingElement = (extrait: Extrait<SuiviDAtelier>): void => {
+  const thenItReadTheWaitingElement = (extrait: Page<SuiviDAtelier>): void => {
     const [suivi] = extrait.elements;
 
     expect(suivi.id).toBe(UN_ELEMENT_QUE_PERSONNE_N_A_COMMENCE.id);
@@ -360,37 +360,37 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     expect(suivi.type).toBe('ORDRE_DE_FABRICATION');
   };
 
-  const thenItReadOnly = (extrait: Extrait<SuiviDAtelier>, numeros: string[]): void => {
+  const thenItReadOnly = (extrait: Page<SuiviDAtelier>, numeros: string[]): void => {
     expect(extrait.elements.map(suivi => suivi.numero())).toEqual(numeros);
   };
 
-  const thenJeanIsAtWorkOnTour1 = (extrait: Extrait<SuiviDAtelier>): void => {
+  const thenJeanIsAtWorkOnTour1 = (extrait: Page<SuiviDAtelier>): void => {
     const activite = extrait.elements[0].findActiviteFor(JEAN);
 
     expect(activite?.categorie).toBe('TRAVAIL');
     expect(activite?.posteId).toBe(TOUR_1.id);
   };
 
-  const thenJeanHasBeenOnItFor = (extrait: Extrait<SuiviDAtelier>, millisecondes: number): void => {
+  const thenJeanHasBeenOnItFor = (extrait: Page<SuiviDAtelier>, millisecondes: number): void => {
     expect(extrait.elements[0].computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBe(millisecondes);
   };
 
-  const thenJeanIsAtWorkOnNoWorkstation = (extrait: Extrait<SuiviDAtelier>): void => {
+  const thenJeanIsAtWorkOnNoWorkstation = (extrait: Page<SuiviDAtelier>): void => {
     expect(extrait.elements[0].findActiviteFor(JEAN)?.posteId).toBeUndefined();
   };
 
-  const thenNobodyIsOnIt = (extrait: Extrait<SuiviDAtelier>): void => {
+  const thenNobodyIsOnIt = (extrait: Page<SuiviDAtelier>): void => {
     expect(extrait.elements[0].findActiviteFor(JEAN)).toBeUndefined();
     expect(extrait.elements[0].computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBeUndefined();
   };
 
-  const thenItReadAWholeWorkshopOf = (extrait: Extrait<SuiviDAtelier>, nombre: number): void => {
+  const thenItReadAWholeWorkshopOf = (extrait: Page<SuiviDAtelier>, nombre: number): void => {
     expect(extrait.elements).toHaveLength(nombre);
     expect(extrait.isComplete()).toBe(true);
   };
 
-  const thenItSaysItMissesSome = (extrait: Extrait<SuiviDAtelier>, nombreTotal: number): void => {
-    expect(extrait.nombreTotal).toBe(nombreTotal);
+  const thenItSaysItMissesSome = (extrait: Page<SuiviDAtelier>, totalCount: number): void => {
+    expect(extrait.totalCount).toBe(totalCount);
     expect(extrait.isComplete()).toBe(false);
   };
 });

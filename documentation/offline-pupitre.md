@@ -5,12 +5,12 @@ effect, not the condition for confirming the operator's action.
 
 ## Durable storage is the acceptance boundary
 
-`StockageLocalPort` abstracts IndexedDB documents and Web Locks. `IndexedDbStockageLocal.update` resolves on
+`LocalStoragePort` abstracts IndexedDB documents and Web Locks. `IndexedDbLocalStorage.update` resolves on
 transaction completion, not on the `put` request. Storage failure rejects explicitly; there is no volatile
 fallback that pretends to have captured work.
 
-`JournalDuPupitrePort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
-`JournalLocalDuPupitre` alone owns document keys and layout. Keep application code and tests on the port so a
+`PupitreJournalPort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
+`LocalPupitreJournal` alone owns document keys and layout. Keep application code and tests on the port so a
 schema change stays local to that adapter.
 
 Each tenant has an independent journal. Reenrolment selects another journal without deleting or pushing the
@@ -23,10 +23,10 @@ before asynchronous capture begins.
 resumption, and maintains the frozen view of one operator window. Only a successfully committed capture
 advances that view.
 
-`PolitiqueDeRejeu` owns contextual refusal absorption and the single concurrency retry. It compares domain
+`PupitreReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
 motifs, never transport URNs.
 
-`PupitreHorsLigne` coordinates capture and visible snapshots. `SynchronisationDuPupitre` coordinates
+`OfflinePupitre` coordinates capture and visible snapshots. `PupitreSynchronization` coordinates
 authenticated exchange, FIFO publication, aggregate rereads and reference refresh. Keep storage,
 authentication and transport mechanics out of the domain owners.
 
@@ -49,7 +49,7 @@ reachable. A received business refusal proves connectivity even though the gestu
 
 ## Runtime lifecycle is explicit
 
-`PupitreRuntime` starts after authentication restoration and owns online listeners and refresh timers. Its
+`PupitreSynchronizationTrigger` starts after authentication restoration and owns online listeners and refresh timers. Its
 destruction removes listeners, clears timers and prevents later work from starting. Tests use explicit
 completion signals for asynchronous exchanges; arbitrary waits hide ordering failures.
 
@@ -65,9 +65,9 @@ extends that decision to the designation's interaction and lifecycle rules.
 
 `DesignationOperateur` owns the numeric entry, correction, explicit validation, unknown code and temporary
 designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
-`PupitreHorsLigne` coordinates local resolution and closure, publishes each designation transition and
+`OfflinePupitre` coordinates local resolution and closure, publishes each designation transition and
 explicitly replaces its inactivity schedule through a domain port. The secondary timer adapter only executes
-the requested callback. `PupitreHorsLigne` releases its designation on destruction. The page calls `finish()`
+the requested callback. `OfflinePupitre` releases its designation on destruction. The page calls `finish()`
 when it is left; switching from keypad to pointage does not destroy the coordinator or close the designation.
 `Designation` translates touch and keyboard events and renders the application snapshot, without owning its
 lifetime.

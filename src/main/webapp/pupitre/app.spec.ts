@@ -1,6 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
-import { PupitreRuntime } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/PupitreRuntime';
+import { PupitreSynchronizationTrigger } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/PupitreSynchronizationTrigger';
 import { signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -16,7 +16,7 @@ describe('Pupitre shell', () => {
       imports: [App],
       providers: [
         provideRouter(routes),
-        { provide: PupitreRuntime, useValue: { connected: signal(true), start: () => undefined } },
+        { provide: PupitreSynchronizationTrigger, useValue: { connected: signal(true), start: () => undefined } },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: AuthenticationPort, useClass: InMemoryAuthentication },
       ],

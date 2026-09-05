@@ -1,8 +1,8 @@
 import { FenetreOperateur } from './FenetreOperateur';
-import { GesteLocal, IdentiteDuGeste, PUPITRE_VIDE, PupitreLocal } from './PupitreLocal';
+import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from './LocalPupitreState';
 
-const vueFixture: PupitreLocal = {
-  ...PUPITRE_VIDE,
+const vueFixture: LocalPupitreState = {
+  ...EMPTY_PUPITRE,
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
     suivis: [],
@@ -28,7 +28,7 @@ describe('FenetreOperateur', () => {
 
   it('should refuse a code absent from a cached referential or without any referential', () => {
     const withReference = whenOpeningAnUnknownOperator(vueFixture);
-    const withoutReference = whenOpeningAnUnknownOperator(PUPITRE_VIDE);
+    const withoutReference = whenOpeningAnUnknownOperator(EMPTY_PUPITRE);
 
     thenWindowIsRefused(withReference);
     thenWindowIsRefused(withoutReference);
@@ -73,7 +73,7 @@ describe('FenetreOperateur', () => {
     identities.set(id, dateDeSurvenue);
     return { id, dateDeSurvenue };
   };
-  const givenAPreparedPointage = (): (() => GesteLocal[]) =>
+  const givenAPreparedPointage = (): (() => LocalGeste[]) =>
     fenetre.preparePointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'tour' }, identifyFixture);
   const givenTheRecordedIdentities = (): Map<string, string> => new Map(identities);
   const whenAnHourPasses = (): void => {
@@ -81,7 +81,7 @@ describe('FenetreOperateur', () => {
   };
   const whenResolvingTheOperator = (): FenetreOperateur['operateur'] =>
     new FenetreOperateur('entreprise-a', structuredClone(vueFixture), '049').operateur;
-  const whenOpeningAnUnknownOperator = (vue: PupitreLocal): unknown => {
+  const whenOpeningAnUnknownOperator = (vue: LocalPupitreState): unknown => {
     try {
       return new FenetreOperateur('entreprise-a', vue, 'inconnu');
     } catch (failure: unknown) {
@@ -95,13 +95,13 @@ describe('FenetreOperateur', () => {
       return failure;
     }
   };
-  const whenCapturingPointage = (capture: () => GesteLocal[]): GesteLocal[] => capture();
-  const whenAcceptingPointage = (capture: () => GesteLocal[]): GesteLocal[] => {
+  const whenCapturingPointage = (capture: () => LocalGeste[]): LocalGeste[] => capture();
+  const whenAcceptingPointage = (capture: () => LocalGeste[]): LocalGeste[] => {
     const gestes = capture();
     fenetre.accept(gestes);
     return gestes;
   };
-  const whenAcceptingAnExplicitPause = (): GesteLocal[] => {
+  const whenAcceptingAnExplicitPause = (): LocalGeste[] => {
     const presence = fenetre.preparePresence('PAUSE', identifyFixture());
     fenetre.accept(presence);
     return presence;
@@ -117,21 +117,21 @@ describe('FenetreOperateur', () => {
     expect(refusal).toBeInstanceOf(Error);
     expect(refusal).toHaveProperty('message', expect.stringContaining('habilitations'));
   };
-  const thenGesturesAre = (gestes: GesteLocal[], natures: string[]): void => {
+  const thenGesturesAre = (gestes: LocalGeste[], natures: string[]): void => {
     expect(gestes.map(geste => geste.nature)).toEqual(natures);
     expect(gestes.every(geste => geste.operateurId === 'jean')).toBe(true);
   };
-  const thenOpeningSharesBusinessTime = (gestes: GesteLocal[]): void => {
+  const thenOpeningSharesBusinessTime = (gestes: LocalGeste[]): void => {
     expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(Array<string | undefined>(3).fill(identities.get(gestes[2].id)));
   };
-  const thenIdentitiesWerePreparedBeforeExecution = (gestes: GesteLocal[], preparedIdentities: Map<string, string>): void => {
+  const thenIdentitiesWerePreparedBeforeExecution = (gestes: LocalGeste[], preparedIdentities: Map<string, string>): void => {
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(gestes.every(geste => preparedIdentities.has(geste.id))).toBe(true);
     expect(
       gestes.filter(geste => geste.nature === 'POINTAGE').every(geste => geste.dateDeSurvenue === preparedIdentities.get(geste.id)),
     ).toBe(true);
   };
-  const thenOnlyExplicitPresenceIsVisible = (gestes: GesteLocal[]): void => {
+  const thenOnlyExplicitPresenceIsVisible = (gestes: LocalGeste[]): void => {
     expect(fenetre.snapshot().evenements).toEqual(gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
     expect(gestes[0]).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false, operateurId: 'jean' });
   };

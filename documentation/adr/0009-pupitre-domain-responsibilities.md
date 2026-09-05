@@ -7,7 +7,7 @@ Accepted. Refines the ownership in ADR 0007; complements the method extraction i
 ## Context
 
 The offline foundation combines decisions about workshop gestures with storage, authentication and network
-coordination in `PupitreHorsLigne`. Private method extraction makes each step readable but leaves those
+coordination in `OfflinePupitre`. Private method extraction makes each step readable but leaves those
 business decisions in the application layer. The online and offline transports also implement the same
 contextual refusal exceptions independently. Tests reaching into document keys obstruct storage evolution.
 
@@ -27,19 +27,19 @@ actual action. The prepared capture chooses its arrival only when it executes in
 successful durable acceptance advances the window. This preserves the first-pointage race and disk-failure
 semantics without giving the domain an asynchronous storage dependency.
 
-`PolitiqueDeRejeu` owns the contextual exceptions and the single concurrency retry. Both online adapters and
+`PupitreReplayPolicy` owns the contextual exceptions and the single concurrency retry. Both online adapters and
 offline synchronization use its decisions. A transport remains responsible for translating HTTP failures;
 the HTTP adapter supplies an optional normalized workshop refusal motif alongside the original diagnostic
 code. The replay policy compares only this domain motif and never constructs or parses transport URNs;
 an unknown offline business URN is retained verbatim and cannot accidentally match another context's code.
 
-`PupitreHorsLigne` coordinates capture and publication. `SynchronisationDuPupitre` coordinates authenticated
+`OfflinePupitre` coordinates capture and publication. `PupitreSynchronization` coordinates authenticated
 exchanges, FIFO processing, aggregate rereads and reference refreshes. Their callbacks publish snapshots;
 only the capture coordinator decides when a snapshot becomes visible to the operator.
 
-`JournalDuPupitrePort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
-`JournalLocalDuPupitre` owns the document layout and delegates durable transactions and locks to
-`StockageLocalPort`. Its session lock is the existing authentication lock; changing the application port does
+`PupitreJournalPort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
+`LocalPupitreJournal` owns the document layout and delegates durable transactions and locks to
+`LocalStoragePort`. Its session lock is the existing authentication lock; changing the application port does
 not create an independent lock that would let a credential commit overlap an outgoing gesture.
 
 ## Consequences

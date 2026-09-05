@@ -1,14 +1,14 @@
 import { components } from '@/app/generated/schema';
-import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
-import { Extrait } from '@/app/shared/pagination/domain/Extrait';
-import { buildExtraitFrom, PLAFOND_DE_PAGE } from '@/app/shared/pagination/infrastructure/secondary/buildExtraitFrom';
+import { Page } from '@/app/shared/pagination/domain/Page';
+import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { ActiviteEnCours } from '@/pupitre/contexts/atelier/domain/ActiviteEnCours';
 import { EtatDAtelier } from '@/pupitre/contexts/atelier/domain/EtatDAtelier';
 import { SuiviDAtelier } from '@/pupitre/contexts/atelier/domain/SuiviDAtelier';
 import { Pointage, SuivisDAtelierPort } from '@/pupitre/contexts/atelier/domain/SuivisDAtelierPort';
 import { inject, Injectable } from '@angular/core';
-import { send } from '../envoiDAtelier';
+import { send } from '../sendToAtelier';
 
 type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
 type RestActiviteEnCours = components['schemas']['RestActiviteEnCours'];
@@ -26,19 +26,19 @@ const toSuiviDAtelier = (suivi: RestSuiviDAtelierEnGrille): SuiviDAtelier =>
 
 @Injectable()
 export class HttpSuivisDAtelier extends SuivisDAtelierPort {
-  private readonly api = inject(ClientApi);
+  private readonly api = inject(ApiClient);
 
-  override async suivis(etats: readonly EtatDAtelier[]): Promise<Extrait<SuiviDAtelier>> {
-    const page = await this.api.read('/api/atelier/suivis', { parametres: { etats: [...etats], size: PLAFOND_DE_PAGE } });
+  override async suivis(etats: readonly EtatDAtelier[]): Promise<Page<SuiviDAtelier>> {
+    const page = await this.api.read('/api/atelier/suivis', { queryParams: { etats: [...etats], size: PAGE_SIZE } });
 
-    return buildExtraitFrom(page, toSuiviDAtelier);
+    return buildPageFrom(page, toSuiviDAtelier);
   }
 
   override recordPointage(suiviId: string, pointage: Pointage): Promise<void> {
     return send(
       () =>
         this.api.write('/api/atelier/suivis/{id}/pointages', {
-          chemin: { id: suiviId },
+          pathParams: { id: suiviId },
           body: {
             id: pointage.id,
             dateDeSurvenue: pointage.dateDeSurvenue,
@@ -47,7 +47,7 @@ export class HttpSuivisDAtelier extends SuivisDAtelierPort {
             poste: pointage.posteId,
           },
         }),
-      () => this.api.read('/api/atelier/suivis/{id}', { chemin: { id: suiviId } }),
+      () => this.api.read('/api/atelier/suivis/{id}', { pathParams: { id: suiviId } }),
     );
   }
 }

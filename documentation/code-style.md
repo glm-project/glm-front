@@ -55,10 +55,15 @@ Run the existing behavioral tests before and after extraction; keep behavior cha
   `angular-eslint`;
 - `private readonly` for injected collaborators.
 
-## Domain nouns in French, action verbs in English
+## Domain concepts in French, technical names and action verbs in English
 
 Business vocabulary stays in French — it is the ubiquitous language the domain speaks
-(`RefusDAtelier`, `SuiviDAtelier`, `PosteDeTravail`). The verb driving an action is English: `send`,
+(`RefusDAtelier`, `SuiviDAtelier`, `PosteDeTravail`). Technical classes, types, ports and helpers use English,
+including in `domain/`: `ApiClient`, `LocalStoragePort`, `Page`. Mixed names keep the business concept in
+French and express the technical role in English: `PupitreSynchronizationTrigger`,
+`DesignationExpirationSchedulerPort`. Keep filenames and references aligned with those names.
+
+The verb driving an action is English: `send`,
 `sendAbsorbing`, `findRefusDAtelierIn`, not `envoyer`, `envoyerEnAbsorbant`, `refusDAtelierDans`. A
 name that reads as a hidden verb behind a French preposition (`xxxDans`, `versXxx`, `xxxDe`) needs an
 explicit English verb instead of the preposition standing in for one. Constants and types carrying

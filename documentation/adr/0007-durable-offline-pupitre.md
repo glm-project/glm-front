@@ -29,13 +29,13 @@ connects its lifecycle and passive connectivity state to the existing shell. It 
 
 ## Decision
 
-`shared/stockage-local` owns `StockageLocalPort`. Its IndexedDB adapter stores structured documents in
+`shared/local-storage` owns `LocalStoragePort`. Its IndexedDB adapter stores structured documents in
 `glm-pupitre/documents`. `update` requests strict transaction durability and resolves on transaction completion, never on a successful `put` request.
 Storage failures reject explicitly. A separate Web Lock serializes synchronization across tabs, while local
 appends remain available during a network request. Another lock coordinates device credential commits with
 outgoing gestures; the authentication port rereads the selected durable session before an exchange.
 
-`atelier/application/PupitreHorsLigne` drives the queue and operator windows. Each company has its own
+`atelier/application/OfflinePupitre` drives the queue and operator windows. Each company has its own
 `atelier:<tenant>` document containing the complete last reference, original gestures, outcomes and the last
 push state. Reenrolment selects a different document. The former document remains intact and its pending
 queue is suspended. Gestures carry their UUID and timestamp before asynchronous work starts. The first
@@ -49,7 +49,7 @@ Every other published business code likewise becomes a durable refusal with its 
 even for the same operator. Unknown technical failures remain pending and stop that push. No record has an
 application size limit, expiry, rotation or purge; acknowledged events are retained too.
 
-`HttpServeurDuPupitre` reads every page of operators and workshop elements, without filtering by operator.
+`HttpPupitreServer` reads every page of operators and workshop elements, without filtering by operator.
 It publishes the pair only after both collections complete, rejects changed totals, empty intermediate pages
 and duplicate identifiers, and aborts if the credential changes during reading. A failed refresh preserves
 the previous complete cache indefinitely. Refresh is attempted at boot, on the browser's online event and

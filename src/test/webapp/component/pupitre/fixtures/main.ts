@@ -1,14 +1,14 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { PupitreHorsLigne } from '@/pupitre/contexts/atelier/application/PupitreHorsLigne';
-import { SynchronisationDuPupitre } from '@/pupitre/contexts/atelier/application/SynchronisationDuPupitre';
-import { JournalDuPupitrePort } from '@/pupitre/contexts/atelier/domain/JournalDuPupitrePort';
-import { PlanificationExpirationDesignationPort } from '@/pupitre/contexts/atelier/domain/PlanificationExpirationDesignationPort';
-import { ServeurDuPupitrePort } from '@/pupitre/contexts/atelier/domain/ServeurDuPupitrePort';
+import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
-import { TimerPlanificationExpirationDesignation } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerPlanificationExpirationDesignation';
+import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { JournalDuPupitreFixture } from '@test/unit/fixtures/JournalDuPupitreFixture';
+import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
 
 @Component({
   selector: 'glm-root',
@@ -22,16 +22,16 @@ import { JournalDuPupitreFixture } from '@test/unit/fixtures/JournalDuPupitreFix
   `,
 })
 class DesignationFixture {
-  readonly designation = inject(PupitreHorsLigne);
+  readonly designation = inject(OfflinePupitre);
 }
 
-const journalFixture = new JournalDuPupitreFixture();
+const journalFixture = new PupitreJournalFixture();
 const authenticationFixture: Pick<AuthenticationPort, 'currentTenant' | 'synchronizeSession'> = {
   currentTenant: () => 'atelier',
   synchronizeSession: () => new Promise(resolve => setTimeout(resolve)),
 };
 const unexpectedNetworkFixture = (): Promise<never> => Promise.reject(new Error('Designation must not contact the server'));
-const serveurFixture: ServeurDuPupitrePort = {
+const serveurFixture: PupitreServerPort = {
   referentiel: unexpectedNetworkFixture,
   send: unexpectedNetworkFixture,
   reread: unexpectedNetworkFixture,
@@ -45,12 +45,12 @@ void journalFixture
   .then(() =>
     bootstrapApplication(DesignationFixture, {
       providers: [
-        PupitreHorsLigne,
-        SynchronisationDuPupitre,
-        { provide: JournalDuPupitrePort, useValue: journalFixture },
-        { provide: PlanificationExpirationDesignationPort, useClass: TimerPlanificationExpirationDesignation },
+        OfflinePupitre,
+        PupitreSynchronization,
+        { provide: PupitreJournalPort, useValue: journalFixture },
+        { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
         { provide: AuthenticationPort, useValue: authenticationFixture },
-        { provide: ServeurDuPupitrePort, useValue: serveurFixture },
+        { provide: PupitreServerPort, useValue: serveurFixture },
       ],
     }),
   );

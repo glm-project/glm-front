@@ -1,14 +1,14 @@
 import { FenetreOperateur } from './FenetreOperateur';
-import { OperateurDuPupitre, PupitreLocal } from './PupitreLocal';
+import { LocalPupitreState, OperateurDuPupitre } from './LocalPupitreState';
 
-export const INACTIVITE_DESIGNATION_MS = 30_000;
+export const DESIGNATION_INACTIVITY_MS = 30_000;
 
-export interface ResolutionDesignation {
+export interface DesignationResolution {
   generation: number;
   code: string;
 }
 
-export interface EtatDesignation {
+export interface DesignationState {
   code: string;
   unknownCode: boolean;
   operateur: OperateurDuPupitre | undefined;
@@ -20,13 +20,13 @@ export class DesignationOperateur {
   private saisie = '';
   private inconnu = false;
   private designated = false;
-  private resolution: ResolutionDesignation | undefined;
+  private resolution: DesignationResolution | undefined;
   private closing = false;
   private deadline: number | undefined;
   private generation = 0;
   private fenetre: FenetreOperateur | undefined;
 
-  snapshot(): EtatDesignation {
+  snapshot(): DesignationState {
     return {
       code: this.saisie,
       unknownCode: this.inconnu,
@@ -41,7 +41,7 @@ export class DesignationOperateur {
       this.finish();
       return false;
     }
-    this.deadline = now + INACTIVITE_DESIGNATION_MS;
+    this.deadline = now + DESIGNATION_INACTIVITY_MS;
     return true;
   }
 
@@ -59,13 +59,13 @@ export class DesignationOperateur {
     }
   }
 
-  beginResolution(now: number): ResolutionDesignation | undefined {
+  beginResolution(now: number): DesignationResolution | undefined {
     if (!this.registerPress(now) || !this.snapshot().canValidate) return undefined;
     this.resolution = { generation: this.generation, code: this.saisie };
     return this.resolution;
   }
 
-  completeResolution(resolution: ResolutionDesignation, now: number): boolean {
+  completeResolution(resolution: DesignationResolution, now: number): boolean {
     this.expire(now);
     if (resolution.generation !== this.generation) return false;
     this.designated = true;
@@ -73,7 +73,7 @@ export class DesignationOperateur {
     return true;
   }
 
-  failResolution(resolution: ResolutionDesignation, now: number): void {
+  failResolution(resolution: DesignationResolution, now: number): void {
     if (this.hasExpired(now)) {
       this.finish();
     } else if (resolution.generation === this.generation) {
@@ -103,12 +103,12 @@ export class DesignationOperateur {
     return this.closing;
   }
 
-  openWindow(entreprise: string, vue: PupitreLocal, code: string, now: number): FenetreOperateur {
+  openWindow(entreprise: string, vue: LocalPupitreState, code: string, now: number): FenetreOperateur {
     this.requireClosedWindow();
     this.fenetre = new FenetreOperateur(entreprise, vue, code);
     if (this.resolution === undefined) {
       this.designated = true;
-      this.deadline = now + INACTIVITE_DESIGNATION_MS;
+      this.deadline = now + DESIGNATION_INACTIVITY_MS;
     }
     return this.fenetre;
   }

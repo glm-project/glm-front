@@ -1,5 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { StockageLocalPort } from '@/pupitre/shared/stockage-local/domain/StockageLocalPort';
+import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { HttpBackend, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, firstValueFrom, map, of } from 'rxjs';
@@ -54,7 +54,7 @@ interface Session {
   tenant?: string;
 }
 
-interface EnrolementPersistant {
+interface PersistedEnrolment {
   session?: Session;
   tenant?: string;
 }
@@ -107,7 +107,7 @@ const hasExpired = (session: Session): boolean => Date.now() >= session.expiresA
 @Injectable()
 export class DeviceAuthentication extends AuthenticationPort {
   private readonly transport = new HttpClient(inject(HttpBackend));
-  private readonly stockage = inject(StockageLocalPort, { optional: true });
+  private readonly stockage = inject(LocalStoragePort, { optional: true });
   private tenant: string | undefined;
   private restored = false;
   private readonly server = inject(DeviceGrantConfiguration);
@@ -170,7 +170,7 @@ export class DeviceAuthentication extends AuthenticationPort {
       return;
     }
     const enrolment = this.enrolment;
-    const stored = await this.stockage.read<EnrolementPersistant>(ENROLEMENT);
+    const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
     if (
       this.enrolment !== enrolment
       || (JSON.stringify(stored?.session) === JSON.stringify(this.session) && stored?.tenant === this.tenant)
@@ -288,7 +288,7 @@ export class DeviceAuthentication extends AuthenticationPort {
   }
 
   private async renewStoredSession(session: Session): Promise<void> {
-    const stored = await this.stockage?.read<EnrolementPersistant>(ENROLEMENT);
+    const stored = await this.stockage?.read<PersistedEnrolment>(ENROLEMENT);
     if (this.session !== session) {
       return;
     }
@@ -352,7 +352,7 @@ export class DeviceAuthentication extends AuthenticationPort {
     if (this.restored || this.stockage === null) {
       return false;
     }
-    const stored = await this.stockage.read<EnrolementPersistant>(ENROLEMENT);
+    const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
     if (this.isAbandoned(enrolment)) {
       return true;
     }
@@ -371,7 +371,7 @@ export class DeviceAuthentication extends AuthenticationPort {
     }
     return this.stockage.lock('session', async () => {
       let resultat: 'CONSERVE' | 'REMPLACE' = 'REMPLACE';
-      await this.stockage?.update<EnrolementPersistant>(ENROLEMENT, {}, current => {
+      await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, current => {
         if (expected !== undefined && JSON.stringify(current.session) !== JSON.stringify(expected)) {
           return current;
         }

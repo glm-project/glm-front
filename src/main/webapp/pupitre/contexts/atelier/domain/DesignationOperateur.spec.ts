@@ -1,8 +1,8 @@
-import { DesignationOperateur, ResolutionDesignation } from './DesignationOperateur';
-import { GesteLocal, IdentiteDuGeste, PUPITRE_VIDE, PupitreLocal } from './PupitreLocal';
+import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
+import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from './LocalPupitreState';
 
-const referenceFixture: PupitreLocal = {
-  ...PUPITRE_VIDE,
+const referenceFixture: LocalPupitreState = {
+  ...EMPTY_PUPITRE,
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
     suivis: [],
@@ -67,19 +67,19 @@ describe('DesignationOperateur', () => {
   const whenEntering = (code: string, now: number): void => {
     for (const digit of code) designation.enterDigit(digit, now);
   };
-  const whenValidating = (now: number): ResolutionDesignation => designation.beginResolution(now)!;
-  const whenResolving = (resolution: ResolutionDesignation, now: number): void => {
+  const whenValidating = (now: number): DesignationResolution => designation.beginResolution(now)!;
+  const whenResolving = (resolution: DesignationResolution, now: number): void => {
     designation.openWindow('atelier', referenceFixture, resolution.code, now);
     const accepted = designation.completeResolution(resolution, now);
     if (!accepted) designation.releaseWindow();
     designation.endResolution();
   };
-  const whenFailingResolution = (resolution: ResolutionDesignation, now: number): void => {
+  const whenFailingResolution = (resolution: DesignationResolution, now: number): void => {
     designation.failResolution(resolution, now);
     designation.endResolution();
   };
   const whenCheckingExpiration = (now: number): void => designation.expire(now);
-  const whenPreparingPointage = (now: number): (() => GesteLocal[]) =>
+  const whenPreparingPointage = (now: number): (() => LocalGeste[]) =>
     designation.requireWindow(now).preparePointage({ suiviId: 'piece', type: 'DEBUT' }, identityFixture);
   const thenPointageIsRefusedAt = (now: number): void => {
     expect(() => whenPreparingPointage(now)).toThrow('Aucune fenetre operateur ouverte.');
@@ -94,7 +94,7 @@ describe('DesignationOperateur', () => {
     expect(designation.snapshot().code).toBe(code);
     expect(designation.snapshot().unknownCode).toBe(false);
   };
-  const thenPreparedPointageBelongsToJean = (capture: () => GesteLocal[]): void => {
+  const thenPreparedPointageBelongsToJean = (capture: () => LocalGeste[]): void => {
     expect(capture()).toContainEqual({
       ...identityFixture(),
       suiviId: 'piece',

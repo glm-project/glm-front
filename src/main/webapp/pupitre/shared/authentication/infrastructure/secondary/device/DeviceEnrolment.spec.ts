@@ -1,5 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { StockageLocalPort } from '@/pupitre/shared/stockage-local/domain/StockageLocalPort';
+import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -24,7 +24,7 @@ const afterMicrotasks = (): Promise<void> =>
     channel.port2.postMessage(undefined);
   });
 
-class StockageFixture extends StockageLocalPort {
+class StorageFixture extends LocalStoragePort {
   value: unknown;
   failRead = false;
   failWrite = false;
@@ -127,20 +127,20 @@ class StockageFixture extends StockageLocalPort {
 
 describe('Persistent device enrolment, through AuthenticationPort', () => {
   let authentication: AuthenticationPort;
-  let stockage: StockageFixture;
+  let stockage: StorageFixture;
   let http: HttpTestingController;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    stockage = new StockageFixture();
+    stockage = new StorageFixture();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         DeviceAuthentication,
         { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
-        { provide: StockageLocalPort, useValue: stockage },
+        { provide: LocalStoragePort, useValue: stockage },
       ],
     });
     authentication = TestBed.inject(DeviceAuthentication);

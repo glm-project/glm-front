@@ -1,13 +1,13 @@
-import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { JourneesDeTravailPort } from '@/pupitre/contexts/atelier/domain/JourneesDeTravailPort';
-import { IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/PupitreLocal';
+import { IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
 import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/TypeDePresence';
 import { inject, Injectable } from '@angular/core';
-import { send } from '../envoiDAtelier';
+import { send } from '../sendToAtelier';
 
 @Injectable()
 export class HttpJourneesDeTravail extends JourneesDeTravailPort {
-  private readonly api = inject(ClientApi);
+  private readonly api = inject(ApiClient);
 
   override ensureOperateurArrived(operateurId: string, identite: IdentiteDuGeste): Promise<void> {
     return send(
@@ -37,6 +37,6 @@ export class HttpJourneesDeTravail extends JourneesDeTravailPort {
   }
 
   private reread(operateurId: string): Promise<unknown> {
-    return this.api.read('/api/atelier/journees', { parametres: { operateur: operateurId, size: 100 } });
+    return this.api.read('/api/atelier/journees', { queryParams: { operateur: operateurId, size: 100 } });
   }
 }

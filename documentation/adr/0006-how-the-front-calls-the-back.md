@@ -19,7 +19,7 @@ Executing them surfaced facts the decision could not have:
   back on the operation's return type: `POST /api/atelier/journees` declares its 409 as a
   `RestJourneeDeTravail`. No generator can type the error path.
 - **The generated types lie about what is present.** `openapi.json` marks `required` on almost no response
-  schema — `RestSuiviDAtelier`, `RestActiviteEnCours` and every `PageRest*` carry none at all, so `id`, `etat`
+  schema — `RestSuiviDAtelier`, `RestActiviteEnCours` and every `RestPage*` carry none at all, so `id`, `etat`
   and `totalElementsCount` all read as optional. Request bodies, by contrast, are correctly marked.
   [Issue 61](https://github.com/glm-project/glm-front/issues/61) is the back-side fix.
 - **A page is capped at 100 and `size=200` answers 500**, not 400: the cap is an `AssertionException` no advice
@@ -49,17 +49,17 @@ Executing them surfaced facts the decision could not have:
 
 ## Decision
 
-**Reach the API through `ClientApi`** (`app/shared/api-client/infrastructure/secondary/`), a client generic over
+**Reach the API through `ApiClient`** (`app/shared/api-client/infrastructure/secondary/`), a client generic over
 `paths` of `schema.d.ts` and built on `HttpClient`. The keys of `paths` start with `/api/` and serve as URLs as
-they are — no base URL is configured anywhere. `lire` reads, `ecrire` writes, and each takes the route plus the
-`chemin`, `parametres` and `corps` that route accepts, so **the contract is held by `tsc`, not by a test**.
+they are — no base URL is configured anywhere. `read` reads, `write` writes, and each takes the route plus the
+`pathParams`, `queryParams` and `body` that route accepts, so **the contract is held by `tsc`, not by a test**.
 
-**Two shared kernels carry what every context needs.** `app/shared/pagination/` owns `domain/Extrait<T>` — the
-one artefact a business domain imports — and the wire-side `buildExtraitFrom`. `app/shared/api-client/` owns
-`ClientApi`, `required` and `findCodeDErreurIn`.
+**Two shared kernels carry what every context needs.** `app/shared/pagination/` owns `domain/Page<T>` — the
+one artefact a business domain imports — and the wire-side `buildPageFrom`. `app/shared/api-client/` owns
+`ApiClient`, `required` and `findApiErrorIn`.
 
-**One read is one request of `size=100`, never a loop**, and `Extrait` says what it carries: `nombreTotal` comes
-from the server's own `totalElementsCount`, and `estComplet()` tells a caller whether anything was left behind.
+**One read is one request of `size=100`, never a loop**, and `Page` says what it carries: `totalCount` comes
+from the server's own `totalElementsCount`, and `isComplete()` tells a caller whether anything was left behind.
 
 **Guard, at the adapter, the fields the domain requires.** `required(value, 'suivi.id')` throws rather than
 let an `undefined` the business does not have reach a domain class. Nothing guards a request body: those are
@@ -68,7 +68,7 @@ typed honestly.
 **Assign the wire enums straight to the domain unions**, which repeat the same literals. No `Record` keyed by
 the generated union: structural typing already fails the compilation when the back adds a value.
 
-**Branch on the stable code, never on `status` + `title`.** `findCodeDErreurIn` reads the `urn:glm:erreur:…` a
+**Branch on the stable code, never on `status` + `title`.** `findApiErrorIn` reads the `urn:glm:erreur:…` a
 `ProblemDetail` carries, along with the message the domain wrote; a context translates those URNs into its own
 refusal class through a table in its `infrastructure/secondary`. A 400 from Bean Validation is not a refusal: at
 the pupitre an invalid body comes from us, and it crosses as a technical failure. 401, 403 and network failures
@@ -88,7 +88,7 @@ identical `POST`: the body is entirely known to the client, there is nothing to 
 This record also names two revisions of issue 6:
 
 - **Decision 6 — "the adapter loops" — becomes one bounded request.** Its rejection targeted truncating
-  _without saying so_; `totalElementsCount` arrives in the answer and `Extrait` says it. What makes the bound
+  _without saying so_; `totalElementsCount` arrives in the answer and `Page` says it. What makes the bound
   acceptable is that it is visible, not that it is large.
 - **Decision 3's exhaustive `Record` keyed by the generated union becomes direct assignment.** The `Record`
   bought nothing structural typing does not already give, and it cost a table per enum.
@@ -111,15 +111,15 @@ ground under the unbounded queue of issue 53; the day it falls, that is the tick
 
 ### Negative
 
-- **A read is truncated at 100 and the pupitre has no way to ask for more.** `estComplet()` says it; nothing
+- **A read is truncated at 100 and the pupitre has no way to ask for more.** `isComplete()` says it; nothing
   yet shows it. For `GET /api/atelier/suivis`, sorted by engagement date descending, the elements lost are the
   oldest ones still open — precisely those an operator is most likely to be looking for. Issue 62 is the lever;
   until it lands the bound is real.
 - **A hundred `RestSuiviDAtelier` carry a hundred complete journals**, around 3 MB, none of it read by the
   pupitre and none of it excludable.
-- `ClientApi` casts its own request object once, at the point where a generic intersection meets the runtime.
+- `ApiClient` casts its own request object once, at the point where a generic intersection meets the runtime.
   The cast is confined to two lines and every call site above it is checked.
-- `findCodeDErreurIn` trusts the back's catalogue: an URN the front's union does not know crosses as a technical
+- `findApiErrorIn` trusts the back's catalogue: an URN the front's union does not know crosses as a technical
   failure, silently. The union is bounded to the codes the three ports can reach, so widening it is a
   deliberate act — and forgetting to widen it degrades a refusal into a crash rather than into a wrong branch.
 - **No Cypress covers any of this yet.** Nothing in `app/atelier` or `app/operateur` is wired into a front:

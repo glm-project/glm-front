@@ -1,4 +1,4 @@
-import { PupitreHorsLigne } from '@/pupitre/contexts/atelier/application/PupitreHorsLigne';
+import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import {
   afterNextRender,
   AfterRenderRef,
@@ -49,7 +49,7 @@ export class FollowContent implements OnChanges, OnDestroy {
   },
 })
 export class Designation {
-  readonly designation = inject(PupitreHorsLigne);
+  readonly designation = inject(OfflinePupitre);
   readonly digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   private consumedPress = false;
 

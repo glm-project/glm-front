@@ -14,7 +14,7 @@ rules. ESLint ignores the generated declaration file because the project does no
 
 ## Secondary adapters translate at the boundary
 
-`ClientApi` is the only ordinary path to the back end. It is generic over OpenAPI `paths`, tying route, verb,
+`ApiClient` is the only ordinary path to the back end. It is generic over OpenAPI `paths`, tying route, verb,
 path parameters, query parameters, body and response together at compilation. It uses Angular `HttpClient`,
 so the global bearer interceptor applies. Device-enrolment protocol traffic is the separate `HttpBackend`
 exception described in [`authentication.md`](authentication.md).
@@ -31,8 +31,8 @@ do not duplicate it in a mapping table without a semantic translation.
 
 ## Reads state their bounds
 
-Online list ports make one request with `PLAFOND_DE_PAGE` and return `Extrait<T>`.
-`buildExtraitFrom` preserves the server total so `estComplet()` tells callers whether the page is truncated.
+Online list ports make one request with `PAGE_SIZE` and return `Page<T>`.
+`buildPageFrom` preserves the server total so `isComplete()` tells callers whether the page is truncated.
 A bounded read is acceptable only when the bound is visible in the result.
 
 The offline pupitre reference is different: it traverses every page and activates neither operators nor
@@ -41,7 +41,7 @@ workflow.
 
 ## Translate refusals by stable code
 
-`findCodeDErreurIn` reads the `urn:glm:erreur:<context>:<code>` and message from a `ProblemDetail`. Branch on
+`findApiErrorIn` reads the `urn:glm:erreur:<context>:<code>` and message from a `ProblemDetail`. Branch on
 that stable code, not HTTP status plus title. Each context translates the codes its ports can produce into
 its own refusal type.
 
@@ -53,7 +53,7 @@ Absorption belongs to a business operation. Arrival assurance may absorb an alre
 resumption may absorb a forbidden presence transition. The same HTTP status on an explicit operator gesture
 remains visible.
 
-`PolitiqueDeRejeu` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
+`PupitreReplayPolicy` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.
 
