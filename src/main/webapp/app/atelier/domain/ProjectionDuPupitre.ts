@@ -1,7 +1,7 @@
 import { EvenementLocal, PointageLocal, PupitreLocal, ReferentielDuPupitre, SuiviDuPupitre } from './PupitreLocal';
 
 const applyPointage = (suivi: SuiviDuPupitre, geste: PointageLocal): SuiviDuPupitre => {
-  const activites = suivi.activites.filter(activite => activite.operateurId !== geste.operateurId);
+  const activites = suivi.activites.filter(activite => activite.operateurId !== geste.operateurId || activite.posteId !== geste.posteId);
   if (geste.type !== 'FIN') {
     activites.push({
       operateurId: geste.operateurId,

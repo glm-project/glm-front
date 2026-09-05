@@ -30,18 +30,35 @@ describe('ProjectionDuPupitre', () => {
   });
 
   it('should keep other operators active when one finishes', () => {
-    const other = { ...debutFixture, geste: { ...debutFixture.geste, operateurId: 'marie' } };
+    const other = { ...debutFixture, geste: { ...debutFixture.geste, id: 'debut-marie', operateurId: 'marie' } };
 
     const projection = projectPupitre(givenEvents([debutFixture, other, givenPointage('FIN')]));
 
     thenStateIs(projection, 'EN_COURS', 1);
   });
 
+  it.each([
+    [undefined, 'tour'],
+    ['tour', 'fraiseuse'],
+  ])('should keep the same operator’s work on %s and %s independent when finishing or changing category', (firstPoste, otherPoste) => {
+    const first = givenWorkstationPointage('DEBUT', firstPoste);
+    const other = givenWorkstationPointage('DEBUT', otherPoste);
+
+    const started = projectPupitre(givenEvents([first, other]));
+    const changed = projectPupitre(givenEvents([first, other, givenWorkstationPointage('NON_CONFORMITE', firstPoste)]));
+    const finished = projectPupitre(givenEvents([first, other, givenWorkstationPointage('FIN', firstPoste)]));
+
+    thenWorkstationsAreActive(started, [firstPoste, otherPoste]);
+    thenWorkstationsHaveIndependentCategories(changed, firstPoste, otherPoste);
+    thenWorkstationsAreActive(finished, [otherPoste]);
+    thenStateIs(finished, 'EN_COURS', 1);
+  });
+
   it('should ignore refused gestures, unrelated elements and gestures already present in the journal', () => {
     const state = givenEvents([
-      { ...debutFixture, etat: 'REFUSE' },
-      { ...debutFixture, geste: { ...debutFixture.geste, nature: 'ARRIVEE' } },
-      { ...debutFixture, geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'absent', type: 'DEBUT' } },
+      { ...debutFixture, geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE' },
+      { ...debutFixture, geste: { ...debutFixture.geste, id: 'arrivee', nature: 'ARRIVEE' } },
+      { ...debutFixture, geste: { ...debutFixture.geste, id: 'autre-suivi', nature: 'POINTAGE', suiviId: 'absent', type: 'DEBUT' } },
     ]);
     state.referentiel = { ...referenceFixture, suivis: [{ ...referenceFixture.suivis[0], evenements: ['debut'] }] };
     state.evenements.push(debutFixture);
@@ -68,8 +85,33 @@ describe('ProjectionDuPupitre', () => {
   const givenEvents = (evenements: EvenementLocal[]): PupitreLocal => ({ referentiel: referenceFixture, evenements, connecte: true });
   const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementLocal => ({
     ...debutFixture,
-    geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', type },
+    geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), type },
   });
+  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementLocal => ({
+    ...debutFixture,
+    geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), posteId, type },
+  });
+  const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {
+    expect(projection?.suivis[0].activites).toHaveLength(postes.length);
+    expect(projection?.suivis[0].activites).toEqual(
+      expect.arrayContaining(
+        postes.map(posteId => ({ operateurId: 'jean', posteId, categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' })),
+      ),
+    );
+  };
+  const thenWorkstationsHaveIndependentCategories = (
+    projection: ReferentielDuPupitre | undefined,
+    first: string | undefined,
+    other: string | undefined,
+  ): void => {
+    expect(projection?.suivis[0].activites).toHaveLength(2);
+    expect(projection?.suivis[0].activites).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ posteId: first, categorie: 'NON_CONFORMITE' }),
+        expect.objectContaining({ posteId: other, categorie: 'TRAVAIL' }),
+      ]),
+    );
+  };
   const thenActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
     expect(projection?.suivis[0].activites[0]).toMatchObject({ operateurId: 'jean', categorie, depuis });
   };

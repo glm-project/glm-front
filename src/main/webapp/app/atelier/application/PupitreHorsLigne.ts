@@ -34,14 +34,13 @@ export class PupitreHorsLigne {
 
   async openWindow(code: string): Promise<OperateurDuPupitre> {
     await this.authentication.synchronizeSession();
-    if (this.fenetre !== undefined) {
-      throw new Error('Une fenetre operateur est deja ouverte.');
-    }
+    this.requireClosedWindow();
     const entreprise = this.requireTenant();
     const vue = await this.journal.read(entreprise);
     if (this.authentication.currentTenant() !== entreprise) {
       throw new Error('L’entreprise du pupitre a change.');
     }
+    this.requireClosedWindow();
     this.fenetre = new FenetreOperateur(entreprise, vue, code);
     this.vue.set(this.fenetre.snapshot());
     return this.fenetre.operateur;
@@ -128,6 +127,12 @@ export class PupitreHorsLigne {
       throw new Error('Le pupitre doit etre enrole une premiere fois.');
     }
     return entreprise;
+  }
+
+  private requireClosedWindow(): void {
+    if (this.fenetre !== undefined) {
+      throw new Error('Une fenetre operateur est deja ouverte.');
+    }
   }
 
   private requireWindow(): FenetreOperateur {

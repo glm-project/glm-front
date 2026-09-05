@@ -1,5 +1,5 @@
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
-import { GesteLocal, PUPITRE_VIDE, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
+import { GesteLocal, OperateurDuPupitre, PUPITRE_VIDE, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
@@ -307,6 +307,20 @@ describe('PupitreHorsLigne', () => {
     await thenPendingIs(0);
   });
 
+  it('should accept only one concurrent operator opening and keep that operator for the next gesture', async () => {
+    const reference = structuredClone(referenceFixture);
+    reference.operateurs.push({ id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', postes: [] });
+    await journal.saveReferentiel('entreprise-a', reference);
+
+    const openings = await Promise.allSettled([pupitre.openWindow('049'), pupitre.openWindow('050')]);
+
+    const acceptedOperator = thenOnlyOneWindowIsAccepted(openings);
+    await pupitre.recordPresence('PAUSE');
+    authentication.token = 'autorise';
+    await pupitre.synchronize();
+    thenPresenceBelongsTo(acceptedOperator);
+  });
+
   it('should reject unknown codes, overlapping windows and unauthorized workstations', async () => {
     await thenFails(pupitre.openWindow('inconnu'), 'Matricule absent');
     await whenOpening();
@@ -400,7 +414,7 @@ describe('PupitreHorsLigne', () => {
     await pupitre.restore();
   };
   const whenOpening = (): Promise<unknown> => pupitre.openWindow('049');
-  const whenStarting = (): Promise<void> => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT' });
+  const whenStarting = (): Promise<void> => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
   const givenPendingArrival = async (): Promise<void> => {
     await journal.append('entreprise-a', [arriveeFixture]);
   };
@@ -425,6 +439,16 @@ describe('PupitreHorsLigne', () => {
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(gestes[0].dateDeSurvenue).toBe(gestes[2].dateDeSurvenue);
     expect(gestes[1].dateDeSurvenue).toBe(gestes[2].dateDeSurvenue);
+  };
+  const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<OperateurDuPupitre>[]): string => {
+    const accepted = openings.filter(result => result.status === 'fulfilled');
+    const refused = openings.filter(result => result.status === 'rejected');
+    expect(accepted).toHaveLength(1);
+    expect(refused).toHaveLength(1);
+    return accepted[0].value.id;
+  };
+  const thenPresenceBelongsTo = (operateurId: string): void => {
+    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false })]);
   };
   const thenFails = async (operation: Promise<unknown>, message: string): Promise<void> => {
     await expect(operation).rejects.toThrow(message);
