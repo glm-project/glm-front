@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted. Gestion has since moved to the Material 3 `azure-blue` theme and its token bridge; pupitre retains
+`indigo-pink`.
 
 ## Context
 
@@ -64,5 +65,6 @@ them out.
 - The pin is exact at `34.0.0` because `35` raises its `@angular/core` peer floor to 22. Upgrading Angular
   and upgrading icons are now one move, not two.
 - Every new icon is a hand edit to `DRAWINGS` — deliberate, and the cost of the compile-time guarantee.
-- Nothing here touches `indigo-pink.css`, still on both build targets and still naming `Roboto` in its own
-  tokens. Material surfaces therefore ask for a font that no longer loads until the prebuilt theme goes.
+- At adoption time this changed neither front's `indigo-pink.css`, which still named `Roboto` after the
+  remote font left. Gestion has since moved to `azure-blue`; pupitre retains that remaining prebuilt-theme
+  fallback.
