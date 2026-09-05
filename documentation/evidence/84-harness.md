@@ -117,3 +117,22 @@ server startup and Chrome startup and is recorded by the measured validation ent
 JSON server observations and JUnit XML live under `artifacts/production-offline/` and are uploaded by the
 required `production-offline-test` CI job. Fixture servers cleanly release ports 9010, 9011 and 9080.
 The service worker retains asset groups only, and gestion has no service worker.
+
+## Required GitHub checks
+
+The active `main protection` ruleset, ID 20292974, now requires `checks-and-unit-tests`, `component-tests`,
+`application-tests`, `production-build`, `production-offline-test` and `security-and-workflows`, all bound to
+the GitHub Actions integration. It requires a current base, has no bypass actor and preserves every previous
+rule (pull request, linear history, deletion and non-fast-forward protection).
+
+For PR 95, commit `282e8d740a63545057199d0d5c98b00d5954bce3` was observed as `BLOCKED` while the six required jobs
+were queued or running. The [first CI run](https://github.com/glm-project/glm-front/actions/runs/33981339248)
+then passed all six jobs, and GitHub reported `CLEAN`. It took 91 seconds from creation to completion.
+Local negative checks separately demonstrate type-error rejection, invalid workflow rejection, staged-secret
+rejection and a mutation score below its threshold. These are deliberately failing validation inputs;
+the recorded GitHub transition is pending to successful, not a fabricated failing CI run.
+
+The first real pre-commit and pre-push hooks exited 0 in 3.04 and 54.83 seconds respectively. Post-push inspection
+also exposed inherited Git environment variables leaking a test fixture into the invoking worktree's index.
+The fixture subprocesses now isolate Git's local environment, and a regression test verifies that the invoking
+repository's index remains unchanged. The final push reruns the full graph with that fix.
