@@ -47,7 +47,7 @@ describe('ClientApi', () => {
     const requete = await whenTheServerAnswers(UNE_PAGE_DE_SUIVIS);
 
     thenItReached(requete, '/api/atelier/suivis?etats=EN_ATTENTE&etats=EN_COURS&size=100');
-    await lecture;
+    await whenTheRequestCompletes(lecture);
   });
 
   it('should leave out a parameter the caller did not fill', async () => {
@@ -56,7 +56,7 @@ describe('ClientApi', () => {
     const requete = await whenTheServerAnswers(UNE_PAGE_DOPERATEURS);
 
     thenItReached(requete, '/api/operateurs?size=100');
-    await lecture;
+    await whenTheRequestCompletes(lecture);
   });
 
   it('should put the path parameters the caller gave into the URL', async () => {
@@ -65,7 +65,7 @@ describe('ClientApi', () => {
     const requete = await whenTheServerAnswers(UN_SUIVI);
 
     thenItReached(requete, `/api/atelier/suivis/${SUIVI_ID}/pointages`);
-    await ecriture;
+    await whenTheRequestCompletes(ecriture);
   });
 
   it('should send the body the caller gave to write', async () => {
@@ -74,7 +74,7 @@ describe('ClientApi', () => {
     const requete = await whenTheServerAnswers({});
 
     thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
-    await ecriture;
+    await whenTheRequestCompletes(ecriture);
   });
 
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -103,6 +103,10 @@ describe('ClientApi', () => {
     requete.flush(reponse);
 
     return requete;
+  };
+
+  const whenTheRequestCompletes = async (request: Promise<unknown>): Promise<void> => {
+    await request;
   };
 
   const thenItReached = (requete: TestRequest, url: string): void => {
