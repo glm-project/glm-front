@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
+    "api:generate": "npm run api:sync && npm run api:types",
     "api:sync": "gh api repos/glm-project/glm-back/contents/documentation/openapi.json -H \"Accept: application/vnd.github.raw\" > src/main/webapp/app/api/openapi.json && prettier --write src/main/webapp/app/api/openapi.json",
     "api:types": "openapi-typescript src/main/webapp/app/api/openapi.json --output src/main/webapp/app/api/schema.d.ts && prettier --write src/main/webapp/app/api/schema.d.ts",
     "application:gestion": "cypress open --e2e --config-file src/test/webapp/application/gestion/cypress-config.ts",

@@ -103,9 +103,10 @@ not copied into each context.
 
 ## The wire format lives at an address no `domain` can reach
 
-`app/api/` holds two files and no `package-info.ts`: `openapi.json`, a snapshot of the specification
-`glm-back` publishes at its own `documentation/openapi.json`, and `schema.d.ts`, generated from it by
-`openapi-typescript`. **The missing `package-info.ts` is the rule, not an oversight.** The folder belongs to
+`app/api/` holds two locally generated files and no `package-info.ts`: `openapi.json`, a snapshot of the
+specification `glm-back` publishes at its own `documentation/openapi.json`, and `schema.d.ts`, generated
+from it by `openapi-typescript`. They are ignored by Git: run `npm run api:generate` after cloning and when
+refreshing the contract. **The missing `package-info.ts` is the rule, not an oversight.** The folder belongs to
 no declared context, so `domain` — which may only depend on `domain` and shared kernels — cannot import it,
 while `infrastructure/secondary` can. Both directions were measured: an `import` of `@/app/api/schema` from
 `shared/authentication/domain/` reddens _Domain should not depend on outside_, the same import from
@@ -123,22 +124,20 @@ the 100 % coverage bar never sees it (measured — it appears in no coverage rep
 `ignores` (`eslint.config.mjs`): measured at 319 errors without that entry, `local/no-comments` on every
 operation description springdoc wrote into the spec, and `strictTypeChecked` on shapes no one here chose.
 
-## The specification is pinned, not followed
+## The specification is generated in each workspace
 
 ```
-back's code ──✓ back CI──▶ back's openapi.json ──npm run api:sync──▶ app/api/openapi.json ──✓ front CI──▶ schema.d.ts
+back's code ──✓ back CI──▶ back's openapi.json ──npm run api:sync──▶ app/api/openapi.json ──npm run api:types──▶ schema.d.ts
 ```
 
 `npm run api:sync` pulls the back's file through `gh api`, never `curl`: `gh` is authenticated, so the
 command survives the day `glm-back` turns private, which `raw.githubusercontent.com` would not.
-`npm run api:types` regenerates `schema.d.ts` and reformats it, so `prettier --check .` stays green without
-an entry in `.prettierignore`. Both the specification and the generated types are committed, and CI runs
-`npm run api:types && git diff --exit-code`: types that no longer match the committed specification fail the
-build.
+`npm run api:types` regenerates `schema.d.ts` and reformats it. `npm run api:generate` chains the two commands
+and is run in each CI workspace before compilation or tests. Neither the specification nor the generated types
+are committed; they are local build inputs.
 
-**The middle link stays manual, deliberately.** CI never reaches across repositories — a workflow reading
-`main` of `glm-back` would need a PAT held as a secret here, an Action's `GITHUB_TOKEN` being confined to its
-own repository. Refreshing the contract is a human gesture, and its diff is reviewed like any other.
+The contract is refreshed when a workspace is prepared, including CI. The `gh` authentication available to that
+workspace must be allowed to read `glm-back`.
 
 ## The rules the architecture test enforces
 

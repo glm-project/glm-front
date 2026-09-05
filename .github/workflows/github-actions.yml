@@ -26,8 +26,8 @@ jobs:
           cache: 'npm'
       - name: 'Setup: install dependencies'
         run: npm install
-      - name: 'Test: api types match the committed spec'
-        run: npm run api:types && git diff --exit-code
+      - name: 'Setup: generate API contract and types'
+        run: npm run api:generate
       - name: 'Test: eslint'
         run: npm run lint
       - name: 'Test: prettier check'
@@ -56,6 +56,8 @@ jobs:
           key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: 'Setup: install dependencies'
         run: npm install
+      - name: 'Setup: generate API contract and types'
+        run: npm run api:generate
       - name: 'Test: run component tests'
         run: npm run test:component
 
@@ -78,5 +80,7 @@ jobs:
           key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: 'Setup: install dependencies'
         run: npm install
+      - name: 'Setup: generate API contract and types'
+        run: npm run api:generate
       - name: 'Test: run application tests'
         run: npm run test:application

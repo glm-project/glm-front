@@ -140,3 +140,7 @@ Desktop.ini
 .seed4j/
 
 cypress/
+
+# OpenAPI contract and TypeScript declarations are generated for each workspace.
+/src/main/webapp/app/api/openapi.json
+/src/main/webapp/app/api/schema.d.ts
