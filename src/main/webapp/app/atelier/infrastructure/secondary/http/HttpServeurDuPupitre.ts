@@ -11,15 +11,18 @@ import { inject, Injectable } from '@angular/core';
 import { findRefusDAtelierIn } from '../findRefusDAtelierIn';
 
 type RestOperateur = components['schemas']['RestOperateur'];
-type RestSuivi = components['schemas']['RestSuiviDAtelier'];
+type RestPosteHabilite = components['schemas']['RestPosteHabilite'];
+type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
 
 interface ElementDuReferentiel {
-  id?: string;
+  id: string;
 }
 
 interface Page<T> {
-  content?: T[];
-  totalElementsCount?: number;
+  content: T[];
+  currentPage: number;
+  pageSize: number;
+  totalElementsCount: number;
 }
 
 const requireStablePage = (previousTotal: number | undefined, count: number, received: number, pageSize: number): void => {
@@ -39,8 +42,8 @@ const readAll = async <T extends ElementDuReferentiel>(read: (page: number) => P
   let total: number | undefined;
   for (let page = 0; ; page++) {
     const answer = await read(page);
-    const count = required(answer.totalElementsCount, 'page.totalElementsCount');
-    const content = required(answer.content, 'page.content');
+    const count = answer.totalElementsCount;
+    const content = answer.content;
     requireStablePage(total, count, elements.length, content.length);
     total = count;
     elements.push(...content);
@@ -51,24 +54,26 @@ const readAll = async <T extends ElementDuReferentiel>(read: (page: number) => P
   }
 };
 
+const toPosteHabilite = (poste: RestPosteHabilite): OperateurDuPupitre['postes'][number] => ({ id: poste.id, libelle: poste.libelle });
+
 const toOperateur = (operateur: RestOperateur): OperateurDuPupitre => ({
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
   matricule: operateur.matricule,
-  postes: operateur.postes ?? [],
+  postes: operateur.postes.map(toPosteHabilite),
 });
 
-const toSuivi = (suivi: RestSuivi): SuiviDuPupitre => ({
-  id: required(suivi.id, 'suivi.id'),
-  nom: required(suivi.nom, 'suivi.nom'),
-  etat: required(suivi.etat, 'suivi.etat'),
-  type: required(suivi.type, 'suivi.type'),
-  evenements: (suivi.journal ?? []).map(evenement => required(evenement.id, 'evenement.id')),
-  activites: (suivi.activitesEnCours ?? []).map(activite => ({
+const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
+  id: suivi.id,
+  nom: suivi.nom,
+  etat: suivi.etat,
+  type: suivi.type,
+  evenements: [],
+  activites: suivi.activitesEnCours.map(activite => ({
     operateurId: required(activite.operateur, 'activite.operateur').id,
-    categorie: required(activite.categorie, 'activite.categorie'),
-    depuis: required(activite.depuis, 'activite.depuis'),
+    categorie: activite.categorie,
+    depuis: activite.depuis,
     posteId: activite.poste?.id,
   })),
 });

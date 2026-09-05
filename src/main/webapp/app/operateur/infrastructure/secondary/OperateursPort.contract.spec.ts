@@ -21,10 +21,17 @@ const JEAN_DUPONT = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
+  natures: ['tournage'],
   postes: [TOUR_1],
 } satisfies RestOperateur;
 
-const unOperateurFixture = (rang: number): RestOperateur => ({ id: `operateur-${rang}`, nom: `Nom ${rang}`, prenom: 'Jean' });
+const unOperateurFixture = (rang: number): RestOperateur => ({
+  id: `operateur-${rang}`,
+  nom: `Nom ${rang}`,
+  prenom: 'Jean',
+  natures: [],
+  postes: [],
+});
 
 const unReferentielFixture = (nombre: number): RestOperateur[] => Array.from({ length: nombre }, (_, rang) => unOperateurFixture(rang));
 
@@ -83,7 +90,12 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
       return;
     }
 
-    requete.flush({ content: referentiel.slice(0, demandee), totalElementsCount: referentiel.length });
+    requete.flush({
+      content: referentiel.slice(0, demandee),
+      currentPage: 0,
+      pageSize: demandee,
+      totalElementsCount: referentiel.length,
+    });
   };
 
   const thenItReadJeanDupont = (extrait: Extrait<Operateur>): void => {
