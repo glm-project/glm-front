@@ -75,7 +75,6 @@ keydown events before calling this guard. Closing the designation must also dism
 The keypad already handles its own pointer and physical keyboard events; its parent only needs to route
 presses outside it. These composition and pointage responsibilities belong to #75 and #76.
 
-The guard consumes a press that discovers an overdue deadline. If the expiry callback has already reset
-the keypad, the next press starts a fresh code. The stronger wording in #74 about the first press after
-OS sleep remains a contract question: this controller has no separate signal identifying an OS resume
-after the timer has already run. Do not infer one from an arbitrary timer-delay threshold.
+The guard consumes a press that discovers an overdue deadline that has not yet been handled. If the expiry
+callback has already reset the keypad, the next press starts a fresh code. This rule also applies after
+OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay threshold is needed.
