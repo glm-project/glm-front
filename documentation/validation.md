@@ -11,7 +11,7 @@ servers never share one workspace at the same time.
 CI invokes the same grouped commands in separate workspaces. Each job records its duration as an artifact.
 The pre-push hook records the complete local duration on standard output and returns the validation exit code.
 The pre-commit hook scans the staged diff for secrets before lint-staged runs ESLint fixes and then Prettier on
-TypeScript and Angular templates. Other supported staged files only run through Prettier.
+TypeScript, Angular templates and JavaScript tooling scripts. Other supported staged files only run through Prettier.
 
 ## Security controls
 
