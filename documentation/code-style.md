@@ -47,6 +47,10 @@ Run the existing behavioral tests before and after extraction; keep behavior cha
 - `signal()` for local component state (`App.appName`, `gestion/app.ts:17`);
 - `input.required()` for what a parent gives a component (`pupitre/header/header.ts`);
 - standalone components, no `NgModule`;
+- signals expose state, `computed()` derives it, and application commands trigger work. Angular `effect()`
+  and `afterRenderEffect()` are forbidden by ESLint; use explicit orchestration or a one-shot render hook.
+  Import Angular Core through named static imports: namespace and dynamic imports are blocked to keep
+  this restriction enforceable;
 - component and directive selectors are prefixed `glm` (`glm-root`, `glm-pupitre-header`) — enforced by
   `angular-eslint`;
 - `private readonly` for injected collaborators.

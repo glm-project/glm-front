@@ -1,5 +1,7 @@
+import { DesignationOperateur } from '@/app/atelier/domain/DesignationOperateur';
 import { FenetreOperateur, PointageDuPupitre } from '@/app/atelier/domain/FenetreOperateur';
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { projectPupitre } from '@/app/atelier/domain/ProjectionDuPupitre';
 import {
   EvenementLocal,
@@ -11,7 +13,7 @@ import {
 } from '@/app/atelier/domain/PupitreLocal';
 import { TypeDePresence } from '@/app/atelier/domain/TypeDePresence';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { SynchronisationDuPupitre } from './SynchronisationDuPupitre';
 
 const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurvenue: new Date().toISOString() });
@@ -21,9 +23,18 @@ export class PupitreHorsLigne {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournalDuPupitrePort);
   private readonly synchronisation = inject(SynchronisationDuPupitre);
+  private readonly planificationExpiration = inject(PlanificationExpirationDesignationPort);
   private readonly vue = signal<PupitreLocal>(PUPITRE_VIDE);
   private readonly connexion = signal(true);
-  private fenetre: FenetreOperateur | undefined;
+  private readonly designation = new DesignationOperateur();
+  private readonly designationState = signal(this.designation.snapshot());
+
+  readonly etatDesignation = this.designationState.asReadonly();
+  readonly code = computed(() => this.designationState().code);
+  readonly unknownCode = computed(() => this.designationState().unknownCode);
+  readonly operateur = computed(() => this.designationState().operateur);
+  readonly canValidate = computed(() => this.designationState().canValidate);
+  private fermeture: Promise<void> | undefined;
   private saisie: Promise<void> = Promise.resolve();
 
   readonly connected = this.connexion.asReadonly();
@@ -32,23 +43,88 @@ export class PupitreHorsLigne {
     return projectPupitre(this.vue());
   }
 
+  registerPress(): boolean {
+    const accepted = this.designation.registerPress(Date.now());
+    this.refreshDesignation();
+    return accepted;
+  }
+
+  enterDigit(digit: string): void {
+    this.designation.enterDigit(digit, Date.now());
+    this.refreshDesignation();
+  }
+
+  erase(): void {
+    this.designation.erase(Date.now());
+    this.refreshDesignation();
+  }
+
+  async validate(): Promise<void> {
+    const resolution = this.designation.beginResolution(Date.now());
+    this.refreshDesignation();
+    if (resolution === undefined) return;
+    try {
+      await this.openWindow(resolution.code);
+      if (!this.designation.completeResolution(resolution, Date.now())) {
+        await this.drainWindow();
+      }
+    } catch {
+      this.designation.failResolution(resolution, Date.now());
+    } finally {
+      this.designation.endResolution();
+      this.refreshDesignation();
+    }
+  }
+
+  finish(): Promise<void> {
+    this.designation.finish();
+    return this.settleDesignation();
+  }
+
+  expire(): Promise<void> {
+    this.designation.expire(Date.now());
+    return this.settleDesignation();
+  }
+
+  private settleDesignation(): Promise<void> {
+    this.publishDesignation();
+    if (!this.designation.needsClosure()) return Promise.resolve();
+    this.fermeture ??= this.drainWindow().finally(() => {
+      this.designation.completeClosure();
+      this.publishDesignation();
+      this.fermeture = undefined;
+    });
+    return this.fermeture;
+  }
+
+  private refreshDesignation(): void {
+    void this.settleDesignation();
+  }
+
+  private publishDesignation(): void {
+    const snapshot = this.designation.snapshot();
+    this.designationState.set(snapshot);
+    this.planificationExpiration.schedule(snapshot.deadline, { expire: () => void this.expire() });
+  }
+
   async openWindow(code: string): Promise<OperateurDuPupitre> {
     await this.authentication.synchronizeSession();
-    this.requireClosedWindow();
+    this.designation.requireClosedWindow();
     const entreprise = this.requireTenant();
     const vue = await this.journal.read(entreprise);
     if (this.authentication.currentTenant() !== entreprise) {
       throw new Error('L’entreprise du pupitre a change.');
     }
-    this.requireClosedWindow();
-    this.fenetre = new FenetreOperateur(entreprise, vue, code);
-    this.vue.set(this.fenetre.snapshot());
-    return this.fenetre.operateur;
+    this.designation.requireClosedWindow();
+    const fenetre = this.designation.openWindow(entreprise, vue, code, Date.now());
+    this.vue.set(fenetre.snapshot());
+    this.refreshDesignation();
+    return fenetre.operateur;
   }
 
-  async closeWindow(): Promise<void> {
+  private async drainWindow(): Promise<void> {
     await this.saisie;
-    this.fenetre = undefined;
+    this.designation.releaseWindow();
     await this.restore();
   }
 
@@ -94,7 +170,7 @@ export class PupitreHorsLigne {
 
   private async persistGestes(fenetre: FenetreOperateur, gestures: () => GesteLocal[]): Promise<void> {
     await this.authentication.synchronizeSession();
-    if (this.fenetre !== fenetre || this.authentication.currentTenant() !== fenetre.entreprise) {
+    if (this.designation.window() !== fenetre || this.authentication.currentTenant() !== fenetre.entreprise) {
       throw new Error('La fenetre operateur a change.');
     }
     const gestes = gestures();
@@ -113,11 +189,20 @@ export class PupitreHorsLigne {
       return;
     }
     this.connexion.set(state.connecte);
-    if (this.fenetre !== undefined && this.fenetre.entreprise !== entreprise) {
-      this.fenetre = undefined;
+    const fenetre = this.designation.window();
+    if (fenetre !== undefined && fenetre.entreprise !== entreprise) {
+      this.designation.releaseWindow();
     }
-    if (this.fenetre === undefined) {
+    if (this.designation.window() === undefined) {
       this.vue.set(state);
+    }
+  }
+
+  private requireWindow(): FenetreOperateur {
+    try {
+      return this.designation.requireWindow(Date.now());
+    } finally {
+      this.refreshDesignation();
     }
   }
 
@@ -127,18 +212,5 @@ export class PupitreHorsLigne {
       throw new Error('Le pupitre doit etre enrole une premiere fois.');
     }
     return entreprise;
-  }
-
-  private requireClosedWindow(): void {
-    if (this.fenetre !== undefined) {
-      throw new Error('Une fenetre operateur est deja ouverte.');
-    }
-  }
-
-  private requireWindow(): FenetreOperateur {
-    if (this.fenetre === undefined) {
-      throw new Error('Aucune fenetre operateur ouverte.');
-    }
-    return this.fenetre;
   }
 }

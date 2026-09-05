@@ -1,6 +1,7 @@
 import { PupitreHorsLigne } from '@/app/atelier/application/PupitreHorsLigne';
 import { SynchronisationDuPupitre } from '@/app/atelier/application/SynchronisationDuPupitre';
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { GesteLocal, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
@@ -55,6 +56,12 @@ class JournalFixture extends JournalDuPupitreFixture {
   }
 }
 
+class PlanificationExpirationFixture extends PlanificationExpirationDesignationPort {
+  override schedule(): void {
+    return;
+  }
+}
+
 describe('PupitreRuntime', () => {
   let runtime: PupitreRuntime;
   let journal: JournalFixture;
@@ -73,6 +80,7 @@ describe('PupitreRuntime', () => {
         { provide: JournalDuPupitrePort, useValue: journal },
         { provide: ServeurDuPupitrePort, useValue: serveur },
         { provide: AuthenticationPort, useClass: AuthenticationFixture },
+        { provide: PlanificationExpirationDesignationPort, useClass: PlanificationExpirationFixture },
       ],
     });
     runtime = TestBed.inject(PupitreRuntime);
