@@ -1,8 +1,10 @@
-<glm-header [heading]="heading()">
+<mat-toolbar color="primary">
+  <span data-selector="header-heading">{{ heading() }}</span>
+  <span class="flex-auto"></span>
   <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu">
     <glm-icon name="menu" />
   </button>
   <mat-menu #menu="matMenu"></mat-menu>
   <img alt="Angular logo" class="angular-logo" ngSrc="content/images/AngularLogo.svg" width="50" height="50" priority />
   <button mat-raised-button (click)="logout()" data-selector="gestion-logout">Logout</button>
-</glm-header>
+</mat-toolbar>

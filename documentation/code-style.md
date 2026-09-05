@@ -45,9 +45,9 @@ Run the existing behavioral tests before and after extraction; keep behavior cha
 - `inject()`, never constructor injection (`gestion/app.ts:18`, `gestion/header/header.ts:19`,
   `KeycloakOidcAuthentication.ts:9`);
 - `signal()` for local component state (`App.appName`, `gestion/app.ts:17`);
-- `input.required()` for what a parent gives a component (`shared/…/header/header.ts:12`);
+- `input.required()` for what a parent gives a component (`pupitre/header/header.ts`);
 - standalone components, no `NgModule`;
-- component and directive selectors are prefixed `glm` (`glm-root`, `glm-header`) — enforced by
+- component and directive selectors are prefixed `glm` (`glm-root`, `glm-pupitre-header`) — enforced by
   `angular-eslint`;
 - `private readonly` for injected collaborators.
 

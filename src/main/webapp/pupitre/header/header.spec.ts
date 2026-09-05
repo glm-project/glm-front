@@ -21,6 +21,7 @@ describe('Pupitre header', () => {
     await whenRenderingTheHeader();
 
     thenItSignsThePupitreIsOnline();
+    thenItShowsTheHeading('glmfront');
   });
 
   it('should sign that the pupitre is disconnected', async () => {
@@ -40,11 +41,28 @@ describe('Pupitre header', () => {
   const thenItSignsThePupitreIsOnline = (): void => {
     expect(showsSign('pupitre-connected')).toBe(true);
     expect(showsSign('pupitre-disconnected')).toBe(false);
+    thenItDescribesConnectivity('pupitre-connected', 'En ligne');
   };
 
   const thenItSignsThePupitreIsOffline = (): void => {
     expect(showsSign('pupitre-disconnected')).toBe(true);
     expect(showsSign('pupitre-connected')).toBe(false);
+    thenItDescribesConnectivity('pupitre-disconnected', 'Hors ligne');
+  };
+
+  const thenItShowsTheHeading = (heading: string): void => {
+    const header = fixture.nativeElement as HTMLElement;
+
+    expect(header.querySelector(dataSelector('header-heading'))?.textContent.trim()).toBe(heading);
+  };
+
+  const thenItDescribesConnectivity = (sign: string, description: string): void => {
+    const header = fixture.nativeElement as HTMLElement;
+    const connectivity = header.querySelector(dataSelector(sign));
+
+    expect(connectivity?.textContent.trim()).toBe(description);
+    expect(connectivity?.querySelector(dataSelector('connectivity-indicator'))?.getAttribute('aria-hidden')).toBe('true');
+    expect(header.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
   };
 
   const showsSign = (sign: string): boolean => {
