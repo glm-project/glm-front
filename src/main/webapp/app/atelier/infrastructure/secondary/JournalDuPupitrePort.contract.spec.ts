@@ -19,6 +19,12 @@ const adapters = [
   ['application fixture', () => new JournalDuPupitreFixture()],
 ] as const;
 
+interface SynchronizationFixture {
+  entered: SignalFixture;
+  release: SignalFixture;
+  chronology: string[];
+}
+
 describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name, build) => {
   let journal: JournalDuPupitrePort;
 
@@ -33,65 +39,100 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
   afterEach(() => vi.unstubAllGlobals());
 
   it('should restore an empty company before its first reference or gesture', async () => {
-    const state = await journal.read('entreprise-a');
+    const state = await whenReadingCompany('entreprise-a');
 
     thenStateIs(state, PUPITRE_VIDE);
   });
 
   it('should retain the complete opening in order and keep another company independent', async () => {
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
+    await givenACompanyReference();
 
-    await journal.append('entreprise-a', [arriveeFixture, repriseFixture, pointageFixture]);
+    await whenAppendingTheCompleteOpening();
 
-    thenStateIs(await journal.read('entreprise-a'), {
+    await thenCompanyStateIs('entreprise-a', {
       referentiel: referenceFixture,
       connecte: true,
       evenements: [arriveeFixture, repriseFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
     });
-    thenStateIs(await journal.read('entreprise-b'), PUPITRE_VIDE);
+    await thenCompanyStateIs('entreprise-b', PUPITRE_VIDE);
   });
 
   it('should preserve a concurrent append and a refusal while recording a push outcome', async () => {
-    await journal.append('entreprise-a', [arriveeFixture, repriseFixture]);
-    await journal.markDisconnected('entreprise-a');
-    const refus: EvenementLocal = { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
+    const refus = await givenADisconnectedQueue();
 
-    await Promise.all([journal.saveResult('entreprise-a', refus), journal.append('entreprise-a', [pointageFixture])]);
+    await whenSavingARefusalWhileAppending(refus);
 
-    thenStateIs(await journal.read('entreprise-a'), {
+    await thenCompanyStateIs('entreprise-a', {
       connecte: true,
       evenements: [refus, { geste: repriseFixture, etat: 'EN_ATTENTE' }, { geste: pointageFixture, etat: 'EN_ATTENTE' }],
     });
   });
 
   it.each(['synchronize', 'withSession'] as const)('should serialize %s operations while allowing local capture', async operation => {
-    const entered = new SignalFixture();
-    const release = new SignalFixture();
-    const chronology: string[] = [];
-    const first = journal[operation](async () => {
-      chronology.push('first');
-      entered.release();
-      await release.promise;
-    });
-    await entered.promise;
+    const { entered, release, chronology } = givenSynchronizationSignals();
 
-    const second = journal[operation](async () => {
-      await new Promise(resolve => setTimeout(resolve));
-      chronology.push('second');
-    });
-    await journal.append('entreprise-a', [arriveeFixture]);
+    const first = whenHoldingTheFirstOperation(operation, entered, release, chronology);
+    await whenTheFirstOperationHasEntered(entered);
+
+    const second = whenStartingTheSecondOperation(operation, chronology);
+    await whenAppendingArrival();
 
     try {
       thenChronologyIs(chronology, ['first']);
     } finally {
-      release.release();
-      await Promise.all([first, second]);
+      await whenReleasingTheOperations(release, first, second);
     }
+
     thenChronologyIs(chronology, ['first', 'second']);
   });
 
+  const givenACompanyReference = async (): Promise<void> => {
+    await journal.saveReferentiel('entreprise-a', referenceFixture);
+  };
+  const givenADisconnectedQueue = async (): Promise<EvenementLocal> => {
+    await journal.append('entreprise-a', [arriveeFixture, repriseFixture]);
+    await journal.markDisconnected('entreprise-a');
+    return { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
+  };
+  const givenSynchronizationSignals = (): SynchronizationFixture => ({
+    entered: new SignalFixture(),
+    release: new SignalFixture(),
+    chronology: [],
+  });
+  const whenReadingCompany = (company: string): Promise<PupitreLocal> => journal.read(company);
+  const whenAppendingTheCompleteOpening = (): Promise<void> =>
+    journal.append('entreprise-a', [arriveeFixture, repriseFixture, pointageFixture]);
+  const whenAppendingArrival = (): Promise<void> => journal.append('entreprise-a', [arriveeFixture]);
+  const whenSavingARefusalWhileAppending = async (refusal: EvenementLocal): Promise<void> => {
+    await Promise.all([journal.saveResult('entreprise-a', refusal), journal.append('entreprise-a', [pointageFixture])]);
+  };
+  const whenHoldingTheFirstOperation = (
+    operation: 'synchronize' | 'withSession',
+    entered: SignalFixture,
+    release: SignalFixture,
+    chronology: string[],
+  ): Promise<void> =>
+    journal[operation](async () => {
+      chronology.push('first');
+      entered.release();
+      await release.promise;
+    });
+  const whenStartingTheSecondOperation = (operation: 'synchronize' | 'withSession', chronology: string[]): Promise<void> =>
+    journal[operation](async () => {
+      await new Promise(resolve => setTimeout(resolve));
+      chronology.push('second');
+    });
+  const whenTheFirstOperationHasEntered = (entered: SignalFixture): Promise<void> => entered.promise;
+  const whenReleasingTheOperations = async (release: SignalFixture, ...operations: Promise<void>[]): Promise<void> => {
+    release.release();
+    await Promise.all(operations);
+  };
+
   const thenStateIs = (state: PupitreLocal, expected: PupitreLocal): void => {
     expect(state).toEqual(expected);
+  };
+  const thenCompanyStateIs = async (company: string, expected: PupitreLocal): Promise<void> => {
+    thenStateIs(await journal.read(company), expected);
   };
   const thenChronologyIs = (chronology: string[], expected: string[]): void => {
     expect(chronology).toEqual(expected);

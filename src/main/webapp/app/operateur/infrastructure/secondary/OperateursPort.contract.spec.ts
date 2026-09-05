@@ -45,7 +45,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
   });
 
   it('should hand over the operators the referential holds, with the postes they are allowed on', async () => {
-    const lecture = operateurs.operateurs();
+    const lecture = whenReadingOperators();
 
     await whenTheReferentialAnswersWith([JEAN_DUPONT]);
 
@@ -53,7 +53,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
   });
 
   it('should read past the page the server sends when it is asked for nothing', async () => {
-    const lecture = operateurs.operateurs();
+    const lecture = whenReadingOperators();
 
     await whenTheReferentialAnswersWith(unReferentielFixture(TOUT_UN_ATELIER));
 
@@ -61,7 +61,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
   });
 
   it('should say the extract is partial rather than cut the referential in silence', async () => {
-    const lecture = operateurs.operateurs();
+    const lecture = whenReadingOperators();
 
     await whenTheReferentialAnswersWith(unReferentielFixture(PLUS_QUE_LE_SERVEUR_N_EN_REND));
 
@@ -69,6 +69,8 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
   });
 
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+
+  const whenReadingOperators = (): Promise<Extrait<Operateur>> => operateurs.operateurs();
 
   const whenTheReferentialAnswersWith = async (referentiel: RestOperateur[]): Promise<void> => {
     await unTourDeBoucle();

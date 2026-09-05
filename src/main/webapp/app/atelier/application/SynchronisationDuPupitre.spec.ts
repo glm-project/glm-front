@@ -47,13 +47,17 @@ describe('SynchronisationDuPupitre', () => {
   });
 
   it('should restore the selected company without attempting to exchange its pending gestures when authorization expired', async () => {
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
-    await journal.append('entreprise-a', [gesteFixture]);
+    await givenASelectedCompanyWithPendingWork();
 
     await whenSynchronizing();
 
     thenPendingWorkRemainsAvailable();
   });
+
+  const givenASelectedCompanyWithPendingWork = async (): Promise<void> => {
+    await journal.saveReferentiel('entreprise-a', referenceFixture);
+    await journal.append('entreprise-a', [gesteFixture]);
+  };
 
   const whenSynchronizing = (): Promise<void> =>
     synchronisation.synchronize((_entreprise, state) => {

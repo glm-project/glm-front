@@ -5,7 +5,7 @@ import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort'
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { HttpServeurDuPupitre } from './http/HttpServeurDuPupitre';
 
@@ -13,11 +13,18 @@ const operateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule:
 const suiviFixture = { id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT' };
 const arriveeFixture: GesteLocal = { nature: 'ARRIVEE', id: 'geste', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
 const adapters = [['HTTP', () => TestBed.inject(HttpServeurDuPupitre)]] as const;
+interface PageFixture {
+  url: string;
+  page: number;
+  content: unknown[];
+  totalElementsCount: number;
+}
 
 describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapter, build) => {
   let serveur: ServeurDuPupitrePort;
   let http: HttpTestingController;
   let token: string | undefined;
+  let referencePages: PageFixture[];
 
   beforeEach(() => {
     token = 'autorise';
@@ -32,115 +39,81 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
     });
     serveur = build();
     http = TestBed.inject(HttpTestingController);
+    referencePages = [];
   });
   afterEach(() => http.verify());
 
   it('should cache all pages of operators and workshop elements without filtering by operator', async () => {
-    const reference = serveur.referentiel();
+    givenCompleteReferencePagesFixture();
 
-    await whenPage('/api/operateurs', 0, [operateurFixture], 2);
-    await whenPage('/api/operateurs', 1, [{ ...operateurFixture, id: 'marie', postes: [{ id: 'tour', libelle: 'Tour' }] }], 2);
-    await whenPage('/api/atelier/suivis', 0, [suiviFixture], 2);
-    await whenPage(
-      '/api/atelier/suivis',
-      1,
-      [
-        {
-          ...suiviFixture,
-          id: 'piece-2',
-          journal: [{ id: 'ancien' }],
-          activitesEnCours: [
-            { operateur: operateurFixture, categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', poste: { id: 'tour' } },
-            { operateur: operateurFixture, categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
-          ],
-        },
-      ],
-      2,
-    );
+    const reference = whenReadingReference();
 
-    thenReferenceIsComplete(await reference);
+    const pages = await whenServerReturnsReferencePages();
+
+    thenPagesHaveNoOperatorFilter(pages);
+    await thenReferenceIsComplete(reference);
   });
 
   it.each(['count', 'empty', 'duplicate', 'overflow'])('should reject a partial or unstable referential (%s)', async kind => {
-    const reference = serveur.referentiel();
-    const rejected = reference.catch((failure: unknown) => failure);
+    const reference = whenReadingReference();
 
-    await whenPage('/api/operateurs', 0, [operateurFixture], 2);
-    if (kind === 'count') {
-      await whenPage('/api/operateurs', 1, [{ ...operateurFixture, id: 'marie' }], 3);
-    }
-    if (kind === 'empty') {
-      await whenPage('/api/operateurs', 1, [], 2);
-    }
-    if (kind === 'duplicate') {
-      await whenPage('/api/operateurs', 1, [operateurFixture], 2);
-    }
-    if (kind === 'overflow') {
-      await whenPage(
-        '/api/operateurs',
-        1,
-        [
-          { ...operateurFixture, id: 'marie' },
-          { ...operateurFixture, id: 'paul' },
-        ],
-        2,
-      );
-    }
+    await whenServerReturnsAnUnstableReference(kind);
 
-    thenItFailed(await rejected);
+    await thenItFailed(reference);
   });
 
   it('should refuse to mix companies when authorization changes between pages', async () => {
-    const reference = serveur.referentiel().catch((failure: unknown) => failure);
+    const reference = whenReadingReference();
 
-    token = 'autre-entreprise';
-    await whenPage('/api/operateurs', 0, [operateurFixture], 2);
+    givenAuthorizationChanges();
+    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 2);
 
-    thenItFailed(await reference);
+    await thenItFailed(reference);
   });
 
   it('should make no referential request without authorization', async () => {
-    token = undefined;
+    givenNoAuthorization();
 
-    const reference = serveur.referentiel().catch((failure: unknown) => failure);
+    const reference = whenReadingReference();
 
-    thenItFailed(await reference);
+    await thenItFailed(reference);
   });
 
   it('should preserve event identity and original business time on each write route', async () => {
-    const arrivee = serveur.send(arriveeFixture);
-    await whenWrite('/api/atelier/journees', { id: 'geste', dateDeSurvenue: arriveeFixture.dateDeSurvenue, operateur: 'jean' });
-    await arrivee;
-    const presence = serveur.send({ ...arriveeFixture, nature: 'PRESENCE', type: 'PAUSE', implicite: false });
-    await whenWrite('/api/atelier/journees/pointages', {
+    const arrivee = whenSending(arriveeFixture);
+    const arriveeRequest = await whenServerAcceptsWrite('/api/atelier/journees');
+    await thenWriteSucceededWith(arrivee, arriveeRequest, {
+      id: 'geste',
+      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      operateur: 'jean',
+    });
+
+    const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'PAUSE', implicite: false });
+    const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
+    await thenWriteSucceededWith(presence, presenceRequest, {
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'PAUSE',
     });
-    await presence;
-    const pointage = serveur.send({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
-    await whenWrite('/api/atelier/suivis/piece/pointages', {
+
+    const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
+    const pointageRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+    await thenWriteSucceededWith(pointage, pointageRequest, {
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'DEBUT',
       poste: 'tour',
     });
-    await pointage;
   });
 
   it('should expose every stable business refusal, including codes outside the old allowlist', async () => {
-    const refused = serveur.send(arriveeFixture).catch((failure: unknown) => failure);
+    const refused = whenSending(arriveeFixture);
 
-    http
-      .expectOne('/api/atelier/journees')
-      .flush(
-        { type: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' },
-        { status: 409, statusText: 'Conflict' },
-      );
+    await whenServerRefusesWrite('urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'collision');
 
-    thenBusinessRefusalIs(await refused);
+    await thenBusinessRefusalIs(refused);
   });
 
   it.each<[string, DecisionDeRejeu]>([
@@ -149,43 +122,154 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
     ['urn:glm:erreur:autre:saisie-concurrente', 'PROPAGER'],
     ['urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'PROPAGER'],
   ])('should supply a domain refusal allowing %s to decide %s', async (code, decision) => {
-    const refused = serveur.send(arriveeFixture).catch((failure: unknown) => failure);
+    const refused = whenSending(arriveeFixture);
 
-    http.expectOne('/api/atelier/journees').flush({ type: code, message: 'cause' }, { status: 409, statusText: 'Conflict' });
+    await whenServerRefusesWrite(code, 'cause');
 
-    thenReplayDecisionIs(await refused, code, decision);
+    await thenReplayDecisionIs(refused, code, decision);
   });
 
   it('should preserve a transport failure as a retryable failure', async () => {
-    const refused = serveur.send(arriveeFixture).catch((failure: unknown) => failure);
+    const refused = whenSending(arriveeFixture);
 
-    http.expectOne('/api/atelier/journees').error(new ProgressEvent('error'));
+    await whenTransportFails();
 
-    thenTransportFailureIs(await refused);
+    await thenTransportFailureIs(refused);
   });
 
   it('should reread the affected aggregate before the caller replays a concurrent gesture', async () => {
-    const presence = serveur.reread(arriveeFixture);
-    http.expectOne(request => request.url === '/api/atelier/journees' && request.params.get('operateur') === 'jean').flush({ content: [] });
-    await presence;
-    const pointage = serveur.reread({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
-    http.expectOne('/api/atelier/suivis/piece').flush(suiviFixture);
-    await pointage;
+    const presence = whenRereading(arriveeFixture);
+
+    const operatorDayRequest = await whenServerReturnsOperatorDay();
+
+    thenItRequestedTheOperatorDay(operatorDayRequest);
+    await thenRereadCompletes(presence);
+
+    const pointage = whenRereading({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
+
+    const workshopElementRequest = await whenServerReturnsWorkshopElement();
+
+    thenItRequestedTheWorkshopElement(workshopElementRequest);
+    await thenRereadCompletes(pointage);
   });
 
-  const whenPage = async (url: string, page: number, content: unknown[], totalElementsCount: number): Promise<void> => {
+  const givenAuthorizationChanges = (): void => {
+    token = 'autre-entreprise';
+  };
+  const givenNoAuthorization = (): void => {
+    token = undefined;
+  };
+  const givenCompleteReferencePagesFixture = (): void => {
+    referencePages = [
+      { url: '/api/operateurs', page: 0, content: [operateurFixture], totalElementsCount: 2 },
+      {
+        url: '/api/operateurs',
+        page: 1,
+        content: [{ ...operateurFixture, id: 'marie', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+        totalElementsCount: 2,
+      },
+      { url: '/api/atelier/suivis', page: 0, content: [suiviFixture], totalElementsCount: 2 },
+      {
+        url: '/api/atelier/suivis',
+        page: 1,
+        content: [
+          {
+            ...suiviFixture,
+            id: 'piece-2',
+            journal: [{ id: 'ancien' }],
+            activitesEnCours: [
+              { operateur: operateurFixture, categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', poste: { id: 'tour' } },
+              { operateur: operateurFixture, categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
+            ],
+          },
+        ],
+        totalElementsCount: 2,
+      },
+    ];
+  };
+  const observeRejection = <T>(operation: Promise<T>): Promise<T> => {
+    void operation.catch(() => undefined);
+    return operation;
+  };
+  const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
+  const whenSending = (geste: GesteLocal): Promise<void> => observeRejection(serveur.send(geste));
+  const whenRereading = (geste: GesteLocal): Promise<void> => serveur.reread(geste);
+  const whenServerReturnsReferencePages = async (): Promise<TestRequest[]> => {
+    const requests: TestRequest[] = [];
+    for (const page of referencePages) {
+      requests.push(await whenServerReturnsPage(page.url, page.page, page.content, page.totalElementsCount));
+    }
+    return requests;
+  };
+  const whenServerReturnsAnUnstableReference = async (kind: string): Promise<void> => {
+    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 2);
+    const unstablePages: Record<string, PageFixture> = {
+      count: { url: '/api/operateurs', page: 1, content: [{ ...operateurFixture, id: 'marie' }], totalElementsCount: 3 },
+      empty: { url: '/api/operateurs', page: 1, content: [], totalElementsCount: 2 },
+      duplicate: { url: '/api/operateurs', page: 1, content: [operateurFixture], totalElementsCount: 2 },
+      overflow: {
+        url: '/api/operateurs',
+        page: 1,
+        content: [
+          { ...operateurFixture, id: 'marie' },
+          { ...operateurFixture, id: 'paul' },
+        ],
+        totalElementsCount: 2,
+      },
+    };
+    const page = unstablePages[kind];
+    await whenServerReturnsPage(page.url, page.page, page.content, page.totalElementsCount);
+  };
+  const whenServerReturnsPage = async (
+    url: string,
+    page: number,
+    content: unknown[],
+    totalElementsCount: number,
+  ): Promise<ReturnType<HttpTestingController['expectOne']>> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne(request => request.url === url && request.params.get('page') === String(page));
-    expect(request.request.params.has('operateur')).toBe(false);
     request.flush({ content, totalElementsCount });
+    return request;
   };
-  const whenWrite = async (url: string, body: unknown): Promise<void> => {
+  const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne(url);
-    expect(request.request.body).toEqual(body);
     request.flush({}, { status: 200, statusText: 'Replay accepted' });
+    return request;
   };
-  const thenReferenceIsComplete = (reference: ReferentielDuPupitre): void => {
+  const whenServerRefusesWrite = async (code: string, message: string): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    http.expectOne('/api/atelier/journees').flush({ type: code, message }, { status: 409, statusText: 'Conflict' });
+  };
+  const whenTransportFails = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    http.expectOne('/api/atelier/journees').error(new ProgressEvent('error'));
+  };
+  const whenServerReturnsOperatorDay = async (): Promise<TestRequest> => {
+    await new Promise(resolve => setTimeout(resolve));
+    const request = http.expectOne(request => request.url === '/api/atelier/journees');
+    request.flush({ content: [] });
+    return request;
+  };
+  const whenServerReturnsWorkshopElement = async (): Promise<TestRequest> => {
+    await new Promise(resolve => setTimeout(resolve));
+    const request = http.expectOne('/api/atelier/suivis/piece');
+    request.flush(suiviFixture);
+    return request;
+  };
+  const thenPagesHaveNoOperatorFilter = (pages: TestRequest[]): void => {
+    pages.forEach(page => expect(page.request.params.has('operateur')).toBe(false));
+  };
+  const thenWriteSucceededWith = async (
+    write: Promise<void>,
+    request: ReturnType<HttpTestingController['expectOne']>,
+    body: unknown,
+  ): Promise<void> => {
+    expect(request.request.body).toEqual(body);
+    await expect(write).resolves.toBeUndefined();
+  };
+  const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
+    const reference = await operation;
     expect(reference.operateurs).toHaveLength(2);
     expect(reference.operateurs[1].postes).toEqual([{ id: 'tour', libelle: 'Tour' }]);
     expect(reference.suivis).toHaveLength(2);
@@ -193,19 +277,31 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
     expect(reference.suivis[1].activites[0].posteId).toBe('tour');
     expect(reference.suivis[1].activites[1].posteId).toBeUndefined();
   };
-  const thenItFailed = (failure: unknown): void => {
-    expect(failure).toBeInstanceOf(Error);
+  const thenItFailed = async (operation: Promise<unknown>): Promise<void> => {
+    await expect(operation).rejects.toBeInstanceOf(Error);
   };
-  const thenBusinessRefusalIs = (failure: unknown): void => {
+  const thenBusinessRefusalIs = async (operation: Promise<unknown>): Promise<void> => {
+    const failure = await operation.catch((reason: unknown) => reason);
     expect(failure).toBeInstanceOf(RefusDuPupitre);
     expect(failure).toMatchObject({ code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' });
   };
-  const thenReplayDecisionIs = (failure: unknown, code: string, decision: DecisionDeRejeu): void => {
+  const thenReplayDecisionIs = async (operation: Promise<unknown>, code: string, decision: DecisionDeRejeu): Promise<void> => {
+    const failure = await operation.catch((reason: unknown) => reason);
     expect(decideRejeu('ARRIVEE_ASSUREE', failure)).toBe(decision);
     expect(failure).toMatchObject({ code, message: 'cause' });
   };
-  const thenTransportFailureIs = (failure: unknown): void => {
+  const thenTransportFailureIs = async (operation: Promise<unknown>): Promise<void> => {
+    const failure = await operation.catch((reason: unknown) => reason);
     expect(failure).not.toBeInstanceOf(RefusDuPupitre);
     expect(failure).toMatchObject({ status: 0 });
+  };
+  const thenItRequestedTheOperatorDay = (request: TestRequest): void => {
+    expect(request.request.params.get('operateur')).toBe('jean');
+  };
+  const thenItRequestedTheWorkshopElement = (request: TestRequest): void => {
+    expect(request.request.url).toBe('/api/atelier/suivis/piece');
+  };
+  const thenRereadCompletes = async (reread: Promise<void>): Promise<void> => {
+    await expect(reread).resolves.toBeUndefined();
   };
 });

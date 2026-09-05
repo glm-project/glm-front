@@ -3,6 +3,8 @@ interface DurablePupitreFixture {
   geste: { id: string; dateDeSurvenue: string; operateurId: string };
 }
 
+export const pupitreTokenFixture = (entreprise: string): string => `header.${btoa(JSON.stringify({ tenant: entreprise }))}.signature`;
+
 export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void => {
   cy.window().then(
     window =>
@@ -11,7 +13,7 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
         request.onsuccess = () => {
           const database = request.result;
           const transaction = database.transaction('documents', 'readwrite');
-          const token = `header.${window.btoa(JSON.stringify({ tenant: fixture.entreprise }))}.signature`;
+          const token = pupitreTokenFixture(fixture.entreprise);
           transaction.objectStore('documents').put(
             {
               tenant: fixture.entreprise,

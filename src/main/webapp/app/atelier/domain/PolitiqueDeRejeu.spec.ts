@@ -23,9 +23,9 @@ const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', 
 
 describe.each(refusFixtures)('PolitiqueDeRejeu for %s refusals', (_name, refusalFixture) => {
   it.each(scenarios)('should decide %s facing %s after retry=%s as %s', (operation, code, tentative, expected) => {
-    const refus = refusalFixture(code);
+    const refus = givenARefusal(refusalFixture, code);
 
-    const decision = decideRejeu(operation, refus, tentative);
+    const decision = whenDecidingReplay(operation, refus, tentative);
 
     thenDecisionIs(decision, expected);
   });
@@ -37,7 +37,7 @@ describe('PolitiqueDeRejeu', () => {
     new RefusDuPupitre('refus autre contexte', 'autre contexte'),
     new RefusDuPupitre('refus inconnu', 'nouvelle cause'),
   ])('should propagate failures that have no contextual exception (%s)', failure => {
-    const decision = decideRejeu('ARRIVEE_ASSUREE', failure);
+    const decision = whenDecidingReplay('ARRIVEE_ASSUREE', failure);
 
     thenDecisionIs(decision, 'PROPAGER');
   });
@@ -48,11 +48,21 @@ describe('PolitiqueDeRejeu', () => {
     [{ nature: 'PRESENCE', id: '3', dateDeSurvenue: 'date', operateurId: 'jean', type: 'REPRISE', implicite: false }, 'GESTE_EXPLICITE'],
     [{ nature: 'POINTAGE', id: '4', dateDeSurvenue: 'date', operateurId: 'jean', suiviId: 'piece', type: 'DEBUT' }, 'GESTE_EXPLICITE'],
   ])('should identify the intent of gesture %j', (geste, expected) => {
-    const operation = operationFor(geste);
+    const operation = whenIdentifyingTheGesture(geste);
 
     thenOperationIs(operation, expected);
   });
 });
+
+const givenARefusal = (
+  refusalFixture: (code: CodeDeRefusDAtelier) => RefusDAtelier | RefusDuPupitre,
+  code: CodeDeRefusDAtelier,
+): RefusDAtelier | RefusDuPupitre => refusalFixture(code);
+
+const whenDecidingReplay = (operation: OperationDAtelier, failure: unknown, attempt: 'INITIALE' | 'REJEU' = 'INITIALE'): DecisionDeRejeu =>
+  decideRejeu(operation, failure, attempt);
+
+const whenIdentifyingTheGesture = (geste: GesteLocal): OperationDAtelier => operationFor(geste);
 
 const thenDecisionIs = (decision: DecisionDeRejeu, expected: DecisionDeRejeu): void => {
   expect(decision).toBe(expected);

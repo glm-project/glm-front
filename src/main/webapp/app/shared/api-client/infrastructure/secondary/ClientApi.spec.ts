@@ -33,7 +33,7 @@ describe('ClientApi', () => {
   });
 
   it('should hand back what the server answered on the route it was asked for', async () => {
-    const lecture = api.read('/api/operateurs', { parametres: { size: PLEINE_PAGE } });
+    const lecture = whenReadingOperators();
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DOPERATEURS);
 
@@ -42,7 +42,7 @@ describe('ClientApi', () => {
   });
 
   it('should repeat a parameter the caller gave several values', async () => {
-    const lecture = api.read('/api/atelier/suivis', { parametres: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
+    const lecture = whenReadingWorkshopElementsInProgress();
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DE_SUIVIS);
 
@@ -51,7 +51,7 @@ describe('ClientApi', () => {
   });
 
   it('should leave out a parameter the caller did not fill', async () => {
-    const lecture = api.read('/api/operateurs', { parametres: { poste: AUCUN_POSTE, size: PLEINE_PAGE } });
+    const lecture = whenReadingOperatorsWithoutAWorkstation();
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DOPERATEURS);
 
@@ -60,10 +60,7 @@ describe('ClientApi', () => {
   });
 
   it('should put the path parameters the caller gave into the URL', async () => {
-    const ecriture = api.write('/api/atelier/suivis/{id}/pointages', {
-      chemin: { id: SUIVI_ID },
-      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
-    });
+    const ecriture = whenStartingWork();
 
     const requete = await whenTheServerAnswers(UN_SUIVI);
 
@@ -72,7 +69,7 @@ describe('ClientApi', () => {
   });
 
   it('should send the body the caller gave to write', async () => {
-    const ecriture = api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' } });
+    const ecriture = whenPausingWork();
 
     const requete = await whenTheServerAnswers({});
 
@@ -81,6 +78,23 @@ describe('ClientApi', () => {
   });
 
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+
+  const whenReadingOperators = (): Promise<unknown> => api.read('/api/operateurs', { parametres: { size: PLEINE_PAGE } });
+
+  const whenReadingWorkshopElementsInProgress = (): Promise<unknown> =>
+    api.read('/api/atelier/suivis', { parametres: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
+
+  const whenReadingOperatorsWithoutAWorkstation = (): Promise<unknown> =>
+    api.read('/api/operateurs', { parametres: { poste: AUCUN_POSTE, size: PLEINE_PAGE } });
+
+  const whenStartingWork = (): Promise<unknown> =>
+    api.write('/api/atelier/suivis/{id}/pointages', {
+      chemin: { id: SUIVI_ID },
+      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
+    });
+
+  const whenPausingWork = (): Promise<unknown> =>
+    api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' } });
 
   const whenTheServerAnswers = async (reponse: object): Promise<TestRequest> => {
     await unTourDeBoucle();

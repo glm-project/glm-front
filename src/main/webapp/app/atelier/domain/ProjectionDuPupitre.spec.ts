@@ -14,25 +14,28 @@ describe('ProjectionDuPupitre', () => {
   it('should reconstruct an offline activity and its original starting time', () => {
     const state = givenEvents([debutFixture]);
 
-    const projection = projectPupitre(state);
+    const projection = whenProjecting(state);
 
     thenActivityIs(projection, 'TRAVAIL', '2026-09-05T08:00:00Z');
   });
 
   it('should change category on non conformity and stop on finish', () => {
     const nonConformite = givenPointage('NON_CONFORMITE');
+    const afterCategoryChange = givenEvents([debutFixture, nonConformite]);
+    const afterFinish = givenEvents([debutFixture, nonConformite, givenPointage('FIN')]);
 
-    const projection = projectPupitre(givenEvents([debutFixture, nonConformite]));
-    const finished = projectPupitre(givenEvents([debutFixture, nonConformite, givenPointage('FIN')]));
+    const projection = whenProjecting(afterCategoryChange);
+    const finished = whenProjecting(afterFinish);
 
     thenActivityIs(projection, 'NON_CONFORMITE', '2026-09-05T08:00:00Z');
     thenStateIs(finished, 'INTERROMPU', 0);
   });
 
   it('should keep other operators active when one finishes', () => {
-    const other = { ...debutFixture, geste: { ...debutFixture.geste, id: 'debut-marie', operateurId: 'marie' } };
+    const other = givenAnotherOperatorAtWork();
+    const state = givenEvents([debutFixture, other, givenPointage('FIN')]);
 
-    const projection = projectPupitre(givenEvents([debutFixture, other, givenPointage('FIN')]));
+    const projection = whenProjecting(state);
 
     thenStateIs(projection, 'EN_COURS', 1);
   });
@@ -43,10 +46,13 @@ describe('ProjectionDuPupitre', () => {
   ])('should keep the same operator’s work on %s and %s independent when finishing or changing category', (firstPoste, otherPoste) => {
     const first = givenWorkstationPointage('DEBUT', firstPoste);
     const other = givenWorkstationPointage('DEBUT', otherPoste);
+    const afterStart = givenEvents([first, other]);
+    const afterCategoryChange = givenEvents([first, other, givenWorkstationPointage('NON_CONFORMITE', firstPoste)]);
+    const afterFinish = givenEvents([first, other, givenWorkstationPointage('FIN', firstPoste)]);
 
-    const started = projectPupitre(givenEvents([first, other]));
-    const changed = projectPupitre(givenEvents([first, other, givenWorkstationPointage('NON_CONFORMITE', firstPoste)]));
-    const finished = projectPupitre(givenEvents([first, other, givenWorkstationPointage('FIN', firstPoste)]));
+    const started = whenProjecting(afterStart);
+    const changed = whenProjecting(afterCategoryChange);
+    const finished = whenProjecting(afterFinish);
 
     thenWorkstationsAreActive(started, [firstPoste, otherPoste]);
     thenWorkstationsHaveIndependentCategories(changed, firstPoste, otherPoste);
@@ -55,15 +61,9 @@ describe('ProjectionDuPupitre', () => {
   });
 
   it('should ignore refused gestures, unrelated elements and gestures already present in the journal', () => {
-    const state = givenEvents([
-      { ...debutFixture, geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE' },
-      { ...debutFixture, geste: { ...debutFixture.geste, id: 'arrivee', nature: 'ARRIVEE' } },
-      { ...debutFixture, geste: { ...debutFixture.geste, id: 'autre-suivi', nature: 'POINTAGE', suiviId: 'absent', type: 'DEBUT' } },
-    ]);
-    state.referentiel = { ...referenceFixture, suivis: [{ ...referenceFixture.suivis[0], evenements: ['debut'] }] };
-    state.evenements.push(debutFixture);
+    const state = givenEventsWithNoRemainingEffect();
 
-    const projection = projectPupitre(state);
+    const projection = whenProjecting(state);
 
     thenStateIs(projection, 'EN_ATTENTE', 0);
   });
@@ -71,18 +71,35 @@ describe('ProjectionDuPupitre', () => {
   it('should retain an accepted gesture until a server snapshot contains it', () => {
     const state = givenEvents([{ ...debutFixture, etat: 'ACCEPTE' }]);
 
-    const projection = projectPupitre(state);
+    const projection = whenProjecting(state);
 
     thenStateIs(projection, 'EN_COURS', 1);
   });
 
   it('should expose no referential before the first complete download', () => {
-    const projection = projectPupitre({ evenements: [], connecte: true });
+    const state = givenNoDownloadedReference();
+
+    const projection = whenProjecting(state);
 
     thenReferenceIsMissing(projection);
   });
 
   const givenEvents = (evenements: EvenementLocal[]): PupitreLocal => ({ referentiel: referenceFixture, evenements, connecte: true });
+  const givenNoDownloadedReference = (): PupitreLocal => ({ evenements: [], connecte: true });
+  const givenAnotherOperatorAtWork = (): EvenementLocal => ({
+    ...debutFixture,
+    geste: { ...debutFixture.geste, id: 'debut-marie', operateurId: 'marie' },
+  });
+  const givenEventsWithNoRemainingEffect = (): PupitreLocal => ({
+    referentiel: { ...referenceFixture, suivis: [{ ...referenceFixture.suivis[0], evenements: ['debut'] }] },
+    connecte: true,
+    evenements: [
+      { ...debutFixture, geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE' },
+      { ...debutFixture, geste: { ...debutFixture.geste, id: 'arrivee', nature: 'ARRIVEE' } },
+      { ...debutFixture, geste: { ...debutFixture.geste, id: 'autre-suivi', nature: 'POINTAGE', suiviId: 'absent', type: 'DEBUT' } },
+      debutFixture,
+    ],
+  });
   const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementLocal => ({
     ...debutFixture,
     geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), type },
@@ -91,6 +108,7 @@ describe('ProjectionDuPupitre', () => {
     ...debutFixture,
     geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), posteId, type },
   });
+  const whenProjecting = (state: PupitreLocal): ReferentielDuPupitre | undefined => projectPupitre(state);
   const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {
     expect(projection?.suivis[0].activites).toHaveLength(postes.length);
     expect(projection?.suivis[0].activites).toEqual(

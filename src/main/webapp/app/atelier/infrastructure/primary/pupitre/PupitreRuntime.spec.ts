@@ -86,7 +86,7 @@ describe('PupitreRuntime', () => {
   it('should send pending gestures at startup, reconnection and every minute', async () => {
     await givenPendingGesture('demarrage');
 
-    runtime.start();
+    whenStartingPupitre();
 
     await thenServerReceived('demarrage');
     await givenPendingGesture('reconnexion');
@@ -103,9 +103,12 @@ describe('PupitreRuntime', () => {
 
   it('should leave new gestures pending after the shell is destroyed', async () => {
     await givenPendingGesture('avant-destruction');
-    runtime.start();
+
+    whenStartingPupitre();
+
     await thenServerReceived('avant-destruction');
-    runtime.ngOnDestroy();
+
+    whenDestroyingTheShell();
     await givenPendingGesture('apres-destruction');
 
     whenNetworkReturns();
@@ -117,11 +120,10 @@ describe('PupitreRuntime', () => {
 
   it('should retain a gesture after a background storage failure and send it on the next trigger', async () => {
     await givenPendingGesture('apres-panne');
-    journal.unavailable = true;
+    givenUnavailableStorage();
 
-    runtime.start();
-    await journal.synchronize(roundTrip).catch(() => undefined);
-    journal.unavailable = false;
+    await whenStartingWithoutStorage();
+    whenStorageRecovers();
 
     await thenServerReceived();
     await thenGestureRemainsPending('apres-panne');
@@ -132,6 +134,18 @@ describe('PupitreRuntime', () => {
   });
 
   const givenPendingGesture = (id: string): Promise<void> => journal.append(entrepriseFixture, [gesteFixture(id)]);
+  const givenUnavailableStorage = (): void => {
+    journal.unavailable = true;
+  };
+  const whenStartingPupitre = (): void => runtime.start();
+  const whenDestroyingTheShell = (): void => runtime.ngOnDestroy();
+  const whenStartingWithoutStorage = async (): Promise<void> => {
+    runtime.start();
+    await journal.synchronize(roundTrip).catch(() => undefined);
+  };
+  const whenStorageRecovers = (): void => {
+    journal.unavailable = false;
+  };
   const whenNetworkReturns = (): void => {
     window.dispatchEvent(new Event('online'));
   };

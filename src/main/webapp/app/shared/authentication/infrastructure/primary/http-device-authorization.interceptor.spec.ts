@@ -20,10 +20,14 @@ class AuthenticationFixture extends AuthenticationPort {
     this.token = undefined;
   }
   override synchronizeSession(): Promise<void> {
-    if (this.remoteToken !== undefined) {
-      this.token = this.remoteToken;
-    }
-    return Promise.resolve();
+    return new Promise(resolve =>
+      setTimeout(() => {
+        if (this.remoteToken !== undefined) {
+          this.token = this.remoteToken;
+        }
+        resolve();
+      }),
+    );
   }
 }
 
@@ -33,6 +37,7 @@ describe('Pupitre authorization refusal', () => {
   let client: HttpClient;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     authentication = new AuthenticationFixture();
     TestBed.configureTestingModule({
       providers: [
@@ -44,13 +49,16 @@ describe('Pupitre authorization refusal', () => {
     http = TestBed.inject(HttpTestingController);
     client = TestBed.inject(HttpClient);
   });
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
 
   it.each([401, 403])('should require reenrolment after a refused device authorization (%s)', async status => {
     const response = whenReading();
 
-    http.expectOne('/api/operateurs').flush({}, { status, statusText: 'Refused' });
-    await response;
+    await whenServerRefuses(response, status);
 
     thenReenrolmentsAre(1);
     thenTokenIs(undefined);
@@ -59,30 +67,29 @@ describe('Pupitre authorization refusal', () => {
   it('should keep its enrolment when the server or the network is unavailable', async () => {
     const response = whenReading();
 
-    http.expectOne('/api/operateurs').error(new ProgressEvent('error'));
-    await response;
+    await whenNetworkFails(response);
 
     thenReenrolmentsAre(0);
     thenTokenIs('autorise');
   });
 
   it('should leave a newer company session intact when a former request is refused', async () => {
-    const response = whenReading();
-    authentication.remoteToken = 'autre-entreprise';
+    givenAnotherCompanySessionOnDisk();
 
-    http.expectOne('/api/operateurs').flush({}, { status: 403, statusText: 'Refused' });
-    await response;
+    const response = whenReading();
+
+    await whenServerRefuses(response, 403);
 
     thenReenrolmentsAre(0);
     thenTokenIs('autre-entreprise');
   });
 
   it('should let the existing enrolment finish when there is no device token yet', async () => {
-    authentication.token = undefined;
+    givenNoDeviceTokenYet();
+
     const response = whenReading();
 
-    http.expectOne('/api/operateurs').flush({}, { status: 401, statusText: 'Refused' });
-    await response;
+    await whenServerRefuses(response, 401);
 
     thenReenrolmentsAre(0);
   });
@@ -90,12 +97,30 @@ describe('Pupitre authorization refusal', () => {
   it('should let an authorized response through', async () => {
     const response = whenReading();
 
-    http.expectOne('/api/operateurs').flush({ content: [] });
+    whenServerAuthorizes();
 
     thenResponseIs(await response);
   });
 
+  const givenAnotherCompanySessionOnDisk = (): void => {
+    authentication.remoteToken = 'autre-entreprise';
+  };
+  const givenNoDeviceTokenYet = (): void => {
+    authentication.token = undefined;
+  };
   const whenReading = (): Promise<unknown> => firstValueFrom(client.get('/api/operateurs')).catch((failure: unknown) => failure);
+  const whenServerRefuses = async (response: Promise<unknown>, status: number): Promise<void> => {
+    http.expectOne('/api/operateurs').flush({}, { status, statusText: 'Refused' });
+    await vi.runAllTimersAsync();
+    await response;
+  };
+  const whenNetworkFails = async (response: Promise<unknown>): Promise<void> => {
+    http.expectOne('/api/operateurs').error(new ProgressEvent('error'));
+    await response;
+  };
+  const whenServerAuthorizes = (): void => {
+    http.expectOne('/api/operateurs').flush({ content: [] });
+  };
   const thenReenrolmentsAre = (count: number): void => {
     expect(authentication.reenrolments).toBe(count);
   };

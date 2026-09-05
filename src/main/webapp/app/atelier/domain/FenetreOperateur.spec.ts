@@ -21,29 +21,33 @@ describe('FenetreOperateur', () => {
   });
 
   it('should resolve the operator from the company referential', () => {
-    const operateur = fenetre.operateur;
+    const operateur = whenResolvingTheOperator();
 
     thenOperatorIsJean(operateur.id);
   });
 
   it('should refuse a code absent from a cached referential or without any referential', () => {
-    thenWindowIsRefused(vueFixture);
-    thenWindowIsRefused(PUPITRE_VIDE);
+    const withReference = whenOpeningAnUnknownOperator(vueFixture);
+    const withoutReference = whenOpeningAnUnknownOperator(PUPITRE_VIDE);
+
+    thenWindowIsRefused(withReference);
+    thenWindowIsRefused(withoutReference);
   });
 
   it('should refuse a workstation outside the operator’s local qualifications', () => {
-    thenWorkstationIsRefused();
+    const refusal = whenPointingAtAnUnauthorizedWorkstation();
+
+    thenWorkstationIsRefused(refusal);
   });
 
   it('should decide the implicit arrival when executing each capture while retaining identities from the operator action', () => {
-    const first = whenPreparingPointage();
-    const second = whenPreparingPointage();
-    const preparedIdentities = new Map(identities);
-    dateDuGeste = '2026-09-05T09:00:00Z';
+    const first = givenAPreparedPointage();
+    const second = givenAPreparedPointage();
+    const preparedIdentities = givenTheRecordedIdentities();
 
-    const firstGestures = first();
-    fenetre.accept(firstGestures);
-    const secondGestures = second();
+    whenAnHourPasses();
+    const firstGestures = whenAcceptingPointage(first);
+    const secondGestures = whenCapturingPointage(second);
 
     thenGesturesAre(firstGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
     thenGesturesAre(secondGestures, ['POINTAGE']);
@@ -52,14 +56,14 @@ describe('FenetreOperateur', () => {
   });
 
   it('should keep requiring arrival until a pointage has been committed', () => {
-    const first = whenPreparingPointage();
-    const retry = whenPreparingPointage();
+    const first = givenAPreparedPointage();
+    const retry = givenAPreparedPointage();
 
-    first();
-    const presence = fenetre.preparePresence('PAUSE', identifyFixture());
-    fenetre.accept(presence);
+    whenCapturingPointage(first);
+    const presence = whenAcceptingAnExplicitPause();
+    const retriedGestures = whenCapturingPointage(retry);
 
-    thenGesturesAre(retry(), ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
+    thenGesturesAre(retriedGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
     thenOnlyExplicitPresenceIsVisible(presence);
   });
 
@@ -69,18 +73,49 @@ describe('FenetreOperateur', () => {
     identities.set(id, dateDeSurvenue);
     return { id, dateDeSurvenue };
   };
-  const whenPreparingPointage = (): (() => GesteLocal[]) =>
+  const givenAPreparedPointage = (): (() => GesteLocal[]) =>
     fenetre.preparePointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'tour' }, identifyFixture);
+  const givenTheRecordedIdentities = (): Map<string, string> => new Map(identities);
+  const whenAnHourPasses = (): void => {
+    dateDuGeste = '2026-09-05T09:00:00Z';
+  };
+  const whenResolvingTheOperator = (): FenetreOperateur['operateur'] =>
+    new FenetreOperateur('entreprise-a', structuredClone(vueFixture), '049').operateur;
+  const whenOpeningAnUnknownOperator = (vue: PupitreLocal): unknown => {
+    try {
+      return new FenetreOperateur('entreprise-a', vue, 'inconnu');
+    } catch (failure: unknown) {
+      return failure;
+    }
+  };
+  const whenPointingAtAnUnauthorizedWorkstation = (): unknown => {
+    try {
+      return fenetre.preparePointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'interdit' }, identifyFixture);
+    } catch (failure: unknown) {
+      return failure;
+    }
+  };
+  const whenCapturingPointage = (capture: () => GesteLocal[]): GesteLocal[] => capture();
+  const whenAcceptingPointage = (capture: () => GesteLocal[]): GesteLocal[] => {
+    const gestes = capture();
+    fenetre.accept(gestes);
+    return gestes;
+  };
+  const whenAcceptingAnExplicitPause = (): GesteLocal[] => {
+    const presence = fenetre.preparePresence('PAUSE', identifyFixture());
+    fenetre.accept(presence);
+    return presence;
+  };
   const thenOperatorIsJean = (id: string): void => {
     expect(id).toBe('jean');
   };
-  const thenWindowIsRefused = (vue: PupitreLocal): void => {
-    expect(() => new FenetreOperateur('entreprise-a', vue, 'inconnu')).toThrow('Matricule absent');
+  const thenWindowIsRefused = (refusal: unknown): void => {
+    expect(refusal).toBeInstanceOf(Error);
+    expect(refusal).toHaveProperty('message', expect.stringContaining('Matricule absent'));
   };
-  const thenWorkstationIsRefused = (): void => {
-    expect(() => fenetre.preparePointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'interdit' }, identifyFixture)).toThrow(
-      'habilitations',
-    );
+  const thenWorkstationIsRefused = (refusal: unknown): void => {
+    expect(refusal).toBeInstanceOf(Error);
+    expect(refusal).toHaveProperty('message', expect.stringContaining('habilitations'));
   };
   const thenGesturesAre = (gestes: GesteLocal[], natures: string[]): void => {
     expect(gestes.map(geste => geste.nature)).toEqual(natures);

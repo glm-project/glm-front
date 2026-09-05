@@ -18,6 +18,11 @@ const SAISIE_CONCURRENTE = 'une autre saisie est passee avant';
 
 type TourDuServeur = (requete: TestRequest) => void;
 
+interface PresenceAttempt {
+  pending: Promise<void>;
+  route: string;
+}
+
 const acceptant: TourDuServeur = requete => requete.flush({}, { status: 201, statusText: 'Created' });
 
 const refusant =
@@ -45,24 +50,24 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should open the working day of an operator arriving in the morning', async () => {
-    const arrivee = journees.ensureOperateurArrived(JEAN, identiteFixture);
+    const arrivee = whenEnsuringJeanHasArrived();
 
     const requete = await whenTheServerAnswersOn(URL_DES_JOURNEES, acceptant);
 
     thenItSent(requete, { operateur: JEAN });
-    await arrivee;
+    await thenItCompletes(arrivee);
   });
 
   it('should hand back when the working day it has to make sure of is already open', async () => {
-    const arrivee = journees.ensureOperateurArrived(JEAN, identiteFixture);
+    const arrivee = whenEnsuringJeanHasArrived();
 
     await whenTheServerAnswersOn(URL_DES_JOURNEES, refusant(409, 'journee-de-travail-deja-ouverte', JOURNEE_DEJA_OUVERTE));
 
-    await expect(arrivee).resolves.toBeUndefined();
+    await thenItCompletes(arrivee);
   });
 
   it('should refuse an arrival for an operator the referential does not hold', async () => {
-    const echec = echecDe(journees.ensureOperateurArrived(JEAN, identiteFixture));
+    const echec = whenEnsuringJeanHasArrivedFails();
 
     await whenTheServerAnswersOn(URL_DES_JOURNEES, refusant(404, 'operateur-introuvable', OPERATEUR_INCONNU));
 
@@ -70,24 +75,24 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should put an operator back at work when he comes off a break', async () => {
-    const reprise = journees.ensureOperateurPresent(JEAN, identiteFixture);
+    const reprise = whenEnsuringJeanIsPresent();
 
     const requete = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
 
     thenItSent(requete, { operateur: JEAN, type: 'REPRISE' });
-    await reprise;
+    await thenItCompletes(reprise);
   });
 
   it('should hand back when the operator it has to make sure of is already at work', async () => {
-    const reprise = journees.ensureOperateurPresent(JEAN, identiteFixture);
+    const reprise = whenEnsuringJeanIsPresent();
 
     await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'transition-de-presence-interdite', DEJA_AU_TRAVAIL));
 
-    await expect(reprise).resolves.toBeUndefined();
+    await thenItCompletes(reprise);
   });
 
   it('should refuse the very same transition when it is asked for as a gesture of its own', async () => {
-    const echec = echecDe(journees.recordPresence(JEAN, 'PAUSE', identiteFixture));
+    const echec = whenRecordingJeanPausingFails();
 
     await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'transition-de-presence-interdite', PAUSE_IMPOSSIBLE));
 
@@ -95,41 +100,33 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
   });
 
   it('should record the departure that closes the working day', async () => {
-    const depart = journees.recordPresence(JEAN, 'DEPART', identiteFixture);
+    const depart = whenRecordingJeanLeaving();
 
     const requete = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
 
     thenItSent(requete, { operateur: JEAN, type: 'DEPART' });
-    await depart;
+    await thenItCompletes(depart);
   });
 
   it('should replay a presence another entry slipped in front of, and record it', async () => {
-    const pause = journees.recordPresence(JEAN, 'PAUSE', identiteFixture);
+    const pause = whenRecordingJeanPausing();
 
     await whenTheServerAnswersOn(URL_DES_PRESENCES, refusant(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
     await whenTheServerAnswersOn(`/api/atelier/journees?operateur=${JEAN}&size=100`, acceptant);
     const rejeu = await whenTheServerAnswersOn(URL_DES_PRESENCES, acceptant);
 
     thenItSent(rejeu, { operateur: JEAN, type: 'PAUSE' });
-    await pause;
+    await thenItCompletes(pause);
   });
 
   it.each(['arrival', 'implicit resumption'])('should reread a concurrent %s before replaying', async gesture => {
-    let pending: Promise<void>;
-    let route: string;
-    if (gesture === 'arrival') {
-      pending = journees.ensureOperateurArrived(JEAN, identiteFixture);
-      route = URL_DES_JOURNEES;
-    } else {
-      pending = journees.ensureOperateurPresent(JEAN, identiteFixture);
-      route = URL_DES_PRESENCES;
-    }
+    const { pending, route } = whenEnsuringPresence(gesture);
 
     await whenTheServerAnswersOn(route, refusant(409, 'saisie-concurrente', SAISIE_CONCURRENTE));
     await whenTheServerAnswersOn(`/api/atelier/journees?operateur=${JEAN}&size=100`, acceptant);
     await whenTheServerAnswersOn(route, acceptant);
 
-    await expect(pending).resolves.toBeUndefined();
+    await thenItCompletes(pending);
   });
 
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -139,6 +136,17 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
       () => undefined,
       (echec: unknown) => echec,
     );
+
+  const whenEnsuringJeanHasArrived = (): Promise<void> => journees.ensureOperateurArrived(JEAN, identiteFixture);
+  const whenEnsuringJeanHasArrivedFails = (): Promise<unknown> => echecDe(whenEnsuringJeanHasArrived());
+  const whenEnsuringJeanIsPresent = (): Promise<void> => journees.ensureOperateurPresent(JEAN, identiteFixture);
+  const whenEnsuringPresence = (gesture: string): PresenceAttempt =>
+    gesture === 'arrival'
+      ? { pending: whenEnsuringJeanHasArrived(), route: URL_DES_JOURNEES }
+      : { pending: whenEnsuringJeanIsPresent(), route: URL_DES_PRESENCES };
+  const whenRecordingJeanPausing = (): Promise<void> => journees.recordPresence(JEAN, 'PAUSE', identiteFixture);
+  const whenRecordingJeanPausingFails = (): Promise<unknown> => echecDe(whenRecordingJeanPausing());
+  const whenRecordingJeanLeaving = (): Promise<void> => journees.recordPresence(JEAN, 'DEPART', identiteFixture);
 
   const whenTheServerAnswersOn = async (url: string, tour: TourDuServeur): Promise<TestRequest> => {
     await unTourDeBoucle();
@@ -151,6 +159,10 @@ describe.each(adapters)('JourneesDeTravailPort contract, honoured by %s', (_adap
 
   const thenItSent = (requete: TestRequest, body: unknown): void => {
     expect(requete.request.body).toEqual({ ...(body as object), ...identiteFixture });
+  };
+
+  const thenItCompletes = async (operation: Promise<void>): Promise<void> => {
+    await expect(operation).resolves.toBeUndefined();
   };
 
   const thenItWasRefused = (echec: unknown, code: string, message: string): void => {
