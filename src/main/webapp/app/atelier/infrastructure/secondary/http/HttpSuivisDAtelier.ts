@@ -10,25 +10,19 @@ import { buildExtraitFrom, PLAFOND_DE_PAGE } from '@/app/shared/pagination/infra
 import { inject, Injectable } from '@angular/core';
 import { send } from '../envoiDAtelier';
 
-type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
+type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
 type RestActiviteEnCours = components['schemas']['RestActiviteEnCours'];
 
 const toActiviteEnCours = (activite: RestActiviteEnCours): ActiviteEnCours =>
   new ActiviteEnCours(
     required(activite.operateur, 'activite.operateur').id,
-    required(activite.categorie, 'activite.categorie'),
-    new Date(required(activite.depuis, 'activite.depuis')),
+    activite.categorie,
+    new Date(activite.depuis),
     activite.poste?.id,
   );
 
-const toSuiviDAtelier = (suivi: RestSuiviDAtelier): SuiviDAtelier =>
-  new SuiviDAtelier(
-    required(suivi.id, 'suivi.id'),
-    required(suivi.nom, 'suivi.nom'),
-    required(suivi.etat, 'suivi.etat'),
-    required(suivi.type, 'suivi.type'),
-    (suivi.activitesEnCours ?? []).map(toActiviteEnCours),
-  );
+const toSuiviDAtelier = (suivi: RestSuiviDAtelierEnGrille): SuiviDAtelier =>
+  new SuiviDAtelier(suivi.id, suivi.nom, suivi.etat, suivi.type, suivi.activitesEnCours.map(toActiviteEnCours));
 
 @Injectable()
 export class HttpSuivisDAtelier extends SuivisDAtelierPort {

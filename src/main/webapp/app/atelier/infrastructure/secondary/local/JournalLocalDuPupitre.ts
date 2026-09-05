@@ -5,6 +5,19 @@ import { inject, Injectable } from '@angular/core';
 
 const keyFor = (entreprise: string): string => `atelier:${entreprise}`;
 
+const acceptedPointageIdsFor = (suiviId: string, evenements: EvenementLocal[]): string[] =>
+  evenements
+    .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
+    .map(evenement => evenement.geste.id);
+
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: EvenementLocal[]): ReferentielDuPupitre => ({
+  ...referentiel,
+  suivis: referentiel.suivis.map(suivi => ({
+    ...suivi,
+    evenements: [...new Set([...suivi.evenements, ...acceptedPointageIdsFor(suivi.id, evenements)])],
+  })),
+});
+
 @Injectable()
 export class JournalLocalDuPupitre extends JournalDuPupitrePort {
   private readonly stockage = inject(StockageLocalPort);
@@ -21,7 +34,10 @@ export class JournalLocalDuPupitre extends JournalDuPupitrePort {
   }
 
   override saveReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): Promise<PupitreLocal> {
-    return this.stockage.update<PupitreLocal>(keyFor(entreprise), PUPITRE_VIDE, current => ({ ...current, referentiel }));
+    return this.stockage.update<PupitreLocal>(keyFor(entreprise), PUPITRE_VIDE, current => ({
+      ...current,
+      referentiel: includeAcceptedPointages(referentiel, current.evenements),
+    }));
   }
 
   override saveResult(entreprise: string, resultat: EvenementLocal): Promise<PupitreLocal> {

@@ -10,13 +10,30 @@ const PLEINE_PAGE = 100;
 const AUCUN_POSTE = undefined;
 
 const UNE_PAGE_DOPERATEURS = {
-  content: [{ id: OPERATEUR_ID, nom: 'Dupont', prenom: 'Jean' }],
+  content: [{ id: OPERATEUR_ID, nom: 'Dupont', prenom: 'Jean', natures: [], postes: [] }],
+  currentPage: 0,
+  pageSize: 1,
   totalElementsCount: 1,
 } satisfies components['schemas']['PageRestOperateur'];
 
-const UNE_PAGE_DE_SUIVIS = { content: [], totalElementsCount: 0 } satisfies components['schemas']['PageRestSyntheseDeSuiviDAtelier'];
+const UNE_PAGE_DE_SUIVIS = {
+  content: [],
+  currentPage: 0,
+  pageSize: 0,
+  totalElementsCount: 0,
+} satisfies components['schemas']['PageRestSuiviDAtelierEnGrille'];
 
-const UN_SUIVI = { id: SUIVI_ID, etat: 'EN_COURS' } satisfies components['schemas']['RestSuiviDAtelier'];
+const UN_SUIVI = {
+  activitesEnCours: [],
+  element: 'element',
+  engageLe: '2026-09-05T08:00:00Z',
+  engagePar: 'gestionnaire',
+  etat: 'EN_COURS',
+  id: SUIVI_ID,
+  journal: [],
+  nom: 'OF-1',
+  type: 'ORDRE_DE_FABRICATION',
+} satisfies components['schemas']['RestSuiviDAtelier'];
 
 describe('ClientApi', () => {
   let api: ClientApi;

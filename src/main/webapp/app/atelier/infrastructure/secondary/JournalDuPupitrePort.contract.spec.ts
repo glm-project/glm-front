@@ -10,6 +10,10 @@ import { IDBFactory } from 'fake-indexeddb';
 import { JournalLocalDuPupitre } from './local/JournalLocalDuPupitre';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
+const refreshedReferenceFixture: ReferentielDuPupitre = {
+  operateurs: [],
+  suivis: [{ id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT', activites: [], evenements: [] }],
+};
 const arriveeFixture: GesteLocal = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
 const repriseFixture: GesteLocal = { ...arriveeFixture, id: 'reprise', nature: 'PRESENCE', type: 'REPRISE', implicite: true };
 const pointageFixture: GesteLocal = { ...arriveeFixture, id: 'pointage', nature: 'POINTAGE', type: 'DEBUT', suiviId: 'piece' };
@@ -64,6 +68,24 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
     });
   });
 
+  it('should retain its audit trail while registering accepted pointages in a fresh reference', async () => {
+    await givenAnAcceptedGestureAndAPendingOne();
+
+    const state = await whenSavingAFreshReference();
+
+    thenStateIs(state, {
+      referentiel: {
+        ...refreshedReferenceFixture,
+        suivis: [{ ...refreshedReferenceFixture.suivis[0], evenements: ['pointage'] }],
+      },
+      connecte: true,
+      evenements: [
+        { geste: pointageFixture, etat: 'ACCEPTE' },
+        { geste: repriseFixture, etat: 'EN_ATTENTE' },
+      ],
+    });
+  });
+
   it.each(['synchronize', 'withSession'] as const)('should serialize %s operations while allowing local capture', async operation => {
     const { entered, release, chronology } = givenSynchronizationSignals();
 
@@ -92,6 +114,10 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
     await journal.markDisconnected('entreprise-a');
     return { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
   };
+  const givenAnAcceptedGestureAndAPendingOne = async (): Promise<void> => {
+    await journal.append('entreprise-a', [pointageFixture, repriseFixture]);
+    await journal.saveResult('entreprise-a', { geste: pointageFixture, etat: 'ACCEPTE' });
+  };
 
   const thenOnlyTheFirstOperationRunsUntilReleased = async (
     chronology: string[],
@@ -114,6 +140,7 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
   const whenAppendingTheCompleteOpening = (): Promise<void> =>
     journal.append('entreprise-a', [arriveeFixture, repriseFixture, pointageFixture]);
   const whenAppendingArrival = (): Promise<void> => journal.append('entreprise-a', [arriveeFixture]);
+  const whenSavingAFreshReference = (): Promise<PupitreLocal> => journal.saveReferentiel('entreprise-a', refreshedReferenceFixture);
   const whenSavingARefusalWhileAppending = async (refusal: EvenementLocal): Promise<void> => {
     await Promise.all([journal.saveResult('entreprise-a', refusal), journal.append('entreprise-a', [pointageFixture])]);
   };

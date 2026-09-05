@@ -2,6 +2,7 @@ import { decideRejeu, DecisionDeRejeu } from '@/app/atelier/domain/PolitiqueDeRe
 import { GesteLocal, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
+import { components } from '@/app/generated/schema';
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { provideHttpClient } from '@angular/common/http';
@@ -9,8 +10,46 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { HttpServeurDuPupitre } from './http/HttpServeurDuPupitre';
 
-const operateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
-const suiviFixture = { id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT' };
+type RestOperateur = components['schemas']['RestOperateur'];
+type RestOperateurDAtelier = components['schemas']['RestOperateurDAtelier'];
+type RestPosteDAtelier = components['schemas']['RestPosteDAtelier'];
+type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
+type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
+
+const operateurFixture = {
+  id: 'jean',
+  nom: 'Dupont',
+  prenom: 'Jean',
+  matricule: '049',
+  natures: [],
+  postes: [],
+} satisfies RestOperateur;
+const operateurDAtelierFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean' } satisfies RestOperateurDAtelier;
+const posteDAtelierFixture = { id: 'tour', libelle: 'Tour' } satisfies RestPosteDAtelier;
+const suiviFixture = {
+  activitesEnCours: [],
+  element: 'element',
+  engageLe: '2026-09-05T07:30:00Z',
+  engagePar: 'gestionnaire',
+  etat: 'EN_ATTENTE',
+  id: 'piece',
+  nom: 'OF-1',
+  type: 'PRODUIT',
+} satisfies RestSuiviDAtelierEnGrille;
+const secondSuiviFixture = {
+  ...suiviFixture,
+  id: 'piece-2',
+  activitesEnCours: [
+    {
+      operateur: operateurDAtelierFixture,
+      categorie: 'TRAVAIL',
+      depuis: '2026-09-05T08:00:00Z',
+      poste: posteDAtelierFixture,
+    },
+    { operateur: operateurDAtelierFixture, categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
+  ],
+} satisfies RestSuiviDAtelierEnGrille;
+const suiviDetailleFixture = { ...suiviFixture, journal: [] } satisfies RestSuiviDAtelier;
 const arriveeFixture: GesteLocal = { nature: 'ARRIVEE', id: 'geste', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
 const adapters = [['HTTP', () => TestBed.inject(HttpServeurDuPupitre)]] as const;
 interface PageFixture {
@@ -165,26 +204,13 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
       {
         url: '/api/operateurs',
         page: 1,
-        content: [{ ...operateurFixture, id: 'marie', postes: [{ id: 'tour', libelle: 'Tour' }] }],
-        totalElementsCount: 2,
-      },
-      { url: '/api/atelier/suivis', page: 0, content: [suiviFixture], totalElementsCount: 2 },
-      {
-        url: '/api/atelier/suivis',
-        page: 1,
         content: [
-          {
-            ...suiviFixture,
-            id: 'piece-2',
-            journal: [{ id: 'ancien' }],
-            activitesEnCours: [
-              { operateur: operateurFixture, categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', poste: { id: 'tour' } },
-              { operateur: operateurFixture, categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
-            ],
-          },
+          { ...operateurFixture, id: 'marie', natures: ['tournage'], postes: [{ id: 'tour', libelle: 'Tour', nature: 'tournage' }] },
         ],
         totalElementsCount: 2,
       },
+      { url: '/api/atelier/suivis', page: 0, content: [suiviFixture], totalElementsCount: 2 },
+      { url: '/api/atelier/suivis', page: 1, content: [secondSuiviFixture], totalElementsCount: 2 },
     ];
   };
   const observeRejection = <T>(operation: Promise<T>): Promise<T> => {
@@ -228,7 +254,7 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
   ): Promise<ReturnType<HttpTestingController['expectOne']>> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne(request => request.url === url && request.params.get('page') === String(page));
-    request.flush({ content, totalElementsCount });
+    request.flush({ content, currentPage: page, pageSize: 100, totalElementsCount });
     return request;
   };
   const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
@@ -248,13 +274,13 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
   const whenServerReturnsOperatorDay = async (): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne(request => request.url === '/api/atelier/journees');
-    request.flush({ content: [] });
+    request.flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
     return request;
   };
   const whenServerReturnsWorkshopElement = async (): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne('/api/atelier/suivis/piece');
-    request.flush(suiviFixture);
+    request.flush(suiviDetailleFixture);
     return request;
   };
   const thenPagesHaveNoOperatorFilter = (pages: TestRequest[]): void => {
@@ -273,7 +299,6 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
     expect(reference.operateurs).toHaveLength(2);
     expect(reference.operateurs[1].postes).toEqual([{ id: 'tour', libelle: 'Tour' }]);
     expect(reference.suivis).toHaveLength(2);
-    expect(reference.suivis[1].evenements).toEqual(['ancien']);
     expect(reference.suivis[1].activites[0].posteId).toBe('tour');
     expect(reference.suivis[1].activites[1].posteId).toBeUndefined();
   };

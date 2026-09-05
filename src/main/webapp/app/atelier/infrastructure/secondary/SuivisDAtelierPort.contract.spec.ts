@@ -11,6 +11,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpSuivisDAtelier } from './http/HttpSuivisDAtelier';
 
 type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
+type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
 
 const PAGE_PAR_DEFAUT_DU_SERVEUR = 20;
 const PAGE_MAXIMALE_DU_SERVEUR = 100;
@@ -22,19 +23,27 @@ const MARIE = '9f8e7d6c-5b4a-3210-9876-543210fedcba';
 const HUIT_HEURES = '2026-05-11T06:00:00Z';
 const NEUF_HEURES_TRENTE = new Date('2026-05-11T07:30:00Z');
 const UNE_HEURE_ET_DEMIE = 90 * 60 * 1000;
+const ENGAGEMENT = {
+  activitesEnCours: [],
+  element: '4b163228-dadd-4819-b022-1c88583e2b5c',
+  engageLe: '2026-05-11T05:30:00Z',
+  engagePar: 'gestionnaire.impeccmold',
+};
 
 const TOUR_1 = { id: '11111111-2222-3333-4444-555555555555', libelle: 'Tour 1', nature: 'tournage' };
 const JEAN_DUPONT = { id: JEAN, nom: 'Dupont', prenom: 'Jean' };
 const MARIE_MARTIN = { id: MARIE, nom: 'Martin', prenom: 'Marie' };
 
 const UN_ELEMENT_QUE_PERSONNE_N_A_COMMENCE = {
+  ...ENGAGEMENT,
   id: 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e',
   nom: 'OF-2026-000042',
   etat: 'EN_ATTENTE',
   type: 'ORDRE_DE_FABRICATION',
-} satisfies RestSuiviDAtelier;
+} satisfies RestSuiviDAtelierEnGrille;
 
 const UN_ELEMENT_QUE_JEAN_TRAVAILLE = {
+  ...ENGAGEMENT,
   id: 'c8e1d3ef-2a3b-4d5c-8e9f-0a1b2c3d4e5f',
   nom: 'OF-2026-000043',
   etat: 'EN_COURS',
@@ -43,26 +52,28 @@ const UN_ELEMENT_QUE_JEAN_TRAVAILLE = {
     { operateur: MARIE_MARTIN, categorie: 'NON_CONFORMITE', depuis: HUIT_HEURES, poste: TOUR_1 },
     { operateur: JEAN_DUPONT, categorie: 'TRAVAIL', depuis: HUIT_HEURES, poste: TOUR_1 },
   ],
-} satisfies RestSuiviDAtelier;
+} satisfies RestSuiviDAtelierEnGrille;
 
 const UN_ELEMENT_TRAVAILLE_SANS_MACHINE = {
+  ...ENGAGEMENT,
   id: 'd9f2e4a0-3b4c-5e6d-9f0a-1b2c3d4e5f60',
   nom: 'OF-2026-000044',
   etat: 'EN_COURS',
   type: 'ORDRE_DE_FABRICATION',
   activitesEnCours: [{ operateur: JEAN_DUPONT, categorie: 'TRAVAIL', depuis: HUIT_HEURES }],
-} satisfies RestSuiviDAtelier;
+} satisfies RestSuiviDAtelierEnGrille;
 
 const UN_ELEMENT_CLOTURE = {
+  ...ENGAGEMENT,
   id: 'e0a3f5b1-4c5d-6f70-a1b2-c3d4e5f60718',
   nom: 'OF-2026-000041',
   etat: 'CLOTURE',
   type: 'ORDRE_DE_FABRICATION',
-} satisfies RestSuiviDAtelier;
+} satisfies RestSuiviDAtelierEnGrille;
 
-const UN_ELEMENT_SANS_IDENTIFIANT = { nom: 'OF-2026-000045', etat: 'EN_ATTENTE', type: 'PRODUIT' } satisfies RestSuiviDAtelier;
+const UN_SUIVI_DETAILLE = { ...UN_ELEMENT_QUE_JEAN_TRAVAILLE, journal: [] } satisfies RestSuiviDAtelier;
 
-const unAtelierFixture = (nombre: number): RestSuiviDAtelier[] =>
+const unAtelierFixture = (nombre: number): RestSuiviDAtelierEnGrille[] =>
   Array.from({ length: nombre }, (_, rang) => ({ ...UN_ELEMENT_QUE_PERSONNE_N_A_COMMENCE, id: `suivi-${rang}` }));
 
 const SUIVI_ID = UN_ELEMENT_QUE_JEAN_TRAVAILLE.id;
@@ -97,7 +108,7 @@ const adapters: [string, () => SuivisDAtelierPort][] = [['http', () => TestBed.i
 describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter, buildSuivis) => {
   let suivis: SuivisDAtelierPort;
   let serveur: HttpTestingController;
-  let atelierFixture: RestSuiviDAtelier[];
+  let atelierFixture: RestSuiviDAtelierEnGrille[];
   let toursDuServeur: TourDuServeur[];
 
   beforeEach(() => {
@@ -174,14 +185,6 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     const lecture = await whenReadingTheWorkshop();
 
     thenItSaysItMissesSome(lecture, PLUS_QUE_LE_SERVEUR_N_EN_REND);
-  });
-
-  it('should refuse an element the server sent without the identifier its URLs carry', () => {
-    givenTheWorkshopHolds([UN_ELEMENT_SANS_IDENTIFIANT]);
-
-    const lecture = whenReadingTheWorkshop();
-
-    return thenReadingFailsOnMissingIdentifier(lecture);
   });
 
   it('should record the operator starting to work on the element', async () => {
@@ -264,7 +267,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
       (echec: unknown) => echec,
     );
 
-  const givenTheWorkshopHolds = (atelier: RestSuiviDAtelier[]): void => {
+  const givenTheWorkshopHolds = (atelier: RestSuiviDAtelierEnGrille[]): void => {
     atelierFixture = atelier;
   };
   const givenTheServerAcceptsTheClocking = (): void => {
@@ -304,7 +307,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
       tour(request);
       if (index < toursDuServeur.length - 1) {
         await unTourDeBoucle();
-        serveur.expectOne(`/api/atelier/suivis/${SUIVI_ID}`).flush(UN_ELEMENT_QUE_JEAN_TRAVAILLE);
+        serveur.expectOne(`/api/atelier/suivis/${SUIVI_ID}`).flush(UN_SUIVI_DETAILLE);
       }
     }
 
@@ -333,18 +336,19 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     const requete = serveur.expectOne(demande => demande.url === '/api/atelier/suivis');
     const etats = requete.request.params.getAll('etats') ?? [];
     const demandee = Number(requete.request.params.get('size') ?? PAGE_PAR_DEFAUT_DU_SERVEUR);
-    const engages = atelierFixture.filter(suivi => etats.includes(suivi.etat ?? ''));
+    const engages = atelierFixture.filter(suivi => etats.includes(suivi.etat));
 
     if (demandee > PAGE_MAXIMALE_DU_SERVEUR) {
       requete.flush(null, { status: 500, statusText: 'la taille de page demandée dépasse le plafond du serveur' });
       return;
     }
 
-    requete.flush({ content: engages.slice(0, demandee), totalElementsCount: engages.length });
-  };
-
-  const thenReadingFailsOnMissingIdentifier = async (lecture: Promise<Extrait<SuiviDAtelier>>): Promise<void> => {
-    await expect(lecture).rejects.toThrow('suivi.id');
+    requete.flush({
+      content: engages.slice(0, demandee),
+      currentPage: 0,
+      pageSize: demandee,
+      totalElementsCount: engages.length,
+    });
   };
 
   const thenItReadTheWaitingElement = (extrait: Extrait<SuiviDAtelier>): void => {

@@ -22,9 +22,9 @@ exception described in [`authentication.md`](authentication.md).
 Keep generated response types in `infrastructure/secondary`. Translate them into hand-written domain
 models before returning through a port.
 
-The back currently marks many response fields optional. Use `required(value, 'field.path')` at the adapter
-boundary for every field the domain requires. Guard only responses; generated request bodies already express
-their required fields.
+The generated response contract distinguishes guaranteed fields from genuinely optional projections. Read
+guaranteed fields directly and guard only an optional field that the domain cannot represent without a value.
+Generated request bodies already express their required fields.
 
 Assign compatible wire literals directly to domain unions. TypeScript then fails when the wire union widens;
 do not duplicate it in a mapping table without a semantic translation.
