@@ -25,4 +25,6 @@ bootstrapApplication(App, {
     offlineProvider,
     provideServiceWorker('ngsw-worker.js', { enabled: environment.production, registrationStrategy: 'registerWhenStable:30000' }),
   ],
-}).catch((err: unknown) => console.error(err));
+}).catch((err: unknown) => {
+  console.error(err);
+});

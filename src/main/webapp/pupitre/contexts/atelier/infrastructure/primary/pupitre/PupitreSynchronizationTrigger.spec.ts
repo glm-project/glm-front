@@ -145,8 +145,12 @@ describe('PupitreSynchronizationTrigger', () => {
   const givenUnavailableStorage = (): void => {
     journal.unavailable = true;
   };
-  const whenStartingPupitre = (): void => synchronizationTrigger.start();
-  const whenDestroyingTheShell = (): void => synchronizationTrigger.ngOnDestroy();
+  const whenStartingPupitre = (): void => {
+    synchronizationTrigger.start();
+  };
+  const whenDestroyingTheShell = (): void => {
+    synchronizationTrigger.ngOnDestroy();
+  };
   const whenStartingWithoutStorage = async (): Promise<void> => {
     synchronizationTrigger.start();
     await journal.synchronize(roundTrip).catch(() => undefined);

@@ -8,6 +8,7 @@ import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { HttpPupitreServer } from './http/HttpPupitreServer';
 
 type RestOperateur = components['schemas']['RestOperateur'];
@@ -15,6 +16,9 @@ type RestOperateurDAtelier = components['schemas']['RestOperateurDAtelier'];
 type RestPosteDAtelier = components['schemas']['RestPosteDAtelier'];
 type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
 type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
+type UnstableReferenceKind = 'count' | 'empty' | 'duplicate' | 'overflow';
+
+const UNSTABLE_REFERENCE_KINDS = ['count', 'empty', 'duplicate', 'overflow'] satisfies UnstableReferenceKind[];
 
 const operateurFixture = {
   id: 'jean',
@@ -23,6 +27,13 @@ const operateurFixture = {
   matricule: '049',
   natures: [],
   postes: [],
+} satisfies RestOperateur;
+const operateurSansMatriculeFixture = {
+  id: 'marie',
+  nom: 'Martin',
+  prenom: 'Marie',
+  natures: ['tournage'],
+  postes: [{ id: 'tour', libelle: 'Tour', nature: 'tournage' }],
 } satisfies RestOperateur;
 const operateurDAtelierFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean' } satisfies RestOperateurDAtelier;
 const posteDAtelierFixture = { id: 'tour', libelle: 'Tour' } satisfies RestPosteDAtelier;
@@ -80,7 +91,9 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
     http = TestBed.inject(HttpTestingController);
     referencePages = [];
   });
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+  });
 
   it('should cache all pages of operators and workshop elements without filtering by operator', async () => {
     givenCompleteReferencePagesFixture();
@@ -93,7 +106,7 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
     await thenReferenceIsComplete(reference);
   });
 
-  it.each(['count', 'empty', 'duplicate', 'overflow'])('should reject a partial or unstable referential (%s)', async kind => {
+  it.each(UNSTABLE_REFERENCE_KINDS)('should reject a partial or unstable referential (%s)', async kind => {
     const reference = whenReadingReference();
 
     await whenServerReturnsAnUnstableReference(kind);
@@ -144,6 +157,15 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
       operateur: 'jean',
       type: 'DEBUT',
       poste: 'tour',
+    });
+
+    const pointageSansPoste = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
+    const pointageSansPosteRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+    await thenWriteSucceededWith(pointageSansPoste, pointageSansPosteRequest, {
+      id: 'geste',
+      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      operateur: 'jean',
+      type: 'FIN',
     });
   });
 
@@ -201,14 +223,7 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
   const givenCompleteReferencePagesFixture = (): void => {
     referencePages = [
       { url: '/api/operateurs', page: 0, content: [operateurFixture], totalElementsCount: 2 },
-      {
-        url: '/api/operateurs',
-        page: 1,
-        content: [
-          { ...operateurFixture, id: 'marie', natures: ['tournage'], postes: [{ id: 'tour', libelle: 'Tour', nature: 'tournage' }] },
-        ],
-        totalElementsCount: 2,
-      },
+      { url: '/api/operateurs', page: 1, content: [operateurSansMatriculeFixture], totalElementsCount: 2 },
       { url: '/api/atelier/suivis', page: 0, content: [suiviFixture], totalElementsCount: 2 },
       { url: '/api/atelier/suivis', page: 1, content: [secondSuiviFixture], totalElementsCount: 2 },
     ];
@@ -227,9 +242,9 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
     }
     return requests;
   };
-  const whenServerReturnsAnUnstableReference = async (kind: string): Promise<void> => {
+  const whenServerReturnsAnUnstableReference = async (kind: UnstableReferenceKind): Promise<void> => {
     await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 2);
-    const unstablePages: Record<string, PageFixture> = {
+    const unstablePages: Record<UnstableReferenceKind, PageFixture> = {
       count: { url: '/api/operateurs', page: 1, content: [{ ...operateurFixture, id: 'marie' }], totalElementsCount: 3 },
       empty: { url: '/api/operateurs', page: 1, content: [], totalElementsCount: 2 },
       duplicate: { url: '/api/operateurs', page: 1, content: [operateurFixture], totalElementsCount: 2 },
@@ -284,7 +299,9 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
     return request;
   };
   const thenPagesHaveNoOperatorFilter = (pages: TestRequest[]): void => {
-    pages.forEach(page => expect(page.request.params.has('operateur')).toBe(false));
+    pages.forEach(page => {
+      expect(page.request.params.has('operateur')).toBe(false);
+    });
   };
   const thenWriteSucceededWith = async (
     write: Promise<void>,
@@ -297,10 +314,13 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
     expect(reference.operateurs).toHaveLength(2);
-    expect(reference.operateurs[1].postes).toEqual([{ id: 'tour', libelle: 'Tour' }]);
+    const secondOperator = requiredFixture(reference.operateurs[1], 'second operator');
+    expect(secondOperator.postes).toEqual([{ id: 'tour', libelle: 'Tour' }]);
+    expect(secondOperator.matricule).toBeUndefined();
     expect(reference.suivis).toHaveLength(2);
-    expect(reference.suivis[1].activites[0].posteId).toBe('tour');
-    expect(reference.suivis[1].activites[1].posteId).toBeUndefined();
+    const activities = requiredFixture(reference.suivis[1], 'second workshop element').activites;
+    expect(requiredFixture(activities[0], 'workstation activity').posteId).toBe('tour');
+    expect(requiredFixture(activities[1], 'activity without workstation').posteId).toBeUndefined();
   };
   const thenItFailed = async (operation: Promise<unknown>): Promise<void> => {
     await expect(operation).rejects.toBeInstanceOf(Error);

@@ -22,6 +22,22 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
    needing an existing enrolment seed it through `PupitreStorageFixture`, preserving the real restoration
    and signing path without repeating enrolment.
 
+4. **Production offline restart (Cypress + Chrome)** —
+   `src/test/webapp/application/pupitre/production-offline/*.spec.ts`, against the normal optimized pupitre
+   output and its generated Angular service worker. This deliberately expensive suite is separate from
+   `test:application`: `npm run test:production-offline` builds the shipped artifact, disables Chrome's HTTP
+   cache, clears the origin, waits for an activated and controlling worker, and cuts the browser network over
+   CDP. An uncached request to a URL outside the worker manifest must fail before an offline restart counts as
+   evidence. The companion run makes `ngsw-worker.js` unavailable and proves that the same restart cannot
+   mount the shell.
+
+   The static fixture server supplies deterministic API and RFC 8628 responses; it is not a backend or
+   Keycloak substitute in the application graph. `/` always serves the unmodified production artifact. A
+   separately compiled page at `/__fixture` shares its origin and prepares or reads durable state through
+   `PupitreJournalPort`; it does not know IndexedDB names, stores or document keys. The driver recreates the
+   production app in child browsing contexts so Cypress remains alive while Chrome is offline. JUnit, server
+   exchange and duration evidence is written below `artifacts/production-offline/` and uploaded by CI.
+
 Both Cypress layers share their helpers from `src/test/webapp/utils/`: `dataSelector` and `interceptForever`,
 the latter controlling response timing. The folder carries its own `tsconfig.json` because those helpers are
 Cypress-typed, where the Vitest specs next door are not.
@@ -146,3 +162,33 @@ intact. Moving a file or renaming a public method may require updating imports o
 not a testing defect. Changing private helpers, internal state representation or orchestration must leave
 the expected business result intact. For example, assert that the last digits are visible and the operator
 can scroll back, rather than fabricating a width and asserting the component's exact scroll assignment.
+
+## Mutation checks the replay policy through Angular
+
+`npm run test:mutation:replay` mutates only `PupitreReplayPolicy.ts` and runs its business scenarios through
+`ng test --watch=false --include`. Stryker's built-in command runner keeps the Angular builder's zoneless
+TestBed and JIT setup; a direct Vitest runner does not establish that environment. One worker gives every
+sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.
+
+The command runner has no per-test instrumentation, so `coverageAnalysis` is off. Its report cannot
+distinguish a mutant that was not executed from one that executed and survived: a displayed zero
+`NoCoverage` count is therefore not evidence of mutation coverage. Keep the regular Istanbul 100 %
+per-file gate as separate source-coverage evidence. The TypeScript checker uses `tsconfig.stryker.json` to
+classify invalid mutations as `CompileError`; Stryker separately reports killed valid mutants, survivors and
+timeouts.
+
+The initial measurement generated 58 mutants in 93.49 seconds: 56 were killed and two survived. Inspecting
+the survivors found that the test helper copied the production default attempt, so no scenario called the
+real default. After adding that observable concurrency scenario, the unchecked run killed 57 mutants and
+left one type-invalid conditional survivor. With the TypeScript checker enabled, the final measured run
+completed in 78.22 seconds with 34 killed valid mutants, 24 compile errors, no survivors and no timeouts. The score is
+100 % over valid mutants; the conditional that looked equivalent for valid `LocalGeste` values cannot type
+check once its narrowing guard is removed, so no equivalent mutant is suppressed. The blocking threshold is
+therefore 100 %. A diagnostic run at a temporary 99 % threshold failed with exit code 1 when the unchecked
+score was 98.28 %, proving that a score below the configured gate fails the command.
+
+HTML and JSON reports are written under `reports/mutation/`. The `mutation-testing` workflow runs manually
+and every Monday, records its duration beside those reports and uploads the directory as a CI artifact. It
+does not run on pushes or pull requests. Extend mutation to projections or operator windows only after a
+bounded report identifies the next useful decision surface. [ADR 0018](adr/0018-run-replay-mutation-through-angular.md)
+records the runner choice and its costs.

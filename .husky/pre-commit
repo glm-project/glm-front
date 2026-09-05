@@ -1,1 +1,1 @@
-lint-staged
+npm run measure -- pre-commit -- npm run validate:commit

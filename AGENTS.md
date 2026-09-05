@@ -17,11 +17,15 @@ ng test --watch=false --filter 'Pupitre shell'
 npm run test:coverage -- --watch=false
 npm run test:component
 npm run test:application
+npm run test:production-offline # production pupitre + real Chrome service worker; owns ports 9010, 9011 and 9080
 
 npm run lint
 npm run prettier:check
-npx tsc --noEmit
+npm run typecheck
+npm run typecheck:watch
 npm run api:generate       # requires authenticated `gh`
+npm run validate:quick
+npm run validate:complete  # coverage, builds, then serial browser suites
 ```
 
 ## Traps that cost
@@ -58,6 +62,7 @@ The workflow in `.github/workflows/github-actions.yml` is the source of truth fo
 - Material: before changing a Material theme, component or token bridge → `documentation/material.md`
 - Icons: before adding or changing an icon → `documentation/icons.md`
 - Git and MR: before branching, committing or opening an MR → `documentation/git-and-mr.md`
+- Validation: before changing hooks, CI checks, security scans or validation commands → `documentation/validation.md`
 - ADRs: before introducing a dependency, pattern or convention → `documentation/adr/README.md`
 - Issue tracker: before creating, reading or organizing issues → `docs/agents/issue-tracker.md`
 - Triage labels: before triaging or applying readiness labels → `docs/agents/triage-labels.md`

@@ -158,6 +158,17 @@
                 }
               ]
             },
+            "production-offline-fixture": {
+              "browser": "src/test/webapp/application/pupitre/production-offline/fixtures/main.ts",
+              "deployUrl": "/__fixture-assets/",
+              "index": "src/test/webapp/application/pupitre/production-offline/fixtures/index.html",
+              "outputPath": {
+                "base": "target/production-offline-fixture",
+                "browser": ""
+              },
+              "serviceWorker": false,
+              "styles": []
+            },
             "component-cypress": {
               "optimization": false,
               "extractLicenses": false,
@@ -217,5 +228,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

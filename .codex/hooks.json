@@ -1,0 +1,17 @@
+{
+  "description": "Validate the repository when Codex finishes a turn.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/codex-stop-validation.mjs\"",
+            "timeout": 3600,
+            "statusMessage": "Running complete repository validation"
+          }
+        ]
+      }
+    ]
+  }
+}

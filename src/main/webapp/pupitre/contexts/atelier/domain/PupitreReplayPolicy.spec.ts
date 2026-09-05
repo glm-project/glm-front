@@ -29,6 +29,14 @@ describe.each(refusFixtures)('PupitreReplayPolicy for %s refusals', (_name, refu
 
     thenDecisionIs(decision, expected);
   });
+
+  it('should reread and replay a concurrent initial attempt by default', () => {
+    const refus = givenARefusal(refusalFixture, 'saisie-concurrente');
+
+    const decision = whenDecidingReplay('GESTE_EXPLICITE', refus);
+
+    thenDecisionIs(decision, 'RELIRE_ET_REJOUER');
+  });
 });
 
 describe('PupitreReplayPolicy', () => {
@@ -59,8 +67,12 @@ const givenARefusal = (
   code: CodeDeRefusDAtelier,
 ): RefusDAtelier | RefusDuPupitre => refusalFixture(code);
 
-const whenDecidingReplay = (operation: OperationDAtelier, failure: unknown, attempt: 'INITIALE' | 'REJEU' = 'INITIALE'): ReplayDecision =>
-  decideReplay(operation, failure, attempt);
+const whenDecidingReplay = (operation: OperationDAtelier, failure: unknown, attempt?: 'INITIALE' | 'REJEU'): ReplayDecision => {
+  if (attempt === undefined) {
+    return decideReplay(operation, failure);
+  }
+  return decideReplay(operation, failure, attempt);
+};
 
 const whenIdentifyingTheGesture = (geste: LocalGeste): OperationDAtelier => operationFor(geste);
 

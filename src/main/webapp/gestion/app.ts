@@ -1,6 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { NgOptimizedImage } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, ErrorHandler, inject, OnInit, signal } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
 
@@ -16,9 +16,12 @@ import { GestionHeader } from './header/header';
 export class App implements OnInit {
   appName = signal('');
   private readonly authentication = inject(AuthenticationPort);
+  private readonly errorHandler = inject(ErrorHandler);
 
   ngOnInit(): void {
     this.appName.set('glmfront');
-    this.authentication.authenticate();
+    this.authentication.authenticate().catch((failure: unknown) => {
+      this.errorHandler.handleError(failure);
+    });
   }
 }

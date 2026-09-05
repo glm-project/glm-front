@@ -4,9 +4,29 @@ Rules for generated contracts, HTTP adapters, pagination and business refusals.
 
 ## Generate the wire contract in each workspace
 
-`npm run api:generate` downloads `glm-back`'s OpenAPI document through authenticated `gh`, generates
-`app/generated/schema.d.ts`, and formats both files. CI runs the same command in every job that needs the
-contract. The generated files are local build inputs and are ignored by Git.
+`.glm-back-revision` contains the full immutable commit SHA of `glm-back` used by this front revision.
+`npm run api:generate` downloads the OpenAPI document at that exact commit through authenticated `gh`,
+generates `app/generated/schema.d.ts`, and formats both files. CI runs the same command in every job that
+needs the contract.
+
+Generation happens in a sibling staging directory. A malformed, missing or inaccessible revision, a failed
+download, invalid OpenAPI or failed formatting leaves the previous generated files in place and exits with
+an explicit error. Only a complete contract and type declaration replace the previous pair. Other files in
+`app/generated/` are preserved. The generated files are local build inputs and are ignored by Git.
+
+To update the backend contract:
+
+1. Resolve the intended backend commit with
+   `gh api repos/glm-project/glm-back/commits/<ref> --jq .sha` and put the returned 40-character SHA in
+   `.glm-back-revision`. Never put a branch or tag there.
+2. Run `mise exec -- npm ci`, then `mise exec -- npm run api:generate`.
+3. Run the generation twice and compare SHA-256 hashes of `app/generated/openapi.json` and
+   `app/generated/schema.d.ts`; both runs must be byte-identical.
+4. Run lint, Prettier, all TypeScript scopes, coverage, component tests, application tests and the production
+   build. Review compilation failures as the visible front impact of the backend change.
+
+A separate compatibility check may generate from the latest backend revision, but it must use a temporary
+revision and workspace. It does not replace the pinned validation and does not update `.glm-back-revision`.
 
 `app/generated/` deliberately has no `package-info.ts`. It remains under `app/` so the architecture project
 can resolve imports from it: secondary adapters may use wire types, while domain imports fail the dependency

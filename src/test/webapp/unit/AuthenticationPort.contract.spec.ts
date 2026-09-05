@@ -8,6 +8,7 @@ import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastruc
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import Keycloak from 'keycloak-js';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { MockInstance } from 'vitest';
@@ -16,15 +17,17 @@ const KEYCLOAK_TOKEN = '1a2b3c';
 const RENEWED_KEYCLOAK_TOKEN = '4d5e6f';
 
 type RefreshOutcome = 'renews' | 'keeps' | 'fails';
+type LogoutOutcome = 'ends' | 'fails';
 
 interface KeycloakSession {
   opensSession?: boolean;
   refresh?: RefreshOutcome;
+  logout?: LogoutOutcome;
 }
 
 const afterARoundTrip = <T>(outcome: () => Promise<T>): Promise<T> => new Promise<void>(resolve => setTimeout(resolve)).then(outcome);
 
-const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps' }: KeycloakSession = {}): Keycloak => {
+const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps', logout = 'ends' }: KeycloakSession = {}): Keycloak => {
   let token: string | undefined;
 
   const refreshOutcomes: Record<RefreshOutcome, () => Promise<boolean>> = {
@@ -36,6 +39,10 @@ const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps' }: Keyc
     keeps: () => afterARoundTrip(() => Promise.resolve(false)),
     fails: () => afterARoundTrip(() => Promise.reject(new Error('refresh refused'))),
   };
+  const logoutOutcomes: Record<LogoutOutcome, () => Promise<void>> = {
+    ends: () => afterARoundTrip(() => Promise.resolve()),
+    fails: () => afterARoundTrip(() => Promise.reject(new Error('logout refused'))),
+  };
 
   return {
     init: () =>
@@ -46,7 +53,7 @@ const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps' }: Keyc
     updateToken: refreshOutcomes[refresh],
     logout: () => {
       token = undefined;
-      return Promise.resolve();
+      return logoutOutcomes[logout]();
     },
     get token() {
       return token;
@@ -146,7 +153,7 @@ const scriptOf = (turns: ServerTurn[]): ServerTurn => {
   return () => {
     const turn = turns[Math.min(taken, turns.length - 1)];
     taken += 1;
-    return turn();
+    return requiredFixture(turn, 'authorization server turn')();
   };
 };
 
@@ -388,16 +395,33 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     thenTokenIs(authentication, KEYCLOAK_TOKEN);
   });
 
+  it('should report when Keycloak cannot complete logout', async () => {
+    const authentication = givenKeycloakCannotEndTheSession();
+    await whenAuthenticating(authentication);
+
+    whenEndingTheSession(authentication);
+    await whenAKeycloakRoundTripCompletes();
+
+    thenTheLogoutFailureWasReported();
+  });
+
   const givenKeycloakOpensNoSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }));
   const givenKeycloakRenewsTheSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'renews' }));
   const givenKeycloakCannotRefreshTheSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'fails' }));
+  const givenKeycloakCannotEndTheSession = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ logout: 'fails' }));
   const whenAuthenticating = (authentication: AuthenticationPort): Promise<void> => authentication.authenticate();
+  const whenEndingTheSession = (authentication: AuthenticationPort): void => authentication.logout();
+  const whenAKeycloakRoundTripCompletes = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
   const thenNoTokenIsAvailable = (authentication: AuthenticationPort): void => expect(authentication.currentToken()).toBeUndefined();
   const thenTheWindowReloads = (): void => {
     expect(reloadWindow).toHaveBeenCalled();
+  };
+  const thenTheLogoutFailureWasReported = (): void => {
+    expect(consoleErrorFixture).toHaveBeenCalledWith('Failed to end Keycloak session', new Error('logout refused'));
   };
   const thenTokenIs = (authentication: AuthenticationPort, token: string): void => expect(authentication.currentToken()).toEqual(token);
 });

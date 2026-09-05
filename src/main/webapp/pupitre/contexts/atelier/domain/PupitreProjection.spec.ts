@@ -1,5 +1,12 @@
-import { LocalEvent, LocalPupitreState, ReferentielDuPupitre } from './LocalPupitreState';
+import { LocalEvent, LocalPointage, LocalPupitreState, ReferentielDuPupitre } from './LocalPupitreState';
 import { projectPupitre } from './PupitreProjection';
+
+const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
+  if (value === null || value === undefined) {
+    throw new Error(`Missing ${description} fixture.`);
+  }
+  return value;
+};
 
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [],
@@ -91,7 +98,10 @@ describe('PupitreProjection', () => {
     geste: { ...debutFixture.geste, id: 'debut-marie', operateurId: 'marie' },
   });
   const givenEventsWithNoRemainingEffect = (): LocalPupitreState => ({
-    referentiel: { ...referenceFixture, suivis: [{ ...referenceFixture.suivis[0], evenements: ['debut'] }] },
+    referentiel: {
+      ...referenceFixture,
+      suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'reference workshop element'), evenements: ['debut'] }],
+    },
     connecte: true,
     evenements: [
       { ...debutFixture, geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE' },
@@ -104,38 +114,57 @@ describe('PupitreProjection', () => {
     ...debutFixture,
     geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), type },
   });
-  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): LocalEvent => ({
-    ...debutFixture,
-    geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), posteId, type },
-  });
+  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): LocalEvent => {
+    const geste: LocalPointage = {
+      ...debutFixture.geste,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      id: crypto.randomUUID(),
+      type,
+    };
+    if (posteId !== undefined) {
+      geste.posteId = posteId;
+    }
+    return { ...debutFixture, geste };
+  };
   const whenProjecting = (state: LocalPupitreState): ReferentielDuPupitre | undefined => projectPupitre(state);
   const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {
-    expect(projection?.suivis[0].activites).toHaveLength(postes.length);
-    expect(projection?.suivis[0].activites).toEqual(
-      expect.arrayContaining(
-        postes.map(posteId => ({ operateurId: 'jean', posteId, categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' })),
-      ),
-    );
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.activites).toHaveLength(postes.length);
+    for (const posteId of postes) {
+      const activite = requiredFixture(
+        suivi.activites.find(candidate => candidate.posteId === posteId),
+        'activity at expected workstation',
+      );
+      expect(activite).toMatchObject({ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' });
+    }
   };
   const thenWorkstationsHaveIndependentCategories = (
     projection: ReferentielDuPupitre | undefined,
     first: string | undefined,
     other: string | undefined,
   ): void => {
-    expect(projection?.suivis[0].activites).toHaveLength(2);
-    expect(projection?.suivis[0].activites).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ posteId: first, categorie: 'NON_CONFORMITE' }),
-        expect.objectContaining({ posteId: other, categorie: 'TRAVAIL' }),
-      ]),
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.activites).toHaveLength(2);
+    const firstActivity = requiredFixture(
+      suivi.activites.find(candidate => candidate.posteId === first),
+      'first workstation activity',
     );
+    const otherActivity = requiredFixture(
+      suivi.activites.find(candidate => candidate.posteId === other),
+      'other workstation activity',
+    );
+    expect(firstActivity.categorie).toBe('NON_CONFORMITE');
+    expect(otherActivity.categorie).toBe('TRAVAIL');
   };
   const thenActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
-    expect(projection?.suivis[0].activites[0]).toMatchObject({ operateurId: 'jean', categorie, depuis });
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(requiredFixture(suivi.activites[0], 'projected activity')).toMatchObject({ operateurId: 'jean', categorie, depuis });
   };
   const thenStateIs = (projection: ReferentielDuPupitre | undefined, state: string, active: number): void => {
-    expect(projection?.suivis[0].etat).toBe(state);
-    expect(projection?.suivis[0].activites).toHaveLength(active);
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.etat).toBe(state);
+    expect(suivi.activites).toHaveLength(active);
   };
   const thenReferenceIsMissing = (projection: unknown): void => {
     expect(projection).toBeUndefined();

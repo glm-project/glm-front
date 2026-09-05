@@ -16,4 +16,6 @@ if (environment.production) {
 
 bootstrapApplication(App, {
   providers: [provideHttpClient(withInterceptors([httpAuthInterceptor])), provideRouter(routes), authProvider],
-}).catch((err: unknown) => console.error(err));
+}).catch((err: unknown) => {
+  console.error(err);
+});
