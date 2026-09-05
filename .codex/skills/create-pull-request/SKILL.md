@@ -11,9 +11,9 @@ closing reference in its description: `Fixes #123`, `Closes #123`, or
 the default branch.
 
 Use a closing reference only for the issue whose work is actually delivered by
-this PR. Do not request an issue number when none is part of the task; this
-repository does not use an issue tracker as a general rule. Keep contextual,
-duplicate, and follow-up issues out of closing references.
+this PR. Do not request an issue number when none is part of the task. Follow the
+[issue tracker configuration](../../../docs/agents/issue-tracker.md) for tracker operations.
+Keep contextual, duplicate, and follow-up issues out of closing references.
 
 After creating the PR/MR, confirm that the description contains the closing
 reference and report the PR URL and the linked issue. If no issue applies,

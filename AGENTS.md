@@ -63,6 +63,9 @@ Every summary that touches code or dependencies states:
 - Icons: before adding or changing an icon → `documentation/icons.md`
 - Git and MR: before branching, committing or opening an MR → `documentation/git-and-mr.md`
 - ADRs: before introducing a dependency, pattern or convention → `documentation/adr/README.md`
+- Issue tracker: before creating, reading or organizing issues → `docs/agents/issue-tracker.md`
+- Triage labels: before triaging or applying readiness labels → `docs/agents/triage-labels.md`
+- Domain docs: before engineering-skill exploration or domain modeling → `docs/agents/domain.md`
 
 ## Maintaining agent documentation
 
