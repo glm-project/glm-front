@@ -1,5 +1,5 @@
-import { PupitreRuntime } from '@/app/atelier/infrastructure/primary/pupitre/PupitreRuntime';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { PupitreRuntime } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/PupitreRuntime';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 

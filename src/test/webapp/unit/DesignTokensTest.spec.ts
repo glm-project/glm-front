@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 const TOKENS_STYLESHEET = 'src/main/webapp/styles.css';
 const PUPITRE_STYLESHEET = 'src/main/webapp/pupitre/styles.css';
-const MATERIAL_BRIDGE_STYLESHEET = 'src/main/webapp/app/shared/design-system/infrastructure/primary/gestion/material-bridge.css';
+const MATERIAL_BRIDGE_STYLESHEET = 'src/main/webapp/gestion/shared/design-system/infrastructure/primary/material-bridge.css';
 
 const WCAG_AA_NORMAL_TEXT = 4.5;
 const SRGB_LINEAR_SEGMENT_END = 0.03928;
