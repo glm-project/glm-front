@@ -129,6 +129,10 @@ export class DeviceAuthentication extends AuthenticationPort {
       return;
     }
 
+    await this.enrol(enrolment);
+  }
+
+  private async enrol(enrolment: symbol): Promise<void> {
     const device = await this.requestDeviceAuthorization();
 
     if (device === undefined) {
@@ -141,6 +145,10 @@ export class DeviceAuthentication extends AuthenticationPort {
       return;
     }
 
+    await this.persistEnrolment(granted, enrolment);
+  }
+
+  private async persistEnrolment(granted: Tokens, enrolment: symbol): Promise<void> {
     const session = sessionFrom(granted);
     try {
       await this.save(session);
@@ -267,22 +275,7 @@ export class DeviceAuthentication extends AuthenticationPort {
   private async renewFrom(session: Session): Promise<void> {
     try {
       if (this.stockage !== null) {
-        await this.stockage.lock('enrolement', async () => {
-          const stored = await this.stockage?.read<EnrolementPersistant>(ENROLEMENT);
-          if (this.session !== session) {
-            return;
-          }
-          if (stored?.session === undefined) {
-            this.session = undefined;
-            this.tenant = stored?.tenant;
-            return;
-          }
-          if (stored.session.refreshToken !== session.refreshToken) {
-            this.open(stored.session, SHORTEST_RENEWAL_DELAY_SECONDS);
-            return;
-          }
-          await this.renewSession(session);
-        });
+        await this.stockage.lock('enrolement', () => this.renewStoredSession(session));
         return;
       }
       await this.renewSession(session);
@@ -294,6 +287,23 @@ export class DeviceAuthentication extends AuthenticationPort {
     }
   }
 
+  private async renewStoredSession(session: Session): Promise<void> {
+    const stored = await this.stockage?.read<EnrolementPersistant>(ENROLEMENT);
+    if (this.session !== session) {
+      return;
+    }
+    if (stored?.session === undefined) {
+      this.session = undefined;
+      this.tenant = stored?.tenant;
+      return;
+    }
+    if (stored.session.refreshToken !== session.refreshToken) {
+      this.open(stored.session, SHORTEST_RENEWAL_DELAY_SECONDS);
+      return;
+    }
+    await this.renewSession(session);
+  }
+
   private async renewSession(session: Session): Promise<void> {
     const answer = await this.renewTokens(session.refreshToken);
 
@@ -302,30 +312,38 @@ export class DeviceAuthentication extends AuthenticationPort {
     }
 
     if (isGranted(answer)) {
-      const renewed = sessionFrom(answer.tokens);
-      const persistence = await this.save(renewed, session);
-      if (persistence === 'REMPLACE') {
-        await this.synchronizeSession();
-        return;
-      }
-      if (this.session === session) {
-        this.open(renewed, secondsBeforeRenewing(answer.tokens));
-      }
+      await this.persistRenewal(answer.tokens, session);
       return;
     }
 
     if (isBeyondRenewal(answer)) {
-      const persistence = await this.save(undefined, session);
-      if (persistence === 'REMPLACE') {
-        await this.synchronizeSession();
-        return;
-      }
-      this.session = undefined;
-      await this.authenticate();
+      await this.reenrol(session);
       return;
     }
 
     this.open(session, SECONDS_BEFORE_RETRYING_A_RENEWAL);
+  }
+
+  private async persistRenewal(tokens: Tokens, session: Session): Promise<void> {
+    const renewed = sessionFrom(tokens);
+    const persistence = await this.save(renewed, session);
+    if (persistence === 'REMPLACE') {
+      await this.synchronizeSession();
+      return;
+    }
+    if (this.session === session) {
+      this.open(renewed, secondsBeforeRenewing(tokens));
+    }
+  }
+
+  private async reenrol(session: Session): Promise<void> {
+    const persistence = await this.save(undefined, session);
+    if (persistence === 'REMPLACE') {
+      await this.synchronizeSession();
+      return;
+    }
+    this.session = undefined;
+    await this.authenticate();
   }
 
   private async restore(enrolment: symbol): Promise<boolean> {

@@ -92,6 +92,11 @@ export class PupitreHorsLigne {
       return Promise.reject(new Error('Poste absent des habilitations locales.'));
     }
     const geste: PointageLocal = { ...identity(), ...pointage, operateurId: fenetre.operateur.id, nature: 'POINTAGE' };
+    const ouverture = this.createOuverture(geste);
+    return this.enqueue(fenetre, () => this.prependOuverture(fenetre, geste, ouverture), true);
+  }
+
+  private createOuverture(geste: PointageLocal): GesteLocal[] {
     const arrivee: GesteLocal = { ...identity(), dateDeSurvenue: geste.dateDeSurvenue, operateurId: geste.operateurId, nature: 'ARRIVEE' };
     const reprise: GesteLocal = {
       ...identity(),
@@ -101,16 +106,14 @@ export class PupitreHorsLigne {
       type: 'REPRISE',
       implicite: true,
     };
-    return this.enqueue(
-      fenetre,
-      () => {
-        if (fenetre.arriveeAssuree) {
-          return [geste];
-        }
-        return [arrivee, reprise, geste];
-      },
-      true,
-    );
+    return [arrivee, reprise];
+  }
+
+  private prependOuverture(fenetre: FenetreOperateur, geste: PointageLocal, ouverture: GesteLocal[]): GesteLocal[] {
+    if (fenetre.arriveeAssuree) {
+      return [geste];
+    }
+    return [...ouverture, geste];
   }
 
   recordPresence(type: TypeDePresence): Promise<void> {
@@ -164,6 +167,10 @@ export class PupitreHorsLigne {
     if (this.authentication.currentTenant() !== entreprise || token === undefined) {
       return;
     }
+    await this.refreshReferentiel(entreprise, token);
+  }
+
+  private async refreshReferentiel(entreprise: string, token: string): Promise<void> {
     try {
       const referentiel = await this.serveur.referentiel();
       await this.authentication.synchronizeSession();
@@ -183,37 +190,52 @@ export class PupitreHorsLigne {
       if (evenement === undefined) {
         return;
       }
-      let result: EvenementLocal;
-      try {
-        await this.stockage.lock('session', async () => {
-          await this.authentication.synchronizeSession();
-          await this.push(entreprise, evenement.geste);
-        });
-        result = { ...evenement, etat: 'ACCEPTE' };
-      } catch (failure: unknown) {
-        if (failure instanceof RefusDuPupitre) {
-          result = { ...evenement, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
-        } else {
-          const failed = await this.stockage.update<PupitreLocal>(keyFor(entreprise), PUPITRE_VIDE, current => ({
-            ...current,
-            connecte: false,
-          }));
-          this.publish(entreprise, failed);
-          return;
-        }
+      const result = await this.replay(entreprise, evenement);
+      if (result === undefined) {
+        return;
       }
-      const updated = await this.stockage.update<PupitreLocal>(keyFor(entreprise), PUPITRE_VIDE, current => ({
-        ...current,
-        connecte: true,
-        evenements: current.evenements.map(candidate => {
-          if (candidate.geste.id === result.geste.id) {
-            return result;
-          }
-          return candidate;
-        }),
-      }));
-      this.publish(entreprise, updated);
+      await this.saveReplay(entreprise, result);
     }
+  }
+
+  private async replay(entreprise: string, evenement: EvenementLocal): Promise<EvenementLocal | undefined> {
+    try {
+      await this.stockage.lock('session', async () => {
+        await this.authentication.synchronizeSession();
+        await this.push(entreprise, evenement.geste);
+      });
+      return { ...evenement, etat: 'ACCEPTE' };
+    } catch (failure: unknown) {
+      if (failure instanceof RefusDuPupitre) {
+        return { ...evenement, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
+      }
+      await this.markDisconnected(entreprise);
+      return undefined;
+    }
+  }
+
+  private async markDisconnected(entreprise: string): Promise<void> {
+    const failed = await this.stockage.update<PupitreLocal>(keyFor(entreprise), PUPITRE_VIDE, current => ({
+      ...current,
+      connecte: false,
+    }));
+    this.publish(entreprise, failed);
+  }
+
+  private async saveReplay(entreprise: string, result: EvenementLocal): Promise<void> {
+    const updated = await this.stockage.update<PupitreLocal>(keyFor(entreprise), PUPITRE_VIDE, current => ({
+      ...current,
+      connecte: true,
+      evenements: current.evenements.map(candidate => this.replaceEvenement(candidate, result)),
+    }));
+    this.publish(entreprise, updated);
+  }
+
+  private replaceEvenement(candidate: EvenementLocal, result: EvenementLocal): EvenementLocal {
+    if (candidate.geste.id === result.geste.id) {
+      return result;
+    }
+    return candidate;
   }
 
   private async push(entreprise: string, geste: GesteLocal): Promise<void> {
@@ -222,14 +244,18 @@ export class PupitreHorsLigne {
       await this.serveur.send(geste);
     } catch (failure: unknown) {
       if (failure instanceof RefusDuPupitre && failure.code === CONCURRENCE) {
-        this.requireExchange(entreprise);
-        await this.serveur.reread(geste);
-        this.requireExchange(entreprise);
-        await this.serveur.send(geste).catch((refusal: unknown) => this.absorbOrThrow(geste, refusal));
+        await this.retryAfterConcurrence(entreprise, geste);
         return;
       }
       this.absorbOrThrow(geste, failure);
     }
+  }
+
+  private async retryAfterConcurrence(entreprise: string, geste: GesteLocal): Promise<void> {
+    this.requireExchange(entreprise);
+    await this.serveur.reread(geste);
+    this.requireExchange(entreprise);
+    await this.serveur.send(geste).catch((refusal: unknown) => this.absorbOrThrow(geste, refusal));
   }
 
   private absorbOrThrow(geste: GesteLocal, failure: unknown): void {
@@ -240,23 +266,25 @@ export class PupitreHorsLigne {
   }
 
   private enqueue(fenetre: FenetreOperateur, gestures: () => GesteLocal[], assureArrivee: boolean): Promise<void> {
-    const accepted = this.saisie.then(async () => {
-      await this.authentication.synchronizeSession();
-      if (this.fenetre !== fenetre || this.authentication.currentTenant() !== fenetre.entreprise) {
-        throw new Error('La fenetre operateur a change.');
-      }
-      const evenements = gestures().map(pending);
-      await this.stockage.update<PupitreLocal>(keyFor(fenetre.entreprise), PUPITRE_VIDE, current => ({
-        ...current,
-        evenements: [...current.evenements, ...evenements],
-      }));
-      fenetre.arriveeAssuree ||= assureArrivee;
-      fenetre.vue = { ...fenetre.vue, evenements: [...fenetre.vue.evenements, ...evenements] };
-      this.vue.set(fenetre.vue);
-      void this.synchronize().catch((failure: unknown) => console.error('Synchronisation interrompue', failure));
-    });
+    const accepted = this.saisie.then(() => this.persistGestes(fenetre, gestures, assureArrivee));
     this.saisie = accepted.catch(() => undefined);
     return accepted;
+  }
+
+  private async persistGestes(fenetre: FenetreOperateur, gestures: () => GesteLocal[], assureArrivee: boolean): Promise<void> {
+    await this.authentication.synchronizeSession();
+    if (this.fenetre !== fenetre || this.authentication.currentTenant() !== fenetre.entreprise) {
+      throw new Error('La fenetre operateur a change.');
+    }
+    const evenements = gestures().map(pending);
+    await this.stockage.update<PupitreLocal>(keyFor(fenetre.entreprise), PUPITRE_VIDE, current => ({
+      ...current,
+      evenements: [...current.evenements, ...evenements],
+    }));
+    fenetre.arriveeAssuree ||= assureArrivee;
+    fenetre.vue = { ...fenetre.vue, evenements: [...fenetre.vue.evenements, ...evenements] };
+    this.vue.set(fenetre.vue);
+    void this.synchronize().catch((failure: unknown) => console.error('Synchronisation interrompue', failure));
   }
 
   private publish(entreprise: string, state: PupitreLocal): void {

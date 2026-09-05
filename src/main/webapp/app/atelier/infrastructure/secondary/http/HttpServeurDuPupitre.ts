@@ -11,26 +11,38 @@ import { inject, Injectable } from '@angular/core';
 type RestOperateur = components['schemas']['RestOperateur'];
 type RestSuivi = components['schemas']['RestSuiviDAtelier'];
 
+interface ElementDuReferentiel {
+  id?: string;
+}
+
 interface Page<T> {
   content?: T[];
   totalElementsCount?: number;
 }
 
-const readAll = async <T extends { id?: string }>(read: (page: number) => Promise<Page<T>>): Promise<T[]> => {
+const requireStablePage = (previousTotal: number | undefined, count: number, received: number, pageSize: number): void => {
+  if ((previousTotal !== undefined && previousTotal !== count) || (pageSize === 0 && received < count)) {
+    throw new Error('Le referentiel a change pendant sa lecture.');
+  }
+};
+
+const requireUniqueElements = (elements: ElementDuReferentiel[], total: number): void => {
+  if (new Set(elements.map(element => element.id)).size !== elements.length || elements.length > total) {
+    throw new Error('Le referentiel contient des doublons.');
+  }
+};
+
+const readAll = async <T extends ElementDuReferentiel>(read: (page: number) => Promise<Page<T>>): Promise<T[]> => {
   const elements: T[] = [];
   let total: number | undefined;
   for (let page = 0; ; page++) {
     const answer = await read(page);
     const count = required(answer.totalElementsCount, 'page.totalElementsCount');
     const content = required(answer.content, 'page.content');
-    if ((total !== undefined && total !== count) || (content.length === 0 && elements.length < count)) {
-      throw new Error('Le referentiel a change pendant sa lecture.');
-    }
+    requireStablePage(total, count, elements.length, content.length);
     total = count;
     elements.push(...content);
-    if (new Set(elements.map(element => element.id)).size !== elements.length || elements.length > total) {
-      throw new Error('Le referentiel contient des doublons.');
-    }
+    requireUniqueElements(elements, total);
     if (elements.length === total) {
       return elements;
     }

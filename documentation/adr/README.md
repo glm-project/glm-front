@@ -20,3 +20,6 @@ renumbers at merge time. The status below is the living one — update this line
 
 - [0007 — Persist the pupitre before acknowledging a gesture](0007-durable-offline-pupitre.md) — **Accepted** —
   IndexedDB, company partitions, a durable FIFO, complete reference activation between operator windows
+
+- [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — **Accepted** —
+  named cohesive steps when long methods, nested logic or callbacks obscure the workflow
