@@ -1,8 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { DeviceAuthentication } from '@/app/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
-import { DeviceGrantConfiguration } from '@/app/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
-import { StockageLocalPort } from '@/app/shared/stockage-local/domain/StockageLocalPort';
-import { IndexedDbStockageLocal } from '@/app/shared/stockage-local/infrastructure/secondary/IndexedDbStockageLocal';
+import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
+import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
+import { StockageLocalPort } from '@/pupitre/shared/stockage-local/domain/StockageLocalPort';
+import { IndexedDbStockageLocal } from '@/pupitre/shared/stockage-local/infrastructure/secondary/IndexedDbStockageLocal';
 import { Provider } from '@angular/core';
 
 import { environment } from './environments/environment';

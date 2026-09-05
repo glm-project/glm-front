@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Amended by 0012
 
 ## Context
 
@@ -48,6 +48,10 @@ chain.
 
 Behavior an adapter has beyond the contract stays in a `beyond the contract` describe next to it, still
 phrased as behavior.
+
+When implementations belong to independent applications, the common contract lives under
+`src/test/webapp/unit/` instead. This keeps the suite unique without making production shared code import
+application-specific adapters, as decided by [ADR 0012](0012-own-business-contexts-by-front.md).
 
 ## Consequences
 

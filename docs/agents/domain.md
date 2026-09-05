@@ -1,22 +1,22 @@
 # Domain docs
 
-Use a single-context documentation layout for this repository: one root `CONTEXT.md` glossary and the
-existing `documentation/adr/` archive, shared by both fronts and their bounded contexts. This describes
-the documentation layout, not the number of domain contexts in the application.
+Each bounded context owns its vocabulary, responsibilities, invariants and local rules in its own
+`AGENTS.md`. System-wide decisions remain in `documentation/adr/`. The root agent document routes work but
+does not own business language.
 
 ## Before exploring
 
-- Read the root `CONTEXT.md` when it exists.
+- Identify the bounded context that owns the work and read its nearest `AGENTS.md`.
 - Read the [ADR index](../../documentation/adr/README.md), then decisions relevant to the work.
   Use the index for current statuses.
 - Read the topic rules routed from [AGENTS.md](../../AGENTS.md) for the changes being considered.
 
-If `CONTEXT.md` is absent, proceed silently. Create it through `domain-modeling` only when a domain term
-has been resolved; keep it a glossary rather than a spec or implementation plan.
+When no bounded context can be identified, proceed without creating business documentation or adding
+business material to the root `AGENTS.md`. A context map is optional and is not required for discovery.
 
 ## Vocabulary and decisions
 
-Use the glossary's canonical terms in domain type names, issue titles, proposals, hypotheses and test names.
+Use the bounded context's canonical terms in domain type names, issue titles, proposals, hypotheses and test names.
 Name a model for the business concept it owns; keep its framework or orchestration role in the technical
 adapter's name. Reconsider unrecognized synonyms; record a real terminology gap for `domain-modeling` when
 one remains.

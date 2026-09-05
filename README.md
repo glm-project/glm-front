@@ -48,11 +48,12 @@ Engineering skill configuration:
 
 - [Issue tracker](docs/agents/issue-tracker.md) — GitHub Issues and the existing Backlog GLM board
 - [Triage labels](docs/agents/triage-labels.md) — the five canonical triage roles
-- [Domain docs](docs/agents/domain.md) — shared glossary and existing ADR archive
+- [Domain docs](docs/agents/domain.md) — bounded-context vocabulary and the existing ADR archive
 
 Background and decisions:
 
-- [Domain glossary](CONTEXT.md) — shared vocabulary for the workshop and operator designation
+- Bounded-context agent docs — [gestion opérateur](src/main/webapp/gestion/contexts/operateur/AGENTS.md)
+  and [pupitre atelier](src/main/webapp/pupitre/contexts/atelier/AGENTS.md) own their vocabulary, responsibilities, invariants and local rules
 - [Hexagonal architecture](documentation/hexagonal-architecture.md) — the theory behind the layout
 - [Architecture Decision Records](documentation/adr/README.md) — structural decisions, the options weighed
   and their price

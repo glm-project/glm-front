@@ -57,7 +57,6 @@ const FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS = [
 }));
 
 const namedAnywherePattern = fronts => `(^|\\/)(${fronts.join('|')})(\\/|$)`;
-const namedOutsideAppPattern = fronts => `^(?!.*(^|\\/)app\\/).*(^|\\/)(${fronts.join('|')})(\\/|$)`;
 
 const lazyRouteSelectors = forbiddenPathPattern => [
   `ImportExpression > Literal[value=/${forbiddenPathPattern}/]`,
@@ -87,13 +86,13 @@ const noOtherFront = front => ({
 
 const noFrontAtAll = {
   regex: namedAnywherePattern(FRONTS),
-  message: `app/ must not import from ${FRONTS.join(' or ')}: dependencies point one way, a root imports from app/ and never the reverse. Only app/<context>/infrastructure/primary/<front>/ may name a front, and only to reach its own zone.`,
+  message: `app/ contains common technical code and must not import from ${FRONTS.join(' or ')}.`,
 };
 
-const noCompositionRoot = {
-  regex: namedOutsideAppPattern(FRONTS),
-  message: `this zone may name its front to reach its own zone, never to leave app/: what ${FRONTS.join(' and ')} wire is their own, and app/ ships in both bundles. A path that names a front without passing through app/ is a composition root.`,
-};
+const noBusinessContext = front => ({
+  regex: `(^|\\/)(?:${front}\\/)?contexts(\\/|$)`,
+  message: `${front}/shared contains technical code and must not import a business context.`,
+});
 
 const local = {
   rules: {
@@ -231,7 +230,7 @@ export default typescript.config(
   },
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/**/*.ts`], [noOtherFront(front)])),
-  ...FRONTS.map(front => boundary([`src/main/webapp/app/**/primary/${front}/**/*.ts`], [noOtherFront(front), noCompositionRoot])),
+  ...FRONTS.map(front => boundary([`src/main/webapp/${front}/shared/**/*.ts`], [noOtherFront(front), noBusinessContext(front)])),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],

@@ -5,9 +5,9 @@ import { describe, it } from 'node:test';
 const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
-  'src/main/webapp/app/atelier/application/PupitreHorsLigne.ts',
-  'src/main/webapp/app/atelier/infrastructure/primary/pupitre/designation/designation.ts',
-  'src/main/webapp/app/atelier/infrastructure/primary/pupitre/designation/designation.spec.ts',
+  'src/main/webapp/pupitre/contexts/atelier/application/PupitreHorsLigne.ts',
+  'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.ts',
+  'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.spec.ts',
   'src/main/webapp/gestion/app.ts',
   'src/main/webapp/pupitre/app.ts',
   'src/test/webapp/component/pupitre/designation/Designation.spec.ts',
@@ -53,6 +53,16 @@ it('should preserve the existing boundaries between fronts', async () => {
   const results = await whenLintingImports('src/main/webapp/gestion/app.ts', [
     "import { App } from '@/pupitre/app';",
     "export async function load() { return import('@/pupitre/app'); }",
+  ]);
+
+  thenImportsAreRejected(results);
+});
+
+it('should reject business imports from app-specific shared code', async () => {
+  const results = await whenLintingImports('src/main/webapp/pupitre/shared/authentication/package-info.ts', [
+    "import { PupitreLocal } from '@/pupitre/contexts/atelier/domain/PupitreLocal';",
+    "export { projectPupitre } from '../../contexts/atelier/domain/ProjectionDuPupitre';",
+    "export async function load() { return import('@/pupitre/contexts/atelier/domain/PupitreLocal'); }",
   ]);
 
   thenImportsAreRejected(results);

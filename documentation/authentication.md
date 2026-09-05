@@ -1,7 +1,8 @@
 # Authentication
 
-Authentication is the shared kernel at `app/shared/authentication/`. The domain owns
-`AuthenticationPort`; each front chooses an adapter in its composition root.
+The common technical contract is at `app/shared/authentication/`. `gestion` owns its Keycloak adapters in
+`gestion/shared/authentication/`; `pupitre` owns its device-grant adapters in
+`pupitre/shared/authentication/`. Each front chooses an adapter in its composition root.
 
 ## The port exposes session capabilities, not an SDK
 
@@ -22,7 +23,7 @@ Keep the replacement at build time: a runtime flag would ship the bypass in the 
 storage adapter. Keycloak URL, realm and client ID stay in front environments; no client secret belongs in a
 browser repository.
 
-Sibling adapters do not import one another. The port contract runs the shared behavior against each
+Application-specific adapters do not import one another. The port contract runs the shared behavior against each
 implementation; adapter-specific behavior stays beside that contract.
 
 ## Bearer headers have one owner

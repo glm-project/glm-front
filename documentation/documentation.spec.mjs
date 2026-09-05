@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const agentFile = resolve(repository, 'AGENTS.md');
 const readmeFile = resolve(repository, 'README.md');
+const contextsDirectory = resolve(repository, 'src/main/webapp');
 
 const markdownFilesIn = directory =>
   readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -16,6 +17,13 @@ const markdownFilesIn = directory =>
     }
     return extname(path) === '.md' ? [path] : [];
   });
+
+const boundedContextDirectories = ['gestion', 'pupitre'].flatMap(front => {
+  const directory = resolve(contextsDirectory, front, 'contexts');
+  return readdirSync(directory, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => resolve(directory, entry.name));
+});
 
 const localMarkdownTargetsIn = file =>
   [...readFileSync(file, 'utf8').matchAll(/!?\[[^\]]*]\(([^)]+)\)/g)]
@@ -36,6 +44,7 @@ test('should resolve every local Markdown link', () => {
     resolve(repository, 'CLAUDE.md'),
     ...markdownFilesIn(resolve(repository, 'documentation')),
     ...markdownFilesIn(resolve(repository, 'docs/agents')),
+    ...markdownFilesIn(contextsDirectory),
   ];
   const missing = markdownFiles.flatMap(file =>
     localMarkdownTargetsIn(file)
@@ -45,6 +54,17 @@ test('should resolve every local Markdown link', () => {
   );
 
   assert.deepEqual(missing, []);
+});
+
+test('should give every bounded context matching agent documents', () => {
+  assert.ok(boundedContextDirectories.length > 0);
+  for (const context of boundedContextDirectories) {
+    const agents = resolve(context, 'AGENTS.md');
+    const claude = resolve(context, 'CLAUDE.md');
+    assert.ok(existsSync(agents), `${context} has no AGENTS.md`);
+    assert.ok(existsSync(claude), `${context} has no CLAUDE.md`);
+    assert.equal(readFileSync(claude, 'utf8'), '@AGENTS.md\n');
+  }
 });
 
 test('should route every indexed topic document from AGENTS.md', () => {

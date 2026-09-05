@@ -6,7 +6,7 @@ import { Architectures } from 'arch-unit-ts/dist/arch-unit/library/Architectures
 import { classes, noClasses } from 'arch-unit-ts/dist/main';
 
 describe('HexagonalArchTest', () => {
-  const srcProject = new TypeScriptProject(RelativePath.of('src/main/webapp/app'), '**/*FilesToExclude*', '**/*OtherFilesToExclude*');
+  const srcProject = new TypeScriptProject(RelativePath.of('src/main/webapp'), '**/*FilesToExclude*', '**/*OtherFilesToExclude*');
 
   const packageInfos = srcProject
     .allClasses()
@@ -16,6 +16,13 @@ describe('HexagonalArchTest', () => {
   const sharedKernels = packagesWithContext(SharedKernel.name);
   const businessContexts = packagesWithContext(BusinessContext.name);
   const designSystem = sharedKernels.filter(kernel => kernel.endsWith('.design-system')).map(kernel => kernel + '..');
+
+  it('should discover every declared architectural boundary', () => {
+    expect(businessContexts).toEqual(
+      expect.arrayContaining(['gestion.contexts.operateur', 'pupitre.contexts.atelier'].map(context => `src.main.webapp.${context}`)),
+    );
+    expect(sharedKernels.length).toBeGreaterThan(0);
+  });
 
   function otherBusinessContextsDomains(context: string): string[] {
     return businessContexts.filter(other => context !== other).map(name => name + '.domain..');
@@ -39,6 +46,17 @@ describe('HexagonalArchTest', () => {
         .check(srcProject.allClasses());
     });
 
+    it.each(sharedKernels)('should %s not depend on a business context', context => {
+      noClasses()
+        .that()
+        .resideInAPackage(context + '..')
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(...businessContexts.map(businessContext => businessContext + '..'))
+        .because('Shared code is technical and cannot own or import business concepts')
+        .check(srcProject.allClasses());
+    });
+
     it('primary TypeScript Adapters should only be called from secondaries', () => {
       classes()
         .that()
@@ -57,7 +75,7 @@ describe('HexagonalArchTest', () => {
 
   describe('DesignSystem', () => {
     it('should be discovered as a shared kernel, since both rules below govern nothing otherwise', () => {
-      expect(designSystem).toHaveLength(1);
+      expect(designSystem.length).toBeGreaterThan(0);
     });
 
     it('should not depend on business contexts', () => {
@@ -77,8 +95,19 @@ describe('HexagonalArchTest', () => {
         .resideInAnyPackage(...designSystem)
         .should()
         .onlyHaveDependentClassesThat()
-        .resideInAPackage('..infrastructure.primary..')
+        .resideInAnyPackage('..infrastructure.primary..', 'src.main.webapp.gestion..', 'src.main.webapp.pupitre..')
         .because('Only primary adapters render: application orchestrates and secondary speaks HTTP, neither has a use for a button')
+        .check(srcProject.allClasses());
+    });
+
+    it('should not be depended on by domain, application or secondary code', () => {
+      noClasses()
+        .that()
+        .resideInAnyPackage('..domain..', '..application..', '..infrastructure.secondary..')
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(...designSystem)
+        .because('Business rules and orchestration do not render components')
         .check(srcProject.allClasses());
     });
   });

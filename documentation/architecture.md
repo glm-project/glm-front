@@ -3,21 +3,23 @@
 Operational rules for changing the project structure. For onboarding or architectural rationale, read
 [`hexagonal-architecture.md`](hexagonal-architecture.md).
 
-## One context tree, two composition roots
+## Two independent applications own their contexts
 
 ```text
 src/main/webapp/
-  app/          # bounded contexts shared by both fronts; arch-unit scans this root
-  gestion/      # composition root: bootstrap, shell, routes, environments, providers
-  pupitre/      # composition root: the same responsibilities for the shop floor
+  app/shared/                # genuinely common technical contracts and adapters
+  gestion/contexts/         # business contexts owned by the back office
+  gestion/shared/           # technical code used only by gestion
+  pupitre/contexts/         # business contexts owned by the shop-floor console
+  pupitre/shared/           # technical code used only by pupitre
 ```
 
 A composition root chooses the shell, routes, environment and adapter bound to each port. Business rules
-live in a context under `app/`.
+live below the owning application's `contexts/` directory.
 
-Dependencies point from `gestion/` and `pupitre/` into `app/`. Neither front imports the other, and `app/`
-imports neither front. A screen used by one front still belongs to its context at
-`app/<context>/infrastructure/primary/<front>/`; the front root only composes it.
+Neither application imports or communicates with the other. Both may import genuinely common technical
+code from `app/shared/`, which imports neither application. Screens belong to their business context's
+primary adapters; the front root composes them.
 
 `eslint.config.mjs` enforces these boundaries for static imports, re-exports and literal dynamic imports.
 It deliberately cannot resolve a runtime-built path or a dependency laundered through a barrel. Introduce a
@@ -28,9 +30,9 @@ Both boot documents are self-contained: every asset needed at boot ships in the 
 
 ## Every context declares its boundary first
 
-Create `package-info.ts` before adding code to a context. It extends `BusinessContext` for
-`app/<name>/` or `SharedKernel` for `app/shared/<name>/`. `app/shared/` is only a namespace; files belong in
-a declared kernel below it.
+Create `package-info.ts` before adding code to a context or shared kernel. It extends `BusinessContext` for
+`<front>/contexts/<name>/` or `SharedKernel` for any technical `<root>/shared/<name>/`. Shared directories
+are namespaces; files belong in a declared kernel below them.
 
 `HexagonalArchTest.spec.ts` discovers contexts from those declarations. A folder without one is invisible to
 the per-context checks, so a green suite would prove nothing about it. `app/generated/` is the single
@@ -77,7 +79,9 @@ import-boundary checks proves allowed dependencies, not correct ownership of the
 
 The architecture suite enforces these rules:
 
-- a context does not depend on another business context's domain;
+- a context does not depend directly on another business context's domain;
+- a shared kernel does not depend on a business context;
+- gestion and pupitre never import one another;
 - cross-context calls use a primary TypeScript adapter whose name starts with `TypeScript`, reached from a
   secondary adapter;
 - domain code depends only on domain code and shared kernels, with the design system excluded;

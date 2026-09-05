@@ -5,9 +5,9 @@ Structural decisions taken on this repository, with the options weighed and the 
 kebab-case title (`0002-something-decided.md`). If two branches take the same number, the later MR
 renumbers at merge time. The status below is the living one — update this line when a record changes state.
 
-- [0001 — Documentation layout](0001-documentation-layout.md) — **Amended by 0010** — minimal agent entry
+- [0001 — Documentation layout](0001-documentation-layout.md) — **Amended by 0010 and 0012** — minimal agent entry
   point, topic documents and local ADRs
-- [0002 — Port contract for secondary adapters](0002-port-contract-for-secondary-adapters.md) — **Accepted** —
+- [0002 — Port contract for secondary adapters](0002-port-contract-for-secondary-adapters.md) — **Amended by 0012** —
   one suite per port run against every adapter, fakes replace the external system
 - [0003 — Hand-written device grant for the pupitre](0003-hand-written-device-grant-for-the-pupitre.md) —
   **Amended by 0007** — RFC 8628 behind the port; device credentials now survive restart
@@ -28,3 +28,5 @@ renumbers at merge time. The status below is the living one — update this line
   branch-specific topic documents, environment-owned inventories and an executable index/link contract
 - [0011 — Give each front its own header](0011-give-each-front-its-own-header.md) — **Accepted** —
   independent front chrome, Material confined to gestion
+- [0012 — Give each front ownership of its business contexts](0012-own-business-contexts-by-front.md) — **Accepted** —
+  application-owned contexts, technical-only shared code and local bounded-context language
