@@ -12,7 +12,9 @@ export class TimerDesignationExpirationScheduler extends DesignationExpirationSc
     clearTimeout(this.timer);
     this.timer = undefined;
     if (deadline !== undefined) {
-      this.timer = setTimeout(() => expiration.expire(), deadline - Date.now());
+      this.timer = setTimeout(() => {
+        expiration.expire();
+      }, deadline - Date.now());
     }
   }
 }

@@ -1,9 +1,18 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
 
 interface NetworkProbeFixture {
   failureName?: string;
   reached: boolean;
 }
+
+const networkProbeFixtureFrom = (data: NetworkProbeFixture): NetworkProbeFixture => {
+  const result: NetworkProbeFixture = { reached: data.reached };
+  if (data.failureName !== undefined) {
+    result.failureName = data.failureName;
+  }
+  return result;
+};
 
 describe('Production pupitre without its service worker', () => {
   beforeEach(() => {
@@ -74,7 +83,8 @@ const whenRestartingTheProductionPupitreWithoutAServiceWorker = (): void => {
 
 const thenTheProductionPupitreBootsOnline = (): void => {
   pupitreFrame().should(frame => {
-    expect(frame[0].contentDocument?.querySelector(dataSelector('pupitre-shell')) ?? null).not.to.equal(null);
+    const pupitre = requiredFixture(frame[0], 'production pupitre frame');
+    expect(pupitre.contentDocument?.querySelector(dataSelector('pupitre-shell')) ?? null).not.to.equal(null);
   });
 };
 
@@ -96,8 +106,8 @@ const thenAnUncachedBrowserRequestSucceeds = (): void => {
 };
 
 const thenTheOfflineNavigationHasNoPupitreShell = (): void => {
-  cy.get(dataSelector('production-pupitre')).should(frame => {
-    const pupitre = frame[0] as HTMLIFrameElement;
+  pupitreFrame().should(frame => {
+    const pupitre = requiredFixture(frame[0], 'production pupitre frame');
     expect(pupitre.contentDocument?.querySelector(dataSelector('pupitre-shell')) ?? null).to.equal(null);
   });
 };
@@ -123,7 +133,7 @@ const browserNetworkProbe = (): Cypress.Chainable<NetworkProbeFixture> =>
           if (event.source !== frame.contentWindow || event.data.token !== token) return;
           document.defaultView?.removeEventListener('message', listener);
           frame.remove();
-          resolve({ failureName: event.data.failureName, reached: event.data.reached });
+          resolve(networkProbeFixtureFrom(event.data));
         };
         document.defaultView?.addEventListener('message', listener);
         frame.sandbox.add('allow-scripts');
@@ -134,7 +144,7 @@ const browserNetworkProbe = (): Cypress.Chainable<NetworkProbeFixture> =>
 
 const thenPupitreWindow = (): Cypress.Chainable<Window> =>
   pupitreFrame().then(frame => {
-    const window = frame[0].contentWindow;
+    const window = requiredFixture(frame[0], 'production pupitre frame').contentWindow;
     if (window === null) throw new Error('The production pupitre browsing context is unavailable.');
     return window;
   });

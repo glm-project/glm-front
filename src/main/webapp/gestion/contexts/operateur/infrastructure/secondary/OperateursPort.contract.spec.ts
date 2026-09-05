@@ -6,6 +6,7 @@ import { OperateursPort } from '@/gestion/contexts/operateur/domain/OperateursPo
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { HttpOperateurs } from './http/HttpOperateurs';
 
 type RestOperateur = components['schemas']['RestOperateur'];
@@ -99,7 +100,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
   };
 
   const thenItReadJeanDupont = (extrait: Page<Operateur>): void => {
-    const [jean] = extrait.elements;
+    const jean = requiredFixture(extrait.elements[0], 'Jean Dupont');
 
     expect(jean.id).toBe(JEAN_DUPONT.id);
     expect(jean.nom).toBe('Dupont');

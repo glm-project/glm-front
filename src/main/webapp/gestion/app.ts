@@ -20,6 +20,8 @@ export class App implements OnInit {
 
   ngOnInit(): void {
     this.appName.set('glmfront');
-    this.authentication.authenticate().catch((failure: unknown) => this.errorHandler.handleError(failure));
+    this.authentication.authenticate().catch((failure: unknown) => {
+      this.errorHandler.handleError(failure);
+    });
   }
 }

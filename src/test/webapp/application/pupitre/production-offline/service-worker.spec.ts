@@ -1,6 +1,7 @@
 import type { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
 
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
 import type { ProductionPupitreFixture } from './fixtures/main';
 
 const entrepriseFixture = 'entreprise-a';
@@ -56,6 +57,14 @@ interface NetworkProbeFixture {
   failureName?: string;
   reached: boolean;
 }
+
+const networkProbeFixtureFrom = (data: NetworkProbeFixture): NetworkProbeFixture => {
+  const result: NetworkProbeFixture = { reached: data.reached };
+  if (data.failureName !== undefined) {
+    result.failureName = data.failureName;
+  }
+  return result;
+};
 
 describe('Production pupitre offline restart', () => {
   beforeEach(() => {
@@ -285,14 +294,14 @@ const fixtureFrame = (): Cypress.Chainable<JQuery<HTMLIFrameElement>> => cy.get(
 
 const thenPupitreWindow = (): Cypress.Chainable<Window> =>
   pupitreFrame().then(frame => {
-    const window = frame[0].contentWindow;
+    const window = requiredFixture(frame[0], 'production pupitre frame').contentWindow;
     if (window === null) throw new Error('The production pupitre browsing context is unavailable.');
     return window;
   });
 
 const thenFixtureWindow = (): Cypress.Chainable<FixtureWindow> =>
   fixtureFrame().then(frame => {
-    const window = frame[0].contentWindow;
+    const window = requiredFixture(frame[0], 'journal fixture frame').contentWindow;
     if (window === null) throw new Error('The journal fixture browsing context is unavailable.');
     return window as FixtureWindow;
   });
@@ -302,7 +311,8 @@ const thenProductionFixture = (): Cypress.Chainable<ProductionPupitreFixture> =>
 
 const thenPupitreContains = (selector: string): void => {
   pupitreFrame().should(frame => {
-    expect(frame[0].contentDocument?.querySelector(dataSelector(selector)) ?? null).not.to.equal(null);
+    const pupitre = requiredFixture(frame[0], 'production pupitre frame');
+    expect(pupitre.contentDocument?.querySelector(dataSelector(selector)) ?? null).not.to.equal(null);
   });
 };
 
@@ -321,7 +331,7 @@ const browserNetworkProbe = (): Cypress.Chainable<NetworkProbeFixture> =>
           if (event.source !== frame.contentWindow || event.data.token !== token) return;
           document.defaultView?.removeEventListener('message', listener);
           frame.remove();
-          resolve({ failureName: event.data.failureName, reached: event.data.reached });
+          resolve(networkProbeFixtureFrom(event.data));
         };
         document.defaultView?.addEventListener('message', listener);
         frame.sandbox.add('allow-scripts');

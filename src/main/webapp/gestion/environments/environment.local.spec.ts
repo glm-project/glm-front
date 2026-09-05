@@ -5,5 +5,7 @@ describe('Environment Configuration (development)', () => {
     thenProductionModeIsDisabled();
   });
 
-  const thenProductionModeIsDisabled = (): void => expect(environment.production).toBeFalsy();
+  const thenProductionModeIsDisabled = (): void => {
+    expect(environment.production).toBeFalsy();
+  };
 });

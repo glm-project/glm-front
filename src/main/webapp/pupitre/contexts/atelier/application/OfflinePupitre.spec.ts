@@ -7,6 +7,7 @@ import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/Refu
 import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
 import { Injector } from '@angular/core';
 import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { OfflinePupitre } from './OfflinePupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -466,7 +467,9 @@ describe('OfflinePupitre', () => {
     vi.setSystemTime(new Date('2026-09-05T08:00:31Z'));
   };
   const whenExpiring = (): Promise<void> => pupitre.expire();
-  const whenReleasingCapture = (release: () => void): void => release();
+  const whenReleasingCapture = (release: () => void): void => {
+    release();
+  };
   const whenCaptureAndClosureComplete = async (pointage: Promise<void>, closing: Promise<void>): Promise<void> => {
     await Promise.all([pointage, closing]);
   };
@@ -556,7 +559,7 @@ describe('OfflinePupitre', () => {
     };
   };
   const givenRefreshedMatricule = (matricule: string): void => {
-    serveur.reference.operateurs[0].matricule = matricule;
+    requiredFixture(serveur.reference.operateurs[0], 'server operator').matricule = matricule;
   };
   const givenReferenceRefreshFails = (): void => {
     serveur.cacheFailure = new Error('page manquante');
@@ -615,10 +618,11 @@ describe('OfflinePupitre', () => {
     expect((await journal.read('entreprise-a')).evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
   };
   const thenActivityIs = (categorie: string): void => {
-    expect(pupitre.referentiel()?.suivis[0].activites[0].categorie).toBe(categorie);
+    const suivi = requiredFixture(pupitre.referentiel()?.suivis[0], 'projected workshop element');
+    expect(requiredFixture(suivi.activites[0], 'projected activity').categorie).toBe(categorie);
   };
   const thenNoActivity = (): void => {
-    expect(pupitre.referentiel()?.suivis[0].activites).toHaveLength(0);
+    expect(requiredFixture(pupitre.referentiel()?.suivis[0], 'projected workshop element').activites).toHaveLength(0);
   };
   const thenNatureOrderIs = async (natures: string[]): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements.map(event => event.geste.nature)).toEqual(natures);
@@ -626,15 +630,18 @@ describe('OfflinePupitre', () => {
   const thenQueueHasUniqueStableIdentities = async (): Promise<void> => {
     const gestes = (await journal.read('entreprise-a')).evenements.map(event => event.geste);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
-    expect(gestes[0].dateDeSurvenue).toBe(gestes[2].dateDeSurvenue);
-    expect(gestes[1].dateDeSurvenue).toBe(gestes[2].dateDeSurvenue);
+    const first = requiredFixture(gestes[0], 'first queued gesture');
+    const second = requiredFixture(gestes[1], 'second queued gesture');
+    const third = requiredFixture(gestes[2], 'third queued gesture');
+    expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
+    expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
   const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<OperateurDuPupitre>[]): string => {
     const accepted = openings.filter(result => result.status === 'fulfilled');
     const refused = openings.filter(result => result.status === 'rejected');
     expect(accepted).toHaveLength(1);
     expect(refused).toHaveLength(1);
-    return accepted[0].value.id;
+    return requiredFixture(accepted[0], 'accepted opening').value.id;
   };
   const thenPresenceBelongsTo = (operateurId: string): void => {
     expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false })]);
@@ -657,13 +664,16 @@ describe('OfflinePupitre', () => {
   const thenRefusalIs = async (code: string): Promise<void> => {
     const diagnostics = await pupitre.diagnostics();
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0].refus).toEqual({ code: `urn:glm:erreur:atelier:${code}`, message: 'cause conservee' });
+    expect(requiredFixture(diagnostics[0], 'diagnostic').refus).toEqual({
+      code: `urn:glm:erreur:atelier:${code}`,
+      message: 'cause conservee',
+    });
   };
   const thenDiagnosticsCountIs = async (count: number): Promise<void> => {
     expect(await pupitre.diagnostics()).toHaveLength(count);
   };
   const thenMatriculeIs = (code: string): void => {
-    expect(pupitre.referentiel()?.operateurs[0].matricule).toBe(code);
+    expect(requiredFixture(pupitre.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);
   };
   const thenNoCompanyBData = async (): Promise<void> => {
     expect(await journal.read('entreprise-b')).toEqual(EMPTY_PUPITRE);

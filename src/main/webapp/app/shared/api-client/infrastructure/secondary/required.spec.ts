@@ -10,7 +10,9 @@ describe('required', () => {
   });
 
   it('should refuse a value the server left out, naming the field the domain needs', () => {
-    thenItRefuses(() => required(undefined, 'suivi.id'), 'suivi.id');
+    thenItRefuses(() => {
+      required(undefined, 'suivi.id');
+    }, 'suivi.id');
   });
 
   const whenReadingARequiredValue = (value: string | undefined, field: string): string => required(value, field);

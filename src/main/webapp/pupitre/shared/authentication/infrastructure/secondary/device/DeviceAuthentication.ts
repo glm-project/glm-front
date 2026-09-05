@@ -63,7 +63,11 @@ const ENROLEMENT = 'enrolement';
 
 const tenantIn = (token: string): string | undefined => {
   try {
-    const claims: unknown = JSON.parse(atob(token.split('.')[1].replaceAll('-', '+').replaceAll('_', '/')));
+    const payload = token.split('.')[1];
+    if (payload === undefined) {
+      return undefined;
+    }
+    const claims: unknown = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/')));
     if (
       typeof claims === 'object'
       && claims !== null
@@ -95,12 +99,29 @@ const lifetimeOf = ({ expires_in }: Tokens): number => (isASaneLifetime(expires_
 const secondsBeforeRenewing = (tokens: Tokens): number =>
   Math.max(lifetimeOf(tokens) - RENEWAL_MARGIN_SECONDS, SHORTEST_RENEWAL_DELAY_SECONDS);
 
-const sessionFrom = (tokens: Tokens): Session => ({
-  accessToken: tokens.access_token,
-  expiresAt: Date.now() + lifetimeOf(tokens) * MILLISECONDS_PER_SECOND,
-  refreshToken: tokens.refresh_token,
-  tenant: tenantIn(tokens.access_token),
-});
+const sessionFrom = (tokens: Tokens): Session => {
+  const session: Session = {
+    accessToken: tokens.access_token,
+    expiresAt: Date.now() + lifetimeOf(tokens) * MILLISECONDS_PER_SECOND,
+    refreshToken: tokens.refresh_token,
+  };
+  const tenant = tenantIn(tokens.access_token);
+  if (tenant !== undefined) {
+    session.tenant = tenant;
+  }
+  return session;
+};
+
+const persistedEnrolmentFrom = (session: Session | undefined, tenant: string | undefined): PersistedEnrolment => {
+  const enrolment: PersistedEnrolment = {};
+  if (session !== undefined) {
+    enrolment.session = session;
+  }
+  if (tenant !== undefined) {
+    enrolment.tenant = tenant;
+  }
+  return enrolment;
+};
 
 const hasExpired = (session: Session): boolean => Date.now() >= session.expiresAt;
 
@@ -198,7 +219,9 @@ export class DeviceAuthentication extends AuthenticationPort {
     this.session = undefined;
     this.enrolment = undefined;
     clearTimeout(this.renewal);
-    void this.save(undefined, ended).catch((failure: unknown) => console.error('Deconnexion non conservee', failure));
+    void this.save(undefined, ended).catch((failure: unknown) => {
+      console.error('Deconnexion non conservee', failure);
+    });
 
     if (ended !== undefined) {
       void this.endServerSession(ended.refreshToken);
@@ -376,7 +399,7 @@ export class DeviceAuthentication extends AuthenticationPort {
           return current;
         }
         resultat = 'CONSERVE';
-        return { session, tenant: session?.tenant ?? this.tenant };
+        return persistedEnrolmentFrom(session, session?.tenant ?? this.tenant);
       });
       return resultat;
     });

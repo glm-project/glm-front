@@ -70,10 +70,18 @@ describe('Pupitre shell', () => {
     expect(shell.querySelector('router-outlet')).not.toBeNull();
   };
 
-  const thenItHoldsABearerToken = (): void => expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
-  const thenTheAuthenticationFailureIsReported = (): void => expect(errorHandler.failure).toEqual(new Error('enrolment refused'));
-  const thenTheRuntimeDidNotStart = (): void => expect(synchronizationTrigger.starts).toBe(0);
-  const thenTheRuntimeStarted = (): void => expect(synchronizationTrigger.starts).toBe(1);
+  const thenItHoldsABearerToken = (): void => {
+    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
+  };
+  const thenTheAuthenticationFailureIsReported = (): void => {
+    expect(errorHandler.failure).toEqual(new Error('enrolment refused'));
+  };
+  const thenTheRuntimeDidNotStart = (): void => {
+    expect(synchronizationTrigger.starts).toBe(0);
+  };
+  const thenTheRuntimeStarted = (): void => {
+    expect(synchronizationTrigger.starts).toBe(1);
+  };
 });
 
 class ErrorHandlerFixture extends ErrorHandler {

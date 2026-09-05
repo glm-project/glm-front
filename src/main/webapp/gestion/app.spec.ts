@@ -55,10 +55,16 @@ describe('Gestion shell', () => {
     comp = fixture.componentInstance;
   };
 
-  const thenItsNameIsGlmfront = (): void => expect(comp.appName()).toBe('glmfront');
+  const thenItsNameIsGlmfront = (): void => {
+    expect(comp.appName()).toBe('glmfront');
+  };
 
-  const thenItHoldsABearerToken = (): void => expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
-  const thenTheAuthenticationFailureIsReported = (): void => expect(errorHandler.failure).toEqual(new Error('login refused'));
+  const thenItHoldsABearerToken = (): void => {
+    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
+  };
+  const thenTheAuthenticationFailureIsReported = (): void => {
+    expect(errorHandler.failure).toEqual(new Error('login refused'));
+  };
 });
 
 class ErrorHandlerFixture extends ErrorHandler {

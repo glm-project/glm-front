@@ -28,6 +28,12 @@ project, without adding root files. It covers both production fronts, co-located
 Cypress application/component suites, the component bootstrap fixture and shared Cypress helpers. Five
 watchers started successfully against the same projects before the production-offline project was added.
 
+The shared compiler configuration also rejects unused locals and parameters, unchecked indexed access,
+inexact optional properties, unreachable code, unused labels, inconsistent path casing and unresolved
+side-effect imports. ESLint's strict type-checked rules reject unbound methods, confusing void expressions,
+non-null assertions and extraneous classes. The only empty classes allowed are the two exact architecture
+marker files consumed by the boundary compiler.
+
 Architecture fixtures exercise undeclared contexts, lookalike declarations, files outside a declared kernel,
 forbidden imports and re-exports, barrel mediation, and a secondary importing both its domain and its own primary.
 Ambient network, storage, browser, current-time and randomness accesses are rejected, including aliases.
@@ -45,7 +51,7 @@ if their private implementation changes.
 ## Integrated validation
 
 The final clean `npm ci`, formatting, and `validate:checks-and-unit` commands exited 0.
-The unit suite passed 357 tests in 37 files, with 100% statements (953), branches (488), functions (288) and lines (837).
+The unit suite passed 359 tests in 37 files, with 100% statements (987), branches (506), functions (291) and lines (883).
 The push hook executes the complete validation graph again before publishing the branch. GitHub check links
 and merge-gate observations are recorded in the pull request, so they refer to the submitted commit.
 

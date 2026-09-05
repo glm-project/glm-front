@@ -12,6 +12,7 @@ import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory } from 'fake-indexeddb';
 import { LocalPupitreJournal } from './local/LocalPupitreJournal';
 
@@ -82,7 +83,7 @@ describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, b
     thenStateIs(state, {
       referentiel: {
         ...refreshedReferenceFixture,
-        suivis: [{ ...refreshedReferenceFixture.suivis[0], evenements: ['pointage'] }],
+        suivis: [{ ...requiredFixture(refreshedReferenceFixture.suivis[0], 'refreshed workshop element'), evenements: ['pointage'] }],
       },
       connecte: true,
       evenements: [

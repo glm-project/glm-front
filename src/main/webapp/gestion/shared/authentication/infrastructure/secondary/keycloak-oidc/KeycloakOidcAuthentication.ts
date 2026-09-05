@@ -24,10 +24,14 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
   }
 
   override logout(): void {
-    this.keycloak.logout().catch((failure: unknown) => console.error('Failed to end Keycloak session', failure));
+    this.keycloak.logout().catch((failure: unknown) => {
+      console.error('Failed to end Keycloak session', failure);
+    });
   }
 
   private refreshToken(): Promise<unknown> {
-    return this.keycloak.updateToken(MIN_TOKEN_VALIDITY_SECONDS).catch((e: unknown) => console.error('Failed to refresh token', e));
+    return this.keycloak.updateToken(MIN_TOKEN_VALIDITY_SECONDS).catch((e: unknown) => {
+      console.error('Failed to refresh token', e);
+    });
   }
 }

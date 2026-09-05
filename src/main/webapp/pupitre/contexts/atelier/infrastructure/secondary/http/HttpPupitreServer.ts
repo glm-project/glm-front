@@ -56,13 +56,32 @@ const readAll = async <T extends ReferentielEntry>(read: (page: number) => Promi
 
 const toPosteHabilite = (poste: RestPosteHabilite): OperateurDuPupitre['postes'][number] => ({ id: poste.id, libelle: poste.libelle });
 
-const toOperateur = (operateur: RestOperateur): OperateurDuPupitre => ({
+const toOperateurWithoutMatricule = (operateur: RestOperateur): OperateurDuPupitre => ({
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
-  matricule: operateur.matricule,
   postes: operateur.postes.map(toPosteHabilite),
 });
+
+const toOperateur = (operateur: RestOperateur): OperateurDuPupitre => {
+  const result = toOperateurWithoutMatricule(operateur);
+  if (operateur.matricule !== undefined) {
+    result.matricule = operateur.matricule;
+  }
+  return result;
+};
+
+const toActivite = (activite: RestSuiviDAtelierEnGrille['activitesEnCours'][number]): SuiviDuPupitre['activites'][number] => {
+  const result: SuiviDuPupitre['activites'][number] = {
+    operateurId: required(activite.operateur, 'activite.operateur').id,
+    categorie: activite.categorie,
+    depuis: activite.depuis,
+  };
+  if (activite.poste !== undefined) {
+    result.posteId = activite.poste.id;
+  }
+  return result;
+};
 
 const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
   id: suivi.id,
@@ -70,12 +89,7 @@ const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
   etat: suivi.etat,
   type: suivi.type,
   evenements: [],
-  activites: suivi.activitesEnCours.map(activite => ({
-    operateurId: required(activite.operateur, 'activite.operateur').id,
-    categorie: activite.categorie,
-    depuis: activite.depuis,
-    posteId: activite.poste?.id,
-  })),
+  activites: suivi.activitesEnCours.map(toActivite),
 });
 
 @Injectable()
@@ -130,9 +144,13 @@ export class HttpPupitreServer extends PupitreServerPort {
     if (geste.nature === 'PRESENCE') {
       return this.api.write('/api/atelier/journees/pointages', { body: { ...body, type: geste.type } });
     }
-    return this.api.write('/api/atelier/suivis/{id}/pointages', {
+    const request = {
       pathParams: { id: geste.suiviId },
-      body: { ...body, type: geste.type, poste: geste.posteId },
-    });
+      body: { ...body, type: geste.type },
+    };
+    if (geste.posteId === undefined) {
+      return this.api.write('/api/atelier/suivis/{id}/pointages', request);
+    }
+    return this.api.write('/api/atelier/suivis/{id}/pointages', { ...request, body: { ...request.body, poste: geste.posteId } });
   }
 }

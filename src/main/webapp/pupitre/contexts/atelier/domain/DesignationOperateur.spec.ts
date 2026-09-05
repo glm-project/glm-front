@@ -67,7 +67,11 @@ describe('DesignationOperateur', () => {
   const whenEntering = (code: string, now: number): void => {
     for (const digit of code) designation.enterDigit(digit, now);
   };
-  const whenValidating = (now: number): DesignationResolution => designation.beginResolution(now)!;
+  const whenValidating = (now: number): DesignationResolution => {
+    const resolution = designation.beginResolution(now);
+    if (resolution === undefined) throw new Error('Expected a designation resolution');
+    return resolution;
+  };
   const whenResolving = (resolution: DesignationResolution, now: number): void => {
     designation.openWindow('atelier', referenceFixture, resolution.code, now);
     const accepted = designation.completeResolution(resolution, now);
@@ -78,7 +82,9 @@ describe('DesignationOperateur', () => {
     designation.failResolution(resolution, now);
     designation.endResolution();
   };
-  const whenCheckingExpiration = (now: number): void => designation.expire(now);
+  const whenCheckingExpiration = (now: number): void => {
+    designation.expire(now);
+  };
   const whenPreparingPointage = (now: number): (() => LocalGeste[]) =>
     designation.requireWindow(now).preparePointage({ suiviId: 'piece', type: 'DEBUT' }, identityFixture);
   const thenPointageIsRefusedAt = (now: number): void => {

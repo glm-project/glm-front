@@ -7,7 +7,6 @@ import { ApiClient } from './ApiClient';
 const SUIVI_ID = 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e';
 const OPERATEUR_ID = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d';
 const PLEINE_PAGE = 100;
-const AUCUN_POSTE = undefined;
 
 const UNE_PAGE_DOPERATEURS = {
   content: [{ id: OPERATEUR_ID, nom: 'Dupont', prenom: 'Jean', natures: [], postes: [] }],
@@ -102,7 +101,7 @@ describe('ApiClient', () => {
     api.read('/api/atelier/suivis', { queryParams: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
 
   const whenReadingOperatorsWithoutAWorkstation = (): Promise<unknown> =>
-    api.read('/api/operateurs', { queryParams: { poste: AUCUN_POSTE, size: PLEINE_PAGE } });
+    api.read('/api/operateurs', { queryParams: { size: PLEINE_PAGE } });
 
   const whenStartingWork = (): Promise<unknown> =>
     api.write('/api/atelier/suivis/{id}/pointages', {

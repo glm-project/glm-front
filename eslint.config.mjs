@@ -195,7 +195,6 @@ export default typescript.config(
     },
     processor: angular.processInlineTemplates,
     rules: {
-      '@angular-eslint/component-class-suffix': 'off',
       '@angular-eslint/component-selector': [
         'error',
         {
@@ -212,14 +211,17 @@ export default typescript.config(
           style: 'camelCase',
         },
       ],
-      '@typescript-eslint/unbound-method': 'off',
-      '@typescript-eslint/no-extraneous-class': 'off',
-      '@typescript-eslint/no-confusing-void-expression': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
       'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
+    },
+  },
+  {
+    files: ['src/main/webapp/app/BusinessContext.ts', 'src/main/webapp/app/SharedKernel.ts'],
+    rules: {
+      '@typescript-eslint/no-extraneous-class': ['error', { allowEmpty: true }],
     },
   },
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),

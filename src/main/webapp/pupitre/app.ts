@@ -22,7 +22,11 @@ export class App implements OnInit {
   ngOnInit(): void {
     this.authentication
       .authenticate()
-      .then(() => this.synchronizationTrigger.start())
-      .catch((failure: unknown) => this.errorHandler.handleError(failure));
+      .then(() => {
+        this.synchronizationTrigger.start();
+      })
+      .catch((failure: unknown) => {
+        this.errorHandler.handleError(failure);
+      });
   }
 }

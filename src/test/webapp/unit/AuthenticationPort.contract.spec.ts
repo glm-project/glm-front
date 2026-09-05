@@ -8,6 +8,7 @@ import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastruc
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import Keycloak from 'keycloak-js';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { MockInstance } from 'vitest';
@@ -152,7 +153,7 @@ const scriptOf = (turns: ServerTurn[]): ServerTurn => {
   return () => {
     const turn = turns[Math.min(taken, turns.length - 1)];
     taken += 1;
-    return turn();
+    return requiredFixture(turn, 'authorization server turn')();
   };
 };
 
