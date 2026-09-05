@@ -4,7 +4,9 @@ Trunk-based: short-lived branches off `main`, named `type/short-description` (e.
 `feat/add-perimeter-panel`, `docs/restructure-documentation`).
 
 Conventional Commits, scope optional and naming the affected area: `docs(documentation): link documentation
-from README`. No ticket tracker on this repository: never ask for an issue key, never put one in a scope.
+from README`. Issues live in GitHub and are organized on Backlog GLM; follow the
+[issue tracker configuration](../docs/agents/issue-tracker.md). Keep scopes descriptive and use an issue
+reference only when the task identifies a relevant issue; do not require an issue number for every change.
 
 **Structural and behavioral changes never share a commit.** A rename, an extraction, a file move is
 `refactor:` or `chore:`, goes first, and leaves the tests green before and after — the existing tests are the

@@ -44,6 +44,12 @@ Conventions, one document per topic:
 - [Git and MR](documentation/git-and-mr.md) — branching, commit messages and their granularity, MR
   descriptions
 
+Engineering skill configuration:
+
+- [Issue tracker](docs/agents/issue-tracker.md) — GitHub Issues and the existing Backlog GLM board
+- [Triage labels](docs/agents/triage-labels.md) — the five canonical triage roles
+- [Domain docs](docs/agents/domain.md) — shared glossary and existing ADR archive
+
 Background and decisions:
 
 - [Hexagonal architecture](documentation/hexagonal-architecture.md) — the theory behind the layout
