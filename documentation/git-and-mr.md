@@ -22,7 +22,3 @@ commit messages and in the diff.
 
 Husky + lint-staged run `eslint --fix` and `prettier --write` on staged files. Do not bypass them with
 `--no-verify`.
-
----
-
-New rules on this topic go here.

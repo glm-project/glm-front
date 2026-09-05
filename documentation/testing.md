@@ -1,6 +1,6 @@
 # Testing
 
-How we write tests here. The commands themselves live in `CLAUDE.md`.
+How we write tests here. Common commands live in `AGENTS.md`; `package.json` is the complete inventory.
 
 ## Write the test first, at the layer that matches the change
 
@@ -16,29 +16,21 @@ How we write tests here. The commands themselves live in `CLAUDE.md`.
    there is no back end behind these, the network is intercepted here too, and gestion is served with
    `auth.provider.cypress.ts` in place of Keycloak. They test the application, and stop at its edges.
 
-   **The pupitre is the exception, and it is a narrow one.** It has no `auth.provider.cypress.ts`: the
-   device grant makes no browser redirect, only XHRs, so the real `device` adapter can be driven against an
-   intercepted authorization server — and enrolment is the one journey worth testing that way, because
-   substituting the adapter would delete the subject. Every other pupitre spec inherits that adapter and
-   simply lets its calls fail; `authenticate()` never rejects, so nothing else notices. A pupitre journey
-   that needs a token, rather than the act of getting one, gets the swap back.
+   **The pupitre is the exception.** It has no `auth.provider.cypress.ts`: device enrolment has no redirect,
+   so its application test drives the real adapter against intercepted authorization endpoints. Journeys
+   needing an existing enrolment seed it through `PupitreStorageFixture`, preserving the real restoration
+   and signing path without repeating enrolment.
 
 Both Cypress layers share their helpers from `src/test/webapp/utils/`: `dataSelector` and `interceptForever`,
 the latter controlling response timing. The folder carries its own `tsconfig.json` because those helpers are
 Cypress-typed, where the Vitest specs next door are not.
 
-Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is
-reached by an npm script naming the front. A suite is added by creating the config and the
-`test:<layer>:headless:<front>` script that boots its front — `test:application` and `test:component` pick it
-up by glob. The fronts run **one front at a time**: two servers of one Angular project share a vite cache
-directory and break each other.
+Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is reached
+by an npm script naming the front. Add a suite with its config and the `test:<layer>:headless:<front>` script;
+the aggregate scripts pick it up by glob. `AGENTS.md` owns the one-server-at-a-time trap.
 
-The pupitre has an application suite and **no component suite**: the component layer tests one component
-with the network intercepted, and no pupitre component calls anything — its header renders from an input
-alone, and the only traffic the front makes is the shell's enrolment, which belongs to the application
-layer. A component spec would restate the application one against the same served app, with no interception
-to earn its place. `test:component` therefore covers `gestion` alone today. The pupitre's first screen
-brings its config and its script with it.
+The pupitre currently has no component suite because its rendered components add no browser integration
+beyond the application journeys. Add the suite when a component owns browser behavior worth isolating.
 
 ## Fixing a defect starts with a failing test
 
@@ -133,7 +125,3 @@ behavior-preserving refactoring would break.** Written down — in the plan, in 
 test, in the MR — not merely thought. Renaming the method under test, moving its file, changing a CSS
 class: if any of these turns the assertion red while no user sees a difference, it tests the implementation
 and it goes in the bin.
-
----
-
-New rules on this topic go here.

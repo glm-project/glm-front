@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted, complemented by [ADR 0007](0007-durable-offline-pupitre.md). This record governs service-worker
+caching; the durable application queue is a separate mechanism.
 
 ## Context
 

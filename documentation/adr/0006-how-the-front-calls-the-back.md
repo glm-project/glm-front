@@ -55,20 +55,20 @@ they are — no base URL is configured anywhere. `lire` reads, `ecrire` writes, 
 `chemin`, `parametres` and `corps` that route accepts, so **the contract is held by `tsc`, not by a test**.
 
 **Two shared kernels carry what every context needs.** `app/shared/pagination/` owns `domain/Extrait<T>` — the
-one artefact a business domain imports — and the wire-side `extraitDe`. `app/shared/api-client/` owns
-`ClientApi`, `obligatoire` and `codeDErreur`.
+one artefact a business domain imports — and the wire-side `buildExtraitFrom`. `app/shared/api-client/` owns
+`ClientApi`, `required` and `findCodeDErreurIn`.
 
 **One read is one request of `size=100`, never a loop**, and `Extrait` says what it carries: `nombreTotal` comes
 from the server's own `totalElementsCount`, and `estComplet()` tells a caller whether anything was left behind.
 
-**Guard, at the adapter, the fields the domain requires.** `obligatoire(valeur, 'suivi.id')` throws rather than
+**Guard, at the adapter, the fields the domain requires.** `required(value, 'suivi.id')` throws rather than
 let an `undefined` the business does not have reach a domain class. Nothing guards a request body: those are
 typed honestly.
 
 **Assign the wire enums straight to the domain unions**, which repeat the same literals. No `Record` keyed by
 the generated union: structural typing already fails the compilation when the back adds a value.
 
-**Branch on the stable code, never on `status` + `title`.** `codeDErreur` reads the `urn:glm:erreur:…` a
+**Branch on the stable code, never on `status` + `title`.** `findCodeDErreurIn` reads the `urn:glm:erreur:…` a
 `ProblemDetail` carries, along with the message the domain wrote; a context translates those URNs into its own
 refusal class through a table in its `infrastructure/secondary`. A 400 from Bean Validation is not a refusal: at
 the pupitre an invalid body comes from us, and it crosses as a technical failure. 401, 403 and network failures
@@ -119,12 +119,12 @@ ground under the unbounded queue of issue 53; the day it falls, that is the tick
   pupitre and none of it excludable.
 - `ClientApi` casts its own request object once, at the point where a generic intersection meets the runtime.
   The cast is confined to two lines and every call site above it is checked.
-- `codeDErreur` trusts the back's catalogue: an URN the front's union does not know crosses as a technical
+- `findCodeDErreurIn` trusts the back's catalogue: an URN the front's union does not know crosses as a technical
   failure, silently. The union is bounded to the codes the three ports can reach, so widening it is a
   deliberate act — and forgetting to widen it degrades a refusal into a crash rather than into a wrong branch.
 - **No Cypress covers any of this yet.** Nothing in `app/atelier` or `app/operateur` is wired into a front:
   issue 55 brings the providers and the screens, and the interception with them. The unit suite and `tsc` are
   the whole net today.
-- What would reopen this: the back publishing honest `required` flags (issue 61) shrinks the `obligatoire`
+- What would reopen this: the back publishing honest `required` flags (issue 61) shrinks the `required`
   guards to the genuinely optional fields, and a grid projection without the journal (issue 62) reopens the
   bound of one request per read.

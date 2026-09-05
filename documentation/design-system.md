@@ -1,158 +1,57 @@
 # Design system
 
-## What both fronts share is a set of tokens, not a library of components
+The fronts share visual roles, not duplicate palettes. `src/main/webapp/styles.css` is the single source for
+colour, typography, touch size and font-family tokens.
 
-`src/main/webapp/styles.css` carries one `@theme static` block, and each front composes in Tailwind over it.
-The two fronts share no screen, so the demand for shared components is thin; what they do share is the meaning
-of a colour — the red of a non-conformity is the same fact on a pupitre tile and in a gestion table, seen by
-two people who talk about it on the shop floor. Two values for one role would break that conversation.
+## Name roles, not values
 
-`static` is load-bearing, not decoration. A plain `@theme` only emits the variables some utility class uses,
-and Tailwind scans templates, not stylesheets: half the roles would exist as a class and resolve to nothing in
-a `var()`. Anything reading a token outside a utility — the Material bridge below, a component stylesheet —
-needs the whole set published.
+Use the thirteen colour roles already declared: surfaces and text (`canvas`, `surface`, `sunken`, `border`,
+`border-strong`, `ink`, `ink-muted`), action (`accent`, `on-accent`) and state (`ok`, `nc`, `glm`, `warn`).
+Choose the role that matches the meaning; a screen does not create a second value for an existing role.
 
-Colour is named by **role**, never by hue: `canvas`, `surface`, `sunken`, `border`, `border-strong`, `ink`,
-`ink-muted`, `accent`, `on-accent`, plus the states `ok`, `nc`, `glm`, `warn`. Typography is six levels, each
-carrying its own weight — `display`, `title`, `section`, `body`, `body-sm`, `label` — which is what makes a
-seventh heading combination impossible to write. Touch targets are `spacing-touch` (44 px) and
-`spacing-touch-lg` (52 px), in px and not rem: a gloved finger is a physical dimension, not a reading
-distance.
+Typography has six levels: `display`, `title`, `section`, `body`, `body-sm` and `label`. Use their Tailwind
+utilities rather than assembling a seventh size/weight combination. Touch targets use `spacing-touch`
+(44 px) and `spacing-touch-lg` (52 px); keep them in pixels because the physical target does not scale with
+reading distance.
 
-`--color-glm` is imported **under reserve**. It presupposes that the GLM is a thing with a colour, where the
-pupitre screen treats it as a computed residue that "must be seen without existing"; it is re-read when that
-is settled.
+`@theme static` is required. Tailwind scans templates, not stylesheets, while Material and component CSS read
+tokens through `var()`. Static publication keeps every role available even when no utility currently names it.
 
-`--font-sans` is a system stack and `body` names it: no `index.html` links a webfont any more, and
-`ExternalRequestsTest` (`src/test/webapp/unit/`) holds both documents to that. It is not yet the only stack.
-`indigo-pink.css` sits in the `styles` array of both build targets and hardcodes `Roboto` across its own
-`--mat-*-font` tokens, so a Material surface still asks for a font nobody loads and lands on the browser's
-generic `sans-serif`. That one ends with the prebuilt theme, not here.
+`--font-sans` is the page family and uses a system stack. Boot documents load no remote font.
 
-## The one override a front gets is the scale
+## Fronts choose tokens; they do not redefine them
 
-`src/main/webapp/pupitre/styles.css` holds `html { font-size: 20px }` and nothing else, and sits in the
-`styles` array of `build-pupitre` (`angular.json`). The kiosk is read standing, at arm's length, so the
-smallest level is what sets the scale: `label` is 12 px on a desktop root and 15 px on the pupitre's. The rem
-type scale follows the root, the px touch targets do not, and that asymmetry is the design.
+The pupitre's sole stylesheet override is `html { font-size: 20px }`. This scales rem typography for a kiosk
+read at arm's length while leaving pixel touch targets physical. `DesignTokensTest` holds that stylesheet to
+one selector and one property.
 
-Divergence between the two fronts is a matter of **choosing** a token in the template — `text-display` and
-`min-h-touch-lg` at the pupitre, `text-body-sm` in the tables — never of giving a role a second value. Any
-colour or role token appearing in a front stylesheet is a violation and not an exception: that is the file
-where, otherwise, `--color-nc` will have taken another shade in six months "because we could not see it".
-`DesignTokensTest` holds the file to one rule, `html`, with one property.
+A front may choose a larger existing role, such as `text-display` or `min-h-touch-lg`. Keep colour, type and
+spacing definitions in the shared theme.
 
-## Material reads the tokens, it does not hold a copy of them
+## Three barriers enforce the contract
 
-`gestion` runs Angular Material's **azure-blue** prebuilt theme (`angular.json`, `build-gestion`), which is
-Material 3 and therefore expresses everything through `--mat-sys-*` custom properties. That is the whole
-reason for the theme: M2's indigo-pink hard-codes its palette into selectors, where M3 leaves a variable to
-point somewhere else.
-`src/main/webapp/app/shared/design-system/infrastructure/primary/gestion/material-bridge.css` is where it
-points — one `:root` block, one line per system token, each of them a bare `var(--color-…)` or `var(--text-…)`.
+- `local/no-token-bypass` rejects native Tailwind colour families, white/black shortcuts, arbitrary hex
+  colours and arbitrary text sizes in TypeScript and templates.
+- `DesignTokensTest` verifies token publication, front overrides, Material references and WCAG AA contrast
+  for the text/background pairs used by screens.
+- `MaterialBridge.spec.ts` verifies computed browser styles so a declaration that never reaches the page
+  cannot pass on text matching alone.
 
-Pure CSS, deliberately. `mat.theme()` in Sass wants compile-time literals, so it would take a **copy** of the
-palette, and a copy drifts: someone changes `--color-accent`, the Material chrome keeps last quarter's blue,
-and nothing fails. A `var()` cannot diverge from what it reads. `:root` (0,1,0) also outranks the prebuilt's
-`html` (0,0,1), so the bridge wins whatever the order of the `styles` array.
+Dynamic class bindings are outside the lint rule's static reach. Prefer literal role classes. If a computed
+binding is required, justify the narrow tooling directive in the commit or MR.
 
-Only the tokens that carry a role are pointed — the twelve colours and the ten typographic levels Material's
-components actually consume. The tonal variants below them keep azure-blue's values, and font weight and
-letter-spacing stay Material's: the design system has an opinion about _which grey_ and _how big_, not about
-the tracking of a chip label. `--mat-sys-on-error` reads `--color-on-accent` on purpose and not by accident:
-in this token set `on-accent` is the one foreground for every strong fill, which is why `DesignTokensTest`
-measures it on `accent`, `ok`, `nc`, `glm` and `warn` alike.
+State colours also serve as text on `sunken`; preserve their measured contrast and rerun the token test after
+changing any colour.
 
-Two things the bridge deliberately does **not** point.
+## Only rendering code depends on the design system
 
-- **The family.** Every `--mat-sys-*-font` stays Roboto, because `styles.css` still says
-  `body { font-family: Roboto … }` and pointing the chrome alone renders the back-office in two typefaces.
-  The family is one decision for the whole page; the ten lines land in this file the day the page stops
-  naming Roboto, alongside the removal of the Google Fonts link.
-- **The composite shorthands.** M3 also ships `--mat-sys-body-large: 400 1rem / 1.5rem Roboto`, which an
-  override of the `-size` and `-line-height` parts cannot reach — and cannot be written as a bare `var()`
-  either, so the bridge's one-reference-per-line contract excludes it by construction. Only `mat-grid-list`
-  reads the shorthands, and gestion has none; the day one appears it will show azure-blue's size, and the
-  fix is the same as for any other family that jars — one more line, still a `var()`.
+The design system is a shared kernel that depends on no business context. Only primary adapters render and
+may depend on it; domain, application and secondary adapters remain independent. `HexagonalArchTest` enforces
+both directions.
 
-Two consequences of the M2 → M3 move are worth knowing before reading a template. `.mat-typography` no longer
-exists, so a heading gets its size from a token class (`text-title`, `text-section`) or from nothing at all —
-Tailwind's preflight resets `h1`–`h6` to inherit. And `color="primary"` / `color="accent"` are inert under M3;
-they are removed where they were gestion-only, and left on the shared header because `pupitre` still loads
-indigo-pink until the ticket that takes Material out of it lands.
+Composition roots may import the shared visual adapters to assemble their front. The roots are outside the
+architecture scan by design; keep business behavior in their front-specific composition or its owning
+context, never in the shared chrome.
 
-## An icon is an SVG the bundle carries, never a font a CDN serves
-
-`glm-icon` (`app/shared/design-system/infrastructure/primary/icon/`) is how a front draws one, and the set it
-offers is a single object — `DRAWINGS` — that is at once the argument to `provideIcons` and, through
-`keyof typeof`, the type of the `name` input. Naming an icon the design system does not carry is a compile
-error, and no name can be added without its drawing: the two cannot drift apart because they are one
-declaration. Both packages are pinned exactly at `34.0.0`. `@ng-icons/core` is the one carrying a framework
-peer range — `@angular/core >=21.0.0` — where `@ng-icons/lucide` declares none and follows its line; `34` is
-the last line admitting Angular 21, `35` raising that floor to 22.
-
-The icon sizes itself at `1em` and paints in `currentColor`, so it takes the size and the colour of whatever
-encloses it, and a caller names a type token rather than a pixel value. Inside a Material control there is
-nothing to name: `.mat-mdc-icon-button svg` hard-sizes the glyph to `--mat-icon-button-icon-size`, 24 px, and
-a class on the wrapper does not outrank it — which is why the gestion menu trigger names no size at all.
-`NgIcon` marks its own `<ng-icon>` element `aria-hidden` unless the caller says otherwise, and that is the
-right default: the accessible name belongs to the control, not to its glyph.
-
-**`<mat-icon>foo</mat-icon>` renders the word `foo` now.** Material still puts `.material-icons` on the
-element — `_defaultFontSetClass` in `_icon-registry-chunk.mjs`, moved there out of `icon.mjs` in v21 — but
-the font behind that class came from the CDN `<link>` that is gone, so no ligature resolves. A Material
-component shipping its own icon is untouched; a hand-written ligature is not.
-
-The decision and its price are in [ADR 0005](adr/0005-icons-as-svg-the-bundle-carries.md).
-
-## Three barriers, all in a tool that already runs
-
-- **`local/no-token-bypass`** (`eslint.config.mjs`), on `src/**/*.ts` and `src/**/*.html`: native Tailwind
-  colour families, `bg-white` / `bg-black`, arbitrary hexes, arbitrary text sizes. eslint already parses the
-  templates and reports the exact line.
-- **`DesignTokensTest`** (`src/test/webapp/unit/`) reads the declared values and measures the contrast of the
-  text-on-background pairs the screens really show — `sunken` included, since tables stripe their rows with
-  `odd:bg-sunken`, so a `text-ok` cell sits on it one row in two. Every pair clears WCAG AA at 4.5:1. It also
-  holds the theme to `@theme static`, and the bridge to references only — a `--mat-sys-*` given a literal, or
-  pointed at a token the theme does not declare, is a red test.
-- **`MaterialBridge.spec.ts`** (`src/test/webapp/component/gestion/design-system/`) opens the shell in a
-  browser and checks that the Material chrome computes to the same colour the token does. A file read from
-  disk proves the intent, not the result: this is the layer that catches a token published nowhere, which a
-  text match on a stylesheet cannot see.
-
-`ok` and `warn` are deliberately darker than the usual greens and ambers because they are also text in those
-cells: measured on `sunken`, `#15803D` fell to 4.26:1 and `#A16207` to 4.19:1. The values in place give
-6.06:1 and 5.83:1. **Never lighten a state colour without rerunning that spec.**
-
-The lint rule is blind to dynamic bindings (`[class]`, `ngClass`): it reads class strings, and a computed one
-is never a string it sees. The way out is a motivated `eslint-disable-next-line`, which `local/no-comments`
-lets through as a tooling directive, with the justification in the commit message as everywhere else. No
-folder is exempt — the one place a hexadecimal is legitimate is `styles.css`, which eslint does not read.
-
-## Who may depend on the design system
-
-Two symmetric rules in `HexagonalArchTest`, under `describe('DesignSystem')`: the design system depends on
-**no business context**, and **only `primary` adapters** depend on the design system — not `domain`, not
-`application`, not `infrastructure.secondary`. `application` orchestrates and never renders; `secondary`
-speaks HTTP and has no use for a button.
-
-The second is the one that closes a hole. `Domain should not depend on outside` allows `..domain..` **and
-every shared kernel**, and the design system is a shared kernel — so a `domain` importing `Header` was legal.
-Measured: with that import planted, the suite was green at 11 tests.
-
-The first rule names the **business-context packages**, never layer globs. A rule forbidding the design
-system to reach `'..infrastructure..'` would redden on one of its own components importing another, since
-the design system lives in `infrastructure/primary/` itself. It is dormant today and knowingly so — there is
-no business context yet for it to catch — and it was proved by planting one, not by watching it pass.
-
-**Two things these rules do not reach.** They govern `src/main/webapp/app/`, the only tree the architecture
-test scans, so the composition roots fall outside: `gestion/header/header.ts` and `pupitre/header/header.ts`
-both import `Header` and neither is a primary adapter. That is the sanctioned composition of §5, not a leak
-— but widening the scan root would redden it, and the fix would be to allow the roots, never to weaken the
-rule. And `failOnEmptyShould: false` means a rule matching nothing passes in silence, which is why a third
-test asserts the design system was discovered at all: rename the folder and both rules would otherwise go on
-passing over an empty set.
-
----
-
-New rules on this topic go here.
+For Angular Material integration read [`material.md`](material.md). For the icon primitive and drawing set
+read [`icons.md`](icons.md).
