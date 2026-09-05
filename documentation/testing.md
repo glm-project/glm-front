@@ -44,6 +44,8 @@ red before the fix and green after.
 
 The 100 % per-file threshold outranks any "not worth testing" judgement below. If you genuinely cannot
 cover a line, delete the line or restructure the code — never lower the threshold.
+Reach that coverage through observable contracts. A new file does not by itself create a new behavior to
+assert; its coverage can come from scenarios through its owner's public entry point.
 
 ## Tests are in English, start with "should", and tell a business story
 
@@ -109,6 +111,10 @@ eager first version of the Keycloak fake passed against an adapter whose refresh
 fake made to settle asynchronously went red. Resolving before the call returns hides exactly the defect this
 branch had already shipped once.
 
+Control delayed I/O with explicit fixture signals for request arrival and completion. Advancing the clock
+by an arbitrary number of milliseconds does not prove that a read has started. Reserve elapsed-time
+simulation for the temporal behavior being exercised.
+
 The reasoning and its price are in [ADR 0002](adr/0002-port-contract-for-secondary-adapters.md).
 
 ## We test observable business behavior, and the real runtime failure modes
@@ -123,8 +129,18 @@ bar:
 Facing a mixed batch of refactoring + fix: zero tests for the refactoring, one behavior test for the fix of
 a real failure mode, red before and green after.
 
-**The rule above is a procedure, not an intention: every proposed assertion states, next to itself, what a
-behavior-preserving refactoring would break.** Written down — in the plan, in the message proposing the
-test, in the MR — not merely thought. Renaming the method under test, moving its file, changing a CSS
-class: if any of these turns the assertion red while no user sees a difference, it tests the implementation
-and it goes in the bin.
+**Before adding or reviewing a scenario, state its functional rule, public entry point and observable
+expected result.** Record the rationale in the plan, review or MR, not in source comments. Derive the
+expected result from the specification; if an existing test contradicts it, correct the expectation with
+the behavior rather than preserving the test as authority.
+
+Exercise the same public interface as a caller and retain the real domain logic behind it. A domain test
+can assert a returned decision or public state; a component test drives input and observes rendered output.
+Being callable or exposed as a signal does not alone make a member the contract under test. When the DOM
+already proves the result, an additional assertion on the controller's backing state adds coupling.
+
+For each scenario, name a behavior-preserving implementation change that must leave its expected result
+intact. Moving a file or renaming a public method may require updating imports or invocation; this alone is
+not a testing defect. Changing private helpers, internal state representation or orchestration must leave
+the expected business result intact. For example, assert that the last digits are visible and the operator
+can scroll back, rather than fabricating a width and asserting the component's exact scroll assignment.
