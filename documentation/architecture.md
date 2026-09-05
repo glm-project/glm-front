@@ -75,6 +75,9 @@ expiration and closure. Consult [offline-pupitre.md](offline-pupitre.md) for the
 In a review, trace each changed functional rule to its domain decision and a behavioral test. Passing the
 import-boundary checks proves allowed dependencies, not correct ownership of the decisions.
 
+[ADR 0013](adr/0013-keep-business-decisions-in-rich-domain-models.md) records the choice of rich domain
+models, the role retained by services and the costs of coordinating asynchronous work.
+
 ## Dependencies flow inward
 
 The architecture suite enforces these rules:
