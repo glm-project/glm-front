@@ -15,11 +15,12 @@ const sendOnce = async (envoi: Envoi): Promise<void> => {
   }
 };
 
-export const send = async (envoi: Envoi): Promise<void> => {
+export const send = async (envoi: Envoi, relire: Envoi): Promise<void> => {
   try {
     await sendOnce(envoi);
   } catch (refus: unknown) {
     if (matches(refus, SAISIE_CONCURRENTE)) {
+      await relire();
       await sendOnce(envoi);
       return;
     }
@@ -28,9 +29,9 @@ export const send = async (envoi: Envoi): Promise<void> => {
   }
 };
 
-export const sendAbsorbing = async (absorbe: CodeDeRefusDAtelier, envoi: Envoi): Promise<void> => {
+export const sendAbsorbing = async (absorbe: CodeDeRefusDAtelier, envoi: Envoi, relire: Envoi): Promise<void> => {
   try {
-    await send(envoi);
+    await send(envoi, relire);
   } catch (refus: unknown) {
     if (matches(refus, absorbe)) {
       return;

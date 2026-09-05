@@ -257,9 +257,13 @@ is no business rule to make it a bounded context.
 - **`authenticate()` never rejects.** Every HTTP failure maps to "no token", the normal answer above. A
   rejection would surface as an uncaught exception and fail every Cypress spec that boots the pupitre
   without a Keycloak behind it.
-- **Tokens live in memory only.** `offline_access` is requested so the session survives a shift, but nothing
-  is written to disk: a reload re-enrols. A long-lived refresh token in `localStorage` is reachable by any
-  XSS, and the shop floor's screens are shared.
+- **Device enrolment persists in IndexedDB.** Its offline refresh credential and company survive a restart.
+  The company remains selected when authorization expires or is revoked, allowing local capture while
+  exchanges require reenrolment. Rotation is committed before a renewed credential is exposed.
+  [ADR 0007](adr/0007-durable-offline-pupitre.md) records the explicit browser-credential tradeoff.
+- The pupitre alone wires `httpDeviceAuthorizationInterceptor`: a 401/403 retires the refused device
+  authorization and starts reenrolment while retaining the local company. A response from an older
+  session cannot retire its replacement. Enrolment traffic still bypasses all interceptors.
 
 ## A secondary adapter reaches the API through `ClientApi`, never through `HttpClient`
 
@@ -292,9 +296,13 @@ The reasoning and its price are in [ADR 0006](adr/0006-how-the-front-calls-the-b
 
 `app/shared/pagination/` carries `domain/Extrait<T>` — the one artefact of these two kernels a business domain
 imports — and `infrastructure/secondary/extraitDe`, which turns a `PageRest*` into it. **One read is one request
-of `size=100`** (`PLAFOND_DE_PAGE`, the hard cap above which the back answers 500), never a loop: `nombreTotal`
+of `size=100`** (`PLAFOND_DE_PAGE`, the hard cap above which the back answers 500) for the online extract ports: `nombreTotal`
 comes from the server's own `totalElementsCount` and `estComplet()` tells a caller whether anything was left
 behind. Truncating is acceptable because it is said; truncating in silence is not.
+
+The offline pupitre has a distinct complete-reference port: it traverses every page and publishes neither
+collection until both are complete. Its durable cache is never replaced by an extract. See
+[ADR 0007](adr/0007-durable-offline-pupitre.md).
 
 ## A refusal is an event, not a return value
 
@@ -314,8 +322,8 @@ domain it is one operation with two internal paths, not an error handled as a su
 gesture of its own, through `pointerLaPresence`, is a refusal the operator must see.
 
 **`saisie-concurrente` is replayed once, immediately, and then let through.** It is the one code where the entry
-was valid and someone else slipped in between the read and the write; replaying is re-issuing the identical
-`POST`, since the body is entirely known to the client.
+was valid and someone else slipped in between the read and the write; the adapter rereads the affected aggregate, then reissues the identical
+`POST` with its original UUID and business date. A refusal after that retry is retained with its cause in the offline queue, which continues with the next gesture.
 
 ---
 

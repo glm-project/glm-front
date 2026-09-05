@@ -310,6 +310,27 @@ describe.each(adapters)('AuthenticationPort contract, honoured by %s', (_adapter
   });
 });
 
+describe('Authentication without a device company', () => {
+  it('should expose no company before device enrolment', async () => {
+    const authentication: AuthenticationPort = new InMemoryAuthentication();
+
+    await authentication.synchronizeSession();
+    thenItHasNoDeviceCompany(authentication);
+  });
+  it('should need no disk synchronization when no persistent storage is configured', async () => {
+    const device = Injector.create({
+      providers: [DeviceAuthentication, { provide: HttpBackend, useValue: {} }, { provide: DeviceGrantConfiguration, useValue: {} }],
+    }).get(DeviceAuthentication);
+
+    await device.synchronizeSession();
+
+    thenItHasNoDeviceCompany(device);
+  });
+  const thenItHasNoDeviceCompany = (authentication: AuthenticationPort): void => {
+    expect(authentication.currentTenant()).toBeUndefined();
+  };
+});
+
 describe('Keycloak OIDC Authentication, beyond the contract', () => {
   const originalLocation = window.location;
   let consoleErrorFixture: MockInstance;

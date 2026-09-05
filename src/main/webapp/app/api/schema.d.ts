@@ -574,6 +574,11 @@ export interface components {
       dateDeSurvenue?: string;
       /**
        * Format: uuid
+       * @description Identifiant durable du geste, genere par le pupitre.
+       */
+      id: string;
+      /**
+       * Format: uuid
        * @description Identifiant de l'operateur qui arrive.
        */
       operateur: string;
@@ -1038,6 +1043,16 @@ export interface components {
     /** @description Un pointage de l'operateur sur un element engage, date a l'instant present. */
     RestPointage: {
       /**
+       * Format: date-time
+       * @description Heure metier du geste. Absente, elle vaut l'instant de reception initial.
+       */
+      dateDeSurvenue?: string;
+      /**
+       * Format: uuid
+       * @description Identifiant durable du geste, genere par le pupitre.
+       */
+      id: string;
+      /**
        * Format: uuid
        * @description Identifiant de l'operateur dont le temps est affecte.
        */
@@ -1060,6 +1075,16 @@ export interface components {
      *     bouton de pause unique, sans N clics pour N taches. Aucun identifiant de journee n'est necessaire.
      */
     RestPointageDePresence: {
+      /**
+       * Format: date-time
+       * @description Heure metier du geste. Absente, elle vaut l'instant de reception initial.
+       */
+      dateDeSurvenue?: string;
+      /**
+       * Format: uuid
+       * @description Identifiant durable du geste, genere par le pupitre.
+       */
+      id: string;
       /**
        * Format: uuid
        * @description Identifiant de l'operateur qui pointe.
@@ -1260,8 +1285,26 @@ export interface operations {
       };
     };
     responses: {
+      /** @description Le geste identique est rejoue. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          '*/*': components['schemas']['RestJourneeDeTravail'];
+        };
+      };
       /** @description La journee est ouverte. */
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          '*/*': components['schemas']['RestJourneeDeTravail'];
+        };
+      };
+      /** @description Le corps est invalide ou la date de survenue est future. */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -1278,7 +1321,7 @@ export interface operations {
           '*/*': components['schemas']['RestJourneeDeTravail'];
         };
       };
-      /** @description Cet operateur a deja une journee ouverte. */
+      /** @description Cet operateur a deja une journee ouverte ou l'identifiant est reutilise. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1302,8 +1345,26 @@ export interface operations {
       };
     };
     responses: {
+      /** @description Le geste identique est rejoue. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          '*/*': components['schemas']['RestJourneeDeTravail'];
+        };
+      };
       /** @description Le pointage est enregistre. */
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          '*/*': components['schemas']['RestJourneeDeTravail'];
+        };
+      };
+      /** @description Le corps est invalide ou la date de survenue est future. */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -1320,7 +1381,7 @@ export interface operations {
           '*/*': components['schemas']['RestJourneeDeTravail'];
         };
       };
-      /** @description Transition impossible depuis l'etat de presence courant. */
+      /** @description Transition impossible depuis l'etat de presence courant ou identifiant reutilise. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1703,8 +1764,26 @@ export interface operations {
       };
     };
     responses: {
+      /** @description Le geste identique est rejoue. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          '*/*': components['schemas']['RestSuiviDAtelier'];
+        };
+      };
       /** @description Le pointage est enregistre. */
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          '*/*': components['schemas']['RestSuiviDAtelier'];
+        };
+      };
+      /** @description Le corps est invalide ou la date de survenue est future. */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -1721,7 +1800,7 @@ export interface operations {
           '*/*': components['schemas']['RestSuiviDAtelier'];
         };
       };
-      /** @description Operateur non habilite sur ce poste, element cloture, ou transition impossible depuis l'etat courant. */
+      /** @description Operateur non habilite sur ce poste, element cloture, transition impossible ou identifiant reutilise. */
       409: {
         headers: {
           [name: string]: unknown;

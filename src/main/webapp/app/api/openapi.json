@@ -183,13 +183,18 @@
             "format": "date-time",
             "type": "string"
           },
+          "id": {
+            "description": "Identifiant durable du geste, genere par le pupitre.",
+            "format": "uuid",
+            "type": "string"
+          },
           "operateur": {
             "description": "Identifiant de l'operateur qui arrive.",
             "format": "uuid",
             "type": "string"
           }
         },
-        "required": ["operateur"],
+        "required": ["id", "operateur"],
         "type": "object"
       },
       "RestCloture": {
@@ -801,6 +806,16 @@
       "RestPointage": {
         "description": "Un pointage de l'operateur sur un element engage, date a l'instant present.",
         "properties": {
+          "dateDeSurvenue": {
+            "description": "Heure metier du geste. Absente, elle vaut l'instant de reception initial.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Identifiant durable du geste, genere par le pupitre.",
+            "format": "uuid",
+            "type": "string"
+          },
           "operateur": {
             "description": "Identifiant de l'operateur dont le temps est affecte.",
             "format": "uuid",
@@ -817,12 +832,22 @@
             "type": "string"
           }
         },
-        "required": ["operateur", "type"],
+        "required": ["id", "operateur", "type"],
         "type": "object"
       },
       "RestPointageDePresence": {
         "description": "Une pause, une reprise ou un depart, saisis en direct sur la journee ouverte de l'operateur.\n\nUn seul evenement, quel que soit le nombre d'elements sur lesquels l'operateur travaille : c'est ce qui donne un\nbouton de pause unique, sans N clics pour N taches. Aucun identifiant de journee n'est necessaire.\n",
         "properties": {
+          "dateDeSurvenue": {
+            "description": "Heure metier du geste. Absente, elle vaut l'instant de reception initial.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Identifiant durable du geste, genere par le pupitre.",
+            "format": "uuid",
+            "type": "string"
+          },
           "operateur": {
             "description": "Identifiant de l'operateur qui pointe.",
             "format": "uuid",
@@ -834,7 +859,7 @@
             "type": "string"
           }
         },
-        "required": ["operateur", "type"],
+        "required": ["id", "operateur", "type"],
         "type": "object"
       },
       "RestPosteDeTravail": {
@@ -1097,6 +1122,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestJourneeDeTravail"
+                }
+              }
+            },
+            "description": "Le geste identique est rejoue."
+          },
           "201": {
             "content": {
               "*/*": {
@@ -1106,6 +1141,16 @@
               }
             },
             "description": "La journee est ouverte."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestJourneeDeTravail"
+                }
+              }
+            },
+            "description": "Le corps est invalide ou la date de survenue est future."
           },
           "404": {
             "content": {
@@ -1125,7 +1170,7 @@
                 }
               }
             },
-            "description": "Cet operateur a deja une journee ouverte."
+            "description": "Cet operateur a deja une journee ouverte ou l'identifiant est reutilise."
           }
         },
         "summary": "Enregistrer une arrivee",
@@ -1147,6 +1192,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestJourneeDeTravail"
+                }
+              }
+            },
+            "description": "Le geste identique est rejoue."
+          },
           "201": {
             "content": {
               "*/*": {
@@ -1156,6 +1211,16 @@
               }
             },
             "description": "Le pointage est enregistre."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestJourneeDeTravail"
+                }
+              }
+            },
+            "description": "Le corps est invalide ou la date de survenue est future."
           },
           "404": {
             "content": {
@@ -1175,7 +1240,7 @@
                 }
               }
             },
-            "description": "Transition impossible depuis l'etat de presence courant."
+            "description": "Transition impossible depuis l'etat de presence courant ou identifiant reutilise."
           }
         },
         "summary": "Pointer une pause, une reprise ou un depart",
@@ -1771,6 +1836,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestSuiviDAtelier"
+                }
+              }
+            },
+            "description": "Le geste identique est rejoue."
+          },
           "201": {
             "content": {
               "*/*": {
@@ -1780,6 +1855,16 @@
               }
             },
             "description": "Le pointage est enregistre."
+          },
+          "400": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestSuiviDAtelier"
+                }
+              }
+            },
+            "description": "Le corps est invalide ou la date de survenue est future."
           },
           "404": {
             "content": {
@@ -1799,7 +1884,7 @@
                 }
               }
             },
-            "description": "Operateur non habilite sur ce poste, element cloture, ou transition impossible depuis l'etat courant."
+            "description": "Operateur non habilite sur ce poste, element cloture, transition impossible ou identifiant reutilise."
           }
         },
         "summary": "Pointer un debut, une non conformite ou une fin",

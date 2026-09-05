@@ -1,9 +1,10 @@
 import { Extrait } from '@/app/shared/pagination/domain/Extrait';
 import { EtatDAtelier } from './EtatDAtelier';
+import { IdentiteDuGeste } from './PupitreLocal';
 import { SuiviDAtelier } from './SuiviDAtelier';
 import { TypeDePointage } from './TypeDePointage';
 
-export interface Pointage {
+export interface Pointage extends IdentiteDuGeste {
   operateurId: string;
   type: TypeDePointage;
   posteId?: string;

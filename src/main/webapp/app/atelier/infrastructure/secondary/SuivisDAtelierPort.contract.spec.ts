@@ -16,6 +16,7 @@ const PAGE_PAR_DEFAUT_DU_SERVEUR = 20;
 const PAGE_MAXIMALE_DU_SERVEUR = 100;
 const TOUT_UN_ATELIER = 60;
 const PLUS_QUE_LE_SERVEUR_N_EN_REND = 137;
+const identiteFixture = { id: '69f66e5e-7401-427a-8f63-5e458e43fa36', dateDeSurvenue: '2026-09-05T08:00:00Z' };
 const JEAN = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d';
 const MARIE = '9f8e7d6c-5b4a-3210-9876-543210fedcba';
 const HUIT_HEURES = '2026-05-11T06:00:00Z';
@@ -66,8 +67,8 @@ const unAtelierFixture = (nombre: number): RestSuiviDAtelier[] =>
 
 const SUIVI_ID = UN_ELEMENT_QUE_JEAN_TRAVAILLE.id;
 const URL_DES_POINTAGES = `/api/atelier/suivis/${SUIVI_ID}/pointages`;
-const UN_DEBUT_DE_JEAN: Pointage = { operateurId: JEAN, type: 'DEBUT', posteId: TOUR_1.id };
-const UN_DEBUT_SANS_MACHINE: Pointage = { operateurId: JEAN, type: 'DEBUT' };
+const UN_DEBUT_DE_JEAN: Pointage = { ...identiteFixture, operateurId: JEAN, type: 'DEBUT', posteId: TOUR_1.id };
+const UN_DEBUT_SANS_MACHINE: Pointage = { ...identiteFixture, operateurId: JEAN, type: 'DEBUT' };
 const DEUX_DEBUTS_DE_SUITE = 'un DEBUT suppose une activite fermee';
 const UN_ELEMENT_QUI_A_QUITTE_L_ATELIER = "aucun suivi d'atelier ne porte cet identifiant";
 
@@ -217,6 +218,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     const pointage = suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN);
 
     await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
+    await whenTheServerRereadsTheElement();
     const rejeu = await whenTheServerTakesTheClocking(acceptant);
 
     thenItSent(rejeu, { operateur: JEAN, type: 'DEBUT', poste: TOUR_1.id });
@@ -227,6 +229,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     const echec = echecDe(suivis.recordPointage(SUIVI_ID, UN_DEBUT_DE_JEAN));
 
     await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
+    await whenTheServerRereadsTheElement();
     await whenTheServerTakesTheClocking(refusant(409, 'saisie-concurrente', 'une autre saisie est passee avant'));
 
     thenItWasRefused(await echec, 'saisie-concurrente', 'une autre saisie est passee avant');
@@ -273,8 +276,13 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     return requete;
   };
 
+  const whenTheServerRereadsTheElement = async (): Promise<void> => {
+    await unTourDeBoucle();
+    serveur.expectOne(`/api/atelier/suivis/${SUIVI_ID}`).flush(UN_ELEMENT_QUE_JEAN_TRAVAILLE);
+  };
+
   const thenItSent = (requete: TestRequest, body: unknown): void => {
-    expect(requete.request.body).toEqual(body);
+    expect(requete.request.body).toEqual({ ...(body as object), ...identiteFixture });
   };
 
   const thenItWasRefused = (echec: unknown, code: string, message: string): void => {

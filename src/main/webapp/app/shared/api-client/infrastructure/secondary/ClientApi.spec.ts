@@ -62,7 +62,7 @@ describe('ClientApi', () => {
   it('should put the path parameters the caller gave into the URL', async () => {
     const ecriture = api.write('/api/atelier/suivis/{id}/pointages', {
       chemin: { id: SUIVI_ID },
-      body: { operateur: OPERATEUR_ID, type: 'DEBUT' },
+      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
     });
 
     const requete = await whenTheServerAnswers(UN_SUIVI);
@@ -72,11 +72,11 @@ describe('ClientApi', () => {
   });
 
   it('should send the body the caller gave to write', async () => {
-    const ecriture = api.write('/api/atelier/journees/pointages', { body: { operateur: OPERATEUR_ID, type: 'PAUSE' } });
+    const ecriture = api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' } });
 
     const requete = await whenTheServerAnswers({});
 
-    thenItSent(requete, { operateur: OPERATEUR_ID, type: 'PAUSE' });
+    thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
     await ecriture;
   });
 

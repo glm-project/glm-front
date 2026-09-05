@@ -41,11 +41,19 @@ export class HttpSuivisDAtelier extends SuivisDAtelierPort {
   }
 
   override recordPointage(suiviId: string, pointage: Pointage): Promise<void> {
-    return send(() =>
-      this.api.write('/api/atelier/suivis/{id}/pointages', {
-        chemin: { id: suiviId },
-        body: { operateur: pointage.operateurId, type: pointage.type, poste: pointage.posteId },
-      }),
+    return send(
+      () =>
+        this.api.write('/api/atelier/suivis/{id}/pointages', {
+          chemin: { id: suiviId },
+          body: {
+            id: pointage.id,
+            dateDeSurvenue: pointage.dateDeSurvenue,
+            operateur: pointage.operateurId,
+            type: pointage.type,
+            poste: pointage.posteId,
+          },
+        }),
+      () => this.api.read('/api/atelier/suivis/{id}', { chemin: { id: suiviId } }),
     );
   }
 }
