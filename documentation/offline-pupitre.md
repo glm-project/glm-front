@@ -66,9 +66,10 @@ records the domain and application ownership split.
 designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
 `PupitreHorsLigne` coordinates local resolution and closure, publishes each designation transition and
 explicitly replaces its inactivity schedule through a domain port. The secondary timer adapter only executes
-the requested callback. `DesignationRuntime` releases the designation on destruction; its provider belongs to
-the page, so it survives the switch from keypad to pointage. `Designation` translates touch and keyboard events
-and renders the application snapshot.
+the requested callback. `PupitreHorsLigne` releases its designation on destruction. The page calls `finish()`
+when it is left; switching from keypad to pointage does not destroy the coordinator or close the designation.
+`Designation` translates touch and keyboard events and renders the application snapshot, without owning its
+lifetime.
 
 The domain checks and renews validity at each gesture's initiation, even when the screen's expiry callback
 has not run. Expiry immediately prevents new gestures; captures already initiated retain their operator and
