@@ -11,7 +11,6 @@ import {
   OnChanges,
   OnDestroy,
 } from '@angular/core';
-import { DesignationRuntime } from './DesignationRuntime';
 
 @Directive({ selector: '[glmFollowContent]' })
 export class FollowContent implements OnChanges, OnDestroy {
@@ -53,10 +52,6 @@ export class Designation {
   readonly designation = inject(PupitreHorsLigne);
   readonly digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   private consumedPress = false;
-
-  constructor() {
-    inject(DesignationRuntime);
-  }
 
   onPress(event: PointerEvent): void {
     this.consumedPress = !this.designation.registerPress();

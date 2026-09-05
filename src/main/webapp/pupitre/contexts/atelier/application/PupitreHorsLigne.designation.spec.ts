@@ -11,7 +11,6 @@ import { ServeurDuPupitrePort } from '@/pupitre/contexts/atelier/domain/ServeurD
 import { TestBed } from '@angular/core/testing';
 import { JournalDuPupitreFixture } from '@test/unit/fixtures/JournalDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
-import { DesignationRuntime } from './DesignationRuntime';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 
@@ -57,7 +56,6 @@ describe('Designation du pupitre', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        DesignationRuntime,
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         { provide: JournalDuPupitrePort, useValue: journal },
@@ -70,7 +68,6 @@ describe('Designation du pupitre', () => {
       ],
     });
     designation = TestBed.inject(PupitreHorsLigne);
-    TestBed.inject(DesignationRuntime);
   });
   afterEach(() => {
     TestBed.resetTestingModule();
@@ -202,6 +199,7 @@ describe('Designation du pupitre', () => {
     whenEntering('049');
     await whenValidating();
     whenDestroying();
+    thenClosed();
     await whenTimePasses(30_000);
     thenClosed();
   });
@@ -275,7 +273,9 @@ describe('Designation du pupitre', () => {
     vi.setSystemTime(Date.now() + duration);
   };
   const whenResolutionCompletes = async (pending: Promise<void>): Promise<void> => pending;
-  const whenDestroying = (): void => TestBed.inject(DesignationRuntime).ngOnDestroy();
+  const whenDestroying = (): void => {
+    TestBed.resetTestingModule();
+  };
   const givenDelayedResolution = (): ((state: PupitreLocal) => void) => {
     journal.delayRead();
     let resolve!: (state: PupitreLocal) => void;
@@ -312,7 +312,7 @@ describe('Designation du pupitre', () => {
   const thenClosed = (): void => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
-    expect(() => TestBed.inject(PupitreHorsLigne).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+    expect(() => designation.recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);

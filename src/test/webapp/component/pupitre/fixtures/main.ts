@@ -5,7 +5,6 @@ import { JournalDuPupitrePort } from '@/pupitre/contexts/atelier/domain/JournalD
 import { PlanificationExpirationDesignationPort } from '@/pupitre/contexts/atelier/domain/PlanificationExpirationDesignationPort';
 import { ServeurDuPupitrePort } from '@/pupitre/contexts/atelier/domain/ServeurDuPupitrePort';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
-import { DesignationRuntime } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/DesignationRuntime';
 import { TimerPlanificationExpirationDesignation } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerPlanificationExpirationDesignation';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -46,7 +45,6 @@ void journalFixture
   .then(() =>
     bootstrapApplication(DesignationFixture, {
       providers: [
-        DesignationRuntime,
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         { provide: JournalDuPupitrePort, useValue: journalFixture },
