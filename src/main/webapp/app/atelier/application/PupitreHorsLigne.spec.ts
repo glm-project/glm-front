@@ -1,4 +1,5 @@
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { GesteLocal, OperateurDuPupitre, PUPITRE_VIDE, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { CODES_DE_REFUS_D_ATELIER } from '@/app/atelier/domain/RefusDAtelier';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
@@ -42,6 +43,12 @@ class AuthenticationFixture extends AuthenticationPort {
   }
   override logout(): void {
     this.token = undefined;
+  }
+}
+
+class PlanificationExpirationFixture extends PlanificationExpirationDesignationPort {
+  override schedule(): void {
+    return;
   }
 }
 
@@ -481,6 +488,7 @@ describe('PupitreHorsLigne', () => {
         { provide: JournalDuPupitrePort, useValue: journal },
         { provide: ServeurDuPupitrePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
+        { provide: PlanificationExpirationDesignationPort, useClass: PlanificationExpirationFixture },
       ],
     }).get(PupitreHorsLigne);
   const whenRestarting = async (): Promise<void> => {

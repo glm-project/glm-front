@@ -1,6 +1,7 @@
 import { PupitreHorsLigne } from '@/app/atelier/application/PupitreHorsLigne';
 import { SynchronisationDuPupitre } from '@/app/atelier/application/SynchronisationDuPupitre';
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { ExpirationDesignation, PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { PUPITRE_VIDE, PupitreLocal } from '@/app/atelier/domain/PupitreLocal';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
@@ -46,6 +47,15 @@ class JournalDesignationFixture {
   }
 }
 
+class PlanificationExpirationFixture extends PlanificationExpirationDesignationPort {
+  private timer: ReturnType<typeof setTimeout> | undefined;
+
+  override schedule(deadline: number | undefined, expiration: ExpirationDesignation): void {
+    clearTimeout(this.timer);
+    if (deadline !== undefined) this.timer = setTimeout(() => expiration.expire(), deadline - Date.now());
+  }
+}
+
 describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
   let designation: PupitreHorsLigne;
@@ -65,6 +75,7 @@ describe('Designation keypad', () => {
         },
         { provide: JournalDuPupitrePort, useValue: journalFixture },
         { provide: ServeurDuPupitrePort, useValue: serveurFixture },
+        { provide: PlanificationExpirationDesignationPort, useClass: PlanificationExpirationFixture },
       ],
     });
     fixture = TestBed.createComponent(Designation);

@@ -1,6 +1,7 @@
 import { DesignationOperateur } from '@/app/atelier/domain/DesignationOperateur';
 import { FenetreOperateur, PointageDuPupitre } from '@/app/atelier/domain/FenetreOperateur';
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { projectPupitre } from '@/app/atelier/domain/ProjectionDuPupitre';
 import {
   EvenementLocal,
@@ -22,6 +23,7 @@ export class PupitreHorsLigne {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournalDuPupitrePort);
   private readonly synchronisation = inject(SynchronisationDuPupitre);
+  private readonly planificationExpiration = inject(PlanificationExpirationDesignationPort);
   private readonly vue = signal<PupitreLocal>(PUPITRE_VIDE);
   private readonly connexion = signal(true);
   private readonly designation = new DesignationOperateur();
@@ -85,11 +87,11 @@ export class PupitreHorsLigne {
   }
 
   private settleDesignation(): Promise<void> {
-    this.designationState.set(this.designation.snapshot());
+    this.publishDesignation();
     if (!this.designation.needsClosure()) return Promise.resolve();
     this.fermeture ??= this.drainWindow().finally(() => {
       this.designation.completeClosure();
-      this.designationState.set(this.designation.snapshot());
+      this.publishDesignation();
       this.fermeture = undefined;
     });
     return this.fermeture;
@@ -97,6 +99,12 @@ export class PupitreHorsLigne {
 
   private refreshDesignation(): void {
     void this.settleDesignation();
+  }
+
+  private publishDesignation(): void {
+    const snapshot = this.designation.snapshot();
+    this.designationState.set(snapshot);
+    this.planificationExpiration.schedule(snapshot.deadline, { expire: () => void this.expire() });
   }
 
   async openWindow(code: string): Promise<OperateurDuPupitre> {

@@ -1,6 +1,7 @@
 import { PupitreHorsLigne } from '@/app/atelier/application/PupitreHorsLigne';
 import { SynchronisationDuPupitre } from '@/app/atelier/application/SynchronisationDuPupitre';
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { ExpirationDesignation, PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { OperateurDuPupitre, PUPITRE_VIDE, PupitreLocal } from '@/app/atelier/domain/PupitreLocal';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
@@ -35,6 +36,15 @@ class JournalDesignationFixture extends JournalDuPupitreFixture {
   }
 }
 
+class PlanificationExpirationFixture extends PlanificationExpirationDesignationPort {
+  private timer: ReturnType<typeof setTimeout> | undefined;
+
+  override schedule(deadline: number | undefined, expiration: ExpirationDesignation): void {
+    clearTimeout(this.timer);
+    if (deadline !== undefined) this.timer = setTimeout(() => expiration.expire(), deadline - Date.now());
+  }
+}
+
 describe('Designation du pupitre', () => {
   let designation: PupitreHorsLigne;
   let journal: JournalDesignationFixture;
@@ -49,6 +59,7 @@ describe('Designation du pupitre', () => {
         SynchronisationDuPupitre,
         { provide: JournalDuPupitrePort, useValue: journal },
         { provide: ServeurDuPupitrePort, useValue: {} },
+        { provide: PlanificationExpirationDesignationPort, useClass: PlanificationExpirationFixture },
         {
           provide: AuthenticationPort,
           useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },

@@ -1,9 +1,11 @@
 import { PupitreHorsLigne } from '@/app/atelier/application/PupitreHorsLigne';
 import { SynchronisationDuPupitre } from '@/app/atelier/application/SynchronisationDuPupitre';
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { Designation } from '@/app/atelier/infrastructure/primary/pupitre/designation/designation';
 import { DesignationRuntime } from '@/app/atelier/infrastructure/primary/pupitre/designation/DesignationRuntime';
+import { TimerPlanificationExpirationDesignation } from '@/app/atelier/infrastructure/secondary/TimerPlanificationExpirationDesignation';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -48,6 +50,7 @@ void journalFixture
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         { provide: JournalDuPupitrePort, useValue: journalFixture },
+        { provide: PlanificationExpirationDesignationPort, useClass: TimerPlanificationExpirationDesignation },
         { provide: AuthenticationPort, useValue: authenticationFixture },
         { provide: ServeurDuPupitrePort, useValue: serveurFixture },
       ],
