@@ -1,6 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { StockageLocalPort } from '@/app/shared/stockage-local/domain/StockageLocalPort';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { DeviceAuthentication } from './DeviceAuthentication';
@@ -111,7 +111,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await vi.advanceTimersByTimeAsync(1);
 
     thenSessionIs(authentication, rotatedFixture, 'entreprise-a');
-    thenPersistedRefreshIs('refresh-2');
+    await thenRestartRenewsWith('refresh-2', rotatedFixture, 'entreprise-a');
   });
 
   it('should adopt a refresh already rotated by another tab before renewing', async () => {
@@ -135,7 +135,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await vi.advanceTimersByTimeAsync(1);
 
     thenSessionIs(authentication, undefined, 'entreprise-a');
-    thenPersistedRefreshIs(undefined);
+    await thenRestartHasNoCredential('entreprise-a');
   });
 
   it('should clear durable credentials on logout without deleting the selected company', async () => {
@@ -147,7 +147,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await vi.advanceTimersByTimeAsync(1);
 
     thenSessionIs(authentication, undefined, 'entreprise-a');
-    thenPersistedRefreshIs(undefined);
+    await thenRestartHasNoCredential('entreprise-a');
   });
 
   it('should expose no session when storage cannot be read or committed', async () => {
@@ -215,7 +215,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await vi.advanceTimersByTimeAsync(1);
 
     thenSessionIs(authentication, undefined, undefined);
-    thenPersistedRefreshIs(undefined);
+    await thenRestartHasNoCredential(undefined);
   });
 
   it.each([false, true])('should not resurrect a session abandoned during renewal persistence (failure %s)', async failure => {
@@ -363,10 +363,12 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await vi.advanceTimersByTimeAsync(2);
 
     thenSessionIs(authentication, jwtFixture({ tenant: 'entreprise-b' }), 'entreprise-b');
-    thenPersistedRefreshIs('refresh-b');
+    await thenRestartRenewsWith('refresh-b', jwtFixture({ tenant: 'entreprise-b' }), 'entreprise-b');
   });
 
   const thenRestartHasNoCredential = async (tenant: string | undefined): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(3);
+    vi.clearAllTimers();
     const restarted: AuthenticationPort = TestBed.runInInjectionContext(() => new DeviceAuthentication());
     const boot = restarted.authenticate();
     await vi.advanceTimersByTimeAsync(1);
@@ -398,7 +400,16 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     expect(session.currentToken()).toBe(token);
     expect(session.currentTenant()).toBe(tenant);
   };
-  const thenPersistedRefreshIs = (token: string | undefined): void => {
-    expect((stockage.value as { session?: { refreshToken: string } }).session?.refreshToken).toBe(token);
+  const thenRestartRenewsWith = async (refreshToken: string, token: string, tenant: string): Promise<void> => {
+    vi.clearAllTimers();
+    const restarted: AuthenticationPort = TestBed.runInInjectionContext(() => new DeviceAuthentication());
+    const boot = restarted.authenticate();
+    await vi.advanceTimersByTimeAsync(1);
+    await boot;
+    thenSessionIs(restarted, token, tenant);
+    await whenRenewing();
+    const request = http.expectOne(`${baseFixture}/token`);
+    expect((request.request.body as HttpParams).get('refresh_token')).toBe(refreshToken);
+    request.error(new ProgressEvent('error'));
   };
 });
