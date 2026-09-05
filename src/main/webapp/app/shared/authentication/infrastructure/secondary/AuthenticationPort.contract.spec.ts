@@ -292,22 +292,56 @@ describe.each(adapters)('AuthenticationPort contract, honoured by %s', (_adapter
   });
 
   it('should hold no token before the session is opened', () => {
-    expect(authentication.currentToken()).toBeUndefined();
+    thenItHasNoToken();
   });
 
   it('should hand over the token of the open session', async () => {
-    await authentication.authenticate();
+    await whenOpeningTheSession();
 
-    expect(authentication.currentToken()).toEqual(sessionToken);
+    thenItHandsOver(sessionToken);
   });
 
   it('should hand over nothing again once the session is ended', async () => {
-    await authentication.authenticate();
+    await givenAnOpenSession();
 
-    authentication.logout();
+    whenEndingTheSession();
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenItHasNoToken();
   });
+
+  const givenAnOpenSession = (): Promise<void> => authentication.authenticate();
+  const whenOpeningTheSession = (): Promise<void> => authentication.authenticate();
+  const whenEndingTheSession = (): void => authentication.logout();
+  const thenItHandsOver = (token: string): void => expect(authentication.currentToken()).toEqual(token);
+  const thenItHasNoToken = (): void => expect(authentication.currentToken()).toBeUndefined();
+});
+
+describe('Authentication without a device company', () => {
+  it('should expose no company before device enrolment', async () => {
+    const authentication = givenInMemoryAuthentication();
+
+    await whenSynchronizingTheSession(authentication);
+
+    thenItHasNoDeviceCompany(authentication);
+  });
+
+  it('should need no disk synchronization when no persistent storage is configured', async () => {
+    const device = givenDeviceAuthenticationWithoutPersistentStorage();
+
+    await whenSynchronizingTheSession(device);
+
+    thenItHasNoDeviceCompany(device);
+  });
+
+  const givenInMemoryAuthentication = (): AuthenticationPort => new InMemoryAuthentication();
+  const givenDeviceAuthenticationWithoutPersistentStorage = (): AuthenticationPort =>
+    Injector.create({
+      providers: [DeviceAuthentication, { provide: HttpBackend, useValue: {} }, { provide: DeviceGrantConfiguration, useValue: {} }],
+    }).get(DeviceAuthentication);
+  const whenSynchronizingTheSession = (authentication: AuthenticationPort): Promise<void> => authentication.synchronizeSession();
+  const thenItHasNoDeviceCompany = (authentication: AuthenticationPort): void => {
+    expect(authentication.currentTenant()).toBeUndefined();
+  };
 });
 
 describe('Keycloak OIDC Authentication, beyond the contract', () => {
@@ -325,29 +359,40 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
   });
 
   it('should reload the window when Keycloak opens no session', async () => {
-    const authentication = buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }));
+    const authentication = givenKeycloakOpensNoSession();
 
-    await authentication.authenticate();
+    await whenAuthenticating(authentication);
 
-    expect(authentication.currentToken()).toBeUndefined();
-    expect(window.location.reload).toHaveBeenCalled();
+    thenNoTokenIsAvailable(authentication);
+    thenTheWindowReloads();
   });
 
   it('should hand over the renewed token once the session has refreshed', async () => {
-    const authentication = buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'renews' }));
+    const authentication = givenKeycloakRenewsTheSession();
 
-    await authentication.authenticate();
+    await whenAuthenticating(authentication);
 
-    expect(authentication.currentToken()).toEqual(RENEWED_KEYCLOAK_TOKEN);
+    thenTokenIs(authentication, RENEWED_KEYCLOAK_TOKEN);
   });
 
   it('should keep handing over the token it had when the refresh fails', async () => {
-    const authentication = buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'fails' }));
+    const authentication = givenKeycloakCannotRefreshTheSession();
 
-    await authentication.authenticate();
+    await whenAuthenticating(authentication);
 
-    expect(authentication.currentToken()).toEqual(KEYCLOAK_TOKEN);
+    thenTokenIs(authentication, KEYCLOAK_TOKEN);
   });
+
+  const givenKeycloakOpensNoSession = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }));
+  const givenKeycloakRenewsTheSession = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'renews' }));
+  const givenKeycloakCannotRefreshTheSession = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'fails' }));
+  const whenAuthenticating = (authentication: AuthenticationPort): Promise<void> => authentication.authenticate();
+  const thenNoTokenIsAvailable = (authentication: AuthenticationPort): void => expect(authentication.currentToken()).toBeUndefined();
+  const thenTheWindowReloads = (): void => expect(window.location.reload).toHaveBeenCalled();
+  const thenTokenIs = (authentication: AuthenticationPort, token: string): void => expect(authentication.currentToken()).toEqual(token);
 });
 
 describe('Device Authentication, beyond the contract', () => {
@@ -408,218 +453,241 @@ describe('Device Authentication, beyond the contract', () => {
     return whenTheRequestHasLeft();
   };
 
+  const givenAuthentication = (behaviour: Partial<AuthorizationServerBehaviour> = NOTHING_UNUSUAL): AuthenticationPort =>
+    buildDeviceAuthentication(anAuthorizationServerFixture(behaviour));
+
+  const givenAuthorizationServer = (behaviour: Partial<AuthorizationServerBehaviour> = NOTHING_UNUSUAL): AuthorizationServerFixture =>
+    anAuthorizationServerFixture(behaviour);
+
+  const givenAuthenticationBackedBy = (server: AuthorizationServerFixture): AuthenticationPort => buildDeviceAuthentication(server);
+
+  const givenTheServerHoldsTokenAnswers = (server: AuthorizationServerFixture): void => server.holdsItsTokenAnswers();
+
+  const whenEndingTheSession = (authentication: AuthenticationPort): void => authentication.logout();
+
+  const thenTokenIs = (authentication: AuthenticationPort, token: string): void => expect(authentication.currentToken()).toEqual(token);
+
+  const thenNoTokenIsAvailable = (authentication: AuthenticationPort): void => expect(authentication.currentToken()).toBeUndefined();
+
+  const thenClaimsMadeAre = (server: AuthorizationServerFixture, count: number): void => expect(server.claimsMade).toEqual(count);
+
+  const thenRenewalsMadeAre = (server: AuthorizationServerFixture, count: number): void => expect(server.renewalsMade).toEqual(count);
+
+  const thenRenewalsStayBelow = (server: AuthorizationServerFixture, count: number): void =>
+    expect(server.renewalsMade).toBeLessThan(count);
+
+  const thenSessionsEndedAre = (server: AuthorizationServerFixture, count: number): void => expect(server.sessionsEnded).toEqual(count);
+
   it('should keep asking for as long as nobody has typed the code', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [stillPending, stillPending, granting] }));
+    const authentication = givenAuthentication({ claims: [stillPending, stillPending, granting] });
 
     await whenEnrolling(authentication);
 
-    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
+    thenTokenIs(authentication, DEVICE_TOKEN);
   });
 
   it('should still enrol once it has been asked to slow down', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [askingToSlowDown, granting] }));
+    const authentication = givenAuthentication({ claims: [askingToSlowDown, granting] });
 
     await whenEnrollingAtTheSlowerPace(authentication);
 
-    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
+    thenTokenIs(authentication, DEVICE_TOKEN);
   });
 
   it('should hold its first claim back to the pace RFC 8628 sets when the server names none', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ authorizations: [authorizingWithoutNamingAPace] }));
+    const authentication = givenAuthentication({ authorizations: [authorizingWithoutNamingAPace] });
 
     await whenEnrolmentHasBegun(authentication);
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
 
     await whenTheSlowerPaceHasPassed();
 
-    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
+    thenTokenIs(authentication, DEVICE_TOKEN);
   });
 
   it.each(['access_denied', 'expired_token'])('should hand over nothing when the enrolment is refused with %s', async refusal => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [refusing(refusal)] }));
+    const authentication = givenAuthentication({ claims: [refusing(refusal)] });
 
     await whenEnrolling(authentication);
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 
   it.each(['toString', 'constructor'])('should stop claiming when the enrolment is refused with %s', async refusal => {
-    const server = anAuthorizationServerFixture({ claims: [refusing(refusal)] });
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer({ claims: [refusing(refusal)] });
+    const authentication = givenAuthenticationBackedBy(server);
 
     await whenEnrolmentHasBegun(authentication);
     await whenTheShiftGoesOn();
 
-    expect(server.claimsMade).toEqual(ONE_CLAIM);
-    expect(authentication.currentToken()).toBeUndefined();
+    thenClaimsMadeAre(server, ONE_CLAIM);
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should hand over nothing when the refusal carries no reason to read', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [outOfReach] }));
+    const authentication = givenAuthentication({ claims: [outOfReach] });
 
     await whenEnrolling(authentication);
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should hand over nothing when the authorization server cannot be reached', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ authorizations: [outOfReach] }));
+    const authentication = givenAuthentication({ authorizations: [outOfReach] });
 
     await whenEnrolling(authentication);
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should stop claiming once the enrolment is abandoned', async () => {
-    const server = anAuthorizationServerFixture({ authorizations: [authorizingWithoutNamingAPace], claims: [stillPending] });
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer({ authorizations: [authorizingWithoutNamingAPace], claims: [stillPending] });
+    const authentication = givenAuthenticationBackedBy(server);
 
     await whenEnrolmentHasBegun(authentication);
     await whenTheSlowerPaceHasPassed();
 
-    authentication.logout();
+    whenEndingTheSession(authentication);
     await whenTheShiftGoesOn();
 
-    expect(server.claimsMade).toEqual(ONE_CLAIM);
+    thenClaimsMadeAre(server, ONE_CLAIM);
   });
 
   it('should hand over a renewed token before the enrolled one expires', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture());
+    const authentication = givenAuthentication();
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
-    expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
+    thenTokenIs(authentication, RENEWED_DEVICE_TOKEN);
   });
 
   it('should keep handing over the token it had while the renewal is refused and the token still lives', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [outOfReach] }));
+    const authentication = givenAuthentication({ renewals: [outOfReach] });
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheRenewalHasFailedButTheTokenLives();
 
-    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
+    thenTokenIs(authentication, DEVICE_TOKEN);
   });
 
   it('should hand over nothing once the token has died and the authorization server stays out of reach', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [outOfReach] }));
+    const authentication = givenAuthentication({ renewals: [outOfReach] });
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should hand over a renewed token once the network is back', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ renewals: [outOfReach, renewing] }));
+    const authentication = givenAuthentication({ renewals: [outOfReach, renewing] });
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
-    expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
+    thenTokenIs(authentication, RENEWED_DEVICE_TOKEN);
   });
 
   it('should enrol again once the authorization server has buried its refresh token', async () => {
-    const authentication = buildDeviceAuthentication(
-      anAuthorizationServerFixture({ claims: [granting, grantingAgain], renewals: [buryingTheRefreshToken] }),
-    );
+    const authentication = givenAuthentication({ claims: [granting, grantingAgain], renewals: [buryingTheRefreshToken] });
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
-    expect(authentication.currentToken()).toEqual(RE_ENROLLED_DEVICE_TOKEN);
+    thenTokenIs(authentication, RE_ENROLLED_DEVICE_TOKEN);
   });
 
   it('should stop asking to renew a refresh token the authorization server has buried', async () => {
-    const server = anAuthorizationServerFixture({ authorizations: [authorizing, outOfReach], renewals: [buryingTheRefreshToken] });
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer({ authorizations: [authorizing, outOfReach], renewals: [buryingTheRefreshToken] });
+    const authentication = givenAuthenticationBackedBy(server);
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
-    expect(server.renewalsMade).toEqual(ONE_RENEWAL);
+    thenRenewalsMadeAre(server, ONE_RENEWAL);
   });
 
   it('should hand over the token it was granted when the server names a lifetime already spent', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ claims: [grantingALifetimeAlreadySpent] }));
+    const authentication = givenAuthentication({ claims: [grantingALifetimeAlreadySpent] });
 
     await whenEnrolling(authentication);
 
-    expect(authentication.currentToken()).toEqual(DEVICE_TOKEN);
+    thenTokenIs(authentication, DEVICE_TOKEN);
   });
 
   it('should not hammer the authorization server when it names no token lifetime', async () => {
-    const server = anAuthorizationServerFixture({
+    const server = givenAuthorizationServer({
       claims: [grantingWithoutNamingALifetime],
       renewals: [renewingWithoutNamingALifetime],
     });
-    const authentication = buildDeviceAuthentication(server);
+    const authentication = givenAuthenticationBackedBy(server);
 
     await givenAnEnrolledPupitre(authentication);
     await whenAMinuteAndAHalfPasses();
 
-    expect(server.renewalsMade).toBeLessThan(A_SANE_NUMBER_OF_RENEWALS);
-    expect(authentication.currentToken()).toEqual(RENEWED_DEVICE_TOKEN);
+    thenRenewalsStayBelow(server, A_SANE_NUMBER_OF_RENEWALS);
+    thenTokenIs(authentication, RENEWED_DEVICE_TOKEN);
   });
 
   it('should tell the authorization server to end the session it opened', async () => {
-    const server = anAuthorizationServerFixture();
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer();
+    const authentication = givenAuthenticationBackedBy(server);
 
     await givenAnEnrolledPupitre(authentication);
 
-    authentication.logout();
+    whenEndingTheSession(authentication);
     await whenTheRequestHasLeft();
 
-    expect(server.sessionsEnded).toEqual(ONE_SESSION_ENDED);
+    thenSessionsEndedAre(server, ONE_SESSION_ENDED);
   });
 
   it('should tell the authorization server nothing when no session was ever opened', async () => {
-    const server = anAuthorizationServerFixture();
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer();
+    const authentication = givenAuthenticationBackedBy(server);
 
-    authentication.logout();
+    whenEndingTheSession(authentication);
     await whenTheRequestHasLeft();
 
-    expect(server.sessionsEnded).toEqual(NO_SESSION_ENDED);
+    thenSessionsEndedAre(server, NO_SESSION_ENDED);
   });
 
   it('should end the session locally even when the authorization server cannot be told', async () => {
-    const authentication = buildDeviceAuthentication(anAuthorizationServerFixture({ logouts: [outOfReach] }));
+    const authentication = givenAuthentication({ logouts: [outOfReach] });
 
     await givenAnEnrolledPupitre(authentication);
 
-    authentication.logout();
+    whenEndingTheSession(authentication);
     await whenTheRequestHasLeft();
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should hand over nothing once the session is ended, even with a renewal already in flight', async () => {
-    const server = anAuthorizationServerFixture();
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer();
+    const authentication = givenAuthenticationBackedBy(server);
 
     await givenAnEnrolledPupitre(authentication);
-    server.holdsItsTokenAnswers();
+    givenTheServerHoldsTokenAnswers(server);
     await whenTheShiftGoesOn();
 
-    authentication.logout();
+    whenEndingTheSession(authentication);
     await whenTheHeldAnswerArrives(server);
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should hand over nothing once the enrolment is abandoned, even with a claim already in flight', async () => {
-    const server = anAuthorizationServerFixture();
-    const authentication = buildDeviceAuthentication(server);
+    const server = givenAuthorizationServer();
+    const authentication = givenAuthenticationBackedBy(server);
 
-    server.holdsItsTokenAnswers();
+    givenTheServerHoldsTokenAnswers(server);
     await whenEnrolmentHasBegun(authentication);
 
-    authentication.logout();
+    whenEndingTheSession(authentication);
     await whenTheHeldAnswerArrives(server);
 
-    expect(authentication.currentToken()).toBeUndefined();
+    thenNoTokenIsAvailable(authentication);
   });
 });
