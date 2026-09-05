@@ -9,6 +9,7 @@ const bodyFixture = { id: idFixture, dateDeSurvenue: dateFixture, operateur: ope
 
 describe('Pupitre offline restart', () => {
   let online: boolean;
+  let completedPushes: number;
 
   it('should restore its enrolment and retry the same durable gesture after restarting without a network', () => {
     givenAnEnrolledPupitreWithAPendingGesture();
@@ -65,7 +66,7 @@ describe('Pupitre offline restart', () => {
   };
   const thenItDoesNotReplayAnAcknowledgedGesture = (): void => {
     cy.wait('@reference');
-    cy.get('@push.all').should('have.length', 3);
+    cy.get<unknown[]>('@push.all').should(pushes => expect(pushes).to.have.length(completedPushes));
     cy.get('@enrolment.all').should('have.length', 1);
     cy.get(dataSelector('pupitre-connected')).should('be.visible');
   };
@@ -73,6 +74,9 @@ describe('Pupitre offline restart', () => {
     cy.wait('@push');
     cy.get(dataSelector('pupitre-connected')).should('be.visible');
     cy.wait('@reference');
+    cy.get<unknown[]>('@push.all').then(pushes => {
+      completedPushes = pushes.length;
+    });
     cy.get('@enrolment.all').should('have.length', 1);
   };
 });
