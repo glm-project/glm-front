@@ -119,8 +119,10 @@ The local journal records acceptance. The server's ten reference requests show t
 triggers both completed while the synchronization lock prevented a second publication.
 
 The negative scenario serves the identical production files while denying the worker and its manifest.
-After the same verified network cut, a fresh document cannot load the pupitre shell. This demonstrates why
-the positive case depends on the service worker rather than the HTTP cache or fixture server.
+It requires no controlling, active or waiting worker; Chrome may briefly retain the failed registration object
+while cleaning up the refused installation. After the same verified network cut, a fresh document cannot load
+the pupitre shell. This demonstrates why the positive case depends on the service worker rather than the HTTP
+cache or fixture server.
 
 The aggregate build-and-browser command exited 0; the two JUnit suites totalled 3.224 seconds of test time.
 The final acknowledgement-barrier runs totalled 3.276 seconds, and twelve consecutive positive runs passed.
@@ -150,6 +152,13 @@ showed that ordering alone did not prove client acknowledgement: the server obse
 HTTP response and `saveResult`. The explicit response barrier now closes that observation gap. Its failure path
 also returns 503 to pending responses before closing the fixture servers. Local negative checks demonstrate
 type-error rejection, invalid workflow rejection, staged-secret rejection and a mutation score below its threshold.
+
+The next run, [33993769174](https://github.com/glm-project/glm-front/actions/runs/33993769174), passed the other
+five required checks and failed only because Linux Chrome still exposed one transient registration after the
+fixture had refused the worker script. The document had no controller and the registration had no active or
+waiting worker. The negative proof now checks those capabilities instead of Chrome's asynchronous cleanup, then
+still requires the offline restart to fail. Fifteen consecutive negative runs and the full positive/negative
+aggregate passed locally after this correction.
 
 The first real pre-commit and pre-push hooks exited 0 in 3.04 and 54.83 seconds respectively. Post-push inspection
 also exposed inherited Git environment variables leaking a test fixture into the invoking worktree's index.

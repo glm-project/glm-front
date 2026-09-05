@@ -91,7 +91,12 @@ const thenTheProductionPupitreBootsOnline = (): void => {
 const thenNoServiceWorkerControlsIt = (): void => {
   thenPupitreWindow().then(window => {
     expect(window.navigator.serviceWorker.controller).to.equal(null);
-    return window.navigator.serviceWorker.getRegistrations().then(registrations => expect(registrations).to.have.length(0));
+    return window.navigator.serviceWorker.getRegistrations().then(registrations => {
+      const usableWorkers = registrations
+        .flatMap(registration => [registration.active, registration.waiting])
+        .filter(worker => worker !== null);
+      expect(usableWorkers).to.have.length(0);
+    });
   });
 };
 
