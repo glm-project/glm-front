@@ -58,3 +58,10 @@ without reading storage documents to decide success.
 The storage contract uses distinct clients sharing the same durable database. Its exclusion test observes
 that a second client cannot enter until the first leaves, and is checked by temporarily bypassing Web Locks:
 the modified adapter must fail that guarantee. Explicit completion signals replace repeated arbitrary waits.
+
+Runtime tests retain both application coordinators and replace only authentication, journal and server ports.
+They observe complete gestures received at startup, online events and timer ticks; after destruction, a new
+gesture remains pending. A failed storage exchange leaves the gesture available for the next trigger.
+Changing coordinator methods, call counts or their internal division of work does not change these expected
+outcomes. The journal's synchronization boundary waits for in-flight exchanges before checking results;
+only interval timers are simulated, leaving I/O fixtures asynchronous.
