@@ -43,6 +43,18 @@ const TOKEN_BYPASS = new RegExp(
 );
 
 const FRONTS = ['gestion', 'pupitre'];
+const FORBIDDEN_ANGULAR_EFFECTS = {
+  name: '@angular/core',
+  importNames: ['effect', 'afterRenderEffect'],
+  message: 'Angular effects hide orchestration: use application commands or a one-shot render hook — see documentation/code-style.md.',
+};
+const FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS = [
+  "ImportExpression[source.value='@angular/core']",
+  "ImportExpression > TemplateLiteral[expressions.length=0] > TemplateElement[value.cooked='@angular/core']",
+].map(selector => ({
+  selector,
+  message: 'Import Angular Core statically so ESLint can forbid effects — see documentation/code-style.md.',
+}));
 
 const namedAnywherePattern = fronts => `(^|\\/)(${fronts.join('|')})(\\/|$)`;
 const namedOutsideAppPattern = fronts => `^(?!.*(^|\\/)app\\/).*(^|\\/)(${fronts.join('|')})(\\/|$)`;
@@ -55,9 +67,10 @@ const lazyRouteSelectors = forbiddenPathPattern => [
 const boundary = (files, restrictions) => ({
   files,
   rules: {
-    'no-restricted-imports': ['error', { patterns: restrictions }],
+    'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
     'no-restricted-syntax': [
       'error',
+      ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
       ...restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
       ),
@@ -165,6 +178,13 @@ export default typescript.config(
     },
   },
   {
+    files: ['src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
+      'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
+    },
+  },
+  {
     files: ['src/main/webapp/**/*.ts'],
     extends: [...typescript.configs.strictTypeChecked, ...typescript.configs.stylistic, ...angular.configs.tsRecommended],
     languageOptions: {
@@ -205,6 +225,8 @@ export default typescript.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
+      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
+      'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
     },
   },
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
