@@ -9,6 +9,8 @@ on:
   pull_request:
     branches:
       - main
+env:
+  GH_TOKEN: ${{ github.token }}
 jobs:
   checks-and-unit-tests:
     name: checks-and-unit-tests
