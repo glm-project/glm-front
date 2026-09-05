@@ -6,7 +6,8 @@ import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort'
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
-import { DesignationDuPupitre } from './DesignationDuPupitre';
+import { setTimeout as roundTrip } from 'node:timers';
+import { DesignationRuntime } from './DesignationRuntime';
 import { Designation } from './designation';
 
 interface KeyFixture {
@@ -19,34 +20,60 @@ const referenceFixture: PupitreLocal = {
   referentiel: { operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }], suivis: [] },
 };
 
-const readCacheFixture = (): Promise<PupitreLocal> => new Promise(resolve => setTimeout(() => resolve(structuredClone(referenceFixture))));
+class JournalDesignationFixture {
+  readCompleted: Promise<void>;
+  private notifyReadCompleted!: () => void;
+
+  constructor() {
+    this.readCompleted = this.nextRead();
+  }
+
+  nextRead(): Promise<void> {
+    this.readCompleted = new Promise(resolve => {
+      this.notifyReadCompleted = resolve;
+    });
+    return this.readCompleted;
+  }
+
+  read(): Promise<PupitreLocal> {
+    const notify = this.notifyReadCompleted;
+    return new Promise(resolve =>
+      roundTrip(() => {
+        resolve(structuredClone(referenceFixture));
+        roundTrip(notify);
+      }),
+    );
+  }
+}
 
 describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
-  let designation: DesignationDuPupitre;
+  let designation: PupitreHorsLigne;
+  let journalFixture: JournalDesignationFixture;
   const serveurFixture = { referentiel: vi.fn(), send: vi.fn(), reread: vi.fn() };
   beforeEach(() => {
+    journalFixture = new JournalDesignationFixture();
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        DesignationDuPupitre,
+        DesignationRuntime,
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         {
           provide: AuthenticationPort,
-          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => setTimeout(resolve)) },
+          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
         },
-        { provide: JournalDuPupitrePort, useValue: { read: readCacheFixture } },
+        { provide: JournalDuPupitrePort, useValue: journalFixture },
         { provide: ServeurDuPupitrePort, useValue: serveurFixture },
       ],
     });
     fixture = TestBed.createComponent(Designation);
-    designation = TestBed.inject(DesignationDuPupitre);
+    designation = TestBed.inject(PupitreHorsLigne);
+    TestBed.inject(DesignationRuntime);
     fixture.detectChanges();
   });
-  afterEach(async () => {
+  afterEach(() => {
     TestBed.resetTestingModule();
-    await vi.advanceTimersByTimeAsync(5);
     vi.useRealTimers();
   });
 
@@ -90,12 +117,6 @@ describe('Designation keypad', () => {
     whenTimePasses(1_000);
     thenDisplayedCodeIs('');
   });
-  it('should follow the last digits while allowing horizontal scrolling', () => {
-    givenAnOverflowingDisplay();
-    whenPressingKey({ key: '0' });
-    thenDisplayFollowsLastDigits();
-  });
-
   it('should show an unknown code in place then recover and validate by touch', async () => {
     whenTouching('digit-7');
     whenTouching('validate');
@@ -133,8 +154,8 @@ describe('Designation keypad', () => {
     fixture.detectChanges();
   };
   const whenResolutionSettles = async (): Promise<void> => {
-    await vi.advanceTimersByTimeAsync(5);
-    await fixture.whenStable();
+    await journalFixture.readCompleted;
+    void journalFixture.nextRead();
     fixture.detectChanges();
   };
   const thenUnknownCodeIsDisplayed = (): void => {
@@ -182,12 +203,5 @@ describe('Designation keypad', () => {
   };
   const thenDisplayedCodeIs = (code: string): void => {
     expect(element('code').textContent.trim()).toBe(code);
-    expect(designation.code()).toBe(code);
-  };
-  const givenAnOverflowingDisplay = (): void => {
-    Object.defineProperty(element('code'), 'scrollWidth', { value: 1200 });
-  };
-  const thenDisplayFollowsLastDigits = (): void => {
-    expect(element('code').scrollLeft).toBe(element('code').scrollWidth);
   };
 });

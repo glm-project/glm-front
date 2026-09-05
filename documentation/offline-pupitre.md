@@ -62,10 +62,13 @@ records the domain and application ownership split.
 
 ## Designation screen integration
 
-`Designation` renders the keypad; its page provides one `DesignationDuPupitre` instance shared with the
-pointage view. The controller exposes the designated `operateur`, resolves through `PupitreHorsLigne` and
-owns the 30-second inactivity timer. It keeps the keypad unavailable while an asynchronous opening or
-closure is pending, and discards an opening completed after the designation has expired.
+`DesignationOperateur` owns the numeric entry, correction, explicit validation, unknown code and temporary
+designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
+`PupitreHorsLigne` coordinates local resolution and closure, and publishes the designation snapshot.
+`DesignationRuntime` only schedules the inactivity callback and releases the designation on destruction.
+Its provider belongs to the page, so it survives the switch from keypad to pointage. `Designation` translates
+touch and keyboard events and renders the application snapshot. The keypad remains unavailable while an
+opening or closure is pending, and a late resolution cannot reopen an expired designation.
 
 The composition gates the keypad on enrolment and reference availability, then switches views on the
 same URL. The pointage view's “J'ai fini” action calls `finish()`. Every screen press, including blank

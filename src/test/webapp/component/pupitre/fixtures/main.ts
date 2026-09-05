@@ -3,7 +3,7 @@ import { SynchronisationDuPupitre } from '@/app/atelier/application/Synchronisat
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { Designation } from '@/app/atelier/infrastructure/primary/pupitre/designation/designation';
-import { DesignationDuPupitre } from '@/app/atelier/infrastructure/primary/pupitre/designation/DesignationDuPupitre';
+import { DesignationRuntime } from '@/app/atelier/infrastructure/primary/pupitre/designation/DesignationRuntime';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -21,7 +21,7 @@ import { JournalDuPupitreFixture } from '@test/unit/fixtures/JournalDuPupitreFix
   `,
 })
 class DesignationFixture {
-  readonly designation = inject(DesignationDuPupitre);
+  readonly designation = inject(PupitreHorsLigne);
 }
 
 const journalFixture = new JournalDuPupitreFixture();
@@ -44,7 +44,7 @@ void journalFixture
   .then(() =>
     bootstrapApplication(DesignationFixture, {
       providers: [
-        DesignationDuPupitre,
+        DesignationRuntime,
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         { provide: JournalDuPupitrePort, useValue: journalFixture },

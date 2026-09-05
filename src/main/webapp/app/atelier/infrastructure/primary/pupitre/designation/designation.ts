@@ -1,5 +1,6 @@
+import { PupitreHorsLigne } from '@/app/atelier/application/PupitreHorsLigne';
 import { afterRenderEffect, Component, ElementRef, inject } from '@angular/core';
-import { DesignationDuPupitre } from './DesignationDuPupitre';
+import { DesignationRuntime } from './DesignationRuntime';
 
 @Component({
   selector: 'glm-designation',
@@ -12,12 +13,13 @@ import { DesignationDuPupitre } from './DesignationDuPupitre';
   },
 })
 export class Designation {
-  readonly designation = inject(DesignationDuPupitre);
+  readonly designation = inject(PupitreHorsLigne);
   readonly digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private consumedPress = false;
 
   constructor() {
+    inject(DesignationRuntime);
     afterRenderEffect(() => {
       this.designation.code();
       const display = this.host.nativeElement.querySelector<HTMLElement>('[data-selector="code"]')!;

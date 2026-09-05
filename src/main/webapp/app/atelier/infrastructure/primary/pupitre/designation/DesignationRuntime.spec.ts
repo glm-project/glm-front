@@ -6,7 +6,8 @@ import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort'
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { TestBed } from '@angular/core/testing';
 import { JournalDuPupitreFixture } from '@test/unit/fixtures/JournalDuPupitreFixture';
-import { DesignationDuPupitre } from './DesignationDuPupitre';
+import { setTimeout as roundTrip } from 'node:timers';
+import { DesignationRuntime } from './DesignationRuntime';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 
@@ -17,16 +18,25 @@ const referenceFixture: PupitreLocal = {
 
 class JournalDesignationFixture extends JournalDuPupitreFixture {
   answer: Promise<PupitreLocal> | undefined;
-  override read(entreprise: string): Promise<PupitreLocal> {
+  readStarted: Promise<void> = Promise.resolve();
+  private notifyRead: () => void = () => undefined;
+
+  delayRead(): void {
+    this.readStarted = new Promise(resolve => {
+      this.notifyRead = resolve;
+    });
+  }
+  override read(): Promise<PupitreLocal> {
+    this.notifyRead();
     const answer = this.answer;
     this.answer = undefined;
     if (answer !== undefined) return answer;
-    return super.read(entreprise);
+    return new Promise(resolve => roundTrip(() => resolve(structuredClone(referenceFixture))));
   }
 }
 
 describe('Designation du pupitre', () => {
-  let designation: DesignationDuPupitre;
+  let designation: PupitreHorsLigne;
   let journal: JournalDesignationFixture;
   beforeEach(async () => {
     journal = new JournalDesignationFixture();
@@ -34,22 +44,22 @@ describe('Designation du pupitre', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        DesignationDuPupitre,
+        DesignationRuntime,
         PupitreHorsLigne,
         SynchronisationDuPupitre,
         { provide: JournalDuPupitrePort, useValue: journal },
         { provide: ServeurDuPupitrePort, useValue: {} },
         {
           provide: AuthenticationPort,
-          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => setTimeout(resolve)) },
+          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
         },
       ],
     });
-    designation = TestBed.inject(DesignationDuPupitre);
+    designation = TestBed.inject(PupitreHorsLigne);
+    TestBed.inject(DesignationRuntime);
   });
-  afterEach(async () => {
+  afterEach(() => {
     TestBed.resetTestingModule();
-    await vi.advanceTimersByTimeAsync(5);
     vi.useRealTimers();
   });
 
@@ -145,6 +155,7 @@ describe('Designation du pupitre', () => {
     const reject = givenDelayedFailure();
     whenEntering('049');
     const pending = whenValidating();
+    await whenReadStarts();
     await whenFinishing();
     whenRejecting(reject);
     await whenResolutionCompletes(pending);
@@ -202,22 +213,26 @@ describe('Designation du pupitre', () => {
   };
   const whenClosingCompletes = (resolve: () => void): void => resolve();
   const whenReadStarts = async (): Promise<void> => {
-    await vi.advanceTimersByTimeAsync(5);
+    await journal.readStarted;
   };
 
   const whenEntering = (code: string): void => {
     for (const digit of code) designation.enterDigit(digit);
+    TestBed.tick();
   };
   const whenValidating = async (): Promise<void> => {
     const pending = designation.validate();
-    await whenReadStarts();
+    TestBed.tick();
     return pending;
   };
   const whenErasing = (): void => designation.erase();
-  const whenPressing = (): boolean => designation.registerPress();
+  const whenPressing = (): boolean => {
+    const accepted = designation.registerPress();
+    TestBed.tick();
+    return accepted;
+  };
   const whenFinishing = async (): Promise<void> => {
     const pending = designation.finish();
-    await whenReadStarts();
     return pending;
   };
   const whenTimePasses = async (duration: number): Promise<void> => {
@@ -226,12 +241,10 @@ describe('Designation du pupitre', () => {
   const whenSleeping = (duration: number): void => {
     vi.setSystemTime(Date.now() + duration);
   };
-  const whenResolutionCompletes = async (pending: Promise<void>): Promise<void> => {
-    await whenReadStarts();
-    return pending;
-  };
-  const whenDestroying = (): void => designation.ngOnDestroy();
+  const whenResolutionCompletes = async (pending: Promise<void>): Promise<void> => pending;
+  const whenDestroying = (): void => TestBed.inject(DesignationRuntime).ngOnDestroy();
   const givenDelayedResolution = (): ((state: PupitreLocal) => void) => {
+    journal.delayRead();
     let resolve!: (state: PupitreLocal) => void;
     journal.answer = new Promise(answer => {
       resolve = answer;
@@ -239,6 +252,7 @@ describe('Designation du pupitre', () => {
     return resolve;
   };
   const givenDelayedFailure = (): ((reason: Error) => void) => {
+    journal.delayRead();
     let reject!: (reason: Error) => void;
     journal.answer = new Promise((_resolve, failure) => {
       reject = failure;
