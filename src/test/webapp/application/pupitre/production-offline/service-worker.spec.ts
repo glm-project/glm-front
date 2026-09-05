@@ -338,11 +338,21 @@ const setBrowserOffline = (offline: boolean): void => {
     uploadThroughput: offline ? 0 : -1,
     connectionType: offline ? 'none' : 'wifi',
   };
+  if (offline) {
+    setPageNetworkConditions(conditions);
+    cy.then(() => attachAndDisconnectServiceWorkers(conditions));
+    return;
+  }
+  cy.then(() => setServiceWorkerNetworkConditions(conditions));
+  setPageNetworkConditions(conditions);
+};
+
+const setPageNetworkConditions = (conditions: object): void => {
   cy.then(() =>
     Cypress.automation('remote:debugger:protocol', {
       command: 'Network.emulateNetworkConditions',
       params: conditions,
-    }).then(() => (offline ? attachAndDisconnectServiceWorkers(conditions) : setServiceWorkerNetworkConditions(conditions))),
+    }),
   );
 };
 

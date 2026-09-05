@@ -100,6 +100,8 @@ through `PupitreJournalPort`; it does not replace the production bootstrap or kn
 The test waits for actual service-worker activation and control of a fresh production document. It disables
 HTTP caching, disconnects both the Chrome page and service-worker targets, and proves the same uncached probe
 succeeds online, fails offline and succeeds after restoration. A fresh controlled-client request also fails offline.
+The network restoration deliberately reconnects the worker before the page. This prevents Chrome's natural
+`online` event from starting a replay while the worker still has its offline CDP conditions.
 
 During two offline document restarts, the production shell boots, shows disconnected state, and the public
 journal port still returns the exact reference and pending gesture. After reconnection and another restart,
@@ -128,9 +130,13 @@ rule (pull request, linear history, deletion and non-fast-forward protection).
 For PR 95, commit `282e8d740a63545057199d0d5c98b00d5954bce3` was observed as `BLOCKED` while the six required jobs
 were queued or running. The [first CI run](https://github.com/glm-project/glm-front/actions/runs/33981339248)
 then passed all six jobs, and GitHub reported `CLEAN`. It took 91 seconds from creation to completion.
-Local negative checks separately demonstrate type-error rejection, invalid workflow rejection, staged-secret
-rejection and a mutation score below its threshold. These are deliberately failing validation inputs;
-the recorded GitHub transition is pending to successful, not a fabricated failing CI run.
+The [subsequent CI run](https://github.com/glm-project/glm-front/actions/runs/33981734652) failed the required
+`production-offline-test` check and GitHub again reported `BLOCKED`. Its uploaded server evidence contained two
+identical gesture POSTs and eight reference requests. The failure exposed a restoration race: the page was
+reconnected before its service-worker target, so Chrome could announce `online` during that transition. The
+browser harness now restores worker connectivity before page connectivity; twelve consecutive targeted runs
+passed after the correction. Local negative checks also demonstrate type-error rejection, invalid workflow
+rejection, staged-secret rejection and a mutation score below its threshold.
 
 The first real pre-commit and pre-push hooks exited 0 in 3.04 and 54.83 seconds respectively. Post-push inspection
 also exposed inherited Git environment variables leaking a test fixture into the invoking worktree's index.
