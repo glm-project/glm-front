@@ -69,7 +69,3 @@ silence.
 **Prettier owns formatting.** Single quotes, 140-char width, `arrowParens: avoid`. Run
 `npm run prettier:format`; never hand-format. The commit hook enforces both — see
 [`git-and-mr.md`](git-and-mr.md).
-
----
-
-New rules on this topic go here.

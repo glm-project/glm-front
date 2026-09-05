@@ -4,13 +4,7 @@
 
 ### Node.js and NPM
 
-Before you can build this project, you must install and configure the following dependencies on your machine:
-
-[Node.js](https://nodejs.org/): We use Node to run a development web server and build the project.
-Depending on your system, you can install Node either from source or as a pre-packaged bundle.
-
-After installing Node, you should be able to run the following command to install development tools.
-You will only need to run this command when dependencies change in [package.json](package.json).
+Install [Node.js](https://nodejs.org/) 24 or newer, then install the dependencies:
 
 ```
 npm install
@@ -24,6 +18,13 @@ npm install
 
 <!-- seed4j-needle-startupCommand -->
 
+Serve one front at a time:
+
+```bash
+npm run dev:gestion # http://localhost:9000
+npm run dev:pupitre # http://localhost:9001
+```
+
 ## Documentation
 
 Conventions, one document per topic:
@@ -31,10 +32,15 @@ Conventions, one document per topic:
 - [Testing](documentation/testing.md) — the three test layers, naming, what deserves a test and what does
   not
 - [Architecture](documentation/architecture.md) — bounded contexts, the rules `arch-unit-ts` enforces, ports
-  and adapters, Keycloak wiring
+  and adapters
+- [Authentication](documentation/authentication.md) — OIDC, device enrolment, credential persistence and
+  interceptors
+- [API](documentation/api.md) — generated contracts, the typed client, pagination and refusal translation
+- [Offline pupitre](documentation/offline-pupitre.md) — durable capture, synchronization, replay and runtime
 - [Code style](documentation/code-style.md) — naming, Angular idioms in use, linting and formatting
-- [Design system](documentation/design-system.md) — the shared tokens, the one per-front override, and the
-  two barriers that keep them from being bypassed
+- [Design system](documentation/design-system.md) — shared role tokens and the barriers against bypasses
+- [Material](documentation/material.md) — theme selection and the bridge from Material to project tokens
+- [Icons](documentation/icons.md) — the typed, bundled SVG icon set
 - [Git and MR](documentation/git-and-mr.md) — branching, commit messages and their granularity, MR
   descriptions
 
