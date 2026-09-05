@@ -49,11 +49,7 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
 
     await whenAppendingTheCompleteOpening();
 
-    await thenCompanyStateIs('entreprise-a', {
-      referentiel: referenceFixture,
-      connecte: true,
-      evenements: [arriveeFixture, repriseFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
-    });
+    await thenCompanyStateIs('entreprise-a', completeOpeningFixture());
     await thenCompanyStateIs('entreprise-b', PUPITRE_VIDE);
   });
 
@@ -85,6 +81,12 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
   const givenACompanyReference = async (): Promise<void> => {
     await journal.saveReferentiel('entreprise-a', referenceFixture);
   };
+
+  const completeOpeningFixture = (): PupitreLocal => ({
+    referentiel: referenceFixture,
+    connecte: true,
+    evenements: [arriveeFixture, repriseFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
+  });
   const givenADisconnectedQueue = async (): Promise<EvenementLocal> => {
     await journal.append('entreprise-a', [arriveeFixture, repriseFixture]);
     await journal.markDisconnected('entreprise-a');

@@ -2,6 +2,7 @@ const SCENARIO_HELPER = /^(given|when|then)[A-Z]/;
 const THEN_HELPER = /^then[A-Z]/;
 const DATA_FACTORY = /^(build|create)[A-Z]|Fixture$/;
 const TECHNICAL_ROOT = /^(TestBed|vi|cy|fixture|http|httpClient|stockage|storage|serveur|server)$/i;
+const ASSERTIVE_EXPECT_MEMBERS = new Set(['poll', 'soft']);
 
 const isFunction = node =>
   node?.type === 'ArrowFunctionExpression' || node?.type === 'FunctionExpression' || node?.type === 'FunctionDeclaration';
@@ -42,6 +43,12 @@ const contains = (node, predicate) => {
 const isAssertion = node =>
   node.type === 'CallExpression'
   && ((node.callee.type === 'Identifier' && ['expect', 'assert', 'expectTypeOf'].includes(node.callee.name))
+    || (node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && node.callee.object.name === 'assert')
+    || (node.callee.type === 'MemberExpression'
+      && node.callee.object.type === 'Identifier'
+      && node.callee.object.name === 'expect'
+      && node.callee.property.type === 'Identifier'
+      && ASSERTIVE_EXPECT_MEMBERS.has(node.callee.property.name))
     || (node.callee.type === 'MemberExpression'
       && !node.callee.computed
       && node.callee.property.type === 'Identifier'
@@ -56,6 +63,22 @@ const isUnlabelledDeclarationCall = node => {
   if (expression?.type !== 'CallExpression') return false;
   if (expression.callee.type !== 'Identifier') return true;
   return !SCENARIO_HELPER.test(expression.callee.name) && !DATA_FACTORY.test(expression.callee.name);
+};
+
+const hasUnlabelledArgumentCall = node => {
+  const expression = unwrappedExpression(node);
+  if (expression?.type !== 'CallExpression') return false;
+  return expression.arguments.some(argument => contains(argument, isUnlabelledDeclarationCall));
+};
+
+const reportScenarioExpression = (context, expression) => {
+  if (contains(expression, isTechnicalCall)) {
+    context.report({ node: expression, messageId: 'technicalDetail' });
+    return;
+  }
+  if (contains(expression, isAssertion)) return;
+  if (SCENARIO_HELPER.test(calledHelperName(expression) ?? '') && !hasUnlabelledArgumentCall(expression)) return;
+  context.report({ node: expression, messageId: 'unnamedScenarioStep' });
 };
 
 const isTestCallee = node => {
@@ -94,7 +117,10 @@ const reportScenarioStatement = (context, statement) => {
     statement.type === 'ExpressionStatement' || statement.type === 'ReturnStatement'
       ? (statement.expression ?? statement.argument)
       : undefined;
-  if (SCENARIO_HELPER.test(calledHelperName(expression) ?? '')) return;
+  if (expression) {
+    reportScenarioExpression(context, expression);
+    return;
+  }
 
   context.report({ node: statement, messageId: 'unnamedScenarioStep' });
 };
@@ -118,8 +144,12 @@ export const givenWhenThen = {
 
       if (!isTestCallee(node.callee)) return;
       const scenario = [...node.arguments].reverse().find(isFunction);
-      if (scenario?.body.type !== 'BlockStatement') return;
-      scenario.body.body.forEach(statement => reportScenarioStatement(context, statement));
+      if (!scenario) return;
+      if (scenario.body.type === 'BlockStatement') {
+        scenario.body.body.forEach(statement => reportScenarioStatement(context, statement));
+        return;
+      }
+      reportScenarioExpression(context, scenario.body);
     },
   }),
 };

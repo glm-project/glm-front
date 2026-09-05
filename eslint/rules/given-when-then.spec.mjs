@@ -57,6 +57,22 @@ ruleTester.run('given-when-then', givenWhenThen, {
         const thenEveryValueMatches = () => values.forEach(value => expect(value).toBe(true));
       `,
     },
+    {
+      code: `test('should allow a concise named step', () => thenItWorks());`,
+    },
+    {
+      code: `
+        it('should allow a deferred action asserted by a then helper', () => { thenItRefuses(() => required(value)); });
+        const thenItRefuses = action => expect(action).toThrow();
+      `,
+    },
+    {
+      code: `
+        expect.extend(matchers);
+        const valueFixture = expect.objectContaining({ state: 'complete' });
+        it('should allow expect configuration and asymmetric fixtures', () => { thenItMatches(valueFixture); });
+      `,
+    },
   ],
   invalid: [
     {
@@ -75,11 +91,19 @@ ruleTester.run('given-when-then', givenWhenThen, {
       errors: [{ messageId: 'unnamedScenarioStep' }],
     },
     {
+      code: `it('should inspect concise scenarios', () => workshop.complete());`,
+      errors: [{ messageId: 'unnamedScenarioStep' }],
+    },
+    {
       code: `it('should not hide its action in a declaration', () => { const result = workshop.complete(); thenItIsComplete(result); });`,
       errors: [{ messageId: 'unnamedScenarioStep' }],
     },
     {
       code: `it('should name a called use case', () => { const result = completeWorkshop(); thenItIsComplete(result); });`,
+      errors: [{ messageId: 'unnamedScenarioStep' }],
+    },
+    {
+      code: `it('should not hide an action in a then argument', () => { thenItIsComplete(workshop.complete()); });`,
       errors: [{ messageId: 'unnamedScenarioStep' }],
     },
     {
@@ -98,6 +122,27 @@ ruleTester.run('given-when-then', givenWhenThen, {
       code: `
         const observeResult = () => expect(value).toBe(true);
         test('should keep assertions in then helpers', () => { thenItWorks(); });
+      `,
+      errors: [{ messageId: 'assertionOutsideThen' }],
+    },
+    {
+      code: `
+        const givenAResult = () => assert.equal(actual, expected);
+        test('should recognize assert members', () => { givenAResult(); });
+      `,
+      errors: [{ messageId: 'assertionOutsideThen' }],
+    },
+    {
+      code: `
+        const givenAResult = () => expect.soft(actual).toBe(expected);
+        test('should recognize soft expectations', () => { givenAResult(); });
+      `,
+      errors: [{ messageId: 'assertionOutsideThen' }],
+    },
+    {
+      code: `
+        const whenReadingEventually = () => expect.poll(readValue).toBe(expected);
+        test('should recognize polled expectations', () => { whenReadingEventually(); });
       `,
       errors: [{ messageId: 'assertionOutsideThen' }],
     },
