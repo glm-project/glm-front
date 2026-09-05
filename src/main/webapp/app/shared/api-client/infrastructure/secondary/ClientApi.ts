@@ -1,4 +1,4 @@
-import { paths } from '@/app/api/schema';
+import { paths } from '@/app/generated/schema';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';

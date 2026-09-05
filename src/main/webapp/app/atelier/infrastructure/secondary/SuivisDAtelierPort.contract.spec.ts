@@ -1,8 +1,8 @@
-import { components } from '@/app/api/schema';
 import { ETATS_EN_ATELIER } from '@/app/atelier/domain/EtatDAtelier';
 import { RefusDAtelier } from '@/app/atelier/domain/RefusDAtelier';
 import { SuiviDAtelier } from '@/app/atelier/domain/SuiviDAtelier';
 import { Pointage, SuivisDAtelierPort } from '@/app/atelier/domain/SuivisDAtelierPort';
+import { components } from '@/app/generated/schema';
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
 import { Extrait } from '@/app/shared/pagination/domain/Extrait';
 import { provideHttpClient } from '@angular/common/http';
