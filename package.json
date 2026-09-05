@@ -20,7 +20,7 @@
     "component:headless:gestion": "cypress run --headless --config-file src/test/webapp/component/gestion/cypress-config.ts",
     "dev:gestion": "ng run project:serve-gestion",
     "dev:pupitre": "ng run project:serve-pupitre",
-    "lint": "eslint .",
+    "lint": "node --test eslint/rules/*.spec.mjs && eslint .",
     "ng": "ng",
     "prepare": "husky",
     "prettier:check": "prettier --check .",
