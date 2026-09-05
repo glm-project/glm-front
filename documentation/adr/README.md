@@ -26,3 +26,5 @@ renumbers at merge time. The status below is the living one — update this line
   window and replay rules in `domain`, separate capture and exchange orchestration, company journal port
 - [0010 — Route agent documentation by change](0010-route-agent-documentation-by-change.md) — **Accepted** —
   branch-specific topic documents, environment-owned inventories and an executable index/link contract
+- [0011 — Give each front its own header](0011-give-each-front-its-own-header.md) — **Accepted** —
+  independent front chrome, Material confined to gestion

@@ -90,7 +90,7 @@ cross-cutting infrastructure.
 
 Each front owns its header structure, styling and navigation, logout or connectivity behavior. Share visual
 primitives through the design-system primary adapter only when their contract is common. See
-[`design-system.md`](design-system.md).
+[ADR 0011](adr/0011-give-each-front-its-own-header.md) and [`design-system.md`](design-system.md).
 
 ## Load the branch that owns the change
 

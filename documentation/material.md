@@ -2,14 +2,13 @@
 
 Angular Material consumes project roles through a CSS bridge; it does not own a second palette.
 
-## Each front selects its current theme
+## Gestion owns Material
 
 `gestion` loads the Material 3 `azure-blue` prebuilt theme, followed by
-`app/shared/design-system/infrastructure/primary/gestion/material-bridge.css`. `pupitre` still loads the
-Material 2 `indigo-pink` prebuilt theme and no bridge.
+`app/shared/design-system/infrastructure/primary/gestion/material-bridge.css`. Pupitre owns a Material-free
+header and loads no Material theme.
 
-Keep that asymmetry explicit in `angular.json`. Removing Material from pupitre or moving it to Material 3 is
-a separate change with its own visual verification.
+Keep Material imports in gestion rendering code so pupitre remains independent of its theme and runtime.
 
 ## The gestion bridge references shared tokens
 
@@ -28,8 +27,8 @@ fallback as one page-wide typography change, verified in the browser.
 ## M3 attributes are not M2 palette switches
 
 Under Material 3, `color="primary"` and `color="accent"` do not select M2 palettes. Use the bridged system
-tokens and project role utilities. The shared toolbar retains `color="primary"` only because pupitre still
-renders it under the M2 theme.
+tokens and project role utilities. Gestion retains its toolbar's `color="primary"` attribute for continuity;
+it does not provide an M2 primary background under its M3 theme.
 
 Tailwind preflight resets heading elements to inherit. Give headings an explicit project typography role;
 `.mat-typography` is not the source of page hierarchy.

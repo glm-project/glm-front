@@ -1,3 +1,15 @@
 :host {
   display: block;
 }
+
+.connectivity-indicator {
+  width: 0.5em;
+  height: 0.5em;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.connectivity-indicator--connected {
+  background-color: currentColor;
+}

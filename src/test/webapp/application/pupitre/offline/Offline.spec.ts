@@ -62,6 +62,12 @@ describe('Pupitre offline restart', () => {
   const thenItKeepsTheGestureAndSignsTheFailedPush = (): void => {
     thenPushUsesTheRestoredCredential();
     cy.get(dataSelector('pupitre-disconnected')).should('be.visible');
+    cy.get(dataSelector('connectivity-indicator')).should(indicator => {
+      const style = getComputedStyle(indicator[0]);
+
+      expect(style.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+      expect(style.borderStyle).to.equal('solid');
+    });
     cy.wait('@reference');
   };
   const thenItDoesNotReplayAnAcknowledgedGesture = (): void => {
