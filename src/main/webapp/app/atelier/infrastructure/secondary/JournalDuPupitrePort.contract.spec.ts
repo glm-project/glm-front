@@ -77,11 +77,7 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
     const second = whenStartingTheSecondOperation(operation, chronology);
     await whenAppendingArrival();
 
-    try {
-      thenChronologyIs(chronology, ['first']);
-    } finally {
-      await whenReleasingTheOperations(release, first, second);
-    }
+    await thenOnlyTheFirstOperationRunsUntilReleased(chronology, release, first, second);
 
     thenChronologyIs(chronology, ['first', 'second']);
   });
@@ -93,6 +89,19 @@ describe.each(adapters)('JournalDuPupitrePort contract, honoured by %s', (_name,
     await journal.append('entreprise-a', [arriveeFixture, repriseFixture]);
     await journal.markDisconnected('entreprise-a');
     return { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
+  };
+
+  const thenOnlyTheFirstOperationRunsUntilReleased = async (
+    chronology: string[],
+    release: SignalFixture,
+    first: Promise<void>,
+    second: Promise<void>,
+  ): Promise<void> => {
+    try {
+      thenChronologyIs(chronology, ['first']);
+    } finally {
+      await whenReleasingTheOperations(release, first, second);
+    }
   };
   const givenSynchronizationSignals = (): SynchronizationFixture => ({
     entered: new SignalFixture(),
