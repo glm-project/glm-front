@@ -58,7 +58,8 @@ implement the durable queue; [ADR 0004](adr/0004-ngsw-caches-the-pupitre-shell-a
 separate boundary.
 
 [ADR 0007](adr/0007-durable-offline-pupitre.md) records durability and synchronization. [ADR 0009](adr/0009-pupitre-domain-responsibilities.md)
-records the domain and application ownership split.
+records the domain and application ownership split. [ADR 0013](adr/0013-keep-business-decisions-in-rich-domain-models.md)
+extends that decision to the designation's interaction and lifecycle rules.
 
 ## Designation screen integration
 

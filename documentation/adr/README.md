@@ -22,7 +22,7 @@ renumbers at merge time. The status below is the living one — update this line
   IndexedDB, company partitions, a durable FIFO, complete reference activation between operator windows
 - [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — **Accepted** —
   named cohesive steps when long methods, nested logic or callbacks obscure the workflow
-- [0009 — Give operator windows and replay rules a domain owner](0009-pupitre-domain-responsibilities.md) — **Accepted** —
+- [0009 — Give operator windows and replay rules a domain owner](0009-pupitre-domain-responsibilities.md) — **Complemented by 0013** —
   window and replay rules in `domain`, separate capture and exchange orchestration, company journal port
 - [0010 — Route agent documentation by change](0010-route-agent-documentation-by-change.md) — **Accepted** —
   branch-specific topic documents, environment-owned inventories and an executable index/link contract
@@ -30,3 +30,5 @@ renumbers at merge time. The status below is the living one — update this line
   independent front chrome, Material confined to gestion
 - [0012 — Give each front ownership of its business contexts](0012-own-business-contexts-by-front.md) — **Accepted** —
   application-owned contexts, technical-only shared code and local bounded-context language
+- [0013 — Keep business decisions in rich domain models](0013-keep-business-decisions-in-rich-domain-models.md) — **Accepted** —
+  domain-owned interaction and lifecycle rules, application coordination and behavioral contracts
