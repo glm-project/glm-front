@@ -26,6 +26,7 @@ npm run api:generate       # requires authenticated `gh`
 
 ## Traps that cost
 
+- When grilling, ask one question at a time.
 - Run unit tests through `ng test`, never bare `npx vitest run`: Angular's unit-test builder injects the zoneless TestBed environment and JIT setup. Select a subset with `--include` or `--filter`; a positional path makes the CLI reject `--watch`.
 - Serve one front at a time. Both dev servers share one Vite cache and overwrite each other's optimized modules. `npm run watch` is safe because the build watcher does not use that cache.
 - Use the npm scripts for builds and servers. Plain `ng build` and `ng serve` have no target; the repository exposes `build-gestion`, `build-pupitre`, `serve-gestion` and `serve-pupitre` through scripts.
