@@ -1,7 +1,7 @@
-import { components } from '@/app/api/schema';
 import { GesteLocal, OperateurDuPupitre, ReferentielDuPupitre, SuiviDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
+import { components } from '@/app/generated/schema';
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
 import { findCodeDErreurIn } from '@/app/shared/api-client/infrastructure/secondary/findCodeDErreurIn';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';

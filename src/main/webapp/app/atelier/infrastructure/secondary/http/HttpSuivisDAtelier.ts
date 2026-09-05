@@ -1,8 +1,8 @@
-import { components } from '@/app/api/schema';
 import { ActiviteEnCours } from '@/app/atelier/domain/ActiviteEnCours';
 import { EtatDAtelier } from '@/app/atelier/domain/EtatDAtelier';
 import { SuiviDAtelier } from '@/app/atelier/domain/SuiviDAtelier';
 import { Pointage, SuivisDAtelierPort } from '@/app/atelier/domain/SuivisDAtelierPort';
+import { components } from '@/app/generated/schema';
 import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { Extrait } from '@/app/shared/pagination/domain/Extrait';

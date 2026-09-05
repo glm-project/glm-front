@@ -83,7 +83,7 @@ never recursing — so a context nested any deeper than `app/<name>/` is discove
 per-context rules with it (11 tests down to 8), and `arch-unit-ts.json` carries `failOnEmptyShould: false`, so
 nothing complains.
 
-One folder under `app/` sits outside that scan on purpose — `app/api/`, below. Everywhere else the absence
+One folder under `app/` sits outside that scan on purpose — `app/generated/`, below. Everywhere else the absence
 is a defect: `app/login/` was the last folder to lack a `package-info.ts`, and the header composition
 absorbed its logout button. A context that arrives without one lands straight in the blind spot — the
 architecture test stays green over it because it checks nothing there.
@@ -103,17 +103,17 @@ not copied into each context.
 
 ## The wire format lives at an address no `domain` can reach
 
-`app/api/` holds two locally generated files and no `package-info.ts`: `openapi.json`, a snapshot of the
+`app/generated/` holds two locally generated files and no `package-info.ts`: `openapi.json`, a snapshot of the
 specification `glm-back` publishes at its own `documentation/openapi.json`, and `schema.d.ts`, generated
 from it by `openapi-typescript`. They are ignored by Git: run `npm run api:generate` after cloning and when
 refreshing the contract. **The missing `package-info.ts` is the rule, not an oversight.** The folder belongs to
 no declared context, so `domain` — which may only depend on `domain` and shared kernels — cannot import it,
-while `infrastructure/secondary` can. Both directions were measured: an `import` of `@/app/api/schema` from
+while `infrastructure/secondary` can. Both directions were measured: an `import` of `@/app/generated/schema` from
 `shared/authentication/domain/` reddens _Domain should not depend on outside_, the same import from
 `shared/authentication/infrastructure/secondary/` leaves the suite green. A shared kernel of wire types would
 be importable from every domain and the rule would be an intention.
 
-**`app/api/` must stay under `app/`.** `TypeScriptProject` populates itself with
+**`app/generated/` must stay under `app/`.** `TypeScriptProject` populates itself with
 `addSourceFilesAtPaths('src/main/webapp/app/**/*.ts')`, and `isImportValid` drops any import ts-morph fails
 to resolve on a bare `console.warn`. Moved out, an import from a `domain` would vanish from the dependency
 graph and the check above would read green over it. The placement is the guard rail.
@@ -127,7 +127,7 @@ operation description springdoc wrote into the spec, and `strictTypeChecked` on 
 ## The specification is generated in each workspace
 
 ```
-back's code ──✓ back CI──▶ back's openapi.json ──npm run api:sync──▶ app/api/openapi.json ──npm run api:types──▶ schema.d.ts
+back's code ──✓ back CI──▶ back's openapi.json ──npm run api:sync──▶ app/generated/openapi.json ──npm run api:types──▶ schema.d.ts
 ```
 
 `npm run api:sync` pulls the back's file through `gh api`, never `curl`: `gh` is authenticated, so the

@@ -1,4 +1,4 @@
-import { components } from '@/app/api/schema';
+import { components } from '@/app/generated/schema';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
