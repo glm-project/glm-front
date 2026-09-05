@@ -59,3 +59,35 @@ separate boundary.
 
 [ADR 0007](adr/0007-durable-offline-pupitre.md) records durability and synchronization. [ADR 0009](adr/0009-pupitre-domain-responsibilities.md)
 records the domain and application ownership split.
+
+## Designation screen integration
+
+`DesignationOperateur` owns the numeric entry, correction, explicit validation, unknown code and temporary
+designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
+`PupitreHorsLigne` coordinates local resolution and closure, publishes each designation transition and
+explicitly replaces its inactivity schedule through a domain port. The secondary timer adapter only executes
+the requested callback. `DesignationRuntime` releases the designation on destruction; its provider belongs to
+the page, so it survives the switch from keypad to pointage. `Designation` translates touch and keyboard events
+and renders the application snapshot.
+
+The domain checks and renews validity at each gesture's initiation, even when the screen's expiry callback
+has not run. Expiry immediately prevents new gestures; captures already initiated retain their operator and
+occurrence time and drain before the window is released. The next reference becomes visible after that
+drain. The application keeps a single closing operation in flight.
+
+A reset keypad accepts the first new digit while the previous closure or cancelled resolution is still
+pending. Validation stays unavailable until that operation finishes. A late resolution cannot reopen an
+expired designation or erase a new partial code. Timer callbacks ask the domain to check the current
+deadline instead of unconditionally closing a designation that may have been renewed.
+
+The composition gates the keypad on enrolment and reference availability, then switches views on the
+same URL. The pointage view's “J'ai fini” action calls `finish()`. Every screen press, including blank
+chrome, goes through `registerPress()` before a business command: a `false` result consumes the entire
+press, including its subsequent click, because the deadline had already elapsed. Ignore repeated physical
+keydown events before calling this guard. Closing the designation must also dismiss the pointage popup.
+The keypad already handles its own pointer and physical keyboard events; its parent only needs to route
+presses outside it. These composition and pointage responsibilities belong to #75 and #76.
+
+The guard consumes a press that discovers an overdue deadline that has not yet been handled. If the expiry
+callback has already reset the keypad, the next press starts a fresh code. This rule also applies after
+OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay threshold is needed.

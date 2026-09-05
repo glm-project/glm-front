@@ -16,8 +16,10 @@ has been resolved; keep it a glossary rather than a spec or implementation plan.
 
 ## Vocabulary and decisions
 
-Use the glossary's canonical terms in issue titles, proposals, hypotheses and test names. Reconsider
-unrecognized synonyms; record a real terminology gap for `domain-modeling` when one remains.
+Use the glossary's canonical terms in domain type names, issue titles, proposals, hypotheses and test names.
+Name a model for the business concept it owns; keep its framework or orchestration role in the technical
+adapter's name. Reconsider unrecognized synonyms; record a real terminology gap for `domain-modeling` when
+one remains.
 
 Surface a proposal's conflict with an existing ADR and explain why reopening the decision is warranted.
 For a new ADR, use `documentation/adr/` and its existing index, numbering and template conventions.

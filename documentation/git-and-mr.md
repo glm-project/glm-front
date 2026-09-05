@@ -13,10 +13,11 @@ reference only when the task identifies a relevant issue; do not require an issu
 net, no new test. What changes behavior is `feat:` or `fix:`, comes after, and carries its test. A task
 needing both produces two commits, in that order.
 
-A refactoring that **creates** a file brings that file's spec with it, in the same commit: the 100 % per-file
-bar leaves no other option, and a commit that is not green is not a commit. That is the one exception to "no
-new test" above, and it is bounded — the spec asserts the contract the extraction just gave the file, never
-a behaviour the change introduced.
+A refactoring that **creates** a file keeps 100 % coverage for that file in the same commit. Existing
+scenarios through its owner's public entry point can provide that coverage. Move or adapt their wiring
+with the extraction while preserving their expected results. Add a dedicated spec only when a distinct
+observable contract needs one, following [testing.md](testing.md); an extraction alone does not require a
+new test. A commit that is not green is not a commit.
 
 **MR descriptions fit in a few bullets**: one sentence of context, one bullet per change (`file:line` plus
 the behavior), one bullet for what is still to be decided, one verification line. The detail lives in the

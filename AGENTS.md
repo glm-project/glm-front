@@ -45,15 +45,10 @@ Nothing is green, validated or done until the relevant command exits with code 0
 
 The workflow in `.github/workflows/github-actions.yml` is the source of truth for CI. Before a code or dependency PR, run its local equivalents: API generation, lint, Prettier check, TypeScript, coverage, component tests and application tests. For a documentation-only change, run the documentation check, lint and Prettier check.
 
-Every summary that touches code or dependencies states:
-
-- **Compilation:** `🟢 OK` | `🟡 NOT RUN (say why)` | `🔴 KO`
-- **Tests:** `🟢 RUN & OK` | `🟡 NOT RUN (say why)` | `🔴 RUN & KO`
-
 ## Where the rules are
 
-- Tests: before writing or changing one → `documentation/testing.md`
-- Architecture: before changing a context, composition root, dependency boundary, port or adapter → `documentation/architecture.md`
+- Tests: before writing, changing or reviewing tests → `documentation/testing.md`
+- Architecture: before designing or reviewing a model, component or service, or changing a context, composition root, dependency boundary, port or adapter → `documentation/architecture.md`
 - Authentication: before changing OIDC, device enrolment, credentials or auth interceptors → `documentation/authentication.md`
 - API: before changing API generation, an HTTP adapter, pagination or refusal translation → `documentation/api.md`
 - Offline pupitre: before changing local storage, synchronization, replay or its runtime → `documentation/offline-pupitre.md`
@@ -65,7 +60,7 @@ Every summary that touches code or dependencies states:
 - ADRs: before introducing a dependency, pattern or convention → `documentation/adr/README.md`
 - Issue tracker: before creating, reading or organizing issues → `docs/agents/issue-tracker.md`
 - Triage labels: before triaging or applying readiness labels → `docs/agents/triage-labels.md`
-- Domain docs: before engineering-skill exploration or domain modeling → `docs/agents/domain.md`
+- Domain docs: before domain modeling, including naming, or engineering-skill exploration → `docs/agents/domain.md`
 
 ## Maintaining agent documentation
 

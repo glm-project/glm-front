@@ -51,6 +51,28 @@ Use this shape where the layers are needed:
 A small context may omit unused layers. Keep every class in the layer matching its responsibility rather
 than creating empty folders for symmetry.
 
+## Give functional decisions a domain owner
+
+Before implementing or reviewing a behavior, identify its rule, its domain owner and the observable result
+that proves it. Domain models may describe user interactions: numeric entry, correction, explicit validation
+and expiration belong there when the product defines them as rules of a business process. A keyboard or
+screen origin does not make a rule presentation-only. Framework-free code alone does not make it domain
+code either; ownership follows the functional responsibility.
+
+The domain decides valid transitions and whether a business command is allowed. Application code supplies
+data and coordinates asynchronous work. Primary adapters translate browser events and render results;
+focus, scrolling, signals and timer scheduling remain technical concerns. Reuse an existing coordinator
+when it already owns the orchestration; a service earns its place through a distinct responsibility.
+
+An invariant must still hold when a caller bypasses the screen or its timer has not run. Supply time
+explicitly to time-dependent domain decisions and enforce them at the business command boundary. Keep one
+authoritative lifecycle state; the displayed state reflects it. When a command completes asynchronously,
+specify whether validity is evaluated at the action or at completion, then preserve that choice through
+expiration and closure. Consult [offline-pupitre.md](offline-pupitre.md) for the pupitre's lifecycle rules.
+
+In a review, trace each changed functional rule to its domain decision and a behavioral test. Passing the
+import-boundary checks proves allowed dependencies, not correct ownership of the decisions.
+
 ## Dependencies flow inward
 
 The architecture suite enforces these rules:

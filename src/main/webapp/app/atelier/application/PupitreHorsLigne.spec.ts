@@ -1,4 +1,5 @@
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
+import { PlanificationExpirationDesignationPort } from '@/app/atelier/domain/PlanificationExpirationDesignationPort';
 import { GesteLocal, OperateurDuPupitre, PUPITRE_VIDE, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { CODES_DE_REFUS_D_ATELIER } from '@/app/atelier/domain/RefusDAtelier';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
@@ -25,6 +26,12 @@ const refusalFixture = (code: string): RefusDuPupitre =>
 class AuthenticationFixture extends AuthenticationPort {
   tenant: string | undefined = 'entreprise-a';
   token: string | undefined;
+  pendingSynchronization: Promise<void> | undefined;
+
+  override async synchronizeSession(): Promise<void> {
+    await roundTrip();
+    await this.pendingSynchronization;
+  }
   override async authenticate(): Promise<void> {
     await roundTrip();
   }
@@ -36,6 +43,12 @@ class AuthenticationFixture extends AuthenticationPort {
   }
   override logout(): void {
     this.token = undefined;
+  }
+}
+
+class PlanificationExpirationFixture extends PlanificationExpirationDesignationPort {
+  override schedule(): void {
+    return;
   }
 }
 
@@ -93,6 +106,7 @@ describe('PupitreHorsLigne', () => {
   afterEach(async () => {
     await pupitre.synchronize();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('should resolve an operator locally after a restart without a network', async () => {
@@ -339,8 +353,7 @@ describe('PupitreHorsLigne', () => {
     const overlappingOpening = whenOpening();
     const unauthorizedPointage = whenStartingOn('interdit');
 
-    await thenFails(overlappingOpening, 'deja ouverte');
-    await thenFails(unauthorizedPointage, 'habilitations');
+    await thenOpeningAndPointageAreRefused(overlappingOpening, unauthorizedPointage);
 
     await thenQueueHas(0);
   });
@@ -420,6 +433,53 @@ describe('PupitreHorsLigne', () => {
     await thenPendingIs(0);
   });
 
+  it('should durably retain a pointage started before expiry while refusing subsequent gestures during closure', async () => {
+    givenBusinessTime();
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const pointage = whenStarting();
+    whenSleepingPastDesignation();
+    const closing = whenExpiring();
+
+    thenGestureIsRefusedDuringClosure();
+
+    whenReleasingCapture(releaseCapture);
+    await whenCaptureAndClosureComplete(pointage, closing);
+
+    await thenQueueHas(3);
+    await thenPointageKeepsItsOriginalOperatorAndTime();
+  });
+
+  const givenBusinessTime = (): void => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
+  };
+  const givenDelayedCapture = (): (() => void) => {
+    let release!: () => void;
+    authentication.pendingSynchronization = new Promise(resolve => {
+      release = resolve;
+    });
+    return release;
+  };
+  const whenSleepingPastDesignation = (): void => {
+    vi.setSystemTime(new Date('2026-09-05T08:00:31Z'));
+  };
+  const whenExpiring = (): Promise<void> => pupitre.expire();
+  const whenReleasingCapture = (release: () => void): void => release();
+  const whenCaptureAndClosureComplete = async (pointage: Promise<void>, closing: Promise<void>): Promise<void> => {
+    await Promise.all([pointage, closing]);
+  };
+  const thenGestureIsRefusedDuringClosure = (): void => {
+    expect(() => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT' })).toThrow('Aucune fenetre operateur ouverte.');
+  };
+  const thenPointageKeepsItsOriginalOperatorAndTime = async (): Promise<void> => {
+    const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
+    expect(gestes).toContainEqual(
+      expect.objectContaining({ nature: 'POINTAGE', operateurId: 'jean', dateDeSurvenue: '2026-09-05T08:00:00.000Z' }),
+    );
+  };
+
   const buildPupitre = (): PupitreHorsLigne =>
     Injector.create({
       providers: [
@@ -428,6 +488,7 @@ describe('PupitreHorsLigne', () => {
         { provide: JournalDuPupitrePort, useValue: journal },
         { provide: ServeurDuPupitrePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
+        { provide: PlanificationExpirationDesignationPort, useClass: PlanificationExpirationFixture },
       ],
     }).get(PupitreHorsLigne);
   const whenRestarting = async (): Promise<void> => {
@@ -450,7 +511,7 @@ describe('PupitreHorsLigne', () => {
   const whenSynchronizingConcurrently = async (): Promise<void> => {
     await Promise.all([pupitre.synchronize(), pupitre.synchronize()]);
   };
-  const whenClosing = (): Promise<void> => pupitre.closeWindow();
+  const whenClosing = (): Promise<void> => pupitre.finish();
   const whenRestoring = (): Promise<void> => pupitre.restore();
   const whenPausingWithoutWindow = (): unknown => {
     try {
@@ -577,6 +638,9 @@ describe('PupitreHorsLigne', () => {
   };
   const thenPresenceBelongsTo = (operateurId: string): void => {
     expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false })]);
+  };
+  const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
+    await Promise.all([thenFails(opening, 'deja ouverte'), thenFails(pointage, 'habilitations')]);
   };
   const thenFails = async (operation: Promise<unknown>, message: string): Promise<void> => {
     await expect(operation).rejects.toThrow(message);

@@ -52,6 +52,7 @@ Engineering skill configuration:
 
 Background and decisions:
 
+- [Domain glossary](CONTEXT.md) — shared vocabulary for the workshop and operator designation
 - [Hexagonal architecture](documentation/hexagonal-architecture.md) — the theory behind the layout
 - [Architecture Decision Records](documentation/adr/README.md) — structural decisions, the options weighed
   and their price
