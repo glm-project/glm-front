@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted; the in-memory-only credential decision is superseded by [ADR 0007](0007-durable-offline-pupitre.md).
+The original rationale below records the earlier tradeoff. Device credentials now persist in IndexedDB, and
+the selected company survives revoked or expired authorization so local collection can continue.
 
 ## Context
 

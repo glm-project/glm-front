@@ -1,11 +1,7 @@
-import { CodeDeRefusDAtelier, RefusDAtelier } from '@/app/atelier/domain/RefusDAtelier';
+import { decideRejeu, OperationDAtelier } from '@/app/atelier/domain/PolitiqueDeRejeu';
 import { findRefusDAtelierIn } from './findRefusDAtelierIn';
 
 type Envoi = () => Promise<unknown>;
-
-const SAISIE_CONCURRENTE: CodeDeRefusDAtelier = 'saisie-concurrente';
-
-const matches = (refus: unknown, code: CodeDeRefusDAtelier): boolean => refus instanceof RefusDAtelier && refus.code === code;
 
 const sendOnce = async (envoi: Envoi): Promise<void> => {
   try {
@@ -15,27 +11,25 @@ const sendOnce = async (envoi: Envoi): Promise<void> => {
   }
 };
 
-export const send = async (envoi: Envoi): Promise<void> => {
+const sendWithRetry = async (envoi: Envoi, relire: Envoi): Promise<void> => {
   try {
     await sendOnce(envoi);
   } catch (refus: unknown) {
-    if (matches(refus, SAISIE_CONCURRENTE)) {
+    if (decideRejeu('GESTE_EXPLICITE', refus) === 'RELIRE_ET_REJOUER') {
+      await relire();
       await sendOnce(envoi);
       return;
     }
-
     throw refus;
   }
 };
 
-export const sendAbsorbing = async (absorbe: CodeDeRefusDAtelier, envoi: Envoi): Promise<void> => {
+export const send = async (envoi: Envoi, relire: Envoi, operation: OperationDAtelier = 'GESTE_EXPLICITE'): Promise<void> => {
   try {
-    await send(envoi);
+    await sendWithRetry(envoi, relire);
   } catch (refus: unknown) {
-    if (matches(refus, absorbe)) {
-      return;
+    if (decideRejeu(operation, refus, 'REJEU') !== 'ACCEPTER') {
+      throw refus;
     }
-
-    throw refus;
   }
 };

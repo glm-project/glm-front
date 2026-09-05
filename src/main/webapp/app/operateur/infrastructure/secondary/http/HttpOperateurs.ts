@@ -1,4 +1,4 @@
-import { components } from '@/app/api/schema';
+import { components } from '@/app/generated/schema';
 import { Operateur } from '@/app/operateur/domain/Operateur';
 import { OperateursPort } from '@/app/operateur/domain/OperateursPort';
 import { PosteHabilite } from '@/app/operateur/domain/PosteHabilite';

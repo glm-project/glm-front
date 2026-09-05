@@ -27,8 +27,8 @@ npm run prettier:check
 npm run prettier:format
 npx tsc --noEmit           # type-checks both fronts in one pass
 
-npm run api:sync           # refresh app/api/openapi.json from glm-back — needs `gh` authenticated
-npm run api:types          # regenerate app/api/schema.d.ts from it; CI fails on any drift
+npm run api:sync           # refresh app/generated/openapi.json from glm-back — needs `gh` authenticated
+npm run api:types          # regenerate app/generated/schema.d.ts from it
 ```
 
 ## Traps that cost
@@ -38,7 +38,7 @@ npm run api:types          # regenerate app/api/schema.d.ts from it; CI fails on
 - `ng build` and `ng serve` no longer resolve: the targets are `build-gestion`, `serve-gestion`, `build-pupitre`, `serve-pupitre`, reached with `ng run project:<target>`. Use the npm scripts — they are the interface.
 - Composition lives in `src/main/webapp/{gestion,pupitre}/` — bootstrap, shell, routes, environments, providers — and never the reverse: a file under `app/` importing from a front is the boundary this split exists to forbid.
 - Coverage is 100 % per file (`vitest.config.ts`, `coverage.thresholds`): one untested branch is a build failure, not a metric. Write the test alongside the code.
-- Add `package-info.ts` before any new bounded context — otherwise `arch-unit-ts` silently checks nothing and the architecture drifts under a green build. `app/api/` is the one folder that must never get one: its absence is what forbids a `domain` from importing the generated wire types.
+- Add `package-info.ts` before any new bounded context — otherwise `arch-unit-ts` silently checks nothing and the architecture drifts under a green build. `app/generated/` is the one folder that must never get one: its absence is what forbids a `domain` from importing the generated wire types.
 - Never edit `src/test/webapp/unit/HexagonalArchTest.spec.ts` to make a build pass: a failure means the code deviates, so fix the code.
 - Keep the three `<!-- seed4j-needle-* -->` markers in `README.md` when editing it by hand — Seed4J module generators insert there. The code markers are gone on purpose: with two composition roots, an insertion point in the app cannot answer "gestion or pupitre?".
 - `httpAuthInterceptor` already attaches `Authorization: Bearer <token>` to every outgoing request (wired in both `main.ts`): never re-attach it in an adapter. It reads `AuthenticationPort`, never an adapter. The one thing that must escape it is the pupitre's own enrolment traffic, which is why `DeviceAuthentication` builds its `HttpClient` on `HttpBackend`.

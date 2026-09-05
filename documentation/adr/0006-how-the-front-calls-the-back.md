@@ -2,14 +2,16 @@
 
 ## Status
 
-Accepted
+Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): the offline reference traverses all pages,
+and concurrent writes reread the affected aggregate before an identical retry. The original account below
+records the earlier implementation.
 
 ## Context
 
 [Issue 6](https://github.com/glm-project/glm-front/issues/6) settled seven decisions on how the front reaches
 the API — generated types read by `infrastructure/secondary` only, hand-written domain classes, a stable error
 code published by the back. None of them had been executed: before this record, `glm-front` held
-`app/api/schema.d.ts` and not one secondary adapter.
+`app/generated/schema.d.ts` and not one secondary adapter.
 
 Executing them surfaced facts the decision could not have:
 

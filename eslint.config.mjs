@@ -117,7 +117,7 @@ export default typescript.config(
     },
   },
   {
-    ignores: ['target/', '.angular/', 'src/main/webapp/app/api/schema.d.ts'],
+    ignores: ['target/', '.angular/', 'src/main/webapp/app/generated/schema.d.ts'],
   },
   eslint.configs.recommended,
   {

@@ -26,6 +26,20 @@ literal.
 > call signature (`interface X { (): T }`), at the commit hook. To keep a real interface, give it a named
 > member — `interface AuthPort { getToken: () => string | undefined }` — and pass a stub object.
 
+## Extract methods when the logic obscures the intent
+
+Extract a coherent step as soon as it needs its own explanation, mixes orchestration with details, or
+buries a decision inside nested branches or a long callback. Review long methods for these signals and
+extract the complicated steps before merging; no fixed line count replaces that judgment.
+
+Keep callers at one level of abstraction. Name each extracted method for its purpose, keep it close to
+its caller, and prefer private methods over new services without a separate responsibility. A forwarding
+method that adds no intent is not an improvement. This applies to production code and test helpers.
+
+Preserve asynchronous ordering, callback evaluation time, identifiers, lock boundaries and error handling.
+Run the existing behavioral tests before and after extraction; keep behavior changes separate. See
+[ADR 0008](adr/0008-extract-methods-to-expose-intent.md) for the decision and its costs.
+
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
 - `inject()`, never constructor injection (`gestion/app.ts:18`, `gestion/header/header.ts:19`,
