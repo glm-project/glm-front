@@ -10,7 +10,8 @@ explicitly associated with the requested PR/MR.
 
 1. Identify the requested PR/MR and inspect its body and GitHub links for
    explicitly linked issues. Do not ask for an issue number when none is
-   present; this repository does not use an issue tracker as a general rule.
+   present. Follow the [issue tracker configuration](../../../docs/agents/issue-tracker.md)
+   when reading or updating issues.
 2. Merge only after the repository's required checks and requested review
    state are satisfied.
 3. After the merge succeeds, read the state of every explicitly linked issue.

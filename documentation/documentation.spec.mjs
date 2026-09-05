@@ -25,12 +25,18 @@ const localMarkdownTargetsIn = file =>
 const routedDocumentsIn = source => [...source.matchAll(/→ `([^`]+\.md)`/g)].map(([, document]) => document);
 
 const indexedDocumentsIn = source =>
-  [...source.matchAll(/]\((documentation\/[^)#]+\.md)(?:#[^)]+)?\)/g)]
+  [...source.matchAll(/]\(((?:documentation|docs\/agents)\/[^)#]+\.md)(?:#[^)]+)?\)/g)]
     .map(([, document]) => document)
     .filter(document => document !== 'documentation/hexagonal-architecture.md');
 
 test('should resolve every local Markdown link', () => {
-  const markdownFiles = [agentFile, readmeFile, resolve(repository, 'CLAUDE.md'), ...markdownFilesIn(resolve(repository, 'documentation'))];
+  const markdownFiles = [
+    agentFile,
+    readmeFile,
+    resolve(repository, 'CLAUDE.md'),
+    ...markdownFilesIn(resolve(repository, 'documentation')),
+    ...markdownFilesIn(resolve(repository, 'docs/agents')),
+  ];
   const missing = markdownFiles.flatMap(file =>
     localMarkdownTargetsIn(file)
       .map(target => resolve(dirname(file), decodeURIComponent(target)))
