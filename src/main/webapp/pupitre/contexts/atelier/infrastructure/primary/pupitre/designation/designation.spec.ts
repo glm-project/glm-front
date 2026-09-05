@@ -1,13 +1,13 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { PupitreHorsLigne } from '@/pupitre/contexts/atelier/application/PupitreHorsLigne';
-import { SynchronisationDuPupitre } from '@/pupitre/contexts/atelier/application/SynchronisationDuPupitre';
-import { JournalDuPupitrePort } from '@/pupitre/contexts/atelier/domain/JournalDuPupitrePort';
+import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
-  ExpirationDesignation,
-  PlanificationExpirationDesignationPort,
-} from '@/pupitre/contexts/atelier/domain/PlanificationExpirationDesignationPort';
-import { PUPITRE_VIDE, PupitreLocal } from '@/pupitre/contexts/atelier/domain/PupitreLocal';
-import { ServeurDuPupitrePort } from '@/pupitre/contexts/atelier/domain/ServeurDuPupitrePort';
+  DesignationExpiration,
+  DesignationExpirationSchedulerPort,
+} from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
+import { EMPTY_PUPITRE, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { setTimeout as roundTrip } from 'node:timers';
@@ -18,12 +18,12 @@ interface KeyFixture {
   repeat?: boolean;
 }
 
-const referenceFixture: PupitreLocal = {
-  ...PUPITRE_VIDE,
+const referenceFixture: LocalPupitreState = {
+  ...EMPTY_PUPITRE,
   referentiel: { operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }], suivis: [] },
 };
 
-class JournalDesignationFixture {
+class DesignationJournalFixture {
   readCompleted: Promise<void>;
   private notifyReadCompleted!: () => void;
 
@@ -38,7 +38,7 @@ class JournalDesignationFixture {
     return this.readCompleted;
   }
 
-  read(): Promise<PupitreLocal> {
+  read(): Promise<LocalPupitreState> {
     const notify = this.notifyReadCompleted;
     return new Promise(resolve =>
       roundTrip(() => {
@@ -49,10 +49,10 @@ class JournalDesignationFixture {
   }
 }
 
-class PlanificationExpirationFixture extends PlanificationExpirationDesignationPort {
+class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedulerPort {
   private timer: ReturnType<typeof setTimeout> | undefined;
 
-  override schedule(deadline: number | undefined, expiration: ExpirationDesignation): void {
+  override schedule(deadline: number | undefined, expiration: DesignationExpiration): void {
     clearTimeout(this.timer);
     if (deadline !== undefined) this.timer = setTimeout(() => expiration.expire(), deadline - Date.now());
   }
@@ -60,27 +60,27 @@ class PlanificationExpirationFixture extends PlanificationExpirationDesignationP
 
 describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
-  let designation: PupitreHorsLigne;
-  let journalFixture: JournalDesignationFixture;
+  let designation: OfflinePupitre;
+  let journalFixture: DesignationJournalFixture;
   const serveurFixture = { referentiel: vi.fn(), send: vi.fn(), reread: vi.fn() };
   beforeEach(() => {
-    journalFixture = new JournalDesignationFixture();
+    journalFixture = new DesignationJournalFixture();
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        PupitreHorsLigne,
-        SynchronisationDuPupitre,
+        OfflinePupitre,
+        PupitreSynchronization,
         {
           provide: AuthenticationPort,
           useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
         },
-        { provide: JournalDuPupitrePort, useValue: journalFixture },
-        { provide: ServeurDuPupitrePort, useValue: serveurFixture },
-        { provide: PlanificationExpirationDesignationPort, useClass: PlanificationExpirationFixture },
+        { provide: PupitreJournalPort, useValue: journalFixture },
+        { provide: PupitreServerPort, useValue: serveurFixture },
+        { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
       ],
     });
     fixture = TestBed.createComponent(Designation);
-    designation = TestBed.inject(PupitreHorsLigne);
+    designation = TestBed.inject(OfflinePupitre);
     fixture.detectChanges();
   });
   afterEach(() => {

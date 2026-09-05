@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
-import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
-import { Extrait } from '@/app/shared/pagination/domain/Extrait';
-import { buildExtraitFrom, PLAFOND_DE_PAGE } from '@/app/shared/pagination/infrastructure/secondary/buildExtraitFrom';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { Page } from '@/app/shared/pagination/domain/Page';
+import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { Operateur } from '@/gestion/contexts/operateur/domain/Operateur';
 import { OperateursPort } from '@/gestion/contexts/operateur/domain/OperateursPort';
 import { PosteHabilite } from '@/gestion/contexts/operateur/domain/PosteHabilite';
@@ -17,11 +17,11 @@ const toOperateur = (operateur: RestOperateur): Operateur =>
 
 @Injectable()
 export class HttpOperateurs extends OperateursPort {
-  private readonly api = inject(ClientApi);
+  private readonly api = inject(ApiClient);
 
-  override async operateurs(): Promise<Extrait<Operateur>> {
-    const page = await this.api.read('/api/operateurs', { parametres: { size: PLAFOND_DE_PAGE } });
+  override async operateurs(): Promise<Page<Operateur>> {
+    const page = await this.api.read('/api/operateurs', { queryParams: { size: PAGE_SIZE } });
 
-    return buildExtraitFrom(page, toOperateur);
+    return buildPageFrom(page, toOperateur);
   }
 }

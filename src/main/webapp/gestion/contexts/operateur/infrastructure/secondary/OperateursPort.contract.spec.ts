@@ -1,6 +1,6 @@
 import { components } from '@/app/generated/schema';
-import { ClientApi } from '@/app/shared/api-client/infrastructure/secondary/ClientApi';
-import { Extrait } from '@/app/shared/pagination/domain/Extrait';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { Page } from '@/app/shared/pagination/domain/Page';
 import { Operateur } from '@/gestion/contexts/operateur/domain/Operateur';
 import { OperateursPort } from '@/gestion/contexts/operateur/domain/OperateursPort';
 import { provideHttpClient } from '@angular/common/http';
@@ -42,7 +42,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
   let serveur: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), ClientApi, HttpOperateurs] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), ApiClient, HttpOperateurs] });
     operateurs = buildOperateurs();
     serveur = TestBed.inject(HttpTestingController);
   });
@@ -77,7 +77,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
 
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
-  const whenReadingOperators = (): Promise<Extrait<Operateur>> => operateurs.operateurs();
+  const whenReadingOperators = (): Promise<Page<Operateur>> => operateurs.operateurs();
 
   const whenTheReferentialAnswersWith = async (referentiel: RestOperateur[]): Promise<void> => {
     await unTourDeBoucle();
@@ -98,7 +98,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
     });
   };
 
-  const thenItReadJeanDupont = (extrait: Extrait<Operateur>): void => {
+  const thenItReadJeanDupont = (extrait: Page<Operateur>): void => {
     const [jean] = extrait.elements;
 
     expect(jean.id).toBe(JEAN_DUPONT.id);
@@ -108,13 +108,13 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, bu
     expect(jean.postes).toEqual([{ id: TOUR_1.id, libelle: 'Tour 1' }]);
   };
 
-  const thenItReadAWholeWorkshopOf = (extrait: Extrait<Operateur>, nombre: number): void => {
+  const thenItReadAWholeWorkshopOf = (extrait: Page<Operateur>, nombre: number): void => {
     expect(extrait.elements).toHaveLength(nombre);
     expect(extrait.isComplete()).toBe(true);
   };
 
-  const thenItSaysItMissesSome = (extrait: Extrait<Operateur>, nombreTotal: number): void => {
-    expect(extrait.nombreTotal).toBe(nombreTotal);
+  const thenItSaysItMissesSome = (extrait: Page<Operateur>, totalCount: number): void => {
+    expect(extrait.totalCount).toBe(totalCount);
     expect(extrait.isComplete()).toBe(false);
   };
 });
