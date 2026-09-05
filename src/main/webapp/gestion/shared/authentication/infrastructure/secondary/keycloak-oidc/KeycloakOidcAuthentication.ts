@@ -24,7 +24,7 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
   }
 
   override logout(): void {
-    this.keycloak.logout();
+    this.keycloak.logout().catch((failure: unknown) => console.error('Failed to end Keycloak session', failure));
   }
 
   private refreshToken(): Promise<unknown> {

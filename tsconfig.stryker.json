@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/main/webapp/pupitre/contexts/atelier/domain/PupitreReplayPolicy.ts",
+    "src/main/webapp/pupitre/contexts/atelier/domain/PupitreReplayPolicy.spec.ts"
+  ]
+}

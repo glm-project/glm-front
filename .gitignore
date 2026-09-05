@@ -140,6 +140,9 @@ Desktop.ini
 .seed4j/
 
 cypress/
+/artifacts/
+/.stryker-tmp/
+/reports/
 
 # OpenAPI contract and TypeScript declarations are generated for each workspace.
 /src/main/webapp/app/generated/openapi.json

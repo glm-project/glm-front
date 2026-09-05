@@ -672,6 +672,9 @@ describe('OfflinePupitre', () => {
     expect(pupitre.referentiel()).toBeUndefined();
   };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
-    expect(failure).toEqual(expect.objectContaining({ message: expect.stringContaining('Aucune fenetre') }));
+    expect(failure).toBeInstanceOf(Error);
+    if (failure instanceof Error) {
+      expect(failure.message).toContain('Aucune fenetre');
+    }
   };
 });

@@ -142,9 +142,6 @@ export default typescript.config(
         project: ['src/test/webapp/application/tsconfig.json'],
       },
     },
-    rules: {
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-    },
   },
   {
     files: ['src/test/webapp/component/**/*.ts'],
@@ -153,9 +150,6 @@ export default typescript.config(
       parserOptions: {
         project: ['src/test/webapp/component/tsconfig.json'],
       },
-    },
-    rules: {
-      '@typescript-eslint/no-unsafe-assignment': 'off',
     },
   },
   {
@@ -179,6 +173,11 @@ export default typescript.config(
   {
     files: ['src/**/*.ts'],
     rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
       'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
     },
@@ -214,14 +213,9 @@ export default typescript.config(
         },
       ],
       '@typescript-eslint/unbound-method': 'off',
-      '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/no-confusing-void-expression': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
