@@ -36,6 +36,7 @@ npm run api:generate       # requires authenticated `gh`
 - Preserve the three `<!-- seed4j-needle-* -->` markers when editing `README.md`; Seed4J generators insert there.
 - Let `httpAuthInterceptor` attach bearer tokens. Device-enrolment traffic is the exception and uses `HttpBackend` to bypass interceptors.
 - Use `@/*` for `src/main/webapp/*`; reserve `@test/*` for specs reaching shared test helpers.
+- Apply Tidy First to every change: when a behavior-preserving structural cleanup helps, isolate it in a preceding `refactor:` or `chore:` commit; keep behavioral work in a separate commit. Do not add speculative cleanup.
 
 ## Verification before claiming done
 
