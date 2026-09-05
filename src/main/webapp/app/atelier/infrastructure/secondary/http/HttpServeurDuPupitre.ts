@@ -8,6 +8,8 @@ import { required } from '@/app/shared/api-client/infrastructure/secondary/requi
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { inject, Injectable } from '@angular/core';
 
+import { findRefusDAtelierIn } from '../findRefusDAtelierIn';
+
 type RestOperateur = components['schemas']['RestOperateur'];
 type RestSuivi = components['schemas']['RestSuiviDAtelier'];
 
@@ -95,7 +97,7 @@ export class HttpServeurDuPupitre extends ServeurDuPupitrePort {
     } catch (failure: unknown) {
       const refusal = findCodeDErreurIn(failure);
       if (refusal !== undefined) {
-        throw new RefusDuPupitre(refusal.urn, refusal.message);
+        throw new RefusDuPupitre(refusal.urn, refusal.message, findRefusDAtelierIn(failure)?.code);
       }
       throw failure;
     }

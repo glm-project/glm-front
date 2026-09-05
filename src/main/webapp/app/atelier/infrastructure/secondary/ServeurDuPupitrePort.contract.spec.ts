@@ -1,3 +1,4 @@
+import { decideRejeu, DecisionDeRejeu } from '@/app/atelier/domain/PolitiqueDeRejeu';
 import { GesteLocal, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
@@ -142,6 +143,19 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
     thenBusinessRefusalIs(await refused);
   });
 
+  it.each<[string, DecisionDeRejeu]>([
+    ['urn:glm:erreur:atelier:saisie-concurrente', 'RELIRE_ET_REJOUER'],
+    ['urn:glm:erreur:atelier:journee-de-travail-deja-ouverte', 'ACCEPTER'],
+    ['urn:glm:erreur:autre:saisie-concurrente', 'PROPAGER'],
+    ['urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'PROPAGER'],
+  ])('should supply a domain refusal allowing %s to decide %s', async (code, decision) => {
+    const refused = serveur.send(arriveeFixture).catch((failure: unknown) => failure);
+
+    http.expectOne('/api/atelier/journees').flush({ type: code, message: 'cause' }, { status: 409, statusText: 'Conflict' });
+
+    thenReplayDecisionIs(await refused, code, decision);
+  });
+
   it('should preserve a transport failure as a retryable failure', async () => {
     const refused = serveur.send(arriveeFixture).catch((failure: unknown) => failure);
 
@@ -185,6 +199,10 @@ describe.each(adapters)('ServeurDuPupitrePort contract, honoured by %s', (_adapt
   const thenBusinessRefusalIs = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(RefusDuPupitre);
     expect(failure).toMatchObject({ code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' });
+  };
+  const thenReplayDecisionIs = (failure: unknown, code: string, decision: DecisionDeRejeu): void => {
+    expect(decideRejeu('ARRIVEE_ASSUREE', failure)).toBe(decision);
+    expect(failure).toMatchObject({ code, message: 'cause' });
   };
   const thenTransportFailureIs = (failure: unknown): void => {
     expect(failure).not.toBeInstanceOf(RefusDuPupitre);

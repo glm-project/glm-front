@@ -5,7 +5,7 @@ import { RefusDuPupitre } from './RefusDuPupitre';
 
 const refusFixtures = [
   ['online', (code: CodeDeRefusDAtelier) => new RefusDAtelier(code, 'cause')],
-  ['offline', (code: CodeDeRefusDAtelier) => new RefusDuPupitre(`urn:glm:erreur:atelier:${code}`, 'cause')],
+  ['offline', (code: CodeDeRefusDAtelier) => new RefusDuPupitre('diagnostic externe', 'cause', code)],
 ] as const;
 
 const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', DecisionDeRejeu][] = [
@@ -34,8 +34,8 @@ describe.each(refusFixtures)('PolitiqueDeRejeu for %s refusals', (_name, refusal
 describe('PolitiqueDeRejeu', () => {
   it.each([
     new Error('network'),
-    new RefusDuPupitre('urn:glm:erreur:autre:saisie-concurrente', 'autre contexte'),
-    new RefusDuPupitre('urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'nouvelle cause'),
+    new RefusDuPupitre('refus autre contexte', 'autre contexte'),
+    new RefusDuPupitre('refus inconnu', 'nouvelle cause'),
   ])('should propagate failures that have no contextual exception (%s)', failure => {
     const decision = decideRejeu('ARRIVEE_ASSUREE', failure);
 

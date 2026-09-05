@@ -29,6 +29,8 @@ semantics without giving the domain an asynchronous storage dependency.
 
 `PolitiqueDeRejeu` owns the contextual exceptions and the single concurrency retry. Both online adapters and
 offline synchronization use its decisions. A transport remains responsible for translating HTTP failures;
+the HTTP adapter supplies an optional normalized workshop refusal motif alongside the original diagnostic
+code. The replay policy compares only this domain motif and never constructs or parses transport URNs;
 an unknown offline business URN is retained verbatim and cannot accidentally match another context's code.
 
 `PupitreHorsLigne` coordinates capture and publication. `SynchronisationDuPupitre` coordinates authenticated

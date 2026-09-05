@@ -1,5 +1,6 @@
 import { JournalDuPupitrePort } from '@/app/atelier/domain/JournalDuPupitrePort';
 import { GesteLocal, OperateurDuPupitre, PUPITRE_VIDE, ReferentielDuPupitre } from '@/app/atelier/domain/PupitreLocal';
+import { CODES_DE_REFUS_D_ATELIER } from '@/app/atelier/domain/RefusDAtelier';
 import { RefusDuPupitre } from '@/app/atelier/domain/RefusDuPupitre';
 import { ServeurDuPupitrePort } from '@/app/atelier/domain/ServeurDuPupitrePort';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
@@ -14,7 +15,12 @@ const referenceFixture: ReferentielDuPupitre = {
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
 const arriveeFixture: GesteLocal = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
-const refusalFixture = (code: string): RefusDuPupitre => new RefusDuPupitre(`urn:glm:erreur:atelier:${code}`, 'cause conservee');
+const refusalFixture = (code: string): RefusDuPupitre =>
+  new RefusDuPupitre(
+    `urn:glm:erreur:atelier:${code}`,
+    'cause conservee',
+    CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code),
+  );
 
 class AuthenticationFixture extends AuthenticationPort {
   tenant: string | undefined = 'entreprise-a';

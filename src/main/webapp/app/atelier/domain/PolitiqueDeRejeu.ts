@@ -9,7 +9,7 @@ const matches = (refus: unknown, code: string): boolean => {
   if (refus instanceof RefusDAtelier) {
     return refus.code === code;
   }
-  return refus instanceof RefusDuPupitre && refus.code === `urn:glm:erreur:atelier:${code}`;
+  return refus instanceof RefusDuPupitre && refus.motif === code;
 };
 
 export const operationFor = (geste: GesteLocal): OperationDAtelier => {
