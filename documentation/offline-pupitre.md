@@ -40,7 +40,9 @@ retry once; retain a second refusal. Never generate a new UUID or occurrence tim
 
 Refresh the complete operator and workshop reference at boot, on the browser online event and on the runtime
 interval. Publish the pair only after every page of both collections passes total, duplicate and progress
-checks. A failed refresh preserves the previous complete cache.
+checks. Activating that post-write snapshot records accepted pointage identifiers in the local reference so
+their optimistic effects are no longer applied, while retaining the gestures in the audit trail. A failed
+refresh preserves the previous complete cache and its optimistic effects.
 
 Only push outcomes set connectivity. The browser online event is a trigger, not evidence that the server is
 reachable. A received business refusal proves connectivity even though the gesture remains refused.
