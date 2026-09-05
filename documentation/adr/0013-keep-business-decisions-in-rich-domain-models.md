@@ -51,7 +51,7 @@ operation; that distinction is a business decision rather than an incidental con
 
 In the pupitre's `atelier` context, `DesignationOperateur` owns the cycle from matricule entry to expiry
 and owns the active `FenetreOperateur`. The latter retains qualifications, gesture preparation and its
-frozen view. `PupitreHorsLigne` coordinates resolution and durable capture. Expiration blocks new gestures;
+frozen view. `OfflinePupitre` coordinates resolution and durable capture. Expiration blocks new gestures;
 a gesture initiated while valid retains its operator and occurrence time while its capture completes,
 subject to the existing tenant and storage checks. A reset keypad accepts new entry during closure while
 validation waits for the preceding operation to finish. The operational contract remains in

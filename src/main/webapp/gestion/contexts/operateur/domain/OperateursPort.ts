@@ -1,6 +1,6 @@
-import { Extrait } from '@/app/shared/pagination/domain/Extrait';
+import { Page } from '@/app/shared/pagination/domain/Page';
 import { Operateur } from './Operateur';
 
 export abstract class OperateursPort {
-  abstract operateurs(): Promise<Extrait<Operateur>>;
+  abstract operateurs(): Promise<Page<Operateur>>;
 }
