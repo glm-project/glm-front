@@ -1,4 +1,5 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
 
 interface TouchPointFixture {
   x: number;
@@ -130,7 +131,7 @@ describe('Designation keypad in a browser', () => {
   };
   const thenLastDigitsAreVisibleOnOneLine = (): void => {
     cy.get(dataSelector('code')).should(display => {
-      const element = display[0];
+      const element = requiredFixture(display[0], 'code display');
       expect(element.scrollWidth).to.be.greaterThan(element.clientWidth);
       expect(element.scrollLeft + element.clientWidth).to.be.closeTo(element.scrollWidth, 1);
       expect(element.scrollHeight).to.equal(element.clientHeight);
@@ -138,7 +139,7 @@ describe('Designation keypad in a browser', () => {
   };
   const thenFirstDigitsAreVisible = (): void => {
     cy.get(dataSelector('code')).should(display => {
-      expect(display[0].scrollLeft).to.equal(0);
+      expect(requiredFixture(display[0], 'code display').scrollLeft).to.equal(0);
     });
   };
 
@@ -148,8 +149,9 @@ describe('Designation keypad in a browser', () => {
   };
   const whenHolding = (selector: string): void => {
     cy.get(dataSelector(selector)).then(element => {
-      const rect = element[0].getBoundingClientRect();
-      const frame = window.top!.document.querySelector<HTMLIFrameElement>('iframe.aut-iframe')!;
+      const rect = requiredFixture(element[0], 'pressed element').getBoundingClientRect();
+      const topWindow = requiredFixture(window.top, 'Cypress top window');
+      const frame = requiredFixture(topWindow.document.querySelector<HTMLIFrameElement>('iframe.aut-iframe'), 'Cypress application frame');
       const viewport = frame.getBoundingClientRect();
       const scale = viewport.width / frame.clientWidth;
       return dispatchTouchFixture('touchStart', [

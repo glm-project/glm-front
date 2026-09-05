@@ -187,7 +187,7 @@ describe('HexagonalArchTest', () => {
         .that()
         .resideInAPackage(context + '.infrastructure.secondary..')
         .should()
-        .onlyDependOnClassesThat()
+        .dependOnClassesThat()
         .resideInAPackage(context + '.infrastructure.primary..')
         .because("Secondary should not loop to its own context's primary")
         .check(srcProject.allClasses());

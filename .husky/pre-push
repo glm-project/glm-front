@@ -1,0 +1,1 @@
+npm run measure -- pre-push -- npm run validate:complete

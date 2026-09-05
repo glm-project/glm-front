@@ -1,6 +1,13 @@
 import { FenetreOperateur } from './FenetreOperateur';
 import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from './LocalPupitreState';
 
+const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
+  if (value === null || value === undefined) {
+    throw new Error(`Missing ${description} fixture.`);
+  }
+  return value;
+};
+
 const vueFixture: LocalPupitreState = {
   ...EMPTY_PUPITRE,
   referentiel: {
@@ -122,7 +129,8 @@ describe('FenetreOperateur', () => {
     expect(gestes.every(geste => geste.operateurId === 'jean')).toBe(true);
   };
   const thenOpeningSharesBusinessTime = (gestes: LocalGeste[]): void => {
-    expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(Array<string | undefined>(3).fill(identities.get(gestes[2].id)));
+    const lastGesture = requiredFixture(gestes[2], 'last gesture');
+    expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(Array<string | undefined>(3).fill(identities.get(lastGesture.id)));
   };
   const thenIdentitiesWerePreparedBeforeExecution = (gestes: LocalGeste[], preparedIdentities: Map<string, string>): void => {
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);

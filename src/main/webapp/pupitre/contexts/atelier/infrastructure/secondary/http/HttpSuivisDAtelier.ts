@@ -12,6 +12,7 @@ import { send } from '../sendToAtelier';
 
 type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
 type RestActiviteEnCours = components['schemas']['RestActiviteEnCours'];
+type RestPointage = components['schemas']['RestPointage'];
 
 const toActiviteEnCours = (activite: RestActiviteEnCours): ActiviteEnCours =>
   new ActiviteEnCours(
@@ -23,6 +24,19 @@ const toActiviteEnCours = (activite: RestActiviteEnCours): ActiviteEnCours =>
 
 const toSuiviDAtelier = (suivi: RestSuiviDAtelierEnGrille): SuiviDAtelier =>
   new SuiviDAtelier(suivi.id, suivi.nom, suivi.etat, suivi.type, suivi.activitesEnCours.map(toActiviteEnCours));
+
+const toRestPointage = (pointage: Pointage): RestPointage => {
+  const body: RestPointage = {
+    id: pointage.id,
+    dateDeSurvenue: pointage.dateDeSurvenue,
+    operateur: pointage.operateurId,
+    type: pointage.type,
+  };
+  if (pointage.posteId !== undefined) {
+    body.poste = pointage.posteId;
+  }
+  return body;
+};
 
 @Injectable()
 export class HttpSuivisDAtelier extends SuivisDAtelierPort {
@@ -39,13 +53,7 @@ export class HttpSuivisDAtelier extends SuivisDAtelierPort {
       () =>
         this.api.write('/api/atelier/suivis/{id}/pointages', {
           pathParams: { id: suiviId },
-          body: {
-            id: pointage.id,
-            dateDeSurvenue: pointage.dateDeSurvenue,
-            operateur: pointage.operateurId,
-            type: pointage.type,
-            poste: pointage.posteId,
-          },
+          body: toRestPointage(pointage),
         }),
       () => this.api.read('/api/atelier/suivis/{id}', { pathParams: { id: suiviId } }),
     );

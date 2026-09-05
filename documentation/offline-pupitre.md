@@ -57,6 +57,13 @@ The service worker caches the application shell and static assets only. It does 
 implement the durable queue; [ADR 0004](adr/0004-ngsw-caches-the-pupitre-shell-and-nothing-else.md) owns that
 separate boundary.
 
+`npm run test:production-offline` exercises that boundary in production Chrome. It waits for the generated
+worker to activate and control a restarted pupitre, verifies the browser is offline with an uncached failed
+request, and recreates the application twice while disconnected. Durable setup and inspection use
+`PupitreJournalPort`; the fixture never reads or writes the local adapter's database layout. A second clean
+origin with `ngsw-worker.js` unavailable proves that HTTP cache or the fixture server cannot make the same
+offline navigation pass.
+
 [ADR 0007](adr/0007-durable-offline-pupitre.md) records durability and synchronization. [ADR 0009](adr/0009-pupitre-domain-responsibilities.md)
 records the domain and application ownership split. [ADR 0013](adr/0013-keep-business-decisions-in-rich-domain-models.md)
 extends that decision to the designation's interaction and lifecycle rules.

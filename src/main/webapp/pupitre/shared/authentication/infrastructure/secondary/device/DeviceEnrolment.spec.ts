@@ -12,6 +12,8 @@ const jwtFixture = (claims: unknown): string => `eyJhbGciOiJub25lIn0.${btoa(JSON
 const tokenFixture = jwtFixture({ tenant: 'entreprise-a' });
 const rotatedFixture = jwtFixture({ tenant: 'entreprise-a', version: 2 });
 const anotherCompanyTokenFixture = jwtFixture({ tenant: 'entreprise-b' });
+const tokenWithoutPayloadFixture = 'malformed-token';
+const undecodableTokenFixture = 'header.%.signature';
 
 const afterMicrotasks = (): Promise<void> =>
   new Promise(resolve => {
@@ -249,6 +251,15 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     },
   );
 
+  it.each([
+    ['no payload', tokenWithoutPayloadFixture],
+    ['an undecodable payload', undecodableTokenFixture],
+  ])('should accept a malformed token with %s without inventing a company', async (_malformation, token) => {
+    await whenEnrolling(token);
+
+    thenSessionIs(authentication, token, undefined);
+  });
+
   it('should report an unsuccessful durable logout', async () => {
     await givenAnEnrolledSession();
     givenTheNextStorageWriteFails();
@@ -460,19 +471,27 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
 
   const givenLogoutDuringTheNextStorageCommit = (failure = false): void => {
     stockage.failWrite = failure;
-    stockage.beforeCommit = () => authentication.logout();
+    stockage.beforeCommit = () => {
+      authentication.logout();
+    };
   };
 
   const givenAnotherCompanyReplacesTheAbandonedRenewal = (anotherCompany: unknown): void => {
     stockage.beforeCommit = () => {
       authentication.logout();
-      stockage.beforeCommit = () => stockage.restore(anotherCompany);
+      stockage.beforeCommit = () => {
+        stockage.restore(anotherCompany);
+      };
     };
   };
 
-  const givenAnotherTabRemovedTheEnrolment = (): void => stockage.clear();
+  const givenAnotherTabRemovedTheEnrolment = (): void => {
+    stockage.clear();
+  };
 
-  const givenAnotherCompanyHasReplacedTheStoredSession = (anotherCompany: unknown): void => stockage.restore(anotherCompany);
+  const givenAnotherCompanyHasReplacedTheStoredSession = (anotherCompany: unknown): void => {
+    stockage.restore(anotherCompany);
+  };
 
   const whenRestoring = async (session = authentication): Promise<void> => {
     const restoration = session.authenticate();
@@ -552,7 +571,9 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await stockage.drainIO();
   };
 
-  const whenLoggingOutBeforeRestoreCompletes = (): void => authentication.logout();
+  const whenLoggingOutBeforeRestoreCompletes = (): void => {
+    authentication.logout();
+  };
 
   const whenRenewalIsGrantedAndLogoutCompletes = async (): Promise<void> => {
     await whenTheRenewalIsDue();

@@ -30,6 +30,12 @@ describe('findApiErrorIn', () => {
     thenItReadNothing(code);
   });
 
+  it('should read no code from a response whose body is not a problem detail', () => {
+    const code = whenFindingTheErrorCodeIn(unRefusFixture(URN));
+
+    thenItReadNothing(code);
+  });
+
   it('should read no code from a bean validation failure, which names no business refusal', () => {
     const code = whenFindingTheErrorCodeIn(unRefusFixture({ status: 400, errors: { operateur: 'ne doit pas être nul' } }));
 

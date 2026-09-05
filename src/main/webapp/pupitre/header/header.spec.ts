@@ -32,9 +32,13 @@ describe('Pupitre header', () => {
     thenItSignsThePupitreIsOffline();
   });
 
-  const givenAConnectedPupitre = (): void => fixture.componentRef.setInput('connected', true);
+  const givenAConnectedPupitre = (): void => {
+    fixture.componentRef.setInput('connected', true);
+  };
 
-  const givenADisconnectedPupitre = (): void => fixture.componentRef.setInput('connected', false);
+  const givenADisconnectedPupitre = (): void => {
+    fixture.componentRef.setInput('connected', false);
+  };
 
   const whenRenderingTheHeader = (): Promise<void> => fixture.whenStable();
 

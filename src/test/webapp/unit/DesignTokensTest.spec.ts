@@ -1,3 +1,4 @@
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { readFileSync } from 'node:fs';
 
 const TOKENS_STYLESHEET = 'src/main/webapp/styles.css';
@@ -65,7 +66,11 @@ const linearChannel = (channel: number): number => {
 
 const relativeLuminance = (hex: string): number => {
   const [red, green, blue] = CHANNEL_STARTS_AFTER_THE_HASH.map(start => parseInt(hex.slice(start, start + 2), 16));
-  return 0.2126 * linearChannel(red) + 0.7152 * linearChannel(green) + 0.0722 * linearChannel(blue);
+  return (
+    0.2126 * linearChannel(requiredFixture(red, 'red channel'))
+    + 0.7152 * linearChannel(requiredFixture(green, 'green channel'))
+    + 0.0722 * linearChannel(requiredFixture(blue, 'blue channel'))
+  );
 };
 
 const hexOf = (roles: Map<string, string>, role: string): string => {
@@ -79,13 +84,20 @@ const hexOf = (roles: Map<string, string>, role: string): string => {
 const propertiesOf = (declarations: string): string[] =>
   declarations
     .split(';')
-    .map(declaration => declaration.split(':')[0].trim())
+    .map(declaration => requiredFixture(declaration.split(':')[0], 'CSS property').trim())
     .filter(property => property.length > 0);
 
 const matchesIn = (stylesheet: string, pattern: RegExp): RegExpExecArray[] => [...readFileSync(stylesheet, 'utf8').matchAll(pattern)];
 
-const givenTheColorRoles = (): Map<string, string> =>
-  new Map(matchesIn(TOKENS_STYLESHEET, COLOR_ROLE_DECLARATION).map(([, role, hex]) => [role, hex]));
+const captureFixture = (match: RegExpExecArray, index: number, description: string): string => requiredFixture(match[index], description);
+
+const givenTheColorRoles = (): Map<string, string> => {
+  const roles = new Map<string, string>();
+  for (const match of matchesIn(TOKENS_STYLESHEET, COLOR_ROLE_DECLARATION)) {
+    roles.set(captureFixture(match, 1, 'color role'), captureFixture(match, 2, 'color value'));
+  }
+  return roles;
+};
 
 const whenMeasuringContrast = (roles: Map<string, string>, pair: TextOnBackground): number => {
   const text = relativeLuminance(hexOf(roles, pair.text));
@@ -104,21 +116,22 @@ const themeBlocksOf = (stylesheet: string): RegExpExecArray[] => matchesIn(style
 
 const givenTheTokensTheThemeDeclares = (): string[] =>
   themeBlocksOf(TOKENS_STYLESHEET)
-    .flatMap(([, , declarations]) => [...declarations.matchAll(TOKEN_DECLARATION)])
-    .map(([, token]) => token);
+    .flatMap(match => [...captureFixture(match, 2, 'theme declarations').matchAll(TOKEN_DECLARATION)])
+    .map(match => captureFixture(match, 1, 'theme token'));
 
-const whenReadingTheThemeAtRules = (): string[] => themeBlocksOf(TOKENS_STYLESHEET).map(([, atRule]) => atRule.trim());
+const whenReadingTheThemeAtRules = (): string[] =>
+  themeBlocksOf(TOKENS_STYLESHEET).map(match => captureFixture(match, 1, 'theme at-rule').trim());
 
 const whenReadingTheMaterialBridge = (): Bridging[] =>
-  matchesIn(MATERIAL_BRIDGE_STYLESHEET, MATERIAL_DECLARATION).map(([, materialToken, value]) => ({
-    materialToken,
-    value: value.trim(),
+  matchesIn(MATERIAL_BRIDGE_STYLESHEET, MATERIAL_DECLARATION).map(match => ({
+    materialToken: captureFixture(match, 1, 'Material token'),
+    value: captureFixture(match, 2, 'Material value').trim(),
   }));
 
 const whenReadingTheRulesOf = (stylesheet: string): StyleRule[] =>
-  matchesIn(stylesheet, STYLE_RULE).map(([, selector, declarations]) => ({
-    selector: selector.trim(),
-    properties: propertiesOf(declarations),
+  matchesIn(stylesheet, STYLE_RULE).map(match => ({
+    selector: captureFixture(match, 1, 'CSS selector').trim(),
+    properties: propertiesOf(captureFixture(match, 2, 'CSS declarations')),
   }));
 
 const thenItStaysReadable = (contrast: number): void => {

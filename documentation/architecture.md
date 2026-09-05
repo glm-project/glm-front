@@ -34,9 +34,10 @@ Create `package-info.ts` before adding code to a context or shared kernel. It ex
 `<front>/contexts/<name>/` or `SharedKernel` for any technical `<root>/shared/<name>/`. Shared directories
 are namespaces; files belong in a declared kernel below them.
 
-`HexagonalArchTest.spec.ts` discovers contexts from those declarations. A folder without one is invisible to
-the per-context checks, so a green suite would prove nothing about it. `app/generated/` is the single
-intentional exception; [`api.md`](api.md) owns why.
+`HexagonalArchTest.spec.ts` discovers contexts from those declarations. The architecture harness also lists
+every direct child of `app/shared/`, each front's `shared/` and each front's `contexts/`: a directory without
+the matching declaration fails lint before the per-context checks can overlook it. `app/generated/` is the
+single intentional exception; [`api.md`](api.md) owns why.
 
 Use this shape where the layers are needed:
 
@@ -93,8 +94,26 @@ The architecture suite enforces these rules:
 - secondary adapters do not depend on application code;
 - only primary adapters depend on the design system.
 
+The compiler-backed architecture harness resolves static imports, literal dynamic imports and re-exports to
+the declaration that TypeScript actually exposes. A barrel therefore cannot turn a forbidden dependency
+into an allowed one. Its executable fixtures cover both accepted port/adapter collaboration and rejected
+direct, re-exported and barrel-mediated dependencies. `arch-unit-ts` remains in place as the readable layer
+specification; the compiler graph closes resolution gaps in that library.
+
 A failing architecture test means the dependency is at the wrong address. Move the responsibility or invert
 the dependency through a port; keep the test intact.
+
+## Domain code receives environmental values
+
+Production files under a boundary's `domain/` cannot access ambient network, browser storage, browser
+globals, the current clock or random generators. This includes `fetch`, browser network constructors,
+storage globals, `window`, `document`, `navigator`, zero-argument `Date`, `Date.now`, `performance.now`,
+`Math.random` and cryptographic random generation. Put I/O behind a domain port and pass the current time,
+generated identity or random value into the business decision.
+
+The harness resolves symbols rather than rejecting names as text. A parameter or local object named
+`fetch`, `Date` or `Math` remains legal, as do `new Date(explicitValue)` and pure operations on a supplied
+date. Aliasing an ambient global does not hide it.
 
 ## Ports belong to the domain
 

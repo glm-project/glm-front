@@ -8,6 +8,7 @@ import { Pointage, SuivisDAtelierPort } from '@/pupitre/contexts/atelier/domain/
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { HttpSuivisDAtelier } from './http/HttpSuivisDAtelier';
 
 type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
@@ -85,23 +86,29 @@ const UN_ELEMENT_QUI_A_QUITTE_L_ATELIER = "aucun suivi d'atelier ne porte cet id
 
 type TourDuServeur = (requete: TestRequest) => void;
 
-const acceptant: TourDuServeur = requete => requete.flush({}, { status: 201, statusText: 'Created' });
+const acceptant: TourDuServeur = requete => {
+  requete.flush({}, { status: 201, statusText: 'Created' });
+};
 
 const refusant =
   (statut: number, code: string, message: string): TourDuServeur =>
-  requete =>
+  requete => {
     requete.flush(
       { type: `urn:glm:erreur:atelier:${code}`, title: code.replaceAll('-', ' '), status: statut, message },
       { status: statut, statusText: 'Refused' },
     );
+  };
 
-const enPanne: TourDuServeur = requete => requete.flush(null, { status: 500, statusText: 'Internal Server Error' });
+const enPanne: TourDuServeur = requete => {
+  requete.flush(null, { status: 500, statusText: 'Internal Server Error' });
+};
 
-const refusantLeCorps: TourDuServeur = requete =>
+const refusantLeCorps: TourDuServeur = requete => {
   requete.flush(
     { title: 'Bean validation error', status: 400, errors: { operateur: 'ne doit pas être nul' } },
     { status: 400, statusText: 'Bad Request' },
   );
+};
 
 const adapters: [string, () => SuivisDAtelierPort][] = [['http', () => TestBed.inject(HttpSuivisDAtelier)]];
 
@@ -352,7 +359,7 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   };
 
   const thenItReadTheWaitingElement = (extrait: Page<SuiviDAtelier>): void => {
-    const [suivi] = extrait.elements;
+    const suivi = firstSuiviIn(extrait);
 
     expect(suivi.id).toBe(UN_ELEMENT_QUE_PERSONNE_N_A_COMMENCE.id);
     expect(suivi.numero()).toBe('OF-2026-000042');
@@ -365,23 +372,23 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
   };
 
   const thenJeanIsAtWorkOnTour1 = (extrait: Page<SuiviDAtelier>): void => {
-    const activite = extrait.elements[0].findActiviteFor(JEAN);
+    const activite = firstSuiviIn(extrait).findActiviteFor(JEAN);
 
     expect(activite?.categorie).toBe('TRAVAIL');
     expect(activite?.posteId).toBe(TOUR_1.id);
   };
 
   const thenJeanHasBeenOnItFor = (extrait: Page<SuiviDAtelier>, millisecondes: number): void => {
-    expect(extrait.elements[0].computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBe(millisecondes);
+    expect(firstSuiviIn(extrait).computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBe(millisecondes);
   };
 
   const thenJeanIsAtWorkOnNoWorkstation = (extrait: Page<SuiviDAtelier>): void => {
-    expect(extrait.elements[0].findActiviteFor(JEAN)?.posteId).toBeUndefined();
+    expect(firstSuiviIn(extrait).findActiviteFor(JEAN)?.posteId).toBeUndefined();
   };
 
   const thenNobodyIsOnIt = (extrait: Page<SuiviDAtelier>): void => {
-    expect(extrait.elements[0].findActiviteFor(JEAN)).toBeUndefined();
-    expect(extrait.elements[0].computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBeUndefined();
+    expect(firstSuiviIn(extrait).findActiviteFor(JEAN)).toBeUndefined();
+    expect(firstSuiviIn(extrait).computeDureeFor(JEAN, NEUF_HEURES_TRENTE)).toBeUndefined();
   };
 
   const thenItReadAWholeWorkshopOf = (extrait: Page<SuiviDAtelier>, nombre: number): void => {
@@ -393,4 +400,6 @@ describe.each(adapters)('SuivisDAtelierPort contract, honoured by %s', (_adapter
     expect(extrait.totalCount).toBe(totalCount);
     expect(extrait.isComplete()).toBe(false);
   };
+
+  const firstSuiviIn = (extrait: Page<SuiviDAtelier>): SuiviDAtelier => requiredFixture(extrait.elements[0], 'first workshop element');
 });

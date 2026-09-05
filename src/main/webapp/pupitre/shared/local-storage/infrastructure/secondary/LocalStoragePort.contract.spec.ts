@@ -1,7 +1,7 @@
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
-import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
+import { IDBFactory, IDBObjectStore, IDBRequest } from 'fake-indexeddb';
 import { IndexedDbLocalStorage } from './IndexedDbLocalStorage';
 
 const adapters = [['IndexedDB', () => new IndexedDbLocalStorage()]] as const;
@@ -131,9 +131,12 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     }
   };
   const givenTheBrowserAbortsReads = (): void => {
-    const get = IDBObjectStore.prototype.get;
+    const descriptor = Object.getOwnPropertyDescriptor(IDBObjectStore.prototype, 'get');
+    const get: unknown = descriptor?.value;
+    if (typeof get !== 'function') throw new Error('IndexedDB get is unavailable');
     vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(function (this: IDBObjectStore, key: IDBValidKey | IDBKeyRange) {
-      const request = get.call(this, key);
+      const request: unknown = Reflect.apply(get, this, [key]);
+      if (!(request instanceof IDBRequest)) throw new Error('IndexedDB get returned no request');
       queueMicrotask(() => request.transaction?.abort());
       return request;
     });
@@ -145,7 +148,9 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
         request.result.close();
         resolve();
       };
-      request.onerror = () => reject(new Error('fixture inaccessible'));
+      request.onerror = () => {
+        reject(new Error('fixture inaccessible'));
+      };
     });
 
   const whenRecording = (key: string, gestes: string[]): Promise<string[]> => stockage.update(key, [], () => gestes);

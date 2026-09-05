@@ -123,7 +123,9 @@ export class PupitreSynchronization {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
-    await this.serveur.send(geste).catch((refusal: unknown) => this.absorbOrThrow(geste, refusal));
+    await this.serveur.send(geste).catch((refusal: unknown) => {
+      this.absorbOrThrow(geste, refusal);
+    });
   }
 
   private absorbOrThrow(geste: LocalGeste, failure: unknown): void {

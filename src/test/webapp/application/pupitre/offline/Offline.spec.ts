@@ -1,5 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { clearPupitreStorageFixture, givenDurablePupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
+import { requiredFixture } from '../../../utils/RequiredFixture';
 
 const entrepriseFixture = 'entreprise-a';
 const dateFixture = '2026-09-05T00:00:00Z';
@@ -63,7 +64,7 @@ describe('Pupitre offline restart', () => {
     thenPushUsesTheRestoredCredential();
     cy.get(dataSelector('pupitre-disconnected')).should('be.visible');
     cy.get(dataSelector('connectivity-indicator')).should(indicator => {
-      const style = getComputedStyle(indicator[0]);
+      const style = getComputedStyle(requiredFixture(indicator[0], 'connectivity indicator'));
 
       expect(style.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
       expect(style.borderStyle).to.equal('solid');

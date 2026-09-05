@@ -2,13 +2,21 @@
 
 ## Prerequisites
 
-### Node.js and NPM
+### Node.js and npm
 
-Install [Node.js](https://nodejs.org/) 24 or newer, then install the dependencies:
+Install [mise](https://mise.jdx.dev/getting-started.html). The repository pins Node.js, npm and their
+download artifacts in `mise.toml` and `mise.lock`. Install and verify that runtime before restoring the exact
+dependency graph from `package-lock.json`:
 
+```bash
+mise install --locked
+mise exec -- npm run runtime:check
+mise exec -- npm ci
 ```
-npm install
-```
+
+Run project commands through `mise exec -- npm …`, or activate mise in the shell. CI installs the same
+locked runtime, verifies the versions and uses `npm ci`; a manifest/lockfile mismatch therefore fails instead
+of changing the lockfile.
 
 ## Local environment
 
@@ -43,6 +51,8 @@ Conventions, one document per topic:
 - [Icons](documentation/icons.md) — the typed, bundled SVG icon set
 - [Git and MR](documentation/git-and-mr.md) — branching, commit messages and their granularity, MR
   descriptions
+- [Validation](documentation/validation.md) — shared local and CI gates, security reports and Codex completion
+  hooks
 
 Engineering skill configuration:
 

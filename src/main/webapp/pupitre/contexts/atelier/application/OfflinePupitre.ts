@@ -163,7 +163,9 @@ export class OfflinePupitre implements OnDestroy {
   }
 
   synchronize(): Promise<void> {
-    return this.synchronization.synchronize((entreprise, state) => this.publish(entreprise, state));
+    return this.synchronization.synchronize((entreprise, state) => {
+      this.publish(entreprise, state);
+    });
   }
 
   private enqueue(fenetre: FenetreOperateur, gestures: () => LocalGeste[]): Promise<void> {
@@ -181,7 +183,9 @@ export class OfflinePupitre implements OnDestroy {
     await this.journal.append(fenetre.entreprise, gestes);
     fenetre.accept(gestes);
     this.vue.set(fenetre.snapshot());
-    void this.synchronize().catch((failure: unknown) => console.error('Synchronisation interrompue', failure));
+    void this.synchronize().catch((failure: unknown) => {
+      console.error('Synchronisation interrompue', failure);
+    });
   }
 
   private publish(entreprise: string | undefined, state: LocalPupitreState): void {

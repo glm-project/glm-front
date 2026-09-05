@@ -6,7 +6,9 @@ export class PupitreSynchronizationTrigger implements OnDestroy {
   private readonly pupitre = inject(OfflinePupitre);
   private interval: ReturnType<typeof setInterval> | undefined;
   private readonly refresh = (): void => {
-    void this.pupitre.synchronize().catch((failure: unknown) => console.error('Pupitre non synchronise', failure));
+    void this.pupitre.synchronize().catch((failure: unknown) => {
+      console.error('Pupitre non synchronise', failure);
+    });
   };
 
   readonly connected = this.pupitre.connected;

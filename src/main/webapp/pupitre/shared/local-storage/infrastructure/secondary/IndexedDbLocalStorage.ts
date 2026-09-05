@@ -57,8 +57,12 @@ export class IndexedDbLocalStorage extends LocalStoragePort {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DATABASE, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(DOCUMENTS);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(new Error('Stockage local inaccessible', { cause: request.error }));
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(new Error('Stockage local inaccessible', { cause: request.error }));
+      };
     });
   }
 }

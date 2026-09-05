@@ -23,15 +23,18 @@ interface PresenceAttempt {
   route: string;
 }
 
-const acceptant: TourDuServeur = requete => requete.flush({}, { status: 201, statusText: 'Created' });
+const acceptant: TourDuServeur = requete => {
+  requete.flush({}, { status: 201, statusText: 'Created' });
+};
 
 const refusalFixture =
   (statut: number, code: string, message: string): TourDuServeur =>
-  requete =>
+  requete => {
     requete.flush(
       { type: `urn:glm:erreur:atelier:${code}`, title: code.replaceAll('-', ' '), status: statut, message },
       { status: statut, statusText: 'Refused' },
     );
+  };
 
 const adapters: [string, () => JourneesDeTravailPort][] = [['http', () => TestBed.inject(HttpJourneesDeTravail)]];
 

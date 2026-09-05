@@ -9,80 +9,195 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    - cron: '17 5 * * 1'
 env:
   GH_TOKEN: ${{ github.token }}
 jobs:
   checks-and-unit-tests:
     name: checks-and-unit-tests
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       CYPRESS_INSTALL_BINARY: 0
+      VALIDATION_TIMINGS_FILE: artifacts/validation/checks-and-unit-tests.ndjson
     steps:
       - name: 'Setup: checkout project'
         uses: actions/checkout@v5
-      - name: 'Setup: Node.js'
-        uses: actions/setup-node@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
         with:
-          node-version: 24.18.0
-          cache: 'npm'
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
       - name: 'Setup: install dependencies'
-        run: npm install
-      - name: 'Setup: generate API contract and types'
-        run: npm run api:generate
-      - name: 'Test: eslint'
-        run: npm run lint
-      - name: 'Test: prettier check'
-        run: npm run prettier:check
-      - name: 'Test: typescript check'
-        run: npx tsc --noEmit
-      - name: 'Test: run unit tests'
-        run: npm run test:coverage -- --watch=false
+        run: npm ci
+      - name: 'Test: checks and unit tests'
+        run: npm run measure -- ci-checks-and-unit-tests -- npm run validate:checks-and-unit
+      - name: 'Report: validation duration'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validation-checks-and-unit-tests-${{ github.run_id }}
+          path: artifacts/validation
+          if-no-files-found: error
+
+  production-build:
+    name: production-build
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+      VALIDATION_TIMINGS_FILE: artifacts/validation/production-build.ndjson
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
+      - name: 'Setup: install dependencies'
+        run: npm ci
+      - name: 'Test: production builds'
+        run: npm run measure -- ci-production-build -- npm run validate:production-build
+      - name: 'Report: validation duration'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validation-production-build-${{ github.run_id }}
+          path: artifacts/validation
+          if-no-files-found: error
 
   component-tests:
     name: component-tests
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      VALIDATION_TIMINGS_FILE: artifacts/validation/component-tests.ndjson
     steps:
       - name: 'Setup: checkout project'
         uses: actions/checkout@v5
-      - name: 'Setup: Node.js'
-        uses: actions/setup-node@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
         with:
-          node-version: 24.18.0
-          cache: 'npm'
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
       - name: 'Setup: cache Cypress binary'
         uses: actions/cache@v4
         with:
           path: ~/.cache/Cypress
           key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: 'Setup: install dependencies'
-        run: npm install
-      - name: 'Setup: generate API contract and types'
-        run: npm run api:generate
+        run: npm ci
       - name: 'Test: run component tests'
-        run: npm run test:component
+        run: npm run measure -- ci-component-tests -- npm run validate:component
+      - name: 'Report: validation duration'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validation-component-tests-${{ github.run_id }}
+          path: artifacts/validation
+          if-no-files-found: error
 
   application-tests:
     name: application-tests
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      VALIDATION_TIMINGS_FILE: artifacts/validation/application-tests.ndjson
     steps:
       - name: 'Setup: checkout project'
         uses: actions/checkout@v5
-      - name: 'Setup: Node.js'
-        uses: actions/setup-node@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
         with:
-          node-version: 24.18.0
-          cache: 'npm'
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
       - name: 'Setup: cache Cypress binary'
         uses: actions/cache@v4
         with:
           path: ~/.cache/Cypress
           key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: 'Setup: install dependencies'
-        run: npm install
-      - name: 'Setup: generate API contract and types'
-        run: npm run api:generate
+        run: npm ci
       - name: 'Test: run application tests'
-        run: npm run test:application
+        run: npm run measure -- ci-application-tests -- npm run validate:application
+      - name: 'Report: validation duration'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validation-application-tests-${{ github.run_id }}
+          path: artifacts/validation
+          if-no-files-found: error
+
+  production-offline-test:
+    name: production-offline-test
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VALIDATION_TIMINGS_FILE: artifacts/production-offline/timings.ndjson
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
+      - name: 'Setup: cache Cypress binary'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: 'Setup: install dependencies'
+        run: npm ci
+      - name: 'Test: production pupitre offline restart'
+        run: npm run measure -- ci-production-offline -- npm run validate:production-offline
+      - name: 'Report: production offline evidence'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: production-offline-${{ github.run_id }}
+          path: artifacts/production-offline
+          if-no-files-found: error
+
+  security-and-workflows:
+    name: security-and-workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+      SECURITY_REPORT_DIR: artifacts/security
+      VALIDATION_TIMINGS_FILE: artifacts/security/timings.ndjson
+    steps:
+      - name: 'Setup: checkout complete history'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: 'Setup: runtime and security tools'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
+      - name: 'Setup: install dependencies'
+        run: npm ci
+      - name: 'Test: security and workflows'
+        run: npm run measure -- ci-security-and-workflows -- npm run validate:security
+      - name: 'Report: security and workflow evidence'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: security-and-workflows-${{ github.run_id }}
+          path: artifacts/security
+          if-no-files-found: error

@@ -32,3 +32,11 @@ renumbers at merge time. The status below is the living one — update this line
   application-owned contexts, technical-only shared code and local bounded-context language
 - [0013 — Keep business decisions in rich domain models](0013-keep-business-decisions-in-rich-domain-models.md) — **Accepted** —
   domain-owned interaction and lifecycle rules, application coordination and behavioral contracts
+- [0014 — Resolve architecture dependencies through the compiler](0014-resolve-architecture-dependencies-through-the-compiler.md) —
+  **Accepted** — exhaustive boundary discovery, re-export resolution and symbol-aware domain environment checks
+- [0015 — Pin every validation input](0015-pin-every-validation-input.md) — **Accepted** — exact Node/npm,
+  lockfile-only installs and an immutable backend contract revision in local validation and CI
+- [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — **Accepted** —
+  shared commands for Git, Codex and CI, with pinned security tools and bounded completion validation
+- [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Accepted** —
+  bounded replay-policy mutation through the Angular builder, checked invalid mutants and a scheduled report

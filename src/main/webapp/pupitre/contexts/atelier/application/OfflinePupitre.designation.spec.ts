@@ -14,9 +14,11 @@ import { setTimeout as roundTrip } from 'node:timers';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 
+const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
+
 const referenceFixture: LocalPupitreState = {
   ...EMPTY_PUPITRE,
-  referentiel: { operateurs: [operateurFixture], suivis: [] },
+  referentiel: referentielFixture,
 };
 
 class DesignationJournalFixture extends PupitreJournalFixture {
@@ -34,7 +36,11 @@ class DesignationJournalFixture extends PupitreJournalFixture {
     const answer = this.answer;
     this.answer = undefined;
     if (answer !== undefined) return answer;
-    return new Promise(resolve => roundTrip(() => resolve(structuredClone(referenceFixture))));
+    return new Promise(resolve =>
+      roundTrip(() => {
+        resolve(structuredClone(referenceFixture));
+      }),
+    );
   }
 }
 
@@ -43,7 +49,10 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 
   override schedule(deadline: number | undefined, expiration: DesignationExpiration): void {
     clearTimeout(this.timer);
-    if (deadline !== undefined) this.timer = setTimeout(() => expiration.expire(), deadline - Date.now());
+    if (deadline !== undefined)
+      this.timer = setTimeout(() => {
+        expiration.expire();
+      }, deadline - Date.now());
   }
 }
 
@@ -52,7 +61,7 @@ describe('Designation du pupitre', () => {
   let journal: DesignationJournalFixture;
   beforeEach(async () => {
     journal = new DesignationJournalFixture();
-    await journal.saveReferentiel('atelier', referenceFixture.referentiel!);
+    await journal.saveReferentiel('atelier', referentielFixture);
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
@@ -239,10 +248,14 @@ describe('Designation du pupitre', () => {
 
   const givenDelayedClosure = (): (() => void) => {
     const resolve = givenDelayedResolution();
-    return () => resolve(referenceFixture);
+    return () => {
+      resolve(referenceFixture);
+    };
   };
   const whenCheckingExpiration = (): Promise<void> => designation.expire();
-  const whenClosingCompletes = (resolve: () => void): void => resolve();
+  const whenClosingCompletes = (resolve: () => void): void => {
+    resolve();
+  };
   const whenReadStarts = async (): Promise<void> => {
     await journal.readStarted;
   };
@@ -256,7 +269,9 @@ describe('Designation du pupitre', () => {
     TestBed.tick();
     return pending;
   };
-  const whenErasing = (): void => designation.erase();
+  const whenErasing = (): void => {
+    designation.erase();
+  };
   const whenPressing = (): boolean => {
     const accepted = designation.registerPress();
     TestBed.tick();
@@ -292,8 +307,12 @@ describe('Designation du pupitre', () => {
     });
     return reject;
   };
-  const whenAnswering = (resolve: (state: LocalPupitreState) => void): void => resolve(referenceFixture);
-  const whenRejecting = (reject: (reason: Error) => void): void => reject(new Error('Unavailable'));
+  const whenAnswering = (resolve: (state: LocalPupitreState) => void): void => {
+    resolve(referenceFixture);
+  };
+  const whenRejecting = (reject: (reason: Error) => void): void => {
+    reject(new Error('Unavailable'));
+  };
   const thenCodeIs = (code: string): void => {
     expect(designation.code()).toBe(code);
     expect(designation.unknownCode()).toBe(false);

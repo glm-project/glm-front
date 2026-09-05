@@ -54,7 +54,10 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 
   override schedule(deadline: number | undefined, expiration: DesignationExpiration): void {
     clearTimeout(this.timer);
-    if (deadline !== undefined) this.timer = setTimeout(() => expiration.expire(), deadline - Date.now());
+    if (deadline !== undefined)
+      this.timer = setTimeout(() => {
+        expiration.expire();
+      }, deadline - Date.now());
   }
 }
 
@@ -182,7 +185,9 @@ describe('Designation keypad', () => {
   const element = (selector: string): HTMLElement => {
     const host: HTMLElement = fixture.nativeElement as HTMLElement;
     if (selector === 'designation') return host;
-    return host.querySelector<HTMLElement>(dataSelector(selector))!;
+    const selected = host.querySelector<HTMLElement>(dataSelector(selector));
+    if (selected === null) throw new Error(`Expected element ${selector}`);
+    return selected;
   };
   const whenClicking = (selector: string): void => {
     element(selector).click();

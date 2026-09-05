@@ -1,14 +1,17 @@
-import { LocalEvent, LocalPointage, LocalPupitreState, ReferentielDuPupitre, SuiviDuPupitre } from './LocalPupitreState';
+import { ActiviteDuPupitre, LocalEvent, LocalPointage, LocalPupitreState, ReferentielDuPupitre, SuiviDuPupitre } from './LocalPupitreState';
 
 const applyPointage = (suivi: SuiviDuPupitre, geste: LocalPointage): SuiviDuPupitre => {
   const activites = suivi.activites.filter(activite => activite.operateurId !== geste.operateurId || activite.posteId !== geste.posteId);
   if (geste.type !== 'FIN') {
-    activites.push({
+    const activite: ActiviteDuPupitre = {
       operateurId: geste.operateurId,
       categorie: categorieFor(geste),
       depuis: geste.dateDeSurvenue,
-      posteId: geste.posteId,
-    });
+    };
+    if (geste.posteId !== undefined) {
+      activite.posteId = geste.posteId;
+    }
+    activites.push(activite);
   }
   return { ...suivi, activites, etat: etatFor(activites.length) };
 };

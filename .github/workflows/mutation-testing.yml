@@ -1,0 +1,35 @@
+name: mutation-testing
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 4 * * 1'
+permissions:
+  contents: read
+jobs:
+  replay-policy:
+    name: replay-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+      VALIDATION_TIMINGS_FILE: reports/mutation/timings.ndjson
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
+      - name: 'Setup: install dependencies'
+        run: npm ci
+      - name: 'Test: mutate replay policy'
+        run: npm run measure -- ci-mutation-replay -- npm run test:mutation:replay
+      - name: 'Report: mutation results and duration'
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mutation-replay-policy-${{ github.run_id }}
+          path: reports/mutation
+          if-no-files-found: error
