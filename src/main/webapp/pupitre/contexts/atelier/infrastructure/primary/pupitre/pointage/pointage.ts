@@ -19,6 +19,7 @@ interface AttenteDePoste {
 export class Pointage {
   readonly vue = input.required<VueDePointage>();
   readonly commander = input.required<PointageCommand>();
+  readonly gestesDisponibles = input(true);
   readonly pauseRequested = output();
   readonly repriseRequested = output();
   readonly arretTotalRequested = output();

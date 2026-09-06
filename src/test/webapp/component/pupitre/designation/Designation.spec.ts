@@ -172,6 +172,6 @@ describe('Designation keypad in a browser', () => {
     });
   };
   const thenJeanIsDesignated = (): void => {
-    cy.get(dataSelector('designated-identity')).should('have.text', 'Jean Dupont');
+    cy.get(dataSelector('header-operator')).should('contain.text', 'Dupont Jean');
   };
 });

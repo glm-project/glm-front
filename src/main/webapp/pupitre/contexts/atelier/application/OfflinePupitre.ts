@@ -7,7 +7,7 @@ import {
   VueDePointage,
 } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDuGeste, JournalDuPupitre, TypeDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
-import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { AcceptationLocale, AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
@@ -16,7 +16,7 @@ import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './Poi
 const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurvenue: new Date().toISOString() });
 
 @Injectable()
-export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGlobale {
+export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
@@ -41,10 +41,6 @@ export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGloba
   private fermeture: Promise<void> | undefined;
 
   readonly connected = this.etatHorsLigne.connected;
-
-  ngOnDestroy(): void {
-    this.observe(this.finish());
-  }
 
   referentiel(): ReturnType<EtatHorsLigneDuPupitre['referentiel']> {
     return this.etatHorsLigne.referentiel();

@@ -1,48 +1,30 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
-import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
-import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
-import { PupitreHeader } from '@/pupitre/header/header';
-import { Component, inject } from '@angular/core';
+import { PupitrePage } from '@/pupitre/page';
+import { Component } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
 @Component({
   selector: 'glm-root',
-  imports: [Designation, Pointage, PupitreHeader],
-  host: { class: 'flex h-screen flex-col' },
-  template: `
-    <glm-pupitre-header
-      heading="glmfront"
-      [connected]="designation.connected()"
-      [operateur]="designation.operateur()"
-      [message]="designation.messageAtelier()"
-      (finRequested)="designation.finish()"
-    />
-    @if (designation.operateur(); as operateur) {
-      <div class="hidden" data-selector="designated-identity">{{ operateur.prenom }} {{ operateur.nom }}</div>
-      @if (designation.pointage(); as vue) {
-        <glm-pointage [vue]="vue" [commander]="designation" />
-      }
-    } @else {
-      <glm-designation />
-    }
-  `,
+  imports: [PupitrePage],
+  template: '<glm-pupitre-page />',
 })
-class DesignationFixture {
-  readonly designation = inject(OfflinePupitre);
-}
+class PupitrePageFixture {}
 
 const journalFixture = new JournauxDuPupitreFixture();
+journalFixture.answerReadsImmediately();
 const authenticationFixture: Pick<AuthenticationPort, 'currentTenant' | 'synchronizeSession'> = {
   currentTenant: () => 'atelier',
-  synchronizeSession: () => new Promise(resolve => setTimeout(resolve)),
+  synchronizeSession: () => Promise.resolve(),
 };
 const unexpectedNetworkFixture = (): Promise<never> => Promise.reject(new Error('Designation must not contact the server'));
 const serveurFixture: AtelierExchangePort = {
@@ -72,31 +54,53 @@ const baseSuivis: SuiviDuPupitre[] = [
   })),
 ];
 
-void journalFixture
-  .saveReferentiel('atelier', {
-    operateurs: [
-      {
-        id: 'jean',
-        nom: 'Dupont',
-        prenom: 'Jean',
-        matricule: '049',
-        postes: [
-          { id: 'tour', libelle: 'Tour' },
-          { id: 'fraiseuse', libelle: 'Fraiseuse' },
-        ],
-      },
-    ],
-    suivis: baseSuivis,
-  })
-  .then(() =>
-    bootstrapApplication(DesignationFixture, {
-      providers: [
-        OfflinePupitre,
-        PupitreSynchronization,
-        { provide: JournauxDuPupitrePort, useValue: journalFixture },
-        { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
-        { provide: AuthenticationPort, useValue: authenticationFixture },
-        { provide: AtelierExchangePort, useValue: serveurFixture },
+const referentielFixture = {
+  operateurs: [
+    {
+      id: 'jean',
+      nom: 'Dupont',
+      prenom: 'Jean',
+      matricule: '049',
+      postes: [
+        { id: 'tour', libelle: 'Tour' },
+        { id: 'fraiseuse', libelle: 'Fraiseuse' },
       ],
-    }),
-  );
+    },
+  ],
+  suivis: baseSuivis,
+};
+
+const parameters = new URLSearchParams(location.search);
+
+const bootstrapFixture = async (): Promise<void> => {
+  if (!parameters.has('reference-delay')) journalFixture.seedReferentiel('atelier', referentielFixture);
+  const application = await bootstrapApplication(PupitrePageFixture, {
+    providers: [
+      AcceptationLocaleDesGestes,
+      EtatHorsLigneDuPupitre,
+      OfflinePupitre,
+      PupitreSynchronization,
+      { provide: JournauxDuPupitrePort, useValue: journalFixture },
+      { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
+      { provide: AuthenticationPort, useValue: authenticationFixture },
+      { provide: AtelierExchangePort, useValue: serveurFixture },
+    ],
+  });
+  const pupitre = application.injector.get(OfflinePupitre);
+  if (parameters.has('reference-delay')) {
+    window.addEventListener('pupitre-fixture-reference-ready', () => {
+      journalFixture.seedReferentiel('atelier', referentielFixture);
+      void pupitre.restore();
+    });
+  } else {
+    await pupitre.restore();
+  }
+  if (parameters.has('delayed-append')) {
+    const barrier = journalFixture.delayNextAppend();
+    void barrier.started.then(() => {
+      setTimeout(barrier.release, 2_000);
+    });
+  }
+};
+
+void bootstrapFixture();
