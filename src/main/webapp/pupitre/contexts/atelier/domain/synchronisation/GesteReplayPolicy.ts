@@ -19,25 +19,22 @@ const arrivalActuallyOpened = (evenements: readonly EvenementDuJournal[], arrive
   evenements.some(
     evenement =>
       evenement.geste.id === arriveeId
-      && evenement.geste.nature === 'ARRIVEE'
       && evenement.geste.operateurId === operateurId
-      && evenement.etat === 'ACCEPTE'
-      && evenement.journeeOuverte === true,
+      && 'journeeOuverte' in evenement
+      && evenement.journeeOuverte,
   );
 
 export const operationFor = (geste: GesteDAtelier, evenements: readonly EvenementDuJournal[] = []): OperationDAtelier => {
   if (geste.nature === 'ARRIVEE') {
     return 'ARRIVEE_ASSUREE';
   }
-  if (geste.nature === 'PRESENCE' && geste.implicite) {
+  if (geste.nature !== 'PRESENCE') {
+    return 'GESTE_EXPLICITE';
+  }
+  if (geste.implicite) {
     return 'PRESENCE_ASSUREE';
   }
-  if (
-    geste.nature === 'PRESENCE'
-    && geste.type === 'REPRISE'
-    && geste.assuranceArriveeId !== undefined
-    && arrivalActuallyOpened(evenements, geste.assuranceArriveeId, geste.operateurId)
-  ) {
+  if (geste.assuranceArriveeId !== undefined && arrivalActuallyOpened(evenements, geste.assuranceArriveeId, geste.operateurId)) {
     return 'REPRISE_APRES_ARRIVEE_OUVERTE';
   }
   return 'GESTE_EXPLICITE';

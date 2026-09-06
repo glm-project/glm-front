@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Amended by [ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md).
 
 ## Context
 

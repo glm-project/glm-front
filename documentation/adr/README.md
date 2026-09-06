@@ -38,15 +38,17 @@ renumbers at merge time. The status below is the living one — update this line
   lockfile-only installs and an immutable backend contract revision in local validation and CI
 - [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — **Amended by 0020** —
   shared commands for Git, Codex and CI, with pinned security tools and bounded completion validation
-- [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Accepted** —
-  bounded replay-policy mutation through the Angular builder, checked invalid mutants and a scheduled report
+- [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Amended by 0024** —
+  initial bounded replay-policy mutation through the Angular builder and checked invalid mutants
 - [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — **Accepted** — recommended static
   analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
-- [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Accepted** — quick static checks
-  at push, with the complete graph retained by Codex Stop and CI
+- [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Amended by 0024** — quick static
+  checks at push, later complemented by mutation of changed production files
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Accepted** — stateful
   invariants and pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
   **Accepted** — contextual readability rules and a narrowly scoped presentation-effect exception
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — **Accepted** — a
   conjunctive production tripwire for stateful coordinators, with responsibility review at the enforcement point
+- [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) — **Accepted** —
+  mutate changed production files before push and retain the complete project as an explicit local diagnostic

@@ -172,12 +172,17 @@ not a testing defect. Changing private helpers, internal state representation or
 the expected business result intact. For example, assert that the last digits are visible and the operator
 can scroll back, rather than fabricating a width and asserting the component's exact scroll assignment.
 
-## Mutation checks the replay policy through Angular
+## Mutation checks the unit-tested project through Angular
 
-`npm run test:mutation:replay` mutates only `GesteReplayPolicy.ts` and runs its business scenarios through
-`ng test --watch=false --include`. Stryker's built-in command runner keeps the Angular builder's zoneless
-TestBed and JIT setup; a direct Vitest runner does not establish that environment. One worker gives every
-sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.
+`npm run test:mutation` mutates the handwritten production TypeScript covered by the unit-test gate and runs
+the complete suite through `ng test --watch=false`. Stryker's built-in command runner keeps the Angular
+builder's zoneless TestBed and JIT setup; a direct Vitest runner does not establish that environment. One
+worker gives every sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.
+
+The mutation scope mirrors `angular.json`'s coverage exclusions: specs, declarations, bootstraps,
+environments, providers, package declarations and generated sources are not mutation targets. Component,
+application and production-offline browser behavior remains protected by its own suites rather than being
+restarted for every mutant.
 
 The command runner has no per-test instrumentation, so `coverageAnalysis` is off. Its report cannot
 distinguish a mutant that was not executed from one that executed and survived: a displayed zero
@@ -186,7 +191,7 @@ per-file gate as separate source-coverage evidence. The TypeScript checker uses 
 classify invalid mutations as `CompileError`; Stryker separately reports killed valid mutants, survivors and
 timeouts.
 
-The initial measurement generated 58 mutants in 93.49 seconds: 56 were killed and two survived. Inspecting
+The initial replay-policy measurement generated 58 mutants in 93.49 seconds: 56 were killed and two survived. Inspecting
 the survivors found that the test helper copied the production default attempt, so no scenario called the
 real default. After adding that observable concurrency scenario, the unchecked run killed 57 mutants and
 left one type-invalid conditional survivor. With the TypeScript checker enabled, the final measured run
@@ -196,8 +201,10 @@ check once its narrowing guard is removed, so no equivalent mutant is suppressed
 therefore 100 %. A diagnostic run at a temporary 99 % threshold failed with exit code 1 when the unchecked
 score was 98.28 %, proving that a score below the configured gate fails the command.
 
-HTML and JSON reports are written under `reports/mutation/`. The `mutation-testing` workflow runs manually
-and every Monday, records its duration beside those reports and uploads the directory as a CI artifact. It
-does not run on pushes or pull requests. Extend mutation to projections or operator windows only after a
-bounded report identifies the next useful decision surface. [ADR 0018](adr/0018-run-replay-mutation-through-angular.md)
-records the runner choice and its costs.
+Project-level HTML and JSON reports are written under `reports/mutation/`. Mutation is an explicitly invoked
+local diagnostic and does not belong to GitHub Actions. The pre-push hook runs `npm run test:mutation:diff`
+against the added or modified production lines in the refs being pushed; a push containing no mutable line skips it.
+The complete `npm run test:mutation` remains a deliberate manual diagnostic.
+[ADR 0018](adr/0018-run-replay-mutation-through-angular.md) records the runner choice and its initial bounded
+experiment; [ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md) records the project-wide scope
+and its costs.

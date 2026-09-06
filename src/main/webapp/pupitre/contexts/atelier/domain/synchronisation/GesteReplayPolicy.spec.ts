@@ -82,6 +82,48 @@ describe('GesteReplayPolicy', () => {
     thenDecisionIs(decision, 'PROPAGER');
   });
 
+  it('should recognize the correlated arrival among unrelated journal events', () => {
+    const arrivee: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'jean' };
+    const autreArrivee: GesteDAtelier = { ...arrivee, id: 'autre-arrivee' };
+    const reprise: GesteDAtelier = {
+      nature: 'PRESENCE',
+      id: 'reprise',
+      dateDeSurvenue: 'date',
+      operateurId: 'jean',
+      type: 'REPRISE',
+      implicite: false,
+      assuranceArriveeId: arrivee.id,
+    };
+    const journal: readonly EvenementDuJournal[] = [
+      { geste: autreArrivee, etat: 'ACCEPTE', journeeOuverte: true },
+      { geste: arrivee, etat: 'ACCEPTE', journeeOuverte: true },
+    ];
+
+    const operation = operationFor(reprise, journal);
+
+    thenOperationIs(operation, 'REPRISE_APRES_ARRIVEE_OUVERTE');
+  });
+
+  it.each([
+    ['another arrival', { nature: 'ARRIVEE', id: 'autre-arrivee', dateDeSurvenue: 'date', operateurId: 'jean' }],
+    ['another operator arrival', { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'marie' }],
+  ] satisfies readonly [string, GesteDAtelier][])('should ignore %s when correlating an assured arrival', (_name, unrelatedArrival) => {
+    const reprise: GesteDAtelier = {
+      nature: 'PRESENCE',
+      id: 'reprise',
+      dateDeSurvenue: 'date',
+      operateurId: 'jean',
+      type: 'REPRISE',
+      implicite: false,
+      assuranceArriveeId: 'arrivee',
+    };
+    const journal: readonly EvenementDuJournal[] = [{ geste: unrelatedArrival, etat: 'ACCEPTE', journeeOuverte: true }];
+
+    const operation = operationFor(reprise, journal);
+
+    thenOperationIs(operation, 'GESTE_EXPLICITE');
+  });
+
   it.each([
     new Error('network'),
     new RefusDePublication('refus autre contexte', 'autre contexte'),

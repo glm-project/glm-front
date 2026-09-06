@@ -32,12 +32,12 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   private readonly gestesDisponiblesState = signal(true);
 
   readonly etatDesignation = this.designationState.asReadonly();
-  readonly code = computed(() => this.designationState().code);
-  readonly unknownCode = computed(() => this.designationState().unknownCode);
-  readonly operateur = computed(() => this.designationState().operateur);
-  readonly canValidate = computed(() => this.designationState().canValidate);
+  readonly code = computed<string>(() => this.designationState().code);
+  readonly unknownCode = computed<boolean>(() => this.designationState().unknownCode);
+  readonly operateur = computed<ReturnType<DesignationOperateur['snapshot']>['operateur']>(() => this.designationState().operateur);
+  readonly canValidate = computed<boolean>(() => this.designationState().canValidate);
   readonly pointage = this.pointageState.asReadonly();
-  readonly messageAtelier = computed(() => {
+  readonly messageAtelier = computed<ReturnType<FenetreOperateur['refusal']> | { readonly message: string }>(() => {
     const erreur = this.erreurAtelierState();
     return erreur === undefined ? this.refusAtelierState() : { message: erreur };
   });
