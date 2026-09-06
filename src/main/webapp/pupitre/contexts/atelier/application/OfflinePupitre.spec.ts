@@ -13,6 +13,8 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
+import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from './OfflinePupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -658,6 +660,8 @@ describe('OfflinePupitre', () => {
   const buildPupitre = (): OfflinePupitre =>
     Injector.create({
       providers: [
+        AcceptationLocaleDesGestes,
+        EtatHorsLigneDuPupitre,
         OfflinePupitre,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
