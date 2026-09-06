@@ -69,25 +69,24 @@ const toOperateurWithoutMatricule = (operateur: RestOperateur): OperateurDuPupit
   postes: operateur.postes.map(toPosteHabilite),
 });
 
-const toOperateur = (operateur: RestOperateur): OperateurDuPupitre => {
-  const result = toOperateurWithoutMatricule(operateur);
-  if (operateur.matricule !== undefined) {
-    result.matricule = operateur.matricule;
-  }
-  return result;
-};
+const toOperateur = (operateur: RestOperateur): OperateurDuPupitre =>
+  operateur.matricule === undefined
+    ? toOperateurWithoutMatricule(operateur)
+    : { ...toOperateurWithoutMatricule(operateur), matricule: operateur.matricule };
 
-const toActivite = (activite: RestSuiviDAtelierEnGrille['activitesEnCours'][number]): SuiviDuPupitre['activites'][number] => {
-  const result: SuiviDuPupitre['activites'][number] = {
-    operateurId: required(activite.operateur, 'activite.operateur').id,
-    categorie: activite.categorie,
-    depuis: activite.depuis,
-  };
-  if (activite.poste !== undefined) {
-    result.posteId = activite.poste.id;
-  }
-  return result;
-};
+const toActivite = (activite: RestSuiviDAtelierEnGrille['activitesEnCours'][number]): SuiviDuPupitre['activites'][number] =>
+  activite.poste === undefined
+    ? {
+        operateurId: required(activite.operateur, 'activite.operateur').id,
+        categorie: activite.categorie,
+        depuis: activite.depuis,
+      }
+    : {
+        operateurId: required(activite.operateur, 'activite.operateur').id,
+        categorie: activite.categorie,
+        depuis: activite.depuis,
+        posteId: activite.poste.id,
+      };
 
 const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
   id: suivi.id,

@@ -1,5 +1,5 @@
 export interface DesignationExpiration {
-  expire: () => void;
+  readonly expire: () => void;
 }
 
 export abstract class DesignationExpirationSchedulerPort {

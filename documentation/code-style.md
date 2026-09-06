@@ -2,29 +2,22 @@
 
 ## Code carries its own intent
 
-**No comments. None.** Not even a _why_, not even an external constraint — that exemption is what every
-comment in this repo was written under. When the urge shows up, refactor: rename, extract a function or an
-object. The rationale that felt worth a comment goes in the commit message, in the MR, or as a rule in the
-topic doc that owns it — places that get read and updated, unlike a comment that drifts from the code it
-sits on. A comment you cannot relocate is a design you have not finished. Machine-readable directives
-(`eslint-disable`, `@ts-expect-error`, `prettier-ignore`) are not comments; they are instructions to a tool,
-and each still needs its own justification elsewhere. `local/no-comments` (`eslint.config.mjs`) fails the
-build on anything else under `src/`, TypeScript and templates alike, tests and generated files included —
-so this is a lint error and not a review argument.
+Avoid comments that repeat the code. Write a short local comment only for a constraint, external behavior or
+trade-off the code cannot make clear, and keep it next to the affected code. Put durable rules in the topic
+document that owns them. A tooling directive (`eslint-disable`, `@ts-expect-error`, `prettier-ignore`) states
+why that exceptional instruction remains necessary. Comments are a review judgment; ESLint does not infer
+their usefulness. Generated files are exempt because the project does not own their text.
 
-**A named function instead of an inline ternary.** `x !== undefined ? Foo.of(x) : undefined` becomes
-`toFoo(x?: Type): Foo | undefined`. The ternary hides the business intent.
+Extract an inline conditional only when the name adds an intention or the expression obscures the flow.
+`x !== undefined ? Foo.of(x) : undefined` may become `toFoo(x?: Type): Foo | undefined`; a short local
+conditional whose meaning is already clear stays local.
 
-**Positive predicates.** Expose `x.isNotLoaded()` rather than writing `!x.loaded()`. The name states the
-tested state, and the double negation disappears.
+Name predicates after the state they answer. Prefer an affirmative question where it reads naturally; a simple
+negation such as `!loaded()` is clear, while double negatives are not.
 
-**A named interface for non-trivial parameters** — stub object, callback, config, test helpers included. The
-name makes the intent readable at the call site. Provide a named default constant rather than an inline
-literal.
-
-> eslint gotcha: `@typescript-eslint/prefer-function-type` rewrites into a `type` any interface reduced to a
-> call signature (`interface X { (): T }`), at the commit hook. To keep a real interface, give it a named
-> member — `interface AuthPort { getToken: () => string | undefined }` — and pass a stub object.
+Name object contracts that carry a meaningful responsibility. A callback that is only a callback remains a
+function type; give it a named type only when its role clarifies the call site. Name reusable defaults rather
+than repeating significant literals.
 
 ## Extract methods when the logic obscures the intent
 
@@ -40,18 +33,18 @@ Preserve asynchronous ordering, callback evaluation time, identifiers, lock boun
 Run the existing behavioral tests before and after extraction; keep behavior changes separate. See
 [ADR 0008](adr/0008-extract-methods-to-expose-intent.md) for the decision and its costs.
 
-## Tell the owner, do not inspect its representation
+## Give every business rule a domain owner
 
-Put each business decision on the object that owns the data needed to make it. A caller asks a named domain
-question or sends an intention; it does not branch on another object's optional fields, enum values or
-collection cardinality and reconstruct that object's rules. Prefer `pointage.hasNoPoste()` to
-`pointage.posteId === undefined`, `operateur.requiresPosteChoice()` to `operateur.postes.length > 1`, and a
-decision result such as `choixDePosteRequis` to a caller assembling the same condition from getters.
+Put each business decision with the domain concept that owns its reason to change. A class encapsulates state
+and invariants; a pure function may own a policy or build a projection. A caller asks a named domain question
+or sends an intention instead of reconstructing a rule from another owner's representation. Prefer
+`operateur.requiresPosteChoice()` to a caller assembling that condition from getters.
 
 Keep serializable HTTP and storage documents as data at their adapter seam. Rehydrate a behavior-bearing
-domain object before making business decisions, and keep its representation private so TypeScript prevents
-callers from bypassing its interface. The owning implementation may inspect its own fields; a secondary
-adapter may inspect a transport document only to translate it.
+domain object before decisions that need its invariants. A pure policy or projection may inspect a
+discriminated union when that union is its public contract; the owner keeps the exhaustive cases together.
+The owning implementation may inspect its own fields; a secondary adapter may inspect a transport document
+only to translate it.
 
 A primary adapter may inspect a dedicated view projection to render it. It still sends an intention through
 the command interface instead of reconstructing a business command from that projection.
@@ -59,8 +52,8 @@ the command interface instead of reconstructing a business command from that pro
 Apply the SOLID test to every changed conditional: the module with the business reason to change owns the
 decision, callers depend on its intention-level interface, and adding a domain case extends that owner rather
 than editing conditionals across callers. Before considering a TypeScript change complete, account for every
-conditional added or modified; move any conditional that chooses behavior from another object's representation
-behind that object's interface.
+conditional added or modified; keep a policy or projection's exhaustive cases in its domain owner, and move a
+caller reconstructing another owner's rule behind that owner's interface.
 
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
@@ -69,13 +62,41 @@ behind that object's interface.
 - `signal()` for local component state (`App.appName`, `gestion/app.ts:17`);
 - `input.required()` for what a parent gives a component (`pupitre/header/header.ts`);
 - standalone components, no `NgModule`;
-- signals expose state, `computed()` derives it, and application commands trigger work. Angular `effect()`
-  and `afterRenderEffect()` are forbidden by ESLint; use explicit orchestration or a one-shot render hook.
-  Import Angular Core through named static imports: namespace and dynamic imports are blocked to keep
-  this restriction enforceable;
+- signals expose state, `computed()` derives it, and application commands trigger work. `effect()` and
+  `afterRenderEffect()` do not orchestrate a business operation or propagate application state. A primary
+  presentation adapter may use one for a narrow imperative browser integration when its lifetime and cleanup
+  are explicit; keep the reason in a local comment. ESLint permits these imports only in
+  `infrastructure/primary/` and cannot determine whether a use is semantically justified. Import Angular Core
+  through named static imports: namespace and dynamic imports remain blocked;
 - component and directive selectors are prefixed `glm` (`glm-root`, `glm-pupitre-header`) — enforced by
   `angular-eslint`;
-- `private readonly` for injected collaborators.
+- use `private` for implementation details, `protected` for members consumed only by a component template,
+  and `public` only for a component contract; mark references `readonly` unless replacement is part of their
+  state transition. Use `private readonly` for injected collaborators.
+
+## Keep domain models and contracts immutable
+
+Every domain model is immutable. Mark all of its properties `readonly`, including private, protected and
+`#private` state. A transition named `after…` returns the next model version without modifying its receiver;
+the application replaces its current reference with that version. Immutable values may be shared between model
+versions. A local collection may be mutable while constructing a result, provided it does not mutate an input
+or escape as a mutable model, decision or snapshot.
+
+Expose commands, decisions and projections as `readonly`, including nested collections. A method named
+`snapshot()` states whether it returns an independent copy or shares an immutable value. When it returns a
+copy, changing that object cannot alter the owner or a later snapshot. Use a discriminated union when states
+have incompatible fields, and model forbidden fields as `never` when the public contract must reject their
+carry-over.
+
+Name an immutable value object for a business collection when it owns a rule or query: qualifications decide
+whether a workstation choice is required and validate the chosen workstation. Keep transport documents and
+rendering projections as readonly collections when they carry no collection rule. ESLint checks readonly syntax;
+review decides when the business responsibility warrants a value object.
+
+An asynchronous operation is awaited, returned to its caller, or observed through an explicit error path.
+The observer reports a technical failure to the application's error boundary or diagnostics; it does not turn
+a fire-and-forget rejection into a silent `void`. Keep business refusals, technical failures and failures
+already rendered to an operator distinct.
 
 ## Domain concepts in French, technical names and action verbs in English
 

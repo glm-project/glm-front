@@ -4,9 +4,8 @@ import cypress from 'eslint-plugin-cypress';
 import sonarjs from 'eslint-plugin-sonarjs';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
+import { domainReadonlyProperties } from './eslint/rules/domain-readonly-properties.mjs';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
-
-const TOOLING_DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|\/)/;
 
 const TAILWIND_COLOR_FAMILIES = [
   'slate',
@@ -42,6 +41,8 @@ const TOKEN_BYPASS = new RegExp(
     + `|\\btext-\\[[\\d.]+(?:px|rem|em|pt)\\]`,
   'g',
 );
+const INLINE_STYLE_TOKEN_BYPASS =
+  /\bstyle\s*=\s*(['"])[^'"]*\b(?:color|background(?:-color)?|font-size)\s*:\s*(?:#[0-9a-fA-F]{3,8}|[\d.]+(?:px|rem|em|pt))/g;
 
 const FRONTS = ['gestion', 'pupitre'];
 const FORBIDDEN_ANGULAR_EFFECTS = {
@@ -56,6 +57,10 @@ const FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS = [
   selector,
   message: 'Import Angular Core statically so ESLint can forbid effects — see documentation/code-style.md.',
 }));
+const FORBIDDEN_ANGULAR_NAMESPACES = {
+  selector: "ImportDeclaration[source.value='@angular/core'] > ImportNamespaceSpecifier",
+  message: 'Import Angular Core through named static imports — see documentation/code-style.md.',
+};
 const FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS = {
   selector: ':matches(PropertyDefinition, VariableDeclarator)[definite=true]',
   message: 'Definite-assignment assertions hide an uninitialized value: initialize it or model its possible absence.',
@@ -63,6 +68,7 @@ const FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS = {
 const restrictedSyntax = (...additionalRestrictions) => [
   'error',
   ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
+  FORBIDDEN_ANGULAR_NAMESPACES,
   FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS,
   ...additionalRestrictions,
 ];
@@ -74,10 +80,10 @@ const lazyRouteSelectors = forbiddenPathPattern => [
   `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${forbiddenPathPattern}/]`,
 ];
 
-const boundary = (files, restrictions) => ({
+const boundary = (files, restrictions, allowsPresentationEffects = false) => ({
   files,
   rules: {
-    'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
+    'no-restricted-imports': ['error', { paths: allowsPresentationEffects ? [] : [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
     'no-restricted-syntax': restrictedSyntax(
       ...restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
@@ -105,29 +111,20 @@ const noBusinessContext = front => ({
 
 const local = {
   rules: {
-    'no-comments': {
-      create: context => ({
-        Program: () =>
-          context.sourceCode
-            .getAllComments()
-            .filter(comment => !TOOLING_DIRECTIVE.test(comment.value))
-            .forEach(comment =>
-              context.report({ node: comment, message: 'Code carries its own intent: no comments — see documentation/code-style.md.' }),
-            ),
-      }),
-    },
     'no-token-bypass': {
       create: context => ({
         Program: () =>
-          [...context.sourceCode.text.matchAll(TOKEN_BYPASS)].forEach(bypass =>
-            context.report({
-              loc: context.sourceCode.getLocFromIndex(bypass.index),
-              message: `'${bypass[0]}' steps outside the design tokens: name a role — see documentation/design-system.md.`,
-            }),
+          [...context.sourceCode.text.matchAll(new RegExp(`${TOKEN_BYPASS.source}|${INLINE_STYLE_TOKEN_BYPASS.source}`, 'g'))].forEach(
+            bypass =>
+              context.report({
+                loc: context.sourceCode.getLocFromIndex(bypass.index),
+                message: `'${bypass[0]}' steps outside the design tokens: name a role — see documentation/design-system.md.`,
+              }),
           ),
       }),
     },
     'given-when-then': givenWhenThen,
+    'domain-readonly-properties': domainReadonlyProperties,
   },
 };
 
@@ -254,6 +251,11 @@ export default typescript.config(
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/**/*.ts`], [noOtherFront(front)])),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/shared/**/*.ts`], [noOtherFront(front), noBusinessContext(front)])),
+  ...FRONTS.map(front => boundary([`src/main/webapp/${front}/contexts/**/infrastructure/primary/**/*.ts`], [noOtherFront(front)], true)),
+  ...FRONTS.map(front =>
+    boundary([`src/main/webapp/${front}/shared/**/infrastructure/primary/**/*.ts`], [noOtherFront(front), noBusinessContext(front)], true),
+  ),
+  boundary(['src/main/webapp/app/shared/**/infrastructure/primary/**/*.ts'], [noFrontAtAll], true),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
@@ -262,7 +264,6 @@ export default typescript.config(
     files: ['src/**/*.ts', 'src/**/*.html'],
     plugins: { local },
     rules: {
-      'local/no-comments': 'error',
       'local/no-token-bypass': 'error',
     },
   },
@@ -272,6 +273,14 @@ export default typescript.config(
     plugins: { local },
     rules: {
       'local/given-when-then': 'error',
+    },
+  },
+  {
+    files: ['src/main/webapp/**/domain/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    plugins: { local },
+    rules: {
+      'local/domain-readonly-properties': 'error',
     },
   },
 );
