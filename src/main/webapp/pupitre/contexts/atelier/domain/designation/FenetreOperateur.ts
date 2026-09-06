@@ -74,8 +74,8 @@ export interface ChoixDePosteRequis {
 
 export type DecisionDePointage = GestesDePointage | ChoixDePosteRequis;
 
-export interface RefusDePointageVisible {
-  readonly numero: string;
+export interface RefusDAtelierVisible {
+  readonly contexte: string;
   readonly message: string;
 }
 
@@ -93,7 +93,7 @@ interface EtatDeFenetreOperateur {
   readonly identity: number;
   readonly arriveeAssuree: boolean;
   readonly numerosParGeste: ReadonlyMap<string, string>;
-  readonly refusVisible: RefusDePointageVisible | undefined;
+  readonly refusVisible: RefusDAtelierVisible | undefined;
   readonly operateurDesigne: OperateurDesigne;
 }
 
@@ -310,7 +310,8 @@ export class FenetreOperateur {
     const numero = refus === undefined ? undefined : this.etat.numerosParGeste.get(refus.geste.id);
     return this.with({
       vue,
-      refusVisible: refus?.geste.nature === 'POINTAGE' && numero !== undefined ? { numero, message: refus.refus.message } : undefined,
+      refusVisible:
+        refus?.geste.nature === 'POINTAGE' && numero !== undefined ? { contexte: numero, message: refus.refus.message } : undefined,
     });
   }
   afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
@@ -327,7 +328,7 @@ export class FenetreOperateur {
       },
     });
   }
-  refusal(): RefusDePointageVisible | undefined {
+  refusal(): RefusDAtelierVisible | undefined {
     return this.etat.refusVisible;
   }
   belongsTo(entreprise: string | undefined): boolean {

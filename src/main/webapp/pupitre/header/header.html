@@ -12,7 +12,7 @@
     <span aria-live="polite"> {{ storageError }} </span>
     } @else if (refus(); as currentRefusal) {
     <span aria-live="polite">
-      <strong class="rounded bg-nc px-2 text-on-accent">{{ currentRefusal.numero }}</strong>
+      <strong class="rounded bg-nc px-2 text-on-accent">{{ currentRefusal.contexte }}</strong>
       {{ currentRefusal.message }}
     </span>
     }

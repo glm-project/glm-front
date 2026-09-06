@@ -563,7 +563,7 @@ describe('OfflinePupitre', () => {
 
     await thenOldCompanyPendingIs(3);
     thenNoWindowPresentationRemains();
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.erreurAtelier()).toBeUndefined();
   });
 
   it('should refuse a capture before append when its operator window has been released during session I/O', async () => {
@@ -580,7 +580,7 @@ describe('OfflinePupitre', () => {
     await thenFails(pointage, 'fenetre operateur a change');
     await thenOldCompanyPendingIs(0);
     thenNoWindowPresentationRemains();
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.erreurAtelier()).toBeUndefined();
   });
 
   const givenBusinessTime = (): void => {
@@ -775,11 +775,11 @@ describe('OfflinePupitre', () => {
     await execution.completion;
   };
   const thenPointageRecordingFailedWithoutAdvancing = (): void => {
-    expect(pupitre.erreurPointage()).toBe('Pointage non enregistré — recommencez');
+    expect(pupitre.erreurAtelier()).toBe('Action non enregistrée — recommencez');
     expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(false);
   };
   const thenPointageRecordingRecoveredAndAdvanced = (): void => {
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.erreurAtelier()).toBeUndefined();
     expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(true);
   };
   const thenNoGestureExistsBeforeChoice = async (): Promise<void> => {
@@ -863,14 +863,14 @@ describe('OfflinePupitre', () => {
   const thenTheWindowPresentationIsPopulated = (): void => {
     expect(pupitre.operateur()).toBeDefined();
     expect(pupitre.pointage()).toBeDefined();
-    expect(pupitre.refusPointage()).toEqual({ numero: 'OF-1', message: 'cause conservee' });
-    expect(pupitre.erreurPointage()).toBe('Pointage non enregistré — recommencez');
+    expect(pupitre.refusAtelier()).toEqual({ contexte: 'OF-1', message: 'cause conservee' });
+    expect(pupitre.erreurAtelier()).toBe('Action non enregistrée — recommencez');
   };
   const thenNoWindowPresentationRemains = (): void => {
     expect(pupitre.operateur()).toBeUndefined();
     expect(pupitre.pointage()).toBeUndefined();
-    expect(pupitre.refusPointage()).toBeUndefined();
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.refusAtelier()).toBeUndefined();
+    expect(pupitre.erreurAtelier()).toBeUndefined();
   };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(Error);

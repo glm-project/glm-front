@@ -162,7 +162,7 @@ describe('FenetreOperateur', () => {
     const reconciled = transition.fenetre.afterReconciling('entreprise-a', refused);
 
     expect(previous.refusal()).toBeUndefined();
-    expect(reconciled.refusal()).toEqual({ numero: '1015', message: "L'élément a été clôturé." });
+    expect(reconciled.refusal()).toEqual({ contexte: '1015', message: "L'élément a été clôturé." });
   });
 
   it('should retain the designated operator and workstation qualifications frozen at opening through a referential reconciliation', () => {
@@ -464,7 +464,7 @@ describe('FenetreOperateur', () => {
     });
   };
   const thenLatestRefusalNamesTheElement = (): void => {
-    expect(fenetre.refusal()).toEqual({ numero: '1015', message: "L'élément a été clôturé." });
+    expect(fenetre.refusal()).toEqual({ contexte: '1015', message: "L'élément a été clôturé." });
   };
   const thenNoRefusalIsVisible = (): void => {
     expect(fenetre.refusal()).toBeUndefined();

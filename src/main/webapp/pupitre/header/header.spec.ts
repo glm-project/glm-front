@@ -37,7 +37,7 @@ describe('Pupitre header', () => {
     thenItSignsThePupitreIsOffline();
   });
 
-  it('should show the designated identity, current pointage message and finish intention', async () => {
+  it('should show the designated identity, current workshop refusal and finish intention', async () => {
     givenAConnectedPupitre();
     givenADesignatedOperator();
     givenACurrentRefusal();
@@ -72,10 +72,10 @@ describe('Pupitre header', () => {
     fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
   };
   const givenACurrentRefusal = (): void => {
-    fixture.componentRef.setInput('refus', { numero: '1015', message: "L'élément a été clôturé." });
+    fixture.componentRef.setInput('refus', { contexte: '1015', message: "L'élément a été clôturé." });
   };
   const givenARecordingError = (): void => {
-    fixture.componentRef.setInput('erreur', 'Pointage non enregistré — recommencez');
+    fixture.componentRef.setInput('erreur', 'Action non enregistrée — recommencez');
   };
 
   const whenRenderingTheHeader = (): Promise<void> => fixture.whenStable();
@@ -112,7 +112,7 @@ describe('Pupitre header', () => {
   };
   const thenItShowsTheRecordingError = (): void => {
     const message = (fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-message'))?.textContent;
-    expect(message).toContain('Pointage non enregistré — recommencez');
+    expect(message).toContain('Action non enregistrée — recommencez');
     expect(message).not.toContain('1015');
   };
   const thenFinishWasRequested = (): void => {

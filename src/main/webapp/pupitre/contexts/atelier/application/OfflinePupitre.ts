@@ -33,8 +33,8 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private designation = DesignationOperateur.empty();
   private readonly designationState = signal(this.designation.snapshot());
   private readonly pointageState = signal<VueDePointage | undefined>(undefined);
-  private readonly refusState = signal<ReturnType<FenetreOperateur['refusal']>>(undefined);
-  private readonly erreurState = signal<string | undefined>(undefined);
+  private readonly refusAtelierState = signal<ReturnType<FenetreOperateur['refusal']>>(undefined);
+  private readonly erreurAtelierState = signal<string | undefined>(undefined);
 
   readonly etatDesignation = this.designationState.asReadonly();
   readonly code = computed(() => this.designationState().code);
@@ -42,8 +42,8 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   readonly operateur = computed(() => this.designationState().operateur);
   readonly canValidate = computed(() => this.designationState().canValidate);
   readonly pointage = this.pointageState.asReadonly();
-  readonly refusPointage = this.refusState.asReadonly();
-  readonly erreurPointage = this.erreurState.asReadonly();
+  readonly refusAtelier = this.refusAtelierState.asReadonly();
+  readonly erreurAtelier = this.erreurAtelierState.asReadonly();
   private fermeture: Promise<void> | undefined;
   private saisie: Promise<void> = Promise.resolve();
 
@@ -181,10 +181,10 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private captureDecision(fenetre: FenetreOperateur, decision: GestesDePointage): Promise<void> {
     return this.enqueue(fenetre, decision)
       .then(() => {
-        if (this.isCurrentWindow(fenetre)) this.erreurState.set(undefined);
+        if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set(undefined);
       })
       .catch((failure: unknown) => {
-        if (this.isCurrentWindow(fenetre)) this.erreurState.set('Pointage non enregistré — recommencez');
+        if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set('Action non enregistrée — recommencez');
         throw failure;
       });
   }
@@ -273,14 +273,14 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private publishWindow(fenetre: FenetreOperateur): void {
     this.vue.set(fenetre.snapshot());
     this.pointageState.set(fenetre.pointage());
-    this.refusState.set(fenetre.refusal());
+    this.refusAtelierState.set(fenetre.refusal());
   }
 
   private closeWindowAndClearPresentation(): void {
     this.designation = this.designation.afterReleasingWindow();
     this.pointageState.set(undefined);
-    this.refusState.set(undefined);
-    this.erreurState.set(undefined);
+    this.refusAtelierState.set(undefined);
+    this.erreurAtelierState.set(undefined);
     this.publishDesignation();
   }
 

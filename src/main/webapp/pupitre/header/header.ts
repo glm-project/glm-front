@@ -1,4 +1,4 @@
-import { IdentiteOperateurDesigne, RefusDePointageVisible } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteOperateurDesigne, RefusDAtelierVisible } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { LIBELLES_ENTETE_PUPITRE } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Component, input, output } from '@angular/core';
 
@@ -13,7 +13,7 @@ export class PupitreHeader {
   readonly heading = input.required<string>();
   readonly connected = input.required<boolean>();
   readonly operateur = input<IdentiteOperateurDesigne>();
-  readonly refus = input<RefusDePointageVisible>();
+  readonly refus = input<RefusDAtelierVisible>();
   readonly erreur = input<string>();
   readonly finRequested = output();
 }
