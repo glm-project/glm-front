@@ -90,14 +90,41 @@ pending. Validation stays unavailable until that operation finishes. A late reso
 expired designation or erase a new partial code. Timer callbacks ask the domain to check the current
 deadline instead of unconditionally closing a designation that may have been renewed.
 
-The composition gates the keypad on enrolment and reference availability, then switches views on the
-same URL. The pointage view's “J'ai fini” action calls `finish()`. Every screen press, including blank
-chrome, goes through `registerPress()` before a business command: a `false` result consumes the entire
-press, including its subsequent click, because the deadline had already elapsed. Ignore repeated physical
-keydown events before calling this guard. Closing the designation must also dismiss the pointage popup.
-The keypad already handles its own pointer and physical keyboard events; its parent only needs to route
-presses outside it. These composition and pointage responsibilities belong to #75 and #76.
+The routed common page owns the permanent chrome, designation and pointage views. The root shell retains
+only technical runtime startup and routing. The page gates the keypad on enrolment and reference
+availability, then switches views on the same URL, and calls `finish()` when it is destroyed; destruction of
+the root-scoped `OfflinePupitre` is not the page-exit hook. The pointage view's “J'ai fini” action also calls
+`finish()`.
+
+Every screen press, including blank chrome, goes through `registerPress()` before a business command: a
+`false` result consumes the entire press, including its subsequent click, because the deadline had already
+elapsed. Ignore repeated physical keydown events before calling this guard. Closing the designation must
+also dismiss the pointage popup. The keypad already handles its own pointer and physical keyboard events;
+its parent only needs to route presses outside it. These composition and pointage responsibilities belong
+to #75 and #76.
 
 The guard consumes a press that discovers an overdue deadline that has not yet been handled. If the expiry
 callback has already reset the keypad, the next press starts a fresh code. This rule also applies after
 OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay threshold is needed.
+
+The first business command in an operator window assures arrival before its requested gestures, including
+`PAUSE`, `REPRISE` and `TOUT ARRÊTER`. A `REPRISE` made redundant because that assurance has just opened the
+day is the one explicit-presence refusal absorbed contextually. Implicit resumption belongs only to an
+intention that opens or resumes an activity; it never precedes a `FIN` or an explicit presence command.
+
+`TOUT ARRÊTER` is one atomically accepted local batch: every known personal `FIN`, followed by `DEPART`.
+A local storage failure retains none of that batch. Once accepted, normal FIFO replay records known business
+refusals and continues with the remaining gestures, so the durable evidence preserves both the requested
+order and each server outcome.
+
+A global command pressed while captures are already in flight is retained and decided from the updated
+window after those captures settle locally. From that intention until local acceptance, tiles and global
+commands are unavailable. “J'ai fini” remains available: it closes the visible window immediately while
+already initiated work drains.
+
+The permanent chrome is the only composition rendered before enrolment and the first reference are
+available; #76 adds no loading or enrolment content, which belongs to #103. The same chrome identifies a
+rejected pointage by its element number and a rejected presence by the originating `PAUSE`, `REPRENDRE` or
+`TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local
+acceptance failure instead shows “Action non enregistrée — recommencez” until the next durable local success
+or window closure.
