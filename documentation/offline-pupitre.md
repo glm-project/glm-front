@@ -49,8 +49,8 @@ reachable. A received business refusal proves connectivity even though the gestu
 
 ## Runtime lifecycle is explicit
 
-`PupitreSynchronizationTrigger` starts after authentication restoration and owns online listeners and refresh timers. Its
-destruction removes listeners, clears timers and prevents later work from starting. Tests use explicit
+`PupitreRuntime` restores authentication and owns the initial synchronization, online listeners and refresh timers. Starting it is
+idempotent. Its destruction removes listeners, clears timers and prevents later work from starting. Tests use explicit
 completion signals for asynchronous exchanges; arbitrary waits hide ordering failures.
 
 The service worker caches the application shell and static assets only. It does not cache API responses or

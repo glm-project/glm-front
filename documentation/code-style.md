@@ -60,7 +60,7 @@ Run the existing behavioral tests before and after extraction; keep behavior cha
 Business vocabulary stays in French — it is the ubiquitous language the domain speaks
 (`RefusDAtelier`, `SuiviDAtelier`, `PosteDeTravail`). Technical classes, types, ports and helpers use English,
 including in `domain/`: `ApiClient`, `LocalStoragePort`, `Page`. Mixed names keep the business concept in
-French and express the technical role in English: `PupitreSynchronizationTrigger`,
+French and express the technical role in English: `PupitreRuntime`,
 `DesignationExpirationSchedulerPort`. Keep filenames and references aligned with those names.
 
 The verb driving an action is English: `send`,

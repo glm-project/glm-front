@@ -7,7 +7,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
 import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
 
-const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+const answerOnNextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
 const acceptedPointageIdsFor = (suiviId: string, evenements: LocalEvent[]): string[] =>
   evenements
@@ -29,7 +29,7 @@ export class PupitreJournalFixture extends PupitreJournalPort {
   afterRead: (() => void) | undefined;
 
   override async read(entreprise: string): Promise<LocalPupitreState> {
-    await roundTrip();
+    await answerOnNextTask();
     const state = structuredClone(this.entreprises.get(entreprise) ?? EMPTY_PUPITRE);
     this.afterRead?.();
     this.afterRead = undefined;
@@ -66,7 +66,7 @@ export class PupitreJournalFixture extends PupitreJournalPort {
     return this.lock('session', action);
   }
   private async update(entreprise: string, change: (state: LocalPupitreState) => LocalPupitreState): Promise<LocalPupitreState> {
-    await roundTrip();
+    await answerOnNextTask();
     if (this.failWrite) {
       this.failWrite = false;
       throw new Error('disque plein');
