@@ -100,7 +100,7 @@ describe('FenetreOperateur', () => {
     const secondGestures = whenCapturingPointage(second);
 
     thenGesturesAre(firstGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    thenGesturesAre(secondGestures, ['POINTAGE']);
+    thenGesturesAre(secondGestures, ['PRESENCE', 'POINTAGE']);
     thenIdentitiesWerePreparedBeforeExecution([...firstGestures, ...secondGestures], preparedIdentities);
     thenOpeningSharesBusinessTime(firstGestures);
   });
@@ -113,7 +113,7 @@ describe('FenetreOperateur', () => {
     const presence = whenAcceptingAnExplicitPause();
     const retriedGestures = whenCapturingPointage(retry);
 
-    thenGesturesAre(retriedGestures, ['POINTAGE']);
+    thenGesturesAre(retriedGestures, ['PRESENCE', 'POINTAGE']);
     thenAcceptedPresenceIsVisible(presence);
   });
 
@@ -165,6 +165,16 @@ describe('FenetreOperateur', () => {
 
     thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE']);
     thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
+  });
+
+  it('should resume implicitly when opening an activity after an accepted pause', () => {
+    whenAcceptingAnExplicitPause();
+
+    const ouverture = whenDeciding('of-1015', 'PRINCIPALE');
+    const gestes = captureGestures(ouverture);
+
+    thenGesturesAre(gestes, ['PRESENCE', 'POINTAGE']);
+    expect(gestes[0]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
   });
 
   it('should finish every personal activity with its workstation before departure when stopping all', () => {

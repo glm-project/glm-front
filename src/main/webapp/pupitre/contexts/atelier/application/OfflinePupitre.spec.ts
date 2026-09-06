@@ -174,13 +174,13 @@ describe('OfflinePupitre', () => {
     await thenQueueHas(3);
   });
 
-  it('should commit arrival and implicit resumption before the first activity, only once per window', async () => {
+  it('should commit arrival once and implicit resumption before each opening activity', async () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
     await whenPausing();
 
-    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'PRESENCE', 'POINTAGE', 'PRESENCE']);
     thenActivityIs('NON_CONFORMITE');
     await thenQueueHasUniqueStableIdentities();
   });
@@ -251,6 +251,20 @@ describe('OfflinePupitre', () => {
     thenPointageIsUnavailable(pointage);
     thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
     thenGlobalGesturesAreAvailable(true);
+  });
+
+  it('should refuse a prepared workstation choice and explicit presence while a global acceptance is in flight', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    const choice = whenPressingPrimaryTarget();
+    const releaseCapture = givenDelayedCapture();
+
+    const stopping = whenStoppingEverything();
+    const choosing = whenChoosingWorkstationLater(choice, 'tour');
+    const pausing = whenPausing();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([stopping, choosing, pausing]);
+
+    thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
   });
 
   it('should hide a finished window immediately while a global gesture waits for an earlier capture', async () => {

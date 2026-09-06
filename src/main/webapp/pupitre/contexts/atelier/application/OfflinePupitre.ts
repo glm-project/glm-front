@@ -144,7 +144,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   }
 
   execute(intention: IntentionDePointage): ExecutionDePointage {
-    if (!this.gestesDisponiblesState()) return { kind: 'INDISPONIBLE' };
+    if (!this.canInitiateGesture()) return { kind: 'INDISPONIBLE' };
     const fenetre = this.requireWindow();
     const result = fenetre.afterDeciding(intention.suiviId, intention.cible, identity);
     this.designation = this.designation.afterReplacingWindow(result.fenetre);
@@ -162,6 +162,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   }
 
   private choosePoste(fenetre: FenetreOperateur, intention: IntentionDePointage, posteId: string): Promise<void> {
+    if (!this.canInitiateGesture()) return Promise.resolve();
     const current = this.requireWindow();
     if (!current.hasIdentity(fenetre)) throw new Error('La fenetre operateur a change.');
     const result = current.afterChoosingPoste(intention.suiviId, intention.cible, posteId, identity);
@@ -189,6 +190,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   }
 
   recordPresence(type: TypeDePresence): Promise<void> {
+    if (!this.canInitiateGesture()) return Promise.resolve();
     const fenetre = this.beginGestureIntention(this.requireWindow());
     const gestes = fenetre.preparePresence(type, identity);
     return this.captureOperation(
@@ -198,7 +200,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   }
 
   executeGlobale(intention: IntentionGlobale): Promise<void> {
-    if (!this.gestesDisponiblesState()) return Promise.resolve();
+    if (!this.canInitiateGesture()) return Promise.resolve();
     const instantDePression = Date.now();
     const fenetre = this.beginGestureIntention(this.requireWindow(instantDePression));
     const intentionInitiee: IntentionGlobaleInitiee = { ...identityAt(instantDePression), commande: intention };
@@ -297,5 +299,9 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
 
   private isCurrentWindow(fenetre: FenetreOperateur): boolean {
     return this.designation.window()?.hasIdentity(fenetre) ?? false;
+  }
+
+  private canInitiateGesture(): boolean {
+    return this.gestesDisponiblesState();
   }
 }

@@ -107,7 +107,7 @@
       @for (poste of attenteDePoste.execution.postes; track poste.id) {
       <button
         type="button"
-        [disabled]="choosing()"
+        [disabled]="choosing() || !gestesDisponibles()"
         (click)="choose(attenteDePoste, poste.id)"
         class="min-h-touch-lg rounded border-2 border-border-strong bg-surface px-4 text-left text-body text-ink disabled:opacity-50"
         [attr.data-selector]="'workstation-' + poste.id"

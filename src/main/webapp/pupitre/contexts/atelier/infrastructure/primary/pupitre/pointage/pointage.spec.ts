@@ -112,6 +112,17 @@ describe('Pointage screen', () => {
     expect(['pause', 'resume', 'stop-all'].map(selector => button(selector).disabled)).toEqual([true, true, true]);
   });
 
+  it('should disable every prepared workstation choice while global gestures are unavailable', async () => {
+    givenAWorkstationChoice();
+    await whenRendering();
+    whenPressing('of-generated', 'primary-target');
+
+    givenGlobalGesturesAreUnavailable();
+    await whenRendering();
+
+    thenEveryWorkstationChoiceIsDisabled();
+  });
+
   it('should leave a tile available when the command boundary refuses a stale reentry', async () => {
     givenTheNextPointageIsUnavailable();
     await whenRendering();

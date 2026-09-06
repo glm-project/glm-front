@@ -482,7 +482,7 @@ export class FenetreOperateur {
     };
     return {
       kind: 'GESTES',
-      capture: (assured = false) => (assured ? pointages : [arrivee, ...(repriseImplicite ? [reprise] : []), ...pointages]),
+      capture: (assured = false) => [...(assured ? [] : [arrivee]), ...(repriseImplicite ? [reprise] : []), ...pointages],
       contextesParGeste: new Map(pointages.map(pointage => [pointage.id, { kind: 'ELEMENT', numero } as const])),
       intention: this.etat.intention,
     };
