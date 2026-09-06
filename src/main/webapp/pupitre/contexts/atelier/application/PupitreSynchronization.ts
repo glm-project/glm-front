@@ -22,12 +22,13 @@ export class PupitreSynchronization {
   private synchronizationRequested = false;
 
   synchronize(publish: PupitrePublisher): Promise<void> {
-    this.synchronizationRequested = true;
     if (this.synchronization !== undefined) {
+      this.synchronizationRequested = true;
       return this.synchronization;
     }
     this.synchronization = this.journal
       .synchronize(async () => {
+        await this.exchange(publish);
         while (this.synchronizationRequested) {
           this.synchronizationRequested = false;
           await this.exchange(publish);
@@ -48,7 +49,7 @@ export class PupitreSynchronization {
     }
     publish(selected, await this.journal.read(selected));
     const entreprise = this.authentication.currentTenant();
-    if (entreprise === undefined || this.authentication.currentToken() === undefined) {
+    if (entreprise === undefined) {
       return;
     }
     await this.drain(entreprise, publish);
