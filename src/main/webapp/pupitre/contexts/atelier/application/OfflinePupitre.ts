@@ -128,7 +128,6 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
 
   async openWindow(code: string): Promise<IdentiteOperateurDesigne> {
     const { entreprise, state } = await this.etatHorsLigne.openingSource();
-    this.designation.requireClosedWindow();
     const opening = this.designation.afterOpeningWindow(entreprise, state, code, Date.now());
     this.designation = opening.designation;
     const { fenetre } = opening;
