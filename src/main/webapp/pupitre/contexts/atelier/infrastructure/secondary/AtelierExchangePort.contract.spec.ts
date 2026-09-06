@@ -140,13 +140,19 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       operateur: 'jean',
     });
 
-    const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'PAUSE', implicite: false });
+    const presence = whenSending({
+      ...arriveeFixture,
+      nature: 'PRESENCE',
+      type: 'REPRISE',
+      implicite: false,
+      assuranceArriveeId: 'arrivee-assuree',
+    });
     const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
     await thenWriteSucceededWith(presence, presenceRequest, {
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
-      type: 'PAUSE',
+      type: 'REPRISE',
     });
 
     const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });

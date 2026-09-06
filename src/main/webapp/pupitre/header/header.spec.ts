@@ -37,7 +37,7 @@ describe('Pupitre header', () => {
     thenItSignsThePupitreIsOffline();
   });
 
-  it('should show the designated identity, current pointage message and finish intention', async () => {
+  it('should show the designated identity, current workshop message and finish intention', async () => {
     givenAConnectedPupitre();
     givenADesignatedOperator();
     givenACurrentRefusal();
@@ -50,10 +50,9 @@ describe('Pupitre header', () => {
     thenFinishWasRequested();
   });
 
-  it('should give the local recording error precedence over a business refusal', async () => {
+  it('should render a local recording message without inventing a business context', async () => {
     givenAConnectedPupitre();
     givenADesignatedOperator();
-    givenACurrentRefusal();
     givenARecordingError();
 
     await whenRenderingTheHeader();
@@ -72,10 +71,10 @@ describe('Pupitre header', () => {
     fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
   };
   const givenACurrentRefusal = (): void => {
-    fixture.componentRef.setInput('refus', { numero: '1015', message: "L'élément a été clôturé." });
+    fixture.componentRef.setInput('message', { contexte: '1015', message: "L'élément a été clôturé." });
   };
   const givenARecordingError = (): void => {
-    fixture.componentRef.setInput('erreur', 'Pointage non enregistré — recommencez');
+    fixture.componentRef.setInput('message', { message: 'Action non enregistrée — recommencez' });
   };
 
   const whenRenderingTheHeader = (): Promise<void> => fixture.whenStable();
@@ -111,9 +110,9 @@ describe('Pupitre header', () => {
     );
   };
   const thenItShowsTheRecordingError = (): void => {
-    const message = (fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-message'))?.textContent;
-    expect(message).toContain('Pointage non enregistré — recommencez');
-    expect(message).not.toContain('1015');
+    const message = (fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-message'));
+    expect(message?.textContent).toContain('Action non enregistrée — recommencez');
+    expect(message?.querySelector('strong')).toBeNull();
   };
   const thenFinishWasRequested = (): void => {
     expect(finishRequested).toBe(true);

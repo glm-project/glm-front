@@ -1,4 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
@@ -76,6 +78,8 @@ describe('Designation keypad', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
+        AcceptationLocaleDesGestes,
+        EtatHorsLigneDuPupitre,
         OfflinePupitre,
         PupitreSynchronization,
         {

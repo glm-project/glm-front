@@ -79,7 +79,7 @@ export class PupitreSynchronization {
       if (evenement === undefined) {
         return;
       }
-      const result = await this.replay(entreprise, evenement, publish);
+      const result = await this.replay(entreprise, evenement, state.evenements, publish);
       if (result === undefined) {
         return;
       }
@@ -90,14 +90,18 @@ export class PupitreSynchronization {
   private async replay(
     entreprise: string,
     evenement: EvenementDuJournal,
+    evenements: readonly EvenementDuJournal[],
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
+      let journeeOuverte = false;
       await this.journal.withSession(async () => {
         await this.authentication.synchronizeSession();
-        await this.push(entreprise, evenement.geste);
+        journeeOuverte = await this.push(entreprise, evenement.geste, evenements);
       });
-      return { geste: evenement.geste, etat: 'ACCEPTE' };
+      return evenement.geste.nature === 'ARRIVEE'
+        ? { geste: evenement.geste, etat: 'ACCEPTE', journeeOuverte }
+        : { geste: evenement.geste, etat: 'ACCEPTE' };
     } catch (failure: unknown) {
       if (failure instanceof RefusDePublication) {
         return { geste: evenement.geste, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
@@ -115,30 +119,39 @@ export class PupitreSynchronization {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: string, geste: GesteDAtelier): Promise<void> {
+  private async push(entreprise: string, geste: GesteDAtelier, evenements: readonly EvenementDuJournal[]): Promise<boolean> {
     try {
       this.requireExchange(entreprise);
       await this.serveur.send(geste);
+      return true;
     } catch (failure: unknown) {
-      if (decideReplay(operationFor(geste), failure) === 'RELIRE_ET_REJOUER') {
-        await this.retryAfterConcurrence(entreprise, geste);
-        return;
+      if (decideReplay(operationFor(geste, evenements), failure) === 'RELIRE_ET_REJOUER') {
+        return this.retryAfterConcurrence(entreprise, geste, evenements);
       }
-      this.absorbOrThrow(geste, failure);
+      this.absorbOrThrow(geste, evenements, failure);
+      return false;
     }
   }
 
-  private async retryAfterConcurrence(entreprise: string, geste: GesteDAtelier): Promise<void> {
+  private async retryAfterConcurrence(
+    entreprise: string,
+    geste: GesteDAtelier,
+    evenements: readonly EvenementDuJournal[],
+  ): Promise<boolean> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
-    await this.serveur.send(geste).catch((refusal: unknown) => {
-      this.absorbOrThrow(geste, refusal);
-    });
+    try {
+      await this.serveur.send(geste);
+      return true;
+    } catch (failure: unknown) {
+      this.absorbOrThrow(geste, evenements, failure);
+      return false;
+    }
   }
 
-  private absorbOrThrow(geste: GesteDAtelier, failure: unknown): void {
-    if (decideReplay(operationFor(geste), failure, 'REJEU') === 'ACCEPTER') {
+  private absorbOrThrow(geste: GesteDAtelier, evenements: readonly EvenementDuJournal[], failure: unknown): void {
+    if (decideReplay(operationFor(geste, evenements), failure, 'REJEU') === 'ACCEPTER') {
       return;
     }
     throw failure;

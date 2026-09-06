@@ -43,7 +43,7 @@
     <div class="flex gap-1 p-2">
       <button
         type="button"
-        [disabled]="busy().has(element.id)"
+        [disabled]="!gestesDisponibles() || busy().has(element.id)"
         (click)="press(element, 'PRINCIPALE')"
         class="min-h-touch flex-1 rounded border border-border-strong bg-surface px-2 text-label text-ink disabled:opacity-50"
         data-selector="primary-target"
@@ -52,7 +52,7 @@
       </button>
       <button
         type="button"
-        [disabled]="busy().has(element.id)"
+        [disabled]="!gestesDisponibles() || busy().has(element.id)"
         (click)="press(element, 'SECONDAIRE')"
         class="min-h-touch rounded border border-nc bg-surface px-3 text-label text-nc disabled:opacity-50"
         data-selector="secondary-target"
@@ -71,6 +71,7 @@
 <nav class="flex gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actionsGlobales">
   <button
     type="button"
+    [disabled]="!gestesDisponibles()"
     (click)="pauseRequested.emit()"
     class="min-h-touch-lg flex-1 rounded bg-warn text-section text-on-accent"
     data-selector="pause"
@@ -79,6 +80,7 @@
   </button>
   <button
     type="button"
+    [disabled]="!gestesDisponibles()"
     (click)="repriseRequested.emit()"
     class="min-h-touch-lg flex-1 rounded border-2 border-warn bg-surface text-section text-warn"
     data-selector="resume"
@@ -87,6 +89,7 @@
   </button>
   <button
     type="button"
+    [disabled]="!gestesDisponibles()"
     (click)="arretTotalRequested.emit()"
     class="min-h-touch-lg flex-1 rounded border-2 border-nc bg-surface text-section text-nc"
     data-selector="stop-all"
@@ -104,7 +107,7 @@
       @for (poste of attenteDePoste.execution.postes; track poste.id) {
       <button
         type="button"
-        [disabled]="choosing()"
+        [disabled]="choosing() || !gestesDisponibles()"
         (click)="choose(attenteDePoste, poste.id)"
         class="min-h-touch-lg rounded border-2 border-border-strong bg-surface px-4 text-left text-body text-ink disabled:opacity-50"
         [attr.data-selector]="'workstation-' + poste.id"

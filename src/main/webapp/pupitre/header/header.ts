@@ -1,6 +1,11 @@
-import { IdentiteOperateurDesigne, RefusDePointageVisible } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { LIBELLES_ENTETE_PUPITRE } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Component, input, output } from '@angular/core';
+
+export interface MessageDAtelierVisible {
+  readonly contexte?: string;
+  readonly message: string;
+}
 
 @Component({
   selector: 'glm-pupitre-header',
@@ -13,7 +18,6 @@ export class PupitreHeader {
   readonly heading = input.required<string>();
   readonly connected = input.required<boolean>();
   readonly operateur = input<IdentiteOperateurDesigne>();
-  readonly refus = input<RefusDePointageVisible>();
-  readonly erreur = input<string>();
+  readonly message = input<MessageDAtelierVisible>();
   readonly finRequested = output();
 }

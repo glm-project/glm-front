@@ -1,4 +1,5 @@
 :host {
+  position: relative;
   display: flex;
   min-height: 0;
 }
@@ -55,7 +56,7 @@
 }
 
 .dialog-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 10;
   display: flex;

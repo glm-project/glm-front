@@ -1,11 +1,22 @@
+import type { EvenementDuJournal, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+
 interface DurablePupitreFixture {
   entreprise: string;
   geste: { id: string; dateDeSurvenue: string; operateurId: string };
 }
 
+interface EnrolledPupitreFixture {
+  readonly entreprise: string;
+  readonly referentiel: ReferentielDuPupitre;
+}
+
+interface StoredPupitreFixture extends EnrolledPupitreFixture {
+  readonly evenements: readonly EvenementDuJournal[];
+}
+
 export const pupitreTokenFixture = (entreprise: string): string => `header.${btoa(JSON.stringify({ tenant: entreprise }))}.signature`;
 
-const persistDurablePupitreFixture = (window: Cypress.AUTWindow, fixture: DurablePupitreFixture): Promise<void> =>
+const persistPupitreFixture = (window: Cypress.AUTWindow, fixture: StoredPupitreFixture): Promise<void> =>
   new Promise<void>((resolve, reject) => {
     const request = window.indexedDB.open('glm-pupitre', 1);
     request.onsuccess = () => {
@@ -27,18 +38,8 @@ const persistDurablePupitreFixture = (window: Cypress.AUTWindow, fixture: Durabl
       transaction.objectStore('documents').put(
         {
           connecte: true,
-          referentiel: { operateurs: [], suivis: [] },
-          evenements: [
-            {
-              etat: 'EN_ATTENTE',
-              geste: {
-                id: fixture.geste.id,
-                dateDeSurvenue: fixture.geste.dateDeSurvenue,
-                operateurId: fixture.geste.operateurId,
-                nature: 'ARRIVEE',
-              },
-            },
-          ],
+          referentiel: fixture.referentiel,
+          evenements: fixture.evenements,
         },
         `atelier:${fixture.entreprise}`,
       );
@@ -55,7 +56,27 @@ const persistDurablePupitreFixture = (window: Cypress.AUTWindow, fixture: Durabl
   });
 
 export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void => {
-  cy.window().then(window => persistDurablePupitreFixture(window, fixture));
+  cy.window().then(window =>
+    persistPupitreFixture(window, {
+      entreprise: fixture.entreprise,
+      referentiel: { operateurs: [], suivis: [] },
+      evenements: [
+        {
+          etat: 'EN_ATTENTE',
+          geste: {
+            id: fixture.geste.id,
+            dateDeSurvenue: fixture.geste.dateDeSurvenue,
+            operateurId: fixture.geste.operateurId,
+            nature: 'ARRIVEE',
+          },
+        },
+      ],
+    }),
+  );
+};
+
+export const givenEnrolledPupitreFixture = (fixture: EnrolledPupitreFixture): void => {
+  cy.window().then(window => persistPupitreFixture(window, { ...fixture, evenements: [] }));
 };
 
 export const clearPupitreStorageFixture = (): void => {

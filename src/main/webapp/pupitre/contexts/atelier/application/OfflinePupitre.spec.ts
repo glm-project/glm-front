@@ -13,6 +13,8 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
+import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from './OfflinePupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -22,6 +24,8 @@ const referenceFixture: ReferentielDuPupitre = {
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const identityRootFixture = '11111111-1111-4111-8111-111111111111';
+const futureIdentityRootFixture = '22222222-2222-4222-8222-222222222222';
 const refusalFixture = (code: string): RefusDePublication =>
   new RefusDePublication(
     `urn:glm:erreur:atelier:${code}`,
@@ -88,6 +92,21 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
   }
 }
 
+class ApplicationJournalFixture extends JournauxDuPupitreFixture {
+  readonly acceptedBatches: string[][] = [];
+
+  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
+    await super.append(entreprise, gestes);
+    this.acceptedBatches.push(
+      gestes.map(geste => {
+        if (geste.nature === 'ARRIVEE') return 'ARRIVEE';
+        if (geste.nature === 'PRESENCE') return geste.type;
+        return `${geste.type}:${geste.suiviId}:${geste.posteId ?? 'SANS_POSTE'}`;
+      }),
+    );
+  }
+}
+
 class ServerFixture extends AtelierExchangePort {
   reference = structuredClone(referenceFixture);
   failures: (Error | undefined)[] = [];
@@ -126,12 +145,12 @@ class ServerFixture extends AtelierExchangePort {
 
 describe('OfflinePupitre', () => {
   let pupitre: OfflinePupitre;
-  let journal: JournauxDuPupitreFixture;
+  let journal: ApplicationJournalFixture;
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
 
   beforeEach(async () => {
-    journal = new JournauxDuPupitreFixture();
+    journal = new ApplicationJournalFixture();
     serveur = new ServerFixture();
     authentication = new AuthenticationFixture();
     await givenCachedReference(referenceFixture);
@@ -155,15 +174,181 @@ describe('OfflinePupitre', () => {
     await thenQueueHas(3);
   });
 
-  it('should commit arrival and implicit resumption before the first activity, only once per window', async () => {
+  it('should commit arrival once and implicit resumption before each opening activity', async () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
     await whenPausing();
 
-    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'PRESENCE', 'POINTAGE', 'PRESENCE']);
     thenActivityIs('NON_CONFORMITE');
     await thenQueueHasUniqueStableIdentities();
+  });
+
+  it('should append every personal finish before departure as one global stop batch', async () => {
+    await givenTwoActiveWorkstations();
+
+    await whenStoppingEverything();
+
+    thenAcceptedBatchesAre([['ARRIVEE', 'FIN:piece-tour:tour', 'FIN:piece-fraiseuse:fraiseuse', 'DEPART']]);
+  });
+
+  it('should keep every activity unchanged and expose the local error when the global batch cannot be appended', async () => {
+    await givenTwoActiveWorkstations();
+    givenLocalWriteFailsOnce();
+
+    const stopping = whenStoppingEverything();
+
+    await thenFails(stopping, 'disque plein');
+    thenAllActivitiesRemain();
+    thenGlobalRecordingFailed();
+    thenAcceptedBatchesAre([]);
+  });
+
+  it('should decide a retained global stop from the window updated by an earlier capture', async () => {
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const pointage = whenStarting();
+    const stopping = whenStoppingEverything();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([pointage, stopping]);
+
+    thenNoActivity();
+    thenAcceptedBatchesAre([
+      ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
+      ['FIN:piece:tour', 'DEPART'],
+    ]);
+  });
+
+  it('should anchor global identities and the business time before its deferred capture starts', async () => {
+    givenBusinessTime();
+    await givenTwoActiveWorkstations();
+    const identityRoot = givenGlobalIdentityRoot();
+    const releaseCapture = givenDelayedCapture();
+
+    const stopping = whenStoppingEverything();
+    whenFutureIdentitiesUseAnotherRoot();
+    whenBusinessTimeBecomes('2026-09-05T09:00:00Z');
+    whenReleasingCapture(releaseCapture);
+    await stopping;
+
+    const identities = await thenQueuedGesturesUseRootAt(identityRoot, '2026-09-05T08:00:00.000Z');
+    await whenRestoring();
+    await thenQueuedIdentitiesAre(identities);
+  });
+
+  it('should refuse pointage and global reentry while a global acceptance is in flight', async () => {
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const stopping = whenStoppingEverything();
+    const pointage = whenPressingPrimaryTarget();
+    const pausing = whenPausingGlobally();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([stopping, pausing]);
+
+    thenPointageIsUnavailable(pointage);
+    thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
+    thenGlobalGesturesAreAvailable(true);
+  });
+
+  it('should refuse a prepared workstation choice and explicit presence while a global acceptance is in flight', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    const choice = whenPressingPrimaryTarget();
+    const releaseCapture = givenDelayedCapture();
+
+    const stopping = whenStoppingEverything();
+    const choosing = whenChoosingWorkstationLater(choice, 'tour');
+    const pausing = whenPausing();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([stopping, choosing, pausing]);
+
+    thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
+  });
+
+  it('should hide a finished window immediately while a global gesture waits for an earlier capture', async () => {
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const pointage = whenStarting();
+    const stopping = whenStoppingEverything();
+    thenGlobalGesturesAreAvailable(false);
+    const closing = whenClosing();
+
+    thenNoWindowPresentationRemains();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([pointage, stopping, closing]);
+
+    thenGlobalGesturesAreAvailable(true);
+    thenAcceptedBatchesAre([
+      ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
+      ['FIN:piece:tour', 'DEPART'],
+    ]);
+  });
+
+  it('should publish global rejection and recovery through its completion and public signals', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+
+    const pausing = whenPausingGlobally();
+    thenGlobalGesturesAreAvailable(false);
+    await thenFails(pausing, 'disque plein');
+
+    thenGlobalRecordingFailed();
+    thenGlobalGesturesAreAvailable(true);
+
+    const resuming = whenResumingGlobally();
+    thenGlobalGesturesAreAvailable(false);
+    await resuming;
+
+    thenGlobalRecordingRecovered();
+    thenGlobalGesturesAreAvailable(true);
+    thenAcceptedBatchesAre([['ARRIVEE', 'REPRISE']]);
+  });
+
+  it('should publish and clear a local presence failure through the common workshop message', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+
+    const pausing = whenPausing();
+    await thenFails(pausing, 'disque plein');
+    thenGlobalRecordingFailed();
+
+    await whenPausing();
+    thenGlobalRecordingRecovered();
+  });
+
+  it('should expose a refused finish from a global stop through one renderable workshop message', async () => {
+    await givenTwoActiveWorkstations();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+
+    await whenStoppingEverything();
+    await whenSynchronizing();
+
+    expect(pupitre.messageAtelier()).toEqual({
+      contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
+      message: 'cause conservee',
+    });
+  });
+
+  it('should clear the current refusal as soon as a new business intent starts', async () => {
+    await givenAnOpenWindow();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    await whenStarting();
+    await whenSynchronizing();
+    const releaseCapture = givenDelayedCapture();
+
+    const pausing = whenPausingGlobally();
+
+    try {
+      expect(pupitre.messageAtelier()).toBeUndefined();
+    } finally {
+      whenReleasingCapture(releaseCapture);
+    }
+    await pausing;
   });
 
   it('should reject a gesture explicitly if local commit fails and accept the next retry durably', async () => {
@@ -286,6 +471,46 @@ describe('OfflinePupitre', () => {
       undefined,
       refusalFixture('transition-de-presence-interdite'),
     );
+
+    await whenSynchronizing();
+
+    await thenPendingIs(0);
+    await thenRefusalIs('transition-de-presence-interdite');
+  });
+
+  it('should absorb an explicit resumption refusal after restart when its correlated arrival opened the day', async () => {
+    await givenAnOpenWindow();
+    await pupitre.recordPresence('REPRISE');
+    await whenSynchronizing();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, new Error('reseau absent'));
+
+    await whenSynchronizing();
+
+    pupitre = buildPupitre();
+    await pupitre.restore();
+    givenServerFailures(refusalFixture('transition-de-presence-interdite'));
+
+    await whenSynchronizing();
+
+    await thenPendingIs(0);
+    await thenDiagnosticsCountIs(0);
+  });
+
+  it('should retain an explicit resumption refusal after restart when arrival assurance found an open day', async () => {
+    await givenAnOpenWindow();
+    await pupitre.recordPresence('REPRISE');
+    await whenSynchronizing();
+    givenAuthorizedAccess();
+    givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
+
+    await whenSynchronizing();
+    await thenArrivalOpenedDay(false);
+    await thenPendingIs(1);
+
+    pupitre = buildPupitre();
+    await pupitre.restore();
+    givenServerFailures(refusalFixture('transition-de-presence-interdite'));
 
     await whenSynchronizing();
 
@@ -528,7 +753,7 @@ describe('OfflinePupitre', () => {
     await whenSynchronizing();
     await whenClosing();
 
-    await thenQueueHas(1);
+    await thenQueueHas(2);
     await thenPendingIs(0);
   });
 
@@ -563,7 +788,7 @@ describe('OfflinePupitre', () => {
 
     await thenOldCompanyPendingIs(3);
     thenNoWindowPresentationRemains();
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   });
 
   it('should refuse a capture before append when its operator window has been released during session I/O', async () => {
@@ -580,12 +805,19 @@ describe('OfflinePupitre', () => {
     await thenFails(pointage, 'fenetre operateur a change');
     await thenOldCompanyPendingIs(0);
     thenNoWindowPresentationRemains();
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   });
 
   const givenBusinessTime = (): void => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
+  };
+  const givenGlobalIdentityRoot = (): string => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(identityRootFixture);
+    return identityRootFixture;
+  };
+  const whenFutureIdentitiesUseAnotherRoot = (): void => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(futureIdentityRootFixture);
   };
   const givenDelayedCapture = (): (() => void) => {
     let release: (() => void) | undefined;
@@ -597,6 +829,9 @@ describe('OfflinePupitre', () => {
   };
   const whenSleepingPastDesignation = (): void => {
     vi.setSystemTime(new Date('2026-09-05T08:00:31Z'));
+  };
+  const whenBusinessTimeBecomes = (instant: string): void => {
+    vi.setSystemTime(new Date(instant));
   };
   const whenExpiring = (): Promise<void> => pupitre.expire();
   const whenReleasingCapture = (release: () => void): void => {
@@ -618,6 +853,8 @@ describe('OfflinePupitre', () => {
   const buildPupitre = (): OfflinePupitre =>
     Injector.create({
       providers: [
+        AcceptationLocaleDesGestes,
+        EtatHorsLigneDuPupitre,
         OfflinePupitre,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
@@ -646,12 +883,15 @@ describe('OfflinePupitre', () => {
   const whenStartingOn = (posteId: string): Promise<void> => {
     const execution = pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
     if (execution.kind === 'CHOIX_POSTE_REQUIS') return Promise.resolve().then(() => execution.choose(posteId));
-    return execution.completion;
+    return completionOf(execution);
   };
   const whenStartingAndReportingNonConformity = async (): Promise<void> => {
     await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
   };
   const whenPausing = (): Promise<void> => pupitre.recordPresence('PAUSE');
+  const whenPausingGlobally = (): Promise<void> => pupitre.executeGlobale('PAUSE');
+  const whenResumingGlobally = (): Promise<void> => pupitre.executeGlobale('REPRENDRE');
+  const whenStoppingEverything = (): Promise<void> => pupitre.executeGlobale('TOUT_ARRETER');
   const whenDeparting = (): Promise<void> => pupitre.recordPresence('DEPART');
   const whenSynchronizing = (): Promise<void> => pupitre.synchronize();
   const whenSynchronizingConcurrently = async (): Promise<void> => {
@@ -678,6 +918,29 @@ describe('OfflinePupitre', () => {
     await givenCachedReference({
       ...referenceFixture,
       operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
+    });
+    await givenAnOpenWindow();
+  };
+  const givenTwoActiveWorkstations = async (): Promise<void> => {
+    const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
+    const suivi = requiredFixture(referenceFixture.suivis[0], 'workshop element');
+    await givenCachedReference({
+      ...referenceFixture,
+      operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
+      suivis: [
+        {
+          ...suivi,
+          id: 'piece-tour',
+          nom: 'OF-tour',
+          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:00:00Z', posteId: 'tour' }],
+        },
+        {
+          ...suivi,
+          id: 'piece-fraiseuse',
+          nom: 'OF-fraiseuse',
+          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:30:00Z', posteId: 'fraiseuse' }],
+        },
+      ],
     });
     await givenAnOpenWindow();
   };
@@ -766,6 +1029,28 @@ describe('OfflinePupitre', () => {
   const thenQueueHas = async (count: number): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements).toHaveLength(count);
   };
+  const thenAcceptedBatchesAre = (batches: string[][]): void => {
+    expect(journal.acceptedBatches).toEqual(batches);
+  };
+  const thenAllActivitiesRemain = (): void => {
+    expect(pupitre.referentiel()?.suivis.flatMap(suivi => suivi.activites)).toHaveLength(2);
+  };
+  const thenGlobalRecordingFailed = (): void => {
+    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
+  };
+  const thenGlobalRecordingRecovered = (): void => {
+    expect(pupitre.messageAtelier()).toBeUndefined();
+  };
+  const thenGlobalGesturesAreAvailable = (available: boolean): void => {
+    expect(pupitre.gestesDisponibles()).toBe(available);
+  };
+  const thenPointageIsUnavailable = (execution: ReturnType<OfflinePupitre['execute']>): void => {
+    expect(execution).toEqual({ kind: 'INDISPONIBLE' });
+  };
+  const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
+    const arrival = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
+    expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
+  };
   const thenSemanticCaptureFails = async (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
     await expect(execution.completion).rejects.toThrow('disque plein');
@@ -775,11 +1060,11 @@ describe('OfflinePupitre', () => {
     await execution.completion;
   };
   const thenPointageRecordingFailedWithoutAdvancing = (): void => {
-    expect(pupitre.erreurPointage()).toBe('Pointage non enregistré — recommencez');
+    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
     expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(false);
   };
   const thenPointageRecordingRecoveredAndAdvanced = (): void => {
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
     expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(true);
   };
   const thenNoGestureExistsBeforeChoice = async (): Promise<void> => {
@@ -812,6 +1097,19 @@ describe('OfflinePupitre', () => {
     expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
+  const thenQueuedGesturesUseRootAt = async (rootIdentity: string, instant: string): Promise<string[]> => {
+    const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
+    const identities = gestes.map(geste => geste.id);
+    const rootPrefix = rootIdentity.slice(0, -8);
+    const firstSuffix = Number.parseInt(rootIdentity.slice(-8), 16);
+    const expected = [0, 1, 2, 3].map(offset => `${rootPrefix}${((firstSuffix + offset) >>> 0).toString(16).padStart(8, '0')}`);
+    expect(new Set(identities)).toEqual(new Set(expected));
+    expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
+    return identities;
+  };
+  const thenQueuedIdentitiesAre = async (identities: string[]): Promise<void> => {
+    expect((await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste.id)).toEqual(identities);
+  };
   const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<IdentiteOperateurDesigne>[]): string => {
     const accepted = openings.filter(result => result.status === 'fulfilled');
     const refused = openings.filter(result => result.status === 'rejected');
@@ -820,7 +1118,9 @@ describe('OfflinePupitre', () => {
     return requiredFixture(accepted[0], 'accepted opening').value.id;
   };
   const thenPresenceBelongsTo = (operateurId: string): void => {
-    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false })]);
+    expect(serveur.journal.filter(geste => geste.nature === 'PRESENCE')).toEqual([
+      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false }),
+    ]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
     await Promise.all([thenFails(opening, 'deja ouverte'), thenFails(pointage, 'habilitations')]);
@@ -863,14 +1163,12 @@ describe('OfflinePupitre', () => {
   const thenTheWindowPresentationIsPopulated = (): void => {
     expect(pupitre.operateur()).toBeDefined();
     expect(pupitre.pointage()).toBeDefined();
-    expect(pupitre.refusPointage()).toEqual({ numero: 'OF-1', message: 'cause conservee' });
-    expect(pupitre.erreurPointage()).toBe('Pointage non enregistré — recommencez');
+    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
   };
   const thenNoWindowPresentationRemains = (): void => {
     expect(pupitre.operateur()).toBeUndefined();
     expect(pupitre.pointage()).toBeUndefined();
-    expect(pupitre.refusPointage()).toBeUndefined();
-    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(Error);

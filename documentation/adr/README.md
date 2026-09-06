@@ -48,3 +48,5 @@ renumbers at merge time. The status below is the living one — update this line
   invariants and pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
   **Accepted** — contextual readability rules and a narrowly scoped presentation-effect exception
+- [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — **Accepted** — a
+  conjunctive production tripwire for stateful coordinators, with responsibility review at the enforcement point

@@ -1,15 +1,8 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
-
-interface TouchPointFixture {
-  x: number;
-  y: number;
-}
+import { holdTouchFixture, releaseTouchFixture, touchFixture } from '../../../utils/TouchscreenFixture';
 
 const longCodeFixture = '0123456789'.repeat(5);
-
-const dispatchTouchFixture = (type: string, touchPoints: TouchPointFixture[]): Promise<void> =>
-  Cypress.automation('remote:debugger:protocol', { command: 'Input.dispatchTouchEvent', params: { type, touchPoints } });
 
 describe('Designation keypad in a browser', () => {
   beforeEach(() => {
@@ -148,23 +141,13 @@ describe('Designation keypad in a browser', () => {
     cy.get(dataSelector('designation'));
   };
   const whenHolding = (selector: string): void => {
-    cy.get(dataSelector(selector)).then(element => {
-      const rect = requiredFixture(element[0], 'pressed element').getBoundingClientRect();
-      const topWindow = requiredFixture(window.top, 'Cypress top window');
-      const frame = requiredFixture(topWindow.document.querySelector<HTMLIFrameElement>('iframe.aut-iframe'), 'Cypress application frame');
-      const viewport = frame.getBoundingClientRect();
-      const scale = viewport.width / frame.clientWidth;
-      return dispatchTouchFixture('touchStart', [
-        { x: viewport.x + (rect.x + rect.width / 2) * scale, y: viewport.y + (rect.y + rect.height / 2) * scale },
-      ]);
-    });
+    holdTouchFixture(dataSelector(selector));
   };
   const whenReleasing = (): void => {
-    cy.then(() => dispatchTouchFixture('touchEnd', []));
+    releaseTouchFixture();
   };
   const whenTouching = (selector: string): void => {
-    whenHolding(selector);
-    whenReleasing();
+    touchFixture(dataSelector(selector));
   };
   const thenCodeIs = (code: string): void => {
     cy.get(dataSelector('code')).should(display => {
@@ -172,6 +155,6 @@ describe('Designation keypad in a browser', () => {
     });
   };
   const thenJeanIsDesignated = (): void => {
-    cy.get(dataSelector('designated-identity')).should('have.text', 'Jean Dupont');
+    cy.get(dataSelector('header-operator')).should('contain.text', 'Dupont Jean');
   };
 });

@@ -1,0 +1,20 @@
+<glm-pupitre-header
+  heading="glmfront"
+  [connected]="pupitre.connected()"
+  [operateur]="pupitre.operateur()"
+  [message]="messageAtelier()"
+  (finRequested)="finish()"
+/>
+
+@if (pupitre.referentiel()) { @if (pupitre.operateur()) { @if (pupitre.pointage(); as vue) {
+<glm-pointage
+  [vue]="vue"
+  [commander]="pupitre"
+  [gestesDisponibles]="pupitre.gestesDisponibles()"
+  (pauseRequested)="executeGlobale('PAUSE')"
+  (repriseRequested)="executeGlobale('REPRENDRE')"
+  (arretTotalRequested)="executeGlobale('TOUT_ARRETER')"
+/>
+} } @else {
+<glm-designation />
+} }

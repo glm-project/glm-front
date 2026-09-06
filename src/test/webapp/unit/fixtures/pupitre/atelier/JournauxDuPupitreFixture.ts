@@ -46,11 +46,12 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly entreprises = new Map<string, JournalDuPupitre>();
   private readonly tails = new Map<string, Promise<unknown>>();
   private nextAppendBarrier: AppendBarrier | undefined;
+  private readsImmediately = false;
   failWrite = false;
   afterRead: (() => void) | undefined;
 
   override async read(entreprise: string): Promise<JournalDuPupitre> {
-    await answerOnNextTask();
+    if (!this.readsImmediately) await answerOnNextTask();
     const state = structuredClone(this.entreprises.get(entreprise) ?? EMPTY_JOURNAL_DU_PUPITRE);
     this.afterRead?.();
     this.afterRead = undefined;
@@ -94,6 +95,12 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     const barrier = appendBarrier();
     this.nextAppendBarrier = barrier;
     return { started: barrier.started, release: barrier.release };
+  }
+  seedReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): void {
+    this.entreprises.set(entreprise, { ...structuredClone(EMPTY_JOURNAL_DU_PUPITRE), referentiel: structuredClone(referentiel) });
+  }
+  answerReadsImmediately(): void {
+    this.readsImmediately = true;
   }
   private async update(entreprise: string, change: (state: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
     await answerOnNextTask();
