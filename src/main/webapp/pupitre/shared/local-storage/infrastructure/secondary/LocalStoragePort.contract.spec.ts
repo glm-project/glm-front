@@ -1,7 +1,8 @@
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
-import { IDBFactory, IDBObjectStore, IDBRequest } from 'fake-indexeddb';
+import { IDBDatabase, IDBFactory, IDBObjectStore, IDBRequest, IDBTransaction } from 'fake-indexeddb';
+import { MockInstance, vi } from 'vitest';
 import { IndexedDbLocalStorage } from './IndexedDbLocalStorage';
 
 const adapters = [['IndexedDB', () => new IndexedDbLocalStorage()]] as const;
@@ -11,6 +12,33 @@ interface SynchronizationFixture {
   release: SignalFixture;
   chronology: string[];
 }
+
+const givenTheBrowserAbortsReads = (): void => {
+  const descriptor = Object.getOwnPropertyDescriptor(IDBObjectStore.prototype, 'get');
+  const get: unknown = descriptor?.value;
+  if (typeof get !== 'function') throw new Error('IndexedDB get is unavailable');
+  vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(function (this: IDBObjectStore, key: IDBValidKey | IDBKeyRange) {
+    const request: unknown = Reflect.apply(get, this, [key]);
+    if (!(request instanceof IDBRequest)) throw new Error('IndexedDB get returned no request');
+    queueMicrotask(() => request.transaction?.abort());
+    return request;
+  });
+};
+
+const givenTheBrowserAbortsWrites = (): void => {
+  const descriptor = Object.getOwnPropertyDescriptor(IDBObjectStore.prototype, 'put');
+  const put: unknown = descriptor?.value;
+  if (typeof put !== 'function') throw new Error('IndexedDB put is unavailable');
+  vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, value: unknown, key?: IDBValidKey) {
+    const request: unknown = Reflect.apply(put, this, [value, key]);
+    if (!(request instanceof IDBRequest)) throw new Error('IndexedDB put returned no request');
+    const typedRequest = request as IDBRequest<IDBValidKey>;
+    queueMicrotask(() => typedRequest.transaction?.abort());
+    return typedRequest;
+  });
+};
+
+const givenAbortSpy = (): MockInstance => vi.spyOn(IDBTransaction.prototype, 'abort');
 
 describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, buildStockage) => {
   let stockage: LocalStoragePort;
@@ -43,10 +71,13 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
 
   it('should leave the committed queue untouched when a local update fails', async () => {
     await givenACommittedQueue();
+    const abortSpy = givenAbortSpy();
 
     const failed = whenTheLocalUpdateFails();
 
-    await thenItFails(failed, 'disque');
+    const error = await thenItFails(failed, 'disque');
+    thenItHasACause(error, new Error('disque'));
+    thenTransactionWasAborted(abortSpy);
     await thenItContains(stockage, 'atelier-a', ['premier']);
   });
 
@@ -93,7 +124,17 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
 
     const failed = whenReadingTheQueue();
 
-    await thenItFails(failed, 'Transaction locale interrompue');
+    const error = await thenItFails(failed, 'Transaction locale interrompue');
+    thenItHasACause(error);
+  });
+
+  it('should fail explicitly when the browser aborts writing to the local queue', async () => {
+    givenTheBrowserAbortsWrites();
+
+    const failed = whenRecording('atelier-a', ['nouveau']);
+
+    const error = await thenItFails(failed, 'Transaction locale interrompue');
+    thenItHasACause(error);
   });
 
   it('should refuse to read a database created by a newer version of the application', async () => {
@@ -101,7 +142,17 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
 
     const failed = whenReadingTheQueue();
 
-    await thenItFails(failed, 'Stockage local inaccessible');
+    const error = await thenItFails(failed, 'Stockage local inaccessible');
+    thenItHasACause(error);
+  });
+
+  it('should allow concurrent locks on different keys', async () => {
+    const { firstEntered, secondEntered, releaseBoth } = givenConcurrentLockSignals();
+
+    const operations = whenAcquiringLocksOnDifferentKeys(stockage, buildStockage(), firstEntered, secondEntered, releaseBoth);
+
+    await thenBothLocksAreActiveConcurrently(firstEntered, secondEntered);
+    await whenReleasingConcurrentLocks(releaseBoth, operations);
   });
 
   const givenACommittedQueue = (): Promise<string[]> => whenRecording('atelier-a', ['premier']);
@@ -117,6 +168,11 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     release: new SignalFixture(),
     chronology: [],
   });
+  const givenConcurrentLockSignals = () => ({
+    firstEntered: new SignalFixture(),
+    secondEntered: new SignalFixture(),
+    releaseBoth: new SignalFixture(),
+  });
 
   const thenOnlyTheFirstTabRunsUntilReleased = async (
     chronology: string[],
@@ -129,17 +185,6 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     } finally {
       await whenReleasingTheTabs(release, first, second);
     }
-  };
-  const givenTheBrowserAbortsReads = (): void => {
-    const descriptor = Object.getOwnPropertyDescriptor(IDBObjectStore.prototype, 'get');
-    const get: unknown = descriptor?.value;
-    if (typeof get !== 'function') throw new Error('IndexedDB get is unavailable');
-    vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(function (this: IDBObjectStore, key: IDBValidKey | IDBKeyRange) {
-      const request: unknown = Reflect.apply(get, this, [key]);
-      if (!(request instanceof IDBRequest)) throw new Error('IndexedDB get returned no request');
-      queueMicrotask(() => request.transaction?.abort());
-      return request;
-    });
   };
   const givenANewerDatabase = (): Promise<void> =>
     new Promise<void>((resolve, reject) => {
@@ -179,6 +224,26 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
       await new Promise(resolve => setTimeout(resolve));
       chronology.push('second completed');
     });
+  const whenAcquiringLocksOnDifferentKeys = (
+    firstStore: LocalStoragePort,
+    secondStore: LocalStoragePort,
+    firstEntered: SignalFixture,
+    secondEntered: SignalFixture,
+    releaseBoth: SignalFixture,
+  ): [Promise<void>, Promise<void>] => [
+    firstStore.lock('cle-1', async () => {
+      firstEntered.release();
+      await releaseBoth.promise;
+    }),
+    secondStore.lock('cle-2', async () => {
+      secondEntered.release();
+      await releaseBoth.promise;
+    }),
+  ];
+  const whenReleasingConcurrentLocks = async (releaseBoth: SignalFixture, operations: [Promise<void>, Promise<void>]): Promise<void> => {
+    releaseBoth.release();
+    await Promise.all(operations);
+  };
   const whenTheFirstTabHasEntered = (entered: SignalFixture): Promise<void> => entered.promise;
   const whenTheSecondTabHasHadATurnToEnter = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
   const whenReleasingTheTabs = async (release: SignalFixture, ...operations: Promise<void>[]): Promise<void> => {
@@ -193,13 +258,133 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
   const thenTabsCompletedInOrder = (chronology: string[]): void => {
     expect(chronology).toEqual(['first entered', 'first completed', 'second entered', 'second completed']);
   };
+  const thenBothLocksAreActiveConcurrently = async (firstEntered: SignalFixture, secondEntered: SignalFixture): Promise<void> => {
+    await Promise.all([firstEntered.promise, secondEntered.promise]);
+    expect(firstEntered).toBeDefined();
+    expect(secondEntered).toBeDefined();
+  };
   const thenItContains = async (store: LocalStoragePort, key: string, value: unknown): Promise<void> => {
     expect(await store.read(key)).toEqual(value);
   };
-  const thenItFails = async (failed: Promise<unknown>, message: string): Promise<void> => {
-    await expect(failed).rejects.toThrow(message);
+  const thenItFails = async (failed: Promise<unknown>, message: string): Promise<Error> => {
+    let captured: unknown;
+    try {
+      await failed;
+    } catch (failure: unknown) {
+      captured = failure;
+    }
+    expect(captured).toBeInstanceOf(Error);
+    const error = captured as Error;
+    expect(error.message).toContain(message);
+    return error;
+  };
+  const thenItHasACause = (error: Error, expectedCause?: unknown): void => {
+    expect(error.cause).toBeDefined();
+    if (expectedCause !== undefined) {
+      expect(error.cause).toEqual(expectedCause);
+    }
+  };
+  const thenTransactionWasAborted = (abortSpy: MockInstance): void => {
+    expect(abortSpy).toHaveBeenCalled();
   };
   const thenItCompleted = (value: string): void => {
     expect(value).toBe('termine');
+  };
+});
+
+describe('IndexedDbLocalStorage, beyond the contract', () => {
+  let stockage: IndexedDbLocalStorage;
+
+  beforeEach(() => {
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    vi.stubGlobal('navigator', { locks: new BrowserLocksFixture() });
+    stockage = new IndexedDbLocalStorage();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('should create the documents object store on upgrade', async () => {
+    await whenReadingUnsetKey(stockage, 'cle-inexistante');
+
+    await thenDatabaseContainsStore('glm-pupitre', 'documents');
+  });
+
+  it('should request strict durability on write transactions', async () => {
+    const txSpy = givenTransactionSpy();
+
+    await whenWriting(stockage, 'cle-1', 'valeur');
+
+    thenTransactionHadStrictDurability(txSpy);
+  });
+
+  it('should close the database connection after reading', async () => {
+    const closeSpy = givenCloseSpy();
+
+    await whenReadingUnsetKey(stockage, 'cle-1');
+
+    thenDatabaseWasClosed(closeSpy);
+  });
+
+  it('should close the database connection when read aborts', async () => {
+    const closeSpy = givenCloseSpy();
+    givenTheBrowserAbortsReads();
+
+    await whenReadingFails(stockage, 'cle-1');
+
+    thenDatabaseWasClosed(closeSpy);
+  });
+
+  it('should close the database connection after updating', async () => {
+    const closeSpy = givenCloseSpy();
+
+    await whenWriting(stockage, 'cle-1', 'valeur');
+
+    thenDatabaseWasClosed(closeSpy);
+  });
+
+  it('should close the database connection when update aborts', async () => {
+    const closeSpy = givenCloseSpy();
+    givenTheBrowserAbortsWrites();
+
+    await whenWritingFails(stockage, 'cle-1');
+
+    thenDatabaseWasClosed(closeSpy);
+  });
+
+  const givenTransactionSpy = (): MockInstance => vi.spyOn(IDBDatabase.prototype, 'transaction');
+  const givenCloseSpy = (): MockInstance => vi.spyOn(IDBDatabase.prototype, 'close');
+  const whenReadingUnsetKey = (store: IndexedDbLocalStorage, key: string): Promise<unknown> => store.read(key);
+  const whenWriting = (store: IndexedDbLocalStorage, key: string, value: string): Promise<string> => store.update(key, '', () => value);
+  const whenReadingFails = async (store: IndexedDbLocalStorage, key: string): Promise<void> => {
+    await store.read(key).catch(() => undefined);
+  };
+  const whenWritingFails = async (store: IndexedDbLocalStorage, key: string): Promise<void> => {
+    await store.update(key, '', () => 'valeur').catch(() => undefined);
+  };
+  const thenDatabaseContainsStore = (databaseName: string, storeName: string): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(databaseName, 1);
+      request.onsuccess = () => {
+        try {
+          expect(request.result.objectStoreNames.contains(storeName)).toBe(true);
+          request.result.close();
+          resolve();
+        } catch (error: unknown) {
+          request.result.close();
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      };
+      request.onerror = () => {
+        reject(new Error('Erreur ouverture'));
+      };
+    });
+  const thenTransactionHadStrictDurability = (txSpy: MockInstance): void => {
+    expect(txSpy).toHaveBeenCalledWith('documents', 'readwrite', { durability: 'strict' });
+  };
+  const thenDatabaseWasClosed = (closeSpy: MockInstance): void => {
+    expect(closeSpy).toHaveBeenCalled();
   };
 });
