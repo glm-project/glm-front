@@ -27,7 +27,7 @@ actual action. The prepared capture chooses its arrival only when it executes in
 successful durable acceptance advances the window. This preserves the first-pointage race and disk-failure
 semantics without giving the domain an asynchronous storage dependency.
 
-`PupitreReplayPolicy` owns the contextual exceptions and the single concurrency retry. Both online adapters and
+`GesteReplayPolicy` owns the contextual exceptions and the single concurrency retry. The HTTP exchange adapter and
 offline synchronization use its decisions. A transport remains responsible for translating HTTP failures;
 the HTTP adapter supplies an optional normalized workshop refusal motif alongside the original diagnostic
 code. The replay policy compares only this domain motif and never constructs or parses transport URNs;
@@ -37,8 +37,8 @@ an unknown offline business URN is retained verbatim and cannot accidentally mat
 exchanges, FIFO processing, aggregate rereads and reference refreshes. Their callbacks publish snapshots;
 only the capture coordinator decides when a snapshot becomes visible to the operator.
 
-`PupitreJournalPort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
-`LocalPupitreJournal` owns the document layout and delegates durable transactions and locks to
+`JournauxDuPupitrePort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
+`IndexedDbJournauxDuPupitre` owns the document layout and delegates durable transactions and locks to
 `LocalStoragePort`. Its session lock is the existing authentication lock; changing the application port does
 not create an independent lock that would let a credential commit overlap an outgoing gesture.
 

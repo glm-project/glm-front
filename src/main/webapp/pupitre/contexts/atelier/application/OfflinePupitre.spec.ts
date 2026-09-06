@@ -1,12 +1,17 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { EMPTY_PUPITRE, LocalGeste, OperateurDuPupitre, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
-import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  GesteDAtelier,
+  OperateurDuPupitre,
+  ReferentielDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
+import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
-import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { OfflinePupitre } from './OfflinePupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
@@ -16,9 +21,9 @@ const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
-const arriveeFixture: LocalGeste = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
-const refusalFixture = (code: string): RefusDuPupitre =>
-  new RefusDuPupitre(
+const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const refusalFixture = (code: string): RefusDePublication =>
+  new RefusDePublication(
     `urn:glm:erreur:atelier:${code}`,
     'cause conservee',
     CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code),
@@ -53,11 +58,11 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
   }
 }
 
-class ServerFixture extends PupitreServerPort {
+class ServerFixture extends AtelierExchangePort {
   reference = structuredClone(referenceFixture);
   failures: (Error | undefined)[] = [];
   cacheFailure: Error | undefined;
-  readonly journal: LocalGeste[] = [];
+  readonly journal: GesteDAtelier[] = [];
   readonly chronology: string[] = [];
   beforeSend: (() => void) | undefined;
   afterReread: (() => void) | undefined;
@@ -71,7 +76,7 @@ class ServerFixture extends PupitreServerPort {
     }
     return this.reference;
   }
-  override async send(geste: LocalGeste): Promise<void> {
+  override async send(geste: GesteDAtelier): Promise<void> {
     await roundTrip();
     this.chronology.push(geste.id);
     this.beforeSend?.();
@@ -91,12 +96,12 @@ class ServerFixture extends PupitreServerPort {
 
 describe('OfflinePupitre', () => {
   let pupitre: OfflinePupitre;
-  let journal: PupitreJournalFixture;
+  let journal: JournauxDuPupitreFixture;
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
 
   beforeEach(async () => {
-    journal = new PupitreJournalFixture();
+    journal = new JournauxDuPupitreFixture();
     serveur = new ServerFixture();
     authentication = new AuthenticationFixture();
     await givenCachedReference(referenceFixture);
@@ -488,8 +493,8 @@ describe('OfflinePupitre', () => {
       providers: [
         OfflinePupitre,
         PupitreSynchronization,
-        { provide: PupitreJournalPort, useValue: journal },
-        { provide: PupitreServerPort, useValue: serveur },
+        { provide: JournauxDuPupitrePort, useValue: journal },
+        { provide: AtelierExchangePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
       ],
@@ -655,7 +660,7 @@ describe('OfflinePupitre', () => {
   const thenConnectedIs = (connected: boolean): void => {
     expect(pupitre.connected()).toBe(connected);
   };
-  const thenJournalIs = (gestes: LocalGeste[]): void => {
+  const thenJournalIs = (gestes: GesteDAtelier[]): void => {
     expect(serveur.journal).toEqual(gestes);
   };
   const thenChronologyIs = (events: string[]): void => {
@@ -676,7 +681,7 @@ describe('OfflinePupitre', () => {
     expect(requiredFixture(pupitre.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);
   };
   const thenNoCompanyBData = async (): Promise<void> => {
-    expect(await journal.read('entreprise-b')).toEqual(EMPTY_PUPITRE);
+    expect(await journal.read('entreprise-b')).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   };
   const thenNoReference = (): void => {
     expect(pupitre.referentiel()).toBeUndefined();

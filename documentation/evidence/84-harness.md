@@ -102,13 +102,13 @@ execution timing. Mutation is deliberately absent from the per-push validation g
 ## Production offline browser proof
 
 The normal optimized pupitre bundle is served unchanged. A separate same-origin fixture bundle seeds and reads
-through `PupitreJournalPort`; it does not replace the production bootstrap or know private IndexedDB keys.
+through `JournauxDuPupitrePort`; it does not replace the production bootstrap or know private IndexedDB keys.
 The test waits for actual service-worker activation and control of a fresh production document. It disables
 HTTP caching, disconnects both the Chrome page and service-worker targets, and proves the same uncached probe
 succeeds online, fails offline and succeeds after restoration. A fresh controlled-client request also fails offline.
 The network restoration deliberately reconnects the worker before the page. The fixture server then retains
 the gesture response without deduplicating requests. After both network probes succeed, the test releases that
-response, waits for the production synchronization lock through `PupitreJournalPort`, and observes the durable
+response, waits for the production synchronization lock through `JournauxDuPupitrePort`, and observes the durable
 `ACCEPTE` state before restarting. This distinguishes server receipt from client acknowledgement without a sleep.
 
 During two offline document restarts, the production shell boots, shows disconnected state, and the public

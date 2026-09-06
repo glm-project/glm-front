@@ -1,7 +1,7 @@
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
-} from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
+} from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { TestBed } from '@angular/core/testing';
 import { TimerDesignationExpirationScheduler } from './TimerDesignationExpirationScheduler';
 

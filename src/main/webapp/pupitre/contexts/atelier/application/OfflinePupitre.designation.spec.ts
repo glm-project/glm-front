@@ -4,25 +4,29 @@ import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/P
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
-} from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { EMPTY_PUPITRE, LocalPupitreState, OperateurDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
+} from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  JournalDuPupitre,
+  OperateurDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { TestBed } from '@angular/core/testing';
-import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 
 const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
 
-const referenceFixture: LocalPupitreState = {
-  ...EMPTY_PUPITRE,
+const referenceFixture: JournalDuPupitre = {
+  ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: referentielFixture,
 };
 
-class DesignationJournalFixture extends PupitreJournalFixture {
-  answer: Promise<LocalPupitreState> | undefined;
+class DesignationJournalFixture extends JournauxDuPupitreFixture {
+  answer: Promise<JournalDuPupitre> | undefined;
   readStarted: Promise<void> = Promise.resolve();
   private notifyRead: () => void = () => undefined;
 
@@ -31,7 +35,7 @@ class DesignationJournalFixture extends PupitreJournalFixture {
       this.notifyRead = resolve;
     });
   }
-  override read(): Promise<LocalPupitreState> {
+  override read(): Promise<JournalDuPupitre> {
     this.notifyRead();
     const answer = this.answer;
     this.answer = undefined;
@@ -67,8 +71,8 @@ describe('Designation du pupitre', () => {
       providers: [
         OfflinePupitre,
         PupitreSynchronization,
-        { provide: PupitreJournalPort, useValue: journal },
-        { provide: PupitreServerPort, useValue: {} },
+        { provide: JournauxDuPupitrePort, useValue: journal },
+        { provide: AtelierExchangePort, useValue: {} },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
         {
           provide: AuthenticationPort,
@@ -291,9 +295,9 @@ describe('Designation du pupitre', () => {
   const whenDestroying = (): void => {
     TestBed.resetTestingModule();
   };
-  const givenDelayedResolution = (): ((state: LocalPupitreState) => void) => {
+  const givenDelayedResolution = (): ((state: JournalDuPupitre) => void) => {
     journal.delayRead();
-    let resolve!: (state: LocalPupitreState) => void;
+    let resolve!: (state: JournalDuPupitre) => void;
     journal.answer = new Promise(answer => {
       resolve = answer;
     });
@@ -307,7 +311,7 @@ describe('Designation du pupitre', () => {
     });
     return reject;
   };
-  const whenAnswering = (resolve: (state: LocalPupitreState) => void): void => {
+  const whenAnswering = (resolve: (state: JournalDuPupitre) => void): void => {
     resolve(referenceFixture);
   };
   const whenRejecting = (reject: (reason: Error) => void): void => {
