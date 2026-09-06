@@ -1,13 +1,17 @@
 import { authProvider } from '@/pupitre/auth.provider';
-import { LocalGeste, LocalPupitreState, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+import {
+  GesteDAtelier,
+  JournalDuPupitre,
+  ReferentielDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { offlineProvider } from '@/pupitre/offline.provider';
 import { enableProdMode } from '@angular/core';
 import { createApplication } from '@angular/platform-browser';
 
 export interface ProductionPupitreFixture {
-  prepare(entreprise: string, referentiel: ReferentielDuPupitre, geste: LocalGeste): Promise<void>;
-  read(entreprise: string): Promise<LocalPupitreState>;
+  prepare(entreprise: string, referentiel: ReferentielDuPupitre, geste: GesteDAtelier): Promise<void>;
+  read(entreprise: string): Promise<JournalDuPupitre>;
   waitForSynchronization(): Promise<void>;
 }
 
@@ -21,7 +25,7 @@ enableProdMode();
 
 createApplication({ providers: [authProvider, offlineProvider] })
   .then(application => {
-    const journal = application.injector.get(PupitreJournalPort);
+    const journal = application.injector.get(JournauxDuPupitrePort);
     window.pupitreProductionFixture = {
       prepare: async (entreprise, referentiel, geste) => {
         await journal.saveReferentiel(entreprise, referentiel);

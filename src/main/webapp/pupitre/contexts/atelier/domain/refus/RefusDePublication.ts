@@ -1,6 +1,6 @@
 import { CodeDeRefusDAtelier } from './RefusDAtelier';
 
-export class RefusDuPupitre extends Error {
+export class RefusDePublication extends Error {
   constructor(
     readonly code: string,
     message: string,

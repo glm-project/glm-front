@@ -1,8 +1,8 @@
-import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from '../journal/LocalPupitreState';
+import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
 
-const referenceFixture: LocalPupitreState = {
-  ...EMPTY_PUPITRE,
+const referenceFixture: JournalDuPupitre = {
+  ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
     suivis: [],
@@ -85,7 +85,7 @@ describe('DesignationOperateur', () => {
   const whenCheckingExpiration = (now: number): void => {
     designation.expire(now);
   };
-  const whenPreparingPointage = (now: number): (() => LocalGeste[]) =>
+  const whenPreparingPointage = (now: number): (() => GesteDAtelier[]) =>
     designation.requireWindow(now).preparePointage({ suiviId: 'piece', type: 'DEBUT' }, identityFixture);
   const thenPointageIsRefusedAt = (now: number): void => {
     expect(() => whenPreparingPointage(now)).toThrow('Aucune fenetre operateur ouverte.');
@@ -100,7 +100,7 @@ describe('DesignationOperateur', () => {
     expect(designation.snapshot().code).toBe(code);
     expect(designation.snapshot().unknownCode).toBe(false);
   };
-  const thenPreparedPointageBelongsToJean = (capture: () => LocalGeste[]): void => {
+  const thenPreparedPointageBelongsToJean = (capture: () => GesteDAtelier[]): void => {
     expect(capture()).toContainEqual({
       ...identityFixture(),
       suiviId: 'piece',

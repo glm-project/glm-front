@@ -5,9 +5,9 @@ import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
 } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
-import { EMPTY_PUPITRE, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
+import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { setTimeout as roundTrip } from 'node:timers';
@@ -18,8 +18,8 @@ interface KeyFixture {
   repeat?: boolean;
 }
 
-const referenceFixture: LocalPupitreState = {
-  ...EMPTY_PUPITRE,
+const referenceFixture: JournalDuPupitre = {
+  ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: { operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }], suivis: [] },
 };
 
@@ -38,7 +38,7 @@ class DesignationJournalFixture {
     return this.readCompleted;
   }
 
-  read(): Promise<LocalPupitreState> {
+  read(): Promise<JournalDuPupitre> {
     const notify = this.notifyReadCompleted;
     return new Promise(resolve =>
       roundTrip(() => {
@@ -77,8 +77,8 @@ describe('Designation keypad', () => {
           provide: AuthenticationPort,
           useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
         },
-        { provide: PupitreJournalPort, useValue: journalFixture },
-        { provide: PupitreServerPort, useValue: serveurFixture },
+        { provide: JournauxDuPupitrePort, useValue: journalFixture },
+        { provide: AtelierExchangePort, useValue: serveurFixture },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
       ],
     });

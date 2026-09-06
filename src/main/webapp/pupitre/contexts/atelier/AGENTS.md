@@ -10,10 +10,13 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 **Fenêtre opérateur** : période temporaire pendant laquelle un opérateur reste désigné pour enchaîner des gestes. Elle se termine après inactivité ou par l'action « J'ai fini »; ce n'est pas une session de connexion.
 
+**Journal du pupitre** : document durable propre à une entreprise, qui conserve le dernier référentiel complet, les gestes dans leur ordre d'acceptation locale, leur résultat de publication et l'état de connexion observé. C'est la racine de cohérence locale; le référentiel qu'il contient reste un modèle de lecture et non un agrégat du pupitre.
+
 ## Responsabilités et invariants
 
 - La saisie, la validation et l'expiration de la désignation, ainsi que les gestes permis pendant la fenêtre, appartiennent au domaine.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
+- Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
 - Un geste conserve l'opérateur, l'identifiant et l'heure fixés à son initiation.
 - Une référence incomplète ou un échec de rafraîchissement ne remplace jamais la dernière référence complète.
 

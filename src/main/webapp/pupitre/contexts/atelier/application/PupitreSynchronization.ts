@@ -1,18 +1,23 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { EMPTY_PUPITRE, LocalEvent, LocalGeste, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
-import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/journal/PupitreReplayPolicy';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/refus/RefusDuPupitre';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementDuJournal,
+  GesteDAtelier,
+  JournalDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { inject, Injectable } from '@angular/core';
 
-type PupitrePublisher = (entreprise: string | undefined, state: LocalPupitreState) => void;
+type PupitrePublisher = (entreprise: string | undefined, state: JournalDuPupitre) => void;
 
 @Injectable()
 export class PupitreSynchronization {
   private readonly authentication = inject(AuthenticationPort);
-  private readonly journal = inject(PupitreJournalPort);
-  private readonly serveur = inject(PupitreServerPort);
+  private readonly journal = inject(JournauxDuPupitrePort);
+  private readonly serveur = inject(AtelierExchangePort);
   private synchronization: Promise<void> | undefined;
   private synchronizationRequested = false;
 
@@ -38,7 +43,7 @@ export class PupitreSynchronization {
     await this.authentication.synchronizeSession();
     const selected = this.authentication.currentTenant();
     if (selected === undefined) {
-      publish(undefined, EMPTY_PUPITRE);
+      publish(undefined, EMPTY_JOURNAL_DU_PUPITRE);
       return;
     }
     publish(selected, await this.journal.read(selected));
@@ -82,7 +87,11 @@ export class PupitreSynchronization {
     }
   }
 
-  private async replay(entreprise: string, evenement: LocalEvent, publish: PupitrePublisher): Promise<LocalEvent | undefined> {
+  private async replay(
+    entreprise: string,
+    evenement: EvenementDuJournal,
+    publish: PupitrePublisher,
+  ): Promise<EvenementDuJournal | undefined> {
     try {
       await this.journal.withSession(async () => {
         await this.authentication.synchronizeSession();
@@ -90,7 +99,7 @@ export class PupitreSynchronization {
       });
       return { ...evenement, etat: 'ACCEPTE' };
     } catch (failure: unknown) {
-      if (failure instanceof RefusDuPupitre) {
+      if (failure instanceof RefusDePublication) {
         return { ...evenement, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
       }
       await this.markDisconnected(entreprise, publish);
@@ -102,11 +111,11 @@ export class PupitreSynchronization {
     publish(entreprise, await this.journal.markDisconnected(entreprise));
   }
 
-  private async saveReplay(entreprise: string, result: LocalEvent, publish: PupitrePublisher): Promise<void> {
+  private async saveReplay(entreprise: string, result: EvenementDuJournal, publish: PupitrePublisher): Promise<void> {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: string, geste: LocalGeste): Promise<void> {
+  private async push(entreprise: string, geste: GesteDAtelier): Promise<void> {
     try {
       this.requireExchange(entreprise);
       await this.serveur.send(geste);
@@ -119,7 +128,7 @@ export class PupitreSynchronization {
     }
   }
 
-  private async retryAfterConcurrence(entreprise: string, geste: LocalGeste): Promise<void> {
+  private async retryAfterConcurrence(entreprise: string, geste: GesteDAtelier): Promise<void> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
@@ -128,7 +137,7 @@ export class PupitreSynchronization {
     });
   }
 
-  private absorbOrThrow(geste: LocalGeste, failure: unknown): void {
+  private absorbOrThrow(geste: GesteDAtelier, failure: unknown): void {
     if (decideReplay(operationFor(geste), failure, 'REJEU') === 'ACCEPTER') {
       return;
     }

@@ -1,4 +1,4 @@
-import type { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import type { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
@@ -8,7 +8,7 @@ const entrepriseFixture = 'entreprise-a';
 const dateFixture = '2026-09-05T08:00:00Z';
 const idFixture = '59ef737b-c3dd-47f8-8e63-4d5526a17df3';
 const tokenFixture = `fixture.${btoa(JSON.stringify({ tenant: entrepriseFixture })).replaceAll('=', '')}.signature`;
-const gestureFixture: LocalGeste = {
+const gestureFixture: GesteDAtelier = {
   nature: 'ARRIVEE',
   id: idFixture,
   dateDeSurvenue: dateFixture,

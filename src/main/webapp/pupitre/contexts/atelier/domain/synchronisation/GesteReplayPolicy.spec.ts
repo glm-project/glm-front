@@ -1,11 +1,11 @@
+import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
 import { CodeDeRefusDAtelier, RefusDAtelier } from '../refus/RefusDAtelier';
-import { RefusDuPupitre } from '../refus/RefusDuPupitre';
-import { LocalGeste } from './LocalPupitreState';
-import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './PupitreReplayPolicy';
+import { RefusDePublication } from '../refus/RefusDePublication';
+import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './GesteReplayPolicy';
 
 const refusFixtures = [
   ['online', (code: CodeDeRefusDAtelier) => new RefusDAtelier(code, 'cause')],
-  ['offline', (code: CodeDeRefusDAtelier) => new RefusDuPupitre('diagnostic externe', 'cause', code)],
+  ['offline', (code: CodeDeRefusDAtelier) => new RefusDePublication('diagnostic externe', 'cause', code)],
 ] as const;
 
 const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', ReplayDecision][] = [
@@ -21,7 +21,7 @@ const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', 
   ['GESTE_EXPLICITE', 'saisie-concurrente', 'REJEU', 'PROPAGER'],
 ];
 
-describe.each(refusFixtures)('PupitreReplayPolicy for %s refusals', (_name, refusalFixture) => {
+describe.each(refusFixtures)('GesteReplayPolicy for %s refusals', (_name, refusalFixture) => {
   it.each(scenarios)('should decide %s facing %s after retry=%s as %s', (operation, code, tentative, expected) => {
     const refus = givenARefusal(refusalFixture, code);
 
@@ -39,18 +39,18 @@ describe.each(refusFixtures)('PupitreReplayPolicy for %s refusals', (_name, refu
   });
 });
 
-describe('PupitreReplayPolicy', () => {
+describe('GesteReplayPolicy', () => {
   it.each([
     new Error('network'),
-    new RefusDuPupitre('refus autre contexte', 'autre contexte'),
-    new RefusDuPupitre('refus inconnu', 'nouvelle cause'),
+    new RefusDePublication('refus autre contexte', 'autre contexte'),
+    new RefusDePublication('refus inconnu', 'nouvelle cause'),
   ])('should propagate failures that have no contextual exception (%s)', failure => {
     const decision = whenDecidingReplay('ARRIVEE_ASSUREE', failure);
 
     thenDecisionIs(decision, 'PROPAGER');
   });
 
-  it.each<[LocalGeste, OperationDAtelier]>([
+  it.each<[GesteDAtelier, OperationDAtelier]>([
     [{ nature: 'ARRIVEE', id: '1', dateDeSurvenue: 'date', operateurId: 'jean' }, 'ARRIVEE_ASSUREE'],
     [{ nature: 'PRESENCE', id: '2', dateDeSurvenue: 'date', operateurId: 'jean', type: 'REPRISE', implicite: true }, 'PRESENCE_ASSUREE'],
     [{ nature: 'PRESENCE', id: '3', dateDeSurvenue: 'date', operateurId: 'jean', type: 'REPRISE', implicite: false }, 'GESTE_EXPLICITE'],
@@ -63,9 +63,9 @@ describe('PupitreReplayPolicy', () => {
 });
 
 const givenARefusal = (
-  refusalFixture: (code: CodeDeRefusDAtelier) => RefusDAtelier | RefusDuPupitre,
+  refusalFixture: (code: CodeDeRefusDAtelier) => RefusDAtelier | RefusDePublication,
   code: CodeDeRefusDAtelier,
-): RefusDAtelier | RefusDuPupitre => refusalFixture(code);
+): RefusDAtelier | RefusDePublication => refusalFixture(code);
 
 const whenDecidingReplay = (operation: OperationDAtelier, failure: unknown, attempt?: 'INITIALE' | 'REJEU'): ReplayDecision => {
   if (attempt === undefined) {
@@ -74,7 +74,7 @@ const whenDecidingReplay = (operation: OperationDAtelier, failure: unknown, atte
   return decideReplay(operation, failure, attempt);
 };
 
-const whenIdentifyingTheGesture = (geste: LocalGeste): OperationDAtelier => operationFor(geste);
+const whenIdentifyingTheGesture = (geste: GesteDAtelier): OperationDAtelier => operationFor(geste);
 
 const thenDecisionIs = (decision: ReplayDecision, expected: ReplayDecision): void => {
   expect(decision).toBe(expected);

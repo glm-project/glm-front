@@ -1,6 +1,6 @@
+import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
 import { RefusDAtelier } from '../refus/RefusDAtelier';
-import { RefusDuPupitre } from '../refus/RefusDuPupitre';
-import { LocalGeste } from './LocalPupitreState';
+import { RefusDePublication } from '../refus/RefusDePublication';
 
 export type OperationDAtelier = 'ARRIVEE_ASSUREE' | 'PRESENCE_ASSUREE' | 'GESTE_EXPLICITE';
 export type ReplayDecision = 'ACCEPTER' | 'RELIRE_ET_REJOUER' | 'PROPAGER';
@@ -9,10 +9,10 @@ const matches = (refus: unknown, code: string): boolean => {
   if (refus instanceof RefusDAtelier) {
     return refus.code === code;
   }
-  return refus instanceof RefusDuPupitre && refus.motif === code;
+  return refus instanceof RefusDePublication && refus.motif === code;
 };
 
-export const operationFor = (geste: LocalGeste): OperationDAtelier => {
+export const operationFor = (geste: GesteDAtelier): OperationDAtelier => {
   if (geste.nature === 'ARRIVEE') {
     return 'ARRIVEE_ASSUREE';
   }

@@ -1,15 +1,15 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
-import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/journal/PupitreReplayPolicy';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/refus/RefusDuPupitre';
+import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { requiredFixture } from '@test/utils/RequiredFixture';
-import { HttpPupitreServer } from './http/HttpPupitreServer';
+import { HttpAtelierExchange } from './http/HttpAtelierExchange';
 
 type RestOperateur = components['schemas']['RestOperateur'];
 type RestOperateurDAtelier = components['schemas']['RestOperateurDAtelier'];
@@ -61,8 +61,8 @@ const secondSuiviFixture = {
   ],
 } satisfies RestSuiviDAtelierEnGrille;
 const suiviDetailleFixture = { ...suiviFixture, journal: [] } satisfies RestSuiviDAtelier;
-const arriveeFixture: LocalGeste = { nature: 'ARRIVEE', id: 'geste', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
-const adapters = [['HTTP', () => TestBed.inject(HttpPupitreServer)]] as const;
+const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'geste', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const adapters = [['HTTP', () => TestBed.inject(HttpAtelierExchange)]] as const;
 interface PageFixture {
   url: string;
   page: number;
@@ -70,8 +70,8 @@ interface PageFixture {
   totalElementsCount: number;
 }
 
-describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter, build) => {
-  let serveur: PupitreServerPort;
+describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapter, build) => {
+  let serveur: AtelierExchangePort;
   let http: HttpTestingController;
   let token: string | undefined;
   let referencePages: PageFixture[];
@@ -83,7 +83,7 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
         provideHttpClient(),
         provideHttpClientTesting(),
         ApiClient,
-        HttpPupitreServer,
+        HttpAtelierExchange,
         { provide: AuthenticationPort, useValue: { currentToken: () => token } },
       ],
     });
@@ -233,8 +233,8 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
     return operation;
   };
   const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
-  const whenSending = (geste: LocalGeste): Promise<void> => observeRejection(serveur.send(geste));
-  const whenRereading = (geste: LocalGeste): Promise<void> => serveur.reread(geste);
+  const whenSending = (geste: GesteDAtelier): Promise<void> => observeRejection(serveur.send(geste));
+  const whenRereading = (geste: GesteDAtelier): Promise<void> => serveur.reread(geste);
   const whenServerReturnsReferencePages = async (): Promise<TestRequest[]> => {
     const requests: TestRequest[] = [];
     for (const page of referencePages) {
@@ -327,7 +327,7 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
   };
   const thenBusinessRefusalIs = async (operation: Promise<unknown>): Promise<void> => {
     const failure = await operation.catch((reason: unknown) => reason);
-    expect(failure).toBeInstanceOf(RefusDuPupitre);
+    expect(failure).toBeInstanceOf(RefusDePublication);
     expect(failure).toMatchObject({ code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' });
   };
   const thenReplayDecisionIs = async (operation: Promise<unknown>, code: string, decision: ReplayDecision): Promise<void> => {
@@ -337,7 +337,7 @@ describe.each(adapters)('PupitreServerPort contract, honoured by %s', (_adapter,
   };
   const thenTransportFailureIs = async (operation: Promise<unknown>): Promise<void> => {
     const failure = await operation.catch((reason: unknown) => reason);
-    expect(failure).not.toBeInstanceOf(RefusDuPupitre);
+    expect(failure).not.toBeInstanceOf(RefusDePublication);
     expect(failure).toMatchObject({ status: 0 });
   };
   const thenItRequestedTheOperatorDay = (request: TestRequest): void => {

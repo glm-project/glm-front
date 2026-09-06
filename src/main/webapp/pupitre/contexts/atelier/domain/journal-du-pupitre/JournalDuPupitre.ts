@@ -1,7 +1,7 @@
-import { TypeDePresence } from '../journee-de-travail/TypeDePresence';
-import { EtatDAtelier } from '../suivi-d-atelier/EtatDAtelier';
-import { TypeDElement } from '../suivi-d-atelier/TypeDElement';
-import { TypeDePointage } from '../suivi-d-atelier/TypeDePointage';
+export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU' | 'CLOTURE';
+export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
+export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
+export type TypeDePresence = 'PAUSE' | 'REPRISE' | 'DEPART';
 
 export interface OperateurDuPupitre {
   id: string;
@@ -37,19 +37,19 @@ export interface IdentiteDuGeste {
   dateDeSurvenue: string;
 }
 
-export interface LocalArrivee extends IdentiteDuGeste {
+export interface GesteDArrivee extends IdentiteDuGeste {
   nature: 'ARRIVEE';
   operateurId: string;
 }
 
-export interface LocalPresence extends IdentiteDuGeste {
+export interface GesteDePresence extends IdentiteDuGeste {
   nature: 'PRESENCE';
   operateurId: string;
   type: TypeDePresence;
   implicite: boolean;
 }
 
-export interface LocalPointage extends IdentiteDuGeste {
+export interface GesteDePointage extends IdentiteDuGeste {
   nature: 'POINTAGE';
   operateurId: string;
   suiviId: string;
@@ -57,18 +57,18 @@ export interface LocalPointage extends IdentiteDuGeste {
   posteId?: string;
 }
 
-export type LocalGeste = LocalArrivee | LocalPresence | LocalPointage;
+export type GesteDAtelier = GesteDArrivee | GesteDePresence | GesteDePointage;
 
-export interface LocalEvent {
-  geste: LocalGeste;
+export interface EvenementDuJournal {
+  geste: GesteDAtelier;
   etat: 'EN_ATTENTE' | 'ACCEPTE' | 'REFUSE';
   refus?: { code: string; message: string };
 }
 
-export interface LocalPupitreState {
+export interface JournalDuPupitre {
   referentiel?: ReferentielDuPupitre;
-  evenements: LocalEvent[];
+  evenements: EvenementDuJournal[];
   connecte: boolean;
 }
 
-export const EMPTY_PUPITRE: LocalPupitreState = { evenements: [], connecte: true };
+export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], connecte: true };

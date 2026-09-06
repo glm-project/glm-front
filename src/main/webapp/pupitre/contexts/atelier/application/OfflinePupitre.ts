@@ -3,16 +3,16 @@ import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/d
 import { DesignationOperateur } from '@/pupitre/contexts/atelier/domain/designation/DesignationOperateur';
 import { FenetreOperateur, PointageDuPupitre } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
-  EMPTY_PUPITRE,
+  EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementDuJournal,
+  GesteDAtelier,
   IdentiteDuGeste,
-  LocalEvent,
-  LocalGeste,
-  LocalPupitreState,
+  JournalDuPupitre,
   OperateurDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
-import { projectPupitre } from '@/pupitre/contexts/atelier/domain/journal/PupitreProjection';
-import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/journee-de-travail/TypeDePresence';
+  TypeDePresence,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -21,10 +21,10 @@ const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurven
 @Injectable()
 export class OfflinePupitre implements OnDestroy {
   private readonly authentication = inject(AuthenticationPort);
-  private readonly journal = inject(PupitreJournalPort);
+  private readonly journal = inject(JournauxDuPupitrePort);
   private readonly synchronization = inject(PupitreSynchronization);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
-  private readonly vue = signal<LocalPupitreState>(EMPTY_PUPITRE);
+  private readonly vue = signal<JournalDuPupitre>(EMPTY_JOURNAL_DU_PUPITRE);
   private readonly connexion = signal(true);
   private readonly designation = new DesignationOperateur();
   private readonly designationState = signal(this.designation.snapshot());
@@ -43,8 +43,8 @@ export class OfflinePupitre implements OnDestroy {
     void this.finish();
   }
 
-  referentiel(): ReturnType<typeof projectPupitre> {
-    return projectPupitre(this.vue());
+  referentiel(): ReturnType<typeof projectReferentiel> {
+    return projectReferentiel(this.vue());
   }
 
   registerPress(): boolean {
@@ -147,7 +147,7 @@ export class OfflinePupitre implements OnDestroy {
     return this.enqueue(fenetre, () => gestes);
   }
 
-  async diagnostics(): Promise<LocalEvent[]> {
+  async diagnostics(): Promise<EvenementDuJournal[]> {
     const state = await this.journal.read(this.requireTenant());
     return state.evenements.filter(evenement => evenement.etat === 'REFUSE');
   }
@@ -155,7 +155,7 @@ export class OfflinePupitre implements OnDestroy {
   async restore(): Promise<void> {
     const entreprise = this.authentication.currentTenant();
     if (entreprise === undefined) {
-      this.vue.set(EMPTY_PUPITRE);
+      this.vue.set(EMPTY_JOURNAL_DU_PUPITRE);
       return;
     }
     const state = await this.journal.read(entreprise);
@@ -168,13 +168,13 @@ export class OfflinePupitre implements OnDestroy {
     });
   }
 
-  private enqueue(fenetre: FenetreOperateur, gestures: () => LocalGeste[]): Promise<void> {
+  private enqueue(fenetre: FenetreOperateur, gestures: () => GesteDAtelier[]): Promise<void> {
     const accepted = this.saisie.then(() => this.persistGestes(fenetre, gestures));
     this.saisie = accepted.catch(() => undefined);
     return accepted;
   }
 
-  private async persistGestes(fenetre: FenetreOperateur, gestures: () => LocalGeste[]): Promise<void> {
+  private async persistGestes(fenetre: FenetreOperateur, gestures: () => GesteDAtelier[]): Promise<void> {
     await this.authentication.synchronizeSession();
     if (this.designation.window() !== fenetre || this.authentication.currentTenant() !== fenetre.entreprise) {
       throw new Error('La fenetre operateur a change.');
@@ -188,12 +188,12 @@ export class OfflinePupitre implements OnDestroy {
     });
   }
 
-  private publish(entreprise: string | undefined, state: LocalPupitreState): void {
+  private publish(entreprise: string | undefined, state: JournalDuPupitre): void {
     if (this.authentication.currentTenant() !== entreprise) {
       return;
     }
     if (entreprise === undefined) {
-      this.vue.set(EMPTY_PUPITRE);
+      this.vue.set(EMPTY_JOURNAL_DU_PUPITRE);
       return;
     }
     this.connexion.set(state.connecte);

@@ -1,8 +1,8 @@
 export default {
-  mutate: ['src/main/webapp/pupitre/contexts/atelier/domain/PupitreReplayPolicy.ts'],
+  mutate: ['src/main/webapp/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy.ts'],
   testRunner: 'command',
   commandRunner: {
-    command: "ng test --watch=false --include 'src/main/webapp/pupitre/contexts/atelier/domain/PupitreReplayPolicy.spec.ts'",
+    command: "ng test --watch=false --include 'src/main/webapp/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy.spec.ts'",
   },
   checkers: ['typescript'],
   tsconfigFile: 'tsconfig.stryker.json',

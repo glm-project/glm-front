@@ -9,8 +9,9 @@ effect, not the condition for confirming the operator's action.
 transaction completion, not on the `put` request. Storage failure rejects explicitly; there is no volatile
 fallback that pretends to have captured work.
 
-`PupitreJournalPort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
-`LocalPupitreJournal` alone owns document keys and layout. Keep application code and tests on the port so a
+`JournalDuPupitre` is the local consistency root for one company. `JournauxDuPupitrePort` exposes company reads,
+atomic gesture batches, reference activation and push outcomes.
+`IndexedDbJournauxDuPupitre` alone owns document keys and layout. Keep application code and tests on the port so a
 schema change stays local to that adapter.
 
 Each tenant has an independent journal. Reenrolment selects another journal without deleting or pushing the
@@ -23,7 +24,7 @@ before asynchronous capture begins.
 resumption, and maintains the frozen view of one operator window. Only a successfully committed capture
 advances that view.
 
-`PupitreReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
+`GesteReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
 motifs, never transport URNs.
 
 `OfflinePupitre` coordinates capture and visible snapshots. `PupitreSynchronization` coordinates
@@ -60,7 +61,7 @@ separate boundary.
 `npm run test:production-offline` exercises that boundary in production Chrome. It waits for the generated
 worker to activate and control a restarted pupitre, verifies the browser is offline with an uncached failed
 request, and recreates the application twice while disconnected. Durable setup and inspection use
-`PupitreJournalPort`; the fixture never reads or writes the local adapter's database layout. A second clean
+`JournauxDuPupitrePort`; the fixture never reads or writes the local adapter's database layout. A second clean
 origin with `ngsw-worker.js` unavailable proves that HTTP cache or the fixture server cannot make the same
 offline navigation pass.
 

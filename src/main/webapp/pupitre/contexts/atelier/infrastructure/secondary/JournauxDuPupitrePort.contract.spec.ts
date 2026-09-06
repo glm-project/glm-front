@@ -1,33 +1,33 @@
 import {
-  EMPTY_PUPITRE,
-  LocalEvent,
-  LocalGeste,
-  LocalPupitreState,
+  EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementDuJournal,
+  GesteDAtelier,
+  JournalDuPupitre,
   ReferentielDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { IndexedDbLocalStorage } from '@/pupitre/shared/local-storage/infrastructure/secondary/IndexedDbLocalStorage';
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
-import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory } from 'fake-indexeddb';
-import { LocalPupitreJournal } from './local/LocalPupitreJournal';
+import { IndexedDbJournauxDuPupitre } from './local/IndexedDbJournauxDuPupitre';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
 const refreshedReferenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [{ id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT', activites: [], evenements: [] }],
 };
-const arriveeFixture: LocalGeste = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
-const repriseFixture: LocalGeste = { ...arriveeFixture, id: 'reprise', nature: 'PRESENCE', type: 'REPRISE', implicite: true };
-const pointageFixture: LocalGeste = { ...arriveeFixture, id: 'pointage', nature: 'POINTAGE', type: 'DEBUT', suiviId: 'piece' };
+const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const repriseFixture: GesteDAtelier = { ...arriveeFixture, id: 'reprise', nature: 'PRESENCE', type: 'REPRISE', implicite: true };
+const pointageFixture: GesteDAtelier = { ...arriveeFixture, id: 'pointage', nature: 'POINTAGE', type: 'DEBUT', suiviId: 'piece' };
 
 const adapters = [
-  ['local storage', () => TestBed.inject(LocalPupitreJournal)],
-  ['application fixture', () => new PupitreJournalFixture()],
+  ['local storage', () => TestBed.inject(IndexedDbJournauxDuPupitre)],
+  ['application fixture', () => new JournauxDuPupitreFixture()],
 ] as const;
 
 interface SynchronizationFixture {
@@ -36,14 +36,14 @@ interface SynchronizationFixture {
   chronology: string[];
 }
 
-describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, build) => {
-  let journal: PupitreJournalPort;
+describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name, build) => {
+  let journal: JournauxDuPupitrePort;
 
   beforeEach(() => {
     vi.stubGlobal('indexedDB', new IDBFactory());
     vi.stubGlobal('navigator', { locks: new BrowserLocksFixture() });
     TestBed.configureTestingModule({
-      providers: [LocalPupitreJournal, { provide: LocalStoragePort, useClass: IndexedDbLocalStorage }],
+      providers: [IndexedDbJournauxDuPupitre, { provide: LocalStoragePort, useClass: IndexedDbLocalStorage }],
     });
     journal = build();
   });
@@ -52,7 +52,7 @@ describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, b
   it('should restore an empty company before its first reference or gesture', async () => {
     const state = await whenReadingCompany('entreprise-a');
 
-    thenStateIs(state, EMPTY_PUPITRE);
+    thenStateIs(state, EMPTY_JOURNAL_DU_PUPITRE);
   });
 
   it('should retain the complete opening in order and keep another company independent', async () => {
@@ -61,7 +61,7 @@ describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, b
     await whenAppendingTheCompleteOpening();
 
     await thenCompanyStateIs('entreprise-a', completeOpeningFixture());
-    await thenCompanyStateIs('entreprise-b', EMPTY_PUPITRE);
+    await thenCompanyStateIs('entreprise-b', EMPTY_JOURNAL_DU_PUPITRE);
   });
 
   it('should preserve a concurrent append and a refusal while recording a push outcome', async () => {
@@ -111,12 +111,12 @@ describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, b
     await journal.saveReferentiel('entreprise-a', referenceFixture);
   };
 
-  const completeOpeningFixture = (): LocalPupitreState => ({
+  const completeOpeningFixture = (): JournalDuPupitre => ({
     referentiel: referenceFixture,
     connecte: true,
     evenements: [arriveeFixture, repriseFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
   });
-  const givenADisconnectedQueue = async (): Promise<LocalEvent> => {
+  const givenADisconnectedQueue = async (): Promise<EvenementDuJournal> => {
     await journal.append('entreprise-a', [arriveeFixture, repriseFixture]);
     await journal.markDisconnected('entreprise-a');
     return { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
@@ -143,12 +143,12 @@ describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, b
     release: new SignalFixture(),
     chronology: [],
   });
-  const whenReadingCompany = (company: string): Promise<LocalPupitreState> => journal.read(company);
+  const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(company);
   const whenAppendingTheCompleteOpening = (): Promise<void> =>
     journal.append('entreprise-a', [arriveeFixture, repriseFixture, pointageFixture]);
   const whenAppendingArrival = (): Promise<void> => journal.append('entreprise-a', [arriveeFixture]);
-  const whenSavingAFreshReference = (): Promise<LocalPupitreState> => journal.saveReferentiel('entreprise-a', refreshedReferenceFixture);
-  const whenSavingARefusalWhileAppending = async (refusal: LocalEvent): Promise<void> => {
+  const whenSavingAFreshReference = (): Promise<JournalDuPupitre> => journal.saveReferentiel('entreprise-a', refreshedReferenceFixture);
+  const whenSavingARefusalWhileAppending = async (refusal: EvenementDuJournal): Promise<void> => {
     await Promise.all([journal.saveResult('entreprise-a', refusal), journal.append('entreprise-a', [pointageFixture])]);
   };
   const whenHoldingTheFirstOperation = (
@@ -173,10 +173,10 @@ describe.each(adapters)('PupitreJournalPort contract, honoured by %s', (_name, b
     await Promise.all(operations);
   };
 
-  const thenStateIs = (state: LocalPupitreState, expected: LocalPupitreState): void => {
+  const thenStateIs = (state: JournalDuPupitre, expected: JournalDuPupitre): void => {
     expect(state).toEqual(expected);
   };
-  const thenCompanyStateIs = async (company: string, expected: LocalPupitreState): Promise<void> => {
+  const thenCompanyStateIs = async (company: string, expected: JournalDuPupitre): Promise<void> => {
     thenStateIs(await journal.read(company), expected);
   };
   const thenChronologyIs = (chronology: string[], expected: string[]): void => {
