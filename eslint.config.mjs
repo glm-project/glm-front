@@ -56,6 +56,16 @@ const FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS = [
   selector,
   message: 'Import Angular Core statically so ESLint can forbid effects — see documentation/code-style.md.',
 }));
+const FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS = {
+  selector: ':matches(PropertyDefinition, VariableDeclarator)[definite=true]',
+  message: 'Definite-assignment assertions hide an uninitialized value: initialize it or model its possible absence.',
+};
+const restrictedSyntax = (...additionalRestrictions) => [
+  'error',
+  ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
+  FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS,
+  ...additionalRestrictions,
+];
 
 const namedAnywherePattern = fronts => `(^|\\/)(${fronts.join('|')})(\\/|$)`;
 
@@ -68,13 +78,11 @@ const boundary = (files, restrictions) => ({
   files,
   rules: {
     'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
-    'no-restricted-syntax': [
-      'error',
-      ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
+    'no-restricted-syntax': restrictedSyntax(
       ...restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
       ),
-    ],
+    ),
   },
 });
 
@@ -193,11 +201,12 @@ export default typescript.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
+      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
@@ -233,7 +242,7 @@ export default typescript.config(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
+      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
