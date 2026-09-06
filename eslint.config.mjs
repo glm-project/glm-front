@@ -6,6 +6,7 @@ import globals from 'globals';
 import typescript from 'typescript-eslint';
 import { domainReadonlyProperties } from './eslint/rules/domain-readonly-properties.mjs';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
+import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
 
 const TAILWIND_COLOR_FAMILIES = [
   'slate',
@@ -125,6 +126,7 @@ const local = {
     },
     'given-when-then': givenWhenThen,
     'domain-readonly-properties': domainReadonlyProperties,
+    'responsibility-cohesion': responsibilityCohesion,
   },
 };
 
@@ -281,6 +283,14 @@ export default typescript.config(
     plugins: { local },
     rules: {
       'local/domain-readonly-properties': 'error',
+    },
+  },
+  {
+    files: ['src/main/webapp/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    plugins: { local },
+    rules: {
+      'local/responsibility-cohesion': 'error',
     },
   },
 );
