@@ -515,10 +515,11 @@ describe('OfflinePupitre', () => {
     vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
   };
   const givenDelayedCapture = (): (() => void) => {
-    let release!: () => void;
+    let release: (() => void) | undefined;
     authentication.pendingSynchronization = new Promise(resolve => {
       release = resolve;
     });
+    if (release === undefined) throw new Error('Delayed capture is not initialized.');
     return release;
   };
   const whenSleepingPastDesignation = (): void => {

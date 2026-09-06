@@ -24,8 +24,8 @@ const referenceFixture: JournalDuPupitre = {
 };
 
 class DesignationJournalFixture {
-  readCompleted!: Promise<void>;
-  private notifyReadCompleted!: () => void;
+  readCompleted = Promise.resolve();
+  private notifyReadCompleted: (() => void) | undefined;
 
   constructor() {
     this.prepareNextRead();
@@ -44,6 +44,7 @@ class DesignationJournalFixture {
 
   read(): Promise<JournalDuPupitre> {
     const notify = this.notifyReadCompleted;
+    if (notify === undefined) throw new Error('Read completion is not prepared.');
     return new Promise(resolve =>
       roundTrip(() => {
         resolve(structuredClone(referenceFixture));
