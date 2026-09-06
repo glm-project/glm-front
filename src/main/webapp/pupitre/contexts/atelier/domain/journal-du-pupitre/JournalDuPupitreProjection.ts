@@ -14,10 +14,8 @@ const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPu
       operateurId: geste.operateurId,
       categorie: categorieFor(geste),
       depuis: geste.dateDeSurvenue,
+      ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
     };
-    if (geste.posteId !== undefined) {
-      activite.posteId = geste.posteId;
-    }
     activites.push(activite);
   }
   return { ...suivi, activites, etat: etatFor(activites.length) };
@@ -54,5 +52,5 @@ export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupi
   if (pupitre.referentiel === undefined) {
     return undefined;
   }
-  return { ...pupitre.referentiel, suivis: pupitre.evenements.reduce(applyEvenement, pupitre.referentiel.suivis) };
+  return { ...pupitre.referentiel, suivis: pupitre.evenements.reduce(applyEvenement, [...pupitre.referentiel.suivis]) };
 };

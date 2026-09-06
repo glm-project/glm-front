@@ -9,12 +9,32 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 
 const answerOnNextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
-const acceptedPointageIdsFor = (suiviId: string, evenements: EvenementDuJournal[]): string[] =>
+interface AppendBarrier {
+  readonly started: Promise<void>;
+  readonly release: () => void;
+  signalStarted(): void;
+  wait(): Promise<void>;
+}
+
+const appendBarrier = (): AppendBarrier => {
+  let signalStarted: (() => void) | undefined;
+  let release: (() => void) | undefined;
+  const started = new Promise<void>(resolve => {
+    signalStarted = resolve;
+  });
+  const waiting = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  if (signalStarted === undefined || release === undefined) throw new Error('Append barrier is not initialized.');
+  return { started, signalStarted, release, wait: () => waiting };
+};
+
+const acceptedPointageIdsFor = (suiviId: string, evenements: readonly EvenementDuJournal[]): string[] =>
   evenements
     .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
     .map(evenement => evenement.geste.id);
 
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: EvenementDuJournal[]): ReferentielDuPupitre => ({
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => ({
   ...referentiel,
   suivis: referentiel.suivis.map(suivi => ({
     ...suivi,
@@ -25,6 +45,7 @@ const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements:
 export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly entreprises = new Map<string, JournalDuPupitre>();
   private readonly tails = new Map<string, Promise<unknown>>();
+  private nextAppendBarrier: AppendBarrier | undefined;
   failWrite = false;
   afterRead: (() => void) | undefined;
 
@@ -35,7 +56,11 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     this.afterRead = undefined;
     return state;
   }
-  override async append(entreprise: string, gestes: GesteDAtelier[]): Promise<void> {
+  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
+    const barrier = this.nextAppendBarrier;
+    this.nextAppendBarrier = undefined;
+    barrier?.signalStarted();
+    await barrier?.wait();
     await this.update(entreprise, state => ({
       ...state,
       evenements: [...state.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))],
@@ -64,6 +89,11 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   }
   override withSession<T>(action: () => Promise<T>): Promise<T> {
     return this.lock('session', action);
+  }
+  delayNextAppend(): { readonly started: Promise<void>; readonly release: () => void } {
+    const barrier = appendBarrier();
+    this.nextAppendBarrier = barrier;
+    return { started: barrier.started, release: barrier.release };
   }
   private async update(entreprise: string, change: (state: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
     await answerOnNextTask();

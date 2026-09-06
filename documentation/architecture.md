@@ -21,9 +21,9 @@ Neither application imports or communicates with the other. Both may import genu
 code from `app/shared/`, which imports neither application. Screens belong to their business context's
 primary adapters; the front root composes them.
 
-`eslint.config.mjs` enforces these boundaries for static imports, re-exports and literal dynamic imports.
-It deliberately cannot resolve a runtime-built path or a dependency laundered through a barrel. Introduce a
-resolver-based boundary tool only when such a case appears.
+`eslint.config.mjs` rejects direct front imports. The compiler-backed architecture harness resolves static
+imports, literal dynamic imports and re-exports, including barrel-mediated dependencies. Runtime-built paths
+remain outside static analysis and require review.
 
 Both boot documents are self-contained: every asset needed at boot ships in the bundle.
 `ExternalRequestsTest` rejects absolute and protocol-relative external origins.
