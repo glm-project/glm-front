@@ -199,13 +199,14 @@ const requiredElement = <T>(element: T | null, description: string): T => {
 };
 
 const deferredFixture = (): DeferredFixture => {
-  let resolve!: () => void;
-  let reject!: () => void;
+  let resolve: (() => void) | undefined;
+  let reject: (() => void) | undefined;
   const promise = new Promise<void>((complete, fail) => {
     resolve = complete;
     reject = () => {
       fail(new Error('disk failure'));
     };
   });
+  if (resolve === undefined || reject === undefined) throw new Error('Deferred fixture is not initialized.');
   return { promise, resolve, reject };
 };

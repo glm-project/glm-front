@@ -36,7 +36,11 @@ renumbers at merge time. The status below is the living one — update this line
   **Accepted** — exhaustive boundary discovery, re-export resolution and symbol-aware domain environment checks
 - [0015 — Pin every validation input](0015-pin-every-validation-input.md) — **Accepted** — exact Node/npm,
   lockfile-only installs and an immutable backend contract revision in local validation and CI
-- [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — **Accepted** —
+- [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — **Amended by 0020** —
   shared commands for Git, Codex and CI, with pinned security tools and bounded completion validation
 - [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Accepted** —
   bounded replay-policy mutation through the Angular builder, checked invalid mutants and a scheduled report
+- [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — **Accepted** — recommended static
+  analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
+- [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Accepted** — quick static checks
+  at push, with the complete graph retained by Codex Stop and CI

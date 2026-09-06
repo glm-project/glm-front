@@ -1,6 +1,7 @@
 import eslint from '@eslint/js';
 import angular from 'angular-eslint';
 import cypress from 'eslint-plugin-cypress';
+import sonarjs from 'eslint-plugin-sonarjs';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
@@ -55,6 +56,16 @@ const FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS = [
   selector,
   message: 'Import Angular Core statically so ESLint can forbid effects — see documentation/code-style.md.',
 }));
+const FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS = {
+  selector: ':matches(PropertyDefinition, VariableDeclarator)[definite=true]',
+  message: 'Definite-assignment assertions hide an uninitialized value: initialize it or model its possible absence.',
+};
+const restrictedSyntax = (...additionalRestrictions) => [
+  'error',
+  ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
+  FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS,
+  ...additionalRestrictions,
+];
 
 const namedAnywherePattern = fronts => `(^|\\/)(${fronts.join('|')})(\\/|$)`;
 
@@ -67,13 +78,11 @@ const boundary = (files, restrictions) => ({
   files,
   rules: {
     'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
-    'no-restricted-syntax': [
-      'error',
-      ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
+    'no-restricted-syntax': restrictedSyntax(
       ...restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
       ),
-    ],
+    ),
   },
 });
 
@@ -135,12 +144,26 @@ export default typescript.config(
   },
   eslint.configs.recommended,
   {
+    ...sonarjs.configs.recommended,
+    files: ['src/**/*.ts'],
+    rules: {
+      ...sonarjs.configs.recommended.rules,
+      'sonarjs/argument-type': 'off',
+      'sonarjs/cognitive-complexity': ['error', 7],
+      'sonarjs/function-return-type': 'off',
+      'sonarjs/null-dereference': 'off',
+    },
+  },
+  {
     files: ['src/test/webapp/application/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
     languageOptions: {
       parserOptions: {
         project: ['src/test/webapp/application/tsconfig.json'],
       },
+    },
+    rules: {
+      'sonarjs/prefer-specific-assertions': 'off',
     },
   },
   {
@@ -150,6 +173,9 @@ export default typescript.config(
       parserOptions: {
         project: ['src/test/webapp/component/tsconfig.json'],
       },
+    },
+    rules: {
+      'sonarjs/prefer-specific-assertions': 'off',
     },
   },
   {
@@ -175,11 +201,12 @@ export default typescript.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
+      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
@@ -215,7 +242,7 @@ export default typescript.config(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': ['error', ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS],
+      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {

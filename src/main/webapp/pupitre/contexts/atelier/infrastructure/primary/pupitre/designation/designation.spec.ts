@@ -24,22 +24,27 @@ const referenceFixture: JournalDuPupitre = {
 };
 
 class DesignationJournalFixture {
-  readCompleted: Promise<void>;
-  private notifyReadCompleted!: () => void;
+  readCompleted = Promise.resolve();
+  private notifyReadCompleted: (() => void) | undefined;
 
   constructor() {
-    this.readCompleted = this.nextRead();
+    this.prepareNextRead();
   }
 
   nextRead(): Promise<void> {
+    this.prepareNextRead();
+    return this.readCompleted;
+  }
+
+  private prepareNextRead(): void {
     this.readCompleted = new Promise(resolve => {
       this.notifyReadCompleted = resolve;
     });
-    return this.readCompleted;
   }
 
   read(): Promise<JournalDuPupitre> {
     const notify = this.notifyReadCompleted;
+    if (notify === undefined) throw new Error('Read completion is not prepared.');
     return new Promise(resolve =>
       roundTrip(() => {
         resolve(structuredClone(referenceFixture));
