@@ -1,6 +1,6 @@
 import { authProvider } from '@/pupitre/auth.provider';
-import { LocalGeste, LocalPupitreState, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
+import { LocalGeste, LocalPupitreState, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
 import { offlineProvider } from '@/pupitre/offline.provider';
 import { enableProdMode } from '@angular/core';
 import { createApplication } from '@angular/platform-browser';

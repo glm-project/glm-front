@@ -1,10 +1,10 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { Page } from '@/app/shared/pagination/domain/Page';
-import { ETATS_EN_ATELIER } from '@/pupitre/contexts/atelier/domain/EtatDAtelier';
-import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
-import { SuiviDAtelier } from '@/pupitre/contexts/atelier/domain/SuiviDAtelier';
-import { Pointage, SuivisDAtelierPort } from '@/pupitre/contexts/atelier/domain/SuivisDAtelierPort';
+import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
+import { ETATS_EN_ATELIER } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/EtatDAtelier';
+import { SuiviDAtelier } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/SuiviDAtelier';
+import { Pointage, SuivisDAtelierPort } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/SuivisDAtelierPort';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';

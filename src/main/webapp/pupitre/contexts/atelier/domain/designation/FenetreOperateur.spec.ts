@@ -1,5 +1,5 @@
+import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from '../journal/LocalPupitreState';
 import { FenetreOperateur } from './FenetreOperateur';
-import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from './LocalPupitreState';
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
   if (value === null || value === undefined) {

@@ -1,7 +1,7 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
-import { JourneesDeTravailPort } from '@/pupitre/contexts/atelier/domain/JourneesDeTravailPort';
-import { IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/TypeDePresence';
+import { IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { JourneesDeTravailPort } from '@/pupitre/contexts/atelier/domain/journee-de-travail/JourneesDeTravailPort';
+import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/journee-de-travail/TypeDePresence';
 import { inject, Injectable } from '@angular/core';
 import { send } from '../sendToAtelier';
 

@@ -1,4 +1,4 @@
-import { decideReplay, OperationDAtelier } from '@/pupitre/contexts/atelier/domain/PupitreReplayPolicy';
+import { decideReplay, OperationDAtelier } from '@/pupitre/contexts/atelier/domain/journal/PupitreReplayPolicy';
 import { findRefusDAtelierIn } from './findRefusDAtelierIn';
 
 type RequestAction = () => Promise<unknown>;

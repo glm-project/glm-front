@@ -1,5 +1,5 @@
+import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from '../journal/LocalPupitreState';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
-import { EMPTY_PUPITRE, IdentiteDuGeste, LocalGeste, LocalPupitreState } from './LocalPupitreState';
 
 const referenceFixture: LocalPupitreState = {
   ...EMPTY_PUPITRE,

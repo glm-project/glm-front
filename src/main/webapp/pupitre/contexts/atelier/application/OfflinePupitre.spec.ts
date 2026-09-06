@@ -1,10 +1,15 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { EMPTY_PUPITRE, LocalGeste, OperateurDuPupitre, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
-import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import {
+  EMPTY_PUPITRE,
+  LocalGeste,
+  OperateurDuPupitre,
+  ReferentielDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
+import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
+import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/refus/RefusDuPupitre';
 import { Injector } from '@angular/core';
 import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';

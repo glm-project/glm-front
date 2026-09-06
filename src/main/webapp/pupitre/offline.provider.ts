@@ -1,9 +1,9 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
-import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
 import { HttpPupitreServer } from '@/pupitre/contexts/atelier/infrastructure/secondary/http/HttpPupitreServer';
 import { LocalPupitreJournal } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/LocalPupitreJournal';
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';

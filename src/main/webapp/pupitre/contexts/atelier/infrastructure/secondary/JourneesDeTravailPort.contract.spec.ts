@@ -1,6 +1,6 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
-import { JourneesDeTravailPort } from '@/pupitre/contexts/atelier/domain/JourneesDeTravailPort';
-import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
+import { JourneesDeTravailPort } from '@/pupitre/contexts/atelier/domain/journee-de-travail/JourneesDeTravailPort';
+import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';

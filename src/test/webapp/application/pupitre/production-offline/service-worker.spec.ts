@@ -1,4 +1,4 @@
-import type { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
+import type { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
 
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';

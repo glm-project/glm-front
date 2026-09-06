@@ -1,6 +1,6 @@
-import { IdentiteDuGeste, LocalGeste, LocalPupitreState, OperateurDuPupitre } from './LocalPupitreState';
-import { TypeDePointage } from './TypeDePointage';
-import { TypeDePresence } from './TypeDePresence';
+import { IdentiteDuGeste, LocalGeste, LocalPupitreState, OperateurDuPupitre } from '../journal/LocalPupitreState';
+import { TypeDePresence } from '../journee-de-travail/TypeDePresence';
+import { TypeDePointage } from '../suivi-d-atelier/TypeDePointage';
 
 export interface PointageDuPupitre {
   suiviId: string;

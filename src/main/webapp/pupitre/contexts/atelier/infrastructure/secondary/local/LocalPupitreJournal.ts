@@ -4,8 +4,8 @@ import {
   LocalGeste,
   LocalPupitreState,
   ReferentielDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
+} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
 

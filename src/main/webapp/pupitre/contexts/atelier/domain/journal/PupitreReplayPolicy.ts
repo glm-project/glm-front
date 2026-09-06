@@ -1,6 +1,6 @@
+import { RefusDAtelier } from '../refus/RefusDAtelier';
+import { RefusDuPupitre } from '../refus/RefusDuPupitre';
 import { LocalGeste } from './LocalPupitreState';
-import { RefusDAtelier } from './RefusDAtelier';
-import { RefusDuPupitre } from './RefusDuPupitre';
 
 export type OperationDAtelier = 'ARRIVEE_ASSUREE' | 'PRESENCE_ASSUREE' | 'GESTE_EXPLICITE';
 export type ReplayDecision = 'ACCEPTER' | 'RELIRE_ET_REJOUER' | 'PROPAGER';

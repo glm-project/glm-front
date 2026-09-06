@@ -1,10 +1,10 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/PupitreReplayPolicy';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
+import { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/journal/PupitreReplayPolicy';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
+import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/refus/RefusDuPupitre';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';

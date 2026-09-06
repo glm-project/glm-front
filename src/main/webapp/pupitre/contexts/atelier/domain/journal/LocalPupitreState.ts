@@ -1,7 +1,7 @@
-import { EtatDAtelier } from './EtatDAtelier';
-import { TypeDElement } from './TypeDElement';
-import { TypeDePointage } from './TypeDePointage';
-import { TypeDePresence } from './TypeDePresence';
+import { TypeDePresence } from '../journee-de-travail/TypeDePresence';
+import { EtatDAtelier } from '../suivi-d-atelier/EtatDAtelier';
+import { TypeDElement } from '../suivi-d-atelier/TypeDElement';
+import { TypeDePointage } from '../suivi-d-atelier/TypeDePointage';
 
 export interface OperateurDuPupitre {
   id: string;

@@ -4,8 +4,8 @@ import {
   LocalGeste,
   LocalPupitreState,
   ReferentielDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
+} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
 
 const answerOnNextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 

@@ -3,9 +3,14 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { LocalGeste, OperateurDuPupitre, ReferentielDuPupitre, SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
+import {
+  LocalGeste,
+  OperateurDuPupitre,
+  ReferentielDuPupitre,
+  SuiviDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
+import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/refus/RefusDuPupitre';
 import { inject, Injectable } from '@angular/core';
 
 import { findRefusDAtelierIn } from '../findRefusDAtelierIn';

@@ -3,10 +3,10 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
-import { ActiviteEnCours } from '@/pupitre/contexts/atelier/domain/ActiviteEnCours';
-import { EtatDAtelier } from '@/pupitre/contexts/atelier/domain/EtatDAtelier';
-import { SuiviDAtelier } from '@/pupitre/contexts/atelier/domain/SuiviDAtelier';
-import { Pointage, SuivisDAtelierPort } from '@/pupitre/contexts/atelier/domain/SuivisDAtelierPort';
+import { ActiviteEnCours } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/ActiviteEnCours';
+import { EtatDAtelier } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/EtatDAtelier';
+import { SuiviDAtelier } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/SuiviDAtelier';
+import { Pointage, SuivisDAtelierPort } from '@/pupitre/contexts/atelier/domain/suivi-d-atelier/SuivisDAtelierPort';
 import { inject, Injectable } from '@angular/core';
 import { send } from '../sendToAtelier';
 

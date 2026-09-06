@@ -1,5 +1,5 @@
+import { LocalPupitreState, OperateurDuPupitre } from '../journal/LocalPupitreState';
 import { FenetreOperateur } from './FenetreOperateur';
-import { LocalPupitreState, OperateurDuPupitre } from './LocalPupitreState';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 

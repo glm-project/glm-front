@@ -1,6 +1,6 @@
 import { Page } from '@/app/shared/pagination/domain/Page';
+import { IdentiteDuGeste } from '../journal/LocalPupitreState';
 import { EtatDAtelier } from './EtatDAtelier';
-import { IdentiteDuGeste } from './LocalPupitreState';
 import { SuiviDAtelier } from './SuiviDAtelier';
 import { TypeDePointage } from './TypeDePointage';
 

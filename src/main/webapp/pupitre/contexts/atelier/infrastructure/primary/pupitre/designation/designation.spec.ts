@@ -4,10 +4,10 @@ import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/P
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
-} from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { EMPTY_PUPITRE, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
+} from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { EMPTY_PUPITRE, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { setTimeout as roundTrip } from 'node:timers';

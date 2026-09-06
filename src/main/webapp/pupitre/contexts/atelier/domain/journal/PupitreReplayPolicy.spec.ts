@@ -1,7 +1,7 @@
+import { CodeDeRefusDAtelier, RefusDAtelier } from '../refus/RefusDAtelier';
+import { RefusDuPupitre } from '../refus/RefusDuPupitre';
 import { LocalGeste } from './LocalPupitreState';
 import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './PupitreReplayPolicy';
-import { CodeDeRefusDAtelier, RefusDAtelier } from './RefusDAtelier';
-import { RefusDuPupitre } from './RefusDuPupitre';
 
 const refusFixtures = [
   ['online', (code: CodeDeRefusDAtelier) => new RefusDAtelier(code, 'cause')],

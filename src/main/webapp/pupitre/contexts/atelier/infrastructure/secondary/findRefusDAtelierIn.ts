@@ -1,5 +1,5 @@
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
-import { CODES_DE_REFUS_D_ATELIER, CodeDeRefusDAtelier, RefusDAtelier } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
+import { CODES_DE_REFUS_D_ATELIER, CodeDeRefusDAtelier, RefusDAtelier } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
 
 const ERREURS_DE_L_ATELIER = 'urn:glm:erreur:atelier:';
 

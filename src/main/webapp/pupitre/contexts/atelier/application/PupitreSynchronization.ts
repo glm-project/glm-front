@@ -1,9 +1,9 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { EMPTY_PUPITRE, LocalEvent, LocalGeste, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/PupitreReplayPolicy';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
+import { EMPTY_PUPITRE, LocalEvent, LocalGeste, LocalPupitreState } from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/journal/PupitreReplayPolicy';
+import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreServerPort';
+import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/refus/RefusDuPupitre';
 import { inject, Injectable } from '@angular/core';
 
 type PupitrePublisher = (entreprise: string | undefined, state: LocalPupitreState) => void;

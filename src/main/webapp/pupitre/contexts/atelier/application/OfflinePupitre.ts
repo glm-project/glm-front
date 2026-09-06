@@ -1,7 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { DesignationOperateur } from '@/pupitre/contexts/atelier/domain/DesignationOperateur';
-import { FenetreOperateur, PointageDuPupitre } from '@/pupitre/contexts/atelier/domain/FenetreOperateur';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { DesignationOperateur } from '@/pupitre/contexts/atelier/domain/designation/DesignationOperateur';
+import { FenetreOperateur, PointageDuPupitre } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
   EMPTY_PUPITRE,
   IdentiteDuGeste,
@@ -9,10 +9,10 @@ import {
   LocalGeste,
   LocalPupitreState,
   OperateurDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { projectPupitre } from '@/pupitre/contexts/atelier/domain/PupitreProjection';
-import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/TypeDePresence';
+} from '@/pupitre/contexts/atelier/domain/journal/LocalPupitreState';
+import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/journal/PupitreJournalPort';
+import { projectPupitre } from '@/pupitre/contexts/atelier/domain/journal/PupitreProjection';
+import { TypeDePresence } from '@/pupitre/contexts/atelier/domain/journee-de-travail/TypeDePresence';
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
