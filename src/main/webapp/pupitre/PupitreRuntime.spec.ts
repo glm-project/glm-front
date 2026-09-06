@@ -1,13 +1,11 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
-import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
-import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
 import { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
 import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
 import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
 import { TestBed } from '@angular/core/testing';
 import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
-import { PupitreSynchronizationTrigger } from './PupitreSynchronizationTrigger';
+import { offlineProvider } from './offline.provider';
+import { PupitreRuntime } from './PupitreRuntime';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 const entrepriseFixture = 'entreprise-a';
@@ -30,6 +28,7 @@ class AuthenticationFixture extends AuthenticationPort {
 
 class ServerFixture extends PupitreServerPort {
   readonly received: LocalGeste[] = [];
+
   override async send(geste: LocalGeste): Promise<void> {
     await roundTrip();
     this.received.push(structuredClone(geste));
@@ -45,6 +44,7 @@ class ServerFixture extends PupitreServerPort {
 
 class JournalFixture extends PupitreJournalFixture {
   unavailable = false;
+
   override synchronize<T>(action: () => Promise<T>): Promise<T> {
     return super.synchronize(async () => {
       await roundTrip();
@@ -56,37 +56,31 @@ class JournalFixture extends PupitreJournalFixture {
   }
 }
 
-class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedulerPort {
-  override schedule(): void {
-    return;
-  }
-}
-
-describe('PupitreSynchronizationTrigger', () => {
-  let synchronizationTrigger: PupitreSynchronizationTrigger;
+describe('PupitreRuntime', () => {
+  let runtime: PupitreRuntime;
+  let authentication: AuthenticationFixture;
   let journal: JournalFixture;
   let serveur: ServerFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    authentication = new AuthenticationFixture();
     journal = new JournalFixture();
     serveur = new ServerFixture();
     TestBed.configureTestingModule({
       providers: [
-        PupitreSynchronizationTrigger,
-        OfflinePupitre,
-        PupitreSynchronization,
+        ...offlineProvider,
         { provide: PupitreJournalPort, useValue: journal },
         { provide: PupitreServerPort, useValue: serveur },
-        { provide: AuthenticationPort, useClass: AuthenticationFixture },
-        { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
+        { provide: AuthenticationPort, useValue: authentication },
       ],
     });
-    synchronizationTrigger = TestBed.inject(PupitreSynchronizationTrigger);
+    runtime = TestBed.inject(PupitreRuntime);
   });
+
   afterEach(() => {
-    synchronizationTrigger.ngOnDestroy();
+    runtime.ngOnDestroy();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -94,7 +88,7 @@ describe('PupitreSynchronizationTrigger', () => {
   it('should send pending gestures at startup, reconnection and every minute', async () => {
     await givenPendingGesture('demarrage');
 
-    whenStartingPupitre();
+    await whenStartingPupitre();
 
     await thenServerReceived('demarrage');
     await givenPendingGesture('reconnexion');
@@ -109,14 +103,12 @@ describe('PupitreSynchronizationTrigger', () => {
     await thenServerReceived('demarrage', 'reconnexion', 'horloge');
   });
 
-  it('should leave new gestures pending after the shell is destroyed', async () => {
+  it('should leave new gestures pending after the runtime is destroyed', async () => {
     await givenPendingGesture('avant-destruction');
-
-    whenStartingPupitre();
-
+    await whenStartingPupitre();
     await thenServerReceived('avant-destruction');
 
-    whenDestroyingTheShell();
+    whenDestroyingTheRuntime();
     await givenPendingGesture('apres-destruction');
 
     whenNetworkReturns();
@@ -145,14 +137,10 @@ describe('PupitreSynchronizationTrigger', () => {
   const givenUnavailableStorage = (): void => {
     journal.unavailable = true;
   };
-  const whenStartingPupitre = (): void => {
-    synchronizationTrigger.start();
-  };
-  const whenDestroyingTheShell = (): void => {
-    synchronizationTrigger.ngOnDestroy();
-  };
+  const whenStartingPupitre = (): Promise<void> => runtime.start();
+  const whenDestroyingTheRuntime = (): void => runtime.ngOnDestroy();
   const whenStartingWithoutStorage = async (): Promise<void> => {
-    synchronizationTrigger.start();
+    await runtime.start();
     await journal.synchronize(roundTrip).catch(() => undefined);
   };
   const whenStorageRecovers = (): void => {

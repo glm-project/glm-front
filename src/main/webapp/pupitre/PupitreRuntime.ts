@@ -1,8 +1,10 @@
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { inject, Injectable, OnDestroy } from '@angular/core';
 
 @Injectable()
-export class PupitreSynchronizationTrigger implements OnDestroy {
+export class PupitreRuntime implements OnDestroy {
+  private readonly authentication = inject(AuthenticationPort);
   private readonly pupitre = inject(OfflinePupitre);
   private interval: ReturnType<typeof setInterval> | undefined;
   private readonly refresh = (): void => {
@@ -13,7 +15,8 @@ export class PupitreSynchronizationTrigger implements OnDestroy {
 
   readonly connected = this.pupitre.connected;
 
-  start(): void {
+  async start(): Promise<void> {
+    await this.authentication.authenticate();
     window.addEventListener('online', this.refresh);
     this.interval = setInterval(this.refresh, 60_000);
     this.refresh();

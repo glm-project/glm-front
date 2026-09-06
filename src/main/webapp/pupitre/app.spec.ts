@@ -1,6 +1,4 @@
-import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
-import { PupitreSynchronizationTrigger } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/PupitreSynchronizationTrigger';
+import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
 import { ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -8,21 +6,34 @@ import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.route';
 
+class PupitreRuntimeFixture {
+  readonly connected = signal(true).asReadonly();
+  started = false;
+  failure: Error | undefined;
+
+  start(): Promise<void> {
+    if (this.failure !== undefined) {
+      return Promise.reject(this.failure);
+    }
+    this.started = true;
+    return Promise.resolve();
+  }
+}
+
 describe('Pupitre shell', () => {
   let errorHandler: ErrorHandlerFixture;
   let fixture: ComponentFixture<App>;
-  let synchronizationTrigger: PupitreSynchronizationTriggerFixture;
+  let runtime: PupitreRuntimeFixture;
 
   beforeEach(async () => {
     errorHandler = new ErrorHandlerFixture();
-    synchronizationTrigger = new PupitreSynchronizationTriggerFixture();
+    runtime = new PupitreRuntimeFixture();
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter(routes),
-        { provide: PupitreSynchronizationTrigger, useValue: synchronizationTrigger },
+        { provide: PupitreRuntime, useValue: runtime },
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: AuthenticationPort, useClass: InMemoryAuthentication },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
     }).compileComponents();
@@ -34,19 +45,13 @@ describe('Pupitre shell', () => {
     thenItGivesTheRoutedScreensAPlaceToRender();
   });
 
-  it('should enrol the pupitre as it boots', async () => {
+  it('should start the pupitre runtime as it boots', async () => {
     await whenBootingTheShell();
 
-    thenItHoldsABearerToken();
+    thenThePupitreRuntimeIsStarted();
   });
 
-  it('should start its synchronizationTrigger after authentication', async () => {
-    await whenBootingTheShell();
-
-    thenTheRuntimeStarted();
-  });
-
-  it('should report an authentication refusal without starting its synchronizationTrigger', async () => {
+  it('should report a runtime startup refusal without starting the runtime', async () => {
     givenAuthenticationIsRefused();
 
     await whenBootingTheShell();
@@ -56,7 +61,7 @@ describe('Pupitre shell', () => {
   });
 
   const givenAuthenticationIsRefused = (): void => {
-    TestBed.overrideProvider(AuthenticationPort, { useValue: new RefusedAuthenticationFixture() });
+    runtime.failure = new Error('enrolment refused');
   };
 
   const whenBootingTheShell = async (): Promise<void> => {
@@ -70,18 +75,13 @@ describe('Pupitre shell', () => {
     expect(shell.querySelector('router-outlet')).not.toBeNull();
   };
 
-  const thenItHoldsABearerToken = (): void => {
-    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
-  };
   const thenTheAuthenticationFailureIsReported = (): void => {
     expect(errorHandler.failure).toEqual(new Error('enrolment refused'));
   };
   const thenTheRuntimeDidNotStart = (): void => {
-    expect(synchronizationTrigger.starts).toBe(0);
+    expect(runtime.started).toBe(false);
   };
-  const thenTheRuntimeStarted = (): void => {
-    expect(synchronizationTrigger.starts).toBe(1);
-  };
+  const thenThePupitreRuntimeIsStarted = (): void => expect(runtime.started).toBe(true);
 });
 
 class ErrorHandlerFixture extends ErrorHandler {
@@ -89,28 +89,5 @@ class ErrorHandlerFixture extends ErrorHandler {
 
   override handleError(failure: unknown): void {
     this.failure = failure;
-  }
-}
-
-class PupitreSynchronizationTriggerFixture {
-  readonly connected = signal(true);
-  starts = 0;
-
-  start(): void {
-    this.starts++;
-  }
-}
-
-class RefusedAuthenticationFixture extends AuthenticationPort {
-  override authenticate(): Promise<void> {
-    return Promise.reject(new Error('enrolment refused'));
-  }
-
-  override currentToken(): string | undefined {
-    return undefined;
-  }
-
-  override logout(): void {
-    throw new Error('No session can be closed');
   }
 }
