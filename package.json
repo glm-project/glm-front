@@ -55,6 +55,7 @@
     "test:hooks": "node --test scripts/codex-stop-validation.spec.mjs scripts/run-diff-mutation.spec.mjs",
     "test:mutation": "stryker run",
     "test:mutation:diff": "node scripts/run-diff-mutation.mjs",
+    "test:mutation:project": "stryker run stryker.project.config.mjs",
     "test:production-offline": "npm-run-all production-offline:build:pupitre test:production-offline:no-service-worker test:production-offline:service-worker",
     "test:production-offline:no-service-worker": "concurrently -k -s first -n server,test \"npm run serve:production-offline:no-service-worker\" \"wait-on http://localhost:9011/__harness && PUPITRE_OFFLINE_BASE_URL=http://localhost:9011 npm run production-offline:headless:no-service-worker\"",
     "test:production-offline:service-worker": "concurrently -k -s first -n server,test \"npm run serve:production-offline:service-worker\" \"wait-on http://localhost:9010/__harness && PUPITRE_OFFLINE_BASE_URL=http://localhost:9010 npm run production-offline:headless:service-worker\"",

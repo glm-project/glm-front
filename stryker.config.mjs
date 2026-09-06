@@ -1,13 +1,9 @@
 export default {
   mutate: [
-    'src/main/webapp/**/*.ts',
-    '!src/main/webapp/**/*.spec.ts',
-    '!src/main/webapp/**/*.d.ts',
-    '!src/main/webapp/**/main.ts',
-    '!src/main/webapp/**/environments/**',
-    '!src/main/webapp/**/*.provider*.ts',
-    '!src/main/webapp/**/package-info.ts',
-    '!src/main/webapp/app/generated/**',
+    'src/main/webapp/**/domain/**/*.ts',
+    '!src/main/webapp/**/domain/**/*.spec.ts',
+    '!src/main/webapp/**/domain/**/*.d.ts',
+    '!src/main/webapp/**/domain/**/package-info.ts',
   ],
   testRunner: 'command',
   commandRunner: {

@@ -51,4 +51,4 @@ renumbers at merge time. The status below is the living one — update this line
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — **Accepted** — a
   conjunctive production tripwire for stateful coordinators, with responsibility review at the enforcement point
 - [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) — **Accepted** —
-  mutate changed production files before push and retain the complete project as an explicit local diagnostic
+  100 % mutation score enforced on changed domain core, informational outside domain
