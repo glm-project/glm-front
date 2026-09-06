@@ -101,7 +101,7 @@ describe('ApiClient', () => {
     api.read('/api/atelier/suivis', { queryParams: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
 
   const whenReadingOperatorsWithoutAWorkstation = (): Promise<unknown> =>
-    api.read('/api/operateurs', { queryParams: { size: PLEINE_PAGE } });
+    api.read('/api/operateurs', { queryParams: { poste: undefined, size: PLEINE_PAGE } });
 
   const whenStartingWork = (): Promise<unknown> =>
     api.write('/api/atelier/suivis/{id}/pointages', {
