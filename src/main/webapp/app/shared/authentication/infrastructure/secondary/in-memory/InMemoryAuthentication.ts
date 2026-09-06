@@ -1,7 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Injectable } from '@angular/core';
 
-export const IN_MEMORY_TOKEN = 'in-memory-token';
+const IN_MEMORY_TOKEN = 'in-memory-token';
 
 @Injectable()
 export class InMemoryAuthentication extends AuthenticationPort {

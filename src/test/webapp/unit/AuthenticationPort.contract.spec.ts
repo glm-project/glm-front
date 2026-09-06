@@ -1,8 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import {
-  IN_MEMORY_TOKEN,
-  InMemoryAuthentication,
-} from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
+import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
@@ -13,6 +10,7 @@ import Keycloak from 'keycloak-js';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { MockInstance } from 'vitest';
 
+const IN_MEMORY_TOKEN = 'in-memory-token';
 const KEYCLOAK_TOKEN = '1a2b3c';
 const RENEWED_KEYCLOAK_TOKEN = '4d5e6f';
 
