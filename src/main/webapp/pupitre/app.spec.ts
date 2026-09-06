@@ -81,7 +81,9 @@ describe('Pupitre shell', () => {
   const thenTheRuntimeDidNotStart = (): void => {
     expect(runtime.started).toBe(false);
   };
-  const thenThePupitreRuntimeIsStarted = (): void => expect(runtime.started).toBe(true);
+  const thenThePupitreRuntimeIsStarted = (): void => {
+    expect(runtime.started).toBe(true);
+  };
 });
 
 class ErrorHandlerFixture extends ErrorHandler {

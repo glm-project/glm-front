@@ -117,5 +117,7 @@ describe('PupitreSynchronization', () => {
   const thenSynchronizationFails = async (synchronization: Promise<void>): Promise<void> => {
     await expect(synchronization).rejects.toThrow('stockage indisponible');
   };
-  const thenServerReceived = (...gestes: LocalGeste[]): void => expect(server.received).toEqual(gestes);
+  const thenServerReceived = (...gestes: LocalGeste[]): void => {
+    expect(server.received).toEqual(gestes);
+  };
 });

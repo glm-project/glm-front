@@ -37,6 +37,8 @@ export class PupitreRuntime implements OnDestroy {
   }
 
   private async synchronize(): Promise<void> {
-    await this.pupitre.synchronize().catch((failure: unknown) => console.error('Pupitre non synchronise', failure));
+    await this.pupitre.synchronize().catch((failure: unknown) => {
+      console.error('Pupitre non synchronise', failure);
+    });
   }
 }

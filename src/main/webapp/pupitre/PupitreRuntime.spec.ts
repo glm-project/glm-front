@@ -135,7 +135,9 @@ describe('PupitreRuntime', () => {
     await thenSynchronizationAttemptsAre(2);
   });
 
-  const givenAuthenticationInProgress = (): void => authentication.waitForPermission();
+  const givenAuthenticationInProgress = (): void => {
+    authentication.waitForPermission();
+  };
   const givenUnavailableSynchronization = (): void => {
     pupitre.unavailable = true;
   };
@@ -143,7 +145,9 @@ describe('PupitreRuntime', () => {
   const whenStartingPupitreTwice = async (): Promise<void> => {
     await Promise.all([runtime.start(), runtime.start()]);
   };
-  const whenDestroyingTheRuntime = (): void => runtime.ngOnDestroy();
+  const whenDestroyingTheRuntime = (): void => {
+    runtime.ngOnDestroy();
+  };
   const whenAuthenticationCompletes = async (startup: Promise<void>): Promise<void> => {
     authentication.permit();
     await startup;
