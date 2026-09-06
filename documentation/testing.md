@@ -42,6 +42,16 @@ Both Cypress layers share their helpers from `src/test/webapp/utils/`: `dataSele
 the latter controlling response timing. The folder carries its own `tsconfig.json` because those helpers are
 Cypress-typed, where the Vitest specs next door are not.
 
+Reusable unit-test fixtures live in `src/test/webapp/unit/fixtures/`. Group a fixture under its owning
+application and context when it carries their vocabulary; technical fixtures used across contexts stay at
+the folder root. Extract one only when at least two test consumers need the same port behavior. Scenario
+data and specialized doubles stay beside their spec so the test keeps its local vocabulary.
+
+A shared fixture is a test adapter at a stable domain seam: it may depend on domain ports and types or on
+other shared test fixtures, never on application or infrastructure code. Only specs and sources under
+`src/test/` may import it. `HexagonalArchTest.spec.ts` enforces these dependency directions; use the
+`@test/unit/fixtures/*` alias from co-located specs.
+
 Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is reached
 by an npm script naming the front. Add a suite with its config and the `test:<layer>:headless:<front>` script;
 the aggregate scripts pick it up by glob. `AGENTS.md` owns the one-server-at-a-time trap.

@@ -7,6 +7,16 @@ import { classes, noClasses } from 'arch-unit-ts/dist/main';
 
 describe('HexagonalArchTest', () => {
   const srcProject = new TypeScriptProject(RelativePath.of('src/main/webapp'), '**/*FilesToExclude*', '**/*OtherFilesToExclude*');
+  const sharedTestFixturesProject = new TypeScriptProject(
+    RelativePath.of('src/test/webapp/unit/fixtures'),
+    '**/*FilesToExclude*',
+    '**/*OtherFilesToExclude*',
+  );
+  const sharedTestFixturesPackage = 'src.test.webapp.unit.fixtures..';
+  const sharedTestFixtures = sharedTestFixturesProject
+    .allClasses()
+    .get()
+    .filter(typeScriptClass => typeScriptClass.getPath().get().startsWith('src/test/webapp/unit/fixtures/'));
 
   const packageInfos = srcProject
     .allClasses()
@@ -70,6 +80,38 @@ describe('HexagonalArchTest', () => {
           "To interact between two contexts, secondary from context 'A' should call a primary TypeScript adapter (naming convention starting with 'TypeScript') from context 'B'",
         )
         .check(srcProject.allClasses());
+    });
+  });
+
+  describe('SharedTestFixtures', () => {
+    it('should discover shared test fixtures, since both rules below govern nothing otherwise', () => {
+      expect(sharedTestFixtures.length).toBeGreaterThan(0);
+    });
+
+    it('should keep shared fixtures on domain seams', () => {
+      classes()
+        .that()
+        .resideInAPackage(sharedTestFixturesPackage)
+        .should()
+        .onlyDependOnClassesThat()
+        .resideInAnyPackage(sharedTestFixturesPackage, '..domain..')
+        .because('A reusable fixture models stable domain behavior and must not couple tests to production orchestration or adapters')
+        .check(sharedTestFixturesProject.allClasses());
+    });
+
+    it('should only be consumed by test sources', () => {
+      const productionConsumers = srcProject
+        .allClasses()
+        .get()
+        .filter(typeScriptClass => !typeScriptClass.getPath().get().endsWith('.spec.ts'))
+        .filter(typeScriptClass =>
+          typeScriptClass.dependencies.some(dependency =>
+            dependency.typeScriptClass.getPath().get().startsWith('src/test/webapp/unit/fixtures/'),
+          ),
+        )
+        .map(typeScriptClass => typeScriptClass.getPath().get());
+
+      expect(productionConsumers).toEqual([]);
     });
   });
 

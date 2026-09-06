@@ -10,7 +10,7 @@ import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalSto
 import { IndexedDbLocalStorage } from '@/pupitre/shared/local-storage/infrastructure/secondary/IndexedDbLocalStorage';
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
-import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
+import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory } from 'fake-indexeddb';

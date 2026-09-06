@@ -9,7 +9,7 @@ import { EMPTY_PUPITRE, LocalPupitreState, OperateurDuPupitre } from '@/pupitre/
 import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
 import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
 import { TestBed } from '@angular/core/testing';
-import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
+import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };

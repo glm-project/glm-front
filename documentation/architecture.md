@@ -93,6 +93,8 @@ The architecture suite enforces these rules:
 - primary and secondary adapters do not depend on one another;
 - secondary adapters do not depend on application code;
 - only primary adapters depend on the design system.
+- shared unit-test fixtures depend only on domain seams or other shared fixtures, and only test sources
+  consume them.
 
 The compiler-backed architecture harness resolves static imports, literal dynamic imports and re-exports to
 the declaration that TypeScript actually exposes. A barrel therefore cannot turn a forbidden dependency
