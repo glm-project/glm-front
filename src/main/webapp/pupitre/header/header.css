@@ -2,6 +2,12 @@
   display: block;
 }
 
+.header-grid {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 2fr) auto;
+  align-items: center;
+}
+
 .connectivity-indicator {
   width: 0.5em;
   height: 0.5em;

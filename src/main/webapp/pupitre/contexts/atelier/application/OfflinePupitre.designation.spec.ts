@@ -17,6 +17,7 @@ import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/Jo
 import { setTimeout as roundTrip } from 'node:timers';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
+const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
 
 const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
 
@@ -325,7 +326,7 @@ describe('Designation du pupitre', () => {
     expect(designation.operateur()).toBeUndefined();
   };
   const thenOperatorIsDesignated = (): void => {
-    expect(designation.operateur()).toEqual(operateurFixture);
+    expect(designation.operateur()).toEqual(identiteOperateurFixture);
     expect(designation.unknownCode()).toBe(false);
   };
   const thenUnknownCodeIsShown = (): void => {

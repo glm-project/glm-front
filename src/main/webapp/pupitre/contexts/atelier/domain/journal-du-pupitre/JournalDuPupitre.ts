@@ -22,6 +22,7 @@ export interface ActiviteDuPupitre {
 export interface SuiviDuPupitre {
   id: string;
   nom: string;
+  reference?: string;
   etat: EtatDAtelier;
   type: TypeDElement;
   activites: ActiviteDuPupitre[];
