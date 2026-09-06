@@ -73,7 +73,7 @@ describe('Pointage screen', () => {
     thenEveryTileIsAvailable();
   });
 
-  it('should request a workstation, disable every choice after selection and dismiss after a failed capture', async () => {
+  it('should request a workstation, disable choices during selection, dismiss after failure, and re-enable choices on retry', async () => {
     givenAWorkstationChoice();
     await whenRendering();
 
@@ -83,10 +83,15 @@ describe('Pointage screen', () => {
     whenChoosing('fraiseuse');
     await whenRendering();
     thenEveryWorkstationChoiceIsDisabled();
+    thenCancellingWorkstationIsDisabled();
     whenChoosing('tour');
     await whenCaptureFails();
 
     thenWorkstationChoiceIsClosed();
+    whenPressing('of-generated', 'secondary-target');
+    await whenRendering();
+    thenWorkstationChoiceIsVisible();
+    thenEveryWorkstationChoiceIsAvailable();
   });
 
   it('should cancel an uncommitted workstation choice and expose global intentions', async () => {
@@ -213,6 +218,13 @@ describe('Pointage screen', () => {
   };
   const thenEveryWorkstationChoiceIsDisabled = (): void => {
     expect(['tour', 'fraiseuse'].map(poste => workstationFor(poste).disabled)).toEqual([true, true]);
+  };
+  const thenCancellingWorkstationIsDisabled = (): void => {
+    expect(button('cancel-workstation').disabled).toBe(true);
+  };
+  const thenEveryWorkstationChoiceIsAvailable = (): void => {
+    expect(['tour', 'fraiseuse'].map(poste => workstationFor(poste).disabled)).toEqual([false, false]);
+    expect(button('cancel-workstation').disabled).toBe(false);
   };
   const thenWorkstationChoiceIsClosed = (): void => {
     expect(root().querySelector(dataSelector('workstation-dialog'))).toBeNull();
