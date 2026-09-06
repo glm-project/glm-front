@@ -3,7 +3,7 @@ import { EMPTY_PUPITRE, LocalGeste, LocalPupitreState, ReferentielDuPupitre } fr
 import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
 import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
 import { Injector } from '@angular/core';
-import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
+import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };

@@ -6,7 +6,7 @@ import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServ
 import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/RefusDAtelier';
 import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
 import { Injector } from '@angular/core';
-import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
+import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { OfflinePupitre } from './OfflinePupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';

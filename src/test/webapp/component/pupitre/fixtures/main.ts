@@ -8,7 +8,7 @@ import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/p
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
+import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
 
 @Component({
   selector: 'glm-root',
