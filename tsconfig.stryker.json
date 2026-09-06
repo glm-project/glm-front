@@ -1,7 +1,4 @@
 {
   "extends": "./tsconfig.spec.json",
-  "include": [
-    "src/main/webapp/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy.ts",
-    "src/main/webapp/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy.spec.ts"
-  ]
+  "include": ["src/main/webapp/**/*.ts", "src/test/webapp/unit/**/*.spec.ts"]
 }

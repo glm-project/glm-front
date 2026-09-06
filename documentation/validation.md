@@ -9,9 +9,11 @@ application tests and the production offline restart. The browser groups run in 
 servers never share one workspace at the same time.
 
 CI invokes the same grouped commands in separate workspaces. Each job records its duration as an artifact.
-The pre-push hook runs `validate:quick`, records its duration on standard output and returns its exit code. It
-does not rerun coverage, builds or browser suites before the CI jobs that own those checks. Codex Stop retains
-the complete local graph. See [ADR 0020](adr/0020-keep-pre-push-feedback-quick.md).
+The pre-push hook runs `validate:quick`, then mutates the added or modified lines of handwritten production
+TypeScript in every ref in the push. Each step records its duration on standard output and returns its exit code. It does not rerun
+coverage, builds or browser suites before the CI jobs that own those checks. Codex Stop retains the complete
+local graph. See [ADR 0020](adr/0020-keep-pre-push-feedback-quick.md) and
+[ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md).
 The pre-commit hook scans the staged diff for secrets before lint-staged runs ESLint fixes and then Prettier on
 TypeScript, Angular templates and JavaScript tooling scripts. Other supported staged files only run through Prettier.
 
