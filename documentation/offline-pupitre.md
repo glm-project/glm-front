@@ -15,8 +15,11 @@ atomic gesture batches, reference activation and push outcomes.
 schema change stays local to that adapter.
 
 Each tenant has an independent journal. Reenrolment selects another journal without deleting or pushing the
-former tenant's pending work. Gestures receive their UUID and business timestamp at the operator action,
-before asynchronous capture begins.
+former tenant's pending work. Immediate gestures receive their UUID and business timestamp at the operator
+action, before asynchronous capture begins. A deferred global intention receives one UUID root and its business
+timestamp at the press; once the updated window decides its batch, every gesture UUID is derived deterministically
+from that root before the atomic append. Waiting never introduces new identity randomness or a new occurrence
+time.
 
 ## Domain owners decide the gesture
 
@@ -75,10 +78,9 @@ extends that decision to the designation's interaction and lifecycle rules.
 designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
 `OfflinePupitre` coordinates local resolution and closure, publishes each designation transition and
 explicitly replaces its inactivity schedule through a domain port. The secondary timer adapter only executes
-the requested callback. `OfflinePupitre` releases its designation on destruction. The page calls `finish()`
-when it is left; switching from keypad to pointage does not destroy the coordinator or close the designation.
-`Designation` translates touch and keyboard events and renders the application snapshot, without owning its
-lifetime.
+the requested callback. The page calls `OfflinePupitre.finish()` when it is left; switching from keypad to
+pointage does not destroy the coordinator or close the designation. `Designation` translates touch and keyboard
+events and renders the application snapshot, without owning its lifetime.
 
 The domain checks and renews validity at each gesture's initiation, even when the screen's expiry callback
 has not run. Expiry immediately prevents new gestures; captures already initiated retain their operator and
@@ -119,8 +121,8 @@ order and each server outcome.
 
 A global command pressed while captures are already in flight is retained and decided from the updated
 window after those captures settle locally. From that intention until local acceptance, tiles and global
-commands are unavailable. “J'ai fini” remains available: it closes the visible window immediately while
-already initiated work drains.
+commands are unavailable at both the command boundary and in the rendered controls. “J'ai fini” remains
+available: it closes the visible window immediately while already initiated work drains.
 
 The permanent chrome is the only composition rendered before enrolment and the first reference are
 available; #76 adds no loading or enrolment content, which belongs to #103. The same chrome identifies a

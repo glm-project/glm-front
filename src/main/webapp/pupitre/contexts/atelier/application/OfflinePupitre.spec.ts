@@ -24,6 +24,8 @@ const referenceFixture: ReferentielDuPupitre = {
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const identityRootFixture = '11111111-1111-4111-8111-111111111111';
+const futureIdentityRootFixture = '22222222-2222-4222-8222-222222222222';
 const refusalFixture = (code: string): RefusDePublication =>
   new RefusDePublication(
     `urn:glm:erreur:atelier:${code}`,
@@ -219,20 +221,36 @@ describe('OfflinePupitre', () => {
     ]);
   });
 
-  it('should retain unique identities and the press time while a global batch waits for storage', async () => {
+  it('should anchor global identities and the business time before its deferred capture starts', async () => {
     givenBusinessTime();
     await givenTwoActiveWorkstations();
+    const identityRoot = givenGlobalIdentityRoot();
     const releaseCapture = givenDelayedCapture();
 
-    const pausing = whenPausing();
     const stopping = whenStoppingEverything();
+    whenFutureIdentitiesUseAnotherRoot();
     whenBusinessTimeBecomes('2026-09-05T09:00:00Z');
     whenReleasingCapture(releaseCapture);
-    await Promise.all([pausing, stopping]);
+    await stopping;
 
-    const identities = await thenQueuedGesturesHaveUniqueIdentitiesAt('2026-09-05T08:00:00.000Z');
+    const identities = await thenQueuedGesturesUseRootAt(identityRoot, '2026-09-05T08:00:00.000Z');
     await whenRestoring();
     await thenQueuedIdentitiesAre(identities);
+  });
+
+  it('should refuse pointage and global reentry while a global acceptance is in flight', async () => {
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const stopping = whenStoppingEverything();
+    const pointage = whenPressingPrimaryTarget();
+    const pausing = whenPausingGlobally();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([stopping, pausing]);
+
+    thenPointageIsUnavailable(pointage);
+    thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
+    thenGlobalGesturesAreAvailable(true);
   });
 
   it('should hide a finished window immediately while a global gesture waits for an earlier capture', async () => {
@@ -275,6 +293,18 @@ describe('OfflinePupitre', () => {
     thenAcceptedBatchesAre([['ARRIVEE', 'REPRISE']]);
   });
 
+  it('should publish and clear a local presence failure through the common workshop message', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+
+    const pausing = whenPausing();
+    await thenFails(pausing, 'disque plein');
+    thenGlobalRecordingFailed();
+
+    await whenPausing();
+    thenGlobalRecordingRecovered();
+  });
+
   it('should expose a refused finish from a global stop through one renderable workshop message', async () => {
     await givenTwoActiveWorkstations();
     givenAuthorizedAccess();
@@ -283,7 +313,10 @@ describe('OfflinePupitre', () => {
     await whenStoppingEverything();
     await whenSynchronizing();
 
-    expect(pupitre.messageAtelier()).toEqual({ contexte: 'TOUT ARRÊTER', message: 'cause conservee' });
+    expect(pupitre.messageAtelier()).toEqual({
+      contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
+      message: 'cause conservee',
+    });
   });
 
   it('should clear the current refusal as soon as a new business intent starts', async () => {
@@ -765,6 +798,13 @@ describe('OfflinePupitre', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
   };
+  const givenGlobalIdentityRoot = (): string => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(identityRootFixture);
+    return identityRootFixture;
+  };
+  const whenFutureIdentitiesUseAnotherRoot = (): void => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(futureIdentityRootFixture);
+  };
   const givenDelayedCapture = (): (() => void) => {
     let release: (() => void) | undefined;
     authentication.pendingSynchronization = new Promise(resolve => {
@@ -829,7 +869,7 @@ describe('OfflinePupitre', () => {
   const whenStartingOn = (posteId: string): Promise<void> => {
     const execution = pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
     if (execution.kind === 'CHOIX_POSTE_REQUIS') return Promise.resolve().then(() => execution.choose(posteId));
-    return execution.completion;
+    return completionOf(execution);
   };
   const whenStartingAndReportingNonConformity = async (): Promise<void> => {
     await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
@@ -990,6 +1030,9 @@ describe('OfflinePupitre', () => {
   const thenGlobalGesturesAreAvailable = (available: boolean): void => {
     expect(pupitre.gestesDisponibles()).toBe(available);
   };
+  const thenPointageIsUnavailable = (execution: ReturnType<OfflinePupitre['execute']>): void => {
+    expect(execution).toEqual({ kind: 'INDISPONIBLE' });
+  };
   const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
     const arrival = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
     expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
@@ -1040,10 +1083,13 @@ describe('OfflinePupitre', () => {
     expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
-  const thenQueuedGesturesHaveUniqueIdentitiesAt = async (instant: string): Promise<string[]> => {
+  const thenQueuedGesturesUseRootAt = async (rootIdentity: string, instant: string): Promise<string[]> => {
     const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
     const identities = gestes.map(geste => geste.id);
-    expect(new Set(identities).size).toBe(gestes.length);
+    const rootPrefix = rootIdentity.slice(0, -8);
+    const firstSuffix = Number.parseInt(rootIdentity.slice(-8), 16);
+    const expected = [0, 1, 2, 3].map(offset => `${rootPrefix}${((firstSuffix + offset) >>> 0).toString(16).padStart(8, '0')}`);
+    expect(new Set(identities)).toEqual(new Set(expected));
     expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
     return identities;
   };

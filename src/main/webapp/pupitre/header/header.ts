@@ -1,6 +1,11 @@
-import { IdentiteOperateurDesigne, MessageDAtelierVisible } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { LIBELLES_ENTETE_PUPITRE } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Component, input, output } from '@angular/core';
+
+export interface MessageDAtelierVisible {
+  readonly contexte?: string;
+  readonly message: string;
+}
 
 @Component({
   selector: 'glm-pupitre-header',

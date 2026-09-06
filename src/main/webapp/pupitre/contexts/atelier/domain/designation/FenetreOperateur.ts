@@ -1,6 +1,7 @@
 import {
   EvenementDuJournal,
   GesteDAtelier,
+  GesteDePresence,
   IdentiteDuGeste,
   JournalDuPupitre,
   OperateurDuPupitre,
@@ -44,11 +45,16 @@ export interface VueDePointage {
 }
 
 export type CibleDePointage = 'PRINCIPALE' | 'SECONDAIRE';
+export type IntentionGlobaleDAtelier = 'PAUSE' | 'REPRENDRE' | 'TOUT_ARRETER';
 
-export interface GestesDePointage {
+export type ContexteDeGesteDAtelier =
+  | { readonly kind: 'ELEMENT'; readonly numero: string }
+  | { readonly kind: 'COMMANDE_GLOBALE'; readonly intention: IntentionGlobaleDAtelier };
+
+export interface LotDeGestesDAtelier {
   readonly kind: 'GESTES';
   readonly capture: (arriveeAssuree?: boolean) => readonly GesteDAtelier[];
-  readonly contextesParGeste: ReadonlyMap<string, string>;
+  readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
   readonly intention: number;
 }
 
@@ -64,7 +70,7 @@ export interface DecisionResult {
 
 export interface GestesDecisionResult {
   readonly fenetre: FenetreOperateur;
-  readonly decision: GestesDePointage;
+  readonly decision: LotDeGestesDAtelier;
 }
 
 export interface PosteAChoisir {
@@ -78,15 +84,15 @@ export interface ChoixDePosteRequis {
   readonly postes: readonly PosteAChoisir[];
 }
 
-export type DecisionDePointage = GestesDePointage | ChoixDePosteRequis;
+export type DecisionDePointage = LotDeGestesDAtelier | ChoixDePosteRequis;
 
-export interface MessageDAtelierVisible {
-  readonly contexte?: string;
+export interface MessageDAtelier {
+  readonly contexte?: ContexteDeGesteDAtelier;
   readonly message: string;
 }
 
-export interface RefusDAtelierVisible extends MessageDAtelierVisible {
-  readonly contexte: string;
+export interface RefusDAtelier extends MessageDAtelier {
+  readonly contexte: ContexteDeGesteDAtelier;
 }
 
 export interface IdentiteOperateurDesigne {
@@ -102,9 +108,9 @@ interface EtatDeFenetreOperateur {
   readonly instantDOuverture: number;
   readonly identity: number;
   readonly arriveeAssuree: boolean;
-  readonly contextesParGeste: ReadonlyMap<string, string>;
+  readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
   readonly intention: number;
-  readonly refusVisible: RefusDAtelierVisible | undefined;
+  readonly refusVisible: RefusDAtelier | undefined;
   readonly operateurDesigne: OperateurDesigne;
 }
 
@@ -336,7 +342,7 @@ export class FenetreOperateur {
       refusVisible: refus !== undefined && contexte !== undefined ? { contexte, message: refus.refus.message } : undefined,
     });
   }
-  prepareAcceptance(decision: GestesDePointage): AcceptationDeGestes {
+  prepareAcceptance(decision: LotDeGestesDAtelier): AcceptationDeGestes {
     const gestes = this.capture(decision);
     return {
       gestes,
@@ -357,7 +363,7 @@ export class FenetreOperateur {
       },
     });
   }
-  refusal(): RefusDAtelierVisible | undefined {
+  refusal(): RefusDAtelier | undefined {
     return this.etat.refusVisible;
   }
   belongsTo(entreprise: string | undefined): boolean {
@@ -369,11 +375,11 @@ export class FenetreOperateur {
   journalScope(): string {
     return this.etat.entreprise;
   }
-  capture(decision: GestesDePointage): readonly GesteDAtelier[] {
+  capture(decision: LotDeGestesDAtelier): readonly GesteDAtelier[] {
     return decision.capture(this.etat.arriveeAssuree);
   }
-  preparePresence(type: TypeDePresence, identify: () => IdentiteDuGeste): GestesDePointage {
-    const presence: GesteDAtelier = {
+  preparePresence(type: TypeDePresence, identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
+    const presence: GesteDePresence = {
       ...identify(),
       operateurId: this.etat.operateurDesigne.id(),
       nature: 'PRESENCE',
@@ -386,7 +392,8 @@ export class FenetreOperateur {
       operateurId: this.etat.operateurDesigne.id(),
       nature: 'ARRIVEE',
     };
-    const presenceApresAssurance = type === 'REPRISE' ? { ...presence, assuranceArriveeId: arrivee.id } : presence;
+    const presenceApresAssurance: GesteDePresence =
+      type === 'REPRISE' ? { ...presence, type, implicite: false, assuranceArriveeId: arrivee.id } : presence;
     const contexte = this.contexteFor(type);
     return {
       kind: 'GESTES',
@@ -395,8 +402,8 @@ export class FenetreOperateur {
       intention: this.etat.intention,
     };
   }
-  prepareToutArreter(identify: () => IdentiteDuGeste): GestesDePointage {
-    const depart = {
+  prepareToutArreter(identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
+    const depart: GesteDePresence = {
       ...identify(),
       operateurId: this.etat.operateurDesigne.id(),
       nature: 'PRESENCE' as const,
@@ -422,23 +429,25 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages, depart],
-      contextesParGeste: new Map([arrivee, ...pointages, depart].map(geste => [geste.id, 'TOUT ARRÊTER'])),
+      contextesParGeste: new Map(
+        [arrivee, ...pointages, depart].map(geste => [geste.id, { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' } as const]),
+      ),
       intention: this.etat.intention,
     };
   }
 
-  private afterLocalAcceptance(gestes: readonly GesteDAtelier[], decision: GestesDePointage): FenetreOperateur {
+  private afterLocalAcceptance(gestes: readonly GesteDAtelier[], decision: LotDeGestesDAtelier): FenetreOperateur {
     const contextesParGeste = decision.intention === this.etat.intention ? decision.contextesParGeste : this.etat.contextesParGeste;
     return this.with({ contextesParGeste }).afterAccept(gestes);
   }
 
-  private contextesOf(decision: DecisionDePointage): ReadonlyMap<string, string> {
+  private contextesOf(decision: DecisionDePointage): ReadonlyMap<string, ContexteDeGesteDAtelier> {
     return decision.kind === 'GESTES' ? decision.contextesParGeste : new Map();
   }
 
-  private contexteFor(type: TypeDePresence): string | undefined {
-    if (type === 'PAUSE') return 'PAUSE';
-    if (type === 'REPRISE') return 'REPRENDRE';
+  private contexteFor(type: TypeDePresence): ContexteDeGesteDAtelier | undefined {
+    if (type === 'PAUSE') return { kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' };
+    if (type === 'REPRISE') return { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' };
     return undefined;
   }
 
@@ -454,7 +463,7 @@ export class FenetreOperateur {
     transitions: LotDeTransitions,
     identify: () => IdentiteDuGeste,
     repriseImplicite: boolean,
-  ): GestesDePointage {
+  ): LotDeGestesDAtelier {
     const first = this.toPointage(suiviId, transitions.premiere, identify());
     const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
     const arrivee: GesteDAtelier = {
@@ -463,7 +472,7 @@ export class FenetreOperateur {
       operateurId: this.etat.operateurDesigne.id(),
       nature: 'ARRIVEE',
     };
-    const reprise: GesteDAtelier = {
+    const reprise: GesteDePresence = {
       ...identify(),
       dateDeSurvenue: first.dateDeSurvenue,
       operateurId: this.etat.operateurDesigne.id(),
@@ -474,7 +483,7 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => (assured ? pointages : [arrivee, ...(repriseImplicite ? [reprise] : []), ...pointages]),
-      contextesParGeste: new Map(pointages.map(pointage => [pointage.id, numero])),
+      contextesParGeste: new Map(pointages.map(pointage => [pointage.id, { kind: 'ELEMENT', numero } as const])),
       intention: this.etat.intention,
     };
   }

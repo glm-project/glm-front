@@ -2,18 +2,22 @@ import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/d
 import { DesignationOperateur } from '@/pupitre/contexts/atelier/domain/designation/DesignationOperateur';
 import {
   FenetreOperateur,
-  GestesDePointage,
   IdentiteOperateurDesigne,
+  LotDeGestesDAtelier,
   VueDePointage,
 } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDuGeste, JournalDuPupitre, TypeDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AcceptationLocale, AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
-import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
+import { CommandeGlobale, IntentionGlobale, IntentionGlobaleInitiee } from './CommandeGlobale';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
 
-const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurvenue: new Date().toISOString() });
+const identityAt = (instant: number): IdentiteDuGeste => ({
+  id: crypto.randomUUID(),
+  dateDeSurvenue: new Date(instant).toISOString(),
+});
+const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
 export class OfflinePupitre implements PointageCommand, CommandeGlobale {
@@ -140,6 +144,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   }
 
   execute(intention: IntentionDePointage): ExecutionDePointage {
+    if (!this.gestesDisponiblesState()) return { kind: 'INDISPONIBLE' };
     const fenetre = this.requireWindow();
     const result = fenetre.afterDeciding(intention.suiviId, intention.cible, identity);
     this.designation = this.designation.afterReplacingWindow(result.fenetre);
@@ -164,7 +169,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
     return this.captureDecision(result.fenetre, result.decision);
   }
 
-  private captureDecision(fenetre: FenetreOperateur, decision: GestesDePointage): Promise<void> {
+  private captureDecision(fenetre: FenetreOperateur, decision: LotDeGestesDAtelier): Promise<void> {
     return this.captureOperation(
       fenetre,
       this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes: decision }, () => this.currentWindow(fenetre)),
@@ -186,22 +191,21 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   recordPresence(type: TypeDePresence): Promise<void> {
     const fenetre = this.beginGestureIntention(this.requireWindow());
     const gestes = fenetre.preparePresence(type, identity);
-    return this.acceptationLocale
-      .capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre))
-      .then(acceptance => {
-        this.afterAccept(fenetre, acceptance);
-      });
+    return this.captureOperation(
+      fenetre,
+      this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre)),
+    );
   }
 
   executeGlobale(intention: IntentionGlobale): Promise<void> {
+    if (!this.gestesDisponiblesState()) return Promise.resolve();
     const instantDePression = Date.now();
     const fenetre = this.beginGestureIntention(this.requireWindow(instantDePression));
+    const intentionInitiee: IntentionGlobaleInitiee = { ...identityAt(instantDePression), commande: intention };
     this.gestesDisponiblesState.set(false);
     return this.captureOperation(
       fenetre,
-      this.acceptationLocale.capture(fenetre, { kind: 'GLOBALE', commande: intention, instantDePression }, () =>
-        this.currentWindow(fenetre),
-      ),
+      this.acceptationLocale.capture(fenetre, { kind: 'GLOBALE', intention: intentionInitiee }, () => this.currentWindow(fenetre)),
     ).finally(() => {
       this.gestesDisponiblesState.set(true);
     });

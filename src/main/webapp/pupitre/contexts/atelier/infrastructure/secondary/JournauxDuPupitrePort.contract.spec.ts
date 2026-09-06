@@ -183,3 +183,32 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     expect(chronology).toEqual(expected);
   };
 });
+
+describe('IndexedDbJournauxDuPupitre compatibility', () => {
+  let journal: IndexedDbJournauxDuPupitre;
+  let storage: LocalStoragePort;
+
+  beforeEach(() => {
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    vi.stubGlobal('navigator', { locks: new BrowserLocksFixture() });
+    TestBed.configureTestingModule({
+      providers: [IndexedDbJournauxDuPupitre, { provide: LocalStoragePort, useClass: IndexedDbLocalStorage }],
+    });
+    journal = TestBed.inject(IndexedDbJournauxDuPupitre);
+    storage = TestBed.inject(LocalStoragePort);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('should restore a legacy accepted arrival without inventing that it opened the day', async () => {
+    await givenALegacyAcceptedArrival();
+
+    const state = await journal.read('entreprise-a');
+
+    expect(state.evenements).toEqual([{ geste: arriveeFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
+  });
+
+  const givenALegacyAcceptedArrival = async (): Promise<void> => {
+    const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const }] };
+    await storage.update('atelier:entreprise-a', legacy, () => legacy);
+  };
+});

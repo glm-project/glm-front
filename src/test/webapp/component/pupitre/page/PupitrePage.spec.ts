@@ -1,4 +1,5 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { touchFixture } from '../../../utils/TouchscreenFixture';
 
 describe('Pupitre common page in a browser', () => {
   let controlledClock: { setSystemTime: (now: number) => void } | undefined;
@@ -171,7 +172,7 @@ describe('Pupitre common page in a browser', () => {
   };
 
   const whenPressingImmediately = (selector: string): void => {
-    cy.get(dataSelector(selector)).then(pressed => dispatchPress(pressed));
+    touchFixture(dataSelector(selector));
   };
 
   const dispatchPress = (pressed: JQuery<HTMLElement>): void => {

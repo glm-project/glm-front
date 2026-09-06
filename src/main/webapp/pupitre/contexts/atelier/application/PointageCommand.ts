@@ -17,7 +17,11 @@ export interface ChoixDePosteDePointage {
   readonly choose: (posteId: string) => Promise<void>;
 }
 
-export type ExecutionDePointage = CaptureDePointage | ChoixDePosteDePointage;
+export interface PointageIndisponible {
+  readonly kind: 'INDISPONIBLE';
+}
+
+export type ExecutionDePointage = CaptureDePointage | ChoixDePosteDePointage | PointageIndisponible;
 
 export interface PointageCommand {
   execute: (intention: IntentionDePointage) => ExecutionDePointage;

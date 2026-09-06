@@ -1,13 +1,13 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { AcceptationDeGestes, FenetreOperateur, GestesDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { AcceptationDeGestes, FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { inject, Injectable } from '@angular/core';
-import { IntentionGlobale } from './CommandeGlobale';
+import { IntentionGlobaleInitiee } from './CommandeGlobale';
 
 type IntentionDeCapture =
-  | { readonly kind: 'PREPAREE'; readonly gestes: GestesDePointage }
-  | { readonly kind: 'GLOBALE'; readonly commande: IntentionGlobale; readonly instantDePression: number };
+  | { readonly kind: 'PREPAREE'; readonly gestes: LotDeGestesDAtelier }
+  | { readonly kind: 'GLOBALE'; readonly intention: IntentionGlobaleInitiee };
 
 export interface AcceptationLocale {
   readonly applyTo: AcceptationDeGestes['applyTo'];
@@ -46,16 +46,22 @@ export class AcceptationLocaleDesGestes {
     return { applyTo: acceptance.applyTo };
   }
 
-  private prepare(fenetre: FenetreOperateur, intention: IntentionDeCapture): GestesDePointage {
+  private prepare(fenetre: FenetreOperateur, intention: IntentionDeCapture): LotDeGestesDAtelier {
     if (intention.kind === 'PREPAREE') return intention.gestes;
-    const identify = this.identityAt(intention.instantDePression);
-    if (intention.commande === 'TOUT_ARRETER') return fenetre.prepareToutArreter(identify);
-    const presence = intention.commande === 'REPRENDRE' ? 'REPRISE' : 'PAUSE';
+    const identify = this.identitiesFrom(intention.intention);
+    if (intention.intention.commande === 'TOUT_ARRETER') return fenetre.prepareToutArreter(identify);
+    const presence = intention.intention.commande === 'REPRENDRE' ? 'REPRISE' : 'PAUSE';
     return fenetre.preparePresence(presence, identify);
   }
 
-  private identityAt(instant: number): () => IdentiteDuGeste {
-    const dateDeSurvenue = new Date(instant).toISOString();
-    return () => ({ id: crypto.randomUUID(), dateDeSurvenue });
+  private identitiesFrom(intention: IntentionGlobaleInitiee): () => IdentiteDuGeste {
+    const prefix = intention.id.slice(0, -8);
+    const firstSuffix = Number.parseInt(intention.id.slice(-8), 16);
+    let offset = 0;
+    return () => {
+      const suffix = ((firstSuffix + offset) >>> 0).toString(16).padStart(8, '0');
+      offset += 1;
+      return { id: `${prefix}${suffix}`, dateDeSurvenue: intention.dateDeSurvenue };
+    };
   }
 }

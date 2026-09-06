@@ -1,4 +1,11 @@
-import { EvenementAccepte, EvenementDuJournal, GesteDePointage, JournalDuPupitre, ReferentielDuPupitre } from './JournalDuPupitre';
+import {
+  EvenementAccepte,
+  EvenementDuJournal,
+  GesteDAtelier,
+  GesteDePointage,
+  JournalDuPupitre,
+  ReferentielDuPupitre,
+} from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
@@ -12,10 +19,15 @@ const referenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
-const debutFixture: EvenementDuJournal = {
-  geste: { nature: 'POINTAGE', operateurId: 'jean', suiviId: 'piece', type: 'DEBUT', id: 'debut', dateDeSurvenue: '2026-09-05T08:00:00Z' },
-  etat: 'EN_ATTENTE',
+const debutGesteFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  operateurId: 'jean',
+  suiviId: 'piece',
+  type: 'DEBUT',
+  id: 'debut',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
 };
+const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
 
 describe('JournalDuPupitreProjection', () => {
   it('should reconstruct an offline activity and its original starting time', () => {
@@ -76,7 +88,7 @@ describe('JournalDuPupitreProjection', () => {
   });
 
   it('should retain an accepted gesture until a server snapshot contains it', () => {
-    const state = givenEvents([{ ...debutFixture, etat: 'ACCEPTE' }]);
+    const state = givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE' }]);
 
     const projection = whenProjecting(state);
 
@@ -84,10 +96,29 @@ describe('JournalDuPupitreProjection', () => {
   });
 
   it('should prevent a refusal from being carried into an accepted event', () => {
-    const accepted: EvenementAccepte = { geste: debutFixture.geste, etat: 'ACCEPTE' };
+    const accepted: EvenementAccepte = { geste: debutGesteFixture, etat: 'ACCEPTE' };
     const acceptedWithAResidualRefusal = { ...accepted, refus: { code: 'obsolete', message: 'obsolete' } };
 
     expectTypeOf(acceptedWithAResidualRefusal).not.toExtend<EvenementDuJournal>();
+  });
+
+  it('should prevent arrival causality from being carried by incompatible gestures and outcomes', () => {
+    const pauseWithArrivalCausality = {
+      ...debutGesteFixture,
+      nature: 'PRESENCE' as const,
+      type: 'PAUSE' as const,
+      implicite: false as const,
+      assuranceArriveeId: 'arrivee',
+    };
+    const pointageWithDayOutcome = { geste: debutGesteFixture, etat: 'ACCEPTE' as const, journeeOuverte: true };
+    const arrivalWithoutDayOutcome = {
+      geste: { ...debutGesteFixture, nature: 'ARRIVEE' as const },
+      etat: 'ACCEPTE' as const,
+    };
+
+    expectTypeOf(pauseWithArrivalCausality).not.toExtend<GesteDAtelier>();
+    expectTypeOf(pointageWithDayOutcome).not.toExtend<EvenementDuJournal>();
+    expectTypeOf(arrivalWithoutDayOutcome).not.toExtend<EvenementDuJournal>();
   });
 
   it('should expose no referential before the first complete download', () => {
@@ -106,7 +137,7 @@ describe('JournalDuPupitreProjection', () => {
   const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
   const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
-    geste: { ...debutFixture.geste, id: 'debut-marie', operateurId: 'marie' },
+    geste: { ...debutGesteFixture, id: 'debut-marie', operateurId: 'marie' },
   });
   const givenEventsWithNoRemainingEffect = (): JournalDuPupitre => ({
     referentiel: {
@@ -115,21 +146,19 @@ describe('JournalDuPupitreProjection', () => {
     },
     connecte: true,
     evenements: [
-      { geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
-      { ...debutFixture, geste: { ...debutFixture.geste, id: 'arrivee', nature: 'ARRIVEE' } },
-      { ...debutFixture, geste: { ...debutFixture.geste, id: 'autre-suivi', nature: 'POINTAGE', suiviId: 'absent', type: 'DEBUT' } },
+      { geste: { ...debutGesteFixture, id: 'refuse' }, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
+      { ...debutFixture, geste: { ...debutGesteFixture, id: 'arrivee', nature: 'ARRIVEE' } },
+      { ...debutFixture, geste: { ...debutGesteFixture, id: 'autre-suivi', suiviId: 'absent' } },
       debutFixture,
     ],
   });
   const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
     ...debutFixture,
-    geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), type },
+    geste: { ...debutGesteFixture, id: crypto.randomUUID(), type },
   });
   const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
     const geste: GesteDePointage = {
-      ...debutFixture.geste,
-      nature: 'POINTAGE',
-      suiviId: 'piece',
+      ...debutGesteFixture,
       id: crypto.randomUUID(),
       type,
       ...(posteId === undefined ? {} : { posteId }),

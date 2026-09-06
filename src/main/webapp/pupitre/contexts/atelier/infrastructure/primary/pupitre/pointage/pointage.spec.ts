@@ -112,11 +112,24 @@ describe('Pointage screen', () => {
     expect(['pause', 'resume', 'stop-all'].map(selector => button(selector).disabled)).toEqual([true, true, true]);
   });
 
+  it('should leave a tile available when the command boundary refuses a stale reentry', async () => {
+    givenTheNextPointageIsUnavailable();
+    await whenRendering();
+
+    whenPressing('moule-1015', 'primary-target');
+    await whenRendering();
+
+    thenEveryTileIsAvailable();
+  });
+
   const givenAnEmptyWorkshop = (): void => {
     fixture.componentRef.setInput('vue', { moules: [], ordresDeFabrication: [], glmActif: true });
   };
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
+  };
+  const givenTheNextPointageIsUnavailable = (): void => {
+    nextExecution = { kind: 'INDISPONIBLE' };
   };
   const givenAWorkstationChoice = (): void => {
     nextExecution = {

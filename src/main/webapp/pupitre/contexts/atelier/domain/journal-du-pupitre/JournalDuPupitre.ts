@@ -44,13 +44,15 @@ export interface GesteDArrivee extends IdentiteDuGeste {
   readonly operateurId: string;
 }
 
-export interface GesteDePresence extends IdentiteDuGeste {
+interface PresenceCommune extends IdentiteDuGeste {
   readonly nature: 'PRESENCE';
   readonly operateurId: string;
-  readonly type: TypeDePresence;
-  readonly implicite: boolean;
-  readonly assuranceArriveeId?: string;
 }
+
+export type GesteDePresence =
+  | (PresenceCommune & { readonly type: TypeDePresence; readonly implicite: false; readonly assuranceArriveeId?: never })
+  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: false; readonly assuranceArriveeId: string })
+  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: true; readonly assuranceArriveeId?: never });
 
 export interface GesteDePointage extends IdentiteDuGeste {
   readonly nature: 'POINTAGE';
@@ -70,12 +72,21 @@ export interface EvenementEnAttente {
   readonly refus?: never;
 }
 
-export interface EvenementAccepte {
-  readonly geste: GesteDAtelier;
+export interface ArriveeAcceptee {
+  readonly geste: GesteDArrivee;
   readonly etat: 'ACCEPTE';
-  readonly journeeOuverte?: boolean;
+  readonly journeeOuverte: boolean;
   readonly refus?: never;
 }
+
+export interface AutreGesteAccepte {
+  readonly geste: GesteDePresence | GesteDePointage;
+  readonly etat: 'ACCEPTE';
+  readonly journeeOuverte?: never;
+  readonly refus?: never;
+}
+
+export type EvenementAccepte = ArriveeAcceptee | AutreGesteAccepte;
 
 export interface EvenementRefuse {
   readonly geste: GesteDAtelier;
@@ -91,13 +102,15 @@ export interface JournalDuPupitre {
 
 export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], connecte: true };
 
+const isArriveeAcceptee = (evenement: EvenementAccepte): evenement is ArriveeAcceptee => evenement.geste.nature === 'ARRIVEE';
+
 const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal => {
   const geste = { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
   if (evenement.etat === 'ACCEPTE') {
-    return evenement.journeeOuverte === undefined
-      ? { geste, etat: 'ACCEPTE' }
-      : { geste, etat: 'ACCEPTE', journeeOuverte: evenement.journeeOuverte };
+    return isArriveeAcceptee(evenement)
+      ? { geste: { ...evenement.geste }, etat: 'ACCEPTE', journeeOuverte: evenement.journeeOuverte }
+      : { geste: { ...evenement.geste }, etat: 'ACCEPTE' };
   }
   return { geste, etat: 'EN_ATTENTE' };
 };

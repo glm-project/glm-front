@@ -1,5 +1,5 @@
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
-import { DecisionDePointage, FenetreOperateur, GestesDePointage } from './FenetreOperateur';
+import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
   if (value === null || value === undefined) {
@@ -7,6 +7,9 @@ const requiredFixture = <T>(value: T | null | undefined, description: string): T
   }
   return value;
 };
+
+const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] =>
+  geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte: false } : { geste, etat: 'ACCEPTE' };
 
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -218,7 +221,10 @@ describe('FenetreOperateur', () => {
       evenements: [{ geste: fin, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
     });
 
-    expect(fenetre.refusal()).toEqual({ contexte: 'TOUT ARRÊTER', message: "L'élément a été clôturé." });
+    expect(fenetre.refusal()).toEqual({
+      contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
+      message: "L'élément a été clôturé.",
+    });
   });
 
   it('should expose only a refused departure when it is the latest refusal from the current global stop batch', () => {
@@ -242,13 +248,16 @@ describe('FenetreOperateur', () => {
       ],
     });
 
-    expect(fenetre.refusal()).toEqual({ contexte: 'TOUT ARRÊTER', message: 'Le départ est refusé.' });
+    expect(fenetre.refusal()).toEqual({
+      contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
+      message: 'Le départ est refusé.',
+    });
   });
 
   it.each([
-    { presence: 'PAUSE' as const, contexte: 'PAUSE' },
-    { presence: 'REPRISE' as const, contexte: 'REPRENDRE' },
-  ])('should expose a refused $presence with its originating global command label', ({ presence, contexte }) => {
+    { presence: 'PAUSE' as const, intention: 'PAUSE' as const },
+    { presence: 'REPRISE' as const, intention: 'REPRENDRE' as const },
+  ])('should expose a refused $presence with its originating global command', ({ presence, intention }) => {
     const acceptance = fenetre.prepareAcceptance(fenetre.preparePresence(presence, identifyFixture));
     const geste = requiredFixture(
       acceptance.gestes.find(candidate => candidate.nature === 'PRESENCE'),
@@ -261,7 +270,10 @@ describe('FenetreOperateur', () => {
       evenements: [{ geste, etat: 'REFUSE', refus: { code: 'presence-interdite', message: 'La présence est refusée.' } }],
     });
 
-    expect(fenetre.refusal()).toEqual({ contexte, message: 'La présence est refusée.' });
+    expect(fenetre.refusal()).toEqual({
+      contexte: { kind: 'COMMANDE_GLOBALE', intention },
+      message: 'La présence est refusée.',
+    });
   });
 
   it('should keep a refusal born in an earlier operator window silent', () => {
@@ -360,7 +372,7 @@ describe('FenetreOperateur', () => {
     const reconciled = transition.fenetre.afterReconciling('entreprise-a', refused);
 
     expect(previous.refusal()).toBeUndefined();
-    expect(reconciled.refusal()).toEqual({ contexte: '1015', message: "L'élément a été clôturé." });
+    expect(reconciled.refusal()).toEqual({ contexte: { kind: 'ELEMENT', numero: '1015' }, message: "L'élément a été clôturé." });
   });
 
   it('should retain the designated operator and workstation qualifications frozen at opening through a referential reconciliation', () => {
@@ -384,9 +396,7 @@ describe('FenetreOperateur', () => {
     const reconciled = {
       ...structuredClone(vueFixture),
       evenements: gestures.map((geste, index) =>
-        index === 0
-          ? { geste, etat: 'ACCEPTE' as const }
-          : { geste, etat: 'REFUSE' as const, refus: { code: 'suivi-cloture', message: 'Clôturé.' } },
+        index === 0 ? acceptedFixture(geste) : { geste, etat: 'REFUSE' as const, refus: { code: 'suivi-cloture', message: 'Clôturé.' } },
       ),
     };
 
@@ -529,7 +539,7 @@ describe('FenetreOperateur', () => {
     suiviId: string,
     cible: 'PRINCIPALE' | 'SECONDAIRE',
     posteId: string,
-  ): GestesDePointage => owner.afterChoosingPoste(suiviId, cible, posteId, identifyFixture).decision;
+  ): LotDeGestesDAtelier => owner.afterChoosingPoste(suiviId, cible, posteId, identifyFixture).decision;
   const givenAcceptedDecision = (decision: DecisionDePointage): readonly GesteDAtelier[] => {
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     const gestures = decision.capture();
@@ -666,7 +676,7 @@ describe('FenetreOperateur', () => {
     });
   };
   const thenLatestRefusalNamesTheElement = (): void => {
-    expect(fenetre.refusal()).toEqual({ contexte: '1015', message: "L'élément a été clôturé." });
+    expect(fenetre.refusal()).toEqual({ contexte: { kind: 'ELEMENT', numero: '1015' }, message: "L'élément a été clôturé." });
   };
   const thenNoRefusalIsVisible = (): void => {
     expect(fenetre.refusal()).toBeUndefined();

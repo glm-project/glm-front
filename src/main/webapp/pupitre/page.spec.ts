@@ -150,6 +150,21 @@ describe('Pupitre page', () => {
     thenVisible('workstation-dialog', false);
   });
 
+  it.each([
+    [{ contexte: { kind: 'ELEMENT' as const, numero: '204' }, message: 'Pointage refusé' }, '204 Pointage refusé'],
+    [
+      { contexte: { kind: 'COMMANDE_GLOBALE' as const, intention: 'TOUT_ARRETER' as const }, message: 'Commande refusée' },
+      'TOUT ARRÊTER Commande refusée',
+    ],
+    [{ message: 'Service indisponible' }, 'Service indisponible'],
+  ])('should render the workshop message in presentation vocabulary', (message, expected) => {
+    givenWorkshopMessage(message);
+
+    whenRenderingThePage();
+
+    thenHeaderMessageIs(expected);
+  });
+
   it('should finish on page destruction and report a closure failure', async () => {
     givenClosureWillFail();
 
@@ -182,7 +197,13 @@ describe('Pupitre page', () => {
   const givenClosureWillFail = (): void => {
     pupitre.finish.mockRejectedValueOnce(new Error('closure unavailable'));
   };
+  const givenWorkshopMessage = (message: ReturnType<OfflinePupitre['messageAtelier']>): void => {
+    pupitre.messageAtelier.set(message);
+  };
 
+  const whenRenderingThePage = (): void => {
+    fixture.detectChanges();
+  };
   const whenPressing = (selector: string): void => {
     const pressed = element(selector);
     pressed.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
@@ -198,6 +219,9 @@ describe('Pupitre page', () => {
     fixture.destroy();
   };
 
+  const thenHeaderMessageIs = (expected: string): void => {
+    expect(element('header-message').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
   const thenVisible = (selector: string, visible: boolean): void => {
     expect(root().querySelector(dataSelector(selector)) !== null).toBe(visible);
   };
