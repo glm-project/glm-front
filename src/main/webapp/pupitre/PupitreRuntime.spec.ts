@@ -12,8 +12,11 @@ const entrepriseFixture = 'entreprise-a';
 const gesteFixture = (id: string): LocalGeste => ({ nature: 'ARRIVEE', id, dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' });
 
 class AuthenticationFixture extends AuthenticationPort {
-  override async authenticate(): Promise<void> {
-    await roundTrip();
+  private authentication: Promise<void> | undefined;
+  private completeAuthentication: (() => void) | undefined;
+
+  override authenticate(): Promise<void> {
+    return this.authentication ?? roundTrip();
   }
   override currentToken(): string {
     return 'autorise';
@@ -24,10 +27,21 @@ class AuthenticationFixture extends AuthenticationPort {
   override logout(): void {
     throw new Error('La session fixture reste ouverte.');
   }
+
+  waitForPermission(): void {
+    this.authentication = new Promise(resolve => {
+      this.completeAuthentication = resolve;
+    });
+  }
+
+  permit(): void {
+    this.completeAuthentication?.();
+  }
 }
 
 class ServerFixture extends PupitreServerPort {
   readonly received: LocalGeste[] = [];
+  referenceRequests = 0;
 
   override async send(geste: LocalGeste): Promise<void> {
     await roundTrip();
@@ -35,6 +49,7 @@ class ServerFixture extends PupitreServerPort {
   }
   override async referentiel(): Promise<ReferentielDuPupitre> {
     await roundTrip();
+    this.referenceRequests += 1;
     return { operateurs: [], suivis: [] };
   }
   override async reread(): Promise<void> {
@@ -103,6 +118,14 @@ describe('PupitreRuntime', () => {
     await thenServerReceived('demarrage', 'reconnexion', 'horloge');
   });
 
+  it('should start only one synchronization schedule', async () => {
+    await whenStartingPupitreTwice();
+
+    await whenOneMinutePasses();
+
+    await thenReferenceRefreshCountIs(2);
+  });
+
   it('should leave new gestures pending after the runtime is destroyed', async () => {
     await givenPendingGesture('avant-destruction');
     await whenStartingPupitre();
@@ -115,6 +138,21 @@ describe('PupitreRuntime', () => {
     await whenOneMinutePasses();
 
     await thenServerReceived('avant-destruction');
+    await thenGestureRemainsPending('apres-destruction');
+  });
+
+  it('should not start synchronization when destroyed during authentication restoration', async () => {
+    givenAuthenticationInProgress();
+    await givenPendingGesture('apres-destruction');
+
+    const startup = whenStartingPupitre();
+    whenDestroyingTheRuntime();
+    await whenAuthenticationCompletes(startup);
+
+    whenNetworkReturns();
+    await whenOneMinutePasses();
+
+    await thenServerReceived();
     await thenGestureRemainsPending('apres-destruction');
   });
 
@@ -134,11 +172,19 @@ describe('PupitreRuntime', () => {
   });
 
   const givenPendingGesture = (id: string): Promise<void> => journal.append(entrepriseFixture, [gesteFixture(id)]);
+  const givenAuthenticationInProgress = (): void => authentication.waitForPermission();
   const givenUnavailableStorage = (): void => {
     journal.unavailable = true;
   };
   const whenStartingPupitre = (): Promise<void> => runtime.start();
+  const whenStartingPupitreTwice = async (): Promise<void> => {
+    await Promise.all([runtime.start(), runtime.start()]);
+  };
   const whenDestroyingTheRuntime = (): void => runtime.ngOnDestroy();
+  const whenAuthenticationCompletes = async (startup: Promise<void>): Promise<void> => {
+    authentication.permit();
+    await startup;
+  };
   const whenStartingWithoutStorage = async (): Promise<void> => {
     await runtime.start();
     await journal.synchronize(roundTrip).catch(() => undefined);
@@ -151,6 +197,12 @@ describe('PupitreRuntime', () => {
   };
   const whenOneMinutePasses = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(60_000);
+  };
+  const thenReferenceRefreshCountIs = async (expected: number): Promise<void> => {
+    await journal.synchronize(async () => {
+      await roundTrip();
+      expect(serveur.referenceRequests).toBe(expected);
+    });
   };
   const thenServerReceived = async (...ids: string[]): Promise<void> => {
     await journal.synchronize(async () => {
