@@ -1,5 +1,5 @@
+import { JournalDuPupitre, OperateurDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { FenetreOperateur } from './FenetreOperateur';
-import { LocalPupitreState, OperateurDuPupitre } from './LocalPupitreState';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
@@ -103,7 +103,7 @@ export class DesignationOperateur {
     return this.closing;
   }
 
-  openWindow(entreprise: string, vue: LocalPupitreState, code: string, now: number): FenetreOperateur {
+  openWindow(entreprise: string, vue: JournalDuPupitre, code: string, now: number): FenetreOperateur {
     this.requireClosedWindow();
     this.fenetre = new FenetreOperateur(entreprise, vue, code);
     if (this.resolution === undefined) {

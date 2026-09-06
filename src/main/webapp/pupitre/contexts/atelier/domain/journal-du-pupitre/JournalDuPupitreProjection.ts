@@ -1,6 +1,13 @@
-import { ActiviteDuPupitre, LocalEvent, LocalPointage, LocalPupitreState, ReferentielDuPupitre, SuiviDuPupitre } from './LocalPupitreState';
+import {
+  ActiviteDuPupitre,
+  EvenementDuJournal,
+  GesteDePointage,
+  JournalDuPupitre,
+  ReferentielDuPupitre,
+  SuiviDuPupitre,
+} from './JournalDuPupitre';
 
-const applyPointage = (suivi: SuiviDuPupitre, geste: LocalPointage): SuiviDuPupitre => {
+const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
   const activites = suivi.activites.filter(activite => activite.operateurId !== geste.operateurId || activite.posteId !== geste.posteId);
   if (geste.type !== 'FIN') {
     const activite: ActiviteDuPupitre = {
@@ -16,7 +23,7 @@ const applyPointage = (suivi: SuiviDuPupitre, geste: LocalPointage): SuiviDuPupi
   return { ...suivi, activites, etat: etatFor(activites.length) };
 };
 
-const categorieFor = (geste: LocalPointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
+const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
   if (geste.type === 'NON_CONFORMITE') {
     return 'NON_CONFORMITE';
   }
@@ -30,7 +37,7 @@ const etatFor = (activites: number): 'EN_COURS' | 'INTERROMPU' => {
   return 'EN_COURS';
 };
 
-const applyEvenement = (suivis: SuiviDuPupitre[], evenement: LocalEvent): SuiviDuPupitre[] => {
+const applyEvenement = (suivis: SuiviDuPupitre[], evenement: EvenementDuJournal): SuiviDuPupitre[] => {
   const geste = evenement.geste;
   if (evenement.etat === 'REFUSE' || geste.nature !== 'POINTAGE') {
     return suivis;
@@ -43,7 +50,7 @@ const applyEvenement = (suivis: SuiviDuPupitre[], evenement: LocalEvent): SuiviD
   });
 };
 
-export const projectPupitre = (pupitre: LocalPupitreState): ReferentielDuPupitre | undefined => {
+export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupitre | undefined => {
   if (pupitre.referentiel === undefined) {
     return undefined;
   }

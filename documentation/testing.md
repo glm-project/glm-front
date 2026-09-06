@@ -34,7 +34,7 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
    The static fixture server supplies deterministic API and RFC 8628 responses; it is not a backend or
    Keycloak substitute in the application graph. `/` always serves the unmodified production artifact. A
    separately compiled page at `/__fixture` shares its origin and prepares or reads durable state through
-   `PupitreJournalPort`; it does not know IndexedDB names, stores or document keys. The driver recreates the
+   `JournauxDuPupitrePort`; it does not know IndexedDB names, stores or document keys. The driver recreates the
    production app in child browsing contexts so Cypress remains alive while Chrome is offline. JUnit, server
    exchange and duration evidence is written below `artifacts/production-offline/` and uploaded by CI.
 
@@ -175,7 +175,7 @@ can scroll back, rather than fabricating a width and asserting the component's e
 
 ## Mutation checks the replay policy through Angular
 
-`npm run test:mutation:replay` mutates only `PupitreReplayPolicy.ts` and runs its business scenarios through
+`npm run test:mutation:replay` mutates only `GesteReplayPolicy.ts` and runs its business scenarios through
 `ng test --watch=false --include`. Stryker's built-in command runner keeps the Angular builder's zoneless
 TestBed and JIT setup; a direct Vitest runner does not establish that environment. One worker gives every
 sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.
@@ -192,7 +192,7 @@ the survivors found that the test helper copied the production default attempt, 
 real default. After adding that observable concurrency scenario, the unchecked run killed 57 mutants and
 left one type-invalid conditional survivor. With the TypeScript checker enabled, the final measured run
 completed in 78.22 seconds with 34 killed valid mutants, 24 compile errors, no survivors and no timeouts. The score is
-100 % over valid mutants; the conditional that looked equivalent for valid `LocalGeste` values cannot type
+100 % over valid mutants; the conditional that looked equivalent for valid `GesteDAtelier` values cannot type
 check once its narrowing guard is removed, so no equivalent mutant is suppressed. The blocking threshold is
 therefore 100 %. A diagnostic run at a temporary 99 % threshold failed with exit code 1 when the unchecked
 score was 98.28 %, proving that a score below the configured gate fails the command.

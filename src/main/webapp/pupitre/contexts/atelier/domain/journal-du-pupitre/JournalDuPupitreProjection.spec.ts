@@ -1,5 +1,5 @@
-import { LocalEvent, LocalPointage, LocalPupitreState, ReferentielDuPupitre } from './LocalPupitreState';
-import { projectPupitre } from './PupitreProjection';
+import { EvenementDuJournal, GesteDePointage, JournalDuPupitre, ReferentielDuPupitre } from './JournalDuPupitre';
+import { projectReferentiel } from './JournalDuPupitreProjection';
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
   if (value === null || value === undefined) {
@@ -12,12 +12,12 @@ const referenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
-const debutFixture: LocalEvent = {
+const debutFixture: EvenementDuJournal = {
   geste: { nature: 'POINTAGE', operateurId: 'jean', suiviId: 'piece', type: 'DEBUT', id: 'debut', dateDeSurvenue: '2026-09-05T08:00:00Z' },
   etat: 'EN_ATTENTE',
 };
 
-describe('PupitreProjection', () => {
+describe('JournalDuPupitreProjection', () => {
   it('should reconstruct an offline activity and its original starting time', () => {
     const state = givenEvents([debutFixture]);
 
@@ -91,13 +91,17 @@ describe('PupitreProjection', () => {
     thenReferenceIsMissing(projection);
   });
 
-  const givenEvents = (evenements: LocalEvent[]): LocalPupitreState => ({ referentiel: referenceFixture, evenements, connecte: true });
-  const givenNoDownloadedReference = (): LocalPupitreState => ({ evenements: [], connecte: true });
-  const givenAnotherOperatorAtWork = (): LocalEvent => ({
+  const givenEvents = (evenements: EvenementDuJournal[]): JournalDuPupitre => ({
+    referentiel: referenceFixture,
+    evenements,
+    connecte: true,
+  });
+  const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
+  const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
     geste: { ...debutFixture.geste, id: 'debut-marie', operateurId: 'marie' },
   });
-  const givenEventsWithNoRemainingEffect = (): LocalPupitreState => ({
+  const givenEventsWithNoRemainingEffect = (): JournalDuPupitre => ({
     referentiel: {
       ...referenceFixture,
       suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'reference workshop element'), evenements: ['debut'] }],
@@ -110,12 +114,12 @@ describe('PupitreProjection', () => {
       debutFixture,
     ],
   });
-  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): LocalEvent => ({
+  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
     ...debutFixture,
     geste: { ...debutFixture.geste, nature: 'POINTAGE', suiviId: 'piece', id: crypto.randomUUID(), type },
   });
-  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): LocalEvent => {
-    const geste: LocalPointage = {
+  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
+    const geste: GesteDePointage = {
       ...debutFixture.geste,
       nature: 'POINTAGE',
       suiviId: 'piece',
@@ -127,7 +131,7 @@ describe('PupitreProjection', () => {
     }
     return { ...debutFixture, geste };
   };
-  const whenProjecting = (state: LocalPupitreState): ReferentielDuPupitre | undefined => projectPupitre(state);
+  const whenProjecting = (state: JournalDuPupitre): ReferentielDuPupitre | undefined => projectReferentiel(state);
   const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
     expect(suivi.activites).toHaveLength(postes.length);

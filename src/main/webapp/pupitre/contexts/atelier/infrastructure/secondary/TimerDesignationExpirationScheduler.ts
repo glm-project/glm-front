@@ -1,7 +1,7 @@
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
-} from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
+} from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { Injectable } from '@angular/core';
 
 @Injectable()

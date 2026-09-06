@@ -64,7 +64,7 @@ French and express the technical role in English: `PupitreRuntime`,
 `DesignationExpirationSchedulerPort`. Keep filenames and references aligned with those names.
 
 The verb driving an action is English: `send`,
-`sendAbsorbing`, `findRefusDAtelierIn`, not `envoyer`, `envoyerEnAbsorbant`, `refusDAtelierDans`. A
+`sendAbsorbing`, `toRefusDAtelier`, not `envoyer`, `envoyerEnAbsorbant`, `refusDAtelierDans`. A
 name that reads as a hidden verb behind a French preposition (`xxxDans`, `versXxx`, `xxxDe`) needs an
 explicit English verb instead of the preposition standing in for one. Constants and types carrying
 only domain nouns keep their French name (`CODES_DE_REFUS_D_ATELIER`, `CodeDeRefusDAtelier`).

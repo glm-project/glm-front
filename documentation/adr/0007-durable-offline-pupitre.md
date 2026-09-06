@@ -49,7 +49,7 @@ Every other published business code likewise becomes a durable refusal with its 
 even for the same operator. Unknown technical failures remain pending and stop that push. No record has an
 application size limit, expiry, rotation or purge; acknowledged events are retained too.
 
-`HttpPupitreServer` reads every page of operators and workshop elements, without filtering by operator.
+`HttpAtelierExchange` reads every page of operators and workshop elements, without filtering by operator.
 It publishes the pair only after both collections complete, rejects changed totals, empty intermediate pages
 and duplicate identifiers, and aborts if the credential changes during reading. A failed refresh preserves
 the previous complete cache indefinitely. Refresh is attempted at boot, on the browser's online event and

@@ -60,9 +60,9 @@ it('should preserve the existing boundaries between fronts', async () => {
 
 it('should reject business imports from app-specific shared code', async () => {
   const results = await whenLintingImports('src/main/webapp/pupitre/shared/authentication/package-info.ts', [
-    "import { LocalPupitreState } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';",
-    "export { projectPupitre } from '../../contexts/atelier/domain/PupitreProjection';",
-    "export async function load() { return import('@/pupitre/contexts/atelier/domain/LocalPupitreState'); }",
+    "import { JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';",
+    "export { projectReferentiel } from '../../contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';",
+    "export async function load() { return import('@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre'); }",
   ]);
 
   thenImportsAreRejected(results);

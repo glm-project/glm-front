@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Line and branch coverage showed that `PupitreReplayPolicy` executed, but did not show whether its assertions
+Line and branch coverage showed that `GesteReplayPolicy` executed, but did not show whether its assertions
 defended arrival absorption, implicit-resumption absorption, one concurrency retry and propagation of other
 refusals. Its unit scenarios depend on the environment installed by Angular's test builder. Running Vitest
 directly bypasses the zoneless TestBed and JIT setup required by this repository.
@@ -27,7 +27,7 @@ loop.
 
 ## Decision
 
-Mutate only `PupitreReplayPolicy.ts` first. Run its scenarios through
+Mutate only `GesteReplayPolicy.ts` first. Run its scenarios through
 `ng test --watch=false --include` with Stryker's built-in command runner, one isolated sandbox worker and
 `coverageAnalysis` off. Use Stryker's TypeScript checker with a narrow `tsconfig.stryker.json` so mutations
 that cannot compile are reported as `CompileError` instead of being mistaken for assertion kills.

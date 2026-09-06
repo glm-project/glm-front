@@ -1,14 +1,14 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
-import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/DesignationExpirationSchedulerPort';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
 @Component({
   selector: 'glm-root',
@@ -25,13 +25,13 @@ class DesignationFixture {
   readonly designation = inject(OfflinePupitre);
 }
 
-const journalFixture = new PupitreJournalFixture();
+const journalFixture = new JournauxDuPupitreFixture();
 const authenticationFixture: Pick<AuthenticationPort, 'currentTenant' | 'synchronizeSession'> = {
   currentTenant: () => 'atelier',
   synchronizeSession: () => new Promise(resolve => setTimeout(resolve)),
 };
 const unexpectedNetworkFixture = (): Promise<never> => Promise.reject(new Error('Designation must not contact the server'));
-const serveurFixture: PupitreServerPort = {
+const serveurFixture: AtelierExchangePort = {
   referentiel: unexpectedNetworkFixture,
   send: unexpectedNetworkFixture,
   reread: unexpectedNetworkFixture,
@@ -47,10 +47,10 @@ void journalFixture
       providers: [
         OfflinePupitre,
         PupitreSynchronization,
-        { provide: PupitreJournalPort, useValue: journalFixture },
+        { provide: JournauxDuPupitrePort, useValue: journalFixture },
         { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
         { provide: AuthenticationPort, useValue: authenticationFixture },
-        { provide: PupitreServerPort, useValue: serveurFixture },
+        { provide: AtelierExchangePort, useValue: serveurFixture },
       ],
     }),
   );

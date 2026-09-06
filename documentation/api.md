@@ -73,7 +73,7 @@ Absorption belongs to a business operation. Arrival assurance may absorb an alre
 resumption may absorb a forbidden presence transition. The same HTTP status on an explicit operator gesture
 remains visible.
 
-`PupitreReplayPolicy` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
+`GesteReplayPolicy` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.
 

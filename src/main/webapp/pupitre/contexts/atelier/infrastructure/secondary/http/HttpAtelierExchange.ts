@@ -3,12 +3,18 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { LocalGeste, OperateurDuPupitre, ReferentielDuPupitre, SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
-import { RefusDuPupitre } from '@/pupitre/contexts/atelier/domain/RefusDuPupitre';
+import {
+  ETATS_DU_REFERENTIEL_DU_PUPITRE,
+  GesteDAtelier,
+  OperateurDuPupitre,
+  ReferentielDuPupitre,
+  SuiviDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { inject, Injectable } from '@angular/core';
 
-import { findRefusDAtelierIn } from '../findRefusDAtelierIn';
+import { toRefusDAtelier } from '../toRefusDAtelier';
 
 type RestOperateur = components['schemas']['RestOperateur'];
 type RestPosteHabilite = components['schemas']['RestPosteHabilite'];
@@ -93,7 +99,7 @@ const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
 });
 
 @Injectable()
-export class HttpPupitreServer extends PupitreServerPort {
+export class HttpAtelierExchange extends AtelierExchangePort {
   private readonly authentication = inject(AuthenticationPort);
   private readonly api = inject(ApiClient);
 
@@ -105,24 +111,26 @@ export class HttpPupitreServer extends PupitreServerPort {
     });
     const suivis = await readAll(page => {
       this.requireToken(token);
-      return this.api.read('/api/atelier/suivis', { queryParams: { page, size: 100 } });
+      return this.api.read('/api/atelier/suivis', {
+        queryParams: { etats: [...ETATS_DU_REFERENTIEL_DU_PUPITRE], page, size: 100 },
+      });
     });
     return { operateurs: operateurs.map(toOperateur), suivis: suivis.map(toSuivi) };
   }
 
-  override async send(geste: LocalGeste): Promise<void> {
+  override async send(geste: GesteDAtelier): Promise<void> {
     try {
       await this.write(geste);
     } catch (failure: unknown) {
       const refusal = findApiErrorIn(failure);
       if (refusal !== undefined) {
-        throw new RefusDuPupitre(refusal.urn, refusal.message, findRefusDAtelierIn(failure)?.code);
+        throw new RefusDePublication(refusal.urn, refusal.message, toRefusDAtelier(refusal.urn, refusal.message)?.code);
       }
       throw failure;
     }
   }
 
-  override async reread(geste: LocalGeste): Promise<void> {
+  override async reread(geste: GesteDAtelier): Promise<void> {
     if (geste.nature === 'POINTAGE') {
       await this.api.read('/api/atelier/suivis/{id}', { pathParams: { id: geste.suiviId } });
       return;
@@ -136,7 +144,7 @@ export class HttpPupitreServer extends PupitreServerPort {
     }
   }
 
-  private write(geste: LocalGeste): Promise<unknown> {
+  private write(geste: GesteDAtelier): Promise<unknown> {
     const body = { id: geste.id, dateDeSurvenue: geste.dateDeSurvenue, operateur: geste.operateurId };
     if (geste.nature === 'ARRIVEE') {
       return this.api.write('/api/atelier/journees', { body });

@@ -1,23 +1,28 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { EMPTY_PUPITRE, LocalGeste, LocalPupitreState, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  GesteDAtelier,
+  JournalDuPupitre,
+  ReferentielDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
-import { PupitreJournalFixture } from '@test/unit/fixtures/pupitre/atelier/PupitreJournalFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
-const gesteFixture: LocalGeste = { id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean', nature: 'ARRIVEE' };
+const gesteFixture: GesteDAtelier = { id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean', nature: 'ARRIVEE' };
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
-class ServerFixture extends PupitreServerPort {
-  readonly received: LocalGeste[] = [];
+class ServerFixture extends AtelierExchangePort {
+  readonly received: GesteDAtelier[] = [];
 
   override async referentiel(): Promise<ReferentielDuPupitre> {
     await roundTrip();
     return referenceFixture;
   }
-  override async send(geste: LocalGeste): Promise<void> {
+  override async send(geste: GesteDAtelier): Promise<void> {
     await roundTrip();
     this.received.push(structuredClone(geste));
   }
@@ -26,7 +31,7 @@ class ServerFixture extends PupitreServerPort {
   }
 }
 
-class JournalFixture extends PupitreJournalFixture {
+class JournalFixture extends JournauxDuPupitreFixture {
   unavailable = false;
 
   override synchronize<T>(action: () => Promise<T>): Promise<T> {
@@ -44,7 +49,7 @@ describe('PupitreSynchronization', () => {
   let journal: JournalFixture;
   let server: ServerFixture;
   let synchronisation: PupitreSynchronization;
-  let exposed: LocalPupitreState | undefined;
+  let exposed: JournalDuPupitre | undefined;
   let token: string | undefined;
 
   beforeEach(() => {
@@ -55,8 +60,8 @@ describe('PupitreSynchronization', () => {
     synchronisation = Injector.create({
       providers: [
         PupitreSynchronization,
-        { provide: PupitreJournalPort, useValue: journal },
-        { provide: PupitreServerPort, useValue: server },
+        { provide: JournauxDuPupitrePort, useValue: journal },
+        { provide: AtelierExchangePort, useValue: server },
         {
           provide: AuthenticationPort,
           useValue: {
@@ -112,12 +117,16 @@ describe('PupitreSynchronization', () => {
     journal.unavailable = false;
   };
   const thenPendingWorkRemainsAvailable = (): void => {
-    expect(exposed).toEqual({ ...EMPTY_PUPITRE, referentiel: referenceFixture, evenements: [{ geste: gesteFixture, etat: 'EN_ATTENTE' }] });
+    expect(exposed).toEqual({
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: referenceFixture,
+      evenements: [{ geste: gesteFixture, etat: 'EN_ATTENTE' }],
+    });
   };
   const thenSynchronizationFails = async (synchronization: Promise<void>): Promise<void> => {
     await expect(synchronization).rejects.toThrow('stockage indisponible');
   };
-  const thenServerReceived = (...gestes: LocalGeste[]): void => {
+  const thenServerReceived = (...gestes: GesteDAtelier[]): void => {
     expect(server.received).toEqual(gestes);
   };
 });

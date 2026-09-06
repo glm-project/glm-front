@@ -1,6 +1,11 @@
-import { IdentiteDuGeste, LocalGeste, LocalPupitreState, OperateurDuPupitre } from './LocalPupitreState';
-import { TypeDePointage } from './TypeDePointage';
-import { TypeDePresence } from './TypeDePresence';
+import {
+  GesteDAtelier,
+  IdentiteDuGeste,
+  JournalDuPupitre,
+  OperateurDuPupitre,
+  TypeDePointage,
+  TypeDePresence,
+} from '../journal-du-pupitre/JournalDuPupitre';
 
 export interface PointageDuPupitre {
   suiviId: string;
@@ -14,7 +19,7 @@ export class FenetreOperateur {
 
   constructor(
     readonly entreprise: string,
-    private vue: LocalPupitreState,
+    private vue: JournalDuPupitre,
     code: string,
   ) {
     const operateur = vue.referentiel?.operateurs.find(candidat => candidat.matricule === code);
@@ -24,17 +29,22 @@ export class FenetreOperateur {
     this.operateur = operateur;
   }
 
-  snapshot(): LocalPupitreState {
+  snapshot(): JournalDuPupitre {
     return this.vue;
   }
 
-  preparePointage(pointage: PointageDuPupitre, identify: () => IdentiteDuGeste): () => LocalGeste[] {
+  preparePointage(pointage: PointageDuPupitre, identify: () => IdentiteDuGeste): () => GesteDAtelier[] {
     if (pointage.posteId !== undefined && this.operateur.postes.every(poste => poste.id !== pointage.posteId)) {
       throw new Error('Poste absent des habilitations locales.');
     }
-    const geste: LocalGeste = { ...identify(), ...pointage, operateurId: this.operateur.id, nature: 'POINTAGE' };
-    const arrivee: LocalGeste = { ...identify(), dateDeSurvenue: geste.dateDeSurvenue, operateurId: this.operateur.id, nature: 'ARRIVEE' };
-    const reprise: LocalGeste = {
+    const geste: GesteDAtelier = { ...identify(), ...pointage, operateurId: this.operateur.id, nature: 'POINTAGE' };
+    const arrivee: GesteDAtelier = {
+      ...identify(),
+      dateDeSurvenue: geste.dateDeSurvenue,
+      operateurId: this.operateur.id,
+      nature: 'ARRIVEE',
+    };
+    const reprise: GesteDAtelier = {
       ...identify(),
       dateDeSurvenue: geste.dateDeSurvenue,
       operateurId: this.operateur.id,
@@ -50,11 +60,11 @@ export class FenetreOperateur {
     };
   }
 
-  preparePresence(type: TypeDePresence, identite: IdentiteDuGeste): LocalGeste[] {
+  preparePresence(type: TypeDePresence, identite: IdentiteDuGeste): GesteDAtelier[] {
     return [{ ...identite, operateurId: this.operateur.id, nature: 'PRESENCE', type, implicite: false }];
   }
 
-  accept(gestes: LocalGeste[]): void {
+  accept(gestes: GesteDAtelier[]): void {
     this.arriveeAssuree ||= gestes.some(geste => geste.nature === 'POINTAGE');
     this.vue = { ...this.vue, evenements: [...this.vue.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))] };
   }
