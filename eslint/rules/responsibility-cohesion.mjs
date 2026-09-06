@@ -31,12 +31,12 @@ export const responsibilityCohesion = {
   meta: {
     type: 'suggestion',
     docs: {
-      description: 'keep stateful coordinators cohesive',
+      description: 'stop overloaded stateful coordinators for responsibility review',
     },
     schema: [],
     messages: {
       splitResponsibilities:
-        '{{className}} coordinates {{collaborators}} injected collaborators through {{operations}} public operations while owning {{states}} state fields. Inventory its responsibilities and extract an independent one behind a cohesive module. Done means deleting that module removes its collaborator, state and operations from this class.',
+        '{{className}} coordinates {{collaborators}} injected collaborators through {{operations}} public operations while owning {{states}} state fields. Inventory its reasons to change and extract an independently cohesive responsibility. If it remains one deep module, document that reason in a narrow inline suppression — see ADR 0023.',
     },
   },
   create: context => {

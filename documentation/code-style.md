@@ -120,7 +120,11 @@ cognitive complexity may not exceed 7. Its type-return, null-dereference and arg
 because they conflict with discriminated unions or duplicate TypeScript strict checks with false positives. A
 rule that fires is a design signal, not noise to silence. Non-null assertions (`value!`) and definite-assignment
 assertions (`property!:`) are forbidden: initialize the value, model its possible absence or narrow it explicitly.
-See [ADR 0019](adr/0019-enforce-sonarjs-rules.md).
+The local responsibility-cohesion rule blocks a production class only when injected collaborators, public
+operations and owned state all cross the coordinator tripwire. Inventory its reasons to change and extract a
+cohesive responsibility; a narrow inline suppression is reserved for a demonstrably single deep module and
+states that reason beside the class. See [ADR 0019](adr/0019-enforce-sonarjs-rules.md) and
+[ADR 0023](adr/0023-stop-overloaded-coordinators-at-lint.md).
 
 **Prettier owns formatting.** Single quotes, 140-char width, `arrowParens: avoid`. Run
 `npm run prettier:format`; never hand-format. The commit hook enforces both — see
