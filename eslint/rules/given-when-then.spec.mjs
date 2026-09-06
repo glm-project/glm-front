@@ -58,7 +58,7 @@ ruleTester.run('given-when-then', givenWhenThen, {
       `,
     },
     {
-      code: `test('should allow a concise named step', () => thenItWorks());`,
+      code: `test('should allow a concise scenario', () => { workshop.complete(); expect(workshop.state()).toBe('complete'); });`,
     },
     {
       code: `
@@ -76,37 +76,6 @@ ruleTester.run('given-when-then', givenWhenThen, {
   ],
   invalid: [
     {
-      code: `it('should not assert directly', () => { expect(value).toBe(true); });`,
-      errors: [{ messageId: 'assertionOutsideThen' }],
-    },
-    {
-      code: `
-        const checkResult = () => expect(value).toBe(true);
-        it('should name assertion helpers', () => { checkResult(); });
-      `,
-      errors: [{ messageId: 'assertionOutsideThen' }, { messageId: 'unnamedScenarioStep' }],
-    },
-    {
-      code: `it('should hide its action', () => { workshop.complete(); });`,
-      errors: [{ messageId: 'unnamedScenarioStep' }],
-    },
-    {
-      code: `it('should inspect concise scenarios', () => workshop.complete());`,
-      errors: [{ messageId: 'unnamedScenarioStep' }],
-    },
-    {
-      code: `it('should not hide its action in a declaration', () => { const result = workshop.complete(); thenItIsComplete(result); });`,
-      errors: [{ messageId: 'unnamedScenarioStep' }],
-    },
-    {
-      code: `it('should name a called use case', () => { const result = completeWorkshop(); thenItIsComplete(result); });`,
-      errors: [{ messageId: 'unnamedScenarioStep' }],
-    },
-    {
-      code: `it('should not hide an action in a then argument', () => { thenItIsComplete(workshop.complete()); });`,
-      errors: [{ messageId: 'unnamedScenarioStep' }],
-    },
-    {
       code: `it('should hide TestBed', () => { TestBed.inject(Service).run(); });`,
       errors: [{ messageId: 'technicalDetail' }],
     },
@@ -117,38 +86,6 @@ ruleTester.run('given-when-then', givenWhenThen, {
     {
       code: `it('should not hide technical access in a declaration', () => { const service = TestBed.inject(Service); thenItWorks(service); });`,
       errors: [{ messageId: 'technicalDetail' }],
-    },
-    {
-      code: `
-        const observeResult = () => expect(value).toBe(true);
-        test('should keep assertions in then helpers', () => { thenItWorks(); });
-      `,
-      errors: [{ messageId: 'assertionOutsideThen' }],
-    },
-    {
-      code: `
-        const givenAResult = () => assert.equal(actual, expected);
-        test('should recognize assert members', () => { givenAResult(); });
-      `,
-      errors: [{ messageId: 'assertionOutsideThen' }],
-    },
-    {
-      code: `
-        const givenAResult = () => expect.soft(actual).toBe(expected);
-        test('should recognize soft expectations', () => { givenAResult(); });
-      `,
-      errors: [{ messageId: 'assertionOutsideThen' }],
-    },
-    {
-      code: `
-        const whenReadingEventually = () => expect.poll(readValue).toBe(expected);
-        test('should recognize polled expectations', () => { whenReadingEventually(); });
-      `,
-      errors: [{ messageId: 'assertionOutsideThen' }],
-    },
-    {
-      code: `it('should keep control flow out of the story', () => { if (ready) whenStarting(); });`,
-      errors: [{ messageId: 'unnamedScenarioStep' }],
     },
   ],
 });

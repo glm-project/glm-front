@@ -29,13 +29,38 @@ const refusalFixture = (code: string): RefusDePublication =>
     CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code),
   );
 
+interface SynchronizationBarrier {
+  readonly started: Promise<void>;
+  readonly release: () => void;
+  signalStarted(): void;
+  wait(): Promise<void>;
+}
+
+const synchronizationBarrier = (): SynchronizationBarrier => {
+  let signalStarted: (() => void) | undefined;
+  let release: (() => void) | undefined;
+  const started = new Promise<void>(resolve => {
+    signalStarted = resolve;
+  });
+  const waiting = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  if (signalStarted === undefined || release === undefined) throw new Error('Synchronization barrier is not initialized.');
+  return { started, signalStarted, release, wait: () => waiting };
+};
+
 class AuthenticationFixture extends AuthenticationPort {
   tenant: string | undefined = 'entreprise-a';
   token: string | undefined;
   pendingSynchronization: Promise<void> | undefined;
+  private nextSynchronizationBarrier: SynchronizationBarrier | undefined;
 
   override async synchronizeSession(): Promise<void> {
     await roundTrip();
+    const barrier = this.nextSynchronizationBarrier;
+    this.nextSynchronizationBarrier = undefined;
+    barrier?.signalStarted();
+    await barrier?.wait();
     await this.pendingSynchronization;
   }
   override async authenticate(): Promise<void> {
@@ -49,6 +74,11 @@ class AuthenticationFixture extends AuthenticationPort {
   }
   override logout(): void {
     this.token = undefined;
+  }
+  delayNextSynchronization(): { readonly started: Promise<void>; readonly release: () => void } {
+    const barrier = synchronizationBarrier();
+    this.nextSynchronizationBarrier = barrier;
+    return { started: barrier.started, release: barrier.release };
   }
 }
 
@@ -185,6 +215,16 @@ describe('OfflinePupitre', () => {
     const staleChoice = whenChoosingWorkstationLater(choice, 'tour');
 
     await thenFails(staleChoice, 'fenetre operateur a change');
+  });
+
+  it('should keep a prepared workstation choice valid when the same operator window receives a reconciled reference', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    const choice = whenPressingPrimaryTarget();
+
+    await whenRestoring();
+    await whenChoosingWorkstation(choice, 'fraiseuse');
+
+    await thenPointageUsesWorkstation('fraiseuse');
   });
 
   it('should retain the failed push and replay exactly the same identifiers and dates on reconnection', async () => {
@@ -510,6 +550,39 @@ describe('OfflinePupitre', () => {
     await thenPointageKeepsItsOriginalOperatorAndTime();
   });
 
+  it('should retain a successful append without restoring an old operator presentation after the tenant changes during storage I/O', async () => {
+    await givenAnOpenWindow();
+    const append = journal.delayNextAppend();
+    const pointage = whenStarting();
+
+    await append.started;
+    givenReenrolledForAnotherCompany();
+    await whenRestoring();
+    append.release();
+    await pointage;
+
+    await thenOldCompanyPendingIs(3);
+    thenNoWindowPresentationRemains();
+    expect(pupitre.erreurPointage()).toBeUndefined();
+  });
+
+  it('should refuse a capture before append when its operator window has been released during session I/O', async () => {
+    await givenAnOpenWindow();
+    const synchronization = authentication.delayNextSynchronization();
+    const pointage = whenStarting();
+
+    await synchronization.started;
+    givenNoCompanySelected();
+    await whenRestoring();
+    authentication.tenant = 'entreprise-a';
+    synchronization.release();
+
+    await thenFails(pointage, 'fenetre operateur a change');
+    await thenOldCompanyPendingIs(0);
+    thenNoWindowPresentationRemains();
+    expect(pupitre.erreurPointage()).toBeUndefined();
+  });
+
   const givenBusinessTime = (): void => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
@@ -601,9 +674,11 @@ describe('OfflinePupitre', () => {
     await pupitre.openWindow('049');
   };
   const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
-    const reference = structuredClone(referenceFixture);
-    requiredFixture(reference.operateurs[0], 'operator').postes.push({ id: 'fraiseuse', libelle: 'Fraiseuse' });
-    await givenCachedReference(reference);
+    const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
+    await givenCachedReference({
+      ...referenceFixture,
+      operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
+    });
     await givenAnOpenWindow();
   };
   const givenWorkStartedOffline = async (): Promise<void> => {
@@ -635,7 +710,8 @@ describe('OfflinePupitre', () => {
     };
   };
   const givenRefreshedMatricule = (matricule: string): void => {
-    requiredFixture(serveur.reference.operateurs[0], 'server operator').matricule = matricule;
+    const operateur = requiredFixture(serveur.reference.operateurs[0], 'server operator');
+    serveur.reference = { ...serveur.reference, operateurs: [{ ...operateur, matricule }] };
   };
   const givenReferenceRefreshFails = (): void => {
     serveur.cacheFailure = new Error('page manquante');
@@ -665,9 +741,10 @@ describe('OfflinePupitre', () => {
     };
   };
   const givenTwoOperators = async (): Promise<void> => {
-    const reference = structuredClone(referenceFixture);
-    reference.operateurs.push({ id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', postes: [] });
-    await journal.saveReferentiel('entreprise-a', reference);
+    await journal.saveReferentiel('entreprise-a', {
+      ...referenceFixture,
+      operateurs: [...referenceFixture.operateurs, { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', postes: [] }],
+    });
   };
   const givenNoCompanySelected = (): void => {
     authentication.tenant = undefined;

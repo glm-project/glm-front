@@ -6,8 +6,6 @@ const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
   'src/main/webapp/pupitre/contexts/atelier/application/OfflinePupitre.ts',
-  'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.ts',
-  'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.spec.ts',
   'src/main/webapp/gestion/app.ts',
   'src/main/webapp/pupitre/app.ts',
   'src/test/webapp/component/pupitre/designation/Designation.spec.ts',
@@ -58,6 +56,30 @@ it('should preserve the existing boundaries between fronts', async () => {
   thenImportsAreRejected(results);
 });
 
+const presentationPrimaryFiles = [
+  [
+    'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.ts',
+    "import { App } from '@/gestion/app';",
+  ],
+  [
+    'src/main/webapp/pupitre/shared/authentication/infrastructure/primary/http-device-authorization.interceptor.ts',
+    "import { App } from '@/gestion/app';",
+  ],
+  ['src/main/webapp/app/shared/design-system/infrastructure/primary/icon/icon.ts', "import { App } from '@/pupitre/app';"],
+];
+
+for (const [file, forbiddenImport] of presentationPrimaryFiles) {
+  it(`should allow a presentation effect while retaining the boundary in ${file}`, async () => {
+    const effects = await whenLintingImports(file, ["import { effect, afterRenderEffect } from '@angular/core';"]);
+    const foreignFront = await whenLintingImports(file, [forbiddenImport]);
+    const angularNamespace = await whenLintingImports(file, ["import * as angular from '@angular/core';"]);
+
+    thenImportsAreAccepted(effects);
+    thenImportsAreRejected(foreignFront);
+    thenImportsAreRejected(angularNamespace);
+  });
+}
+
 it('should reject business imports from app-specific shared code', async () => {
   const results = await whenLintingImports('src/main/webapp/pupitre/shared/authentication/package-info.ts', [
     "import { JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';",
@@ -66,6 +88,16 @@ it('should reject business imports from app-specific shared code', async () => {
   ]);
 
   thenImportsAreRejected(results);
+});
+
+it('should reject a static inline token bypass', async () => {
+  const config = await eslint.calculateConfigForFile('src/main/webapp/pupitre/app.ts');
+  const results = linter.verify(`const template = '<div style="color: #ff0000"></div>';`, {
+    plugins: { local: config.plugins.local },
+    rules: { 'local/no-token-bypass': config.rules['local/no-token-bypass'] },
+  });
+
+  thenImportsAreRejected([results]);
 });
 
 const whenLintingImports = async (file, sources) => {

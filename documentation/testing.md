@@ -80,21 +80,20 @@ assert; its coverage can come from scenarios through its owner's public entry po
 the intent from the name alone. Data and helpers carry the word **fixture** — `keycloakFixture`, not
 `SeededKeycloak`.
 
-## Every spec follows given-when-then through named helpers
+## Every spec tells its scenario with given-when-then
 
-Every state to arrange is a `givenXxx()`, every action a `whenXxx()`, every assertion a `thenXxx()` — a local
-const arrow or in `*.function.ts`. Setup, actions and assertions in blocks separated by blank lines.
-Assertions live in a helper, which keeps the reading thread and centralizes the selectors.
+Structure scenarios as given, when and then. Use named helpers when they express the scenario's vocabulary or
+hide TestBed, browser, HTTP, storage, clock or selector plumbing. A short scenario may call its public
+contract and assert directly when extracting helpers would only rename those calls.
 
 Vitest specs are held to it as much as Cypress ones. What varies is where the seam falls: wiring the TestBed
 stays in `beforeEach` — it is plumbing, not a business precondition — while rendering with the inputs under
 test is the action (`pupitre/header/header.spec.ts`).
 
-`local/given-when-then` enforces this shape on every `*.spec.ts`: scenario calls are named `givenXxx`,
-`whenXxx` or `thenXxx`, technical APIs stay behind those helpers, and assertions stay in `thenXxx` helpers.
-Data declarations and fixture construction remain readable in the scenario. `HexagonalArchTest.spec.ts` is
-the sole exception: its `arch-unit-ts` fluent DSL is itself the architecture rule being stated, and wrapping
-that DSL would only rename its vocabulary without hiding a test detail.
+`local/given-when-then` rejects technical APIs directly in a scenario; it permits direct public calls and
+assertions. It cannot judge whether a helper adds business meaning, so that remains a review concern. Data
+declarations and fixture construction remain readable in the scenario. `HexagonalArchTest.spec.ts` is the
+sole exception: its `arch-unit-ts` fluent DSL is itself the architecture rule being stated.
 
 ## Select on `data-selector`, never on CSS classes or text
 

@@ -11,12 +11,12 @@ import { inject, Injectable } from '@angular/core';
 
 const keyFor = (entreprise: string): string => `atelier:${entreprise}`;
 
-const acceptedPointageIdsFor = (suiviId: string, evenements: EvenementDuJournal[]): string[] =>
+const acceptedPointageIdsFor = (suiviId: string, evenements: readonly EvenementDuJournal[]): string[] =>
   evenements
     .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
     .map(evenement => evenement.geste.id);
 
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: EvenementDuJournal[]): ReferentielDuPupitre => ({
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => ({
   ...referentiel,
   suivis: referentiel.suivis.map(suivi => ({
     ...suivi,
@@ -32,7 +32,7 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
     return (await this.stockage.read<JournalDuPupitre>(keyFor(entreprise))) ?? EMPTY_JOURNAL_DU_PUPITRE;
   }
 
-  override async append(entreprise: string, gestes: GesteDAtelier[]): Promise<void> {
+  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
     await this.stockage.update<JournalDuPupitre>(keyFor(entreprise), EMPTY_JOURNAL_DU_PUPITRE, current => ({
       ...current,
       evenements: [...current.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))],

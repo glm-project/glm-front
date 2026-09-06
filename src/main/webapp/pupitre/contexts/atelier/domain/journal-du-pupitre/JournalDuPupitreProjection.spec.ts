@@ -1,4 +1,4 @@
-import { EvenementDuJournal, GesteDePointage, JournalDuPupitre, ReferentielDuPupitre } from './JournalDuPupitre';
+import { EvenementAccepte, EvenementDuJournal, GesteDePointage, JournalDuPupitre, ReferentielDuPupitre } from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
@@ -83,6 +83,13 @@ describe('JournalDuPupitreProjection', () => {
     thenStateIs(projection, 'EN_COURS', 1);
   });
 
+  it('should prevent a refusal from being carried into an accepted event', () => {
+    const accepted: EvenementAccepte = { geste: debutFixture.geste, etat: 'ACCEPTE' };
+    const acceptedWithAResidualRefusal = { ...accepted, refus: { code: 'obsolete', message: 'obsolete' } };
+
+    expectTypeOf(acceptedWithAResidualRefusal).not.toExtend<EvenementDuJournal>();
+  });
+
   it('should expose no referential before the first complete download', () => {
     const state = givenNoDownloadedReference();
 
@@ -108,7 +115,7 @@ describe('JournalDuPupitreProjection', () => {
     },
     connecte: true,
     evenements: [
-      { ...debutFixture, geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE' },
+      { geste: { ...debutFixture.geste, id: 'refuse' }, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
       { ...debutFixture, geste: { ...debutFixture.geste, id: 'arrivee', nature: 'ARRIVEE' } },
       { ...debutFixture, geste: { ...debutFixture.geste, id: 'autre-suivi', nature: 'POINTAGE', suiviId: 'absent', type: 'DEBUT' } },
       debutFixture,
@@ -125,10 +132,8 @@ describe('JournalDuPupitreProjection', () => {
       suiviId: 'piece',
       id: crypto.randomUUID(),
       type,
+      ...(posteId === undefined ? {} : { posteId }),
     };
-    if (posteId !== undefined) {
-      geste.posteId = posteId;
-    }
     return { ...debutFixture, geste };
   };
   const whenProjecting = (state: JournalDuPupitre): ReferentielDuPupitre | undefined => projectReferentiel(state);

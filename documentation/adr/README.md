@@ -20,7 +20,7 @@ renumbers at merge time. The status below is the living one — update this line
   typed client and adapter translation, with complete offline reads and aggregate rereads added later
 - [0007 — Persist the pupitre before acknowledging a gesture](0007-durable-offline-pupitre.md) — **Accepted** —
   IndexedDB, company partitions, a durable FIFO, complete reference activation between operator windows
-- [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — **Accepted** —
+- [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — **Amended by 0022** —
   named cohesive steps when long methods, nested logic or callbacks obscure the workflow
 - [0009 — Give operator windows and replay rules a domain owner](0009-pupitre-domain-responsibilities.md) — **Complemented by 0013** —
   window and replay rules in `domain`, separate capture and exchange orchestration, company journal port
@@ -30,7 +30,7 @@ renumbers at merge time. The status below is the living one — update this line
   independent front chrome, Material confined to gestion
 - [0012 — Give each front ownership of its business contexts](0012-own-business-contexts-by-front.md) — **Accepted** —
   application-owned contexts, technical-only shared code and local bounded-context language
-- [0013 — Keep business decisions in rich domain models](0013-keep-business-decisions-in-rich-domain-models.md) — **Accepted** —
+- [0013 — Keep business decisions in rich domain models](0013-keep-business-decisions-in-rich-domain-models.md) — **Amended by 0021** —
   domain-owned interaction and lifecycle rules, application coordination and behavioral contracts
 - [0014 — Resolve architecture dependencies through the compiler](0014-resolve-architecture-dependencies-through-the-compiler.md) —
   **Accepted** — exhaustive boundary discovery, re-export resolution and symbol-aware domain environment checks
@@ -44,3 +44,7 @@ renumbers at merge time. The status below is the living one — update this line
   analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
 - [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Accepted** — quick static checks
   at push, with the complete graph retained by Codex Stop and CI
+- [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Accepted** — stateful
+  invariants and pure domain policies, immutable public snapshots and exclusive journal event states
+- [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
+  **Accepted** — contextual readability rules and a narrowly scoped presentation-effect exception

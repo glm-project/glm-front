@@ -1,8 +1,10 @@
 import {
+  EvenementDuJournal,
   GesteDAtelier,
   IdentiteDuGeste,
   JournalDuPupitre,
   OperateurDuPupitre,
+  snapshotDuJournal,
   SuiviDuPupitre,
   TypeDePointage,
   TypeDePresence,
@@ -45,7 +47,18 @@ export type CibleDePointage = 'PRINCIPALE' | 'SECONDAIRE';
 
 export interface GestesDePointage {
   readonly kind: 'GESTES';
-  readonly capture: () => GesteDAtelier[];
+  readonly capture: (arriveeAssuree?: boolean) => readonly GesteDAtelier[];
+  readonly numerosParGeste: ReadonlyMap<string, string>;
+}
+
+export interface DecisionResult {
+  readonly fenetre: FenetreOperateur;
+  readonly decision: DecisionDePointage;
+}
+
+export interface GestesDecisionResult {
+  readonly fenetre: FenetreOperateur;
+  readonly decision: GestesDePointage;
 }
 
 export interface PosteAChoisir {
@@ -73,9 +86,20 @@ export interface IdentiteOperateurDesigne {
   readonly matricule: string;
 }
 
+interface EtatDeFenetreOperateur {
+  readonly entreprise: string;
+  readonly vue: JournalDuPupitre;
+  readonly instantDOuverture: number;
+  readonly identity: number;
+  readonly arriveeAssuree: boolean;
+  readonly numerosParGeste: ReadonlyMap<string, string>;
+  readonly refusVisible: RefusDePointageVisible | undefined;
+  readonly operateurDesigne: OperateurDesigne;
+}
+
 interface TransitionDePointage {
-  type: TypeDePointage;
-  posteId?: string;
+  readonly type: TypeDePointage;
+  readonly posteId?: string;
 }
 
 interface LotDeTransitions {
@@ -87,13 +111,31 @@ type DecisionDOuverture =
   | { readonly kind: 'CHOIX_POSTE_REQUIS'; readonly postes: readonly PosteAChoisir[] }
   | { readonly kind: 'TRANSITION'; readonly transition: TransitionDePointage };
 
+class HabilitationsDePoste {
+  private constructor(private readonly postes: readonly PosteAChoisir[]) {}
+
+  static from(source: readonly { readonly id: string; readonly libelle: string }[]): HabilitationsDePoste {
+    return new HabilitationsDePoste(source.map(({ id, libelle }) => ({ id, libelle })));
+  }
+
+  decideOuverture(type: TypeDePointage): DecisionDOuverture {
+    if (this.postes.length > 1) return { kind: 'CHOIX_POSTE_REQUIS', postes: this.postes };
+    const posteId = this.postes[0]?.id;
+    return { kind: 'TRANSITION', transition: posteId === undefined ? { type } : { type, posteId } };
+  }
+
+  require(posteId: string): void {
+    if (this.postes.every(poste => poste.id !== posteId)) throw new Error('Poste absent des habilitations locales.');
+  }
+}
+
 class OperateurDesigne {
   private readonly identite: IdentiteOperateurDesigne;
-  private readonly postes: readonly PosteAChoisir[];
+  private readonly habilitations: HabilitationsDePoste;
 
   constructor(source: OperateurDuPupitre, code: string) {
     this.identite = { id: source.id, nom: source.nom, prenom: source.prenom, matricule: code };
-    this.postes = source.postes.map(({ id, libelle }) => ({ id, libelle }));
+    this.habilitations = HabilitationsDePoste.from(source.postes);
   }
 
   identity(): IdentiteOperateurDesigne {
@@ -101,9 +143,7 @@ class OperateurDesigne {
   }
 
   decideOuverture(type: TypeDePointage): DecisionDOuverture {
-    if (this.postes.length > 1) return { kind: 'CHOIX_POSTE_REQUIS', postes: this.postes };
-    const posteId = this.postes[0]?.id;
-    return { kind: 'TRANSITION', transition: posteId === undefined ? { type } : { type, posteId } };
+    return this.habilitations.decideOuverture(type);
   }
 
   owns(operateurId: string): boolean {
@@ -115,9 +155,7 @@ class OperateurDesigne {
   }
 
   assertPoste(posteId: string): void {
-    if (this.postes.every(poste => poste.id !== posteId)) {
-      throw new Error('Poste absent des habilitations locales.');
-    }
+    this.habilitations.require(posteId);
   }
 }
 
@@ -172,7 +210,7 @@ class ActivitesPersonnelles {
     return { kind: 'ACTIF', transitions: this.transitionAll('NON_CONFORMITE', this.etat) };
   }
 
-  private transitionAll(type: TypeDePointage, etat: Extract<EtatDesActivites, { kind: 'ACTIF' }>): LotDeTransitions {
+  private transitionAll(type: TypeDePointage, etat: Extract<EtatDesActivites, { readonly kind: 'ACTIF' }>): LotDeTransitions {
     return {
       premiere: this.transition(type, etat.premiere.posteId),
       suivantes: etat.suivantes.map(activite => this.transition(type, activite.posteId)),
@@ -191,36 +229,41 @@ class ActivitesPersonnelles {
 
 export class FenetreOperateur {
   readonly operateur: IdentiteOperateurDesigne;
-  private readonly operateurDesigne: OperateurDesigne;
-  private arriveeAssuree = false;
-  private readonly numerosParGeste = new Map<string, string>();
-  private refusVisible: RefusDePointageVisible | undefined;
+  private constructor(private readonly etat: EtatDeFenetreOperateur) {
+    this.operateur = etat.operateurDesigne.identity();
+  }
 
-  constructor(
-    private readonly entreprise: string,
-    private vue: JournalDuPupitre,
-    code: string,
-    private readonly instantDOuverture: number,
-  ) {
+  static open(entreprise: string, vue: JournalDuPupitre, code: string, instantDOuverture: number, identity: number): FenetreOperateur {
     const operateur = vue.referentiel?.operateurs.find(candidat => candidat.matricule === code);
-    if (operateur === undefined) {
-      throw new Error('Matricule absent du referentiel local.');
-    }
-    this.operateurDesigne = new OperateurDesigne(operateur, code);
-    this.operateur = this.operateurDesigne.identity();
-  }
-
-  snapshot(): JournalDuPupitre {
-    return this.vue;
-  }
-
-  pointage(): VueDePointage {
-    const suivis = projectReferentiel(this.vue)?.suivis ?? [];
-    const elements = suivis.map(suivi => {
-      const activite = this.activitesFor(suivi).snapshot();
-      const element = new ElementDePointage(suivi.id, suivi.reference ?? suivi.nom, suivi.reference === undefined, activite);
-      return { element, type: suivi.type };
+    if (operateur === undefined) throw new Error('Matricule absent du referentiel local.');
+    return new FenetreOperateur({
+      entreprise,
+      vue,
+      instantDOuverture,
+      identity,
+      arriveeAssuree: false,
+      numerosParGeste: new Map(),
+      refusVisible: undefined,
+      operateurDesigne: new OperateurDesigne(operateur, code),
     });
+  }
+
+  hasIdentity(other: FenetreOperateur): boolean {
+    return this.etat.identity === other.etat.identity;
+  }
+  snapshot(): JournalDuPupitre {
+    return snapshotDuJournal(this.etat.vue);
+  }
+  pointage(): VueDePointage {
+    const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({
+      element: new ElementDePointage(
+        suivi.id,
+        suivi.reference ?? suivi.nom,
+        suivi.reference === undefined,
+        this.activitesFor(suivi).snapshot(),
+      ),
+      type: suivi.type,
+    }));
     const sorted = [...elements].sort((left, right) =>
       left.element.numero.localeCompare(right.element.numero, 'fr', { numeric: true, sensitivity: 'base' }),
     );
@@ -231,129 +274,132 @@ export class FenetreOperateur {
     };
   }
 
-  decide(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
-    this.refusVisible = undefined;
+  afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionResult {
     const suivi = this.requireSuivi(suiviId);
-    const activites = this.activitesFor(suivi);
-    const decisionDesActivites = activites.decide(cible);
+    const activities = this.activitesFor(suivi).decide(cible);
     const numero = this.numeroDuSuivi(suivi);
-    if (decisionDesActivites.kind === 'ACTIF') {
-      return {
-        kind: 'GESTES',
-        capture: this.prepareTransitions(suiviId, numero, decisionDesActivites.transitions, identify),
-      };
-    }
-    const ouverture = this.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
-    if (ouverture.kind === 'CHOIX_POSTE_REQUIS') {
-      return { kind: ouverture.kind, numero, postes: ouverture.postes };
-    }
-    return {
-      kind: 'GESTES',
-      capture: this.prepareTransitions(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify),
-    };
+    const decision =
+      activities.kind === 'ACTIF'
+        ? this.gestes(suiviId, numero, activities.transitions, identify)
+        : this.ouverture(suiviId, numero, cible, identify);
+    return { fenetre: this.with({ refusVisible: undefined, numerosParGeste: this.numerosAfter(decision) }), decision };
   }
-
-  choosePoste(suiviId: string, cible: CibleDePointage, posteId: string, identify: () => IdentiteDuGeste): GestesDePointage {
-    this.refusVisible = undefined;
+  afterChoosingPoste(suiviId: string, cible: CibleDePointage, posteId: string, identify: () => IdentiteDuGeste): GestesDecisionResult {
     const suivi = this.requireSuivi(suiviId);
     if (this.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
-    this.operateurDesigne.assertPoste(posteId);
+    this.etat.operateurDesigne.assertPoste(posteId);
+    const decision = this.gestes(
+      suiviId,
+      this.numeroDuSuivi(suivi),
+      { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
+      identify,
+    );
     return {
-      kind: 'GESTES',
-      capture: this.prepareTransitions(
-        suiviId,
-        this.numeroDuSuivi(suivi),
-        { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
-        identify,
-      ),
+      fenetre: this.with({ refusVisible: undefined, numerosParGeste: this.numerosAfter(decision) }),
+      decision,
     };
   }
-
-  reconcile(entreprise: string, vue: JournalDuPupitre): void {
-    if (!this.belongsTo(entreprise)) return;
-    this.vue = vue;
+  afterReconciling(entreprise: string, vue: JournalDuPupitre): FenetreOperateur {
+    if (!this.belongsTo(entreprise)) return this;
     const refus = [...vue.evenements]
       .reverse()
-      .find(evenement => evenement.etat === 'REFUSE' && this.numerosParGeste.has(evenement.geste.id));
-    const numero = refus === undefined ? undefined : this.numerosParGeste.get(refus.geste.id);
-    if (refus?.geste.nature !== 'POINTAGE' || refus.refus === undefined || numero === undefined) {
-      this.refusVisible = undefined;
-      return;
-    }
-    this.refusVisible = { numero, message: refus.refus.message };
+      .find(
+        (event): event is Extract<EvenementDuJournal, { readonly etat: 'REFUSE' }> =>
+          event.etat === 'REFUSE' && this.etat.numerosParGeste.has(event.geste.id),
+      );
+    const numero = refus === undefined ? undefined : this.etat.numerosParGeste.get(refus.geste.id);
+    return this.with({
+      vue,
+      refusVisible: refus?.geste.nature === 'POINTAGE' && numero !== undefined ? { numero, message: refus.refus.message } : undefined,
+    });
   }
-
-  refus(): RefusDePointageVisible | undefined {
-    return this.refusVisible;
+  afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
+    const known = new Set(this.etat.vue.evenements.map(evenement => evenement.geste.id));
+    return this.with({
+      arriveeAssuree: this.etat.arriveeAssuree || gestes.some(geste => geste.nature === 'POINTAGE'),
+      numerosParGeste: this.etat.numerosParGeste,
+      vue: {
+        ...this.etat.vue,
+        evenements: [
+          ...this.etat.vue.evenements,
+          ...gestes.filter(geste => !known.has(geste.id)).map(geste => ({ geste, etat: 'EN_ATTENTE' as const })),
+        ],
+      },
+    });
   }
-
+  refusal(): RefusDePointageVisible | undefined {
+    return this.etat.refusVisible;
+  }
   belongsTo(entreprise: string | undefined): boolean {
-    return entreprise === this.entreprise;
+    return entreprise === this.etat.entreprise;
   }
-
   assertEntreprise(entreprise: string | undefined): void {
     if (!this.belongsTo(entreprise)) throw new Error('La fenetre operateur a change.');
   }
-
   journalScope(): string {
-    return this.entreprise;
+    return this.etat.entreprise;
+  }
+  capture(decision: GestesDePointage): readonly GesteDAtelier[] {
+    return decision.capture(this.etat.arriveeAssuree);
+  }
+  preparePresence(type: TypeDePresence, identite: IdentiteDuGeste): GesteDAtelier[] {
+    return [{ ...identite, operateurId: this.etat.operateurDesigne.id(), nature: 'PRESENCE', type, implicite: false }];
   }
 
-  private requireSuivi(suiviId: string): SuiviDuPupitre {
-    const suivi = projectReferentiel(this.vue)?.suivis.find(candidate => candidate.id === suiviId);
-    if (suivi === undefined) throw new Error('Élément absent du référentiel local.');
-    return suivi;
+  private numerosAfter(decision: DecisionDePointage): ReadonlyMap<string, string> {
+    if (decision.kind !== 'GESTES') return this.etat.numerosParGeste;
+    return new Map([...this.etat.numerosParGeste, ...decision.numerosParGeste]);
   }
 
-  private activitesFor(suivi: SuiviDuPupitre): ActivitesPersonnelles {
-    return new ActivitesPersonnelles(suivi, this.operateurDesigne, this.instantDOuverture);
+  private ouverture(suiviId: string, numero: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
+    const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
+    return ouverture.kind === 'CHOIX_POSTE_REQUIS'
+      ? { kind: ouverture.kind, numero, postes: ouverture.postes }
+      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify);
   }
-
-  private openingTypeFor(cible: CibleDePointage): TypeDePointage {
-    return cible === 'PRINCIPALE' ? 'DEBUT' : 'NON_CONFORMITE';
-  }
-
-  private prepareTransitions(
-    suiviId: string,
-    numero: string,
-    transitions: LotDeTransitions,
-    identify: () => IdentiteDuGeste,
-  ): () => GesteDAtelier[] {
-    const first = this.toPointage(suiviId, numero, transitions.premiere, identify());
-    const pointages = [first, ...transitions.suivantes.map(transition => this.toPointage(suiviId, numero, transition, identify()))];
+  private gestes(suiviId: string, numero: string, transitions: LotDeTransitions, identify: () => IdentiteDuGeste): GestesDePointage {
+    const first = this.toPointage(suiviId, transitions.premiere, identify());
+    const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
     const arrivee: GesteDAtelier = {
       ...identify(),
       dateDeSurvenue: first.dateDeSurvenue,
-      operateurId: this.operateurDesigne.id(),
+      operateurId: this.etat.operateurDesigne.id(),
       nature: 'ARRIVEE',
     };
     const reprise: GesteDAtelier = {
       ...identify(),
       dateDeSurvenue: first.dateDeSurvenue,
-      operateurId: this.operateurDesigne.id(),
+      operateurId: this.etat.operateurDesigne.id(),
       nature: 'PRESENCE',
       type: 'REPRISE',
       implicite: true,
     };
-    return () => (this.arriveeAssuree ? pointages : [arrivee, reprise, ...pointages]);
+    return {
+      kind: 'GESTES',
+      capture: (assured = false) => (assured ? pointages : [arrivee, reprise, ...pointages]),
+      numerosParGeste: new Map(pointages.map(pointage => [pointage.id, numero])),
+    };
   }
-
-  private toPointage(suiviId: string, numero: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDAtelier {
-    const geste: GesteDAtelier = { ...identite, ...transition, suiviId, operateurId: this.operateurDesigne.id(), nature: 'POINTAGE' };
-    this.numerosParGeste.set(geste.id, numero);
-    return geste;
+  private toPointage(suiviId: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDAtelier {
+    return { ...identite, ...transition, suiviId, operateurId: this.etat.operateurDesigne.id(), nature: 'POINTAGE' };
   }
-
+  private requireSuivi(suiviId: string): SuiviDuPupitre {
+    const suivi = projectReferentiel(this.etat.vue)?.suivis.find(candidate => candidate.id === suiviId);
+    if (suivi === undefined) throw new Error('Élément absent du référentiel local.');
+    return suivi;
+  }
+  private activitesFor(suivi: SuiviDuPupitre): ActivitesPersonnelles {
+    return new ActivitesPersonnelles(suivi, this.etat.operateurDesigne, this.etat.instantDOuverture);
+  }
+  private openingTypeFor(cible: CibleDePointage): TypeDePointage {
+    return cible === 'PRINCIPALE' ? 'DEBUT' : 'NON_CONFORMITE';
+  }
   private numeroDuSuivi(suivi: SuiviDuPupitre): string {
     return suivi.reference ?? suivi.nom;
   }
-
-  preparePresence(type: TypeDePresence, identite: IdentiteDuGeste): GesteDAtelier[] {
-    return [{ ...identite, operateurId: this.operateurDesigne.id(), nature: 'PRESENCE', type, implicite: false }];
-  }
-
-  accept(gestes: GesteDAtelier[]): void {
-    this.arriveeAssuree ||= gestes.some(geste => geste.nature === 'POINTAGE');
-    this.vue = { ...this.vue, evenements: [...this.vue.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))] };
+  private with(
+    change: Partial<Pick<EtatDeFenetreOperateur, 'vue' | 'arriveeAssuree' | 'numerosParGeste' | 'refusVisible'>>,
+  ): FenetreOperateur {
+    return new FenetreOperateur({ ...this.etat, ...change });
   }
 }

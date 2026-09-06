@@ -97,10 +97,10 @@ export class PupitreSynchronization {
         await this.authentication.synchronizeSession();
         await this.push(entreprise, evenement.geste);
       });
-      return { ...evenement, etat: 'ACCEPTE' };
+      return { geste: evenement.geste, etat: 'ACCEPTE' };
     } catch (failure: unknown) {
       if (failure instanceof RefusDePublication) {
-        return { ...evenement, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
+        return { geste: evenement.geste, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
       }
       await this.markDisconnected(entreprise, publish);
       return undefined;

@@ -64,8 +64,13 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 describe('Designation du pupitre', () => {
   let designation: OfflinePupitre;
   let journal: DesignationJournalFixture;
+  let reportedFailures: unknown[][];
   beforeEach(async () => {
     journal = new DesignationJournalFixture();
+    reportedFailures = [];
+    vi.spyOn(console, 'error').mockImplementation((...arguments_: unknown[]) => {
+      reportedFailures.push(arguments_);
+    });
     await journal.saveReferentiel('atelier', referentielFixture);
     vi.useFakeTimers();
     TestBed.configureTestingModule({
@@ -84,6 +89,7 @@ describe('Designation du pupitre', () => {
     designation = TestBed.inject(OfflinePupitre);
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     TestBed.resetTestingModule();
     vi.useRealTimers();
   });
@@ -218,6 +224,17 @@ describe('Designation du pupitre', () => {
     thenClosed();
   });
 
+  it('should report a failed closure launched during destruction', async () => {
+    whenEntering('049');
+    await whenValidating();
+    givenTheRestorationWillFail();
+
+    whenDestroying();
+    await whenTheFailureIsReported();
+
+    thenTheRestorationFailureIsReported();
+  });
+
   it('should keep the first digit after expiry while the previous window is still closing', async () => {
     whenEntering('049');
     await whenValidating();
@@ -296,6 +313,10 @@ describe('Designation du pupitre', () => {
   const whenDestroying = (): void => {
     TestBed.resetTestingModule();
   };
+  const givenTheRestorationWillFail = (): void => {
+    journal.answer = Promise.reject(new Error('lecture indisponible'));
+  };
+  const whenTheFailureIsReported = (): Promise<void> => new Promise(resolve => roundTrip(resolve));
   const givenDelayedResolution = (): ((state: JournalDuPupitre) => void) => {
     journal.delayRead();
     let resolve: ((state: JournalDuPupitre) => void) | undefined;
@@ -339,6 +360,9 @@ describe('Designation du pupitre', () => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
     expect(() => designation.recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+  };
+  const thenTheRestorationFailureIsReported = (): void => {
+    expect(reportedFailures).toEqual([['Operation asynchrone interrompue', expect.objectContaining({ message: 'lecture indisponible' })]]);
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);

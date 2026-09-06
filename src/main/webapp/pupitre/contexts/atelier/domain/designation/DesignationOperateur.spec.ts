@@ -1,5 +1,6 @@
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
+import { FenetreOperateur } from './FenetreOperateur';
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -13,7 +14,7 @@ const identityFixture = (): IdentiteDuGeste => ({ id: 'geste', dateDeSurvenue: '
 describe('DesignationOperateur', () => {
   let designation: DesignationOperateur;
   beforeEach(() => {
-    designation = new DesignationOperateur();
+    designation = DesignationOperateur.empty();
   });
 
   it('should refuse to attribute a pointage at the inactivity deadline without a screen callback', () => {
@@ -60,35 +61,66 @@ describe('DesignationOperateur', () => {
     thenNoOperatorIsDesignated();
   });
 
+  it('should preserve earlier designation snapshots across input and closure transitions', () => {
+    const empty = designation;
+
+    whenEntering('0', 0);
+    const partial = designation;
+    whenEntering('4', 1);
+    designation = designation.afterFinish();
+
+    expect(empty.snapshot()).toMatchObject({ code: '', canValidate: false, operateur: undefined });
+    expect(partial.snapshot()).toMatchObject({ code: '0', canValidate: true, operateur: undefined });
+    expect(designation.snapshot()).toMatchObject({ code: '', canValidate: false, operateur: undefined });
+  });
+
+  it('should leave a designation unchanged when another operator window tries to replace it', () => {
+    givenDesignatedOperator();
+    const before = designation;
+    const other = FenetreOperateur.open('atelier', referenceFixture, '049', 1, 1);
+
+    designation = designation.afterReplacingWindow(other);
+
+    expect(designation).toBe(before);
+    thenOperatorIsDesignated();
+  });
+
   const givenDesignatedOperator = (): void => {
     whenEntering('049', 0);
     whenResolving(whenValidating(0), 0);
   };
   const whenEntering = (code: string, now: number): void => {
-    for (const digit of code) designation.enterDigit(digit, now);
+    for (const digit of code) designation = designation.afterDigit(digit, now);
   };
   const whenValidating = (now: number): DesignationResolution => {
-    const resolution = designation.beginResolution(now);
-    if (resolution === undefined) throw new Error('Expected a designation resolution');
-    return resolution;
+    const result = designation.afterBeginningResolution(now);
+    designation = result.designation;
+    if (result.resolution === undefined) throw new Error('Expected a designation resolution');
+    return result.resolution;
   };
   const whenResolving = (resolution: DesignationResolution, now: number): void => {
-    designation.openWindow('atelier', referenceFixture, resolution.code, now);
-    const accepted = designation.completeResolution(resolution, now);
-    if (!accepted) designation.releaseWindow();
-    designation.endResolution();
+    const opening = designation.afterOpeningWindow('atelier', referenceFixture, resolution.code, now);
+    designation = opening.designation;
+    const completion = designation.afterCompletingResolution(resolution, now);
+    designation = completion.designation;
+    if (!completion.accepted) designation = designation.afterReleasingWindow();
+    designation = designation.afterEndingResolution();
   };
   const whenFailingResolution = (resolution: DesignationResolution, now: number): void => {
-    designation.failResolution(resolution, now);
-    designation.endResolution();
+    designation = designation.afterFailingResolution(resolution, now);
+    designation = designation.afterEndingResolution();
   };
   const whenCheckingExpiration = (now: number): void => {
-    designation.expire(now);
+    designation = designation.afterExpiration(now);
   };
-  const whenPreparingPointage = (now: number): (() => GesteDAtelier[]) => {
-    const decision = designation.requireWindow(now).decide('piece', 'PRINCIPALE', identityFixture);
+  const whenPreparingPointage = (now: number): (() => readonly GesteDAtelier[]) => {
+    const access = designation.windowAfterPress(now);
+    designation = access.designation;
+    if (access.fenetre === undefined) throw new Error('Aucune fenetre operateur ouverte.');
+    const { fenetre, decision } = access.fenetre.afterDeciding('piece', 'PRINCIPALE', identityFixture);
+    designation = designation.afterReplacingWindow(fenetre);
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    return decision.capture;
+    return () => fenetre.capture(decision);
   };
   const thenPointageIsRefusedAt = (now: number): void => {
     expect(() => whenPreparingPointage(now)).toThrow('Aucune fenetre operateur ouverte.');
@@ -103,7 +135,7 @@ describe('DesignationOperateur', () => {
     expect(designation.snapshot().code).toBe(code);
     expect(designation.snapshot().unknownCode).toBe(false);
   };
-  const thenPreparedPointageBelongsToJean = (capture: () => GesteDAtelier[]): void => {
+  const thenPreparedPointageBelongsToJean = (capture: () => readonly GesteDAtelier[]): void => {
     expect(capture()).toContainEqual({
       ...identityFixture(),
       suiviId: 'piece',

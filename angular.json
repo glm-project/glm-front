@@ -7,7 +7,7 @@
       "projectType": "application",
       "root": "",
       "sourceRoot": "src",
-      "prefix": "app",
+      "prefix": "glm",
       "architect": {
         "build-gestion": {
           "builder": "@angular/build:application",

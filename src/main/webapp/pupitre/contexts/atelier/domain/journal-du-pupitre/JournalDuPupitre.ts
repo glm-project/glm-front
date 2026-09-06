@@ -5,72 +5,113 @@ export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
 export type TypeDePresence = 'PAUSE' | 'REPRISE' | 'DEPART';
 
 export interface OperateurDuPupitre {
-  id: string;
-  nom: string;
-  prenom: string;
-  matricule?: string;
-  postes: { id: string; libelle: string }[];
+  readonly id: string;
+  readonly nom: string;
+  readonly prenom: string;
+  readonly matricule?: string;
+  readonly postes: readonly { readonly id: string; readonly libelle: string }[];
 }
 
 export interface ActiviteDuPupitre {
-  operateurId: string;
-  categorie: 'TRAVAIL' | 'NON_CONFORMITE';
-  depuis: string;
-  posteId?: string;
+  readonly operateurId: string;
+  readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
+  readonly depuis: string;
+  readonly posteId?: string;
 }
 
 export interface SuiviDuPupitre {
-  id: string;
-  nom: string;
-  reference?: string;
-  etat: EtatDAtelier;
-  type: TypeDElement;
-  activites: ActiviteDuPupitre[];
-  evenements: string[];
+  readonly id: string;
+  readonly nom: string;
+  readonly reference?: string;
+  readonly etat: EtatDAtelier;
+  readonly type: TypeDElement;
+  readonly activites: readonly ActiviteDuPupitre[];
+  readonly evenements: readonly string[];
 }
 
 export interface ReferentielDuPupitre {
-  operateurs: OperateurDuPupitre[];
-  suivis: SuiviDuPupitre[];
+  readonly operateurs: readonly OperateurDuPupitre[];
+  readonly suivis: readonly SuiviDuPupitre[];
 }
 
 export interface IdentiteDuGeste {
-  id: string;
-  dateDeSurvenue: string;
+  readonly id: string;
+  readonly dateDeSurvenue: string;
 }
 
 export interface GesteDArrivee extends IdentiteDuGeste {
-  nature: 'ARRIVEE';
-  operateurId: string;
+  readonly nature: 'ARRIVEE';
+  readonly operateurId: string;
 }
 
 export interface GesteDePresence extends IdentiteDuGeste {
-  nature: 'PRESENCE';
-  operateurId: string;
-  type: TypeDePresence;
-  implicite: boolean;
+  readonly nature: 'PRESENCE';
+  readonly operateurId: string;
+  readonly type: TypeDePresence;
+  readonly implicite: boolean;
 }
 
 export interface GesteDePointage extends IdentiteDuGeste {
-  nature: 'POINTAGE';
-  operateurId: string;
-  suiviId: string;
-  type: TypeDePointage;
-  posteId?: string;
+  readonly nature: 'POINTAGE';
+  readonly operateurId: string;
+  readonly suiviId: string;
+  readonly type: TypeDePointage;
+  readonly posteId?: string;
 }
 
 export type GesteDAtelier = GesteDArrivee | GesteDePresence | GesteDePointage;
 
-export interface EvenementDuJournal {
-  geste: GesteDAtelier;
-  etat: 'EN_ATTENTE' | 'ACCEPTE' | 'REFUSE';
-  refus?: { code: string; message: string };
+export type EvenementDuJournal = EvenementEnAttente | EvenementAccepte | EvenementRefuse;
+
+export interface EvenementEnAttente {
+  readonly geste: GesteDAtelier;
+  readonly etat: 'EN_ATTENTE';
+  readonly refus?: never;
+}
+
+export interface EvenementAccepte {
+  readonly geste: GesteDAtelier;
+  readonly etat: 'ACCEPTE';
+  readonly refus?: never;
+}
+
+export interface EvenementRefuse {
+  readonly geste: GesteDAtelier;
+  readonly etat: 'REFUSE';
+  readonly refus: { readonly code: string; readonly message: string };
 }
 
 export interface JournalDuPupitre {
-  referentiel?: ReferentielDuPupitre;
-  evenements: EvenementDuJournal[];
-  connecte: boolean;
+  readonly referentiel?: ReferentielDuPupitre;
+  readonly evenements: readonly EvenementDuJournal[];
+  readonly connecte: boolean;
 }
 
 export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], connecte: true };
+
+const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal => {
+  const geste = { ...evenement.geste };
+  if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
+  if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
+  return { geste, etat: 'EN_ATTENTE' };
+};
+
+export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre => ({
+  connecte: journal.connecte,
+  evenements: journal.evenements.map(snapshotEvenement),
+  ...(journal.referentiel === undefined
+    ? {}
+    : {
+        referentiel: {
+          operateurs: journal.referentiel.operateurs.map(operateur => ({
+            ...operateur,
+            postes: operateur.postes.map(poste => ({ ...poste })),
+          })),
+          suivis: journal.referentiel.suivis.map(suivi => ({
+            ...suivi,
+            activites: suivi.activites.map(activite => ({ ...activite })),
+            evenements: [...suivi.evenements],
+          })),
+        },
+      }),
+});
