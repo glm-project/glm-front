@@ -1,8 +1,10 @@
-import { ESLint } from 'eslint';
+import typescriptParser from '@typescript-eslint/parser';
+import { ESLint, Linter } from 'eslint';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 const eslint = new ESLint();
+const linter = new Linter();
 const filesFixture = [
   'src/main/webapp/app/shared/authentication/domain/AuthenticationPort.ts',
   'src/main/webapp/gestion/app.ts',
@@ -15,22 +17,28 @@ const filesFixture = [
 for (const file of filesFixture) {
   describe(`Type assertion policy in ${file}`, () => {
     it('should reject non-null and definite-assignment assertions', async () => {
-      const [result] = await eslint.lintText(
+      const config = await eslint.calculateConfigForFile(file);
+      const messages = linter.verify(
         `
-          class Probe {
-            value!: string;
-          }
-          let deferred!: () => void;
-          declare const optional: string | undefined;
-          optional!.trim();
-        `,
-        { filePath: file },
+        class Probe {
+          value!: string;
+        }
+        let deferred!: () => void;
+        declare const optional: string | undefined;
+        optional!.trim();
+      `,
+        {
+          languageOptions: { parser: typescriptParser },
+          plugins: { '@typescript-eslint': config.plugins['@typescript-eslint'] },
+          rules: {
+            '@typescript-eslint/no-non-null-assertion': config.rules['@typescript-eslint/no-non-null-assertion'],
+            'no-restricted-syntax': config.rules['no-restricted-syntax'],
+          },
+        },
       );
 
       assert.deepEqual(
-        result.messages
-          .filter(message => ['@typescript-eslint/no-non-null-assertion', 'no-restricted-syntax'].includes(message.ruleId ?? ''))
-          .map(message => message.ruleId),
+        messages.map(message => message.ruleId),
         ['no-restricted-syntax', 'no-restricted-syntax', '@typescript-eslint/no-non-null-assertion'],
       );
     });
