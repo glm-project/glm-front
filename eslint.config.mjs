@@ -1,6 +1,7 @@
 import eslint from '@eslint/js';
 import angular from 'angular-eslint';
 import cypress from 'eslint-plugin-cypress';
+import sonarjs from 'eslint-plugin-sonarjs';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
@@ -135,12 +136,26 @@ export default typescript.config(
   },
   eslint.configs.recommended,
   {
+    ...sonarjs.configs.recommended,
+    files: ['src/**/*.ts'],
+    rules: {
+      ...sonarjs.configs.recommended.rules,
+      'sonarjs/argument-type': 'off',
+      'sonarjs/cognitive-complexity': ['error', 7],
+      'sonarjs/function-return-type': 'off',
+      'sonarjs/null-dereference': 'off',
+    },
+  },
+  {
     files: ['src/test/webapp/application/**/*.ts'],
     extends: [...typescript.configs.recommendedTypeChecked, cypress.configs.recommended],
     languageOptions: {
       parserOptions: {
         project: ['src/test/webapp/application/tsconfig.json'],
       },
+    },
+    rules: {
+      'sonarjs/prefer-specific-assertions': 'off',
     },
   },
   {
@@ -150,6 +165,9 @@ export default typescript.config(
       parserOptions: {
         project: ['src/test/webapp/component/tsconfig.json'],
       },
+    },
+    rules: {
+      'sonarjs/prefer-specific-assertions': 'off',
     },
   },
   {

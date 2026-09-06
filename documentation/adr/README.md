@@ -40,3 +40,5 @@ renumbers at merge time. The status below is the living one — update this line
   shared commands for Git, Codex and CI, with pinned security tools and bounded completion validation
 - [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Accepted** —
   bounded replay-policy mutation through the Angular builder, checked invalid mutants and a scheduled report
+- [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — **Accepted** — recommended static
+  analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
