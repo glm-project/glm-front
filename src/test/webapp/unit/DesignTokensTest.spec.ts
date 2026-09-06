@@ -9,10 +9,6 @@ const WCAG_AA_NORMAL_TEXT = 4.5;
 const SRGB_LINEAR_SEGMENT_END = 0.03928;
 const CHANNEL_STARTS_AFTER_THE_HASH = [1, 3, 5];
 const COLOR_ROLE_DECLARATION = /--color-([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g;
-const STYLE_RULE = /([^{}]+)\{([^{}]*)\}/g;
-const THEME_AT_RULE = /(@theme[^{]*)\{([^{}]*)\}/g;
-const TOKEN_DECLARATION = /(--[a-z0-9-]+):/g;
-const MATERIAL_DECLARATION = /(--mat-sys-[a-z0-9-]+):\s*([^;]+);/g;
 const TOKEN_REFERENCE = /^var\((--[a-z0-9-]+)\)$/;
 
 interface TextOnBackground {
@@ -27,6 +23,16 @@ interface StyleRule {
 
 interface Bridging {
   materialToken: string;
+  value: string;
+}
+
+interface StylesheetBlock {
+  heading: string;
+  declarations: string;
+}
+
+interface Declaration {
+  name: string;
   value: string;
 }
 
@@ -81,15 +87,23 @@ const hexOf = (roles: Map<string, string>, role: string): string => {
   return hex;
 };
 
-const propertiesOf = (declarations: string): string[] =>
-  declarations
-    .split(';')
-    .map(declaration => requiredFixture(declaration.split(':')[0], 'CSS property').trim())
-    .filter(property => property.length > 0);
-
 const matchesIn = (stylesheet: string, pattern: RegExp): RegExpExecArray[] => [...readFileSync(stylesheet, 'utf8').matchAll(pattern)];
 
 const captureFixture = (match: RegExpExecArray, index: number, description: string): string => requiredFixture(match[index], description);
+
+const blocksIn = (stylesheet: string): StylesheetBlock[] =>
+  readFileSync(stylesheet, 'utf8')
+    .split('}')
+    .flatMap(source => {
+      const opening = source.indexOf('{');
+      return opening === -1 ? [] : [{ heading: source.slice(0, opening).trim(), declarations: source.slice(opening + 1) }];
+    });
+
+const declarationsIn = (source: string): Declaration[] =>
+  source.split(';').flatMap(declaration => {
+    const separator = declaration.indexOf(':');
+    return separator === -1 ? [] : [{ name: declaration.slice(0, separator).trim(), value: declaration.slice(separator + 1).trim() }];
+  });
 
 const givenTheColorRoles = (): Map<string, string> => {
   const roles = new Map<string, string>();
@@ -112,26 +126,27 @@ const whatItPointsAt = (value: string): string => {
   return token ?? value;
 };
 
-const themeBlocksOf = (stylesheet: string): RegExpExecArray[] => matchesIn(stylesheet, THEME_AT_RULE);
+const themeBlocksOf = (stylesheet: string): StylesheetBlock[] => blocksIn(stylesheet).filter(({ heading }) => heading.includes('@theme'));
 
 const givenTheTokensTheThemeDeclares = (): string[] =>
   themeBlocksOf(TOKENS_STYLESHEET)
-    .flatMap(match => [...captureFixture(match, 2, 'theme declarations').matchAll(TOKEN_DECLARATION)])
-    .map(match => captureFixture(match, 1, 'theme token'));
+    .flatMap(({ declarations }) => declarationsIn(declarations))
+    .map(({ name }) => name)
+    .filter(name => name.startsWith('--'));
 
 const whenReadingTheThemeAtRules = (): string[] =>
-  themeBlocksOf(TOKENS_STYLESHEET).map(match => captureFixture(match, 1, 'theme at-rule').trim());
+  themeBlocksOf(TOKENS_STYLESHEET).map(({ heading }) => heading.slice(heading.indexOf('@theme')).trim());
 
 const whenReadingTheMaterialBridge = (): Bridging[] =>
-  matchesIn(MATERIAL_BRIDGE_STYLESHEET, MATERIAL_DECLARATION).map(match => ({
-    materialToken: captureFixture(match, 1, 'Material token'),
-    value: captureFixture(match, 2, 'Material value').trim(),
-  }));
+  blocksIn(MATERIAL_BRIDGE_STYLESHEET)
+    .flatMap(({ declarations }) => declarationsIn(declarations))
+    .filter(({ name }) => name.startsWith('--mat-sys-'))
+    .map(({ name, value }) => ({ materialToken: name, value }));
 
 const whenReadingTheRulesOf = (stylesheet: string): StyleRule[] =>
-  matchesIn(stylesheet, STYLE_RULE).map(match => ({
-    selector: captureFixture(match, 1, 'CSS selector').trim(),
-    properties: propertiesOf(captureFixture(match, 2, 'CSS declarations')),
+  blocksIn(stylesheet).map(({ heading, declarations }) => ({
+    selector: heading,
+    properties: declarationsIn(declarations).map(({ name }) => name),
   }));
 
 const thenItStaysReadable = (contrast: number): void => {

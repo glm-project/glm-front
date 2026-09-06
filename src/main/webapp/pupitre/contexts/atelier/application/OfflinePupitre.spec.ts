@@ -439,7 +439,7 @@ describe('OfflinePupitre', () => {
 
     thenNoReference();
 
-    const pausing = whenPausingWithoutWindow();
+    const pausing = await whenPausingWithoutWindow();
 
     thenGestureNeedsAWindow(pausing);
   });
@@ -585,9 +585,9 @@ describe('OfflinePupitre', () => {
   };
   const whenClosing = (): Promise<void> => pupitre.finish();
   const whenRestoring = (): Promise<void> => pupitre.restore();
-  const whenPausingWithoutWindow = (): unknown => {
+  const whenPausingWithoutWindow = async (): Promise<unknown> => {
     try {
-      void whenPausing();
+      await whenPausing();
       return undefined;
     } catch (failure) {
       return failure;

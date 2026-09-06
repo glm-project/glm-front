@@ -24,18 +24,22 @@ const referenceFixture: JournalDuPupitre = {
 };
 
 class DesignationJournalFixture {
-  readCompleted: Promise<void>;
+  readCompleted!: Promise<void>;
   private notifyReadCompleted!: () => void;
 
   constructor() {
-    this.readCompleted = this.nextRead();
+    this.prepareNextRead();
   }
 
   nextRead(): Promise<void> {
+    this.prepareNextRead();
+    return this.readCompleted;
+  }
+
+  private prepareNextRead(): void {
     this.readCompleted = new Promise(resolve => {
       this.notifyReadCompleted = resolve;
     });
-    return this.readCompleted;
   }
 
   read(): Promise<JournalDuPupitre> {
