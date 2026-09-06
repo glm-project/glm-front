@@ -14,6 +14,7 @@ const gestureFixture: GesteDAtelier = {
   dateDeSurvenue: dateFixture,
   operateurId: 'operator-1',
 };
+const acceptedGestureFixture = { geste: gestureFixture, etat: 'ACCEPTE', journeeOuverte: true } as const;
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
   suivis: [
@@ -281,7 +282,7 @@ const thenTheOriginalGestureIsAcceptedInTheJournal = (): void => {
   thenProductionFixture()
     .then(fixture => fixture.read(entrepriseFixture))
     .its('evenements')
-    .should('deep.equal', [{ geste: gestureFixture, etat: 'ACCEPTE' }]);
+    .should('deep.equal', [acceptedGestureFixture]);
 };
 
 const thenTheOriginalGestureStillReachedTheServerExactlyOnce = (): void => {
@@ -293,7 +294,7 @@ const thenTheJournalAndReferenceSurvivedEveryRestart = (): void => {
     .then(fixture => fixture.read(entrepriseFixture))
     .then(state => {
       expect(state.referentiel).to.deep.equal(referenceFixture);
-      expect(state.evenements).to.deep.equal([{ geste: gestureFixture, etat: 'ACCEPTE' }]);
+      expect(state.evenements).to.deep.equal([acceptedGestureFixture]);
     });
 };
 
