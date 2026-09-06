@@ -58,10 +58,11 @@ describe('PupitreRuntime', () => {
   let runtime: PupitreRuntime;
   let authentication: AuthenticationFixture;
   let pupitre: OfflinePupitreFixture;
+  let consoleErrorFixture: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleErrorFixture = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     authentication = new AuthenticationFixture();
     pupitre = new OfflinePupitreFixture();
     TestBed.configureTestingModule({
@@ -129,6 +130,7 @@ describe('PupitreRuntime', () => {
     givenUnavailableSynchronization();
 
     await whenStartingPupitre();
+    thenTheSynchronizationFailureWasLogged();
     whenSynchronizationRecovers();
     whenNetworkReturns();
 
@@ -164,5 +166,8 @@ describe('PupitreRuntime', () => {
   const thenSynchronizationAttemptsAre = async (expected: number): Promise<void> => {
     await pupitre.settle();
     expect(pupitre.synchronizationAttempts).toBe(expected);
+  };
+  const thenTheSynchronizationFailureWasLogged = (): void => {
+    expect(consoleErrorFixture).toHaveBeenCalledWith('Pupitre non synchronise', new Error('synchronisation indisponible'));
   };
 });
