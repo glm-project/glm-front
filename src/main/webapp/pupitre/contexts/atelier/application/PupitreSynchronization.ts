@@ -95,10 +95,9 @@ export class PupitreSynchronization {
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
-      let journeeOuverte = false;
-      await this.journal.withSession(async () => {
+      const journeeOuverte = await this.journal.withSession(async () => {
         await this.authentication.synchronizeSession();
-        journeeOuverte = await this.push(entreprise, evenement.geste, evenements);
+        return this.push(entreprise, evenement.geste, evenements);
       });
       return evenement.geste.nature === 'ARRIVEE'
         ? { geste: evenement.geste, etat: 'ACCEPTE', journeeOuverte }
