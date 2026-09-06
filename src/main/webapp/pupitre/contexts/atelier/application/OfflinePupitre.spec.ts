@@ -13,6 +13,7 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
+import { MockInstance, vi } from 'vitest';
 import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from './OfflinePupitre';
@@ -87,8 +88,10 @@ class AuthenticationFixture extends AuthenticationPort {
 }
 
 class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedulerPort {
-  override schedule(): void {
-    return;
+  readonly scheduledDeadlines: (number | undefined)[] = [];
+
+  override schedule(deadline?: number): void {
+    this.scheduledDeadlines.push(deadline);
   }
 }
 
@@ -148,8 +151,10 @@ describe('OfflinePupitre', () => {
   let journal: ApplicationJournalFixture;
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
+  let scheduler: DesignationExpirationSchedulerFixture;
 
   beforeEach(async () => {
+    scheduler = new DesignationExpirationSchedulerFixture();
     journal = new ApplicationJournalFixture();
     serveur = new ServerFixture();
     authentication = new AuthenticationFixture();
@@ -808,6 +813,101 @@ describe('OfflinePupitre', () => {
     expect(pupitre.messageAtelier()).toBeUndefined();
   });
 
+  it('should disable validation while resolving and drain window if resolution expired during opening', async () => {
+    givenBusinessTime();
+    givenDigitsEntered('049');
+    thenValidationIsAvailable(true);
+
+    const opening = whenValidating();
+    thenValidationIsAvailable(false);
+
+    whenSleepingPastDesignation();
+    await opening;
+
+    thenNoWindowPresentationRemains();
+  });
+
+  it('should clear errors immediately when closing begins and restore validate capability when closure completes', async () => {
+    await givenAnOpenWindow();
+    await givenFailedLocalSemanticCapture();
+    thenWorkshopMessageIsError('Action non enregistrée — recommencez');
+
+    const releaseCapture = givenDelayedCapture();
+    const pointage = whenStarting();
+    const closing = whenClosing();
+
+    thenWorkshopMessageIsCleared();
+    givenDigitsEntered('0');
+    thenValidationIsAvailable(false);
+
+    whenReleasingCapture(releaseCapture);
+    await whenCaptureAndClosureComplete(pointage, closing);
+
+    thenValidationIsAvailable(true);
+  });
+
+  it('should clear active refusals immediately when closing begins', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    await givenServerRefusalOnStart('tour');
+    thenWorkshopMessageIsDefined();
+
+    const closing = whenClosing();
+
+    thenWorkshopMessageIsCleared();
+
+    await closing;
+  });
+
+  it('should expose pointage projection immediately when window is opened', async () => {
+    await whenOpening();
+
+    thenPointageIsDefined();
+    thenDesignatedMatriculeIs('049');
+  });
+
+  it('should clear existing refusal immediately upon pressing a target requiring workstation choice', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    await givenServerRefusalOnStart('tour');
+    thenWorkshopMessageIsDefined();
+
+    const choice = whenPressingPrimaryTarget();
+
+    thenChoiceRequiresWorkstation(choice);
+    thenWorkshopMessageIsCleared();
+  });
+
+  it('should log an error when background synchronization fails after durable acceptance', async () => {
+    await givenAnOpenWindow();
+    const consoleError = givenBackgroundSynchronizationFails();
+
+    await whenStarting();
+    await roundTrip();
+
+    thenBackgroundSynchronizationInterruptionWasLogged(consoleError);
+  });
+
+  it('should clear an existing refusal when the window is closed during company change', async () => {
+    await givenAnOpenWindow();
+    await givenServerRefusalOnStart('tour');
+    thenWorkshopMessageIsDefined();
+
+    givenReenrolledForAnotherCompany();
+    await whenRestoring();
+
+    thenNoWindowPresentationRemains();
+  });
+
+  it('should renew inactivity deadline when initiating a gesture in an open window', async () => {
+    givenBusinessTime();
+    await givenAnOpenWindow();
+    const initialDeadline = scheduler.scheduledDeadlines.at(-1);
+
+    whenBusinessTimeBecomes('2026-09-05T08:00:10Z');
+    whenPressingPrimaryTarget();
+
+    thenInactivityDeadlineWasRenewed(initialDeadline);
+  });
+
   const givenBusinessTime = (): void => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
@@ -860,7 +960,7 @@ describe('OfflinePupitre', () => {
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
-        { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
+        { provide: DesignationExpirationSchedulerPort, useValue: scheduler },
       ],
     }).get(OfflinePupitre);
   const whenRestarting = async (): Promise<void> => {
@@ -1176,6 +1276,57 @@ describe('OfflinePupitre', () => {
       expect(failure.message).toContain('Aucune fenetre');
     }
   };
+  const givenDigitsEntered = (digits: string): void => {
+    for (const char of digits) {
+      pupitre.enterDigit(char);
+    }
+  };
+  const givenFailedLocalSemanticCapture = async (): Promise<void> => {
+    givenLocalWriteFailsOnce();
+    const failed = whenPressingPrimaryTarget();
+    await thenSemanticCaptureFails(failed);
+  };
+  const givenServerRefusalOnStart = async (posteId: string): Promise<void> => {
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    await whenStartingOn(posteId);
+    await whenSynchronizing();
+  };
+  const givenBackgroundSynchronizationFails = (): MockInstance => {
+    vi.spyOn(journal, 'synchronize').mockRejectedValueOnce(new Error('stockage indisponible'));
+    return vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  };
+  const whenValidating = (): Promise<void> => pupitre.validate();
+  const thenValidationIsAvailable = (expected: boolean): void => {
+    expect(pupitre.canValidate()).toBe(expected);
+  };
+  const thenPointageIsDefined = (): void => {
+    expect(pupitre.pointage()).toBeDefined();
+  };
+  const thenWorkshopMessageIsDefined = (): void => {
+    expect(pupitre.messageAtelier()).toBeDefined();
+  };
+  const thenWorkshopMessageIsCleared = (): void => {
+    expect(pupitre.messageAtelier()).toBeUndefined();
+  };
+  const thenWorkshopMessageIsError = (message: string): void => {
+    expect(pupitre.messageAtelier()).toEqual({ message });
+  };
+  const thenChoiceRequiresWorkstation = (choice: ReturnType<OfflinePupitre['execute']>): void => {
+    expect(choice.kind).toBe('CHOIX_POSTE_REQUIS');
+  };
+  const thenInactivityDeadlineWasRenewed = (initialDeadline: number | undefined): void => {
+    const renewedDeadline = scheduler.scheduledDeadlines.at(-1);
+    expect(renewedDeadline).toBeDefined();
+    if (initialDeadline !== undefined && renewedDeadline !== undefined) {
+      expect(renewedDeadline).toBeGreaterThan(initialDeadline);
+    }
+  };
+  const thenBackgroundSynchronizationInterruptionWasLogged = (spy: MockInstance): void => {
+    expect(spy).toHaveBeenCalledWith('Synchronisation interrompue', expect.any(Error));
+    spy.mockRestore();
+  };
+
   const completionOf = (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected immediate capture fixture.');
     return execution.completion;
