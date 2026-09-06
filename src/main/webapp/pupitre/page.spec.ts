@@ -135,6 +135,72 @@ describe('Pupitre page', () => {
     expect(pupitre.globales).toEqual(['REPRENDRE']);
   });
 
+  it('should accept a click that has no preceding pointerdown', () => {
+    givenPointage();
+
+    whenClicking('pause');
+
+    thenGlobalIntentionsAre(['PAUSE']);
+  });
+
+  it('should render session expiry immediately during pointerdown before click', () => {
+    givenPointage();
+    givenSessionExpiryOnNextPress();
+
+    whenDispatchingPointerDown('pause');
+
+    thenVisible('pause', false);
+    thenVisible('designation', true);
+  });
+
+  it('should not prevent default on an accepted pointerdown', () => {
+    givenPointage();
+
+    const pointerdown = whenDispatchingPointerDown('pause');
+
+    thenDefaultWasNotPrevented(pointerdown);
+  });
+
+  it('should consume the click following a refused press and restore click handling afterwards', () => {
+    givenPointage();
+    givenTheNextPagePressIsRefused();
+
+    const refusedPointer = whenDispatchingPointerDown('pause');
+    const refusedClick = whenDispatchingClick('pause');
+
+    thenDefaultWasPrevented(refusedPointer);
+    thenDefaultWasPrevented(refusedClick);
+    thenGlobalIntentionsAre([]);
+
+    whenClicking('pause');
+
+    thenGlobalIntentionsAre(['PAUSE']);
+  });
+
+  it('should guard pointerdown in capture phase even when child stops propagation', () => {
+    givenPointage();
+    givenChildStopsPointerDownPropagation('pause');
+
+    whenPressing('pause');
+
+    thenRegisterPressWasCalledTimes(1);
+  });
+
+  it('should remove pointerdown and click guards on page destruction', () => {
+    givenPointage();
+    givenTheNextPagePressIsRefused();
+    whenDispatchingPointerDown('pause');
+    whenClearingPressRegistrations();
+
+    whenDestroyingThePage();
+
+    whenDispatchingPointerDownOnRoot();
+    const click = whenDispatchingClickOnRoot();
+
+    thenRegisterPressWasNotCalled();
+    thenDefaultWasNotPrevented(click);
+  });
+
   it('should remove an open workstation choice with the pointage view', () => {
     givenPointage({
       kind: 'CHOIX_POSTE_REQUIS',
@@ -217,6 +283,61 @@ describe('Pupitre page', () => {
   };
   const whenDestroyingThePage = (): void => {
     fixture.destroy();
+  };
+
+  const givenChildStopsPointerDownPropagation = (selector: string): void => {
+    element(selector).addEventListener('pointerdown', event => {
+      event.stopPropagation();
+    });
+  };
+  const givenSessionExpiryOnNextPress = (): void => {
+    pupitre.registerPress.mockImplementationOnce(() => {
+      pupitre.operateur.set(undefined);
+      pupitre.pointage.set(undefined);
+      return false;
+    });
+  };
+  const whenClearingPressRegistrations = (): void => {
+    pupitre.registerPress.mockClear();
+  };
+  const whenClicking = (selector: string): void => {
+    element(selector).click();
+    fixture.detectChanges();
+  };
+  const whenDispatchingPointerDown = (selector: string): Event => {
+    const event = new Event('pointerdown', { bubbles: true, cancelable: true });
+    element(selector).dispatchEvent(event);
+    return event;
+  };
+  const whenDispatchingClick = (selector: string): MouseEvent => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    element(selector).dispatchEvent(event);
+    return event;
+  };
+  const whenDispatchingPointerDownOnRoot = (): Event => {
+    const event = new Event('pointerdown', { bubbles: true, cancelable: true });
+    root().dispatchEvent(event);
+    return event;
+  };
+  const whenDispatchingClickOnRoot = (): MouseEvent => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    root().dispatchEvent(event);
+    return event;
+  };
+  const thenGlobalIntentionsAre = (expected: IntentionGlobale[]): void => {
+    expect(pupitre.globales).toEqual(expected);
+  };
+  const thenRegisterPressWasCalledTimes = (times: number): void => {
+    expect(pupitre.registerPress).toHaveBeenCalledTimes(times);
+  };
+  const thenRegisterPressWasNotCalled = (): void => {
+    expect(pupitre.registerPress).not.toHaveBeenCalled();
+  };
+  const thenDefaultWasPrevented = (event: Event): void => {
+    expect(event.defaultPrevented).toBe(true);
+  };
+  const thenDefaultWasNotPrevented = (event: Event): void => {
+    expect(event.defaultPrevented).toBe(false);
   };
 
   const thenHeaderMessageIs = (expected: string): void => {
