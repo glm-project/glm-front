@@ -102,7 +102,7 @@ describe('FenetreOperateur', () => {
     thenOpeningSharesBusinessTime(firstGestures);
   });
 
-  it('should keep requiring arrival until a pointage has been committed', () => {
+  it('should keep requiring arrival until a business command has been committed', () => {
     const first = givenAPreparedPointage();
     const retry = givenAPreparedPointage();
 
@@ -110,8 +110,108 @@ describe('FenetreOperateur', () => {
     const presence = whenAcceptingAnExplicitPause();
     const retriedGestures = whenCapturingPointage(retry);
 
-    thenGesturesAre(retriedGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    thenOnlyExplicitPresenceIsVisible(presence);
+    thenGesturesAre(retriedGestures, ['POINTAGE']);
+    thenAcceptedPresenceIsVisible(presence);
+  });
+
+  it('should assure arrival before the first explicit pause', () => {
+    const pause = fenetre.preparePresence('PAUSE', identifyFixture);
+
+    const gestes = pause.capture();
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE']);
+    expect(gestes[1]).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false });
+  });
+
+  it('should correlate the first explicit resumption with its arrival assurance', () => {
+    const reprise = fenetre.preparePresence('REPRISE', identifyFixture);
+
+    const gestes = fenetre.capture(reprise);
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE']);
+    expect(gestes[1]).toMatchObject({
+      nature: 'PRESENCE',
+      type: 'REPRISE',
+      implicite: false,
+      assuranceArriveeId: gestes[0]?.id,
+    });
+  });
+
+  it('should assure arrival without an implicit resumption before a first finish', () => {
+    const fin = whenDeciding('moule-1015', 'PRINCIPALE');
+
+    const gestes = captureGestures(fin);
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE']);
+    thenPointageTypesAre(fin, ['FIN']);
+  });
+
+  it('should not resume implicitly when moving work to non conformity', () => {
+    const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
+
+    const gestes = captureGestures(nonConformite);
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE']);
+    thenPointageTypesAre(nonConformite, ['NON_CONFORMITE']);
+  });
+
+  it('should resume implicitly when moving non conformity back to work', () => {
+    const travail = whenDeciding('of-204', 'SECONDAIRE');
+
+    const gestes = captureGestures(travail);
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE']);
+    thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
+  });
+
+  it('should finish every personal activity with its workstation before departure when stopping all', () => {
+    const toutArreter = fenetre.prepareToutArreter(identifyFixture);
+
+    const gestes = toutArreter.capture();
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+    expect(
+      gestes
+        .filter(geste => geste.nature === 'POINTAGE')
+        .map(geste => ({ suiviId: geste.suiviId, type: geste.type, posteId: geste.posteId })),
+    ).toEqual([
+      { suiviId: 'moule-1015', type: 'FIN', posteId: 'tour' },
+      { suiviId: 'of-204', type: 'FIN', posteId: undefined },
+      { suiviId: 'of-204', type: 'FIN', posteId: 'tour' },
+      { suiviId: 'of-204', type: 'FIN', posteId: undefined },
+    ]);
+    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART', implicite: false });
+    expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
+    expect(new Set(gestes.map(geste => geste.dateDeSurvenue))).toEqual(new Set(['2026-09-05T08:00:00.000Z']));
+  });
+
+  it('should not repeat arrival before stopping all after a first accepted command', () => {
+    const premiereCommande = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
+    fenetre = fenetre.afterAccept(premiereCommande);
+
+    const toutArreter = fenetre.capture(fenetre.prepareToutArreter(identifyFixture));
+
+    thenGesturesAre(toutArreter, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+  });
+
+  it('should assure arrival then depart when stopping all without a visible activity', () => {
+    fenetre = fenetre.afterReconciling('entreprise-a', EMPTY_JOURNAL_DU_PUPITRE);
+
+    const toutArreter = fenetre.prepareToutArreter(identifyFixture).capture();
+
+    thenGesturesAre(toutArreter, ['ARRIVEE', 'PRESENCE']);
+    expect(toutArreter.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
+  });
+
+  it('should not repeat arrival after the first business command was accepted', () => {
+    const premiereCommande = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
+    fenetre = fenetre.afterAccept(premiereCommande);
+
+    const commandeSuivante = fenetre.capture(fenetre.preparePresence('REPRISE', identifyFixture));
+
+    thenGesturesAre(commandeSuivante, ['PRESENCE']);
+    expect(commandeSuivante[0]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: false });
+    expect(commandeSuivante[0]).not.toHaveProperty('assuranceArriveeId');
   });
 
   it('should turn every personal activity off from the primary target and normalize only necessary secondary transitions', () => {
@@ -279,7 +379,7 @@ describe('FenetreOperateur', () => {
       connecte: true,
       evenements: [
         { geste, etat: 'EN_ATTENTE' },
-        { geste, etat: 'ACCEPTE' },
+        { geste, etat: 'ACCEPTE', journeeOuverte: true },
         { geste, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
       ],
     };
@@ -413,8 +513,8 @@ describe('FenetreOperateur', () => {
     fenetre = fenetre.afterAccept(gestes);
     return gestes;
   };
-  const whenAcceptingAnExplicitPause = (): GesteDAtelier[] => {
-    const presence = fenetre.preparePresence('PAUSE', identifyFixture());
+  const whenAcceptingAnExplicitPause = (): readonly GesteDAtelier[] => {
+    const presence = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
     fenetre = fenetre.afterAccept(presence);
     return presence;
   };
@@ -443,6 +543,10 @@ describe('FenetreOperateur', () => {
           .map(geste => geste.type),
       ).toEqual(types);
     }
+  };
+  const captureGestures = (decision: DecisionDePointage): readonly GesteDAtelier[] => {
+    if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
+    return fenetre.capture(decision);
   };
   const thenPointagesKeepTheirWorkstations = (decision: DecisionDePointage, postes: (string | undefined)[]): void => {
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
@@ -515,8 +619,8 @@ describe('FenetreOperateur', () => {
       gestes.filter(geste => geste.nature === 'POINTAGE').every(geste => geste.dateDeSurvenue === preparedIdentities.get(geste.id)),
     ).toBe(true);
   };
-  const thenOnlyExplicitPresenceIsVisible = (gestes: readonly GesteDAtelier[]): void => {
+  const thenAcceptedPresenceIsVisible = (gestes: readonly GesteDAtelier[]): void => {
     expect(fenetre.snapshot().evenements).toEqual(gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
-    expect(gestes[0]).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false, operateurId: 'jean' });
+    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false, operateurId: 'jean' });
   };
 });

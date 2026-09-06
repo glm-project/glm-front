@@ -49,6 +49,7 @@ export interface GesteDePresence extends IdentiteDuGeste {
   readonly operateurId: string;
   readonly type: TypeDePresence;
   readonly implicite: boolean;
+  readonly assuranceArriveeId?: string;
 }
 
 export interface GesteDePointage extends IdentiteDuGeste {
@@ -72,6 +73,7 @@ export interface EvenementEnAttente {
 export interface EvenementAccepte {
   readonly geste: GesteDAtelier;
   readonly etat: 'ACCEPTE';
+  readonly journeeOuverte?: boolean;
   readonly refus?: never;
 }
 
@@ -92,7 +94,11 @@ export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], conn
 const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal => {
   const geste = { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
-  if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
+  if (evenement.etat === 'ACCEPTE') {
+    return evenement.journeeOuverte === undefined
+      ? { geste, etat: 'ACCEPTE' }
+      : { geste, etat: 'ACCEPTE', journeeOuverte: evenement.journeeOuverte };
+  }
   return { geste, etat: 'EN_ATTENTE' };
 };
 

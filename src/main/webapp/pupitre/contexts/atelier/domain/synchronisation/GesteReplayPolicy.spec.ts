@@ -1,4 +1,4 @@
-import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
+import { EvenementDuJournal, GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
 import { CodeDeRefusDAtelier, RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
 import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './GesteReplayPolicy';
@@ -15,6 +15,8 @@ const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', 
   ['PRESENCE_ASSUREE', 'transition-de-presence-interdite', 'INITIALE', 'ACCEPTER'],
   ['PRESENCE_ASSUREE', 'transition-de-presence-interdite', 'REJEU', 'ACCEPTER'],
   ['PRESENCE_ASSUREE', 'journee-de-travail-deja-ouverte', 'INITIALE', 'PROPAGER'],
+  ['REPRISE_APRES_ARRIVEE_OUVERTE', 'transition-de-presence-interdite', 'INITIALE', 'ACCEPTER'],
+  ['REPRISE_APRES_ARRIVEE_OUVERTE', 'transition-de-presence-interdite', 'REJEU', 'ACCEPTER'],
   ['GESTE_EXPLICITE', 'transition-de-presence-interdite', 'INITIALE', 'PROPAGER'],
   ['GESTE_EXPLICITE', 'suivi-d-atelier-cloture', 'INITIALE', 'PROPAGER'],
   ['GESTE_EXPLICITE', 'saisie-concurrente', 'INITIALE', 'RELIRE_ET_REJOUER'],
@@ -40,6 +42,46 @@ describe.each(refusFixtures)('GesteReplayPolicy for %s refusals', (_name, refusa
 });
 
 describe('GesteReplayPolicy', () => {
+  it('should absorb an explicit resumption refusal after its correlated arrival actually opened the day', () => {
+    const arrivee: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'jean' };
+    const reprise: GesteDAtelier = {
+      nature: 'PRESENCE',
+      id: 'reprise',
+      dateDeSurvenue: 'date',
+      operateurId: 'jean',
+      type: 'REPRISE',
+      implicite: false,
+      assuranceArriveeId: arrivee.id,
+    };
+    const journal: readonly EvenementDuJournal[] = [{ geste: arrivee, etat: 'ACCEPTE', journeeOuverte: true }];
+
+    const operation = operationFor(reprise, journal);
+    const decision = decideReplay(operation, new RefusDAtelier('transition-de-presence-interdite', 'cause'));
+
+    expect(operation).toBe('REPRISE_APRES_ARRIVEE_OUVERTE');
+    thenDecisionIs(decision, 'ACCEPTER');
+  });
+
+  it('should propagate an explicit resumption refusal when arrival assurance found an already open day', () => {
+    const arrivee: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'jean' };
+    const reprise: GesteDAtelier = {
+      nature: 'PRESENCE',
+      id: 'reprise',
+      dateDeSurvenue: 'date',
+      operateurId: 'jean',
+      type: 'REPRISE',
+      implicite: false,
+      assuranceArriveeId: arrivee.id,
+    };
+    const journal: readonly EvenementDuJournal[] = [{ geste: arrivee, etat: 'ACCEPTE', journeeOuverte: false }];
+
+    const operation = operationFor(reprise, journal);
+    const decision = decideReplay(operation, new RefusDAtelier('transition-de-presence-interdite', 'cause'));
+
+    expect(operation).toBe('GESTE_EXPLICITE');
+    thenDecisionIs(decision, 'PROPAGER');
+  });
+
   it.each([
     new Error('network'),
     new RefusDePublication('refus autre contexte', 'autre contexte'),

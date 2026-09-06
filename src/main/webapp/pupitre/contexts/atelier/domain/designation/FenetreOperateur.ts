@@ -280,7 +280,13 @@ export class FenetreOperateur {
     const numero = this.numeroDuSuivi(suivi);
     const decision =
       activities.kind === 'ACTIF'
-        ? this.gestes(suiviId, numero, activities.transitions, identify)
+        ? this.gestes(
+            suiviId,
+            numero,
+            activities.transitions,
+            identify,
+            [activities.transitions.premiere, ...activities.transitions.suivantes].some(transition => transition.type === 'DEBUT'),
+          )
         : this.ouverture(suiviId, numero, cible, identify);
     return { fenetre: this.with({ refusVisible: undefined, numerosParGeste: this.numerosAfter(decision) }), decision };
   }
@@ -293,6 +299,7 @@ export class FenetreOperateur {
       this.numeroDuSuivi(suivi),
       { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
       identify,
+      true,
     );
     return {
       fenetre: this.with({ refusVisible: undefined, numerosParGeste: this.numerosAfter(decision) }),
@@ -317,7 +324,7 @@ export class FenetreOperateur {
   afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
     const known = new Set(this.etat.vue.evenements.map(evenement => evenement.geste.id));
     return this.with({
-      arriveeAssuree: this.etat.arriveeAssuree || gestes.some(geste => geste.nature === 'POINTAGE'),
+      arriveeAssuree: this.etat.arriveeAssuree || gestes.some(geste => geste.nature === 'ARRIVEE'),
       numerosParGeste: this.etat.numerosParGeste,
       vue: {
         ...this.etat.vue,
@@ -343,8 +350,56 @@ export class FenetreOperateur {
   capture(decision: GestesDePointage): readonly GesteDAtelier[] {
     return decision.capture(this.etat.arriveeAssuree);
   }
-  preparePresence(type: TypeDePresence, identite: IdentiteDuGeste): GesteDAtelier[] {
-    return [{ ...identite, operateurId: this.etat.operateurDesigne.id(), nature: 'PRESENCE', type, implicite: false }];
+  preparePresence(type: TypeDePresence, identify: () => IdentiteDuGeste): GestesDePointage {
+    const presence: GesteDAtelier = {
+      ...identify(),
+      operateurId: this.etat.operateurDesigne.id(),
+      nature: 'PRESENCE',
+      type,
+      implicite: false,
+    };
+    const arrivee: GesteDAtelier = {
+      ...identify(),
+      dateDeSurvenue: presence.dateDeSurvenue,
+      operateurId: this.etat.operateurDesigne.id(),
+      nature: 'ARRIVEE',
+    };
+    const presenceApresAssurance = type === 'REPRISE' ? { ...presence, assuranceArriveeId: arrivee.id } : presence;
+    return {
+      kind: 'GESTES',
+      capture: (assured = false) => (assured ? [presence] : [arrivee, presenceApresAssurance]),
+      numerosParGeste: new Map(),
+    };
+  }
+  prepareToutArreter(identify: () => IdentiteDuGeste): GestesDePointage {
+    const depart = {
+      ...identify(),
+      operateurId: this.etat.operateurDesigne.id(),
+      nature: 'PRESENCE' as const,
+      type: 'DEPART' as const,
+      implicite: false,
+    };
+    const pointages = (projectReferentiel(this.etat.vue)?.suivis ?? []).flatMap(suivi =>
+      suivi.activites
+        .filter(activite => this.etat.operateurDesigne.owns(activite.operateurId))
+        .map(activite =>
+          this.toPointage(suivi.id, activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId }, {
+            ...identify(),
+            dateDeSurvenue: depart.dateDeSurvenue,
+          }),
+        ),
+    );
+    const arrivee: GesteDAtelier = {
+      ...identify(),
+      dateDeSurvenue: depart.dateDeSurvenue,
+      operateurId: this.etat.operateurDesigne.id(),
+      nature: 'ARRIVEE',
+    };
+    return {
+      kind: 'GESTES',
+      capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages, depart],
+      numerosParGeste: new Map(),
+    };
   }
 
   private numerosAfter(decision: DecisionDePointage): ReadonlyMap<string, string> {
@@ -356,9 +411,15 @@ export class FenetreOperateur {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
-      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify);
+      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify, true);
   }
-  private gestes(suiviId: string, numero: string, transitions: LotDeTransitions, identify: () => IdentiteDuGeste): GestesDePointage {
+  private gestes(
+    suiviId: string,
+    numero: string,
+    transitions: LotDeTransitions,
+    identify: () => IdentiteDuGeste,
+    repriseImplicite: boolean,
+  ): GestesDePointage {
     const first = this.toPointage(suiviId, transitions.premiere, identify());
     const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
     const arrivee: GesteDAtelier = {
@@ -377,7 +438,7 @@ export class FenetreOperateur {
     };
     return {
       kind: 'GESTES',
-      capture: (assured = false) => (assured ? pointages : [arrivee, reprise, ...pointages]),
+      capture: (assured = false) => (assured ? pointages : [arrivee, ...(repriseImplicite ? [reprise] : []), ...pointages]),
       numerosParGeste: new Map(pointages.map(pointage => [pointage.id, numero])),
     };
   }

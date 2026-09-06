@@ -191,8 +191,8 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
 
   recordPresence(type: TypeDePresence): Promise<void> {
     const fenetre = this.requireWindow();
-    const gestes = fenetre.preparePresence(type, identity());
-    return this.enqueue(fenetre, { kind: 'GESTES', capture: () => gestes, numerosParGeste: new Map() });
+    const gestes = fenetre.preparePresence(type, identity);
+    return this.enqueue(fenetre, gestes);
   }
 
   async diagnostics(): Promise<EvenementDuJournal[]> {

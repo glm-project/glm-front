@@ -293,6 +293,46 @@ describe('OfflinePupitre', () => {
     await thenRefusalIs('transition-de-presence-interdite');
   });
 
+  it('should absorb an explicit resumption refusal after restart when its correlated arrival opened the day', async () => {
+    await givenAnOpenWindow();
+    await pupitre.recordPresence('REPRISE');
+    await whenSynchronizing();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, new Error('reseau absent'));
+
+    await whenSynchronizing();
+
+    pupitre = buildPupitre();
+    await pupitre.restore();
+    givenServerFailures(refusalFixture('transition-de-presence-interdite'));
+
+    await whenSynchronizing();
+
+    await thenPendingIs(0);
+    await thenDiagnosticsCountIs(0);
+  });
+
+  it('should retain an explicit resumption refusal after restart when arrival assurance found an open day', async () => {
+    await givenAnOpenWindow();
+    await pupitre.recordPresence('REPRISE');
+    await whenSynchronizing();
+    givenAuthorizedAccess();
+    givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
+
+    await whenSynchronizing();
+    await thenArrivalOpenedDay(false);
+    await thenPendingIs(1);
+
+    pupitre = buildPupitre();
+    await pupitre.restore();
+    givenServerFailures(refusalFixture('transition-de-presence-interdite'));
+
+    await whenSynchronizing();
+
+    await thenPendingIs(0);
+    await thenRefusalIs('transition-de-presence-interdite');
+  });
+
   it('should reread before retrying a concurrent gesture with its original body', async () => {
     await givenPendingArrival();
     givenAuthorizedAccess();
@@ -528,7 +568,7 @@ describe('OfflinePupitre', () => {
     await whenSynchronizing();
     await whenClosing();
 
-    await thenQueueHas(1);
+    await thenQueueHas(2);
     await thenPendingIs(0);
   });
 
@@ -766,6 +806,10 @@ describe('OfflinePupitre', () => {
   const thenQueueHas = async (count: number): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements).toHaveLength(count);
   };
+  const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
+    const arrival = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
+    expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
+  };
   const thenSemanticCaptureFails = async (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
     await expect(execution.completion).rejects.toThrow('disque plein');
@@ -820,7 +864,9 @@ describe('OfflinePupitre', () => {
     return requiredFixture(accepted[0], 'accepted opening').value.id;
   };
   const thenPresenceBelongsTo = (operateurId: string): void => {
-    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false })]);
+    expect(serveur.journal.filter(geste => geste.nature === 'PRESENCE')).toEqual([
+      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false }),
+    ]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
     await Promise.all([thenFails(opening, 'deja ouverte'), thenFails(pointage, 'habilitations')]);
