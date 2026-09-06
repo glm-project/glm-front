@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
@@ -11,6 +12,7 @@ import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/a
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { setTimeout as roundTrip } from 'node:timers';
 import { Designation } from './designation';
@@ -89,6 +91,7 @@ describe('Designation keypad', () => {
         { provide: JournauxDuPupitrePort, useValue: journalFixture },
         { provide: AtelierExchangePort, useValue: serveurFixture },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
     fixture = TestBed.createComponent(Designation);

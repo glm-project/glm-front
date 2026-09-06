@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
@@ -18,6 +19,7 @@ export class PupitreSynchronization {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournauxDuPupitrePort);
   private readonly serveur = inject(AtelierExchangePort);
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private synchronization: Promise<void> | undefined;
   private synchronizationRequested = false;
 
@@ -69,7 +71,7 @@ export class PupitreSynchronization {
         publish(entreprise, state);
       }
     } catch (failure: unknown) {
-      console.error('Referentiel non actualise', failure);
+      this.errorHandler.handleError(failure);
     }
   }
 

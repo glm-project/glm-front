@@ -1,3 +1,4 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { DesignationOperateur } from '@/pupitre/contexts/atelier/domain/designation/DesignationOperateur';
 import {
@@ -20,7 +21,9 @@ const identityAt = (instant: number): IdentiteDuGeste => ({
 const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
+// eslint-disable-next-line local/responsibility-cohesion -- coordinates offline gesture acceptance, state, designation timer and background error reporting as a single deep application coordinator
 export class OfflinePupitre implements PointageCommand, CommandeGlobale {
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
@@ -234,14 +237,12 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
     const next = acceptance.applyTo(latest);
     this.designation = this.designation.afterReplacingWindow(next);
     this.publishWindow(next);
-    void this.synchronize().catch((failure: unknown) => {
-      console.error('Synchronisation interrompue', failure);
-    });
+    this.observe(this.synchronize());
   }
 
   private observe(operation: Promise<void>): void {
     void operation.catch((failure: unknown) => {
-      console.error('Operation asynchrone interrompue', failure);
+      this.errorHandler.handleError(failure);
     });
   }
 

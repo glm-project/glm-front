@@ -1,4 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { Provider } from '@angular/core';
 import Keycloak from 'keycloak-js';
@@ -16,4 +18,5 @@ export const authProvider: Provider[] = [
       }),
   },
   { provide: AuthenticationPort, useClass: KeycloakOidcAuthentication },
+  { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
 ];

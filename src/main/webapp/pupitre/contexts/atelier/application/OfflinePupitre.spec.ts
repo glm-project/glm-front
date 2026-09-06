@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
@@ -11,9 +12,10 @@ import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/refu
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
-import { MockInstance, vi } from 'vitest';
+import { vi } from 'vitest';
 import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from './OfflinePupitre';
@@ -152,14 +154,15 @@ describe('OfflinePupitre', () => {
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
   let scheduler: DesignationExpirationSchedulerFixture;
+  let errorHandler: ErrorHandlerFixture;
 
   beforeEach(async () => {
+    errorHandler = new ErrorHandlerFixture();
     scheduler = new DesignationExpirationSchedulerFixture();
     journal = new ApplicationJournalFixture();
     serveur = new ServerFixture();
     authentication = new AuthenticationFixture();
     await givenCachedReference(referenceFixture);
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     pupitre = buildPupitre();
   });
 
@@ -876,14 +879,14 @@ describe('OfflinePupitre', () => {
     thenWorkshopMessageIsCleared();
   });
 
-  it('should log an error when background synchronization fails after durable acceptance', async () => {
+  it('should report an error when background synchronization fails after durable acceptance', async () => {
     await givenAnOpenWindow();
-    const consoleError = givenBackgroundSynchronizationFails();
+    givenBackgroundSynchronizationFails();
 
     await whenStarting();
     await roundTrip();
 
-    thenBackgroundSynchronizationInterruptionWasLogged(consoleError);
+    thenBackgroundSynchronizationInterruptionWasReported();
   });
 
   it('should clear an existing refusal when the window is closed during company change', async () => {
@@ -961,6 +964,7 @@ describe('OfflinePupitre', () => {
         { provide: AtelierExchangePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
         { provide: DesignationExpirationSchedulerPort, useValue: scheduler },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     }).get(OfflinePupitre);
   const whenRestarting = async (): Promise<void> => {
@@ -1292,9 +1296,8 @@ describe('OfflinePupitre', () => {
     await whenStartingOn(posteId);
     await whenSynchronizing();
   };
-  const givenBackgroundSynchronizationFails = (): MockInstance => {
+  const givenBackgroundSynchronizationFails = (): void => {
     vi.spyOn(journal, 'synchronize').mockRejectedValueOnce(new Error('stockage indisponible'));
-    return vi.spyOn(console, 'error').mockImplementation(() => undefined);
   };
   const whenValidating = (): Promise<void> => pupitre.validate();
   const thenValidationIsAvailable = (expected: boolean): void => {
@@ -1322,9 +1325,8 @@ describe('OfflinePupitre', () => {
       expect(renewedDeadline).toBeGreaterThan(initialDeadline);
     }
   };
-  const thenBackgroundSynchronizationInterruptionWasLogged = (spy: MockInstance): void => {
-    expect(spy).toHaveBeenCalledWith('Synchronisation interrompue', expect.any(Error));
-    spy.mockRestore();
+  const thenBackgroundSynchronizationInterruptionWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([expect.any(Error)]);
   };
 
   const completionOf = (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {

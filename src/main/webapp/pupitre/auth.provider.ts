@@ -1,4 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
@@ -14,4 +16,5 @@ export const authProvider: Provider[] = [
     useFactory: () => new DeviceGrantConfiguration(environment.keycloak.url, environment.keycloak.realm, environment.keycloak.client_id),
   },
   { provide: AuthenticationPort, useClass: DeviceAuthentication },
+  { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
 ];

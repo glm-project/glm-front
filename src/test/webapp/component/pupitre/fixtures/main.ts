@@ -1,4 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
@@ -84,6 +86,7 @@ const bootstrapFixture = async (): Promise<void> => {
       { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
       { provide: AuthenticationPort, useValue: authenticationFixture },
       { provide: AtelierExchangePort, useValue: serveurFixture },
+      { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
     ],
   });
   const pupitre = application.injector.get(OfflinePupitre);

@@ -1,14 +1,15 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import Keycloak from 'keycloak-js';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
-import { MockInstance } from 'vitest';
 
 const IN_MEMORY_TOKEN = 'in-memory-token';
 const KEYCLOAK_TOKEN = '1a2b3c';
@@ -274,14 +275,21 @@ const anAuthorizationServerFixture = (behaviour: Partial<AuthorizationServerBeha
 const buildInMemoryAuthentication = (): AuthenticationPort =>
   Injector.create({ providers: [InMemoryAuthentication] }).get(InMemoryAuthentication);
 
-const buildKeycloakAuthentication = (keycloak: Keycloak): AuthenticationPort =>
-  Injector.create({ providers: [{ provide: Keycloak, useValue: keycloak }, KeycloakOidcAuthentication] }).get(KeycloakOidcAuthentication);
+const buildKeycloakAuthentication = (keycloak: Keycloak, errorHandler: ErrorHandlerPort = new ErrorHandlerFixture()): AuthenticationPort =>
+  Injector.create({
+    providers: [
+      { provide: Keycloak, useValue: keycloak },
+      { provide: ErrorHandlerPort, useValue: errorHandler },
+      KeycloakOidcAuthentication,
+    ],
+  }).get(KeycloakOidcAuthentication);
 
-const buildDeviceAuthentication = (server: HttpBackend): AuthenticationPort =>
+const buildDeviceAuthentication = (server: HttpBackend, errorHandler: ErrorHandlerPort = new ErrorHandlerFixture()): AuthenticationPort =>
   Injector.create({
     providers: [
       { provide: HttpBackend, useValue: server },
       { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration(KEYCLOAK_URL, REALM, DEVICE_CLIENT_ID) },
+      { provide: ErrorHandlerPort, useValue: errorHandler },
       DeviceAuthentication,
     ],
   }).get(DeviceAuthentication);
@@ -344,7 +352,12 @@ describe('Authentication without a device company', () => {
   const givenInMemoryAuthentication = (): AuthenticationPort => new InMemoryAuthentication();
   const givenDeviceAuthenticationWithoutPersistentStorage = (): AuthenticationPort =>
     Injector.create({
-      providers: [DeviceAuthentication, { provide: HttpBackend, useValue: {} }, { provide: DeviceGrantConfiguration, useValue: {} }],
+      providers: [
+        DeviceAuthentication,
+        { provide: HttpBackend, useValue: {} },
+        { provide: DeviceGrantConfiguration, useValue: {} },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
     }).get(DeviceAuthentication);
   const whenSynchronizingTheSession = (authentication: AuthenticationPort): Promise<void> => authentication.synchronizeSession();
   const thenItHasNoDeviceCompany = (authentication: AuthenticationPort): void => {
@@ -354,17 +367,16 @@ describe('Authentication without a device company', () => {
 
 describe('Keycloak OIDC Authentication, beyond the contract', () => {
   const originalLocation = window.location;
-  let consoleErrorFixture: MockInstance;
+  let errorHandler: ErrorHandlerFixture;
   let reloadWindow: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    consoleErrorFixture = vi.spyOn(console, 'error').mockImplementation(vi.fn());
+    errorHandler = new ErrorHandlerFixture();
     reloadWindow = vi.fn();
     Object.defineProperty(window, 'location', { value: { reload: reloadWindow }, configurable: true });
   });
 
   afterEach(() => {
-    consoleErrorFixture.mockRestore();
     Object.defineProperty(window, 'location', { value: originalLocation, configurable: true });
   });
 
@@ -404,13 +416,13 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
   });
 
   const givenKeycloakOpensNoSession = (): AuthenticationPort =>
-    buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }));
+    buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }), errorHandler);
   const givenKeycloakRenewsTheSession = (): AuthenticationPort =>
-    buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'renews' }));
+    buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'renews' }), errorHandler);
   const givenKeycloakCannotRefreshTheSession = (): AuthenticationPort =>
-    buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'fails' }));
+    buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'fails' }), errorHandler);
   const givenKeycloakCannotEndTheSession = (): AuthenticationPort =>
-    buildKeycloakAuthentication(keycloakSessionFixture({ logout: 'fails' }));
+    buildKeycloakAuthentication(keycloakSessionFixture({ logout: 'fails' }), errorHandler);
   const whenAuthenticating = (authentication: AuthenticationPort): Promise<void> => authentication.authenticate();
   const whenEndingTheSession = (authentication: AuthenticationPort): void => authentication.logout();
   const whenAKeycloakRoundTripCompletes = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -419,7 +431,7 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     expect(reloadWindow).toHaveBeenCalled();
   };
   const thenTheLogoutFailureWasReported = (): void => {
-    expect(consoleErrorFixture).toHaveBeenCalledWith('Failed to end Keycloak session', new Error('logout refused'));
+    expect(errorHandler.errors).toEqual([new Error('logout refused')]);
   };
   const thenTokenIs = (authentication: AuthenticationPort, token: string): void => expect(authentication.currentToken()).toEqual(token);
 });

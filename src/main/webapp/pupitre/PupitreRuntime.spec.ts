@@ -1,7 +1,9 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { PupitreRuntime } from './PupitreRuntime';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -58,11 +60,11 @@ describe('PupitreRuntime', () => {
   let runtime: PupitreRuntime;
   let authentication: AuthenticationFixture;
   let pupitre: OfflinePupitreFixture;
-  let consoleErrorFixture: ReturnType<typeof vi.spyOn>;
+  let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-    consoleErrorFixture = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    errorHandler = new ErrorHandlerFixture();
     authentication = new AuthenticationFixture();
     pupitre = new OfflinePupitreFixture();
     TestBed.configureTestingModule({
@@ -70,6 +72,7 @@ describe('PupitreRuntime', () => {
         PupitreRuntime,
         { provide: AuthenticationPort, useValue: authentication },
         { provide: OfflinePupitre, useValue: pupitre },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     runtime = TestBed.inject(PupitreRuntime);
@@ -168,6 +171,6 @@ describe('PupitreRuntime', () => {
     expect(pupitre.synchronizationAttempts).toBe(expected);
   };
   const thenTheSynchronizationFailureWasLogged = (): void => {
-    expect(consoleErrorFixture).toHaveBeenCalledWith('Pupitre non synchronise', new Error('synchronisation indisponible'));
+    expect(errorHandler.errors).toEqual([new Error('synchronisation indisponible')]);
   };
 });

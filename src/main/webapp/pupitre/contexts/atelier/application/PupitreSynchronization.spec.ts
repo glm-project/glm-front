@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -9,8 +10,8 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { MockInstance, vi } from 'vitest';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
@@ -50,6 +51,12 @@ class ServerFixture extends AtelierExchangePort {
 class JournalFixture extends JournauxDuPupitreFixture {
   unavailable = false;
   lastSessionError: unknown;
+  onRead: (() => void) | undefined;
+
+  override async read(entreprise: string): Promise<JournalDuPupitre> {
+    this.onRead?.();
+    return super.read(entreprise);
+  }
 
   override synchronize<T>(action: () => Promise<T>): Promise<T> {
     return super.synchronize(async () => {
@@ -81,21 +88,22 @@ describe('PupitreSynchronization', () => {
   let tenant: string | undefined;
   let token: string | undefined;
   let onSynchronizeSession: (() => Promise<void> | void) | undefined;
-  let loggedError: MockInstance | undefined;
+  let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
     journal = new JournalFixture();
     server = new ServerFixture();
+    errorHandler = new ErrorHandlerFixture();
     exposed = undefined;
     tenant = 'entreprise-a';
     token = undefined;
     onSynchronizeSession = undefined;
-    loggedError = undefined;
     synchronisation = Injector.create({
       providers: [
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: server },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
         {
           provide: AuthenticationPort,
           useValue: {
@@ -206,6 +214,15 @@ describe('PupitreSynchronization', () => {
     thenServerReceived(gesteFixture);
     thenReferentialNeverRefreshed();
     thenDrainingStoppedWithoutDisconnection();
+  });
+
+  it('should stop exchange when company is deselected during journal read', async () => {
+    await givenASelectedCompanyWithPendingWork();
+    givenCompanyDeselectedDuringJournalRead();
+
+    await whenSynchronizing();
+
+    thenReferentialNeverRefreshed();
   });
 
   it('should record an arrival as accepted with journeeOuverte false when already opened', async () => {
@@ -334,7 +351,6 @@ describe('PupitreSynchronization', () => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       throw new Error('reseau indisponible');
     };
-    loggedError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   };
   const givenSessionTokenExpiresOnFirstReplay = (): void => {
     server.onSend = (): void => {
@@ -344,6 +360,11 @@ describe('PupitreSynchronization', () => {
   const givenCompanyChangesOnFirstReplay = (): void => {
     server.onSend = (): void => {
       tenant = 'entreprise-b';
+    };
+  };
+  const givenCompanyDeselectedDuringJournalRead = (): void => {
+    journal.onRead = (): void => {
+      tenant = undefined;
     };
   };
   const givenArrivalAlreadyOpened = (): void => {
@@ -445,8 +466,7 @@ describe('PupitreSynchronization', () => {
     expect(saved.referentiel).toEqual(EMPTY_JOURNAL_DU_PUPITRE.referentiel);
   };
   const thenReferentialFailureWasLogged = (): void => {
-    expect(loggedError).toHaveBeenCalledWith('Referentiel non actualise', expect.any(Error));
-    loggedError?.mockRestore();
+    expect(errorHandler.errors).toEqual([expect.any(Error)]);
   };
   const thenEventAcceptedWithoutOpeningDay = (): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
