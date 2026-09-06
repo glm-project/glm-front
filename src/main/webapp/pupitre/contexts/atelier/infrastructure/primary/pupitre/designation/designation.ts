@@ -1,46 +1,9 @@
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
-import {
-  afterNextRender,
-  AfterRenderRef,
-  Component,
-  Directive,
-  ElementRef,
-  inject,
-  Injector,
-  input,
-  OnChanges,
-  OnDestroy,
-} from '@angular/core';
-
-@Directive({ selector: '[glmFollowContent]' })
-export class FollowContent implements OnChanges, OnDestroy {
-  readonly content = input.required<string>({ alias: 'glmFollowContent' });
-  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly injector = inject(Injector);
-  private render: AfterRenderRef | undefined;
-
-  ngOnChanges(): void {
-    this.render?.destroy();
-    this.render = afterNextRender(
-      {
-        earlyRead: () => this.element.nativeElement.scrollWidth,
-        write: scrollWidth => {
-          this.element.nativeElement.scrollLeft = scrollWidth;
-        },
-      },
-      { injector: this.injector },
-    );
-  }
-
-  ngOnDestroy(): void {
-    this.render?.destroy();
-  }
-}
+import { Component, inject } from '@angular/core';
 
 @Component({
   selector: 'glm-designation',
   templateUrl: './designation.html',
-  imports: [FollowContent],
   host: {
     'data-selector': 'designation',
     class: 'block h-full',
