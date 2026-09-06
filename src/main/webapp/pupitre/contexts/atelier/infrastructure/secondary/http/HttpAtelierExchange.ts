@@ -4,6 +4,7 @@ import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import {
+  ETATS_DU_REFERENTIEL_DU_PUPITRE,
   GesteDAtelier,
   OperateurDuPupitre,
   ReferentielDuPupitre,
@@ -110,7 +111,9 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     });
     const suivis = await readAll(page => {
       this.requireToken(token);
-      return this.api.read('/api/atelier/suivis', { queryParams: { page, size: 100 } });
+      return this.api.read('/api/atelier/suivis', {
+        queryParams: { etats: [...ETATS_DU_REFERENTIEL_DU_PUPITRE], page, size: 100 },
+      });
     });
     return { operateurs: operateurs.map(toOperateur), suivis: suivis.map(toSuivi) };
   }

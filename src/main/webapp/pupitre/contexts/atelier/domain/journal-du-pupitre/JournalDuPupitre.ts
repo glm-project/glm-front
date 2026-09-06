@@ -1,4 +1,5 @@
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU' | 'CLOTURE';
+export const ETATS_DU_REFERENTIEL_DU_PUPITRE: readonly EtatDAtelier[] = ['EN_ATTENTE', 'EN_COURS', 'INTERROMPU'];
 export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
 export type TypeDePresence = 'PAUSE' | 'REPRISE' | 'DEPART';

@@ -95,14 +95,14 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     http.verify();
   });
 
-  it('should cache all pages of operators and workshop elements without filtering by operator', async () => {
+  it('should cache all pages of operators and active workshop elements without filtering by operator', async () => {
     givenCompleteReferencePagesFixture();
 
     const reference = whenReadingReference();
 
     const pages = await whenServerReturnsReferencePages();
 
-    thenPagesHaveNoOperatorFilter(pages);
+    thenPagesRequestTheWholeActiveReference(pages);
     await thenReferenceIsComplete(reference);
   });
 
@@ -298,9 +298,12 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     request.flush(suiviDetailleFixture);
     return request;
   };
-  const thenPagesHaveNoOperatorFilter = (pages: TestRequest[]): void => {
+  const thenPagesRequestTheWholeActiveReference = (pages: TestRequest[]): void => {
     pages.forEach(page => {
       expect(page.request.params.has('operateur')).toBe(false);
+      if (page.request.url === '/api/atelier/suivis') {
+        expect(page.request.params.getAll('etats')).toEqual(['EN_ATTENTE', 'EN_COURS', 'INTERROMPU']);
+      }
     });
   };
   const thenWriteSucceededWith = async (
