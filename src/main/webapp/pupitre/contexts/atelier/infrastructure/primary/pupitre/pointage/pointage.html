@@ -1,0 +1,127 @@
+<main class="min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4" data-selector="pointage-grid">
+  @if (vue().moules.length > 0) {
+  <section class="zone" data-selector="moules-zone">
+    <h2 class="mb-2 text-label uppercase text-ink-muted">{{ labels.zones.PRODUIT }}</h2>
+    <div class="tiles">
+      @for (element of vue().moules; track element.id) {
+      <ng-container [ngTemplateOutlet]="tile" [ngTemplateOutletContext]="{ $implicit: element }" />
+      }
+    </div>
+  </section>
+  } @if (vue().ordresDeFabrication.length > 0) {
+  <section class="zone" data-selector="of-zone">
+    <h2 class="mb-2 text-label uppercase text-ink-muted">{{ labels.zones.ORDRE_DE_FABRICATION }}</h2>
+    <div class="tiles">
+      @for (element of vue().ordresDeFabrication; track element.id) {
+      <ng-container [ngTemplateOutlet]="tile" [ngTemplateOutletContext]="{ $implicit: element }" />
+      }
+    </div>
+  </section>
+  }
+</main>
+
+<ng-template #tile let-element>
+  <article
+    class="tile"
+    [class.tile--active]="element.isActive()"
+    [class.tile--nc]="element.isNonConforme()"
+    [attr.data-selector]="'tile-' + element.id"
+  >
+    <div class="flex flex-1 flex-col px-3 pt-2">
+      <div class="flex items-center justify-between gap-2">
+        <span [class.text-body-sm]="element.repliSurNom" [class.text-title]="!element.repliSurNom" class="font-bold text-ink"
+          >{{ element.numero }}</span
+        >
+        @if (element.isNonConforme()) {
+        <span class="rounded bg-nc px-2 text-label text-on-accent" data-selector="nc-marker">{{ labels.nonConformite }}</span>
+        }
+      </div>
+      @if (element.isActive()) {
+      <span class="text-body-sm text-ink-muted" data-selector="duration">{{ labels.duree(element.dureeMs()) }}</span>
+      }
+    </div>
+    <div class="flex gap-1 p-2">
+      <button
+        type="button"
+        [disabled]="busy().has(element.id)"
+        (click)="press(element, 'PRINCIPALE')"
+        class="min-h-touch flex-1 rounded border border-border-strong bg-surface px-2 text-label text-ink disabled:opacity-50"
+        data-selector="primary-target"
+      >
+        {{ labels.actionPrincipale(element) }}
+      </button>
+      <button
+        type="button"
+        [disabled]="busy().has(element.id)"
+        (click)="press(element, 'SECONDAIRE')"
+        class="min-h-touch rounded border border-nc bg-surface px-3 text-label text-nc disabled:opacity-50"
+        data-selector="secondary-target"
+      >
+        {{ labels.actionSecondaire(element) }}
+      </button>
+    </div>
+  </article>
+</ng-template>
+
+<aside class="glm" [class.glm--active]="vue().glmActif" data-selector="glm-band">
+  <strong class="text-section">{{ labels.glm }}</strong>
+  <span class="text-body">{{ vue().glmActif ? labels.glmActif : labels.glmInactif }}</span>
+</aside>
+
+<nav class="flex gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actionsGlobales">
+  <button
+    type="button"
+    (click)="pauseRequested.emit()"
+    class="min-h-touch-lg flex-1 rounded bg-warn text-section text-on-accent"
+    data-selector="pause"
+  >
+    {{ labels.pause }}
+  </button>
+  <button
+    type="button"
+    (click)="repriseRequested.emit()"
+    class="min-h-touch-lg flex-1 rounded border-2 border-warn bg-surface text-section text-warn"
+    data-selector="resume"
+  >
+    {{ labels.reprise }}
+  </button>
+  <button
+    type="button"
+    (click)="arretTotalRequested.emit()"
+    class="min-h-touch-lg flex-1 rounded border-2 border-nc bg-surface text-section text-nc"
+    data-selector="stop-all"
+  >
+    {{ labels.arretTotal }}
+  </button>
+</nav>
+
+@if (attente(); as attenteDePoste) {
+<div class="dialog-backdrop" data-selector="workstation-dialog">
+  <section class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="workstation-heading">
+    <h2 id="workstation-heading" class="text-title text-ink">{{ labels.choixPoste }}</h2>
+    <p class="mb-4 text-body text-ink-muted">{{ labels.element(attenteDePoste.execution.numero) }}</p>
+    <div class="grid gap-2">
+      @for (poste of attenteDePoste.execution.postes; track poste.id) {
+      <button
+        type="button"
+        [disabled]="choosing()"
+        (click)="choose(attenteDePoste, poste.id)"
+        class="min-h-touch-lg rounded border-2 border-border-strong bg-surface px-4 text-left text-body text-ink disabled:opacity-50"
+        [attr.data-selector]="'workstation-' + poste.id"
+      >
+        {{ poste.libelle }}
+      </button>
+      }
+    </div>
+    <button
+      type="button"
+      [disabled]="choosing()"
+      (click)="cancelChoice()"
+      class="mt-4 min-h-touch w-full rounded bg-sunken text-body text-ink"
+      data-selector="cancel-workstation"
+    >
+      {{ labels.annuler }}
+    </button>
+  </section>
+</div>
+}

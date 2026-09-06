@@ -1,5 +1,5 @@
-import { JournalDuPupitre, OperateurDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
-import { FenetreOperateur } from './FenetreOperateur';
+import { JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
+import { FenetreOperateur, IdentiteOperateurDesigne } from './FenetreOperateur';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
@@ -11,7 +11,7 @@ export interface DesignationResolution {
 export interface DesignationState {
   code: string;
   unknownCode: boolean;
-  operateur: OperateurDuPupitre | undefined;
+  operateur: IdentiteOperateurDesigne | undefined;
   canValidate: boolean;
   deadline: number | undefined;
 }
@@ -105,7 +105,7 @@ export class DesignationOperateur {
 
   openWindow(entreprise: string, vue: JournalDuPupitre, code: string, now: number): FenetreOperateur {
     this.requireClosedWindow();
-    this.fenetre = new FenetreOperateur(entreprise, vue, code);
+    this.fenetre = new FenetreOperateur(entreprise, vue, code, now);
     if (this.resolution === undefined) {
       this.designated = true;
       this.deadline = now + DESIGNATION_INACTIVITY_MS;
@@ -139,7 +139,7 @@ export class DesignationOperateur {
     return this.fenetre;
   }
 
-  private operateur(): OperateurDuPupitre | undefined {
+  private operateur(): IdentiteOperateurDesigne | undefined {
     if (this.designated) return this.fenetre?.operateur;
     return undefined;
   }

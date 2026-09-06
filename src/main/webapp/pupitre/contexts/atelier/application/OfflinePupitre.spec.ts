@@ -1,9 +1,9 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
-  OperateurDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
@@ -151,6 +151,42 @@ describe('OfflinePupitre', () => {
     await thenQueueHas(3);
   });
 
+  it('should keep the semantic tile unchanged and expose a persistent message until the next durable acceptance', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+
+    const failed = whenPressingPrimaryTarget();
+
+    await thenSemanticCaptureFails(failed);
+    thenPointageRecordingFailedWithoutAdvancing();
+
+    await thenSemanticCaptureSucceeds(whenPressingPrimaryTarget());
+
+    thenPointageRecordingRecoveredAndAdvanced();
+  });
+
+  it('should create no gesture before the final workstation choice', async () => {
+    await givenAMultiWorkstationOpenWindow();
+
+    const choice = whenPressingPrimaryTarget();
+
+    await thenNoGestureExistsBeforeChoice();
+    await whenChoosingWorkstation(choice, 'fraiseuse');
+
+    await thenPointageUsesWorkstation('fraiseuse');
+  });
+
+  it('should reject a workstation choice after its operator window was replaced', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    const choice = whenPressingPrimaryTarget();
+    await whenClosing();
+    await givenAMultiWorkstationOpenWindow();
+
+    const staleChoice = whenChoosingWorkstationLater(choice, 'tour');
+
+    await thenFails(staleChoice, 'fenetre operateur a change');
+  });
+
   it('should retain the failed push and replay exactly the same identifiers and dates on reconnection', async () => {
     await givenPendingArrival();
     givenAuthorizedAccess();
@@ -190,7 +226,7 @@ describe('OfflinePupitre', () => {
 
     await whenSynchronizing();
 
-    thenActivityIs('TRAVAIL');
+    thenNoActivity();
 
     await whenDeparting();
     await whenSynchronizing();
@@ -250,14 +286,15 @@ describe('OfflinePupitre', () => {
     await thenPendingIs(0);
   });
 
-  it('should never activate a refreshed referential under the operator’s fingers', async () => {
+  it('should reconcile a refreshed referential while retaining the designated operator', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
     givenRefreshedMatricule('050');
 
     await whenSynchronizing();
 
-    thenMatriculeIs('049');
+    thenMatriculeIs('050');
+    thenDesignatedMatriculeIs('049');
 
     await whenClosing();
 
@@ -290,6 +327,22 @@ describe('OfflinePupitre', () => {
     const unknownOpening = whenOpeningMatricule('inconnu');
 
     await thenFails(unknownOpening, 'Matricule absent');
+  });
+
+  it('should clear every operator presentation when restoring another company', async () => {
+    await givenWorkStartedOffline();
+    givenLocalWriteFailsOnce();
+    const failedStop = whenStarting();
+    await thenFails(failedStop, 'disque plein');
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    await whenSynchronizing();
+    thenTheWindowPresentationIsPopulated();
+
+    givenReenrolledForAnotherCompany();
+    await whenRestoring();
+
+    thenNoWindowPresentationRemains();
   });
 
   it('should discard a cache response received after the company changed', async () => {
@@ -354,7 +407,7 @@ describe('OfflinePupitre', () => {
 
     await thenFails(unknownOpening, 'Matricule absent');
 
-    await whenOpening();
+    await givenAMultiWorkstationOpenWindow();
 
     const overlappingOpening = whenOpening();
     const unauthorizedPointage = whenStartingOn('interdit');
@@ -479,7 +532,7 @@ describe('OfflinePupitre', () => {
     await Promise.all([pointage, closing]);
   };
   const thenGestureIsRefusedDuringClosure = (): void => {
-    expect(() => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT' })).toThrow('Aucune fenetre operateur ouverte.');
+    expect(() => pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' })).toThrow('Aucune fenetre operateur ouverte.');
   };
   const thenPointageKeepsItsOriginalOperatorAndTime = async (): Promise<void> => {
     const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
@@ -506,12 +559,23 @@ describe('OfflinePupitre', () => {
   };
   const whenOpening = (): Promise<unknown> => pupitre.openWindow('049');
   const whenOpeningMatricule = (matricule: string): Promise<unknown> => pupitre.openWindow(matricule);
-  const whenOpeningBothOperators = (): Promise<PromiseSettledResult<OperateurDuPupitre>[]> =>
+  const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
     Promise.allSettled([pupitre.openWindow('049'), pupitre.openWindow('050')]);
-  const whenStarting = (): Promise<void> => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
-  const whenStartingOn = (posteId: string): Promise<void> => pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT', posteId });
+  const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
+  const whenPressingPrimaryTarget = (): ReturnType<OfflinePupitre['execute']> => pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
+  const whenChoosingWorkstation = async (execution: ReturnType<OfflinePupitre['execute']>, posteId: string): Promise<void> => {
+    if (execution.kind !== 'CHOIX_POSTE_REQUIS') throw new Error('Expected workstation choice fixture.');
+    await execution.choose(posteId);
+  };
+  const whenChoosingWorkstationLater = (execution: ReturnType<OfflinePupitre['execute']>, posteId: string): Promise<void> =>
+    Promise.resolve().then(() => whenChoosingWorkstation(execution, posteId));
+  const whenStartingOn = (posteId: string): Promise<void> => {
+    const execution = pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
+    if (execution.kind === 'CHOIX_POSTE_REQUIS') return Promise.resolve().then(() => execution.choose(posteId));
+    return execution.completion;
+  };
   const whenStartingAndReportingNonConformity = async (): Promise<void> => {
-    await Promise.all([whenStarting(), pupitre.recordPointage({ suiviId: 'piece', type: 'NON_CONFORMITE', posteId: 'tour' })]);
+    await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
   };
   const whenPausing = (): Promise<void> => pupitre.recordPresence('PAUSE');
   const whenDeparting = (): Promise<void> => pupitre.recordPresence('DEPART');
@@ -535,9 +599,15 @@ describe('OfflinePupitre', () => {
   const givenAnOpenWindow = async (): Promise<void> => {
     await pupitre.openWindow('049');
   };
+  const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
+    const reference = structuredClone(referenceFixture);
+    requiredFixture(reference.operateurs[0], 'operator').postes.push({ id: 'fraiseuse', libelle: 'Fraiseuse' });
+    await givenCachedReference(reference);
+    await givenAnOpenWindow();
+  };
   const givenWorkStartedOffline = async (): Promise<void> => {
     await givenAnOpenWindow();
-    await pupitre.recordPointage({ suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
+    await whenStarting();
   };
   const givenResumedWorkOffline = async (): Promise<void> => {
     await givenWorkStartedOffline();
@@ -618,6 +688,29 @@ describe('OfflinePupitre', () => {
   const thenQueueHas = async (count: number): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements).toHaveLength(count);
   };
+  const thenSemanticCaptureFails = async (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
+    if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
+    await expect(execution.completion).rejects.toThrow('disque plein');
+  };
+  const thenSemanticCaptureSucceeds = async (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
+    if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
+    await execution.completion;
+  };
+  const thenPointageRecordingFailedWithoutAdvancing = (): void => {
+    expect(pupitre.erreurPointage()).toBe('Pointage non enregistré — recommencez');
+    expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(false);
+  };
+  const thenPointageRecordingRecoveredAndAdvanced = (): void => {
+    expect(pupitre.erreurPointage()).toBeUndefined();
+    expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(true);
+  };
+  const thenNoGestureExistsBeforeChoice = async (): Promise<void> => {
+    await thenQueueHas(0);
+  };
+  const thenPointageUsesWorkstation = async (posteId: string): Promise<void> => {
+    const pointage = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'POINTAGE');
+    expect(pointage?.geste).toMatchObject({ nature: 'POINTAGE', posteId });
+  };
   const thenPendingIs = (count: number): Promise<void> => thenOldCompanyPendingIs(count);
   const thenOldCompanyPendingIs = async (count: number): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
@@ -641,7 +734,7 @@ describe('OfflinePupitre', () => {
     expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
-  const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<OperateurDuPupitre>[]): string => {
+  const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<IdentiteOperateurDesigne>[]): string => {
     const accepted = openings.filter(result => result.status === 'fulfilled');
     const refused = openings.filter(result => result.status === 'rejected');
     expect(accepted).toHaveLength(1);
@@ -680,16 +773,35 @@ describe('OfflinePupitre', () => {
   const thenMatriculeIs = (code: string): void => {
     expect(requiredFixture(pupitre.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);
   };
+  const thenDesignatedMatriculeIs = (code: string): void => {
+    expect(pupitre.operateur()?.matricule).toBe(code);
+  };
   const thenNoCompanyBData = async (): Promise<void> => {
     expect(await journal.read('entreprise-b')).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   };
   const thenNoReference = (): void => {
     expect(pupitre.referentiel()).toBeUndefined();
   };
+  const thenTheWindowPresentationIsPopulated = (): void => {
+    expect(pupitre.operateur()).toBeDefined();
+    expect(pupitre.pointage()).toBeDefined();
+    expect(pupitre.refusPointage()).toEqual({ numero: 'OF-1', message: 'cause conservee' });
+    expect(pupitre.erreurPointage()).toBe('Pointage non enregistré — recommencez');
+  };
+  const thenNoWindowPresentationRemains = (): void => {
+    expect(pupitre.operateur()).toBeUndefined();
+    expect(pupitre.pointage()).toBeUndefined();
+    expect(pupitre.refusPointage()).toBeUndefined();
+    expect(pupitre.erreurPointage()).toBeUndefined();
+  };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(Error);
     if (failure instanceof Error) {
       expect(failure.message).toContain('Aucune fenetre');
     }
+  };
+  const completionOf = (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
+    if (execution.kind !== 'CAPTURE') throw new Error('Expected immediate capture fixture.');
+    return execution.completion;
   };
 });

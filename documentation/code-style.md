@@ -40,6 +40,28 @@ Preserve asynchronous ordering, callback evaluation time, identifiers, lock boun
 Run the existing behavioral tests before and after extraction; keep behavior changes separate. See
 [ADR 0008](adr/0008-extract-methods-to-expose-intent.md) for the decision and its costs.
 
+## Tell the owner, do not inspect its representation
+
+Put each business decision on the object that owns the data needed to make it. A caller asks a named domain
+question or sends an intention; it does not branch on another object's optional fields, enum values or
+collection cardinality and reconstruct that object's rules. Prefer `pointage.hasNoPoste()` to
+`pointage.posteId === undefined`, `operateur.requiresPosteChoice()` to `operateur.postes.length > 1`, and a
+decision result such as `choixDePosteRequis` to a caller assembling the same condition from getters.
+
+Keep serializable HTTP and storage documents as data at their adapter seam. Rehydrate a behavior-bearing
+domain object before making business decisions, and keep its representation private so TypeScript prevents
+callers from bypassing its interface. The owning implementation may inspect its own fields; a secondary
+adapter may inspect a transport document only to translate it.
+
+A primary adapter may inspect a dedicated view projection to render it. It still sends an intention through
+the command interface instead of reconstructing a business command from that projection.
+
+Apply the SOLID test to every changed conditional: the module with the business reason to change owns the
+decision, callers depend on its intention-level interface, and adding a domain case extends that owner rather
+than editing conditionals across callers. Before considering a TypeScript change complete, account for every
+conditional added or modified; move any conditional that chooses behavior from another object's representation
+behind that object's interface.
+
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
 - `inject()`, never constructor injection (`gestion/app.ts:18`, `gestion/header/header.ts:19`,

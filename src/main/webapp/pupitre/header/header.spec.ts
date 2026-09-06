@@ -5,6 +5,7 @@ import { PupitreHeader } from './header';
 
 describe('Pupitre header', () => {
   let fixture: ComponentFixture<PupitreHeader>;
+  let finishRequested: boolean;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -13,6 +14,10 @@ describe('Pupitre header', () => {
 
     fixture = TestBed.createComponent(PupitreHeader);
     fixture.componentRef.setInput('heading', 'glmfront');
+    finishRequested = false;
+    fixture.componentInstance.finRequested.subscribe(() => {
+      finishRequested = true;
+    });
   });
 
   it('should sign that the pupitre is connected', async () => {
@@ -32,6 +37,30 @@ describe('Pupitre header', () => {
     thenItSignsThePupitreIsOffline();
   });
 
+  it('should show the designated identity, current pointage message and finish intention', async () => {
+    givenAConnectedPupitre();
+    givenADesignatedOperator();
+    givenACurrentRefusal();
+
+    await whenRenderingTheHeader();
+    whenFinishing();
+
+    thenItShowsTheDesignatedOperator();
+    thenItShowsTheRefusal();
+    thenFinishWasRequested();
+  });
+
+  it('should give the local recording error precedence over a business refusal', async () => {
+    givenAConnectedPupitre();
+    givenADesignatedOperator();
+    givenACurrentRefusal();
+    givenARecordingError();
+
+    await whenRenderingTheHeader();
+
+    thenItShowsTheRecordingError();
+  });
+
   const givenAConnectedPupitre = (): void => {
     fixture.componentRef.setInput('connected', true);
   };
@@ -39,8 +68,21 @@ describe('Pupitre header', () => {
   const givenADisconnectedPupitre = (): void => {
     fixture.componentRef.setInput('connected', false);
   };
+  const givenADesignatedOperator = (): void => {
+    fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
+  };
+  const givenACurrentRefusal = (): void => {
+    fixture.componentRef.setInput('refus', { numero: '1015', message: "L'élément a été clôturé." });
+  };
+  const givenARecordingError = (): void => {
+    fixture.componentRef.setInput('erreur', 'Pointage non enregistré — recommencez');
+  };
 
   const whenRenderingTheHeader = (): Promise<void> => fixture.whenStable();
+  const whenFinishing = (): void => {
+    const header = fixture.nativeElement as HTMLElement;
+    header.querySelector<HTMLButtonElement>(dataSelector('finish'))?.click();
+  };
 
   const thenItSignsThePupitreIsOnline = (): void => {
     expect(showsSign('pupitre-connected')).toBe(true);
@@ -58,6 +100,23 @@ describe('Pupitre header', () => {
     const header = fixture.nativeElement as HTMLElement;
 
     expect(header.querySelector(dataSelector('header-heading'))?.textContent.trim()).toBe(heading);
+  };
+  const thenItShowsTheDesignatedOperator = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-operator'))?.textContent.trim()).toBe('Dupont Jean');
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-code'))?.textContent.trim()).toBe('Code 049');
+  };
+  const thenItShowsTheRefusal = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-message'))?.textContent).toContain(
+      "1015 L'élément a été clôturé.",
+    );
+  };
+  const thenItShowsTheRecordingError = (): void => {
+    const message = (fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-message'))?.textContent;
+    expect(message).toContain('Pointage non enregistré — recommencez');
+    expect(message).not.toContain('1015');
+  };
+  const thenFinishWasRequested = (): void => {
+    expect(finishRequested).toBe(true);
   };
 
   const thenItDescribesConnectivity = (sign: string, description: string): void => {

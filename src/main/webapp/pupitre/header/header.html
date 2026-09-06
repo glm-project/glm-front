@@ -1,14 +1,46 @@
-<header class="flex min-h-touch-lg items-center gap-4 bg-accent px-4 text-on-accent">
-  <span class="min-w-0 flex-1 truncate text-section" data-selector="header-heading">{{ heading() }}</span>
-  @if (connected()) {
-  <span class="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm" data-selector="pupitre-connected">
-    <span class="connectivity-indicator connectivity-indicator--connected" aria-hidden="true" data-selector="connectivity-indicator"></span>
-    En ligne
-  </span>
-  } @else {
-  <span class="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm" data-selector="pupitre-disconnected">
-    <span class="connectivity-indicator" aria-hidden="true" data-selector="connectivity-indicator"></span>
-    Hors ligne
-  </span>
-  }
+<header class="header-grid min-h-touch-lg gap-4 border-b border-border bg-surface px-4 text-ink">
+  <div class="min-w-0">
+    @if (operateur(); as designated) {
+    <div class="truncate text-title" data-selector="header-operator">{{ designated.nom }} {{ designated.prenom }}</div>
+    <div class="text-body-sm text-ink-muted" data-selector="header-code">{{ labels.code(designated.matricule) }}</div>
+    } @else {
+    <span class="truncate text-section" data-selector="header-heading">{{ heading() }}</span>
+    }
+  </div>
+  <div class="min-w-0 text-body text-nc" data-selector="header-message">
+    @if (erreur(); as storageError) {
+    <span aria-live="polite"> {{ storageError }} </span>
+    } @else if (refus(); as currentRefusal) {
+    <span aria-live="polite">
+      <strong class="rounded bg-nc px-2 text-on-accent">{{ currentRefusal.numero }}</strong>
+      {{ currentRefusal.message }}
+    </span>
+    }
+  </div>
+  <div class="flex items-center gap-4">
+    @if (connected()) {
+    <span class="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm" data-selector="pupitre-connected">
+      <span
+        class="connectivity-indicator connectivity-indicator--connected"
+        aria-hidden="true"
+        data-selector="connectivity-indicator"
+      ></span>
+      {{ labels.enLigne }}
+    </span>
+    } @else {
+    <span class="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm" data-selector="pupitre-disconnected">
+      <span class="connectivity-indicator" aria-hidden="true" data-selector="connectivity-indicator"></span>
+      {{ labels.horsLigne }}
+    </span>
+    } @if (operateur()) {
+    <button
+      type="button"
+      (click)="finRequested.emit()"
+      class="min-h-touch-lg whitespace-nowrap rounded border-2 border-border-strong bg-surface px-4 text-body text-ink"
+      data-selector="finish"
+    >
+      {{ labels.fin }}
+    </button>
+    }
+  </div>
 </header>

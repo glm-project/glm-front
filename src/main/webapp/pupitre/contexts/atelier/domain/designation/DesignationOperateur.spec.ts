@@ -5,7 +5,7 @@ const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
-    suivis: [],
+    suivis: [{ id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
   },
 };
 const identityFixture = (): IdentiteDuGeste => ({ id: 'geste', dateDeSurvenue: '2026-09-05T08:00:29.000Z' });
@@ -85,8 +85,11 @@ describe('DesignationOperateur', () => {
   const whenCheckingExpiration = (now: number): void => {
     designation.expire(now);
   };
-  const whenPreparingPointage = (now: number): (() => GesteDAtelier[]) =>
-    designation.requireWindow(now).preparePointage({ suiviId: 'piece', type: 'DEBUT' }, identityFixture);
+  const whenPreparingPointage = (now: number): (() => GesteDAtelier[]) => {
+    const decision = designation.requireWindow(now).decide('piece', 'PRINCIPALE', identityFixture);
+    if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
+    return decision.capture;
+  };
   const thenPointageIsRefusedAt = (now: number): void => {
     expect(() => whenPreparingPointage(now)).toThrow('Aucune fenetre operateur ouverte.');
   };
