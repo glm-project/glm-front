@@ -1,2 +1,6 @@
+mutation_updates_file="$(mktemp)"
+trap 'rm -f "$mutation_updates_file"' EXIT
+cat > "$mutation_updates_file"
+
 npm run measure -- pre-push -- npm run validate:quick
-npm run measure -- pre-push-mutation -- npm run test:mutation:diff -- "$@"
+npm run measure -- pre-push-mutation -- npm run test:mutation:diff -- "$@" < "$mutation_updates_file"
