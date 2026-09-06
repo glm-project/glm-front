@@ -103,8 +103,44 @@ describe('Pointage screen', () => {
     thenGlobalIntentionsAreExposed();
   });
 
+  it('should disable every tile and global command while global gestures are unavailable', async () => {
+    givenGlobalGesturesAreUnavailable();
+
+    await whenRendering();
+
+    expect(targetsFor('moule-1015').every(target => target.disabled)).toBe(true);
+    expect(['pause', 'resume', 'stop-all'].map(selector => button(selector).disabled)).toEqual([true, true, true]);
+  });
+
+  it('should disable every prepared workstation choice while global gestures are unavailable', async () => {
+    givenAWorkstationChoice();
+    await whenRendering();
+    whenPressing('of-generated', 'primary-target');
+
+    givenGlobalGesturesAreUnavailable();
+    await whenRendering();
+
+    thenEveryWorkstationChoiceIsDisabled();
+  });
+
+  it('should leave a tile available when the command boundary refuses a stale reentry', async () => {
+    givenTheNextPointageIsUnavailable();
+    await whenRendering();
+
+    whenPressing('moule-1015', 'primary-target');
+    await whenRendering();
+
+    thenEveryTileIsAvailable();
+  });
+
   const givenAnEmptyWorkshop = (): void => {
     fixture.componentRef.setInput('vue', { moules: [], ordresDeFabrication: [], glmActif: true });
+  };
+  const givenGlobalGesturesAreUnavailable = (): void => {
+    fixture.componentRef.setInput('gestesDisponibles', false);
+  };
+  const givenTheNextPointageIsUnavailable = (): void => {
+    nextExecution = { kind: 'INDISPONIBLE' };
   };
   const givenAWorkstationChoice = (): void => {
     nextExecution = {
@@ -190,6 +226,8 @@ describe('Pointage screen', () => {
   };
   const workstationFor = (posteId: string): HTMLButtonElement =>
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(`workstation-${posteId}`)), 'workstation');
+  const button = (selector: string): HTMLButtonElement =>
+    requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const root = (): HTMLElement => fixture.nativeElement as HTMLElement;
 });
 

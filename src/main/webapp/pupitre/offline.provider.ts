@@ -1,4 +1,6 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
@@ -12,6 +14,8 @@ import { Provider } from '@angular/core';
 
 export const offlineProvider: Provider[] = [
   ApiClient,
+  AcceptationLocaleDesGestes,
+  EtatHorsLigneDuPupitre,
   OfflinePupitre,
   PupitreSynchronization,
   { provide: JournauxDuPupitrePort, useClass: IndexedDbJournauxDuPupitre },

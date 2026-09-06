@@ -8,12 +8,11 @@
     }
   </div>
   <div class="min-w-0 text-body text-nc" data-selector="header-message">
-    @if (erreur(); as storageError) {
-    <span aria-live="polite"> {{ storageError }} </span>
-    } @else if (refus(); as currentRefusal) {
+    @if (message(); as currentMessage) {
     <span aria-live="polite">
-      <strong class="rounded bg-nc px-2 text-on-accent">{{ currentRefusal.numero }}</strong>
-      {{ currentRefusal.message }}
+      @if (currentMessage.contexte; as contexte) {
+      <strong class="rounded bg-nc px-2 text-on-accent">{{ contexte }}</strong>
+      } {{ currentMessage.message }}
     </span>
     }
   </div>

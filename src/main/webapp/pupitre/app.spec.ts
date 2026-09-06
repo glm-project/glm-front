@@ -1,7 +1,9 @@
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
+import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { dataSelector } from '@test/utils/DataSelector';
 
 import { App } from './app';
 import { routes } from './app.route';
@@ -20,6 +22,26 @@ class PupitreRuntimeFixture {
   }
 }
 
+class OfflinePupitrePageFixture {
+  readonly connected = signal(true);
+  readonly operateur = signal(undefined);
+  readonly messageAtelier = signal(undefined);
+  readonly pointage = signal(undefined);
+  readonly gestesDisponibles = signal(true);
+
+  referentiel(): undefined {
+    return undefined;
+  }
+
+  registerPress(): boolean {
+    return true;
+  }
+
+  finish(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 describe('Pupitre shell', () => {
   let errorHandler: ErrorHandlerFixture;
   let fixture: ComponentFixture<App>;
@@ -33,6 +55,7 @@ describe('Pupitre shell', () => {
       providers: [
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
+        { provide: OfflinePupitre, useClass: OfflinePupitrePageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
@@ -49,6 +72,14 @@ describe('Pupitre shell', () => {
     await whenBootingTheShell();
 
     thenThePupitreRuntimeIsStarted();
+  });
+
+  it('should route the common pupitre page at its root URL', async () => {
+    await whenBootingTheShell();
+
+    await whenNavigatingToTheRoot();
+
+    thenTheCommonPupitrePageIsRendered();
   });
 
   it('should report a runtime startup refusal without starting the runtime', async () => {
@@ -73,6 +104,16 @@ describe('Pupitre shell', () => {
     const shell = fixture.nativeElement as HTMLElement;
 
     expect(shell.querySelector('router-outlet')).not.toBeNull();
+  };
+
+  const whenNavigatingToTheRoot = async (): Promise<void> => {
+    await TestBed.inject(Router).navigateByUrl('/');
+    fixture.detectChanges();
+  };
+
+  const thenTheCommonPupitrePageIsRendered = (): void => {
+    const shell = fixture.nativeElement as HTMLElement;
+    expect(shell.querySelector(dataSelector('pupitre-page'))).not.toBeNull();
   };
 
   const thenTheAuthenticationFailureIsReported = (): void => {

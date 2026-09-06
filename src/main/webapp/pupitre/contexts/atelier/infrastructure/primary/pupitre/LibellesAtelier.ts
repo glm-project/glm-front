@@ -1,4 +1,4 @@
-import { ElementDePointage } from '../../../domain/designation/FenetreOperateur';
+import { ContexteDeGesteDAtelier, ElementDePointage, IntentionGlobaleDAtelier } from '../../../domain/designation/FenetreOperateur';
 import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 
 export const formatDuree = (dureeMs: number): string => {
@@ -12,6 +12,15 @@ const ZONES: Record<TypeDElement, string> = {
   ORDRE_DE_FABRICATION: 'OF',
 };
 
+const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
+  PAUSE: 'PAUSE',
+  REPRENDRE: 'REPRENDRE',
+  TOUT_ARRETER: 'TOUT ARRÊTER',
+};
+
+export const libelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
+  contexte.kind === 'ELEMENT' ? contexte.numero : COMMANDES_GLOBALES[contexte.intention];
+
 export const LIBELLES_POINTAGE = {
   zones: ZONES,
   nonConformite: 'NC',
@@ -22,9 +31,9 @@ export const LIBELLES_POINTAGE = {
   glmActif: 'Aucun élément en cours — ton temps de présence est compté ici.',
   glmInactif: 'Ton temps est affecté.',
   actionsGlobales: 'Pointages globaux',
-  pause: 'PAUSE',
-  reprise: 'REPRENDRE',
-  arretTotal: 'TOUT ARRÊTER',
+  pause: COMMANDES_GLOBALES.PAUSE,
+  reprise: COMMANDES_GLOBALES.REPRENDRE,
+  arretTotal: COMMANDES_GLOBALES.TOUT_ARRETER,
   choixPoste: 'Sur quel poste ?',
   element: (numero: string): string => `Élément ${numero}`,
   annuler: 'Annuler',

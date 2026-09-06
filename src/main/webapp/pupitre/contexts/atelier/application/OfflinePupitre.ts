@@ -1,40 +1,35 @@
-import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { DesignationOperateur } from '@/pupitre/contexts/atelier/domain/designation/DesignationOperateur';
 import {
   FenetreOperateur,
-  GestesDePointage,
   IdentiteOperateurDesigne,
+  LotDeGestesDAtelier,
   VueDePointage,
 } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
-import {
-  EMPTY_JOURNAL_DU_PUPITRE,
-  EvenementDuJournal,
-  IdentiteDuGeste,
-  JournalDuPupitre,
-  TypeDePresence,
-} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
-import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
-import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
+import { IdentiteDuGeste, JournalDuPupitre, TypeDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { AcceptationLocale, AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { CommandeGlobale, IntentionGlobale, IntentionGlobaleInitiee } from './CommandeGlobale';
+import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
-import { PupitreSynchronization } from './PupitreSynchronization';
 
-const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurvenue: new Date().toISOString() });
+const identityAt = (instant: number): IdentiteDuGeste => ({
+  id: crypto.randomUUID(),
+  dateDeSurvenue: new Date(instant).toISOString(),
+});
+const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
-export class OfflinePupitre implements OnDestroy, PointageCommand {
-  private readonly authentication = inject(AuthenticationPort);
-  private readonly journal = inject(JournauxDuPupitrePort);
-  private readonly synchronization = inject(PupitreSynchronization);
+export class OfflinePupitre implements PointageCommand, CommandeGlobale {
+  private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
+  private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
-  private readonly vue = signal<JournalDuPupitre>(EMPTY_JOURNAL_DU_PUPITRE);
-  private readonly connexion = signal(true);
   private designation = DesignationOperateur.empty();
   private readonly designationState = signal(this.designation.snapshot());
   private readonly pointageState = signal<VueDePointage | undefined>(undefined);
-  private readonly refusState = signal<ReturnType<FenetreOperateur['refusal']>>(undefined);
-  private readonly erreurState = signal<string | undefined>(undefined);
+  private readonly refusAtelierState = signal<ReturnType<FenetreOperateur['refusal']>>(undefined);
+  private readonly erreurAtelierState = signal<string | undefined>(undefined);
+  private readonly gestesDisponiblesState = signal(true);
 
   readonly etatDesignation = this.designationState.asReadonly();
   readonly code = computed(() => this.designationState().code);
@@ -42,19 +37,17 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   readonly operateur = computed(() => this.designationState().operateur);
   readonly canValidate = computed(() => this.designationState().canValidate);
   readonly pointage = this.pointageState.asReadonly();
-  readonly refusPointage = this.refusState.asReadonly();
-  readonly erreurPointage = this.erreurState.asReadonly();
+  readonly messageAtelier = computed(() => {
+    const erreur = this.erreurAtelierState();
+    return erreur === undefined ? this.refusAtelierState() : { message: erreur };
+  });
+  readonly gestesDisponibles = this.gestesDisponiblesState.asReadonly();
   private fermeture: Promise<void> | undefined;
-  private saisie: Promise<void> = Promise.resolve();
 
-  readonly connected = this.connexion.asReadonly();
+  readonly connected = this.etatHorsLigne.connected;
 
-  ngOnDestroy(): void {
-    this.observe(this.finish());
-  }
-
-  referentiel(): ReturnType<typeof projectReferentiel> {
-    return projectReferentiel(this.vue());
+  referentiel(): ReturnType<EtatHorsLigneDuPupitre['referentiel']> {
+    return this.etatHorsLigne.referentiel();
   }
 
   registerPress(): boolean {
@@ -108,6 +101,9 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private settleDesignation(): Promise<void> {
     this.publishDesignation();
     if (!this.designation.needsClosure()) return Promise.resolve();
+    this.pointageState.set(undefined);
+    this.refusAtelierState.set(undefined);
+    this.erreurAtelierState.set(undefined);
     this.fermeture ??= this.drainWindow().finally(() => {
       this.designation = this.designation.afterCompletingClosure();
       this.publishDesignation();
@@ -131,15 +127,9 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   }
 
   async openWindow(code: string): Promise<IdentiteOperateurDesigne> {
-    await this.authentication.synchronizeSession();
+    const { entreprise, state } = await this.etatHorsLigne.openingSource();
     this.designation.requireClosedWindow();
-    const entreprise = this.requireTenant();
-    const vue = await this.journal.read(entreprise);
-    if (this.authentication.currentTenant() !== entreprise) {
-      throw new Error('L’entreprise du pupitre a change.');
-    }
-    this.designation.requireClosedWindow();
-    const opening = this.designation.afterOpeningWindow(entreprise, vue, code, Date.now());
+    const opening = this.designation.afterOpeningWindow(entreprise, state, code, Date.now());
     this.designation = opening.designation;
     const { fenetre } = opening;
     this.publishWindow(fenetre);
@@ -148,12 +138,13 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   }
 
   private async drainWindow(): Promise<void> {
-    await this.saisie;
+    await this.acceptationLocale.drain();
     this.closeWindowAndClearPresentation();
     await this.restore();
   }
 
   execute(intention: IntentionDePointage): ExecutionDePointage {
+    if (!this.canInitiateGesture()) return { kind: 'INDISPONIBLE' };
     const fenetre = this.requireWindow();
     const result = fenetre.afterDeciding(intention.suiviId, intention.cible, identity);
     this.designation = this.designation.afterReplacingWindow(result.fenetre);
@@ -171,6 +162,7 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   }
 
   private choosePoste(fenetre: FenetreOperateur, intention: IntentionDePointage, posteId: string): Promise<void> {
+    if (!this.canInitiateGesture()) return Promise.resolve();
     const current = this.requireWindow();
     if (!current.hasIdentity(fenetre)) throw new Error('La fenetre operateur a change.');
     const result = current.afterChoosingPoste(intention.suiviId, intention.cible, posteId, identity);
@@ -178,60 +170,69 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
     return this.captureDecision(result.fenetre, result.decision);
   }
 
-  private captureDecision(fenetre: FenetreOperateur, decision: GestesDePointage): Promise<void> {
-    return this.enqueue(fenetre, decision)
-      .then(() => {
-        if (this.isCurrentWindow(fenetre)) this.erreurState.set(undefined);
+  private captureDecision(fenetre: FenetreOperateur, decision: LotDeGestesDAtelier): Promise<void> {
+    return this.captureOperation(
+      fenetre,
+      this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes: decision }, () => this.currentWindow(fenetre)),
+    );
+  }
+
+  private captureOperation(fenetre: FenetreOperateur, operation: Promise<AcceptationLocale>): Promise<void> {
+    return operation
+      .then(acceptance => {
+        this.afterAccept(fenetre, acceptance);
+        if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set(undefined);
       })
       .catch((failure: unknown) => {
-        if (this.isCurrentWindow(fenetre)) this.erreurState.set('Pointage non enregistré — recommencez');
+        if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set('Action non enregistrée — recommencez');
         throw failure;
       });
   }
 
   recordPresence(type: TypeDePresence): Promise<void> {
-    const fenetre = this.requireWindow();
-    const gestes = fenetre.preparePresence(type, identity());
-    return this.enqueue(fenetre, { kind: 'GESTES', capture: () => gestes, numerosParGeste: new Map() });
+    if (!this.canInitiateGesture()) return Promise.resolve();
+    const fenetre = this.beginGestureIntention(this.requireWindow());
+    const gestes = fenetre.preparePresence(type, identity);
+    return this.captureOperation(
+      fenetre,
+      this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre)),
+    );
   }
 
-  async diagnostics(): Promise<EvenementDuJournal[]> {
-    const state = await this.journal.read(this.requireTenant());
-    return state.evenements.filter(evenement => evenement.etat === 'REFUSE');
-  }
-
-  async restore(): Promise<void> {
-    const entreprise = this.authentication.currentTenant();
-    if (entreprise === undefined) {
-      this.closeWindowAndClearPresentation();
-      this.vue.set(EMPTY_JOURNAL_DU_PUPITRE);
-      return;
-    }
-    const state = await this.journal.read(entreprise);
-    this.publish(entreprise, state);
-  }
-
-  synchronize(): Promise<void> {
-    return this.synchronization.synchronize((entreprise, state) => {
-      this.publish(entreprise, state);
+  executeGlobale(intention: IntentionGlobale): Promise<void> {
+    if (!this.canInitiateGesture()) return Promise.resolve();
+    const instantDePression = Date.now();
+    const fenetre = this.beginGestureIntention(this.requireWindow(instantDePression));
+    const intentionInitiee: IntentionGlobaleInitiee = { ...identityAt(instantDePression), commande: intention };
+    this.gestesDisponiblesState.set(false);
+    return this.captureOperation(
+      fenetre,
+      this.acceptationLocale.capture(fenetre, { kind: 'GLOBALE', intention: intentionInitiee }, () => this.currentWindow(fenetre)),
+    ).finally(() => {
+      this.gestesDisponiblesState.set(true);
     });
   }
 
-  private enqueue(fenetre: FenetreOperateur, gestures: GestesDePointage): Promise<void> {
-    const accepted = this.saisie.then(() => this.persistGestes(fenetre, gestures));
-    this.saisie = accepted.catch(() => undefined);
-    return accepted;
+  diagnostics(): ReturnType<EtatHorsLigneDuPupitre['diagnostics']> {
+    return this.etatHorsLigne.diagnostics();
   }
 
-  private async persistGestes(fenetre: FenetreOperateur, gestures: GestesDePointage): Promise<void> {
-    await this.authentication.synchronizeSession();
-    fenetre.assertEntreprise(this.authentication.currentTenant());
-    const current = this.currentWindow(fenetre);
-    const gestes = current.capture(gestures);
-    await this.journal.append(fenetre.journalScope(), gestes);
+  restore(): Promise<void> {
+    return this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
+      this.reconcile(entreprise, state);
+    });
+  }
+
+  synchronize(): Promise<void> {
+    return this.etatHorsLigne.refresh('SYNCHRONIZE', (entreprise, state) => {
+      this.reconcile(entreprise, state);
+    });
+  }
+
+  private afterAccept(fenetre: FenetreOperateur, acceptance: AcceptationLocale): void {
     const latest = this.designation.window();
     if (latest === undefined || !latest.hasIdentity(fenetre)) return;
-    const next = latest.afterAccept(gestes);
+    const next = acceptance.applyTo(latest);
     this.designation = this.designation.afterReplacingWindow(next);
     this.publishWindow(next);
     void this.synchronize().catch((failure: unknown) => {
@@ -245,24 +246,15 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
     });
   }
 
-  private publish(entreprise: string | undefined, state: JournalDuPupitre): void {
-    if (this.authentication.currentTenant() !== entreprise) {
-      return;
-    }
+  private reconcile(entreprise: string | undefined, state: JournalDuPupitre): void {
     if (entreprise === undefined) {
       this.closeWindowAndClearPresentation();
-      this.vue.set(EMPTY_JOURNAL_DU_PUPITRE);
       return;
     }
-    this.connexion.set(state.connecte);
     const fenetre = this.designation.window();
-    if (fenetre === undefined) {
-      this.vue.set(state);
-      return;
-    }
+    if (fenetre === undefined) return;
     if (!fenetre.belongsTo(entreprise)) {
       this.closeWindowAndClearPresentation();
-      this.vue.set(state);
       return;
     }
     const next = fenetre.afterReconciling(entreprise, state);
@@ -271,21 +263,28 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   }
 
   private publishWindow(fenetre: FenetreOperateur): void {
-    this.vue.set(fenetre.snapshot());
+    this.etatHorsLigne.publish(fenetre.snapshot());
     this.pointageState.set(fenetre.pointage());
-    this.refusState.set(fenetre.refusal());
+    this.refusAtelierState.set(fenetre.refusal());
+  }
+
+  private beginGestureIntention(fenetre: FenetreOperateur): FenetreOperateur {
+    const next = fenetre.afterIntendingGesture();
+    this.designation = this.designation.afterReplacingWindow(next);
+    this.publishWindow(next);
+    return next;
   }
 
   private closeWindowAndClearPresentation(): void {
     this.designation = this.designation.afterReleasingWindow();
     this.pointageState.set(undefined);
-    this.refusState.set(undefined);
-    this.erreurState.set(undefined);
+    this.refusAtelierState.set(undefined);
+    this.erreurAtelierState.set(undefined);
     this.publishDesignation();
   }
 
-  private requireWindow(): FenetreOperateur {
-    const access = this.designation.windowAfterPress(Date.now());
+  private requireWindow(now = Date.now()): FenetreOperateur {
+    const access = this.designation.windowAfterPress(now);
     this.designation = access.designation;
     this.refreshDesignation();
     if (access.fenetre === undefined) throw new Error('Aucune fenetre operateur ouverte.');
@@ -302,11 +301,7 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
     return this.designation.window()?.hasIdentity(fenetre) ?? false;
   }
 
-  private requireTenant(): string {
-    const entreprise = this.authentication.currentTenant();
-    if (entreprise === undefined) {
-      throw new Error('Le pupitre doit etre enrole une premiere fois.');
-    }
-    return entreprise;
+  private canInitiateGesture(): boolean {
+    return this.gestesDisponiblesState();
   }
 }

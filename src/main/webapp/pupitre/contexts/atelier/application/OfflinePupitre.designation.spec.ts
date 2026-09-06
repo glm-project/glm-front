@@ -15,6 +15,9 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { TestBed } from '@angular/core/testing';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
+import { MockInstance } from 'vitest';
+import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
@@ -64,17 +67,14 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 describe('Designation du pupitre', () => {
   let designation: OfflinePupitre;
   let journal: DesignationJournalFixture;
-  let reportedFailures: unknown[][];
   beforeEach(async () => {
     journal = new DesignationJournalFixture();
-    reportedFailures = [];
-    vi.spyOn(console, 'error').mockImplementation((...arguments_: unknown[]) => {
-      reportedFailures.push(arguments_);
-    });
     await journal.saveReferentiel('atelier', referentielFixture);
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
+        AcceptationLocaleDesGestes,
+        EtatHorsLigneDuPupitre,
         OfflinePupitre,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
@@ -215,26 +215,19 @@ describe('Designation du pupitre', () => {
     await whenResolutionCompletes(pending);
     thenClosed();
   });
-  it('should release a designation and timers when its owner is destroyed', async () => {
+  it('should report a failed closure launched by the expiration timer', async () => {
+    const reported = givenFailuresAreReported();
     whenEntering('049');
     await whenValidating();
-    whenDestroying();
-    thenClosed();
-    await whenTimePasses(30_000);
-    thenClosed();
+    const reject = givenDelayedFailure();
+
+    await whenTimePasses(30_001);
+    await whenReadStarts();
+    whenRejecting(reject);
+    await new Promise(resolve => roundTrip(resolve));
+
+    expect(reported).toHaveBeenCalledWith('Operation asynchrone interrompue', expect.objectContaining({ message: 'Unavailable' }));
   });
-
-  it('should report a failed closure launched during destruction', async () => {
-    whenEntering('049');
-    await whenValidating();
-    givenTheRestorationWillFail();
-
-    whenDestroying();
-    await whenTheFailureIsReported();
-
-    thenTheRestorationFailureIsReported();
-  });
-
   it('should keep the first digit after expiry while the previous window is still closing', async () => {
     whenEntering('049');
     await whenValidating();
@@ -274,6 +267,7 @@ describe('Designation du pupitre', () => {
       resolve(referenceFixture);
     };
   };
+  const givenFailuresAreReported = (): MockInstance => vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const whenCheckingExpiration = (): Promise<void> => designation.expire();
   const whenClosingCompletes = (resolve: () => void): void => {
     resolve();
@@ -310,13 +304,6 @@ describe('Designation du pupitre', () => {
     vi.setSystemTime(Date.now() + duration);
   };
   const whenResolutionCompletes = async (pending: Promise<void>): Promise<void> => pending;
-  const whenDestroying = (): void => {
-    TestBed.resetTestingModule();
-  };
-  const givenTheRestorationWillFail = (): void => {
-    journal.answer = Promise.reject(new Error('lecture indisponible'));
-  };
-  const whenTheFailureIsReported = (): Promise<void> => new Promise(resolve => roundTrip(resolve));
   const givenDelayedResolution = (): ((state: JournalDuPupitre) => void) => {
     journal.delayRead();
     let resolve: ((state: JournalDuPupitre) => void) | undefined;
@@ -360,9 +347,6 @@ describe('Designation du pupitre', () => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
     expect(() => designation.recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
-  };
-  const thenTheRestorationFailureIsReported = (): void => {
-    expect(reportedFailures).toEqual([['Operation asynchrone interrompue', expect.objectContaining({ message: 'lecture indisponible' })]]);
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);

@@ -19,6 +19,7 @@ interface AttenteDePoste {
 export class Pointage {
   readonly vue = input.required<VueDePointage>();
   readonly commander = input.required<PointageCommand>();
+  readonly gestesDisponibles = input(true);
   readonly pauseRequested = output();
   readonly repriseRequested = output();
   readonly arretTotalRequested = output();
@@ -30,6 +31,7 @@ export class Pointage {
   press(element: ElementDePointage, cible: CibleDePointage): void {
     const intention: IntentionDePointage = { suiviId: element.id, cible };
     const execution = this.commander().execute(intention);
+    if (execution.kind === 'INDISPONIBLE') return;
     if (execution.kind === 'CHOIX_POSTE_REQUIS') {
       this.attente.set({ intention, execution });
       return;
