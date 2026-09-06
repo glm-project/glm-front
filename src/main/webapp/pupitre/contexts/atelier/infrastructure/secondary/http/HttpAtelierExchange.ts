@@ -74,19 +74,21 @@ const toOperateur = (operateur: RestOperateur): OperateurDuPupitre =>
     ? toOperateurWithoutMatricule(operateur)
     : { ...toOperateurWithoutMatricule(operateur), matricule: operateur.matricule };
 
-const toActivite = (activite: RestSuiviDAtelierEnGrille['activitesEnCours'][number]): SuiviDuPupitre['activites'][number] =>
-  activite.poste === undefined
+const toActivite = (activite: RestSuiviDAtelierEnGrille['activitesEnCours'][number]): SuiviDuPupitre['activites'][number] => {
+  const operateurId = required(activite.operateur, 'activite.operateur').id;
+  return activite.poste === undefined
     ? {
-        operateurId: required(activite.operateur, 'activite.operateur').id,
+        operateurId,
         categorie: activite.categorie,
         depuis: activite.depuis,
       }
     : {
-        operateurId: required(activite.operateur, 'activite.operateur').id,
+        operateurId,
         categorie: activite.categorie,
         depuis: activite.depuis,
         posteId: activite.poste.id,
       };
+};
 
 const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
   id: suivi.id,
