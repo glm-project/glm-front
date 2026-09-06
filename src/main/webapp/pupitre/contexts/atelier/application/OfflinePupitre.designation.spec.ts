@@ -298,18 +298,20 @@ describe('Designation du pupitre', () => {
   };
   const givenDelayedResolution = (): ((state: JournalDuPupitre) => void) => {
     journal.delayRead();
-    let resolve!: (state: JournalDuPupitre) => void;
+    let resolve: ((state: JournalDuPupitre) => void) | undefined;
     journal.answer = new Promise(answer => {
       resolve = answer;
     });
+    if (resolve === undefined) throw new Error('Delayed resolution is not initialized.');
     return resolve;
   };
   const givenDelayedFailure = (): ((reason: Error) => void) => {
     journal.delayRead();
-    let reject!: (reason: Error) => void;
+    let reject: ((reason: Error) => void) | undefined;
     journal.answer = new Promise((_resolve, failure) => {
       reject = failure;
     });
+    if (reject === undefined) throw new Error('Delayed failure is not initialized.');
     return reject;
   };
   const whenAnswering = (resolve: (state: JournalDuPupitre) => void): void => {

@@ -170,9 +170,7 @@ const whenRestoringTheBrowserNetwork = (): void => {
 
 const whenAnnouncingTheNetworkReturn = (): void => {
   thenPupitreWindow().then(window => {
-    const online = window.document.createEvent('Event');
-    online.initEvent('online');
-    window.dispatchEvent(online);
+    window.dispatchEvent(new Event('online'));
   });
 };
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Amended by 0020.
 
 ## Context
 

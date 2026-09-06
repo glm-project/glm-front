@@ -46,7 +46,7 @@ export class DesignationOperateur {
   }
 
   enterDigit(digit: string, now: number): void {
-    if (/^[0-9]$/.test(digit) && this.registerPress(now) && this.canEdit()) {
+    if (/^\d$/.test(digit) && this.registerPress(now) && this.canEdit()) {
       this.inconnu = false;
       this.saisie += digit;
     }

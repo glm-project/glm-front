@@ -70,7 +70,7 @@ export class Designation {
       event.preventDefault();
       return;
     }
-    if (/^[0-9]$/.test(event.key) || event.key === 'Backspace' || event.key === 'Enter') {
+    if (/^\d$/.test(event.key) || event.key === 'Backspace' || event.key === 'Enter') {
       event.preventDefault();
       this.execute(event.key);
     }

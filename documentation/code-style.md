@@ -94,8 +94,12 @@ only domain nouns keep their French name (`CODES_DE_REFUS_D_ATELIER`, `CodeDeRef
 ## Linting and formatting
 
 ESLint is strict on `main/webapp/**`: `typescript-eslint` `strictTypeChecked` + `stylistic` +
-`angular-eslint` recommended (`eslint.config.mjs`). A rule that fires is a design signal, not noise to
-silence.
+`angular-eslint` recommended (`eslint.config.mjs`). SonarJS recommended rules cover every TypeScript source;
+cognitive complexity may not exceed 7. Its type-return, null-dereference and argument-type rules stay disabled
+because they conflict with discriminated unions or duplicate TypeScript strict checks with false positives. A
+rule that fires is a design signal, not noise to silence. Non-null assertions (`value!`) and definite-assignment
+assertions (`property!:`) are forbidden: initialize the value, model its possible absence or narrow it explicitly.
+See [ADR 0019](adr/0019-enforce-sonarjs-rules.md).
 
 **Prettier owns formatting.** Single quotes, 140-char width, `arrowParens: avoid`. Run
 `npm run prettier:format`; never hand-format. The commit hook enforces both — see
