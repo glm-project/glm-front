@@ -180,7 +180,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
     return operation
       .then(acceptance => {
         this.afterAccept(fenetre, acceptance);
-        if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set(undefined);
+        this.erreurAtelierState.set(undefined);
       })
       .catch((failure: unknown) => {
         if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set('Action non enregistrée — recommencez');
