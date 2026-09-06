@@ -111,26 +111,33 @@ describe('Designation keypad', () => {
     thenValidationIsDisabled(false);
   });
   it('should support physical digits and backspace without repeating held keys', () => {
-    whenPressingKey({ key: '0' });
-    whenPressingKey({ key: '4' });
-    whenPressingKey({ key: '4', repeat: true });
-    whenPressingKey({ key: 'Backspace' });
-    whenPressingKey({ key: 'a' });
+    expect(whenPressingKey({ key: '0' })).toBe(true);
+    expect(whenPressingKey({ key: '4' })).toBe(true);
+    expect(whenPressingKey({ key: '4', repeat: true })).toBe(true);
+    expect(whenPressingKey({ key: 'Backspace' })).toBe(true);
+    expect(whenPressingKey({ key: 'a' })).toBe(false);
+    expect(whenPressingKey({ key: '12' })).toBe(false);
     thenDisplayedCodeIs('0');
   });
   it('should ignore Enter on empty input and erase by touch', () => {
-    whenPressingKey({ key: 'Enter' });
+    expect(whenPressingKey({ key: 'Enter' })).toBe(true);
     whenClicking('digit-1');
     whenClicking('erase');
     thenDisplayedCodeIs('');
   });
-  it('should consume a touch after sleep and accept the next touch', () => {
+  it('should consume a touch after sleep and accept the next touch or direct click', () => {
     whenClicking('digit-0');
     whenSleeping();
-    whenTouching('digit-4');
+    const prevented = whenTouching('digit-4');
+    expect(prevented).toBe(true);
     thenDisplayedCodeIs('');
-    whenTouching('digit-9');
+    whenClicking('digit-9');
     thenDisplayedCodeIs('9');
+  });
+  it('should not prevent default on an active touch', () => {
+    const prevented = whenHolding('digit-0');
+    expect(prevented).toBe(false);
+    thenDisplayedCodeIs('0');
   });
   it('should renew on a blank area press but not mouse movement or held keys', () => {
     whenClicking('digit-0');
@@ -175,9 +182,11 @@ describe('Designation keypad', () => {
     thenDisplayedCodeIs('');
   });
 
-  const whenHolding = (selector: string): void => {
-    element(selector).dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+  const whenHolding = (selector: string): boolean => {
+    const event = new PointerEvent('pointerdown', { bubbles: true, cancelable: true });
+    element(selector).dispatchEvent(event);
     fixture.detectChanges();
+    return event.defaultPrevented;
   };
   const whenResolutionSettles = async (): Promise<void> => {
     await journalFixture.readCompleted;
@@ -205,13 +214,17 @@ describe('Designation keypad', () => {
     element(selector).click();
     fixture.detectChanges();
   };
-  const whenTouching = (selector: string): void => {
-    element(selector).dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+  const whenTouching = (selector: string): boolean => {
+    const event = new PointerEvent('pointerdown', { bubbles: true, cancelable: true });
+    element(selector).dispatchEvent(event);
     whenClicking(selector);
+    return event.defaultPrevented;
   };
-  const whenPressingKey = (key: KeyFixture): void => {
-    document.dispatchEvent(new KeyboardEvent('keydown', { ...key, bubbles: true, cancelable: true }));
+  const whenPressingKey = (key: KeyFixture): boolean => {
+    const event = new KeyboardEvent('keydown', { ...key, bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
     fixture.detectChanges();
+    return event.defaultPrevented;
   };
   const whenSleeping = (): void => {
     vi.setSystemTime(Date.now() + 31_000);
