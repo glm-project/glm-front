@@ -4,151 +4,186 @@ import { FenetreOperateur, IdentiteOperateurDesigne } from './FenetreOperateur';
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
 export interface DesignationResolution {
-  generation: number;
-  code: string;
+  readonly generation: number;
+  readonly code: string;
 }
 
 export interface DesignationState {
-  code: string;
-  unknownCode: boolean;
-  operateur: IdentiteOperateurDesigne | undefined;
-  canValidate: boolean;
-  deadline: number | undefined;
+  readonly code: string;
+  readonly unknownCode: boolean;
+  readonly operateur: IdentiteOperateurDesigne | undefined;
+  readonly canValidate: boolean;
+  readonly deadline: number | undefined;
+}
+
+export interface PressResult {
+  readonly designation: DesignationOperateur;
+  readonly accepted: boolean;
+}
+
+export interface ResolutionResult {
+  readonly designation: DesignationOperateur;
+  readonly resolution: DesignationResolution | undefined;
+}
+
+export interface CompletionResult {
+  readonly designation: DesignationOperateur;
+  readonly accepted: boolean;
+}
+
+export interface OpeningWindowResult {
+  readonly designation: DesignationOperateur;
+  readonly fenetre: FenetreOperateur;
+}
+
+interface EtatDeDesignation {
+  readonly saisie: string;
+  readonly inconnu: boolean;
+  readonly designated: boolean;
+  readonly resolution: DesignationResolution | undefined;
+  readonly closing: boolean;
+  readonly deadline: number | undefined;
+  readonly generation: number;
+  readonly fenetre: FenetreOperateur | undefined;
+  readonly windowId: number;
 }
 
 export class DesignationOperateur {
-  private saisie = '';
-  private inconnu = false;
-  private designated = false;
-  private resolution: DesignationResolution | undefined;
-  private closing = false;
-  private deadline: number | undefined;
-  private generation = 0;
-  private fenetre: FenetreOperateur | undefined;
+  private constructor(private readonly etat: EtatDeDesignation) {}
+
+  static empty(): DesignationOperateur {
+    return new DesignationOperateur({
+      saisie: '',
+      inconnu: false,
+      designated: false,
+      resolution: undefined,
+      closing: false,
+      deadline: undefined,
+      generation: 0,
+      fenetre: undefined,
+      windowId: 0,
+    });
+  }
 
   snapshot(): DesignationState {
     return {
-      code: this.saisie,
-      unknownCode: this.inconnu,
+      code: this.etat.saisie,
+      unknownCode: this.etat.inconnu,
       operateur: this.operateur(),
-      canValidate: this.saisie.length > 0 && this.canEdit() && this.resolution === undefined && !this.closing,
-      deadline: this.deadline,
+      canValidate: this.etat.saisie.length > 0 && this.canEdit() && this.etat.resolution === undefined && !this.etat.closing,
+      deadline: this.etat.deadline,
     };
   }
 
-  registerPress(now: number): boolean {
-    if (this.hasExpired(now)) {
-      this.finish();
-      return false;
-    }
-    this.deadline = now + DESIGNATION_INACTIVITY_MS;
-    return true;
+  afterPress(now: number): PressResult {
+    if (this.hasExpired(now)) return { designation: this.afterFinish(), accepted: false };
+    return { designation: this.with({ deadline: now + DESIGNATION_INACTIVITY_MS }), accepted: true };
   }
 
-  enterDigit(digit: string, now: number): void {
-    if (/^\d$/.test(digit) && this.registerPress(now) && this.canEdit()) {
-      this.inconnu = false;
-      this.saisie += digit;
-    }
+  afterDigit(digit: string, now: number): DesignationOperateur {
+    if (!/^\d$/.test(digit)) return this;
+    const press = this.afterPress(now);
+    if (!press.accepted || !press.designation.canEdit()) return press.designation;
+    return press.designation.with({ saisie: `${press.designation.etat.saisie}${digit}`, inconnu: false });
   }
 
-  erase(now: number): void {
-    if (this.registerPress(now) && this.canEdit()) {
-      this.inconnu = false;
-      this.saisie = this.saisie.slice(0, -1);
-    }
+  afterErasing(now: number): DesignationOperateur {
+    const press = this.afterPress(now);
+    if (!press.accepted || !press.designation.canEdit()) return press.designation;
+    return press.designation.with({ saisie: press.designation.etat.saisie.slice(0, -1), inconnu: false });
   }
 
-  beginResolution(now: number): DesignationResolution | undefined {
-    if (!this.registerPress(now) || !this.snapshot().canValidate) return undefined;
-    this.resolution = { generation: this.generation, code: this.saisie };
-    return this.resolution;
+  afterBeginningResolution(now: number): ResolutionResult {
+    const press = this.afterPress(now);
+    if (!press.accepted || !press.designation.snapshot().canValidate) return { designation: press.designation, resolution: undefined };
+    const resolution = { generation: press.designation.etat.generation, code: press.designation.etat.saisie };
+    return { designation: press.designation.with({ resolution }), resolution };
   }
 
-  completeResolution(resolution: DesignationResolution, now: number): boolean {
-    this.expire(now);
-    if (resolution.generation !== this.generation) return false;
-    this.designated = true;
-    this.saisie = '';
-    return true;
+  afterCompletingResolution(resolution: DesignationResolution, now: number): CompletionResult {
+    const expired = this.afterExpiration(now);
+    if (resolution.generation !== expired.etat.generation) return { designation: expired, accepted: false };
+    return { designation: expired.with({ designated: true, saisie: '', inconnu: false }), accepted: true };
   }
 
-  failResolution(resolution: DesignationResolution, now: number): void {
-    if (this.hasExpired(now)) {
-      this.finish();
-    } else if (resolution.generation === this.generation) {
-      this.saisie = '';
-      this.inconnu = true;
-    }
+  afterFailingResolution(resolution: DesignationResolution, now: number): DesignationOperateur {
+    const expired = this.afterExpiration(now);
+    if (resolution.generation !== expired.etat.generation) return expired;
+    return expired.with({ saisie: '', inconnu: true });
   }
 
-  endResolution(): void {
-    this.resolution = undefined;
+  afterEndingResolution(): DesignationOperateur {
+    return this.with({ resolution: undefined });
   }
 
-  expire(now: number): void {
-    if (this.hasExpired(now)) this.finish();
+  afterExpiration(now: number): DesignationOperateur {
+    return this.hasExpired(now) ? this.afterFinish() : this;
   }
 
-  finish(): void {
-    this.deadline = undefined;
-    this.generation++;
-    this.closing ||= this.designated;
-    this.designated = false;
-    this.saisie = '';
-    this.inconnu = false;
+  afterFinish(): DesignationOperateur {
+    return this.with({
+      deadline: undefined,
+      generation: this.etat.generation + 1,
+      closing: this.etat.closing || this.etat.designated,
+      designated: false,
+      saisie: '',
+      inconnu: false,
+    });
   }
 
   needsClosure(): boolean {
-    return this.closing;
+    return this.etat.closing;
   }
 
-  openWindow(entreprise: string, vue: JournalDuPupitre, code: string, now: number): FenetreOperateur {
+  afterOpeningWindow(entreprise: string, vue: JournalDuPupitre, code: string, now: number): OpeningWindowResult {
     this.requireClosedWindow();
-    this.fenetre = new FenetreOperateur(entreprise, vue, code, now);
-    if (this.resolution === undefined) {
-      this.designated = true;
-      this.deadline = now + DESIGNATION_INACTIVITY_MS;
-    }
-    return this.fenetre;
+    const fenetre = FenetreOperateur.open(entreprise, vue, code, now, this.etat.windowId);
+    const designation =
+      this.etat.resolution === undefined
+        ? this.with({ fenetre, designated: true, deadline: now + DESIGNATION_INACTIVITY_MS })
+        : this.with({ fenetre });
+    return { designation, fenetre };
   }
 
-  releaseWindow(): void {
-    this.fenetre = undefined;
-    this.designated = false;
+  afterReplacingWindow(fenetre: FenetreOperateur): DesignationOperateur {
+    if (this.etat.fenetre === undefined || !this.etat.fenetre.hasIdentity(fenetre)) return this;
+    return this.with({ fenetre });
   }
 
-  completeClosure(): void {
-    this.closing = false;
+  afterReleasingWindow(): DesignationOperateur {
+    return this.with({ fenetre: undefined, designated: false, windowId: this.etat.windowId + 1 });
+  }
+
+  afterCompletingClosure(): DesignationOperateur {
+    return this.with({ closing: false });
+  }
+
+  windowAfterPress(now: number): PressResult & { readonly fenetre: FenetreOperateur | undefined } {
+    const press = this.afterPress(now);
+    return { ...press, fenetre: press.designation.etat.designated ? press.designation.etat.fenetre : undefined };
   }
 
   window(): FenetreOperateur | undefined {
-    return this.fenetre;
+    return this.etat.fenetre;
   }
 
   requireClosedWindow(): void {
-    if (this.fenetre !== undefined || this.closing) {
-      throw new Error('Une fenetre operateur est deja ouverte.');
-    }
-  }
-
-  requireWindow(now: number): FenetreOperateur {
-    if (!this.registerPress(now) || !this.designated || this.fenetre === undefined) {
-      throw new Error('Aucune fenetre operateur ouverte.');
-    }
-    return this.fenetre;
+    if (this.etat.fenetre !== undefined || this.etat.closing) throw new Error('Une fenetre operateur est deja ouverte.');
   }
 
   private operateur(): IdentiteOperateurDesigne | undefined {
-    if (this.designated) return this.fenetre?.operateur;
-    return undefined;
+    return this.etat.designated ? this.etat.fenetre?.operateur : undefined;
   }
 
   private canEdit(): boolean {
-    return (this.resolution === undefined || this.resolution.generation !== this.generation) && !this.designated;
+    return (this.etat.resolution === undefined || this.etat.resolution.generation !== this.etat.generation) && !this.etat.designated;
   }
 
   private hasExpired(now: number): boolean {
-    return this.deadline !== undefined && now >= this.deadline;
+    return this.etat.deadline !== undefined && now >= this.etat.deadline;
+  }
+
+  private with(change: Partial<EtatDeDesignation>): DesignationOperateur {
+    return new DesignationOperateur({ ...this.etat, ...change });
   }
 }
