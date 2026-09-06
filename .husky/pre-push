@@ -1,1 +1,1 @@
-npm run measure -- pre-push -- npm run validate:complete
+npm run measure -- pre-push -- npm run validate:quick
