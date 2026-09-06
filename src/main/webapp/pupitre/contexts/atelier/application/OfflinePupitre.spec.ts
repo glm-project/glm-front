@@ -90,6 +90,21 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
   }
 }
 
+class ApplicationJournalFixture extends JournauxDuPupitreFixture {
+  readonly acceptedBatches: string[][] = [];
+
+  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
+    await super.append(entreprise, gestes);
+    this.acceptedBatches.push(
+      gestes.map(geste => {
+        if (geste.nature === 'ARRIVEE') return 'ARRIVEE';
+        if (geste.nature === 'PRESENCE') return geste.type;
+        return `${geste.type}:${geste.suiviId}:${geste.posteId ?? 'SANS_POSTE'}`;
+      }),
+    );
+  }
+}
+
 class ServerFixture extends AtelierExchangePort {
   reference = structuredClone(referenceFixture);
   failures: (Error | undefined)[] = [];
@@ -128,12 +143,12 @@ class ServerFixture extends AtelierExchangePort {
 
 describe('OfflinePupitre', () => {
   let pupitre: OfflinePupitre;
-  let journal: JournauxDuPupitreFixture;
+  let journal: ApplicationJournalFixture;
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
 
   beforeEach(async () => {
-    journal = new JournauxDuPupitreFixture();
+    journal = new ApplicationJournalFixture();
     serveur = new ServerFixture();
     authentication = new AuthenticationFixture();
     await givenCachedReference(referenceFixture);
@@ -166,6 +181,98 @@ describe('OfflinePupitre', () => {
     await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
     thenActivityIs('NON_CONFORMITE');
     await thenQueueHasUniqueStableIdentities();
+  });
+
+  it('should append every personal finish before departure as one global stop batch', async () => {
+    await givenTwoActiveWorkstations();
+
+    await whenStoppingEverything();
+
+    thenAcceptedBatchesAre([['ARRIVEE', 'FIN:piece-tour:tour', 'FIN:piece-fraiseuse:fraiseuse', 'DEPART']]);
+  });
+
+  it('should keep every activity unchanged and expose the local error when the global batch cannot be appended', async () => {
+    await givenTwoActiveWorkstations();
+    givenLocalWriteFailsOnce();
+
+    const stopping = whenStoppingEverything();
+
+    await thenFails(stopping, 'disque plein');
+    thenAllActivitiesRemain();
+    thenGlobalRecordingFailed();
+    thenAcceptedBatchesAre([]);
+  });
+
+  it('should decide a retained global stop from the window updated by an earlier capture', async () => {
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const pointage = whenStarting();
+    const stopping = whenStoppingEverything();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([pointage, stopping]);
+
+    thenNoActivity();
+    thenAcceptedBatchesAre([
+      ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
+      ['FIN:piece:tour', 'DEPART'],
+    ]);
+  });
+
+  it('should retain unique identities and the press time while a global batch waits for storage', async () => {
+    givenBusinessTime();
+    await givenTwoActiveWorkstations();
+    const releaseCapture = givenDelayedCapture();
+
+    const pausing = whenPausing();
+    const stopping = whenStoppingEverything();
+    whenBusinessTimeBecomes('2026-09-05T09:00:00Z');
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([pausing, stopping]);
+
+    const identities = await thenQueuedGesturesHaveUniqueIdentitiesAt('2026-09-05T08:00:00.000Z');
+    await whenRestoring();
+    await thenQueuedIdentitiesAre(identities);
+  });
+
+  it('should hide a finished window immediately while a global gesture waits for an earlier capture', async () => {
+    await givenAnOpenWindow();
+    const releaseCapture = givenDelayedCapture();
+
+    const pointage = whenStarting();
+    const stopping = whenStoppingEverything();
+    thenGlobalGesturesAreAvailable(false);
+    const closing = whenClosing();
+
+    thenNoWindowPresentationRemains();
+    whenReleasingCapture(releaseCapture);
+    await Promise.all([pointage, stopping, closing]);
+
+    thenGlobalGesturesAreAvailable(true);
+    thenAcceptedBatchesAre([
+      ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
+      ['FIN:piece:tour', 'DEPART'],
+    ]);
+  });
+
+  it('should publish global rejection and recovery through its completion and public signals', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+
+    const pausing = whenPausingGlobally();
+    thenGlobalGesturesAreAvailable(false);
+    await thenFails(pausing, 'disque plein');
+
+    thenGlobalRecordingFailed();
+    thenGlobalGesturesAreAvailable(true);
+
+    const resuming = whenResumingGlobally();
+    thenGlobalGesturesAreAvailable(false);
+    await resuming;
+
+    thenGlobalRecordingRecovered();
+    thenGlobalGesturesAreAvailable(true);
+    thenAcceptedBatchesAre([['ARRIVEE', 'REPRISE']]);
   });
 
   it('should reject a gesture explicitly if local commit fails and accept the next retry durably', async () => {
@@ -640,6 +747,9 @@ describe('OfflinePupitre', () => {
   const whenSleepingPastDesignation = (): void => {
     vi.setSystemTime(new Date('2026-09-05T08:00:31Z'));
   };
+  const whenBusinessTimeBecomes = (instant: string): void => {
+    vi.setSystemTime(new Date(instant));
+  };
   const whenExpiring = (): Promise<void> => pupitre.expire();
   const whenReleasingCapture = (release: () => void): void => {
     release();
@@ -696,6 +806,9 @@ describe('OfflinePupitre', () => {
     await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
   };
   const whenPausing = (): Promise<void> => pupitre.recordPresence('PAUSE');
+  const whenPausingGlobally = (): Promise<void> => pupitre.executeGlobale('PAUSE');
+  const whenResumingGlobally = (): Promise<void> => pupitre.executeGlobale('REPRENDRE');
+  const whenStoppingEverything = (): Promise<void> => pupitre.executeGlobale('TOUT_ARRETER');
   const whenDeparting = (): Promise<void> => pupitre.recordPresence('DEPART');
   const whenSynchronizing = (): Promise<void> => pupitre.synchronize();
   const whenSynchronizingConcurrently = async (): Promise<void> => {
@@ -722,6 +835,29 @@ describe('OfflinePupitre', () => {
     await givenCachedReference({
       ...referenceFixture,
       operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
+    });
+    await givenAnOpenWindow();
+  };
+  const givenTwoActiveWorkstations = async (): Promise<void> => {
+    const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
+    const suivi = requiredFixture(referenceFixture.suivis[0], 'workshop element');
+    await givenCachedReference({
+      ...referenceFixture,
+      operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
+      suivis: [
+        {
+          ...suivi,
+          id: 'piece-tour',
+          nom: 'OF-tour',
+          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:00:00Z', posteId: 'tour' }],
+        },
+        {
+          ...suivi,
+          id: 'piece-fraiseuse',
+          nom: 'OF-fraiseuse',
+          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:30:00Z', posteId: 'fraiseuse' }],
+        },
+      ],
     });
     await givenAnOpenWindow();
   };
@@ -810,6 +946,21 @@ describe('OfflinePupitre', () => {
   const thenQueueHas = async (count: number): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements).toHaveLength(count);
   };
+  const thenAcceptedBatchesAre = (batches: string[][]): void => {
+    expect(journal.acceptedBatches).toEqual(batches);
+  };
+  const thenAllActivitiesRemain = (): void => {
+    expect(pupitre.referentiel()?.suivis.flatMap(suivi => suivi.activites)).toHaveLength(2);
+  };
+  const thenGlobalRecordingFailed = (): void => {
+    expect(pupitre.erreurAtelier()).toBe('Action non enregistrée — recommencez');
+  };
+  const thenGlobalRecordingRecovered = (): void => {
+    expect(pupitre.erreurAtelier()).toBeUndefined();
+  };
+  const thenGlobalGesturesAreAvailable = (available: boolean): void => {
+    expect(pupitre.gestesDisponibles()).toBe(available);
+  };
   const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
     const arrival = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
     expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
@@ -859,6 +1010,16 @@ describe('OfflinePupitre', () => {
     const third = requiredFixture(gestes[2], 'third queued gesture');
     expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
+  };
+  const thenQueuedGesturesHaveUniqueIdentitiesAt = async (instant: string): Promise<string[]> => {
+    const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
+    const identities = gestes.map(geste => geste.id);
+    expect(new Set(identities).size).toBe(gestes.length);
+    expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
+    return identities;
+  };
+  const thenQueuedIdentitiesAre = async (identities: string[]): Promise<void> => {
+    expect((await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste.id)).toEqual(identities);
   };
   const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<IdentiteOperateurDesigne>[]): string => {
     const accepted = openings.filter(result => result.status === 'fulfilled');

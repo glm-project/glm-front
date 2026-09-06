@@ -14,13 +14,14 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
 
 const identity = (): IdentiteDuGeste => ({ id: crypto.randomUUID(), dateDeSurvenue: new Date().toISOString() });
 
 @Injectable()
-export class OfflinePupitre implements OnDestroy, PointageCommand {
+export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGlobale {
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
@@ -29,6 +30,7 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private readonly pointageState = signal<VueDePointage | undefined>(undefined);
   private readonly refusAtelierState = signal<ReturnType<FenetreOperateur['refusal']>>(undefined);
   private readonly erreurAtelierState = signal<string | undefined>(undefined);
+  private readonly gestesDisponiblesState = signal(true);
 
   readonly etatDesignation = this.designationState.asReadonly();
   readonly code = computed(() => this.designationState().code);
@@ -38,6 +40,7 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   readonly pointage = this.pointageState.asReadonly();
   readonly refusAtelier = this.refusAtelierState.asReadonly();
   readonly erreurAtelier = this.erreurAtelierState.asReadonly();
+  readonly gestesDisponibles = this.gestesDisponiblesState.asReadonly();
   private fermeture: Promise<void> | undefined;
 
   readonly connected = this.etatHorsLigne.connected;
@@ -101,6 +104,9 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private settleDesignation(): Promise<void> {
     this.publishDesignation();
     if (!this.designation.needsClosure()) return Promise.resolve();
+    this.pointageState.set(undefined);
+    this.refusAtelierState.set(undefined);
+    this.erreurAtelierState.set(undefined);
     this.fermeture ??= this.drainWindow().finally(() => {
       this.designation = this.designation.afterCompletingClosure();
       this.publishDesignation();
@@ -168,7 +174,7 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
   private captureDecision(fenetre: FenetreOperateur, decision: GestesDePointage): Promise<void> {
     return this.captureOperation(
       fenetre,
-      this.acceptationLocale.capture(fenetre, decision, () => this.currentWindow(fenetre)),
+      this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes: decision }, () => this.currentWindow(fenetre)),
     );
   }
 
@@ -188,10 +194,24 @@ export class OfflinePupitre implements OnDestroy, PointageCommand {
     const fenetre = this.requireWindow();
     const gestes = fenetre.preparePresence(type, identity);
     return this.acceptationLocale
-      .capture(fenetre, gestes, () => this.currentWindow(fenetre))
+      .capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre))
       .then(accepted => {
         this.afterAccept(fenetre, accepted);
       });
+  }
+
+  executeGlobale(intention: IntentionGlobale): Promise<void> {
+    const instantDePression = Date.now();
+    const fenetre = this.requireWindow(instantDePression);
+    this.gestesDisponiblesState.set(false);
+    return this.captureOperation(
+      fenetre,
+      this.acceptationLocale.capture(fenetre, { kind: 'GLOBALE', commande: intention, instantDePression }, () =>
+        this.currentWindow(fenetre),
+      ),
+    ).finally(() => {
+      this.gestesDisponiblesState.set(true);
+    });
   }
 
   diagnostics(): ReturnType<EtatHorsLigneDuPupitre['diagnostics']> {
