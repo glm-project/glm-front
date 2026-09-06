@@ -1,15 +1,10 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { LocalGeste, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/LocalPupitreState';
-import { PupitreJournalPort } from '@/pupitre/contexts/atelier/domain/PupitreJournalPort';
-import { PupitreServerPort } from '@/pupitre/contexts/atelier/domain/PupitreServerPort';
+import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PupitreJournalFixture } from '@test/unit/fixtures/PupitreJournalFixture';
-import { offlineProvider } from './offline.provider';
 import { PupitreRuntime } from './PupitreRuntime';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
-const entrepriseFixture = 'entreprise-a';
-const gesteFixture = (id: string): LocalGeste => ({ nature: 'ARRIVEE', id, dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' });
 
 class AuthenticationFixture extends AuthenticationPort {
   private authentication: Promise<void> | undefined;
@@ -20,9 +15,6 @@ class AuthenticationFixture extends AuthenticationPort {
   }
   override currentToken(): string {
     return 'autorise';
-  }
-  override currentTenant(): string {
-    return entrepriseFixture;
   }
   override logout(): void {
     throw new Error('La session fixture reste ouverte.');
@@ -39,56 +31,44 @@ class AuthenticationFixture extends AuthenticationPort {
   }
 }
 
-class ServerFixture extends PupitreServerPort {
-  readonly received: LocalGeste[] = [];
-  referenceRequests = 0;
-
-  override async send(geste: LocalGeste): Promise<void> {
-    await roundTrip();
-    this.received.push(structuredClone(geste));
-  }
-  override async referentiel(): Promise<ReferentielDuPupitre> {
-    await roundTrip();
-    this.referenceRequests += 1;
-    return { operateurs: [], suivis: [] };
-  }
-  override async reread(): Promise<void> {
-    await roundTrip();
-  }
-}
-
-class JournalFixture extends PupitreJournalFixture {
+class OfflinePupitreFixture {
+  readonly connected = signal(true).asReadonly();
+  synchronizationAttempts = 0;
   unavailable = false;
+  private readonly completions: Promise<void>[] = [];
 
-  override synchronize<T>(action: () => Promise<T>): Promise<T> {
-    return super.synchronize(async () => {
-      await roundTrip();
-      if (this.unavailable) {
-        throw new Error('stockage indisponible');
+  synchronize(): Promise<void> {
+    this.synchronizationAttempts += 1;
+    const unavailable = this.unavailable;
+    const completion = roundTrip().then(() => {
+      if (unavailable) {
+        throw new Error('synchronisation indisponible');
       }
-      return action();
     });
+    this.completions.push(completion);
+    return completion;
+  }
+
+  async settle(): Promise<void> {
+    await Promise.allSettled(this.completions);
   }
 }
 
 describe('PupitreRuntime', () => {
   let runtime: PupitreRuntime;
   let authentication: AuthenticationFixture;
-  let journal: JournalFixture;
-  let serveur: ServerFixture;
+  let pupitre: OfflinePupitreFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     authentication = new AuthenticationFixture();
-    journal = new JournalFixture();
-    serveur = new ServerFixture();
+    pupitre = new OfflinePupitreFixture();
     TestBed.configureTestingModule({
       providers: [
-        ...offlineProvider,
-        { provide: PupitreJournalPort, useValue: journal },
-        { provide: PupitreServerPort, useValue: serveur },
+        PupitreRuntime,
         { provide: AuthenticationPort, useValue: authentication },
+        { provide: OfflinePupitre, useValue: pupitre },
       ],
     });
     runtime = TestBed.inject(PupitreRuntime);
@@ -100,22 +80,18 @@ describe('PupitreRuntime', () => {
     vi.restoreAllMocks();
   });
 
-  it('should send pending gestures at startup, reconnection and every minute', async () => {
-    await givenPendingGesture('demarrage');
-
+  it('should synchronize at startup, reconnection and every minute', async () => {
     await whenStartingPupitre();
 
-    await thenServerReceived('demarrage');
-    await givenPendingGesture('reconnexion');
+    await thenSynchronizationAttemptsAre(1);
 
     whenNetworkReturns();
 
-    await thenServerReceived('demarrage', 'reconnexion');
-    await givenPendingGesture('horloge');
+    await thenSynchronizationAttemptsAre(2);
 
     await whenOneMinutePasses();
 
-    await thenServerReceived('demarrage', 'reconnexion', 'horloge');
+    await thenSynchronizationAttemptsAre(3);
   });
 
   it('should start only one synchronization schedule', async () => {
@@ -123,27 +99,21 @@ describe('PupitreRuntime', () => {
 
     await whenOneMinutePasses();
 
-    await thenReferenceRefreshCountIs(2);
+    await thenSynchronizationAttemptsAre(2);
   });
 
-  it('should leave new gestures pending after the runtime is destroyed', async () => {
-    await givenPendingGesture('avant-destruction');
+  it('should stop synchronization after the runtime is destroyed', async () => {
     await whenStartingPupitre();
-    await thenServerReceived('avant-destruction');
 
     whenDestroyingTheRuntime();
-    await givenPendingGesture('apres-destruction');
-
     whenNetworkReturns();
     await whenOneMinutePasses();
 
-    await thenServerReceived('avant-destruction');
-    await thenGestureRemainsPending('apres-destruction');
+    await thenSynchronizationAttemptsAre(1);
   });
 
   it('should not start synchronization when destroyed during authentication restoration', async () => {
     givenAuthenticationInProgress();
-    await givenPendingGesture('apres-destruction');
 
     const startup = whenStartingPupitre();
     whenDestroyingTheRuntime();
@@ -152,29 +122,22 @@ describe('PupitreRuntime', () => {
     whenNetworkReturns();
     await whenOneMinutePasses();
 
-    await thenServerReceived();
-    await thenGestureRemainsPending('apres-destruction');
+    await thenSynchronizationAttemptsAre(0);
   });
 
-  it('should retain a gesture after a background storage failure and send it on the next trigger', async () => {
-    await givenPendingGesture('apres-panne');
-    givenUnavailableStorage();
+  it('should attempt synchronization again after a background failure', async () => {
+    givenUnavailableSynchronization();
 
-    await whenStartingWithoutStorage();
-    whenStorageRecovers();
-
-    await thenServerReceived();
-    await thenGestureRemainsPending('apres-panne');
-
+    await whenStartingPupitre();
+    whenSynchronizationRecovers();
     whenNetworkReturns();
 
-    await thenServerReceived('apres-panne');
+    await thenSynchronizationAttemptsAre(2);
   });
 
-  const givenPendingGesture = (id: string): Promise<void> => journal.append(entrepriseFixture, [gesteFixture(id)]);
   const givenAuthenticationInProgress = (): void => authentication.waitForPermission();
-  const givenUnavailableStorage = (): void => {
-    journal.unavailable = true;
+  const givenUnavailableSynchronization = (): void => {
+    pupitre.unavailable = true;
   };
   const whenStartingPupitre = (): Promise<void> => runtime.start();
   const whenStartingPupitreTwice = async (): Promise<void> => {
@@ -185,12 +148,8 @@ describe('PupitreRuntime', () => {
     authentication.permit();
     await startup;
   };
-  const whenStartingWithoutStorage = async (): Promise<void> => {
-    await runtime.start();
-    await journal.synchronize(roundTrip).catch(() => undefined);
-  };
-  const whenStorageRecovers = (): void => {
-    journal.unavailable = false;
+  const whenSynchronizationRecovers = (): void => {
+    pupitre.unavailable = false;
   };
   const whenNetworkReturns = (): void => {
     window.dispatchEvent(new Event('online'));
@@ -198,20 +157,8 @@ describe('PupitreRuntime', () => {
   const whenOneMinutePasses = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(60_000);
   };
-  const thenReferenceRefreshCountIs = async (expected: number): Promise<void> => {
-    await journal.synchronize(async () => {
-      await roundTrip();
-      expect(serveur.referenceRequests).toBe(expected);
-    });
-  };
-  const thenServerReceived = async (...ids: string[]): Promise<void> => {
-    await journal.synchronize(async () => {
-      await roundTrip();
-      expect(serveur.received).toEqual(ids.map(gesteFixture));
-    });
-  };
-  const thenGestureRemainsPending = async (id: string): Promise<void> => {
-    const state = await journal.read(entrepriseFixture);
-    expect(state.evenements).toContainEqual({ geste: gesteFixture(id), etat: 'EN_ATTENTE' });
+  const thenSynchronizationAttemptsAre = async (expected: number): Promise<void> => {
+    await pupitre.settle();
+    expect(pupitre.synchronizationAttempts).toBe(expected);
   };
 });
