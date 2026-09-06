@@ -275,6 +275,35 @@ describe('OfflinePupitre', () => {
     thenAcceptedBatchesAre([['ARRIVEE', 'REPRISE']]);
   });
 
+  it('should expose a refused finish from a global stop through one renderable workshop message', async () => {
+    await givenTwoActiveWorkstations();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+
+    await whenStoppingEverything();
+    await whenSynchronizing();
+
+    expect(pupitre.messageAtelier()).toEqual({ contexte: 'TOUT ARRÊTER', message: 'cause conservee' });
+  });
+
+  it('should clear the current refusal as soon as a new business intent starts', async () => {
+    await givenAnOpenWindow();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    await whenStarting();
+    await whenSynchronizing();
+    const releaseCapture = givenDelayedCapture();
+
+    const pausing = whenPausingGlobally();
+
+    try {
+      expect(pupitre.messageAtelier()).toBeUndefined();
+    } finally {
+      whenReleasingCapture(releaseCapture);
+    }
+    await pausing;
+  });
+
   it('should reject a gesture explicitly if local commit fails and accept the next retry durably', async () => {
     await givenAnOpenWindow();
     givenLocalWriteFailsOnce();
@@ -712,7 +741,7 @@ describe('OfflinePupitre', () => {
 
     await thenOldCompanyPendingIs(3);
     thenNoWindowPresentationRemains();
-    expect(pupitre.erreurAtelier()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   });
 
   it('should refuse a capture before append when its operator window has been released during session I/O', async () => {
@@ -729,7 +758,7 @@ describe('OfflinePupitre', () => {
     await thenFails(pointage, 'fenetre operateur a change');
     await thenOldCompanyPendingIs(0);
     thenNoWindowPresentationRemains();
-    expect(pupitre.erreurAtelier()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   });
 
   const givenBusinessTime = (): void => {
@@ -953,10 +982,10 @@ describe('OfflinePupitre', () => {
     expect(pupitre.referentiel()?.suivis.flatMap(suivi => suivi.activites)).toHaveLength(2);
   };
   const thenGlobalRecordingFailed = (): void => {
-    expect(pupitre.erreurAtelier()).toBe('Action non enregistrée — recommencez');
+    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
   };
   const thenGlobalRecordingRecovered = (): void => {
-    expect(pupitre.erreurAtelier()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   };
   const thenGlobalGesturesAreAvailable = (available: boolean): void => {
     expect(pupitre.gestesDisponibles()).toBe(available);
@@ -974,11 +1003,11 @@ describe('OfflinePupitre', () => {
     await execution.completion;
   };
   const thenPointageRecordingFailedWithoutAdvancing = (): void => {
-    expect(pupitre.erreurAtelier()).toBe('Action non enregistrée — recommencez');
+    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
     expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(false);
   };
   const thenPointageRecordingRecoveredAndAdvanced = (): void => {
-    expect(pupitre.erreurAtelier()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
     expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(true);
   };
   const thenNoGestureExistsBeforeChoice = async (): Promise<void> => {
@@ -1074,14 +1103,12 @@ describe('OfflinePupitre', () => {
   const thenTheWindowPresentationIsPopulated = (): void => {
     expect(pupitre.operateur()).toBeDefined();
     expect(pupitre.pointage()).toBeDefined();
-    expect(pupitre.refusAtelier()).toEqual({ contexte: 'OF-1', message: 'cause conservee' });
-    expect(pupitre.erreurAtelier()).toBe('Action non enregistrée — recommencez');
+    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
   };
   const thenNoWindowPresentationRemains = (): void => {
     expect(pupitre.operateur()).toBeUndefined();
     expect(pupitre.pointage()).toBeUndefined();
-    expect(pupitre.refusAtelier()).toBeUndefined();
-    expect(pupitre.erreurAtelier()).toBeUndefined();
+    expect(pupitre.messageAtelier()).toBeUndefined();
   };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(Error);

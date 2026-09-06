@@ -203,6 +203,104 @@ describe('FenetreOperateur', () => {
     expect(toutArreter.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
   });
 
+  it('should expose a refused finish from the current global stop batch as TOUT ARRÊTER', () => {
+    const decision = fenetre.prepareToutArreter(identifyFixture);
+    const acceptance = fenetre.prepareAcceptance(decision);
+    const gestes = acceptance.gestes;
+    fenetre = acceptance.applyTo(fenetre);
+    const fin = requiredFixture(
+      gestes.find(geste => geste.nature === 'POINTAGE' && geste.type === 'FIN'),
+      'finish gesture',
+    );
+
+    whenReconciling({
+      ...structuredClone(vueFixture),
+      evenements: [{ geste: fin, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+    });
+
+    expect(fenetre.refusal()).toEqual({ contexte: 'TOUT ARRÊTER', message: "L'élément a été clôturé." });
+  });
+
+  it('should expose only a refused departure when it is the latest refusal from the current global stop batch', () => {
+    const decision = fenetre.prepareToutArreter(identifyFixture);
+    const acceptance = fenetre.prepareAcceptance(decision);
+    const fin = requiredFixture(
+      acceptance.gestes.find(geste => geste.nature === 'POINTAGE' && geste.type === 'FIN'),
+      'finish gesture',
+    );
+    const depart = requiredFixture(
+      acceptance.gestes.find(geste => geste.nature === 'PRESENCE' && geste.type === 'DEPART'),
+      'departure gesture',
+    );
+    fenetre = acceptance.applyTo(fenetre);
+
+    whenReconciling({
+      ...structuredClone(vueFixture),
+      evenements: [
+        { geste: fin, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } },
+        { geste: depart, etat: 'REFUSE', refus: { code: 'presence-interdite', message: 'Le départ est refusé.' } },
+      ],
+    });
+
+    expect(fenetre.refusal()).toEqual({ contexte: 'TOUT ARRÊTER', message: 'Le départ est refusé.' });
+  });
+
+  it.each([
+    { presence: 'PAUSE' as const, contexte: 'PAUSE' },
+    { presence: 'REPRISE' as const, contexte: 'REPRENDRE' },
+  ])('should expose a refused $presence with its originating global command label', ({ presence, contexte }) => {
+    const acceptance = fenetre.prepareAcceptance(fenetre.preparePresence(presence, identifyFixture));
+    const geste = requiredFixture(
+      acceptance.gestes.find(candidate => candidate.nature === 'PRESENCE'),
+      'presence gesture',
+    );
+    fenetre = acceptance.applyTo(fenetre);
+
+    whenReconciling({
+      ...structuredClone(vueFixture),
+      evenements: [{ geste, etat: 'REFUSE', refus: { code: 'presence-interdite', message: 'La présence est refusée.' } }],
+    });
+
+    expect(fenetre.refusal()).toEqual({ contexte, message: 'La présence est refusée.' });
+  });
+
+  it('should keep a refusal born in an earlier operator window silent', () => {
+    const previousDecision = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture).decision;
+    if (previousDecision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
+    const previousGesture = requiredFixture(
+      previousDecision.capture().find(geste => geste.nature === 'POINTAGE'),
+      'previous pointage',
+    );
+    const journalWithPreviousRefusal: JournalDuPupitre = {
+      ...structuredClone(vueFixture),
+      evenements: [{ geste: previousGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+    };
+    fenetre = FenetreOperateur.open('entreprise-a', journalWithPreviousRefusal, '049', Date.parse('2026-09-05T09:00:00Z'), 2);
+
+    whenReconciling(journalWithPreviousRefusal);
+
+    expect(fenetre.refusal()).toBeUndefined();
+  });
+
+  it('should not restore an earlier batch context when its local acceptance completes after a newer intent', () => {
+    const earlier = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture);
+    if (earlier.decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
+    const acceptance = earlier.fenetre.prepareAcceptance(earlier.decision);
+    const newerIntent = earlier.fenetre.afterIntendingGesture();
+    const acceptedAfterNewerIntent = acceptance.applyTo(newerIntent);
+    const refusedGesture = requiredFixture(
+      acceptance.gestes.find(geste => geste.nature === 'POINTAGE'),
+      'earlier pointage',
+    );
+
+    fenetre = acceptedAfterNewerIntent.afterReconciling('entreprise-a', {
+      ...structuredClone(vueFixture),
+      evenements: [{ geste: refusedGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+    });
+
+    expect(fenetre.refusal()).toBeUndefined();
+  });
+
   it('should not repeat arrival after the first business command was accepted', () => {
     const premiereCommande = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
     fenetre = fenetre.afterAccept(premiereCommande);

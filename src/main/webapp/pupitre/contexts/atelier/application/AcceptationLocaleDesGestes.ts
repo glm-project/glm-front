@@ -1,6 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { FenetreOperateur, GestesDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
-import { GesteDAtelier, IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { AcceptationDeGestes, FenetreOperateur, GestesDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteDuGeste } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { inject, Injectable } from '@angular/core';
 import { IntentionGlobale } from './CommandeGlobale';
@@ -8,6 +8,10 @@ import { IntentionGlobale } from './CommandeGlobale';
 type IntentionDeCapture =
   | { readonly kind: 'PREPAREE'; readonly gestes: GestesDePointage }
   | { readonly kind: 'GLOBALE'; readonly commande: IntentionGlobale; readonly instantDePression: number };
+
+export interface AcceptationLocale {
+  readonly applyTo: AcceptationDeGestes['applyTo'];
+}
 
 @Injectable()
 export class AcceptationLocaleDesGestes {
@@ -19,7 +23,7 @@ export class AcceptationLocaleDesGestes {
     fenetreInitiale: FenetreOperateur,
     intention: IntentionDeCapture,
     fenetreCourante: () => FenetreOperateur,
-  ): Promise<readonly GesteDAtelier[]> {
+  ): Promise<AcceptationLocale> {
     const accepted = this.saisie.then(() => this.persist(fenetreInitiale, intention, fenetreCourante));
     this.saisie = accepted.then(() => undefined).catch(() => undefined);
     return accepted;
@@ -33,13 +37,13 @@ export class AcceptationLocaleDesGestes {
     fenetreInitiale: FenetreOperateur,
     intention: IntentionDeCapture,
     fenetreCourante: () => FenetreOperateur,
-  ): Promise<readonly GesteDAtelier[]> {
+  ): Promise<AcceptationLocale> {
     await this.authentication.synchronizeSession();
     fenetreInitiale.assertEntreprise(this.authentication.currentTenant());
     const fenetre = fenetreCourante();
-    const captured = fenetre.capture(this.prepare(fenetre, intention));
-    await this.journal.append(fenetreInitiale.journalScope(), captured);
-    return captured;
+    const acceptance = fenetre.prepareAcceptance(this.prepare(fenetre, intention));
+    await this.journal.append(fenetreInitiale.journalScope(), acceptance.gestes);
+    return { applyTo: acceptance.applyTo };
   }
 
   private prepare(fenetre: FenetreOperateur, intention: IntentionDeCapture): GestesDePointage {

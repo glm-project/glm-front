@@ -48,7 +48,13 @@ export type CibleDePointage = 'PRINCIPALE' | 'SECONDAIRE';
 export interface GestesDePointage {
   readonly kind: 'GESTES';
   readonly capture: (arriveeAssuree?: boolean) => readonly GesteDAtelier[];
-  readonly numerosParGeste: ReadonlyMap<string, string>;
+  readonly contextesParGeste: ReadonlyMap<string, string>;
+  readonly intention: number;
+}
+
+export interface AcceptationDeGestes {
+  readonly gestes: readonly GesteDAtelier[];
+  readonly applyTo: (fenetre: FenetreOperateur) => FenetreOperateur;
 }
 
 export interface DecisionResult {
@@ -74,9 +80,13 @@ export interface ChoixDePosteRequis {
 
 export type DecisionDePointage = GestesDePointage | ChoixDePosteRequis;
 
-export interface RefusDAtelierVisible {
-  readonly contexte: string;
+export interface MessageDAtelierVisible {
+  readonly contexte?: string;
   readonly message: string;
+}
+
+export interface RefusDAtelierVisible extends MessageDAtelierVisible {
+  readonly contexte: string;
 }
 
 export interface IdentiteOperateurDesigne {
@@ -92,7 +102,8 @@ interface EtatDeFenetreOperateur {
   readonly instantDOuverture: number;
   readonly identity: number;
   readonly arriveeAssuree: boolean;
-  readonly numerosParGeste: ReadonlyMap<string, string>;
+  readonly contextesParGeste: ReadonlyMap<string, string>;
+  readonly intention: number;
   readonly refusVisible: RefusDAtelierVisible | undefined;
   readonly operateurDesigne: OperateurDesigne;
 }
@@ -242,7 +253,8 @@ export class FenetreOperateur {
       instantDOuverture,
       identity,
       arriveeAssuree: false,
-      numerosParGeste: new Map(),
+      contextesParGeste: new Map(),
+      intention: 0,
       refusVisible: undefined,
       operateurDesigne: new OperateurDesigne(operateur, code),
     });
@@ -275,20 +287,21 @@ export class FenetreOperateur {
   }
 
   afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionResult {
-    const suivi = this.requireSuivi(suiviId);
-    const activities = this.activitesFor(suivi).decide(cible);
-    const numero = this.numeroDuSuivi(suivi);
+    const fenetre = this.afterIntendingGesture();
+    const suivi = fenetre.requireSuivi(suiviId);
+    const activities = fenetre.activitesFor(suivi).decide(cible);
+    const numero = fenetre.numeroDuSuivi(suivi);
     const decision =
       activities.kind === 'ACTIF'
-        ? this.gestes(
+        ? fenetre.gestes(
             suiviId,
             numero,
             activities.transitions,
             identify,
             [activities.transitions.premiere, ...activities.transitions.suivantes].some(transition => transition.type === 'DEBUT'),
           )
-        : this.ouverture(suiviId, numero, cible, identify);
-    return { fenetre: this.with({ refusVisible: undefined, numerosParGeste: this.numerosAfter(decision) }), decision };
+        : fenetre.ouverture(suiviId, numero, cible, identify);
+    return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }
   afterChoosingPoste(suiviId: string, cible: CibleDePointage, posteId: string, identify: () => IdentiteDuGeste): GestesDecisionResult {
     const suivi = this.requireSuivi(suiviId);
@@ -302,9 +315,12 @@ export class FenetreOperateur {
       true,
     );
     return {
-      fenetre: this.with({ refusVisible: undefined, numerosParGeste: this.numerosAfter(decision) }),
+      fenetre: this.with({ refusVisible: undefined, contextesParGeste: decision.contextesParGeste }),
       decision,
     };
+  }
+  afterIntendingGesture(): FenetreOperateur {
+    return this.with({ refusVisible: undefined, contextesParGeste: new Map(), intention: this.etat.intention + 1 });
   }
   afterReconciling(entreprise: string, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
@@ -312,20 +328,26 @@ export class FenetreOperateur {
       .reverse()
       .find(
         (event): event is Extract<EvenementDuJournal, { readonly etat: 'REFUSE' }> =>
-          event.etat === 'REFUSE' && this.etat.numerosParGeste.has(event.geste.id),
+          event.etat === 'REFUSE' && this.etat.contextesParGeste.has(event.geste.id),
       );
-    const numero = refus === undefined ? undefined : this.etat.numerosParGeste.get(refus.geste.id);
+    const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.get(refus.geste.id);
     return this.with({
       vue,
-      refusVisible:
-        refus?.geste.nature === 'POINTAGE' && numero !== undefined ? { contexte: numero, message: refus.refus.message } : undefined,
+      refusVisible: refus !== undefined && contexte !== undefined ? { contexte, message: refus.refus.message } : undefined,
     });
+  }
+  prepareAcceptance(decision: GestesDePointage): AcceptationDeGestes {
+    const gestes = this.capture(decision);
+    return {
+      gestes,
+      applyTo: fenetre => fenetre.afterLocalAcceptance(gestes, decision),
+    };
   }
   afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
     const known = new Set(this.etat.vue.evenements.map(evenement => evenement.geste.id));
     return this.with({
       arriveeAssuree: this.etat.arriveeAssuree || gestes.some(geste => geste.nature === 'ARRIVEE'),
-      numerosParGeste: this.etat.numerosParGeste,
+      contextesParGeste: this.etat.contextesParGeste,
       vue: {
         ...this.etat.vue,
         evenements: [
@@ -365,10 +387,12 @@ export class FenetreOperateur {
       nature: 'ARRIVEE',
     };
     const presenceApresAssurance = type === 'REPRISE' ? { ...presence, assuranceArriveeId: arrivee.id } : presence;
+    const contexte = this.contexteFor(type);
     return {
       kind: 'GESTES',
       capture: (assured = false) => (assured ? [presence] : [arrivee, presenceApresAssurance]),
-      numerosParGeste: new Map(),
+      contextesParGeste: new Map(contexte === undefined ? [] : [arrivee, presenceApresAssurance].map(geste => [geste.id, contexte])),
+      intention: this.etat.intention,
     };
   }
   prepareToutArreter(identify: () => IdentiteDuGeste): GestesDePointage {
@@ -398,13 +422,24 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages, depart],
-      numerosParGeste: new Map(),
+      contextesParGeste: new Map([arrivee, ...pointages, depart].map(geste => [geste.id, 'TOUT ARRÊTER'])),
+      intention: this.etat.intention,
     };
   }
 
-  private numerosAfter(decision: DecisionDePointage): ReadonlyMap<string, string> {
-    if (decision.kind !== 'GESTES') return this.etat.numerosParGeste;
-    return new Map([...this.etat.numerosParGeste, ...decision.numerosParGeste]);
+  private afterLocalAcceptance(gestes: readonly GesteDAtelier[], decision: GestesDePointage): FenetreOperateur {
+    const contextesParGeste = decision.intention === this.etat.intention ? decision.contextesParGeste : this.etat.contextesParGeste;
+    return this.with({ contextesParGeste }).afterAccept(gestes);
+  }
+
+  private contextesOf(decision: DecisionDePointage): ReadonlyMap<string, string> {
+    return decision.kind === 'GESTES' ? decision.contextesParGeste : new Map();
+  }
+
+  private contexteFor(type: TypeDePresence): string | undefined {
+    if (type === 'PAUSE') return 'PAUSE';
+    if (type === 'REPRISE') return 'REPRENDRE';
+    return undefined;
   }
 
   private ouverture(suiviId: string, numero: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
@@ -439,7 +474,8 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => (assured ? pointages : [arrivee, ...(repriseImplicite ? [reprise] : []), ...pointages]),
-      numerosParGeste: new Map(pointages.map(pointage => [pointage.id, numero])),
+      contextesParGeste: new Map(pointages.map(pointage => [pointage.id, numero])),
+      intention: this.etat.intention,
     };
   }
   private toPointage(suiviId: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDAtelier {
@@ -460,7 +496,7 @@ export class FenetreOperateur {
     return suivi.reference ?? suivi.nom;
   }
   private with(
-    change: Partial<Pick<EtatDeFenetreOperateur, 'vue' | 'arriveeAssuree' | 'numerosParGeste' | 'refusVisible'>>,
+    change: Partial<Pick<EtatDeFenetreOperateur, 'vue' | 'arriveeAssuree' | 'contextesParGeste' | 'intention' | 'refusVisible'>>,
   ): FenetreOperateur {
     return new FenetreOperateur({ ...this.etat, ...change });
   }

@@ -22,8 +22,7 @@ import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/Jo
       heading="glmfront"
       [connected]="designation.connected()"
       [operateur]="designation.operateur()"
-      [refus]="designation.refusAtelier()"
-      [erreur]="designation.erreurAtelier()"
+      [message]="designation.messageAtelier()"
       (finRequested)="designation.finish()"
     />
     @if (designation.operateur(); as operateur) {

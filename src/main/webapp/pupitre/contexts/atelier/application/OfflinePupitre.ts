@@ -6,14 +6,9 @@ import {
   IdentiteOperateurDesigne,
   VueDePointage,
 } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
-import {
-  GesteDAtelier,
-  IdentiteDuGeste,
-  JournalDuPupitre,
-  TypeDePresence,
-} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { IdentiteDuGeste, JournalDuPupitre, TypeDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { computed, inject, Injectable, OnDestroy, signal } from '@angular/core';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { AcceptationLocale, AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
@@ -38,8 +33,10 @@ export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGloba
   readonly operateur = computed(() => this.designationState().operateur);
   readonly canValidate = computed(() => this.designationState().canValidate);
   readonly pointage = this.pointageState.asReadonly();
-  readonly refusAtelier = this.refusAtelierState.asReadonly();
-  readonly erreurAtelier = this.erreurAtelierState.asReadonly();
+  readonly messageAtelier = computed(() => {
+    const erreur = this.erreurAtelierState();
+    return erreur === undefined ? this.refusAtelierState() : { message: erreur };
+  });
   readonly gestesDisponibles = this.gestesDisponiblesState.asReadonly();
   private fermeture: Promise<void> | undefined;
 
@@ -178,10 +175,10 @@ export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGloba
     );
   }
 
-  private captureOperation(fenetre: FenetreOperateur, operation: Promise<readonly GesteDAtelier[]>): Promise<void> {
+  private captureOperation(fenetre: FenetreOperateur, operation: Promise<AcceptationLocale>): Promise<void> {
     return operation
-      .then(gestes => {
-        this.afterAccept(fenetre, gestes);
+      .then(acceptance => {
+        this.afterAccept(fenetre, acceptance);
         if (this.isCurrentWindow(fenetre)) this.erreurAtelierState.set(undefined);
       })
       .catch((failure: unknown) => {
@@ -191,18 +188,18 @@ export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGloba
   }
 
   recordPresence(type: TypeDePresence): Promise<void> {
-    const fenetre = this.requireWindow();
+    const fenetre = this.beginGestureIntention(this.requireWindow());
     const gestes = fenetre.preparePresence(type, identity);
     return this.acceptationLocale
       .capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre))
-      .then(accepted => {
-        this.afterAccept(fenetre, accepted);
+      .then(acceptance => {
+        this.afterAccept(fenetre, acceptance);
       });
   }
 
   executeGlobale(intention: IntentionGlobale): Promise<void> {
     const instantDePression = Date.now();
-    const fenetre = this.requireWindow(instantDePression);
+    const fenetre = this.beginGestureIntention(this.requireWindow(instantDePression));
     this.gestesDisponiblesState.set(false);
     return this.captureOperation(
       fenetre,
@@ -230,10 +227,10 @@ export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGloba
     });
   }
 
-  private afterAccept(fenetre: FenetreOperateur, gestes: readonly GesteDAtelier[]): void {
+  private afterAccept(fenetre: FenetreOperateur, acceptance: AcceptationLocale): void {
     const latest = this.designation.window();
     if (latest === undefined || !latest.hasIdentity(fenetre)) return;
-    const next = latest.afterAccept(gestes);
+    const next = acceptance.applyTo(latest);
     this.designation = this.designation.afterReplacingWindow(next);
     this.publishWindow(next);
     void this.synchronize().catch((failure: unknown) => {
@@ -267,6 +264,13 @@ export class OfflinePupitre implements OnDestroy, PointageCommand, CommandeGloba
     this.etatHorsLigne.publish(fenetre.snapshot());
     this.pointageState.set(fenetre.pointage());
     this.refusAtelierState.set(fenetre.refusal());
+  }
+
+  private beginGestureIntention(fenetre: FenetreOperateur): FenetreOperateur {
+    const next = fenetre.afterIntendingGesture();
+    this.designation = this.designation.afterReplacingWindow(next);
+    this.publishWindow(next);
+    return next;
   }
 
   private closeWindowAndClearPresentation(): void {
