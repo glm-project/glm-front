@@ -49,7 +49,7 @@ Un échec d'acceptation locale affiche dans le chrome « Action non enregistrée
 
 Le chrome accompagne un refus métier du numéro de l'élément pour un pointage et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour une présence issue d'une commande globale. Il montre le message du serveur et seulement le dernier refus du lot.
 
-Avant l'enrôlement et la disponibilité d'un premier référentiel, la composition ne rend que le chrome permanent. Elle n'expose aucun pavé, pointage, indicateur de chargement ou message qui appartiendrait au futur écran d'enrôlement.
+Tant que l'appareil n'est pas enrôlé et que son premier référentiel complet n'est pas actif, la composition rend l'écran d'enrôlement sous le chrome permanent, jamais un pavé ni un pointage. La bascule lit l'état projeté par le contexte [enrôlement](../enrolement/AGENTS.md), pas la seule présence du référentiel. Ce contexte n'expose son état de chargement que par l'adaptateur primaire `TypeScriptChargementDeLAtelier`, appelé depuis un adaptateur secondaire d'`enrolement`.
 
 Les libellés métier du pupitre vivent dans un module unique de ce contexte et sont indexés par ses types de domaine. Ne pas partager ce vocabulaire avec `gestion` ni l'adosser aux types générés de l'API.
 

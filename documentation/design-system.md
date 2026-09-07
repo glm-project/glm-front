@@ -17,7 +17,9 @@ reading distance.
 `@theme static` is required. Tailwind scans templates, not stylesheets, while Material and component CSS read
 tokens through `var()`. Static publication keeps every role available even when no utility currently names it.
 
-`--font-sans` is the page family and uses a system stack. Boot documents load no remote font.
+`--font-sans` is the page family and uses a system stack. `--font-mono` is the family for a character-by-character
+value the reader has to transcribe, such as the pupitre's enrolment code. Both are system stacks: boot documents
+load no remote font.
 
 ## Fronts choose tokens; they do not redefine them
 

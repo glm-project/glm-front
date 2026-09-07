@@ -19,9 +19,10 @@ credential or reach into an adapter.
 `KeycloakOidcAuthentication`. Its Cypress build replaces that provider file with the in-memory adapter.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
 
-`pupitre/auth.provider.ts` binds `DeviceAuthentication`, its device-grant configuration and the IndexedDB
-storage adapter. Keycloak URL, realm and client ID stay in front environments; no client secret belongs in a
-browser repository.
+`pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration
+and the IndexedDB storage adapter. `pupitre/enrolement.provider.ts` binds `DeviceEnrolmentPort` to that same
+adapter with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
+client ID stay in front environments; no client secret belongs in a browser repository.
 
 Application-specific adapters do not import one another. The port contract runs the shared behavior against each
 implementation; adapter-specific behavior stays beside that contract.
@@ -49,8 +50,28 @@ The adapter implements RFC 8628 because `keycloak-js` does not support `device_c
 4. persist the granted session before exposing it;
 5. renew before expiry and commit token rotation before use.
 
-Use a `Map` for authorization-server refusal delays. The refusal string is external input; a plain object
-would also expose prototype members such as `constructor`.
+`DeviceGrantClient` owns that transport: the `HttpBackend` client, the endpoints, the wire documents and the
+four protocol calls. `DeviceAuthentication` owns the session, its persistence and its renewal.
+
+Use a `Map` for authorization-server refusal delays and for translating a refusal into an enrolment outcome.
+The refusal string is external input; a plain object would also expose prototype members such as
+`constructor`.
+
+## The enrolment lifecycle is observable
+
+`DeviceEnrolmentPort.enrol(showCode)` publishes the authorization code — user code, verification URI, its
+complete form when the server sends one, and the lifetime — as soon as the authorization server issues it,
+then resolves to exactly one outcome: `ENROLLED`, `DENIED` on `access_denied`, `EXPIRED` on `expired_token`,
+`UNREACHABLE` for any other refusal or a failure to reach the server or the disk, and `ABANDONED` when a
+newer enrolment or a logout replaced this one. A restored durable session answers `ENROLLED` and shows no
+code. `authenticate()` is that same call with nothing to show.
+
+The caller drives the adapter and reads the outcome. The adapter never calls back into its caller: doing so
+would close an injection cycle through `AuthenticationPort`. A caller that shows the code must ignore the
+code and the outcome of an attempt it has already replaced.
+
+A network cut during the poll is reported as `UNREACHABLE`, indistinguishable from a failure to obtain the
+code at all; [ADR 0026](adr/0026-enrol-pupitre-screen-and-keycloak-delegation.md) records that limit.
 
 A transient renewal refusal keeps the unexpired access token and retries later. `invalid_grant` removes the
 matching credential and starts enrolment again while retaining the selected tenant. Logout conditionally

@@ -9,7 +9,10 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
    logic, services, interceptors, pipes — anything testable without a real DOM or router integration. A
    **port contract** is the one thing not co-located: it belongs to no single adapter. It normally sits
    beside the adapters; a contract spanning both applications lives in `src/test/webapp/unit/` so production
-   code never imports an adapter from the other application.
+   code never imports an adapter from the other application. A cross-context port lives there for the same
+   reason: `ChargementDeLAtelierPort.contract.spec.ts` names both the secondary adapter of `enrolement` and
+   the `atelier` coordinator behind its `TypeScript` primary adapter, a pair no production package under
+   `src/main/webapp` is allowed to name from one place.
 2. **Component (Cypress)** — `src/test/webapp/component/<front>/<context>/*.spec.ts`, against the real dev
    server. Rendering and browser behavior of one component, network intercepted.
 3. **Application (Cypress)** — `src/test/webapp/application/<front>/<context>/*.spec.ts`, driving the whole
