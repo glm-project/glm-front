@@ -4,7 +4,17 @@
     <div class="truncate text-title" data-selector="header-operator">{{ designated.nom }} {{ designated.prenom }}</div>
     <div class="text-body-sm text-ink-muted" data-selector="header-code">{{ labels.code(designated.matricule) }}</div>
     } @else {
-    <span class="truncate text-section" data-selector="header-heading">{{ heading() }}</span>
+    <button
+      type="button"
+      class="heading-target truncate text-section"
+      data-selector="header-heading"
+      (pointerdown)="holdTheLogo()"
+      (pointerup)="releaseTheLogo()"
+      (pointerleave)="releaseTheLogo()"
+      (pointercancel)="releaseTheLogo()"
+    >
+      {{ heading() }}
+    </button>
     }
   </div>
   <div class="min-w-0 text-body text-nc" data-selector="header-message">

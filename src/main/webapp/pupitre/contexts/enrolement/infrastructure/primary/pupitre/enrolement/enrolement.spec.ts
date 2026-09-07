@@ -111,7 +111,7 @@ describe('Enrolement screen', () => {
     whenRendering();
     whenPressingTheAction();
 
-    thenItReads('enrolement-status', 'Appareil validé — En attente de connexion pour charger l’atelier');
+    thenItReads('enrolement-status', "Appareil validé — En attente de connexion pour charger l'atelier");
     thenWorkshopLoadsAre(1);
     thenAuthorizationRequestsAre(0);
   });
@@ -121,7 +121,7 @@ describe('Enrolement screen', () => {
 
     whenRendering();
 
-    thenItReads('enrolement-status', 'Appareil validé — Chargement de l’atelier en cours...');
+    thenItReads('enrolement-status', "Appareil validé — Chargement de l'atelier en cours...");
     thenThereIsNoAction();
   });
 

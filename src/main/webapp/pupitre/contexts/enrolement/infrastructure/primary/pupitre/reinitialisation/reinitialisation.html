@@ -1,0 +1,24 @@
+<div class="dialog-backdrop">
+  <div class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="reinitialisation-titre">
+    <h2 id="reinitialisation-titre" class="text-title text-ink" data-selector="reset-title">{{ labels.titre }}</h2>
+    <p class="text-body text-ink-muted" data-selector="reset-message">{{ labels.message }}</p>
+    <div class="dialog-actions">
+      <button
+        type="button"
+        class="min-h-touch-lg rounded border-2 border-border-strong bg-surface px-6 text-body text-ink"
+        data-selector="reset-cancel"
+        (click)="annule.emit()"
+      >
+        {{ labels.annuler }}
+      </button>
+      <button
+        type="button"
+        class="min-h-touch-lg rounded bg-nc px-6 text-body text-on-accent"
+        data-selector="reset-confirm"
+        (click)="confirme.emit()"
+      >
+        {{ labels.confirmer }}
+      </button>
+    </div>
+  </div>
+</div>

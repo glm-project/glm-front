@@ -10,8 +10,8 @@ const STATUTS: Record<VueDEnrolement['kind'], string> = {
   EXPIRE: "Le code d'autorisation a expiré",
   REFUSE: "Autorisation refusée par l'administrateur",
   ERREUR_RESEAU_INITIALE: "Connexion Internet requise pour enrôler l'appareil",
-  VALIDE_CHARGEMENT_ATELIER: 'Appareil validé — Chargement de l’atelier en cours...',
-  ATTENTE_RESEAU_ATELIER: 'Appareil validé — En attente de connexion pour charger l’atelier',
+  VALIDE_CHARGEMENT_ATELIER: "Appareil validé — Chargement de l'atelier en cours...",
+  ATTENTE_RESEAU_ATELIER: "Appareil validé — En attente de connexion pour charger l'atelier",
   ENROLE_ET_PRET: 'Appareil enrôlé',
 };
 
@@ -29,7 +29,7 @@ export const LIBELLES_ENROLEMENT = {
 
 export const LIBELLES_REINITIALISATION = {
   titre: "Réinitialiser l'enrôlement ?",
-  message: 'L’enrôlement de cet appareil sera révoqué sur le serveur et le pupitre devra être ré-enrôlé.',
+  message: "L'enrôlement de cet appareil sera révoqué sur le serveur et le pupitre devra être ré-enrôlé.",
   annuler: 'Annuler',
   confirmer: 'Réinitialiser',
 } as const;

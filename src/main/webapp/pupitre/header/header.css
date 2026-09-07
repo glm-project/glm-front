@@ -8,6 +8,13 @@
   align-items: center;
 }
 
+.heading-target {
+  display: block;
+  max-width: 100%;
+  text-align: start;
+  touch-action: manipulation;
+}
+
 .connectivity-indicator {
   width: 0.5em;
   height: 0.5em;

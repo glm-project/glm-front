@@ -4,6 +4,7 @@
   [operateur]="pupitre.operateur()"
   [message]="messageAtelier()"
   (finRequested)="finish()"
+  (reinitialisationRequested)="askReset()"
 />
 
 @if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (pupitre.operateur()) { @if (pupitre.pointage(); as vue) {
@@ -19,4 +20,6 @@
 <glm-designation />
 } } @else {
 <glm-enrolement />
+} @if (resetRequested()) {
+<glm-reinitialisation (annule)="cancelReset()" (confirme)="confirmReset()" />
 }

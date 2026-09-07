@@ -6,6 +6,7 @@ import { PupitreHeader } from './header';
 describe('Pupitre header', () => {
   let fixture: ComponentFixture<PupitreHeader>;
   let finishRequested: boolean;
+  let resetsRequested: number;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -15,9 +16,17 @@ describe('Pupitre header', () => {
     fixture = TestBed.createComponent(PupitreHeader);
     fixture.componentRef.setInput('heading', 'glmfront');
     finishRequested = false;
+    resetsRequested = 0;
     fixture.componentInstance.finRequested.subscribe(() => {
       finishRequested = true;
     });
+    fixture.componentInstance.reinitialisationRequested.subscribe(() => {
+      resetsRequested += 1;
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should sign that the pupitre is connected', async () => {
@@ -60,6 +69,55 @@ describe('Pupitre header', () => {
     thenItShowsTheRecordingError();
   });
 
+  it('should ask to reset the enrolment only after the logo is held for three seconds', () => {
+    givenAConnectedPupitre();
+    givenAControlledClock();
+
+    whenRenderingTheHeaderAtOnce();
+    whenPressingTheLogo();
+    whenTimePasses(2_999);
+
+    thenResetsRequestedAre(0);
+
+    whenTimePasses(1);
+
+    thenResetsRequestedAre(1);
+  });
+
+  it('should ask nothing when the logo is released before three seconds', () => {
+    givenAConnectedPupitre();
+    givenAControlledClock();
+
+    whenRenderingTheHeaderAtOnce();
+    whenPressingTheLogo();
+    whenTimePasses(2_000);
+    whenReleasingTheLogo();
+    whenTimePasses(5_000);
+
+    thenResetsRequestedAre(0);
+  });
+
+  it('should ask nothing more than once for a single hold', () => {
+    givenAConnectedPupitre();
+    givenAControlledClock();
+
+    whenRenderingTheHeaderAtOnce();
+    whenPressingTheLogo();
+    whenPressingTheLogo();
+    whenTimePasses(6_000);
+
+    thenResetsRequestedAre(1);
+  });
+
+  it('should offer no reset gesture while an operator is designated', async () => {
+    givenAConnectedPupitre();
+    givenADesignatedOperator();
+
+    await whenRenderingTheHeader();
+
+    thenThereIsNoLogo();
+  });
+
   const givenAConnectedPupitre = (): void => {
     fixture.componentRef.setInput('connected', true);
   };
@@ -77,10 +135,26 @@ describe('Pupitre header', () => {
     fixture.componentRef.setInput('message', { message: 'Action non enregistrée — recommencez' });
   };
 
+  const givenAControlledClock = (): void => {
+    vi.useFakeTimers();
+  };
+
   const whenRenderingTheHeader = (): Promise<void> => fixture.whenStable();
+  const whenRenderingTheHeaderAtOnce = (): void => {
+    fixture.detectChanges();
+  };
   const whenFinishing = (): void => {
     const header = fixture.nativeElement as HTMLElement;
     header.querySelector<HTMLButtonElement>(dataSelector('finish'))?.click();
+  };
+  const whenPressingTheLogo = (): void => {
+    logo()?.dispatchEvent(new Event('pointerdown'));
+  };
+  const whenReleasingTheLogo = (): void => {
+    logo()?.dispatchEvent(new Event('pointerup'));
+  };
+  const whenTimePasses = (milliseconds: number): void => {
+    vi.advanceTimersByTime(milliseconds);
   };
 
   const thenItSignsThePupitreIsOnline = (): void => {
@@ -127,9 +201,19 @@ describe('Pupitre header', () => {
     expect(header.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
   };
 
+  const thenResetsRequestedAre = (expected: number): void => {
+    expect(resetsRequested).toBe(expected);
+  };
+
+  const thenThereIsNoLogo = (): void => {
+    expect(logo()).toBeNull();
+  };
+
   const showsSign = (sign: string): boolean => {
     const header = fixture.nativeElement as HTMLElement;
 
     return header.querySelector(dataSelector(sign)) !== null;
   };
+
+  const logo = (): HTMLElement | null => (fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-heading'));
 });

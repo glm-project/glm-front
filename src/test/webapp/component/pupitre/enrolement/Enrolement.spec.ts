@@ -35,7 +35,7 @@ describe('Pupitre enrolment screen in a browser', () => {
   it('should keep the keypad hidden until the workshop reference makes the pupitre ready', () => {
     givenAPupitreAwaitingItsWorkshop();
 
-    thenTheStatusReads('Appareil validé — Chargement de l’atelier en cours...');
+    thenTheStatusReads("Appareil validé — Chargement de l'atelier en cours...");
     thenTheKeypadIsHidden();
 
     whenTheReferenceBecomesReady();

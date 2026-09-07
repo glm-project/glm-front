@@ -74,6 +74,8 @@ class EnrolementDuPupitreFixture {
 
   constructor(private readonly pupitre: OfflinePupitreFixture) {}
 
+  resets = 0;
+
   rafraichir(): void {
     return undefined;
   }
@@ -83,6 +85,11 @@ class EnrolementDuPupitreFixture {
   }
 
   chargerLAtelier(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  reinitialiser(): Promise<void> {
+    this.resets += 1;
     return Promise.resolve();
   }
 }
@@ -98,21 +105,28 @@ class PageErrorHandlerFixture extends ErrorHandler {
 describe('Pupitre page', () => {
   let fixture: ComponentFixture<PupitrePage>;
   let pupitre: OfflinePupitreFixture;
+  let enrolement: EnrolementDuPupitreFixture;
   let errorHandler: PageErrorHandlerFixture;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     pupitre = new OfflinePupitreFixture();
+    enrolement = new EnrolementDuPupitreFixture(pupitre);
     errorHandler = new PageErrorHandlerFixture();
     TestBed.configureTestingModule({
       imports: [PupitrePage],
       providers: [
         { provide: OfflinePupitre, useValue: pupitre },
-        { provide: EnrolementDuPupitre, useValue: new EnrolementDuPupitreFixture(pupitre) },
+        { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
     });
     fixture = TestBed.createComponent(PupitrePage);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should keep the enrolment screen under the header until a reference makes the keypad available', () => {
@@ -190,6 +204,28 @@ describe('Pupitre page', () => {
     thenHeaderMessageIs(expected);
   });
 
+  it('should confirm an administration reset before revoking the enrolment', () => {
+    givenReference();
+
+    whenTheAdministrationGestureIsHeld();
+    thenVisible('reinitialisation', true);
+
+    whenPressing('reset-confirm');
+
+    thenVisible('reinitialisation', false);
+    expect(enrolement.resets).toBe(1);
+  });
+
+  it('should revoke nothing when the administration reset is cancelled', () => {
+    givenReference();
+
+    whenTheAdministrationGestureIsHeld();
+    whenPressing('reset-cancel');
+
+    thenVisible('reinitialisation', false);
+    expect(enrolement.resets).toBe(0);
+  });
+
   it('should finish on page destruction and report a closure failure', async () => {
     givenClosureWillFail();
 
@@ -233,6 +269,11 @@ describe('Pupitre page', () => {
     const pressed = element(selector);
     pressed.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
     pressed.click();
+    fixture.detectChanges();
+  };
+  const whenTheAdministrationGestureIsHeld = (): void => {
+    element('header-heading').dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    vi.advanceTimersByTime(3_000);
     fixture.detectChanges();
   };
   const whenPointageCloses = (): void => {
