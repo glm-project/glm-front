@@ -16,7 +16,7 @@ ruleTester.run('responsibility-cohesion', responsibilityCohesion, {
     {
       name: 'offline coordinator after extracting an independent responsibility',
       code: `
-        class OfflinePupitre {
+        class AtelierCoordinator {
           private readonly authentication = inject(AuthenticationPort);
           private readonly synchronization = inject(Synchronization);
           private readonly localAcceptance = inject(LocalAcceptance);
@@ -152,9 +152,11 @@ ruleTester.run('responsibility-cohesion', responsibilityCohesion, {
 const eslint = new ESLint();
 
 it('should apply responsibility cohesion to production classes only', async () => {
-  const productionConfig = await eslint.calculateConfigForFile('src/main/webapp/pupitre/contexts/atelier/application/OfflinePupitre.ts');
+  const productionConfig = await eslint.calculateConfigForFile(
+    'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.ts',
+  );
   const productionSpecConfig = await eslint.calculateConfigForFile(
-    'src/main/webapp/pupitre/contexts/atelier/application/OfflinePupitre.spec.ts',
+    'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.spec.ts',
   );
   const testFixtureConfig = await eslint.calculateConfigForFile('src/test/webapp/unit/fixtures/ResponsibilityFixture.ts');
 

@@ -1,8 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
   DesignationExpiration,
@@ -72,7 +72,7 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 
 describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
-  let designation: OfflinePupitre;
+  let designation: CurrentOperateurLifecycle;
   let journalFixture: DesignationJournalFixture;
   const serveurFixture = { referentiel: vi.fn(), send: vi.fn(), reread: vi.fn() };
   beforeEach(() => {
@@ -80,9 +80,9 @@ describe('Designation keypad', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
-        OfflinePupitre,
+        CurrentOperateurLifecycle,
         PupitreSynchronization,
         {
           provide: AuthenticationPort,
@@ -95,7 +95,7 @@ describe('Designation keypad', () => {
       ],
     });
     fixture = TestBed.createComponent(Designation);
-    designation = TestBed.inject(OfflinePupitre);
+    designation = TestBed.inject(CurrentOperateurLifecycle);
     fixture.detectChanges();
   });
   afterEach(() => {

@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -27,7 +28,7 @@ class EnrolementFixture {
   }
 }
 
-class OfflinePupitreFixture {
+class AtelierCoordinatorFixture {
   readonly connected = signal(true).asReadonly();
   synchronizationAttempts = 0;
   unavailable = false;
@@ -53,19 +54,20 @@ class OfflinePupitreFixture {
 describe('PupitreRuntime', () => {
   let runtime: PupitreRuntime;
   let enrolement: EnrolementFixture;
-  let pupitre: OfflinePupitreFixture;
+  let pupitre: AtelierCoordinatorFixture;
   let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     errorHandler = new ErrorHandlerFixture();
     enrolement = new EnrolementFixture();
-    pupitre = new OfflinePupitreFixture();
+    pupitre = new AtelierCoordinatorFixture();
     TestBed.configureTestingModule({
       providers: [
         PupitreRuntime,
         { provide: EnrolementDuPupitre, useValue: enrolement },
-        { provide: OfflinePupitre, useValue: pupitre },
+        { provide: AtelierCoordinator, useValue: pupitre },
+        { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });

@@ -79,6 +79,35 @@ import-boundary checks proves allowed dependencies, not correct ownership of the
 [ADR 0013](adr/0013-keep-business-decisions-in-rich-domain-models.md) records the choice of rich domain
 models, the role retained by services and the costs of coordinating asynchronous work.
 
+Application coordinators may use Angular injection and signals to hold and expose the current domain model.
+This is a deliberate framework dependency: coordination remains exercisable without components or a DOM,
+through domain ports, while domain decisions remain executable without Angular. Keep display messages,
+formatting, focus and browser event translation in primary adapters. A signal may expose a capture failure;
+the primary adapter chooses its operator-facing message.
+
+Temporal ordering may itself express a business rule. The domain determines which initiated gestures remain
+valid through expiration and what a deferred command contains; application code executes that protocol around
+asynchronous I/O. Do not infer business validity from promise completion or screen availability.
+
+## Use Value Objects by default for domain values
+
+Use Value Objects freely throughout each bounded context wherever a value carries business meaning:
+identifiers, codes, quantities, dates, intervals, composite values and business collections. A precise
+domain distinction is enough to justify one, even around a single primitive or for a single caller.
+Reuse, complex validation and a minimum number of methods are not prerequisites.
+
+Name the value in its owner's ubiquitous language. Keep it immutable, define equality by its meaningful
+attributes, and give it the validation, comparisons, calculations and collection queries it owns. Establish
+known invariants at construction; transformations return new values. Callers ask the value for a decision
+instead of reconstructing its rules from primitives. Introduce only constraints supported by the domain.
+
+During design and refactoring, inspect the touched primitive fields, parameter groups and collections for
+these concepts before extracting another application service. Carry Value Objects through domain-facing
+contracts and translate their representation at adapter boundaries. Transport documents and rendering-only
+projections may remain plain data; the existing immutable-contract rules still apply.
+
+[ADR 0028](adr/0028-default-to-value-objects-for-domain-values.md) records this default and its costs.
+
 ## Dependencies flow inward
 
 The architecture suite enforces these rules:

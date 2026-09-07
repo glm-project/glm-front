@@ -1,9 +1,10 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
-import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
@@ -16,9 +17,10 @@ import { Provider } from '@angular/core';
 
 export const offlineProvider: Provider[] = [
   ApiClient,
-  AcceptationLocaleDesGestes,
+  GestesRecordingQueue,
   EtatHorsLigneDuPupitre,
-  OfflinePupitre,
+  AtelierCoordinator,
+  CurrentOperateurLifecycle,
   PupitreSynchronization,
   { provide: JournauxDuPupitrePort, useClass: IndexedDbJournauxDuPupitre },
   { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },

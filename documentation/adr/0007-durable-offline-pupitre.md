@@ -35,7 +35,7 @@ Storage failures reject explicitly. A separate Web Lock serializes synchronizati
 appends remain available during a network request. Another lock coordinates device credential commits with
 outgoing gestures; the authentication port rereads the selected durable session before an exchange.
 
-`atelier/application/OfflinePupitre` drives the queue and operator windows. Each company has its own
+`atelier/application/AtelierCoordinator` drives the queue and operator windows. Each company has its own
 `atelier:<tenant>` document containing the complete last reference, original gestures, outcomes and the last
 push state. Reenrolment selects a different document. The former document remains intact and its pending
 queue is suspended. Gestures carry their UUID and timestamp before asynchronous work starts. The first

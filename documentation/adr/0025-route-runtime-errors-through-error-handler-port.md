@@ -28,7 +28,7 @@ Adopt `ErrorHandlerPort` as the shared technical error-handling abstraction:
 
 1. `ErrorHandlerPort` lives under `src/main/webapp/app/shared/error-handler/domain/ErrorHandlerPort.ts` as an abstract class defining `abstract handleError(failure: unknown): void`.
 2. A default secondary adapter `ConsoleErrorHandler` logs unhandled errors to `console.error`.
-3. Application coordinators and secondary authentication adapters (`OfflinePupitre`, `PupitreSynchronization`, `PupitreRuntime`, `DeviceAuthentication`, `KeycloakOidcAuthentication`) inject `ErrorHandlerPort` to observe background rejections.
+3. Application coordinators and secondary authentication adapters (`AtelierCoordinator`, `PupitreSynchronization`, `PupitreRuntime`, `DeviceAuthentication`, `KeycloakOidcAuthentication`) inject `ErrorHandlerPort` to observe background rejections.
 4. Unit tests use `ErrorHandlerFixture` to verify that unexpected runtime failures are observed without spying on global console methods.
 
 ## Consequences

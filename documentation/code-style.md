@@ -4,8 +4,9 @@
 
 Avoid comments that repeat the code. Write a short local comment only for a constraint, external behavior or
 trade-off the code cannot make clear, and keep it next to the affected code. Put durable rules in the topic
-document that owns them. A tooling directive (`eslint-disable`, `@ts-expect-error`, `prettier-ignore`) states
-why that exceptional instruction remains necessary. Comments are a review judgment; ESLint does not infer
+document that owns them. Tooling directives (`@ts-expect-error`, `prettier-ignore`) state
+why that exceptional instruction remains necessary; disabling ESLint via comments is forbidden (`local/no-eslint-disable`).
+Comments are a review judgment; ESLint does not infer
 their usefulness. Generated files are exempt because the project does not own their text.
 
 Extract an inline conditional only when the name adds an intention or the expression obscures the flow.
@@ -88,10 +89,10 @@ copy, changing that object cannot alter the owner or a later snapshot. Use a dis
 have incompatible fields, and model forbidden fields as `never` when the public contract must reject their
 carry-over.
 
-Name an immutable value object for a business collection when it owns a rule or query: qualifications decide
-whether a workstation choice is required and validate the chosen workstation. Keep transport documents and
-rendering projections as readonly collections when they carry no collection rule. ESLint checks readonly syntax;
-review decides when the business responsibility warrants a value object.
+Apply the [Value Object default](architecture.md#use-value-objects-by-default-for-domain-values) to scalar
+values as well as business collections. For example, qualifications own workstation-choice and eligibility
+queries. ESLint checks readonly syntax; review checks that domain distinctions and operations have a value
+owner and that callers use its behavior.
 
 An asynchronous operation is awaited, returned to its caller, or observed through an explicit error path.
 The observer reports a technical failure to the application's error boundary or diagnostics; it does not turn
@@ -123,8 +124,7 @@ assertions (`property!:`) and type assertions to unknown (`as unknown`, `<unknow
 possible absence or narrow it explicitly.
 The local responsibility-cohesion rule blocks a production class only when injected collaborators, public
 operations and owned state all cross the coordinator tripwire. Inventory its reasons to change and extract a
-cohesive responsibility; a narrow inline suppression is reserved for a demonstrably single deep module and
-states that reason beside the class. See [ADR 0019](adr/0019-enforce-sonarjs-rules.md) and
+cohesive responsibility; no waivers or inline suppressions are permitted. See [ADR 0019](adr/0019-enforce-sonarjs-rules.md) and
 [ADR 0023](adr/0023-stop-overloaded-coordinators-at-lint.md).
 
 **Prettier owns formatting.** Single quotes, 140-char width, `arrowParens: avoid`. Run

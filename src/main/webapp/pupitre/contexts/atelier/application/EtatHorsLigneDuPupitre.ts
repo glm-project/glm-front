@@ -1,7 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
-  EvenementDuJournal,
+  EvenementRefuse,
+  EvenementsDuJournal,
   JournalDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
@@ -50,9 +51,9 @@ export class EtatHorsLigneDuPupitre {
     return this.restore(reconcile);
   }
 
-  async diagnostics(): Promise<EvenementDuJournal[]> {
+  async diagnostics(): Promise<readonly EvenementRefuse[]> {
     const state = await this.journal.read(this.requireTenant());
-    return state.evenements.filter(evenement => evenement.etat === 'REFUSE');
+    return new EvenementsDuJournal(state.evenements).refusals();
   }
 
   publish(state: JournalDuPupitre): void {

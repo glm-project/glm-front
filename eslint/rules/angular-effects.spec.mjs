@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
-  'src/main/webapp/pupitre/contexts/atelier/application/OfflinePupitre.ts',
+  'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.ts',
   'src/main/webapp/gestion/app.ts',
   'src/main/webapp/pupitre/app.ts',
   'src/test/webapp/component/pupitre/designation/Designation.spec.ts',

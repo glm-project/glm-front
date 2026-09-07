@@ -1,10 +1,13 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import {
+  acceptPublication,
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
+  EvenementsDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
+  refusePublication,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
@@ -78,7 +81,7 @@ export class PupitreSynchronization {
   private async drain(entreprise: string, publish: PupitrePublisher): Promise<void> {
     while (this.authentication.currentTenant() === entreprise && this.authentication.currentToken() !== undefined) {
       const state = await this.journal.read(entreprise);
-      const evenement = state.evenements.find(candidate => candidate.etat === 'EN_ATTENTE');
+      const evenement = new EvenementsDuJournal(state.evenements).nextPending();
       if (evenement === undefined) {
         return;
       }
@@ -101,12 +104,10 @@ export class PupitreSynchronization {
         await this.authentication.synchronizeSession();
         return this.push(entreprise, evenement.geste, evenements);
       });
-      return evenement.geste.nature === 'ARRIVEE'
-        ? { geste: evenement.geste, etat: 'ACCEPTE', journeeOuverte }
-        : { geste: evenement.geste, etat: 'ACCEPTE' };
+      return acceptPublication(evenement.geste, journeeOuverte);
     } catch (failure: unknown) {
       if (failure instanceof RefusDePublication) {
-        return { geste: evenement.geste, etat: 'REFUSE', refus: { code: failure.code, message: failure.message } };
+        return refusePublication(evenement.geste, failure);
       }
       await this.markDisconnected(entreprise, publish);
       return undefined;

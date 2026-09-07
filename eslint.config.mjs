@@ -7,6 +7,7 @@ import typescript from 'typescript-eslint';
 import { domainReadonlyProperties } from './eslint/rules/domain-readonly-properties.mjs';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
+import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
 
 const TAILWIND_COLOR_FAMILIES = [
@@ -128,6 +129,7 @@ const local = {
     'given-when-then': givenWhenThen,
     'domain-readonly-properties': domainReadonlyProperties,
     'no-as-unknown': noAsUnknown,
+    'no-eslint-disable': noEslintDisable,
     'responsibility-cohesion': responsibilityCohesion,
   },
 };
@@ -208,6 +210,7 @@ export default typescript.config(
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       'local/no-as-unknown': 'error',
+      'local/no-eslint-disable': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
       'no-restricted-syntax': restrictedSyntax(),
     },

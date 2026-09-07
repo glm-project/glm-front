@@ -1,5 +1,7 @@
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
 import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
@@ -16,7 +18,9 @@ import { MessageDAtelierVisible, PupitreHeader } from './header/header';
   templateUrl: './page.html',
 })
 export class PupitrePage implements OnInit, OnDestroy {
-  protected readonly pupitre = inject(OfflinePupitre);
+  protected readonly pupitre = inject(AtelierCoordinator);
+  protected readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
+  protected readonly designation = inject(CurrentOperateurLifecycle);
   protected readonly enrolement = inject(EnrolementDuPupitre);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly errorHandler = inject(ErrorHandler);
@@ -24,14 +28,15 @@ export class PupitrePage implements OnInit, OnDestroy {
   private consumeNextClick = false;
   protected readonly resetRequested = signal(false);
   protected readonly messageAtelier = computed<MessageDAtelierVisible | undefined>(() => {
-    const message = this.pupitre.messageAtelier();
-    if (message === undefined || !('contexte' in message)) return message;
+    if (this.pupitre.echecCaptureLocale()) return { message: 'Action non enregistrée — recommencez' };
+    const message = this.designation.refusAtelier();
+    if (message === undefined) return undefined;
     return { message: message.message, contexte: toLibelleContexteAtelier(message.contexte) };
   });
 
   private readonly guardPointerDown = (event: PointerEvent): void => {
     if (this.comesFromKeypad(event)) return;
-    this.consumeNextClick = !this.pupitre.registerPress();
+    this.consumeNextClick = !this.designation.registerPress();
     // This capture-phase native listener bypasses Angular event dispatch; render expiry before a compatibility click can follow.
     this.changeDetector.detectChanges();
     if (this.consumeNextClick) event.preventDefault();
@@ -52,11 +57,11 @@ export class PupitrePage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.host.nativeElement.removeEventListener('pointerdown', this.guardPointerDown, true);
     this.host.nativeElement.removeEventListener('click', this.guardClick, true);
-    this.observe(this.pupitre.finish());
+    this.observe(this.designation.finish());
   }
 
   protected finish(): void {
-    this.observe(this.pupitre.finish());
+    this.observe(this.designation.finish());
   }
 
   protected askReset(): void {

@@ -1,5 +1,7 @@
+import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
+import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
   if (value === null || value === undefined) {
@@ -59,7 +61,13 @@ describe('FenetreOperateur', () => {
   let identities: Map<string, string>;
 
   beforeEach(() => {
-    fenetre = FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    fenetre = FenetreOperateur.open(
+      'entreprise-a',
+      structuredClone(vueFixture),
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
     dateDuGeste = '2026-09-05T08:00:00Z';
     identities = new Map<string, string>();
   });
@@ -68,6 +76,23 @@ describe('FenetreOperateur', () => {
     const operateur = whenResolvingTheOperator();
 
     thenOperatorIsJean(operateur.id);
+  });
+
+  it('should refuse new gestures at every initiation boundary while a global capture is pending', () => {
+    const globale = new IntentionGlobaleInitiee('TOUT_ARRETER', {
+      id: '11111111-2222-3333-4444-0000000a',
+      dateDeSurvenue: dateDuGeste,
+    });
+
+    const pending = fenetre.afterIntendingGlobal(globale);
+
+    expect(() => pending.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture)).toThrow('Une commande globale est en cours.');
+    expect(() => pending.afterChoosingPoste('of-1015', 'PRINCIPALE', 'tour', identifyFixture)).toThrow(
+      'Une commande globale est en cours.',
+    );
+    expect(() => pending.afterIntendingGesture()).toThrow('Une commande globale est en cours.');
+    expect(() => pending.afterIntendingGlobal(globale)).toThrow('Une commande globale est en cours.');
+    expect(fenetre.allowsGestures()).toBe(true);
   });
 
   it('should expose naturally sorted workshop zones with the operator activity frozen at window opening', () => {
@@ -297,7 +322,13 @@ describe('FenetreOperateur', () => {
       ...structuredClone(vueFixture),
       evenements: [{ geste: previousGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
     };
-    fenetre = FenetreOperateur.open('entreprise-a', journalWithPreviousRefusal, '049', Date.parse('2026-09-05T09:00:00Z'), 2);
+    fenetre = FenetreOperateur.open(
+      'entreprise-a',
+      journalWithPreviousRefusal,
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(2),
+    );
 
     whenReconciling(journalWithPreviousRefusal);
 
@@ -482,7 +513,13 @@ describe('FenetreOperateur', () => {
         ],
       },
     };
-    const localWindow = FenetreOperateur.open('entreprise-a', onlyNcJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    const localWindow = FenetreOperateur.open(
+      'entreprise-a',
+      onlyNcJournal,
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
     expect(localWindow.pointage().ordresDeFabrication[0]?.isNonConforme()).toBe(true);
   });
@@ -520,7 +557,13 @@ describe('FenetreOperateur', () => {
         ],
       },
     };
-    const multiWindow = FenetreOperateur.open('entreprise-a', multiNcJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    const multiWindow = FenetreOperateur.open(
+      'entreprise-a',
+      multiNcJournal,
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
     const decision = multiWindow.afterDeciding('of-multi-nc', 'SECONDAIRE', identifyFixture).decision;
 
@@ -546,7 +589,13 @@ describe('FenetreOperateur', () => {
         ],
       },
     };
-    const sortWindow = FenetreOperateur.open('entreprise-a', unsortedJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    const sortWindow = FenetreOperateur.open(
+      'entreprise-a',
+      unsortedJournal,
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
     const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero);
 
@@ -561,7 +610,13 @@ describe('FenetreOperateur', () => {
         suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
       },
     };
-    const inactiveWindow = FenetreOperateur.open('entreprise-a', inactiveJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    const inactiveWindow = FenetreOperateur.open(
+      'entreprise-a',
+      inactiveJournal,
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
     expect(inactiveWindow.pointage().glmActif).toBe(true);
   });
@@ -585,7 +640,13 @@ describe('FenetreOperateur', () => {
         suivis: [{ id: 'of-multi', nom: 'OF-MULTI', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
       },
     };
-    const multiWindow = FenetreOperateur.open('entreprise-a', multiPosteJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    const multiWindow = FenetreOperateur.open(
+      'entreprise-a',
+      multiPosteJournal,
+      '049',
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
     const { fenetre: afterChoice, decision } = multiWindow.afterChoosingPoste('of-multi', 'PRINCIPALE', 'poste-1', identifyFixture);
 
@@ -667,7 +728,8 @@ describe('FenetreOperateur', () => {
     dateDuGeste = '2026-09-05T09:00:00Z';
   };
   const whenResolvingTheOperator = (): FenetreOperateur['operateur'] =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), 1).operateur;
+    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1))
+      .operateur;
   const whenReadingThePointageView = (): ReturnType<FenetreOperateur['pointage']> => fenetre.pointage();
   const givenTheCurrentSnapshot = (): JournalDuPupitre => fenetre.snapshot();
   const whenChangingTheSnapshot = (snapshot: JournalDuPupitre): void => {
@@ -707,7 +769,7 @@ describe('FenetreOperateur', () => {
       },
       '049',
       Date.parse('2026-09-05T09:00:00Z'),
-      2,
+      new IdentiteDeFenetre(2),
     );
   };
   const givenAWindowWithoutWorkstation = (): FenetreOperateur => {
@@ -718,7 +780,7 @@ describe('FenetreOperateur', () => {
       { ...vueFixture, referentiel: { ...referentiel, operateurs: [{ ...operateur, postes: [] }] } },
       '049',
       Date.parse('2026-09-05T09:00:00Z'),
-      3,
+      new IdentiteDeFenetre(3),
     );
   };
   const whenDeciding = (suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): DecisionDePointage => {
@@ -792,12 +854,12 @@ describe('FenetreOperateur', () => {
       },
       '049',
       Date.parse('2026-09-05T09:00:00Z'),
-      4,
+      new IdentiteDeFenetre(4),
     );
   };
   const whenOpeningAnUnknownOperator = (vue: JournalDuPupitre): unknown => {
     try {
-      return FenetreOperateur.open('entreprise-a', vue, 'inconnu', Date.parse('2026-09-05T09:00:00Z'), 5);
+      return FenetreOperateur.open('entreprise-a', vue, 'inconnu', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(5));
     } catch (failure: unknown) {
       return failure;
     }

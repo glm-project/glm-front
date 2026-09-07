@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -9,7 +10,8 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
+import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -29,8 +31,8 @@ const vueFixture: JournalDuPupitre = {
   },
 };
 
-describe('AcceptationLocaleDesGestes', () => {
-  let acceptation: AcceptationLocaleDesGestes;
+describe('GestesRecordingQueue', () => {
+  let acceptation: GestesRecordingQueue;
   let journal: JournauxDuPupitreFixture;
   let tenant: string | undefined;
 
@@ -41,7 +43,7 @@ describe('AcceptationLocaleDesGestes', () => {
 
     acceptation = Injector.create({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         { provide: JournauxDuPupitrePort, useValue: journal },
         {
           provide: AuthenticationPort,
@@ -52,7 +54,7 @@ describe('AcceptationLocaleDesGestes', () => {
           },
         },
       ],
-    }).get(AcceptationLocaleDesGestes);
+    }).get(GestesRecordingQueue);
   });
 
   it('should capture pause presence when global intention is pause', async () => {
@@ -64,13 +66,14 @@ describe('AcceptationLocaleDesGestes', () => {
     thenPresenceTypeIs(gestures, 'PAUSE');
   });
 
-  it('should derive distinct deterministic IDs for all gestures in a global stop intention', async () => {
+  it('should retain the initiated root identity among the distinct IDs accepted for a global stop', async () => {
     const fenetre = givenAnOpenOperatorWindow();
+    const identityFixture = '11111111-2222-4333-8444-55550000000a';
 
-    await whenCapturingGlobalIntention(fenetre, 'TOUT_ARRETER', '11111111-2222-3333-4444-0000000a');
+    await whenCapturingGlobalIntention(fenetre, 'TOUT_ARRETER', identityFixture);
 
     const gestures = await whenReadingRecordedGestures('entreprise-a');
-    thenRecordedGesturesHaveUniqueIds(gestures);
+    thenRecordedGesturesRetainRootIdentity(gestures, identityFixture);
   });
 
   it('should capture prepared gestures directly', async () => {
@@ -139,7 +142,7 @@ describe('AcceptationLocaleDesGestes', () => {
   });
 
   const givenAnOpenOperatorWindow = (): FenetreOperateur =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1));
 
   const whenCapturingGlobalIntention = async (
     fenetre: FenetreOperateur,
@@ -148,7 +151,7 @@ describe('AcceptationLocaleDesGestes', () => {
   ): Promise<void> => {
     await acceptation.capture(
       fenetre,
-      { kind: 'GLOBALE', intention: { commande, id, dateDeSurvenue: '2026-09-05T09:00:00Z' } },
+      { kind: 'GLOBALE', commande: new IntentionGlobaleInitiee(commande, { id, dateDeSurvenue: '2026-09-05T09:00:00Z' }) },
       () => fenetre,
     );
   };
@@ -164,9 +167,10 @@ describe('AcceptationLocaleDesGestes', () => {
     expect((presence as GesteDePresence).type).toBe(expectedPresenceType);
   };
 
-  const thenRecordedGesturesHaveUniqueIds = (gestures: readonly GesteDAtelier[]): void => {
+  const thenRecordedGesturesRetainRootIdentity = (gestures: readonly GesteDAtelier[], rootIdentity: string): void => {
     expect(gestures.length).toBe(3);
     const ids = gestures.map(g => g.id);
+    expect(ids).toContain(rootIdentity);
     expect(new Set(ids).size).toBe(gestures.length);
     for (const gesture of gestures) {
       expect(gesture.dateDeSurvenue).toBe('2026-09-05T09:00:00Z');

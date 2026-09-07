@@ -1,6 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
   DesignationExpiration,
@@ -17,8 +18,8 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
@@ -66,7 +67,7 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 }
 
 describe('Designation du pupitre', () => {
-  let designation: OfflinePupitre;
+  let designation: CurrentOperateurLifecycle;
   let journal: DesignationJournalFixture;
   let errorHandler: ErrorHandlerFixture;
   beforeEach(async () => {
@@ -76,9 +77,10 @@ describe('Designation du pupitre', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
-        OfflinePupitre,
+        AtelierCoordinator,
+        CurrentOperateurLifecycle,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: {} },
@@ -90,7 +92,7 @@ describe('Designation du pupitre', () => {
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
-    designation = TestBed.inject(OfflinePupitre);
+    designation = TestBed.inject(CurrentOperateurLifecycle);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -261,7 +263,7 @@ describe('Designation du pupitre', () => {
   });
 
   const thenNewGestureIsRefused = (): void => {
-    expect(() => designation.recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+    expect(() => TestBed.inject(AtelierCoordinator).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
   };
 
   const givenDelayedClosure = (): (() => void) => {
@@ -348,7 +350,7 @@ describe('Designation du pupitre', () => {
   const thenClosed = (): void => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
-    expect(() => designation.recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+    expect(() => TestBed.inject(AtelierCoordinator).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);

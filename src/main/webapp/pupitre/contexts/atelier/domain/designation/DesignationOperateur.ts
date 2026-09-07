@@ -1,5 +1,6 @@
 import { JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { FenetreOperateur, IdentiteOperateurDesigne } from './FenetreOperateur';
+import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
@@ -45,7 +46,7 @@ interface EtatDeDesignation {
   readonly deadline: number | undefined;
   readonly generation: number;
   readonly fenetre: FenetreOperateur | undefined;
-  readonly windowId: number;
+  readonly windowId: IdentiteDeFenetre;
 }
 
 export class DesignationOperateur {
@@ -61,7 +62,7 @@ export class DesignationOperateur {
       deadline: undefined,
       generation: 0,
       fenetre: undefined,
-      windowId: 0,
+      windowId: new IdentiteDeFenetre(0),
     });
   }
 
@@ -151,7 +152,7 @@ export class DesignationOperateur {
   }
 
   afterReleasingWindow(): DesignationOperateur {
-    return this.with({ fenetre: undefined, designated: false, windowId: this.etat.windowId + 1 });
+    return this.with({ fenetre: undefined, designated: false, windowId: this.etat.windowId.next() });
   }
 
   afterCompletingClosure(): DesignationOperateur {
@@ -165,6 +166,10 @@ export class DesignationOperateur {
 
   window(): FenetreOperateur | undefined {
     return this.etat.fenetre;
+  }
+
+  visibleWindow(): FenetreOperateur | undefined {
+    return this.etat.designated ? this.etat.fenetre : undefined;
   }
 
   private requireClosedWindow(): void {

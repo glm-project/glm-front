@@ -73,5 +73,5 @@ logo followed by a modal confirmation, so no operator reaches it by accident.
 - The administration gesture is unavailable while an operator is designated, because the header then shows that
   operator instead of the logo. Resetting requires finishing the operator window first.
 - The context adds a second reader of the workshop load. It reaches it through a port and the
-  `TypeScriptChargementDeLAtelier` primary adapter, which is one more indirection than reading `OfflinePupitre`
+  `TypeScriptChargementDeLAtelier` primary adapter, which is one more indirection than reading `AtelierCoordinator`
   directly.

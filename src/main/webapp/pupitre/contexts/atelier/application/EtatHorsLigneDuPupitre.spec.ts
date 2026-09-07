@@ -145,7 +145,7 @@ describe('EtatHorsLigneDuPupitre', () => {
 
   const whenOpeningSource = async (): Promise<SourceDOuverture> => etatHorsLigne.openingSource();
 
-  const whenReadingDiagnostics = async (): Promise<EvenementDuJournal[]> => etatHorsLigne.diagnostics();
+  const whenReadingDiagnostics = async (): Promise<readonly EvenementDuJournal[]> => etatHorsLigne.diagnostics();
 
   const whenPublishing = (state: JournalDuPupitre): void => {
     etatHorsLigne.publish(state);
@@ -163,7 +163,7 @@ describe('EtatHorsLigneDuPupitre', () => {
     expect(actual).toBe(expected);
   };
 
-  const thenDiagnosticsContainOnlyRefusedEvents = (actual: EvenementDuJournal[], expected: EvenementDuJournal[]): void => {
+  const thenDiagnosticsContainOnlyRefusedEvents = (actual: readonly EvenementDuJournal[], expected: EvenementDuJournal[]): void => {
     expect(actual).toEqual(expected);
   };
 
