@@ -1,7 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
   DesignationExpiration,
@@ -67,7 +67,7 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 }
 
 describe('Designation du pupitre', () => {
-  let designation: DesignationCoordinator;
+  let designation: CurrentOperateurLifecycle;
   let journal: DesignationJournalFixture;
   let errorHandler: ErrorHandlerFixture;
   beforeEach(async () => {
@@ -80,7 +80,7 @@ describe('Designation du pupitre', () => {
         AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
         AtelierCoordinator,
-        DesignationCoordinator,
+        CurrentOperateurLifecycle,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: {} },
@@ -92,7 +92,7 @@ describe('Designation du pupitre', () => {
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
-    designation = TestBed.inject(DesignationCoordinator);
+    designation = TestBed.inject(CurrentOperateurLifecycle);
   });
   afterEach(() => {
     vi.restoreAllMocks();

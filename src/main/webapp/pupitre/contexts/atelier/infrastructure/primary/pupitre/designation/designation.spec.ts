@@ -1,7 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
@@ -72,7 +72,7 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 
 describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
-  let designation: DesignationCoordinator;
+  let designation: CurrentOperateurLifecycle;
   let journalFixture: DesignationJournalFixture;
   const serveurFixture = { referentiel: vi.fn(), send: vi.fn(), reread: vi.fn() };
   beforeEach(() => {
@@ -82,7 +82,7 @@ describe('Designation keypad', () => {
       providers: [
         AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
-        DesignationCoordinator,
+        CurrentOperateurLifecycle,
         PupitreSynchronization,
         {
           provide: AuthenticationPort,
@@ -95,7 +95,7 @@ describe('Designation keypad', () => {
       ],
     });
     fixture = TestBed.createComponent(Designation);
-    designation = TestBed.inject(DesignationCoordinator);
+    designation = TestBed.inject(CurrentOperateurLifecycle);
     fixture.detectChanges();
   });
   afterEach(() => {

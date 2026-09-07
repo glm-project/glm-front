@@ -1,6 +1,6 @@
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
 import { ElementDePointage, IdentiteOperateurDesigne, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
@@ -27,7 +27,7 @@ class AtelierCoordinatorFixture {
   readonly connected = signal(true);
   readonly operateur = signal<IdentiteOperateurDesigne | undefined>(undefined);
   readonly echecCaptureLocale = signal(false);
-  readonly refusAtelier = signal<ReturnType<DesignationCoordinator['refusAtelier']>>(undefined);
+  readonly refusAtelier = signal<ReturnType<CurrentOperateurLifecycle['refusAtelier']>>(undefined);
   readonly pointage = signal<VueDePointage | undefined>(undefined);
   readonly gestesDisponibles = signal(true);
   readonly code = signal('');
@@ -121,7 +121,7 @@ describe('Pupitre page', () => {
       providers: [
         { provide: AtelierCoordinator, useValue: pupitre },
         { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
-        { provide: DesignationCoordinator, useValue: pupitre },
+        { provide: CurrentOperateurLifecycle, useValue: pupitre },
         { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
@@ -275,7 +275,7 @@ describe('Pupitre page', () => {
     pupitre.echecCaptureLocale.set(true);
   };
 
-  const givenWorkshopMessage = (message: ReturnType<DesignationCoordinator['refusAtelier']>): void => {
+  const givenWorkshopMessage = (message: ReturnType<CurrentOperateurLifecycle['refusAtelier']>): void => {
     pupitre.refusAtelier.set(message);
   };
 

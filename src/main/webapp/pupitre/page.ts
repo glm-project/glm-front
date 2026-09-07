@@ -1,6 +1,6 @@
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
 import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
@@ -20,7 +20,7 @@ import { MessageDAtelierVisible, PupitreHeader } from './header/header';
 export class PupitrePage implements OnInit, OnDestroy {
   protected readonly pupitre = inject(AtelierCoordinator);
   protected readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
-  protected readonly designation = inject(DesignationCoordinator);
+  protected readonly designation = inject(CurrentOperateurLifecycle);
   protected readonly enrolement = inject(EnrolementDuPupitre);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly errorHandler = inject(ErrorHandler);

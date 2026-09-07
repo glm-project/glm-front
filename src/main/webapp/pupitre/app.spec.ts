@@ -1,5 +1,5 @@
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
@@ -77,7 +77,7 @@ describe('Pupitre shell', () => {
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
         { provide: AtelierCoordinator, useClass: AtelierCoordinatorPageFixture },
-        { provide: DesignationCoordinator, useExisting: AtelierCoordinator },
+        { provide: CurrentOperateurLifecycle, useExisting: AtelierCoordinator },
         { provide: EtatHorsLigneDuPupitre, useExisting: AtelierCoordinator },
         { provide: EnrolementDuPupitre, useClass: EnrolementPageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },

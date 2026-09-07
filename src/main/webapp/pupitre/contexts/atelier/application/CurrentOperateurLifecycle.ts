@@ -9,7 +9,7 @@ import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 
 @Injectable()
-export class DesignationCoordinator {
+export class CurrentOperateurLifecycle {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);

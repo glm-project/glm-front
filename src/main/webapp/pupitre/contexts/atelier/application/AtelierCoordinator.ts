@@ -6,7 +6,7 @@ import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleI
 import { IdentiteDuGeste, TypeDePresence } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { AcceptationLocaleDesGestes, IntentionDeCapture } from './AcceptationLocaleDesGestes';
 import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
-import { DesignationCoordinator } from './DesignationCoordinator';
+import { CurrentOperateurLifecycle } from './CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
 
@@ -20,7 +20,7 @@ const identity = (): IdentiteDuGeste => identityAt(Date.now());
 export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
-  private readonly designation = inject(DesignationCoordinator);
+  private readonly designation = inject(CurrentOperateurLifecycle);
   private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly echecLocal = signal<IdentiteDeFenetre | undefined>(undefined);
 

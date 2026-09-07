@@ -1,6 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
@@ -151,7 +151,7 @@ class ServerFixture extends AtelierExchangePort {
 
 describe('AtelierCoordinator', () => {
   let pupitre: AtelierCoordinator;
-  let designation: DesignationCoordinator;
+  let designation: CurrentOperateurLifecycle;
   let etatHorsLigne: EtatHorsLigneDuPupitre;
   let journal: ApplicationJournalFixture;
   let serveur: ServerFixture;
@@ -965,7 +965,7 @@ describe('AtelierCoordinator', () => {
         AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
         AtelierCoordinator,
-        DesignationCoordinator,
+        CurrentOperateurLifecycle,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: serveur },
@@ -974,7 +974,7 @@ describe('AtelierCoordinator', () => {
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
-    designation = injector.get(DesignationCoordinator);
+    designation = injector.get(CurrentOperateurLifecycle);
     etatHorsLigne = injector.get(EtatHorsLigneDuPupitre);
     return injector.get(AtelierCoordinator);
   };

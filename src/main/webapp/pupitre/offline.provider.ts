@@ -3,7 +3,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
@@ -20,7 +20,7 @@ export const offlineProvider: Provider[] = [
   AcceptationLocaleDesGestes,
   EtatHorsLigneDuPupitre,
   AtelierCoordinator,
-  DesignationCoordinator,
+  CurrentOperateurLifecycle,
   PupitreSynchronization,
   { provide: JournauxDuPupitrePort, useClass: IndexedDbJournauxDuPupitre },
   { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },

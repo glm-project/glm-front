@@ -1,4 +1,4 @@
-import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import {
   afterNextRender,
   AfterRenderRef,
@@ -49,7 +49,7 @@ export class FollowContent implements OnChanges, OnDestroy {
   },
 })
 export class Designation {
-  readonly designation = inject(DesignationCoordinator);
+  readonly designation = inject(CurrentOperateurLifecycle);
   readonly digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   private consumedPress = false;
 
