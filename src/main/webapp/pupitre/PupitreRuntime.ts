@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { inject, Injectable, OnDestroy } from '@angular/core';
 
@@ -7,6 +8,7 @@ import { inject, Injectable, OnDestroy } from '@angular/core';
 export class PupitreRuntime implements OnDestroy {
   private readonly enrolement = inject(EnrolementDuPupitre);
   private readonly atelier = inject(AtelierCoordinator);
+  private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly errorHandler = inject(ErrorHandlerPort);
   private startup: Promise<void> | undefined;
   private interval: ReturnType<typeof setInterval> | undefined;
@@ -14,7 +16,7 @@ export class PupitreRuntime implements OnDestroy {
     void this.synchronize();
   };
 
-  readonly connected = this.atelier.connected;
+  readonly connected = this.etatHorsLigne.connected;
 
   start(): Promise<void> {
     this.startup ??= this.initialize();

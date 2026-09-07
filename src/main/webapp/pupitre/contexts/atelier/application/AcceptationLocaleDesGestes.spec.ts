@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -9,6 +10,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
 import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 
 const vueFixture: JournalDuPupitre = {
@@ -139,7 +141,7 @@ describe('AcceptationLocaleDesGestes', () => {
   });
 
   const givenAnOpenOperatorWindow = (): FenetreOperateur =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1));
 
   const whenCapturingGlobalIntention = async (
     fenetre: FenetreOperateur,
@@ -148,7 +150,7 @@ describe('AcceptationLocaleDesGestes', () => {
   ): Promise<void> => {
     await acceptation.capture(
       fenetre,
-      { kind: 'GLOBALE', intention: { commande, id, dateDeSurvenue: '2026-09-05T09:00:00Z' } },
+      { kind: 'GLOBALE', commande: new IntentionGlobaleInitiee(commande, { id, dateDeSurvenue: '2026-09-05T09:00:00Z' }) },
       () => fenetre,
     );
   };

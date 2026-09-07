@@ -1,3 +1,4 @@
+import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
 import { FenetreOperateur } from './FenetreOperateur';
@@ -77,7 +78,7 @@ describe('DesignationOperateur', () => {
   it('should leave a designation unchanged when another operator window tries to replace it', () => {
     givenDesignatedOperator();
     const before = designation;
-    const other = FenetreOperateur.open('atelier', referenceFixture, '049', 1, 1);
+    const other = FenetreOperateur.open('atelier', referenceFixture, '049', 1, new IdentiteDeFenetre(1));
 
     designation = designation.afterReplacingWindow(other);
 
@@ -186,7 +187,7 @@ describe('DesignationOperateur', () => {
     designation = designation.afterReleasingWindow();
     const secondWindow = designation.afterOpeningWindow('atelier', referenceFixture, '049', 1).fenetre;
 
-    expect(secondWindow.hasIdentity(FenetreOperateur.open('atelier', referenceFixture, '049', 1, 1))).toBe(true);
+    expect(secondWindow.hasIdentity(FenetreOperateur.open('atelier', referenceFixture, '049', 1, new IdentiteDeFenetre(1)))).toBe(true);
     expect(secondWindow.hasIdentity(firstWindow)).toBe(false);
   });
 

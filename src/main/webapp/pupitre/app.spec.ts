@@ -1,7 +1,9 @@
-import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
 import { ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -27,7 +29,8 @@ class PupitreRuntimeFixture {
 class AtelierCoordinatorPageFixture {
   readonly connected = signal(true);
   readonly operateur = signal(undefined);
-  readonly messageAtelier = signal(undefined);
+  readonly echecCaptureLocale = signal(false);
+  readonly refusAtelier = signal(undefined);
   readonly pointage = signal(undefined);
   readonly gestesDisponibles = signal(true);
 
@@ -74,6 +77,8 @@ describe('Pupitre shell', () => {
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
         { provide: AtelierCoordinator, useClass: AtelierCoordinatorPageFixture },
+        { provide: DesignationCoordinator, useExisting: AtelierCoordinator },
+        { provide: EtatHorsLigneDuPupitre, useExisting: AtelierCoordinator },
         { provide: EnrolementDuPupitre, useClass: EnrolementPageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ErrorHandler, useValue: errorHandler },

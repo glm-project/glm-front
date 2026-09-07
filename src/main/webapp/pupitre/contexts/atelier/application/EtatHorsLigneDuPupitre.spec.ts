@@ -7,7 +7,6 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre, SourceDOuverture } from './EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -24,7 +23,6 @@ describe('EtatHorsLigneDuPupitre', () => {
 
     etatHorsLigne = Injector.create({
       providers: [
-        AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
         { provide: JournauxDuPupitrePort, useValue: journal },
         {
@@ -123,10 +121,6 @@ describe('EtatHorsLigneDuPupitre', () => {
     thenReferentielContainsOperator(state.referentiel?.operateurs[0]?.nom ?? '');
   });
 
-  it('should drain in-flight gesture captures', async () => {
-    await expect(etatHorsLigne.drain()).resolves.toBeUndefined();
-  });
-
   const givenDisconnectedStateInJournal = (entreprise: string): void => {
     journal.seedJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
   };
@@ -151,7 +145,7 @@ describe('EtatHorsLigneDuPupitre', () => {
 
   const whenOpeningSource = async (): Promise<SourceDOuverture> => etatHorsLigne.openingSource();
 
-  const whenReadingDiagnostics = async (): Promise<EvenementDuJournal[]> => etatHorsLigne.diagnostics();
+  const whenReadingDiagnostics = async (): Promise<readonly EvenementDuJournal[]> => etatHorsLigne.diagnostics();
 
   const whenPublishing = (state: JournalDuPupitre): void => {
     etatHorsLigne.publish(state);
@@ -169,7 +163,7 @@ describe('EtatHorsLigneDuPupitre', () => {
     expect(actual).toBe(expected);
   };
 
-  const thenDiagnosticsContainOnlyRefusedEvents = (actual: EvenementDuJournal[], expected: EvenementDuJournal[]): void => {
+  const thenDiagnosticsContainOnlyRefusedEvents = (actual: readonly EvenementDuJournal[], expected: EvenementDuJournal[]): void => {
     expect(actual).toEqual(expected);
   };
 

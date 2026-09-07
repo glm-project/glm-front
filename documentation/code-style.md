@@ -89,10 +89,10 @@ copy, changing that object cannot alter the owner or a later snapshot. Use a dis
 have incompatible fields, and model forbidden fields as `never` when the public contract must reject their
 carry-over.
 
-Name an immutable value object for a business collection when it owns a rule or query: qualifications decide
-whether a workstation choice is required and validate the chosen workstation. Keep transport documents and
-rendering projections as readonly collections when they carry no collection rule. ESLint checks readonly syntax;
-review decides when the business responsibility warrants a value object.
+Apply the [Value Object default](architecture.md#use-value-objects-by-default-for-domain-values) to scalar
+values as well as business collections. For example, qualifications own workstation-choice and eligibility
+queries. ESLint checks readonly syntax; review checks that domain distinctions and operations have a value
+owner and that callers use its behavior.
 
 An asynchronous operation is awaited, returned to its caller, or observed through an explicit error path.
 The observer reports a technical failure to the application's error boundary or diagnostics; it does not turn

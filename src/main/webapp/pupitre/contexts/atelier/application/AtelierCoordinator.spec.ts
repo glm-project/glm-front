@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
@@ -150,6 +151,8 @@ class ServerFixture extends AtelierExchangePort {
 
 describe('AtelierCoordinator', () => {
   let pupitre: AtelierCoordinator;
+  let designation: DesignationCoordinator;
+  let etatHorsLigne: EtatHorsLigneDuPupitre;
   let journal: ApplicationJournalFixture;
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
@@ -335,7 +338,7 @@ describe('AtelierCoordinator', () => {
     await whenStoppingEverything();
     await whenSynchronizing();
 
-    expect(pupitre.messageAtelier()).toEqual({
+    expect(designation.refusAtelier()).toEqual({
       contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
       message: 'cause conservee',
     });
@@ -352,7 +355,8 @@ describe('AtelierCoordinator', () => {
     const pausing = whenPausingGlobally();
 
     try {
-      expect(pupitre.messageAtelier()).toBeUndefined();
+      expect(pupitre.echecCaptureLocale()).toBe(false);
+      expect(designation.refusAtelier()).toBeUndefined();
     } finally {
       whenReleasingCapture(releaseCapture);
     }
@@ -796,7 +800,8 @@ describe('AtelierCoordinator', () => {
 
     await thenOldCompanyPendingIs(3);
     thenNoWindowPresentationRemains();
-    expect(pupitre.messageAtelier()).toBeUndefined();
+    expect(pupitre.echecCaptureLocale()).toBe(false);
+    expect(designation.refusAtelier()).toBeUndefined();
   });
 
   it('should refuse a capture before append when its operator window has been released during session I/O', async () => {
@@ -813,7 +818,8 @@ describe('AtelierCoordinator', () => {
     await thenFails(pointage, 'fenetre operateur a change');
     await thenOldCompanyPendingIs(0);
     thenNoWindowPresentationRemains();
-    expect(pupitre.messageAtelier()).toBeUndefined();
+    expect(pupitre.echecCaptureLocale()).toBe(false);
+    expect(designation.refusAtelier()).toBeUndefined();
   });
 
   it('should disable validation while resolving and drain window if resolution expired during opening', async () => {
@@ -833,7 +839,7 @@ describe('AtelierCoordinator', () => {
   it('should clear errors immediately when closing begins and restore validate capability when closure completes', async () => {
     await givenAnOpenWindow();
     await givenFailedLocalSemanticCapture();
-    thenWorkshopMessageIsError('Action non enregistrée — recommencez');
+    thenGlobalRecordingFailed();
 
     const releaseCapture = givenDelayedCapture();
     const pointage = whenStarting();
@@ -936,7 +942,7 @@ describe('AtelierCoordinator', () => {
   const whenBusinessTimeBecomes = (instant: string): void => {
     vi.setSystemTime(new Date(instant));
   };
-  const whenExpiring = (): Promise<void> => pupitre.expire();
+  const whenExpiring = (): Promise<void> => designation.expire();
   const whenReleasingCapture = (release: () => void): void => {
     release();
   };
@@ -953,12 +959,13 @@ describe('AtelierCoordinator', () => {
     );
   };
 
-  const buildPupitre = (): AtelierCoordinator =>
-    Injector.create({
+  const buildPupitre = (): AtelierCoordinator => {
+    const injector = Injector.create({
       providers: [
         AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
         AtelierCoordinator,
+        DesignationCoordinator,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: serveur },
@@ -966,16 +973,20 @@ describe('AtelierCoordinator', () => {
         { provide: DesignationExpirationSchedulerPort, useValue: scheduler },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
-    }).get(AtelierCoordinator);
+    });
+    designation = injector.get(DesignationCoordinator);
+    etatHorsLigne = injector.get(EtatHorsLigneDuPupitre);
+    return injector.get(AtelierCoordinator);
+  };
   const whenRestarting = async (): Promise<void> => {
     await pupitre.synchronize();
     pupitre = buildPupitre();
     await pupitre.restore();
   };
-  const whenOpening = (): Promise<unknown> => pupitre.openWindow('049');
-  const whenOpeningMatricule = (matricule: string): Promise<unknown> => pupitre.openWindow(matricule);
+  const whenOpening = (): Promise<unknown> => designation.openWindow('049');
+  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(matricule);
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
-    Promise.allSettled([pupitre.openWindow('049'), pupitre.openWindow('050')]);
+    Promise.allSettled([designation.openWindow('049'), designation.openWindow('050')]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
   const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
     pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
@@ -1002,7 +1013,7 @@ describe('AtelierCoordinator', () => {
   const whenSynchronizingConcurrently = async (): Promise<void> => {
     await Promise.all([pupitre.synchronize(), pupitre.synchronize()]);
   };
-  const whenClosing = (): Promise<void> => pupitre.finish();
+  const whenClosing = (): Promise<void> => designation.finish();
   const whenRestoring = (): Promise<void> => pupitre.restore();
   const whenPausingWithoutWindow = async (): Promise<unknown> => {
     try {
@@ -1016,7 +1027,7 @@ describe('AtelierCoordinator', () => {
     await journal.saveReferentiel('entreprise-a', structuredClone(reference));
   };
   const givenAnOpenWindow = async (): Promise<void> => {
-    await pupitre.openWindow('049');
+    await designation.openWindow('049');
   };
   const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
@@ -1138,16 +1149,17 @@ describe('AtelierCoordinator', () => {
     expect(journal.acceptedBatches).toEqual(batches);
   };
   const thenAllActivitiesRemain = (): void => {
-    expect(pupitre.referentiel()?.suivis.flatMap(suivi => suivi.activites)).toHaveLength(2);
+    expect(etatHorsLigne.referentiel()?.suivis.flatMap(suivi => suivi.activites)).toHaveLength(2);
   };
   const thenGlobalRecordingFailed = (): void => {
-    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
+    expect(pupitre.echecCaptureLocale()).toBe(true);
   };
   const thenGlobalRecordingRecovered = (): void => {
-    expect(pupitre.messageAtelier()).toBeUndefined();
+    expect(pupitre.echecCaptureLocale()).toBe(false);
+    expect(designation.refusAtelier()).toBeUndefined();
   };
   const thenGlobalGesturesAreAvailable = (available: boolean): void => {
-    expect(pupitre.gestesDisponibles()).toBe(available);
+    expect(designation.gestesDisponibles()).toBe(available);
   };
   const thenPointageIsUnavailable = (execution: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(execution).toEqual({ kind: 'INDISPONIBLE' });
@@ -1165,12 +1177,13 @@ describe('AtelierCoordinator', () => {
     await execution.completion;
   };
   const thenPointageRecordingFailedWithoutAdvancing = (): void => {
-    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
-    expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(false);
+    expect(pupitre.echecCaptureLocale()).toBe(true);
+    expect(designation.pointage()?.moules[0]?.isActive()).toBe(false);
   };
   const thenPointageRecordingRecoveredAndAdvanced = (): void => {
-    expect(pupitre.messageAtelier()).toBeUndefined();
-    expect(pupitre.pointage()?.moules[0]?.isActive()).toBe(true);
+    expect(pupitre.echecCaptureLocale()).toBe(false);
+    expect(designation.refusAtelier()).toBeUndefined();
+    expect(designation.pointage()?.moules[0]?.isActive()).toBe(true);
   };
   const thenNoGestureExistsBeforeChoice = async (): Promise<void> => {
     await thenQueueHas(0);
@@ -1184,11 +1197,11 @@ describe('AtelierCoordinator', () => {
     expect((await journal.read('entreprise-a')).evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
   };
   const thenActivityIs = (categorie: string): void => {
-    const suivi = requiredFixture(pupitre.referentiel()?.suivis[0], 'projected workshop element');
+    const suivi = requiredFixture(etatHorsLigne.referentiel()?.suivis[0], 'projected workshop element');
     expect(requiredFixture(suivi.activites[0], 'projected activity').categorie).toBe(categorie);
   };
   const thenNoActivity = (): void => {
-    expect(requiredFixture(pupitre.referentiel()?.suivis[0], 'projected workshop element').activites).toHaveLength(0);
+    expect(requiredFixture(etatHorsLigne.referentiel()?.suivis[0], 'projected workshop element').activites).toHaveLength(0);
   };
   const thenNatureOrderIs = async (natures: string[]): Promise<void> => {
     expect((await journal.read('entreprise-a')).evenements.map(event => event.geste.nature)).toEqual(natures);
@@ -1234,7 +1247,7 @@ describe('AtelierCoordinator', () => {
     await expect(operation).rejects.toThrow(message);
   };
   const thenConnectedIs = (connected: boolean): void => {
-    expect(pupitre.connected()).toBe(connected);
+    expect(etatHorsLigne.connected()).toBe(connected);
   };
   const thenJournalIs = (gestes: GesteDAtelier[]): void => {
     expect(serveur.journal).toEqual(gestes);
@@ -1243,7 +1256,7 @@ describe('AtelierCoordinator', () => {
     expect(serveur.chronology).toEqual(events);
   };
   const thenRefusalIs = async (code: string): Promise<void> => {
-    const diagnostics = await pupitre.diagnostics();
+    const diagnostics = await etatHorsLigne.diagnostics();
     expect(diagnostics).toHaveLength(1);
     expect(requiredFixture(diagnostics[0], 'diagnostic').refus).toEqual({
       code: `urn:glm:erreur:atelier:${code}`,
@@ -1251,29 +1264,30 @@ describe('AtelierCoordinator', () => {
     });
   };
   const thenDiagnosticsCountIs = async (count: number): Promise<void> => {
-    expect(await pupitre.diagnostics()).toHaveLength(count);
+    expect(await etatHorsLigne.diagnostics()).toHaveLength(count);
   };
   const thenMatriculeIs = (code: string): void => {
-    expect(requiredFixture(pupitre.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);
+    expect(requiredFixture(etatHorsLigne.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);
   };
   const thenDesignatedMatriculeIs = (code: string): void => {
-    expect(pupitre.operateur()?.matricule).toBe(code);
+    expect(designation.operateur()?.matricule).toBe(code);
   };
   const thenNoCompanyBData = async (): Promise<void> => {
     expect(await journal.read('entreprise-b')).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   };
   const thenNoReference = (): void => {
-    expect(pupitre.referentiel()).toBeUndefined();
+    expect(etatHorsLigne.referentiel()).toBeUndefined();
   };
   const thenTheWindowPresentationIsPopulated = (): void => {
-    expect(pupitre.operateur()).toBeDefined();
-    expect(pupitre.pointage()).toBeDefined();
-    expect(pupitre.messageAtelier()).toEqual({ message: 'Action non enregistrée — recommencez' });
+    expect(designation.operateur()).toBeDefined();
+    expect(designation.pointage()).toBeDefined();
+    expect(pupitre.echecCaptureLocale()).toBe(true);
   };
   const thenNoWindowPresentationRemains = (): void => {
-    expect(pupitre.operateur()).toBeUndefined();
-    expect(pupitre.pointage()).toBeUndefined();
-    expect(pupitre.messageAtelier()).toBeUndefined();
+    expect(designation.operateur()).toBeUndefined();
+    expect(designation.pointage()).toBeUndefined();
+    expect(pupitre.echecCaptureLocale()).toBe(false);
+    expect(designation.refusAtelier()).toBeUndefined();
   };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(Error);
@@ -1283,7 +1297,7 @@ describe('AtelierCoordinator', () => {
   };
   const givenDigitsEntered = (digits: string): void => {
     for (const char of digits) {
-      pupitre.enterDigit(char);
+      designation.enterDigit(char);
     }
   };
   const givenFailedLocalSemanticCapture = async (): Promise<void> => {
@@ -1300,21 +1314,19 @@ describe('AtelierCoordinator', () => {
   const givenBackgroundSynchronizationFails = (): void => {
     vi.spyOn(journal, 'synchronize').mockRejectedValueOnce(new Error('stockage indisponible'));
   };
-  const whenValidating = (): Promise<void> => pupitre.validate();
+  const whenValidating = (): Promise<void> => designation.validate();
   const thenValidationIsAvailable = (expected: boolean): void => {
-    expect(pupitre.canValidate()).toBe(expected);
+    expect(designation.canValidate()).toBe(expected);
   };
   const thenPointageIsDefined = (): void => {
-    expect(pupitre.pointage()).toBeDefined();
+    expect(designation.pointage()).toBeDefined();
   };
   const thenWorkshopMessageIsDefined = (): void => {
-    expect(pupitre.messageAtelier()).toBeDefined();
+    expect(designation.refusAtelier()).toBeDefined();
   };
   const thenWorkshopMessageIsCleared = (): void => {
-    expect(pupitre.messageAtelier()).toBeUndefined();
-  };
-  const thenWorkshopMessageIsError = (message: string): void => {
-    expect(pupitre.messageAtelier()).toEqual({ message });
+    expect(pupitre.echecCaptureLocale()).toBe(false);
+    expect(designation.refusAtelier()).toBeUndefined();
   };
   const thenChoiceRequiresWorkstation = (choice: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(choice.kind).toBe('CHOIX_POSTE_REQUIS');

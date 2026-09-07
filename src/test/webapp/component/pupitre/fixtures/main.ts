@@ -3,6 +3,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
@@ -106,8 +107,9 @@ const chargementProvider = {
   provide: ChargementDeLAtelierPort,
   useFactory: (): ChargementDeLAtelierPort => {
     const pupitre = inject(AtelierCoordinator);
+    const etatHorsLigne = inject(EtatHorsLigneDuPupitre);
     return {
-      etat: () => ({ referentielDisponible: pupitre.referentiel() !== undefined, connecte: pupitre.connected() }),
+      etat: () => ({ referentielDisponible: etatHorsLigne.referentiel() !== undefined, connecte: etatHorsLigne.connected() }),
       charger: () => pupitre.restore(),
     };
   },
@@ -120,6 +122,7 @@ const bootstrapFixture = async (): Promise<void> => {
       AcceptationLocaleDesGestes,
       EtatHorsLigneDuPupitre,
       AtelierCoordinator,
+      DesignationCoordinator,
       PupitreSynchronization,
       EnrolementDuPupitre,
       chargementProvider,

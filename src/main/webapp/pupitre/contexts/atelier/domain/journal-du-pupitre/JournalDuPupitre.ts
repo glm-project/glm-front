@@ -134,3 +134,28 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
         },
       }),
 });
+
+export class EvenementsDuJournal {
+  private readonly evenements: readonly EvenementDuJournal[];
+
+  constructor(evenements: readonly EvenementDuJournal[]) {
+    this.evenements = evenements.map(snapshotEvenement);
+  }
+
+  nextPending(): EvenementEnAttente | undefined {
+    return this.evenements.find(evenement => evenement.etat === 'EN_ATTENTE');
+  }
+
+  refusals(): readonly EvenementRefuse[] {
+    return this.evenements.filter(evenement => evenement.etat === 'REFUSE');
+  }
+}
+
+export const acceptPublication = (geste: GesteDAtelier, journeeOuverte: boolean): EvenementAccepte =>
+  geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte } : { geste, etat: 'ACCEPTE' };
+
+export const refusePublication = (geste: GesteDAtelier, refus: EvenementRefuse['refus']): EvenementRefuse => ({
+  geste,
+  etat: 'REFUSE',
+  refus: { code: refus.code, message: refus.message },
+});

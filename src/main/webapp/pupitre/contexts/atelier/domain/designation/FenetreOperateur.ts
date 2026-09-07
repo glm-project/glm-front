@@ -11,6 +11,8 @@ import {
   TypeDePresence,
 } from '../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../journal-du-pupitre/JournalDuPupitreProjection';
+import { IdentiteDeFenetre } from './IdentiteDeFenetre';
+import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 
 export interface ActiviteDePointage {
   readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
@@ -106,7 +108,8 @@ interface EtatDeFenetreOperateur {
   readonly entreprise: string;
   readonly vue: JournalDuPupitre;
   readonly instantDOuverture: number;
-  readonly identity: number;
+  readonly identity: IdentiteDeFenetre;
+  readonly globale: IntentionGlobaleInitiee | undefined;
   readonly arriveeAssuree: boolean;
   readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
   readonly intention: number;
@@ -250,7 +253,13 @@ export class FenetreOperateur {
     this.operateur = etat.operateurDesigne.identity();
   }
 
-  static open(entreprise: string, vue: JournalDuPupitre, code: string, instantDOuverture: number, identity: number): FenetreOperateur {
+  static open(
+    entreprise: string,
+    vue: JournalDuPupitre,
+    code: string,
+    instantDOuverture: number,
+    identity: IdentiteDeFenetre,
+  ): FenetreOperateur {
     const operateur = vue.referentiel?.operateurs.find(candidat => candidat.matricule === code);
     if (operateur === undefined) throw new Error('Matricule absent du referentiel local.');
     return new FenetreOperateur({
@@ -258,6 +267,7 @@ export class FenetreOperateur {
       vue,
       instantDOuverture,
       identity,
+      globale: undefined,
       arriveeAssuree: false,
       contextesParGeste: new Map(),
       intention: 0,
@@ -267,7 +277,19 @@ export class FenetreOperateur {
   }
 
   hasIdentity(other: FenetreOperateur): boolean {
-    return this.etat.identity === other.etat.identity;
+    return this.identity().equals(other.identity());
+  }
+  identity(): IdentiteDeFenetre {
+    return this.etat.identity;
+  }
+  allowsGestures(): boolean {
+    return this.etat.globale === undefined;
+  }
+  afterIntendingGlobal(intention: IntentionGlobaleInitiee): FenetreOperateur {
+    return this.afterIntendingGesture().with({ globale: intention });
+  }
+  afterCompletingGlobal(): FenetreOperateur {
+    return this.with({ globale: undefined });
   }
   snapshot(): JournalDuPupitre {
     return snapshotDuJournal(this.etat.vue);
@@ -304,6 +326,7 @@ export class FenetreOperateur {
     return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }
   afterChoosingPoste(suiviId: string, cible: CibleDePointage, posteId: string, identify: () => IdentiteDuGeste): GestesDecisionResult {
+    this.requireAvailableGestures();
     const suivi = this.requireSuivi(suiviId);
     if (this.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
     this.etat.operateurDesigne.assertPoste(posteId);
@@ -320,7 +343,12 @@ export class FenetreOperateur {
     };
   }
   afterIntendingGesture(): FenetreOperateur {
+    this.requireAvailableGestures();
     return this.with({ refusVisible: undefined, contextesParGeste: new Map(), intention: this.etat.intention + 1 });
+  }
+
+  private requireAvailableGestures(): void {
+    if (!this.allowsGestures()) throw new Error('Une commande globale est en cours.');
   }
   afterReconciling(entreprise: string, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
@@ -499,7 +527,9 @@ export class FenetreOperateur {
     return suivi.reference ?? suivi.nom;
   }
   private with(
-    change: Partial<Pick<EtatDeFenetreOperateur, 'vue' | 'arriveeAssuree' | 'contextesParGeste' | 'intention' | 'refusVisible'>>,
+    change: Partial<
+      Pick<EtatDeFenetreOperateur, 'vue' | 'arriveeAssuree' | 'contextesParGeste' | 'intention' | 'refusVisible' | 'globale'>
+    >,
   ): FenetreOperateur {
     return new FenetreOperateur({ ...this.etat, ...change });
   }

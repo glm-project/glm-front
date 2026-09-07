@@ -1,5 +1,7 @@
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
+import { DesignationCoordinator } from '@/pupitre/contexts/atelier/application/DesignationCoordinator';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
 import { ElementDePointage, IdentiteOperateurDesigne, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
@@ -24,7 +26,8 @@ const pointageFixture: VueDePointage = {
 class AtelierCoordinatorFixture {
   readonly connected = signal(true);
   readonly operateur = signal<IdentiteOperateurDesigne | undefined>(undefined);
-  readonly messageAtelier = signal<ReturnType<AtelierCoordinator['messageAtelier']>>(undefined);
+  readonly echecCaptureLocale = signal(false);
+  readonly refusAtelier = signal<ReturnType<DesignationCoordinator['refusAtelier']>>(undefined);
   readonly pointage = signal<VueDePointage | undefined>(undefined);
   readonly gestesDisponibles = signal(true);
   readonly code = signal('');
@@ -117,6 +120,8 @@ describe('Pupitre page', () => {
       imports: [PupitrePage],
       providers: [
         { provide: AtelierCoordinator, useValue: pupitre },
+        { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
+        { provide: DesignationCoordinator, useValue: pupitre },
         { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
@@ -195,13 +200,21 @@ describe('Pupitre page', () => {
       { contexte: { kind: 'COMMANDE_GLOBALE' as const, intention: 'TOUT_ARRETER' as const }, message: 'Commande refusée' },
       'TOUT ARRÊTER Commande refusée',
     ],
-    [{ message: 'Service indisponible' }, 'Service indisponible'],
   ])('should render the workshop message in presentation vocabulary', (message, expected) => {
     givenWorkshopMessage(message);
 
     whenRenderingThePage();
 
     thenHeaderMessageIs(expected);
+  });
+
+  it('should display a local capture failure ahead of a workshop refusal', () => {
+    givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: '204' }, message: 'Pointage refusé' });
+    givenLocalCaptureFailure();
+
+    whenRenderingThePage();
+
+    thenHeaderMessageIs('Action non enregistrée — recommencez');
   });
 
   it('should confirm an administration reset before revoking the enrolment', () => {
@@ -258,8 +271,12 @@ describe('Pupitre page', () => {
   const givenClosureWillFail = (): void => {
     pupitre.finish.mockRejectedValueOnce(new Error('closure unavailable'));
   };
-  const givenWorkshopMessage = (message: ReturnType<AtelierCoordinator['messageAtelier']>): void => {
-    pupitre.messageAtelier.set(message);
+  const givenLocalCaptureFailure = (): void => {
+    pupitre.echecCaptureLocale.set(true);
+  };
+
+  const givenWorkshopMessage = (message: ReturnType<DesignationCoordinator['refusAtelier']>): void => {
+    pupitre.refusAtelier.set(message);
   };
 
   const whenRenderingThePage = (): void => {

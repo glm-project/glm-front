@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -66,6 +67,7 @@ describe('PupitreRuntime', () => {
         PupitreRuntime,
         { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: AtelierCoordinator, useValue: pupitre },
+        { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });

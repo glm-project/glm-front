@@ -44,7 +44,7 @@ renumbers at merge time. The status below is the living one — update this line
   analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
 - [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Amended by 0024** — quick static
   checks at push, later complemented by mutation of changed domain files
-- [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Accepted** — stateful
+- [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Complemented by 0028** — stateful
   invariants and pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
   **Accepted** — contextual readability rules and a narrowly scoped presentation-effect exception
@@ -58,3 +58,5 @@ renumbers at merge time. The status below is the living one — update this line
   **Accepted** — an enrolment context and screen, an exposed grant lifecycle, derived expiry and a guarded reset gesture
 - [0027 — Encode the enrolment QR code in the bundle](0027-encode-the-enrolment-qr-code-in-the-bundle.md) — **Accepted** —
   a pinned encoder, our own SVG path rendering and design-token colours, with no external origin
+- [0028 — Default to Value Objects for domain values](0028-default-to-value-objects-for-domain-values.md) — **Accepted** —
+  Value Objects for meaningful scalar and composite values and business collections, including single-use concepts

@@ -30,9 +30,17 @@ advances that view.
 `GesteReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
 motifs, never transport URNs.
 
-`AtelierCoordinator` coordinates capture and visible snapshots. `PupitreSynchronization` coordinates
+`DesignationCoordinator` owns the current immutable designation and derives its visible snapshots.
+`AtelierCoordinator` coordinates gesture commands and durable capture. `PupitreSynchronization` coordinates
 authenticated exchange, FIFO publication, aggregate rereads and reference refresh. Keep storage,
 authentication and transport mechanics out of the domain owners.
+
+`AcceptationLocaleDesGestes` owns the acceptance queue, shared directly by capture and designation closure.
+`EtatHorsLigneDuPupitre` loads and exposes the selected company's journal view; it does not relay capture
+commands. Read consumers use that state directly. `AtelierCoordinator` exposes local capture failure separately
+from the designation's domain refusal; the primary presentation chooses the message and its precedence.
+`EvenementsDuJournal` owns pending-event selection in acceptance order and refused-event queries. Domain
+publication functions construct accepted or refused outcomes; synchronization executes and persists them.
 
 ## Synchronization preserves evidence
 
@@ -78,9 +86,9 @@ extends that decision to the designation's interaction and lifecycle rules.
 
 `DesignationOperateur` owns the numeric entry, correction, explicit validation, unknown code and temporary
 designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
-`AtelierCoordinator` coordinates local resolution and closure, publishes each designation transition and
+`DesignationCoordinator` coordinates local resolution and closure, publishes each designation transition and
 explicitly replaces its inactivity schedule through a domain port. The secondary timer adapter only executes
-the requested callback. The page calls `AtelierCoordinator.finish()` when it is left; switching from keypad to
+the requested callback. The page calls `DesignationCoordinator.finish()` when it is left; switching from keypad to
 pointage does not destroy the coordinator or close the designation. `Designation` translates touch and keyboard
 events and renders the application snapshot, without owning its lifetime.
 
@@ -97,7 +105,7 @@ deadline instead of unconditionally closing a designation that may have been ren
 The routed common page owns the permanent chrome, designation and pointage views. The root shell retains
 only technical runtime startup and routing. The page gates the keypad on enrolment and reference
 availability, then switches views on the same URL, and calls `finish()` when it is destroyed; destruction of
-the root-scoped `AtelierCoordinator` is not the page-exit hook. The pointage view's “J'ai fini” action also calls
+the root-scoped `DesignationCoordinator` is not the page-exit hook. The pointage view's “J'ai fini” action also calls
 `finish()`.
 
 Every screen press, including blank chrome, goes through `registerPress()` before a business command: a
@@ -125,6 +133,13 @@ A global command pressed while captures are already in flight is retained and de
 window after those captures settle locally. From that intention until local acceptance, tiles and global
 commands are unavailable at both the command boundary and in the rendered controls. “J'ai fini” remains
 available: it closes the visible window immediately while already initiated work drains.
+
+The window owns that exclusion through its retained `IntentionGlobaleInitiee`; the application reports local
+completion or failure to release it. This Value Object prepares the deferred command with deterministic
+gesture identities and the time fixed at the press. `IdentiteDeFenetre` identifies one opening across immutable
+versions, so queued work and a prepared workstation choice can resolve the latest version of that same window.
+The designation remains the sole owner of the window during capture, reconciliation and closure. Its visible
+projection disappears on closure while the retained model lets previously initiated captures finish.
 
 Under the permanent chrome, the page renders the enrolment screen until the device is enrolled and its first
 complete reference is active, and the workshop views afterwards. That switch reads the enrolment context's

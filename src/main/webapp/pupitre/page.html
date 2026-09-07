@@ -1,17 +1,17 @@
 <glm-pupitre-header
   heading="glmfront"
-  [connected]="pupitre.connected()"
-  [operateur]="pupitre.operateur()"
+  [connected]="etatHorsLigne.connected()"
+  [operateur]="designation.operateur()"
   [message]="messageAtelier()"
   (finRequested)="finish()"
   (reinitialisationRequested)="askReset()"
 />
 
-@if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (pupitre.operateur()) { @if (pupitre.pointage(); as vue) {
+@if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (designation.operateur()) { @if (designation.pointage(); as vue) {
 <glm-pointage
   [vue]="vue"
   [commander]="pupitre"
-  [gestesDisponibles]="pupitre.gestesDisponibles()"
+  [gestesDisponibles]="designation.gestesDisponibles()"
   (pauseRequested)="executeGlobale('PAUSE')"
   (repriseRequested)="executeGlobale('REPRENDRE')"
   (arretTotalRequested)="executeGlobale('TOUT_ARRETER')"

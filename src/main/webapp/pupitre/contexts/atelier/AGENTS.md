@@ -10,6 +10,10 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 **Fenêtre opérateur** : période temporaire pendant laquelle un opérateur reste désigné pour enchaîner des gestes. Elle possède la vue métier personnelle du pointage et en fige les durées à son ouverture. Elle se termine après inactivité ou par l'action « J'ai fini »; ce n'est pas une session de connexion.
 
+**Identité de fenêtre** : valeur qui distingue une ouverture des suivantes et reste identique à travers ses versions immuables. Elle permet de retrouver la fenêtre courante d'une capture ou d'un choix de poste initié auparavant.
+
+**Intention globale initiée** : commande globale retenue avec l'identité racine et l'heure fixées à la pression. Elle prépare son lot à partir de la fenêtre mise à jour au moment de sa capture, sans nouvelle identité aléatoire ni nouvel échantillonnage du temps.
+
 **Vue de pointage** : projection personnelle prête à rendre des éléments de l'atelier, regroupés et ordonnés avec leur numéro résolu, l'activité de l'opérateur désigné, sa catégorie et sa durée figée. Elle ne porte ni libellé d'écran ni choix de style.
 
 **Numéro d'élément** : référence attribuée par l'entreprise lorsqu'elle existe, sinon nom généré de l'élément. C'est l'identifiant visible et la clé du tri naturel sur la vue de pointage.
@@ -41,7 +45,9 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 L'adaptateur primaire de pointage expose les intentions de l'écran. La composition du pupitre possède la navigation entre écrans, la fermeture de la fenêtre et l'orchestration des séquences globales.
 
-La page routée commune possède le chrome permanent, la désignation et le pointage. Elle porte le garde d'inactivité sur toute cette surface et appelle `finish()` à sa destruction. Le shell racine ne possède que le démarrage technique et le routeur; le coordinateur `AtelierCoordinator` n'interprète pas sa propre destruction comme la sortie de cette page.
+La page routée commune possède le chrome permanent, la désignation et le pointage. Elle porte le garde d'inactivité sur toute cette surface et appelle `DesignationCoordinator.finish()` à sa destruction. Le shell racine ne possède que le démarrage technique et le routeur; le coordinateur de désignation n'interprète pas sa propre destruction comme la sortie de cette page.
+
+`DesignationCoordinator` possède l'unique version courante de `DesignationOperateur` et en dérive les vues. `AtelierCoordinator` orchestre les commandes de gestes et leur capture. La fenêtre porte l'exclusion pendant une intention globale initiée; les signaux de disponibilité la reflètent. Les deux orchestrations partagent la même file d'acceptation locale, que la fermeture attend sans dépendre du coordinateur de gestes.
 
 Pendant l'acceptation durable d'une action, l'adaptateur primaire désactive les deux cibles de la tuile concernée et tous les choix de sa pop-up après sélection. Les autres tuiles restent disponibles; un échec local réactive les contrôles sans avancer la vue.
 

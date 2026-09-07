@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { ChargementDeLAtelier, ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { chargementProviders } from '@/pupitre/contexts/enrolement/infrastructure/secondary/atelier/chargement.providers';
@@ -37,6 +38,7 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
       providers: [
         ...chargementProviders,
         { provide: AtelierCoordinator, useValue: pupitre },
+        { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
