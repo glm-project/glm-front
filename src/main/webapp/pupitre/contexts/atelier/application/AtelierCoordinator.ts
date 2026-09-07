@@ -32,7 +32,6 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
   private readonly erreurAtelierState = signal<string | undefined>(undefined);
   private readonly gestesDisponiblesState = signal(true);
 
-  readonly etatDesignation = this.designationState.asReadonly();
   readonly code = computed<string>(() => this.designationState().code);
   readonly unknownCode = computed<boolean>(() => this.designationState().unknownCode);
   readonly operateur = computed<ReturnType<DesignationOperateur['snapshot']>['operateur']>(() => this.designationState().operateur);
