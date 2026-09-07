@@ -1,13 +1,30 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import {
+  DeviceEnrolmentOutcome,
+  DeviceEnrolmentPort,
+  ShowDeviceAuthorizationCode,
+} from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
-import { DeviceAuthorization, DeviceGrantClient, isGranted, RefusedGrant, Tokens } from './DeviceGrantClient';
+import {
+  authorizationCodeFrom,
+  DeviceAuthorization,
+  DeviceGrantClient,
+  GrantAnswer,
+  isGranted,
+  RefusedGrant,
+  Tokens,
+} from './DeviceGrantClient';
 
 const SLOW_DOWN_EXTRA_SECONDS = 5;
 const EXTRA_SECONDS_WHEN_STILL_WAITING = new Map<string, number>([
   ['authorization_pending', 0],
   ['slow_down', SLOW_DOWN_EXTRA_SECONDS],
+]);
+const OUTCOME_WHEN_REFUSED = new Map<string, DeviceEnrolmentOutcome>([
+  ['access_denied', 'DENIED'],
+  ['expired_token', 'EXPIRED'],
 ]);
 const REFUSAL_NO_RETRY_WILL_FIX = 'invalid_grant';
 const SECONDS_BETWEEN_CLAIMS_UNLESS_TOLD = 5;
@@ -91,8 +108,12 @@ const persistedEnrolmentFrom = (session: Session | undefined, tenant: string | u
 
 const hasExpired = (session: Session): boolean => Date.now() >= session.expiresAt;
 
+const SHOW_NO_CODE: ShowDeviceAuthorizationCode = () => undefined;
+
+type Restoration = 'RESTORED' | 'ABANDONED' | 'ABSENT' | 'UNREACHABLE';
+
 @Injectable()
-export class DeviceAuthentication extends AuthenticationPort {
+export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort {
   private readonly grant = inject(DeviceGrantClient);
   private readonly stockage = inject(LocalStoragePort, { optional: true });
   private readonly errorHandler = inject(ErrorHandlerPort);
@@ -104,47 +125,67 @@ export class DeviceAuthentication extends AuthenticationPort {
   private renewal: ReturnType<typeof setTimeout> | undefined;
 
   override async authenticate(): Promise<void> {
+    await this.enrol(SHOW_NO_CODE);
+  }
+
+  async enrol(showCode: ShowDeviceAuthorizationCode): Promise<DeviceEnrolmentOutcome> {
     const enrolment = Symbol('enrolment');
     this.enrolment = enrolment;
 
-    try {
-      if (await this.restore(enrolment)) {
-        return;
-      }
-    } catch (failure: unknown) {
-      this.errorHandler.handleError(failure);
-      return;
+    const restoration = await this.restoreOrReport(enrolment);
+
+    if (restoration === 'RESTORED') {
+      return 'ENROLLED';
+    }
+    if (restoration !== 'ABSENT') {
+      return restoration;
     }
 
-    await this.enrol(enrolment);
+    return this.requestApproval(enrolment, showCode);
   }
 
-  private async enrol(enrolment: symbol): Promise<void> {
+  private async restoreOrReport(enrolment: symbol): Promise<Restoration> {
+    try {
+      return await this.restore(enrolment);
+    } catch (failure: unknown) {
+      this.errorHandler.handleError(failure);
+      return 'UNREACHABLE';
+    }
+  }
+
+  private async requestApproval(enrolment: symbol, showCode: ShowDeviceAuthorizationCode): Promise<DeviceEnrolmentOutcome> {
     const device = await this.grant.requestDeviceAuthorization();
 
     if (device === undefined) {
-      return;
+      return 'UNREACHABLE';
     }
 
-    const granted = await this.pollUntilGranted(device, enrolment);
+    showCode(authorizationCodeFrom(device));
 
-    if (granted === undefined || this.isAbandoned(enrolment)) {
-      return;
+    const answer = await this.pollUntilGranted(device, enrolment);
+
+    if (answer === undefined || this.isAbandoned(enrolment)) {
+      return 'ABANDONED';
+    }
+    if (!isGranted(answer)) {
+      return OUTCOME_WHEN_REFUSED.get(answer.refusedBecause) ?? 'UNREACHABLE';
     }
 
-    await this.persistEnrolment(granted, enrolment);
+    return this.persistEnrolment(answer.tokens, enrolment);
   }
 
-  private async persistEnrolment(granted: Tokens, enrolment: symbol): Promise<void> {
+  private async persistEnrolment(granted: Tokens, enrolment: symbol): Promise<DeviceEnrolmentOutcome> {
     const session = sessionFrom(granted);
     try {
       await this.save(session);
       if (this.isAbandoned(enrolment)) {
-        return;
+        return 'ABANDONED';
       }
       this.open(session, secondsBeforeRenewing(granted));
+      return 'ENROLLED';
     } catch (failure: unknown) {
       this.errorHandler.handleError(failure);
+      return 'UNREACHABLE';
     }
   }
 
@@ -198,7 +239,7 @@ export class DeviceAuthentication extends AuthenticationPort {
     return this.enrolment !== enrolment;
   }
 
-  private async pollUntilGranted(device: DeviceAuthorization, enrolment: symbol): Promise<Tokens | undefined> {
+  private async pollUntilGranted(device: DeviceAuthorization, enrolment: symbol): Promise<GrantAnswer | undefined> {
     let secondsBetweenClaims = device.interval ?? SECONDS_BETWEEN_CLAIMS_UNLESS_TOLD;
 
     for (;;) {
@@ -211,13 +252,13 @@ export class DeviceAuthentication extends AuthenticationPort {
       const answer = await this.grant.claimTokens(device.device_code);
 
       if (isGranted(answer)) {
-        return answer.tokens;
+        return answer;
       }
 
       const extraSeconds = EXTRA_SECONDS_WHEN_STILL_WAITING.get(answer.refusedBecause);
 
       if (extraSeconds === undefined) {
-        return undefined;
+        return answer;
       }
 
       secondsBetweenClaims += extraSeconds;
@@ -308,21 +349,21 @@ export class DeviceAuthentication extends AuthenticationPort {
     await this.authenticate();
   }
 
-  private async restore(enrolment: symbol): Promise<boolean> {
+  private async restore(enrolment: symbol): Promise<Restoration> {
     if (this.restored || this.stockage === null) {
-      return false;
+      return 'ABSENT';
     }
     const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
     if (this.isAbandoned(enrolment)) {
-      return true;
+      return 'ABANDONED';
     }
     this.restored = true;
     this.tenant = stored?.tenant;
     if (stored?.session === undefined) {
-      return false;
+      return 'ABSENT';
     }
     this.open(stored.session, SHORTEST_RENEWAL_DELAY_SECONDS);
-    return true;
+    return 'RESTORED';
   }
 
   private async save(session: Session | undefined, expected?: Session): Promise<'CONSERVE' | 'REMPLACE'> {

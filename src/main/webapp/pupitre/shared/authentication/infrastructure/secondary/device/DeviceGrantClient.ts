@@ -1,3 +1,4 @@
+import { DeviceAuthorizationCode } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { HttpBackend, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, firstValueFrom, map, of } from 'rxjs';
@@ -11,6 +12,10 @@ const NO_REASON_GIVEN = 'no_reason_given';
 export interface DeviceAuthorization {
   device_code: string;
   interval?: number;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete?: string;
+  expires_in: number;
 }
 
 export interface Tokens {
@@ -34,6 +39,13 @@ interface OauthRefusal {
 }
 
 export const isGranted = (answer: GrantAnswer): answer is GrantedTokens => 'tokens' in answer;
+
+export const authorizationCodeFrom = (device: DeviceAuthorization): DeviceAuthorizationCode => ({
+  userCode: device.user_code,
+  verificationUri: device.verification_uri,
+  verificationUriComplete: device.verification_uri_complete,
+  expiresIn: device.expires_in,
+});
 
 const reasonIn = (refusal: HttpErrorResponse): string => (refusal.error as OauthRefusal | null)?.error ?? NO_REASON_GIVEN;
 

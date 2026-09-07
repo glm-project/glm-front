@@ -1,5 +1,10 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import {
+  DeviceAuthorizationCode,
+  DeviceEnrolmentOutcome,
+  DeviceEnrolmentPort,
+} from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
@@ -662,5 +667,194 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
   const thenRestartedSessionRenewsWith = (restarted: RestartedRenewal, refreshToken: string, token: string, tenant: string): void => {
     thenSessionIs(restarted.session, token, tenant);
     expect(restarted.refreshToken).toBe(refreshToken);
+  };
+});
+
+describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
+  const verificationUriFixture = 'http://keycloak.test/realms/glm/device';
+  const deviceAuthorizationFixture = {
+    device_code: 'device',
+    user_code: 'WDJB-MJHT',
+    verification_uri: verificationUriFixture,
+    verification_uri_complete: `${verificationUriFixture}?user_code=WDJB-MJHT`,
+    expires_in: 600,
+    interval: 0,
+  };
+  const grantedTokensFixture = { access_token: tokenFixture, refresh_token: 'refresh-1', expires_in: 300 };
+  const refusalsFixture: [string, DeviceEnrolmentOutcome][] = [
+    ['access_denied', 'DENIED'],
+    ['expired_token', 'EXPIRED'],
+    ['invalid_client', 'UNREACHABLE'],
+  ];
+
+  let device: DeviceAuthentication;
+  let enrolment: DeviceEnrolmentPort;
+  let stockage: StorageFixture;
+  let http: HttpTestingController;
+  let codesShown: DeviceAuthorizationCode[];
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    stockage = new StorageFixture();
+    codesShown = [];
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        DeviceGrantClient,
+        DeviceAuthentication,
+        { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
+        { provide: LocalStoragePort, useValue: stockage },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    });
+    device = TestBed.inject(DeviceAuthentication);
+    enrolment = device;
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('should show the code to approve, then report the device enrolled once its tokens are granted', async () => {
+    const outcome = whenEnrolling();
+
+    await whenTheServerIssuesTheCode();
+
+    thenTheCodeShownIs({
+      userCode: 'WDJB-MJHT',
+      verificationUri: verificationUriFixture,
+      verificationUriComplete: `${verificationUriFixture}?user_code=WDJB-MJHT`,
+      expiresIn: 600,
+    });
+
+    await whenTheServerGrantsTheTokens();
+
+    await thenTheOutcomeIs(outcome, 'ENROLLED');
+  });
+
+  it.each(refusalsFixture)('should report the %s refusal as %s', async (refusal, expected) => {
+    const outcome = whenEnrolling();
+
+    await whenTheServerIssuesTheCode();
+    await whenTheServerRefusesTheClaim(refusal);
+
+    await thenTheOutcomeIs(outcome, expected);
+  });
+
+  it('should report an unreachable server when no code can be obtained', async () => {
+    const outcome = whenEnrolling();
+
+    await whenTheAuthorizationRequestFails();
+
+    await thenTheOutcomeIs(outcome, 'UNREACHABLE');
+    thenNoCodeWasShown();
+  });
+
+  it('should report an unreachable server when the granted session cannot be committed', async () => {
+    givenStorageCannotCommit();
+
+    const outcome = whenEnrolling();
+    await whenTheServerIssuesTheCode();
+    await whenTheServerGrantsTheTokens();
+
+    await thenTheOutcomeIs(outcome, 'UNREACHABLE');
+  });
+
+  it('should report an unreachable server when the durable enrolment cannot be read', async () => {
+    givenStorageCannotBeRead();
+
+    const outcome = whenEnrolling();
+
+    await thenTheOutcomeIs(outcome, 'UNREACHABLE');
+    thenNoCodeWasShown();
+  });
+
+  it('should abandon an enrolment replaced while its code was still being claimed', async () => {
+    const outcome = whenEnrolling();
+    await whenTheServerIssuesTheCode();
+
+    await whenTheEnrolmentIsAbandoned();
+
+    await thenTheOutcomeIs(outcome, 'ABANDONED');
+  });
+
+  it('should report the device enrolled from its durable session without showing a code', async () => {
+    await givenADurableEnrolment();
+
+    const outcome = whenEnrolling();
+
+    await thenTheOutcomeIs(outcome, 'ENROLLED');
+    thenNoCodeWasShown();
+  });
+
+  const givenStorageCannotCommit = (): void => {
+    stockage.failWrite = true;
+  };
+
+  const givenStorageCannotBeRead = (): void => {
+    stockage.failRead = true;
+  };
+
+  const givenADurableEnrolment = async (): Promise<void> => {
+    const first = whenEnrolling();
+    await whenTheServerIssuesTheCode();
+    await whenTheServerGrantsTheTokens();
+    await stockage.completeIOUntil(first);
+    vi.clearAllTimers();
+    codesShown = [];
+    device = TestBed.runInInjectionContext(() => new DeviceAuthentication());
+    enrolment = device;
+  };
+
+  const whenEnrolling = (): Promise<DeviceEnrolmentOutcome> =>
+    enrolment.enrol(code => {
+      codesShown.push(code);
+    });
+
+  const whenTheServerIssuesTheCode = async (): Promise<void> => {
+    await stockage.drainIO();
+    (await whenRequestArrives(`${baseFixture}/auth/device`)).flush(deviceAuthorizationFixture);
+  };
+
+  const whenTheAuthorizationRequestFails = async (): Promise<void> => {
+    await stockage.drainIO();
+    (await whenRequestArrives(`${baseFixture}/auth/device`)).error(new ProgressEvent('error'));
+  };
+
+  const whenTheServerGrantsTheTokens = async (): Promise<void> => {
+    await vi.advanceTimersToNextTimerAsync();
+    (await whenRequestArrives(`${baseFixture}/token`)).flush(grantedTokensFixture);
+  };
+
+  const whenTheServerRefusesTheClaim = async (refusal: string): Promise<void> => {
+    await vi.advanceTimersToNextTimerAsync();
+    (await whenRequestArrives(`${baseFixture}/token`)).flush({ error: refusal }, { status: 400, statusText: 'Refused' });
+  };
+
+  const whenTheEnrolmentIsAbandoned = async (): Promise<void> => {
+    device.logout();
+    await vi.advanceTimersToNextTimerAsync();
+  };
+
+  const whenRequestArrives = async (url: string): Promise<TestRequest> => {
+    await afterMicrotasks();
+    return http.expectOne(url);
+  };
+
+  const thenTheCodeShownIs = (expected: DeviceAuthorizationCode): void => {
+    expect(codesShown).toEqual([expected]);
+  };
+
+  const thenNoCodeWasShown = (): void => {
+    expect(codesShown).toEqual([]);
+  };
+
+  const thenTheOutcomeIs = async (outcome: Promise<DeviceEnrolmentOutcome>, expected: DeviceEnrolmentOutcome): Promise<void> => {
+    expect(await stockage.completeIOUntil(outcome)).toBe(expected);
   };
 });
