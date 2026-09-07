@@ -31,7 +31,9 @@ type RequestBody<Op> = Op extends { requestBody: { content: { 'application/json'
 
 type ReadRequest<Route extends ReadRoute> = PathParameters<ReadOperation<Route>> & QueryParameters<ReadOperation<Route>>;
 
-type WriteRequest<Route extends WriteRoute> = PathParameters<WriteOperation<Route>> & RequestBody<WriteOperation<Route>>;
+type WriteRequest<Route extends WriteRoute> = PathParameters<WriteOperation<Route>>
+  & QueryParameters<WriteOperation<Route>>
+  & RequestBody<WriteOperation<Route>>;
 
 type QueryValue = string | number | boolean | readonly (string | number | boolean)[];
 
@@ -63,8 +65,10 @@ export class ApiClient {
   }
 
   write<Route extends WriteRoute>(route: Route, request: WriteRequest<Route>): Promise<ResponseBody<WriteOperation<Route>>> {
-    const { pathParams, body } = request as RawRequest;
+    const { pathParams, queryParams, body } = request as RawRequest;
 
-    return firstValueFrom(this.http.post<ResponseBody<WriteOperation<Route>>>(buildUrlFor(route, pathParams), body));
+    return firstValueFrom(
+      this.http.post<ResponseBody<WriteOperation<Route>>>(buildUrlFor(route, pathParams), body, { params: buildParamsFrom(queryParams) }),
+    );
   }
 }
