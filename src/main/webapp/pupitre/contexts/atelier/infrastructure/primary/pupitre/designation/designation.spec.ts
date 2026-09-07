@@ -1,8 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
+import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
   DesignationExpiration,
@@ -80,7 +80,7 @@ describe('Designation keypad', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
         CurrentOperateurLifecycle,
         PupitreSynchronization,

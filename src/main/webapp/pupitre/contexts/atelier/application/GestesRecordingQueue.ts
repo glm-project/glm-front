@@ -13,7 +13,7 @@ export interface AcceptationLocale {
 }
 
 @Injectable()
-export class AcceptationLocaleDesGestes {
+export class GestesRecordingQueue {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournauxDuPupitrePort);
   private saisie: Promise<void> = Promise.resolve();

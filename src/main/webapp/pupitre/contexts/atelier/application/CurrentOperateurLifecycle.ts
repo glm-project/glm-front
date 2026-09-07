@@ -5,14 +5,14 @@ import { DesignationOperateur } from '../domain/designation/DesignationOperateur
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 @Injectable()
 export class CurrentOperateurLifecycle {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
-  private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
+  private readonly acceptationLocale = inject(GestesRecordingQueue);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
   private readonly designation = signal(DesignationOperateur.empty());
   private readonly state = computed(() => this.designation().snapshot());

@@ -4,10 +4,10 @@ import { FenetreOperateur, LotDeGestesDAtelier } from '../domain/designation/Fen
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
 import { IdentiteDuGeste, TypeDePresence } from '../domain/journal-du-pupitre/JournalDuPupitre';
-import { AcceptationLocaleDesGestes, IntentionDeCapture } from './AcceptationLocaleDesGestes';
 import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
 import { CurrentOperateurLifecycle } from './CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { GestesRecordingQueue, IntentionDeCapture } from './GestesRecordingQueue';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
 
 const identityAt = (instant: number): IdentiteDuGeste => ({
@@ -21,7 +21,7 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly designation = inject(CurrentOperateurLifecycle);
-  private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
+  private readonly acceptationLocale = inject(GestesRecordingQueue);
   private readonly echecLocal = signal<IdentiteDeFenetre | undefined>(undefined);
 
   readonly echecCaptureLocale = computed(() => {

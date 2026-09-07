@@ -11,7 +11,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -31,8 +31,8 @@ const vueFixture: JournalDuPupitre = {
   },
 };
 
-describe('AcceptationLocaleDesGestes', () => {
-  let acceptation: AcceptationLocaleDesGestes;
+describe('GestesRecordingQueue', () => {
+  let acceptation: GestesRecordingQueue;
   let journal: JournauxDuPupitreFixture;
   let tenant: string | undefined;
 
@@ -43,7 +43,7 @@ describe('AcceptationLocaleDesGestes', () => {
 
     acceptation = Injector.create({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         { provide: JournauxDuPupitrePort, useValue: journal },
         {
           provide: AuthenticationPort,
@@ -54,7 +54,7 @@ describe('AcceptationLocaleDesGestes', () => {
           },
         },
       ],
-    }).get(AcceptationLocaleDesGestes);
+    }).get(GestesRecordingQueue);
   });
 
   it('should capture pause presence when global intention is pause', async () => {

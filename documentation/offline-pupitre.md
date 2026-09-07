@@ -35,7 +35,7 @@ motifs, never transport URNs.
 authenticated exchange, FIFO publication, aggregate rereads and reference refresh. Keep storage,
 authentication and transport mechanics out of the domain owners.
 
-`AcceptationLocaleDesGestes` owns the acceptance queue, shared directly by capture and designation closure.
+`GestesRecordingQueue` owns the acceptance queue, shared directly by capture and designation closure.
 `EtatHorsLigneDuPupitre` loads and exposes the selected company's journal view; it does not relay capture
 commands. Read consumers use that state directly. `AtelierCoordinator` exposes local capture failure separately
 from the designation's domain refusal; the primary presentation chooses the message and its precedence.

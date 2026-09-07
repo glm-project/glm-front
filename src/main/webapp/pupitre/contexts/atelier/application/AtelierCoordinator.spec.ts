@@ -17,9 +17,9 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { vi } from 'vitest';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { AtelierCoordinator } from './AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { GestesRecordingQueue } from './GestesRecordingQueue';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -962,7 +962,7 @@ describe('AtelierCoordinator', () => {
   const buildPupitre = (): AtelierCoordinator => {
     const injector = Injector.create({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
         AtelierCoordinator,
         CurrentOperateurLifecycle,

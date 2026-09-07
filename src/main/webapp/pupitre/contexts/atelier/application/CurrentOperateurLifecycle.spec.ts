@@ -18,8 +18,8 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
-import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
@@ -77,7 +77,7 @@ describe('Designation du pupitre', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
-        AcceptationLocaleDesGestes,
+        GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
         AtelierCoordinator,
         CurrentOperateurLifecycle,
