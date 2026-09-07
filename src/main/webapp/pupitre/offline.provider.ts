@@ -2,8 +2,8 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
@@ -18,7 +18,7 @@ export const offlineProvider: Provider[] = [
   ApiClient,
   AcceptationLocaleDesGestes,
   EtatHorsLigneDuPupitre,
-  OfflinePupitre,
+  AtelierCoordinator,
   PupitreSynchronization,
   { provide: JournauxDuPupitrePort, useClass: IndexedDbJournauxDuPupitre },
   { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },

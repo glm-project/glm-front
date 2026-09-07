@@ -41,7 +41,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 L'adaptateur primaire de pointage expose les intentions de l'écran. La composition du pupitre possède la navigation entre écrans, la fermeture de la fenêtre et l'orchestration des séquences globales.
 
-La page routée commune possède le chrome permanent, la désignation et le pointage. Elle porte le garde d'inactivité sur toute cette surface et appelle `finish()` à sa destruction. Le shell racine ne possède que le démarrage technique et le routeur; le coordinateur `OfflinePupitre` n'interprète pas sa propre destruction comme la sortie de cette page.
+La page routée commune possède le chrome permanent, la désignation et le pointage. Elle porte le garde d'inactivité sur toute cette surface et appelle `finish()` à sa destruction. Le shell racine ne possède que le démarrage technique et le routeur; le coordinateur `AtelierCoordinator` n'interprète pas sa propre destruction comme la sortie de cette page.
 
 Pendant l'acceptation durable d'une action, l'adaptateur primaire désactive les deux cibles de la tuile concernée et tous les choix de sa pop-up après sélection. Les autres tuiles restent disponibles; un échec local réactive les contrôles sans avancer la vue.
 

@@ -1,19 +1,19 @@
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { inject, Injectable } from '@angular/core';
 
 @Injectable()
 export class TypeScriptChargementDeLAtelier {
-  private readonly pupitre = inject(OfflinePupitre);
+  private readonly atelier = inject(AtelierCoordinator);
 
   referentielDisponible(): boolean {
-    return this.pupitre.referentiel() !== undefined;
+    return this.atelier.referentiel() !== undefined;
   }
 
   connecte(): boolean {
-    return this.pupitre.connected();
+    return this.atelier.connected();
   }
 
   charger(): Promise<void> {
-    return this.pupitre.synchronize();
+    return this.atelier.synchronize();
   }
 }

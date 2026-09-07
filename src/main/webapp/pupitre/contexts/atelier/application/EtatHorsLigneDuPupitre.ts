@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { FenetreOperateur } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
@@ -7,6 +8,7 @@ import {
 import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { inject, Injectable, signal } from '@angular/core';
+import { AcceptationLocale, AcceptationLocaleDesGestes, IntentionDeCapture } from './AcceptationLocaleDesGestes';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 type RefreshIntent = 'RESTORE' | 'SYNCHRONIZE';
@@ -22,6 +24,7 @@ export class EtatHorsLigneDuPupitre {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournauxDuPupitrePort);
   private readonly synchronization = inject(PupitreSynchronization);
+  private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly vue = signal<JournalDuPupitre>(EMPTY_JOURNAL_DU_PUPITRE);
   private readonly connexion = signal(true);
 
@@ -53,6 +56,18 @@ export class EtatHorsLigneDuPupitre {
   async diagnostics(): Promise<EvenementDuJournal[]> {
     const state = await this.journal.read(this.requireTenant());
     return state.evenements.filter(evenement => evenement.etat === 'REFUSE');
+  }
+
+  capture(
+    fenetreInitiale: FenetreOperateur,
+    intention: IntentionDeCapture,
+    fenetreCourante: () => FenetreOperateur,
+  ): Promise<AcceptationLocale> {
+    return this.acceptationLocale.capture(fenetreInitiale, intention, fenetreCourante);
+  }
+
+  drain(): Promise<void> {
+    return this.acceptationLocale.drain();
   }
 
   publish(state: JournalDuPupitre): void {

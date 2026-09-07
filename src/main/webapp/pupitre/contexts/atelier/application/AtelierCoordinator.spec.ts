@@ -17,8 +17,8 @@ import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/Jo
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { vi } from 'vitest';
 import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { AtelierCoordinator } from './AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
-import { OfflinePupitre } from './OfflinePupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -148,8 +148,8 @@ class ServerFixture extends AtelierExchangePort {
   }
 }
 
-describe('OfflinePupitre', () => {
-  let pupitre: OfflinePupitre;
+describe('AtelierCoordinator', () => {
+  let pupitre: AtelierCoordinator;
   let journal: ApplicationJournalFixture;
   let serveur: ServerFixture;
   let authentication: AuthenticationFixture;
@@ -953,12 +953,12 @@ describe('OfflinePupitre', () => {
     );
   };
 
-  const buildPupitre = (): OfflinePupitre =>
+  const buildPupitre = (): AtelierCoordinator =>
     Injector.create({
       providers: [
         AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
-        OfflinePupitre,
+        AtelierCoordinator,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: serveur },
@@ -966,7 +966,7 @@ describe('OfflinePupitre', () => {
         { provide: DesignationExpirationSchedulerPort, useValue: scheduler },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
-    }).get(OfflinePupitre);
+    }).get(AtelierCoordinator);
   const whenRestarting = async (): Promise<void> => {
     await pupitre.synchronize();
     pupitre = buildPupitre();
@@ -977,12 +977,13 @@ describe('OfflinePupitre', () => {
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
     Promise.allSettled([pupitre.openWindow('049'), pupitre.openWindow('050')]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
-  const whenPressingPrimaryTarget = (): ReturnType<OfflinePupitre['execute']> => pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
-  const whenChoosingWorkstation = async (execution: ReturnType<OfflinePupitre['execute']>, posteId: string): Promise<void> => {
+  const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
+    pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
+  const whenChoosingWorkstation = async (execution: ReturnType<AtelierCoordinator['execute']>, posteId: string): Promise<void> => {
     if (execution.kind !== 'CHOIX_POSTE_REQUIS') throw new Error('Expected workstation choice fixture.');
     await execution.choose(posteId);
   };
-  const whenChoosingWorkstationLater = (execution: ReturnType<OfflinePupitre['execute']>, posteId: string): Promise<void> =>
+  const whenChoosingWorkstationLater = (execution: ReturnType<AtelierCoordinator['execute']>, posteId: string): Promise<void> =>
     Promise.resolve().then(() => whenChoosingWorkstation(execution, posteId));
   const whenStartingOn = (posteId: string): Promise<void> => {
     const execution = pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
@@ -1148,18 +1149,18 @@ describe('OfflinePupitre', () => {
   const thenGlobalGesturesAreAvailable = (available: boolean): void => {
     expect(pupitre.gestesDisponibles()).toBe(available);
   };
-  const thenPointageIsUnavailable = (execution: ReturnType<OfflinePupitre['execute']>): void => {
+  const thenPointageIsUnavailable = (execution: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(execution).toEqual({ kind: 'INDISPONIBLE' });
   };
   const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
     const arrival = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
     expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
   };
-  const thenSemanticCaptureFails = async (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
+  const thenSemanticCaptureFails = async (execution: ReturnType<AtelierCoordinator['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
     await expect(execution.completion).rejects.toThrow('disque plein');
   };
-  const thenSemanticCaptureSucceeds = async (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
+  const thenSemanticCaptureSucceeds = async (execution: ReturnType<AtelierCoordinator['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
     await execution.completion;
   };
@@ -1315,7 +1316,7 @@ describe('OfflinePupitre', () => {
   const thenWorkshopMessageIsError = (message: string): void => {
     expect(pupitre.messageAtelier()).toEqual({ message });
   };
-  const thenChoiceRequiresWorkstation = (choice: ReturnType<OfflinePupitre['execute']>): void => {
+  const thenChoiceRequiresWorkstation = (choice: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(choice.kind).toBe('CHOIX_POSTE_REQUIS');
   };
   const thenInactivityDeadlineWasRenewed = (initialDeadline: number | undefined): void => {
@@ -1329,7 +1330,7 @@ describe('OfflinePupitre', () => {
     expect(errorHandler.errors).toEqual([expect.any(Error)]);
   };
 
-  const completionOf = (execution: ReturnType<OfflinePupitre['execute']>): Promise<void> => {
+  const completionOf = (execution: ReturnType<AtelierCoordinator['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected immediate capture fixture.');
     return execution.completion;
   };

@@ -37,7 +37,7 @@ npm run validate:complete  # coverage, builds, then serial browser suites
 - Create the bounded context's `AGENTS.md` and a sibling `CLAUDE.md` containing only `@AGENTS.md` before code; keep vocabulary, responsibilities, invariants and local rules with their owner.
 - Treat `HexagonalArchTest.spec.ts` failures as architecture failures; fix the dependency instead of weakening the test.
 - Let `httpAuthInterceptor` attach bearer tokens. Device-enrolment traffic is the exception and uses `HttpBackend` to bypass interceptors.
-- Apply Tidy First to every change: when a behavior-preserving structural cleanup helps, isolate it in a preceding `refactor:` or `chore:` commit; keep behavioral work in a separate commit. Do not add speculative cleanup.
+- Apply Tidy First from Kent Beck to every change: when a behavior-preserving structural cleanup helps, isolate it in a preceding `refactor:` or `chore:` commit; keep behavioral work in a separate commit. Do not add speculative cleanup.
 
 ## Verification before claiming done
 

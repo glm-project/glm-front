@@ -44,7 +44,8 @@ const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps', logout
     fails: () => afterARoundTrip(() => Promise.reject(new Error('logout refused'))),
   };
 
-  return {
+  const keycloak = new Keycloak({ url: KEYCLOAK_URL, realm: REALM, clientId: DEVICE_CLIENT_ID });
+  Object.assign(keycloak, {
     init: () =>
       afterARoundTrip(() => {
         token = opensSession ? KEYCLOAK_TOKEN : undefined;
@@ -55,11 +56,12 @@ const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps', logout
       token = undefined;
       return logoutOutcomes[logout]();
     },
-    get token() {
-      return token;
-    },
-    // eslint-disable-next-line local/no-as-unknown -- Keycloak SDK fake implements only consumed session capabilities (see ADR 0002)
-  } as unknown as Keycloak;
+  });
+  Object.defineProperty(keycloak, 'token', {
+    get: () => token,
+    configurable: true,
+  });
+  return keycloak;
 };
 
 const KEYCLOAK_URL = 'http://keycloak.test';

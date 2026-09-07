@@ -30,7 +30,7 @@ advances that view.
 `GesteReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
 motifs, never transport URNs.
 
-`OfflinePupitre` coordinates capture and visible snapshots. `PupitreSynchronization` coordinates
+`AtelierCoordinator` coordinates capture and visible snapshots. `PupitreSynchronization` coordinates
 authenticated exchange, FIFO publication, aggregate rereads and reference refresh. Keep storage,
 authentication and transport mechanics out of the domain owners.
 
@@ -78,9 +78,9 @@ extends that decision to the designation's interaction and lifecycle rules.
 
 `DesignationOperateur` owns the numeric entry, correction, explicit validation, unknown code and temporary
 designation. It receives time explicitly and owns the `FenetreOperateur` shared by designation and capture.
-`OfflinePupitre` coordinates local resolution and closure, publishes each designation transition and
+`AtelierCoordinator` coordinates local resolution and closure, publishes each designation transition and
 explicitly replaces its inactivity schedule through a domain port. The secondary timer adapter only executes
-the requested callback. The page calls `OfflinePupitre.finish()` when it is left; switching from keypad to
+the requested callback. The page calls `AtelierCoordinator.finish()` when it is left; switching from keypad to
 pointage does not destroy the coordinator or close the designation. `Designation` translates touch and keyboard
 events and renders the application snapshot, without owning its lifetime.
 
@@ -97,7 +97,7 @@ deadline instead of unconditionally closing a designation that may have been ren
 The routed common page owns the permanent chrome, designation and pointage views. The root shell retains
 only technical runtime startup and routing. The page gates the keypad on enrolment and reference
 availability, then switches views on the same URL, and calls `finish()` when it is destroyed; destruction of
-the root-scoped `OfflinePupitre` is not the page-exit hook. The pointage view's “J'ai fini” action also calls
+the root-scoped `AtelierCoordinator` is not the page-exit hook. The pointage view's “J'ai fini” action also calls
 `finish()`.
 
 Every screen press, including blank chrome, goes through `registerPress()` before a business command: a

@@ -7,6 +7,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre, SourceDOuverture } from './EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -23,6 +24,7 @@ describe('EtatHorsLigneDuPupitre', () => {
 
     etatHorsLigne = Injector.create({
       providers: [
+        AcceptationLocaleDesGestes,
         EtatHorsLigneDuPupitre,
         { provide: JournauxDuPupitrePort, useValue: journal },
         {
@@ -119,6 +121,10 @@ describe('EtatHorsLigneDuPupitre', () => {
     whenPublishing(state);
 
     thenReferentielContainsOperator(state.referentiel?.operateurs[0]?.nom ?? '');
+  });
+
+  it('should drain in-flight gesture captures', async () => {
+    await expect(etatHorsLigne.drain()).resolves.toBeUndefined();
   });
 
   const givenDisconnectedStateInJournal = (entreprise: string): void => {

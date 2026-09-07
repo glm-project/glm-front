@@ -1,5 +1,5 @@
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { ErrorHandler, signal } from '@angular/core';
@@ -24,7 +24,7 @@ class PupitreRuntimeFixture {
   }
 }
 
-class OfflinePupitrePageFixture {
+class AtelierCoordinatorPageFixture {
   readonly connected = signal(true);
   readonly operateur = signal(undefined);
   readonly messageAtelier = signal(undefined);
@@ -73,7 +73,7 @@ describe('Pupitre shell', () => {
       providers: [
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
-        { provide: OfflinePupitre, useClass: OfflinePupitrePageFixture },
+        { provide: AtelierCoordinator, useClass: AtelierCoordinatorPageFixture },
         { provide: EnrolementDuPupitre, useClass: EnrolementPageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ErrorHandler, useValue: errorHandler },

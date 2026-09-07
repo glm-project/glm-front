@@ -1,5 +1,5 @@
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
 import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
@@ -16,7 +16,7 @@ import { MessageDAtelierVisible, PupitreHeader } from './header/header';
   templateUrl: './page.html',
 })
 export class PupitrePage implements OnInit, OnDestroy {
-  protected readonly pupitre = inject(OfflinePupitre);
+  protected readonly pupitre = inject(AtelierCoordinator);
   protected readonly enrolement = inject(EnrolementDuPupitre);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly errorHandler = inject(ErrorHandler);

@@ -36,7 +36,7 @@ export const responsibilityCohesion = {
     schema: [],
     messages: {
       splitResponsibilities:
-        '{{className}} coordinates {{collaborators}} injected collaborators through {{operations}} public operations while owning {{states}} state fields. Inventory its reasons to change and extract an independently cohesive responsibility. If it remains one deep module, document that reason in a narrow inline suppression — see ADR 0023.',
+        '{{className}} coordinates {{collaborators}} injected collaborators through {{operations}} public operations while owning {{states}} state fields. Inventory its reasons to change and extract an independently cohesive responsibility; no inline suppressions are permitted — see ADR 0023.',
     },
   },
   create: context => {

@@ -50,7 +50,9 @@ const eslint = new ESLint();
 
 it('should apply the no-as-unknown rule to all TypeScript files', async () => {
   const domainConfig = await eslint.calculateConfigForFile('src/main/webapp/pupitre/contexts/atelier/domain/FenetreOperateur.ts');
-  const applicationConfig = await eslint.calculateConfigForFile('src/main/webapp/pupitre/contexts/atelier/application/OfflinePupitre.ts');
+  const applicationConfig = await eslint.calculateConfigForFile(
+    'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.ts',
+  );
   const sharedConfig = await eslint.calculateConfigForFile('src/main/webapp/app/shared/api-client/infrastructure/secondary/ApiClient.ts');
   const specConfig = await eslint.calculateConfigForFile('src/test/webapp/unit/AuthenticationPort.contract.spec.ts');
   const componentConfig = await eslint.calculateConfigForFile('src/test/webapp/component/pupitre/designation/Designation.spec.ts');

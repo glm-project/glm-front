@@ -2,8 +2,8 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
@@ -105,7 +105,7 @@ const enrolmentFixture: DeviceEnrolmentPort = {
 const chargementProvider = {
   provide: ChargementDeLAtelierPort,
   useFactory: (): ChargementDeLAtelierPort => {
-    const pupitre = inject(OfflinePupitre);
+    const pupitre = inject(AtelierCoordinator);
     return {
       etat: () => ({ referentielDisponible: pupitre.referentiel() !== undefined, connecte: pupitre.connected() }),
       charger: () => pupitre.restore(),
@@ -119,7 +119,7 @@ const bootstrapFixture = async (): Promise<void> => {
     providers: [
       AcceptationLocaleDesGestes,
       EtatHorsLigneDuPupitre,
-      OfflinePupitre,
+      AtelierCoordinator,
       PupitreSynchronization,
       EnrolementDuPupitre,
       chargementProvider,

@@ -9,7 +9,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDuGeste, JournalDuPupitre, TypeDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { AcceptationLocale, AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
+import { AcceptationLocale } from './AcceptationLocaleDesGestes';
 import { CommandeGlobale, IntentionGlobale, IntentionGlobaleInitiee } from './CommandeGlobale';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
@@ -21,11 +21,9 @@ const identityAt = (instant: number): IdentiteDuGeste => ({
 const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
-// eslint-disable-next-line local/responsibility-cohesion -- coordinates offline gesture acceptance, state, designation timer and background error reporting as a single deep application coordinator
-export class OfflinePupitre implements PointageCommand, CommandeGlobale {
+export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
-  private readonly acceptationLocale = inject(AcceptationLocaleDesGestes);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
   private designation = DesignationOperateur.empty();
   private readonly designationState = signal(this.designation.snapshot());
@@ -140,7 +138,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   }
 
   private async drainWindow(): Promise<void> {
-    await this.acceptationLocale.drain();
+    await this.etatHorsLigne.drain();
     this.closeWindowAndClearPresentation();
     await this.restore();
   }
@@ -175,7 +173,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
   private captureDecision(fenetre: FenetreOperateur, decision: LotDeGestesDAtelier): Promise<void> {
     return this.captureOperation(
       fenetre,
-      this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes: decision }, () => this.currentWindow(fenetre)),
+      this.etatHorsLigne.capture(fenetre, { kind: 'PREPAREE', gestes: decision }, () => this.currentWindow(fenetre)),
     );
   }
 
@@ -197,7 +195,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
     const gestes = fenetre.preparePresence(type, identity);
     return this.captureOperation(
       fenetre,
-      this.acceptationLocale.capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre)),
+      this.etatHorsLigne.capture(fenetre, { kind: 'PREPAREE', gestes }, () => this.currentWindow(fenetre)),
     );
   }
 
@@ -209,7 +207,7 @@ export class OfflinePupitre implements PointageCommand, CommandeGlobale {
     this.gestesDisponiblesState.set(false);
     return this.captureOperation(
       fenetre,
-      this.acceptationLocale.capture(fenetre, { kind: 'GLOBALE', intention: intentionInitiee }, () => this.currentWindow(fenetre)),
+      this.etatHorsLigne.capture(fenetre, { kind: 'GLOBALE', intention: intentionInitiee }, () => this.currentWindow(fenetre)),
     ).finally(() => {
       this.gestesDisponiblesState.set(true);
     });

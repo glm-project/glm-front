@@ -7,7 +7,7 @@ Accepted. Refines the ownership in ADR 0007; complements the method extraction i
 ## Context
 
 The offline foundation combines decisions about workshop gestures with storage, authentication and network
-coordination in `OfflinePupitre`. Private method extraction makes each step readable but leaves those
+coordination in `AtelierCoordinator`. Private method extraction makes each step readable but leaves those
 business decisions in the application layer. The online and offline transports also implement the same
 contextual refusal exceptions independently. Tests reaching into document keys obstruct storage evolution.
 
@@ -33,7 +33,7 @@ the HTTP adapter supplies an optional normalized workshop refusal motif alongsid
 code. The replay policy compares only this domain motif and never constructs or parses transport URNs;
 an unknown offline business URN is retained verbatim and cannot accidentally match another context's code.
 
-`OfflinePupitre` coordinates capture and publication. `PupitreSynchronization` coordinates authenticated
+`AtelierCoordinator` coordinates capture and publication. `PupitreSynchronization` coordinates authenticated
 exchanges, FIFO processing, aggregate rereads and reference refreshes. Their callbacks publish snapshots;
 only the capture coordinator decides when a snapshot becomes visible to the operator.
 

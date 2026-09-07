@@ -5,7 +5,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { inject, Injectable } from '@angular/core';
 import { IntentionGlobaleInitiee } from './CommandeGlobale';
 
-type IntentionDeCapture =
+export type IntentionDeCapture =
   | { readonly kind: 'PREPAREE'; readonly gestes: LotDeGestesDAtelier }
   | { readonly kind: 'GLOBALE'; readonly intention: IntentionGlobaleInitiee };
 

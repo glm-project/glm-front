@@ -1,5 +1,5 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { ChargementDeLAtelier, ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { chargementProviders } from '@/pupitre/contexts/enrolement/infrastructure/secondary/atelier/chargement.providers';
@@ -9,7 +9,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 
 const referentielFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
 
-class OfflinePupitreFixture {
+class AtelierCoordinatorFixture {
   readonly reference = signal<ReferentielDuPupitre | undefined>(undefined);
   readonly connected = signal(true);
   synchronizations = 0;
@@ -27,16 +27,16 @@ class OfflinePupitreFixture {
 
 describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', () => {
   let chargement: ChargementDeLAtelierPort;
-  let pupitre: OfflinePupitreFixture;
+  let pupitre: AtelierCoordinatorFixture;
   let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
-    pupitre = new OfflinePupitreFixture();
+    pupitre = new AtelierCoordinatorFixture();
     errorHandler = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       providers: [
         ...chargementProviders,
-        { provide: OfflinePupitre, useValue: pupitre },
+        { provide: AtelierCoordinator, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
