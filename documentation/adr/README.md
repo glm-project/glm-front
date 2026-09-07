@@ -37,7 +37,7 @@ renumbers at merge time. The status below is the living one — update this line
 - [0015 — Pin every validation input](0015-pin-every-validation-input.md) — **Accepted** — exact Node/npm,
   lockfile-only installs and an immutable backend contract revision in local validation and CI
 - [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — **Amended by 0020** —
-  shared commands for Git, Codex and CI, with pinned security tools and bounded completion validation
+  shared validation commands and pinned security tools
 - [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Amended by 0024** —
   initial bounded replay-policy mutation through the Angular builder and checked invalid mutants
 - [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — **Accepted** — recommended static

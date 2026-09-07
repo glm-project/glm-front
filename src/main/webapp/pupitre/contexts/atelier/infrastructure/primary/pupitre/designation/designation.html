@@ -1,4 +1,4 @@
-<div class="mx-auto flex h-full w-full max-w-xl flex-col justify-center gap-4 p-6">
+<div class="mx-auto grid h-full max-h-[36rem] w-full max-w-xl grid-rows-[auto_minmax(0,1fr)] gap-3 p-4">
   <div
     data-selector="code"
     [glmFollowContent]="designation.code()"
@@ -12,14 +12,14 @@
     <span class="text-nc">Code inconnu</span>
     } @else { {{ designation.code() }} }
   </div>
-  <div class="grid grid-cols-3 gap-3">
+  <div class="grid min-h-0 auto-rows-fr grid-cols-3 gap-3">
     @for (digit of digits; track digit) {
     <button
       type="button"
       [attr.data-selector]="'digit-' + digit"
       (pointerdown)="onTouch($event, digit)"
       (click)="onClick(digit)"
-      class="min-h-touch-lg rounded border border-border-strong bg-surface p-5 text-display text-ink"
+      class="min-h-touch-lg rounded border border-border-strong bg-surface p-2 text-title sm:text-display text-ink"
     >
       {{ digit }}
     </button>
@@ -29,7 +29,7 @@
       data-selector="erase"
       (pointerdown)="onTouch($event, 'Backspace')"
       (click)="onClick('Backspace')"
-      class="min-h-touch-lg rounded border border-border-strong bg-surface p-5 text-body text-ink"
+      class="min-h-touch-lg rounded border border-border-strong bg-surface p-2 text-body text-ink"
     >
       Effacer
     </button>
@@ -38,7 +38,7 @@
       data-selector="digit-0"
       (pointerdown)="onTouch($event, '0')"
       (click)="onClick('0')"
-      class="min-h-touch-lg rounded border border-border-strong bg-surface p-5 text-display text-ink"
+      class="min-h-touch-lg rounded border border-border-strong bg-surface p-2 text-title sm:text-display text-ink"
     >
       0
     </button>
@@ -48,7 +48,7 @@
       [disabled]="designation.canValidate() === false"
       (pointerdown)="onTouch($event, 'Enter')"
       (click)="onClick('Enter')"
-      class="min-h-touch-lg rounded bg-accent p-5 text-body text-on-accent disabled:opacity-50"
+      class="min-h-touch-lg rounded bg-accent p-2 text-body text-on-accent disabled:opacity-50"
     >
       Valider
     </button>

@@ -11,8 +11,8 @@ servers never share one workspace at the same time.
 CI invokes the same grouped commands in separate workspaces. Each job records its duration as an artifact.
 The pre-push hook runs `validate:quick`, then mutates the added or modified lines of handwritten domain
 TypeScript in every ref in the push. Each step records its duration on standard output and returns its exit code. It does not rerun
-coverage, builds or browser suites before the CI jobs that own those checks. Codex Stop retains the complete
-local graph. See [ADR 0020](adr/0020-keep-pre-push-feedback-quick.md) and
+coverage, builds or browser suites before the CI jobs that own those checks. The complete local graph runs
+on explicit invocation with `npm run validate:complete`. See [ADR 0020](adr/0020-keep-pre-push-feedback-quick.md) and
 [ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md).
 The pre-commit hook scans the staged diff for secrets before lint-staged runs ESLint fixes and then Prettier on
 TypeScript, Angular templates and JavaScript tooling scripts. Other supported staged files only run through Prettier.
@@ -32,18 +32,8 @@ The `security-and-workflows` CI job runs on pull requests, pushes to `main` and 
 jobs in its workflow skip that scheduled event. Its report, history-scan result and duration are uploaded
 together. The initial repository-history scan found no secret.
 
-## Codex completion hook
+## Explicit local validation
 
-`.codex/hooks.json` registers the supported Codex `Stop` event. On the first stop it runs
-`npm run validate:complete`; success lets the turn finish and failure continues the turn with the command's
-failure output. The continued turn is validated again. If that second validation still fails,
-`stop_hook_active` makes the hook stop with an explicit failure instead of starting another continuation, which
-bounds the loop while checking the agent's final edits.
-
-Codex first requires a person to trust the project directory, which activates its `.codex` configuration
-layer. `/hooks` then requires a separate review of the hook definition and stores that trust against its exact
-hash. A new checkout can require project trust, and any hook change requires a new hook review. Repository
-files cannot grant either trust. The one-off CLI proof uses `--dangerously-bypass-hook-trust` only in an
-isolated, pre-reviewed fixture; this flag is not part of the project configuration.
-
-Measured acceptance evidence is recorded in [the harness run log](evidence/84-harness.md).
+The repository does not register a Codex completion hook. Run the checks relevant to the change during the
+work, and invoke `npm run validate:complete` when the complete local graph is needed. Finishing a response
+does not launch validation automatically.

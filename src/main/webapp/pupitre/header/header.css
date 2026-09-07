@@ -4,7 +4,7 @@
 
 .header-grid {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 2fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
   align-items: center;
 }
 
@@ -18,4 +18,28 @@
 
 .connectivity-indicator--connected {
   background-color: currentColor;
+}
+
+@media (max-width: 60rem) {
+  .header-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding-block: 0.5rem;
+  }
+
+  [data-selector='header-message'] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    overflow-wrap: anywhere;
+  }
+
+  [data-selector='header-message']:empty {
+    display: none;
+  }
+}
+
+@media (max-width: 30rem) {
+  .header-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
