@@ -16,10 +16,10 @@ export default {
   concurrency: 1,
   reporters: ['clear-text', 'progress', 'html', 'json'],
   htmlReporter: {
-    fileName: 'reports/mutation/project.html',
+    fileName: 'reports/mutation/domain.html',
   },
   jsonReporter: {
-    fileName: 'reports/mutation/project.json',
+    fileName: 'reports/mutation/domain.json',
   },
   thresholds: {
     high: 100,

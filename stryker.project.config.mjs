@@ -12,6 +12,12 @@ export default {
     '!src/main/webapp/**/package-info.ts',
     '!src/main/webapp/app/generated/**',
   ],
+  htmlReporter: {
+    fileName: 'reports/mutation/project.html',
+  },
+  jsonReporter: {
+    fileName: 'reports/mutation/project.json',
+  },
   thresholds: {
     high: 80,
     low: 60,
