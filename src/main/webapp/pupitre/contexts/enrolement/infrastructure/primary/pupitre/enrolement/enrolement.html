@@ -1,0 +1,28 @@
+@let vue = enrolement.vue(); @if (vue.kind === 'EN_ATTENTE_D_APPROBATION') {
+<div class="enrolement-colonnes" data-selector="enrolement-awaiting">
+  <section class="carte-qr">
+    <p class="text-body text-ink">{{ labels.consigneScan }}</p>
+    <glm-qr-code class="qr-cadre" [valeur]="vue.code.lienDeValidation" [description]="labels.descriptionQrCode" />
+  </section>
+  <section class="colonne-code">
+    <p class="text-body text-ink-muted" data-selector="verification-uri">{{ labels.adresseAlternative(vue.code.verificationUri) }}</p>
+    <p class="code-enrolement text-display text-ink" data-selector="user-code">{{ vue.code.userCode }}</p>
+    <p class="text-body-sm text-ink-muted" data-selector="countdown">{{ labels.compteARebours(vue.code.secondesRestantes) }}</p>
+    <p class="text-body text-ink" aria-live="polite" data-selector="enrolement-status">{{ statut() }}</p>
+  </section>
+</div>
+} @else {
+<div class="enrolement-panneau" data-selector="enrolement-panel">
+  <p class="text-title text-ink" aria-live="polite" data-selector="enrolement-status">{{ statut() }}</p>
+  @if (action(); as demande) {
+  <button
+    type="button"
+    class="min-h-touch-lg rounded bg-accent px-6 text-body text-on-accent"
+    data-selector="enrolement-action"
+    (click)="declencher(demande.intention)"
+  >
+    {{ demande.libelle }}
+  </button>
+  }
+</div>
+}

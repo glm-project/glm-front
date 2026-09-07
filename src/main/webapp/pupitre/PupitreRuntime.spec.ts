@@ -1,6 +1,6 @@
-import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -8,28 +8,22 @@ import { PupitreRuntime } from './PupitreRuntime';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
-class AuthenticationFixture extends AuthenticationPort {
-  private authentication: Promise<void> | undefined;
-  private completeAuthentication: (() => void) | undefined;
+class EnrolementFixture {
+  private enrolment: Promise<void> | undefined;
+  private completeEnrolment: (() => void) | undefined;
 
-  override authenticate(): Promise<void> {
-    return this.authentication ?? roundTrip();
-  }
-  override currentToken(): string {
-    return 'autorise';
-  }
-  override logout(): void {
-    throw new Error('La session fixture reste ouverte.');
+  enroler(): Promise<void> {
+    return this.enrolment ?? roundTrip();
   }
 
-  waitForPermission(): void {
-    this.authentication = new Promise(resolve => {
-      this.completeAuthentication = resolve;
+  waitForApproval(): void {
+    this.enrolment = new Promise(resolve => {
+      this.completeEnrolment = resolve;
     });
   }
 
-  permit(): void {
-    this.completeAuthentication?.();
+  approve(): void {
+    this.completeEnrolment?.();
   }
 }
 
@@ -58,19 +52,19 @@ class OfflinePupitreFixture {
 
 describe('PupitreRuntime', () => {
   let runtime: PupitreRuntime;
-  let authentication: AuthenticationFixture;
+  let enrolement: EnrolementFixture;
   let pupitre: OfflinePupitreFixture;
   let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     errorHandler = new ErrorHandlerFixture();
-    authentication = new AuthenticationFixture();
+    enrolement = new EnrolementFixture();
     pupitre = new OfflinePupitreFixture();
     TestBed.configureTestingModule({
       providers: [
         PupitreRuntime,
-        { provide: AuthenticationPort, useValue: authentication },
+        { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: OfflinePupitre, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
@@ -84,44 +78,44 @@ describe('PupitreRuntime', () => {
     vi.restoreAllMocks();
   });
 
-  it('should synchronize at startup, reconnection and every minute', async () => {
+  it('should leave the first workshop load to the enrolment, then refresh on reconnection and every minute', async () => {
     await whenStartingPupitre();
 
-    await thenSynchronizationAttemptsAre(1);
+    await thenSynchronizationAttemptsAre(0);
 
     whenNetworkReturns();
 
-    await thenSynchronizationAttemptsAre(2);
+    await thenSynchronizationAttemptsAre(1);
 
     await whenOneMinutePasses();
 
-    await thenSynchronizationAttemptsAre(3);
+    await thenSynchronizationAttemptsAre(2);
   });
 
-  it('should start only one synchronization schedule', async () => {
+  it('should start only one refresh schedule', async () => {
     await whenStartingPupitreTwice();
 
     await whenOneMinutePasses();
 
-    await thenSynchronizationAttemptsAre(2);
+    await thenSynchronizationAttemptsAre(1);
   });
 
-  it('should stop synchronization after the runtime is destroyed', async () => {
+  it('should stop refreshing after the runtime is destroyed', async () => {
     await whenStartingPupitre();
 
     whenDestroyingTheRuntime();
     whenNetworkReturns();
     await whenOneMinutePasses();
 
-    await thenSynchronizationAttemptsAre(1);
+    await thenSynchronizationAttemptsAre(0);
   });
 
-  it('should not start synchronization when destroyed during authentication restoration', async () => {
-    givenAuthenticationInProgress();
+  it('should stop refreshing when destroyed while the pupitre is still enrolling', async () => {
+    givenAnEnrolmentAwaitingApproval();
 
     const startup = whenStartingPupitre();
     whenDestroyingTheRuntime();
-    await whenAuthenticationCompletes(startup);
+    await whenTheEnrolmentCompletes(startup);
 
     whenNetworkReturns();
     await whenOneMinutePasses();
@@ -129,19 +123,33 @@ describe('PupitreRuntime', () => {
     await thenSynchronizationAttemptsAre(0);
   });
 
-  it('should attempt synchronization again after a background failure', async () => {
+  it('should already listen for the network while the pupitre is still enrolling', async () => {
+    givenAnEnrolmentAwaitingApproval();
+
+    const startup = whenStartingPupitre();
+    whenNetworkReturns();
+
+    await thenSynchronizationAttemptsAre(1);
+
+    await whenTheEnrolmentCompletes(startup);
+  });
+
+  it('should refresh again after a background failure', async () => {
     givenUnavailableSynchronization();
 
     await whenStartingPupitre();
+    whenNetworkReturns();
+    await thenSynchronizationAttemptsAre(1);
     thenTheSynchronizationFailureWasLogged();
+
     whenSynchronizationRecovers();
     whenNetworkReturns();
 
     await thenSynchronizationAttemptsAre(2);
   });
 
-  const givenAuthenticationInProgress = (): void => {
-    authentication.waitForPermission();
+  const givenAnEnrolmentAwaitingApproval = (): void => {
+    enrolement.waitForApproval();
   };
   const givenUnavailableSynchronization = (): void => {
     pupitre.unavailable = true;
@@ -153,8 +161,8 @@ describe('PupitreRuntime', () => {
   const whenDestroyingTheRuntime = (): void => {
     runtime.ngOnDestroy();
   };
-  const whenAuthenticationCompletes = async (startup: Promise<void>): Promise<void> => {
-    authentication.permit();
+  const whenTheEnrolmentCompletes = async (startup: Promise<void>): Promise<void> => {
+    enrolement.approve();
     await startup;
   };
   const whenSynchronizationRecovers = (): void => {

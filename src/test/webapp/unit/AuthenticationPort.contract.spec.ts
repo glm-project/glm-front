@@ -3,6 +3,7 @@ import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructu
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
+import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
@@ -291,6 +292,7 @@ const buildDeviceAuthentication = (server: HttpBackend, errorHandler: ErrorHandl
       { provide: HttpBackend, useValue: server },
       { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration(KEYCLOAK_URL, REALM, DEVICE_CLIENT_ID) },
       { provide: ErrorHandlerPort, useValue: errorHandler },
+      DeviceGrantClient,
       DeviceAuthentication,
     ],
   }).get(DeviceAuthentication);
@@ -355,6 +357,7 @@ describe('Authentication without a device company', () => {
     Injector.create({
       providers: [
         DeviceAuthentication,
+        DeviceGrantClient,
         { provide: HttpBackend, useValue: {} },
         { provide: DeviceGrantConfiguration, useValue: {} },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },

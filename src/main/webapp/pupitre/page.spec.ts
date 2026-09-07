@@ -3,7 +3,9 @@ import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePu
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
 import { ElementDePointage, IdentiteOperateurDesigne, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
-import { ErrorHandler, signal } from '@angular/core';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { computed, ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { PupitrePage } from './page';
@@ -65,6 +67,33 @@ class OfflinePupitreFixture {
   }
 }
 
+class EnrolementDuPupitreFixture {
+  readonly vue = computed<VueDEnrolement>(() =>
+    this.pupitre.referentiel() === undefined ? { kind: 'VALIDE_CHARGEMENT_ATELIER' } : { kind: 'ENROLE_ET_PRET' },
+  );
+
+  constructor(private readonly pupitre: OfflinePupitreFixture) {}
+
+  resets = 0;
+
+  rafraichir(): void {
+    return undefined;
+  }
+
+  enroler(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  chargerLAtelier(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  reinitialiser(): Promise<void> {
+    this.resets += 1;
+    return Promise.resolve();
+  }
+}
+
 class PageErrorHandlerFixture extends ErrorHandler {
   failure: unknown;
 
@@ -76,15 +105,19 @@ class PageErrorHandlerFixture extends ErrorHandler {
 describe('Pupitre page', () => {
   let fixture: ComponentFixture<PupitrePage>;
   let pupitre: OfflinePupitreFixture;
+  let enrolement: EnrolementDuPupitreFixture;
   let errorHandler: PageErrorHandlerFixture;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     pupitre = new OfflinePupitreFixture();
+    enrolement = new EnrolementDuPupitreFixture(pupitre);
     errorHandler = new PageErrorHandlerFixture();
     TestBed.configureTestingModule({
       imports: [PupitrePage],
       providers: [
         { provide: OfflinePupitre, useValue: pupitre },
+        { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
     });
@@ -92,12 +125,18 @@ describe('Pupitre page', () => {
     fixture.detectChanges();
   });
 
-  it('should keep only the header until a reference makes the keypad available', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should keep the enrolment screen under the header until a reference makes the keypad available', () => {
     thenVisible('pupitre-header', true);
+    thenVisible('enrolement', true);
     thenVisible('designation', false);
 
     givenReference();
 
+    thenVisible('enrolement', false);
     thenVisible('designation', true);
   });
 
@@ -165,6 +204,28 @@ describe('Pupitre page', () => {
     thenHeaderMessageIs(expected);
   });
 
+  it('should confirm an administration reset before revoking the enrolment', () => {
+    givenReference();
+
+    whenTheAdministrationGestureIsHeld();
+    thenVisible('reinitialisation', true);
+
+    whenPressing('reset-confirm');
+
+    thenVisible('reinitialisation', false);
+    expect(enrolement.resets).toBe(1);
+  });
+
+  it('should revoke nothing when the administration reset is cancelled', () => {
+    givenReference();
+
+    whenTheAdministrationGestureIsHeld();
+    whenPressing('reset-cancel');
+
+    thenVisible('reinitialisation', false);
+    expect(enrolement.resets).toBe(0);
+  });
+
   it('should finish on page destruction and report a closure failure', async () => {
     givenClosureWillFail();
 
@@ -208,6 +269,11 @@ describe('Pupitre page', () => {
     const pressed = element(selector);
     pressed.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
     pressed.click();
+    fixture.detectChanges();
+  };
+  const whenTheAdministrationGestureIsHeld = (): void => {
+    element('header-heading').dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    vi.advanceTimersByTime(3_000);
     fixture.detectChanges();
   };
   const whenPointageCloses = (): void => {

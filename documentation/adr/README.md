@@ -54,3 +54,7 @@ renumbers at merge time. The status below is the living one — update this line
   100 % mutation score enforced on changed domain core, informational outside domain
 - [0025 — Route runtime errors through ErrorHandlerPort](0025-route-runtime-errors-through-error-handler-port.md) — **Accepted** —
   a shared technical port for unhandled asynchronous errors across application coordinators and authentication adapters
+- [0026 — Show the pupitre enrolment and delegate its approval to Keycloak](0026-enrol-pupitre-screen-and-keycloak-delegation.md) —
+  **Accepted** — an enrolment context and screen, an exposed grant lifecycle, derived expiry and a guarded reset gesture
+- [0027 — Encode the enrolment QR code in the bundle](0027-encode-the-enrolment-qr-code-in-the-bundle.md) — **Accepted** —
+  a pinned encoder, our own SVG path rendering and design-token colours, with no external origin

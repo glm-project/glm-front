@@ -53,9 +53,11 @@ reachable. A received business refusal proves connectivity even though the gestu
 
 ## Runtime lifecycle is explicit
 
-`PupitreRuntime` restores authentication and owns the initial synchronization, online listeners and refresh timers. Starting it is
-idempotent. Its destruction removes listeners, clears timers and prevents later work from starting. Tests use explicit
-completion signals for asynchronous exchanges; arbitrary waits hide ordering failures.
+`PupitreRuntime` starts the enrolment and owns the online listener and the refresh timer. It installs both
+before awaiting that enrolment, so a network event arriving during the first workshop load is not lost.
+Starting it is idempotent. Its destruction removes the listener and clears the timer. The first workshop load
+belongs to the enrolment, not to the runtime: it happens when the device becomes enrolled, and only then.
+Tests use explicit completion signals for asynchronous exchanges; arbitrary waits hide ordering failures.
 
 The service worker caches the application shell and static assets only. It does not cache API responses or
 implement the durable queue; [ADR 0004](adr/0004-ngsw-caches-the-pupitre-shell-and-nothing-else.md) owns that
@@ -124,8 +126,11 @@ window after those captures settle locally. From that intention until local acce
 commands are unavailable at both the command boundary and in the rendered controls. “J'ai fini” remains
 available: it closes the visible window immediately while already initiated work drains.
 
-The permanent chrome is the only composition rendered before enrolment and the first reference are
-available; #76 adds no loading or enrolment content, which belongs to #103. The same chrome identifies a
+Under the permanent chrome, the page renders the enrolment screen until the device is enrolled and its first
+complete reference is active, and the workshop views afterwards. That switch reads the enrolment context's
+projected state, never the reference alone: an administration reset returns the pupitre to enrolment even
+though its last reference is still on disk. The header's own reset gesture opens a confirmation the page
+owns. The same chrome identifies a
 rejected pointage by its element number and a rejected presence by the originating `PAUSE`, `REPRENDRE` or
 `TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local
 acceptance failure instead shows “Action non enregistrée — recommencez” until the next durable local success

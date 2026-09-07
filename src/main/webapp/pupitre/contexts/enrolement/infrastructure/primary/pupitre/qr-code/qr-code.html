@@ -1,0 +1,10 @@
+<svg
+  class="qr"
+  role="img"
+  [attr.aria-label]="description()"
+  [attr.viewBox]="'0 0 ' + dessin().cote + ' ' + dessin().cote"
+  shape-rendering="crispEdges"
+>
+  <rect class="qr-quiet-zone" x="0" y="0" [attr.width]="dessin().cote" [attr.height]="dessin().cote" />
+  <path class="qr-modules" data-selector="qr-modules" [attr.d]="dessin().chemin" />
+</svg>

@@ -3,21 +3,26 @@ import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePu
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
 import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
-import { ChangeDetectorRef, Component, computed, ElementRef, ErrorHandler, inject, OnDestroy, OnInit } from '@angular/core';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { Enrolement } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/enrolement/enrolement';
+import { Reinitialisation } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/reinitialisation/reinitialisation';
+import { ChangeDetectorRef, Component, computed, ElementRef, ErrorHandler, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { MessageDAtelierVisible, PupitreHeader } from './header/header';
 
 @Component({
   selector: 'glm-pupitre-page',
-  imports: [Designation, Pointage, PupitreHeader],
+  imports: [Designation, Enrolement, Pointage, PupitreHeader, Reinitialisation],
   host: { class: 'flex h-screen flex-col', 'data-selector': 'pupitre-page' },
   templateUrl: './page.html',
 })
 export class PupitrePage implements OnInit, OnDestroy {
   protected readonly pupitre = inject(OfflinePupitre);
+  protected readonly enrolement = inject(EnrolementDuPupitre);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly errorHandler = inject(ErrorHandler);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private consumeNextClick = false;
+  protected readonly resetRequested = signal(false);
   protected readonly messageAtelier = computed<MessageDAtelierVisible | undefined>(() => {
     const message = this.pupitre.messageAtelier();
     if (message === undefined || !('contexte' in message)) return message;
@@ -52,6 +57,19 @@ export class PupitrePage implements OnInit, OnDestroy {
 
   protected finish(): void {
     this.observe(this.pupitre.finish());
+  }
+
+  protected askReset(): void {
+    this.resetRequested.set(true);
+  }
+
+  protected cancelReset(): void {
+    this.resetRequested.set(false);
+  }
+
+  protected confirmReset(): void {
+    this.resetRequested.set(false);
+    this.observe(this.enrolement.reinitialiser());
   }
 
   protected executeGlobale(intention: IntentionGlobale): void {

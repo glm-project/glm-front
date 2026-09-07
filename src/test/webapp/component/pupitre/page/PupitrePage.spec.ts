@@ -9,9 +9,9 @@ describe('Pupitre common page in a browser', () => {
     cy.viewport(1280, 800);
   });
 
-  it('should render only the permanent header before the first reference, then reveal the keypad', () => {
+  it('should keep the enrolment screen under the header before the first reference, then reveal the keypad', () => {
     givenThePageWithoutAReference();
-    thenOnlyTheHeaderIsVisible();
+    thenTheHeaderStandsAboveTheEnrolmentScreen();
 
     whenTheReferenceBecomesReady();
 
@@ -182,8 +182,9 @@ describe('Pupitre common page in a browser', () => {
     target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   };
 
-  const thenOnlyTheHeaderIsVisible = (): void => {
+  const thenTheHeaderStandsAboveTheEnrolmentScreen = (): void => {
     cy.get(dataSelector('pupitre-header')).should('be.visible');
+    cy.get(dataSelector('enrolement')).should('be.visible');
     cy.get(dataSelector('designation')).should('not.exist');
     cy.get(dataSelector('pointage')).should('not.exist');
   };

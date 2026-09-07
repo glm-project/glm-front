@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+.qr {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.qr-quiet-zone {
+  fill: var(--color-surface);
+}
+
+.qr-modules {
+  fill: var(--color-ink);
+}
