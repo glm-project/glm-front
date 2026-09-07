@@ -66,13 +66,14 @@ describe('AcceptationLocaleDesGestes', () => {
     thenPresenceTypeIs(gestures, 'PAUSE');
   });
 
-  it('should derive distinct deterministic IDs for all gestures in a global stop intention', async () => {
+  it('should retain the initiated root identity among the distinct IDs accepted for a global stop', async () => {
     const fenetre = givenAnOpenOperatorWindow();
+    const identityFixture = '11111111-2222-4333-8444-55550000000a';
 
-    await whenCapturingGlobalIntention(fenetre, 'TOUT_ARRETER', '11111111-2222-3333-4444-0000000a');
+    await whenCapturingGlobalIntention(fenetre, 'TOUT_ARRETER', identityFixture);
 
     const gestures = await whenReadingRecordedGestures('entreprise-a');
-    thenRecordedGesturesHaveUniqueIds(gestures);
+    thenRecordedGesturesRetainRootIdentity(gestures, identityFixture);
   });
 
   it('should capture prepared gestures directly', async () => {
@@ -166,9 +167,10 @@ describe('AcceptationLocaleDesGestes', () => {
     expect((presence as GesteDePresence).type).toBe(expectedPresenceType);
   };
 
-  const thenRecordedGesturesHaveUniqueIds = (gestures: readonly GesteDAtelier[]): void => {
+  const thenRecordedGesturesRetainRootIdentity = (gestures: readonly GesteDAtelier[], rootIdentity: string): void => {
     expect(gestures.length).toBe(3);
     const ids = gestures.map(g => g.id);
+    expect(ids).toContain(rootIdentity);
     expect(new Set(ids).size).toBe(gestures.length);
     for (const gesture of gestures) {
       expect(gesture.dateDeSurvenue).toBe('2026-09-05T09:00:00Z');
