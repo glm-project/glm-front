@@ -57,6 +57,7 @@ const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps', logout
     get token() {
       return token;
     },
+    // eslint-disable-next-line local/no-as-unknown -- Keycloak SDK fake implements only consumed session capabilities (see ADR 0002)
   } as unknown as Keycloak;
 };
 

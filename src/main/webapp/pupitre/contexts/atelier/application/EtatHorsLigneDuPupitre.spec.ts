@@ -10,20 +10,14 @@ import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/Jo
 import { EtatHorsLigneDuPupitre, SourceDOuverture } from './EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
-class TestJournalFixture extends JournauxDuPupitreFixture {
-  overrideJournal(entreprise: string, state: JournalDuPupitre): void {
-    (this as unknown as { entreprises: Map<string, JournalDuPupitre> })['entreprises'].set(entreprise, structuredClone(state));
-  }
-}
-
 describe('EtatHorsLigneDuPupitre', () => {
   let etatHorsLigne: EtatHorsLigneDuPupitre;
-  let journal: TestJournalFixture;
+  let journal: JournauxDuPupitreFixture;
   let tenant: string | undefined;
   let syncCallback: ((entreprise: string | undefined, state: JournalDuPupitre) => void) | undefined;
 
   beforeEach(() => {
-    journal = new TestJournalFixture();
+    journal = new JournauxDuPupitreFixture();
     tenant = 'entreprise-a';
     syncCallback = undefined;
 
@@ -128,11 +122,11 @@ describe('EtatHorsLigneDuPupitre', () => {
   });
 
   const givenDisconnectedStateInJournal = (entreprise: string): void => {
-    journal.overrideJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
+    journal.seedJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
   };
 
   const givenEventsInJournal = (entreprise: string, evenements: EvenementDuJournal[]): void => {
-    journal.overrideJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, evenements });
+    journal.seedJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, evenements });
   };
 
   const whenTenantChangesTo = (newTenant: string | undefined): void => {

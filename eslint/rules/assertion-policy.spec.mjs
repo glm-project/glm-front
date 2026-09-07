@@ -16,7 +16,7 @@ const filesFixture = [
 
 for (const file of filesFixture) {
   describe(`Type assertion policy in ${file}`, () => {
-    it('should reject non-null and definite-assignment assertions', async () => {
+    it('should reject non-null, definite-assignment and unknown assertions', async () => {
       const config = await eslint.calculateConfigForFile(file);
       const messages = linter.verify(
         `
@@ -26,20 +26,25 @@ for (const file of filesFixture) {
         let deferred!: () => void;
         declare const optional: string | undefined;
         optional!.trim();
+        const forbidden = optional as unknown;
       `,
         {
           languageOptions: { parser: typescriptParser },
-          plugins: { '@typescript-eslint': config.plugins['@typescript-eslint'] },
+          plugins: {
+            '@typescript-eslint': config.plugins['@typescript-eslint'],
+            local: config.plugins['local'],
+          },
           rules: {
             '@typescript-eslint/no-non-null-assertion': config.rules['@typescript-eslint/no-non-null-assertion'],
             'no-restricted-syntax': config.rules['no-restricted-syntax'],
+            'local/no-as-unknown': config.rules['local/no-as-unknown'],
           },
         },
       );
 
       assert.deepEqual(
         messages.map(message => message.ruleId),
-        ['no-restricted-syntax', 'no-restricted-syntax', '@typescript-eslint/no-non-null-assertion'],
+        ['no-restricted-syntax', 'no-restricted-syntax', '@typescript-eslint/no-non-null-assertion', 'local/no-as-unknown'],
       );
     });
   });
