@@ -52,7 +52,7 @@
     "test:coverage": "ng test --coverage",
     "test:coverage:ci": "npm run test:coverage -- --watch=false",
     "test:documentation": "node --test documentation/documentation.spec.mjs",
-    "test:hooks": "node --test scripts/codex-stop-validation.spec.mjs scripts/run-diff-mutation.spec.mjs",
+    "test:hooks": "node --test scripts/run-diff-mutation.spec.mjs",
     "test:mutation": "stryker run",
     "test:mutation:diff": "node scripts/run-diff-mutation.mjs",
     "test:mutation:project": "stryker run stryker.project.config.mjs",

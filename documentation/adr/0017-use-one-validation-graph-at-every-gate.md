@@ -4,6 +4,10 @@
 
 Amended by 0020.
 
+The Codex Stop portion was withdrawn on 2026-09-07 at the user's request: automatic completion validation
+repeated environment failures after otherwise successful work. Complete validation remains available through
+an explicit command; Git and CI gates are unchanged. See [Validation](../validation.md).
+
 ## Context
 
 Local Git hooks and CI previously named their checks independently. The commit hook did not lint Angular
