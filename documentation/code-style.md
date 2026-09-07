@@ -4,8 +4,9 @@
 
 Avoid comments that repeat the code. Write a short local comment only for a constraint, external behavior or
 trade-off the code cannot make clear, and keep it next to the affected code. Put durable rules in the topic
-document that owns them. A tooling directive (`eslint-disable`, `@ts-expect-error`, `prettier-ignore`) states
-why that exceptional instruction remains necessary. Comments are a review judgment; ESLint does not infer
+document that owns them. Tooling directives (`@ts-expect-error`, `prettier-ignore`) state
+why that exceptional instruction remains necessary; disabling ESLint via comments is forbidden (`local/no-eslint-disable`).
+Comments are a review judgment; ESLint does not infer
 their usefulness. Generated files are exempt because the project does not own their text.
 
 Extract an inline conditional only when the name adds an intention or the expression obscures the flow.
@@ -123,8 +124,7 @@ assertions (`property!:`) and type assertions to unknown (`as unknown`, `<unknow
 possible absence or narrow it explicitly.
 The local responsibility-cohesion rule blocks a production class only when injected collaborators, public
 operations and owned state all cross the coordinator tripwire. Inventory its reasons to change and extract a
-cohesive responsibility; a narrow inline suppression is reserved for a demonstrably single deep module and
-states that reason beside the class. See [ADR 0019](adr/0019-enforce-sonarjs-rules.md) and
+cohesive responsibility; no waivers or inline suppressions are permitted. See [ADR 0019](adr/0019-enforce-sonarjs-rules.md) and
 [ADR 0023](adr/0023-stop-overloaded-coordinators-at-lint.md).
 
 **Prettier owns formatting.** Single quotes, 140-char width, `arrowParens: avoid`. Run
