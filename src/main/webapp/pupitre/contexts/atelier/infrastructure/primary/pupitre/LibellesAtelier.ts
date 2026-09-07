@@ -1,7 +1,7 @@
 import { ContexteDeGesteDAtelier, ElementDePointage, IntentionGlobaleDAtelier } from '../../../domain/designation/FenetreOperateur';
 import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 
-export const formatDuree = (dureeMs: number): string => {
+const formatDuree = (dureeMs: number): string => {
   const minutes = Math.floor(dureeMs / 60_000);
   const heures = Math.floor(minutes / 60);
   return `${heures} h ${String(minutes % 60).padStart(2, '0')}`;

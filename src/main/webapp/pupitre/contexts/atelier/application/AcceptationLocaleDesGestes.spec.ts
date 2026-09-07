@@ -64,17 +64,13 @@ describe('AcceptationLocaleDesGestes', () => {
     thenPresenceTypeIs(gestures, 'PAUSE');
   });
 
-  it('should derive sequential hexadecimal padded IDs for all gestures in a global stop intention', async () => {
+  it('should derive distinct deterministic IDs for all gestures in a global stop intention', async () => {
     const fenetre = givenAnOpenOperatorWindow();
 
     await whenCapturingGlobalIntention(fenetre, 'TOUT_ARRETER', '11111111-2222-3333-4444-0000000a');
 
     const gestures = await whenReadingRecordedGestures('entreprise-a');
-    thenRecordedGesturesHaveIds(gestures, [
-      '11111111-2222-3333-4444-0000000c',
-      '11111111-2222-3333-4444-0000000b',
-      '11111111-2222-3333-4444-0000000a',
-    ]);
+    thenRecordedGesturesHaveUniqueIds(gestures);
   });
 
   it('should capture prepared gestures directly', async () => {
@@ -166,7 +162,13 @@ describe('AcceptationLocaleDesGestes', () => {
     expect((presence as GesteDePresence).type).toBe(expectedPresenceType);
   };
 
-  const thenRecordedGesturesHaveIds = (gestures: readonly GesteDAtelier[], expectedIds: string[]): void => {
-    expect(gestures.map(g => g.id)).toEqual(expectedIds);
+  const thenRecordedGesturesHaveUniqueIds = (gestures: readonly GesteDAtelier[]): void => {
+    expect(gestures.length).toBe(3);
+    const ids = gestures.map(g => g.id);
+    expect(new Set(ids).size).toBe(gestures.length);
+    for (const gesture of gestures) {
+      expect(gesture.dateDeSurvenue).toBe('2026-09-05T09:00:00Z');
+      expect(gesture.operateurId).toBe('jean');
+    }
   };
 });

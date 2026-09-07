@@ -1,11 +1,11 @@
 import { ElementDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
-import { formatDuree, libelleContexteAtelier, LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE } from './LibellesAtelier';
+import { libelleContexteAtelier, LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE } from './LibellesAtelier';
 
 describe('LibellesAtelier', () => {
-  it('should format duration in hours and zero-padded minutes', () => {
-    expect(formatDuree(5 * 60_000)).toBe('0 h 05');
-    expect(formatDuree(65 * 60_000)).toBe('1 h 05');
-    expect(formatDuree(120 * 60_000)).toBe('2 h 00');
+  it('should format duration label in hours and zero-padded minutes', () => {
+    expect(LIBELLES_POINTAGE.duree(5 * 60_000)).toBe('depuis 0 h 05');
+    expect(LIBELLES_POINTAGE.duree(65 * 60_000)).toBe('depuis 1 h 05');
+    expect(LIBELLES_POINTAGE.duree(120 * 60_000)).toBe('depuis 2 h 00');
   });
 
   it('should map workshop zone labels to natural shop-floor names', () => {
