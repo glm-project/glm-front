@@ -4,10 +4,6 @@
 
 Amended by [ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md).
 
-The Codex Stop portion was withdrawn on 2026-09-07 at the user's request: automatic completion validation
-repeated environment failures after otherwise successful work. Complete validation remains available through
-an explicit command; Git and CI gates are unchanged. See [Validation](../validation.md).
-
 ## Context
 
 ADR 0017 introduced the complete validation graph at both pre-push and Codex Stop. The graph runs security
