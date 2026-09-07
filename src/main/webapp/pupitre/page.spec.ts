@@ -3,7 +3,9 @@ import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePu
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
 import { ElementDePointage, IdentiteOperateurDesigne, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
-import { ErrorHandler, signal } from '@angular/core';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { computed, ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { PupitrePage } from './page';
@@ -65,6 +67,26 @@ class OfflinePupitreFixture {
   }
 }
 
+class EnrolementDuPupitreFixture {
+  readonly vue = computed<VueDEnrolement>(() =>
+    this.pupitre.referentiel() === undefined ? { kind: 'VALIDE_CHARGEMENT_ATELIER' } : { kind: 'ENROLE_ET_PRET' },
+  );
+
+  constructor(private readonly pupitre: OfflinePupitreFixture) {}
+
+  rafraichir(): void {
+    return undefined;
+  }
+
+  enroler(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  chargerLAtelier(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 class PageErrorHandlerFixture extends ErrorHandler {
   failure: unknown;
 
@@ -85,6 +107,7 @@ describe('Pupitre page', () => {
       imports: [PupitrePage],
       providers: [
         { provide: OfflinePupitre, useValue: pupitre },
+        { provide: EnrolementDuPupitre, useValue: new EnrolementDuPupitreFixture(pupitre) },
         { provide: ErrorHandler, useValue: errorHandler },
       ],
     });
@@ -92,12 +115,14 @@ describe('Pupitre page', () => {
     fixture.detectChanges();
   });
 
-  it('should keep only the header until a reference makes the keypad available', () => {
+  it('should keep the enrolment screen under the header until a reference makes the keypad available', () => {
     thenVisible('pupitre-header', true);
+    thenVisible('enrolement', true);
     thenVisible('designation', false);
 
     givenReference();
 
+    thenVisible('enrolement', false);
     thenVisible('designation', true);
   });
 

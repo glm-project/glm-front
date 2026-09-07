@@ -1,16 +1,15 @@
-import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { inject, Injectable, OnDestroy } from '@angular/core';
 
 @Injectable()
 export class PupitreRuntime implements OnDestroy {
-  private readonly authentication = inject(AuthenticationPort);
+  private readonly enrolement = inject(EnrolementDuPupitre);
   private readonly pupitre = inject(OfflinePupitre);
   private readonly errorHandler = inject(ErrorHandlerPort);
   private startup: Promise<void> | undefined;
   private interval: ReturnType<typeof setInterval> | undefined;
-  private destroyed = false;
   private readonly refresh = (): void => {
     void this.synchronize();
   };
@@ -23,19 +22,14 @@ export class PupitreRuntime implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroyed = true;
     clearInterval(this.interval);
     window.removeEventListener('online', this.refresh);
   }
 
   private async initialize(): Promise<void> {
-    await this.authentication.authenticate();
-    if (this.destroyed) {
-      return;
-    }
     window.addEventListener('online', this.refresh);
     this.interval = setInterval(this.refresh, 60_000);
-    await this.synchronize();
+    await this.enrolement.enroler();
   }
 
   private async synchronize(): Promise<void> {

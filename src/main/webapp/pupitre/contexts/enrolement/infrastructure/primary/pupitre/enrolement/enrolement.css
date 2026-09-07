@@ -1,0 +1,53 @@
+.enrolement-colonnes {
+  display: grid;
+  height: 100%;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.carte-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  background: var(--color-surface);
+}
+
+.qr-cadre {
+  width: min(320px, 100%);
+}
+
+.colonne-code {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.code-enrolement {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  letter-spacing: 0.25em;
+}
+
+.enrolement-panneau {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+@media (max-width: 48rem) {
+  .enrolement-colonnes {
+    grid-template-columns: 1fr;
+  }
+}

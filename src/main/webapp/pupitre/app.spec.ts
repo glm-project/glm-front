@@ -1,5 +1,7 @@
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -42,6 +44,22 @@ class OfflinePupitrePageFixture {
   }
 }
 
+class EnrolementPageFixture {
+  readonly vue = signal<VueDEnrolement>({ kind: 'DEMANDE_EN_COURS' }).asReadonly();
+
+  rafraichir(): void {
+    return undefined;
+  }
+
+  enroler(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  chargerLAtelier(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 describe('Pupitre shell', () => {
   let errorHandler: ErrorHandlerFixture;
   let fixture: ComponentFixture<App>;
@@ -56,6 +74,7 @@ describe('Pupitre shell', () => {
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
         { provide: OfflinePupitre, useClass: OfflinePupitrePageFixture },
+        { provide: EnrolementDuPupitre, useClass: EnrolementPageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ErrorHandler, useValue: errorHandler },
       ],

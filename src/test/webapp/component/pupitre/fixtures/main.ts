@@ -10,8 +10,11 @@ import { SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pup
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { PupitrePage } from '@/pupitre/page';
-import { Component } from '@angular/core';
+import { DeviceEnrolmentOutcome, DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
+import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
@@ -24,9 +27,10 @@ class PupitrePageFixture {}
 
 const journalFixture = new JournauxDuPupitreFixture();
 journalFixture.answerReadsImmediately();
-const authenticationFixture: Pick<AuthenticationPort, 'currentTenant' | 'synchronizeSession'> = {
+const authenticationFixture: Pick<AuthenticationPort, 'currentTenant' | 'synchronizeSession' | 'logout'> = {
   currentTenant: () => 'atelier',
   synchronizeSession: () => Promise.resolve(),
+  logout: () => undefined,
 };
 const unexpectedNetworkFixture = (): Promise<never> => Promise.reject(new Error('Designation must not contact the server'));
 const serveurFixture: AtelierExchangePort = {
@@ -74,6 +78,41 @@ const referentielFixture = {
 
 const parameters = new URLSearchParams(location.search);
 
+const OUTCOME_BY_SCENARIO = new Map<string, DeviceEnrolmentOutcome>([
+  ['denied', 'DENIED'],
+  ['expired', 'EXPIRED'],
+  ['unreachable', 'UNREACHABLE'],
+]);
+const NEVER_APPROVED = new Promise<DeviceEnrolmentOutcome>(() => undefined);
+let enrolmentsRequested = 0;
+
+const enrolmentFixture: DeviceEnrolmentPort = {
+  enrol: showCode => {
+    enrolmentsRequested += 1;
+    const scenario = parameters.get('enrolment');
+    if (scenario === null && enrolmentsRequested === 1) return Promise.resolve('ENROLLED');
+    showCode({
+      userCode: 'WDJB-MJHT',
+      verificationUri: 'http://localhost:9080/realms/glmproject/device',
+      verificationUriComplete: undefined,
+      expiresIn: 125,
+    });
+    const outcome = OUTCOME_BY_SCENARIO.get(scenario ?? '');
+    return outcome === undefined ? NEVER_APPROVED : Promise.resolve(outcome);
+  },
+};
+
+const chargementProvider = {
+  provide: ChargementDeLAtelierPort,
+  useFactory: (): ChargementDeLAtelierPort => {
+    const pupitre = inject(OfflinePupitre);
+    return {
+      etat: () => ({ referentielDisponible: pupitre.referentiel() !== undefined, connecte: pupitre.connected() }),
+      charger: () => pupitre.restore(),
+    };
+  },
+};
+
 const bootstrapFixture = async (): Promise<void> => {
   if (!parameters.has('reference-delay')) journalFixture.seedReferentiel('atelier', referentielFixture);
   const application = await bootstrapApplication(PupitrePageFixture, {
@@ -82,6 +121,9 @@ const bootstrapFixture = async (): Promise<void> => {
       EtatHorsLigneDuPupitre,
       OfflinePupitre,
       PupitreSynchronization,
+      EnrolementDuPupitre,
+      chargementProvider,
+      { provide: DeviceEnrolmentPort, useValue: enrolmentFixture },
       { provide: JournauxDuPupitrePort, useValue: journalFixture },
       { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
       { provide: AuthenticationPort, useValue: authenticationFixture },
@@ -89,15 +131,14 @@ const bootstrapFixture = async (): Promise<void> => {
       { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
     ],
   });
-  const pupitre = application.injector.get(OfflinePupitre);
+  const enrolement = application.injector.get(EnrolementDuPupitre);
   if (parameters.has('reference-delay')) {
     window.addEventListener('pupitre-fixture-reference-ready', () => {
       journalFixture.seedReferentiel('atelier', referentielFixture);
-      void pupitre.restore();
+      void enrolement.chargerLAtelier();
     });
-  } else {
-    await pupitre.restore();
   }
+  void enrolement.enroler();
   if (parameters.has('delayed-append')) {
     const barrier = journalFixture.delayNextAppend();
     void barrier.started.then(() => {

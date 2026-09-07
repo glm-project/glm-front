@@ -9,6 +9,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { App } from './app';
 import { routes } from './app.route';
 import { authProvider } from './auth.provider';
+import { enrolementProvider } from './enrolement.provider';
 import { offlineProvider } from './offline.provider';
 
 import { environment } from './environments/environment';
@@ -23,6 +24,7 @@ bootstrapApplication(App, {
     provideRouter(routes),
     authProvider,
     offlineProvider,
+    enrolementProvider,
     provideServiceWorker('ngsw-worker.js', { enabled: environment.production, registrationStrategy: 'registerWhenStable:30000' }),
   ],
 }).catch((err: unknown) => {

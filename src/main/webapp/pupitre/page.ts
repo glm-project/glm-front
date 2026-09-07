@@ -3,17 +3,20 @@ import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePu
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
 import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
+import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { Enrolement } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/enrolement/enrolement';
 import { ChangeDetectorRef, Component, computed, ElementRef, ErrorHandler, inject, OnDestroy, OnInit } from '@angular/core';
 import { MessageDAtelierVisible, PupitreHeader } from './header/header';
 
 @Component({
   selector: 'glm-pupitre-page',
-  imports: [Designation, Pointage, PupitreHeader],
+  imports: [Designation, Enrolement, Pointage, PupitreHeader],
   host: { class: 'flex h-screen flex-col', 'data-selector': 'pupitre-page' },
   templateUrl: './page.html',
 })
 export class PupitrePage implements OnInit, OnDestroy {
   protected readonly pupitre = inject(OfflinePupitre);
+  protected readonly enrolement = inject(EnrolementDuPupitre);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly errorHandler = inject(ErrorHandler);
   private readonly changeDetector = inject(ChangeDetectorRef);

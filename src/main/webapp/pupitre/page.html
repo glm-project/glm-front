@@ -6,7 +6,7 @@
   (finRequested)="finish()"
 />
 
-@if (pupitre.referentiel()) { @if (pupitre.operateur()) { @if (pupitre.pointage(); as vue) {
+@if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (pupitre.operateur()) { @if (pupitre.pointage(); as vue) {
 <glm-pointage
   [vue]="vue"
   [commander]="pupitre"
@@ -17,4 +17,6 @@
 />
 } } @else {
 <glm-designation />
-} }
+} } @else {
+<glm-enrolement />
+}
