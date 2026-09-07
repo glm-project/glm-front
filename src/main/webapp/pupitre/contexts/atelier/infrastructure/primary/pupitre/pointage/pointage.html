@@ -68,12 +68,12 @@
   <span class="text-body">{{ vue().glmActif ? labels.glmActif : labels.glmInactif }}</span>
 </aside>
 
-<nav class="flex gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actionsGlobales">
+<nav class="global-actions flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actionsGlobales">
   <button
     type="button"
     [disabled]="!gestesDisponibles()"
     (click)="pauseRequested.emit()"
-    class="min-h-touch-lg flex-1 rounded bg-warn text-section text-on-accent"
+    class="min-h-touch-lg flex-1 rounded bg-warn text-section text-on-accent disabled:opacity-50"
     data-selector="pause"
   >
     {{ labels.pause }}
@@ -82,7 +82,7 @@
     type="button"
     [disabled]="!gestesDisponibles()"
     (click)="repriseRequested.emit()"
-    class="min-h-touch-lg flex-1 rounded border-2 border-warn bg-surface text-section text-warn"
+    class="min-h-touch-lg flex-1 rounded border-2 border-warn bg-surface text-section text-warn disabled:opacity-50"
     data-selector="resume"
   >
     {{ labels.reprise }}
@@ -91,7 +91,7 @@
     type="button"
     [disabled]="!gestesDisponibles()"
     (click)="arretTotalRequested.emit()"
-    class="min-h-touch-lg flex-1 rounded border-2 border-nc bg-surface text-section text-nc"
+    class="min-h-touch-lg flex-1 rounded border-2 border-nc bg-surface text-section text-nc disabled:opacity-50"
     data-selector="stop-all"
   >
     {{ labels.arretTotal }}
