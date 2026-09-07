@@ -133,7 +133,9 @@ describe('AcceptationLocaleDesGestes', () => {
     };
     tenant = 'autre-entreprise';
 
-    await expect(acceptation.capture(fenetre, { kind: 'PREPAREE', gestes: lot }, () => fenetre)).rejects.toThrow();
+    await expect(acceptation.capture(fenetre, { kind: 'PREPAREE', gestes: lot }, () => fenetre)).rejects.toThrow(
+      'La fenetre operateur a change.',
+    );
   });
 
   const givenAnOpenOperatorWindow = (): FenetreOperateur =>

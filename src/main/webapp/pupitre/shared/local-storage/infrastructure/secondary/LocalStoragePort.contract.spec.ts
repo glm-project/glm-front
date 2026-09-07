@@ -259,9 +259,7 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     expect(chronology).toEqual(['first entered', 'first completed', 'second entered', 'second completed']);
   };
   const thenBothLocksAreActiveConcurrently = async (firstEntered: SignalFixture, secondEntered: SignalFixture): Promise<void> => {
-    await Promise.all([firstEntered.promise, secondEntered.promise]);
-    expect(firstEntered).toBeDefined();
-    expect(secondEntered).toBeDefined();
+    await expect(Promise.all([firstEntered.promise, secondEntered.promise])).resolves.toEqual([undefined, undefined]);
   };
   const thenItContains = async (store: LocalStoragePort, key: string, value: unknown): Promise<void> => {
     expect(await store.read(key)).toEqual(value);
