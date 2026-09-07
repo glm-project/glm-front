@@ -37,6 +37,7 @@ Implementation:
 - `stryker.config.mjs` mutates `src/main/webapp/**/domain/**/*.ts` by default with a 100 % blocking threshold (`thresholds.break: 100`), excluding specs, declarations and package-info files.
 - The pre-push hook (`npm run test:mutation:diff`) inspects pushed refs and mutates only lines modified within `src/main/webapp/**/domain/**/*.ts`. Pushes modifying only code outside the domain skip mutation.
 - `npm run test:mutation:project` executes whole-project mutation testing with `thresholds.break: null` as an informational diagnostic.
+- Decommission the scheduled GitHub Actions workflow (`.github/workflows/mutation-testing.yml`); mutation testing is restricted to local pre-push validation and on-demand local diagnostics rather than CI execution.
 
 ## Consequences
 
@@ -50,3 +51,4 @@ Implementation:
 ### Negative
 
 - Regressions in test assertion strength outside the domain core are not automatically blocked at pre-push. They rely on unit test coverage, component tests and application tests.
+- GitHub Actions no longer runs scheduled mutation jobs; project-wide mutation measurements must be executed on demand locally via `npm run test:mutation:project`.
