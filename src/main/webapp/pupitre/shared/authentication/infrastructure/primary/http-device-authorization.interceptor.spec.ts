@@ -1,5 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
@@ -62,6 +62,7 @@ describe('Pupitre authorization refusal', () => {
 
     thenReenrolmentsAre(1);
     thenTokenIs(undefined);
+    thenFailureIs(await response, status);
   });
 
   it('should keep its enrolment when the server or the network is unavailable', async () => {
@@ -129,5 +130,9 @@ describe('Pupitre authorization refusal', () => {
   };
   const thenResponseIs = (response: unknown): void => {
     expect(response).toEqual({ content: [] });
+  };
+  const thenFailureIs = (failure: unknown, status: number): void => {
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect((failure as HttpErrorResponse).status).toBe(status);
   };
 });

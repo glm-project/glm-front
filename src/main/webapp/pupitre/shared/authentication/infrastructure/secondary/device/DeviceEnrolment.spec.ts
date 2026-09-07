@@ -1,8 +1,10 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { DeviceAuthentication } from './DeviceAuthentication';
 import { DeviceGrantConfiguration } from './DeviceGrantConfiguration';
@@ -134,7 +136,6 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     stockage = new StorageFixture();
     TestBed.configureTestingModule({
       providers: [
@@ -143,6 +144,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
         DeviceAuthentication,
         { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
         { provide: LocalStoragePort, useValue: stockage },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
     authentication = TestBed.inject(DeviceAuthentication);

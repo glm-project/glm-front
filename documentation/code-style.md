@@ -118,8 +118,9 @@ ESLint is strict on `main/webapp/**`: `typescript-eslint` `strictTypeChecked` + 
 `angular-eslint` recommended (`eslint.config.mjs`). SonarJS recommended rules cover every TypeScript source;
 cognitive complexity may not exceed 7. Its type-return, null-dereference and argument-type rules stay disabled
 because they conflict with discriminated unions or duplicate TypeScript strict checks with false positives. A
-rule that fires is a design signal, not noise to silence. Non-null assertions (`value!`) and definite-assignment
-assertions (`property!:`) are forbidden: initialize the value, model its possible absence or narrow it explicitly.
+rule that fires is a design signal, not noise to silence. Non-null assertions (`value!`), definite-assignment
+assertions (`property!:`) and type assertions to unknown (`as unknown`, `<unknown>`) are forbidden: initialize the value, model its
+possible absence or narrow it explicitly.
 The local responsibility-cohesion rule blocks a production class only when injected collaborators, public
 operations and owned state all cross the coordinator tripwire. Inventory its reasons to change and extract a
 cohesive responsibility; a narrow inline suppression is reserved for a demonstrably single deep module and

@@ -14,12 +14,11 @@ import { GestionHeader } from './header/header';
   styleUrl: './app.css',
 })
 export class App implements OnInit {
-  appName = signal('');
+  appName = signal('glmfront');
   private readonly authentication = inject(AuthenticationPort);
   private readonly errorHandler = inject(ErrorHandler);
 
   ngOnInit(): void {
-    this.appName.set('glmfront');
     this.authentication.authenticate().catch((failure: unknown) => {
       this.errorHandler.handleError(failure);
     });

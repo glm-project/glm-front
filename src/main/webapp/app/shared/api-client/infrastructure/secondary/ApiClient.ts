@@ -24,7 +24,7 @@ type PathParameters<Op> = Op extends { parameters: { path: infer Values } } ? { 
 type QueryParameters<Op> = Op extends { parameters: { query?: infer Values } }
   ? [NonNullable<Values>] extends [never]
     ? { queryParams?: never }
-    : { queryParams?: NonNullable<Values> }
+    : { queryParams?: { [Parameter in keyof NonNullable<Values>]?: NonNullable<Values>[Parameter] | undefined } }
   : never;
 
 type RequestBody<Op> = Op extends { requestBody: { content: { 'application/json': infer Body } } } ? { body: Body } : { body?: never };

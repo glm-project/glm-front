@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { inject, Injectable, OnDestroy } from '@angular/core';
 
@@ -6,6 +7,7 @@ import { inject, Injectable, OnDestroy } from '@angular/core';
 export class PupitreRuntime implements OnDestroy {
   private readonly authentication = inject(AuthenticationPort);
   private readonly pupitre = inject(OfflinePupitre);
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private startup: Promise<void> | undefined;
   private interval: ReturnType<typeof setInterval> | undefined;
   private destroyed = false;
@@ -38,7 +40,7 @@ export class PupitreRuntime implements OnDestroy {
 
   private async synchronize(): Promise<void> {
     await this.pupitre.synchronize().catch((failure: unknown) => {
-      console.error('Pupitre non synchronise', failure);
+      this.errorHandler.handleError(failure);
     });
   }
 }

@@ -299,13 +299,7 @@ export class FenetreOperateur {
     const numero = fenetre.numeroDuSuivi(suivi);
     const decision =
       activities.kind === 'ACTIF'
-        ? fenetre.gestes(
-            suiviId,
-            numero,
-            activities.transitions,
-            identify,
-            [activities.transitions.premiere, ...activities.transitions.suivantes].some(transition => transition.type === 'DEBUT'),
-          )
+        ? fenetre.gestes(suiviId, numero, activities.transitions, identify, activities.transitions.premiere.type === 'DEBUT')
         : fenetre.ouverture(suiviId, numero, cible, identify);
     return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }

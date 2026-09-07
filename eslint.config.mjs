@@ -6,6 +6,7 @@ import globals from 'globals';
 import typescript from 'typescript-eslint';
 import { domainReadonlyProperties } from './eslint/rules/domain-readonly-properties.mjs';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
+import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
 
 const TAILWIND_COLOR_FAMILIES = [
@@ -126,6 +127,7 @@ const local = {
     },
     'given-when-then': givenWhenThen,
     'domain-readonly-properties': domainReadonlyProperties,
+    'no-as-unknown': noAsUnknown,
     'responsibility-cohesion': responsibilityCohesion,
   },
 };
@@ -139,7 +141,7 @@ export default typescript.config(
     },
   },
   {
-    ignores: ['target/', '.angular/', 'src/main/webapp/app/generated/schema.d.ts'],
+    ignores: ['target/', '.angular/', '.stryker-tmp/', 'src/main/webapp/app/generated/schema.d.ts'],
   },
   eslint.configs.recommended,
   {
@@ -197,6 +199,7 @@ export default typescript.config(
   },
   {
     files: ['src/**/*.ts'],
+    plugins: { local },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
@@ -204,6 +207,7 @@ export default typescript.config(
       '@typescript-eslint/no-unsafe-argument': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
+      'local/no-as-unknown': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
       'no-restricted-syntax': restrictedSyntax(),
     },

@@ -19,13 +19,11 @@ interface BusinessProblemDetail extends ProblemDetail {
 
 const asString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
-const asProblemDetail = (value: unknown): ProblemDetail | null => (typeof value === 'object' && value !== null ? value : null);
+const isBusinessProblem = (problem: unknown): problem is BusinessProblemDetail =>
+  asString((problem as ProblemDetail | null)?.type)?.startsWith(GLM_ERROR_PREFIX) === true;
 
-const isBusinessProblem = (problem: ProblemDetail | null): problem is BusinessProblemDetail =>
-  asString(problem?.type)?.startsWith(GLM_ERROR_PREFIX) === true;
-
-const findBusinessProblemIn = (problem: ProblemDetail | null): ApiError | undefined =>
+const findBusinessProblemIn = (problem: unknown): ApiError | undefined =>
   isBusinessProblem(problem) ? { urn: problem.type, message: asString(problem.message) ?? EMPTY_MESSAGE } : undefined;
 
 export const findApiErrorIn = (failure: unknown): ApiError | undefined =>
-  failure instanceof HttpErrorResponse ? findBusinessProblemIn(asProblemDetail(failure.error)) : undefined;
+  failure instanceof HttpErrorResponse ? findBusinessProblemIn(failure.error) : undefined;

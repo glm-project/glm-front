@@ -6,6 +6,7 @@ const ZERO_OID = /^0+$/;
 
 const isMutationTarget = path =>
   path.startsWith('src/main/webapp/')
+  && path.includes('/domain/')
   && path.endsWith('.ts')
   && !path.endsWith('.spec.ts')
   && !path.endsWith('.d.ts')
@@ -68,7 +69,7 @@ export const runDiffMutation = ({ updates, remoteName, git, runMutation, write }
 
   const selected = [...targets].sort();
   if (selected.length === 0) {
-    write('No changed production TypeScript files to mutate.\n');
+    write('No changed domain TypeScript files to mutate.\n');
     return 0;
   }
   return runMutation(selected);
