@@ -1,3 +1,7 @@
+:host {
+  background: var(--color-canvas);
+}
+
 .enrolement-colonnes {
   display: grid;
   height: 100%;

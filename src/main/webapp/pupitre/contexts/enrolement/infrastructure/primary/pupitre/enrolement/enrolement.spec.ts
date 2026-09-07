@@ -78,6 +78,20 @@ describe('Enrolement screen', () => {
     thenTheQrCodeIsDrawn();
   });
 
+  it('should encode the validation link, not the address printed beside it', () => {
+    givenTheScreenShows({ kind: 'EN_ATTENTE_D_APPROBATION', code: codeFixture });
+    whenRendering();
+    const scanned = whatTheQrCodeDraws();
+
+    givenTheScreenShows({
+      kind: 'EN_ATTENTE_D_APPROBATION',
+      code: { ...codeFixture, lienDeValidation: `${codeFixture.lienDeValidation}&session=42` },
+    });
+    whenRendering();
+
+    thenTheQrCodeChangedFrom(scanned);
+  });
+
   it('should show only the status while the authorization is being requested', () => {
     givenTheScreenShows({ kind: 'DEMANDE_EN_COURS' });
 
@@ -189,8 +203,14 @@ describe('Enrolement screen', () => {
     expect(root().querySelector(dataSelector('enrolement-action'))).toBeNull();
   };
 
+  const whatTheQrCodeDraws = (): string => element('qr-modules').getAttribute('d') ?? '';
+
   const thenTheQrCodeIsDrawn = (): void => {
-    expect(element('qr-modules').getAttribute('d')?.length).toBeGreaterThan(0);
+    expect(whatTheQrCodeDraws().length).toBeGreaterThan(0);
+  };
+
+  const thenTheQrCodeChangedFrom = (previous: string): void => {
+    expect(whatTheQrCodeDraws()).not.toBe(previous);
   };
 
   const thenAuthorizationRequestsAre = (count: number): void => {

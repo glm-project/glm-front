@@ -128,9 +128,9 @@ available: it closes the visible window immediately while already initiated work
 
 Under the permanent chrome, the page renders the enrolment screen until the device is enrolled and its first
 complete reference is active, and the workshop views afterwards. That switch reads the enrolment context's
-projected state, never the reference alone: a pupitre whose credentials were revoked must return to
-enrolment even though its last reference is still on disk. The header's own reset gesture opens a
-confirmation the page owns. The same chrome identifies a
+projected state, never the reference alone: an administration reset returns the pupitre to enrolment even
+though its last reference is still on disk. The header's own reset gesture opens a confirmation the page
+owns. The same chrome identifies a
 rejected pointage by its element number and a rejected presence by the originating `PAUSE`, `REPRENDRE` or
 `TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local
 acceptance failure instead shows “Action non enregistrée — recommencez” until the next durable local success

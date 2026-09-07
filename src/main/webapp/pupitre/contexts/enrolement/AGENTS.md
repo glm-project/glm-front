@@ -32,6 +32,8 @@ Ce contexte appartient exclusivement à `pupitre`. Il possède le cycle de vie v
 
 Le QR code est produit dans le bundle et rendu par un `<path>` unique dans un `<svg>` en ligne : ni `innerHTML`, ni `DomSanitizer`, ni origine externe. Ses couleurs viennent des tokens. Voir [ADR 0027](../../../../../../documentation/adr/0027-encode-the-enrolment-qr-code-in-the-bundle.md).
 
+Le tableau de providers qui nomme `TypeScriptChargementDeLAtelier` vit dans `infrastructure/secondary/atelier/`, pas à la racine de composition : un adaptateur primaire `TypeScript*` ne peut être nommé que depuis un adaptateur secondaire. Le déplacer casse `typescript-primary-caller` et `HexagonalArchTest`. Pour la même raison, le contrat de `ChargementDeLAtelierPort` est le seul spec du contexte à ne pas être colocalisé : il vit dans `src/test/webapp/unit/`, hors de la portée de ces règles.
+
 `glm-qr-code` reste un adaptateur primaire de ce contexte tant qu'un seul écran l'utilise. Ne pas le promouvoir dans le design system par anticipation.
 
 Le `user_code` s'affiche tel que le serveur l'a émis. L'espacement visuel entre ses groupes vient de la typographie, jamais d'une altération de la chaîne : ce qui est lu doit être ce qui est saisi.
