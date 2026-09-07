@@ -43,7 +43,7 @@ export class FollowContent implements OnChanges, OnDestroy {
   imports: [FollowContent],
   host: {
     'data-selector': 'designation',
-    class: 'block h-full',
+    class: 'block min-h-0 flex-1',
     '(pointerdown)': 'onPress($event)',
     '(document:keydown)': 'onKey($event)',
   },
