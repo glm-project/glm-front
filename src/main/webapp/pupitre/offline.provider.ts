@@ -1,4 +1,6 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AcceptationLocaleDesGestes } from '@/pupitre/contexts/atelier/application/AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
@@ -22,4 +24,5 @@ export const offlineProvider: Provider[] = [
   { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
   PupitreRuntime,
   { provide: AtelierExchangePort, useClass: HttpAtelierExchange },
+  { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
 ];

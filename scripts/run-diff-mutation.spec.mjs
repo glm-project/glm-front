@@ -12,7 +12,11 @@ describe('pre-push mutation', () => {
       git: arguments_ => {
         gitCalls.push(arguments_);
         if (arguments_[1] === '--unified=0') return '@@ -4,2 +5,3 @@\n@@ -12 +14 @@\n@@ -20 +22,0 @@\n';
-        return ['src/main/webapp/pupitre/app.ts', 'src/main/webapp/pupitre/app.spec.ts', 'documentation/testing.md'].join('\n');
+        return [
+          'src/main/webapp/pupitre/contexts/atelier/domain/designation/FenetreOperateur.ts',
+          'src/main/webapp/pupitre/contexts/atelier/domain/designation/FenetreOperateur.spec.ts',
+          'documentation/testing.md',
+        ].join('\n');
       },
       runMutation: targets => {
         mutationCalls.push(targets);
@@ -24,9 +28,14 @@ describe('pre-push mutation', () => {
     assert.equal(status, 0);
     assert.deepEqual(gitCalls, [
       ['diff', '--name-only', '--diff-filter=ACMRT', 'remote', 'local', '--'],
-      ['diff', '--unified=0', 'remote', 'local', '--', 'src/main/webapp/pupitre/app.ts'],
+      ['diff', '--unified=0', 'remote', 'local', '--', 'src/main/webapp/pupitre/contexts/atelier/domain/designation/FenetreOperateur.ts'],
     ]);
-    assert.deepEqual(mutationCalls, [['src/main/webapp/pupitre/app.ts:14-14', 'src/main/webapp/pupitre/app.ts:5-7']]);
+    assert.deepEqual(mutationCalls, [
+      [
+        'src/main/webapp/pupitre/contexts/atelier/domain/designation/FenetreOperateur.ts:14-14',
+        'src/main/webapp/pupitre/contexts/atelier/domain/designation/FenetreOperateur.ts:5-7',
+      ],
+    ]);
   });
 
   it('should mutate commits introduced by a new remote branch', () => {
@@ -37,7 +46,7 @@ describe('pre-push mutation', () => {
       if (arguments_[0] === 'rev-list' && arguments_[1] === '--reverse') return 'first\nlocal\n';
       if (arguments_[0] === 'rev-list') return 'first base\n';
       if (arguments_[1] === '--unified=0') return '@@ -9 +10,2 @@\n';
-      return 'src/main/webapp/gestion/app.ts\n';
+      return 'src/main/webapp/gestion/contexts/operateur/domain/Operateur.ts\n';
     };
 
     const status = runDiffMutation({
@@ -56,9 +65,9 @@ describe('pre-push mutation', () => {
       ['rev-list', '--reverse', 'local', '--not', '--remotes=origin'],
       ['rev-list', '--parents', '-n', '1', 'first'],
       ['diff', '--name-only', '--diff-filter=ACMRT', 'base', 'local', '--'],
-      ['diff', '--unified=0', 'base', 'local', '--', 'src/main/webapp/gestion/app.ts'],
+      ['diff', '--unified=0', 'base', 'local', '--', 'src/main/webapp/gestion/contexts/operateur/domain/Operateur.ts'],
     ]);
-    assert.deepEqual(mutationCalls, [['src/main/webapp/gestion/app.ts:10-11']]);
+    assert.deepEqual(mutationCalls, [['src/main/webapp/gestion/contexts/operateur/domain/Operateur.ts:10-11']]);
   });
 
   it('should mutate the complete tree on the first repository push', () => {
@@ -66,7 +75,7 @@ describe('pre-push mutation', () => {
     const git = arguments_ => {
       if (arguments_[1] === '--reverse') return 'root\n';
       if (arguments_[1] === '--parents') return 'root\n';
-      return 'src/main/webapp/pupitre/app.ts\n';
+      return 'src/main/webapp/pupitre/contexts/atelier/domain/GesteAtelier.ts\n';
     };
 
     const status = runDiffMutation({
@@ -81,7 +90,7 @@ describe('pre-push mutation', () => {
     });
 
     assert.equal(status, 0);
-    assert.deepEqual(mutationCalls, [['src/main/webapp/pupitre/app.ts']]);
+    assert.deepEqual(mutationCalls, [['src/main/webapp/pupitre/contexts/atelier/domain/GesteAtelier.ts']]);
   });
 
   it('should skip mutation when deleting a remote reference', () => {
@@ -95,6 +104,23 @@ describe('pre-push mutation', () => {
     });
 
     assert.equal(status, 0);
-    assert.deepEqual(messages, ['No changed production TypeScript files to mutate.\n']);
+    assert.deepEqual(messages, ['No changed domain TypeScript files to mutate.\n']);
+  });
+
+  it('should skip mutation when changed production files are outside the domain', () => {
+    const messages = [];
+    const status = runDiffMutation({
+      updates: 'refs/heads/feature local refs/heads/feature remote\n',
+      remoteName: 'origin',
+      git: arguments_ => {
+        if (arguments_[1] === '--unified=0') return '@@ -4,2 +5,3 @@\n';
+        return ['src/main/webapp/pupitre/page.ts', 'src/main/webapp/pupitre/page.spec.ts'].join('\n');
+      },
+      runMutation: () => assert.fail('Stryker should not run when changes are outside the domain.'),
+      write: message => messages.push(message),
+    });
+
+    assert.equal(status, 0);
+    assert.deepEqual(messages, ['No changed domain TypeScript files to mutate.\n']);
   });
 });

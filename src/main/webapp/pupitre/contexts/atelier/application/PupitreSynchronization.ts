@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
@@ -18,16 +19,18 @@ export class PupitreSynchronization {
   private readonly authentication = inject(AuthenticationPort);
   private readonly journal = inject(JournauxDuPupitrePort);
   private readonly serveur = inject(AtelierExchangePort);
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private synchronization: Promise<void> | undefined;
   private synchronizationRequested = false;
 
   synchronize(publish: PupitrePublisher): Promise<void> {
-    this.synchronizationRequested = true;
     if (this.synchronization !== undefined) {
+      this.synchronizationRequested = true;
       return this.synchronization;
     }
     this.synchronization = this.journal
       .synchronize(async () => {
+        await this.exchange(publish);
         while (this.synchronizationRequested) {
           this.synchronizationRequested = false;
           await this.exchange(publish);
@@ -48,7 +51,7 @@ export class PupitreSynchronization {
     }
     publish(selected, await this.journal.read(selected));
     const entreprise = this.authentication.currentTenant();
-    if (entreprise === undefined || this.authentication.currentToken() === undefined) {
+    if (entreprise === undefined) {
       return;
     }
     await this.drain(entreprise, publish);
@@ -68,7 +71,7 @@ export class PupitreSynchronization {
         publish(entreprise, state);
       }
     } catch (failure: unknown) {
-      console.error('Referentiel non actualise', failure);
+      this.errorHandler.handleError(failure);
     }
   }
 
@@ -94,10 +97,9 @@ export class PupitreSynchronization {
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
-      let journeeOuverte = false;
-      await this.journal.withSession(async () => {
+      const journeeOuverte = await this.journal.withSession(async () => {
         await this.authentication.synchronizeSession();
-        journeeOuverte = await this.push(entreprise, evenement.geste, evenements);
+        return this.push(entreprise, evenement.geste, evenements);
       });
       return evenement.geste.nature === 'ARRIVEE'
         ? { geste: evenement.geste, etat: 'ACCEPTE', journeeOuverte }

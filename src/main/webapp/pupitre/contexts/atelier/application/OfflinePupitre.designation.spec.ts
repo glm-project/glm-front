@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
@@ -13,9 +14,9 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
-import { MockInstance } from 'vitest';
 import { AcceptationLocaleDesGestes } from './AcceptationLocaleDesGestes';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 
@@ -67,7 +68,9 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 describe('Designation du pupitre', () => {
   let designation: OfflinePupitre;
   let journal: DesignationJournalFixture;
+  let errorHandler: ErrorHandlerFixture;
   beforeEach(async () => {
+    errorHandler = new ErrorHandlerFixture();
     journal = new DesignationJournalFixture();
     await journal.saveReferentiel('atelier', referentielFixture);
     vi.useFakeTimers();
@@ -84,6 +87,7 @@ describe('Designation du pupitre', () => {
           provide: AuthenticationPort,
           useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
         },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     designation = TestBed.inject(OfflinePupitre);
@@ -216,7 +220,6 @@ describe('Designation du pupitre', () => {
     thenClosed();
   });
   it('should report a failed closure launched by the expiration timer', async () => {
-    const reported = givenFailuresAreReported();
     whenEntering('049');
     await whenValidating();
     const reject = givenDelayedFailure();
@@ -226,7 +229,7 @@ describe('Designation du pupitre', () => {
     whenRejecting(reject);
     await new Promise(resolve => roundTrip(resolve));
 
-    expect(reported).toHaveBeenCalledWith('Operation asynchrone interrompue', expect.objectContaining({ message: 'Unavailable' }));
+    expect(errorHandler.errors).toEqual([expect.objectContaining({ message: 'Unavailable' })]);
   });
   it('should keep the first digit after expiry while the previous window is still closing', async () => {
     whenEntering('049');
@@ -267,7 +270,6 @@ describe('Designation du pupitre', () => {
       resolve(referenceFixture);
     };
   };
-  const givenFailuresAreReported = (): MockInstance => vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const whenCheckingExpiration = (): Promise<void> => designation.expire();
   const whenClosingCompletes = (resolve: () => void): void => {
     resolve();

@@ -99,6 +99,9 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   seedReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): void {
     this.entreprises.set(entreprise, { ...structuredClone(EMPTY_JOURNAL_DU_PUPITRE), referentiel: structuredClone(referentiel) });
   }
+  seedJournal(entreprise: string, journal: JournalDuPupitre): void {
+    this.entreprises.set(entreprise, structuredClone(journal));
+  }
   answerReadsImmediately(): void {
     this.readsImmediately = true;
   }

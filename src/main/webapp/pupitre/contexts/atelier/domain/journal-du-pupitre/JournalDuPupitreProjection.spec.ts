@@ -36,6 +36,7 @@ describe('JournalDuPupitreProjection', () => {
     const projection = whenProjecting(state);
 
     thenActivityIs(projection, 'TRAVAIL', '2026-09-05T08:00:00Z');
+    thenActivityHasNoPoste(projection);
   });
 
   it('should change category on non conformity and stop on finish', () => {
@@ -198,6 +199,11 @@ describe('JournalDuPupitreProjection', () => {
   const thenActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
     expect(requiredFixture(suivi.activites[0], 'projected activity')).toMatchObject({ operateurId: 'jean', categorie, depuis });
+  };
+  const thenActivityHasNoPoste = (projection: ReferentielDuPupitre | undefined): void => {
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    const activite = requiredFixture(suivi.activites[0], 'projected activity');
+    expect('posteId' in activite).toBe(false);
   };
   const thenStateIs = (projection: ReferentielDuPupitre | undefined, state: string, active: number): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');

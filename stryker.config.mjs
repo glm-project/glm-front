@@ -1,13 +1,9 @@
 export default {
   mutate: [
-    'src/main/webapp/**/*.ts',
-    '!src/main/webapp/**/*.spec.ts',
-    '!src/main/webapp/**/*.d.ts',
-    '!src/main/webapp/**/main.ts',
-    '!src/main/webapp/**/environments/**',
-    '!src/main/webapp/**/*.provider*.ts',
-    '!src/main/webapp/**/package-info.ts',
-    '!src/main/webapp/app/generated/**',
+    'src/main/webapp/**/domain/**/*.ts',
+    '!src/main/webapp/**/domain/**/*.spec.ts',
+    '!src/main/webapp/**/domain/**/*.d.ts',
+    '!src/main/webapp/**/domain/**/package-info.ts',
   ],
   testRunner: 'command',
   commandRunner: {
@@ -20,10 +16,10 @@ export default {
   concurrency: 1,
   reporters: ['clear-text', 'progress', 'html', 'json'],
   htmlReporter: {
-    fileName: 'reports/mutation/project.html',
+    fileName: 'reports/mutation/domain.html',
   },
   jsonReporter: {
-    fileName: 'reports/mutation/project.json',
+    fileName: 'reports/mutation/domain.json',
   },
   thresholds: {
     high: 100,

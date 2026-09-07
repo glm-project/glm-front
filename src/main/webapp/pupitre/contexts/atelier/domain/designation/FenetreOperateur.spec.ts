@@ -465,6 +465,190 @@ describe('FenetreOperateur', () => {
     thenPointageViewIsEmpty();
   });
 
+  it('should mark an element non conforme when its activities only contain non conformity', () => {
+    const onlyNcJournal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        suivis: [
+          {
+            id: 'of-nc',
+            nom: 'OF-NC',
+            etat: 'EN_COURS',
+            type: 'ORDRE_DE_FABRICATION',
+            activites: [{ operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' }],
+            evenements: [],
+          },
+        ],
+      },
+    };
+    const localWindow = FenetreOperateur.open('entreprise-a', onlyNcJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+
+    expect(localWindow.pointage().ordresDeFabrication[0]?.isNonConforme()).toBe(true);
+  });
+
+  it('should resume only non conforming activities preserving their respective workstations', () => {
+    const multiNcJournal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [
+          {
+            id: 'jean',
+            nom: 'Dupont',
+            prenom: 'Jean',
+            matricule: '049',
+            postes: [
+              { id: 'poste-1', libelle: 'Poste 1' },
+              { id: 'poste-2', libelle: 'Poste 2' },
+              { id: 'poste-3', libelle: 'Poste 3' },
+            ],
+          },
+        ],
+        suivis: [
+          {
+            id: 'of-multi-nc',
+            nom: 'OF-MULTI',
+            etat: 'EN_COURS',
+            type: 'ORDRE_DE_FABRICATION',
+            activites: [
+              { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z', posteId: 'poste-1' },
+              { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:15:00Z', posteId: 'poste-2' },
+              { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z', posteId: 'poste-3' },
+            ],
+            evenements: [],
+          },
+        ],
+      },
+    };
+    const multiWindow = FenetreOperateur.open('entreprise-a', multiNcJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+
+    const decision = multiWindow.afterDeciding('of-multi-nc', 'SECONDAIRE', identifyFixture).decision;
+
+    expect(decision.kind).toBe('GESTES');
+    if (decision.kind === 'GESTES') {
+      const pointages = decision.capture().filter(geste => geste.nature === 'POINTAGE');
+      expect(pointages.map(pointage => ({ type: pointage.type, posteId: pointage.posteId }))).toEqual([
+        { type: 'DEBUT', posteId: 'poste-1' },
+        { type: 'DEBUT', posteId: 'poste-3' },
+      ]);
+    }
+  });
+
+  it('should sort elements using natural numeric order', () => {
+    const unsortedJournal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        suivis: [
+          { id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+        ],
+      },
+    };
+    const sortWindow = FenetreOperateur.open('entreprise-a', unsortedJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+
+    const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero);
+
+    expect(numeros).toEqual(['OF-1', 'OF-2', 'OF-10']);
+  });
+
+  it('should indicate glmActif is true when the operator has no active activities', () => {
+    const inactiveJournal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
+      },
+    };
+    const inactiveWindow = FenetreOperateur.open('entreprise-a', inactiveJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+
+    expect(inactiveWindow.pointage().glmActif).toBe(true);
+  });
+
+  it('should capture arrival, implicit resumption, and pointage when confirming workstation selection and clear visible refusal', () => {
+    const multiPosteJournal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [
+          {
+            id: 'jean',
+            nom: 'Dupont',
+            prenom: 'Jean',
+            matricule: '049',
+            postes: [
+              { id: 'poste-1', libelle: 'Poste 1' },
+              { id: 'poste-2', libelle: 'Poste 2' },
+            ],
+          },
+        ],
+        suivis: [{ id: 'of-multi', nom: 'OF-MULTI', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
+      },
+    };
+    const multiWindow = FenetreOperateur.open('entreprise-a', multiPosteJournal, '049', Date.parse('2026-09-05T09:00:00Z'), 1);
+
+    const { fenetre: afterChoice, decision } = multiWindow.afterChoosingPoste('of-multi', 'PRINCIPALE', 'poste-1', identifyFixture);
+
+    const gestures = decision.capture();
+    thenGesturesAre(gestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
+    expect(gestures[1]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
+    expect(gestures[2]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'poste-1' });
+    expect(afterChoice.refusal()).toBeUndefined();
+    const reconciled = afterChoice.afterReconciling('entreprise-a', givenTheDecisionWasRefused(gestures));
+    expect(reconciled.refusal()).toBeDefined();
+  });
+
+  it('should increment intention counter monotonically across sequential decisions', () => {
+    const first = fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture);
+    fenetre = first.fenetre;
+    expect(first.decision.kind).toBe('GESTES');
+    if (first.decision.kind === 'GESTES') {
+      expect(first.decision.intention).toBe(1);
+    }
+
+    const second = fenetre.afterDeciding('of-204', 'PRINCIPALE', identifyFixture);
+    expect(second.decision.kind).toBe('GESTES');
+    if (second.decision.kind === 'GESTES') {
+      expect(second.decision.intention).toBe(2);
+    }
+  });
+
+  it('should not assure arrival when accepting gestures that do not include an arrival', () => {
+    const pointageOnly: GesteDAtelier = {
+      id: 'pt-1',
+      dateDeSurvenue: '2026-09-05T08:00:00Z',
+      suiviId: 'moule-1015',
+      type: 'FIN',
+      nature: 'POINTAGE',
+      operateurId: 'jean',
+    };
+
+    fenetre = fenetre.afterAccept([pointageOnly]);
+
+    const nextDecision = fenetre.afterDeciding('of-204', 'PRINCIPALE', identifyFixture).decision;
+    expect(nextDecision.kind).toBe('GESTES');
+    if (nextDecision.kind === 'GESTES') {
+      const captured = fenetre.capture(nextDecision);
+      expect(captured.some(geste => geste.nature === 'ARRIVEE')).toBe(true);
+    }
+  });
+
+  it('should not attach a global command context for departure presence', () => {
+    const departLot = fenetre.preparePresence('DEPART', identifyFixture);
+
+    expect(departLot.contextesParGeste.size).toBe(0);
+  });
+
+  it('should include arrival by default when capture is called without arguments on pointage decision', () => {
+    const decision = fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture).decision;
+
+    expect(decision.kind).toBe('GESTES');
+    if (decision.kind === 'GESTES') {
+      const gestures = decision.capture();
+      expect(gestures[0]?.nature).toBe('ARRIVEE');
+    }
+  });
+
   const identifyFixture = (): IdentiteDuGeste => {
     const id = crypto.randomUUID();
     const dateDeSurvenue = new Date(Date.parse(dateDuGeste) + identities.size).toISOString();
@@ -643,11 +827,15 @@ describe('FenetreOperateur', () => {
     expect(pointage.moules.map(element => ({ id: element.id, numero: element.numero, dureeMs: element.dureeMs() }))).toEqual([
       { id: 'moule-1015', numero: '1015', dureeMs: 10_800_000 },
     ]);
+    expect(pointage.moules[0]?.isNonConforme()).toBe(false);
+    expect(pointage.moules[0]?.repliSurNom).toBe(false);
     expect(pointage.ordresDeFabrication.map(element => element.numero)).toEqual(['204', 'OF-2026-000042']);
     expect(pointage.ordresDeFabrication[0]?.isNonConforme()).toBe(true);
+    expect(pointage.ordresDeFabrication[0]?.repliSurNom).toBe(false);
     expect(pointage.ordresDeFabrication[0]?.dureeMs()).toBe(1_800_000);
     expect(pointage.ordresDeFabrication[1]).toMatchObject({ repliSurNom: true });
     expect(pointage.ordresDeFabrication[1]?.isActive()).toBe(false);
+    expect(pointage.ordresDeFabrication[1]?.isNonConforme()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.dureeMs()).toBe(0);
     expect(pointage.glmActif).toBe(false);
   };

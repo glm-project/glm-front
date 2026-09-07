@@ -43,7 +43,7 @@ renumbers at merge time. The status below is the living one — update this line
 - [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — **Accepted** — recommended static
   analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
 - [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Amended by 0024** — quick static
-  checks at push, later complemented by mutation of changed production files
+  checks at push, later complemented by mutation of changed domain files
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Accepted** — stateful
   invariants and pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
@@ -51,4 +51,6 @@ renumbers at merge time. The status below is the living one — update this line
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — **Accepted** — a
   conjunctive production tripwire for stateful coordinators, with responsibility review at the enforcement point
 - [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) — **Accepted** —
-  mutate changed production files before push and retain the complete project as an explicit local diagnostic
+  100 % mutation score enforced on changed domain core, informational outside domain
+- [0025 — Route runtime errors through ErrorHandlerPort](0025-route-runtime-errors-through-error-handler-port.md) — **Accepted** —
+  a shared technical port for unhandled asynchronous errors across application coordinators and authentication adapters

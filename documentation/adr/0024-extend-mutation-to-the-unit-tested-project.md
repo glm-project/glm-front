@@ -6,50 +6,49 @@ Accepted. Amends [ADR 0018](0018-run-replay-mutation-through-angular.md).
 
 ## Context
 
-ADR 0018 deliberately limited the first mutation measurement to `GesteReplayPolicy.ts`. That experiment proved the Angular command runner,
-the TypeScript checker and the 100 % threshold, but its report could not say anything about the rest of the applications.
+ADR 0018 deliberately limited the first mutation measurement to `GesteReplayPolicy.ts`. That experiment proved the Angular command runner, the TypeScript checker and the 100 % threshold, but its report could not say anything about the rest of the applications.
 
-The repository now needs mutation feedback for every changed handwritten production TypeScript file exercised by the unit-test coverage gate.
-The command runner still cannot select tests per mutant or collect per-test coverage, so running the complete project on every push would make
-the feedback loop too expensive.
+Extending a strict 100 % blocking threshold across all unit-tested TypeScript files (including UI components, DOM event listeners and secondary infrastructure adapters) created significant friction without proportionate business confidence:
+
+- Engineers were forced to write fragile tests targeting browser DOM plumbing (e.g. asserting `event.defaultPrevented` on synthetic `PointerEvent` instances or handling multi-digit key events like `'12'`).
+- Angular component testbeds and asynchronous browser infrastructure adapters significantly slowed the pre-push feedback loop.
+- Presentation literals, framework lifecycle hooks and equivalent mutants outside the domain encouraged artificial assertions rather than protecting business invariants.
+
+Conversely, mutation testing inside the domain core (`**/domain/**`) runs in milliseconds, has zero framework dependencies, and systematically catches subtle boundary conditions and state transition regressions.
 
 ## Considered options
 
 - Keep the replay-only scope — rejected: its project-level report name and score would overstate what was checked.
-- Mutate every TypeScript file, including generated declarations, bootstraps and configuration — rejected: those files are outside the unit-test
-  coverage contract and would create invalid or behaviorless mutations.
-- Match the production scope of the 100 % unit-test coverage gate — **kept**: it covers handwritten behavior in both applications while retaining
-  the same explicit exclusions.
-- Add Cypress and production-offline suites to every mutant — rejected: these suites require independently owned servers and make one mutant run
-  too slow for useful feedback. Their browser contracts remain separate validation gates.
+- Mutate every TypeScript file with a strict 100 % threshold across all layers — rejected: high maintenance burden, slow push validation and proliferation of change-detector tests coupled to implementation details.
+- Enforce the 100 % blocking threshold on the domain core and treat mutation scores as informational outside the domain core — **kept**: strictly protects business invariants while preserving developer velocity and test maintainability.
+- Add Cypress and production-offline suites to every mutant — rejected: these suites require independently owned servers and make one mutant run too slow for useful feedback. Their browser contracts remain separate validation gates.
 
 ## Decision
 
-Mutate every `src/main/webapp/**/*.ts` file except specs, declarations, `main.ts`, environment files, providers, `package-info.ts` and generated
-sources. These exclusions mirror the unit-test coverage boundary in `angular.json`.
+Adopt the **Domain mutation policy**:
 
-Run the complete Angular unit suite for each valid mutant, keep the TypeScript checker, one worker and the 100 % blocking threshold, and produce
-project-level HTML and JSON reports under `reports/mutation/`. Mutation does not run in GitHub Actions. The pre-push hook derives the net production
-lines added or modified by each pushed ref and mutates only those ranges after `validate:quick` succeeds. A new branch is compared with the parent
-of its first commit absent from the named remote; a first repository push uses the complete local tree. Deleted refs and pushes without mutable
-production TypeScript skip mutation. The complete project run remains an explicitly invoked local diagnostic.
+1. All changed domain code (`src/main/webapp/**/domain/**/*.ts`) must be mutation-tested.
+2. No surviving mutant affecting a business invariant is allowed in the domain core (blocking threshold at 100 %).
+3. Equivalent mutants may be explicitly waived when identified.
+4. Mutation score is informational outside the domain core (`break: null`).
+
+Implementation:
+
+- `stryker.config.mjs` mutates `src/main/webapp/**/domain/**/*.ts` by default with a 100 % blocking threshold (`thresholds.break: 100`), excluding specs, declarations and package-info files.
+- The pre-push hook (`npm run test:mutation:diff`) inspects pushed refs and mutates only lines modified within `src/main/webapp/**/domain/**/*.ts`. Pushes modifying only code outside the domain skip mutation.
+- `npm run test:mutation:project` executes whole-project mutation testing with `thresholds.break: null` as an informational diagnostic.
+- Decommission the scheduled GitHub Actions workflow (`.github/workflows/mutation-testing.yml`); mutation testing is restricted to local pre-push validation and on-demand local diagnostics rather than CI execution.
 
 ## Consequences
 
 ### Positive
 
-- The available mutation scope covers handwritten unit-tested behavior across `gestion`, `pupitre` and shared kernels.
-- The report no longer implies that one replay policy represents the complete project.
-- Source coverage and mutation testing use the same production-file boundary.
-- Ordinary pushes receive mutation feedback proportional to their production diff.
+- Pre-push feedback remains fast: pure domain suites execute in seconds without launching Angular browser harnesses.
+- Eliminates fragile, change-detecting tests on UI presentation strings and browser DOM events.
+- Business invariants in the domain core remain unconditionally protected with a 100 % mutation score requirement.
+- Developers pushing UI or infrastructure changes are no longer blocked by cosmetic or equivalent mutants.
 
 ### Negative
 
-- The full run is substantially slower than the former replay-only run.
-- Browser-only behavior remains outside mutation scope and is protected by component, application and production-offline suites instead.
-- A new production file can introduce surviving mutants even when source coverage remains at 100 %, and this drift is visible only when someone
-  pushes that file or runs the complete diagnostic explicitly.
-- The command runner does not report test locations, so Stryker's incremental mode cannot safely infer the effect of a test-only change; the hook
-  deliberately scopes from production changes instead.
-- Stryker runs against the current working tree. Uncommitted changes to a selected production file or its tests therefore influence the pre-push
-  result even though they are not part of the commits being pushed.
+- Regressions in test assertion strength outside the domain core are not automatically blocked at pre-push. They rely on unit test coverage, component tests and application tests.
+- GitHub Actions no longer runs scheduled mutation jobs; project-wide mutation measurements must be executed on demand locally via `npm run test:mutation:project`.

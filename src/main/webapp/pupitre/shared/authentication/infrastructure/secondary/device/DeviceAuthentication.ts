@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { HttpBackend, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
@@ -129,6 +130,7 @@ const hasExpired = (session: Session): boolean => Date.now() >= session.expiresA
 export class DeviceAuthentication extends AuthenticationPort {
   private readonly transport = new HttpClient(inject(HttpBackend));
   private readonly stockage = inject(LocalStoragePort, { optional: true });
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private tenant: string | undefined;
   private restored = false;
   private readonly server = inject(DeviceGrantConfiguration);
@@ -146,7 +148,7 @@ export class DeviceAuthentication extends AuthenticationPort {
         return;
       }
     } catch (failure: unknown) {
-      console.error('Enrolement non restaure', failure);
+      this.errorHandler.handleError(failure);
       return;
     }
 
@@ -178,7 +180,7 @@ export class DeviceAuthentication extends AuthenticationPort {
       }
       this.open(session, secondsBeforeRenewing(granted));
     } catch (failure: unknown) {
-      console.error('Enrolement non conserve', failure);
+      this.errorHandler.handleError(failure);
     }
   }
 
@@ -220,7 +222,7 @@ export class DeviceAuthentication extends AuthenticationPort {
     this.enrolment = undefined;
     clearTimeout(this.renewal);
     void this.save(undefined, ended).catch((failure: unknown) => {
-      console.error('Deconnexion non conservee', failure);
+      this.errorHandler.handleError(failure);
     });
 
     if (ended !== undefined) {
@@ -303,7 +305,7 @@ export class DeviceAuthentication extends AuthenticationPort {
       }
       await this.renewSession(session);
     } catch (failure: unknown) {
-      console.error('Renouvellement non conserve', failure);
+      this.errorHandler.handleError(failure);
       if (this.session === session) {
         this.open(session, SECONDS_BEFORE_RETRYING_A_RENEWAL);
       }

@@ -111,7 +111,24 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
 
     await whenServerReturnsAnUnstableReference(kind);
 
-    await thenItFailed(reference);
+    const expectedMessages: Record<UnstableReferenceKind, string> = {
+      count: 'Le referentiel a change pendant sa lecture.',
+      empty: 'Le referentiel a change pendant sa lecture.',
+      duplicate: 'Le referentiel contient des doublons.',
+      overflow: 'Le referentiel contient des doublons.',
+    };
+    await thenItFailed(reference, expectedMessages[kind]);
+  });
+
+  it('should accept an empty referential without error', async () => {
+    const reference = whenReadingReference();
+
+    await whenServerReturnsPage('/api/operateurs', 0, [], 0);
+    await whenServerReturnsPage('/api/atelier/suivis', 0, [], 0);
+
+    const result = await reference;
+    expect(result.operateurs).toEqual([]);
+    expect(result.suivis).toEqual([]);
   });
 
   it('should refuse to mix companies when authorization changes between pages', async () => {
@@ -120,7 +137,35 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     givenAuthorizationChanges();
     await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 2);
 
-    await thenItFailed(reference);
+    await thenItFailed(reference, 'L’autorisation a change pendant la lecture.');
+  });
+
+  it('should refuse to continue reading workshop elements when authorization changes', async () => {
+    const reference = whenReadingReference();
+
+    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 1);
+    givenAuthorizationChanges();
+
+    await thenItFailed(reference, 'L’autorisation a change pendant la lecture.');
+  });
+
+  it('should reject a workshop element activity missing its operator', async () => {
+    const reference = whenReadingReference();
+
+    const activityWithoutOperator = {
+      activitesEnCours: [{ categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' }],
+      element: 'element',
+      engageLe: '2026-09-05T07:30:00Z',
+      engagePar: 'gestionnaire',
+      etat: 'EN_ATTENTE',
+      id: 'piece-sans-operateur',
+      nom: 'OF-SANS-OP',
+      type: 'PRODUIT',
+    };
+    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 1);
+    await whenServerReturnsPage('/api/atelier/suivis', 0, [activityWithoutOperator], 1);
+
+    await thenItFailed(reference, 'activite.operateur manque dans la réponse du serveur');
   });
 
   it('should make no referential request without authorization', async () => {
@@ -128,7 +173,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
 
     const reference = whenReadingReference();
 
-    await thenItFailed(reference);
+    await thenItFailed(reference, 'L’autorisation a change pendant la lecture.');
   });
 
   it('should preserve event identity and original business time on each write route', async () => {
@@ -327,12 +372,18 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     expect(secondOperator.postes).toEqual([{ id: 'tour', libelle: 'Tour' }]);
     expect(secondOperator.matricule).toBeUndefined();
     expect(reference.suivis).toHaveLength(2);
+    expect(reference.suivis[0]?.evenements).toEqual([]);
+    expect(reference.suivis[1]?.evenements).toEqual([]);
     const activities = requiredFixture(reference.suivis[1], 'second workshop element').activites;
     expect(requiredFixture(activities[0], 'workstation activity').posteId).toBe('tour');
     expect(requiredFixture(activities[1], 'activity without workstation').posteId).toBeUndefined();
   };
-  const thenItFailed = async (operation: Promise<unknown>): Promise<void> => {
-    await expect(operation).rejects.toBeInstanceOf(Error);
+  const thenItFailed = async (operation: Promise<unknown>, expectedMessage?: string): Promise<void> => {
+    if (expectedMessage !== undefined) {
+      await expect(operation).rejects.toThrow(expectedMessage);
+    } else {
+      await expect(operation).rejects.toBeInstanceOf(Error);
+    }
   };
   const thenBusinessRefusalIs = async (operation: Promise<unknown>): Promise<void> => {
     const failure = await operation.catch((reason: unknown) => reason);
