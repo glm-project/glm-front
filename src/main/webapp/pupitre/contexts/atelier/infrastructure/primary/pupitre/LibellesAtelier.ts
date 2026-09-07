@@ -18,7 +18,7 @@ const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
   TOUT_ARRETER: 'TOUT ARRÊTER',
 };
 
-export const libelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
+export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
   contexte.kind === 'ELEMENT' ? contexte.numero : COMMANDES_GLOBALES[contexte.intention];
 
 export const LIBELLES_POINTAGE = {

@@ -1,5 +1,5 @@
 import { ElementDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
-import { libelleContexteAtelier, LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE } from './LibellesAtelier';
+import { LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE, toLibelleContexteAtelier } from './LibellesAtelier';
 
 describe('LibellesAtelier', () => {
   it('should format duration label in hours and zero-padded minutes', () => {
@@ -14,10 +14,10 @@ describe('LibellesAtelier', () => {
   });
 
   it('should resolve gesture context labels for elements and global commands', () => {
-    expect(libelleContexteAtelier({ kind: 'ELEMENT', numero: 'OF-42' })).toBe('OF-42');
-    expect(libelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' })).toBe('PAUSE');
-    expect(libelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' })).toBe('REPRENDRE');
-    expect(libelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' })).toBe('TOUT ARRÊTER');
+    expect(toLibelleContexteAtelier({ kind: 'ELEMENT', numero: 'OF-42' })).toBe('OF-42');
+    expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' })).toBe('PAUSE');
+    expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' })).toBe('REPRENDRE');
+    expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' })).toBe('TOUT ARRÊTER');
   });
 
   it('should expose primary action labels depending on element activity', () => {

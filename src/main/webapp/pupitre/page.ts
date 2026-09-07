@@ -1,7 +1,7 @@
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
 import { OfflinePupitre } from '@/pupitre/contexts/atelier/application/OfflinePupitre';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
-import { libelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
+import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
 import { ChangeDetectorRef, Component, computed, ElementRef, ErrorHandler, inject, OnDestroy, OnInit } from '@angular/core';
 import { MessageDAtelierVisible, PupitreHeader } from './header/header';
@@ -21,7 +21,7 @@ export class PupitrePage implements OnInit, OnDestroy {
   protected readonly messageAtelier = computed<MessageDAtelierVisible | undefined>(() => {
     const message = this.pupitre.messageAtelier();
     if (message === undefined || !('contexte' in message)) return message;
-    return { message: message.message, contexte: libelleContexteAtelier(message.contexte) };
+    return { message: message.message, contexte: toLibelleContexteAtelier(message.contexte) };
   });
 
   private readonly guardPointerDown = (event: PointerEvent): void => {

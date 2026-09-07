@@ -167,7 +167,7 @@ export class DesignationOperateur {
     return this.etat.fenetre;
   }
 
-  requireClosedWindow(): void {
+  private requireClosedWindow(): void {
     if (this.etat.fenetre !== undefined || this.etat.closing) throw new Error('Une fenetre operateur est deja ouverte.');
   }
 
