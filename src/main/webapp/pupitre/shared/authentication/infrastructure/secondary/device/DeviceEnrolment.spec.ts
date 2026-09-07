@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { DeviceAuthentication } from './DeviceAuthentication';
+import { DeviceGrantClient } from './DeviceGrantClient';
 import { DeviceGrantConfiguration } from './DeviceGrantConfiguration';
 
 const baseFixture = 'http://keycloak.test/realms/glm/protocol/openid-connect';
@@ -141,6 +142,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        DeviceGrantClient,
         DeviceAuthentication,
         { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
         { provide: LocalStoragePort, useValue: stockage },
