@@ -9,7 +9,21 @@ why that exceptional instruction remains necessary; disabling ESLint via comment
 Comments are a review judgment; ESLint does not infer
 their usefulness. Generated files are exempt because the project does not own their text.
 
-Extract an inline conditional only when the name adds an intention or the expression obscures the flow.
+For an `if` condition combining two or more criteria with `&&` or `||`, extract an explicitly named
+predicate. Even `a && b` and `a || b` require extraction; parentheses do not hide a combination. Put a business predicate
+in the Value Object, aggregate or policy that owns the rule; keep a technical predicate near its caller.
+Move the expression without changing its behavior, left-to-right evaluation or short-circuiting. Keep
+deferred calls and property reads inside the predicate rather than evaluating them eagerly as arguments;
+use a type predicate when the caller needs TypeScript narrowing.
+
+`local/max-if-criteria` enforces this limit on JavaScript and TypeScript `if` / `else if` conditions,
+including tests and tooling. It counts `&&` and `||` throughout the condition expression, including beneath
+negation and type wrappers, but stops at nested function and class bodies. `??` is not a boolean criterion
+separator. A predicate's returned expression, other control structures and Angular templates are outside
+this syntactic check; every nested `if` is checked independently. Review still owns predicate names and
+placement. See [ADR 0029](adr/0029-name-compound-if-predicates.md).
+
+For other inline conditionals, extract only when the name adds an intention or the expression obscures the flow.
 `x !== undefined ? Foo.of(x) : undefined` may become `toFoo(x?: Type): Foo | undefined`; a short local
 conditional whose meaning is already clear stays local.
 

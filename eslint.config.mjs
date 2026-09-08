@@ -6,6 +6,7 @@ import globals from 'globals';
 import typescript from 'typescript-eslint';
 import { domainReadonlyProperties } from './eslint/rules/domain-readonly-properties.mjs';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
+import { maxIfCriteria } from './eslint/rules/max-if-criteria.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
 import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
@@ -127,6 +128,7 @@ const local = {
       }),
     },
     'given-when-then': givenWhenThen,
+    'max-if-criteria': maxIfCriteria,
     'domain-readonly-properties': domainReadonlyProperties,
     'no-as-unknown': noAsUnknown,
     'no-eslint-disable': noEslintDisable,
@@ -146,6 +148,13 @@ export default typescript.config(
     ignores: ['target/', '.angular/', '.stryker-tmp/', 'src/main/webapp/app/generated/schema.d.ts'],
   },
   eslint.configs.recommended,
+  {
+    files: ['**/*.{js,mjs,cjs}', 'src/**/*.ts'],
+    plugins: { local },
+    rules: {
+      'local/max-if-criteria': 'error',
+    },
+  },
   {
     ...sonarjs.configs.recommended,
     files: ['src/**/*.ts'],
