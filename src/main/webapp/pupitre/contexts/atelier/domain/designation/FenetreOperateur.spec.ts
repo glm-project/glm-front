@@ -2,6 +2,7 @@ import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
+import { NumeroDElement } from './NumeroDElement';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -415,7 +416,10 @@ describe('FenetreOperateur', () => {
     const reconciled = transition.fenetre.afterReconciling('entreprise-a', refused);
 
     expect(previous.refusal()).toBeUndefined();
-    expect(reconciled.refusal()).toEqual({ contexte: { kind: 'ELEMENT', numero: '1015' }, message: "L'élément a été clôturé." });
+    expect(reconciled.refusal()).toEqual({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.attribue('1015') },
+      message: "L'élément a été clôturé.",
+    });
   });
 
   it('should retain the designated operator and workstation qualifications frozen at opening through a referential reconciliation', () => {
@@ -599,7 +603,7 @@ describe('FenetreOperateur', () => {
       new IdentiteDeFenetre(1),
     );
 
-    const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero);
+    const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero.toString());
 
     expect(numeros).toEqual(['OF-1', 'OF-2', 'OF-10']);
   });
@@ -888,16 +892,16 @@ describe('FenetreOperateur', () => {
     expect(id).toBe('jean');
   };
   const thenPointageViewIsPersonalAndFrozen = (pointage: ReturnType<FenetreOperateur['pointage']>): void => {
-    expect(pointage.moules.map(element => ({ id: element.id, numero: element.numero, dureeMs: element.dureeMs() }))).toEqual([
+    expect(pointage.moules.map(element => ({ id: element.id, numero: element.numero.toString(), dureeMs: element.dureeMs() }))).toEqual([
       { id: 'moule-1015', numero: '1015', dureeMs: 10_800_000 },
     ]);
     expect(pointage.moules[0]?.isNonConforme()).toBe(false);
-    expect(pointage.moules[0]?.repliSurNom).toBe(false);
-    expect(pointage.ordresDeFabrication.map(element => element.numero)).toEqual(['204', 'OF-2026-000042']);
+    expect(pointage.moules[0]?.numero.isRepliSurNom()).toBe(false);
+    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['204', 'OF-2026-000042']);
     expect(pointage.ordresDeFabrication[0]?.isNonConforme()).toBe(true);
-    expect(pointage.ordresDeFabrication[0]?.repliSurNom).toBe(false);
+    expect(pointage.ordresDeFabrication[0]?.numero.isRepliSurNom()).toBe(false);
     expect(pointage.ordresDeFabrication[0]?.dureeMs()).toBe(1_800_000);
-    expect(pointage.ordresDeFabrication[1]).toMatchObject({ repliSurNom: true });
+    expect(pointage.ordresDeFabrication[1]?.numero.isRepliSurNom()).toBe(true);
     expect(pointage.ordresDeFabrication[1]?.isActive()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.isNonConforme()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.dureeMs()).toBe(0);
@@ -930,7 +934,7 @@ describe('FenetreOperateur', () => {
   const thenWorkstationChoiceIsRequested = (decision: DecisionDePointage): void => {
     expect(decision).toMatchObject({
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: 'OF-2026-000042',
+      numero: NumeroDElement.genere('OF-2026-000042'),
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },
@@ -938,7 +942,10 @@ describe('FenetreOperateur', () => {
     });
   };
   const thenLatestRefusalNamesTheElement = (): void => {
-    expect(fenetre.refusal()).toEqual({ contexte: { kind: 'ELEMENT', numero: '1015' }, message: "L'élément a été clôturé." });
+    expect(fenetre.refusal()).toEqual({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.attribue('1015') },
+      message: "L'élément a été clôturé.",
+    });
   };
   const thenNoRefusalIsVisible = (): void => {
     expect(fenetre.refusal()).toBeUndefined();

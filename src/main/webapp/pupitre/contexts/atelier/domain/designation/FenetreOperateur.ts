@@ -13,6 +13,7 @@ import {
 import { projectReferentiel } from '../journal-du-pupitre/JournalDuPupitreProjection';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
+import { NumeroDElement } from './NumeroDElement';
 
 export interface ActiviteDePointage {
   readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
@@ -22,8 +23,7 @@ export interface ActiviteDePointage {
 export class ElementDePointage {
   constructor(
     readonly id: string,
-    readonly numero: string,
-    readonly repliSurNom: boolean,
+    readonly numero: NumeroDElement,
     private readonly activite: ActiviteDePointage | undefined,
   ) {}
 
@@ -50,7 +50,7 @@ export type CibleDePointage = 'PRINCIPALE' | 'SECONDAIRE';
 export type IntentionGlobaleDAtelier = 'PAUSE' | 'REPRENDRE' | 'TOUT_ARRETER';
 
 export type ContexteDeGesteDAtelier =
-  | { readonly kind: 'ELEMENT'; readonly numero: string }
+  | { readonly kind: 'ELEMENT'; readonly numero: NumeroDElement }
   | { readonly kind: 'COMMANDE_GLOBALE'; readonly intention: IntentionGlobaleDAtelier };
 
 export interface LotDeGestesDAtelier {
@@ -82,7 +82,7 @@ export interface PosteAChoisir {
 
 export interface ChoixDePosteRequis {
   readonly kind: 'CHOIX_POSTE_REQUIS';
-  readonly numero: string;
+  readonly numero: NumeroDElement;
   readonly postes: readonly PosteAChoisir[];
 }
 
@@ -296,17 +296,10 @@ export class FenetreOperateur {
   }
   pointage(): VueDePointage {
     const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({
-      element: new ElementDePointage(
-        suivi.id,
-        suivi.reference ?? suivi.nom,
-        suivi.reference === undefined,
-        this.activitesFor(suivi).snapshot(),
-      ),
+      element: new ElementDePointage(suivi.id, NumeroDElement.from(suivi), this.activitesFor(suivi).snapshot()),
       type: suivi.type,
     }));
-    const sorted = [...elements].sort((left, right) =>
-      left.element.numero.localeCompare(right.element.numero, 'fr', { numeric: true, sensitivity: 'base' }),
-    );
+    const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
     return {
       moules: sorted.filter(({ type }) => type === 'PRODUIT').map(({ element }) => element),
       ordresDeFabrication: sorted.filter(({ type }) => type === 'ORDRE_DE_FABRICATION').map(({ element }) => element),
@@ -318,7 +311,7 @@ export class FenetreOperateur {
     const fenetre = this.afterIntendingGesture();
     const suivi = fenetre.requireSuivi(suiviId);
     const activities = fenetre.activitesFor(suivi).decide(cible);
-    const numero = fenetre.numeroDuSuivi(suivi);
+    const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
         ? fenetre.gestes(suiviId, numero, activities.transitions, identify, activities.transitions.premiere.type === 'DEBUT')
@@ -332,7 +325,7 @@ export class FenetreOperateur {
     this.etat.operateurDesigne.assertPoste(posteId);
     const decision = this.gestes(
       suiviId,
-      this.numeroDuSuivi(suivi),
+      NumeroDElement.from(suivi),
       { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
       identify,
       true,
@@ -473,7 +466,7 @@ export class FenetreOperateur {
     return undefined;
   }
 
-  private ouverture(suiviId: string, numero: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
+  private ouverture(suiviId: string, numero: NumeroDElement, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
@@ -481,7 +474,7 @@ export class FenetreOperateur {
   }
   private gestes(
     suiviId: string,
-    numero: string,
+    numero: NumeroDElement,
     transitions: LotDeTransitions,
     identify: () => IdentiteDuGeste,
     repriseImplicite: boolean,
@@ -522,9 +515,6 @@ export class FenetreOperateur {
   }
   private openingTypeFor(cible: CibleDePointage): TypeDePointage {
     return cible === 'PRINCIPALE' ? 'DEBUT' : 'NON_CONFORMITE';
-  }
-  private numeroDuSuivi(suivi: SuiviDuPupitre): string {
-    return suivi.reference ?? suivi.nom;
   }
   private with(
     change: Partial<
