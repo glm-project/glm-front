@@ -1,14 +1,15 @@
 import { IdentiteDuGeste } from '../journal-du-pupitre/JournalDuPupitre';
+import { SuiteDIdentitesDeGestes } from '../journal-du-pupitre/SuiteDIdentitesDeGestes';
 import { FenetreOperateur, IntentionGlobaleDAtelier, LotDeGestesDAtelier } from './FenetreOperateur';
 
 export class IntentionGlobaleInitiee {
-  private readonly origine: IdentiteDuGeste;
+  private readonly origine: SuiteDIdentitesDeGestes;
 
   constructor(
     private readonly commande: IntentionGlobaleDAtelier,
     origine: IdentiteDuGeste,
   ) {
-    this.origine = { ...origine };
+    this.origine = SuiteDIdentitesDeGestes.from(origine);
   }
 
   prepare(fenetre: FenetreOperateur): LotDeGestesDAtelier {
@@ -18,13 +19,11 @@ export class IntentionGlobaleInitiee {
   }
 
   private identities(): () => IdentiteDuGeste {
-    const prefix = this.origine.id.slice(0, -8);
-    const firstSuffix = Number.parseInt(this.origine.id.slice(-8), 16);
-    let offset = 0;
+    let suite = this.origine;
     return () => {
-      const suffix = ((firstSuffix + offset) >>> 0).toString(16).padStart(8, '0');
-      offset += 1;
-      return { id: `${prefix}${suffix}`, dateDeSurvenue: this.origine.dateDeSurvenue };
+      const identite = suite.identite();
+      suite = suite.suivante();
+      return identite;
     };
   }
 }
