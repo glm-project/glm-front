@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { AcceptationDeGestes, FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { inject, Injectable } from '@angular/core';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
@@ -38,7 +39,7 @@ export class GestesRecordingQueue {
     fenetreCourante: () => FenetreOperateur,
   ): Promise<AcceptationLocale> {
     await this.authentication.synchronizeSession();
-    fenetreInitiale.assertEntreprise(this.authentication.currentTenant());
+    fenetreInitiale.assertEntreprise(Entreprise.from(this.authentication.currentTenant()));
     const fenetre = fenetreCourante();
     const acceptance = fenetre.prepareAcceptance(this.prepare(fenetre, capture));
     await this.journal.append(fenetreInitiale.journalScope(), acceptance.gestes);

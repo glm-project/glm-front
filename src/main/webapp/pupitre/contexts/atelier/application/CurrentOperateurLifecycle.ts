@@ -5,6 +5,7 @@ import { DesignationOperateur, isFenetreIdentifiedBy } from '../domain/designati
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
+import { Entreprise } from '../domain/journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
@@ -115,7 +116,7 @@ export class CurrentOperateurLifecycle {
     if (this.isCurrentWindow(identity)) this.acceptDecision(this.currentWindow(identity).afterCompletingGlobal());
   }
 
-  reconcile(entreprise: string | undefined, state: JournalDuPupitre): void {
+  reconcile(entreprise: Entreprise | undefined, state: JournalDuPupitre): void {
     const designation = this.designation();
     if (!designation.canReconcileWith(entreprise)) {
       this.releaseWindow();

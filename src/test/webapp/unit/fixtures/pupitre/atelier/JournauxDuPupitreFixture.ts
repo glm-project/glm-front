@@ -1,6 +1,8 @@
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
+  EvenementsDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
   ReferentielDuPupitre,
@@ -33,35 +35,34 @@ const appendBarrier = (): AppendBarrier => {
   return { started, ...callbacks, wait: () => waiting };
 };
 
-const acceptedPointageIdsFor = (suiviId: string, evenements: readonly EvenementDuJournal[]): string[] =>
-  evenements
-    .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
-    .map(evenement => evenement.geste.id);
-
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => ({
-  ...referentiel,
-  suivis: referentiel.suivis.map(suivi => ({
-    ...suivi,
-    evenements: [...new Set([...suivi.evenements, ...acceptedPointageIdsFor(suivi.id, evenements)])],
-  })),
-});
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => {
+  const journal = new EvenementsDuJournal(evenements);
+  return {
+    ...referentiel,
+    suivis: referentiel.suivis.map(suivi => ({
+      ...suivi,
+      evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
+    })),
+  };
+};
 
 export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly entreprises = new Map<string, JournalDuPupitre>();
+
   private readonly tails = new Map<string, Promise<unknown>>();
   private nextAppendBarrier: AppendBarrier | undefined;
   private readsImmediately = false;
   failWrite = false;
   afterRead: (() => void) | undefined;
 
-  override async read(entreprise: string): Promise<JournalDuPupitre> {
+  override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     if (!this.readsImmediately) await answerOnNextTask();
-    const state = structuredClone(this.entreprises.get(entreprise) ?? EMPTY_JOURNAL_DU_PUPITRE);
+    const state = structuredClone(this.entreprises.get(entreprise.toString()) ?? EMPTY_JOURNAL_DU_PUPITRE);
     this.afterRead?.();
     this.afterRead = undefined;
     return state;
   }
-  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
+  override async append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
     const barrier = this.nextAppendBarrier;
     this.nextAppendBarrier = undefined;
     barrier?.signalStarted();
@@ -71,10 +72,10 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
       evenements: [...state.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))],
     }));
   }
-  override saveReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
+  override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({ ...state, referentiel: includeAcceptedPointages(referentiel, state.evenements) }));
   }
-  override saveResult(entreprise: string, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
+  override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({
       ...state,
       connecte: true,
@@ -86,7 +87,7 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
       }),
     }));
   }
-  override markDisconnected(entreprise: string): Promise<JournalDuPupitre> {
+  override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({ ...state, connecte: false }));
   }
   override synchronize<T>(action: () => Promise<T>): Promise<T> {
@@ -100,23 +101,26 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     this.nextAppendBarrier = barrier;
     return { started: barrier.started, release: barrier.release };
   }
-  seedReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): void {
-    this.entreprises.set(entreprise, { ...structuredClone(EMPTY_JOURNAL_DU_PUPITRE), referentiel: structuredClone(referentiel) });
+  seedReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): void {
+    this.entreprises.set(entreprise.toString(), {
+      ...structuredClone(EMPTY_JOURNAL_DU_PUPITRE),
+      referentiel: structuredClone(referentiel),
+    });
   }
-  seedJournal(entreprise: string, journal: JournalDuPupitre): void {
-    this.entreprises.set(entreprise, structuredClone(journal));
+  seedJournal(entreprise: Entreprise, journal: JournalDuPupitre): void {
+    this.entreprises.set(entreprise.toString(), structuredClone(journal));
   }
   answerReadsImmediately(): void {
     this.readsImmediately = true;
   }
-  private async update(entreprise: string, change: (state: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
+  private async update(entreprise: Entreprise, change: (state: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
     await answerOnNextTask();
     if (this.failWrite) {
       this.failWrite = false;
       throw new Error('disque plein');
     }
-    const state = change(structuredClone(this.entreprises.get(entreprise) ?? EMPTY_JOURNAL_DU_PUPITRE));
-    this.entreprises.set(entreprise, structuredClone(state));
+    const state = change(structuredClone(this.entreprises.get(entreprise.toString()) ?? EMPTY_JOURNAL_DU_PUPITRE));
+    this.entreprises.set(entreprise.toString(), structuredClone(state));
     return state;
   }
   private lock<T>(key: string, action: () => Promise<T>): Promise<T> {

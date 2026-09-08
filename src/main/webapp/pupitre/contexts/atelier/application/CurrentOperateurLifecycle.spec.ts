@@ -7,6 +7,7 @@ import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
 } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   JournalDuPupitre,
@@ -73,7 +74,7 @@ describe('Designation du pupitre', () => {
   beforeEach(async () => {
     errorHandler = new ErrorHandlerFixture();
     journal = new DesignationJournalFixture();
-    await journal.saveReferentiel('atelier', referentielFixture);
+    await journal.saveReferentiel(Entreprise.of('atelier'), referentielFixture);
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [

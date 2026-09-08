@@ -1,3 +1,4 @@
+import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import {
   EvenementsDuJournal,
   GesteDAtelier,
@@ -106,7 +107,7 @@ export interface IdentiteOperateurDesigne {
 }
 
 interface EtatDeFenetreOperateur {
-  readonly entreprise: string;
+  readonly entreprise: Entreprise;
   readonly vue: JournalDuPupitre;
   readonly instantDOuverture: number;
   readonly identity: IdentiteDeFenetre;
@@ -255,7 +256,7 @@ export class FenetreOperateur {
   }
 
   static open(
-    entreprise: string,
+    entreprise: Entreprise,
     vue: JournalDuPupitre,
     code: Matricule,
     instantDOuverture: number,
@@ -344,7 +345,7 @@ export class FenetreOperateur {
   private requireAvailableGestures(): void {
     if (!this.allowsGestures()) throw new Error('Une commande globale est en cours.');
   }
-  afterReconciling(entreprise: string, vue: JournalDuPupitre): FenetreOperateur {
+  afterReconciling(entreprise: Entreprise, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
     const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(new Set(this.etat.contextesParGeste.keys()));
     const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.get(refus.geste.id);
@@ -377,13 +378,13 @@ export class FenetreOperateur {
   refusal(): RefusDAtelier | undefined {
     return this.etat.refusVisible;
   }
-  belongsTo(entreprise: string | undefined): boolean {
-    return entreprise === this.etat.entreprise;
+  belongsTo(entreprise: Entreprise | undefined): boolean {
+    return Entreprise.same(entreprise, this.etat.entreprise);
   }
-  assertEntreprise(entreprise: string | undefined): void {
+  assertEntreprise(entreprise: Entreprise | undefined): void {
     if (!this.belongsTo(entreprise)) throw new Error('La fenetre operateur a change.');
   }
-  journalScope(): string {
+  journalScope(): Entreprise {
     return this.etat.entreprise;
   }
   capture(decision: LotDeGestesDAtelier): readonly GesteDAtelier[] {

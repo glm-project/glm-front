@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
@@ -69,7 +70,7 @@ describe('EtatHorsLigneDuPupitre', () => {
     thenConnectionIs(false);
 
     whenTenantChangesTo(undefined);
-    let reconciledWithTenant: string | undefined = 'initial';
+    let reconciledWithTenant: Entreprise | undefined = Entreprise.of('initial');
     await whenRefreshingRestore(entreprise => {
       reconciledWithTenant = entreprise;
     });
@@ -122,23 +123,25 @@ describe('EtatHorsLigneDuPupitre', () => {
   });
 
   const givenDisconnectedStateInJournal = (entreprise: string): void => {
-    journal.seedJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
+    journal.seedJournal(Entreprise.of(entreprise), { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
   };
 
   const givenEventsInJournal = (entreprise: string, evenements: EvenementDuJournal[]): void => {
-    journal.seedJournal(entreprise, { ...EMPTY_JOURNAL_DU_PUPITRE, evenements });
+    journal.seedJournal(Entreprise.of(entreprise), { ...EMPTY_JOURNAL_DU_PUPITRE, evenements });
   };
 
   const whenTenantChangesTo = (newTenant: string | undefined): void => {
     tenant = newTenant;
   };
 
-  const whenRefreshingSynchronize = async (reconcile: (entreprise: string | undefined, state: JournalDuPupitre) => void): Promise<void> => {
+  const whenRefreshingSynchronize = async (
+    reconcile: (entreprise: Entreprise | undefined, state: JournalDuPupitre) => void,
+  ): Promise<void> => {
     await etatHorsLigne.refresh('SYNCHRONIZE', reconcile);
   };
 
   const whenRefreshingRestore = async (
-    reconcile: (entreprise: string | undefined, state: JournalDuPupitre) => void = () => undefined,
+    reconcile: (entreprise: Entreprise | undefined, state: JournalDuPupitre) => void = () => undefined,
   ): Promise<void> => {
     await etatHorsLigne.refresh('RESTORE', reconcile);
   };
@@ -159,8 +162,8 @@ describe('EtatHorsLigneDuPupitre', () => {
     expect(reconciled).toBe(false);
   };
 
-  const thenReconciledTenantIs = (actual: string | undefined, expected: string | undefined): void => {
-    expect(actual).toBe(expected);
+  const thenReconciledTenantIs = (actual: Entreprise | undefined, expected: Entreprise | undefined): void => {
+    expect(Entreprise.same(actual, expected)).toBe(true);
   };
 
   const thenDiagnosticsContainOnlyRefusedEvents = (actual: readonly EvenementDuJournal[], expected: EvenementDuJournal[]): void => {

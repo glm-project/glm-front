@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -53,7 +54,7 @@ class JournalFixture extends JournauxDuPupitreFixture {
   lastSessionError: unknown;
   onRead: (() => void) | undefined;
 
-  override async read(entreprise: string): Promise<JournalDuPupitre> {
+  override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     this.onRead?.();
     return super.read(entreprise);
   }
@@ -183,7 +184,7 @@ describe('PupitreSynchronization', () => {
   });
 
   it('should retain existing state and log an error when referential refresh fails', async () => {
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
     givenAnAuthorizedSession();
     givenFailedReferentialExchange();
 
@@ -311,13 +312,13 @@ describe('PupitreSynchronization', () => {
   });
 
   const givenASelectedCompanyWithPendingWork = async (): Promise<void> => {
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
-    await journal.append('entreprise-a', [gesteFixture]);
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
   };
   const givenCompanyWithTwoPendingGestures = async (): Promise<void> => {
     const secondGeste: GesteDAtelier = { ...gesteFixture, id: 'geste-2' };
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
-    await journal.append('entreprise-a', [gesteFixture, secondGeste]);
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture, secondGeste]);
   };
   const givenAnAuthorizedSession = (): void => {
     token = 'autorise';
@@ -462,7 +463,7 @@ describe('PupitreSynchronization', () => {
     expect(server.referentielCalls).toBe(0);
   };
   const thenCompanyReferentialWasNotOverwritten = async (entreprise: string): Promise<void> => {
-    const saved = await journal.read(entreprise);
+    const saved = await journal.read(Entreprise.of(entreprise));
     expect(saved.referentiel).toEqual(EMPTY_JOURNAL_DU_PUPITRE.referentiel);
   };
   const thenReferentialFailureWasLogged = (): void => {

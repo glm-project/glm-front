@@ -1,4 +1,5 @@
 import { authProvider } from '@/pupitre/auth.provider';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   GesteDAtelier,
   JournalDuPupitre,
@@ -28,10 +29,10 @@ createApplication({ providers: [authProvider, offlineProvider] })
     const journal = application.injector.get(JournauxDuPupitrePort);
     window.pupitreProductionFixture = {
       prepare: async (entreprise, referentiel, geste) => {
-        await journal.saveReferentiel(entreprise, referentiel);
-        await journal.append(entreprise, [geste]);
+        await journal.saveReferentiel(Entreprise.of(entreprise), referentiel);
+        await journal.append(Entreprise.of(entreprise), [geste]);
       },
-      read: entreprise => journal.read(entreprise),
+      read: entreprise => journal.read(Entreprise.of(entreprise)),
       waitForSynchronization: () => journal.synchronize(() => Promise.resolve()),
     };
   })

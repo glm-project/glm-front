@@ -2,6 +2,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -144,7 +145,7 @@ describe('GestesRecordingQueue', () => {
 
   const givenAnOpenOperatorWindow = (): FenetreOperateur =>
     FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
       Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
@@ -164,7 +165,7 @@ describe('GestesRecordingQueue', () => {
   };
 
   const whenReadingRecordedGestures = async (entreprise: string): Promise<readonly GesteDAtelier[]> => {
-    const state = await journal.read(entreprise);
+    const state = await journal.read(Entreprise.of(entreprise));
     return state.evenements.map(e => e.geste);
   };
 

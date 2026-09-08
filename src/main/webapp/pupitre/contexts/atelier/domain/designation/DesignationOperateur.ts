@@ -1,3 +1,4 @@
+import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { FenetreOperateur, IdentiteOperateurDesigne } from './FenetreOperateur';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
@@ -140,7 +141,7 @@ export class DesignationOperateur {
     return this.etat.closing;
   }
 
-  afterOpeningWindow(entreprise: string, vue: JournalDuPupitre, code: Matricule, now: number): OpeningWindowResult {
+  afterOpeningWindow(entreprise: Entreprise, vue: JournalDuPupitre, code: Matricule, now: number): OpeningWindowResult {
     this.requireClosedWindow();
     const fenetre = FenetreOperateur.open(entreprise, vue, code, now, this.etat.windowId);
     const designation =
@@ -172,7 +173,7 @@ export class DesignationOperateur {
     return this.etat.fenetre;
   }
 
-  canReconcileWith(entreprise: string | undefined): entreprise is string {
+  canReconcileWith(entreprise: Entreprise | undefined): entreprise is Entreprise {
     const fenetre = this.window();
     return !(entreprise === undefined || (fenetre !== undefined && !fenetre.belongsTo(entreprise)));
   }
