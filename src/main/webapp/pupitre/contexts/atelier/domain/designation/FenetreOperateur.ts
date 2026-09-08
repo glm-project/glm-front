@@ -1,5 +1,5 @@
 import {
-  EvenementDuJournal,
+  EvenementsDuJournal,
   GesteDAtelier,
   GesteDePresence,
   IdentiteDuGeste,
@@ -345,12 +345,7 @@ export class FenetreOperateur {
   }
   afterReconciling(entreprise: string, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
-    const refus = [...vue.evenements]
-      .reverse()
-      .find(
-        (event): event is Extract<EvenementDuJournal, { readonly etat: 'REFUSE' }> =>
-          event.etat === 'REFUSE' && this.etat.contextesParGeste.has(event.geste.id),
-      );
+    const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(new Set(this.etat.contextesParGeste.keys()));
     const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.get(refus.geste.id);
     return this.with({
       vue,
@@ -365,7 +360,7 @@ export class FenetreOperateur {
     };
   }
   afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
-    const known = new Set(this.etat.vue.evenements.map(evenement => evenement.geste.id));
+    const journal = new EvenementsDuJournal(this.etat.vue.evenements);
     return this.with({
       arriveeAssuree: this.etat.arriveeAssuree || gestes.some(geste => geste.nature === 'ARRIVEE'),
       contextesParGeste: this.etat.contextesParGeste,
@@ -373,7 +368,7 @@ export class FenetreOperateur {
         ...this.etat.vue,
         evenements: [
           ...this.etat.vue.evenements,
-          ...gestes.filter(geste => !known.has(geste.id)).map(geste => ({ geste, etat: 'EN_ATTENTE' as const })),
+          ...gestes.filter(geste => !journal.records(geste.id)).map(geste => ({ geste, etat: 'EN_ATTENTE' as const })),
         ],
       },
     });

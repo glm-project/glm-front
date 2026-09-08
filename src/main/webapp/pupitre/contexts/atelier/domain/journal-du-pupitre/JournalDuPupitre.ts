@@ -135,6 +135,20 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
       }),
 });
 
+const isRefusalAmong =
+  (gesteIds: ReadonlySet<string>) =>
+  (evenement: EvenementDuJournal): evenement is EvenementRefuse =>
+    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id);
+
+const isAcceptedPointageOf = (evenement: EvenementDuJournal, suiviId: string): boolean =>
+  evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId;
+
+const opensTheDay = (evenement: EvenementDuJournal, arriveeId: string, operateurId: string): boolean =>
+  evenement.geste.id === arriveeId
+  && evenement.geste.operateurId === operateurId
+  && 'journeeOuverte' in evenement
+  && evenement.journeeOuverte;
+
 export class EvenementsDuJournal {
   private readonly evenements: readonly EvenementDuJournal[];
 
@@ -148,6 +162,22 @@ export class EvenementsDuJournal {
 
   refusals(): readonly EvenementRefuse[] {
     return this.evenements.filter(evenement => evenement.etat === 'REFUSE');
+  }
+
+  records(gesteId: string): boolean {
+    return this.evenements.some(evenement => evenement.geste.id === gesteId);
+  }
+
+  hasOpenedDay(arriveeId: string, operateurId: string): boolean {
+    return this.evenements.some(evenement => opensTheDay(evenement, arriveeId, operateurId));
+  }
+
+  latestRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {
+    return [...this.evenements].reverse().find(isRefusalAmong(gesteIds));
+  }
+
+  acceptedPointageIds(suiviId: string): readonly string[] {
+    return this.evenements.filter(evenement => isAcceptedPointageOf(evenement, suiviId)).map(evenement => evenement.geste.id);
   }
 }
 

@@ -1,4 +1,4 @@
-import { EvenementDuJournal, GesteDAtelier, GesteDePresence } from '../journal-du-pupitre/JournalDuPupitre';
+import { EvenementsDuJournal, GesteDAtelier, GesteDePresence } from '../journal-du-pupitre/JournalDuPupitre';
 import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
 
@@ -15,19 +15,10 @@ const matches = (refus: unknown, code: string): boolean => {
 const absorbsForbiddenPresenceTransition = (operation: OperationDAtelier): boolean =>
   operation === 'PRESENCE_ASSUREE' || operation === 'REPRISE_APRES_ARRIVEE_OUVERTE';
 
-const arrivalActuallyOpened = (evenements: readonly EvenementDuJournal[], arriveeId: string, operateurId: string): boolean =>
-  evenements.some(
-    evenement =>
-      evenement.geste.id === arriveeId
-      && evenement.geste.operateurId === operateurId
-      && 'journeeOuverte' in evenement
-      && evenement.journeeOuverte,
-  );
+const followsOpenedArrival = (geste: GesteDePresence, evenements: EvenementsDuJournal): boolean =>
+  geste.assuranceArriveeId !== undefined && evenements.hasOpenedDay(geste.assuranceArriveeId, geste.operateurId);
 
-const followsOpenedArrival = (geste: GesteDePresence, evenements: readonly EvenementDuJournal[]): boolean =>
-  geste.assuranceArriveeId !== undefined && arrivalActuallyOpened(evenements, geste.assuranceArriveeId, geste.operateurId);
-
-export const operationFor = (geste: GesteDAtelier, evenements: readonly EvenementDuJournal[] = []): OperationDAtelier => {
+export const operationFor = (geste: GesteDAtelier, evenements = new EvenementsDuJournal([])): OperationDAtelier => {
   if (geste.nature === 'ARRIVEE') {
     return 'ARRIVEE_ASSUREE';
   }

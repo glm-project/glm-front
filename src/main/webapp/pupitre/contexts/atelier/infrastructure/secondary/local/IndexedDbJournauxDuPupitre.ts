@@ -1,6 +1,7 @@
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
+  EvenementsDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
   ReferentielDuPupitre,
@@ -32,18 +33,16 @@ const restoreJournal = (journal: JournalDuPupitreStocke): JournalDuPupitre => ({
   evenements: journal.evenements.map(restoreEvenement),
 });
 
-const acceptedPointageIdsFor = (suiviId: string, evenements: readonly EvenementDuJournal[]): string[] =>
-  evenements
-    .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
-    .map(evenement => evenement.geste.id);
-
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => ({
-  ...referentiel,
-  suivis: referentiel.suivis.map(suivi => ({
-    ...suivi,
-    evenements: [...new Set([...suivi.evenements, ...acceptedPointageIdsFor(suivi.id, evenements)])],
-  })),
-});
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => {
+  const journal = new EvenementsDuJournal(evenements);
+  return {
+    ...referentiel,
+    suivis: referentiel.suivis.map(suivi => ({
+      ...suivi,
+      evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
+    })),
+  };
+};
 
 @Injectable()
 export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {

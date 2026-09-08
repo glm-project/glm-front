@@ -81,11 +81,12 @@ export class PupitreSynchronization {
   private async drain(entreprise: string, publish: PupitrePublisher): Promise<void> {
     while (this.authentication.currentTenant() === entreprise && this.authentication.currentToken() !== undefined) {
       const state = await this.journal.read(entreprise);
-      const evenement = new EvenementsDuJournal(state.evenements).nextPending();
+      const evenements = new EvenementsDuJournal(state.evenements);
+      const evenement = evenements.nextPending();
       if (evenement === undefined) {
         return;
       }
-      const result = await this.replay(entreprise, evenement, state.evenements, publish);
+      const result = await this.replay(entreprise, evenement, evenements, publish);
       if (result === undefined) {
         return;
       }
@@ -96,7 +97,7 @@ export class PupitreSynchronization {
   private async replay(
     entreprise: string,
     evenement: EvenementDuJournal,
-    evenements: readonly EvenementDuJournal[],
+    evenements: EvenementsDuJournal,
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
@@ -122,7 +123,7 @@ export class PupitreSynchronization {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: string, geste: GesteDAtelier, evenements: readonly EvenementDuJournal[]): Promise<boolean> {
+  private async push(entreprise: string, geste: GesteDAtelier, evenements: EvenementsDuJournal): Promise<boolean> {
     try {
       this.requireExchange(entreprise);
       await this.serveur.send(geste);
@@ -136,11 +137,7 @@ export class PupitreSynchronization {
     }
   }
 
-  private async retryAfterConcurrence(
-    entreprise: string,
-    geste: GesteDAtelier,
-    evenements: readonly EvenementDuJournal[],
-  ): Promise<boolean> {
+  private async retryAfterConcurrence(entreprise: string, geste: GesteDAtelier, evenements: EvenementsDuJournal): Promise<boolean> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
@@ -153,7 +150,7 @@ export class PupitreSynchronization {
     }
   }
 
-  private absorbOrThrow(geste: GesteDAtelier, evenements: readonly EvenementDuJournal[], failure: unknown): void {
+  private absorbOrThrow(geste: GesteDAtelier, evenements: EvenementsDuJournal, failure: unknown): void {
     if (decideReplay(operationFor(geste, evenements), failure, 'REJEU') === 'ACCEPTER') {
       return;
     }
