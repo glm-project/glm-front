@@ -1,11 +1,14 @@
-import { CodeDeRefusDAtelier } from './RefusDAtelier';
+import { MotifDeRefus } from './MotifDeRefus';
 
 export class RefusDePublication extends Error {
+  readonly motif: MotifDeRefus;
+
   constructor(
     readonly code: string,
     message: string,
-    readonly motif?: CodeDeRefusDAtelier,
+    motif: MotifDeRefus = MotifDeRefus.aucun(),
   ) {
     super(message);
+    this.motif = motif;
   }
 }

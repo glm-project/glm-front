@@ -1,11 +1,12 @@
 import { EvenementDuJournal, EvenementsDuJournal, GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
-import { CodeDeRefusDAtelier, RefusDAtelier } from '../refus/RefusDAtelier';
+import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
+import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
 import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './GesteReplayPolicy';
 
 const refusFixtures = [
   ['online', (code: CodeDeRefusDAtelier) => new RefusDAtelier(code, 'cause')],
-  ['offline', (code: CodeDeRefusDAtelier) => new RefusDePublication('diagnostic externe', 'cause', code)],
+  ['offline', (code: CodeDeRefusDAtelier) => new RefusDePublication('diagnostic externe', 'cause', MotifDeRefus.from(code))],
 ] as const;
 
 const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', ReplayDecision][] = [

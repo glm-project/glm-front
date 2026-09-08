@@ -8,6 +8,7 @@ import {
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
@@ -370,7 +371,7 @@ describe('PupitreSynchronization', () => {
   };
   const givenArrivalAlreadyOpened = (): void => {
     server.onSend = (): void => {
-      throw new RefusDePublication('refus-1', 'Journée déjà ouverte', 'journee-de-travail-deja-ouverte');
+      throw new RefusDePublication('refus-1', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte'));
     };
   };
   const givenConcurrentModificationOnFirstAttempt = (): void => {
@@ -378,7 +379,7 @@ describe('PupitreSynchronization', () => {
     server.onSend = (): void => {
       attempts++;
       if (attempts === 1) {
-        throw new RefusDePublication('concurrence', 'Concurrence', 'saisie-concurrente');
+        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
       }
     };
   };
@@ -387,9 +388,9 @@ describe('PupitreSynchronization', () => {
     server.onSend = (): void => {
       attempts++;
       if (attempts === 1) {
-        throw new RefusDePublication('concurrence', 'Concurrence', 'saisie-concurrente');
+        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
       }
-      throw new RefusDePublication('refus-2', 'Journée déjà ouverte', 'journee-de-travail-deja-ouverte');
+      throw new RefusDePublication('refus-2', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte'));
     };
   };
   const givenUnauthorizedGestureRefusal = (): void => {
@@ -417,7 +418,7 @@ describe('PupitreSynchronization', () => {
       attempts++;
       if (attempts === 1) {
         token = undefined;
-        throw new RefusDePublication('concurrence', 'Concurrence', 'saisie-concurrente');
+        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
       }
     };
   };

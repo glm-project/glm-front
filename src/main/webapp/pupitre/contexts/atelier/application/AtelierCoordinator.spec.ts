@@ -11,7 +11,7 @@ import {
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
+import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
@@ -36,7 +36,7 @@ const refusalFixture = (code: string): RefusDePublication =>
   new RefusDePublication(
     `urn:glm:erreur:atelier:${code}`,
     'cause conservee',
-    CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code),
+    MotifDeRefus.from(CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code)),
   );
 
 interface SynchronizationBarrier {

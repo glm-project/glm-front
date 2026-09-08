@@ -131,7 +131,7 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     } catch (failure: unknown) {
       const refusal = findApiErrorIn(failure);
       if (refusal !== undefined) {
-        throw new RefusDePublication(refusal.urn, refusal.message, toRefusDAtelier(refusal.urn, refusal.message)?.code);
+        throw new RefusDePublication(refusal.urn, refusal.message, toRefusDAtelier(refusal.urn, refusal.message)?.motif);
       }
       throw failure;
     }

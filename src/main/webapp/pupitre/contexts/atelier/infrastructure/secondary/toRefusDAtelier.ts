@@ -1,4 +1,5 @@
-import { CODES_DE_REFUS_D_ATELIER, CodeDeRefusDAtelier, RefusDAtelier } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
+import { CODES_DE_REFUS_D_ATELIER, CodeDeRefusDAtelier } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
+import { RefusDAtelier } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
 
 const ERREURS_DE_L_ATELIER = 'urn:glm:erreur:atelier:';
 
