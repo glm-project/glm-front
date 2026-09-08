@@ -3,6 +3,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -990,10 +991,10 @@ describe('AtelierCoordinator', () => {
     pupitre = buildPupitre();
     await pupitre.restore();
   };
-  const whenOpening = (): Promise<unknown> => designation.openWindow('049');
-  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(matricule);
+  const whenOpening = (): Promise<unknown> => designation.openWindow(Matricule.of('049'));
+  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(Matricule.of(matricule));
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
-    Promise.allSettled([designation.openWindow('049'), designation.openWindow('050')]);
+    Promise.allSettled([designation.openWindow(Matricule.of('049')), designation.openWindow(Matricule.of('050'))]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
   const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
     pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
@@ -1034,7 +1035,7 @@ describe('AtelierCoordinator', () => {
     await journal.saveReferentiel('entreprise-a', structuredClone(reference));
   };
   const givenAnOpenWindow = async (): Promise<void> => {
-    await designation.openWindow('049');
+    await designation.openWindow(Matricule.of('049'));
   };
   const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');

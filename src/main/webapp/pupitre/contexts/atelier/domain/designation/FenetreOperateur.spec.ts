@@ -2,6 +2,7 @@ import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
+import { Matricule } from './Matricule';
 import { NumeroDElement } from './NumeroDElement';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
@@ -67,7 +68,7 @@ describe('FenetreOperateur', () => {
     fenetre = FenetreOperateur.open(
       'entreprise-a',
       structuredClone(vueFixture),
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -328,7 +329,7 @@ describe('FenetreOperateur', () => {
     fenetre = FenetreOperateur.open(
       'entreprise-a',
       journalWithPreviousRefusal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(2),
     );
@@ -522,7 +523,7 @@ describe('FenetreOperateur', () => {
     const localWindow = FenetreOperateur.open(
       'entreprise-a',
       onlyNcJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -566,7 +567,7 @@ describe('FenetreOperateur', () => {
     const multiWindow = FenetreOperateur.open(
       'entreprise-a',
       multiNcJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -598,7 +599,7 @@ describe('FenetreOperateur', () => {
     const sortWindow = FenetreOperateur.open(
       'entreprise-a',
       unsortedJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -619,7 +620,7 @@ describe('FenetreOperateur', () => {
     const inactiveWindow = FenetreOperateur.open(
       'entreprise-a',
       inactiveJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -649,7 +650,7 @@ describe('FenetreOperateur', () => {
     const multiWindow = FenetreOperateur.open(
       'entreprise-a',
       multiPosteJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -734,8 +735,13 @@ describe('FenetreOperateur', () => {
     dateDuGeste = '2026-09-05T09:00:00Z';
   };
   const whenResolvingTheOperator = (): FenetreOperateur['operateur'] =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1))
-      .operateur;
+    FenetreOperateur.open(
+      'entreprise-a',
+      structuredClone(vueFixture),
+      Matricule.of('049'),
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    ).operateur;
   const whenReadingThePointageView = (): ReturnType<FenetreOperateur['pointage']> => fenetre.pointage();
   const givenTheCurrentSnapshot = (): JournalDuPupitre => fenetre.snapshot();
   const whenChangingTheSnapshot = (snapshot: JournalDuPupitre): void => {
@@ -773,7 +779,7 @@ describe('FenetreOperateur', () => {
           operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
         },
       },
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(2),
     );
@@ -784,7 +790,7 @@ describe('FenetreOperateur', () => {
     return FenetreOperateur.open(
       'entreprise-a',
       { ...vueFixture, referentiel: { ...referentiel, operateurs: [{ ...operateur, postes: [] }] } },
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(3),
     );
@@ -858,14 +864,20 @@ describe('FenetreOperateur', () => {
           ],
         },
       },
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(4),
     );
   };
   const whenOpeningAnUnknownOperator = (vue: JournalDuPupitre): unknown => {
     try {
-      return FenetreOperateur.open('entreprise-a', vue, 'inconnu', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(5));
+      return FenetreOperateur.open(
+        'entreprise-a',
+        vue,
+        Matricule.of('inconnu'),
+        Date.parse('2026-09-05T09:00:00Z'),
+        new IdentiteDeFenetre(5),
+      );
     } catch (failure: unknown) {
       return failure;
     }

@@ -1,6 +1,7 @@
 import { JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { FenetreOperateur, IdentiteOperateurDesigne } from './FenetreOperateur';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
+import { Matricule } from './Matricule';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
@@ -9,7 +10,7 @@ export const isFenetreIdentifiedBy = (fenetre: FenetreOperateur | undefined, ide
 
 export interface DesignationResolution {
   readonly generation: number;
-  readonly code: string;
+  readonly code: Matricule;
 }
 
 export interface DesignationState {
@@ -41,7 +42,7 @@ export interface OpeningWindowResult {
 }
 
 interface EtatDeDesignation {
-  readonly saisie: string;
+  readonly saisie: Matricule;
   readonly inconnu: boolean;
   readonly designated: boolean;
   readonly resolution: DesignationResolution | undefined;
@@ -57,7 +58,7 @@ export class DesignationOperateur {
 
   static empty(): DesignationOperateur {
     return new DesignationOperateur({
-      saisie: '',
+      saisie: Matricule.vide(),
       inconnu: false,
       designated: false,
       resolution: undefined,
@@ -71,10 +72,10 @@ export class DesignationOperateur {
 
   snapshot(): DesignationState {
     return {
-      code: this.etat.saisie,
+      code: this.etat.saisie.toString(),
       unknownCode: this.etat.inconnu,
       operateur: this.operateur(),
-      canValidate: this.etat.saisie.length > 0 && this.canEdit() && this.etat.resolution === undefined && !this.etat.closing,
+      canValidate: !this.etat.saisie.isEmpty() && this.canEdit() && this.etat.resolution === undefined && !this.etat.closing,
       deadline: this.etat.deadline,
     };
   }
@@ -85,16 +86,16 @@ export class DesignationOperateur {
   }
 
   afterDigit(digit: string, now: number): DesignationOperateur {
-    if (!/^\d$/.test(digit)) return this;
+    if (!Matricule.accepts(digit)) return this;
     const press = this.afterPress(now);
     if (this.isEditingRefused(press)) return press.designation;
-    return press.designation.with({ saisie: `${press.designation.etat.saisie}${digit}`, inconnu: false });
+    return press.designation.with({ saisie: press.designation.etat.saisie.afterDigit(digit), inconnu: false });
   }
 
   afterErasing(now: number): DesignationOperateur {
     const press = this.afterPress(now);
     if (this.isEditingRefused(press)) return press.designation;
-    return press.designation.with({ saisie: press.designation.etat.saisie.slice(0, -1), inconnu: false });
+    return press.designation.with({ saisie: press.designation.etat.saisie.afterErasing(), inconnu: false });
   }
 
   afterBeginningResolution(now: number): ResolutionResult {
@@ -107,13 +108,13 @@ export class DesignationOperateur {
   afterCompletingResolution(resolution: DesignationResolution, now: number): CompletionResult {
     const expired = this.afterExpiration(now);
     if (resolution.generation !== expired.etat.generation) return { designation: expired, accepted: false };
-    return { designation: expired.with({ designated: true, saisie: '', inconnu: false }), accepted: true };
+    return { designation: expired.with({ designated: true, saisie: Matricule.vide(), inconnu: false }), accepted: true };
   }
 
   afterFailingResolution(resolution: DesignationResolution, now: number): DesignationOperateur {
     const expired = this.afterExpiration(now);
     if (resolution.generation !== expired.etat.generation) return expired;
-    return expired.with({ saisie: '', inconnu: true });
+    return expired.with({ saisie: Matricule.vide(), inconnu: true });
   }
 
   afterEndingResolution(): DesignationOperateur {
@@ -130,7 +131,7 @@ export class DesignationOperateur {
       generation: this.etat.generation + 1,
       closing: this.etat.closing || this.etat.designated,
       designated: false,
-      saisie: '',
+      saisie: Matricule.vide(),
       inconnu: false,
     });
   }
@@ -139,7 +140,7 @@ export class DesignationOperateur {
     return this.etat.closing;
   }
 
-  afterOpeningWindow(entreprise: string, vue: JournalDuPupitre, code: string, now: number): OpeningWindowResult {
+  afterOpeningWindow(entreprise: string, vue: JournalDuPupitre, code: Matricule, now: number): OpeningWindowResult {
     this.requireClosedWindow();
     const fenetre = FenetreOperateur.open(entreprise, vue, code, now, this.etat.windowId);
     const designation =

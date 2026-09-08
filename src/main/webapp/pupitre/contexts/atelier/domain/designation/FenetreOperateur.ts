@@ -13,6 +13,7 @@ import {
 import { projectReferentiel } from '../journal-du-pupitre/JournalDuPupitreProjection';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
+import { Matricule } from './Matricule';
 import { NumeroDElement } from './NumeroDElement';
 
 export interface ActiviteDePointage {
@@ -153,8 +154,8 @@ class OperateurDesigne {
   private readonly identite: IdentiteOperateurDesigne;
   private readonly habilitations: HabilitationsDePoste;
 
-  constructor(source: OperateurDuPupitre, code: string) {
-    this.identite = { id: source.id, nom: source.nom, prenom: source.prenom, matricule: code };
+  constructor(source: OperateurDuPupitre, code: Matricule) {
+    this.identite = { id: source.id, nom: source.nom, prenom: source.prenom, matricule: code.toString() };
     this.habilitations = HabilitationsDePoste.from(source.postes);
   }
 
@@ -256,11 +257,11 @@ export class FenetreOperateur {
   static open(
     entreprise: string,
     vue: JournalDuPupitre,
-    code: string,
+    code: Matricule,
     instantDOuverture: number,
     identity: IdentiteDeFenetre,
   ): FenetreOperateur {
-    const operateur = vue.referentiel?.operateurs.find(candidat => candidat.matricule === code);
+    const operateur = vue.referentiel?.operateurs.find(candidat => code.identifies(candidat.matricule));
     if (operateur === undefined) throw new Error('Matricule absent du referentiel local.');
     return new FenetreOperateur({
       entreprise,

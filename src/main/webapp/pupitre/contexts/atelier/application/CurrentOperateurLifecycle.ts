@@ -4,6 +4,7 @@ import { DesignationExpirationSchedulerPort } from '../domain/designation/Design
 import { DesignationOperateur, isFenetreIdentifiedBy } from '../domain/designation/DesignationOperateur';
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
+import { Matricule } from '../domain/designation/Matricule';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
@@ -62,7 +63,7 @@ export class CurrentOperateurLifecycle {
     }
   }
 
-  async openWindow(code: string): Promise<IdentiteOperateurDesigne> {
+  async openWindow(code: Matricule): Promise<IdentiteOperateurDesigne> {
     const { entreprise, state } = await this.etatHorsLigne.openingSource();
     const opening = this.designation().afterOpeningWindow(entreprise, state, code, Date.now());
     this.designation.set(opening.designation);

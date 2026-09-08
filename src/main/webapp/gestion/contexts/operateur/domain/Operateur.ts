@@ -1,3 +1,4 @@
+import { Matricule } from './Matricule';
 import { PosteHabilite } from './PosteHabilite';
 
 export class Operateur {
@@ -6,10 +7,10 @@ export class Operateur {
     readonly nom: string,
     readonly prenom: string,
     readonly postes: readonly PosteHabilite[],
-    private readonly matricule?: string,
+    private readonly matricule: Matricule,
   ) {}
 
   matchesCode(code: string): boolean {
-    return this.matricule === code;
+    return this.matricule.answersTo(code);
   }
 }

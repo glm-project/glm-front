@@ -1,6 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
+import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -142,7 +143,13 @@ describe('GestesRecordingQueue', () => {
   });
 
   const givenAnOpenOperatorWindow = (): FenetreOperateur =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1));
+    FenetreOperateur.open(
+      'entreprise-a',
+      structuredClone(vueFixture),
+      Matricule.of('049'),
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
   const whenCapturingGlobalIntention = async (
     fenetre: FenetreOperateur,

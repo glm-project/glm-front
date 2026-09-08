@@ -2,6 +2,7 @@ import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { Matricule } from '@/gestion/contexts/operateur/domain/Matricule';
 import { Operateur } from '@/gestion/contexts/operateur/domain/Operateur';
 import { OperateursPort } from '@/gestion/contexts/operateur/domain/OperateursPort';
 import { PosteHabilite } from '@/gestion/contexts/operateur/domain/PosteHabilite';
@@ -13,7 +14,7 @@ type RestPosteHabilite = components['schemas']['RestPosteHabilite'];
 const toPosteHabilite = (poste: RestPosteHabilite): PosteHabilite => new PosteHabilite(poste.id, poste.libelle);
 
 const toOperateur = (operateur: RestOperateur): Operateur =>
-  new Operateur(operateur.id, operateur.nom, operateur.prenom, operateur.postes.map(toPosteHabilite), operateur.matricule);
+  new Operateur(operateur.id, operateur.nom, operateur.prenom, operateur.postes.map(toPosteHabilite), new Matricule(operateur.matricule));
 
 @Injectable()
 export class HttpOperateurs extends OperateursPort {
