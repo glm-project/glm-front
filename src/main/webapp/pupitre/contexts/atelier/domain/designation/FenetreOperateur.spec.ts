@@ -705,7 +705,7 @@ describe('FenetreOperateur', () => {
   it('should not attach a global command context for departure presence', () => {
     const departLot = fenetre.preparePresence('DEPART', identifyFixture);
 
-    expect(departLot.contextesParGeste.size).toBe(0);
+    expect(departLot.contextesParGeste.isEmpty()).toBe(true);
   });
 
   it('should include arrival by default when capture is called without arguments on pointage decision', () => {

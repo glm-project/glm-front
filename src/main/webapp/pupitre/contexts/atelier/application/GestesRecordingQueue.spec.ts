@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ContextesParGeste } from '@/pupitre/contexts/atelier/domain/designation/ContextesParGeste';
 import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
@@ -92,7 +93,7 @@ describe('GestesRecordingQueue', () => {
           type: 'FIN',
         },
       ],
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.aucun(),
       intention: 1,
     };
 
@@ -116,7 +117,7 @@ describe('GestesRecordingQueue', () => {
           type: 'FIN',
         },
       ],
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.aucun(),
       intention: 1,
     };
 
@@ -133,7 +134,7 @@ describe('GestesRecordingQueue', () => {
     const lot: LotDeGestesDAtelier = {
       kind: 'GESTES',
       capture: () => [],
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.aucun(),
       intention: 1,
     };
     tenant = 'autre-entreprise';

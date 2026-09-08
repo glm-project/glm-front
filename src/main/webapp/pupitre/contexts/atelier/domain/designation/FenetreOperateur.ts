@@ -12,6 +12,7 @@ import {
   TypeDePresence,
 } from '../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../journal-du-pupitre/JournalDuPupitreProjection';
+import { ContextesParGeste } from './ContextesParGeste';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 import { Matricule } from './Matricule';
@@ -58,7 +59,7 @@ export type ContexteDeGesteDAtelier =
 export interface LotDeGestesDAtelier {
   readonly kind: 'GESTES';
   readonly capture: (arriveeAssuree?: boolean) => readonly GesteDAtelier[];
-  readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
+  readonly contextesParGeste: ContextesParGeste;
   readonly intention: number;
 }
 
@@ -113,7 +114,7 @@ interface EtatDeFenetreOperateur {
   readonly identity: IdentiteDeFenetre;
   readonly globale: IntentionGlobaleInitiee | undefined;
   readonly arriveeAssuree: boolean;
-  readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
+  readonly contextesParGeste: ContextesParGeste;
   readonly intention: number;
   readonly refusVisible: RefusDAtelier | undefined;
   readonly operateurDesigne: OperateurDesigne;
@@ -271,7 +272,7 @@ export class FenetreOperateur {
       identity,
       globale: undefined,
       arriveeAssuree: false,
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.aucun(),
       intention: 0,
       refusVisible: undefined,
       operateurDesigne: new OperateurDesigne(operateur, code),
@@ -339,7 +340,7 @@ export class FenetreOperateur {
   }
   afterIntendingGesture(): FenetreOperateur {
     this.requireAvailableGestures();
-    return this.with({ refusVisible: undefined, contextesParGeste: new Map(), intention: this.etat.intention + 1 });
+    return this.with({ refusVisible: undefined, contextesParGeste: ContextesParGeste.aucun(), intention: this.etat.intention + 1 });
   }
 
   private requireAvailableGestures(): void {
@@ -347,8 +348,8 @@ export class FenetreOperateur {
   }
   afterReconciling(entreprise: Entreprise, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
-    const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(new Set(this.etat.contextesParGeste.keys()));
-    const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.get(refus.geste.id);
+    const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(this.etat.contextesParGeste.gesteIds());
+    const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.contexteOf(refus.geste.id);
     return this.with({
       vue,
       refusVisible: refus !== undefined && contexte !== undefined ? { contexte, message: refus.refus.message } : undefined,
@@ -410,7 +411,7 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => (assured ? [presence] : [arrivee, presenceApresAssurance]),
-      contextesParGeste: new Map(contexte === undefined ? [] : [arrivee, presenceApresAssurance].map(geste => [geste.id, contexte])),
+      contextesParGeste: ContextesParGeste.forGestes([arrivee, presenceApresAssurance], contexte),
       intention: this.etat.intention,
     };
   }
@@ -441,9 +442,10 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages, depart],
-      contextesParGeste: new Map(
-        [arrivee, ...pointages, depart].map(geste => [geste.id, { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' } as const]),
-      ),
+      contextesParGeste: ContextesParGeste.forGestes([arrivee, ...pointages, depart], {
+        kind: 'COMMANDE_GLOBALE',
+        intention: 'TOUT_ARRETER',
+      }),
       intention: this.etat.intention,
     };
   }
@@ -453,8 +455,8 @@ export class FenetreOperateur {
     return this.with({ contextesParGeste }).afterAccept(gestes);
   }
 
-  private contextesOf(decision: DecisionDePointage): ReadonlyMap<string, ContexteDeGesteDAtelier> {
-    return decision.kind === 'GESTES' ? decision.contextesParGeste : new Map();
+  private contextesOf(decision: DecisionDePointage): ContextesParGeste {
+    return decision.kind === 'GESTES' ? decision.contextesParGeste : ContextesParGeste.aucun();
   }
 
   private contexteFor(type: TypeDePresence): ContexteDeGesteDAtelier | undefined {
@@ -495,7 +497,7 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => [...(assured ? [] : [arrivee]), ...(repriseImplicite ? [reprise] : []), ...pointages],
-      contextesParGeste: new Map(pointages.map(pointage => [pointage.id, { kind: 'ELEMENT', numero } as const])),
+      contextesParGeste: ContextesParGeste.forGestes(pointages, { kind: 'ELEMENT', numero }),
       intention: this.etat.intention,
     };
   }
