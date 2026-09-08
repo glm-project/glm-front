@@ -3,10 +3,16 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, from, mergeMap, throwError } from 'rxjs';
 
+const isAuthorizationFailure = (failure: unknown): boolean =>
+  failure instanceof HttpErrorResponse && (failure.status === 401 || failure.status === 403);
+
+const isCurrentToken = (token: string | undefined, authentication: AuthenticationPort): boolean =>
+  token !== undefined && authentication.currentToken() === token;
+
 const reenrolAfter = async (failure: unknown, token: string | undefined, authentication: AuthenticationPort): Promise<void> => {
-  if (failure instanceof HttpErrorResponse && (failure.status === 401 || failure.status === 403)) {
+  if (isAuthorizationFailure(failure)) {
     await authentication.synchronizeSession();
-    if (token !== undefined && authentication.currentToken() === token) {
+    if (isCurrentToken(token, authentication)) {
       authentication.logout();
       void authentication.authenticate();
     }

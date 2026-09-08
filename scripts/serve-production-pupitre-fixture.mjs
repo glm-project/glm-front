@@ -67,11 +67,13 @@ const observedCount = field => {
   return undefined;
 };
 
+const hasReachedObservationCount = (count, waiter) => count !== undefined && count >= waiter.atLeast;
+
 const flushControlWaiters = () => {
   for (let index = controlWaiters.length - 1; index >= 0; index--) {
     const waiter = controlWaiters[index];
     const count = observedCount(waiter.field);
-    if (count !== undefined && count >= waiter.atLeast) {
+    if (hasReachedObservationCount(count, waiter)) {
       controlWaiters.splice(index, 1);
       json(waiter.response, 200, state);
     }
@@ -107,10 +109,12 @@ const contentTypes = new Map([
   ['.webmanifest', 'application/manifest+json'],
 ]);
 
+const isUnavailableStaticFile = candidate => !candidate.startsWith(`${output}/`) || !existsSync(candidate) || !statSync(candidate).isFile();
+
 const staticFileFor = pathname => {
   const relative = pathname === '/' ? 'index.html' : normalize(decodeURIComponent(pathname)).replace(/^[/\\]+/, '');
   const candidate = resolve(output, relative);
-  if (!candidate.startsWith(`${output}/`) || !existsSync(candidate) || !statSync(candidate).isFile()) {
+  if (isUnavailableStaticFile(candidate)) {
     return extname(relative) === '' ? join(output, 'index.html') : undefined;
   }
   return candidate;
@@ -129,6 +133,13 @@ const serveFile = (response, file) => {
   });
   createReadStream(file).pipe(response);
 };
+
+const needsMoreObservations = (field, count, atLeast) => field !== null && count !== undefined && count < atLeast;
+
+const isPostTo = (request, url, pathname) => request.method === 'POST' && url.pathname === pathname;
+const isPostToEndpoint = (request, url, endpoint) => request.method === 'POST' && url.pathname.endsWith(endpoint);
+const isReferentielRequest = url => url.pathname === '/api/operateurs' || url.pathname === '/api/atelier/suivis';
+const isDisabledServiceWorkerRequest = url => serviceWorker === 'disabled' && ['/ngsw-worker.js', '/ngsw.json'].includes(url.pathname);
 
 const appServer = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', origin);
@@ -154,7 +165,7 @@ const appServer = createServer(async (request, response) => {
     json(response, 200, { online: true });
     return;
   }
-  if (request.method === 'POST' && url.pathname === '/__control/release-gesture-responses') {
+  if (isPostTo(request, url, '/__control/release-gesture-responses')) {
     state.gestureResponsesReleased = true;
     for (const pending of pendingGestureResponses.splice(0)) {
       json(pending, 200, {});
@@ -167,21 +178,21 @@ const appServer = createServer(async (request, response) => {
     const field = url.searchParams.get('until');
     const atLeast = Number(url.searchParams.get('atLeast') ?? '0');
     const count = field === null ? undefined : observedCount(field);
-    if (field !== null && count !== undefined && count < atLeast) {
+    if (needsMoreObservations(field, count, atLeast)) {
       controlWaiters.push({ atLeast, field, response });
       return;
     }
     json(response, 200, state);
     return;
   }
-  if (url.pathname === '/api/operateurs' || url.pathname === '/api/atelier/suivis') {
+  if (isReferentielRequest(url)) {
     state.referenceRequests += 1;
     recordEvidence();
     const content = url.pathname === '/api/operateurs' ? [operator] : [workshopItem];
     json(response, 200, { content, currentPage: 0, pageSize: 100, totalElementsCount: content.length });
     return;
   }
-  if (request.method === 'POST' && url.pathname === '/api/atelier/journees') {
+  if (isPostTo(request, url, '/api/atelier/journees')) {
     const body = JSON.parse(await readBody(request));
     state.pushes.push({ authorization: request.headers.authorization, body });
     recordEvidence();
@@ -192,7 +203,7 @@ const appServer = createServer(async (request, response) => {
     json(response, 200, {});
     return;
   }
-  if (serviceWorker === 'disabled' && ['/ngsw-worker.js', '/ngsw.json'].includes(url.pathname)) {
+  if (isDisabledServiceWorkerRequest(url)) {
     json(response, 404, { unavailable: url.pathname });
     return;
   }
@@ -215,14 +226,14 @@ const authServer = createServer(async (request, response) => {
     json(response, 200, { online: true }, allowFixtureOrigin);
     return;
   }
-  if (request.method === 'POST' && url.pathname.endsWith('/auth/device')) {
+  if (isPostToEndpoint(request, url, '/auth/device')) {
     state.authorizationRequests += 1;
     recordEvidence();
     await readBody(request);
     json(response, 200, { device_code: 'production-offline-device', interval: 0 }, allowFixtureOrigin);
     return;
   }
-  if (request.method === 'POST' && url.pathname.endsWith('/token')) {
+  if (isPostToEndpoint(request, url, '/token')) {
     state.tokenRequests += 1;
     recordEvidence();
     await readBody(request);

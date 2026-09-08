@@ -70,7 +70,7 @@ export class Designation {
       event.preventDefault();
       return;
     }
-    if (/^\d$/.test(event.key) || event.key === 'Backspace' || event.key === 'Enter') {
+    if (this.isSupportedKey(event)) {
       event.preventDefault();
       this.execute(event.key);
     }
@@ -82,6 +82,10 @@ export class Designation {
       return;
     }
     this.execute(command);
+  }
+
+  private isSupportedKey(event: KeyboardEvent): boolean {
+    return /^\d$/.test(event.key) || event.key === 'Backspace' || event.key === 'Enter';
   }
 
   private execute(command: string): void {

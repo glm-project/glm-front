@@ -3,20 +3,25 @@ const TECHNICAL_ROOT = /^(TestBed|vi|cy|fixture|http|httpClient|stockage|storage
 const isFunction = node =>
   node?.type === 'ArrowFunctionExpression' || node?.type === 'FunctionExpression' || node?.type === 'FunctionDeclaration';
 
+const isWrappedExpression = node =>
+  node.type === 'AwaitExpression' || node.type === 'TSAsExpression' || node.type === 'TSNonNullExpression';
+
 const rootIdentifier = node => {
   if (!node) return undefined;
   if (node.type === 'Identifier') return node.name;
   if (node.type === 'ChainExpression') return rootIdentifier(node.expression);
   if (node.type === 'CallExpression') return rootIdentifier(node.callee);
   if (node.type === 'MemberExpression') return rootIdentifier(node.object);
-  if (node.type === 'AwaitExpression' || node.type === 'TSAsExpression' || node.type === 'TSNonNullExpression') {
+  if (isWrappedExpression(node)) {
     return rootIdentifier(node.expression ?? node.argument);
   }
   return undefined;
 };
 
+const isNonTraversable = node => !node || typeof node !== 'object';
+
 const contains = (node, predicate) => {
-  if (!node || typeof node !== 'object') return false;
+  if (isNonTraversable(node)) return false;
   if (predicate(node)) return true;
   if (isFunction(node)) return false;
   return Object.entries(node)

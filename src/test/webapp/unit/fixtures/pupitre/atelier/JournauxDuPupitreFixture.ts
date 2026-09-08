@@ -16,17 +16,21 @@ interface AppendBarrier {
   wait(): Promise<void>;
 }
 
+const hasInitializedBarrier = (
+  callbacks: Partial<Pick<AppendBarrier, 'signalStarted' | 'release'>>,
+): callbacks is Pick<AppendBarrier, 'signalStarted' | 'release'> =>
+  !(callbacks.signalStarted === undefined || callbacks.release === undefined);
+
 const appendBarrier = (): AppendBarrier => {
-  let signalStarted: (() => void) | undefined;
-  let release: (() => void) | undefined;
+  const callbacks: { signalStarted?: () => void; release?: () => void } = {};
   const started = new Promise<void>(resolve => {
-    signalStarted = resolve;
+    callbacks.signalStarted = resolve;
   });
   const waiting = new Promise<void>(resolve => {
-    release = resolve;
+    callbacks.release = resolve;
   });
-  if (signalStarted === undefined || release === undefined) throw new Error('Append barrier is not initialized.');
-  return { started, signalStarted, release, wait: () => waiting };
+  if (!hasInitializedBarrier(callbacks)) throw new Error('Append barrier is not initialized.');
+  return { started, ...callbacks, wait: () => waiting };
 };
 
 const acceptedPointageIdsFor = (suiviId: string, evenements: readonly EvenementDuJournal[]): string[] =>

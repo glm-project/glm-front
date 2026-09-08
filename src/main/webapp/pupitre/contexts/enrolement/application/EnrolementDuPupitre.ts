@@ -47,7 +47,7 @@ export class EnrolementDuPupitre {
       this.showCode(tentative, code);
     });
 
-    if (issue === 'ABANDONED' || this.tentative !== tentative) {
+    if (!this.isCurrentAttemptOutcome(issue, tentative)) {
       return;
     }
 
@@ -69,6 +69,10 @@ export class EnrolementDuPupitre {
   async reinitialiser(): Promise<void> {
     this.authentication.logout();
     await this.enroler();
+  }
+
+  private isCurrentAttemptOutcome(issue: DeviceEnrolmentOutcome, tentative: symbol): issue is Exclude<DeviceEnrolmentOutcome, 'ABANDONED'> {
+    return !(issue === 'ABANDONED' || this.tentative !== tentative);
   }
 
   private showCode(tentative: symbol, code: DeviceAuthorizationCode): void {

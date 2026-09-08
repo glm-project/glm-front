@@ -13,6 +13,10 @@ const BROWSER_GLOBALS = new Set(['document', 'globalThis', 'history', 'location'
 const NETWORK_CONSTRUCTORS = new Set(['EventSource', 'WebSocket', 'XMLHttpRequest']);
 const STORAGE_GLOBALS = new Set(['caches', 'indexedDB', 'localStorage', 'sessionStorage']);
 
+const isProductionDomain = source => source.layer === 'domain' && !source.relativePath.endsWith('.spec.ts');
+
+const isTypeScriptFile = entry => entry.isFile() && entry.name.endsWith('.ts');
+
 export const inspectArchitecture = ({ sourceRoot = 'src/main/webapp', tsconfigPath = 'tsconfig.json' } = {}) => {
   const absoluteSourceRoot = resolve(sourceRoot);
   const absoluteTsconfigPath = resolve(tsconfigPath);
@@ -30,7 +34,7 @@ export const inspectArchitecture = ({ sourceRoot = 'src/main/webapp', tsconfigPa
     for (const dependency of dependencies) {
       violations.push(...dependencyViolations(source, describeFile(dependency.fileName, absoluteSourceRoot, boundaries), dependency));
     }
-    if (source.layer === 'domain' && !source.relativePath.endsWith('.spec.ts')) {
+    if (isProductionDomain(source)) {
       violations.push(...ambientDomainViolations(sourceFile, source, checker, absoluteSourceRoot));
     }
   }
@@ -58,7 +62,7 @@ const discoverBoundaries = (sourceRoot, program, checker) => {
     const absoluteRoot = join(sourceRoot, root.path);
     if (!existsSync(absoluteRoot)) continue;
     for (const entry of readdirSync(absoluteRoot, { withFileTypes: true })) {
-      if (entry.isFile() && entry.name.endsWith('.ts')) {
+      if (isTypeScriptFile(entry)) {
         violations.push(
           violation(
             'unowned-boundary-file',
@@ -102,6 +106,19 @@ const declaresBoundary = (packageInfoPath, kind, sourceRoot, program, checker) =
   });
 };
 
+const isLiteralReexport = node => ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier);
+
+const isLiteralImport = node => ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier);
+const hasNamedImports = bindings => bindings && ts.isNamedImports(bindings);
+const hasNamespaceImport = bindings => bindings && ts.isNamespaceImport(bindings);
+const hasNamedExports = node => node.exportClause && ts.isNamedExports(node.exportClause);
+
+const isLiteralDynamicImport = node =>
+  ts.isCallExpression(node)
+  && node.expression.kind === ts.SyntaxKind.ImportKeyword
+  && node.arguments.length === 1
+  && ts.isStringLiteral(node.arguments[0]);
+
 const dependenciesOf = (sourceFile, compilerOptions, checker) => {
   const dependencies = [];
   const addResolvedModule = moduleSpecifier => {
@@ -130,36 +147,31 @@ const dependenciesOf = (sourceFile, compilerOptions, checker) => {
     }
   };
   const visit = node => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+    if (isLiteralImport(node)) {
       addResolvedModule(node.moduleSpecifier);
       const bindings = node.importClause?.namedBindings;
       if (node.importClause?.name) {
         addSymbol(node.importClause.name);
         addNamedModuleExport(node.moduleSpecifier, 'default', node.importClause.name);
       }
-      if (bindings && ts.isNamedImports(bindings)) {
+      if (hasNamedImports(bindings)) {
         bindings.elements.forEach(specifier => {
           addSymbol(specifier);
           addNamedModuleExport(node.moduleSpecifier, (specifier.propertyName ?? specifier.name).text, specifier);
         });
       }
-      if (bindings && ts.isNamespaceImport(bindings)) addModuleExports(node.moduleSpecifier);
+      if (hasNamespaceImport(bindings)) addModuleExports(node.moduleSpecifier);
     }
-    if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+    if (isLiteralReexport(node)) {
       addResolvedModule(node.moduleSpecifier);
-      if (node.exportClause && ts.isNamedExports(node.exportClause)) {
+      if (hasNamedExports(node)) {
         node.exportClause.elements.forEach(specifier => {
           addSymbol(specifier);
           addNamedModuleExport(node.moduleSpecifier, (specifier.propertyName ?? specifier.name).text, specifier);
         });
       } else addModuleExports(node.moduleSpecifier);
     }
-    if (
-      ts.isCallExpression(node)
-      && node.expression.kind === ts.SyntaxKind.ImportKeyword
-      && node.arguments.length === 1
-      && ts.isStringLiteral(node.arguments[0])
-    ) {
+    if (isLiteralDynamicImport(node)) {
       addResolvedModule(node.arguments[0]);
       addModuleExports(node.arguments[0]);
     }
@@ -186,6 +198,8 @@ const aliasedSymbol = (symbol, checker) => {
   return target;
 };
 
+const isInfrastructureLayer = (parts, infrastructureIndex, layer) => infrastructureIndex >= 0 && parts[infrastructureIndex + 1] === layer;
+
 const describeFile = (fileName, sourceRoot, boundaries) => {
   const absolutePath = resolve(fileName);
   const relativePath = slash(relative(sourceRoot, absolutePath));
@@ -195,51 +209,72 @@ const describeFile = (fileName, sourceRoot, boundaries) => {
   let layer;
   if (parts.includes('domain')) layer = 'domain';
   else if (parts.includes('application')) layer = 'application';
-  else if (infrastructureIndex >= 0 && parts[infrastructureIndex + 1] === 'primary') layer = 'primary';
-  else if (infrastructureIndex >= 0 && parts[infrastructureIndex + 1] === 'secondary') layer = 'secondary';
+  else if (isInfrastructureLayer(parts, infrastructureIndex, 'primary')) layer = 'primary';
+  else if (isInfrastructureLayer(parts, infrastructureIndex, 'secondary')) layer = 'secondary';
   const firstPart = parts[0];
   const front = firstPart === 'gestion' || firstPart === 'pupitre' ? firstPart : undefined;
   return { absolutePath, relativePath, boundary, layer, front, insideSource: isWithin(absolutePath, sourceRoot) };
 };
+
+const crossesFronts = (source, target) => source.front && target.front && source.front !== target.front;
+
+const couplesCommonCodeToFront = (source, target) => !source.front && source.insideSource && target.front;
+
+const accessesAnotherBusinessDomain = (source, target) =>
+  source.boundary
+  && target.boundary?.kind === 'business'
+  && target.layer === 'domain'
+  && source.boundary.relativeRoot !== target.boundary.relativeRoot;
+
+const couplesApplicationToInfrastructure = (source, target) =>
+  source.layer === 'application' && target.layer && ['primary', 'secondary'].includes(target.layer);
+
+const couplesSecondaryToOwnPrimary = (source, target) =>
+  source.layer === 'secondary' && target.layer === 'primary' && source.boundary?.relativeRoot === target.boundary?.relativeRoot;
+
+const consumesDesignSystemOutsidePrimary = (source, target) =>
+  target.boundary?.name === 'design-system' && source.layer !== 'primary' && source.boundary;
+
+const callsTypeScriptPrimaryOutsideSecondary = (source, target) =>
+  target.layer === 'primary' && target.relativePath.split('/').at(-1)?.startsWith('TypeScript') && source.layer !== 'secondary';
+
+const couplesSharedToBusiness = (source, target) => source.boundary?.kind === 'shared' && target.boundary?.kind === 'business';
+const accessesForbiddenDomainTarget = (source, target) => source.layer === 'domain' && !isAllowedDomainTarget(source, target);
+const couplesPrimaryToSecondary = (source, target) => source.layer === 'primary' && target.layer === 'secondary';
+const couplesSecondaryToApplication = (source, target) => source.layer === 'secondary' && target.layer === 'application';
 
 const dependencyViolations = (source, target, dependency) => {
   if (source.absolutePath === target.absolutePath) return [];
   const violations = [];
   const report = (code, message) => violations.push(violation(code, source.relativePath, dependency.line, message, target.relativePath));
 
-  if (source.front && target.front && source.front !== target.front)
-    report('cross-front', `${source.front} must not depend on ${target.front}`);
-  if (!source.front && source.insideSource && target.front) report('common-to-front', 'Common app code must not depend on a front');
-  if (source.boundary?.kind === 'shared' && target.boundary?.kind === 'business') {
+  if (crossesFronts(source, target)) report('cross-front', `${source.front} must not depend on ${target.front}`);
+  if (couplesCommonCodeToFront(source, target)) report('common-to-front', 'Common app code must not depend on a front');
+  if (couplesSharedToBusiness(source, target)) {
     report('shared-to-business', 'A shared kernel must not depend on a business context');
   }
-  if (
-    source.boundary
-    && target.boundary?.kind === 'business'
-    && target.layer === 'domain'
-    && source.boundary.relativeRoot !== target.boundary.relativeRoot
-  ) {
+  if (accessesAnotherBusinessDomain(source, target)) {
     report('cross-context-domain', 'A boundary must not depend on another business context domain');
   }
-  if (source.layer === 'domain' && !isAllowedDomainTarget(source, target)) {
+  if (accessesForbiddenDomainTarget(source, target)) {
     report('domain-outside', 'Domain code may depend only on its own domain and declared shared kernels');
   }
-  if (source.layer === 'application' && target.layer && ['primary', 'secondary'].includes(target.layer)) {
+  if (couplesApplicationToInfrastructure(source, target)) {
     report('application-to-infrastructure', 'Application code must not depend on infrastructure');
   }
-  if (source.layer === 'primary' && target.layer === 'secondary') {
+  if (couplesPrimaryToSecondary(source, target)) {
     report('primary-to-secondary', 'A primary adapter must not depend on a secondary adapter');
   }
-  if (source.layer === 'secondary' && target.layer === 'application') {
+  if (couplesSecondaryToApplication(source, target)) {
     report('secondary-to-application', 'A secondary adapter must not depend on application code');
   }
-  if (source.layer === 'secondary' && target.layer === 'primary' && source.boundary?.relativeRoot === target.boundary?.relativeRoot) {
+  if (couplesSecondaryToOwnPrimary(source, target)) {
     report('secondary-to-own-primary', 'A secondary adapter must not depend on its own primary adapter');
   }
-  if (target.boundary?.name === 'design-system' && source.layer !== 'primary' && source.boundary) {
+  if (consumesDesignSystemOutsidePrimary(source, target)) {
     report('design-system-consumer', 'Only primary adapters may depend on a design system');
   }
-  if (target.layer === 'primary' && target.relativePath.split('/').at(-1)?.startsWith('TypeScript') && source.layer !== 'secondary') {
+  if (callsTypeScriptPrimaryOutsideSecondary(source, target)) {
     report('typescript-primary-caller', 'A primary TypeScript adapter may only be called from a secondary adapter');
   }
   return violations;
@@ -249,6 +284,15 @@ const isAllowedDomainTarget = (source, target) => {
   if (target.boundary?.kind === 'shared') return target.boundary.name !== 'design-system';
   return source.boundary?.relativeRoot === target.boundary?.relativeRoot && target.layer === 'domain';
 };
+
+const constructsCurrentDate = (node, invokedOrigin) =>
+  ts.isNewExpression(node) && invokedOrigin === 'date' && (node.arguments?.length ?? 0) === 0;
+
+const isUnresolvedOrVisited = (symbol, visited) => !symbol || visited.has(symbol);
+const hasVariableInitializer = declaration => ts.isVariableDeclaration(declaration) && declaration.initializer;
+const isMemberAccess = expression => ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression);
+const callsAmbientOrigin = (node, invokedOrigin, expectedOrigin) => ts.isCallExpression(node) && invokedOrigin === expectedOrigin;
+const constructsAmbientOrigin = (node, invokedOrigin, expectedOrigin) => ts.isNewExpression(node) && invokedOrigin === expectedOrigin;
 
 const ambientDomainViolations = (sourceFile, source, checker, sourceRoot) => {
   const violations = [];
@@ -272,41 +316,42 @@ const ambientDomainViolations = (sourceFile, source, checker, sourceRoot) => {
         if (BROWSER_GLOBALS.has(expression.text)) return 'browser';
       }
       const symbol = checker.getSymbolAtLocation(expression);
-      if (!symbol || visited.has(symbol)) return undefined;
+      if (isUnresolvedOrVisited(symbol, visited)) return undefined;
       visited.add(symbol);
       for (const declaration of symbol.declarations ?? []) {
-        if (ts.isVariableDeclaration(declaration) && declaration.initializer) return ambientOrigin(declaration.initializer, visited);
+        if (hasVariableInitializer(declaration)) return ambientOrigin(declaration.initializer, visited);
         if (ts.isBindingElement(declaration)) {
           const variable = declaration.parent.parent;
-          if (ts.isVariableDeclaration(variable) && variable.initializer) {
+          if (hasVariableInitializer(variable)) {
             return ambientMemberOrigin(ambientOrigin(variable.initializer, visited), bindingName(declaration));
           }
         }
       }
       return undefined;
     }
-    if (ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) {
+    if (isMemberAccess(expression)) {
       return ambientMemberOrigin(ambientOrigin(expression.expression, visited), memberName(expression));
     }
     return undefined;
   };
+  const isAmbientReference = (node, origin) => ts.isIdentifier(node) && ambientOrigin(node) === origin && isReferenceIdentifier(node);
   const visit = node => {
     const invokedOrigin = ts.isCallExpression(node) || ts.isNewExpression(node) ? ambientOrigin(node.expression) : undefined;
-    if (ts.isCallExpression(node) && invokedOrigin === 'network-function') {
+    if (callsAmbientOrigin(node, invokedOrigin, 'network-function')) {
       report(node.expression, 'ambient-network', 'Domain code must receive network access through a port');
-    } else if (ts.isNewExpression(node) && invokedOrigin === 'network-constructor') {
+    } else if (constructsAmbientOrigin(node, invokedOrigin, 'network-constructor')) {
       report(node.expression, 'ambient-network', 'Domain code must receive network access through a port');
-    } else if (ts.isNewExpression(node) && invokedOrigin === 'date' && (node.arguments?.length ?? 0) === 0) {
+    } else if (constructsCurrentDate(node, invokedOrigin)) {
       report(node.expression, 'ambient-clock', 'Domain code must receive the current time explicitly');
-    } else if (ts.isCallExpression(node) && invokedOrigin === 'date') {
+    } else if (callsAmbientOrigin(node, invokedOrigin, 'date')) {
       report(node.expression, 'ambient-clock', 'Domain code must receive the current time explicitly');
-    } else if (ts.isCallExpression(node) && invokedOrigin === 'clock-function') {
+    } else if (callsAmbientOrigin(node, invokedOrigin, 'clock-function')) {
       report(node.expression, 'ambient-clock', 'Domain code must receive the current time explicitly');
-    } else if (ts.isCallExpression(node) && invokedOrigin === 'random-function') {
+    } else if (callsAmbientOrigin(node, invokedOrigin, 'random-function')) {
       report(node.expression, 'ambient-randomness', 'Domain code must receive generated identities or random values explicitly');
-    } else if (ts.isIdentifier(node) && ambientOrigin(node) === 'storage' && isReferenceIdentifier(node)) {
+    } else if (isAmbientReference(node, 'storage')) {
       report(node, 'ambient-storage', 'Domain code must receive storage access through a port');
-    } else if (ts.isIdentifier(node) && ambientOrigin(node) === 'browser' && isReferenceIdentifier(node)) {
+    } else if (isAmbientReference(node, 'browser')) {
       report(node, 'ambient-browser', 'Domain code must not read browser globals');
     }
     ts.forEachChild(node, visit);
@@ -315,19 +360,25 @@ const ambientDomainViolations = (sourceFile, source, checker, sourceRoot) => {
   return violations;
 };
 
+const isAmbientMember = (owner, member, expectedOwner, expectedMember) => owner === expectedOwner && member === expectedMember;
+const isPureDateConversion = (owner, member) => owner === 'date' && ['parse', 'UTC'].includes(member);
+const isCryptographicRandomness = (owner, member) => owner === 'crypto' && ['getRandomValues', 'randomUUID'].includes(member);
+const isBrowserNetworkConstructor = (owner, member) => owner === 'browser' && NETWORK_CONSTRUCTORS.has(member);
+const isBrowserStorage = (owner, member) => owner === 'browser' && STORAGE_GLOBALS.has(member);
+
 const ambientMemberOrigin = (owner, member) => {
-  if (owner === 'date' && member === 'now') return 'clock-function';
-  if (owner === 'date' && ['parse', 'UTC'].includes(member)) return undefined;
-  if (owner === 'performance' && member === 'now') return 'clock-function';
-  if (owner === 'math' && member === 'random') return 'random-function';
-  if (owner === 'crypto' && ['getRandomValues', 'randomUUID'].includes(member)) return 'random-function';
-  if (owner === 'browser' && member === 'fetch') return 'network-function';
-  if (owner === 'browser' && NETWORK_CONSTRUCTORS.has(member)) return 'network-constructor';
-  if (owner === 'browser' && member === 'Date') return 'date';
-  if (owner === 'browser' && member === 'Math') return 'math';
-  if (owner === 'browser' && member === 'crypto') return 'crypto';
-  if (owner === 'browser' && member === 'performance') return 'performance';
-  if (owner === 'browser' && STORAGE_GLOBALS.has(member)) return 'storage';
+  if (isAmbientMember(owner, member, 'date', 'now')) return 'clock-function';
+  if (isPureDateConversion(owner, member)) return undefined;
+  if (isAmbientMember(owner, member, 'performance', 'now')) return 'clock-function';
+  if (isAmbientMember(owner, member, 'math', 'random')) return 'random-function';
+  if (isCryptographicRandomness(owner, member)) return 'random-function';
+  if (isAmbientMember(owner, member, 'browser', 'fetch')) return 'network-function';
+  if (isBrowserNetworkConstructor(owner, member)) return 'network-constructor';
+  if (isAmbientMember(owner, member, 'browser', 'Date')) return 'date';
+  if (isAmbientMember(owner, member, 'browser', 'Math')) return 'math';
+  if (isAmbientMember(owner, member, 'browser', 'crypto')) return 'crypto';
+  if (isAmbientMember(owner, member, 'browser', 'performance')) return 'performance';
+  if (isBrowserStorage(owner, member)) return 'storage';
   return owner;
 };
 
@@ -355,19 +406,26 @@ const unwrapExpression = node => {
   return expression;
 };
 
+const isDeclarationName = (node, parent) =>
+  (ts.isVariableDeclaration(parent) || ts.isParameter(parent) || ts.isFunctionDeclaration(parent) || ts.isClassDeclaration(parent))
+  && parent.name === node;
+
+const isPropertyAssignmentName = (node, parent) => ts.isPropertyAssignment(parent) && parent.name === node && parent.initializer !== node;
+
+const isPropertyAccessName = (node, parent) => ts.isPropertyAccessExpression(parent) && parent.name === node;
+
+const isModuleBinding = node =>
+  ts.isImportSpecifier(node) || ts.isExportSpecifier(node) || ts.isImportClause(node) || ts.isNamespaceImport(node);
+
 const isReferenceIdentifier = node => {
   const parent = node.parent;
   if (!parent) return true;
-  if (
-    (ts.isVariableDeclaration(parent) || ts.isParameter(parent) || ts.isFunctionDeclaration(parent) || ts.isClassDeclaration(parent))
-    && parent.name === node
-  ) {
+  if (isDeclarationName(node, parent)) {
     return false;
   }
-  if (ts.isPropertyAccessExpression(parent) && parent.name === node) return false;
-  if (ts.isPropertyAssignment(parent) && parent.name === node && parent.initializer !== node) return false;
-  if (ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent) || ts.isImportClause(parent) || ts.isNamespaceImport(parent))
-    return false;
+  if (isPropertyAccessName(node, parent)) return false;
+  if (isPropertyAssignmentName(node, parent)) return false;
+  if (isModuleBinding(parent)) return false;
   return true;
 };
 

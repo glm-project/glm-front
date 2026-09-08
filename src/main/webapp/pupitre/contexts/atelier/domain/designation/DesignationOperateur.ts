@@ -4,6 +4,9 @@ import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
+export const isFenetreIdentifiedBy = (fenetre: FenetreOperateur | undefined, identity: IdentiteDeFenetre): fenetre is FenetreOperateur =>
+  !(fenetre === undefined || !fenetre.identity().equals(identity));
+
 export interface DesignationResolution {
   readonly generation: number;
   readonly code: string;
@@ -84,19 +87,19 @@ export class DesignationOperateur {
   afterDigit(digit: string, now: number): DesignationOperateur {
     if (!/^\d$/.test(digit)) return this;
     const press = this.afterPress(now);
-    if (!press.accepted || !press.designation.canEdit()) return press.designation;
+    if (this.isEditingRefused(press)) return press.designation;
     return press.designation.with({ saisie: `${press.designation.etat.saisie}${digit}`, inconnu: false });
   }
 
   afterErasing(now: number): DesignationOperateur {
     const press = this.afterPress(now);
-    if (!press.accepted || !press.designation.canEdit()) return press.designation;
+    if (this.isEditingRefused(press)) return press.designation;
     return press.designation.with({ saisie: press.designation.etat.saisie.slice(0, -1), inconnu: false });
   }
 
   afterBeginningResolution(now: number): ResolutionResult {
     const press = this.afterPress(now);
-    if (!press.accepted || !press.designation.snapshot().canValidate) return { designation: press.designation, resolution: undefined };
+    if (this.isResolutionRefused(press)) return { designation: press.designation, resolution: undefined };
     const resolution = { generation: press.designation.etat.generation, code: press.designation.etat.saisie };
     return { designation: press.designation.with({ resolution }), resolution };
   }
@@ -147,7 +150,7 @@ export class DesignationOperateur {
   }
 
   afterReplacingWindow(fenetre: FenetreOperateur): DesignationOperateur {
-    if (this.etat.fenetre === undefined || !this.etat.fenetre.hasIdentity(fenetre)) return this;
+    if (this.isWindowReplacementRefused(fenetre)) return this;
     return this.with({ fenetre });
   }
 
@@ -168,12 +171,33 @@ export class DesignationOperateur {
     return this.etat.fenetre;
   }
 
+  canReconcileWith(entreprise: string | undefined): entreprise is string {
+    const fenetre = this.window();
+    return !(entreprise === undefined || (fenetre !== undefined && !fenetre.belongsTo(entreprise)));
+  }
+
   visibleWindow(): FenetreOperateur | undefined {
     return this.etat.designated ? this.etat.fenetre : undefined;
   }
 
   private requireClosedWindow(): void {
-    if (this.etat.fenetre !== undefined || this.etat.closing) throw new Error('Une fenetre operateur est deja ouverte.');
+    if (this.hasUnclosedWindow()) throw new Error('Une fenetre operateur est deja ouverte.');
+  }
+
+  private hasUnclosedWindow(): boolean {
+    return this.etat.fenetre !== undefined || this.etat.closing;
+  }
+
+  private isWindowReplacementRefused(fenetre: FenetreOperateur): boolean {
+    return this.etat.fenetre === undefined || !this.etat.fenetre.hasIdentity(fenetre);
+  }
+
+  private isEditingRefused(press: PressResult): boolean {
+    return !press.accepted || !press.designation.canEdit();
+  }
+
+  private isResolutionRefused(press: PressResult): boolean {
+    return !press.accepted || !press.designation.snapshot().canValidate;
   }
 
   private operateur(): IdentiteOperateurDesigne | undefined {
