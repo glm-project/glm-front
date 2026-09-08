@@ -87,11 +87,13 @@ const OUTCOME_BY_SCENARIO = new Map<string, DeviceEnrolmentOutcome>([
 const NEVER_APPROVED = new Promise<DeviceEnrolmentOutcome>(() => undefined);
 let enrolmentsRequested = 0;
 
+const isFirstDefaultEnrolment = (scenario: string | null): boolean => scenario === null && enrolmentsRequested === 1;
+
 const enrolmentFixture: DeviceEnrolmentPort = {
   enrol: showCode => {
     enrolmentsRequested += 1;
     const scenario = parameters.get('enrolment');
-    if (scenario === null && enrolmentsRequested === 1) return Promise.resolve('ENROLLED');
+    if (isFirstDefaultEnrolment(scenario)) return Promise.resolve('ENROLLED');
     showCode({
       userCode: 'WDJB-MJHT',
       verificationUri: 'http://localhost:9080/realms/glmproject/device',

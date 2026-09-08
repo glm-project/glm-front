@@ -1,6 +1,7 @@
 import {
   ActiviteDuPupitre,
   EvenementDuJournal,
+  GesteDAtelier,
   GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
@@ -35,13 +36,19 @@ const etatFor = (activites: number): 'EN_COURS' | 'INTERROMPU' => {
   return 'EN_COURS';
 };
 
+const isProjectablePointage = (evenement: EvenementDuJournal, geste: GesteDAtelier): geste is GesteDePointage =>
+  !(evenement.etat === 'REFUSE' || geste.nature !== 'POINTAGE');
+
+const isAlreadyProjectedOrUnrelated = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
+  suivi.id !== geste.suiviId || suivi.evenements.includes(geste.id);
+
 const applyEvenement = (suivis: SuiviDuPupitre[], evenement: EvenementDuJournal): SuiviDuPupitre[] => {
   const geste = evenement.geste;
-  if (evenement.etat === 'REFUSE' || geste.nature !== 'POINTAGE') {
+  if (!isProjectablePointage(evenement, geste)) {
     return suivis;
   }
   return suivis.map(suivi => {
-    if (suivi.id !== geste.suiviId || suivi.evenements.includes(geste.id)) {
+    if (isAlreadyProjectedOrUnrelated(suivi, geste)) {
       return suivi;
     }
     return applyPointage(suivi, geste);

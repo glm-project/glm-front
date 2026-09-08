@@ -2,9 +2,13 @@ const MIN_INJECTED_COLLABORATORS = 4;
 const MIN_PUBLIC_OPERATIONS = 6;
 const MIN_OWNED_STATES = 3;
 
+const isCallNamed = (node, name) => node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === name;
+
+const isNonTraversable = node => !node || typeof node !== 'object';
+
 const containsCallNamed = (node, name) => {
-  if (!node || typeof node !== 'object') return false;
-  if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === name) return true;
+  if (isNonTraversable(node)) return false;
+  if (isCallNamed(node, name)) return true;
   return Object.entries(node)
     .filter(([key]) => key !== 'parent')
     .some(([, value]) => (Array.isArray(value) ? value.some(child => containsCallNamed(child, name)) : containsCallNamed(value, name)));
@@ -13,8 +17,10 @@ const containsCallNamed = (node, name) => {
 const isInjectedCollaborator = member =>
   member.type === 'PropertyDefinition' && !member.static && containsCallNamed(member.value, 'inject');
 
+const isExcludedStateMember = member => member.type !== 'PropertyDefinition' || member.static || isInjectedCollaborator(member);
+
 const isOwnedState = member => {
-  if (member.type !== 'PropertyDefinition' || member.static || isInjectedCollaborator(member)) return false;
+  if (isExcludedStateMember(member)) return false;
   return !member.readonly || containsCallNamed(member.value, 'signal');
 };
 
@@ -26,6 +32,9 @@ const isPublicOperation = member =>
   && member.accessibility !== 'protected';
 
 const className = node => node.id?.name ?? 'anonymous class';
+
+const isBelowCoordinatorTripwire = (collaborators, operations, states) =>
+  collaborators < MIN_INJECTED_COLLABORATORS || operations < MIN_PUBLIC_OPERATIONS || states < MIN_OWNED_STATES;
 
 export const responsibilityCohesion = {
   meta: {
@@ -45,7 +54,7 @@ export const responsibilityCohesion = {
       const collaborators = members.filter(isInjectedCollaborator).length;
       const operations = members.filter(isPublicOperation).length;
       const states = members.filter(isOwnedState).length;
-      if (collaborators < MIN_INJECTED_COLLABORATORS || operations < MIN_PUBLIC_OPERATIONS || states < MIN_OWNED_STATES) {
+      if (isBelowCoordinatorTripwire(collaborators, operations, states)) {
         return;
       }
       context.report({

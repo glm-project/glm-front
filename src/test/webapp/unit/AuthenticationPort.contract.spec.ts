@@ -201,11 +201,19 @@ class AuthorizationServerFixture implements HttpBackend {
   private async answer(request: HttpRequest<unknown>): Promise<ServerAnswer> {
     const turn = this.turnFor(request.url, new URLSearchParams(request.serializeBody() as string));
 
-    if (this.holdingTokenAnswers && request.url === TOKEN_ENDPOINT) {
+    if (this.shouldHoldTokenAnswer(request)) {
       await this.heldAnswer;
     }
 
     return onceTheRequestHasTravelled(turn());
+  }
+
+  private shouldHoldTokenAnswer(request: HttpRequest<unknown>): boolean {
+    return this.holdingTokenAnswers && request.url === TOKEN_ENDPOINT;
+  }
+
+  private isInvalidDeviceClaim(form: URLSearchParams): boolean {
+    return form.get('grant_type') !== DEVICE_CODE_GRANT || form.get('device_code') !== DEVICE_CODE;
   }
 
   private turnFor(url: string, form: URLSearchParams): ServerTurn {
@@ -241,7 +249,7 @@ class AuthorizationServerFixture implements HttpBackend {
   private turnForAClaim(form: URLSearchParams): ServerTurn {
     this.claimsMade += 1;
 
-    if (form.get('grant_type') !== DEVICE_CODE_GRANT || form.get('device_code') !== DEVICE_CODE) {
+    if (this.isInvalidDeviceClaim(form)) {
       return notTheGrantItIssued;
     }
     return this.nextClaim;

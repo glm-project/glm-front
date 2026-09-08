@@ -59,7 +59,7 @@ export class PupitreSynchronization {
     }
     await this.drain(entreprise, publish);
     const token = this.authentication.currentToken();
-    if (this.authentication.currentTenant() !== entreprise || token === undefined) {
+    if (!this.canRefreshWith(entreprise, token)) {
       return;
     }
     await this.refreshReferentiel(entreprise, token, publish);
@@ -69,7 +69,7 @@ export class PupitreSynchronization {
     try {
       const referentiel = await this.serveur.referentiel();
       await this.authentication.synchronizeSession();
-      if (this.authentication.currentTenant() === entreprise && this.authentication.currentToken() === token) {
+      if (this.hasUnchangedAuthorization(entreprise, token)) {
         const state = await this.journal.saveReferentiel(entreprise, referentiel);
         publish(entreprise, state);
       }
@@ -161,8 +161,20 @@ export class PupitreSynchronization {
   }
 
   private requireExchange(entreprise: string): void {
-    if (this.authentication.currentTenant() !== entreprise || this.authentication.currentToken() === undefined) {
+    if (this.hasLostAuthorization(entreprise)) {
       throw new Error('L’autorisation du pupitre a change.');
     }
+  }
+
+  private canRefreshWith(entreprise: string, token: string | undefined): token is string {
+    return !(this.authentication.currentTenant() !== entreprise || token === undefined);
+  }
+
+  private hasUnchangedAuthorization(entreprise: string, token: string): boolean {
+    return this.authentication.currentTenant() === entreprise && this.authentication.currentToken() === token;
+  }
+
+  private hasLostAuthorization(entreprise: string): boolean {
+    return this.authentication.currentTenant() !== entreprise || this.authentication.currentToken() === undefined;
   }
 }

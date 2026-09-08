@@ -58,9 +58,13 @@ function propertyValue(node) {
   return node.parameter?.type === 'AssignmentPattern' ? node.parameter.right : node.value;
 }
 
+function isConstAssertion(value) {
+  return value.typeAnnotation.type === 'TSTypeReference' && typeName(value.typeAnnotation) === 'const';
+}
+
 function containsMutableCollectionInitializer(value) {
   if (value?.type === 'TSAsExpression') {
-    if (value.typeAnnotation.type === 'TSTypeReference' && typeName(value.typeAnnotation) === 'const') return false;
+    if (isConstAssertion(value)) return false;
     return containsMutableCollection(value.typeAnnotation);
   }
   return value?.type === 'ArrayExpression' || (value?.type === 'NewExpression' && mutableCollectionNames.has(value.callee.name));

@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { DesignationExpirationSchedulerPort } from '../domain/designation/DesignationExpirationSchedulerPort';
-import { DesignationOperateur } from '../domain/designation/DesignationOperateur';
+import { DesignationOperateur, isFenetreIdentifiedBy } from '../domain/designation/DesignationOperateur';
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
@@ -91,12 +91,12 @@ export class CurrentOperateurLifecycle {
 
   currentWindow(identity: IdentiteDeFenetre): FenetreOperateur {
     const current = this.designation().window();
-    if (current === undefined || !current.identity().equals(identity)) throw new Error('La fenetre operateur a change.');
+    if (!isFenetreIdentifiedBy(current, identity)) throw new Error('La fenetre operateur a change.');
     return current;
   }
 
   isCurrentWindow(identity: IdentiteDeFenetre): boolean {
-    return this.designation().window()?.identity().equals(identity) ?? false;
+    return isFenetreIdentifiedBy(this.designation().window(), identity);
   }
 
   acceptDecision(fenetre: FenetreOperateur): void {
@@ -115,11 +115,12 @@ export class CurrentOperateurLifecycle {
   }
 
   reconcile(entreprise: string | undefined, state: JournalDuPupitre): void {
-    const fenetre = this.designation().window();
-    if (entreprise === undefined || (fenetre !== undefined && !fenetre.belongsTo(entreprise))) {
+    const designation = this.designation();
+    if (!designation.canReconcileWith(entreprise)) {
       this.releaseWindow();
       return;
     }
+    const fenetre = designation.window();
     if (fenetre !== undefined) this.acceptDecision(fenetre.afterReconciling(entreprise, state));
   }
 

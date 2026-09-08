@@ -4,7 +4,9 @@ import { dirname } from 'node:path';
 
 const separator = process.argv.indexOf('--');
 
-if (separator < 3 || separator === process.argv.length - 1) {
+const hasInvalidInvocation = () => separator < 3 || separator === process.argv.length - 1;
+
+if (hasInvalidInvocation()) {
   process.stderr.write('Usage: node scripts/measure-command.mjs <label> -- <command> [arguments...]\n');
   process.exitCode = 2;
 } else {

@@ -8,8 +8,10 @@ import {
 } from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
+const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
+
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
-  if (value === null || value === undefined) {
+  if (isMissingFixture(value)) {
     throw new Error(`Missing ${description} fixture.`);
   }
   return value;

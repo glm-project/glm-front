@@ -48,6 +48,9 @@ interface PersistedEnrolment {
 
 const ENROLEMENT = 'enrolement';
 
+const hasTenantClaim = (claims: unknown): claims is { tenant: string } =>
+  typeof claims === 'object' && claims !== null && 'tenant' in claims && typeof claims.tenant === 'string' && claims.tenant.length > 0;
+
 const tenantIn = (token: string): string | undefined => {
   try {
     const payload = token.split('.')[1];
@@ -55,13 +58,7 @@ const tenantIn = (token: string): string | undefined => {
       return undefined;
     }
     const claims: unknown = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/')));
-    if (
-      typeof claims === 'object'
-      && claims !== null
-      && 'tenant' in claims
-      && typeof claims.tenant === 'string'
-      && claims.tenant.length > 0
-    ) {
+    if (hasTenantClaim(claims)) {
       return claims.tenant;
     }
   } catch {
@@ -107,6 +104,14 @@ const persistedEnrolmentFrom = (session: Session | undefined, tenant: string | u
 };
 
 const hasExpired = (session: Session): boolean => Date.now() >= session.expiresAt;
+
+const isUsableSession = (session: Session | undefined): session is Session => !(session === undefined || hasExpired(session));
+
+const canRestoreSession = (restored: boolean, stockage: LocalStoragePort | null): stockage is LocalStoragePort =>
+  !(restored || stockage === null);
+
+const hasConcurrentSession = (expected: Session | undefined, current: PersistedEnrolment): boolean =>
+  expected !== undefined && JSON.stringify(current.session) !== JSON.stringify(expected);
 
 const SHOW_NO_CODE: ShowDeviceAuthorizationCode = () => undefined;
 
@@ -164,7 +169,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
     const answer = await this.pollUntilGranted(device, enrolment);
 
-    if (answer === undefined || this.isAbandoned(enrolment)) {
+    if (!this.isActiveGrant(answer, enrolment)) {
       return 'ABANDONED';
     }
     if (!isGranted(answer)) {
@@ -199,10 +204,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     }
     const enrolment = this.enrolment;
     const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
-    if (
-      this.enrolment !== enrolment
-      || (JSON.stringify(stored?.session) === JSON.stringify(this.session) && stored?.tenant === this.tenant)
-    ) {
+    if (this.isSynchronizationUnnecessary(enrolment, stored)) {
       return;
     }
     clearTimeout(this.renewal);
@@ -214,10 +216,17 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   }
 
   override currentToken(): string | undefined {
-    if (this.session === undefined || hasExpired(this.session)) {
+    const session = this.session;
+    if (!isUsableSession(session)) {
       return undefined;
     }
-    return this.session.accessToken;
+    return session.accessToken;
+  }
+
+  private isSynchronizationUnnecessary(enrolment: symbol | undefined, stored: PersistedEnrolment | undefined): boolean {
+    return (
+      this.enrolment !== enrolment || (JSON.stringify(stored?.session) === JSON.stringify(this.session) && stored?.tenant === this.tenant)
+    );
   }
 
   override logout(): void {
@@ -237,6 +246,10 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private isAbandoned(enrolment: symbol): boolean {
     return this.enrolment !== enrolment;
+  }
+
+  private isActiveGrant(answer: GrantAnswer | undefined, enrolment: symbol): answer is GrantAnswer {
+    return !(answer === undefined || this.isAbandoned(enrolment));
   }
 
   private async pollUntilGranted(device: DeviceAuthorization, enrolment: symbol): Promise<GrantAnswer | undefined> {
@@ -350,7 +363,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   }
 
   private async restore(enrolment: symbol): Promise<Restoration> {
-    if (this.restored || this.stockage === null) {
+    if (!canRestoreSession(this.restored, this.stockage)) {
       return 'ABSENT';
     }
     const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
@@ -373,7 +386,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     return this.stockage.lock('session', async () => {
       let resultat: 'CONSERVE' | 'REMPLACE' = 'REMPLACE';
       await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, current => {
-        if (expected !== undefined && JSON.stringify(current.session) !== JSON.stringify(expected)) {
+        if (hasConcurrentSession(expected, current)) {
           return current;
         }
         resultat = 'CONSERVE';

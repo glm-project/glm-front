@@ -134,8 +134,10 @@ const browserNetworkProbe = (): Cypress.Chainable<NetworkProbeFixture> =>
       new Cypress.Promise<NetworkProbeFixture>(resolve => {
         const frame = document.createElement('iframe');
         const token = crypto.randomUUID();
+        const isUnrelatedProbeResponse = (event: MessageEvent<NetworkProbeFixture & { token?: string }>): boolean =>
+          event.source !== frame.contentWindow || event.data.token !== token;
         const listener = (event: MessageEvent<NetworkProbeFixture & { token?: string }>): void => {
-          if (event.source !== frame.contentWindow || event.data.token !== token) return;
+          if (isUnrelatedProbeResponse(event)) return;
           document.defaultView?.removeEventListener('message', listener);
           frame.remove();
           resolve(networkProbeFixtureFrom(event.data));

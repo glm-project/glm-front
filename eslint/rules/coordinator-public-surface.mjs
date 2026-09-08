@@ -21,9 +21,12 @@ const findApplicationFiles = sourceRoot => {
   });
 };
 
+const hasUninspectableName = member => !member.name || !ts.isIdentifier(member.name);
+const isNamedClass = node => ts.isClassDeclaration(node) && node.name;
+
 const isPublicMember = member => {
   if (ts.isConstructorDeclaration(member)) return false;
-  if (!member.name || !ts.isIdentifier(member.name)) return false;
+  if (hasUninspectableName(member)) return false;
   if (member.name.kind === ts.SyntaxKind.PrivateIdentifier) return false;
   const isPrivateOrProtected = member.modifiers?.some(
     modifier => modifier.kind === ts.SyntaxKind.PrivateKeyword || modifier.kind === ts.SyntaxKind.ProtectedKeyword,
@@ -49,7 +52,7 @@ export const inspectCoordinatorPublicSurface = ({
     const sourceFile = ts.createSourceFile(appFile, content, ts.ScriptTarget.Latest, true);
 
     const visit = node => {
-      if (ts.isClassDeclaration(node) && node.name) {
+      if (isNamedClass(node)) {
         const isExported = node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword);
         if (isExported) {
           const className = node.name.text;

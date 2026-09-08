@@ -26,6 +26,8 @@ const parseUpdates = input =>
       return { localRef, localOid, remoteRef, remoteOid };
     });
 
+const isMissingCommit = commit => commit === undefined || commit === '';
+
 const changedFilesFor = (update, remoteName, git) => {
   if (!ZERO_OID.test(update.remoteOid)) {
     return {
@@ -35,7 +37,7 @@ const changedFilesFor = (update, remoteName, git) => {
   }
 
   const [firstCommit] = git(['rev-list', '--reverse', update.localOid, '--not', `--remotes=${remoteName}`]).split('\n');
-  if (firstCommit === undefined || firstCommit === '') return { base: undefined, files: '' };
+  if (isMissingCommit(firstCommit)) return { base: undefined, files: '' };
   const [, parent] = git(['rev-list', '--parents', '-n', '1', firstCommit]).trim().split(/\s+/);
   if (parent === undefined) return { base: undefined, files: git(['ls-tree', '-r', '--name-only', update.localOid]) };
   return {

@@ -31,14 +31,20 @@ interface Page<T> {
   totalElementsCount: number;
 }
 
+const isUnstablePage = (previousTotal: number | undefined, count: number, received: number, pageSize: number): boolean =>
+  (previousTotal !== undefined && previousTotal !== count) || (pageSize === 0 && received < count);
+
 const requireStablePage = (previousTotal: number | undefined, count: number, received: number, pageSize: number): void => {
-  if ((previousTotal !== undefined && previousTotal !== count) || (pageSize === 0 && received < count)) {
+  if (isUnstablePage(previousTotal, count, received, pageSize)) {
     throw new Error('Le referentiel a change pendant sa lecture.');
   }
 };
 
+const hasDuplicateOrExcessElements = (elements: ReferentielEntry[], total: number): boolean =>
+  new Set(elements.map(element => element.id)).size !== elements.length || elements.length > total;
+
 const requireUniqueElements = (elements: ReferentielEntry[], total: number): void => {
-  if (new Set(elements.map(element => element.id)).size !== elements.length || elements.length > total) {
+  if (hasDuplicateOrExcessElements(elements, total)) {
     throw new Error('Le referentiel contient des doublons.');
   }
 };
@@ -140,9 +146,13 @@ export class HttpAtelierExchange extends AtelierExchangePort {
   }
 
   private requireToken(token: string | undefined): void {
-    if (token === undefined || this.authentication.currentToken() !== token) {
+    if (this.hasLostReadAuthorization(token)) {
       throw new Error('L’autorisation a change pendant la lecture.');
     }
+  }
+
+  private hasLostReadAuthorization(token: string | undefined): boolean {
+    return token === undefined || this.authentication.currentToken() !== token;
   }
 
   private write(geste: GesteDAtelier): Promise<unknown> {

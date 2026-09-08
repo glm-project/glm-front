@@ -248,15 +248,18 @@ const requiredElement = <T>(element: T | null, description: string): T => {
   return element;
 };
 
+const hasInitializedDeferred = (
+  callbacks: Partial<Pick<DeferredFixture, 'resolve' | 'reject'>>,
+): callbacks is Pick<DeferredFixture, 'resolve' | 'reject'> => !(callbacks.resolve === undefined || callbacks.reject === undefined);
+
 const deferredFixture = (): DeferredFixture => {
-  let resolve: (() => void) | undefined;
-  let reject: (() => void) | undefined;
+  const callbacks: { resolve?: () => void; reject?: () => void } = {};
   const promise = new Promise<void>((complete, fail) => {
-    resolve = complete;
-    reject = () => {
+    callbacks.resolve = complete;
+    callbacks.reject = () => {
       fail(new Error('disk failure'));
     };
   });
-  if (resolve === undefined || reject === undefined) throw new Error('Deferred fixture is not initialized.');
-  return { promise, resolve, reject };
+  if (!hasInitializedDeferred(callbacks)) throw new Error('Deferred fixture is not initialized.');
+  return { promise, ...callbacks };
 };

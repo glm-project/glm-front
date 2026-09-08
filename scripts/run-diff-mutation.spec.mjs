@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { runDiffMutation } from './run-diff-mutation.mjs';
 
+const isChronologicalHistoryRequest = arguments_ => arguments_[0] === 'rev-list' && arguments_[1] === '--reverse';
+
 describe('pre-push mutation', () => {
   it('should mutate production files changed by an existing remote branch', () => {
     const gitCalls = [];
@@ -43,7 +45,7 @@ describe('pre-push mutation', () => {
     const mutationCalls = [];
     const git = arguments_ => {
       gitCalls.push(arguments_);
-      if (arguments_[0] === 'rev-list' && arguments_[1] === '--reverse') return 'first\nlocal\n';
+      if (isChronologicalHistoryRequest(arguments_)) return 'first\nlocal\n';
       if (arguments_[0] === 'rev-list') return 'first base\n';
       if (arguments_[1] === '--unified=0') return '@@ -9 +10,2 @@\n';
       return 'src/main/webapp/gestion/contexts/operateur/domain/Operateur.ts\n';

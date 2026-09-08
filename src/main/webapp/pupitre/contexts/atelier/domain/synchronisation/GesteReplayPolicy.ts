@@ -1,4 +1,4 @@
-import { EvenementDuJournal, GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
+import { EvenementDuJournal, GesteDAtelier, GesteDePresence } from '../journal-du-pupitre/JournalDuPupitre';
 import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
 
@@ -24,6 +24,9 @@ const arrivalActuallyOpened = (evenements: readonly EvenementDuJournal[], arrive
       && evenement.journeeOuverte,
   );
 
+const followsOpenedArrival = (geste: GesteDePresence, evenements: readonly EvenementDuJournal[]): boolean =>
+  geste.assuranceArriveeId !== undefined && arrivalActuallyOpened(evenements, geste.assuranceArriveeId, geste.operateurId);
+
 export const operationFor = (geste: GesteDAtelier, evenements: readonly EvenementDuJournal[] = []): OperationDAtelier => {
   if (geste.nature === 'ARRIVEE') {
     return 'ARRIVEE_ASSUREE';
@@ -34,24 +37,33 @@ export const operationFor = (geste: GesteDAtelier, evenements: readonly Evenemen
   if (geste.implicite) {
     return 'PRESENCE_ASSUREE';
   }
-  if (geste.assuranceArriveeId !== undefined && arrivalActuallyOpened(evenements, geste.assuranceArriveeId, geste.operateurId)) {
+  if (followsOpenedArrival(geste, evenements)) {
     return 'REPRISE_APRES_ARRIVEE_OUVERTE';
   }
   return 'GESTE_EXPLICITE';
 };
+
+const canRetryConcurrence = (refus: unknown, tentative: 'INITIALE' | 'REJEU'): boolean =>
+  matches(refus, 'saisie-concurrente') && tentative === 'INITIALE';
+
+const absorbsAlreadyOpenDay = (operation: OperationDAtelier, refus: unknown): boolean =>
+  operation === 'ARRIVEE_ASSUREE' && matches(refus, 'journee-de-travail-deja-ouverte');
+
+const absorbsPresenceRefusal = (operation: OperationDAtelier, refus: unknown): boolean =>
+  absorbsForbiddenPresenceTransition(operation) && matches(refus, 'transition-de-presence-interdite');
 
 export const decideReplay = (
   operation: OperationDAtelier,
   refus: unknown,
   tentative: 'INITIALE' | 'REJEU' = 'INITIALE',
 ): ReplayDecision => {
-  if (matches(refus, 'saisie-concurrente') && tentative === 'INITIALE') {
+  if (canRetryConcurrence(refus, tentative)) {
     return 'RELIRE_ET_REJOUER';
   }
-  if (operation === 'ARRIVEE_ASSUREE' && matches(refus, 'journee-de-travail-deja-ouverte')) {
+  if (absorbsAlreadyOpenDay(operation, refus)) {
     return 'ACCEPTER';
   }
-  if (absorbsForbiddenPresenceTransition(operation) && matches(refus, 'transition-de-presence-interdite')) {
+  if (absorbsPresenceRefusal(operation, refus)) {
     return 'ACCEPTER';
   }
   return 'PROPAGER';

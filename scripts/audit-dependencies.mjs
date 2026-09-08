@@ -38,6 +38,8 @@ export const saveAudit = ({ audit, generatedAt, outputDirectory }) => {
 
 const isMain = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
+const hasExecutionFailure = result => result.error !== undefined || result.status === null;
+
 if (isMain) {
   const result = spawnSync('npm', ['audit', '--json', '--audit-level=high'], {
     cwd: repositoryRoot,
@@ -46,7 +48,7 @@ if (isMain) {
   });
   let audit;
 
-  if (result.error !== undefined || result.status === null) {
+  if (hasExecutionFailure(result)) {
     audit = { error: { summary: result.error?.message ?? `npm audit ended by signal ${result.signal ?? 'unknown'}` } };
   } else {
     try {

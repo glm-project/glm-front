@@ -18,6 +18,10 @@ describe('DesignationOperateur', () => {
     designation = DesignationOperateur.empty();
   });
 
+  it('should require a selected entreprise to reconcile even before an operator is designated', () => {
+    expect(designation.canReconcileWith(undefined)).toBe(false);
+  });
+
   it('should refuse to attribute a pointage at the inactivity deadline without a screen callback', () => {
     givenDesignatedOperator();
 
