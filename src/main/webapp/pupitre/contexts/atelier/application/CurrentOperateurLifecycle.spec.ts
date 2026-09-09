@@ -282,6 +282,15 @@ describe('Designation du pupitre', () => {
     thenNewGestureIsRefused();
   });
 
+  it('should designate without any exchange of its own', async () => {
+    whenEntering('049');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenOperatorIsDesignated();
+    thenNoExchangeWasAttempted();
+  });
+
   it('should reach an operator added to the referential after a window closes', async () => {
     givenAnOperateurAddedToTheServerReferential();
 
@@ -369,6 +378,9 @@ describe('Designation du pupitre', () => {
   };
   const whenTheServerRefreshSettles = (): Promise<void> => journal.synchronizationsSettled();
   const whenAFailureIsReported = (): Promise<void> => errorHandler.nextFailure();
+  const thenNoExchangeWasAttempted = (): void => {
+    expect(serveur.attempts).toBe(0);
+  };
   const thenTheAddedOperatorIsDesignated = (): void => {
     expect(designation.operateur()).toEqual(identiteOperateurAjouteFixture);
   };

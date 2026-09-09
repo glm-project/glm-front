@@ -8,6 +8,7 @@ const emptyReferentiel = (): ReferentielDuPupitre => ({ operateurs: [], suivis: 
 export class AtelierExchangeFixture extends AtelierExchangePort {
   private readonly suspended: (() => void)[] = [];
   private suspends = false;
+  attempts = 0;
   reference: ReferentielDuPupitre = emptyReferentiel();
 
   override referentiel(): Promise<ReferentielDuPupitre> {
@@ -32,6 +33,7 @@ export class AtelierExchangeFixture extends AtelierExchangePort {
   }
 
   private answer<T>(answer: () => T): Promise<T> {
+    this.attempts += 1;
     return new Promise<T>(resolve => {
       const respond = (): void => {
         resolve(answer());
