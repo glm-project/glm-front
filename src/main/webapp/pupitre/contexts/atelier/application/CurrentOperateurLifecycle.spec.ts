@@ -352,6 +352,49 @@ describe('Designation du pupitre', () => {
     thenUnknownCodeIsShown();
   });
 
+  it('should not push the referential twice for the same unknown code', async () => {
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    const pushed = givenTheExchangesSoFar();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenNoFurtherExchangeWasAttempted(pushed);
+  });
+
+  it('should push the referential again for a different unknown code', async () => {
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    const pushed = givenTheExchangesSoFar();
+
+    whenEntering('051');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenAFurtherExchangeWasAttempted(pushed);
+  });
+
+  it('should push the referential again for a code refused before a successful designation', async () => {
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
+    await whenTheServerRefreshSettles();
+    const pushed = givenTheExchangesSoFar();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenAFurtherExchangeWasAttempted(pushed);
+  });
+
   it('should keep showing the unknown code while the pushed refresh runs', async () => {
     givenAnOperateurAddedToTheServerReferential();
 
@@ -403,6 +446,13 @@ describe('Designation du pupitre', () => {
   const whenAFailureIsReported = (): Promise<void> => errorHandler.nextFailure();
   const thenNoExchangeWasAttempted = (): void => {
     expect(serveur.attempts).toBe(0);
+  };
+  const givenTheExchangesSoFar = (): number => serveur.attempts;
+  const thenNoFurtherExchangeWasAttempted = (previous: number): void => {
+    expect(serveur.attempts).toBe(previous);
+  };
+  const thenAFurtherExchangeWasAttempted = (previous: number): void => {
+    expect(serveur.attempts).toBeGreaterThan(previous);
   };
   const thenTheAddedOperatorIsDesignated = (): void => {
     expect(designation.operateur()).toEqual(identiteOperateurAjouteFixture);

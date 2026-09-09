@@ -44,6 +44,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - Une référence incomplète ou un échec de rafraîchissement ne remplace jamais la dernière référence complète.
 - Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
 - La fraîcheur du référentiel se pousse en arrière-plan, par une synchronisation complète qui publie d'abord les gestes en attente, et ne se place jamais sur le chemin d'un geste.
+- Un même matricule inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
 
 ## Règles locales
 

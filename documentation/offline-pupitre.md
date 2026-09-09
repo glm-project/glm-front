@@ -69,6 +69,10 @@ An operator added to the reference is therefore missing from the cache for a whi
 nothing about it. Online, the runtime interval closes that gap on its own, and the unknown-code trigger
 usually closes it sooner: the operator types their code again and it works.
 
+That last trigger fires once per code. Retyping a matricule that the freshly pushed reference still does not
+know reads nothing new, and a mistyped code on a keypad repeats easily, so `FraicheurDuReferentiel` holds it
+back rather than paging the whole reference again. Any successful designation releases the hold.
+
 ## Synchronization preserves evidence
 
 The queue is FIFO and continues after known business refusals. Persist the refusal and its cause. An unknown

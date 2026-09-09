@@ -59,12 +59,13 @@ export class CurrentOperateurLifecycle {
     if (resolution === undefined) return;
     try {
       await this.openWindow(resolution.code);
+      this.fraicheur.release();
       const completion = this.designation().afterCompletingResolution(resolution, Date.now());
       this.designation.set(completion.designation);
       if (!completion.accepted) await this.drainWindow();
     } catch (failure: unknown) {
       this.designation.update(current => current.afterFailingResolution(resolution, Date.now()));
-      if (failure instanceof MatriculeInconnu) this.pushReferentielFreshness();
+      if (failure instanceof MatriculeInconnu) this.fraicheur.pushForUnknown(resolution.code, this.applyReferentiel);
     } finally {
       this.designation.update(current => current.afterEndingResolution());
       this.refresh();
