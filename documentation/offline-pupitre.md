@@ -58,10 +58,11 @@ rule as written.
 
 Freshness is pushed, never dated. The reference refreshes at boot, on the browser online event, on the
 thirty-second interval owned by `PupitreRuntime`, after an accepted capture, when an operator window closes
-and when a code came back unknown. Every one of those triggers runs the whole synchronization: pending
-gestures are published first and the reference is read last, so a failure earlier in the exchange leaves the
-reference unchanged. There is no TTL and no per-entry expiry marker; the chrome's binary connected indicator
-already carries that information.
+and when a code came back unknown. The enrolment screen adds the one operator-initiated trigger: its retry
+button, offered while the first complete reference is still missing. Every one of those triggers runs the
+whole synchronization: pending gestures are published first and the reference is read last, so a failure
+earlier in the exchange leaves the reference unchanged. There is no TTL and no per-entry expiry marker; the
+chrome's binary connected indicator already carries that information.
 
 An operator added to the reference is therefore missing from the cache for a while, and the pupitre says
 nothing about it. Online, the runtime interval closes that gap on its own, and the unknown-code trigger
