@@ -89,7 +89,7 @@ describe('PupitreRuntime', () => {
 
     await thenSynchronizationAttemptsAre(1);
 
-    await whenOneMinutePasses();
+    await whenThirtySecondsPass();
 
     await thenSynchronizationAttemptsAre(2);
   });
@@ -97,7 +97,7 @@ describe('PupitreRuntime', () => {
   it('should start only one refresh schedule', async () => {
     await whenStartingPupitreTwice();
 
-    await whenOneMinutePasses();
+    await whenThirtySecondsPass();
 
     await thenSynchronizationAttemptsAre(1);
   });
@@ -107,7 +107,7 @@ describe('PupitreRuntime', () => {
 
     whenDestroyingTheRuntime();
     whenNetworkReturns();
-    await whenOneMinutePasses();
+    await whenThirtySecondsPass();
 
     await thenSynchronizationAttemptsAre(0);
   });
@@ -120,7 +120,7 @@ describe('PupitreRuntime', () => {
     await whenTheEnrolmentCompletes(startup);
 
     whenNetworkReturns();
-    await whenOneMinutePasses();
+    await whenThirtySecondsPass();
 
     await thenSynchronizationAttemptsAre(0);
   });
@@ -173,8 +173,8 @@ describe('PupitreRuntime', () => {
   const whenNetworkReturns = (): void => {
     window.dispatchEvent(new Event('online'));
   };
-  const whenOneMinutePasses = async (): Promise<void> => {
-    await vi.advanceTimersByTimeAsync(60_000);
+  const whenThirtySecondsPass = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(30_000);
   };
   const thenSynchronizationAttemptsAre = async (expected: number): Promise<void> => {
     await pupitre.settle();

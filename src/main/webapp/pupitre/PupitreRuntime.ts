@@ -30,7 +30,7 @@ export class PupitreRuntime implements OnDestroy {
 
   private async initialize(): Promise<void> {
     window.addEventListener('online', this.refresh);
-    this.interval = setInterval(this.refresh, 60_000);
+    this.interval = setInterval(this.refresh, 30_000);
     await this.enrolement.enroler();
   }
 
