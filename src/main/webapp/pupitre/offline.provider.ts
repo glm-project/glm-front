@@ -4,6 +4,7 @@ import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/s
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
+import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/FraicheurDuReferentiel';
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
@@ -19,6 +20,7 @@ export const offlineProvider: Provider[] = [
   ApiClient,
   GestesRecordingQueue,
   EtatHorsLigneDuPupitre,
+  FraicheurDuReferentiel,
   AtelierCoordinator,
   CurrentOperateurLifecycle,
   PupitreSynchronization,

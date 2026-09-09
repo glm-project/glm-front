@@ -2,17 +2,25 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
+import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/FraicheurDuReferentiel';
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
 } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
-import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  JournalDuPupitre,
+  ReferentielDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { setTimeout as roundTrip } from 'node:timers';
 import { Designation } from './designation';
@@ -22,16 +30,19 @@ interface KeyFixture {
   repeat?: boolean;
 }
 
-const referenceFixture: JournalDuPupitre = {
-  ...EMPTY_JOURNAL_DU_PUPITRE,
-  referentiel: { operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }], suivis: [] },
+const referentielFixture: ReferentielDuPupitre = {
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+  suivis: [],
 };
 
-class DesignationJournalFixture {
+const referenceFixture: JournalDuPupitre = { ...EMPTY_JOURNAL_DU_PUPITRE, referentiel: referentielFixture };
+
+class DesignationJournalFixture extends JournauxDuPupitreFixture {
   readCompleted = Promise.resolve();
   private notifyReadCompleted: (() => void) | undefined;
 
   constructor() {
+    super();
     this.prepareNextRead();
   }
 
@@ -46,15 +57,12 @@ class DesignationJournalFixture {
     });
   }
 
-  read(): Promise<JournalDuPupitre> {
+  override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     const notify = this.notifyReadCompleted;
     if (notify === undefined) throw new Error('Read completion is not prepared.');
-    return new Promise(resolve =>
-      roundTrip(() => {
-        resolve(structuredClone(referenceFixture));
-        roundTrip(notify);
-      }),
-    );
+    const state = await super.read(entreprise);
+    roundTrip(notify);
+    return state;
   }
 }
 
@@ -74,19 +82,27 @@ describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
   let designation: CurrentOperateurLifecycle;
   let journalFixture: DesignationJournalFixture;
-  const serveurFixture = { referentiel: vi.fn(), send: vi.fn(), reread: vi.fn() };
+  let serveurFixture: AtelierExchangeFixture;
   beforeEach(() => {
     journalFixture = new DesignationJournalFixture();
+    journalFixture.seedJournal(Entreprise.of('atelier'), referenceFixture);
+    serveurFixture = new AtelierExchangeFixture();
+    serveurFixture.reference = referentielFixture;
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
         GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
+        FraicheurDuReferentiel,
         CurrentOperateurLifecycle,
         PupitreSynchronization,
         {
           provide: AuthenticationPort,
-          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
+          useValue: {
+            currentTenant: () => 'atelier',
+            currentToken: () => 'jeton',
+            synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)),
+          },
         },
         { provide: JournauxDuPupitrePort, useValue: journalFixture },
         { provide: AtelierExchangePort, useValue: serveurFixture },
@@ -98,7 +114,10 @@ describe('Designation keypad', () => {
     designation = TestBed.inject(CurrentOperateurLifecycle);
     fixture.detectChanges();
   });
-  afterEach(() => {
+  afterEach(async () => {
+    serveurFixture.settle();
+    await journalFixture.synchronizationsSettled();
+    await new Promise(resolve => roundTrip(resolve));
     TestBed.resetTestingModule();
     vi.useRealTimers();
   });
@@ -181,6 +200,7 @@ describe('Designation keypad', () => {
   };
   const whenResolutionSettles = async (): Promise<void> => {
     await journalFixture.readCompleted;
+    await journalFixture.synchronizationsSettled();
     void journalFixture.nextRead();
     fixture.detectChanges();
   };
@@ -189,9 +209,6 @@ describe('Designation keypad', () => {
   };
   const thenOperatorIsDesignated = (): void => {
     expect(designation.operateur()?.id).toBe('jean');
-    expect(serveurFixture.referentiel).not.toHaveBeenCalled();
-    expect(serveurFixture.send).not.toHaveBeenCalled();
-    expect(serveurFixture.reread).not.toHaveBeenCalled();
   };
 
   const element = (selector: string): HTMLElement => {

@@ -13,7 +13,7 @@ export class PupitreRuntime implements OnDestroy {
   private startup: Promise<void> | undefined;
   private interval: ReturnType<typeof setInterval> | undefined;
   private readonly refresh = (): void => {
-    void this.synchronize();
+    this.errorHandler.observe(this.atelier.synchronize());
   };
 
   readonly connected = this.etatHorsLigne.connected;
@@ -30,13 +30,7 @@ export class PupitreRuntime implements OnDestroy {
 
   private async initialize(): Promise<void> {
     window.addEventListener('online', this.refresh);
-    this.interval = setInterval(this.refresh, 60_000);
+    this.interval = setInterval(this.refresh, 30_000);
     await this.enrolement.enroler();
-  }
-
-  private async synchronize(): Promise<void> {
-    await this.atelier.synchronize().catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
   }
 }

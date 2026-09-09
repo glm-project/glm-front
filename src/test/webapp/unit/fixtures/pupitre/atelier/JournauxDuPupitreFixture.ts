@@ -9,7 +9,9 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 
-const answerOnNextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+const scheduleOnTheRealClock = globalThis.setTimeout.bind(globalThis);
+
+const answerOnNextTask = (): Promise<void> => new Promise(resolve => scheduleOnTheRealClock(resolve));
 
 interface AppendBarrier {
   readonly started: Promise<void>;
@@ -52,6 +54,8 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly tails = new Map<string, Promise<unknown>>();
   private nextAppendBarrier: AppendBarrier | undefined;
   private readsImmediately = false;
+  private synchronizationsInFlight = 0;
+  private readonly waitingForSettled: (() => void)[] = [];
   failWrite = false;
   afterRead: (() => void) | undefined;
 
@@ -90,8 +94,22 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({ ...state, connecte: false }));
   }
-  override synchronize<T>(action: () => Promise<T>): Promise<T> {
-    return this.lock('synchronisation', action);
+  override async synchronize<T>(action: () => Promise<T>): Promise<T> {
+    this.synchronizationsInFlight += 1;
+    try {
+      return await this.lock('synchronisation', action);
+    } finally {
+      this.synchronizationsInFlight -= 1;
+      if (this.synchronizationsInFlight === 0) {
+        for (const resolve of this.waitingForSettled.splice(0)) resolve();
+      }
+    }
+  }
+  synchronizationsSettled(): Promise<void> {
+    if (this.synchronizationsInFlight === 0) return Promise.resolve();
+    return new Promise(resolve => {
+      this.waitingForSettled.push(resolve);
+    });
   }
   override withSession<T>(action: () => Promise<T>): Promise<T> {
     return this.lock('session', action);

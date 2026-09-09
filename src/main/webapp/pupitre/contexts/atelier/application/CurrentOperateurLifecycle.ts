@@ -5,9 +5,11 @@ import { DesignationOperateur, isFenetreIdentifiedBy } from '../domain/designati
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
+import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';
 import { Entreprise } from '../domain/journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { ApplicationDuReferentiel, FraicheurDuReferentiel } from './FraicheurDuReferentiel';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 @Injectable()
@@ -16,8 +18,12 @@ export class CurrentOperateurLifecycle {
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(GestesRecordingQueue);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
+  private readonly fraicheur = inject(FraicheurDuReferentiel);
   private readonly designation = signal(DesignationOperateur.empty());
   private readonly state = computed(() => this.designation().snapshot());
+  private readonly applyReferentiel: ApplicationDuReferentiel = (entreprise, state) => {
+    this.reconcile(entreprise, state);
+  };
   private fermeture: Promise<void> | undefined;
 
   readonly code = computed(() => this.state().code);
@@ -53,11 +59,13 @@ export class CurrentOperateurLifecycle {
     if (resolution === undefined) return;
     try {
       await this.openWindow(resolution.code);
+      this.fraicheur.release();
       const completion = this.designation().afterCompletingResolution(resolution, Date.now());
       this.designation.set(completion.designation);
       if (!completion.accepted) await this.drainWindow();
-    } catch {
+    } catch (failure: unknown) {
       this.designation.update(current => current.afterFailingResolution(resolution, Date.now()));
+      if (failure instanceof MatriculeInconnu) this.fraicheur.pushForUnknown(resolution.code, this.applyReferentiel);
     } finally {
       this.designation.update(current => current.afterEndingResolution());
       this.refresh();
@@ -116,6 +124,14 @@ export class CurrentOperateurLifecycle {
     if (this.isCurrentWindow(identity)) this.acceptDecision(this.currentWindow(identity).afterCompletingGlobal());
   }
 
+  refreshReferentiel(): Promise<void> {
+    return this.fraicheur.refresh(this.applyReferentiel);
+  }
+
+  pushReferentielFreshness(): void {
+    this.fraicheur.push(this.applyReferentiel);
+  }
+
   reconcile(entreprise: Entreprise | undefined, state: JournalDuPupitre): void {
     const designation = this.designation();
     if (!designation.canReconcileWith(entreprise)) {
@@ -138,13 +154,13 @@ export class CurrentOperateurLifecycle {
   }
 
   private refresh(): void {
-    this.observe(this.settle());
+    this.errorHandler.observe(this.settle());
   }
 
   private scheduleExpiration(): void {
     this.expirationScheduler.schedule(this.state().deadline, {
       expire: () => {
-        this.observe(this.expire());
+        this.errorHandler.observe(this.expire());
       },
     });
   }
@@ -152,19 +168,17 @@ export class CurrentOperateurLifecycle {
   private async drainWindow(): Promise<void> {
     await this.acceptationLocale.drain();
     this.releaseWindow();
-    await this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
-      this.reconcile(entreprise, state);
-    });
+    try {
+      await this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
+        this.reconcile(entreprise, state);
+      });
+    } finally {
+      this.pushReferentielFreshness();
+    }
   }
 
   private releaseWindow(): void {
     this.designation.update(current => current.afterReleasingWindow());
     this.scheduleExpiration();
-  }
-
-  private observe(operation: Promise<void>): void {
-    void operation.catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
   }
 }

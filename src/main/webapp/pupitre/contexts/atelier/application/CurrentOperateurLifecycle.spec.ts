@@ -17,13 +17,18 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { FraicheurDuReferentiel } from './FraicheurDuReferentiel';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
+
+const operateurAjouteFixture: OperateurDuPupitre = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050', postes: [] };
+const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050' };
 
 const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
 
@@ -42,16 +47,12 @@ class DesignationJournalFixture extends JournauxDuPupitreFixture {
       this.notifyRead = resolve;
     });
   }
-  override read(): Promise<JournalDuPupitre> {
+  override read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     this.notifyRead();
     const answer = this.answer;
     this.answer = undefined;
     if (answer !== undefined) return answer;
-    return new Promise(resolve =>
-      roundTrip(() => {
-        resolve(structuredClone(referenceFixture));
-      }),
-    );
+    return super.read(entreprise);
   }
 }
 
@@ -71,31 +72,50 @@ describe('Designation du pupitre', () => {
   let designation: CurrentOperateurLifecycle;
   let journal: DesignationJournalFixture;
   let errorHandler: ErrorHandlerFixture;
+  let serveur: AtelierExchangeFixture;
+  let sessionFailure: Error | undefined;
   beforeEach(async () => {
+    sessionFailure = undefined;
     errorHandler = new ErrorHandlerFixture();
     journal = new DesignationJournalFixture();
+    serveur = new AtelierExchangeFixture();
+    serveur.reference = referentielFixture;
     await journal.saveReferentiel(Entreprise.of('atelier'), referentielFixture);
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
         GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
+        FraicheurDuReferentiel,
         AtelierCoordinator,
         CurrentOperateurLifecycle,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
-        { provide: AtelierExchangePort, useValue: {} },
+        { provide: AtelierExchangePort, useValue: serveur },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
         {
           provide: AuthenticationPort,
-          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
+          useValue: {
+            currentTenant: () => 'atelier',
+            currentToken: () => 'jeton',
+            synchronizeSession: () =>
+              new Promise<void>((resolve, reject) =>
+                roundTrip(() => {
+                  if (sessionFailure === undefined) resolve();
+                  else reject(sessionFailure);
+                }),
+              ),
+          },
         },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     designation = TestBed.inject(CurrentOperateurLifecycle);
   });
-  afterEach(() => {
+  afterEach(async () => {
+    serveur.settle();
+    await journal.synchronizationsSettled();
+    await new Promise(resolve => roundTrip(resolve));
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
     vi.useRealTimers();
@@ -226,11 +246,12 @@ describe('Designation du pupitre', () => {
     whenEntering('049');
     await whenValidating();
     const reject = givenDelayedFailure();
+    const reported = whenAFailureIsReported();
 
     await whenTimePasses(30_001);
     await whenReadStarts();
     whenRejecting(reject);
-    await new Promise(resolve => roundTrip(resolve));
+    await reported;
 
     expect(errorHandler.errors).toEqual([expect.objectContaining({ message: 'Unavailable' })]);
   });
@@ -262,6 +283,183 @@ describe('Designation du pupitre', () => {
 
     thenNewGestureIsRefused();
   });
+
+  it('should designate without any exchange of its own', async () => {
+    whenEntering('049');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenOperatorIsDesignated();
+    thenNoExchangeWasAttempted();
+  });
+
+  it('should reach an operator added to the referential after a window closes', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenTheAddedOperatorIsDesignated();
+  });
+
+  it('should reach an operator added to the referential even when the closure fails to reread the journal', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+    whenEntering('049');
+    await whenValidating();
+
+    const reject = givenDelayedFailure();
+    const closure = whenFinishing();
+    await whenReadStarts();
+    whenRejecting(reject);
+    await whenTheClosureFails(closure);
+
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenTheAddedOperatorIsDesignated();
+  });
+
+  it('should reach an operator added to the referential on the keystroke after their code came back unknown', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenTheAddedOperatorIsDesignated();
+  });
+
+  it('should leave the referential untouched when the resolution fails for another reason than an unknown code', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+    const reject = givenDelayedFailure();
+
+    whenEntering('050');
+    const pending = whenValidating();
+    await whenReadStarts();
+    whenRejecting(reject);
+    await whenResolutionCompletes(pending);
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenUnknownCodeIsShown();
+  });
+
+  it('should not push the referential twice for the same unknown code', async () => {
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    const pushed = givenTheExchangesSoFar();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenNoFurtherExchangeWasAttempted(pushed);
+  });
+
+  it('should push the referential again for a different unknown code', async () => {
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    const pushed = givenTheExchangesSoFar();
+
+    whenEntering('051');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenAFurtherExchangeWasAttempted(pushed);
+  });
+
+  it('should push the referential again for a code refused before a successful designation', async () => {
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
+    await whenTheServerRefreshSettles();
+    const pushed = givenTheExchangesSoFar();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenAFurtherExchangeWasAttempted(pushed);
+  });
+
+  it('should keep showing the unknown code while the pushed refresh runs', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenUnknownCodeIsShown();
+  });
+
+  it('should designate again while every exchange pushed by the previous closure still hangs', async () => {
+    givenAHangingServerExchange();
+
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
+    whenEntering('049');
+    await whenValidating();
+
+    thenOperatorIsDesignated();
+  });
+
+  it('should close the designation even when the pushed refresh rejects', async () => {
+    whenEntering('049');
+    await whenValidating();
+    whenTheSessionStopsAnswering();
+    const reported = whenAFailureIsReported();
+
+    await whenFinishing();
+    await reported;
+
+    thenClosed();
+    thenTheRefreshFailureWasReported();
+  });
+
+  const givenAnOperateurAddedToTheServerReferential = (): void => {
+    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [] };
+  };
+  const givenAHangingServerExchange = (): void => {
+    serveur.suspendExchanges();
+  };
+  const whenTheSessionStopsAnswering = (): void => {
+    sessionFailure = new Error('Session indisponible');
+  };
+  const whenTheServerRefreshSettles = (): Promise<void> => journal.synchronizationsSettled();
+  const whenTheClosureFails = async (closure: Promise<void>): Promise<void> => {
+    await expect(closure).rejects.toThrow('Unavailable');
+  };
+  const whenAFailureIsReported = (): Promise<void> => errorHandler.nextFailure();
+  const thenNoExchangeWasAttempted = (): void => {
+    expect(serveur.attempts).toBe(0);
+  };
+  const givenTheExchangesSoFar = (): number => serveur.attempts;
+  const thenNoFurtherExchangeWasAttempted = (previous: number): void => {
+    expect(serveur.attempts).toBe(previous);
+  };
+  const thenAFurtherExchangeWasAttempted = (previous: number): void => {
+    expect(serveur.attempts).toBeGreaterThan(previous);
+  };
+  const thenTheAddedOperatorIsDesignated = (): void => {
+    expect(designation.operateur()).toEqual(identiteOperateurAjouteFixture);
+  };
+  const thenTheRefreshFailureWasReported = (): void => {
+    expect(errorHandler.errors).toContainEqual(new Error('Session indisponible'));
+  };
 
   const thenNewGestureIsRefused = (): void => {
     expect(() => TestBed.inject(AtelierCoordinator).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');

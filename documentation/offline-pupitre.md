@@ -31,6 +31,7 @@ advances that view.
 motifs, never transport URNs.
 
 `CurrentOperateurLifecycle` owns the current immutable designation and derives its visible snapshots.
+`FraicheurDuReferentiel` owns the decision to refresh the reference and whether that refresh is awaited.
 `AtelierCoordinator` coordinates gesture commands and durable capture. `PupitreSynchronization` coordinates
 authenticated exchange, FIFO publication, aggregate rereads and reference refresh. Keep storage,
 authentication and transport mechanics out of the domain owners.
@@ -42,6 +43,36 @@ from the designation's domain refusal; the primary presentation chooses the mess
 `EvenementsDuJournal` owns pending-event selection in acceptance order and refused-event queries. Domain
 publication functions construct accepted or refused outcomes; synchronization executes and persists them.
 
+## The pupitre writes identifiers and only displays labels
+
+Every gesture carries identifiers — `operateurId`, `suiviId`, `posteId`. Names, element numbers and
+workstation labels never leave the screen. A stale label therefore corrupts no data: it misnames a tile for
+the length of the outage, and the identifiers behind it stay exact. This is what makes the local reference
+cacheable at all.
+
+`glm-back/documentation/atelier-api.md`, under « L'opérateur et le poste sont des identifiants », resolves
+those labels at every read and asks the front not to cache them beyond a screen session. The pupitre keeps
+its whole reference on disk across restarts and renders designation and tile labels from it, so it holds
+that rule for the identifiers it writes back and knowingly diverges for the labels it shows. It is the
+capture device that must keep working when the network does not; the back office's online views hold the
+rule as written.
+
+Freshness is pushed, never dated. The reference refreshes at boot, on the browser online event, on the
+thirty-second interval owned by `PupitreRuntime`, after an accepted capture, when an operator window closes
+and when a code came back unknown. The enrolment screen adds the one operator-initiated trigger: its retry
+button, offered while the first complete reference is still missing. Every one of those triggers runs the
+whole synchronization: pending gestures are published first and the reference is read last, so a failure
+earlier in the exchange leaves the reference unchanged. There is no TTL and no per-entry expiry marker; the
+chrome's binary connected indicator already carries that information.
+
+An operator added to the reference is therefore missing from the cache for a while, and the pupitre says
+nothing about it. Online, the runtime interval closes that gap on its own, and the unknown-code trigger
+usually closes it sooner: the operator types their code again and it works.
+
+That last trigger fires once per code. Retyping a matricule that the freshly pushed reference still does not
+know reads nothing new, and a mistyped code on a keypad repeats easily, so `FraicheurDuReferentiel` holds it
+back rather than paging the whole reference again. Any successful designation releases the hold.
+
 ## Synchronization preserves evidence
 
 The queue is FIFO and continues after known business refusals. Persist the refusal and its cause. An unknown
@@ -50,11 +81,11 @@ technical failure leaves the gesture pending and stops that push, allowing a lat
 An identical retry reuses the original body. For `saisie-concurrente`, reread the affected aggregate and
 retry once; retain a second refusal. Never generate a new UUID or occurrence time during replay.
 
-Refresh the complete operator and workshop reference at boot, on the browser online event and on the runtime
-interval. Publish the pair only after every page of both collections passes total, duplicate and progress
-checks. Activating that post-write snapshot records accepted pointage identifiers in the local reference so
-their optimistic effects are no longer applied, while retaining the gestures in the audit trail. A failed
-refresh preserves the previous complete cache and its optimistic effects.
+Every synchronization ends by refreshing the complete operator and workshop reference. Publish the pair only
+after every page of both collections passes total, duplicate and progress checks. Activating that post-write
+snapshot records accepted pointage identifiers in the local reference so their optimistic effects are no
+longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
+complete cache and its optimistic effects.
 
 Only push outcomes set connectivity. The browser online event is a trigger, not evidence that the server is
 reachable. A received business refusal proves connectivity even though the gesture remains refused.

@@ -56,9 +56,11 @@ application size limit, expiry, rotation or purge; acknowledged events are retai
 `HttpAtelierExchange` reads every page of operators and workshop elements, without filtering by operator.
 It publishes the pair only after both collections complete, rejects changed totals, empty intermediate pages
 and duplicate identifiers, and aborts if the credential changes during reading. A failed refresh preserves
-the previous complete cache indefinitely. Refresh is attempted at boot, on the browser's online event and
-every minute. The online event is only a trigger; it never sets the connectivity indicator. Only push outcomes
-do that. A received business refusal confirms connectivity while retaining the refusal separately.
+the previous complete cache indefinitely. Refresh is attempted on the triggers listed in
+[Offline pupitre](../offline-pupitre.md); all of them run in the background except the enrolment screen's
+retry. The online event is only a trigger; it never sets the connectivity
+indicator. Only push outcomes do that. A received business refusal confirms connectivity while retaining the
+refusal separately.
 
 The reference and accepted/refused outcomes activate between operator windows. Within a window, only its
 own committed gestures change the optimistic view. The projection starts from server activities and overlays

@@ -42,6 +42,9 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - « Tout arrêter » forme un unique lot local atomique et ordonné : toutes les fins des activités personnelles connues, puis le départ. Un échec d'acceptation locale n'en conserve aucune partie; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
 - Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
 - Une référence incomplète ou un échec de rafraîchissement ne remplace jamais la dernière référence complète.
+- Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
+- La fraîcheur du référentiel se pousse en arrière-plan, par une synchronisation complète qui publie d'abord les gestes en attente, et ne se place jamais sur le chemin d'un geste.
+- Un même matricule inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
 
 ## Règles locales
 
@@ -49,7 +52,7 @@ L'adaptateur primaire de pointage expose les intentions de l'écran. La composit
 
 La page routée commune possède le chrome permanent, la désignation et le pointage. Elle porte le garde d'inactivité sur toute cette surface et appelle `CurrentOperateurLifecycle.finish()` à sa destruction. Le shell racine ne possède que le démarrage technique et le routeur; le coordinateur de désignation n'interprète pas sa propre destruction comme la sortie de cette page.
 
-`CurrentOperateurLifecycle` possède l'unique version courante de `DesignationOperateur` et en dérive les vues. `AtelierCoordinator` orchestre les commandes de gestes et leur capture. La fenêtre porte l'exclusion pendant une intention globale initiée; les signaux de disponibilité la reflètent. Les deux orchestrations partagent la même file d'acceptation locale, que la fermeture attend sans dépendre du coordinateur de gestes.
+`CurrentOperateurLifecycle` possède l'unique version courante de `DesignationOperateur` et en dérive les vues. `FraicheurDuReferentiel` possède la décision de rafraîchir : `refresh()` pour l'attendre, `push()` pour la pousser en arrière-plan. Tout déclencheur y aboutit, `AtelierCoordinator.synchronize()` compris, en passant par `CurrentOperateurLifecycle` qui fournit la réconciliation appliquant le résultat; la liste des déclencheurs vit dans [Offline pupitre](../../../../../../documentation/offline-pupitre.md). `AtelierCoordinator` orchestre les commandes de gestes et leur capture. La fenêtre porte l'exclusion pendant une intention globale initiée; les signaux de disponibilité la reflètent. Les deux orchestrations partagent la même file d'acceptation locale, que la fermeture attend sans dépendre du coordinateur de gestes.
 
 Pendant l'acceptation durable d'une action, l'adaptateur primaire désactive les deux cibles de la tuile concernée et tous les choix de sa pop-up après sélection. Les autres tuiles restent disponibles; un échec local réactive les contrôles sans avancer la vue.
 

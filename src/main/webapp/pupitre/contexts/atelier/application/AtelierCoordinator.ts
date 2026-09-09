@@ -1,4 +1,3 @@
-import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { FenetreOperateur, LotDeGestesDAtelier } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
@@ -18,7 +17,6 @@ const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
 export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
-  private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly designation = inject(CurrentOperateurLifecycle);
   private readonly acceptationLocale = inject(GestesRecordingQueue);
@@ -72,9 +70,7 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
   }
 
   synchronize(): Promise<void> {
-    return this.etatHorsLigne.refresh('SYNCHRONIZE', (entreprise, state) => {
-      this.designation.reconcile(entreprise, state);
-    });
+    return this.designation.refreshReferentiel();
   }
 
   private choosePoste(opening: IdentiteDeFenetre, intention: IntentionDePointage, posteId: string): Promise<void> {
@@ -95,18 +91,12 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
     return this.acceptationLocale
       .capture(fenetre, intention, () => this.designation.currentWindow(opening))
       .then(acceptance => {
-        if (this.designation.acceptCapture(opening, acceptance)) this.observe(this.synchronize());
+        if (this.designation.acceptCapture(opening, acceptance)) this.designation.pushReferentielFreshness();
         this.echecLocal.set(undefined);
       })
       .catch((failure: unknown) => {
         if (this.designation.isCurrentWindow(opening)) this.echecLocal.set(opening);
         throw failure;
       });
-  }
-
-  private observe(operation: Promise<void>): void {
-    void operation.catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
   }
 }
