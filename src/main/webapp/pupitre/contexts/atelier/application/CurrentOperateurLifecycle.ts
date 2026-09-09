@@ -118,6 +118,16 @@ export class CurrentOperateurLifecycle {
     if (this.isCurrentWindow(identity)) this.acceptDecision(this.currentWindow(identity).afterCompletingGlobal());
   }
 
+  refreshReferentiel(): Promise<void> {
+    return this.etatHorsLigne.refresh('SYNCHRONIZE', (entreprise, state) => {
+      this.reconcile(entreprise, state);
+    });
+  }
+
+  pushReferentielFreshness(): void {
+    this.observe(this.refreshReferentiel());
+  }
+
   reconcile(entreprise: Entreprise | undefined, state: JournalDuPupitre): void {
     const designation = this.designation();
     if (!designation.canReconcileWith(entreprise)) {
@@ -158,14 +168,6 @@ export class CurrentOperateurLifecycle {
       this.reconcile(entreprise, state);
     });
     this.pushReferentielFreshness();
-  }
-
-  private pushReferentielFreshness(): void {
-    this.observe(
-      this.etatHorsLigne.refresh('SYNCHRONIZE', (entreprise, state) => {
-        this.reconcile(entreprise, state);
-      }),
-    );
   }
 
   private releaseWindow(): void {
