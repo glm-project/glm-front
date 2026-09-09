@@ -3,7 +3,11 @@
 ## Status
 
 Accepted. Implements issue 53 and the decisions confirmed during its execution. Supersedes the in-memory
-credential decision in ADR 0003 and the offline-specific pagination and retry assumptions in ADR 0006.
+credential decision in [ADR 0003](0003-hand-written-device-grant-for-the-pupitre.md) and the offline-specific
+pagination and retry assumptions in [ADR 0006](0006-how-the-front-calls-the-back.md). Refined by
+[ADR 0009](0009-pupitre-domain-responsibilities.md), which moves the window and replay rules out of the
+application coordinator into domain owners. Complemented by
+[ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md), which gives the enrolment its screen.
 
 ## Context
 

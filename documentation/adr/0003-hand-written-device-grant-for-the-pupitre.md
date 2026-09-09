@@ -2,9 +2,12 @@
 
 ## Status
 
-Accepted; the in-memory-only credential decision is superseded by [ADR 0007](0007-durable-offline-pupitre.md).
-The original rationale below records the earlier tradeoff. Device credentials now persist in IndexedDB, and
-the selected company survives revoked or expired authorization so local collection can continue.
+Accepted, except two clauses. [ADR 0007](0007-durable-offline-pupitre.md) supersedes the in-memory-only
+credentials: the refresh credential, the access-token expiry and the company now persist in IndexedDB, and
+the selected company survives a revoked or expired authorization so local collection can continue.
+[ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md) supplies the screen this record said nothing
+displayed: the `user_code`, its QR code and its verification URI are shown, and Keycloak approves. The
+hand-written RFC 8628 adapter behind `AuthenticationPort` stands; the original tradeoff is recorded below.
 
 ## Context
 

@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted. Refines the ownership in ADR 0007; complements the method extraction in ADR 0008.
+Accepted. Refines the ownership in [ADR 0007](0007-durable-offline-pupitre.md); complements the method
+extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented by
+[ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md), which generalizes the same ownership rule
+to every context and brings interaction and lifecycle rules into the domain.
 
 ## Context
 

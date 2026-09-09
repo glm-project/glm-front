@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted. Amends [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md).
+Accepted. Amends [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md). Complemented by
+[ADR 0028](0028-default-to-value-objects-for-domain-values.md): a Value Object is the default for any
+meaningful domain value, not only for a business collection that owns rules or queries.
 
 ## Context
 

@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted, amended by [ADR 0010](0010-route-agent-documentation-by-change.md).
+Accepted. Amended by [ADR 0010](0010-route-agent-documentation-by-change.md): the topic documents are split
+by change branch, routed from `AGENTS.md`, and an executable check now holds the two indexes together — the
+written maintenance rule below was not enough. Amended by
+[ADR 0012](0012-own-business-contexts-by-front.md): each bounded context owns an `AGENTS.md` too, so
+normative prose is no longer confined to `documentation/`.
 
 ## Context
 
