@@ -244,11 +244,12 @@ describe('Designation du pupitre', () => {
     whenEntering('049');
     await whenValidating();
     const reject = givenDelayedFailure();
+    const reported = whenAFailureIsReported();
 
     await whenTimePasses(30_001);
     await whenReadStarts();
     whenRejecting(reject);
-    await new Promise(resolve => roundTrip(resolve));
+    await reported;
 
     expect(errorHandler.errors).toEqual([expect.objectContaining({ message: 'Unavailable' })]);
   });
@@ -348,8 +349,10 @@ describe('Designation du pupitre', () => {
     whenEntering('049');
     await whenValidating();
     whenTheSessionStopsAnswering();
+    const reported = whenAFailureIsReported();
+
     await whenFinishing();
-    await whenTheServerRefreshSettles();
+    await reported;
 
     thenClosed();
     thenTheRefreshFailureWasReported();
@@ -364,10 +367,8 @@ describe('Designation du pupitre', () => {
   const whenTheSessionStopsAnswering = (): void => {
     sessionFailure = new Error('Session indisponible');
   };
-  const whenTheServerRefreshSettles = async (): Promise<void> => {
-    await journal.synchronizationsSettled();
-    await new Promise(resolve => roundTrip(resolve));
-  };
+  const whenTheServerRefreshSettles = (): Promise<void> => journal.synchronizationsSettled();
+  const whenAFailureIsReported = (): Promise<void> => errorHandler.nextFailure();
   const thenTheAddedOperatorIsDesignated = (): void => {
     expect(designation.operateur()).toEqual(identiteOperateurAjouteFixture);
   };
