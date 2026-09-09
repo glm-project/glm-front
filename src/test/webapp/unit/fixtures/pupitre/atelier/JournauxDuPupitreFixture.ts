@@ -112,9 +112,6 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
       this.notifySettled = resolve;
     });
   }
-  isSynchronizing(): boolean {
-    return this.synchronizationsInFlight > 0;
-  }
   override withSession<T>(action: () => Promise<T>): Promise<T> {
     return this.lock('session', action);
   }
