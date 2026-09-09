@@ -47,7 +47,7 @@ renumbers at merge time. The status below is the living one — update this line
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Complemented by 0028** — stateful
   invariants and pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
-  **Amended by 0029** — contextual readability rules and a narrowly scoped presentation-effect exception
+  **Amended by 0029 and 0030** — contextual readability rules and a narrowly scoped presentation-effect exception
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — **Accepted** — a
   conjunctive production tripwire for stateful coordinators, with responsibility review at the enforcement point
 - [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) — **Accepted** —
@@ -62,3 +62,5 @@ renumbers at merge time. The status below is the living one — update this line
   Value Objects for meaningful scalar and composite values and business collections, including single-use concepts
 - [0029 — Name compound if predicates](0029-name-compound-if-predicates.md) — **Accepted** — a deterministic
   single-criterion limit for `if` conditions, with named predicates placed by responsibility
+- [0030 — Shape scenarios at lint](0030-shape-scenarios-at-lint.md) — **Accepted** — branchless scenarios
+  everywhere and, on domain specs, nothing acting after the first assertion

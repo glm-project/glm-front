@@ -363,13 +363,11 @@ describe('AtelierCoordinator', () => {
 
     const pausing = whenPausingGlobally();
 
-    try {
-      expect(pupitre.echecCaptureLocale()).toBe(false);
-      expect(designation.refusAtelier()).toBeUndefined();
-    } finally {
-      whenReleasingCapture(releaseCapture);
-    }
+    const duringCapture = whenReadingTheRefusalState();
+    whenReleasingCapture(releaseCapture);
     await pausing;
+
+    expect(duringCapture).toEqual({ echecLocal: false, refus: undefined });
   });
 
   it('should reject a gesture explicitly if local commit fails and accept the next retry durably', async () => {
@@ -955,6 +953,10 @@ describe('AtelierCoordinator', () => {
   const whenReleasingCapture = (release: () => void): void => {
     release();
   };
+  const whenReadingTheRefusalState = (): { echecLocal: boolean; refus: ReturnType<CurrentOperateurLifecycle['refusAtelier']> } => ({
+    echecLocal: pupitre.echecCaptureLocale(),
+    refus: designation.refusAtelier(),
+  });
   const whenCaptureAndClosureComplete = async (pointage: Promise<void>, closing: Promise<void>): Promise<void> => {
     await Promise.all([pointage, closing]);
   };

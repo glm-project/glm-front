@@ -10,6 +10,7 @@ import { maxIfCriteria } from './eslint/rules/max-if-criteria.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
 import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
+import { scenarioShape } from './eslint/rules/scenario-shape.mjs';
 
 const TAILWIND_COLOR_FAMILIES = [
   'slate',
@@ -133,6 +134,7 @@ const local = {
     'no-as-unknown': noAsUnknown,
     'no-eslint-disable': noEslintDisable,
     'responsibility-cohesion': responsibilityCohesion,
+    'scenario-shape': scenarioShape,
   },
 };
 
@@ -291,6 +293,14 @@ export default typescript.config(
     plugins: { local },
     rules: {
       'local/given-when-then': 'error',
+      'local/scenario-shape': 'error',
+    },
+  },
+  {
+    files: ['src/main/webapp/**/domain/**/*.spec.ts'],
+    plugins: { local },
+    rules: {
+      'local/scenario-shape': ['error', { order: true }],
     },
   },
   {

@@ -98,6 +98,17 @@ assertions. It cannot judge whether a helper adds business meaning, so that rema
 declarations and fixture construction remain readable in the scenario. `HexagonalArchTest.spec.ts` is the
 sole exception: its `arch-unit-ts` fluent DSL is itself the architecture rule being stated.
 
+`local/scenario-shape` holds the shape ([ADR 0030](adr/0030-shape-scenarios-at-lint.md)). **A scenario never
+branches**: an assertion under a condition can be skipped, and a skipped assertion still reads green. Narrow a
+union through a helper that returns the narrowed value or throws — `gesturesOf`, `requiredFixture` — write
+cases as an `it.each` table, and let the fixture own a teardown that must run whatever happens. **On domain
+specs a scenario also stops at its assertions**: acting again after concluding means two scenarios. The other
+layers are not held to that second half yet, and a Cypress journey legitimately alternates acts and
+observations.
+
+Neither check knows what an assertion targets. Asserting an observable business result rather than an
+intermediate structure stays yours, and the section below is where it is decided.
+
 ## Select on `data-selector`, never on CSS classes or text
 
 Use the `dataSelector()` helper (`src/test/webapp/utils/DataSelector.ts`, reached from a co-located spec
@@ -158,6 +169,11 @@ bar:
 
 Facing a mixed batch of refactoring + fix: zero tests for the refactoring, one behavior test for the fix of
 a real failure mode, red before and green after.
+
+**A production member whose only callers are specs is not covered, it is dead.** Delete it instead of
+asserting it: a query nobody asks answers no business question, its coverage is an illusion and mutation will
+keep hunting inside it. Reach the rule through the entry point production itself uses — and if no entry point
+reaches it, there is no rule to state.
 
 **Before adding or reviewing a scenario, state its functional rule, public entry point and observable
 expected result.** Record the rationale in the plan, review or MR, not in source comments. Derive the

@@ -1,6 +1,12 @@
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { Entreprise } from '../journal-du-pupitre/Entreprise';
-import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  GesteDAtelier,
+  GesteDePointage,
+  IdentiteDuGeste,
+  JournalDuPupitre,
+} from '../journal-du-pupitre/JournalDuPupitre';
 import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 import { Matricule } from './Matricule';
@@ -317,33 +323,24 @@ describe('FenetreOperateur', () => {
   });
 
   it('should keep a refusal born in an earlier operator window silent', () => {
-    const previousDecision = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture).decision;
-    if (previousDecision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     const previousGesture = requiredFixture(
-      previousDecision.capture().find(geste => geste.nature === 'POINTAGE'),
+      pointagesOf(fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture).decision)[0],
       'previous pointage',
     );
     const journalWithPreviousRefusal: JournalDuPupitre = {
       ...structuredClone(vueFixture),
       evenements: [{ geste: previousGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
     };
-    fenetre = FenetreOperateur.open(
-      Entreprise.of('entreprise-a'),
-      journalWithPreviousRefusal,
-      Matricule.of('049'),
-      Date.parse('2026-09-05T09:00:00Z'),
-      new IdentiteDeFenetre(2),
-    );
+    fenetre = givenAWindowOpenedOn(journalWithPreviousRefusal, 2);
 
     whenReconciling(journalWithPreviousRefusal);
 
-    expect(fenetre.refusal()).toBeUndefined();
+    thenNoRefusalIsVisible();
   });
 
   it('should not restore an earlier batch context when its local acceptance completes after a newer intent', () => {
     const earlier = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture);
-    if (earlier.decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    const acceptance = earlier.fenetre.prepareAcceptance(earlier.decision);
+    const acceptance = earlier.fenetre.prepareAcceptance(gesturesOf(earlier.decision));
     const newerIntent = earlier.fenetre.afterIntendingGesture();
     const acceptedAfterNewerIntent = acceptance.applyTo(newerIntent);
     const refusedGesture = requiredFixture(
@@ -381,39 +378,53 @@ describe('FenetreOperateur', () => {
     thenPointagesKeepTheirWorkstations(stop, [undefined, 'tour', undefined]);
   });
 
-  it('should open directly with zero or one workstation and request a choice with several', () => {
+  it('should open without a workstation when the operator holds none', () => {
     const sansPoste = givenAWindowWithoutWorkstation();
-    const multiposte = givenAMultiWorkstationWindow();
 
     const withoutWorkstation = whenDecidingWith(sansPoste, 'of-1015', 'PRINCIPALE');
+
+    thenPointagesKeepTheirWorkstations(withoutWorkstation, [undefined]);
+  });
+
+  it('should open directly on the only workstation the operator holds', () => {
     const defaultWorkstation = whenDeciding('of-1015', 'PRINCIPALE');
+
+    thenPointagesKeepTheirWorkstations(defaultWorkstation, ['tour']);
+  });
+
+  it('should request a choice when the operator holds several workstations, then open on the chosen one', () => {
+    const multiposte = givenAMultiWorkstationWindow();
+
     const choice = whenDecidingWith(multiposte, 'of-1015', 'PRINCIPALE');
     const chosen = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse');
 
-    thenPointagesKeepTheirWorkstations(withoutWorkstation, [undefined]);
-    thenPointagesKeepTheirWorkstations(defaultWorkstation, ['tour']);
     thenWorkstationChoiceIsRequested(choice);
     thenPointageTypesAre(chosen, ['DEBUT']);
     thenPointagesKeepTheirWorkstations(chosen, ['fraiseuse']);
   });
 
-  it('should reconcile the current company and expose only the latest refusal born in this window until another intent', () => {
-    const capture = whenDeciding('moule-1015', 'SECONDAIRE');
-    const gestures = givenAcceptedDecision(capture);
+  it('should expose the latest refusal born in this window when reconciling its company', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
     const refused = givenTheDecisionWasRefused(gestures);
 
     whenReconciling(refused);
 
     thenLatestRefusalNamesTheElement();
+  });
+
+  it('should stop exposing a refusal as soon as another intent starts', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+    whenReconciling(givenTheDecisionWasRefused(gestures));
+
     whenDeciding('of-1015', 'PRINCIPALE');
+
     thenNoRefusalIsVisible();
   });
 
   it('should preserve an earlier window while recognizing a refusal reconciled before durable acceptance', () => {
     const previous = fenetre;
     const transition = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture);
-    if (transition.decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    const refused = givenTheDecisionWasRefused(transition.decision.capture());
+    const refused = givenTheDecisionWasRefused(gesturesOf(transition.decision).capture());
 
     const reconciled = transition.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
 
@@ -439,9 +450,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should retain accepted and refused gestures already reconciled without adding pending duplicates', () => {
-    const decision = whenDeciding('moule-1015', 'SECONDAIRE');
-    if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    const gestures = decision.capture();
+    const gestures = gesturesOf(whenDeciding('moule-1015', 'SECONDAIRE')).capture();
     const reconciled = {
       ...structuredClone(vueFixture),
       evenements: gestures.map((geste, index) =>
@@ -464,15 +473,23 @@ describe('FenetreOperateur', () => {
     thenLatestRefusalNamesTheElement();
   });
 
-  it('should ignore another company, reject a missing element and reject a workstation choice after concurrent activation', () => {
+  it('should ignore a journal reconciled for another company', () => {
     const before = givenTheCurrentSnapshot();
 
     whenReconcilingFor('entreprise-b', EMPTY_JOURNAL_DU_PUPITRE);
-    const missing = whenDecidingUnknownElement();
-    const activeChoice = whenChoosingActiveElement();
 
     thenSnapshotIs(before);
+  });
+
+  it('should reject an element absent from the local reference', () => {
+    const missing = whenDecidingUnknownElement();
+
     thenElementIsRefused(missing);
+  });
+
+  it('should reject a workstation choice on an element activated meanwhile', () => {
+    const activeChoice = whenChoosingActiveElement();
+
     thenActiveChoiceIsRefused(activeChoice);
   });
 
@@ -494,13 +511,17 @@ describe('FenetreOperateur', () => {
     thenTheSnapshotStillEquals(journal);
   });
 
-  it('should show a zero frozen duration for an activity created after the window opened and tolerate a reconciled empty reference', () => {
+  it('should show a zero frozen duration for an activity created after the window opened', () => {
     const futureWindow = givenAWindowWithOnlyAFutureActivity();
 
     const futureView = whenReadingPointage(futureWindow);
-    whenReconciling(EMPTY_JOURNAL_DU_PUPITRE);
 
     thenFutureActivityStartsAtZero(futureView);
+  });
+
+  it('should show an empty pointage view when the reconciled reference is empty', () => {
+    whenReconciling(EMPTY_JOURNAL_DU_PUPITRE);
+
     thenPointageViewIsEmpty();
   });
 
@@ -521,15 +542,11 @@ describe('FenetreOperateur', () => {
         ],
       },
     };
-    const localWindow = FenetreOperateur.open(
-      Entreprise.of('entreprise-a'),
-      onlyNcJournal,
-      Matricule.of('049'),
-      Date.parse('2026-09-05T09:00:00Z'),
-      new IdentiteDeFenetre(1),
-    );
+    const onlyNcWindow = givenAWindowOpenedOn(onlyNcJournal);
 
-    expect(localWindow.pointage().ordresDeFabrication[0]?.isNonConforme()).toBe(true);
+    const pointage = whenReadingPointage(onlyNcWindow);
+
+    expect(pointage.ordresDeFabrication[0]?.isNonConforme()).toBe(true);
   });
 
   it('should resume only non conforming activities preserving their respective workstations', () => {
@@ -565,24 +582,12 @@ describe('FenetreOperateur', () => {
         ],
       },
     };
-    const multiWindow = FenetreOperateur.open(
-      Entreprise.of('entreprise-a'),
-      multiNcJournal,
-      Matricule.of('049'),
-      Date.parse('2026-09-05T09:00:00Z'),
-      new IdentiteDeFenetre(1),
-    );
+    const multiWindow = givenAWindowOpenedOn(multiNcJournal);
 
-    const decision = multiWindow.afterDeciding('of-multi-nc', 'SECONDAIRE', identifyFixture).decision;
+    const decision = whenDecidingWith(multiWindow, 'of-multi-nc', 'SECONDAIRE');
 
-    expect(decision.kind).toBe('GESTES');
-    if (decision.kind === 'GESTES') {
-      const pointages = decision.capture().filter(geste => geste.nature === 'POINTAGE');
-      expect(pointages.map(pointage => ({ type: pointage.type, posteId: pointage.posteId }))).toEqual([
-        { type: 'DEBUT', posteId: 'poste-1' },
-        { type: 'DEBUT', posteId: 'poste-3' },
-      ]);
-    }
+    thenPointageTypesAre(decision, ['DEBUT', 'DEBUT']);
+    thenPointagesKeepTheirWorkstations(decision, ['poste-1', 'poste-3']);
   });
 
   it('should sort elements using natural numeric order', () => {
@@ -597,17 +602,11 @@ describe('FenetreOperateur', () => {
         ],
       },
     };
-    const sortWindow = FenetreOperateur.open(
-      Entreprise.of('entreprise-a'),
-      unsortedJournal,
-      Matricule.of('049'),
-      Date.parse('2026-09-05T09:00:00Z'),
-      new IdentiteDeFenetre(1),
-    );
+    const sortWindow = givenAWindowOpenedOn(unsortedJournal);
 
-    const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero.toString());
+    const pointage = whenReadingPointage(sortWindow);
 
-    expect(numeros).toEqual(['OF-1', 'OF-2', 'OF-10']);
+    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['OF-1', 'OF-2', 'OF-10']);
   });
 
   it('should indicate glmActif is true when the operator has no active activities', () => {
@@ -618,71 +617,47 @@ describe('FenetreOperateur', () => {
         suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
       },
     };
-    const inactiveWindow = FenetreOperateur.open(
-      Entreprise.of('entreprise-a'),
-      inactiveJournal,
-      Matricule.of('049'),
-      Date.parse('2026-09-05T09:00:00Z'),
-      new IdentiteDeFenetre(1),
-    );
+    const inactiveWindow = givenAWindowOpenedOn(inactiveJournal);
 
-    expect(inactiveWindow.pointage().glmActif).toBe(true);
+    const pointage = whenReadingPointage(inactiveWindow);
+
+    expect(pointage.glmActif).toBe(true);
   });
 
-  it('should capture arrival, implicit resumption, and pointage when confirming workstation selection and clear visible refusal', () => {
-    const multiPosteJournal: JournalDuPupitre = {
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        operateurs: [
-          {
-            id: 'jean',
-            nom: 'Dupont',
-            prenom: 'Jean',
-            matricule: '049',
-            postes: [
-              { id: 'poste-1', libelle: 'Poste 1' },
-              { id: 'poste-2', libelle: 'Poste 2' },
-            ],
-          },
-        ],
-        suivis: [{ id: 'of-multi', nom: 'OF-MULTI', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
-      },
-    };
-    const multiWindow = FenetreOperateur.open(
-      Entreprise.of('entreprise-a'),
-      multiPosteJournal,
-      Matricule.of('049'),
-      Date.parse('2026-09-05T09:00:00Z'),
-      new IdentiteDeFenetre(1),
-    );
+  it('should capture arrival, implicit resumption and pointage when confirming a workstation choice', () => {
+    const multiposte = givenAMultiWorkstationWindow();
 
-    const { fenetre: afterChoice, decision } = multiWindow.afterChoosingPoste('of-multi', 'PRINCIPALE', 'poste-1', identifyFixture);
+    const gestures = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse').capture();
 
-    const gestures = decision.capture();
     thenGesturesAre(gestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
     expect(gestures[1]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
-    expect(gestures[2]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'poste-1' });
-    expect(afterChoice.refusal()).toBeUndefined();
-    const reconciled = afterChoice.afterReconciling(Entreprise.of('entreprise-a'), givenTheDecisionWasRefused(gestures));
-    expect(reconciled.refusal()).toBeDefined();
+    expect(gestures[2]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
   });
 
-  it('should increment intention counter monotonically across sequential decisions', () => {
-    const first = fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture);
-    fenetre = first.fenetre;
-    expect(first.decision.kind).toBe('GESTES');
-    if (first.decision.kind === 'GESTES') {
-      expect(first.decision.intention).toBe(1);
-    }
+  it('should expose no refusal after a workstation choice until one is reconciled', () => {
+    const multiposte = givenAMultiWorkstationWindow();
+    const choice = multiposte.afterChoosingPoste('of-1015', 'PRINCIPALE', 'fraiseuse', identifyFixture);
 
-    const second = fenetre.afterDeciding('of-204', 'PRINCIPALE', identifyFixture);
-    expect(second.decision.kind).toBe('GESTES');
-    if (second.decision.kind === 'GESTES') {
-      expect(second.decision.intention).toBe(2);
-    }
+    const reconciled = choice.fenetre.afterReconciling(
+      Entreprise.of('entreprise-a'),
+      givenTheDecisionWasRefused(choice.decision.capture()),
+    );
+
+    expect(choice.fenetre.refusal()).toBeUndefined();
+    expect(reconciled.refusal()).toEqual({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.generated('OF-2026-000042') },
+      message: "L'élément a été clôturé.",
+    });
   });
 
-  it('should not assure arrival when accepting gestures that do not include an arrival', () => {
+  it('should increment the intention counter monotonically across sequential decisions', () => {
+    const first = gesturesOf(whenDeciding('moule-1015', 'PRINCIPALE'));
+    const second = gesturesOf(whenDeciding('of-204', 'PRINCIPALE'));
+
+    expect([first.intention, second.intention]).toEqual([1, 2]);
+  });
+
+  it('should still assure arrival after accepting gestures that do not include one', () => {
     const pointageOnly: GesteDAtelier = {
       id: 'pt-1',
       dateDeSurvenue: '2026-09-05T08:00:00Z',
@@ -691,33 +666,11 @@ describe('FenetreOperateur', () => {
       nature: 'POINTAGE',
       operateurId: 'jean',
     };
-
     fenetre = fenetre.afterAccept([pointageOnly]);
 
-    const nextDecision = fenetre.afterDeciding('of-204', 'PRINCIPALE', identifyFixture).decision;
-    expect(nextDecision.kind).toBe('GESTES');
-    if (nextDecision.kind === 'GESTES') {
-      const captured = fenetre.capture(nextDecision);
-      expect(captured.some(geste => geste.nature === 'ARRIVEE')).toBe(true);
-    }
-  });
+    const captured = captureGestures(whenDeciding('of-204', 'PRINCIPALE'));
 
-  it('should attach a global command context to a pause but not to a departure presence', () => {
-    const departLot = fenetre.preparePresence('DEPART', identifyFixture);
-    const pauseLot = fenetre.preparePresence('PAUSE', identifyFixture);
-
-    expect(departLot.contextesParGeste.isEmpty()).toBe(true);
-    expect(pauseLot.contextesParGeste.isEmpty()).toBe(false);
-  });
-
-  it('should include arrival by default when capture is called without arguments on pointage decision', () => {
-    const decision = fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture).decision;
-
-    expect(decision.kind).toBe('GESTES');
-    if (decision.kind === 'GESTES') {
-      const gestures = decision.capture();
-      expect(gestures[0]?.nature).toBe('ARRIVEE');
-    }
+    thenGesturesAre(captured, ['ARRIVEE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
   });
 
   const identifyFixture = (): IdentiteDuGeste => {
@@ -726,11 +679,26 @@ describe('FenetreOperateur', () => {
     identities.set(id, dateDeSurvenue);
     return { id, dateDeSurvenue };
   };
+  const gesturesOf = (decision: DecisionDePointage): LotDeGestesDAtelier => {
+    if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
+    return decision;
+  };
+  const pointagesOf = (decision: DecisionDePointage): readonly GesteDePointage[] =>
+    gesturesOf(decision)
+      .capture()
+      .filter(geste => geste.nature === 'POINTAGE');
+  const givenAWindowOpenedOn = (journal: JournalDuPupitre, identity = 1): FenetreOperateur =>
+    FenetreOperateur.open(
+      Entreprise.of('entreprise-a'),
+      journal,
+      Matricule.of('049'),
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(identity),
+    );
   const givenAPreparedPointage = (): (() => readonly GesteDAtelier[]) => {
     const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture);
     fenetre = result.fenetre;
-    if (result.decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    const decision = result.decision;
+    const decision = gesturesOf(result.decision);
     return () => fenetre.capture(decision);
   };
   const givenTheRecordedIdentities = (): Map<string, string> => new Map(identities);
@@ -923,28 +891,11 @@ describe('FenetreOperateur', () => {
     expect(pointage.glmActif).toBe(false);
   };
   const thenPointageTypesAre = (decision: DecisionDePointage, types: string[]): void => {
-    expect(decision.kind).toBe('GESTES');
-    if (decision.kind === 'GESTES') {
-      expect(
-        decision
-          .capture()
-          .filter(geste => geste.nature === 'POINTAGE')
-          .map(geste => geste.type),
-      ).toEqual(types);
-    }
+    expect(pointagesOf(decision).map(geste => geste.type)).toEqual(types);
   };
-  const captureGestures = (decision: DecisionDePointage): readonly GesteDAtelier[] => {
-    if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    return fenetre.capture(decision);
-  };
+  const captureGestures = (decision: DecisionDePointage): readonly GesteDAtelier[] => fenetre.capture(gesturesOf(decision));
   const thenPointagesKeepTheirWorkstations = (decision: DecisionDePointage, postes: (string | undefined)[]): void => {
-    if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
-    expect(
-      decision
-        .capture()
-        .filter(geste => geste.nature === 'POINTAGE')
-        .map(geste => geste.posteId),
-    ).toEqual(postes);
+    expect(pointagesOf(decision).map(geste => geste.posteId)).toEqual(postes);
   };
   const thenWorkstationChoiceIsRequested = (decision: DecisionDePointage): void => {
     expect(decision).toMatchObject({
