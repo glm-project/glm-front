@@ -38,11 +38,11 @@ renumbers at merge time. The status below is the living one — update this line
   lockfile-only installs and an immutable backend contract revision in local validation and CI
 - [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — **Amended by 0020** —
   shared validation commands and pinned security tools
-- [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Amended by 0024** —
+- [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) — **Superseded by 0024** —
   initial bounded replay-policy mutation through the Angular builder and checked invalid mutants
 - [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — **Accepted** — recommended static
   analysis with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
-- [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Amended by 0024** — quick static
+- [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **Superseded by 0024** — quick static
   checks at push, later complemented by mutation of changed domain files
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — **Complemented by 0028** — stateful
   invariants and pure domain policies, immutable public snapshots and exclusive journal event states

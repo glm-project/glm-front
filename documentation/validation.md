@@ -12,8 +12,9 @@ CI invokes the same grouped commands in separate workspaces. Each job records it
 The pre-push hook runs `validate:quick`, then mutates the added or modified lines of handwritten domain
 TypeScript in every ref in the push. Each step records its duration on standard output and returns its exit code. It does not rerun
 coverage, builds or browser suites before the CI jobs that own those checks. The complete local graph runs
-on explicit invocation with `npm run validate:complete`. See [ADR 0020](adr/0020-keep-pre-push-feedback-quick.md) and
-[ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md).
+on explicit invocation with `npm run validate:complete`. See
+[ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md) for the pre-push gate and
+[ADR 0017](adr/0017-use-one-validation-graph-at-every-gate.md) for the graph the other gates share.
 The pre-commit hook scans the staged diff for secrets before lint-staged runs ESLint fixes and then Prettier on
 TypeScript, Angular templates and JavaScript tooling scripts. Other supported staged files only run through Prettier.
 

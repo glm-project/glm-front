@@ -2,7 +2,10 @@
 
 ## Status
 
-Amended by 0020.
+Accepted, except the pre-push gate: it no longer runs the complete graph, and
+[ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md) states what it runs instead. Everything else
+here — the commit gate, the CI split, the pinned Gitleaks and actionlint, the audit threshold and the Codex
+Stop gate — stands.
 
 ## Context
 

@@ -2,7 +2,8 @@
 
 ## Status
 
-Amended by [ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md).
+Superseded by [ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md), which states the whole pre-push
+gate. Read it instead; what follows is why the complete graph left that gate.
 
 ## Context
 

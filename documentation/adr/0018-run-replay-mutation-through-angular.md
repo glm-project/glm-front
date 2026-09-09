@@ -2,7 +2,9 @@
 
 ## Status
 
-Amended by [ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md).
+Superseded by [ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md), which carries the runner, the
+checker, the threshold and the scope in force. Read it instead; what follows is the bounded first experiment
+that chose them, and its scope and CI schedule no longer hold.
 
 ## Context
 
