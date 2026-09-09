@@ -55,7 +55,7 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private nextAppendBarrier: AppendBarrier | undefined;
   private readsImmediately = false;
   private synchronizationsInFlight = 0;
-  private notifySettled: (() => void) | undefined;
+  private readonly waitingForSettled: (() => void)[] = [];
   failWrite = false;
   afterRead: (() => void) | undefined;
 
@@ -101,15 +101,14 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     } finally {
       this.synchronizationsInFlight -= 1;
       if (this.synchronizationsInFlight === 0) {
-        this.notifySettled?.();
-        this.notifySettled = undefined;
+        for (const resolve of this.waitingForSettled.splice(0)) resolve();
       }
     }
   }
   synchronizationsSettled(): Promise<void> {
     if (this.synchronizationsInFlight === 0) return Promise.resolve();
     return new Promise(resolve => {
-      this.notifySettled = resolve;
+      this.waitingForSettled.push(resolve);
     });
   }
   override withSession<T>(action: () => Promise<T>): Promise<T> {

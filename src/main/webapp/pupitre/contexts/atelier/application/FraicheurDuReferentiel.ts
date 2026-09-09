@@ -11,29 +11,23 @@ export type ApplicationDuReferentiel = (entreprise: Entreprise | undefined, stat
 export class FraicheurDuReferentiel {
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly errorHandler = inject(ErrorHandlerPort);
-  private matriculeRetenu: string | undefined;
+  private matriculeRetenu: Matricule | undefined;
 
   refresh(apply: ApplicationDuReferentiel): Promise<void> {
     return this.etatHorsLigne.refresh('SYNCHRONIZE', apply);
   }
 
   push(apply: ApplicationDuReferentiel): void {
-    this.observe(this.refresh(apply));
+    this.errorHandler.observe(this.refresh(apply));
   }
 
   pushForUnknown(code: Matricule, apply: ApplicationDuReferentiel): void {
-    if (code.identifies(this.matriculeRetenu)) return;
-    this.matriculeRetenu = code.toString();
+    if (code.equals(this.matriculeRetenu)) return;
+    this.matriculeRetenu = code;
     this.push(apply);
   }
 
   release(): void {
     this.matriculeRetenu = undefined;
-  }
-
-  private observe(operation: Promise<void>): void {
-    void operation.catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
   }
 }

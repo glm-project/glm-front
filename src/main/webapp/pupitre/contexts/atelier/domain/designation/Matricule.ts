@@ -31,6 +31,10 @@ export class Matricule {
     return this.valeur === candidat;
   }
 
+  equals(other: Matricule | undefined): boolean {
+    return this.valeur === other?.valeur;
+  }
+
   toString(): string {
     return this.valeur;
   }

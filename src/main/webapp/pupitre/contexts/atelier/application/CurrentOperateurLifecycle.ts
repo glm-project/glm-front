@@ -154,13 +154,13 @@ export class CurrentOperateurLifecycle {
   }
 
   private refresh(): void {
-    this.observe(this.settle());
+    this.errorHandler.observe(this.settle());
   }
 
   private scheduleExpiration(): void {
     this.expirationScheduler.schedule(this.state().deadline, {
       expire: () => {
-        this.observe(this.expire());
+        this.errorHandler.observe(this.expire());
       },
     });
   }
@@ -180,11 +180,5 @@ export class CurrentOperateurLifecycle {
   private releaseWindow(): void {
     this.designation.update(current => current.afterReleasingWindow());
     this.scheduleExpiration();
-  }
-
-  private observe(operation: Promise<void>): void {
-    void operation.catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
   }
 }
