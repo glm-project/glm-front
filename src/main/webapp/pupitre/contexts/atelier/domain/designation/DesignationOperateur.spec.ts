@@ -31,12 +31,19 @@ describe('DesignationOperateur', () => {
     thenNoOperatorIsDesignated();
   });
 
-  it('should renew designation when accepting a gesture and preserve its attribution after expiry', () => {
+  it('should renew the inactivity deadline when a gesture is prepared', () => {
     givenDesignatedOperator();
 
-    const capture = whenPreparingPointage(29_000);
+    whenPreparingPointage(29_000);
     whenCheckingExpiration(30_000);
+
     thenOperatorIsDesignated();
+  });
+
+  it('should keep a prepared pointage attributed to its operator once the renewed deadline expires', () => {
+    givenDesignatedOperator();
+    const capture = whenPreparingPointage(29_000);
+
     whenCheckingExpiration(59_000);
 
     thenNoOperatorIsDesignated();
@@ -101,38 +108,55 @@ describe('DesignationOperateur', () => {
     thenCodeIs('');
   });
 
-  it('should ignore digits and erasing when an operator is already designated', () => {
+  it('should ignore a digit when an operator is already designated', () => {
     givenDesignatedOperator();
 
-    designation = designation.afterDigit('1', 0);
-    thenCodeIs('');
+    whenEntering('1', 0);
 
-    designation = designation.afterErasing(0);
     thenCodeIs('');
     thenOperatorIsDesignated();
   });
 
-  it('should ignore digits and erasing while a code resolution is in flight', () => {
+  it('should ignore erasing when an operator is already designated', () => {
+    givenDesignatedOperator();
+
+    whenErasing(0);
+
+    thenCodeIs('');
+    thenOperatorIsDesignated();
+  });
+
+  it('should ignore a digit while a code resolution is in flight', () => {
     whenEntering('049', 0);
     whenValidating(0);
 
-    designation = designation.afterDigit('1', 0);
-    thenCodeIs('049');
+    whenEntering('1', 0);
 
-    designation = designation.afterErasing(0);
     thenCodeIs('049');
   });
 
-  it('should ignore digit entry and erasing when pressed at or after inactivity deadline', () => {
+  it('should ignore erasing while a code resolution is in flight', () => {
+    whenEntering('049', 0);
+    whenValidating(0);
+
+    whenErasing(0);
+
+    thenCodeIs('049');
+  });
+
+  it('should ignore a digit pressed at the inactivity deadline', () => {
     whenEntering('04', 0);
 
-    designation = designation.afterDigit('9', 30_000);
+    whenEntering('9', 30_000);
 
     thenCodeIs('');
     thenNoOperatorIsDesignated();
+  });
 
+  it('should ignore erasing pressed after the inactivity deadline', () => {
     whenEntering('04', 30_001);
-    designation = designation.afterErasing(60_001);
+
+    whenErasing(60_001);
 
     thenCodeIs('');
   });
@@ -169,40 +193,42 @@ describe('DesignationOperateur', () => {
     expect(completion.accepted).toBe(false);
   });
 
-  it('should forbid opening an operator window when one is already open or closing', () => {
+  it('should forbid opening an operator window while one is already open', () => {
     givenDesignatedOperator();
 
-    expect(() => designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 0)).toThrow(
-      'Une fenetre operateur est deja ouverte.',
-    );
-
-    designation = designation.afterFinish();
-    expect(designation.needsClosure()).toBe(true);
-    expect(() => designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 0)).toThrow(
-      'Une fenetre operateur est deja ouverte.',
-    );
+    thenOpeningAWindowIsForbidden();
   });
 
-  it('should increment resolution generation and window identities across lifecycles', () => {
+  it('should forbid opening an operator window while the previous one is closing', () => {
+    givenDesignatedOperator();
+
+    designation = designation.afterFinish();
+
+    expect(designation.needsClosure()).toBe(true);
+    thenOpeningAWindowIsForbidden();
+  });
+
+  it('should increment the resolution generation across designation lifecycles', () => {
     whenEntering('049', 0);
     const firstResolution = whenValidating(0);
-    expect(firstResolution.generation).toBe(0);
-
     designation = designation.afterFinish().afterEndingResolution();
     whenEntering('049', 1);
+
     const secondResolution = whenValidating(1);
-    expect(secondResolution.generation).toBe(1);
 
-    const firstWindow = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1).fenetre;
+    expect([firstResolution.generation, secondResolution.generation]).toEqual([0, 1]);
+  });
+
+  it('should give the next operator window its own identity once the previous one is released', () => {
+    whenEntering('049', 0);
+    whenValidating(0);
+    const firstWindow = whenOpeningAWindow();
+
     designation = designation.afterReleasingWindow();
-    const secondWindow = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1).fenetre;
 
-    expect(
-      secondWindow.hasIdentity(
-        FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1, new IdentiteDeFenetre(1)),
-      ),
-    ).toBe(true);
+    const secondWindow = whenOpeningAWindow();
     expect(secondWindow.hasIdentity(firstWindow)).toBe(false);
+    expect(secondWindow.hasIdentity(givenAWindowWithIdentity(1))).toBe(true);
   });
 
   const givenDesignatedOperator = (): void => {
@@ -212,6 +238,13 @@ describe('DesignationOperateur', () => {
   const whenEntering = (code: string, now: number): void => {
     for (const digit of code) designation = designation.afterDigit(digit, now);
   };
+  const whenErasing = (now: number): void => {
+    designation = designation.afterErasing(now);
+  };
+  const whenOpeningAWindow = (): FenetreOperateur =>
+    designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1).fenetre;
+  const givenAWindowWithIdentity = (identity: number): FenetreOperateur =>
+    FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1, new IdentiteDeFenetre(identity));
   const whenValidating = (now: number): DesignationResolution => {
     const result = designation.afterBeginningResolution(now);
     designation = result.designation;
@@ -244,6 +277,9 @@ describe('DesignationOperateur', () => {
   };
   const thenPointageIsRefusedAt = (now: number): void => {
     expect(() => whenPreparingPointage(now)).toThrow('Aucune fenetre operateur ouverte.');
+  };
+  const thenOpeningAWindowIsForbidden = (): void => {
+    expect(() => whenOpeningAWindow()).toThrow('Une fenetre operateur est deja ouverte.');
   };
   const thenNoOperatorIsDesignated = (): void => {
     expect(designation.snapshot().operateur).toBeUndefined();
