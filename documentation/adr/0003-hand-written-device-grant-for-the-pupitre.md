@@ -2,9 +2,12 @@
 
 ## Status
 
-Accepted; the in-memory-only credential decision is superseded by [ADR 0007](0007-durable-offline-pupitre.md).
-The original rationale below records the earlier tradeoff. Device credentials now persist in IndexedDB, and
-the selected company survives revoked or expired authorization so local collection can continue.
+Accepted, except two clauses. [ADR 0007](0007-durable-offline-pupitre.md) supersedes the in-memory-only
+credentials: the refresh credential, the access-token expiry and the company now persist in IndexedDB, and
+the selected company survives a revoked or expired authorization so local collection can continue.
+[ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md) supplies the screen this record said nothing
+displayed: the `user_code`, its QR code and its verification URI are shown, and Keycloak approves. The
+hand-written RFC 8628 adapter behind `AuthenticationPort` stands; the original tradeoff is recorded below.
 
 ## Context
 
@@ -80,9 +83,9 @@ nothing is written to `localStorage` or a cookie. A reload re-enrols.
 ### Negative
 
 - We now own an OAuth client, and the bill is already visible. Polling, back-off, renewal timing and revocation are ours to keep correct, and **the adapter was written with seven defects in it**: an absent `interval` polling flat out; a `logout()` that let an in-flight enrolment reopen the session; a `logout()` that never stopped the polling loop, leaving an unenrolled pupitre claiming tokens for the rest of the shift; an absent `expires_in` making the renewal delay `NaN`, which `setTimeout` reads as zero — 45 499 renewals in 90 seconds; a refused renewal throwing away an access token that had not expired; a back-off table read off `Object.prototype`, so a refusal named `toString` turned the poll interval into `NaN` the same way — 500 claims a second, measured; and a renewal refused with `invalid_grant` retried every 60 s for the life of the tab, against a refresh token that was never coming back. Every one was caught in review, none by the compiler, and a library would have had none of them. Five of the seven are timing bugs invisible without fake clocks, which is the class of defect that hides longest.
-- **A buried refresh token now sends the pupitre back to enrolment, and enrolment needs a human.** Revoke a session in Keycloak and the adapter asks for a new device code — which nothing displays, until issue #11 gives the pupitre a screen. The pupitre goes dark rather than looping, which is the better of the two, but it does go dark.
-- **Nothing displays the `user_code`.** The grant cannot complete in production until a pupitre screen shows it, and the pupitre has no screen yet — issue #11 specifies its first. The adapter deliberately parses only `device_code` and `interval` so there is no dead field pretending otherwise.
+- **A buried refresh token sends the pupitre back to enrolment, and enrolment needs a human.** Revoke a session in Keycloak and the adapter asks for a new device code; the pupitre goes dark rather than looping, which is the better of the two, but it does go dark. ADR 0026 gives that code a screen — except on the `reenrol()` path, which still runs silently.
+- **This decision shipped a grant that could not complete**: nothing displayed the `user_code`, so no pupitre could be enrolled in production until ADR 0026. The adapter deliberately parses only `device_code` and `interval`, so there was no dead field pretending otherwise.
 - The polling loop has no client-side deadline. It stops when Keycloak says `expired_token`, which Keycloak does say, but RFC 8628 §3.5 puts that clock on the client and we do not keep one.
 - **Keeping the token through a refused renewal delays revocation.** Revoke a pupitre's session in Keycloak and the refresh is refused at once, but the access token it already holds is signed and unexpired, so the back end keeps accepting it until it dies — up to the token's lifetime. Cutting a pupitre off is therefore not instant, and the shorter that lifetime is configured in the realm, the shorter the window. This is the ordinary bearer-token trade and gestion has always made it; it is written here because a reader who finds the adapter serving a token whose renewal was refused should see a decision and not an oversight.
-- In-memory tokens mean a reload is a re-enrolment, and a re-enrolment needs a human to type a code again. The moment the pupitre is expected to survive a browser restart on its own, this decision reopens — and the answer will not be `localStorage`.
+- In-memory tokens meant a reload was a re-enrolment, and a re-enrolment needs a human to type a code again. That reopened as soon as the pupitre had to survive a browser restart alone: ADR 0007 answers it with IndexedDB, not `localStorage`.
 - The adapter needs a device-grant client in the `glmproject` realm, carrying the `glmproject` client scope. That is infrastructure work outside this repository; without it the token has no `tenant` claim and the back end answers 403.

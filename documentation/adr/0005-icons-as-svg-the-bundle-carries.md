@@ -3,7 +3,9 @@
 ## Status
 
 Accepted. Gestion has since moved to the Material 3 `azure-blue` theme and its token bridge; pupitre no
-longer loads a Material theme.
+longer loads a Material theme. Complemented by
+[ADR 0027](0027-encode-the-enrolment-qr-code-in-the-bundle.md): the enrolment QR code follows the same
+no-external-origin rule, with a pinned encoder and our own SVG path rendering.
 
 ## Context
 

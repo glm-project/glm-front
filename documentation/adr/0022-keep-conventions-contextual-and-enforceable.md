@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted. Amends [ADR 0008](0008-extract-methods-to-expose-intent.md).
+Accepted. Amends [ADR 0008](0008-extract-methods-to-expose-intent.md). Two contextual rules have since
+become executable limits: [ADR 0029](0029-name-compound-if-predicates.md) refuses any `&&` or `||` in an
+`if` condition, which must become a named predicate, and [ADR 0030](0030-shape-scenarios-at-lint.md) refuses
+any `if`, loop, `switch` or `try` in a scenario, plus any act after the first assertion on a domain spec.
+Complemented by [ADR 0023](0023-stop-overloaded-coordinators-at-lint.md) for coordinator size.
 
 ## Context
 
