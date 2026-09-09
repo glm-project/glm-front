@@ -20,8 +20,4 @@ export class ContextesParGeste {
   contexteOf(gesteId: string): ContexteDeGesteDAtelier | undefined {
     return this.contextes.get(gesteId);
   }
-
-  isEmpty(): boolean {
-    return this.contextes.size === 0;
-  }
 }
