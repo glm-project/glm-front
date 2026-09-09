@@ -16,8 +16,8 @@ have to open that later record. This index carries titles and hooks.
 routes to it any more.** Superseding alone is not enough: a record whose options and prices still teach
 something stays, with a status that says what died.
 
-- [0001 — Documentation layout](0001-documentation-layout.md) — minimal agent entry point, topic documents
-  and local ADRs
+- [0001 — Documentation layout](0001-documentation-layout.md) — why this archive exists, where it lives and
+  what was rejected to get there; its documentation layout is superseded by 0010 and 0012
 - [0002 — Port contract for secondary adapters](0002-port-contract-for-secondary-adapters.md) — one suite per
   port run against every adapter, fakes replace the external system
 - [0003 — Hand-written device grant for the pupitre](0003-hand-written-device-grant-for-the-pupitre.md) —

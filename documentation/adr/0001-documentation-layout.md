@@ -2,11 +2,24 @@
 
 ## Status
 
-Accepted. Amended by [ADR 0010](0010-route-agent-documentation-by-change.md): the topic documents are split
-by change branch, routed from `AGENTS.md`, and an executable check now holds the two indexes together — the
-written maintenance rule below was not enough. Amended by
-[ADR 0012](0012-own-business-contexts-by-front.md): each bounded context owns an `AGENTS.md` too, so
-normative prose is no longer confined to `documentation/`.
+Accepted for the archive it founded; its documentation layout is superseded by
+[ADR 0010](0010-route-agent-documentation-by-change.md) and
+[ADR 0012](0012-own-business-contexts-by-front.md). Read the Decision below as the state it left, not as the
+state to restore.
+
+What no longer holds: the always-loaded file is `AGENTS.md`, not `CLAUDE.md`; the topic documents are eleven
+routed by change branch, not four; the routing table and the human index are held together by
+`npm run test:documentation`, not by the written maintenance rule this record trusted; agent-process
+documents live under `docs/agents/`, so the single `documentation/` root did not survive; each bounded
+context owns an `AGENTS.md`, so normative prose is no longer confined to one tree; and each record's own
+`## Status` carries its living state, not `adr/README.md`.
+
+What still holds, and is written down nowhere else: ADRs live under `documentation/adr/`, out of the agent's
+default path and reached only through a routing line; the template is a trimmed MADR whose negative
+consequences are mandatory; nothing goes to Confluence, the records stay versioned beside the code they
+constrain. So do the options this record rejected — `.claude/skills/`, `@import`, `UserPromptSubmit` and
+`PreToolUse` hooks, a CI size cap on the entry file, and backfilling retroactive ADRs for decisions already
+embodied in the code. Anyone proposing one of those again owes this record an answer.
 
 ## Context
 
