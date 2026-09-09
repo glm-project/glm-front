@@ -1,33 +1,6 @@
+import { contains, isTestCallee, rootIdentifier, scenarioOf } from './scenario.mjs';
+
 const TECHNICAL_ROOT = /^(TestBed|vi|cy|fixture|http|httpClient|stockage|storage|serveur|server)$/i;
-
-const isFunction = node =>
-  node?.type === 'ArrowFunctionExpression' || node?.type === 'FunctionExpression' || node?.type === 'FunctionDeclaration';
-
-const isWrappedExpression = node =>
-  node.type === 'AwaitExpression' || node.type === 'TSAsExpression' || node.type === 'TSNonNullExpression';
-
-const rootIdentifier = node => {
-  if (!node) return undefined;
-  if (node.type === 'Identifier') return node.name;
-  if (node.type === 'ChainExpression') return rootIdentifier(node.expression);
-  if (node.type === 'CallExpression') return rootIdentifier(node.callee);
-  if (node.type === 'MemberExpression') return rootIdentifier(node.object);
-  if (isWrappedExpression(node)) {
-    return rootIdentifier(node.expression ?? node.argument);
-  }
-  return undefined;
-};
-
-const isNonTraversable = node => !node || typeof node !== 'object';
-
-const contains = (node, predicate) => {
-  if (isNonTraversable(node)) return false;
-  if (predicate(node)) return true;
-  if (isFunction(node)) return false;
-  return Object.entries(node)
-    .filter(([key]) => key !== 'parent')
-    .some(([, value]) => (Array.isArray(value) ? value.some(child => contains(child, predicate)) : contains(value, predicate)));
-};
 
 const isTechnicalCall = node => node.type === 'CallExpression' && TECHNICAL_ROOT.test(rootIdentifier(node) ?? '');
 
@@ -38,17 +11,10 @@ const reportScenarioExpression = (context, expression) => {
   }
 };
 
-const isTestCallee = node => {
-  if (node.type === 'Identifier') return node.name === 'it' || node.name === 'test';
-  if (node.type === 'MemberExpression') return isTestCallee(node.object);
-  if (node.type === 'CallExpression') return isTestCallee(node.callee);
-  return false;
-};
-
 const reportScenarioStatement = (context, statement) => {
   const technicalDetail = contains(statement, isTechnicalCall);
   if (technicalDetail) {
-    context.report({ node: technicalDetail === true ? statement : technicalDetail, messageId: 'technicalDetail' });
+    context.report({ node: statement, messageId: 'technicalDetail' });
     return;
   }
 
@@ -78,7 +44,7 @@ export const givenWhenThen = {
   create: context => ({
     CallExpression: node => {
       if (!isTestCallee(node.callee)) return;
-      const scenario = [...node.arguments].reverse().find(isFunction);
+      const scenario = scenarioOf(node);
       if (!scenario) return;
       if (scenario.body.type === 'BlockStatement') {
         scenario.body.body.forEach(statement => reportScenarioStatement(context, statement));
