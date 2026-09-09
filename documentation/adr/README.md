@@ -3,7 +3,8 @@
 Structural decisions taken on this repository, with the options weighed and the price paid. Copy
 [`template.md`](template.md) to start one; number it with the next free 4-digit prefix followed by a
 kebab-case title (`0002-something-decided.md`). If two branches take the same number, the later MR
-renumbers at merge time.
+renumbers at merge time. There is no 0016: the number was skipped, and renumbering would move a few dozen
+cross-references to save nothing, so it stays free.
 
 **A record's own `## Status` is the living one.** Most records are reached from a topic document or a
 context's `AGENTS.md`, never through this index, so a status kept only here would not reach their readers. A

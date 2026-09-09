@@ -2,7 +2,16 @@
 
 ## Status
 
-One of `Proposed`, `Accepted`, `Superseded by 000X`, `Deprecated`.
+`Proposed`, `Accepted`, `Superseded by 000X` or `Deprecated`, then every relation this record has with
+another, each carrying its delta:
+
+- `Amended by 000X: <what it changed, in one clause>` — part of this decision no longer holds.
+- `Superseded by 000X` — none of it holds. Say it on the first line and send the reader away.
+- `Complemented by 000X: <what it adds>` — all of it holds and a later record extends it.
+- `Amends`, `Supersedes`, `Complements` or `Refines 000X` — the same relations, seen from the newer record.
+
+A reader landing here from a topic document must leave with the rule in force without opening `000X`. That is
+what the clause is for; a bare link is not enough.
 
 ## Context
 
