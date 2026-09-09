@@ -52,10 +52,11 @@ threshold as independent source-coverage evidence, and store JSON and HTML repor
 
 The pre-push gate is the whole of this policy plus the static one: the hook runs `validate:quick` — pinned
 runtime and API contract, then lint, Prettier, TypeScript and workflow validation — and then
-`test:mutation:diff`. It runs neither coverage, nor the builds, nor the browser suites: CI and the Codex Stop
-gate own that evidence, and duplicating it serialized every push behind checks the remote pipeline repeated
-immediately. Staged secret detection, ESLint fixes and Prettier stay at commit; `validate:complete` stays at
-Codex Stop and across the CI jobs, as [ADR 0017](0017-use-one-validation-graph-at-every-gate.md) composes them.
+`test:mutation:diff`. It runs neither coverage, nor the builds, nor the browser suites: CI owns that evidence,
+and duplicating it serialized every push behind checks the remote pipeline repeated immediately. Staged secret
+detection, ESLint fixes and Prettier stay at commit. `validate:complete` runs across the CI jobs and, locally,
+only when a developer invokes it — the repository registers no completion hook that would run it for them.
+[ADR 0017](0017-use-one-validation-graph-at-every-gate.md) composes those groups.
 
 ## Consequences
 
@@ -73,4 +74,4 @@ Codex Stop and across the CI jobs, as [ADR 0017](0017-use-one-validation-graph-a
 - Regressions in test assertion strength outside the domain core are not automatically blocked at pre-push. They rely on unit test coverage, component tests and application tests.
 - GitHub Actions no longer runs scheduled mutation jobs; project-wide mutation measurements must be executed on demand locally via `npm run test:mutation:project`.
 - Every valid mutant runs the complete selected spec, because the command runner can neither select tests nor collect per-mutant coverage.
-- A person pushing outside a trusted Codex task discovers test, build or audit failures only in CI, and complete local validation stays an explicit developer action.
+- Nothing runs the complete local graph on a developer's behalf, so a push discovers test, build or audit failures only in CI unless someone invokes `validate:complete` first.

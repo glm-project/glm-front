@@ -2,10 +2,14 @@
 
 ## Status
 
-Accepted, except the pre-push gate: it no longer runs the complete graph, and
-[ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md) states what it runs instead. Everything else
-here — the commit gate, the CI split, the pinned Gitleaks and actionlint, the audit threshold and the Codex
-Stop gate — stands.
+Accepted, except two of its gates. The pre-push gate no longer runs the complete graph;
+[ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md) states what it runs instead. The Codex Stop
+gate no longer exists: #107 removed `.codex/hooks.json` and `scripts/codex-stop-validation.mjs`, so
+`validate:complete` is an explicit developer invocation and nothing triggers it on completion. Read the Codex
+passages below as the account of a gate that was, not one to reinstate.
+
+Everything else here stands — the graph composed in `package.json`, the commit gate, the CI split, the
+pinned Gitleaks and actionlint, and the blocking audit threshold.
 
 ## Context
 
