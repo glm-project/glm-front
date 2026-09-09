@@ -164,10 +164,13 @@ export class CurrentOperateurLifecycle {
   private async drainWindow(): Promise<void> {
     await this.acceptationLocale.drain();
     this.releaseWindow();
-    await this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
-      this.reconcile(entreprise, state);
-    });
-    this.pushReferentielFreshness();
+    try {
+      await this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
+        this.reconcile(entreprise, state);
+      });
+    } finally {
+      this.pushReferentielFreshness();
+    }
   }
 
   private releaseWindow(): void {

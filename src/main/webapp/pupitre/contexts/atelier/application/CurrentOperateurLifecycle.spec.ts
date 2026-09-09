@@ -304,6 +304,24 @@ describe('Designation du pupitre', () => {
     thenTheAddedOperatorIsDesignated();
   });
 
+  it('should reach an operator added to the referential even when the closure fails to reread the journal', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+    whenEntering('049');
+    await whenValidating();
+
+    const reject = givenDelayedFailure();
+    const closure = whenFinishing();
+    await whenReadStarts();
+    whenRejecting(reject);
+    await whenTheClosureFails(closure);
+
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenTheAddedOperatorIsDesignated();
+  });
+
   it('should reach an operator added to the referential on the keystroke after their code came back unknown', async () => {
     givenAnOperateurAddedToTheServerReferential();
 
@@ -377,6 +395,9 @@ describe('Designation du pupitre', () => {
     sessionFailure = new Error('Session indisponible');
   };
   const whenTheServerRefreshSettles = (): Promise<void> => journal.synchronizationsSettled();
+  const whenTheClosureFails = async (closure: Promise<void>): Promise<void> => {
+    await expect(closure).rejects.toThrow('Unavailable');
+  };
   const whenAFailureIsReported = (): Promise<void> => errorHandler.nextFailure();
   const thenNoExchangeWasAttempted = (): void => {
     expect(serveur.attempts).toBe(0);
