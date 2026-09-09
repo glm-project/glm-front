@@ -3,14 +3,18 @@
 Structural decisions taken on this repository, with the options weighed and the price paid. Copy
 [`template.md`](template.md) to start one; number it with the next free 4-digit prefix followed by a
 kebab-case title (`0002-something-decided.md`). If two branches take the same number, the later MR
-renumbers at merge time. There is no 0016: the number was skipped, and renumbering would move a few dozen
-cross-references to save nothing, so it stays free.
+renumbers at merge time. Numbers are never reused: 0016 was skipped, 0018 and 0020 were removed once 0024
+carried everything they said, and renumbering the rest would move a few dozen cross-references to save
+nothing. A number that answers nothing here has its account in `git log`.
 
 **A record's own `## Status` is the living one.** Most records are reached from a topic document or a
 context's `AGENTS.md`, never through this index, so a status kept only here would not reach their readers. A
 `## Status` states what still holds and what a later record changed, in enough words that the reader does not
-have to open that later record. This index carries titles and hooks, and marks the records that have been
-superseded — those are the ones not to open.
+have to open that later record. This index carries titles and hooks.
+
+**A record is deleted, not kept as a redirect, when a later one carries its whole reasoning and nothing
+routes to it any more.** Superseding alone is not enough: a record whose options and prices still teach
+something stays, with a status that says what died.
 
 - [0001 — Documentation layout](0001-documentation-layout.md) — minimal agent entry point, topic documents
   and local ADRs
@@ -44,12 +48,8 @@ superseded — those are the ones not to open.
   installs and an immutable backend contract revision in local validation and CI
 - [0017 — Use one validation graph at every gate](0017-use-one-validation-graph-at-every-gate.md) — shared
   validation commands and pinned security tools
-- [0018 — Run replay mutation through Angular](0018-run-replay-mutation-through-angular.md) —
-  **superseded by 0024** — initial bounded replay-policy mutation through the Angular builder
 - [0019 — Enforce SonarJS rules through ESLint](0019-enforce-sonarjs-rules.md) — recommended static analysis
   with a cognitive-complexity ceiling of 7 and narrow TypeScript exclusions
-- [0020 — Keep pre-push feedback quick](0020-keep-pre-push-feedback-quick.md) — **superseded by 0024** —
-  quick static checks at push instead of the complete graph
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — stateful invariants and
   pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —

@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted. Supersedes [ADR 0018](0018-run-replay-mutation-through-angular.md) and
-[ADR 0020](0020-keep-pre-push-feedback-quick.md); this record states the whole pre-push gate and the whole
-mutation policy, so neither of those needs reading.
+Accepted. This record states the whole pre-push gate and the whole mutation policy. It replaces records 0018
+and 0020, which held the first bounded mutation experiment and the earlier pre-push gate; both were deleted
+once their reasoning had moved here, and both numbers stay free.
 
 ## Context
 
-ADR 0018 deliberately limited the first mutation measurement to `GesteReplayPolicy.ts`. That experiment proved the Angular command runner, the TypeScript checker and the 100 % threshold, but its report could not say anything about the rest of the applications.
+The first mutation measurement was deliberately limited to `GesteReplayPolicy.ts`. That experiment proved the Angular command runner, the TypeScript checker and the 100 % threshold, but its report could not say anything about the rest of the applications.
 
 Extending a strict 100 % blocking threshold across all unit-tested TypeScript files (including UI components, DOM event listeners and secondary infrastructure adapters) created significant friction without proportionate business confidence:
 
