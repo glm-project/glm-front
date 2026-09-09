@@ -3,7 +3,11 @@
 ## Status
 
 Accepted. Implements issue 53 and the decisions confirmed during its execution. Supersedes the in-memory
-credential decision in ADR 0003 and the offline-specific pagination and retry assumptions in ADR 0006.
+credential decision in [ADR 0003](0003-hand-written-device-grant-for-the-pupitre.md) and the offline-specific
+pagination and retry assumptions in [ADR 0006](0006-how-the-front-calls-the-back.md). Refined by
+[ADR 0009](0009-pupitre-domain-responsibilities.md), which moves the window and replay rules out of the
+application coordinator into domain owners. Complemented by
+[ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md), which gives the enrolment its screen.
 
 ## Context
 
@@ -78,22 +82,29 @@ inaccessible to injected same-origin code; this is the explicit trade required b
 
 ## Consequences
 
+### Positive
+
+- A gesture the operator sees accepted has been committed. Nothing acknowledges before the transaction
+  completes, so a lost tab, a crash or a restart cannot swallow work the screen already confirmed.
+- An enrolled pupitre keeps collecting through a network outage of any length, and a server that committed a
+  gesture whose acknowledgement was lost returns 200 on the identical replay rather than duplicating it.
+- Company partitioning is structural: reenrolment selects another document, and the former queue is suspended
+  intact rather than merged or discarded.
+- Behavior is what the assertions hold. Moving or renaming an implementation file, a private helper or a CSS
+  class does not invalidate them, so the document layout stays free to change.
+
+### Negative
+
 - Chromium/Firefox/Safari must provide IndexedDB and Web Locks in a secure context. Unsupported or failed
   local storage fails explicitly; there is no fallback that pretends to have recorded a gesture.
 - Browser-managed quota and user deletion remain possible. No application cap can eliminate those platform
   failures, and requesting another gesture cannot recover a failed commit.
-- Each company document grows with its event history. Transactions copy that document today; an event-indexed
-  store is the next change if measured growth makes this costly. It must preserve the same atomic contract.
+- Each company document grows with its event history, with no size limit, expiry, rotation or purge.
+  Transactions copy that document today; an event-indexed store is the next change if measured growth makes
+  this costly, and it must preserve the same atomic contract.
 - Offset pagination has no server snapshot version. Count and identity checks detect common concurrent edits,
   but an equal-size replacement across pages can escape them. A server cursor/snapshot is required to prove
   one instantaneous reference version; a failed detectable refresh always keeps the previous one.
-- Device enrolment still has no screen displaying its device code. That existing UI gap and the operator
-  screen remain separate tickets. This change supplies their durable application API.
+- Persisting the refresh credential puts a bearer token where injected same-origin code can read it. That is
+  the explicit price of unattended restart, and no browser storage removes it.
 - Manual refusal replay/correction, service-screen diagnostics and back-office supervision remain out of scope.
-
-## Verification
-
-The assertions exercise persisted outcomes, original wire bodies, reference completeness, company boundaries,
-crash replay and window activation. Moving or renaming implementation files, changing private helper names,
-or changing CSS classes does not invalidate those behavioral assertions. Native browser journeys cover the
-shell and device enrolment; the port contract suite drives IndexedDB transaction failures and parallel writes.

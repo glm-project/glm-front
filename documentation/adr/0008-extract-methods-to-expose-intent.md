@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Accepted. Amended by [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md): extraction is a
+contextual review rule, not a universal one — a short, direct public action or assertion stays as it is when
+a wrapper would only rename it. Extract a workflow whose details obscure its caller, as below.
 
 ## Context
 

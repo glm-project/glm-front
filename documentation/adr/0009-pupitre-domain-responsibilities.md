@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted. Refines the ownership in ADR 0007; complements the method extraction in ADR 0008.
+Accepted. Refines the ownership in [ADR 0007](0007-durable-offline-pupitre.md); complements the method
+extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented by
+[ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md), which generalizes the same ownership rule
+to every context and brings interaction and lifecycle rules into the domain.
 
 ## Context
 
@@ -44,24 +47,23 @@ not create an independent lock that would let a credential commit overlap an out
 
 ## Consequences
 
-There are two application coordinators and two domain rule owners to navigate, instead of one application
-class containing every decision. The journal port adds one adapter; changing its document keys or storage
-layout no longer changes the application coordinator or its fixture.
+### Positive
 
-Tests observe prepared gestures, restored reference and activity, retained diagnostics, port outcomes and
-server-received gestures. A method or file rename requires adjusting imports or invocation, but does not
-change an expected business result. A document-schema change is limited to the local adapter and the
-browser's durable-state fixture. The browser fixture seeds storage because no capture screen exists yet;
-its journey asserts signed requests, connectivity, restart replay and absence of a replay after acceptance,
-without reading storage documents to decide success.
+- The window and replay rules can be exercised with explicit time and no storage, network or Angular, because
+  they no longer live inside the coordinator that owns those dependencies.
+- The HTTP exchange and offline synchronization can no longer drift apart on refusals: both ask
+  `GesteReplayPolicy`, which owns the contextual exceptions and the single concurrency retry.
+- The policy compares a normalized domain motif and never constructs or parses a transport URN, so an unknown
+  offline business URN is retained verbatim and cannot accidentally match another context's code.
+- A document-schema change is confined to the local adapter and the durable-state fixture; the application
+  coordinator does not move. A method or file rename changes wiring, not an expected business result.
 
-The storage contract uses distinct clients sharing the same durable database. Its exclusion test observes
-that a second client cannot enter until the first leaves, and is checked by temporarily bypassing Web Locks:
-the modified adapter must fail that guarantee. Explicit completion signals replace repeated arbitrary waits.
+### Negative
 
-Runtime tests retain both application coordinators and replace only authentication, journal and server ports.
-They observe complete gestures received at startup, online events and timer ticks; after destruction, a new
-gesture remains pending. A failed storage exchange leaves the gesture available for the next trigger.
-Changing coordinator methods, call counts or their internal division of work does not change these expected
-outcomes. The journal's synchronization boundary waits for in-flight exchanges before checking results;
-only interval timers are simulated, leaving I/O fixtures asynchronous.
+- Two application coordinators and two domain rule owners to navigate, instead of one class holding every
+  decision, plus one more port and one more adapter.
+- The journal's session lock is deliberately the existing authentication lock. Nothing enforces that: a later
+  change to the application port can introduce a second lock and let a credential commit overlap an outgoing
+  gesture, and only review will catch it.
+- Splitting capture from publication puts the visibility decision in one coordinator and the exchange in the
+  other. Which snapshot an operator sees, and when, is now a contract between them rather than a local call.

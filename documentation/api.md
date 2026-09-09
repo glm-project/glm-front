@@ -77,5 +77,6 @@ remains visible.
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.
 
-[ADR 0006](adr/0006-how-the-front-calls-the-back.md) records the typed-client decision; ADRs 0007 and 0009
+[ADR 0006](adr/0006-how-the-front-calls-the-back.md) records the typed-client decision;
+[ADR 0007](adr/0007-durable-offline-pupitre.md) and [ADR 0009](adr/0009-pupitre-domain-responsibilities.md)
 record the later complete-reference and replay refinements.

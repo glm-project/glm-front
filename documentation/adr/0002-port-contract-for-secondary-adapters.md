@@ -2,7 +2,8 @@
 
 ## Status
 
-Amended by 0012
+Accepted. Amended by [ADR 0012](0012-own-business-contexts-by-front.md): when two independent applications
+implement one port, its contract suite lives under `src/test/webapp/unit/` rather than beside the adapters.
 
 ## Context
 

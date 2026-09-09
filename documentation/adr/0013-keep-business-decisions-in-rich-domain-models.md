@@ -4,6 +4,10 @@
 
 Accepted. Complements [ADR 0009](0009-pupitre-domain-responsibilities.md) with interaction and lifecycle
 ownership. Applies within each application's contexts, following [ADR 0012](0012-own-business-contexts-by-front.md).
+Amended by [ADR 0021](0021-own-immutable-domain-contracts.md): a business rule may be a pure function over a
+public discriminated union, not only a method on a stateful class, and every domain contract is immutable.
+Complemented by [ADR 0023](0023-stop-overloaded-coordinators-at-lint.md), which stops an application
+coordinator from accumulating those responsibilities at lint.
 
 ## Context
 
