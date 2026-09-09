@@ -31,6 +31,7 @@ advances that view.
 motifs, never transport URNs.
 
 `CurrentOperateurLifecycle` owns the current immutable designation and derives its visible snapshots.
+`FraicheurDuReferentiel` owns the decision to refresh the reference and whether that refresh is awaited.
 `AtelierCoordinator` coordinates gesture commands and durable capture. `PupitreSynchronization` coordinates
 authenticated exchange, FIFO publication, aggregate rereads and reference refresh. Keep storage,
 authentication and transport mechanics out of the domain owners.

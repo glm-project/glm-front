@@ -21,6 +21,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { vi } from 'vitest';
 import { AtelierCoordinator } from './AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { FraicheurDuReferentiel } from './FraicheurDuReferentiel';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -975,6 +976,7 @@ describe('AtelierCoordinator', () => {
       providers: [
         GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
+        FraicheurDuReferentiel,
         AtelierCoordinator,
         CurrentOperateurLifecycle,
         PupitreSynchronization,

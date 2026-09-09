@@ -9,6 +9,7 @@ import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';
 import { Entreprise } from '../domain/journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { ApplicationDuReferentiel, FraicheurDuReferentiel } from './FraicheurDuReferentiel';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 @Injectable()
@@ -17,8 +18,12 @@ export class CurrentOperateurLifecycle {
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(GestesRecordingQueue);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
+  private readonly fraicheur = inject(FraicheurDuReferentiel);
   private readonly designation = signal(DesignationOperateur.empty());
   private readonly state = computed(() => this.designation().snapshot());
+  private readonly applyReferentiel: ApplicationDuReferentiel = (entreprise, state) => {
+    this.reconcile(entreprise, state);
+  };
   private fermeture: Promise<void> | undefined;
 
   readonly code = computed(() => this.state().code);
@@ -119,13 +124,11 @@ export class CurrentOperateurLifecycle {
   }
 
   refreshReferentiel(): Promise<void> {
-    return this.etatHorsLigne.refresh('SYNCHRONIZE', (entreprise, state) => {
-      this.reconcile(entreprise, state);
-    });
+    return this.fraicheur.refresh(this.applyReferentiel);
   }
 
   pushReferentielFreshness(): void {
-    this.observe(this.refreshReferentiel());
+    this.fraicheur.push(this.applyReferentiel);
   }
 
   reconcile(entreprise: Entreprise | undefined, state: JournalDuPupitre): void {

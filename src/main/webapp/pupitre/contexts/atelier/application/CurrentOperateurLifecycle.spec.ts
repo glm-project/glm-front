@@ -21,6 +21,7 @@ import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/Atel
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
+import { FraicheurDuReferentiel } from './FraicheurDuReferentiel';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
@@ -85,6 +86,7 @@ describe('Designation du pupitre', () => {
       providers: [
         GestesRecordingQueue,
         EtatHorsLigneDuPupitre,
+        FraicheurDuReferentiel,
         AtelierCoordinator,
         CurrentOperateurLifecycle,
         PupitreSynchronization,
