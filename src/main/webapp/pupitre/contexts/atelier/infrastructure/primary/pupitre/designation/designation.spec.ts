@@ -112,7 +112,10 @@ describe('Designation keypad', () => {
     designation = TestBed.inject(CurrentOperateurLifecycle);
     fixture.detectChanges();
   });
-  afterEach(() => {
+  afterEach(async () => {
+    serveurFixture.settle();
+    await journalFixture.synchronizationsSettled();
+    await new Promise(resolve => roundTrip(resolve));
     TestBed.resetTestingModule();
     vi.useRealTimers();
   });
@@ -195,6 +198,7 @@ describe('Designation keypad', () => {
   };
   const whenResolutionSettles = async (): Promise<void> => {
     await journalFixture.readCompleted;
+    await journalFixture.synchronizationsSettled();
     void journalFixture.nextRead();
     fixture.detectChanges();
   };

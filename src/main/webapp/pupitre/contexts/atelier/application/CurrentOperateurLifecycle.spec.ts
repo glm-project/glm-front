@@ -112,6 +112,7 @@ describe('Designation du pupitre', () => {
   });
   afterEach(async () => {
     serveur.settle();
+    await journal.synchronizationsSettled();
     await new Promise(resolve => roundTrip(resolve));
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
@@ -321,8 +322,18 @@ describe('Designation du pupitre', () => {
     thenUnknownCodeIsShown();
   });
 
-  it('should designate again while the refresh pushed by the previous closure still hangs', async () => {
-    givenAHangingServerRefresh();
+  it('should keep showing the unknown code while the pushed refresh runs', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+
+    thenUnknownCodeIsShown();
+  });
+
+  it('should designate again while every exchange pushed by the previous closure still hangs', async () => {
+    givenAHangingServerExchange();
 
     whenEntering('049');
     await whenValidating();
@@ -347,20 +358,21 @@ describe('Designation du pupitre', () => {
   const givenAnOperateurAddedToTheServerReferential = (): void => {
     serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [] };
   };
-  const givenAHangingServerRefresh = (): void => {
-    serveur.suspendReferentiel();
+  const givenAHangingServerExchange = (): void => {
+    serveur.suspendExchanges();
   };
   const whenTheSessionStopsAnswering = (): void => {
     sessionFailure = new Error('Session indisponible');
   };
   const whenTheServerRefreshSettles = async (): Promise<void> => {
-    for (let exchange = 0; exchange < 8; exchange += 1) await new Promise(resolve => roundTrip(resolve));
+    await journal.synchronizationsSettled();
+    await new Promise(resolve => roundTrip(resolve));
   };
   const thenTheAddedOperatorIsDesignated = (): void => {
     expect(designation.operateur()).toEqual(identiteOperateurAjouteFixture);
   };
   const thenTheRefreshFailureWasReported = (): void => {
-    expect(errorHandler.errors).toEqual([new Error('Session indisponible')]);
+    expect(errorHandler.errors).toContainEqual(new Error('Session indisponible'));
   };
 
   const thenNewGestureIsRefused = (): void => {

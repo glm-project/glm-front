@@ -54,6 +54,8 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly tails = new Map<string, Promise<unknown>>();
   private nextAppendBarrier: AppendBarrier | undefined;
   private readsImmediately = false;
+  private synchronizationsInFlight = 0;
+  private notifySettled: (() => void) | undefined;
   failWrite = false;
   afterRead: (() => void) | undefined;
 
@@ -92,8 +94,26 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({ ...state, connecte: false }));
   }
-  override synchronize<T>(action: () => Promise<T>): Promise<T> {
-    return this.lock('synchronisation', action);
+  override async synchronize<T>(action: () => Promise<T>): Promise<T> {
+    this.synchronizationsInFlight += 1;
+    try {
+      return await this.lock('synchronisation', action);
+    } finally {
+      this.synchronizationsInFlight -= 1;
+      if (this.synchronizationsInFlight === 0) {
+        this.notifySettled?.();
+        this.notifySettled = undefined;
+      }
+    }
+  }
+  synchronizationsSettled(): Promise<void> {
+    if (this.synchronizationsInFlight === 0) return Promise.resolve();
+    return new Promise(resolve => {
+      this.notifySettled = resolve;
+    });
+  }
+  isSynchronizing(): boolean {
+    return this.synchronizationsInFlight > 0;
   }
   override withSession<T>(action: () => Promise<T>): Promise<T> {
     return this.lock('session', action);

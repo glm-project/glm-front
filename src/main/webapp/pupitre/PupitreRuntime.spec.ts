@@ -80,7 +80,7 @@ describe('PupitreRuntime', () => {
     vi.restoreAllMocks();
   });
 
-  it('should leave the first workshop load to the enrolment, then refresh on reconnection and every minute', async () => {
+  it('should leave the first workshop load to the enrolment, then refresh on reconnection and every thirty seconds', async () => {
     await whenStartingPupitre();
 
     await thenSynchronizationAttemptsAre(0);
@@ -92,6 +92,14 @@ describe('PupitreRuntime', () => {
     await whenThirtySecondsPass();
 
     await thenSynchronizationAttemptsAre(2);
+  });
+
+  it('should hold its refresh until the interval has fully elapsed', async () => {
+    await whenStartingPupitre();
+
+    await whenJustUnderThirtySecondsPass();
+
+    await thenSynchronizationAttemptsAre(0);
   });
 
   it('should start only one refresh schedule', async () => {
@@ -175,6 +183,9 @@ describe('PupitreRuntime', () => {
   };
   const whenThirtySecondsPass = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(30_000);
+  };
+  const whenJustUnderThirtySecondsPass = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(29_999);
   };
   const thenSynchronizationAttemptsAre = async (expected: number): Promise<void> => {
     await pupitre.settle();
