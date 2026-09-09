@@ -122,9 +122,8 @@ ground under the unbounded queue of issue 53; the day it falls, that is the tick
 - `findApiErrorIn` trusts the back's catalogue: an URN the front's union does not know crosses as a technical
   failure, silently. The union is bounded to the codes the three ports can reach, so widening it is a
   deliberate act — and forgetting to widen it degrades a refusal into a crash rather than into a wrong branch.
-- **No Cypress covers any of this yet.** Nothing in `app/atelier` or `app/operateur` is wired into a front:
-  issue 55 brings the providers and the screens, and the interception with them. The unit suite and `tsc` are
-  the whole net today.
+- **The unit suite and `tsc` were the whole net when this was decided**: no context was wired into a front,
+  so nothing exercised a real request. The pupitre's application suites cover it since.
 - What would reopen this: the back publishing honest `required` flags (issue 61) shrinks the `required`
   guards to the genuinely optional fields, and a grid projection without the journal (issue 62) reopens the
   bound of one request per read.
