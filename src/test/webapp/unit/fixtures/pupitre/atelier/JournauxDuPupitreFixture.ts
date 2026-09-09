@@ -9,7 +9,9 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 
-const answerOnNextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+const scheduleOnTheRealClock = globalThis.setTimeout.bind(globalThis);
+
+const answerOnNextTask = (): Promise<void> => new Promise(resolve => scheduleOnTheRealClock(resolve));
 
 interface AppendBarrier {
   readonly started: Promise<void>;

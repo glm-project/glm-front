@@ -16,6 +16,7 @@ import { ContextesParGeste } from './ContextesParGeste';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 import { Matricule } from './Matricule';
+import { MatriculeInconnu } from './MatriculeInconnu';
 import { NumeroDElement } from './NumeroDElement';
 
 export interface ActiviteDePointage {
@@ -264,7 +265,7 @@ export class FenetreOperateur {
     identity: IdentiteDeFenetre,
   ): FenetreOperateur {
     const operateur = vue.referentiel?.operateurs.find(candidat => code.identifies(candidat.matricule));
-    if (operateur === undefined) throw new Error('Matricule absent du referentiel local.');
+    if (operateur === undefined) throw new MatriculeInconnu();
     return new FenetreOperateur({
       entreprise,
       vue,

@@ -26,6 +26,9 @@ import { GestesRecordingQueue } from './GestesRecordingQueue';
 const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
 
+const operateurAjouteFixture: OperateurDuPupitre = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050', postes: [] };
+const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050' };
+
 const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
 
 const referenceFixture: JournalDuPupitre = {
@@ -43,16 +46,12 @@ class DesignationJournalFixture extends JournauxDuPupitreFixture {
       this.notifyRead = resolve;
     });
   }
-  override read(): Promise<JournalDuPupitre> {
+  override read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     this.notifyRead();
     const answer = this.answer;
     this.answer = undefined;
     if (answer !== undefined) return answer;
-    return new Promise(resolve =>
-      roundTrip(() => {
-        resolve(structuredClone(referenceFixture));
-      }),
-    );
+    return super.read(entreprise);
   }
 }
 
@@ -73,7 +72,9 @@ describe('Designation du pupitre', () => {
   let journal: DesignationJournalFixture;
   let errorHandler: ErrorHandlerFixture;
   let serveur: AtelierExchangeFixture;
+  let sessionFailure: Error | undefined;
   beforeEach(async () => {
+    sessionFailure = undefined;
     errorHandler = new ErrorHandlerFixture();
     journal = new DesignationJournalFixture();
     serveur = new AtelierExchangeFixture();
@@ -95,7 +96,13 @@ describe('Designation du pupitre', () => {
           useValue: {
             currentTenant: () => 'atelier',
             currentToken: () => 'jeton',
-            synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)),
+            synchronizeSession: () =>
+              new Promise<void>((resolve, reject) =>
+                roundTrip(() => {
+                  if (sessionFailure === undefined) resolve();
+                  else reject(sessionFailure);
+                }),
+              ),
           },
         },
         { provide: ErrorHandlerPort, useValue: errorHandler },
@@ -105,7 +112,7 @@ describe('Designation du pupitre', () => {
   });
   afterEach(async () => {
     serveur.settle();
-    await vi.advanceTimersByTimeAsync(0);
+    await new Promise(resolve => roundTrip(resolve));
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
     vi.useRealTimers();
@@ -272,6 +279,89 @@ describe('Designation du pupitre', () => {
 
     thenNewGestureIsRefused();
   });
+
+  it('should reach an operator added to the referential after a window closes', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenTheAddedOperatorIsDesignated();
+  });
+
+  it('should reach an operator added to the referential on the keystroke after their code came back unknown', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+
+    whenEntering('050');
+    await whenValidating();
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenTheAddedOperatorIsDesignated();
+  });
+
+  it('should leave the referential untouched when the resolution fails for another reason than an unknown code', async () => {
+    givenAnOperateurAddedToTheServerReferential();
+    const reject = givenDelayedFailure();
+
+    whenEntering('050');
+    const pending = whenValidating();
+    await whenReadStarts();
+    whenRejecting(reject);
+    await whenResolutionCompletes(pending);
+    await whenTheServerRefreshSettles();
+    whenEntering('050');
+    await whenValidating();
+
+    thenUnknownCodeIsShown();
+  });
+
+  it('should designate again while the refresh pushed by the previous closure still hangs', async () => {
+    givenAHangingServerRefresh();
+
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
+    whenEntering('049');
+    await whenValidating();
+
+    thenOperatorIsDesignated();
+  });
+
+  it('should close the designation even when the pushed refresh rejects', async () => {
+    whenEntering('049');
+    await whenValidating();
+    whenTheSessionStopsAnswering();
+    await whenFinishing();
+    await whenTheServerRefreshSettles();
+
+    thenClosed();
+    thenTheRefreshFailureWasReported();
+  });
+
+  const givenAnOperateurAddedToTheServerReferential = (): void => {
+    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [] };
+  };
+  const givenAHangingServerRefresh = (): void => {
+    serveur.suspendReferentiel();
+  };
+  const whenTheSessionStopsAnswering = (): void => {
+    sessionFailure = new Error('Session indisponible');
+  };
+  const whenTheServerRefreshSettles = async (): Promise<void> => {
+    for (let exchange = 0; exchange < 8; exchange += 1) await new Promise(resolve => roundTrip(resolve));
+  };
+  const thenTheAddedOperatorIsDesignated = (): void => {
+    expect(designation.operateur()).toEqual(identiteOperateurAjouteFixture);
+  };
+  const thenTheRefreshFailureWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([new Error('Session indisponible')]);
+  };
 
   const thenNewGestureIsRefused = (): void => {
     expect(() => TestBed.inject(AtelierCoordinator).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');

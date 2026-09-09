@@ -5,6 +5,7 @@ import { DesignationOperateur, isFenetreIdentifiedBy } from '../domain/designati
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
+import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';
 import { Entreprise } from '../domain/journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
@@ -56,8 +57,9 @@ export class CurrentOperateurLifecycle {
       const completion = this.designation().afterCompletingResolution(resolution, Date.now());
       this.designation.set(completion.designation);
       if (!completion.accepted) await this.drainWindow();
-    } catch {
+    } catch (failure: unknown) {
       this.designation.update(current => current.afterFailingResolution(resolution, Date.now()));
+      if (failure instanceof MatriculeInconnu) this.pushReferentielFreshness();
     } finally {
       this.designation.update(current => current.afterEndingResolution());
       this.refresh();
@@ -155,6 +157,15 @@ export class CurrentOperateurLifecycle {
     await this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
       this.reconcile(entreprise, state);
     });
+    this.pushReferentielFreshness();
+  }
+
+  private pushReferentielFreshness(): void {
+    this.observe(
+      this.etatHorsLigne.refresh('SYNCHRONIZE', (entreprise, state) => {
+        this.reconcile(entreprise, state);
+      }),
+    );
   }
 
   private releaseWindow(): void {
