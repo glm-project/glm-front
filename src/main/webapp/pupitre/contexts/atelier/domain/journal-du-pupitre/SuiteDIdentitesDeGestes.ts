@@ -25,7 +25,7 @@ export class SuiteDIdentitesDeGestes {
     };
   }
 
-  suivante(): SuiteDIdentitesDeGestes {
+  next(): SuiteDIdentitesDeGestes {
     return new SuiteDIdentitesDeGestes(this.prefixe, (this.suffixe + 1) >>> 0, this.dateDeSurvenue);
   }
 }

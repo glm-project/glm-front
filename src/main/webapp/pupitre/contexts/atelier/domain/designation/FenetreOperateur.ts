@@ -272,7 +272,7 @@ export class FenetreOperateur {
       identity,
       globale: undefined,
       arriveeAssuree: false,
-      contextesParGeste: ContextesParGeste.aucun(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 0,
       refusVisible: undefined,
       operateurDesigne: new OperateurDesigne(operateur, code),
@@ -340,7 +340,7 @@ export class FenetreOperateur {
   }
   afterIntendingGesture(): FenetreOperateur {
     this.requireAvailableGestures();
-    return this.with({ refusVisible: undefined, contextesParGeste: ContextesParGeste.aucun(), intention: this.etat.intention + 1 });
+    return this.with({ refusVisible: undefined, contextesParGeste: ContextesParGeste.empty(), intention: this.etat.intention + 1 });
   }
 
   private requireAvailableGestures(): void {
@@ -456,7 +456,7 @@ export class FenetreOperateur {
   }
 
   private contextesOf(decision: DecisionDePointage): ContextesParGeste {
-    return decision.kind === 'GESTES' ? decision.contextesParGeste : ContextesParGeste.aucun();
+    return decision.kind === 'GESTES' ? decision.contextesParGeste : ContextesParGeste.empty();
   }
 
   private contexteFor(type: TypeDePresence): ContexteDeGesteDAtelier | undefined {

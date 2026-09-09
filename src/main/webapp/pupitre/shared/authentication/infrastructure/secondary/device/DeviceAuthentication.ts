@@ -16,7 +16,7 @@ import {
   RefusedGrant,
   Tokens,
 } from './DeviceGrantClient';
-import { SessionDAppareil, SessionStockee } from './SessionDAppareil';
+import { SessionDAppareil, StoredSession } from './SessionDAppareil';
 
 const SLOW_DOWN_EXTRA_SECONDS = 5;
 const EXTRA_SECONDS_WHEN_STILL_WAITING = new Map<string, number>([
@@ -33,7 +33,7 @@ const SECONDS_BEFORE_RETRYING_A_RENEWAL = 60;
 const MILLISECONDS_PER_SECOND = 1000;
 
 interface PersistedEnrolment {
-  session?: SessionStockee;
+  session?: StoredSession;
   tenant?: string;
 }
 

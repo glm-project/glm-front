@@ -419,7 +419,7 @@ describe('FenetreOperateur', () => {
 
     expect(previous.refusal()).toBeUndefined();
     expect(reconciled.refusal()).toEqual({
-      contexte: { kind: 'ELEMENT', numero: NumeroDElement.attribue('1015') },
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
       message: "L'élément a été clôturé.",
     });
   });
@@ -949,7 +949,7 @@ describe('FenetreOperateur', () => {
   const thenWorkstationChoiceIsRequested = (decision: DecisionDePointage): void => {
     expect(decision).toMatchObject({
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: NumeroDElement.genere('OF-2026-000042'),
+      numero: NumeroDElement.generated('OF-2026-000042'),
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },
@@ -958,7 +958,7 @@ describe('FenetreOperateur', () => {
   };
   const thenLatestRefusalNamesTheElement = (): void => {
     expect(fenetre.refusal()).toEqual({
-      contexte: { kind: 'ELEMENT', numero: NumeroDElement.attribue('1015') },
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
       message: "L'élément a été clôturé.",
     });
   };

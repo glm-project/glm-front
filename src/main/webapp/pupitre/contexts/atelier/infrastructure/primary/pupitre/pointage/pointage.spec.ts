@@ -12,10 +12,10 @@ interface DeferredFixture {
 }
 
 const pointageFixture: VueDePointage = {
-  moules: [new ElementDePointage('moule-1015', NumeroDElement.attribue('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
+  moules: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
   ordresDeFabrication: [
-    new ElementDePointage('of-204', NumeroDElement.attribue('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
-    new ElementDePointage('of-generated', NumeroDElement.genere('OF-2026-000042'), undefined),
+    new ElementDePointage('of-204', NumeroDElement.assigned('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
+    new ElementDePointage('of-generated', NumeroDElement.generated('OF-2026-000042'), undefined),
   ],
   glmActif: false,
 };
@@ -151,7 +151,7 @@ describe('Pointage screen', () => {
   const givenAWorkstationChoice = (): void => {
     nextExecution = {
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: NumeroDElement.attribue('OF-2026-000042'),
+      numero: NumeroDElement.assigned('OF-2026-000042'),
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },

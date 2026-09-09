@@ -15,23 +15,23 @@ describe('LibellesAtelier', () => {
   });
 
   it('should resolve gesture context labels for elements and global commands', () => {
-    expect(toLibelleContexteAtelier({ kind: 'ELEMENT', numero: NumeroDElement.attribue('OF-42') })).toBe('OF-42');
+    expect(toLibelleContexteAtelier({ kind: 'ELEMENT', numero: NumeroDElement.assigned('OF-42') })).toBe('OF-42');
     expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' })).toBe('PAUSE');
     expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' })).toBe('REPRENDRE');
     expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' })).toBe('TOUT ARRÊTER');
   });
 
   it('should expose primary action labels depending on element activity', () => {
-    const activeElement = new ElementDePointage('e1', NumeroDElement.attribue('OF-1'), { categorie: 'TRAVAIL', dureeMs: 10_000 });
-    const inactiveElement = new ElementDePointage('e2', NumeroDElement.attribue('OF-2'), undefined);
+    const activeElement = new ElementDePointage('e1', NumeroDElement.assigned('OF-1'), { categorie: 'TRAVAIL', dureeMs: 10_000 });
+    const inactiveElement = new ElementDePointage('e2', NumeroDElement.assigned('OF-2'), undefined);
 
     expect(LIBELLES_POINTAGE.actionPrincipale(activeElement)).toBe('ARRÊTER');
     expect(LIBELLES_POINTAGE.actionPrincipale(inactiveElement)).toBe('DÉMARRER');
   });
 
   it('should expose secondary action labels depending on non-conformity status', () => {
-    const conformingElement = new ElementDePointage('e1', NumeroDElement.attribue('OF-1'), { categorie: 'TRAVAIL', dureeMs: 10_000 });
-    const nonConformingElement = new ElementDePointage('e2', NumeroDElement.attribue('OF-2'), {
+    const conformingElement = new ElementDePointage('e1', NumeroDElement.assigned('OF-1'), { categorie: 'TRAVAIL', dureeMs: 10_000 });
+    const nonConformingElement = new ElementDePointage('e2', NumeroDElement.assigned('OF-2'), {
       categorie: 'NON_CONFORMITE',
       dureeMs: 10_000,
     });

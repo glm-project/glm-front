@@ -6,16 +6,16 @@ export class NumeroDElement {
     private readonly repli: boolean,
   ) {}
 
-  static attribue(reference: string): NumeroDElement {
+  static assigned(reference: string): NumeroDElement {
     return new NumeroDElement(reference, false);
   }
 
-  static genere(nom: string): NumeroDElement {
+  static generated(nom: string): NumeroDElement {
     return new NumeroDElement(nom, true);
   }
 
   static from(suivi: SuiviDuPupitre): NumeroDElement {
-    return suivi.reference === undefined ? NumeroDElement.genere(suivi.nom) : NumeroDElement.attribue(suivi.reference);
+    return suivi.reference === undefined ? NumeroDElement.generated(suivi.nom) : NumeroDElement.assigned(suivi.reference);
   }
 
   isRepliSurNom(): boolean {

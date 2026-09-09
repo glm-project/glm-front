@@ -22,7 +22,7 @@ export class IntentionGlobaleInitiee {
     let suite = this.origine;
     return () => {
       const identite = suite.identite();
-      suite = suite.suivante();
+      suite = suite.next();
       return identite;
     };
   }

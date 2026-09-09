@@ -59,7 +59,7 @@ export class DesignationOperateur {
 
   static empty(): DesignationOperateur {
     return new DesignationOperateur({
-      saisie: Matricule.vide(),
+      saisie: Matricule.empty(),
       inconnu: false,
       designated: false,
       resolution: undefined,
@@ -109,13 +109,13 @@ export class DesignationOperateur {
   afterCompletingResolution(resolution: DesignationResolution, now: number): CompletionResult {
     const expired = this.afterExpiration(now);
     if (resolution.generation !== expired.etat.generation) return { designation: expired, accepted: false };
-    return { designation: expired.with({ designated: true, saisie: Matricule.vide(), inconnu: false }), accepted: true };
+    return { designation: expired.with({ designated: true, saisie: Matricule.empty(), inconnu: false }), accepted: true };
   }
 
   afterFailingResolution(resolution: DesignationResolution, now: number): DesignationOperateur {
     const expired = this.afterExpiration(now);
     if (resolution.generation !== expired.etat.generation) return expired;
-    return expired.with({ saisie: Matricule.vide(), inconnu: true });
+    return expired.with({ saisie: Matricule.empty(), inconnu: true });
   }
 
   afterEndingResolution(): DesignationOperateur {
@@ -132,7 +132,7 @@ export class DesignationOperateur {
       generation: this.etat.generation + 1,
       closing: this.etat.closing || this.etat.designated,
       designated: false,
-      saisie: Matricule.vide(),
+      saisie: Matricule.empty(),
       inconnu: false,
     });
   }

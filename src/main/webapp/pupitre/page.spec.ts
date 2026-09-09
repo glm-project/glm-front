@@ -20,7 +20,7 @@ const referentielFixture: ReferentielDuPupitre = {
 const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
 const pointageFixture: VueDePointage = {
   moules: [],
-  ordresDeFabrication: [new ElementDePointage('of-1', NumeroDElement.attribue('204'), undefined)],
+  ordresDeFabrication: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)],
   glmActif: false,
 };
 
@@ -183,7 +183,7 @@ describe('Pupitre page', () => {
   it('should remove an open workstation choice with the pointage view', () => {
     givenPointage({
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: NumeroDElement.attribue('204'),
+      numero: NumeroDElement.assigned('204'),
       postes: [{ id: 'tour', libelle: 'Tour' }],
       choose: () => Promise.resolve(),
     });
@@ -196,7 +196,7 @@ describe('Pupitre page', () => {
   });
 
   it.each([
-    [{ contexte: { kind: 'ELEMENT' as const, numero: NumeroDElement.attribue('204') }, message: 'Pointage refusé' }, '204 Pointage refusé'],
+    [{ contexte: { kind: 'ELEMENT' as const, numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' }, '204 Pointage refusé'],
     [
       { contexte: { kind: 'COMMANDE_GLOBALE' as const, intention: 'TOUT_ARRETER' as const }, message: 'Commande refusée' },
       'TOUT ARRÊTER Commande refusée',
@@ -210,7 +210,7 @@ describe('Pupitre page', () => {
   });
 
   it('should display a local capture failure ahead of a workshop refusal', () => {
-    givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: NumeroDElement.attribue('204') }, message: 'Pointage refusé' });
+    givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' });
     givenLocalCaptureFailure();
 
     whenRenderingThePage();

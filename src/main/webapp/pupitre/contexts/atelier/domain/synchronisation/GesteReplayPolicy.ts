@@ -9,7 +9,7 @@ export type ReplayDecision = 'ACCEPTER' | 'RELIRE_ET_REJOUER' | 'PROPAGER';
 const carriesAMotif = (refus: unknown): refus is RefusDAtelier | RefusDePublication =>
   refus instanceof RefusDAtelier || refus instanceof RefusDePublication;
 
-const motifOf = (refus: unknown): MotifDeRefus => (carriesAMotif(refus) ? refus.motif : MotifDeRefus.aucun());
+const motifOf = (refus: unknown): MotifDeRefus => (carriesAMotif(refus) ? refus.motif : MotifDeRefus.none());
 
 const absorbsForbiddenPresenceTransition = (operation: OperationDAtelier): boolean =>
   operation === 'PRESENCE_ASSUREE' || operation === 'REPRISE_APRES_ARRIVEE_OUVERTE';

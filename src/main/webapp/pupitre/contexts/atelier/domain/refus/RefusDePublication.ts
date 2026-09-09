@@ -6,7 +6,7 @@ export class RefusDePublication extends Error {
   constructor(
     readonly code: string,
     message: string,
-    motif: MotifDeRefus = MotifDeRefus.aucun(),
+    motif: MotifDeRefus = MotifDeRefus.none(),
   ) {
     super(message);
     this.motif = motif;

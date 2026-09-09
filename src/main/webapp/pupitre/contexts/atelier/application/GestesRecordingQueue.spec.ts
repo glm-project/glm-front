@@ -93,7 +93,7 @@ describe('GestesRecordingQueue', () => {
           type: 'FIN',
         },
       ],
-      contextesParGeste: ContextesParGeste.aucun(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 1,
     };
 
@@ -117,7 +117,7 @@ describe('GestesRecordingQueue', () => {
           type: 'FIN',
         },
       ],
-      contextesParGeste: ContextesParGeste.aucun(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 1,
     };
 
@@ -134,7 +134,7 @@ describe('GestesRecordingQueue', () => {
     const lot: LotDeGestesDAtelier = {
       kind: 'GESTES',
       capture: () => [],
-      contextesParGeste: ContextesParGeste.aucun(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 1,
     };
     tenant = 'autre-entreprise';

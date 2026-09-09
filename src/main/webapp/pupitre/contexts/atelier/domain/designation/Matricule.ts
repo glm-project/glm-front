@@ -3,7 +3,7 @@ const UN_CHIFFRE = /^\d$/;
 export class Matricule {
   private constructor(private readonly valeur: string) {}
 
-  static vide(): Matricule {
+  static empty(): Matricule {
     return new Matricule('');
   }
 

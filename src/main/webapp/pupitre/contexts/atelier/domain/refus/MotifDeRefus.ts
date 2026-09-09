@@ -16,7 +16,7 @@ export type CodeDeRefusDAtelier = (typeof CODES_DE_REFUS_D_ATELIER)[number];
 export class MotifDeRefus {
   private constructor(private readonly code: CodeDeRefusDAtelier | undefined) {}
 
-  static aucun(): MotifDeRefus {
+  static none(): MotifDeRefus {
     return new MotifDeRefus(undefined);
   }
 

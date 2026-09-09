@@ -4,12 +4,12 @@ import { ContexteDeGesteDAtelier } from './FenetreOperateur';
 export class ContextesParGeste {
   private constructor(private readonly contextes: ReadonlyMap<string, ContexteDeGesteDAtelier>) {}
 
-  static aucun(): ContextesParGeste {
+  static empty(): ContextesParGeste {
     return new ContextesParGeste(new Map());
   }
 
   static forGestes(gestes: readonly GesteDAtelier[], contexte: ContexteDeGesteDAtelier | undefined): ContextesParGeste {
-    if (contexte === undefined) return ContextesParGeste.aucun();
+    if (contexte === undefined) return ContextesParGeste.empty();
     return new ContextesParGeste(new Map(gestes.map(geste => [geste.id, contexte])));
   }
 
