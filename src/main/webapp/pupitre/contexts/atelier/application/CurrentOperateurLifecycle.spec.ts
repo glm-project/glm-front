@@ -17,6 +17,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
@@ -71,9 +72,12 @@ describe('Designation du pupitre', () => {
   let designation: CurrentOperateurLifecycle;
   let journal: DesignationJournalFixture;
   let errorHandler: ErrorHandlerFixture;
+  let serveur: AtelierExchangeFixture;
   beforeEach(async () => {
     errorHandler = new ErrorHandlerFixture();
     journal = new DesignationJournalFixture();
+    serveur = new AtelierExchangeFixture();
+    serveur.reference = referentielFixture;
     await journal.saveReferentiel(Entreprise.of('atelier'), referentielFixture);
     vi.useFakeTimers();
     TestBed.configureTestingModule({
@@ -84,18 +88,24 @@ describe('Designation du pupitre', () => {
         CurrentOperateurLifecycle,
         PupitreSynchronization,
         { provide: JournauxDuPupitrePort, useValue: journal },
-        { provide: AtelierExchangePort, useValue: {} },
+        { provide: AtelierExchangePort, useValue: serveur },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
         {
           provide: AuthenticationPort,
-          useValue: { currentTenant: () => 'atelier', synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)) },
+          useValue: {
+            currentTenant: () => 'atelier',
+            currentToken: () => 'jeton',
+            synchronizeSession: () => new Promise<void>(resolve => roundTrip(resolve)),
+          },
         },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     designation = TestBed.inject(CurrentOperateurLifecycle);
   });
-  afterEach(() => {
+  afterEach(async () => {
+    serveur.settle();
+    await vi.advanceTimersByTimeAsync(0);
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
     vi.useRealTimers();
