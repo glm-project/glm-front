@@ -42,6 +42,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - « Tout arrêter » forme un unique lot local atomique et ordonné : toutes les fins des activités personnelles connues, puis le départ. Un échec d'acceptation locale n'en conserve aucune partie; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
 - Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
 - Une référence incomplète ou un échec de rafraîchissement ne remplace jamais la dernière référence complète.
+- Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée. La fraîcheur du référentiel se pousse en arrière-plan et ne se place jamais sur le chemin d'un geste.
 
 ## Règles locales
 

@@ -42,6 +42,27 @@ from the designation's domain refusal; the primary presentation chooses the mess
 `EvenementsDuJournal` owns pending-event selection in acceptance order and refused-event queries. Domain
 publication functions construct accepted or refused outcomes; synchronization executes and persists them.
 
+## The pupitre writes identifiers and only displays labels
+
+Every gesture carries identifiers — `operateurId`, `suiviId`, `posteId`. Names, element numbers and
+workstation labels never leave the screen. A stale label therefore corrupts no data: it misnames a tile for
+the length of the outage, and the identifiers behind it stay exact. This is what makes the local reference
+cacheable at all.
+
+That diverges knowingly from `glm-back/documentation/atelier-api.md` §2, which asks the front not to cache
+these collections beyond a screen session. That rule was written for an online history reader — the back
+office's real-time view — which must hold to it strictly. The pupitre is not a history reader: it is the
+capture device that must keep working when the network does not.
+
+Freshness is pushed, never dated. Four background triggers refresh the reference: the thirty-second runtime
+interval, the browser online event, the closing of an operator window and a code that came back unknown.
+There is no TTL and no per-entry expiry marker; the chrome's binary connected indicator already carries that
+information.
+
+An operator added to the referential is therefore missing from the cache for a while, and the pupitre says
+nothing about it. Online, that window is at most thirty seconds, and the unknown-code trigger brings it down
+to one more keystroke: the operator types their code again and it works.
+
 ## Synchronization preserves evidence
 
 The queue is FIFO and continues after known business refusals. Persist the refusal and its cause. An unknown
@@ -50,9 +71,9 @@ technical failure leaves the gesture pending and stops that push, allowing a lat
 An identical retry reuses the original body. For `saisie-concurrente`, reread the affected aggregate and
 retry once; retain a second refusal. Never generate a new UUID or occurrence time during replay.
 
-Refresh the complete operator and workshop reference at boot, on the browser online event and on the runtime
-interval. Publish the pair only after every page of both collections passes total, duplicate and progress
-checks. Activating that post-write snapshot records accepted pointage identifiers in the local reference so
+Refresh the complete operator and workshop reference at boot, on the browser online event, on the runtime
+interval, when an operator window closes and when a code came back unknown. Publish the pair only after
+every page of both collections passes total, duplicate and progress checks. Activating that post-write snapshot records accepted pointage identifiers in the local reference so
 their optimistic effects are no longer applied, while retaining the gestures in the audit trail. A failed
 refresh preserves the previous complete cache and its optimistic effects.
 
