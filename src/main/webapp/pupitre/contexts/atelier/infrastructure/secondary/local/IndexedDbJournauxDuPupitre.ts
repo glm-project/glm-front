@@ -1,6 +1,8 @@
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
+  EvenementsDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
   ReferentielDuPupitre,
@@ -9,7 +11,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
 
-const keyFor = (entreprise: string): string => `atelier:${entreprise}`;
+const keyFor = (entreprise: Entreprise): string => `atelier:${entreprise.toString()}`;
 
 interface EvenementAccepteStocke {
   readonly geste: GesteDAtelier;
@@ -32,43 +34,41 @@ const restoreJournal = (journal: JournalDuPupitreStocke): JournalDuPupitre => ({
   evenements: journal.evenements.map(restoreEvenement),
 });
 
-const acceptedPointageIdsFor = (suiviId: string, evenements: readonly EvenementDuJournal[]): string[] =>
-  evenements
-    .filter(evenement => evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId)
-    .map(evenement => evenement.geste.id);
-
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => ({
-  ...referentiel,
-  suivis: referentiel.suivis.map(suivi => ({
-    ...suivi,
-    evenements: [...new Set([...suivi.evenements, ...acceptedPointageIdsFor(suivi.id, evenements)])],
-  })),
-});
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => {
+  const journal = new EvenementsDuJournal(evenements);
+  return {
+    ...referentiel,
+    suivis: referentiel.suivis.map(suivi => ({
+      ...suivi,
+      evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
+    })),
+  };
+};
 
 @Injectable()
 export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
   private readonly stockage = inject(LocalStoragePort);
 
-  override async read(entreprise: string): Promise<JournalDuPupitre> {
+  override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     const stored = await this.stockage.read<JournalDuPupitreStocke>(keyFor(entreprise));
     return stored === undefined ? EMPTY_JOURNAL_DU_PUPITRE : restoreJournal(stored);
   }
 
-  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
+  override async append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
     await this.update(entreprise, current => ({
       ...current,
       evenements: [...current.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))],
     }));
   }
 
-  override saveReferentiel(entreprise: string, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
+  override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
     return this.update(entreprise, current => ({
       ...current,
       referentiel: includeAcceptedPointages(referentiel, current.evenements),
     }));
   }
 
-  override saveResult(entreprise: string, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
+  override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
     return this.update(entreprise, current => ({
       ...current,
       connecte: true,
@@ -81,7 +81,7 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
     }));
   }
 
-  override markDisconnected(entreprise: string): Promise<JournalDuPupitre> {
+  override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
     return this.update(entreprise, current => ({
       ...current,
       connecte: false,
@@ -96,7 +96,7 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
     return this.stockage.lock('session', action);
   }
 
-  private update(entreprise: string, change: (current: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
+  private update(entreprise: Entreprise, change: (current: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
     return this.stockage
       .update<JournalDuPupitreStocke>(keyFor(entreprise), EMPTY_JOURNAL_DU_PUPITRE, current => change(restoreJournal(current)))
       .then(restoreJournal);

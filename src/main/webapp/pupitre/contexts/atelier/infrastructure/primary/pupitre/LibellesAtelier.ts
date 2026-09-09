@@ -1,4 +1,5 @@
 import { ContexteDeGesteDAtelier, ElementDePointage, IntentionGlobaleDAtelier } from '../../../domain/designation/FenetreOperateur';
+import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
 import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 
 const formatDuree = (dureeMs: number): string => {
@@ -19,7 +20,7 @@ const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
 };
 
 export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
-  contexte.kind === 'ELEMENT' ? contexte.numero : COMMANDES_GLOBALES[contexte.intention];
+  contexte.kind === 'ELEMENT' ? contexte.numero.toString() : COMMANDES_GLOBALES[contexte.intention];
 
 export const LIBELLES_POINTAGE = {
   zones: ZONES,
@@ -35,7 +36,7 @@ export const LIBELLES_POINTAGE = {
   reprise: COMMANDES_GLOBALES.REPRENDRE,
   arretTotal: COMMANDES_GLOBALES.TOUT_ARRETER,
   choixPoste: 'Sur quel poste ?',
-  element: (numero: string): string => `Élément ${numero}`,
+  element: (numero: NumeroDElement): string => `Élément ${numero.toString()}`,
   annuler: 'Annuler',
 } as const;
 

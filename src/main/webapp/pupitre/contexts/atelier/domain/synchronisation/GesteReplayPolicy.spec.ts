@@ -1,11 +1,12 @@
-import { EvenementDuJournal, GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
-import { CodeDeRefusDAtelier, RefusDAtelier } from '../refus/RefusDAtelier';
+import { EvenementDuJournal, EvenementsDuJournal, GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
+import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
+import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
 import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './GesteReplayPolicy';
 
 const refusFixtures = [
   ['online', (code: CodeDeRefusDAtelier) => new RefusDAtelier(code, 'cause')],
-  ['offline', (code: CodeDeRefusDAtelier) => new RefusDePublication('diagnostic externe', 'cause', code)],
+  ['offline', (code: CodeDeRefusDAtelier) => new RefusDePublication('diagnostic externe', 'cause', MotifDeRefus.from(code))],
 ] as const;
 
 const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', ReplayDecision][] = [
@@ -55,7 +56,7 @@ describe('GesteReplayPolicy', () => {
     };
     const journal: readonly EvenementDuJournal[] = [{ geste: arrivee, etat: 'ACCEPTE', journeeOuverte: true }];
 
-    const operation = operationFor(reprise, journal);
+    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
     const decision = decideReplay(operation, new RefusDAtelier('transition-de-presence-interdite', 'cause'));
 
     expect(operation).toBe('REPRISE_APRES_ARRIVEE_OUVERTE');
@@ -75,7 +76,7 @@ describe('GesteReplayPolicy', () => {
     };
     const journal: readonly EvenementDuJournal[] = [{ geste: arrivee, etat: 'ACCEPTE', journeeOuverte: false }];
 
-    const operation = operationFor(reprise, journal);
+    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
     const decision = decideReplay(operation, new RefusDAtelier('transition-de-presence-interdite', 'cause'));
 
     expect(operation).toBe('GESTE_EXPLICITE');
@@ -99,7 +100,7 @@ describe('GesteReplayPolicy', () => {
       { geste: arrivee, etat: 'ACCEPTE', journeeOuverte: true },
     ];
 
-    const operation = operationFor(reprise, journal);
+    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
 
     thenOperationIs(operation, 'REPRISE_APRES_ARRIVEE_OUVERTE');
   });
@@ -119,7 +120,7 @@ describe('GesteReplayPolicy', () => {
     };
     const journal: readonly EvenementDuJournal[] = [{ geste: unrelatedArrival, etat: 'ACCEPTE', journeeOuverte: true }];
 
-    const operation = operationFor(reprise, journal);
+    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
 
     thenOperationIs(operation, 'GESTE_EXPLICITE');
   });

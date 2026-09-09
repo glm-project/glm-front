@@ -3,13 +3,15 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { CODES_DE_REFUS_D_ATELIER } from '@/pupitre/contexts/atelier/domain/refus/RefusDAtelier';
+import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
@@ -34,7 +36,7 @@ const refusalFixture = (code: string): RefusDePublication =>
   new RefusDePublication(
     `urn:glm:erreur:atelier:${code}`,
     'cause conservee',
-    CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code),
+    MotifDeRefus.from(CODES_DE_REFUS_D_ATELIER.find(candidate => candidate === code)),
   );
 
 interface SynchronizationBarrier {
@@ -108,7 +110,7 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 class ApplicationJournalFixture extends JournauxDuPupitreFixture {
   readonly acceptedBatches: string[][] = [];
 
-  override async append(entreprise: string, gestes: readonly GesteDAtelier[]): Promise<void> {
+  override async append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
     await super.append(entreprise, gestes);
     this.acceptedBatches.push(
       gestes.map(geste => {
@@ -960,7 +962,7 @@ describe('AtelierCoordinator', () => {
     expect(() => pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' })).toThrow('Aucune fenetre operateur ouverte.');
   };
   const thenPointageKeepsItsOriginalOperatorAndTime = async (): Promise<void> => {
-    const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
+    const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
     expect(gestes).toContainEqual(
       expect.objectContaining({ nature: 'POINTAGE', operateurId: 'jean', dateDeSurvenue: '2026-09-05T08:00:00.000Z' }),
     );
@@ -990,10 +992,10 @@ describe('AtelierCoordinator', () => {
     pupitre = buildPupitre();
     await pupitre.restore();
   };
-  const whenOpening = (): Promise<unknown> => designation.openWindow('049');
-  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(matricule);
+  const whenOpening = (): Promise<unknown> => designation.openWindow(Matricule.of('049'));
+  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(Matricule.of(matricule));
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
-    Promise.allSettled([designation.openWindow('049'), designation.openWindow('050')]);
+    Promise.allSettled([designation.openWindow(Matricule.of('049')), designation.openWindow(Matricule.of('050'))]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
   const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
     pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
@@ -1031,10 +1033,10 @@ describe('AtelierCoordinator', () => {
     }
   };
   const givenCachedReference = async (reference: ReferentielDuPupitre): Promise<void> => {
-    await journal.saveReferentiel('entreprise-a', structuredClone(reference));
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), structuredClone(reference));
   };
   const givenAnOpenWindow = async (): Promise<void> => {
-    await designation.openWindow('049');
+    await designation.openWindow(Matricule.of('049'));
   };
   const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
@@ -1079,7 +1081,7 @@ describe('AtelierCoordinator', () => {
     await pupitre.restore();
   };
   const givenPendingArrival = async (): Promise<void> => {
-    await journal.append('entreprise-a', [arriveeFixture]);
+    await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
   };
   const givenAuthorizedAccess = (): void => {
     authentication.token = 'autorise';
@@ -1127,7 +1129,7 @@ describe('AtelierCoordinator', () => {
     };
   };
   const givenTwoOperators = async (): Promise<void> => {
-    await journal.saveReferentiel('entreprise-a', {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), {
       ...referenceFixture,
       operateurs: [...referenceFixture.operateurs, { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', postes: [] }],
     });
@@ -1150,7 +1152,7 @@ describe('AtelierCoordinator', () => {
     };
   };
   const thenQueueHas = async (count: number): Promise<void> => {
-    expect((await journal.read('entreprise-a')).evenements).toHaveLength(count);
+    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements).toHaveLength(count);
   };
   const thenAcceptedBatchesAre = (batches: string[][]): void => {
     expect(journal.acceptedBatches).toEqual(batches);
@@ -1172,7 +1174,7 @@ describe('AtelierCoordinator', () => {
     expect(execution).toEqual({ kind: 'INDISPONIBLE' });
   };
   const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
-    const arrival = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
+    const arrival = (await journal.read(Entreprise.of('entreprise-a'))).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
     expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
   };
   const thenSemanticCaptureFails = async (execution: ReturnType<AtelierCoordinator['execute']>): Promise<void> => {
@@ -1196,12 +1198,14 @@ describe('AtelierCoordinator', () => {
     await thenQueueHas(0);
   };
   const thenPointageUsesWorkstation = async (posteId: string): Promise<void> => {
-    const pointage = (await journal.read('entreprise-a')).evenements.find(evenement => evenement.geste.nature === 'POINTAGE');
+    const pointage = (await journal.read(Entreprise.of('entreprise-a'))).evenements.find(
+      evenement => evenement.geste.nature === 'POINTAGE',
+    );
     expect(pointage?.geste).toMatchObject({ nature: 'POINTAGE', posteId });
   };
   const thenPendingIs = (count: number): Promise<void> => thenOldCompanyPendingIs(count);
   const thenOldCompanyPendingIs = async (count: number): Promise<void> => {
-    expect((await journal.read('entreprise-a')).evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
+    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'EN_ATTENTE')).toHaveLength(count);
   };
   const thenActivityIs = (categorie: string): void => {
     const suivi = requiredFixture(etatHorsLigne.referentiel()?.suivis[0], 'projected workshop element');
@@ -1211,10 +1215,10 @@ describe('AtelierCoordinator', () => {
     expect(requiredFixture(etatHorsLigne.referentiel()?.suivis[0], 'projected workshop element').activites).toHaveLength(0);
   };
   const thenNatureOrderIs = async (natures: string[]): Promise<void> => {
-    expect((await journal.read('entreprise-a')).evenements.map(event => event.geste.nature)).toEqual(natures);
+    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.map(event => event.geste.nature)).toEqual(natures);
   };
   const thenQueueHasUniqueStableIdentities = async (): Promise<void> => {
-    const gestes = (await journal.read('entreprise-a')).evenements.map(event => event.geste);
+    const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(event => event.geste);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     const first = requiredFixture(gestes[0], 'first queued gesture');
     const second = requiredFixture(gestes[1], 'second queued gesture');
@@ -1223,7 +1227,7 @@ describe('AtelierCoordinator', () => {
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
   const thenQueuedGesturesUseRootAt = async (rootIdentity: string, instant: string): Promise<string[]> => {
-    const gestes = (await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste);
+    const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
     const identities = gestes.map(geste => geste.id);
     const rootPrefix = rootIdentity.slice(0, -8);
     const firstSuffix = Number.parseInt(rootIdentity.slice(-8), 16);
@@ -1233,7 +1237,7 @@ describe('AtelierCoordinator', () => {
     return identities;
   };
   const thenQueuedIdentitiesAre = async (identities: string[]): Promise<void> => {
-    expect((await journal.read('entreprise-a')).evenements.map(evenement => evenement.geste.id)).toEqual(identities);
+    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste.id)).toEqual(identities);
   };
   const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<IdentiteOperateurDesigne>[]): string => {
     const accepted = openings.filter(result => result.status === 'fulfilled');
@@ -1280,7 +1284,7 @@ describe('AtelierCoordinator', () => {
     expect(designation.operateur()?.matricule).toBe(code);
   };
   const thenNoCompanyBData = async (): Promise<void> => {
-    expect(await journal.read('entreprise-b')).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
+    expect(await journal.read(Entreprise.of('entreprise-b'))).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   };
   const thenNoReference = (): void => {
     expect(etatHorsLigne.referentiel()).toBeUndefined();

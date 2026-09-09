@@ -7,6 +7,7 @@ import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/E
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
@@ -118,7 +119,7 @@ const chargementProvider = {
 };
 
 const bootstrapFixture = async (): Promise<void> => {
-  if (!parameters.has('reference-delay')) journalFixture.seedReferentiel('atelier', referentielFixture);
+  if (!parameters.has('reference-delay')) journalFixture.seedReferentiel(Entreprise.of('atelier'), referentielFixture);
   const application = await bootstrapApplication(PupitrePageFixture, {
     providers: [
       GestesRecordingQueue,
@@ -139,7 +140,7 @@ const bootstrapFixture = async (): Promise<void> => {
   const enrolement = application.injector.get(EnrolementDuPupitre);
   if (parameters.has('reference-delay')) {
     window.addEventListener('pupitre-fixture-reference-ready', () => {
-      journalFixture.seedReferentiel('atelier', referentielFixture);
+      journalFixture.seedReferentiel(Entreprise.of('atelier'), referentielFixture);
       void enrolement.chargerLAtelier();
     });
   }

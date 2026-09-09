@@ -1,6 +1,9 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ContextesParGeste } from '@/pupitre/contexts/atelier/domain/designation/ContextesParGeste';
 import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
+import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -90,7 +93,7 @@ describe('GestesRecordingQueue', () => {
           type: 'FIN',
         },
       ],
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 1,
     };
 
@@ -114,7 +117,7 @@ describe('GestesRecordingQueue', () => {
           type: 'FIN',
         },
       ],
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 1,
     };
 
@@ -131,7 +134,7 @@ describe('GestesRecordingQueue', () => {
     const lot: LotDeGestesDAtelier = {
       kind: 'GESTES',
       capture: () => [],
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 1,
     };
     tenant = 'autre-entreprise';
@@ -142,7 +145,13 @@ describe('GestesRecordingQueue', () => {
   });
 
   const givenAnOpenOperatorWindow = (): FenetreOperateur =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1));
+    FenetreOperateur.open(
+      Entreprise.of('entreprise-a'),
+      structuredClone(vueFixture),
+      Matricule.of('049'),
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    );
 
   const whenCapturingGlobalIntention = async (
     fenetre: FenetreOperateur,
@@ -157,7 +166,7 @@ describe('GestesRecordingQueue', () => {
   };
 
   const whenReadingRecordedGestures = async (entreprise: string): Promise<readonly GesteDAtelier[]> => {
-    const state = await journal.read(entreprise);
+    const state = await journal.read(Entreprise.of(entreprise));
     return state.evenements.map(e => e.geste);
   };
 

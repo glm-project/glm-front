@@ -1,3 +1,4 @@
+import { Matricule } from './Matricule';
 import { Operateur } from './Operateur';
 import { PosteHabilite } from './PosteHabilite';
 
@@ -25,7 +26,7 @@ describe('Operateur', () => {
   });
 
   const unOperateurFixture = (matricule: string | undefined): Operateur =>
-    new Operateur('0a1b2c3d', 'Dupont', 'Jean', SANS_POSTE, matricule);
+    new Operateur('0a1b2c3d', 'Dupont', 'Jean', SANS_POSTE, new Matricule(matricule));
 
   const thenItAnswersTo = (operateur: Operateur, code: string): void => {
     expect(operateur.matchesCode(code)).toBe(true);

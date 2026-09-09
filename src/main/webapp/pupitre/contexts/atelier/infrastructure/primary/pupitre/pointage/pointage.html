@@ -29,7 +29,10 @@
   >
     <div class="flex flex-1 flex-col px-3 pt-2">
       <div class="flex items-center justify-between gap-2">
-        <span [class.text-body-sm]="element.repliSurNom" [class.text-title]="!element.repliSurNom" class="font-bold text-ink"
+        <span
+          [class.text-body-sm]="element.numero.isRepliSurNom()"
+          [class.text-title]="!element.numero.isRepliSurNom()"
+          class="font-bold text-ink"
           >{{ element.numero }}</span
         >
         @if (element.isNonConforme()) {

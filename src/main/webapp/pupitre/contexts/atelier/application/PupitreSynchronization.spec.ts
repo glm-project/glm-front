@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
@@ -7,6 +8,7 @@ import {
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { Injector } from '@angular/core';
@@ -53,7 +55,7 @@ class JournalFixture extends JournauxDuPupitreFixture {
   lastSessionError: unknown;
   onRead: (() => void) | undefined;
 
-  override async read(entreprise: string): Promise<JournalDuPupitre> {
+  override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     this.onRead?.();
     return super.read(entreprise);
   }
@@ -183,7 +185,7 @@ describe('PupitreSynchronization', () => {
   });
 
   it('should retain existing state and log an error when referential refresh fails', async () => {
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
     givenAnAuthorizedSession();
     givenFailedReferentialExchange();
 
@@ -311,13 +313,13 @@ describe('PupitreSynchronization', () => {
   });
 
   const givenASelectedCompanyWithPendingWork = async (): Promise<void> => {
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
-    await journal.append('entreprise-a', [gesteFixture]);
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
   };
   const givenCompanyWithTwoPendingGestures = async (): Promise<void> => {
     const secondGeste: GesteDAtelier = { ...gesteFixture, id: 'geste-2' };
-    await journal.saveReferentiel('entreprise-a', referenceFixture);
-    await journal.append('entreprise-a', [gesteFixture, secondGeste]);
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture, secondGeste]);
   };
   const givenAnAuthorizedSession = (): void => {
     token = 'autorise';
@@ -369,7 +371,7 @@ describe('PupitreSynchronization', () => {
   };
   const givenArrivalAlreadyOpened = (): void => {
     server.onSend = (): void => {
-      throw new RefusDePublication('refus-1', 'Journée déjà ouverte', 'journee-de-travail-deja-ouverte');
+      throw new RefusDePublication('refus-1', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte'));
     };
   };
   const givenConcurrentModificationOnFirstAttempt = (): void => {
@@ -377,7 +379,7 @@ describe('PupitreSynchronization', () => {
     server.onSend = (): void => {
       attempts++;
       if (attempts === 1) {
-        throw new RefusDePublication('concurrence', 'Concurrence', 'saisie-concurrente');
+        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
       }
     };
   };
@@ -386,9 +388,9 @@ describe('PupitreSynchronization', () => {
     server.onSend = (): void => {
       attempts++;
       if (attempts === 1) {
-        throw new RefusDePublication('concurrence', 'Concurrence', 'saisie-concurrente');
+        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
       }
-      throw new RefusDePublication('refus-2', 'Journée déjà ouverte', 'journee-de-travail-deja-ouverte');
+      throw new RefusDePublication('refus-2', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte'));
     };
   };
   const givenUnauthorizedGestureRefusal = (): void => {
@@ -416,7 +418,7 @@ describe('PupitreSynchronization', () => {
       attempts++;
       if (attempts === 1) {
         token = undefined;
-        throw new RefusDePublication('concurrence', 'Concurrence', 'saisie-concurrente');
+        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
       }
     };
   };
@@ -462,7 +464,7 @@ describe('PupitreSynchronization', () => {
     expect(server.referentielCalls).toBe(0);
   };
   const thenCompanyReferentialWasNotOverwritten = async (entreprise: string): Promise<void> => {
-    const saved = await journal.read(entreprise);
+    const saved = await journal.read(Entreprise.of(entreprise));
     expect(saved.referentiel).toEqual(EMPTY_JOURNAL_DU_PUPITRE.referentiel);
   };
   const thenReferentialFailureWasLogged = (): void => {

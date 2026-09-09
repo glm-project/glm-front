@@ -4,6 +4,7 @@ import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/applicatio
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
 import { ElementDePointage, IdentiteOperateurDesigne, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/NumeroDElement';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
@@ -19,7 +20,7 @@ const referentielFixture: ReferentielDuPupitre = {
 const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
 const pointageFixture: VueDePointage = {
   moules: [],
-  ordresDeFabrication: [new ElementDePointage('of-1', '204', false, undefined)],
+  ordresDeFabrication: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)],
   glmActif: false,
 };
 
@@ -182,7 +183,7 @@ describe('Pupitre page', () => {
   it('should remove an open workstation choice with the pointage view', () => {
     givenPointage({
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: '204',
+      numero: NumeroDElement.assigned('204'),
       postes: [{ id: 'tour', libelle: 'Tour' }],
       choose: () => Promise.resolve(),
     });
@@ -195,7 +196,7 @@ describe('Pupitre page', () => {
   });
 
   it.each([
-    [{ contexte: { kind: 'ELEMENT' as const, numero: '204' }, message: 'Pointage refusé' }, '204 Pointage refusé'],
+    [{ contexte: { kind: 'ELEMENT' as const, numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' }, '204 Pointage refusé'],
     [
       { contexte: { kind: 'COMMANDE_GLOBALE' as const, intention: 'TOUT_ARRETER' as const }, message: 'Commande refusée' },
       'TOUT ARRÊTER Commande refusée',
@@ -209,7 +210,7 @@ describe('Pupitre page', () => {
   });
 
   it('should display a local capture failure ahead of a workshop refusal', () => {
-    givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: '204' }, message: 'Pointage refusé' });
+    givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' });
     givenLocalCaptureFailure();
 
     whenRenderingThePage();

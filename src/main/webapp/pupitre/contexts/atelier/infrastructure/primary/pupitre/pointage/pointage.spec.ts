@@ -2,6 +2,7 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { dataSelector } from '@test/utils/DataSelector';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/FenetreOperateur';
+import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
 import { Pointage } from './pointage';
 
 interface DeferredFixture {
@@ -11,10 +12,10 @@ interface DeferredFixture {
 }
 
 const pointageFixture: VueDePointage = {
-  moules: [new ElementDePointage('moule-1015', '1015', false, { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
+  moules: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
   ordresDeFabrication: [
-    new ElementDePointage('of-204', '204', false, { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
-    new ElementDePointage('of-generated', 'OF-2026-000042', true, undefined),
+    new ElementDePointage('of-204', NumeroDElement.assigned('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
+    new ElementDePointage('of-generated', NumeroDElement.generated('OF-2026-000042'), undefined),
   ],
   glmActif: false,
 };
@@ -150,7 +151,7 @@ describe('Pointage screen', () => {
   const givenAWorkstationChoice = (): void => {
     nextExecution = {
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: 'OF-2026-000042',
+      numero: NumeroDElement.assigned('OF-2026-000042'),
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },

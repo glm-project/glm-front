@@ -1,7 +1,10 @@
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
+import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
+import { Matricule } from './Matricule';
+import { NumeroDElement } from './NumeroDElement';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -64,9 +67,9 @@ describe('FenetreOperateur', () => {
 
   beforeEach(() => {
     fenetre = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -235,7 +238,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should assure arrival then depart when stopping all without a visible activity', () => {
-    fenetre = fenetre.afterReconciling('entreprise-a', EMPTY_JOURNAL_DU_PUPITRE);
+    fenetre = fenetre.afterReconciling(Entreprise.of('entreprise-a'), EMPTY_JOURNAL_DU_PUPITRE);
 
     const toutArreter = fenetre.prepareToutArreter(identifyFixture).capture();
 
@@ -325,9 +328,9 @@ describe('FenetreOperateur', () => {
       evenements: [{ geste: previousGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
     };
     fenetre = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       journalWithPreviousRefusal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(2),
     );
@@ -348,7 +351,7 @@ describe('FenetreOperateur', () => {
       'earlier pointage',
     );
 
-    fenetre = acceptedAfterNewerIntent.afterReconciling('entreprise-a', {
+    fenetre = acceptedAfterNewerIntent.afterReconciling(Entreprise.of('entreprise-a'), {
       ...structuredClone(vueFixture),
       evenements: [{ geste: refusedGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
     });
@@ -412,15 +415,18 @@ describe('FenetreOperateur', () => {
     if (transition.decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     const refused = givenTheDecisionWasRefused(transition.decision.capture());
 
-    const reconciled = transition.fenetre.afterReconciling('entreprise-a', refused);
+    const reconciled = transition.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
 
     expect(previous.refusal()).toBeUndefined();
-    expect(reconciled.refusal()).toEqual({ contexte: { kind: 'ELEMENT', numero: '1015' }, message: "L'élément a été clôturé." });
+    expect(reconciled.refusal()).toEqual({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
+      message: "L'élément a été clôturé.",
+    });
   });
 
   it('should retain the designated operator and workstation qualifications frozen at opening through a referential reconciliation', () => {
     const opened = givenAMultiWorkstationWindow();
-    const reconciled = opened.afterReconciling('entreprise-a', {
+    const reconciled = opened.afterReconciling(Entreprise.of('entreprise-a'), {
       ...structuredClone(vueFixture),
       referentiel: { operateurs: [], suivis: structuredClone(requiredFixture(vueFixture.referentiel, 'referential').suivis) },
     });
@@ -443,7 +449,7 @@ describe('FenetreOperateur', () => {
       ),
     };
 
-    fenetre = fenetre.afterReconciling('entreprise-a', reconciled).afterAccept(gestures);
+    fenetre = fenetre.afterReconciling(Entreprise.of('entreprise-a'), reconciled).afterAccept(gestures);
 
     expect(fenetre.snapshot().evenements).toEqual(reconciled.evenements);
   });
@@ -516,9 +522,9 @@ describe('FenetreOperateur', () => {
       },
     };
     const localWindow = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       onlyNcJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -560,9 +566,9 @@ describe('FenetreOperateur', () => {
       },
     };
     const multiWindow = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       multiNcJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -592,14 +598,14 @@ describe('FenetreOperateur', () => {
       },
     };
     const sortWindow = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       unsortedJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
 
-    const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero);
+    const numeros = sortWindow.pointage().ordresDeFabrication.map(element => element.numero.toString());
 
     expect(numeros).toEqual(['OF-1', 'OF-2', 'OF-10']);
   });
@@ -613,9 +619,9 @@ describe('FenetreOperateur', () => {
       },
     };
     const inactiveWindow = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       inactiveJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -643,9 +649,9 @@ describe('FenetreOperateur', () => {
       },
     };
     const multiWindow = FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       multiPosteJournal,
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -657,7 +663,7 @@ describe('FenetreOperateur', () => {
     expect(gestures[1]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
     expect(gestures[2]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'poste-1' });
     expect(afterChoice.refusal()).toBeUndefined();
-    const reconciled = afterChoice.afterReconciling('entreprise-a', givenTheDecisionWasRefused(gestures));
+    const reconciled = afterChoice.afterReconciling(Entreprise.of('entreprise-a'), givenTheDecisionWasRefused(gestures));
     expect(reconciled.refusal()).toBeDefined();
   });
 
@@ -696,10 +702,12 @@ describe('FenetreOperateur', () => {
     }
   });
 
-  it('should not attach a global command context for departure presence', () => {
+  it('should attach a global command context to a pause but not to a departure presence', () => {
     const departLot = fenetre.preparePresence('DEPART', identifyFixture);
+    const pauseLot = fenetre.preparePresence('PAUSE', identifyFixture);
 
-    expect(departLot.contextesParGeste.size).toBe(0);
+    expect(departLot.contextesParGeste.isEmpty()).toBe(true);
+    expect(pauseLot.contextesParGeste.isEmpty()).toBe(false);
   });
 
   it('should include arrival by default when capture is called without arguments on pointage decision', () => {
@@ -730,8 +738,13 @@ describe('FenetreOperateur', () => {
     dateDuGeste = '2026-09-05T09:00:00Z';
   };
   const whenResolvingTheOperator = (): FenetreOperateur['operateur'] =>
-    FenetreOperateur.open('entreprise-a', structuredClone(vueFixture), '049', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(1))
-      .operateur;
+    FenetreOperateur.open(
+      Entreprise.of('entreprise-a'),
+      structuredClone(vueFixture),
+      Matricule.of('049'),
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(1),
+    ).operateur;
   const whenReadingThePointageView = (): ReturnType<FenetreOperateur['pointage']> => fenetre.pointage();
   const givenTheCurrentSnapshot = (): JournalDuPupitre => fenetre.snapshot();
   const whenChangingTheSnapshot = (snapshot: JournalDuPupitre): void => {
@@ -761,7 +774,7 @@ describe('FenetreOperateur', () => {
     const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
     const operateur = requiredFixture(referentiel.operateurs[0], 'operator');
     return FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       {
         ...vueFixture,
         referentiel: {
@@ -769,7 +782,7 @@ describe('FenetreOperateur', () => {
           operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
         },
       },
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(2),
     );
@@ -778,9 +791,9 @@ describe('FenetreOperateur', () => {
     const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
     const operateur = requiredFixture(referentiel.operateurs[0], 'operator');
     return FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       { ...vueFixture, referentiel: { ...referentiel, operateurs: [{ ...operateur, postes: [] }] } },
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(3),
     );
@@ -818,10 +831,10 @@ describe('FenetreOperateur', () => {
     return { ...refused, referentiel: { ...referentiel, suivis: referentiel.suivis.filter(suivi => suivi.id !== suiviId) } };
   };
   const whenReconciling = (vue: JournalDuPupitre): void => {
-    fenetre = fenetre.afterReconciling('entreprise-a', vue);
+    fenetre = fenetre.afterReconciling(Entreprise.of('entreprise-a'), vue);
   };
   const whenReconcilingFor = (entreprise: string, vue: JournalDuPupitre): void => {
-    fenetre = fenetre.afterReconciling(entreprise, vue);
+    fenetre = fenetre.afterReconciling(Entreprise.of(entreprise), vue);
   };
   const whenDecidingUnknownElement = (): unknown => {
     try {
@@ -844,7 +857,7 @@ describe('FenetreOperateur', () => {
       'moule',
     );
     return FenetreOperateur.open(
-      'entreprise-a',
+      Entreprise.of('entreprise-a'),
       {
         ...vueFixture,
         referentiel: {
@@ -854,14 +867,20 @@ describe('FenetreOperateur', () => {
           ],
         },
       },
-      '049',
+      Matricule.of('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(4),
     );
   };
   const whenOpeningAnUnknownOperator = (vue: JournalDuPupitre): unknown => {
     try {
-      return FenetreOperateur.open('entreprise-a', vue, 'inconnu', Date.parse('2026-09-05T09:00:00Z'), new IdentiteDeFenetre(5));
+      return FenetreOperateur.open(
+        Entreprise.of('entreprise-a'),
+        vue,
+        Matricule.of('inconnu'),
+        Date.parse('2026-09-05T09:00:00Z'),
+        new IdentiteDeFenetre(5),
+      );
     } catch (failure: unknown) {
       return failure;
     }
@@ -888,16 +907,16 @@ describe('FenetreOperateur', () => {
     expect(id).toBe('jean');
   };
   const thenPointageViewIsPersonalAndFrozen = (pointage: ReturnType<FenetreOperateur['pointage']>): void => {
-    expect(pointage.moules.map(element => ({ id: element.id, numero: element.numero, dureeMs: element.dureeMs() }))).toEqual([
+    expect(pointage.moules.map(element => ({ id: element.id, numero: element.numero.toString(), dureeMs: element.dureeMs() }))).toEqual([
       { id: 'moule-1015', numero: '1015', dureeMs: 10_800_000 },
     ]);
     expect(pointage.moules[0]?.isNonConforme()).toBe(false);
-    expect(pointage.moules[0]?.repliSurNom).toBe(false);
-    expect(pointage.ordresDeFabrication.map(element => element.numero)).toEqual(['204', 'OF-2026-000042']);
+    expect(pointage.moules[0]?.numero.isRepliSurNom()).toBe(false);
+    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['204', 'OF-2026-000042']);
     expect(pointage.ordresDeFabrication[0]?.isNonConforme()).toBe(true);
-    expect(pointage.ordresDeFabrication[0]?.repliSurNom).toBe(false);
+    expect(pointage.ordresDeFabrication[0]?.numero.isRepliSurNom()).toBe(false);
     expect(pointage.ordresDeFabrication[0]?.dureeMs()).toBe(1_800_000);
-    expect(pointage.ordresDeFabrication[1]).toMatchObject({ repliSurNom: true });
+    expect(pointage.ordresDeFabrication[1]?.numero.isRepliSurNom()).toBe(true);
     expect(pointage.ordresDeFabrication[1]?.isActive()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.isNonConforme()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.dureeMs()).toBe(0);
@@ -930,7 +949,7 @@ describe('FenetreOperateur', () => {
   const thenWorkstationChoiceIsRequested = (decision: DecisionDePointage): void => {
     expect(decision).toMatchObject({
       kind: 'CHOIX_POSTE_REQUIS',
-      numero: 'OF-2026-000042',
+      numero: NumeroDElement.generated('OF-2026-000042'),
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },
@@ -938,7 +957,10 @@ describe('FenetreOperateur', () => {
     });
   };
   const thenLatestRefusalNamesTheElement = (): void => {
-    expect(fenetre.refusal()).toEqual({ contexte: { kind: 'ELEMENT', numero: '1015' }, message: "L'élément a été clôturé." });
+    expect(fenetre.refusal()).toEqual({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
+      message: "L'élément a été clôturé.",
+    });
   };
   const thenNoRefusalIsVisible = (): void => {
     expect(fenetre.refusal()).toBeUndefined();

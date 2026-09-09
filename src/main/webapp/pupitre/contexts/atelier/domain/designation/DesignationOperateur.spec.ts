@@ -1,7 +1,9 @@
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
+import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
 import { FenetreOperateur } from './FenetreOperateur';
+import { Matricule } from './Matricule';
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -82,7 +84,7 @@ describe('DesignationOperateur', () => {
   it('should leave a designation unchanged when another operator window tries to replace it', () => {
     givenDesignatedOperator();
     const before = designation;
-    const other = FenetreOperateur.open('atelier', referenceFixture, '049', 1, new IdentiteDeFenetre(1));
+    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1, new IdentiteDeFenetre(1));
 
     designation = designation.afterReplacingWindow(other);
 
@@ -148,7 +150,7 @@ describe('DesignationOperateur', () => {
   it('should clear entered code upon successful resolution completion', () => {
     whenEntering('049', 0);
     const resolution = whenValidating(0);
-    const opening = designation.afterOpeningWindow('atelier', referenceFixture, resolution.code, 0);
+    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, resolution.code, 0);
     designation = opening.designation;
 
     const completion = designation.afterCompletingResolution(resolution, 0);
@@ -170,11 +172,15 @@ describe('DesignationOperateur', () => {
   it('should forbid opening an operator window when one is already open or closing', () => {
     givenDesignatedOperator();
 
-    expect(() => designation.afterOpeningWindow('atelier', referenceFixture, '049', 0)).toThrow('Une fenetre operateur est deja ouverte.');
+    expect(() => designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 0)).toThrow(
+      'Une fenetre operateur est deja ouverte.',
+    );
 
     designation = designation.afterFinish();
     expect(designation.needsClosure()).toBe(true);
-    expect(() => designation.afterOpeningWindow('atelier', referenceFixture, '049', 0)).toThrow('Une fenetre operateur est deja ouverte.');
+    expect(() => designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 0)).toThrow(
+      'Une fenetre operateur est deja ouverte.',
+    );
   });
 
   it('should increment resolution generation and window identities across lifecycles', () => {
@@ -187,11 +193,15 @@ describe('DesignationOperateur', () => {
     const secondResolution = whenValidating(1);
     expect(secondResolution.generation).toBe(1);
 
-    const firstWindow = designation.afterOpeningWindow('atelier', referenceFixture, '049', 1).fenetre;
+    const firstWindow = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1).fenetre;
     designation = designation.afterReleasingWindow();
-    const secondWindow = designation.afterOpeningWindow('atelier', referenceFixture, '049', 1).fenetre;
+    const secondWindow = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1).fenetre;
 
-    expect(secondWindow.hasIdentity(FenetreOperateur.open('atelier', referenceFixture, '049', 1, new IdentiteDeFenetre(1)))).toBe(true);
+    expect(
+      secondWindow.hasIdentity(
+        FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1, new IdentiteDeFenetre(1)),
+      ),
+    ).toBe(true);
     expect(secondWindow.hasIdentity(firstWindow)).toBe(false);
   });
 
@@ -209,7 +219,7 @@ describe('DesignationOperateur', () => {
     return result.resolution;
   };
   const whenResolving = (resolution: DesignationResolution, now: number): void => {
-    const opening = designation.afterOpeningWindow('atelier', referenceFixture, resolution.code, now);
+    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, resolution.code, now);
     designation = opening.designation;
     const completion = designation.afterCompletingResolution(resolution, now);
     designation = completion.designation;

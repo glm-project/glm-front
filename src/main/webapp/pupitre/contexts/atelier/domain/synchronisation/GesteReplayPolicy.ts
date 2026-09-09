@@ -1,33 +1,23 @@
-import { EvenementDuJournal, GesteDAtelier, GesteDePresence } from '../journal-du-pupitre/JournalDuPupitre';
+import { EvenementsDuJournal, GesteDAtelier, GesteDePresence } from '../journal-du-pupitre/JournalDuPupitre';
+import { MotifDeRefus } from '../refus/MotifDeRefus';
 import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
 
 export type OperationDAtelier = 'ARRIVEE_ASSUREE' | 'PRESENCE_ASSUREE' | 'REPRISE_APRES_ARRIVEE_OUVERTE' | 'GESTE_EXPLICITE';
 export type ReplayDecision = 'ACCEPTER' | 'RELIRE_ET_REJOUER' | 'PROPAGER';
 
-const matches = (refus: unknown, code: string): boolean => {
-  if (refus instanceof RefusDAtelier) {
-    return refus.code === code;
-  }
-  return refus instanceof RefusDePublication && refus.motif === code;
-};
+const carriesAMotif = (refus: unknown): refus is RefusDAtelier | RefusDePublication =>
+  refus instanceof RefusDAtelier || refus instanceof RefusDePublication;
+
+const motifOf = (refus: unknown): MotifDeRefus => (carriesAMotif(refus) ? refus.motif : MotifDeRefus.none());
 
 const absorbsForbiddenPresenceTransition = (operation: OperationDAtelier): boolean =>
   operation === 'PRESENCE_ASSUREE' || operation === 'REPRISE_APRES_ARRIVEE_OUVERTE';
 
-const arrivalActuallyOpened = (evenements: readonly EvenementDuJournal[], arriveeId: string, operateurId: string): boolean =>
-  evenements.some(
-    evenement =>
-      evenement.geste.id === arriveeId
-      && evenement.geste.operateurId === operateurId
-      && 'journeeOuverte' in evenement
-      && evenement.journeeOuverte,
-  );
+const followsOpenedArrival = (geste: GesteDePresence, evenements: EvenementsDuJournal): boolean =>
+  geste.assuranceArriveeId !== undefined && evenements.hasOpenedDay(geste.assuranceArriveeId, geste.operateurId);
 
-const followsOpenedArrival = (geste: GesteDePresence, evenements: readonly EvenementDuJournal[]): boolean =>
-  geste.assuranceArriveeId !== undefined && arrivalActuallyOpened(evenements, geste.assuranceArriveeId, geste.operateurId);
-
-export const operationFor = (geste: GesteDAtelier, evenements: readonly EvenementDuJournal[] = []): OperationDAtelier => {
+export const operationFor = (geste: GesteDAtelier, evenements = new EvenementsDuJournal([])): OperationDAtelier => {
   if (geste.nature === 'ARRIVEE') {
     return 'ARRIVEE_ASSUREE';
   }
@@ -44,13 +34,13 @@ export const operationFor = (geste: GesteDAtelier, evenements: readonly Evenemen
 };
 
 const canRetryConcurrence = (refus: unknown, tentative: 'INITIALE' | 'REJEU'): boolean =>
-  matches(refus, 'saisie-concurrente') && tentative === 'INITIALE';
+  motifOf(refus).is('saisie-concurrente') && tentative === 'INITIALE';
 
 const absorbsAlreadyOpenDay = (operation: OperationDAtelier, refus: unknown): boolean =>
-  operation === 'ARRIVEE_ASSUREE' && matches(refus, 'journee-de-travail-deja-ouverte');
+  operation === 'ARRIVEE_ASSUREE' && motifOf(refus).is('journee-de-travail-deja-ouverte');
 
 const absorbsPresenceRefusal = (operation: OperationDAtelier, refus: unknown): boolean =>
-  absorbsForbiddenPresenceTransition(operation) && matches(refus, 'transition-de-presence-interdite');
+  absorbsForbiddenPresenceTransition(operation) && motifOf(refus).is('transition-de-presence-interdite');
 
 export const decideReplay = (
   operation: OperationDAtelier,

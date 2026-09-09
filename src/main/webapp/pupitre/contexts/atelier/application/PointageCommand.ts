@@ -1,4 +1,5 @@
 import { CibleDePointage, PosteAChoisir } from '../domain/designation/FenetreOperateur';
+import { NumeroDElement } from '../domain/designation/NumeroDElement';
 
 export interface IntentionDePointage {
   readonly suiviId: string;
@@ -12,7 +13,7 @@ export interface CaptureDePointage {
 
 export interface ChoixDePosteDePointage {
   readonly kind: 'CHOIX_POSTE_REQUIS';
-  readonly numero: string;
+  readonly numero: NumeroDElement;
   readonly postes: readonly PosteAChoisir[];
   readonly choose: (posteId: string) => Promise<void>;
 }

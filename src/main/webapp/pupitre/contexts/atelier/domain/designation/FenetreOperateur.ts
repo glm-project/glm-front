@@ -1,5 +1,6 @@
+import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import {
-  EvenementDuJournal,
+  EvenementsDuJournal,
   GesteDAtelier,
   GesteDePresence,
   IdentiteDuGeste,
@@ -11,8 +12,11 @@ import {
   TypeDePresence,
 } from '../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../journal-du-pupitre/JournalDuPupitreProjection';
+import { ContextesParGeste } from './ContextesParGeste';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
+import { Matricule } from './Matricule';
+import { NumeroDElement } from './NumeroDElement';
 
 export interface ActiviteDePointage {
   readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
@@ -22,8 +26,7 @@ export interface ActiviteDePointage {
 export class ElementDePointage {
   constructor(
     readonly id: string,
-    readonly numero: string,
-    readonly repliSurNom: boolean,
+    readonly numero: NumeroDElement,
     private readonly activite: ActiviteDePointage | undefined,
   ) {}
 
@@ -50,13 +53,13 @@ export type CibleDePointage = 'PRINCIPALE' | 'SECONDAIRE';
 export type IntentionGlobaleDAtelier = 'PAUSE' | 'REPRENDRE' | 'TOUT_ARRETER';
 
 export type ContexteDeGesteDAtelier =
-  | { readonly kind: 'ELEMENT'; readonly numero: string }
+  | { readonly kind: 'ELEMENT'; readonly numero: NumeroDElement }
   | { readonly kind: 'COMMANDE_GLOBALE'; readonly intention: IntentionGlobaleDAtelier };
 
 export interface LotDeGestesDAtelier {
   readonly kind: 'GESTES';
   readonly capture: (arriveeAssuree?: boolean) => readonly GesteDAtelier[];
-  readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
+  readonly contextesParGeste: ContextesParGeste;
   readonly intention: number;
 }
 
@@ -82,7 +85,7 @@ export interface PosteAChoisir {
 
 export interface ChoixDePosteRequis {
   readonly kind: 'CHOIX_POSTE_REQUIS';
-  readonly numero: string;
+  readonly numero: NumeroDElement;
   readonly postes: readonly PosteAChoisir[];
 }
 
@@ -105,13 +108,13 @@ export interface IdentiteOperateurDesigne {
 }
 
 interface EtatDeFenetreOperateur {
-  readonly entreprise: string;
+  readonly entreprise: Entreprise;
   readonly vue: JournalDuPupitre;
   readonly instantDOuverture: number;
   readonly identity: IdentiteDeFenetre;
   readonly globale: IntentionGlobaleInitiee | undefined;
   readonly arriveeAssuree: boolean;
-  readonly contextesParGeste: ReadonlyMap<string, ContexteDeGesteDAtelier>;
+  readonly contextesParGeste: ContextesParGeste;
   readonly intention: number;
   readonly refusVisible: RefusDAtelier | undefined;
   readonly operateurDesigne: OperateurDesigne;
@@ -153,8 +156,8 @@ class OperateurDesigne {
   private readonly identite: IdentiteOperateurDesigne;
   private readonly habilitations: HabilitationsDePoste;
 
-  constructor(source: OperateurDuPupitre, code: string) {
-    this.identite = { id: source.id, nom: source.nom, prenom: source.prenom, matricule: code };
+  constructor(source: OperateurDuPupitre, code: Matricule) {
+    this.identite = { id: source.id, nom: source.nom, prenom: source.prenom, matricule: code.toString() };
     this.habilitations = HabilitationsDePoste.from(source.postes);
   }
 
@@ -254,13 +257,13 @@ export class FenetreOperateur {
   }
 
   static open(
-    entreprise: string,
+    entreprise: Entreprise,
     vue: JournalDuPupitre,
-    code: string,
+    code: Matricule,
     instantDOuverture: number,
     identity: IdentiteDeFenetre,
   ): FenetreOperateur {
-    const operateur = vue.referentiel?.operateurs.find(candidat => candidat.matricule === code);
+    const operateur = vue.referentiel?.operateurs.find(candidat => code.identifies(candidat.matricule));
     if (operateur === undefined) throw new Error('Matricule absent du referentiel local.');
     return new FenetreOperateur({
       entreprise,
@@ -269,7 +272,7 @@ export class FenetreOperateur {
       identity,
       globale: undefined,
       arriveeAssuree: false,
-      contextesParGeste: new Map(),
+      contextesParGeste: ContextesParGeste.empty(),
       intention: 0,
       refusVisible: undefined,
       operateurDesigne: new OperateurDesigne(operateur, code),
@@ -296,17 +299,10 @@ export class FenetreOperateur {
   }
   pointage(): VueDePointage {
     const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({
-      element: new ElementDePointage(
-        suivi.id,
-        suivi.reference ?? suivi.nom,
-        suivi.reference === undefined,
-        this.activitesFor(suivi).snapshot(),
-      ),
+      element: new ElementDePointage(suivi.id, NumeroDElement.from(suivi), this.activitesFor(suivi).snapshot()),
       type: suivi.type,
     }));
-    const sorted = [...elements].sort((left, right) =>
-      left.element.numero.localeCompare(right.element.numero, 'fr', { numeric: true, sensitivity: 'base' }),
-    );
+    const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
     return {
       moules: sorted.filter(({ type }) => type === 'PRODUIT').map(({ element }) => element),
       ordresDeFabrication: sorted.filter(({ type }) => type === 'ORDRE_DE_FABRICATION').map(({ element }) => element),
@@ -318,7 +314,7 @@ export class FenetreOperateur {
     const fenetre = this.afterIntendingGesture();
     const suivi = fenetre.requireSuivi(suiviId);
     const activities = fenetre.activitesFor(suivi).decide(cible);
-    const numero = fenetre.numeroDuSuivi(suivi);
+    const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
         ? fenetre.gestes(suiviId, numero, activities.transitions, identify, activities.transitions.premiere.type === 'DEBUT')
@@ -332,7 +328,7 @@ export class FenetreOperateur {
     this.etat.operateurDesigne.assertPoste(posteId);
     const decision = this.gestes(
       suiviId,
-      this.numeroDuSuivi(suivi),
+      NumeroDElement.from(suivi),
       { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
       identify,
       true,
@@ -344,21 +340,16 @@ export class FenetreOperateur {
   }
   afterIntendingGesture(): FenetreOperateur {
     this.requireAvailableGestures();
-    return this.with({ refusVisible: undefined, contextesParGeste: new Map(), intention: this.etat.intention + 1 });
+    return this.with({ refusVisible: undefined, contextesParGeste: ContextesParGeste.empty(), intention: this.etat.intention + 1 });
   }
 
   private requireAvailableGestures(): void {
     if (!this.allowsGestures()) throw new Error('Une commande globale est en cours.');
   }
-  afterReconciling(entreprise: string, vue: JournalDuPupitre): FenetreOperateur {
+  afterReconciling(entreprise: Entreprise, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
-    const refus = [...vue.evenements]
-      .reverse()
-      .find(
-        (event): event is Extract<EvenementDuJournal, { readonly etat: 'REFUSE' }> =>
-          event.etat === 'REFUSE' && this.etat.contextesParGeste.has(event.geste.id),
-      );
-    const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.get(refus.geste.id);
+    const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(this.etat.contextesParGeste.gesteIds());
+    const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.contexteOf(refus.geste.id);
     return this.with({
       vue,
       refusVisible: refus !== undefined && contexte !== undefined ? { contexte, message: refus.refus.message } : undefined,
@@ -372,7 +363,7 @@ export class FenetreOperateur {
     };
   }
   afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
-    const known = new Set(this.etat.vue.evenements.map(evenement => evenement.geste.id));
+    const journal = new EvenementsDuJournal(this.etat.vue.evenements);
     return this.with({
       arriveeAssuree: this.etat.arriveeAssuree || gestes.some(geste => geste.nature === 'ARRIVEE'),
       contextesParGeste: this.etat.contextesParGeste,
@@ -380,7 +371,7 @@ export class FenetreOperateur {
         ...this.etat.vue,
         evenements: [
           ...this.etat.vue.evenements,
-          ...gestes.filter(geste => !known.has(geste.id)).map(geste => ({ geste, etat: 'EN_ATTENTE' as const })),
+          ...gestes.filter(geste => !journal.records(geste.id)).map(geste => ({ geste, etat: 'EN_ATTENTE' as const })),
         ],
       },
     });
@@ -388,13 +379,13 @@ export class FenetreOperateur {
   refusal(): RefusDAtelier | undefined {
     return this.etat.refusVisible;
   }
-  belongsTo(entreprise: string | undefined): boolean {
-    return entreprise === this.etat.entreprise;
+  belongsTo(entreprise: Entreprise | undefined): boolean {
+    return Entreprise.same(entreprise, this.etat.entreprise);
   }
-  assertEntreprise(entreprise: string | undefined): void {
+  assertEntreprise(entreprise: Entreprise | undefined): void {
     if (!this.belongsTo(entreprise)) throw new Error('La fenetre operateur a change.');
   }
-  journalScope(): string {
+  journalScope(): Entreprise {
     return this.etat.entreprise;
   }
   capture(decision: LotDeGestesDAtelier): readonly GesteDAtelier[] {
@@ -420,7 +411,7 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => (assured ? [presence] : [arrivee, presenceApresAssurance]),
-      contextesParGeste: new Map(contexte === undefined ? [] : [arrivee, presenceApresAssurance].map(geste => [geste.id, contexte])),
+      contextesParGeste: ContextesParGeste.forGestes([arrivee, presenceApresAssurance], contexte),
       intention: this.etat.intention,
     };
   }
@@ -451,9 +442,10 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages, depart],
-      contextesParGeste: new Map(
-        [arrivee, ...pointages, depart].map(geste => [geste.id, { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' } as const]),
-      ),
+      contextesParGeste: ContextesParGeste.forGestes([arrivee, ...pointages, depart], {
+        kind: 'COMMANDE_GLOBALE',
+        intention: 'TOUT_ARRETER',
+      }),
       intention: this.etat.intention,
     };
   }
@@ -463,8 +455,8 @@ export class FenetreOperateur {
     return this.with({ contextesParGeste }).afterAccept(gestes);
   }
 
-  private contextesOf(decision: DecisionDePointage): ReadonlyMap<string, ContexteDeGesteDAtelier> {
-    return decision.kind === 'GESTES' ? decision.contextesParGeste : new Map();
+  private contextesOf(decision: DecisionDePointage): ContextesParGeste {
+    return decision.kind === 'GESTES' ? decision.contextesParGeste : ContextesParGeste.empty();
   }
 
   private contexteFor(type: TypeDePresence): ContexteDeGesteDAtelier | undefined {
@@ -473,7 +465,7 @@ export class FenetreOperateur {
     return undefined;
   }
 
-  private ouverture(suiviId: string, numero: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
+  private ouverture(suiviId: string, numero: NumeroDElement, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
@@ -481,7 +473,7 @@ export class FenetreOperateur {
   }
   private gestes(
     suiviId: string,
-    numero: string,
+    numero: NumeroDElement,
     transitions: LotDeTransitions,
     identify: () => IdentiteDuGeste,
     repriseImplicite: boolean,
@@ -505,7 +497,7 @@ export class FenetreOperateur {
     return {
       kind: 'GESTES',
       capture: (assured = false) => [...(assured ? [] : [arrivee]), ...(repriseImplicite ? [reprise] : []), ...pointages],
-      contextesParGeste: new Map(pointages.map(pointage => [pointage.id, { kind: 'ELEMENT', numero } as const])),
+      contextesParGeste: ContextesParGeste.forGestes(pointages, { kind: 'ELEMENT', numero }),
       intention: this.etat.intention,
     };
   }
@@ -522,9 +514,6 @@ export class FenetreOperateur {
   }
   private openingTypeFor(cible: CibleDePointage): TypeDePointage {
     return cible === 'PRINCIPALE' ? 'DEBUT' : 'NON_CONFORMITE';
-  }
-  private numeroDuSuivi(suivi: SuiviDuPupitre): string {
-    return suivi.reference ?? suivi.nom;
   }
   private with(
     change: Partial<

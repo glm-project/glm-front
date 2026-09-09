@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementRefuse,
@@ -11,10 +12,10 @@ import { inject, Injectable, signal } from '@angular/core';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 type RefreshIntent = 'RESTORE' | 'SYNCHRONIZE';
-type Reconcile = (entreprise: string | undefined, state: JournalDuPupitre) => void;
+type Reconcile = (entreprise: Entreprise | undefined, state: JournalDuPupitre) => void;
 
 export interface SourceDOuverture {
-  readonly entreprise: string;
+  readonly entreprise: Entreprise;
   readonly state: JournalDuPupitre;
 }
 
@@ -34,9 +35,9 @@ export class EtatHorsLigneDuPupitre {
 
   async openingSource(): Promise<SourceDOuverture> {
     await this.authentication.synchronizeSession();
-    const entreprise = this.requireTenant();
+    const entreprise = this.requireEntreprise();
     const state = await this.journal.read(entreprise);
-    if (this.authentication.currentTenant() !== entreprise) {
+    if (!this.stillSelects(entreprise)) {
       throw new Error('L’entreprise du pupitre a change.');
     }
     return { entreprise, state };
@@ -52,7 +53,7 @@ export class EtatHorsLigneDuPupitre {
   }
 
   async diagnostics(): Promise<readonly EvenementRefuse[]> {
-    const state = await this.journal.read(this.requireTenant());
+    const state = await this.journal.read(this.requireEntreprise());
     return new EvenementsDuJournal(state.evenements).refusals();
   }
 
@@ -61,7 +62,7 @@ export class EtatHorsLigneDuPupitre {
   }
 
   private async restore(reconcile: Reconcile): Promise<void> {
-    const entreprise = this.authentication.currentTenant();
+    const entreprise = this.currentEntreprise();
     if (entreprise === undefined) {
       this.receive(undefined, EMPTY_JOURNAL_DU_PUPITRE, reconcile);
       return;
@@ -69,8 +70,8 @@ export class EtatHorsLigneDuPupitre {
     this.receive(entreprise, await this.journal.read(entreprise), reconcile);
   }
 
-  private receive(entreprise: string | undefined, state: JournalDuPupitre, reconcile: Reconcile): void {
-    if (this.authentication.currentTenant() !== entreprise) return;
+  private receive(entreprise: Entreprise | undefined, state: JournalDuPupitre, reconcile: Reconcile): void {
+    if (!this.stillSelects(entreprise)) return;
     if (entreprise === undefined) {
       this.vue.set(EMPTY_JOURNAL_DU_PUPITRE);
     } else {
@@ -80,11 +81,19 @@ export class EtatHorsLigneDuPupitre {
     reconcile(entreprise, state);
   }
 
-  private requireTenant(): string {
-    const entreprise = this.authentication.currentTenant();
+  private requireEntreprise(): Entreprise {
+    const entreprise = this.currentEntreprise();
     if (entreprise === undefined) {
       throw new Error('Le pupitre doit etre enrole une premiere fois.');
     }
     return entreprise;
+  }
+
+  private stillSelects(entreprise: Entreprise | undefined): boolean {
+    return Entreprise.same(this.currentEntreprise(), entreprise);
+  }
+
+  private currentEntreprise(): Entreprise | undefined {
+    return Entreprise.from(this.authentication.currentTenant());
   }
 }

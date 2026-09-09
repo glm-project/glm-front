@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   acceptPublication,
   EMPTY_JOURNAL_DU_PUPITRE,
@@ -15,7 +16,7 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { inject, Injectable } from '@angular/core';
 
-type PupitrePublisher = (entreprise: string | undefined, state: JournalDuPupitre) => void;
+type PupitrePublisher = (entreprise: Entreprise | undefined, state: JournalDuPupitre) => void;
 
 @Injectable()
 export class PupitreSynchronization {
@@ -47,13 +48,13 @@ export class PupitreSynchronization {
 
   private async exchange(publish: PupitrePublisher): Promise<void> {
     await this.authentication.synchronizeSession();
-    const selected = this.authentication.currentTenant();
+    const selected = this.currentEntreprise();
     if (selected === undefined) {
       publish(undefined, EMPTY_JOURNAL_DU_PUPITRE);
       return;
     }
     publish(selected, await this.journal.read(selected));
-    const entreprise = this.authentication.currentTenant();
+    const entreprise = this.currentEntreprise();
     if (entreprise === undefined) {
       return;
     }
@@ -65,7 +66,7 @@ export class PupitreSynchronization {
     await this.refreshReferentiel(entreprise, token, publish);
   }
 
-  private async refreshReferentiel(entreprise: string, token: string, publish: PupitrePublisher): Promise<void> {
+  private async refreshReferentiel(entreprise: Entreprise, token: string, publish: PupitrePublisher): Promise<void> {
     try {
       const referentiel = await this.serveur.referentiel();
       await this.authentication.synchronizeSession();
@@ -78,14 +79,15 @@ export class PupitreSynchronization {
     }
   }
 
-  private async drain(entreprise: string, publish: PupitrePublisher): Promise<void> {
-    while (this.authentication.currentTenant() === entreprise && this.authentication.currentToken() !== undefined) {
+  private async drain(entreprise: Entreprise, publish: PupitrePublisher): Promise<void> {
+    while (this.keepsExchanging(entreprise)) {
       const state = await this.journal.read(entreprise);
-      const evenement = new EvenementsDuJournal(state.evenements).nextPending();
+      const evenements = new EvenementsDuJournal(state.evenements);
+      const evenement = evenements.nextPending();
       if (evenement === undefined) {
         return;
       }
-      const result = await this.replay(entreprise, evenement, state.evenements, publish);
+      const result = await this.replay(entreprise, evenement, evenements, publish);
       if (result === undefined) {
         return;
       }
@@ -94,9 +96,9 @@ export class PupitreSynchronization {
   }
 
   private async replay(
-    entreprise: string,
+    entreprise: Entreprise,
     evenement: EvenementDuJournal,
-    evenements: readonly EvenementDuJournal[],
+    evenements: EvenementsDuJournal,
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
@@ -114,15 +116,15 @@ export class PupitreSynchronization {
     }
   }
 
-  private async markDisconnected(entreprise: string, publish: PupitrePublisher): Promise<void> {
+  private async markDisconnected(entreprise: Entreprise, publish: PupitrePublisher): Promise<void> {
     publish(entreprise, await this.journal.markDisconnected(entreprise));
   }
 
-  private async saveReplay(entreprise: string, result: EvenementDuJournal, publish: PupitrePublisher): Promise<void> {
+  private async saveReplay(entreprise: Entreprise, result: EvenementDuJournal, publish: PupitrePublisher): Promise<void> {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: string, geste: GesteDAtelier, evenements: readonly EvenementDuJournal[]): Promise<boolean> {
+  private async push(entreprise: Entreprise, geste: GesteDAtelier, evenements: EvenementsDuJournal): Promise<boolean> {
     try {
       this.requireExchange(entreprise);
       await this.serveur.send(geste);
@@ -136,11 +138,7 @@ export class PupitreSynchronization {
     }
   }
 
-  private async retryAfterConcurrence(
-    entreprise: string,
-    geste: GesteDAtelier,
-    evenements: readonly EvenementDuJournal[],
-  ): Promise<boolean> {
+  private async retryAfterConcurrence(entreprise: Entreprise, geste: GesteDAtelier, evenements: EvenementsDuJournal): Promise<boolean> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
@@ -153,28 +151,40 @@ export class PupitreSynchronization {
     }
   }
 
-  private absorbOrThrow(geste: GesteDAtelier, evenements: readonly EvenementDuJournal[], failure: unknown): void {
+  private absorbOrThrow(geste: GesteDAtelier, evenements: EvenementsDuJournal, failure: unknown): void {
     if (decideReplay(operationFor(geste, evenements), failure, 'REJEU') === 'ACCEPTER') {
       return;
     }
     throw failure;
   }
 
-  private requireExchange(entreprise: string): void {
+  private requireExchange(entreprise: Entreprise): void {
     if (this.hasLostAuthorization(entreprise)) {
       throw new Error('L’autorisation du pupitre a change.');
     }
   }
 
-  private canRefreshWith(entreprise: string, token: string | undefined): token is string {
-    return !(this.authentication.currentTenant() !== entreprise || token === undefined);
+  private canRefreshWith(entreprise: Entreprise, token: string | undefined): token is string {
+    return !(!this.stillSelects(entreprise) || token === undefined);
   }
 
-  private hasUnchangedAuthorization(entreprise: string, token: string): boolean {
-    return this.authentication.currentTenant() === entreprise && this.authentication.currentToken() === token;
+  private hasUnchangedAuthorization(entreprise: Entreprise, token: string): boolean {
+    return this.stillSelects(entreprise) && this.authentication.currentToken() === token;
   }
 
-  private hasLostAuthorization(entreprise: string): boolean {
-    return this.authentication.currentTenant() !== entreprise || this.authentication.currentToken() === undefined;
+  private hasLostAuthorization(entreprise: Entreprise): boolean {
+    return !this.stillSelects(entreprise) || this.authentication.currentToken() === undefined;
+  }
+
+  private keepsExchanging(entreprise: Entreprise): boolean {
+    return this.stillSelects(entreprise) && this.authentication.currentToken() !== undefined;
+  }
+
+  private stillSelects(entreprise: Entreprise): boolean {
+    return Entreprise.same(this.currentEntreprise(), entreprise);
+  }
+
+  private currentEntreprise(): Entreprise | undefined {
+    return Entreprise.from(this.authentication.currentTenant());
   }
 }
