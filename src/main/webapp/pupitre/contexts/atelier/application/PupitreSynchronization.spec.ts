@@ -233,14 +233,9 @@ describe('PupitreSynchronization', () => {
   it('should exchange work requested while the synchronization lock is being released', async () => {
     givenAnAuthorizedSession();
     const lateStates: JournalDuPupitre[] = [];
-    const barrier = journal.holdNextSynchronizationRelease();
+    const synchronization = await givenSynchronizationIsReleasingItsLock();
 
-    const first = whenSynchronizing();
-    await barrier.reached;
-    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
-    const late = whenSynchronizingInto(lateStates);
-    barrier.release();
-    await Promise.all([first, late]);
+    await whenAddingWorkAndSynchronizingDuringRelease(synchronization, lateStates);
 
     thenServerReceived(gesteFixture);
     expect(lateStates.at(-1)?.evenements[0]?.etat).toBe('ACCEPTE');
@@ -300,13 +295,9 @@ describe('PupitreSynchronization', () => {
 
   it('should stop exchange when company is deselected during journal read', async () => {
     await givenASelectedCompanyWithPendingWork();
-    const barrier = journal.holdNextRead();
+    const synchronization = await givenSynchronizationIsReadingTheJournal();
 
-    const synchronization = whenSynchronizing();
-    await barrier.reached;
-    whenDeselectingCompany();
-    barrier.release();
-    await synchronization;
+    await whenDeselectingCompanyDuringRead(synchronization);
 
     thenReferentialNeverRefreshed();
   });
@@ -396,6 +387,35 @@ describe('PupitreSynchronization', () => {
     thenAuthorizationChangeWasCaught();
   });
 
+  const givenSynchronizationIsReleasingItsLock = async () => {
+    const barrier = journal.holdNextSynchronizationRelease();
+    const completion = whenSynchronizing();
+    await barrier.reached;
+    return { barrier, completion };
+  };
+  const whenAddingWorkAndSynchronizingDuringRelease = async (
+    synchronization: { barrier: JournalBarrierFixture; completion: Promise<void> },
+    states: JournalDuPupitre[],
+  ): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
+    const late = whenSynchronizingInto(states);
+    synchronization.barrier.release();
+    await Promise.all([synchronization.completion, late]);
+  };
+  const givenSynchronizationIsReadingTheJournal = async () => {
+    const barrier = journal.holdNextRead();
+    const completion = whenSynchronizing();
+    await barrier.reached;
+    return { barrier, completion };
+  };
+  const whenDeselectingCompanyDuringRead = async (synchronization: {
+    barrier: JournalBarrierFixture;
+    completion: Promise<void>;
+  }): Promise<void> => {
+    whenDeselectingCompany();
+    synchronization.barrier.release();
+    await synchronization.completion;
+  };
   const whenSynchronizingInto = (states: JournalDuPupitre[]): Promise<void> =>
     synchronisation.synchronize((_entreprise, state) => {
       states.push(state);

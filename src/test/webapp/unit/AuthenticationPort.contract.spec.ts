@@ -799,6 +799,24 @@ describe('Keycloak HTTP session renewal', () => {
 
   beforeEach(() => {
     requests = [];
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
+        { provide: Keycloak, useFactory: () => keycloak },
+        { provide: AuthenticationPort, useClass: KeycloakOidcAuthentication },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        {
+          provide: HttpBackend,
+          useValue: {
+            handle: (request: HttpRequest<unknown>): Observable<HttpEvent<string>> => {
+              const authorization = request.headers.get('Authorization') ?? '';
+              requests.push(authorization);
+              return of(new HttpResponse({ body: authorization }));
+            },
+          },
+        },
+      ],
+    });
   });
 
   it('should sign a request after boot with the renewed token', async () => {
@@ -828,24 +846,6 @@ describe('Keycloak HTTP session renewal', () => {
 
   const givenAnAuthenticatedHttpClient = async (laterRefresh: RefreshOutcome): Promise<void> => {
     keycloak = keycloakSessionFixture({ laterRefresh });
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
-        { provide: Keycloak, useValue: keycloak },
-        { provide: AuthenticationPort, useClass: KeycloakOidcAuthentication },
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
-        {
-          provide: HttpBackend,
-          useValue: {
-            handle: (request: HttpRequest<unknown>): Observable<HttpEvent<string>> => {
-              const authorization = request.headers.get('Authorization') ?? '';
-              requests.push(authorization);
-              return of(new HttpResponse({ body: authorization }));
-            },
-          },
-        },
-      ],
-    });
     await TestBed.inject(AuthenticationPort).authenticate();
   };
   const whenRequestingProtectedData = (): Promise<string> =>

@@ -103,12 +103,9 @@ describe('Pupitre replay and device renewal exclusion', () => {
 
   it('should wait for renewal and its durable rotation before replaying with the new token', async () => {
     await givenAnEnrolledSession();
-    await whenRenewalStarts();
+    await givenRenewalIsInProgress();
 
-    const replay = whenReplaying();
-    await whenLettingQueuedWorkRun();
-    whenRenewalCompletes();
-    const token = await replay;
+    const token = await whenReplayingDuringRenewal();
 
     expect(server.chronology).toEqual(['renewal-started', 'renewal-finished', 'replay']);
     expect(token).toBe('renewed-token');
@@ -116,16 +113,9 @@ describe('Pupitre replay and device renewal exclusion', () => {
 
   it('should finish an outgoing replay before starting a network renewal', async () => {
     await givenAnEnrolledSession();
-    const entered = new SignalFixture();
-    const release = new SignalFixture();
+    const replay = await givenReplayIsInProgress();
 
-    const replay = whenHoldingReplay(entered, release);
-    await entered.promise;
-    await whenRenewalBecomesDue();
-    await whenReleasingReplay(release, replay);
-    await server.renewalArrived.promise;
-    whenRenewalCompletes();
-    await whenLettingQueuedWorkRun();
+    await whenRenewalBecomesDueDuringReplay(replay);
 
     expect(server.chronology).toEqual(['replay-started', 'replay-finished', 'renewal-started', 'renewal-finished']);
   });
@@ -136,7 +126,7 @@ describe('Pupitre replay and device renewal exclusion', () => {
     await enrolment;
   };
   const whenRenewalBecomesDue = (): Promise<void> => vi.advanceTimersByTimeAsync(270_000).then(() => undefined);
-  const whenRenewalStarts = async (): Promise<void> => {
+  const givenRenewalIsInProgress = async (): Promise<void> => {
     await whenRenewalBecomesDue();
     await server.renewalArrived.promise;
   };
@@ -148,15 +138,30 @@ describe('Pupitre replay and device renewal exclusion', () => {
       server.chronology.push('replay');
       return authentication.currentToken();
     });
-  const whenHoldingReplay = (entered: SignalFixture, release: SignalFixture): Promise<void> =>
-    journal.withSession(async () => {
+  const whenReplayingDuringRenewal = async (): Promise<string | undefined> => {
+    const replay = whenReplaying();
+    await whenLettingQueuedWorkRun();
+    whenRenewalCompletes();
+    return replay;
+  };
+  const givenReplayIsInProgress = async () => {
+    const entered = new SignalFixture();
+    const release = new SignalFixture();
+    const completion = journal.withSession(async () => {
       server.chronology.push('replay-started');
       entered.release();
       await release.promise;
       server.chronology.push('replay-finished');
     });
-  const whenReleasingReplay = async (release: SignalFixture, replay: Promise<void>): Promise<void> => {
-    release.release();
-    await replay;
+    await entered.promise;
+    return { release, completion };
+  };
+  const whenRenewalBecomesDueDuringReplay = async (replay: { release: SignalFixture; completion: Promise<void> }): Promise<void> => {
+    await whenRenewalBecomesDue();
+    replay.release.release();
+    await replay.completion;
+    await server.renewalArrived.promise;
+    whenRenewalCompletes();
+    await whenLettingQueuedWorkRun();
   };
 });
