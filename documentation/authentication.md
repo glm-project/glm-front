@@ -19,9 +19,9 @@ credential or reach into an adapter.
 `KeycloakOidcAuthentication`. Its Cypress build replaces that provider file with the in-memory adapter.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
 
-`pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration
-and the IndexedDB storage adapter. `pupitre/enrolement.provider.ts` binds `DeviceEnrolmentPort` to that same
-adapter with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
+`pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,
+the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort` and
+`DeviceEnrolmentPort`) with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
 client ID stay in front environments; no client secret belongs in a browser repository.
 
 Application-specific adapters do not import one another. The port contract runs the shared behavior against each

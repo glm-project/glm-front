@@ -24,30 +24,12 @@ const gesteFixture: GesteDAtelier = {
   nature: 'ARRIVEE',
 };
 
-class TimeoutAuthenticationFixture extends AuthenticationPort implements DeviceSessionPort {
+class TimeoutSessionFixture extends DeviceSessionPort {
   private readonly locks = new BrowserLocksFixture();
-
-  override synchronizeSession(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  override currentTenant(): string | undefined {
-    return 'entreprise-a';
-  }
-
-  override currentToken(): string | undefined {
-    return 'authorized';
-  }
 
   withSession<T>(action: () => Promise<T>): Promise<T> {
     return this.locks.request('session', action);
   }
-
-  override authenticate(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  override logout(): void {}
 }
 
 describe('Pupitre synchronization over stalled HTTP', () => {
@@ -77,8 +59,15 @@ describe('Pupitre synchronization over stalled HTTP', () => {
         { provide: AtelierExchangePort, useClass: HttpAtelierExchange },
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
-        { provide: AuthenticationPort, useClass: TimeoutAuthenticationFixture },
-        { provide: DeviceSessionPort, useExisting: AuthenticationPort },
+        {
+          provide: AuthenticationPort,
+          useValue: {
+            synchronizeSession: () => Promise.resolve(),
+            currentTenant: () => 'entreprise-a',
+            currentToken: () => 'authorized',
+          },
+        },
+        { provide: DeviceSessionPort, useClass: TimeoutSessionFixture },
       ],
     });
     synchronization = TestBed.inject(PupitreSynchronization);
