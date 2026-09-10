@@ -26,24 +26,31 @@ export class PupitreSynchronization {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private synchronization: Promise<void> | undefined;
   private synchronizationRequested = false;
+  private readonly publishers = new Set<PupitrePublisher>();
 
   synchronize(publish: PupitrePublisher): Promise<void> {
-    if (this.synchronization !== undefined) {
-      this.synchronizationRequested = true;
-      return this.synchronization;
-    }
-    this.synchronization = this.journal
-      .synchronize(async () => {
-        await this.exchange(publish);
-        while (this.synchronizationRequested) {
-          this.synchronizationRequested = false;
-          await this.exchange(publish);
-        }
-      })
-      .finally(() => {
-        this.synchronization = undefined;
-      });
+    this.publishers.add(publish);
+    this.synchronizationRequested = true;
+    this.synchronization ??= this.runSynchronization();
     return this.synchronization;
+  }
+
+  private async runSynchronization(): Promise<void> {
+    try {
+      while (this.synchronizationRequested) {
+        this.synchronizationRequested = false;
+        await this.journal.synchronize(() =>
+          this.exchange((entreprise, state) => {
+            for (const publish of [...this.publishers]) {
+              publish(entreprise, state);
+            }
+          }),
+        );
+      }
+    } finally {
+      this.synchronization = undefined;
+      this.publishers.clear();
+    }
   }
 
   private async exchange(publish: PupitrePublisher): Promise<void> {

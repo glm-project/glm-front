@@ -1,4 +1,5 @@
 import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
+import { httpSessionRefreshInterceptor } from '@/gestion/shared/authentication/infrastructure/primary/http-session-refresh.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -15,7 +16,11 @@ if (environment.production) {
 }
 
 bootstrapApplication(App, {
-  providers: [provideHttpClient(withInterceptors([httpAuthInterceptor])), provideRouter(routes), authProvider],
+  providers: [
+    provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
+    provideRouter(routes),
+    authProvider,
+  ],
 }).catch((err: unknown) => {
   console.error(err);
 });

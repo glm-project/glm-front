@@ -52,6 +52,7 @@ class ServerFixture extends AtelierExchangePort {
 
 class JournalFixture extends JournauxDuPupitreFixture {
   unavailable = false;
+  afterSynchronization: (() => Promise<void>) | undefined;
   lastSessionError: unknown;
   onRead: (() => void) | undefined;
 
@@ -66,7 +67,11 @@ class JournalFixture extends JournauxDuPupitreFixture {
       if (this.unavailable) {
         throw new Error('stockage indisponible');
       }
-      return action();
+      const result = await action();
+      const after = this.afterSynchronization;
+      this.afterSynchronization = undefined;
+      await after?.();
+      return result;
     });
   }
 
@@ -164,6 +169,29 @@ describe('PupitreSynchronization', () => {
     await Promise.all([first, second]);
 
     thenReferentialRefreshedTwice();
+  });
+
+  it('should reconcile every concurrent caller with the refreshed journal', async () => {
+    givenAnAuthorizedSession();
+    const firstStates: JournalDuPupitre[] = [];
+    const secondStates: JournalDuPupitre[] = [];
+
+    await Promise.all([whenSynchronizingInto(firstStates), whenSynchronizingInto(secondStates)]);
+
+    expect(firstStates.at(-1)?.referentiel).toEqual(referenceFixture);
+    expect(secondStates.at(-1)?.referentiel).toEqual(referenceFixture);
+  });
+
+  it('should exchange work requested while the synchronization lock is being released', async () => {
+    givenAnAuthorizedSession();
+    const lateStates: JournalDuPupitre[] = [];
+    const late = givenNewWorkDuringLockRelease(lateStates);
+
+    await whenSynchronizing();
+    await late();
+
+    thenServerReceived(gesteFixture);
+    expect(lateStates.at(-1)?.evenements[0]?.etat).toBe('ACCEPTE');
   });
 
   it('should discard refreshed referential if the company changed during server exchange', async () => {
@@ -311,6 +339,19 @@ describe('PupitreSynchronization', () => {
     thenServerReread();
     thenAuthorizationChangeWasCaught();
   });
+
+  const whenSynchronizingInto = (states: JournalDuPupitre[]): Promise<void> =>
+    synchronisation.synchronize((_entreprise, state) => {
+      states.push(state);
+    });
+  const givenNewWorkDuringLockRelease = (states: JournalDuPupitre[]): (() => Promise<void> | undefined) => {
+    let late: Promise<void> | undefined;
+    journal.afterSynchronization = async () => {
+      await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
+      late = whenSynchronizingInto(states);
+    };
+    return () => late;
+  };
 
   const givenASelectedCompanyWithPendingWork = async (): Promise<void> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
