@@ -42,7 +42,11 @@ export class PupitreSynchronization {
         await this.journal.synchronize(() =>
           this.exchange((entreprise, state) => {
             for (const publish of [...this.publishers]) {
-              publish(entreprise, state);
+              try {
+                publish(entreprise, state);
+              } catch (failure: unknown) {
+                this.errorHandler.handleError(failure);
+              }
             }
           }),
         );

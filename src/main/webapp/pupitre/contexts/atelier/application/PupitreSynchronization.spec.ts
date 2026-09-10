@@ -230,6 +230,18 @@ describe('PupitreSynchronization', () => {
     expect(secondStates.at(-1)?.referentiel).toEqual(referenceFixture);
   });
 
+  it('should continue notifying remaining publishers when one throws', async () => {
+    givenAnAuthorizedSession();
+    const failingCaller = whenSynchronizingWithFailingPublisher();
+    const secondStates: JournalDuPupitre[] = [];
+    const successfulCaller = whenSynchronizingInto(secondStates);
+
+    await Promise.all([failingCaller, successfulCaller]);
+
+    expect(secondStates.at(-1)?.referentiel).toEqual(referenceFixture);
+    thenAnErrorWasReported();
+  });
+
   it('should exchange work requested while the synchronization lock is being released', async () => {
     givenAnAuthorizedSession();
     const lateStates: JournalDuPupitre[] = [];
@@ -420,6 +432,10 @@ describe('PupitreSynchronization', () => {
     synchronisation.synchronize((_entreprise, state) => {
       states.push(state);
     });
+  const whenSynchronizingWithFailingPublisher = (): Promise<void> =>
+    synchronisation.synchronize(() => {
+      throw new Error('publisher failed');
+    });
   const givenASelectedCompanyWithPendingWork = async (): Promise<void> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
     await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
@@ -575,6 +591,10 @@ describe('PupitreSynchronization', () => {
   };
   const thenReferentialFailureWasLogged = (): void => {
     expect(errorHandler.errors).toEqual([expect.any(Error)]);
+  };
+  const thenAnErrorWasReported = (): void => {
+    expect(errorHandler.errors.length).toBeGreaterThanOrEqual(1);
+    expect(errorHandler.errors[0]).toEqual(expect.any(Error));
   };
   const thenEventAcceptedWithoutOpeningDay = (): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
