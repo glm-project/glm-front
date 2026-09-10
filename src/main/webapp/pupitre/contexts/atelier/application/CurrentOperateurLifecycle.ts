@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { DesignationExpirationSchedulerPort } from '../domain/designation/DesignationExpirationSchedulerPort';
-import { DesignationOperateur, isFenetreIdentifiedBy } from '../domain/designation/DesignationOperateur';
+import { DesignationOperateur, DesignationResolution, isFenetreIdentifiedBy } from '../domain/designation/DesignationOperateur';
 import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
@@ -64,8 +64,7 @@ export class CurrentOperateurLifecycle {
       this.designation.set(completion.designation);
       if (!completion.accepted) await this.drainWindow();
     } catch (failure: unknown) {
-      this.designation.update(current => current.afterFailingResolution(resolution, Date.now()));
-      if (failure instanceof MatriculeInconnu) this.fraicheur.pushForUnknown(resolution.code, this.applyReferentiel);
+      this.failResolution(resolution, failure);
     } finally {
       this.designation.update(current => current.afterEndingResolution());
       this.refresh();
@@ -140,6 +139,17 @@ export class CurrentOperateurLifecycle {
     }
     const fenetre = designation.window();
     if (fenetre !== undefined) this.acceptDecision(fenetre.afterReconciling(entreprise, state));
+  }
+
+  private failResolution(resolution: DesignationResolution, failure: unknown): void {
+    const now = Date.now();
+    if (failure instanceof MatriculeInconnu) {
+      this.designation.update(current => current.afterFailingResolution(resolution, now));
+      this.fraicheur.pushForUnknown(resolution.code, this.applyReferentiel);
+      return;
+    }
+    this.designation.update(current => current.afterExpiration(now));
+    this.errorHandler.handleError(failure);
   }
 
   private settle(): Promise<void> {

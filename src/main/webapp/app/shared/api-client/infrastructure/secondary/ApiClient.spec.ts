@@ -46,6 +46,7 @@ describe('ApiClient', () => {
 
   afterEach(() => {
     serveur.verify();
+    vi.useRealTimers();
   });
 
   it('should hand back what the server answered on the route it was asked for', async () => {
@@ -93,6 +94,30 @@ describe('ApiClient', () => {
     await whenTheRequestCompletes(ecriture);
   });
 
+  it.each(['read', 'write'] as const)('should cancel a stalled %s after thirty seconds', async operation => {
+    givenAStoppedNetworkClock();
+    const result = whenStartingAStalledRequest(operation);
+    const request = givenTheServerDoesNotAnswer();
+
+    await whenThirtySecondsElapse();
+
+    thenTheRequestWasCancelled(request);
+    await thenTheTimeoutWasReported(result);
+  });
+
+  const givenAStoppedNetworkClock = (): void => {
+    vi.useFakeTimers();
+  };
+
+  const whenStartingAStalledRequest = (operation: 'read' | 'write'): Promise<unknown> =>
+    (operation === 'read' ? whenReadingOperators() : whenPausingWork()).catch((error: unknown) => error);
+
+  const givenTheServerDoesNotAnswer = (): TestRequest => serveur.expectOne(() => true);
+
+  const whenThirtySecondsElapse = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  };
+
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
   const whenReadingOperators = (): Promise<unknown> => api.read('/api/operateurs', { queryParams: { size: PLEINE_PAGE } });
@@ -135,5 +160,13 @@ describe('ApiClient', () => {
 
   const thenItHandedBack = (recu: unknown, attendu: unknown): void => {
     expect(recu).toEqual(attendu);
+  };
+
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
+  };
+
+  const thenTheTimeoutWasReported = async (result: Promise<unknown>): Promise<void> => {
+    await expect(result).resolves.toBeInstanceOf(Error);
   };
 });

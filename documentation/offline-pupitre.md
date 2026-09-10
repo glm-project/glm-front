@@ -123,6 +123,11 @@ the requested callback. The page calls `CurrentOperateurLifecycle.finish()` when
 pointage does not destroy the coordinator or close the designation. `Designation` translates touch and keyboard
 events and renders the application snapshot, without owning its lifetime.
 
+Only a matricule absent from the local reference produces the unknown-code state. A technical failure during
+resolution goes to `ErrorHandlerPort` and preserves the entered code for another explicit validation, provided
+the designation has not expired or been closed. A late failure never restores an expired code or overwrites
+new input. It does not trigger the unknown-code reference refresh.
+
 The domain checks and renews validity at each gesture's initiation, even when the screen's expiry callback
 has not run. Expiry immediately prevents new gestures; captures already initiated retain their operator and
 occurrence time and drain before the window is released. The next reference becomes visible after that

@@ -219,6 +219,25 @@ describe('Designation du pupitre', () => {
     await whenResolutionCompletes(pending);
     thenClosed();
   });
+  it('should report a local read failure and let the operator retry the same code', async () => {
+    const reject = givenDelayedFailure();
+    whenEntering('049');
+    const pending = whenValidating();
+    await whenReadStarts();
+
+    whenRejecting(reject);
+    await whenResolutionCompletes(pending);
+
+    thenCodeIs('049');
+    thenNoOperatorIsDesignated();
+    thenValidationIsAvailable();
+    thenTheLocalReadFailureWasReported();
+    thenNoExchangeWasAttempted();
+
+    await whenValidating();
+
+    thenOperatorIsDesignated();
+  });
   it('should discard a failed local read after sleep before the expiry timer runs', async () => {
     const reject = givenDelayedFailure();
     whenEntering('049');
@@ -346,7 +365,6 @@ describe('Designation du pupitre', () => {
     whenRejecting(reject);
     await whenResolutionCompletes(pending);
     await whenTheServerRefreshSettles();
-    whenEntering('050');
     await whenValidating();
 
     thenUnknownCodeIsShown();
@@ -553,6 +571,12 @@ describe('Designation du pupitre', () => {
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);
+  };
+  const thenValidationIsAvailable = (): void => {
+    expect(designation.canValidate()).toBe(true);
+  };
+  const thenTheLocalReadFailureWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([new Error('Unavailable')]);
   };
   const thenPressIsRejected = (accepted: boolean): void => {
     expect(accepted).toBe(false);

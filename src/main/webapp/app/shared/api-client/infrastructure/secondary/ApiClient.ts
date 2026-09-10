@@ -1,7 +1,9 @@
 import { paths } from '@/app/generated/schema';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
+
+const NETWORK_TIMEOUT_MS = 30_000;
 
 interface Operation {
   responses: unknown;
@@ -60,7 +62,9 @@ export class ApiClient {
     const { pathParams, queryParams } = request as RawRequest;
 
     return firstValueFrom(
-      this.http.get<ResponseBody<ReadOperation<Route>>>(buildUrlFor(route, pathParams), { params: buildParamsFrom(queryParams) }),
+      this.http
+        .get<ResponseBody<ReadOperation<Route>>>(buildUrlFor(route, pathParams), { params: buildParamsFrom(queryParams) })
+        .pipe(timeout(NETWORK_TIMEOUT_MS)),
     );
   }
 
@@ -68,7 +72,9 @@ export class ApiClient {
     const { pathParams, queryParams, body } = request as RawRequest;
 
     return firstValueFrom(
-      this.http.post<ResponseBody<WriteOperation<Route>>>(buildUrlFor(route, pathParams), body, { params: buildParamsFrom(queryParams) }),
+      this.http
+        .post<ResponseBody<WriteOperation<Route>>>(buildUrlFor(route, pathParams), body, { params: buildParamsFrom(queryParams) })
+        .pipe(timeout(NETWORK_TIMEOUT_MS)),
     );
   }
 }

@@ -8,6 +8,7 @@ import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infras
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import Keycloak from 'keycloak-js';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
@@ -170,6 +171,7 @@ class AuthorizationServerFixture implements HttpBackend {
   private readonly nextRenewal: ServerTurn;
   private readonly nextLogout: ServerTurn;
 
+  private readonly tokenAnswerHeld = new SignalFixture();
   private holdingTokenAnswers = false;
   private releaseTheHeldAnswer: () => void = () => undefined;
   private readonly heldAnswer: Promise<void>;
@@ -194,6 +196,10 @@ class AuthorizationServerFixture implements HttpBackend {
     this.holdingTokenAnswers = true;
   }
 
+  waitUntilTokenAnswerIsHeld(): Promise<void> {
+    return this.tokenAnswerHeld.promise;
+  }
+
   answersWhatItHeld(): void {
     this.releaseTheHeldAnswer();
   }
@@ -202,6 +208,7 @@ class AuthorizationServerFixture implements HttpBackend {
     const turn = this.turnFor(request.url, new URLSearchParams(request.serializeBody() as string));
 
     if (this.shouldHoldTokenAnswer(request)) {
+      this.tokenAnswerHeld.release();
       await this.heldAnswer;
     }
 
@@ -502,6 +509,11 @@ describe('Device Authentication, beyond the contract', () => {
     return whenTheRequestHasLeft();
   };
 
+  const whenTheRenewalIsInFlight = async (server: AuthorizationServerFixture): Promise<void> => {
+    await vi.advanceTimersToNextTimerAsync();
+    await server.waitUntilTokenAnswerIsHeld();
+  };
+
   const whenTheHeldAnswerArrives = (server: AuthorizationServerFixture): Promise<void> => {
     server.answersWhatItHeld();
 
@@ -725,7 +737,7 @@ describe('Device Authentication, beyond the contract', () => {
 
     await givenAnEnrolledPupitre(authentication);
     givenTheServerHoldsTokenAnswers(server);
-    await whenTheShiftGoesOn();
+    await whenTheRenewalIsInFlight(server);
 
     whenEndingTheSession(authentication);
     await whenTheHeldAnswerArrives(server);

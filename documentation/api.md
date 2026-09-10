@@ -39,6 +39,10 @@ path parameters, query parameters, body and response together at compilation. It
 so the global bearer interceptor applies. Device-enrolment protocol traffic is the separate `HttpBackend`
 exception described in [`authentication.md`](authentication.md).
 
+Bound each `ApiClient` read and write to thirty seconds. A timeout cancels the outstanding HTTP subscription
+and remains a technical failure. In the pupitre, it releases the exchange locks and leaves the gesture pending
+for a later synchronization with the same identity and business timestamp; it never becomes a business refusal.
+
 Keep generated response types in `infrastructure/secondary`. Translate them into hand-written domain
 models before returning through a port.
 

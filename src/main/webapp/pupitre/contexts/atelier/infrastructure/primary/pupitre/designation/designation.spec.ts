@@ -39,6 +39,7 @@ const referenceFixture: JournalDuPupitre = { ...EMPTY_JOURNAL_DU_PUPITRE, refere
 
 class DesignationJournalFixture extends JournauxDuPupitreFixture {
   readCompleted = Promise.resolve();
+  failure: Error | undefined;
   private notifyReadCompleted: (() => void) | undefined;
 
   constructor() {
@@ -60,9 +61,13 @@ class DesignationJournalFixture extends JournauxDuPupitreFixture {
   override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     const notify = this.notifyReadCompleted;
     if (notify === undefined) throw new Error('Read completion is not prepared.');
-    const state = await super.read(entreprise);
-    roundTrip(notify);
-    return state;
+    try {
+      const state = await super.read(entreprise);
+      if (this.failure !== undefined) throw this.failure;
+      return state;
+    } finally {
+      roundTrip(notify);
+    }
   }
 }
 
@@ -186,6 +191,19 @@ describe('Designation keypad', () => {
     thenOperatorIsDesignated();
   });
 
+  it('should keep the entered code available for retry when local storage fails', async () => {
+    givenUnavailableStorage();
+    whenPressingKey({ key: '0' });
+    whenPressingKey({ key: '4' });
+    whenPressingKey({ key: '9' });
+
+    whenPressingKey({ key: 'Enter' });
+    await whenResolutionSettles();
+
+    thenDisplayedCodeIs('049');
+    thenValidationIsDisabled(false);
+  });
+
   it('should produce one touch action and not renew inactivity when a held touch is released', () => {
     whenHolding('digit-0');
     thenDisplayedCodeIs('0');
@@ -197,6 +215,9 @@ describe('Designation keypad', () => {
   const whenHolding = (selector: string): void => {
     element(selector).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
+  };
+  const givenUnavailableStorage = (): void => {
+    journalFixture.failure = new Error('Stockage indisponible');
   };
   const whenResolutionSettles = async (): Promise<void> => {
     await journalFixture.readCompleted;

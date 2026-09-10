@@ -393,6 +393,44 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     thenRestartedSessionRenewsWith(restarted, 'refresh-b', anotherCompanyTokenFixture, 'entreprise-b');
   });
 
+  it('should cancel a stalled renewal and retain the unexpired session', async () => {
+    await givenAnEnrolledSession();
+    await whenTheRenewalIsDue();
+    const request = await whenRequestArrives(`${baseFixture}/token`);
+
+    await whenThirtySecondsElapse();
+
+    thenTheRequestWasCancelled(request);
+    thenSessionIs(authentication, tokenFixture, 'entreprise-a');
+  });
+
+  it('should cancel a stalled logout and remove its durable credential', async () => {
+    await givenAnEnrolledSession();
+    const request = await whenLoggingOutWithoutAnAnswer();
+
+    await whenThirtySecondsElapse();
+
+    thenTheRequestWasCancelled(request);
+    await whenLogoutPersistenceCompletes();
+    const restarted = await whenRestartingWithoutAStoredCredential();
+    thenSessionIs(restarted, undefined, 'entreprise-a');
+  });
+
+  const whenLoggingOutWithoutAnAnswer = async (): Promise<TestRequest> => {
+    authentication.logout();
+    return whenRequestArrives(`${baseFixture}/logout`);
+  };
+
+  const whenLogoutPersistenceCompletes = (): Promise<void> => stockage.drainIO();
+
+  const whenThirtySecondsElapse = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  };
+
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
+  };
+
   interface RestartedRenewal {
     session: AuthenticationPort;
     refreshToken: string | null;
@@ -791,6 +829,46 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
     await thenTheOutcomeIs(outcome, 'ENROLLED');
     thenNoCodeWasShown();
   });
+
+  it('should cancel a stalled authorization and report the server unreachable', async () => {
+    const outcome = whenEnrolling();
+    const request = await whenAuthorizationStalls();
+
+    await whenThirtySecondsElapse();
+
+    thenTheRequestWasCancelled(request);
+    await thenTheOutcomeIs(outcome, 'UNREACHABLE');
+    thenNoCodeWasShown();
+  });
+
+  it('should cancel a stalled token claim and report the server unreachable', async () => {
+    const outcome = whenEnrolling();
+    await whenTheServerIssuesTheCode();
+    const request = await whenTokenClaimStalls();
+
+    await whenThirtySecondsElapse();
+
+    thenTheRequestWasCancelled(request);
+    await thenTheOutcomeIs(outcome, 'UNREACHABLE');
+  });
+
+  const whenAuthorizationStalls = async (): Promise<TestRequest> => {
+    await stockage.drainIO();
+    return whenRequestArrives(`${baseFixture}/auth/device`);
+  };
+
+  const whenTokenClaimStalls = async (): Promise<TestRequest> => {
+    await vi.advanceTimersToNextTimerAsync();
+    return whenRequestArrives(`${baseFixture}/token`);
+  };
+
+  const whenThirtySecondsElapse = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  };
+
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
+  };
 
   const givenStorageCannotCommit = (): void => {
     stockage.failWrite = true;
