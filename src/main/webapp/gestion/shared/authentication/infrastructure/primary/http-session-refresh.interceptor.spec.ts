@@ -21,7 +21,7 @@ class AuthenticationFixture extends AuthenticationPort {
   }
 
   override async synchronizeSession(): Promise<void> {
-    await Promise.resolve();
+    await new Promise<void>(resolve => setTimeout(resolve));
     if (this.shouldFailRefresh) {
       throw new Error('refresh refused');
     }

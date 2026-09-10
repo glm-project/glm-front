@@ -7,6 +7,7 @@ import { GesteDAtelier } from '@/pupitre/contexts/atelier/domain/journal-du-pupi
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { HttpAtelierExchange } from '@/pupitre/contexts/atelier/infrastructure/secondary/http/HttpAtelierExchange';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -23,7 +24,7 @@ const gesteFixture: GesteDAtelier = {
   nature: 'ARRIVEE',
 };
 
-class TimeoutAuthenticationFixture extends AuthenticationPort {
+class TimeoutAuthenticationFixture extends AuthenticationPort implements DeviceSessionPort {
   private readonly locks = new BrowserLocksFixture();
 
   override synchronizeSession(): Promise<void> {
@@ -38,7 +39,7 @@ class TimeoutAuthenticationFixture extends AuthenticationPort {
     return 'authorized';
   }
 
-  override withSession<T>(action: () => Promise<T>): Promise<T> {
+  withSession<T>(action: () => Promise<T>): Promise<T> {
     return this.locks.request('session', action);
   }
 
@@ -51,7 +52,7 @@ class TimeoutAuthenticationFixture extends AuthenticationPort {
 
 describe('Pupitre synchronization over stalled HTTP', () => {
   let journal: JournauxDuPupitreFixture;
-  let authentication: AuthenticationPort;
+  let session: DeviceSessionPort;
   let synchronization: PupitreSynchronization;
   let http: HttpTestingController;
   let requestArrived: SignalFixture;
@@ -77,10 +78,11 @@ describe('Pupitre synchronization over stalled HTTP', () => {
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
         { provide: AuthenticationPort, useClass: TimeoutAuthenticationFixture },
+        { provide: DeviceSessionPort, useExisting: AuthenticationPort },
       ],
     });
     synchronization = TestBed.inject(PupitreSynchronization);
-    authentication = TestBed.inject(AuthenticationPort);
+    session = TestBed.inject(DeviceSessionPort);
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -135,7 +137,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
     );
     return whenRequestArrives();
   };
-  const whenQueuingASessionWrite = (): Promise<string> => authentication.withSession(() => Promise.resolve('session updated'));
+  const whenQueuingASessionWrite = (): Promise<string> => session.withSession(() => Promise.resolve('session updated'));
   const whenThirtySecondsElapse = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(30_000);
   };

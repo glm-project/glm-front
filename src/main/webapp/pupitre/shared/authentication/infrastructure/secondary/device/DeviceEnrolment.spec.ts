@@ -5,9 +5,11 @@ import {
   DeviceEnrolmentOutcome,
   DeviceEnrolmentPort,
 } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
-import { HttpParams, provideHttpClient } from '@angular/common/http';
+import { HttpBackend, HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
+import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
@@ -934,5 +936,76 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
   const thenTheOutcomeIs = async (outcome: Promise<DeviceEnrolmentOutcome>, expected: DeviceEnrolmentOutcome): Promise<void> => {
     expect(await stockage.completeIOUntil(outcome)).toBe(expected);
+  };
+});
+
+class LockTrackingStorageFixture extends LocalStoragePort {
+  readonly acquiredLocks: string[] = [];
+
+  override read<T>(): Promise<T | undefined> {
+    return Promise.resolve(undefined);
+  }
+  override update<T>(_key: string, initial: T, change: (value: T) => T): Promise<T> {
+    return Promise.resolve(change(initial));
+  }
+  override lock<T>(key: string, action: () => Promise<T>): Promise<T> {
+    this.acquiredLocks.push(key);
+    return action();
+  }
+}
+
+describe('Device session coordination, through DeviceSessionPort', () => {
+  it('should execute action directly when no persistent storage is configured', async () => {
+    const device = givenDeviceWithoutStorage();
+
+    const result = await whenRunningWithSession(device, () => Promise.resolve('ok'));
+
+    thenActionResultIs(result, 'ok');
+  });
+
+  it('should run action within enrolment and session locks when persistent storage is configured', async () => {
+    const storage = new LockTrackingStorageFixture();
+    const device = givenDeviceWithStorage(storage);
+    const locksAtExecution: string[] = [];
+
+    await whenRunningWithSession(device, () => {
+      locksAtExecution.push(...storage.acquiredLocks);
+      return Promise.resolve();
+    });
+
+    thenLocksWereAcquiredInOrder(locksAtExecution, ['enrolement', 'session']);
+  });
+
+  const givenDeviceWithoutStorage = (): DeviceSessionPort =>
+    Injector.create({
+      providers: [
+        DeviceAuthentication,
+        DeviceGrantClient,
+        { provide: HttpBackend, useValue: {} },
+        { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    }).get(DeviceAuthentication);
+
+  const givenDeviceWithStorage = (storage: LocalStoragePort): DeviceSessionPort =>
+    Injector.create({
+      providers: [
+        DeviceAuthentication,
+        DeviceGrantClient,
+        { provide: HttpBackend, useValue: {} },
+        { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
+        { provide: LocalStoragePort, useValue: storage },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    }).get(DeviceAuthentication);
+
+  const whenRunningWithSession = <T>(device: DeviceSessionPort, action: () => Promise<T>): Promise<T> => device.withSession(action);
+
+  const thenActionResultIs = <T>(actual: T, expected: T): void => {
+    expect(actual).toBe(expected);
+  };
+
+  const thenLocksWereAcquiredInOrder = (actual: string[], expected: string[]): void => {
+    expect(actual).toEqual(expected);
   };
 });

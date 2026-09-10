@@ -1,6 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
@@ -17,6 +18,8 @@ export const authProvider: Provider[] = [
     useFactory: () => new DeviceGrantConfiguration(environment.keycloak.url, environment.keycloak.realm, environment.keycloak.client_id),
   },
   DeviceGrantClient,
-  { provide: AuthenticationPort, useClass: DeviceAuthentication },
+  DeviceAuthentication,
+  { provide: AuthenticationPort, useExisting: DeviceAuthentication },
+  { provide: DeviceSessionPort, useExisting: DeviceAuthentication },
   { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
 ];

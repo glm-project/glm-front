@@ -12,6 +12,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
@@ -132,7 +133,6 @@ describe('PupitreSynchronization', () => {
   let token: string | undefined;
   let onSynchronizeSession: (() => Promise<void> | void) | undefined;
   let errorHandler: ErrorHandlerFixture;
-  let lastSessionError: unknown;
 
   beforeEach(() => {
     journal = new SynchronizationJournalFixture();
@@ -142,7 +142,6 @@ describe('PupitreSynchronization', () => {
     tenant = 'entreprise-a';
     token = undefined;
     onSynchronizeSession = undefined;
-    lastSessionError = undefined;
     synchronisation = Injector.create({
       providers: [
         PupitreSynchronization,
@@ -158,16 +157,14 @@ describe('PupitreSynchronization', () => {
                 await onSynchronizeSession();
               }
             },
-            withSession: async <T>(action: () => Promise<T>): Promise<T> => {
-              try {
-                return await action();
-              } catch (error: unknown) {
-                lastSessionError = error;
-                throw error;
-              }
-            },
             currentTenant: () => tenant,
             currentToken: () => token,
+          },
+        },
+        {
+          provide: DeviceSessionPort,
+          useValue: {
+            withSession: <T>(action: () => Promise<T>): Promise<T> => action(),
           },
         },
       ],
@@ -382,7 +379,6 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     thenDisconnectedStatusObserved();
-    thenAuthorizationChangeWasCaught();
   });
 
   it('should mark disconnected when authorization changes during retry reread', async () => {
@@ -394,7 +390,6 @@ describe('PupitreSynchronization', () => {
 
     thenDisconnectedStatusObserved();
     thenServerReread();
-    thenAuthorizationChangeWasCaught();
   });
 
   const givenSynchronizationIsReleasingItsLock = async () => {
@@ -608,8 +603,5 @@ describe('PupitreSynchronization', () => {
   };
   const thenDrainingStoppedWithoutDisconnection = (): void => {
     expect(exposed?.connecte).toBe(true);
-  };
-  const thenAuthorizationChangeWasCaught = (): void => {
-    expect(lastSessionError).toEqual(new Error('L’autorisation du pupitre a change.'));
   };
 });

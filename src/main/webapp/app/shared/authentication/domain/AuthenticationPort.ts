@@ -11,9 +11,5 @@ export abstract class AuthenticationPort {
     return Promise.resolve();
   }
 
-  withSession<T>(action: () => Promise<T>): Promise<T> {
-    return action();
-  }
-
   abstract logout(): void;
 }

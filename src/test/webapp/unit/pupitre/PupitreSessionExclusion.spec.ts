@@ -6,6 +6,7 @@ import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { IndexedDbJournauxDuPupitre } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/IndexedDbJournauxDuPupitre';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
@@ -127,6 +128,7 @@ describe('Pupitre replay and device renewal exclusion', () => {
         DeviceGrantClient,
         IndexedDbJournauxDuPupitre,
         { provide: AuthenticationPort, useExisting: DeviceAuthentication },
+        { provide: DeviceSessionPort, useExisting: DeviceAuthentication },
         { provide: JournauxDuPupitrePort, useExisting: IndexedDbJournauxDuPupitre },
         { provide: AtelierExchangePort, useValue: exchange },
         { provide: HttpBackend, useValue: server },
@@ -148,21 +150,14 @@ describe('Pupitre replay and device renewal exclusion', () => {
   it('should wait for renewal and its durable rotation before replaying with the new token', async () => {
     await givenAnEnrolledSession();
     await givenPendingWork();
-    let tokenDuringReplay: string | undefined;
-    exchange.onSend = () => {
-      server.chronology.push('replay');
-      tokenDuringReplay = authentication.currentToken();
-    };
+    const token = givenCapturedTokenDuringReplay();
 
     await givenRenewalIsInProgress();
 
-    const replay = whenSynchronizing();
-    await whenLettingQueuedWorkRun();
-    whenRenewalCompletes();
-    await replay;
+    await whenReplayingDuringRenewal();
 
     expect(server.chronology).toEqual(['renewal-started', 'renewal-finished', 'replay']);
-    expect(tokenDuringReplay).toBe(renewedToken);
+    expect(token.duringReplay).toBe(renewedToken);
   });
 
   it('should finish an outgoing replay before starting a network renewal', async () => {
@@ -183,6 +178,14 @@ describe('Pupitre replay and device renewal exclusion', () => {
   const givenPendingWork = async (): Promise<void> => {
     await journal.append(entrepriseFixture, [gesteFixture]);
   };
+  const givenCapturedTokenDuringReplay = (): { duringReplay: string | undefined } => {
+    const token = { duringReplay: undefined as string | undefined };
+    exchange.onSend = () => {
+      server.chronology.push('replay');
+      token.duringReplay = authentication.currentToken();
+    };
+    return token;
+  };
   const whenRenewalBecomesDue = (): Promise<void> => vi.advanceTimersByTimeAsync(270_000).then(() => undefined);
   const givenRenewalIsInProgress = async (): Promise<void> => {
     await whenRenewalBecomesDue();
@@ -191,6 +194,12 @@ describe('Pupitre replay and device renewal exclusion', () => {
   const whenLettingQueuedWorkRun = (): Promise<void> => vi.advanceTimersByTimeAsync(0).then(() => undefined);
   const whenRenewalCompletes = (): void => server.grantRenewal();
   const whenSynchronizing = (): Promise<void> => synchronization.synchronize(() => undefined);
+  const whenReplayingDuringRenewal = async (): Promise<void> => {
+    const replay = whenSynchronizing();
+    await whenLettingQueuedWorkRun();
+    whenRenewalCompletes();
+    await replay;
+  };
   const givenReplayIsInProgress = async () => {
     const entered = new SignalFixture();
     const release = new SignalFixture();

@@ -14,6 +14,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { inject, Injectable } from '@angular/core';
 
 type PupitrePublisher = (entreprise: Entreprise | undefined, state: JournalDuPupitre) => void;
@@ -21,6 +22,7 @@ type PupitrePublisher = (entreprise: Entreprise | undefined, state: JournalDuPup
 @Injectable()
 export class PupitreSynchronization {
   private readonly authentication = inject(AuthenticationPort);
+  private readonly session = inject(DeviceSessionPort, { optional: true });
   private readonly journal = inject(JournauxDuPupitrePort);
   private readonly serveur = inject(AtelierExchangePort);
   private readonly errorHandler = inject(ErrorHandlerPort);
@@ -113,7 +115,7 @@ export class PupitreSynchronization {
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
-      const journeeOuverte = await this.authentication.withSession(async () => {
+      const journeeOuverte = await this.withSession(async () => {
         await this.authentication.synchronizeSession();
         return this.push(entreprise, evenement.geste, evenements);
       });
@@ -125,6 +127,14 @@ export class PupitreSynchronization {
       await this.markDisconnected(entreprise, publish);
       return undefined;
     }
+  }
+
+  private withSession<T>(action: () => Promise<T>): Promise<T> {
+    const session = this.session;
+    if (session === null) {
+      return action();
+    }
+    return session.withSession(action);
   }
 
   private async markDisconnected(entreprise: Entreprise, publish: PupitrePublisher): Promise<void> {

@@ -83,7 +83,7 @@ code and the outcome of an attempt it has already replaced.
 A network cut during the poll is reported as `UNREACHABLE`, indistinguishable from a failure to obtain the
 code at all; [ADR 0026](adr/0026-enrol-pupitre-screen-and-keycloak-delegation.md) records that limit.
 
-`AuthenticationPort.withSession` guarantees mutual exclusion on the pupitre: replay takes the
+`DeviceSessionPort.withSession` guarantees mutual exclusion on the pupitre: replay takes the
 `enrolement` lock before `session`, matching the order used by background renewal and its credential
 commit. Keep the outer lock through the network exchange and persistence: protecting only the commit
 allows a replay to use a token while the server is rotating it. Never acquire `enrolement` while holding
