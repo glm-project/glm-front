@@ -50,6 +50,11 @@ application and context when it carries their vocabulary; technical fixtures use
 the folder root. Extract one only when at least two test consumers need the same port behavior. Scenario
 data and specialized doubles stay beside their spec so the test keeps its local vocabulary.
 
+Do not inherit from another fixture class. A fixture may extend an abstract domain port to implement its
+contract; reuse fixture behavior through composition and explicit delegation. Keep scenario-specific
+coordination local to its spec. For concurrent I/O, expose an arrival signal and a release operation so the
+scenario controls the interleaving directly, instead of injecting callbacks into the fixture's internal steps.
+
 A shared fixture is a test adapter at a stable domain seam: it may depend on domain ports and types or on
 other shared test fixtures, never on application or infrastructure code. Only specs and sources under
 `src/test/` may import it. `HexagonalArchTest.spec.ts` enforces these dependency directions; use the
