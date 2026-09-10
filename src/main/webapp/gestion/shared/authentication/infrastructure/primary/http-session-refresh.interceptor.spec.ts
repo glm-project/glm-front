@@ -83,11 +83,24 @@ describe('httpSessionRefreshInterceptor', () => {
     expect(sentAuthorizations).toEqual([]);
   });
 
+  it('should sign a later request after session renewal recovers from refusal', async () => {
+    await givenAnInitialRefreshFailure();
+
+    const authorization = await whenRequestingProtectedData();
+
+    expect(authorization).toBe(`Bearer ${RENEWED_TOKEN}`);
+  });
+
   const givenAnAuthenticatedSession = (): void => {
     authentication.token = INITIAL_TOKEN;
   };
   const givenSessionRenewalWillFail = (): void => {
     authentication.shouldFailRefresh = true;
+  };
+  const givenAnInitialRefreshFailure = async (): Promise<void> => {
+    authentication.shouldFailRefresh = true;
+    await expect(whenRequestingProtectedData()).rejects.toThrow('refresh refused');
+    authentication.shouldFailRefresh = false;
   };
   const whenRequestingProtectedData = (): Promise<string> =>
     firstValueFrom(TestBed.inject(HttpClient).get('/protected', { responseType: 'text' }));

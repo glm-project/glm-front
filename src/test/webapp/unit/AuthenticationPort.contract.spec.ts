@@ -441,9 +441,18 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     const authentication = givenKeycloakNeedsRenewalAfterBoot();
     await whenAuthenticating(authentication);
 
-    await authentication.synchronizeSession();
+    await whenSynchronizingTheSession(authentication);
 
     thenTokenIs(authentication, RENEWED_KEYCLOAK_TOKEN);
+  });
+
+  it('should fail session synchronization when Keycloak cannot refresh the session', async () => {
+    const authentication = givenKeycloakCannotRefreshTheSessionAfterBoot();
+    await whenAuthenticating(authentication);
+
+    const synchronization = whenSynchronizingTheSession(authentication);
+
+    await expect(synchronization).rejects.toThrow('refresh refused');
   });
 
   it('should report when Keycloak cannot complete logout', async () => {
@@ -458,6 +467,8 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
 
   const givenKeycloakNeedsRenewalAfterBoot = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'renews' }), errorHandler);
+  const givenKeycloakCannotRefreshTheSessionAfterBoot = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'fails' }), errorHandler);
   const givenKeycloakOpensNoSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }), errorHandler);
   const givenKeycloakRenewsTheSession = (): AuthenticationPort =>
@@ -467,6 +478,7 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
   const givenKeycloakCannotEndTheSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ logout: 'fails' }), errorHandler);
   const whenAuthenticating = (authentication: AuthenticationPort): Promise<void> => authentication.authenticate();
+  const whenSynchronizingTheSession = (authentication: AuthenticationPort): Promise<void> => authentication.synchronizeSession();
   const whenEndingTheSession = (authentication: AuthenticationPort): void => authentication.logout();
   const whenAKeycloakRoundTripCompletes = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
   const thenNoTokenIsAvailable = (authentication: AuthenticationPort): void => expect(authentication.currentToken()).toBeUndefined();
