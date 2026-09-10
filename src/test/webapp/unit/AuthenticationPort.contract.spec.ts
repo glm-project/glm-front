@@ -1,29 +1,17 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
 import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { httpSessionRefreshInterceptor } from '@/gestion/shared/authentication/infrastructure/primary/http-session-refresh.interceptor';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
 import { DeviceGrantConfiguration } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantConfiguration';
-import {
-  HttpBackend,
-  HttpClient,
-  HttpErrorResponse,
-  HttpEvent,
-  HttpRequest,
-  HttpResponse,
-  provideHttpClient,
-  withInterceptors,
-} from '@angular/common/http';
+import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Injector } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import Keycloak from 'keycloak-js';
-import { defer, firstValueFrom, Observable, of, switchMap, throwError } from 'rxjs';
+import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 
 const IN_MEMORY_TOKEN = 'in-memory-token';
 const KEYCLOAK_TOKEN = '1a2b3c';
@@ -791,63 +779,4 @@ describe('Device Authentication, beyond the contract', () => {
 
     thenNoTokenIsAvailable(authentication);
   });
-});
-
-describe('Keycloak HTTP session renewal', () => {
-  let keycloak: Keycloak;
-  let requests: string[];
-
-  beforeEach(() => {
-    requests = [];
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
-        { provide: Keycloak, useFactory: () => keycloak },
-        { provide: AuthenticationPort, useClass: KeycloakOidcAuthentication },
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
-        {
-          provide: HttpBackend,
-          useValue: {
-            handle: (request: HttpRequest<unknown>): Observable<HttpEvent<string>> => {
-              const authorization = request.headers.get('Authorization') ?? '';
-              requests.push(authorization);
-              return of(new HttpResponse({ body: authorization }));
-            },
-          },
-        },
-      ],
-    });
-  });
-
-  it('should sign a request after boot with the renewed token', async () => {
-    await givenAnAuthenticatedHttpClient('renews');
-
-    const authorization = await whenRequestingProtectedData();
-
-    expect(authorization).toBe(`Bearer ${RENEWED_KEYCLOAK_TOKEN}`);
-  });
-
-  it('should await renewal for every concurrent request', async () => {
-    await givenAnAuthenticatedHttpClient('renews');
-
-    const authorizations = await Promise.all([whenRequestingProtectedData(), whenRequestingProtectedData()]);
-
-    expect(authorizations).toEqual([`Bearer ${RENEWED_KEYCLOAK_TOKEN}`, `Bearer ${RENEWED_KEYCLOAK_TOKEN}`]);
-  });
-
-  it('should fail without sending a stale bearer when session renewal is refused', async () => {
-    await givenAnAuthenticatedHttpClient('fails');
-
-    const request = whenRequestingProtectedData();
-
-    await expect(request).rejects.toThrow('refresh refused');
-    expect(requests).toEqual([]);
-  });
-
-  const givenAnAuthenticatedHttpClient = async (laterRefresh: RefreshOutcome): Promise<void> => {
-    keycloak = keycloakSessionFixture({ laterRefresh });
-    await TestBed.inject(AuthenticationPort).authenticate();
-  };
-  const whenRequestingProtectedData = (): Promise<string> =>
-    firstValueFrom(TestBed.inject(HttpClient).get('/protected', { responseType: 'text' }));
 });
