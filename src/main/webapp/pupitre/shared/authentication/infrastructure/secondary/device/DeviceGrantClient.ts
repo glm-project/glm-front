@@ -1,9 +1,10 @@
 import { DeviceAuthorizationCode } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { HttpBackend, HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, firstValueFrom, map, of } from 'rxjs';
+import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
 import { DeviceGrantConfiguration } from './DeviceGrantConfiguration';
 
+const NETWORK_TIMEOUT_MS = 30_000;
 const OFFLINE_SCOPE = 'openid offline_access';
 const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 const REFRESH_TOKEN_GRANT = 'refresh_token';
@@ -47,7 +48,8 @@ export const authorizationCodeFrom = (device: DeviceAuthorization): DeviceAuthor
   expiresIn: device.expires_in,
 });
 
-const reasonIn = (refusal: HttpErrorResponse): string => (refusal.error as OauthRefusal | null)?.error ?? NO_REASON_GIVEN;
+const reasonIn = (refusal: unknown): string =>
+  refusal instanceof HttpErrorResponse ? ((refusal.error as OauthRefusal | null)?.error ?? NO_REASON_GIVEN) : NO_REASON_GIVEN;
 
 @Injectable()
 export class DeviceGrantClient {
@@ -58,7 +60,10 @@ export class DeviceGrantClient {
     return firstValueFrom(
       this.transport
         .post<DeviceAuthorization>(this.server.deviceAuthorizationEndpoint(), this.namingThisClient().set('scope', OFFLINE_SCOPE))
-        .pipe(catchError(() => of(undefined))),
+        .pipe(
+          timeout(NETWORK_TIMEOUT_MS),
+          catchError(() => of(undefined)),
+        ),
     );
   }
 
@@ -73,14 +78,20 @@ export class DeviceGrantClient {
   endSession(refreshToken: string): Promise<unknown> {
     const ending = this.namingThisClient().set('refresh_token', refreshToken);
 
-    return firstValueFrom(this.transport.post(this.server.logoutEndpoint(), ending).pipe(catchError(() => of(undefined))));
+    return firstValueFrom(
+      this.transport.post(this.server.logoutEndpoint(), ending).pipe(
+        timeout(NETWORK_TIMEOUT_MS),
+        catchError(() => of(undefined)),
+      ),
+    );
   }
 
   private askForTokens(grant: HttpParams): Promise<GrantAnswer> {
     return firstValueFrom(
       this.transport.post<Tokens>(this.server.tokenEndpoint(), grant).pipe(
+        timeout(NETWORK_TIMEOUT_MS),
         map((tokens): GrantAnswer => ({ tokens })),
-        catchError((refusal: HttpErrorResponse) => of<GrantAnswer>({ refusedBecause: reasonIn(refusal) })),
+        catchError((refusal: unknown) => of<GrantAnswer>({ refusedBecause: reasonIn(refusal) })),
       ),
     );
   }

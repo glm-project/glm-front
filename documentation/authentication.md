@@ -36,6 +36,11 @@ Device authorization obtains the credential, so its requests must bypass that in
 `DeviceAuthentication` creates its protocol client directly on `HttpBackend`. Keep enrolment, token and
 logout calls on that client.
 
+Each device authorization, token and logout request has a thirty-second timeout that cancels its HTTP
+subscription. Authorization and polling failures retain the existing `UNREACHABLE` outcome; a renewal timeout
+keeps the still-valid session and uses the existing delayed retry. The polling interval and authorization-code
+lifetime remain separate from this per-request limit.
+
 The pupitre alone registers `httpDeviceAuthorizationInterceptor`. A 401 or 403 synchronizes the durable
 session first, then retires and reenrols only the exact token that was refused. A delayed response from an
 older session must not remove its replacement.

@@ -46,6 +46,7 @@ describe('ApiClient', () => {
 
   afterEach(() => {
     serveur.verify();
+    vi.useRealTimers();
   });
 
   it('should hand back what the server answered on the route it was asked for', async () => {
@@ -92,6 +93,30 @@ describe('ApiClient', () => {
     thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
     await whenTheRequestCompletes(ecriture);
   });
+
+  it.each(['read', 'write'] as const)('should cancel a stalled %s after thirty seconds', async operation => {
+    givenAStoppedNetworkClock();
+    const result = whenStartingAStalledRequest(operation);
+    const request = givenTheServerDoesNotAnswer();
+
+    await whenThirtySecondsElapse();
+
+    expect(request.cancelled).toBe(true);
+    await expect(result).resolves.toBeInstanceOf(Error);
+  });
+
+  const givenAStoppedNetworkClock = (): void => {
+    vi.useFakeTimers();
+  };
+
+  const whenStartingAStalledRequest = (operation: 'read' | 'write'): Promise<unknown> =>
+    (operation === 'read' ? whenReadingOperators() : whenPausingWork()).catch((error: unknown) => error);
+
+  const givenTheServerDoesNotAnswer = (): TestRequest => serveur.expectOne(() => true);
+
+  const whenThirtySecondsElapse = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  };
 
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 

@@ -219,6 +219,25 @@ describe('Designation du pupitre', () => {
     await whenResolutionCompletes(pending);
     thenClosed();
   });
+  it('should report a local read failure and let the operator retry the same code', async () => {
+    const reject = givenDelayedFailure();
+    whenEntering('049');
+    const pending = whenValidating();
+    await whenReadStarts();
+
+    whenRejecting(reject);
+    await whenResolutionCompletes(pending);
+
+    thenCodeIs('049');
+    thenNoOperatorIsDesignated();
+    expect(designation.canValidate()).toBe(true);
+    expect(errorHandler.errors).toEqual([new Error('Unavailable')]);
+    thenNoExchangeWasAttempted();
+
+    await whenValidating();
+
+    thenOperatorIsDesignated();
+  });
   it('should discard a failed local read after sleep before the expiry timer runs', async () => {
     const reject = givenDelayedFailure();
     whenEntering('049');
@@ -346,7 +365,6 @@ describe('Designation du pupitre', () => {
     whenRejecting(reject);
     await whenResolutionCompletes(pending);
     await whenTheServerRefreshSettles();
-    whenEntering('050');
     await whenValidating();
 
     thenUnknownCodeIsShown();
