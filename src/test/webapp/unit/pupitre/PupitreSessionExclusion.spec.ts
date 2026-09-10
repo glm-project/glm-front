@@ -5,7 +5,6 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
-import { IndexedDbJournauxDuPupitre } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/IndexedDbJournauxDuPupitre';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
@@ -15,6 +14,7 @@ import { HttpBackend, HttpEvent, HttpRequest, HttpResponse } from '@angular/comm
 import { Injector } from '@angular/core';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { Observable, Subject } from 'rxjs';
 
@@ -92,13 +92,49 @@ class AuthorizationServerFixture extends HttpBackend {
   }
 }
 
-class AtelierExchangeFixture extends AtelierExchangePort {
-  onSend: ((geste: GesteDAtelier) => Promise<void> | void) | undefined;
+class ExchangeBarrierFixture {
+  private readonly arrival = new SignalFixture();
+  private readonly continuation = new SignalFixture();
+  readonly reached = this.arrival.promise;
 
-  override async send(geste: GesteDAtelier): Promise<void> {
-    if (this.onSend !== undefined) {
-      await this.onSend(geste);
+  async hold(): Promise<void> {
+    this.arrival.release();
+    await this.continuation.promise;
+  }
+
+  release(): void {
+    this.continuation.release();
+  }
+}
+
+class AtelierExchangeFixture extends AtelierExchangePort {
+  private nextSend: ExchangeBarrierFixture | undefined;
+  tokenDuringReplay: string | undefined;
+
+  constructor(
+    private readonly authentication: () => AuthenticationPort,
+    private readonly chronology: string[],
+  ) {
+    super();
+  }
+
+  holdNextSend(): ExchangeBarrierFixture {
+    const barrier = new ExchangeBarrierFixture();
+    this.nextSend = barrier;
+    return barrier;
+  }
+
+  override async send(): Promise<void> {
+    this.tokenDuringReplay = this.authentication().currentToken();
+    const barrier = this.nextSend;
+    this.nextSend = undefined;
+    if (barrier !== undefined) {
+      this.chronology.push('replay-started');
+      await barrier.hold();
+      this.chronology.push('replay-finished');
+      return;
     }
+    this.chronology.push('replay');
   }
 
   override reread(): Promise<void> {
@@ -120,16 +156,15 @@ describe('Pupitre replay and device renewal exclusion', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     server = new AuthorizationServerFixture();
-    exchange = new AtelierExchangeFixture();
+    exchange = new AtelierExchangeFixture(() => authentication, server.chronology);
     const injector = Injector.create({
       providers: [
         PupitreSynchronization,
         DeviceAuthentication,
         DeviceGrantClient,
-        IndexedDbJournauxDuPupitre,
         { provide: AuthenticationPort, useExisting: DeviceAuthentication },
         { provide: DeviceSessionPort, useExisting: DeviceAuthentication },
-        { provide: JournauxDuPupitrePort, useExisting: IndexedDbJournauxDuPupitre },
+        { provide: JournauxDuPupitrePort, useClass: JournauxDuPupitreFixture },
         { provide: AtelierExchangePort, useValue: exchange },
         { provide: HttpBackend, useValue: server },
         { provide: LocalStoragePort, useClass: StorageFixture },
@@ -150,20 +185,19 @@ describe('Pupitre replay and device renewal exclusion', () => {
   it('should wait for renewal and its durable rotation before replaying with the new token', async () => {
     await givenAnEnrolledSession();
     await givenPendingWork();
-    const token = givenCapturedTokenDuringReplay();
 
     await givenRenewalIsInProgress();
 
     await whenReplayingDuringRenewal();
 
     expect(server.chronology).toEqual(['renewal-started', 'renewal-finished', 'replay']);
-    expect(token.duringReplay).toBe(renewedToken);
+    expect(exchange.tokenDuringReplay).toBe(renewedToken);
   });
 
   it('should finish an outgoing replay before starting a network renewal', async () => {
     await givenAnEnrolledSession();
     await givenPendingWork();
-    const replay = await givenReplayIsInProgress();
+    const replay = givenReplayIsInProgress();
 
     await whenRenewalBecomesDueDuringReplay(replay);
 
@@ -177,14 +211,6 @@ describe('Pupitre replay and device renewal exclusion', () => {
   };
   const givenPendingWork = async (): Promise<void> => {
     await journal.append(entrepriseFixture, [gesteFixture]);
-  };
-  const givenCapturedTokenDuringReplay = (): { duringReplay: string | undefined } => {
-    const token = { duringReplay: undefined as string | undefined };
-    exchange.onSend = () => {
-      server.chronology.push('replay');
-      token.duringReplay = authentication.currentToken();
-    };
-    return token;
   };
   const whenRenewalBecomesDue = (): Promise<void> => vi.advanceTimersByTimeAsync(270_000).then(() => undefined);
   const givenRenewalIsInProgress = async (): Promise<void> => {
@@ -200,22 +226,18 @@ describe('Pupitre replay and device renewal exclusion', () => {
     whenRenewalCompletes();
     await replay;
   };
-  const givenReplayIsInProgress = async () => {
-    const entered = new SignalFixture();
-    const release = new SignalFixture();
-    exchange.onSend = async () => {
-      server.chronology.push('replay-started');
-      entered.release();
-      await release.promise;
-      server.chronology.push('replay-finished');
-    };
+  const givenReplayIsInProgress = () => {
+    const barrier = exchange.holdNextSend();
     const completion = whenSynchronizing();
-    await entered.promise;
-    return { release, completion };
+    return { barrier, completion };
   };
-  const whenRenewalBecomesDueDuringReplay = async (replay: { release: SignalFixture; completion: Promise<void> }): Promise<void> => {
+  const whenRenewalBecomesDueDuringReplay = async (replay: {
+    barrier: ExchangeBarrierFixture;
+    completion: Promise<void>;
+  }): Promise<void> => {
+    await replay.barrier.reached;
     await whenRenewalBecomesDue();
-    replay.release.release();
+    replay.barrier.release();
     await replay.completion;
     await server.renewalArrived.promise;
     whenRenewalCompletes();

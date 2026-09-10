@@ -963,11 +963,11 @@ describe('Device session coordination, through DeviceSessionPort', () => {
     thenActionResultIs(result, 'ok');
   });
 
-  it('should serialize withSession behind an active storage lock', async () => {
+  it.each(['enrolement', 'session'] as const)('should serialize withSession behind an active %s storage lock', async key => {
     const storage = new LockingStorageFixture();
     const device = givenDeviceWithStorage(storage);
     const chronology: string[] = [];
-    const held = await givenAnActiveStorageLock(storage, chronology);
+    const held = await givenAnActiveStorageLock(storage, key, chronology);
 
     const queued = whenRunningWithSession(device, () => {
       chronology.push('session-action');
@@ -975,25 +975,26 @@ describe('Device session coordination, through DeviceSessionPort', () => {
     });
     await whenAllowingTurnToEnter();
 
-    thenChronologyIs(chronology, ['enrolement-held']);
+    thenChronologyIs(chronology, [`${key}-held`]);
 
     held.release();
     await Promise.all([held.completion, queued]);
 
-    thenChronologyIs(chronology, ['enrolement-held', 'enrolement-released', 'session-action']);
+    thenChronologyIs(chronology, [`${key}-held`, `${key}-released`, 'session-action']);
   });
 
   const givenAnActiveStorageLock = async (
     storage: LocalStoragePort,
+    key: string,
     chronology: string[],
   ): Promise<{ release: () => void; completion: Promise<void> }> => {
     const entered = new SignalFixture();
     const release = new SignalFixture();
-    const completion = storage.lock('enrolement', async () => {
-      chronology.push('enrolement-held');
+    const completion = storage.lock(key, async () => {
+      chronology.push(`${key}-held`);
       entered.release();
       await release.promise;
-      chronology.push('enrolement-released');
+      chronology.push(`${key}-released`);
     });
     await entered.promise;
     return {

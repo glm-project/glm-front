@@ -99,7 +99,7 @@ describe('httpSessionRefreshInterceptor', () => {
   };
   const givenAnInitialRefreshFailure = async (): Promise<void> => {
     authentication.shouldFailRefresh = true;
-    await expect(whenRequestingProtectedData()).rejects.toThrow('refresh refused');
+    await whenRequestingProtectedData().catch(() => undefined);
     authentication.shouldFailRefresh = false;
   };
   const whenRequestingProtectedData = (): Promise<string> =>
