@@ -11,6 +11,7 @@ import { HttpBackend, HttpParams, provideHttpClient } from '@angular/common/http
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { DeviceAuthentication } from './DeviceAuthentication';
@@ -939,8 +940,8 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
   };
 });
 
-class LockTrackingStorageFixture extends LocalStoragePort {
-  readonly acquiredLocks: string[] = [];
+class LockingStorageFixture extends LocalStoragePort {
+  private readonly locks = new BrowserLocksFixture();
 
   override read<T>(): Promise<T | undefined> {
     return Promise.resolve(undefined);
@@ -949,8 +950,7 @@ class LockTrackingStorageFixture extends LocalStoragePort {
     return Promise.resolve(change(initial));
   }
   override lock<T>(key: string, action: () => Promise<T>): Promise<T> {
-    this.acquiredLocks.push(key);
-    return action();
+    return this.locks.request(key, action);
   }
 }
 
@@ -963,18 +963,47 @@ describe('Device session coordination, through DeviceSessionPort', () => {
     thenActionResultIs(result, 'ok');
   });
 
-  it('should run action within enrolment and session locks when persistent storage is configured', async () => {
-    const storage = new LockTrackingStorageFixture();
+  it('should serialize withSession behind an active storage lock', async () => {
+    const storage = new LockingStorageFixture();
     const device = givenDeviceWithStorage(storage);
-    const locksAtExecution: string[] = [];
+    const chronology: string[] = [];
+    const held = await givenAnActiveStorageLock(storage, chronology);
 
-    await whenRunningWithSession(device, () => {
-      locksAtExecution.push(...storage.acquiredLocks);
+    const queued = whenRunningWithSession(device, () => {
+      chronology.push('session-action');
       return Promise.resolve();
     });
+    await whenAllowingTurnToEnter();
 
-    thenLocksWereAcquiredInOrder(locksAtExecution, ['enrolement', 'session']);
+    thenChronologyIs(chronology, ['enrolement-held']);
+
+    held.release();
+    await Promise.all([held.completion, queued]);
+
+    thenChronologyIs(chronology, ['enrolement-held', 'enrolement-released', 'session-action']);
   });
+
+  const givenAnActiveStorageLock = async (
+    storage: LocalStoragePort,
+    chronology: string[],
+  ): Promise<{ release: () => void; completion: Promise<void> }> => {
+    const entered = new SignalFixture();
+    const release = new SignalFixture();
+    const completion = storage.lock('enrolement', async () => {
+      chronology.push('enrolement-held');
+      entered.release();
+      await release.promise;
+      chronology.push('enrolement-released');
+    });
+    await entered.promise;
+    return {
+      release: () => {
+        release.release();
+      },
+      completion,
+    };
+  };
+  const whenAllowingTurnToEnter = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
   const givenDeviceWithoutStorage = (): DeviceSessionPort =>
     Injector.create({
@@ -1005,7 +1034,7 @@ describe('Device session coordination, through DeviceSessionPort', () => {
     expect(actual).toBe(expected);
   };
 
-  const thenLocksWereAcquiredInOrder = (actual: string[], expected: string[]): void => {
+  const thenChronologyIs = (actual: string[], expected: string[]): void => {
     expect(actual).toEqual(expected);
   };
 });
