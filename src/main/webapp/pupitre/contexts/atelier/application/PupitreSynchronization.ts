@@ -113,7 +113,7 @@ export class PupitreSynchronization {
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
-      const journeeOuverte = await this.journal.withSession(async () => {
+      const journeeOuverte = await this.authentication.withSession(async () => {
         await this.authentication.synchronizeSession();
         return this.push(entreprise, evenement.geste, evenements);
       });

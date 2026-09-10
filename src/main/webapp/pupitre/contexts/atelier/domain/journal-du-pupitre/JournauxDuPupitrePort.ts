@@ -8,5 +8,4 @@ export abstract class JournauxDuPupitrePort {
   abstract saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre>;
   abstract markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre>;
   abstract synchronize<T>(action: () => Promise<T>): Promise<T>;
-  abstract withSession<T>(action: () => Promise<T>): Promise<T>;
 }

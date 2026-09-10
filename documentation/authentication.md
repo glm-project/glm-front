@@ -83,10 +83,11 @@ code and the outcome of an attempt it has already replaced.
 A network cut during the poll is reported as `UNREACHABLE`, indistinguishable from a failure to obtain the
 code at all; [ADR 0026](adr/0026-enrol-pupitre-screen-and-keycloak-delegation.md) records that limit.
 
-Replay takes the `enrolement` lock before `session`, matching the order used by background renewal and
-its credential commit. Keep the outer lock through the network exchange and persistence: protecting only
-the commit allows a replay to use a token while the server is rotating it. Never acquire `enrolement` while
-holding `session`, or reacquire `session` inside its own critical section.
+`AuthenticationPort.withSession` guarantees mutual exclusion on the pupitre: replay takes the
+`enrolement` lock before `session`, matching the order used by background renewal and its credential
+commit. Keep the outer lock through the network exchange and persistence: protecting only the commit
+allows a replay to use a token while the server is rotating it. Never acquire `enrolement` while holding
+`session`, or reacquire `session` inside its own critical section.
 
 A transient renewal refusal keeps the unexpired access token and retries later. `invalid_grant` removes the
 matching credential and starts enrolment again while retaining the selected tenant. Logout conditionally

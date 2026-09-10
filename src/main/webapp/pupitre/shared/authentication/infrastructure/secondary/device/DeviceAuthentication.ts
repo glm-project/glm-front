@@ -164,6 +164,14 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     return this.session?.accessTokenAt(Date.now());
   }
 
+  override withSession<T>(action: () => Promise<T>): Promise<T> {
+    const stockage = this.stockage;
+    if (stockage === null) {
+      return action();
+    }
+    return stockage.lock('enrolement', () => stockage.lock('session', action));
+  }
+
   private isSynchronizationUnnecessary(enrolment: symbol | undefined, stored: PersistedEnrolment | undefined): boolean {
     return this.enrolment !== enrolment || this.matchesStoredEnrolment(stored);
   }

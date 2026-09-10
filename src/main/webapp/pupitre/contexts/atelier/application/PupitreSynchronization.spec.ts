@@ -72,7 +72,6 @@ class SynchronizationJournalFixture extends JournauxDuPupitrePort {
   private nextRelease: JournalBarrierFixture | undefined;
   private nextRead: JournalBarrierFixture | undefined;
   unavailable = false;
-  lastSessionError: unknown;
 
   holdNextSynchronizationRelease(): JournalBarrierFixture {
     const barrier = new JournalBarrierFixture();
@@ -122,17 +121,6 @@ class SynchronizationJournalFixture extends JournauxDuPupitrePort {
       return result;
     });
   }
-
-  override withSession<T>(action: () => Promise<T>): Promise<T> {
-    return this.stored.withSession(async () => {
-      try {
-        return await action();
-      } catch (error: unknown) {
-        this.lastSessionError = error;
-        throw error;
-      }
-    });
-  }
 }
 
 describe('PupitreSynchronization', () => {
@@ -144,6 +132,7 @@ describe('PupitreSynchronization', () => {
   let token: string | undefined;
   let onSynchronizeSession: (() => Promise<void> | void) | undefined;
   let errorHandler: ErrorHandlerFixture;
+  let lastSessionError: unknown;
 
   beforeEach(() => {
     journal = new SynchronizationJournalFixture();
@@ -153,6 +142,7 @@ describe('PupitreSynchronization', () => {
     tenant = 'entreprise-a';
     token = undefined;
     onSynchronizeSession = undefined;
+    lastSessionError = undefined;
     synchronisation = Injector.create({
       providers: [
         PupitreSynchronization,
@@ -166,6 +156,14 @@ describe('PupitreSynchronization', () => {
               await roundTrip();
               if (onSynchronizeSession !== undefined) {
                 await onSynchronizeSession();
+              }
+            },
+            withSession: async <T>(action: () => Promise<T>): Promise<T> => {
+              try {
+                return await action();
+              } catch (error: unknown) {
+                lastSessionError = error;
+                throw error;
               }
             },
             currentTenant: () => tenant,
@@ -612,6 +610,6 @@ describe('PupitreSynchronization', () => {
     expect(exposed?.connecte).toBe(true);
   };
   const thenAuthorizationChangeWasCaught = (): void => {
-    expect(journal.lastSessionError).toEqual(new Error('L’autorisation du pupitre a change.'));
+    expect(lastSessionError).toEqual(new Error('L’autorisation du pupitre a change.'));
   };
 });

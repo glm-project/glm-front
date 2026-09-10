@@ -10,6 +10,7 @@ import { HttpAtelierExchange } from '@/pupitre/contexts/atelier/infrastructure/s
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
@@ -22,8 +23,35 @@ const gesteFixture: GesteDAtelier = {
   nature: 'ARRIVEE',
 };
 
+class TimeoutAuthenticationFixture extends AuthenticationPort {
+  private readonly locks = new BrowserLocksFixture();
+
+  override synchronizeSession(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  override currentTenant(): string | undefined {
+    return 'entreprise-a';
+  }
+
+  override currentToken(): string | undefined {
+    return 'authorized';
+  }
+
+  override withSession<T>(action: () => Promise<T>): Promise<T> {
+    return this.locks.request('session', action);
+  }
+
+  override authenticate(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  override logout(): void {}
+}
+
 describe('Pupitre synchronization over stalled HTTP', () => {
   let journal: JournauxDuPupitreFixture;
+  let authentication: AuthenticationPort;
   let synchronization: PupitreSynchronization;
   let http: HttpTestingController;
   let requestArrived: SignalFixture;
@@ -48,17 +76,11 @@ describe('Pupitre synchronization over stalled HTTP', () => {
         { provide: AtelierExchangePort, useClass: HttpAtelierExchange },
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
-        {
-          provide: AuthenticationPort,
-          useValue: {
-            synchronizeSession: () => Promise.resolve(),
-            currentTenant: () => 'entreprise-a',
-            currentToken: () => 'authorized',
-          },
-        },
+        { provide: AuthenticationPort, useClass: TimeoutAuthenticationFixture },
       ],
     });
     synchronization = TestBed.inject(PupitreSynchronization);
+    authentication = TestBed.inject(AuthenticationPort);
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -113,7 +135,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
     );
     return whenRequestArrives();
   };
-  const whenQueuingASessionWrite = (): Promise<string> => journal.withSession(() => Promise.resolve('session updated'));
+  const whenQueuingASessionWrite = (): Promise<string> => authentication.withSession(() => Promise.resolve('session updated'));
   const whenThirtySecondsElapse = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(30_000);
   };

@@ -142,33 +142,18 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     });
   });
 
-  it.each(['synchronize', 'withSession'] as const)('should serialize %s operations while allowing local capture', async operation => {
+  it('should serialize synchronize operations while allowing local capture', async () => {
     const { entered, release, chronology } = givenSynchronizationSignals();
 
-    const first = whenHoldingTheFirstOperation(operation, entered, release, chronology);
+    const first = whenHoldingTheFirstOperation(entered, release, chronology);
     await whenTheFirstOperationHasEntered(entered);
 
-    const second = whenStartingTheSecondOperation(operation, chronology);
+    const second = whenStartingTheSecondOperation(chronology);
     await whenAppendingArrival();
 
     await thenOnlyTheFirstOperationRunsUntilReleased(chronology, release, first, second);
 
     thenChronologyIs(chronology, ['first', 'second']);
-  });
-
-  it('should allow synchronization and session operations to run concurrently', async () => {
-    const { entered, release, chronology } = givenSynchronizationSignals();
-
-    const sync = whenHoldingSynchronization(entered, release, chronology);
-    await whenTheFirstOperationHasEntered(entered);
-
-    await whenRunningSessionOperation(chronology);
-
-    thenChronologyIs(chronology, ['sync-entered', 'session-run']);
-
-    await whenReleasingOperation(release, sync);
-
-    thenChronologyIs(chronology, ['sync-entered', 'session-run', 'sync-released']);
   });
 
   const givenACompanyReference = async (): Promise<void> => {
@@ -222,31 +207,14 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
       journal.append(Entreprise.of('entreprise-a'), [pointageFixture]),
     ]);
   };
-  const whenHoldingTheFirstOperation = (
-    operation: 'synchronize' | 'withSession',
-    entered: SignalFixture,
-    release: SignalFixture,
-    chronology: string[],
-  ): Promise<void> =>
-    journal[operation](async () => {
+  const whenHoldingTheFirstOperation = (entered: SignalFixture, release: SignalFixture, chronology: string[]): Promise<void> =>
+    journal.synchronize(async () => {
       chronology.push('first');
       entered.release();
       await release.promise;
     });
-  const whenHoldingSynchronization = (entered: SignalFixture, release: SignalFixture, chronology: string[]): Promise<void> =>
+  const whenStartingTheSecondOperation = (chronology: string[]): Promise<void> =>
     journal.synchronize(async () => {
-      chronology.push('sync-entered');
-      entered.release();
-      await release.promise;
-      chronology.push('sync-released');
-    });
-  const whenRunningSessionOperation = (chronology: string[]): Promise<void> =>
-    journal.withSession(() => {
-      chronology.push('session-run');
-      return Promise.resolve();
-    });
-  const whenStartingTheSecondOperation = (operation: 'synchronize' | 'withSession', chronology: string[]): Promise<void> =>
-    journal[operation](async () => {
       await new Promise(resolve => setTimeout(resolve));
       chronology.push('second');
     });
@@ -303,23 +271,6 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     thenChronologyIs(chronology, ['lock-entered', 'lock-released', 'journal-run']);
   });
 
-  it('should acquire the storage session lock during session execution', async () => {
-    const { entered, release, chronology } = givenSynchronizationSignals();
-
-    const held = whenHoldingStorageLock(storage, 'session', entered, release, chronology);
-    await whenTheFirstOperationHasEntered(entered);
-
-    const queued = whenStartingSession(journal, chronology);
-    await whenAllowingTurnToEnter();
-
-    thenChronologyIs(chronology, ['lock-entered']);
-
-    await whenReleasingOperation(release, held);
-    await queued;
-
-    thenChronologyIs(chronology, ['lock-entered', 'lock-released', 'journal-run']);
-  });
-
   const givenALegacyAcceptedArrival = async (): Promise<void> => {
     const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const }] };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
@@ -340,11 +291,6 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     });
   const whenStartingSynchronization = (j: IndexedDbJournauxDuPupitre, chronology: string[]): Promise<void> =>
     j.synchronize(() => {
-      chronology.push('journal-run');
-      return Promise.resolve();
-    });
-  const whenStartingSession = (j: IndexedDbJournauxDuPupitre, chronology: string[]): Promise<void> =>
-    j.withSession(() => {
       chronology.push('journal-run');
       return Promise.resolve();
     });
