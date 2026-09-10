@@ -78,19 +78,19 @@ describe('Pupitre synchronization over stalled HTTP', () => {
 
       await whenThirtySecondsElapse();
 
-      expect(stalled.cancelled).toBe(true);
-      await expect(sessionWrite).resolves.toBe('session updated');
+      thenTheRequestWasCancelled(stalled);
+      await thenTheSessionWriteCompletes(sessionWrite);
       await whenReferenceRefreshCompletes();
-      await first;
+      await thenSynchronizationCompletes(first);
       await thenGestureIsPending();
 
       const retry = whenSynchronizing();
       const request = await whenRequestArrives();
       whenServerAccepts(request);
       await whenReferenceRefreshCompletes();
-      await retry;
+      await thenSynchronizationCompletes(retry);
 
-      expect(request.request.body).toEqual({ id: 'arrivee-originale', dateDeSurvenue: '2026-09-05T08:00:00Z', operateur: 'jean' });
+      thenTheGestureKeepsItsOriginalIdentity(request);
       await thenGestureIsAccepted();
     },
   );
@@ -119,6 +119,18 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   };
   const whenServerAccepts = (request: TestRequest): void => {
     request.flush({});
+  };
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
+  };
+  const thenTheSessionWriteCompletes = async (write: Promise<string>): Promise<void> => {
+    await expect(write).resolves.toBe('session updated');
+  };
+  const thenSynchronizationCompletes = async (synchronization: Promise<void>): Promise<void> => {
+    await synchronization;
+  };
+  const thenTheGestureKeepsItsOriginalIdentity = (request: TestRequest): void => {
+    expect(request.request.body).toEqual({ id: 'arrivee-originale', dateDeSurvenue: '2026-09-05T08:00:00Z', operateur: 'jean' });
   };
   const whenReferenceRefreshCompletes = async (): Promise<void> => {
     for (const url of ['/api/operateurs', '/api/atelier/suivis']) {

@@ -101,8 +101,8 @@ describe('ApiClient', () => {
 
     await whenThirtySecondsElapse();
 
-    expect(request.cancelled).toBe(true);
-    await expect(result).resolves.toBeInstanceOf(Error);
+    thenTheRequestWasCancelled(request);
+    await thenTheTimeoutWasReported(result);
   });
 
   const givenAStoppedNetworkClock = (): void => {
@@ -160,5 +160,13 @@ describe('ApiClient', () => {
 
   const thenItHandedBack = (recu: unknown, attendu: unknown): void => {
     expect(recu).toEqual(attendu);
+  };
+
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
+  };
+
+  const thenTheTimeoutWasReported = async (result: Promise<unknown>): Promise<void> => {
+    await expect(result).resolves.toBeInstanceOf(Error);
   };
 });

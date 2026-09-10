@@ -400,7 +400,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
 
     await whenThirtySecondsElapse();
 
-    expect(request.cancelled).toBe(true);
+    thenTheRequestWasCancelled(request);
     thenSessionIs(authentication, tokenFixture, 'entreprise-a');
   });
 
@@ -410,7 +410,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
 
     await whenThirtySecondsElapse();
 
-    expect(request.cancelled).toBe(true);
+    thenTheRequestWasCancelled(request);
     await whenLogoutPersistenceCompletes();
     const restarted = await whenRestartingWithoutAStoredCredential();
     thenSessionIs(restarted, undefined, 'entreprise-a');
@@ -425,6 +425,10 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
 
   const whenThirtySecondsElapse = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(30_000);
+  };
+
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
   };
 
   interface RestartedRenewal {
@@ -832,7 +836,7 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
     await whenThirtySecondsElapse();
 
-    expect(request.cancelled).toBe(true);
+    thenTheRequestWasCancelled(request);
     await thenTheOutcomeIs(outcome, 'UNREACHABLE');
     thenNoCodeWasShown();
   });
@@ -844,7 +848,7 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
     await whenThirtySecondsElapse();
 
-    expect(request.cancelled).toBe(true);
+    thenTheRequestWasCancelled(request);
     await thenTheOutcomeIs(outcome, 'UNREACHABLE');
   });
 
@@ -860,6 +864,10 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
   const whenThirtySecondsElapse = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(30_000);
+  };
+
+  const thenTheRequestWasCancelled = (request: TestRequest): void => {
+    expect(request.cancelled).toBe(true);
   };
 
   const givenStorageCannotCommit = (): void => {

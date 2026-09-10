@@ -230,8 +230,8 @@ describe('Designation du pupitre', () => {
 
     thenCodeIs('049');
     thenNoOperatorIsDesignated();
-    expect(designation.canValidate()).toBe(true);
-    expect(errorHandler.errors).toEqual([new Error('Unavailable')]);
+    thenValidationIsAvailable();
+    thenTheLocalReadFailureWasReported();
     thenNoExchangeWasAttempted();
 
     await whenValidating();
@@ -571,6 +571,12 @@ describe('Designation du pupitre', () => {
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);
+  };
+  const thenValidationIsAvailable = (): void => {
+    expect(designation.canValidate()).toBe(true);
+  };
+  const thenTheLocalReadFailureWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([new Error('Unavailable')]);
   };
   const thenPressIsRejected = (accepted: boolean): void => {
     expect(accepted).toBe(false);
