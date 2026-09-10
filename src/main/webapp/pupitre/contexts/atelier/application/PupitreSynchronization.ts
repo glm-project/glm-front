@@ -22,7 +22,7 @@ type PupitrePublisher = (entreprise: Entreprise | undefined, state: JournalDuPup
 @Injectable()
 export class PupitreSynchronization {
   private readonly authentication = inject(AuthenticationPort);
-  private readonly session = inject(DeviceSessionPort, { optional: true });
+  private readonly session = inject(DeviceSessionPort);
   private readonly journal = inject(JournauxDuPupitrePort);
   private readonly serveur = inject(AtelierExchangePort);
   private readonly errorHandler = inject(ErrorHandlerPort);
@@ -54,6 +54,7 @@ export class PupitreSynchronization {
         );
       }
     } finally {
+      this.synchronizationRequested = false;
       this.synchronization = undefined;
       this.publishers.clear();
     }
@@ -130,11 +131,7 @@ export class PupitreSynchronization {
   }
 
   private withSession<T>(action: () => Promise<T>): Promise<T> {
-    const session = this.session;
-    if (session === null) {
-      return action();
-    }
-    return session.withSession(action);
+    return this.session.withSession(action);
   }
 
   private async markDisconnected(entreprise: Entreprise, publish: PupitrePublisher): Promise<void> {

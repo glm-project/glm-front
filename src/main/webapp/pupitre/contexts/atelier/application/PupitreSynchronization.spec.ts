@@ -16,6 +16,7 @@ import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/Device
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
@@ -161,12 +162,7 @@ describe('PupitreSynchronization', () => {
             currentToken: () => token,
           },
         },
-        {
-          provide: DeviceSessionPort,
-          useValue: {
-            withSession: <T>(action: () => Promise<T>): Promise<T> => action(),
-          },
-        },
+        { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
       ],
     }).get(PupitreSynchronization);
   });
@@ -586,8 +582,7 @@ describe('PupitreSynchronization', () => {
     expect(errorHandler.errors).toEqual([expect.any(Error)]);
   };
   const thenAnErrorWasReported = (): void => {
-    expect(errorHandler.errors.length).toBeGreaterThanOrEqual(1);
-    expect(errorHandler.errors[0]).toEqual(expect.any(Error));
+    expect(errorHandler.errors).toContainEqual(new Error('publisher failed'));
   };
   const thenEventAcceptedWithoutOpeningDay = (): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
