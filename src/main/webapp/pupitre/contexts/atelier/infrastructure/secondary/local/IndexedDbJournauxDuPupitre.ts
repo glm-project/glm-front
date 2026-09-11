@@ -92,10 +92,6 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
     return this.stockage.lock('synchronisation', action);
   }
 
-  override withSession<T>(action: () => Promise<T>): Promise<T> {
-    return this.stockage.lock('session', action);
-  }
-
   private update(entreprise: Entreprise, change: (current: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
     return this.stockage
       .update<JournalDuPupitreStocke>(keyFor(entreprise), EMPTY_JOURNAL_DU_PUPITRE, current => change(restoreJournal(current)))

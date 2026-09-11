@@ -3,6 +3,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
   ReferentielDuPupitre,
@@ -11,9 +12,12 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
+import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
@@ -50,40 +54,79 @@ class ServerFixture extends AtelierExchangePort {
   }
 }
 
-class JournalFixture extends JournauxDuPupitreFixture {
+class JournalBarrierFixture {
+  private readonly arrival = new SignalFixture();
+  private readonly continuation = new SignalFixture();
+  readonly reached = this.arrival.promise;
+
+  async hold(): Promise<void> {
+    this.arrival.release();
+    await this.continuation.promise;
+  }
+
+  release(): void {
+    this.continuation.release();
+  }
+}
+
+class SynchronizationJournalFixture extends JournauxDuPupitrePort {
+  private readonly stored = new JournauxDuPupitreFixture();
+  private nextRelease: JournalBarrierFixture | undefined;
+  private nextRead: JournalBarrierFixture | undefined;
   unavailable = false;
-  lastSessionError: unknown;
-  onRead: (() => void) | undefined;
+
+  holdNextSynchronizationRelease(): JournalBarrierFixture {
+    const barrier = new JournalBarrierFixture();
+    this.nextRelease = barrier;
+    return barrier;
+  }
+
+  holdNextRead(): JournalBarrierFixture {
+    const barrier = new JournalBarrierFixture();
+    this.nextRead = barrier;
+    return barrier;
+  }
 
   override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
-    this.onRead?.();
-    return super.read(entreprise);
+    const barrier = this.nextRead;
+    this.nextRead = undefined;
+    await barrier?.hold();
+    return this.stored.read(entreprise);
+  }
+
+  override append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
+    return this.stored.append(entreprise, gestes);
+  }
+
+  override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
+    return this.stored.saveReferentiel(entreprise, referentiel);
+  }
+
+  override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
+    return this.stored.saveResult(entreprise, resultat);
+  }
+
+  override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
+    return this.stored.markDisconnected(entreprise);
   }
 
   override synchronize<T>(action: () => Promise<T>): Promise<T> {
-    return super.synchronize(async () => {
+    return this.stored.synchronize(async () => {
       await roundTrip();
       if (this.unavailable) {
         throw new Error('stockage indisponible');
       }
-      return action();
-    });
-  }
-
-  override withSession<T>(action: () => Promise<T>): Promise<T> {
-    return super.withSession(async () => {
-      try {
-        return await action();
-      } catch (error: unknown) {
-        this.lastSessionError = error;
-        throw error;
-      }
+      const result = await action();
+      const barrier = this.nextRelease;
+      this.nextRelease = undefined;
+      await barrier?.hold();
+      return result;
     });
   }
 }
 
 describe('PupitreSynchronization', () => {
-  let journal: JournalFixture;
+  let journal: SynchronizationJournalFixture;
   let server: ServerFixture;
   let synchronisation: PupitreSynchronization;
   let exposed: JournalDuPupitre | undefined;
@@ -93,7 +136,7 @@ describe('PupitreSynchronization', () => {
   let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
-    journal = new JournalFixture();
+    journal = new SynchronizationJournalFixture();
     server = new ServerFixture();
     errorHandler = new ErrorHandlerFixture();
     exposed = undefined;
@@ -119,6 +162,7 @@ describe('PupitreSynchronization', () => {
             currentToken: () => token,
           },
         },
+        { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
       ],
     }).get(PupitreSynchronization);
   });
@@ -164,6 +208,40 @@ describe('PupitreSynchronization', () => {
     await Promise.all([first, second]);
 
     thenReferentialRefreshedTwice();
+  });
+
+  it('should reconcile every concurrent caller with the refreshed journal', async () => {
+    givenAnAuthorizedSession();
+    const firstStates: JournalDuPupitre[] = [];
+    const secondStates: JournalDuPupitre[] = [];
+
+    await Promise.all([whenSynchronizingInto(firstStates), whenSynchronizingInto(secondStates)]);
+
+    expect(firstStates.at(-1)?.referentiel).toEqual(referenceFixture);
+    expect(secondStates.at(-1)?.referentiel).toEqual(referenceFixture);
+  });
+
+  it('should continue notifying remaining publishers when one throws', async () => {
+    givenAnAuthorizedSession();
+    const failingCaller = whenSynchronizingWithFailingPublisher();
+    const secondStates: JournalDuPupitre[] = [];
+    const successfulCaller = whenSynchronizingInto(secondStates);
+
+    await Promise.all([failingCaller, successfulCaller]);
+
+    expect(secondStates.at(-1)?.referentiel).toEqual(referenceFixture);
+    thenAnErrorWasReported();
+  });
+
+  it('should exchange work requested while the synchronization lock is being released', async () => {
+    givenAnAuthorizedSession();
+    const lateStates: JournalDuPupitre[] = [];
+    const synchronization = await givenSynchronizationIsReleasingItsLock();
+
+    await whenAddingWorkAndSynchronizingDuringRelease(synchronization, lateStates);
+
+    thenServerReceived(gesteFixture);
+    expect(lateStates.at(-1)?.evenements[0]?.etat).toBe('ACCEPTE');
   });
 
   it('should discard refreshed referential if the company changed during server exchange', async () => {
@@ -220,9 +298,9 @@ describe('PupitreSynchronization', () => {
 
   it('should stop exchange when company is deselected during journal read', async () => {
     await givenASelectedCompanyWithPendingWork();
-    givenCompanyDeselectedDuringJournalRead();
+    const synchronization = await givenSynchronizationIsReadingTheJournal();
 
-    await whenSynchronizing();
+    await whenDeselectingCompanyDuringRead(synchronization);
 
     thenReferentialNeverRefreshed();
   });
@@ -297,7 +375,6 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     thenDisconnectedStatusObserved();
-    thenAuthorizationChangeWasCaught();
   });
 
   it('should mark disconnected when authorization changes during retry reread', async () => {
@@ -309,9 +386,45 @@ describe('PupitreSynchronization', () => {
 
     thenDisconnectedStatusObserved();
     thenServerReread();
-    thenAuthorizationChangeWasCaught();
   });
 
+  const givenSynchronizationIsReleasingItsLock = async () => {
+    const barrier = journal.holdNextSynchronizationRelease();
+    const completion = whenSynchronizing();
+    await barrier.reached;
+    return { barrier, completion };
+  };
+  const whenAddingWorkAndSynchronizingDuringRelease = async (
+    synchronization: { barrier: JournalBarrierFixture; completion: Promise<void> },
+    states: JournalDuPupitre[],
+  ): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
+    const late = whenSynchronizingInto(states);
+    synchronization.barrier.release();
+    await Promise.all([synchronization.completion, late]);
+  };
+  const givenSynchronizationIsReadingTheJournal = async () => {
+    const barrier = journal.holdNextRead();
+    const completion = whenSynchronizing();
+    await barrier.reached;
+    return { barrier, completion };
+  };
+  const whenDeselectingCompanyDuringRead = async (synchronization: {
+    barrier: JournalBarrierFixture;
+    completion: Promise<void>;
+  }): Promise<void> => {
+    whenDeselectingCompany();
+    synchronization.barrier.release();
+    await synchronization.completion;
+  };
+  const whenSynchronizingInto = (states: JournalDuPupitre[]): Promise<void> =>
+    synchronisation.synchronize((_entreprise, state) => {
+      states.push(state);
+    });
+  const whenSynchronizingWithFailingPublisher = (): Promise<void> =>
+    synchronisation.synchronize(() => {
+      throw new Error('publisher failed');
+    });
   const givenASelectedCompanyWithPendingWork = async (): Promise<void> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
     await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
@@ -364,10 +477,8 @@ describe('PupitreSynchronization', () => {
       tenant = 'entreprise-b';
     };
   };
-  const givenCompanyDeselectedDuringJournalRead = (): void => {
-    journal.onRead = (): void => {
-      tenant = undefined;
-    };
+  const whenDeselectingCompany = (): void => {
+    tenant = undefined;
   };
   const givenArrivalAlreadyOpened = (): void => {
     server.onSend = (): void => {
@@ -470,6 +581,9 @@ describe('PupitreSynchronization', () => {
   const thenReferentialFailureWasLogged = (): void => {
     expect(errorHandler.errors).toEqual([expect.any(Error)]);
   };
+  const thenAnErrorWasReported = (): void => {
+    expect(errorHandler.errors).toContainEqual(new Error('publisher failed'));
+  };
   const thenEventAcceptedWithoutOpeningDay = (): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
   };
@@ -484,8 +598,5 @@ describe('PupitreSynchronization', () => {
   };
   const thenDrainingStoppedWithoutDisconnection = (): void => {
     expect(exposed?.connecte).toBe(true);
-  };
-  const thenAuthorizationChangeWasCaught = (): void => {
-    expect(journal.lastSessionError).toEqual(new Error('L’autorisation du pupitre a change.'));
   };
 });

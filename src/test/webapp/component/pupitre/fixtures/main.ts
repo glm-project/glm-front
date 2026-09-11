@@ -17,8 +17,10 @@ import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/E
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { PupitrePage } from '@/pupitre/page';
 import { DeviceEnrolmentOutcome, DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
+import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
 @Component({
@@ -134,6 +136,7 @@ const bootstrapFixture = async (): Promise<void> => {
       { provide: DeviceEnrolmentPort, useValue: enrolmentFixture },
       { provide: JournauxDuPupitrePort, useValue: journalFixture },
       { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
+      { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
       { provide: AuthenticationPort, useValue: authenticationFixture },
       { provide: AtelierExchangePort, useValue: serveurFixture },
       { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },

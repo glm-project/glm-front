@@ -7,9 +7,11 @@ import { GesteDAtelier } from '@/pupitre/contexts/atelier/domain/journal-du-pupi
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { HttpAtelierExchange } from '@/pupitre/contexts/atelier/infrastructure/secondary/http/HttpAtelierExchange';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
@@ -22,8 +24,17 @@ const gesteFixture: GesteDAtelier = {
   nature: 'ARRIVEE',
 };
 
+class TimeoutSessionFixture extends DeviceSessionPort {
+  private readonly locks = new BrowserLocksFixture();
+
+  withSession<T>(action: () => Promise<T>): Promise<T> {
+    return this.locks.request('session', action);
+  }
+}
+
 describe('Pupitre synchronization over stalled HTTP', () => {
   let journal: JournauxDuPupitreFixture;
+  let session: DeviceSessionPort;
   let synchronization: PupitreSynchronization;
   let http: HttpTestingController;
   let requestArrived: SignalFixture;
@@ -56,9 +67,11 @@ describe('Pupitre synchronization over stalled HTTP', () => {
             currentToken: () => 'authorized',
           },
         },
+        { provide: DeviceSessionPort, useClass: TimeoutSessionFixture },
       ],
     });
     synchronization = TestBed.inject(PupitreSynchronization);
+    session = TestBed.inject(DeviceSessionPort);
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -113,7 +126,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
     );
     return whenRequestArrives();
   };
-  const whenQueuingASessionWrite = (): Promise<string> => journal.withSession(() => Promise.resolve('session updated'));
+  const whenQueuingASessionWrite = (): Promise<string> => session.withSession(() => Promise.resolve('session updated'));
   const whenThirtySecondsElapse = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(30_000);
   };

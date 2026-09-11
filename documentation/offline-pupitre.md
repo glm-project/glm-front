@@ -87,6 +87,11 @@ snapshot records accepted pointage identifiers in the local reference so their o
 longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
 complete cache and its optimistic effects.
 
+Concurrent synchronization callers share sequential exchanges, and each caller receives publications for
+its reconciliation. Check for another requested exchange after the storage lock promise settles; a request
+arriving during lock release must be processed before the shared promise resolves. Clear the running state
+in the same continuation as that final check.
+
 Only push outcomes set connectivity. The browser online event is a trigger, not evidence that the server is
 reachable. A received business refusal proves connectivity even though the gesture remains refused.
 

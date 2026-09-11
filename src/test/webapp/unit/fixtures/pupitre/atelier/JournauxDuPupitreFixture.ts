@@ -111,9 +111,6 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
       this.waitingForSettled.push(resolve);
     });
   }
-  override withSession<T>(action: () => Promise<T>): Promise<T> {
-    return this.lock('session', action);
-  }
   delayNextAppend(): { readonly started: Promise<void>; readonly release: () => void } {
     const barrier = appendBarrier();
     this.nextAppendBarrier = barrier;

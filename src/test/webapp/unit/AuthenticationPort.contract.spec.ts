@@ -23,13 +23,20 @@ type LogoutOutcome = 'ends' | 'fails';
 interface KeycloakSession {
   opensSession?: boolean;
   refresh?: RefreshOutcome;
+  laterRefresh?: RefreshOutcome;
   logout?: LogoutOutcome;
 }
 
 const afterARoundTrip = <T>(outcome: () => Promise<T>): Promise<T> => new Promise<void>(resolve => setTimeout(resolve)).then(outcome);
 
-const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps', logout = 'ends' }: KeycloakSession = {}): Keycloak => {
+const keycloakSessionFixture = ({
+  opensSession = true,
+  refresh = 'keeps',
+  laterRefresh = refresh,
+  logout = 'ends',
+}: KeycloakSession = {}): Keycloak => {
   let token: string | undefined;
+  let refreshedAtBoot = false;
 
   const refreshOutcomes: Record<RefreshOutcome, () => Promise<boolean>> = {
     renews: () =>
@@ -52,7 +59,11 @@ const keycloakSessionFixture = ({ opensSession = true, refresh = 'keeps', logout
         token = opensSession ? KEYCLOAK_TOKEN : undefined;
         return Promise.resolve(opensSession);
       }),
-    updateToken: refreshOutcomes[refresh],
+    updateToken: () => {
+      const outcome = refreshedAtBoot ? laterRefresh : refresh;
+      refreshedAtBoot = true;
+      return refreshOutcomes[outcome]();
+    },
     logout: () => {
       token = undefined;
       return logoutOutcomes[logout]();
@@ -426,6 +437,24 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     thenTokenIs(authentication, KEYCLOAK_TOKEN);
   });
 
+  it('should renew an aging session after boot before handing its token to a caller', async () => {
+    const authentication = givenKeycloakNeedsRenewalAfterBoot();
+    await whenAuthenticating(authentication);
+
+    await whenSynchronizingTheSession(authentication);
+
+    thenTokenIs(authentication, RENEWED_KEYCLOAK_TOKEN);
+  });
+
+  it('should fail session synchronization when Keycloak cannot refresh the session', async () => {
+    const authentication = givenKeycloakCannotRefreshTheSessionAfterBoot();
+    await whenAuthenticating(authentication);
+
+    const synchronization = whenSynchronizingTheSession(authentication);
+
+    await expect(synchronization).rejects.toThrow('refresh refused');
+  });
+
   it('should report when Keycloak cannot complete logout', async () => {
     const authentication = givenKeycloakCannotEndTheSession();
     await whenAuthenticating(authentication);
@@ -436,6 +465,10 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     thenTheLogoutFailureWasReported();
   });
 
+  const givenKeycloakNeedsRenewalAfterBoot = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'renews' }), errorHandler);
+  const givenKeycloakCannotRefreshTheSessionAfterBoot = (): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'fails' }), errorHandler);
   const givenKeycloakOpensNoSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }), errorHandler);
   const givenKeycloakRenewsTheSession = (): AuthenticationPort =>
@@ -445,6 +478,7 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
   const givenKeycloakCannotEndTheSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ logout: 'fails' }), errorHandler);
   const whenAuthenticating = (authentication: AuthenticationPort): Promise<void> => authentication.authenticate();
+  const whenSynchronizingTheSession = (authentication: AuthenticationPort): Promise<void> => authentication.synchronizeSession();
   const whenEndingTheSession = (authentication: AuthenticationPort): void => authentication.logout();
   const whenAKeycloakRoundTripCompletes = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
   const thenNoTokenIsAvailable = (authentication: AuthenticationPort): void => expect(authentication.currentToken()).toBeUndefined();

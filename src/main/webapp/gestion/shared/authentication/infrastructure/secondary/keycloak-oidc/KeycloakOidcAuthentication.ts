@@ -21,6 +21,10 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
     await this.refreshToken();
   }
 
+  override async synchronizeSession(): Promise<void> {
+    await this.keycloak.updateToken(MIN_TOKEN_VALIDITY_SECONDS);
+  }
+
   override currentToken(): string | undefined {
     return this.keycloak.token;
   }

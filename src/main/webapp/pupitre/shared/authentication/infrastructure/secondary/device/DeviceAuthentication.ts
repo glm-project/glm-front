@@ -5,6 +5,7 @@ import {
   DeviceEnrolmentPort,
   ShowDeviceAuthorizationCode,
 } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
 import {
@@ -65,7 +66,7 @@ const SHOW_NO_CODE: ShowDeviceAuthorizationCode = () => undefined;
 type Restoration = 'RESTORED' | 'ABANDONED' | 'ABSENT' | 'UNREACHABLE';
 
 @Injectable()
-export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort {
+export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort, DeviceSessionPort {
   private readonly grant = inject(DeviceGrantClient);
   private readonly stockage = inject(LocalStoragePort, { optional: true });
   private readonly errorHandler = inject(ErrorHandlerPort);
@@ -162,6 +163,14 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   override currentToken(): string | undefined {
     return this.session?.accessTokenAt(Date.now());
+  }
+
+  withSession<T>(action: () => Promise<T>): Promise<T> {
+    const stockage = this.stockage;
+    if (stockage === null) {
+      return action();
+    }
+    return stockage.lock('enrolement', () => stockage.lock('session', action));
   }
 
   private isSynchronizationUnnecessary(enrolment: symbol | undefined, stored: PersistedEnrolment | undefined): boolean {

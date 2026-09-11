@@ -5,10 +5,13 @@ import {
   DeviceEnrolmentOutcome,
   DeviceEnrolmentPort,
 } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
-import { HttpParams, provideHttpClient } from '@angular/common/http';
+import { HttpBackend, HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
+import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { DeviceAuthentication } from './DeviceAuthentication';
@@ -934,5 +937,105 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
   const thenTheOutcomeIs = async (outcome: Promise<DeviceEnrolmentOutcome>, expected: DeviceEnrolmentOutcome): Promise<void> => {
     expect(await stockage.completeIOUntil(outcome)).toBe(expected);
+  };
+});
+
+class LockingStorageFixture extends LocalStoragePort {
+  private readonly locks = new BrowserLocksFixture();
+
+  override read<T>(): Promise<T | undefined> {
+    return Promise.resolve(undefined);
+  }
+  override update<T>(_key: string, initial: T, change: (value: T) => T): Promise<T> {
+    return Promise.resolve(change(initial));
+  }
+  override lock<T>(key: string, action: () => Promise<T>): Promise<T> {
+    return this.locks.request(key, action);
+  }
+}
+
+describe('Device session coordination, through DeviceSessionPort', () => {
+  it('should execute action directly when no persistent storage is configured', async () => {
+    const device = givenDeviceWithoutStorage();
+
+    const result = await whenRunningWithSession(device, () => Promise.resolve('ok'));
+
+    thenActionResultIs(result, 'ok');
+  });
+
+  it.each(['enrolement', 'session'] as const)('should serialize withSession behind an active %s storage lock', async key => {
+    const storage = new LockingStorageFixture();
+    const device = givenDeviceWithStorage(storage);
+    const chronology: string[] = [];
+    const held = await givenAnActiveStorageLock(storage, key, chronology);
+
+    const queued = whenRunningWithSession(device, () => {
+      chronology.push('session-action');
+      return Promise.resolve();
+    });
+    await whenAllowingTurnToEnter();
+
+    thenChronologyIs(chronology, [`${key}-held`]);
+
+    held.release();
+    await Promise.all([held.completion, queued]);
+
+    thenChronologyIs(chronology, [`${key}-held`, `${key}-released`, 'session-action']);
+  });
+
+  const givenAnActiveStorageLock = async (
+    storage: LocalStoragePort,
+    key: string,
+    chronology: string[],
+  ): Promise<{ release: () => void; completion: Promise<void> }> => {
+    const entered = new SignalFixture();
+    const release = new SignalFixture();
+    const completion = storage.lock(key, async () => {
+      chronology.push(`${key}-held`);
+      entered.release();
+      await release.promise;
+      chronology.push(`${key}-released`);
+    });
+    await entered.promise;
+    return {
+      release: () => {
+        release.release();
+      },
+      completion,
+    };
+  };
+  const whenAllowingTurnToEnter = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
+
+  const givenDeviceWithoutStorage = (): DeviceSessionPort =>
+    Injector.create({
+      providers: [
+        DeviceAuthentication,
+        DeviceGrantClient,
+        { provide: HttpBackend, useValue: {} },
+        { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    }).get(DeviceAuthentication);
+
+  const givenDeviceWithStorage = (storage: LocalStoragePort): DeviceSessionPort =>
+    Injector.create({
+      providers: [
+        DeviceAuthentication,
+        DeviceGrantClient,
+        { provide: HttpBackend, useValue: {} },
+        { provide: DeviceGrantConfiguration, useValue: new DeviceGrantConfiguration('http://keycloak.test', 'glm', 'pupitre') },
+        { provide: LocalStoragePort, useValue: storage },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    }).get(DeviceAuthentication);
+
+  const whenRunningWithSession = <T>(device: DeviceSessionPort, action: () => Promise<T>): Promise<T> => device.withSession(action);
+
+  const thenActionResultIs = <T>(actual: T, expected: T): void => {
+    expect(actual).toBe(expected);
+  };
+
+  const thenChronologyIs = (actual: string[], expected: string[]): void => {
+    expect(actual).toEqual(expected);
   };
 });

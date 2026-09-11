@@ -14,9 +14,11 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { vi } from 'vitest';
 import { AtelierCoordinator } from './AtelierCoordinator';
@@ -984,6 +986,7 @@ describe('AtelierCoordinator', () => {
         { provide: AtelierExchangePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
         { provide: DesignationExpirationSchedulerPort, useValue: scheduler },
+        { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });

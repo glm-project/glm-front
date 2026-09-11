@@ -7,7 +7,7 @@ The common technical contract is at `app/shared/authentication/`. `gestion` owns
 ## The port exposes session capabilities, not an SDK
 
 `AuthenticationPort` is an abstract class so Angular can inject it at runtime. It exposes authentication,
-the current bearer token and tenant, durable-session synchronization, and logout. Keep Keycloak, HTTP,
+the current bearer token and tenant, session synchronization, and logout. Keep Keycloak, HTTP,
 RxJS and browser-storage types outside its signature.
 
 A missing token or tenant is a normal state. Callers branch on the optional value; they do not manufacture a
@@ -19,9 +19,9 @@ credential or reach into an adapter.
 `KeycloakOidcAuthentication`. Its Cypress build replaces that provider file with the in-memory adapter.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
 
-`pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration
-and the IndexedDB storage adapter. `pupitre/enrolement.provider.ts` binds `DeviceEnrolmentPort` to that same
-adapter with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
+`pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,
+the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort` and
+`DeviceEnrolmentPort`) with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
 client ID stay in front environments; no client secret belongs in a browser repository.
 
 Application-specific adapters do not import one another. The port contract runs the shared behavior against each
@@ -31,6 +31,11 @@ implementation; adapter-specific behavior stays beside that contract.
 
 `httpAuthInterceptor` reads `AuthenticationPort.currentToken()` and adds `Authorization: Bearer <token>`
 when one exists. HTTP adapters rely on it and never attach the header themselves.
+
+`gestion` runs `httpSessionRefreshInterceptor` before bearer signing. It awaits session synchronization,
+which asks Keycloak to refresh a token with less than seventy seconds of validity. A refresh failure rejects
+the HTTP operation before it sends a stale token; a later request can try again. `pupitre` keeps its separate
+durable-session and background-renewal lifecycle.
 
 Device authorization obtains the credential, so its requests must bypass that interceptor.
 `DeviceAuthentication` creates its protocol client directly on `HttpBackend`. Keep enrolment, token and
@@ -77,6 +82,12 @@ code and the outcome of an attempt it has already replaced.
 
 A network cut during the poll is reported as `UNREACHABLE`, indistinguishable from a failure to obtain the
 code at all; [ADR 0026](adr/0026-enrol-pupitre-screen-and-keycloak-delegation.md) records that limit.
+
+`DeviceSessionPort.withSession` guarantees mutual exclusion on the pupitre: replay takes the
+`enrolement` lock before `session`, matching the order used by background renewal and its credential
+commit. Keep the outer lock through the network exchange and persistence: protecting only the commit
+allows a replay to use a token while the server is rotating it. Never acquire `enrolement` while holding
+`session`, or reacquire `session` inside its own critical section.
 
 A transient renewal refusal keeps the unexpired access token and retries later. `invalid_grant` removes the
 matching credential and starts enrolment again while retaining the selected tenant. Logout conditionally
