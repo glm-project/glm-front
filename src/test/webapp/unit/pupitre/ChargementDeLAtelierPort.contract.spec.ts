@@ -1,12 +1,23 @@
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
+import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
-import { ChargementDeLAtelier, ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { TypeScriptChargementDeLAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/TypeScriptChargementDeLAtelier';
+import {
+  ChargementDeLAtelier,
+  ChargementDeLAtelierPort,
+  IssueDuChargementDeLAtelier,
+} from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
+import { AtelierChargement } from '@/pupitre/contexts/enrolement/infrastructure/secondary/atelier/AtelierChargement';
 import { chargementProviders } from '@/pupitre/contexts/enrolement/infrastructure/secondary/atelier/chargement.providers';
-import { signal } from '@angular/core';
+import { Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
 const referentielFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
 
@@ -18,6 +29,10 @@ class AtelierCoordinatorFixture {
 
   referentiel(): ReferentielDuPupitre | undefined {
     return this.reference();
+  }
+
+  referentielDisponible(): boolean {
+    return this.referentiel() !== undefined;
   }
 
   synchronize(): Promise<void> {
@@ -59,6 +74,14 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
     thenTheReferenceIs(etat, true);
   });
 
+  it('should report no workshop reference when the active reference belongs to the previous company', async () => {
+    const chargementDeLaNouvelleEntreprise = await givenAReferenceActiveForThePreviousCompany();
+
+    const etat = chargementDeLaNouvelleEntreprise.etat();
+
+    thenTheReferenceIs(etat, false);
+  });
+
   it.each([true, false])('should report the connectivity the pupitre observed (%s)', connected => {
     givenTheObservedConnectivityIs(connected);
 
@@ -81,9 +104,52 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
     thenTheFailureWasReported();
   });
 
+  it('should report a failed workshop load as a distinct outcome', async () => {
+    givenSynchronizationFails();
+
+    const issue = await chargement.charger();
+
+    expect(issue).toBe('ECHEC');
+  });
+
   const givenAnActiveReference = (): void => {
     pupitre.reference.set(referentielFixture);
   };
+
+  const givenAReferenceActiveForThePreviousCompany = async (): Promise<ChargementDeLAtelierPort> => {
+    let entrepriseSelectionnee = 'entreprise-a';
+    const journaux = new JournauxDuPupitreFixture();
+    journaux.answerReadsImmediately();
+    journaux.seedReferentiel(Entreprise.of(entrepriseSelectionnee), referentielFixture);
+    const etatHorsLigne = offlineStateFor(journaux, () => entrepriseSelectionnee);
+    await etatHorsLigne.refresh('RESTORE', () => undefined);
+    entrepriseSelectionnee = 'entreprise-b';
+    return workshopLoadingFor(etatHorsLigne);
+  };
+
+  const offlineStateFor = (journaux: JournauxDuPupitrePort, currentTenant: () => string | undefined): EtatHorsLigneDuPupitre =>
+    Injector.create({
+      providers: [
+        EtatHorsLigneDuPupitre,
+        { provide: JournauxDuPupitrePort, useValue: journaux },
+        { provide: AuthenticationPort, useValue: { currentTenant } },
+        {
+          provide: PupitreSynchronization,
+          useValue: { synchronize: () => Promise.resolve() },
+        },
+      ],
+    }).get(EtatHorsLigneDuPupitre);
+
+  const workshopLoadingFor = (etatHorsLigne: EtatHorsLigneDuPupitre): ChargementDeLAtelierPort =>
+    Injector.create({
+      providers: [
+        TypeScriptChargementDeLAtelier,
+        { provide: ChargementDeLAtelierPort, useClass: AtelierChargement },
+        { provide: AtelierCoordinator, useValue: { synchronize: () => Promise.resolve() } },
+        { provide: EtatHorsLigneDuPupitre, useValue: etatHorsLigne },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
+      ],
+    }).get(ChargementDeLAtelierPort);
 
   const givenTheObservedConnectivityIs = (connected: boolean): void => {
     pupitre.connected.set(connected);
@@ -95,7 +161,7 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
 
   const whenReadingTheWorkshopState = (): ChargementDeLAtelier => chargement.etat();
 
-  const whenLoadingTheWorkshop = (): Promise<void> => chargement.charger();
+  const whenLoadingTheWorkshop = (): Promise<IssueDuChargementDeLAtelier> => chargement.charger();
 
   const thenTheReferenceIs = (etat: ChargementDeLAtelier, disponible: boolean): void => {
     expect(etat.referentielDisponible).toBe(disponible);

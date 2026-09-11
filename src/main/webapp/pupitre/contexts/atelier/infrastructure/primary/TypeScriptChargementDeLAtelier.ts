@@ -8,7 +8,7 @@ export class TypeScriptChargementDeLAtelier {
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
 
   referentielDisponible(): boolean {
-    return this.etatHorsLigne.referentiel() !== undefined;
+    return this.etatHorsLigne.referentielDisponible();
   }
 
   connecte(): boolean {

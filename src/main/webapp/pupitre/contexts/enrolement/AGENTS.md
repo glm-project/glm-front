@@ -14,6 +14,8 @@ Ce contexte appartient exclusivement à `pupitre`. Il possède le cycle de vie v
 
 **Chargement de l'atelier** : période entre l'obtention des jetons et l'activation du premier référentiel complet. Elle appartient à l'enrôlement parce que l'écran la montre; le référentiel lui-même appartient au contexte `atelier`.
 
+**Issue du chargement de l'atelier** : résultat `CHARGE` ou `ECHEC` d'une tentative de chargement. Elle reste distincte de la connexion observée par la publication des gestes.
+
 **Réinitialisation** : geste d'administration qui révoque l'enrôlement sur le serveur et ramène le pupitre à sa demande initiale. Ce n'est ni une déconnexion d'opérateur ni un effacement des journaux d'atelier.
 
 ## Responsabilités et invariants
@@ -24,9 +26,10 @@ Ce contexte appartient exclusivement à `pupitre`. Il possède le cycle de vie v
 - La vue est une projection pure de l'étape stockée, de l'instant courant et de l'état du chargement de l'atelier. Elle porte les sept états de la spécification et ne décide rien d'autre.
 - L'application pilote l'adaptateur d'enrôlement : elle appelle `enrol(showCode)` et reçoit l'issue. L'adaptateur ne rappelle jamais l'application, ce qui fermerait un cycle d'injection par `AuthenticationPort`.
 - Une tentative périmée n'écrit plus rien : chaque `enroler()` prend un jeton de tentative et ignore l'issue et le code d'une tentative remplacée.
+- Chaque chargement de l'atelier prend aussi un jeton de tentative. Une reprise remet l'écran en chargement et l'issue tardive d'un chargement remplacé ne modifie plus la vue.
 - Le tic de la seconde appartient à l'adaptateur primaire. Il pousse l'instant courant dans l'application; il ne décide pas de l'expiration.
 - L'état du chargement de l'atelier arrive par un port de domaine, implémenté par un adaptateur secondaire qui passe par l'adaptateur primaire `TypeScriptChargementDeLAtelier` du contexte `atelier`. Aucun import direct de son domaine.
-- Le chargement de l'atelier ne rejette jamais vers l'appelant : son échec part au gestionnaire d'erreurs, sinon le démarrage du runtime s'interromprait avant d'installer ses écouteurs.
+- Le chargement de l'atelier ne rejette jamais vers l'appelant : son échec part au gestionnaire d'erreurs et revient comme l'issue `ECHEC`, sinon le démarrage du runtime s'interromprait avant d'installer ses écouteurs.
 
 ## Règles locales
 
