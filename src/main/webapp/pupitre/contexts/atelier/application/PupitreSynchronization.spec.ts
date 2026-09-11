@@ -73,6 +73,7 @@ class SynchronizationJournalFixture extends JournauxDuPupitrePort {
   private readonly stored = new JournauxDuPupitreFixture();
   private nextRelease: JournalBarrierFixture | undefined;
   private nextRead: JournalBarrierFixture | undefined;
+  private readsBeforeBarrier = 0;
   unavailable = false;
 
   holdNextSynchronizationRelease(): JournalBarrierFixture {
@@ -81,13 +82,18 @@ class SynchronizationJournalFixture extends JournauxDuPupitrePort {
     return barrier;
   }
 
-  holdNextRead(): JournalBarrierFixture {
+  holdNextRead(readsToSkip = 0): JournalBarrierFixture {
     const barrier = new JournalBarrierFixture();
     this.nextRead = barrier;
+    this.readsBeforeBarrier = readsToSkip;
     return barrier;
   }
 
   override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
+    if (this.readsBeforeBarrier > 0) {
+      this.readsBeforeBarrier--;
+      return this.stored.read(entreprise);
+    }
     const barrier = this.nextRead;
     this.nextRead = undefined;
     await barrier?.hold();
@@ -305,6 +311,16 @@ describe('PupitreSynchronization', () => {
     thenReferentialNeverRefreshed();
   });
 
+  it('should preserve the referential when authorization expires while reading the drained journal', async () => {
+    givenAnAuthorizedSession();
+    const synchronization = await givenSynchronizationIsReadingTheDrainedJournal();
+
+    await whenAuthorizationExpiresDuringRead(synchronization);
+
+    thenReferentialNeverRefreshed();
+    thenExistingReferentialPreserved();
+  });
+
   it('should record an arrival as accepted with journeeOuverte false when already opened', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
@@ -420,6 +436,21 @@ describe('PupitreSynchronization', () => {
     const completion = whenSynchronizing();
     await barrier.reached;
     return { barrier, completion };
+  };
+  const givenSynchronizationIsReadingTheDrainedJournal = async () => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
+    const barrier = journal.holdNextRead(1);
+    const completion = whenSynchronizing();
+    await barrier.reached;
+    return { barrier, completion };
+  };
+  const whenAuthorizationExpiresDuringRead = async (synchronization: {
+    barrier: JournalBarrierFixture;
+    completion: Promise<void>;
+  }): Promise<void> => {
+    token = undefined;
+    synchronization.barrier.release();
+    await synchronization.completion;
   };
   const whenDeselectingCompanyDuringRead = async (synchronization: {
     barrier: JournalBarrierFixture;

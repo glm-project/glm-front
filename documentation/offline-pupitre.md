@@ -81,7 +81,9 @@ technical failure leaves the gesture pending and stops that push, allowing a lat
 An identical retry reuses the original body. For `saisie-concurrente`, reread the affected aggregate and
 retry once; retain a second refusal. Never generate a new UUID or occurrence time during replay.
 
-Every synchronization ends by refreshing the complete operator and workshop reference. Publish the pair only
+Only a completed publication allows synchronization to refresh the complete operator and workshop reference.
+Known business refusals do not prevent completion; a technical interruption preserves the previous reference
+without attempting a new read. Publish the pair only
 after every page of both collections passes total, duplicate and progress checks. Activating that post-write
 snapshot records accepted pointage identifiers in the local reference so their optimistic effects are no
 longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
