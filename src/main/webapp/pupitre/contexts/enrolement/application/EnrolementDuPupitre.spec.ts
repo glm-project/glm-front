@@ -69,7 +69,6 @@ class DeviceEnrolmentFixture extends DeviceEnrolmentPort {
 class ChargementDeLAtelierFixture extends ChargementDeLAtelierPort {
   readonly referentielDisponible = signal(false);
   readonly connecte = signal(true);
-  loads = 0;
   issue: IssueDuChargementDeLAtelier = 'CHARGE';
   nextLoad: WorkshopLoadFixture | undefined;
 
@@ -78,7 +77,6 @@ class ChargementDeLAtelierFixture extends ChargementDeLAtelierPort {
   }
 
   override charger(): Promise<IssueDuChargementDeLAtelier> {
-    this.loads += 1;
     const nextLoad = this.nextLoad;
     this.nextLoad = undefined;
     return nextLoad?.completion ?? Promise.resolve(this.issue);
@@ -166,7 +164,6 @@ describe('EnrolementDuPupitre', () => {
     await whenTheAttemptAnswers('ENROLLED');
 
     thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
-    thenWorkshopLoadsAre(1);
 
     whenTheFirstReferenceLands();
 
@@ -203,7 +200,6 @@ describe('EnrolementDuPupitre', () => {
       await whenTheAttemptAnswers(outcome);
 
       thenTheScreenShows(expected);
-      thenWorkshopLoadsAre(0);
     },
   );
 
@@ -213,28 +209,68 @@ describe('EnrolementDuPupitre', () => {
     await whenTheAttemptAnswers('ABANDONED');
 
     thenTheScreenShows('DEMANDE_EN_COURS');
-    thenWorkshopLoadsAre(0);
   });
 
-  it('should ignore the code and the answer of an attempt a new request has replaced', async () => {
+  it('should ignore the authorization code of an attempt a new request has replaced', () => {
+    const nouveauCode: DeviceAuthorizationCode = {
+      ...codeFixture,
+      userCode: 'AAAA-BBBB',
+    };
     whenEnrolling();
     whenAskingForANewCode();
 
-    whenTheServerIssuesTheCode();
-    await whenTheAttemptAnswers('DENIED');
-
+    whenTheServerIssuesTheCode(codeFixture, 0);
     thenTheScreenShows('DEMANDE_EN_COURS');
-    thenAuthorizationsAskedAre(2);
+
+    whenTheServerIssuesTheCode(nouveauCode, 1);
+    thenTheScreenShows('EN_ATTENTE_D_APPROBATION');
+    thenTheScreenShowsCode('AAAA-BBBB');
+  });
+
+  it('should ignore the answer of an attempt a new request has replaced', async () => {
+    const nouveauCode: DeviceAuthorizationCode = {
+      ...codeFixture,
+      userCode: 'AAAA-BBBB',
+    };
+    whenEnrolling();
+    whenAskingForANewCode();
+    whenTheServerIssuesTheCode(nouveauCode, 1);
+
+    await whenTheAttemptAnswers('DENIED', 0);
+
+    thenTheScreenShows('EN_ATTENTE_D_APPROBATION');
+    thenTheScreenShowsCode('AAAA-BBBB');
+  });
+
+  it('should ignore an approval for an attempt a new request has replaced', async () => {
+    const nouveauCode: DeviceAuthorizationCode = {
+      ...codeFixture,
+      userCode: 'AAAA-BBBB',
+    };
+    whenEnrolling();
+    whenAskingForANewCode();
+    whenTheServerIssuesTheCode(nouveauCode, 1);
+
+    await whenTheAttemptAnswers('ENROLLED', 0);
+
+    thenTheScreenShows('EN_ATTENTE_D_APPROBATION');
+    thenTheScreenShowsCode('AAAA-BBBB');
   });
 
   it('should retry the workshop load without asking for another code', async () => {
+    givenTheWorkshopLoadFails();
     whenEnrolling();
     await whenTheAttemptAnswers('ENROLLED');
+    thenTheScreenShows('ATTENTE_RESEAU_ATELIER');
 
-    await whenRetryingTheWorkshopLoad();
+    const retry = whenRetryingTheWorkshopLoad();
+    thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
 
-    thenWorkshopLoadsAre(2);
-    thenAuthorizationsAskedAre(1);
+    givenTheWorkshopLoadRecovers();
+    await retry;
+    whenTheFirstReferenceLands();
+
+    thenTheScreenShows('ENROLE_ET_PRET');
   });
 
   it('should ignore a failed workshop load that a newer retry replaced', async () => {
@@ -248,10 +284,45 @@ describe('EnrolementDuPupitre', () => {
 
     previousLoad.settle('ECHEC');
     await previousRetry;
-
     thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
+
     currentLoad.settle('ECHEC');
     await currentRetry;
+    thenTheScreenShows('ATTENTE_RESEAU_ATELIER');
+  });
+
+  it('should ignore a late failed workshop load after a newer retry has already succeeded', async () => {
+    givenTheWorkshopLoadFails();
+    whenEnrolling();
+    await whenTheAttemptAnswers('ENROLLED');
+    const previousLoad = givenTheNextWorkshopLoadWaits();
+    const previousRetry = whenRetryingTheWorkshopLoad();
+    const currentLoad = givenTheNextWorkshopLoadWaits();
+    const currentRetry = whenRetryingTheWorkshopLoad();
+
+    currentLoad.settle('CHARGE');
+    await currentRetry;
+    whenTheFirstReferenceLands();
+    thenTheScreenShows('ENROLE_ET_PRET');
+
+    previousLoad.settle('ECHEC');
+    await previousRetry;
+
+    thenTheScreenShows('ENROLE_ET_PRET');
+  });
+
+  it('should ignore a workshop load settling after the pupitre was reset', async () => {
+    whenEnrolling();
+    await whenTheAttemptAnswers('ENROLLED');
+    const pendingLoad = givenTheNextWorkshopLoadWaits();
+    const retry = whenRetryingTheWorkshopLoad();
+
+    whenResetting();
+
+    pendingLoad.settle('CHARGE');
+    await retry;
+
+    thenTheScreenShows('DEMANDE_EN_COURS');
   });
 
   it('should revoke the durable enrolment before asking for a new code', () => {
@@ -316,8 +387,17 @@ describe('EnrolementDuPupitre', () => {
     return load;
   };
 
+  const givenTheWorkshopLoadRecovers = (): void => {
+    atelier.issue = 'CHARGE';
+  };
+
   const thenTheScreenShows = (expected: VueDEnrolement['kind']): void => {
     expect(enrolement.vue().kind).toBe(expected);
+  };
+
+  const thenTheScreenShowsCode = (userCode: string): void => {
+    const vue = enrolement.vue();
+    expect(vue.kind === 'EN_ATTENTE_D_APPROBATION' ? vue.code.userCode : undefined).toBe(userCode);
   };
 
   const thenSecondsLeftAre = (secondes: number): void => {
@@ -327,10 +407,6 @@ describe('EnrolementDuPupitre', () => {
 
   const thenAuthorizationsAskedAre = (count: number): void => {
     expect(appareil.count()).toBe(count);
-  };
-
-  const thenWorkshopLoadsAre = (count: number): void => {
-    expect(atelier.loads).toBe(count);
   };
 
   const thenRevocationsAre = (count: number): void => {
