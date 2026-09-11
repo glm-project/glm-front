@@ -3,6 +3,7 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
+import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 import { Pointage } from './pointage';
 
 interface DeferredFixture {
@@ -194,12 +195,12 @@ describe('Pointage screen', () => {
     expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('BON');
     expect(requiredElement(root().querySelector(dataSelector('tile-moule-1015')), 'active tile').textContent).toContain('depuis 2 h 14');
     expect(requiredElement(root().querySelector(dataSelector('tile-of-generated')), 'inactive tile').textContent).toContain('DÉMARRER');
-    expect(requiredElement(root().querySelector(dataSelector('glm-band')), 'GLM').classList).not.toContain('glm--active');
+    expect(requiredElement(root().querySelector(dataSelector('glm-band')), 'GLM').textContent).toContain(LIBELLES_POINTAGE.glmInactif);
   };
   const thenOnlyActiveGlmRemains = (): void => {
     expect(root().querySelector(dataSelector('moules-zone'))).toBeNull();
     expect(root().querySelector(dataSelector('of-zone'))).toBeNull();
-    expect(requiredElement(root().querySelector(dataSelector('glm-band')), 'GLM').classList).toContain('glm--active');
+    expect(requiredElement(root().querySelector(dataSelector('glm-band')), 'GLM').textContent).toContain(LIBELLES_POINTAGE.glmActif);
   };
   const thenOnlyThePressedTileIsBusy = (): void => {
     expect(targetsFor('moule-1015').every(target => target.disabled)).toBe(true);
