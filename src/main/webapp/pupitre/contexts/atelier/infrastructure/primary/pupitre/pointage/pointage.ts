@@ -1,7 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, input, output, signal } from '@angular/core';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
-import { CibleDePointage, ElementDePointage, VueDePointage } from '../../../../domain/designation/FenetreOperateur';
+import { CibleDePointage } from '../../../../domain/designation/fenetre-operateur/DecisionDePointage';
+import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 
 interface AttenteDePoste {

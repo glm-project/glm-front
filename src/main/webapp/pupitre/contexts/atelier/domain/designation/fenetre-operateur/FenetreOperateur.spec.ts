@@ -1,16 +1,17 @@
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
-import { Entreprise } from '../journal-du-pupitre/Entreprise';
+import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
   GesteDePointage,
   IdentiteDuGeste,
   JournalDuPupitre,
-} from '../journal-du-pupitre/JournalDuPupitre';
-import { DecisionDePointage, FenetreOperateur, LotDeGestesDAtelier } from './FenetreOperateur';
-import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
-import { Matricule } from './Matricule';
-import { NumeroDElement } from './NumeroDElement';
+} from '../../journal-du-pupitre/JournalDuPupitre';
+import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
+import { Matricule } from '../Matricule';
+import { NumeroDElement } from '../NumeroDElement';
+import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
+import { FenetreOperateur } from './FenetreOperateur';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 

@@ -1,4 +1,4 @@
-import { IntentionGlobaleDAtelier } from '../domain/designation/FenetreOperateur';
+import { IntentionGlobaleDAtelier } from '../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
 
 export type IntentionGlobale = IntentionGlobaleDAtelier;
 

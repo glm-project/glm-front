@@ -1,5 +1,5 @@
 import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
-import { ContexteDeGesteDAtelier } from './FenetreOperateur';
+import { ContexteDeGesteDAtelier } from './fenetre-operateur/ContexteDeGesteDAtelier';
 
 export class ContextesParGeste {
   private constructor(private readonly contextes: ReadonlyMap<string, ContexteDeGesteDAtelier>) {}

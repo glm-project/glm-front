@@ -2,7 +2,9 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { DesignationExpirationSchedulerPort } from '../domain/designation/DesignationExpirationSchedulerPort';
 import { DesignationOperateur, DesignationResolution, isFenetreIdentifiedBy } from '../domain/designation/DesignationOperateur';
-import { AcceptationDeGestes, FenetreOperateur, IdentiteOperateurDesigne } from '../domain/designation/FenetreOperateur';
+import { AcceptationDeGestes } from '../domain/designation/fenetre-operateur/DecisionDePointage';
+import { FenetreOperateur } from '../domain/designation/fenetre-operateur/FenetreOperateur';
+import { IdentiteOperateurDesigne } from '../domain/designation/fenetre-operateur/OperateurDesigne';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
 import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';

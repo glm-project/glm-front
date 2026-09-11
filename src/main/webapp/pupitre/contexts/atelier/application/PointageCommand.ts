@@ -1,4 +1,5 @@
-import { CibleDePointage, PosteAChoisir } from '../domain/designation/FenetreOperateur';
+import { CibleDePointage } from '../domain/designation/fenetre-operateur/DecisionDePointage';
+import { PosteAChoisir } from '../domain/designation/fenetre-operateur/HabilitationsDePoste';
 import { NumeroDElement } from '../domain/designation/NumeroDElement';
 
 export interface IntentionDePointage {

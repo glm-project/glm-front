@@ -2,7 +2,7 @@ import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation
 import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
-import { FenetreOperateur } from './FenetreOperateur';
+import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
 import { Matricule } from './Matricule';
 
 const referenceFixture: JournalDuPupitre = {

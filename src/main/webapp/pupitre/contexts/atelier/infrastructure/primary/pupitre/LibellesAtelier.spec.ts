@@ -1,4 +1,4 @@
-import { ElementDePointage } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { ElementDePointage } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/NumeroDElement';
 import { LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE, toLibelleContexteAtelier } from './LibellesAtelier';
 

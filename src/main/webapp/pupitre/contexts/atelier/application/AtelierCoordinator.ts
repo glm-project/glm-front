@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { FenetreOperateur, LotDeGestesDAtelier } from '../domain/designation/FenetreOperateur';
+import { LotDeGestesDAtelier } from '../domain/designation/fenetre-operateur/DecisionDePointage';
+import { FenetreOperateur } from '../domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
 import { IdentiteDuGeste, TypeDePresence } from '../domain/journal-du-pupitre/JournalDuPupitre';
