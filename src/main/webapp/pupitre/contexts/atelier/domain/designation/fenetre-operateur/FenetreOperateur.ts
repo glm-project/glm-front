@@ -8,7 +8,6 @@ import {
   snapshotDuJournal,
   SuiviDuPupitre,
   TypeDePointage,
-  TypeDePresence,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
 import { ContextesParGeste } from '../ContextesParGeste';
@@ -186,7 +185,7 @@ export class FenetreOperateur {
   capture(decision: LotDeGestesDAtelier): readonly GesteDAtelier[] {
     return decision.capture(this.etat.assuranceArrivee.isAssuree());
   }
-  preparePresence(type: TypeDePresence, identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
+  preparePresence(type: 'PAUSE' | 'REPRISE', identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
     const presence: GesteDePresence = {
       ...identify(),
       operateurId: this.etat.operateurDesigne.id(),
@@ -254,10 +253,9 @@ export class FenetreOperateur {
     return decision.kind === 'GESTES' ? decision.contextesParGeste : ContextesParGeste.empty();
   }
 
-  private contexteFor(type: TypeDePresence): ContexteDeGesteDAtelier | undefined {
+  private contexteFor(type: 'PAUSE' | 'REPRISE'): ContexteDeGesteDAtelier {
     if (type === 'PAUSE') return { kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' };
-    if (type === 'REPRISE') return { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' };
-    return undefined;
+    return { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' };
   }
 
   private ouverture(suiviId: string, numero: NumeroDElement, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {

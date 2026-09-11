@@ -3,7 +3,7 @@ import { LotDeGestesDAtelier } from '../domain/designation/fenetre-operateur/Dec
 import { FenetreOperateur } from '../domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
-import { IdentiteDuGeste, TypeDePresence } from '../domain/journal-du-pupitre/JournalDuPupitre';
+import { IdentiteDuGeste } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
 import { CurrentOperateurLifecycle } from './CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
@@ -43,13 +43,6 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
       };
     }
     return { kind: 'CAPTURE', completion: this.captureDecision(fenetre, decision) };
-  }
-
-  recordPresence(type: TypeDePresence): Promise<void> {
-    if (!this.designation.gestesDisponibles()) return Promise.resolve();
-    const fenetre = this.designation.requireWindow().afterIntendingGesture();
-    this.designation.acceptDecision(fenetre);
-    return this.captureDecision(fenetre, fenetre.preparePresence(type, identity));
   }
 
   executeGlobale(intention: IntentionGlobale): Promise<void> {

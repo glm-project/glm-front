@@ -8,8 +8,7 @@ export class ContextesParGeste {
     return new ContextesParGeste(new Map());
   }
 
-  static forGestes(gestes: readonly GesteDAtelier[], contexte: ContexteDeGesteDAtelier | undefined): ContextesParGeste {
-    if (contexte === undefined) return ContextesParGeste.empty();
+  static forGestes(gestes: readonly GesteDAtelier[], contexte: ContexteDeGesteDAtelier): ContextesParGeste {
     return new ContextesParGeste(new Map(gestes.map(geste => [geste.id, contexte])));
   }
 
