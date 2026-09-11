@@ -57,8 +57,12 @@ class DeviceEnrolmentFixture extends DeviceEnrolmentPort {
     return this.attempts.length;
   }
 
+  attempt(index: number): AttemptFixture {
+    return requiredFixture(this.attempts[index], `enrolment attempt ${index}`);
+  }
+
   first(): AttemptFixture {
-    return requiredFixture(this.attempts[0], 'enrolment attempt');
+    return this.attempt(0);
   }
 }
 
@@ -272,13 +276,13 @@ describe('EnrolementDuPupitre', () => {
 
   const whenRetryingTheWorkshopLoad = (): Promise<void> => enrolement.chargerLAtelier();
 
-  const whenTheServerIssuesTheCode = (): void => {
-    appareil.first().showCode(codeFixture);
+  const whenTheServerIssuesTheCode = (code: DeviceAuthorizationCode = codeFixture, index = 0): void => {
+    appareil.attempt(index).showCode(code);
   };
 
-  const whenTheAttemptAnswers = async (outcome: DeviceEnrolmentOutcome): Promise<void> => {
-    appareil.first().settle(outcome);
-    await requiredFixture(attempts[0], 'enrolment in progress');
+  const whenTheAttemptAnswers = async (outcome: DeviceEnrolmentOutcome, index = 0): Promise<void> => {
+    appareil.attempt(index).settle(outcome);
+    await requiredFixture(attempts[index], 'enrolment in progress');
   };
 
   const whenOneSecondPasses = (): void => {
