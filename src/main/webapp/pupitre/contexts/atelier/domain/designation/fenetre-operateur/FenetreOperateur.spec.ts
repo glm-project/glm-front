@@ -253,6 +253,14 @@ describe('FenetreOperateur', () => {
     expect(toutArreter.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
   });
 
+  it('should assure arrival when starting an activity after stopping all in the same operator window', () => {
+    const stoppedWindow = givenAnAcceptedStopWithoutActivities();
+
+    const gestes = whenStartingAnActivityIn(stoppedWindow);
+
+    thenArrivalPrecedesResumptionAndStart(gestes);
+  });
+
   it('should expose a refused finish from the current global stop batch as TOUT ARRÊTER', () => {
     const decision = fenetre.prepareToutArreter(identifyFixture);
     const acceptance = fenetre.prepareAcceptance(decision);
@@ -696,6 +704,25 @@ describe('FenetreOperateur', () => {
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(identity),
     );
+  const givenAnAcceptedStopWithoutActivities = (): FenetreOperateur => {
+    const inactiveJournalFixture: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
+      },
+    };
+    const initialWindow = givenAWindowOpenedOn(inactiveJournalFixture);
+    const stop = initialWindow.prepareAcceptance(initialWindow.prepareToutArreter(identifyFixture));
+    return stop.applyTo(initialWindow);
+  };
+  const whenStartingAnActivityIn = (window: FenetreOperateur): readonly GesteDAtelier[] => {
+    const start = window.afterDeciding('of-1', 'PRINCIPALE', identifyFixture);
+    return start.fenetre.prepareAcceptance(gesturesOf(start.decision)).gestes;
+  };
+  const thenArrivalPrecedesResumptionAndStart = (gestes: readonly GesteDAtelier[]): void => {
+    expect(gestes).toMatchObject([{ nature: 'ARRIVEE' }, { nature: 'PRESENCE', type: 'REPRISE' }, { nature: 'POINTAGE', type: 'DEBUT' }]);
+  };
   const givenAPreparedPointage = (): (() => readonly GesteDAtelier[]) => {
     const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture);
     fenetre = result.fenetre;
