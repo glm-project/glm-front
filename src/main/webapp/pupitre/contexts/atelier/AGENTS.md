@@ -20,6 +20,8 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 **Journal du pupitre** : document durable propre à une entreprise, qui conserve le dernier référentiel complet, les gestes dans leur ordre d'acceptation locale, leur résultat de publication et l'état de connexion observé. C'est la racine de cohérence locale; le référentiel qu'il contient reste un modèle de lecture et non un agrégat du pupitre.
 
+**Bilan de publication** : issue du traitement des gestes en attente. Un bilan terminé permet de rafraîchir le référentiel, y compris si des refus métier ont été conservés. Un bilan interrompu impose de conserver le référentiel. `BilanDePublication` porte cette décision; l'orchestration vérifie séparément l'autorisation d'échanger.
+
 **Entreprise** : portée d'un journal du pupitre et de tous les gestes qu'il contient. Deux journaux d'entreprises différentes restent indépendants.
 
 ## Responsabilités et invariants

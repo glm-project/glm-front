@@ -78,6 +78,10 @@ builds retain the regular pupitre bootstrap.
 First a test at the layer where the defect is observable, then the smallest test that reproduces it. Both go
 red before the fix and green after.
 
+Never alter production code just to manufacture a test result, including temporarily removing a working
+fix to force a new test red. If the next proposed TDD scenario already passes, report that the behavior is
+already implemented and reassess the next missing behavior with the user before continuing.
+
 ## Coverage is not negotiable
 
 The 100 % per-file threshold outranks any "not worth testing" judgement below. If you genuinely cannot

@@ -367,6 +367,18 @@ describe('PupitreSynchronization', () => {
     thenDisconnectedStatusObserved();
   });
 
+  it('should preserve the referential without reading a new one when gesture publication fails technically', async () => {
+    await givenASelectedCompanyWithPendingWork();
+    givenAnAuthorizedSession();
+    givenTechnicalFailureDuringSend();
+    givenANewReferentialAvailableOnServer();
+
+    await whenSynchronizing();
+
+    thenExistingReferentialPreserved();
+    thenReferentialNeverRefreshed();
+  });
+
   it('should mark disconnected when authorization changes before push', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
@@ -514,6 +526,12 @@ describe('PupitreSynchronization', () => {
       throw new Error('Erreur réseau');
     };
   };
+  const givenANewReferentialAvailableOnServer = (): void => {
+    server.onReferentiel = (): ReferentielDuPupitre => ({
+      operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
+      suivis: [],
+    });
+  };
   const givenSessionTokenExpiresBeforePush = (): void => {
     let sessionCount = 0;
     onSynchronizeSession = (): void => {
@@ -573,6 +591,9 @@ describe('PupitreSynchronization', () => {
   };
   const thenReferentialNeverRefreshed = (): void => {
     expect(server.referentielCalls).toBe(0);
+  };
+  const thenExistingReferentialPreserved = (): void => {
+    expect(exposed?.referentiel).toEqual(referenceFixture);
   };
   const thenCompanyReferentialWasNotOverwritten = async (entreprise: string): Promise<void> => {
     const saved = await journal.read(Entreprise.of(entreprise));
