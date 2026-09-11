@@ -44,6 +44,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - « Tout arrêter » forme un unique lot local atomique et ordonné : toutes les fins des activités personnelles connues, puis le départ. Un échec d'acceptation locale n'en conserve aucune partie; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
 - Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
 - Une référence incomplète ou un échec de rafraîchissement ne remplace jamais la dernière référence complète.
+- Un référentiel n'est disponible pour l'enrôlement que si la vue active appartient à l'entreprise actuellement sélectionnée.
 - Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
 - La fraîcheur du référentiel se pousse en arrière-plan, par une synchronisation complète qui publie d'abord les gestes en attente, et ne se place jamais sur le chemin d'un geste.
 - Un même matricule inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
@@ -67,5 +68,7 @@ Tant que l'appareil n'est pas enrôlé et que son premier référentiel complet 
 Les libellés métier du pupitre vivent dans un module unique de ce contexte et sont indexés par ses types de domaine. Ne pas partager ce vocabulaire avec `gestion` ni l'adosser aux types générés de l'API.
 
 `AuthenticationPort` appartient au shared kernel et continue de répondre un `tenant` en chaîne : un shared kernel ne peut pas nommer `Entreprise`. `EtatHorsLigneDuPupitre` et `PupitreSynchronization` traduisent à cette couture; ne pas remonter le type dans le port, `HexagonalArchTest` le refuse. `PupitreSynchronization` consomme également `DeviceSessionPort.withSession` pour garantir l'exclusion mutuelle entre le rejeu des gestes et le renouvellement réseau des jetons de l'appareil. Le matricule du pupitre ne traverse pas non plus vers `gestion`, qui possède le sien.
+
+Le résultat du chargement initial est distinct de la connexion observée. `TypeScriptChargementDeLAtelier` expose la disponibilité du référentiel de l'entreprise courante; l'adaptateur secondaire d'`enrolement` traduit l'achèvement de la synchronisation en `CHARGE` ou `ECHEC`. Cette issue ne modifie pas l'indicateur de connexion, que seuls les résultats de publication établissent.
 
 Lire [Offline pupitre](../../../../../../documentation/offline-pupitre.md) avant de changer la désignation, le journal, le rejeu ou le runtime, et les [ADR pertinents](../../../../../../documentation/adr/README.md) avant de rouvrir une décision. Les échanges futurs avec un autre contexte de `pupitre` passent par un port et un adaptateur TypeScript, sans import direct de son domaine.
