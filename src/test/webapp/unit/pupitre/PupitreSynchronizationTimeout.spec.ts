@@ -93,8 +93,8 @@ describe('Pupitre synchronization over stalled HTTP', () => {
 
       thenTheRequestWasCancelled(stalled);
       await thenTheSessionWriteCompletes(sessionWrite);
-      await whenReferenceRefreshCompletes();
       await thenSynchronizationCompletes(first);
+      thenReferentialWasNotRead();
       await thenGestureIsPending();
 
       const retry = whenSynchronizing();
@@ -141,6 +141,10 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   };
   const thenSynchronizationCompletes = async (synchronization: Promise<void>): Promise<void> => {
     await synchronization;
+  };
+  const thenReferentialWasNotRead = (): void => {
+    http.expectNone(request => request.url === '/api/operateurs');
+    http.expectNone(request => request.url === '/api/atelier/suivis');
   };
   const thenTheGestureKeepsItsOriginalIdentity = (request: TestRequest): void => {
     expect(request.request.body).toEqual({ id: 'arrivee-originale', dateDeSurvenue: '2026-09-05T08:00:00Z', operateur: 'jean' });

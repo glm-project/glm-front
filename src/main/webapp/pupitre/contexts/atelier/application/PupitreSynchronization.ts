@@ -13,6 +13,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { BilanDePublication } from '@/pupitre/contexts/atelier/domain/synchronisation/BilanDePublication';
 import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { inject, Injectable } from '@angular/core';
@@ -72,7 +73,10 @@ export class PupitreSynchronization {
     if (entreprise === undefined) {
       return;
     }
-    await this.drain(entreprise, publish);
+    const bilan = await this.drain(entreprise, publish);
+    if (!bilan.allowsReferentialRefresh()) {
+      return;
+    }
     const token = this.authentication.currentToken();
     if (!this.canRefreshWith(entreprise, token)) {
       return;
@@ -93,20 +97,22 @@ export class PupitreSynchronization {
     }
   }
 
-  private async drain(entreprise: Entreprise, publish: PupitrePublisher): Promise<void> {
+  private async drain(entreprise: Entreprise, publish: PupitrePublisher): Promise<BilanDePublication> {
     while (this.keepsExchanging(entreprise)) {
       const state = await this.journal.read(entreprise);
       const evenements = new EvenementsDuJournal(state.evenements);
       const evenement = evenements.nextPending();
-      if (evenement === undefined) {
-        return;
+      const noPendingGestureRemains = evenement === undefined;
+      if (noPendingGestureRemains) {
+        return BilanDePublication.TERMINE;
       }
       const result = await this.replay(entreprise, evenement, evenements, publish);
       if (result === undefined) {
-        return;
+        return BilanDePublication.INTERROMPU;
       }
       await this.saveReplay(entreprise, result, publish);
     }
+    return BilanDePublication.INTERROMPU;
   }
 
   private async replay(

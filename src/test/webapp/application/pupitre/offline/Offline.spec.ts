@@ -33,7 +33,7 @@ describe('Pupitre offline restart', () => {
     online = false;
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('enrolment');
     cy.intercept('POST', '**/protocol/openid-connect/token', { forceNetworkError: true });
-    cy.intercept('GET', '/api/operateurs*', { body: { content: [], totalElementsCount: 0 } });
+    cy.intercept('GET', '/api/operateurs*', { body: { content: [], totalElementsCount: 0 } }).as('operateurs');
     cy.intercept('GET', '/api/atelier/suivis*', { body: { content: [], totalElementsCount: 0 } }).as('reference');
     cy.intercept('POST', '/api/atelier/journees', request => {
       thenOriginalGestureIsSent(request.body);
@@ -69,7 +69,11 @@ describe('Pupitre offline restart', () => {
       expect(style.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
       expect(style.borderStyle).to.equal('solid');
     });
-    cy.wait('@reference');
+    thenReferentialWasNotRead();
+  };
+  const thenReferentialWasNotRead = (): void => {
+    cy.get('@operateurs.all').should('have.length', 0);
+    cy.get('@reference.all').should('have.length', 0);
   };
   const thenItDoesNotReplayAnAcknowledgedGesture = (): void => {
     cy.wait('@reference');
