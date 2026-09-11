@@ -28,7 +28,7 @@ const referenceFixture: ReferentielDuPupitre = {
     },
   ],
 };
-let serviceWorkerSessions: string[] = [];
+const serviceWorkerSessions: string[] = [];
 
 interface ServerStateFixture {
   authorizationRequests: number;
@@ -127,7 +127,7 @@ describe('Production pupitre offline restart', () => {
 });
 
 const givenACleanBrowserWithHttpCacheDisabled = (): void => {
-  serviceWorkerSessions = [];
+  cy.then(() => detachServiceWorkers());
   cy.then(() => {
     const origin = Cypress.config('baseUrl');
     if (origin === null) throw new Error('The production offline origin is missing.');
@@ -375,6 +375,7 @@ const setBrowserOffline = (offline: boolean): void => {
     return;
   }
   cy.then(() => setServiceWorkerNetworkConditions(conditions));
+  cy.then(() => detachServiceWorkers());
   setPageNetworkConditions(conditions);
 };
 
@@ -411,6 +412,18 @@ const attachAndDisconnectServiceWorkers = (conditions: object): Promise<unknown[
 
 const setServiceWorkerNetworkConditions = (conditions: object): Promise<unknown[]> =>
   Promise.all(serviceWorkerSessions.map(sessionId => sendNetworkConditionsTo(sessionId, conditions)));
+
+const detachServiceWorkers = (): Promise<unknown[]> =>
+  Promise.all(
+    serviceWorkerSessions.splice(0).map(sessionId =>
+      Promise.resolve(
+        Cypress.automation('remote:debugger:protocol', {
+          command: 'Target.detachFromTarget',
+          params: { sessionId },
+        }) as PromiseLike<unknown>,
+      ).catch(() => undefined),
+    ),
+  );
 
 const sendNetworkConditionsTo = (sessionId: string, conditions: object): Promise<unknown> =>
   Promise.resolve(
