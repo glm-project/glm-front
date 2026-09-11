@@ -25,12 +25,18 @@ export class EtatHorsLigneDuPupitre {
   private readonly journal = inject(JournauxDuPupitrePort);
   private readonly synchronization = inject(PupitreSynchronization);
   private readonly vue = signal<JournalDuPupitre>(EMPTY_JOURNAL_DU_PUPITRE);
+  private readonly entrepriseDeLaVue = signal<Entreprise | undefined>(undefined);
   private readonly connexion = signal(true);
 
   readonly connected = this.connexion.asReadonly();
 
   referentiel(): ReturnType<typeof projectReferentiel> {
     return projectReferentiel(this.vue());
+  }
+
+  referentielDisponible(): boolean {
+    const entreprise = this.entrepriseDeLaVue();
+    return [entreprise !== undefined, this.stillSelects(entreprise), this.referentiel() !== undefined].every(Boolean);
   }
 
   async openingSource(): Promise<SourceDOuverture> {
@@ -73,8 +79,10 @@ export class EtatHorsLigneDuPupitre {
   private receive(entreprise: Entreprise | undefined, state: JournalDuPupitre, reconcile: Reconcile): void {
     if (!this.stillSelects(entreprise)) return;
     if (entreprise === undefined) {
+      this.entrepriseDeLaVue.set(undefined);
       this.vue.set(EMPTY_JOURNAL_DU_PUPITRE);
     } else {
+      this.entrepriseDeLaVue.set(entreprise);
       this.connexion.set(state.connecte);
       this.vue.set(state);
     }

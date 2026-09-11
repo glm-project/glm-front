@@ -115,8 +115,8 @@ const chargementProvider = {
     const pupitre = inject(AtelierCoordinator);
     const etatHorsLigne = inject(EtatHorsLigneDuPupitre);
     return {
-      etat: () => ({ referentielDisponible: etatHorsLigne.referentiel() !== undefined, connecte: etatHorsLigne.connected() }),
-      charger: () => pupitre.restore(),
+      etat: () => ({ referentielDisponible: etatHorsLigne.referentielDisponible(), connecte: etatHorsLigne.connected() }),
+      charger: () => pupitre.restore().then(() => (etatHorsLigne.referentielDisponible() ? ('CHARGE' as const) : ('ECHEC' as const))),
     };
   },
 };

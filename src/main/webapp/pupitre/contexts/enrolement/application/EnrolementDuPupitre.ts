@@ -34,12 +34,14 @@ export class EnrolementDuPupitre {
   private readonly etat = signal(Enrolement.demande());
   private readonly maintenant = signal(Date.now());
   private tentative = Symbol('tentative');
+  private chargement = Symbol('chargement');
 
   readonly vue = computed<VueDEnrolement>(() => this.etat().vue(this.maintenant(), this.atelier.etat()));
 
   async enroler(): Promise<void> {
     const tentative = Symbol('tentative');
     this.tentative = tentative;
+    this.chargement = Symbol('chargement abandonne');
     this.etat.set(Enrolement.demande());
     this.rafraichir();
 
@@ -54,7 +56,7 @@ export class EnrolementDuPupitre {
     this.etat.set(this.etat().afterAttempting(ISSUE_APRES_TENTATIVE[issue]));
 
     if (issue === 'ENROLLED') {
-      await this.atelier.charger();
+      await this.loadAtelier();
     }
   }
 
@@ -62,8 +64,8 @@ export class EnrolementDuPupitre {
     this.maintenant.set(Date.now());
   }
 
-  chargerLAtelier(): Promise<void> {
-    return this.atelier.charger();
+  async chargerLAtelier(): Promise<void> {
+    await this.loadAtelier();
   }
 
   async reinitialiser(): Promise<void> {
@@ -82,5 +84,19 @@ export class EnrolementDuPupitre {
     const maintenant = Date.now();
     this.maintenant.set(maintenant);
     this.etat.set(this.etat().afterShowingCode(codeExpiringAt(code, maintenant)));
+  }
+
+  private async loadAtelier(): Promise<void> {
+    const chargement = Symbol('chargement');
+    this.chargement = chargement;
+    this.etat.update(current => current.afterBeginningAtelierLoad());
+    const issue = await this.atelier.charger();
+    if (this.isCurrentLoad(chargement)) {
+      this.etat.update(current => current.afterLoadingAtelier(issue));
+    }
+  }
+
+  private isCurrentLoad(chargement: symbol): boolean {
+    return this.chargement === chargement;
   }
 }

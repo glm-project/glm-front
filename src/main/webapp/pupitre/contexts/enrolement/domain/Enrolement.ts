@@ -1,4 +1,4 @@
-import { ChargementDeLAtelier } from './ChargementDeLAtelierPort';
+import { ChargementDeLAtelier, IssueDuChargementDeLAtelier } from './ChargementDeLAtelierPort';
 import { CodeDEnrolement, VueDuCodeDEnrolement } from './CodeDEnrolement';
 
 export type IssueDEnrolement = 'ENROLE' | 'REFUSE' | 'EXPIRE' | 'INJOIGNABLE';
@@ -30,15 +30,24 @@ const ETAPE_APRES_TENTATIVE: Record<IssueDEnrolement, EtapeSansCode['kind']> = {
   INJOIGNABLE: 'ERREUR_RESEAU_INITIALE',
 };
 
-const vueDuChargement = ({ referentielDisponible, connecte }: ChargementDeLAtelier): VueDEnrolement => {
+const vueDuChargement = (
+  { referentielDisponible, connecte }: ChargementDeLAtelier,
+  issue: 'EN_COURS' | IssueDuChargementDeLAtelier,
+): VueDEnrolement => {
   if (referentielDisponible) {
     return { kind: 'ENROLE_ET_PRET' };
+  }
+  if (issue === 'ECHEC') {
+    return { kind: 'ATTENTE_RESEAU_ATELIER' };
   }
   return connecte ? { kind: 'VALIDE_CHARGEMENT_ATELIER' } : { kind: 'ATTENTE_RESEAU_ATELIER' };
 };
 
 export class Enrolement {
-  private constructor(private readonly etape: EtapeDEnrolement) {}
+  private constructor(
+    private readonly etape: EtapeDEnrolement,
+    private readonly chargement: 'EN_COURS' | IssueDuChargementDeLAtelier = 'EN_COURS',
+  ) {}
 
   static demande(): Enrolement {
     return new Enrolement({ kind: 'DEMANDE_EN_COURS' });
@@ -52,13 +61,21 @@ export class Enrolement {
     return new Enrolement({ kind: ETAPE_APRES_TENTATIVE[issue] });
   }
 
+  afterBeginningAtelierLoad(): Enrolement {
+    return new Enrolement(this.etape);
+  }
+
+  afterLoadingAtelier(issue: IssueDuChargementDeLAtelier): Enrolement {
+    return new Enrolement(this.etape, issue);
+  }
+
   vue(maintenant: number, chargement: ChargementDeLAtelier): VueDEnrolement {
     if (this.etape.kind === 'EN_ATTENTE_D_APPROBATION') {
       const code = this.etape.code;
       return code.aExpire(maintenant) ? { kind: 'EXPIRE' } : { kind: 'EN_ATTENTE_D_APPROBATION', code: code.snapshot(maintenant) };
     }
     if (this.etape.kind === 'ENROLE') {
-      return vueDuChargement(chargement);
+      return vueDuChargement(chargement, this.chargement);
     }
     return { kind: this.etape.kind };
   }

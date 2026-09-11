@@ -1,5 +1,9 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { ChargementDeLAtelier, ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
+import {
+  ChargementDeLAtelier,
+  ChargementDeLAtelierPort,
+  IssueDuChargementDeLAtelier,
+} from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import {
   DeviceAuthorizationCode,
@@ -27,6 +31,19 @@ interface AttemptFixture {
   readonly settle: (outcome: DeviceEnrolmentOutcome) => void;
 }
 
+interface WorkshopLoadFixture {
+  readonly completion: Promise<IssueDuChargementDeLAtelier>;
+  readonly settle: (issue: IssueDuChargementDeLAtelier) => void;
+}
+
+const workshopLoadFixture = (): WorkshopLoadFixture => {
+  let settle: ((issue: IssueDuChargementDeLAtelier) => void) | undefined;
+  const completion = new Promise<IssueDuChargementDeLAtelier>(resolve => {
+    settle = resolve;
+  });
+  return { completion, settle: requiredFixture(settle, 'workshop load completion') };
+};
+
 class DeviceEnrolmentFixture extends DeviceEnrolmentPort {
   private readonly attempts: AttemptFixture[] = [];
 
@@ -49,14 +66,18 @@ class ChargementDeLAtelierFixture extends ChargementDeLAtelierPort {
   readonly referentielDisponible = signal(false);
   readonly connecte = signal(true);
   loads = 0;
+  issue: IssueDuChargementDeLAtelier = 'CHARGE';
+  nextLoad: WorkshopLoadFixture | undefined;
 
   override etat(): ChargementDeLAtelier {
     return { referentielDisponible: this.referentielDisponible(), connecte: this.connecte() };
   }
 
-  override charger(): Promise<void> {
+  override charger(): Promise<IssueDuChargementDeLAtelier> {
     this.loads += 1;
-    return Promise.resolve();
+    const nextLoad = this.nextLoad;
+    this.nextLoad = undefined;
+    return nextLoad?.completion ?? Promise.resolve(this.issue);
   }
 }
 
@@ -157,6 +178,15 @@ describe('EnrolementDuPupitre', () => {
     thenTheScreenShows('ATTENTE_RESEAU_ATELIER');
   });
 
+  it('should offer workshop load recovery when its first download fails', async () => {
+    givenTheWorkshopLoadFails();
+    whenEnrolling();
+
+    await whenTheAttemptAnswers('ENROLLED');
+
+    thenTheScreenShows('ATTENTE_RESEAU_ATELIER');
+  });
+
   it.each([
     ['REFUSE', 'DENIED'],
     ['EXPIRE', 'EXPIRED'],
@@ -201,6 +231,23 @@ describe('EnrolementDuPupitre', () => {
 
     thenWorkshopLoadsAre(2);
     thenAuthorizationsAskedAre(1);
+  });
+
+  it('should ignore a failed workshop load that a newer retry replaced', async () => {
+    givenTheWorkshopLoadFails();
+    whenEnrolling();
+    await whenTheAttemptAnswers('ENROLLED');
+    const previousLoad = givenTheNextWorkshopLoadWaits();
+    const previousRetry = whenRetryingTheWorkshopLoad();
+    const currentLoad = givenTheNextWorkshopLoadWaits();
+    const currentRetry = whenRetryingTheWorkshopLoad();
+
+    previousLoad.settle('ECHEC');
+    await previousRetry;
+
+    thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
+    currentLoad.settle('ECHEC');
+    await currentRetry;
   });
 
   it('should revoke the durable enrolment before asking for a new code', () => {
@@ -253,6 +300,16 @@ describe('EnrolementDuPupitre', () => {
 
   const whenTheNetworkDrops = (): void => {
     atelier.connecte.set(false);
+  };
+
+  const givenTheWorkshopLoadFails = (): void => {
+    atelier.issue = 'ECHEC';
+  };
+
+  const givenTheNextWorkshopLoadWaits = (): WorkshopLoadFixture => {
+    const load = workshopLoadFixture();
+    atelier.nextLoad = load;
+    return load;
   };
 
   const thenTheScreenShows = (expected: VueDEnrolement['kind']): void => {
