@@ -1,7 +1,7 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
-import { ElementDePointage, VueDePointage } from '../../../../domain/designation/FenetreOperateur';
+import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
 import { Pointage } from './pointage';
 

@@ -1,6 +1,8 @@
 import { IdentiteDuGeste } from '../journal-du-pupitre/JournalDuPupitre';
 import { SuiteDIdentitesDeGestes } from '../journal-du-pupitre/SuiteDIdentitesDeGestes';
-import { FenetreOperateur, IntentionGlobaleDAtelier, LotDeGestesDAtelier } from './FenetreOperateur';
+import { IntentionGlobaleDAtelier } from './fenetre-operateur/ContexteDeGesteDAtelier';
+import { LotDeGestesDAtelier } from './fenetre-operateur/DecisionDePointage';
+import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
 
 export class IntentionGlobaleInitiee {
   private readonly origine: SuiteDIdentitesDeGestes;

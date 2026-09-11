@@ -55,6 +55,9 @@ and invariants; a pure function may own a policy or build a projection. A caller
 or sends an intention instead of reconstructing a rule from another owner's representation. Prefer
 `operateur.requiresPosteChoice()` to a caller assembling that condition from getters.
 
+Group the objects and contracts of one domain concept in a folder, with one file per responsibility and
+interfaces beside their owner.
+
 Keep serializable HTTP and storage documents as data at their adapter seam. Rehydrate a behavior-bearing
 domain object before decisions that need its invariants. A pure policy or projection may inspect a
 discriminated union when that union is its public contract; the owner keeps the exhaustive cases together.

@@ -2,7 +2,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
-import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
 import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
@@ -201,7 +201,7 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
-    await whenPausing();
+    await whenPausingGlobally();
 
     await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'PRESENCE', 'POINTAGE', 'PRESENCE']);
     thenActivityIs('NON_CONFORMITE');
@@ -283,7 +283,7 @@ describe('AtelierCoordinator', () => {
 
     const stopping = whenStoppingEverything();
     const choosing = whenChoosingWorkstationLater(choice, 'tour');
-    const pausing = whenPausing();
+    const pausing = whenPausingGlobally();
     whenReleasingCapture(releaseCapture);
     await Promise.all([stopping, choosing, pausing]);
 
@@ -334,11 +334,11 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
     givenLocalWriteFailsOnce();
 
-    const pausing = whenPausing();
+    const pausing = whenPausingGlobally();
     await thenFails(pausing, 'disque plein');
     thenGlobalRecordingFailed();
 
-    await whenPausing();
+    await whenPausingGlobally();
     thenGlobalRecordingRecovered();
   });
 
@@ -475,7 +475,7 @@ describe('AtelierCoordinator', () => {
 
     thenNoActivity();
 
-    await whenDeparting();
+    await whenStoppingEverything();
     await whenSynchronizing();
     await whenClosing();
 
@@ -502,7 +502,7 @@ describe('AtelierCoordinator', () => {
 
   it('should absorb an explicit resumption refusal after restart when its correlated arrival opened the day', async () => {
     await givenAnOpenWindow();
-    await pupitre.recordPresence('REPRISE');
+    await pupitre.executeGlobale('REPRENDRE');
     await whenSynchronizing();
     givenAuthorizedAccess();
     givenServerFailures(undefined, new Error('reseau absent'));
@@ -521,7 +521,7 @@ describe('AtelierCoordinator', () => {
 
   it('should retain an explicit resumption refusal after restart when arrival assurance found an open day', async () => {
     await givenAnOpenWindow();
-    await pupitre.recordPresence('REPRISE');
+    await pupitre.executeGlobale('REPRENDRE');
     await whenSynchronizing();
     givenAuthorizedAccess();
     givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
@@ -682,7 +682,7 @@ describe('AtelierCoordinator', () => {
 
     const acceptedOperator = thenOnlyOneWindowIsAccepted(openings);
 
-    await whenPausing();
+    await whenPausingGlobally();
     givenAuthorizedAccess();
     await whenSynchronizing();
 
@@ -1020,11 +1020,9 @@ describe('AtelierCoordinator', () => {
   const whenStartingAndReportingNonConformity = async (): Promise<void> => {
     await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
   };
-  const whenPausing = (): Promise<void> => pupitre.recordPresence('PAUSE');
   const whenPausingGlobally = (): Promise<void> => pupitre.executeGlobale('PAUSE');
   const whenResumingGlobally = (): Promise<void> => pupitre.executeGlobale('REPRENDRE');
   const whenStoppingEverything = (): Promise<void> => pupitre.executeGlobale('TOUT_ARRETER');
-  const whenDeparting = (): Promise<void> => pupitre.recordPresence('DEPART');
   const whenSynchronizing = (): Promise<void> => pupitre.synchronize();
   const whenSynchronizingConcurrently = async (): Promise<void> => {
     await Promise.all([pupitre.synchronize(), pupitre.synchronize()]);
@@ -1033,7 +1031,7 @@ describe('AtelierCoordinator', () => {
   const whenRestoring = (): Promise<void> => pupitre.restore();
   const whenPausingWithoutWindow = async (): Promise<unknown> => {
     try {
-      await whenPausing();
+      await whenPausingGlobally();
       return undefined;
     } catch (failure) {
       return failure;
@@ -1082,7 +1080,7 @@ describe('AtelierCoordinator', () => {
   };
   const givenResumedWorkOffline = async (): Promise<void> => {
     await givenWorkStartedOffline();
-    await pupitre.recordPresence('REPRISE');
+    await pupitre.executeGlobale('REPRENDRE');
   };
   const givenRestoredPupitre = async (): Promise<void> => {
     await pupitre.restore();
@@ -1132,7 +1130,7 @@ describe('AtelierCoordinator', () => {
   };
   const givenPauseIsAppendedDuringSend = (): void => {
     serveur.beforeSend = () => {
-      void pupitre.recordPresence('PAUSE');
+      void pupitre.executeGlobale('PAUSE');
     };
   };
   const givenTwoOperators = async (): Promise<void> => {
@@ -1155,7 +1153,7 @@ describe('AtelierCoordinator', () => {
   const givenPauseIsAppendedDuringReferenceRefresh = (): void => {
     serveur.afterReference = () => {
       serveur.afterReference = undefined;
-      void pupitre.recordPresence('PAUSE');
+      void pupitre.executeGlobale('PAUSE');
     };
   };
   const thenQueueHas = async (count: number): Promise<void> => {

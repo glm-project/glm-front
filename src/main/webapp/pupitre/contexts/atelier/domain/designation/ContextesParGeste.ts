@@ -1,5 +1,5 @@
 import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
-import { ContexteDeGesteDAtelier } from './FenetreOperateur';
+import { ContexteDeGesteDAtelier } from './fenetre-operateur/ContexteDeGesteDAtelier';
 
 export class ContextesParGeste {
   private constructor(private readonly contextes: ReadonlyMap<string, ContexteDeGesteDAtelier>) {}
@@ -8,8 +8,7 @@ export class ContextesParGeste {
     return new ContextesParGeste(new Map());
   }
 
-  static forGestes(gestes: readonly GesteDAtelier[], contexte: ContexteDeGesteDAtelier | undefined): ContextesParGeste {
-    if (contexte === undefined) return ContextesParGeste.empty();
+  static forGestes(gestes: readonly GesteDAtelier[], contexte: ContexteDeGesteDAtelier): ContextesParGeste {
     return new ContextesParGeste(new Map(gestes.map(geste => [geste.id, contexte])));
   }
 

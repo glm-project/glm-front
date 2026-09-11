@@ -1,4 +1,5 @@
-import { ContexteDeGesteDAtelier, ElementDePointage, IntentionGlobaleDAtelier } from '../../../domain/designation/FenetreOperateur';
+import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
+import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
 import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 

@@ -483,7 +483,7 @@ describe('Designation du pupitre', () => {
   };
 
   const thenNewGestureIsRefused = (): void => {
-    expect(() => TestBed.inject(AtelierCoordinator).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+    expect(() => TestBed.inject(AtelierCoordinator).executeGlobale('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
   };
 
   const givenDelayedClosure = (): (() => void) => {
@@ -570,7 +570,7 @@ describe('Designation du pupitre', () => {
   const thenClosed = (): void => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
-    expect(() => TestBed.inject(AtelierCoordinator).recordPresence('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
+    expect(() => TestBed.inject(AtelierCoordinator).executeGlobale('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
   };
   const thenValidationIsUnavailable = (): void => {
     expect(designation.canValidate()).toBe(false);

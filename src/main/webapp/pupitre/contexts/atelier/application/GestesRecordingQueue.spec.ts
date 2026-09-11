@@ -1,6 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ContextesParGeste } from '@/pupitre/contexts/atelier/domain/designation/ContextesParGeste';
-import { FenetreOperateur, LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/FenetreOperateur';
+import { LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/DecisionDePointage';
+import { FenetreOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';

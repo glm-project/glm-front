@@ -1,6 +1,7 @@
 import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
-import { FenetreOperateur, IdentiteOperateurDesigne } from './FenetreOperateur';
+import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
+import { IdentiteOperateurDesigne } from './fenetre-operateur/OperateurDesigne';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { Matricule } from './Matricule';
 
