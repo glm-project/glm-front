@@ -73,6 +73,7 @@ export class PupitrePage implements OnInit, OnDestroy {
   }
 
   protected confirmReset(): void {
+    if (this.designation.operateur() !== undefined) return;
     this.resetRequested.set(false);
     this.observe(this.enrolement.reinitialiser());
   }

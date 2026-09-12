@@ -1,17 +1,35 @@
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
+import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/FraicheurDuReferentiel';
+import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
+import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
 import { ElementDePointage, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/NumeroDElement';
-import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
+import { EMPTY_JOURNAL_DU_PUPITRE, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
+import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { computed, ErrorHandler, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
+import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { requiredFixture } from '@test/utils/RequiredFixture';
+import { setTimeout as roundTrip } from 'node:timers';
 import { PupitrePage } from './page';
 
 const referentielFixture: ReferentielDuPupitre = {
@@ -316,6 +334,203 @@ describe('Pupitre page', () => {
     if (selected === null) throw new Error(`Missing ${selector} fixture.`);
     return selected;
   };
+
+  const root = (): HTMLElement => fixture.nativeElement as HTMLElement;
+});
+
+describe('Pupitre page with its designation keypad', () => {
+  let fixture: ComponentFixture<PupitrePage>;
+  let journalFixture: JournauxDuPupitreFixture;
+  let serveurFixture: AtelierExchangeFixture;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    journalFixture = new JournauxDuPupitreFixture();
+    journalFixture.answerReadsImmediately();
+    journalFixture.seedJournal(Entreprise.of('atelier'), { ...EMPTY_JOURNAL_DU_PUPITRE, referentiel: referentielFixture });
+    serveurFixture = new AtelierExchangeFixture();
+    serveurFixture.reference = referentielFixture;
+    TestBed.configureTestingModule({
+      imports: [PupitrePage],
+      providers: [
+        GestesRecordingQueue,
+        EtatHorsLigneDuPupitre,
+        FraicheurDuReferentiel,
+        AtelierCoordinator,
+        CurrentOperateurLifecycle,
+        PupitreSynchronization,
+        EnrolementDuPupitre,
+        { provide: JournauxDuPupitrePort, useValue: journalFixture },
+        { provide: AtelierExchangePort, useValue: serveurFixture },
+        { provide: DesignationExpirationSchedulerPort, useValue: { schedule: () => undefined } },
+        { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
+        {
+          provide: AuthenticationPort,
+          useValue: {
+            currentTenant: () => 'atelier',
+            synchronizeSession: () => Promise.resolve(),
+            logout: () => undefined,
+          },
+        },
+        { provide: DeviceEnrolmentPort, useValue: { enrol: () => Promise.resolve('ENROLLED') } },
+        {
+          provide: ChargementDeLAtelierPort,
+          useValue: {
+            etat: () => ({ referentielDisponible: true, connecte: true }),
+            charger: () => Promise.resolve('CHARGE'),
+          },
+        },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    });
+    await TestBed.inject(EnrolementDuPupitre).enroler();
+    fixture = TestBed.createComponent(PupitrePage);
+    fixture.detectChanges();
+  });
+
+  afterEach(async () => {
+    fixture.destroy();
+    serveurFixture.settle();
+    await journalFixture.synchronizationsSettled();
+    await new Promise(resolve => roundTrip(resolve));
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  it('should suspend operator designation while the administration reset awaits confirmation', async () => {
+    givenTheReadyKeypad();
+    whenTheResetConfirmationIsOpen();
+
+    await whenTypingAValidMatriculeOnThePhysicalKeyboard();
+
+    thenNoOperatorIsDesignated();
+    thenDesignationCommandsAreUnavailable();
+    thenTheResetActionsRemainAvailable();
+  });
+
+  it('should move focus into the administration reset confirmation', async () => {
+    givenTheReadyKeypad();
+    givenTheLogoHasFocus();
+
+    whenTheResetConfirmationIsOpen();
+    await whenRenderingSettles();
+
+    thenFocused('reset-cancel');
+  });
+
+  it('should prevent a reset when an operator designation completes during the confirmation', async () => {
+    givenTheReadyKeypad();
+    whenStartingAValidDesignationOnThePhysicalKeyboard();
+    whenTheResetConfirmationIsOpen();
+
+    await whenRenderingSettles();
+    thenTheOperatorIsDesignatedBehindTheConfirmation();
+
+    whenConfirmingTheReset();
+
+    thenTheResetConfirmationRemainsOpenAndUnavailable();
+  });
+
+  it('should restore operator designation after the administration reset is cancelled', async () => {
+    givenTheReadyKeypad();
+    whenTheResetConfirmationIsOpen();
+
+    whenCancellingTheReset();
+    await whenTypingAValidMatriculeOnThePhysicalKeyboard();
+
+    thenTheOperatorIsDesignated();
+  });
+
+  const givenTheReadyKeypad = (): void => {
+    thenVisible('designation');
+  };
+
+  const givenTheLogoHasFocus = (): void => {
+    element('header-heading').focus();
+  };
+
+  const whenTheResetConfirmationIsOpen = (): void => {
+    element('header-heading').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+    vi.advanceTimersByTime(3_000);
+    fixture.detectChanges();
+    thenVisible('reinitialisation');
+  };
+
+  const whenTypingAValidMatriculeOnThePhysicalKeyboard = async (): Promise<void> => {
+    whenStartingAValidDesignationOnThePhysicalKeyboard();
+    await whenRenderingSettles();
+  };
+
+  const whenStartingAValidDesignationOnThePhysicalKeyboard = (): void => {
+    for (const key of ['0', '4', '9', 'Enter']) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    }
+  };
+
+  const whenConfirmingTheReset = (): void => {
+    element('reset-confirm').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+  };
+
+  const whenCancellingTheReset = (): void => {
+    element('reset-cancel').click();
+    fixture.detectChanges();
+  };
+
+  const whenRenderingSettles = async (): Promise<void> => {
+    fixture.detectChanges();
+    await new Promise(resolve => roundTrip(resolve));
+    fixture.detectChanges();
+  };
+
+  const thenNoOperatorIsDesignated = (): void => {
+    expect(root().querySelector(dataSelector('header-operator'))).toBeNull();
+    expect(root().querySelector(dataSelector('pointage'))).toBeNull();
+  };
+
+  const thenTheResetActionsRemainAvailable = (): void => {
+    expect(button('reset-cancel').disabled).toBe(false);
+    expect(button('reset-confirm').disabled).toBe(false);
+  };
+
+  const thenDesignationCommandsAreUnavailable = (): void => {
+    expect(button('digit-0').disabled).toBe(true);
+    expect(button('validate').disabled).toBe(true);
+  };
+
+  const thenFocused = (selector: string): void => {
+    expect(document.activeElement).toBe(element(selector));
+  };
+
+  const thenTheOperatorIsDesignatedBehindTheConfirmation = (): void => {
+    thenVisible('header-operator');
+    thenVisible('pointage');
+  };
+
+  const thenTheOperatorIsDesignated = (): void => {
+    thenVisible('header-operator');
+    thenVisible('pointage');
+    expect(root().querySelector(dataSelector('reinitialisation'))).toBeNull();
+  };
+
+  const thenTheResetConfirmationRemainsOpenAndUnavailable = (): void => {
+    thenVisible('reinitialisation');
+    expect(button('reset-confirm').disabled).toBe(true);
+    expect(root().querySelector(dataSelector('enrolement'))).toBeNull();
+  };
+
+  const thenVisible = (selector: string): void => {
+    expect(root().querySelector(dataSelector(selector))).not.toBeNull();
+  };
+
+  const button = (selector: string): HTMLButtonElement => {
+    const selected = element(selector);
+    if (!(selected instanceof HTMLButtonElement)) throw new Error(`${selector} is not a button fixture.`);
+    return selected;
+  };
+
+  const element = (selector: string): HTMLElement =>
+    requiredFixture(root().querySelector<HTMLElement>(dataSelector(selector)), `${selector} element`);
 
   const root = (): HTMLElement => fixture.nativeElement as HTMLElement;
 });

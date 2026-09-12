@@ -17,6 +17,7 @@
     <button
       type="button"
       [attr.data-selector]="'digit-' + digit"
+      [disabled]="commandsEnabled() === false"
       (pointerdown)="onTouch($event, digit)"
       (click)="onClick(digit)"
       class="min-h-touch-lg rounded border border-border-strong bg-surface p-2 text-title sm:text-display text-ink"
@@ -27,6 +28,7 @@
     <button
       type="button"
       data-selector="erase"
+      [disabled]="commandsEnabled() === false"
       (pointerdown)="onTouch($event, 'Backspace')"
       (click)="onClick('Backspace')"
       class="min-h-touch-lg rounded border border-border-strong bg-surface p-2 text-body text-ink"
@@ -36,6 +38,7 @@
     <button
       type="button"
       data-selector="digit-0"
+      [disabled]="commandsEnabled() === false"
       (pointerdown)="onTouch($event, '0')"
       (click)="onClick('0')"
       class="min-h-touch-lg rounded border border-border-strong bg-surface p-2 text-title sm:text-display text-ink"
@@ -45,7 +48,7 @@
     <button
       type="button"
       data-selector="validate"
-      [disabled]="designation.canValidate() === false"
+      [disabled]="commandsEnabled() === false || designation.canValidate() === false"
       (pointerdown)="onTouch($event, 'Enter')"
       (click)="onClick('Enter')"
       class="min-h-touch-lg rounded bg-accent p-2 text-body text-on-accent disabled:opacity-50"
