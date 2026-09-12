@@ -1,25 +1,28 @@
-<glm-pupitre-header
-  heading="glmfront"
-  [connected]="etatHorsLigne.connected()"
-  [operateur]="designation.operateur()"
-  [message]="messageAtelier()"
-  (finRequested)="finish()"
-  (reinitialisationRequested)="askReset()"
-/>
+<div class="contents" [attr.inert]="resetRequested() ? '' : null">
+  <glm-pupitre-header
+    heading="glmfront"
+    [connected]="etatHorsLigne.connected()"
+    [operateur]="designation.operateur()"
+    [message]="messageAtelier()"
+    (finRequested)="finish()"
+    (reinitialisationRequested)="askReset()"
+  />
 
-@if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (designation.operateur()) { @if (designation.pointage(); as vue) {
-<glm-pointage
-  [vue]="vue"
-  [commander]="pupitre"
-  [gestesDisponibles]="designation.gestesDisponibles()"
-  (pauseRequested)="executeGlobale('PAUSE')"
-  (repriseRequested)="executeGlobale('REPRENDRE')"
-  (arretTotalRequested)="executeGlobale('TOUT_ARRETER')"
-/>
-} } @else {
-<glm-designation />
-} } @else {
-<glm-enrolement />
-} @if (resetRequested()) {
-<glm-reinitialisation (annule)="cancelReset()" (confirme)="confirmReset()" />
+  @if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (designation.operateur()) { @if (designation.pointage(); as vue) {
+  <glm-pointage
+    [vue]="vue"
+    [commander]="pupitre"
+    [gestesDisponibles]="designation.gestesDisponibles()"
+    (pauseRequested)="executeGlobale('PAUSE')"
+    (repriseRequested)="executeGlobale('REPRENDRE')"
+    (arretTotalRequested)="executeGlobale('TOUT_ARRETER')"
+  />
+  } } @else {
+  <glm-designation [commandsEnabled]="resetRequested() === false" />
+  } } @else {
+  <glm-enrolement />
+  }
+</div>
+@if (resetRequested()) {
+<glm-reinitialisation [confirmationEnabled]="designation.operateur() === undefined" (annule)="cancelReset()" (confirme)="confirmReset()" />
 }

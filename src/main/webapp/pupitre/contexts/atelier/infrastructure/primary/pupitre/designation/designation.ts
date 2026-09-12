@@ -50,6 +50,7 @@ export class FollowContent implements OnChanges, OnDestroy {
 })
 export class Designation {
   readonly designation = inject(CurrentOperateurLifecycle);
+  readonly commandsEnabled = input(true);
   readonly digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   private consumedPress = false;
 
@@ -66,6 +67,7 @@ export class Designation {
   }
 
   onKey(event: KeyboardEvent): void {
+    if (!this.commandsEnabled()) return;
     if (event.repeat) {
       event.preventDefault();
       return;

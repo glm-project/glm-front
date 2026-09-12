@@ -90,6 +90,17 @@ describe('Pupitre enrolment', () => {
 
     thenThePupitreAsksForANewCodeAgain();
   });
+
+  it('should keep operator designation inactive while the administration reset awaits confirmation', () => {
+    givenAnEnrolledPupitre();
+
+    whenHoldingTheLogo();
+    thenOnlyTheResetActionsAreActive();
+
+    whenTypingAValidMatriculeOnThePhysicalKeyboard();
+
+    thenNoOperatorIsDesignated();
+  });
 });
 
 const givenAWorkshopBehindTheAuthorizationServer = (): void => {
@@ -175,6 +186,13 @@ const whenConfirmingTheReset = (): void => {
   cy.tick(0);
 };
 
+const whenTypingAValidMatriculeOnThePhysicalKeyboard = (): void => {
+  cy.press('0');
+  cy.press('4');
+  cy.press('9');
+  cy.press(Cypress.Keyboard.Keys.ENTER);
+};
+
 const thenThePupitreAsksToBeEnrolledOffline = (): void => {
   cy.wait('@deviceAuthorization').its('request.body').should('contain', 'offline_access');
 };
@@ -241,4 +259,16 @@ const thenThePupitreAsksForANewCodeAgain = (): void => {
   cy.wait('@logout');
   cy.get(dataSelector('enrolement')).should('be.visible');
   cy.get(dataSelector('designation')).should('not.exist');
+};
+
+const thenOnlyTheResetActionsAreActive = (): void => {
+  cy.get(dataSelector('reset-cancel')).should('be.focused').and('not.be.disabled');
+  cy.get(dataSelector('reset-confirm')).should('not.be.disabled');
+  cy.get(dataSelector('digit-0')).should('be.disabled');
+  cy.get(dataSelector('validate')).should('be.disabled');
+};
+
+const thenNoOperatorIsDesignated = (): void => {
+  cy.get(dataSelector('header-operator')).should('not.exist');
+  cy.get(dataSelector('pointage')).should('not.exist');
 };
