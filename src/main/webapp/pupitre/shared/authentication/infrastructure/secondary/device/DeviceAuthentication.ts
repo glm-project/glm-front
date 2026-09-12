@@ -74,6 +74,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   private restored = false;
 
   private session: SessionDAppareil | undefined;
+  private pendingEnrolmentSession: SessionDAppareil | undefined;
   private enrolment: symbol | undefined;
   private renewal: ReturnType<typeof setTimeout> | undefined;
 
@@ -99,6 +100,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private async restoreOrReport(enrolment: symbol): Promise<Restoration> {
     try {
+      await this.invalidatePendingEnrolment();
       return await this.restore(enrolment);
     } catch (failure: unknown) {
       this.errorHandler.handleError(failure);
@@ -129,9 +131,11 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private async persistEnrolment(granted: Tokens, enrolment: symbol): Promise<DeviceEnrolmentOutcome> {
     const session = SessionDAppareil.granted(granted, Date.now());
+    this.pendingEnrolmentSession = session;
     try {
-      await this.storeSession(session);
+      await this.storeEnrolmentSession(session, enrolment);
       if (this.isAbandoned(enrolment)) {
+        await this.removeSessionIfMatching(session);
         return 'ABANDONED';
       }
       this.open(session);
@@ -139,7 +143,33 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     } catch (failure: unknown) {
       this.errorHandler.handleError(failure);
       return 'UNREACHABLE';
+    } finally {
+      if (this.pendingEnrolmentSession === session) {
+        this.pendingEnrolmentSession = undefined;
+      }
     }
+  }
+
+  private async invalidatePendingEnrolment(): Promise<void> {
+    const expected = this.pendingEnrolmentSession;
+    if (expected === undefined) {
+      return;
+    }
+    await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, current => {
+      if (!SessionDAppareil.same(SessionDAppareil.restored(current.session), expected)) {
+        return current;
+      }
+      return persistedEnrolmentFrom(undefined, this.tenant);
+    });
+  }
+
+  private storeEnrolmentSession(session: SessionDAppareil, enrolment: symbol): Promise<void> {
+    return this.updateStoredEnrolment(current => {
+      if (this.isAbandoned(enrolment)) {
+        return current;
+      }
+      return persistedEnrolmentFrom(session, session.tenant() ?? this.tenant);
+    });
   }
 
   override currentTenant(): string | undefined {
