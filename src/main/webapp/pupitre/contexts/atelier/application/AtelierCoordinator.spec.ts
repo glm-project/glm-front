@@ -20,7 +20,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
-import { vi } from 'vitest';
+import { MockInstance, vi } from 'vitest';
 import { AtelierCoordinator } from './AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { FraicheurDuReferentiel } from './FraicheurDuReferentiel';
@@ -244,21 +244,26 @@ describe('AtelierCoordinator', () => {
     ]);
   });
 
-  it('should anchor global identities and the business time before its deferred capture starts', async () => {
+  it('should anchor distinct global identities and business time at initiation and replay them unchanged', async () => {
     givenBusinessTime();
     await givenTwoActiveWorkstations();
-    const identityRoot = givenGlobalIdentityRoot();
+    const identitySourceFixture = givenChangingGlobalIdentitySource();
     const releaseCapture = givenDelayedCapture();
 
     const stopping = whenStoppingEverything();
-    whenFutureIdentitiesUseAnotherRoot();
+    thenGlobalIdentityWasSampledOnlyAtInitiation(identitySourceFixture);
     whenBusinessTimeBecomes('2026-09-05T09:00:00Z');
     whenReleasingCapture(releaseCapture);
     await stopping;
 
-    const identities = await thenQueuedGesturesUseRootAt(identityRoot, '2026-09-05T08:00:00.000Z');
+    const gestures = await thenQueuedGesturesHaveDistinctIdentitiesAt('2026-09-05T08:00:00.000Z');
     await whenRestoring();
-    await thenQueuedIdentitiesAre(identities);
+    await thenQueuedGesturesAre(gestures);
+    givenAuthorizedAccess();
+    await whenSynchronizing();
+
+    thenReplayedGesturesAre(gestures);
+    thenGlobalIdentityWasSampledOnlyAtInitiation(identitySourceFixture);
   });
 
   it('should refuse pointage and global reentry while a global acceptance is in flight', async () => {
@@ -931,13 +936,8 @@ describe('AtelierCoordinator', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-05T08:00:00Z'));
   };
-  const givenGlobalIdentityRoot = (): string => {
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue(identityRootFixture);
-    return identityRootFixture;
-  };
-  const whenFutureIdentitiesUseAnotherRoot = (): void => {
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue(futureIdentityRootFixture);
-  };
+  const givenChangingGlobalIdentitySource = (): MockInstance =>
+    vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(identityRootFixture).mockReturnValue(futureIdentityRootFixture);
   const givenDelayedCapture = (): (() => void) => {
     let release: (() => void) | undefined;
     authentication.pendingSynchronization = new Promise(resolve => {
@@ -1231,18 +1231,22 @@ describe('AtelierCoordinator', () => {
     expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
-  const thenQueuedGesturesUseRootAt = async (rootIdentity: string, instant: string): Promise<string[]> => {
+  const thenQueuedGesturesHaveDistinctIdentitiesAt = async (instant: string): Promise<readonly GesteDAtelier[]> => {
     const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
     const identities = gestes.map(geste => geste.id);
-    const rootPrefix = rootIdentity.slice(0, -8);
-    const firstSuffix = Number.parseInt(rootIdentity.slice(-8), 16);
-    const expected = [0, 1, 2, 3].map(offset => `${rootPrefix}${((firstSuffix + offset) >>> 0).toString(16).padStart(8, '0')}`);
-    expect(new Set(identities)).toEqual(new Set(expected));
+    expect(gestes).toHaveLength(4);
+    expect(new Set(identities).size).toBe(gestes.length);
     expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
-    return identities;
+    return gestes;
   };
-  const thenQueuedIdentitiesAre = async (identities: string[]): Promise<void> => {
-    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste.id)).toEqual(identities);
+  const thenQueuedGesturesAre = async (gestures: readonly GesteDAtelier[]): Promise<void> => {
+    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste)).toEqual(gestures);
+  };
+  const thenReplayedGesturesAre = (gestures: readonly GesteDAtelier[]): void => {
+    expect(serveur.journal).toEqual(gestures);
+  };
+  const thenGlobalIdentityWasSampledOnlyAtInitiation = (identitySourceFixture: MockInstance): void => {
+    expect(identitySourceFixture).toHaveBeenCalledTimes(1);
   };
   const thenOnlyOneWindowIsAccepted = (openings: PromiseSettledResult<IdentiteOperateurDesigne>[]): string => {
     const accepted = openings.filter(result => result.status === 'fulfilled');

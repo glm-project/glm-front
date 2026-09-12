@@ -208,15 +208,20 @@ describe('DesignationOperateur', () => {
     thenOpeningAWindowIsForbidden();
   });
 
-  it('should increment the resolution generation across designation lifecycles', () => {
+  it('should keep a stale resolution from taking over the next designation lifecycle', () => {
     whenEntering('049', 0);
-    const firstResolution = whenValidating(0);
+    const staleResolution = whenValidating(0);
     designation = designation.afterFinish().afterEndingResolution();
     whenEntering('049', 1);
+    const currentResolution = whenValidating(1);
+    whenOpeningAWindow();
 
-    const secondResolution = whenValidating(1);
+    const staleCompletion = designation.afterCompletingResolution(staleResolution, 1);
+    const currentCompletion = staleCompletion.designation.afterCompletingResolution(currentResolution, 1);
 
-    expect([firstResolution.generation, secondResolution.generation]).toEqual([0, 1]);
+    expect(staleCompletion.accepted).toBe(false);
+    expect(currentCompletion.accepted).toBe(true);
+    expect(currentCompletion.designation.snapshot().operateur?.id).toBe('jean');
   });
 
   it('should give the next operator window its own identity once the previous one is released', () => {
@@ -227,8 +232,10 @@ describe('DesignationOperateur', () => {
     designation = designation.afterReleasingWindow();
 
     const secondWindow = whenOpeningAWindow();
+    const reconciledSecondWindow = secondWindow.afterReconciling(Entreprise.of('atelier'), referenceFixture);
+
     expect(secondWindow.hasIdentity(firstWindow)).toBe(false);
-    expect(secondWindow.hasIdentity(givenAWindowWithIdentity(1))).toBe(true);
+    expect(reconciledSecondWindow.hasIdentity(secondWindow)).toBe(true);
   });
 
   const givenDesignatedOperator = (): void => {
@@ -241,10 +248,11 @@ describe('DesignationOperateur', () => {
   const whenErasing = (now: number): void => {
     designation = designation.afterErasing(now);
   };
-  const whenOpeningAWindow = (): FenetreOperateur =>
-    designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1).fenetre;
-  const givenAWindowWithIdentity = (identity: number): FenetreOperateur =>
-    FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1, new IdentiteDeFenetre(identity));
+  const whenOpeningAWindow = (): FenetreOperateur => {
+    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1);
+    designation = opening.designation;
+    return opening.fenetre;
+  };
   const whenValidating = (now: number): DesignationResolution => {
     const result = designation.afterBeginningResolution(now);
     designation = result.designation;
