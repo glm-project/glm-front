@@ -69,6 +69,7 @@ class DeviceEnrolmentFixture extends DeviceEnrolmentPort {
 class ChargementDeLAtelierFixture extends ChargementDeLAtelierPort {
   readonly referentielDisponible = signal(false);
   readonly connecte = signal(true);
+  loads = 0;
   issue: IssueDuChargementDeLAtelier = 'CHARGE';
   nextLoad: WorkshopLoadFixture | undefined;
 
@@ -77,6 +78,7 @@ class ChargementDeLAtelierFixture extends ChargementDeLAtelierPort {
   }
 
   override charger(): Promise<IssueDuChargementDeLAtelier> {
+    this.loads += 1;
     const nextLoad = this.nextLoad;
     this.nextLoad = undefined;
     return nextLoad?.completion ?? Promise.resolve(this.issue);
@@ -200,6 +202,7 @@ describe('EnrolementDuPupitre', () => {
       await whenTheAttemptAnswers(outcome);
 
       thenTheScreenShows(expected);
+      thenWorkshopLoadsAre(0);
     },
   );
 
@@ -209,6 +212,7 @@ describe('EnrolementDuPupitre', () => {
     await whenTheAttemptAnswers('ABANDONED');
 
     thenTheScreenShows('DEMANDE_EN_COURS');
+    thenWorkshopLoadsAre(0);
   });
 
   it('should ignore the authorization code of an attempt a new request has replaced', () => {
@@ -271,6 +275,7 @@ describe('EnrolementDuPupitre', () => {
     whenTheFirstReferenceLands();
 
     thenTheScreenShows('ENROLE_ET_PRET');
+    thenAuthorizationsAskedAre(1);
   });
 
   it('should ignore a failed workshop load that a newer retry replaced', async () => {
@@ -407,6 +412,10 @@ describe('EnrolementDuPupitre', () => {
 
   const thenAuthorizationsAskedAre = (count: number): void => {
     expect(appareil.count()).toBe(count);
+  };
+
+  const thenWorkshopLoadsAre = (count: number): void => {
+    expect(atelier.loads).toBe(count);
   };
 
   const thenRevocationsAre = (count: number): void => {
