@@ -1,0 +1,38 @@
+name: deploy
+concurrency:
+  group: deploy-pupitre
+  cancel-in-progress: false
+on:
+  push:
+    branches:
+      - main
+env:
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  pupitre:
+    name: pupitre
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
+      - name: 'Setup: install dependencies'
+        run: npm ci
+      - name: 'Build: generate API contract'
+        run: npm run api:generate
+      - name: 'Build: pupitre'
+        run: npm run build:pupitre
+      - name: 'Deploy: Cloudflare Pages'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist/pupitre/browser --project-name=glm-pupitre
