@@ -35,4 +35,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist/pupitre/browser --project-name=glm-pupitre
+          command: pages deploy target/classes/static/pupitre --project-name=glm-pupitre --commit-dirty=true
