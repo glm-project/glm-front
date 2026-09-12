@@ -201,3 +201,22 @@ jobs:
           name: security-and-workflows-${{ github.run_id }}
           path: artifacts/security
           if-no-files-found: error
+
+  deploy-pupitre:
+    name: deploy pupitre
+    needs: [checks-and-unit-tests, component-tests, application-tests, production-offline-test, security-and-workflows]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # reprends ici tes étapes de setup mise + Node, à l'identique
+      - run: npm ci
+      - run: npm run api:generate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run build:pupitre
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist/pupitre/browser --project-name=glm-pupitre
