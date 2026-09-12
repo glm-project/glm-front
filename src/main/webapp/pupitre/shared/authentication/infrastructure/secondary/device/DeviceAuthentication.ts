@@ -130,7 +130,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   private async persistEnrolment(granted: Tokens, enrolment: symbol): Promise<DeviceEnrolmentOutcome> {
     const session = SessionDAppareil.granted(granted, Date.now());
     try {
-      await this.save(session);
+      await this.storeSession(session);
       if (this.isAbandoned(enrolment)) {
         return 'ABANDONED';
       }
@@ -187,7 +187,8 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     this.session = undefined;
     this.enrolment = undefined;
     clearTimeout(this.renewal);
-    void this.save(undefined, ended).catch((failure: unknown) => {
+    const removal = ended === undefined ? this.clearStoredSession() : this.removeSessionIfMatching(ended);
+    void removal.catch((failure: unknown) => {
       this.errorHandler.handleError(failure);
     });
 
@@ -299,7 +300,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private async persistRenewal(tokens: Tokens, session: SessionDAppareil): Promise<void> {
     const renewed = SessionDAppareil.granted(tokens, Date.now());
-    const persistence = await this.save(renewed, session);
+    const persistence = await this.storeSession(renewed, session);
     if (persistence === 'REMPLACE') {
       await this.synchronizeSession();
       return;
@@ -308,11 +309,11 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
       this.open(renewed);
       return;
     }
-    await this.save(undefined, renewed);
+    await this.removeSessionIfMatching(renewed);
   }
 
   private async reenrol(session: SessionDAppareil): Promise<void> {
-    const persistence = await this.save(undefined, session);
+    const persistence = await this.removeSessionIfMatching(session);
     if (persistence === 'REMPLACE') {
       await this.synchronizeSession();
       return;
@@ -339,20 +340,40 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     return 'RESTORED';
   }
 
-  private async save(session: SessionDAppareil | undefined, expected?: SessionDAppareil): Promise<'CONSERVE' | 'REMPLACE'> {
+  private async storeSession(session: SessionDAppareil, expected?: SessionDAppareil): Promise<'CONSERVE' | 'REMPLACE'> {
+    let resultat: 'CONSERVE' | 'REMPLACE' = 'CONSERVE';
+    await this.updateStoredEnrolment(current => {
+      if (hasConcurrentSession(expected, current)) {
+        resultat = 'REMPLACE';
+        return current;
+      }
+      return persistedEnrolmentFrom(session, session.tenant() ?? this.tenant);
+    });
+    return resultat;
+  }
+
+  private async removeSessionIfMatching(expected: SessionDAppareil): Promise<'CONSERVE' | 'REMPLACE'> {
+    let resultat: 'CONSERVE' | 'REMPLACE' = 'CONSERVE';
+    await this.updateStoredEnrolment(current => {
+      if (!SessionDAppareil.same(SessionDAppareil.restored(current.session), expected)) {
+        resultat = 'REMPLACE';
+        return current;
+      }
+      return persistedEnrolmentFrom(undefined, this.tenant);
+    });
+    return resultat;
+  }
+
+  private clearStoredSession(): Promise<void> {
+    return this.updateStoredEnrolment(() => persistedEnrolmentFrom(undefined, this.tenant));
+  }
+
+  private async updateStoredEnrolment(change: (current: PersistedEnrolment) => PersistedEnrolment): Promise<void> {
     if (this.stockage === null) {
-      return 'CONSERVE';
+      return;
     }
     return this.stockage.lock('session', async () => {
-      let resultat: 'CONSERVE' | 'REMPLACE' = 'REMPLACE';
-      await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, current => {
-        if (hasConcurrentSession(expected, current)) {
-          return current;
-        }
-        resultat = 'CONSERVE';
-        return persistedEnrolmentFrom(session, session?.tenant() ?? this.tenant);
-      });
-      return resultat;
+      await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, change);
     });
   }
 }
