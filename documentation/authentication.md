@@ -80,6 +80,15 @@ The caller drives the adapter and reads the outcome. The adapter never calls bac
 would close an injection cycle through `AuthenticationPort`. A caller that shows the code must ignore the
 code and the outcome of an attempt it has already replaced.
 
+When replacing an enrolment whose credential commit is still pending, retire that exact credential durably
+before requesting another authorization code. This invalidation uses `LocalStoragePort.update` directly:
+its transaction compares and removes the credential atomically, without waiting for the `session` Web Lock
+held by the previous attempt. Waiting for that attempt's acknowledgement or later cleanup would leave its
+credential restorable after a crash following the replacement's network failure. The pending write also
+checks abandonment inside its update callback, so it cannot install its credential after invalidation.
+The crash guarantee begins when invalidation commits; a failed or interrupted disk write cannot acknowledge
+durable abandonment. The selected tenant and any different session retain their existing removal semantics.
+
 A network cut during the poll is reported as `UNREACHABLE`, indistinguishable from a failure to obtain the
 code at all; [ADR 0026](adr/0026-enrol-pupitre-screen-and-keycloak-delegation.md) records that limit.
 

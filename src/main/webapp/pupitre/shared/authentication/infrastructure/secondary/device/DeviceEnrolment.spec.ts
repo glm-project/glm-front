@@ -21,6 +21,7 @@ import { DeviceGrantConfiguration } from './DeviceGrantConfiguration';
 const baseFixture = 'http://keycloak.test/realms/glm/protocol/openid-connect';
 const jwtFixture = (claims: unknown): string => `eyJhbGciOiJub25lIn0.${btoa(JSON.stringify(claims))}.signature`;
 const tokenFixture = jwtFixture({ tenant: 'entreprise-a' });
+const tokenWithoutCompanyFixture = jwtFixture({});
 const rotatedFixture = jwtFixture({ tenant: 'entreprise-a', version: 2 });
 const anotherCompanyTokenFixture = jwtFixture({ tenant: 'entreprise-b' });
 const tokenWithoutPayloadFixture = 'malformed-token';
@@ -38,6 +39,7 @@ const afterMicrotasks = (): Promise<void> =>
   });
 
 class StorageFixture extends LocalStoragePort {
+  readonly writeArrived = new SignalFixture();
   value: unknown;
   failRead = false;
   failWrite = false;
@@ -45,6 +47,19 @@ class StorageFixture extends LocalStoragePort {
   private readonly tails = new Map<string, Promise<void>>();
   private readonly pendingIO: SignalFixture[] = [];
   private ioAvailable = new SignalFixture();
+  private heldWriteCompletion: { committed: SignalFixture; release: SignalFixture } | undefined;
+
+  holdNextWriteCompletion(): { committed: Promise<void>; release: () => void } {
+    const committed = new SignalFixture();
+    const release = new SignalFixture();
+    this.heldWriteCompletion = { committed, release };
+    return {
+      committed: committed.promise,
+      release: () => {
+        release.release();
+      },
+    };
+  }
 
   snapshot(): unknown {
     return structuredClone(this.value);
@@ -98,6 +113,9 @@ class StorageFixture extends LocalStoragePort {
     return structuredClone(this.value) as T | undefined;
   }
   override async update<T>(_key: string, initial: T, change: (value: T) => T): Promise<T> {
+    const heldCompletion = this.heldWriteCompletion;
+    this.heldWriteCompletion = undefined;
+    this.writeArrived.release();
     await this.waitForIO();
     const callback = this.beforeCommit;
     this.beforeCommit = undefined;
@@ -107,6 +125,10 @@ class StorageFixture extends LocalStoragePort {
       throw new Error('ecriture impossible');
     }
     this.value = structuredClone(change((this.value as T | undefined) ?? initial));
+    if (heldCompletion !== undefined) {
+      heldCompletion.committed.release();
+      await heldCompletion.release.promise;
+    }
     return this.value as T;
   }
   override async lock<T>(cle: string, action: () => Promise<T>): Promise<T> {
@@ -250,6 +272,14 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await whenRenewalIsGranted();
 
     thenSessionIs(authentication, tokenFixture, 'entreprise-a');
+  });
+
+  it('should accept a renewed token without inventing a missing company claim', async () => {
+    await givenAnEnrolledSession();
+
+    await whenRenewalIsGrantedWithoutACompanyClaim();
+
+    thenSessionIs(authentication, tokenWithoutCompanyFixture, undefined);
   });
 
   it.each([null, {}, { tenant: 12 }, { tenant: '' }, 'claims'])(
@@ -585,9 +615,9 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await stockage.drainIO();
   };
 
-  const whenTheServerGrantsARenewal = async (): Promise<void> => {
+  const whenTheServerGrantsARenewal = async (accessToken = rotatedFixture): Promise<void> => {
     (await whenRequestArrives(`${baseFixture}/token`)).flush({
-      access_token: rotatedFixture,
+      access_token: accessToken,
       refresh_token: 'refresh-2',
       expires_in: 300,
     });
@@ -598,6 +628,12 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
   const whenRenewalIsGranted = async (): Promise<void> => {
     await whenTheRenewalIsDue();
     await whenTheServerGrantsARenewal();
+    await whenRenewalPersistenceCompletes();
+  };
+
+  const whenRenewalIsGrantedWithoutACompanyClaim = async (): Promise<void> => {
+    await whenTheRenewalIsDue();
+    await whenTheServerGrantsARenewal(tokenWithoutCompanyFixture);
     await whenRenewalPersistenceCompletes();
   };
 
@@ -824,6 +860,14 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
     await thenTheOutcomeIs(outcome, 'ABANDONED');
   });
 
+  it('should not restore tokens from an enrolment replaced during its durable commit when the new authorization is unreachable', async () => {
+    const { previous } = await givenAnEnrolmentAwaitingItsDurableCommit();
+
+    const result = await whenReplacingTheEnrolmentAndSynchronizingAfterAuthorizationFails(previous);
+
+    thenTheAbandonedEnrolmentProvidesNoTokenDespiteSynchronization(result);
+  });
+
   it('should report the device enrolled from its durable session without showing a code', async () => {
     await givenADurableEnrolment();
 
@@ -831,6 +875,30 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
     await thenTheOutcomeIs(outcome, 'ENROLLED');
     thenNoCodeWasShown();
+  });
+
+  it('should expose no abandoned token while the replaced enrolment is still awaiting its commit acknowledgement', async () => {
+    const fixture = await givenAnEnrolmentWithItsCommitAcknowledgementHeld();
+
+    const result = await whenSynchronizingBeforeTheAbandonedEnrolmentFinishes(fixture);
+
+    thenTheAbandonedEnrolmentProvidesNoTokenDespiteSynchronization(result);
+  });
+
+  it('should restore no abandoned token after a crash following an unreachable replacement authorization', async () => {
+    const fixture = await givenAnEnrolmentCommittedWithoutAcknowledgement();
+
+    const result = await whenReplacingThenCrashingBeforeThePreviousEnrolmentCanCleanUp(fixture);
+
+    thenTheFailedReplacementLeavesNoCredentialAfterRestart(result);
+  });
+
+  it('should preserve a replacement enrolment granted while the abandoned commit is awaiting acknowledgement', async () => {
+    const fixture = await givenAnEnrolmentCommittedWithoutAcknowledgement();
+
+    const result = await whenTheReplacementIsGrantedBeforeTheAbandonedCommitIsAcknowledged(fixture);
+
+    thenTheReplacementRemainsEnrolledAfterRestart(result);
   });
 
   it('should cancel a stalled authorization and report the server unreachable', async () => {
@@ -907,6 +975,159 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
     (await whenRequestArrives(`${baseFixture}/auth/device`)).error(new ProgressEvent('error'));
   };
 
+  const givenAnEnrolmentAwaitingItsDurableCommit = async (): Promise<{ previous: Promise<DeviceEnrolmentOutcome> }> => {
+    const previous = whenEnrolling();
+    await whenTheServerIssuesTheCode();
+    await whenTheServerGrantsTheTokens();
+    await stockage.writeArrived.promise;
+    return { previous };
+  };
+
+  const whenReplacingTheEnrolmentAndSynchronizingAfterAuthorizationFails = async (
+    previous: Promise<DeviceEnrolmentOutcome>,
+  ): Promise<{
+    replacementOutcome: DeviceEnrolmentOutcome;
+    previousOutcome: DeviceEnrolmentOutcome;
+    tokenBeforeSynchronization: string | undefined;
+    tokenAfterSynchronization: string | undefined;
+  }> => {
+    const authentication: AuthenticationPort = device;
+    const replacement = whenEnrolling();
+    await whenTheReplacementAuthorizationFails();
+    const replacementOutcome = await replacement;
+    const previousOutcome = await stockage.completeIOUntil(previous);
+    const tokenBeforeSynchronization = authentication.currentToken();
+    await stockage.completeIOUntil(authentication.synchronizeSession());
+    return {
+      replacementOutcome,
+      previousOutcome,
+      tokenBeforeSynchronization,
+      tokenAfterSynchronization: authentication.currentToken(),
+    };
+  };
+
+  const givenAnEnrolmentWithItsCommitAcknowledgementHeld = async (): Promise<{
+    previous: Promise<DeviceEnrolmentOutcome>;
+    committed: Promise<void>;
+    release: () => void;
+  }> => {
+    const completion = stockage.holdNextWriteCompletion();
+    const { previous } = await givenAnEnrolmentAwaitingItsDurableCommit();
+    return { previous, ...completion };
+  };
+
+  const givenAnEnrolmentCommittedWithoutAcknowledgement = async (): Promise<{
+    previous: Promise<DeviceEnrolmentOutcome>;
+    release: () => void;
+  }> => {
+    const fixture = await givenAnEnrolmentWithItsCommitAcknowledgementHeld();
+    await stockage.completeIOUntil(fixture.committed);
+    return fixture;
+  };
+
+  const whenReplacingThenCrashingBeforeThePreviousEnrolmentCanCleanUp = async (fixture: {
+    previous: Promise<DeviceEnrolmentOutcome>;
+    release: () => void;
+  }): Promise<{ replacementOutcome: DeviceEnrolmentOutcome; restoredToken: string | undefined }> => {
+    try {
+      const replacement = whenEnrolling();
+      await whenTheReplacementAuthorizationFails();
+      const replacementOutcome = await replacement;
+      const restoredToken = await whenRestoringTheDurableStateAfterACrash();
+      return { replacementOutcome, restoredToken };
+    } finally {
+      fixture.release();
+      await stockage.completeIOUntil(fixture.previous);
+    }
+  };
+
+  const whenRestoringTheDurableStateAfterACrash = async (): Promise<string | undefined> => {
+    const restartedStorageFixture = new StorageFixture();
+    restartedStorageFixture.restore(stockage.snapshot());
+    const restartedInjectorFixture = Injector.create({
+      parent: TestBed.inject(Injector),
+      providers: [DeviceAuthentication, { provide: LocalStoragePort, useValue: restartedStorageFixture }],
+    });
+    try {
+      const restarted: AuthenticationPort = restartedInjectorFixture.get(DeviceAuthentication);
+      await restartedStorageFixture.completeIOUntil(restarted.synchronizeSession());
+      return restarted.currentToken();
+    } finally {
+      restartedInjectorFixture.destroy();
+    }
+  };
+
+  const whenTheReplacementIsGrantedBeforeTheAbandonedCommitIsAcknowledged = async (fixture: {
+    previous: Promise<DeviceEnrolmentOutcome>;
+    release: () => void;
+  }): Promise<{
+    replacementOutcome: DeviceEnrolmentOutcome;
+    previousOutcome: DeviceEnrolmentOutcome;
+    restoredToken: string | undefined;
+  }> => {
+    let replacementOutcome: DeviceEnrolmentOutcome;
+    try {
+      const replacement = whenEnrolling();
+      await stockage.completeIOUntil(afterMicrotasks());
+      (await whenRequestArrives(`${baseFixture}/auth/device`)).flush(deviceAuthorizationFixture);
+      await vi.advanceTimersToNextTimerAsync();
+      (await whenRequestArrives(`${baseFixture}/token`)).flush({
+        access_token: anotherCompanyTokenFixture,
+        refresh_token: 'refresh-b',
+        expires_in: 300,
+      });
+      await afterMicrotasks();
+      fixture.release();
+      replacementOutcome = await stockage.completeIOUntil(replacement);
+    } finally {
+      fixture.release();
+      await stockage.completeIOUntil(fixture.previous);
+    }
+    return {
+      replacementOutcome,
+      previousOutcome: await fixture.previous,
+      restoredToken: await whenRestoringTheDurableStateAfterACrash(),
+    };
+  };
+
+  const whenSynchronizingBeforeTheAbandonedEnrolmentFinishes = async (fixture: {
+    previous: Promise<DeviceEnrolmentOutcome>;
+    committed: Promise<void>;
+    release: () => void;
+  }): Promise<{
+    replacementOutcome: DeviceEnrolmentOutcome;
+    previousOutcome: DeviceEnrolmentOutcome;
+    tokenBeforeSynchronization: string | undefined;
+    tokenAfterSynchronization: string | undefined;
+  }> => {
+    const authentication: AuthenticationPort = device;
+    const replacement = whenEnrolling();
+    await whenTheReplacementAuthorizationFails();
+    const replacementOutcome = await replacement;
+    let tokenBeforeSynchronization: string | undefined;
+    let tokenAfterSynchronization: string | undefined;
+    try {
+      await stockage.completeIOUntil(fixture.committed);
+      tokenBeforeSynchronization = authentication.currentToken();
+      await stockage.completeIOUntil(authentication.synchronizeSession());
+      tokenAfterSynchronization = authentication.currentToken();
+    } finally {
+      fixture.release();
+      await stockage.completeIOUntil(fixture.previous);
+    }
+    return {
+      replacementOutcome,
+      previousOutcome: await fixture.previous,
+      tokenBeforeSynchronization,
+      tokenAfterSynchronization,
+    };
+  };
+
+  const whenTheReplacementAuthorizationFails = async (): Promise<void> => {
+    await stockage.completeIOUntil(afterMicrotasks());
+    (await whenRequestArrives(`${baseFixture}/auth/device`)).error(new ProgressEvent('error'));
+  };
+
   const whenTheServerGrantsTheTokens = async (): Promise<void> => {
     await vi.advanceTimersToNextTimerAsync();
     (await whenRequestArrives(`${baseFixture}/token`)).flush(grantedTokensFixture);
@@ -925,6 +1146,36 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
   const whenRequestArrives = async (url: string): Promise<TestRequest> => {
     await afterMicrotasks();
     return http.expectOne(url);
+  };
+
+  const thenTheAbandonedEnrolmentProvidesNoTokenDespiteSynchronization = (result: {
+    replacementOutcome: DeviceEnrolmentOutcome;
+    previousOutcome: DeviceEnrolmentOutcome;
+    tokenBeforeSynchronization: string | undefined;
+    tokenAfterSynchronization: string | undefined;
+  }): void => {
+    expect(result.replacementOutcome).toBe('UNREACHABLE');
+    expect(result.previousOutcome).toBe('ABANDONED');
+    expect(result.tokenBeforeSynchronization).toBeUndefined();
+    expect(result.tokenAfterSynchronization).toBeUndefined();
+  };
+
+  const thenTheFailedReplacementLeavesNoCredentialAfterRestart = (result: {
+    replacementOutcome: DeviceEnrolmentOutcome;
+    restoredToken: string | undefined;
+  }): void => {
+    expect(result.replacementOutcome).toBe('UNREACHABLE');
+    expect(result.restoredToken).toBeUndefined();
+  };
+
+  const thenTheReplacementRemainsEnrolledAfterRestart = (result: {
+    replacementOutcome: DeviceEnrolmentOutcome;
+    previousOutcome: DeviceEnrolmentOutcome;
+    restoredToken: string | undefined;
+  }): void => {
+    expect(result.replacementOutcome).toBe('ENROLLED');
+    expect(result.previousOutcome).toBe('ABANDONED');
+    expect(result.restoredToken).toBe(anotherCompanyTokenFixture);
   };
 
   const thenTheCodeShownIs = (expected: DeviceAuthorizationCode): void => {
