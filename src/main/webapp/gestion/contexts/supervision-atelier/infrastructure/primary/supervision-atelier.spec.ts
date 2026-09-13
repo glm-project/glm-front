@@ -24,7 +24,7 @@ class DeferredFixture<T> {
   });
 }
 
-class DonneesFixture extends DonneesDeSupervisionPort {
+class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
   arrival = new DeferredFixture<void>();
   response = new DeferredFixture<DonneesDeSupervision>();
 
@@ -55,122 +55,145 @@ const donneesFixture: DonneesDeSupervision = {
 };
 
 class SupervisionFixture {
-  readonly donnees = new DonneesFixture();
-  private readonly component: ComponentFixture<SupervisionAtelier>;
+  constructor(
+    private readonly component: ComponentFixture<SupervisionAtelier>,
+    private readonly donneesFixture: DonneesDeSupervisionFixture,
+  ) {}
 
-  constructor() {
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: DonneesDeSupervisionPort, useValue: this.donnees },
-      ],
-    });
-    this.component = TestBed.createComponent(SupervisionAtelier);
+  displayedCounts(): { operateurs: string | undefined; journees: string | undefined; activites: string | undefined } {
+    return {
+      operateurs: this.element('supervision-operateurs-count')?.textContent.trim(),
+      journees: this.element('supervision-journees-count')?.textContent.trim(),
+      activites: this.element('supervision-activites-count')?.textContent.trim(),
+    };
   }
 
-  async started(): Promise<void> {
+  loadingMessage(): string | undefined {
+    return this.element('supervision-loading')?.textContent;
+  }
+
+  errorMessage(): string | undefined {
+    return this.element('supervision-error')?.textContent;
+  }
+
+  hasDisplayedData(): boolean {
+    return this.element('supervision-data') !== null;
+  }
+
+  canRefresh(): boolean {
+    return !this.refreshButton().disabled;
+  }
+
+  async open(): Promise<void> {
     this.component.detectChanges();
-    await this.donnees.arrival.promise;
+    await this.donneesFixture.arrival.promise;
   }
 
-  element(selector: string): HTMLElement | null {
+  private element(selector: string): HTMLElement | null {
     const host = this.component.nativeElement as HTMLElement;
     return host.querySelector(dataSelector(selector));
   }
 
-  async complete(donnees: DonneesDeSupervision = donneesFixture): Promise<void> {
-    this.donnees.response.resolve(donnees);
+  async receiveDonnees(donnees: DonneesDeSupervision = donneesFixture): Promise<void> {
+    this.donneesFixture.response.resolve(donnees);
     await this.component.whenStable();
   }
 
-  async fail(): Promise<void> {
-    this.donnees.response.reject(new Error('Source unavailable'));
+  async failAcquisition(): Promise<void> {
+    this.donneesFixture.response.reject(new Error('Source unavailable'));
     await this.component.whenStable();
   }
 
-  async reload(): Promise<void> {
-    this.donnees.prepare();
+  async refresh(): Promise<void> {
+    this.donneesFixture.prepare();
+    this.refreshButton().click();
+    await this.open();
+  }
+
+  private refreshButton(): HTMLButtonElement {
     const button = this.element('supervision-refresh');
-    if (!button) {
+    if (!(button instanceof HTMLButtonElement)) {
       throw new Error('Missing refresh button');
     }
-    button.click();
-    await this.started();
+    return button;
   }
 
-  async loadInitial(): Promise<void> {
-    await this.started();
-    await this.complete();
+  async loadDonnees(): Promise<void> {
+    await this.open();
+    await this.receiveDonnees();
   }
 }
 
 describe('Supervision atelier component', () => {
   let supervisionFixture: SupervisionFixture;
   beforeEach(() => {
-    supervisionFixture = new SupervisionFixture();
+    const donneesFixture = new DonneesDeSupervisionFixture();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ComponentFixtureAutoDetect, useValue: true },
+        { provide: DonneesDeSupervisionPort, useValue: donneesFixture },
+      ],
+    });
+    supervisionFixture = new SupervisionFixture(TestBed.createComponent(SupervisionAtelier), donneesFixture);
   });
 
   it('should display loading until the data arrives', async () => {
-    await supervisionFixture.started();
+    await supervisionFixture.open();
 
-    expect(supervisionFixture.element('supervision-loading')?.textContent).toContain('Chargement');
-    expect(supervisionFixture.element('supervision-data')).toBeNull();
-    expect(supervisionFixture.element('supervision-refresh')?.hasAttribute('disabled')).toBe(true);
+    expect(supervisionFixture.loadingMessage()).toContain('Chargement');
+    expect(supervisionFixture.hasDisplayedData()).toBe(false);
+    expect(supervisionFixture.canRefresh()).toBe(false);
 
-    await supervisionFixture.complete();
+    await supervisionFixture.receiveDonnees();
   });
 
   it('should display the acquired collections without interpreting their business validity', async () => {
-    await supervisionFixture.started();
+    await supervisionFixture.open();
 
-    await supervisionFixture.complete();
+    await supervisionFixture.receiveDonnees();
 
-    expect(supervisionFixture.element('supervision-operateurs-count')?.textContent.trim()).toBe('1');
-    expect(supervisionFixture.element('supervision-journees-count')?.textContent.trim()).toBe('1');
-    expect(supervisionFixture.element('supervision-activites-count')?.textContent.trim()).toBe('1');
-    expect(supervisionFixture.element('supervision-loading')).toBeNull();
-    expect(supervisionFixture.element('supervision-error')).toBeNull();
+    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '1', journees: '1', activites: '1' });
+    expect(supervisionFixture.loadingMessage()).toBeUndefined();
+    expect(supervisionFixture.errorMessage()).toBeUndefined();
   });
 
   it('should display empty collections as a successful acquisition', async () => {
-    await supervisionFixture.started();
+    await supervisionFixture.open();
 
-    await supervisionFixture.complete({ operateurs: [], journees: [], activites: [] });
+    await supervisionFixture.receiveDonnees({ operateurs: [], journees: [], activites: [] });
 
-    expect(supervisionFixture.element('supervision-operateurs-count')?.textContent.trim()).toBe('0');
-    expect(supervisionFixture.element('supervision-journees-count')?.textContent.trim()).toBe('0');
-    expect(supervisionFixture.element('supervision-activites-count')?.textContent.trim()).toBe('0');
-    expect(supervisionFixture.element('supervision-error')).toBeNull();
+    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '0', journees: '0', activites: '0' });
+    expect(supervisionFixture.errorMessage()).toBeUndefined();
   });
 
   it('should display an acquisition error without data', async () => {
-    await supervisionFixture.started();
+    await supervisionFixture.open();
 
-    await supervisionFixture.fail();
+    await supervisionFixture.failAcquisition();
 
-    expect(supervisionFixture.element('supervision-error')?.textContent).toContain('Impossible de charger');
-    expect(supervisionFixture.element('supervision-data')).toBeNull();
-    expect(supervisionFixture.element('supervision-refresh')?.hasAttribute('disabled')).toBe(false);
+    expect(supervisionFixture.errorMessage()).toContain('Impossible de charger');
+    expect(supervisionFixture.hasDisplayedData()).toBe(false);
+    expect(supervisionFixture.canRefresh()).toBe(true);
   });
 
   it('should replace previously displayed data with an error when refresh fails', async () => {
-    await supervisionFixture.loadInitial();
-    await supervisionFixture.reload();
+    await supervisionFixture.loadDonnees();
+    await supervisionFixture.refresh();
 
-    await supervisionFixture.fail();
+    await supervisionFixture.failAcquisition();
 
-    expect(supervisionFixture.element('supervision-error')?.textContent).toContain('Impossible de charger');
-    expect(supervisionFixture.element('supervision-data')).toBeNull();
+    expect(supervisionFixture.errorMessage()).toContain('Impossible de charger');
+    expect(supervisionFixture.hasDisplayedData()).toBe(false);
   });
 
   it('should display fresh data when the user retries after an error', async () => {
-    await supervisionFixture.started();
-    await supervisionFixture.fail();
-    await supervisionFixture.reload();
+    await supervisionFixture.open();
+    await supervisionFixture.failAcquisition();
+    await supervisionFixture.refresh();
 
-    await supervisionFixture.complete();
+    await supervisionFixture.receiveDonnees();
 
-    expect(supervisionFixture.element('supervision-operateurs-count')?.textContent.trim()).toBe('1');
-    expect(supervisionFixture.element('supervision-error')).toBeNull();
+    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '1', journees: '1', activites: '1' });
+    expect(supervisionFixture.errorMessage()).toBeUndefined();
   });
 });
