@@ -1,6 +1,8 @@
+import { Instant } from './Instant';
+
 export class FenetreDePresence {
   constructor(
-    readonly debut: string,
-    readonly fin?: string,
+    readonly debut: Instant,
+    readonly fin?: Instant,
   ) {}
 }

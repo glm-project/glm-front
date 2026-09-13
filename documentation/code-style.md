@@ -34,6 +34,12 @@ Name object contracts that carry a meaningful responsibility. A callback that is
 function type; give it a named type only when its role clarifies the call site. Name reusable defaults rather
 than repeating significant literals.
 
+Constructors accept at most three parameters, including optional and defaulted parameters. When construction
+needs more information, accept a named immutable parameter object or cohesive Value Objects. Keep the fields
+explicit; a rest parameter or an opaque array is not a way around this limit. This limit concerns constructors,
+not ordinary methods or functions. ESLint enforces it through `local/max-constructor-parameters`.
+See [ADR 0032](adr/0032-limit-constructor-parameters.md).
+
 ## Extract methods when the logic obscures the intent
 
 Extract a coherent step as soon as it needs its own explanation, mixes orchestration with details, or
@@ -102,9 +108,10 @@ or escape as a mutable model, decision or snapshot.
 
 Expose commands, decisions and projections as `readonly`, including nested collections. A method named
 `snapshot()` states whether it returns an independent copy or shares an immutable value. When it returns a
-copy, changing that object cannot alter the owner or a later snapshot. Use a discriminated union when states
-have incompatible fields, and model forbidden fields as `never` when the public contract must reject their
-carry-over.
+copy, changing that object cannot alter the owner or a later snapshot. Use a pure discriminated union when
+states have incompatible fields: each variant declares only its own properties so TypeScript enforces narrowing
+on the discriminant before accessing state. Do not model absent fields as optional `never` (`field?: never`):
+let the discriminant guard property access.
 
 Apply the [Value Object default](architecture.md#use-value-objects-by-default-for-domain-values) to scalar
 values as well as business collections. For example, qualifications own workstation-choice and eligibility

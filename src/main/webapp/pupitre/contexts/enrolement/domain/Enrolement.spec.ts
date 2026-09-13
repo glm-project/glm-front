@@ -79,7 +79,12 @@ const givenAnAttemptAnsweredWith = (issue: IssueDEnrolement): Enrolement => Enro
 
 const whenTheCodeIsIssued = (enrolement: Enrolement): Enrolement =>
   enrolement.afterShowingCode(
-    new CodeDEnrolement('WDJB-MJHT', 'http://keycloak.test/realms/glm/device', undefined, MAINTENANT + UNE_MINUTE),
+    new CodeDEnrolement({
+      userCode: 'WDJB-MJHT',
+      verificationUri: 'http://keycloak.test/realms/glm/device',
+      verificationUriComplete: undefined,
+      limite: MAINTENANT + UNE_MINUTE,
+    }),
   );
 
 const whenProjectingAt = (enrolement: Enrolement, maintenant: number, chargement: ChargementDeLAtelier): VueDEnrolement =>

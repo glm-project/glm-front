@@ -7,13 +7,25 @@ export interface VueDuCodeDEnrolement {
   readonly secondesRestantes: number;
 }
 
+export interface DonneesDuCodeDEnrolement {
+  readonly userCode: string;
+  readonly verificationUri: string;
+  readonly verificationUriComplete: string | undefined;
+  readonly limite: number;
+}
+
 export class CodeDEnrolement {
-  constructor(
-    private readonly userCode: string,
-    private readonly verificationUri: string,
-    private readonly verificationUriComplete: string | undefined,
-    private readonly limite: number,
-  ) {}
+  private readonly userCode: string;
+  private readonly verificationUri: string;
+  private readonly verificationUriComplete: string | undefined;
+  private readonly limite: number;
+
+  constructor(donnees: DonneesDuCodeDEnrolement) {
+    this.userCode = donnees.userCode;
+    this.verificationUri = donnees.verificationUri;
+    this.verificationUriComplete = donnees.verificationUriComplete;
+    this.limite = donnees.limite;
+  }
 
   lienDeValidation(): string {
     return this.verificationUriComplete ?? `${this.verificationUri}?user_code=${this.userCode}`;
