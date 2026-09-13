@@ -15,18 +15,18 @@ describe.each([
   },
 ])('$name activity read contract', ({ create }) => {
   it('should read the ongoing activities with its completeness', async () => {
-    const operateurFixture = new ActiviteDeSupervision({
+    const activiteFixture = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: new IdentifiantOperateur('alice'),
       nom: 'OF-42',
       categorie: new CategorieActivite('NC'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
-    const port = create(new Page([operateurFixture], 1));
+    const port = create(new Page([activiteFixture], 1));
 
     const page = await port.read();
 
-    expect(page.elements).toEqual([operateurFixture]);
+    expect(page.elements).toEqual([activiteFixture]);
     expect(page.isComplete()).toBe(true);
   });
 

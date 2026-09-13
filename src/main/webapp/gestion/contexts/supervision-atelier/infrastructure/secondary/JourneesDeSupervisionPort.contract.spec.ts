@@ -12,12 +12,12 @@ describe.each([
   },
 ])('$name working visit read contract', ({ create }) => {
   it('should read the open working visits with its completeness', async () => {
-    const operateurFixture = JourneeDeTravail.open(new IdentifiantOperateur('alice'), 'EN_PAUSE');
-    const port = create(new Page([operateurFixture], 1));
+    const journeeFixture = JourneeDeTravail.open(new IdentifiantOperateur('alice'), 'EN_PAUSE');
+    const port = create(new Page([journeeFixture], 1));
 
     const page = await port.read();
 
-    expect(page.elements).toEqual([operateurFixture]);
+    expect(page.elements).toEqual([journeeFixture]);
     expect(page.isComplete()).toBe(true);
   });
 

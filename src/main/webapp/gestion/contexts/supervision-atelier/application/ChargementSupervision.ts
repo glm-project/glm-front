@@ -10,7 +10,8 @@ import { OperateursDeSupervisionPort } from '../domain/OperateursDeSupervisionPo
 import { SupervisionDeLAtelier } from '../domain/SupervisionDeLAtelier';
 
 export type EtatChargementSupervision =
-  | { readonly status: 'loading' | 'failed'; readonly supervision: SupervisionDeLAtelier | undefined }
+  | { readonly status: 'loading'; readonly supervision: undefined }
+  | { readonly status: 'failed'; readonly supervision: SupervisionDeLAtelier | undefined }
   | { readonly status: 'ready'; readonly supervision: SupervisionDeLAtelier };
 
 @Injectable()
@@ -71,9 +72,13 @@ export class ChargementSupervision {
   }
 
   private async readReference(): Promise<Page<OperateurDeclare>> {
-    const page = this.reference ?? (await this.operateurs.read());
+    if (this.reference) {
+      return this.reference;
+    }
+    const page = await this.operateurs.read();
     if (page.isComplete()) {
       this.reference = new Page([...page.elements], page.totalCount);
+      return this.reference;
     }
     return page;
   }
