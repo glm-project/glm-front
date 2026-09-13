@@ -108,9 +108,10 @@ or escape as a mutable model, decision or snapshot.
 
 Expose commands, decisions and projections as `readonly`, including nested collections. A method named
 `snapshot()` states whether it returns an independent copy or shares an immutable value. When it returns a
-copy, changing that object cannot alter the owner or a later snapshot. Use a discriminated union when states
-have incompatible fields, and model forbidden fields as `never` when the public contract must reject their
-carry-over.
+copy, changing that object cannot alter the owner or a later snapshot. Use a pure discriminated union when
+states have incompatible fields: each variant declares only its own properties so TypeScript enforces narrowing
+on the discriminant before accessing state. Do not model absent fields as optional `never` (`field?: never`):
+let the discriminant guard property access.
 
 Apply the [Value Object default](architecture.md#use-value-objects-by-default-for-domain-values) to scalar
 values as well as business collections. For example, qualifications own workstation-choice and eligibility
