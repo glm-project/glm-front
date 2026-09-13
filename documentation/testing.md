@@ -25,6 +25,12 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
    needing an existing enrolment seed it through `PupitreStorageFixture`, preserving the real restoration
    and signing path without repeating enrolment.
 
+   **Routing and initial views belong here.** Never simulate Angular router navigation (`Router.navigateByUrl`)
+   inside unit specs (`app.spec.ts`). Vitest tests the shell component in isolation; the `routes` definition is
+   covered through its import in `provideRouter(routes)`. Validating that a URL mounts its view belongs
+   exclusively to the **Application (Cypress)** suite under `src/test/webapp/application/<front>/<context>/`,
+   which exercises the real dev server, router and nominal user journey.
+
 4. **Production offline restart (Cypress + Chrome)** —
    `src/test/webapp/application/pupitre/production-offline/*.spec.ts`, against the normal optimized pupitre
    output and its generated Angular service worker. This deliberately expensive suite is separate from
@@ -132,7 +138,9 @@ concatenated into a descendant selector — chain `.find()` instead.
 Each front's shell carries its marker as a host attribute (`host: { 'data-selector': 'pupitre-shell' }`),
 and its **application** smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static
 `index.html` already, so the attribute appears only once Angular has bootstrapped — the one assertion a
-title check cannot make, because a title reads green on a blank page.
+title check cannot make, because a title reads green on a blank page. Context-specific routes and their nominal
+journeys (e.g. the supervision grid mounted on `/`) are asserted in dedicated specs beside it
+(`application/<front>/<context>/*.spec.ts`), not inside the shell smoke test or unit tests.
 
 ## Mock at the boundary
 
