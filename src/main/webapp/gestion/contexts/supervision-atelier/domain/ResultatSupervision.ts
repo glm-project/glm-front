@@ -6,12 +6,10 @@ export type ResultatSupervision =
   | {
       readonly estExploitable: true;
       readonly supervision: SupervisionDeLAtelier;
-      readonly motif?: never;
     }
   | {
       readonly estExploitable: false;
       readonly motif: MotifSupervisionInexploitable;
-      readonly supervision?: never;
     };
 
 export const resultatSupervisionExploitable = (supervision: SupervisionDeLAtelier): ResultatSupervision => ({

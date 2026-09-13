@@ -8,7 +8,7 @@ import { Instant } from './Instant';
 import { JourneeDeTravail } from './JourneeDeTravail';
 import { OperateurDeclare } from './OperateurDeclare';
 import { OperateurSupervise } from './OperateurSupervise';
-import { ResultatSupervision } from './ResultatSupervision';
+import { MotifSupervisionInexploitable, ResultatSupervision } from './ResultatSupervision';
 import { SupervisionDeLAtelier } from './SupervisionDeLAtelier';
 
 describe('SupervisionDeLAtelier', () => {
@@ -425,8 +425,7 @@ describe('SupervisionDeLAtelier', () => {
     const resultat = SupervisionDeLAtelier.determine([operateur], [], [activiteSansOperateur], new Instant('2026-09-13T09:00:00Z'));
 
     expect(resultat.estExploitable).toBe(false);
-    expect(resultat.motif).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
-    expect(resultat.supervision).toBeUndefined();
+    expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
   });
 
   it('should return unexploitable result when an activity has an unknown operator identifier not among declared operators', () => {
@@ -443,8 +442,7 @@ describe('SupervisionDeLAtelier', () => {
     const resultat = SupervisionDeLAtelier.determine([operateur], [], [activiteInconnue], new Instant('2026-09-13T09:00:00Z'));
 
     expect(resultat.estExploitable).toBe(false);
-    expect(resultat.motif).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
-    expect(resultat.supervision).toBeUndefined();
+    expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
   });
 });
 
@@ -453,4 +451,11 @@ function exploitableFixture(resultat: ResultatSupervision): SupervisionDeLAtelie
     throw new Error('Expected an exploitable supervision');
   }
   return resultat.supervision;
+}
+
+function inexploitableFixture(resultat: ResultatSupervision): MotifSupervisionInexploitable {
+  if (resultat.estExploitable) {
+    throw new Error('Expected an unexploitable supervision');
+  }
+  return resultat.motif;
 }
