@@ -12,6 +12,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { inject, Injectable } from '@angular/core';
 
 import { toRefusDAtelier } from '../toRefusDAtelier';
@@ -125,13 +126,14 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     return { operateurs: operateurs.map(toOperateur), suivis: suivis.map(toSuivi) };
   }
 
-  override async send(geste: GesteDAtelier): Promise<void> {
+  override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
     try {
       await this.write(geste);
+      return ok(undefined);
     } catch (failure: unknown) {
       const refusal = findApiErrorIn(failure);
       if (refusal !== undefined) {
-        throw new RefusDePublication(refusal.urn, refusal.message, toRefusDAtelier(refusal.urn, refusal.message)?.motif);
+        return err(new RefusDePublication(refusal.urn, refusal.message, toRefusDAtelier(refusal.urn, refusal.message)?.motif));
       }
       throw failure;
     }

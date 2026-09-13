@@ -5,6 +5,7 @@ import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
+import { Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -284,7 +285,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     return operation;
   };
   const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
-  const whenSending = (geste: GesteDAtelier): Promise<void> => observeRejection(serveur.send(geste));
+  const whenSending = (geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> => observeRejection(serveur.send(geste));
   const whenRereading = (geste: GesteDAtelier): Promise<void> => serveur.reread(geste);
   const whenServerReturnsReferencePages = async (): Promise<TestRequest[]> => {
     const requests: TestRequest[] = [];
@@ -358,12 +359,12 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     });
   };
   const thenWriteSucceededWith = async (
-    write: Promise<void>,
+    write: Promise<Result<void, RefusDePublication>>,
     request: ReturnType<HttpTestingController['expectOne']>,
     body: unknown,
   ): Promise<void> => {
     expect(request.request.body).toEqual(body);
-    await expect(write).resolves.toBeUndefined();
+    await expect(write).resolves.toEqual({ ok: true, value: undefined });
   };
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
@@ -385,15 +386,20 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       await expect(operation).rejects.toBeInstanceOf(Error);
     }
   };
-  const thenBusinessRefusalIs = async (operation: Promise<unknown>): Promise<void> => {
-    const failure = await operation.catch((reason: unknown) => reason);
-    expect(failure).toBeInstanceOf(RefusDePublication);
-    expect(failure).toMatchObject({ code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' });
+  const thenBusinessRefusalIs = async (operation: Promise<Result<void, RefusDePublication>>): Promise<void> => {
+    const result = await operation;
+    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ error: { code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' } });
   };
-  const thenReplayDecisionIs = async (operation: Promise<unknown>, code: string, decision: ReplayDecision): Promise<void> => {
-    const failure = await operation.catch((reason: unknown) => reason);
-    expect(decideReplay('ARRIVEE_ASSUREE', failure)).toBe(decision);
-    expect(failure).toMatchObject({ code, message: 'cause' });
+  const thenReplayDecisionIs = async (
+    operation: Promise<Result<void, RefusDePublication>>,
+    code: string,
+    decision: ReplayDecision,
+  ): Promise<void> => {
+    const result = await operation;
+    const refusal = result.ok ? undefined : result.error;
+    expect(decideReplay('ARRIVEE_ASSUREE', refusal)).toBe(decision);
+    expect(refusal).toMatchObject({ code, message: 'cause' });
   };
   const thenTransportFailureIs = async (operation: Promise<unknown>): Promise<void> => {
     const failure = await operation.catch((reason: unknown) => reason);

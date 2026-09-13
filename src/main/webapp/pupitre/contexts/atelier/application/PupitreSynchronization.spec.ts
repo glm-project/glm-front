@@ -12,6 +12,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -29,7 +30,9 @@ class ServerFixture extends AtelierExchangePort {
   readonly rereadGestes: GesteDAtelier[] = [];
   referentielCalls = 0;
   onReferentiel: (() => Promise<ReferentielDuPupitre> | ReferentielDuPupitre) | undefined;
-  onSend: ((geste: GesteDAtelier) => Promise<void> | void) | undefined;
+  onSend:
+    | ((geste: GesteDAtelier) => Promise<Result<void, RefusDePublication> | undefined> | Result<void, RefusDePublication> | undefined)
+    | undefined;
 
   override async referentiel(): Promise<ReferentielDuPupitre> {
     await roundTrip();
@@ -40,12 +43,16 @@ class ServerFixture extends AtelierExchangePort {
     return referenceFixture;
   }
 
-  override async send(geste: GesteDAtelier): Promise<void> {
+  override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     if (this.onSend !== undefined) {
-      await this.onSend(geste);
+      const result = await this.onSend(geste);
+      if (result !== undefined) {
+        return result;
+      }
     }
     this.received.push(structuredClone(geste));
+    return ok(undefined);
   }
 
   override async reread(geste: GesteDAtelier): Promise<void> {
@@ -371,6 +378,7 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     thenEventRefused('refus-invalide', 'Opérateur non habilité');
+    thenNoTechnicalFailureWasReported();
   });
 
   it('should mark disconnected when unexpected technical failure occurs during exchange', async () => {
@@ -381,6 +389,7 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     thenDisconnectedStatusObserved();
+    thenTechnicalFailureWasReported();
   });
 
   it('should preserve the referential without reading a new one when gesture publication fails technically', async () => {
@@ -511,49 +520,49 @@ describe('PupitreSynchronization', () => {
     };
   };
   const givenSessionTokenExpiresOnFirstReplay = (): void => {
-    server.onSend = (): void => {
+    server.onSend = () => {
       token = undefined;
+      return undefined;
     };
   };
   const givenCompanyChangesOnFirstReplay = (): void => {
-    server.onSend = (): void => {
+    server.onSend = () => {
       tenant = 'entreprise-b';
+      return undefined;
     };
   };
   const whenDeselectingCompany = (): void => {
     tenant = undefined;
   };
   const givenArrivalAlreadyOpened = (): void => {
-    server.onSend = (): void => {
-      throw new RefusDePublication('refus-1', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte'));
-    };
+    server.onSend = () =>
+      err(new RefusDePublication('refus-1', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte')));
   };
   const givenConcurrentModificationOnFirstAttempt = (): void => {
     let attempts = 0;
-    server.onSend = (): void => {
+    server.onSend = () => {
       attempts++;
       if (attempts === 1) {
-        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
+        return err(new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente')));
       }
+      return undefined;
     };
   };
   const givenConcurrentModificationFollowedByAlreadyOpenedArrival = (): void => {
     let attempts = 0;
-    server.onSend = (): void => {
+    server.onSend = () => {
       attempts++;
       if (attempts === 1) {
-        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
+        return err(new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente')));
       }
-      throw new RefusDePublication('refus-2', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte'));
+      return err(new RefusDePublication('refus-2', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte')));
     };
   };
   const givenUnauthorizedGestureRefusal = (): void => {
-    server.onSend = (): void => {
-      throw new RefusDePublication('refus-invalide', 'Opérateur non habilité');
-    };
+    server.onSend = () => err(new RefusDePublication('refus-invalide', 'Opérateur non habilité'));
   };
   const givenTechnicalFailureDuringSend = (): void => {
-    server.onSend = (): void => {
+    server.onSend = () => {
       throw new Error('Erreur réseau');
     };
   };
@@ -574,12 +583,13 @@ describe('PupitreSynchronization', () => {
   };
   const givenSessionTokenExpiresDuringConcurrentRetry = (): void => {
     let attempts = 0;
-    server.onSend = (): void => {
+    server.onSend = () => {
       attempts++;
       if (attempts === 1) {
         token = undefined;
-        throw new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente'));
+        return err(new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente')));
       }
+      return undefined;
     };
   };
 
@@ -647,6 +657,12 @@ describe('PupitreSynchronization', () => {
   };
   const thenDisconnectedStatusObserved = (): void => {
     expect(exposed?.connecte).toBe(false);
+  };
+  const thenTechnicalFailureWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([new Error('Erreur réseau')]);
+  };
+  const thenNoTechnicalFailureWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([]);
   };
   const thenDrainingStoppedWithoutDisconnection = (): void => {
     expect(exposed?.connecte).toBe(true);
