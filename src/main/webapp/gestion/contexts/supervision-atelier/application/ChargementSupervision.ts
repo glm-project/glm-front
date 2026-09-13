@@ -1,13 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { Page } from '@/app/shared/pagination/domain/Page';
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { ActiviteDeSupervision } from '../domain/ActiviteDeSupervision';
-import { ActivitesDeSupervisionPort } from '../domain/ActivitesDeSupervisionPort';
+import { DonneesDeSupervisionPort, LectureDeSupervision } from '../domain/DonneesDeSupervisionPort';
 import { Instant } from '../domain/Instant';
-import { JourneeDeTravail } from '../domain/JourneeDeTravail';
-import { JourneesDeSupervisionPort } from '../domain/JourneesDeSupervisionPort';
-import { OperateurDeclare } from '../domain/OperateurDeclare';
-import { OperateursDeSupervisionPort } from '../domain/OperateursDeSupervisionPort';
 import { SupervisionDeLAtelier } from '../domain/SupervisionDeLAtelier';
 
 export type EtatChargementSupervision =
@@ -19,11 +13,8 @@ export type EtatChargementSupervision =
 export class ChargementSupervision {
   private readonly lifetime = inject(DestroyRef);
   private readonly errorHandler = inject(ErrorHandlerPort);
-  private readonly operateurs = inject(OperateursDeSupervisionPort);
-  private readonly journees = inject(JourneesDeSupervisionPort);
-  private readonly activites = inject(ActivitesDeSupervisionPort);
+  private readonly donnees = inject(DonneesDeSupervisionPort);
   private readonly current = signal<EtatChargementSupervision>({ status: 'loading', supervision: undefined });
-  private reference: Page<OperateurDeclare> | undefined;
   private inFlight: Promise<void> | undefined;
   readonly state = this.current.asReadonly();
 
@@ -38,55 +29,32 @@ export class ChargementSupervision {
   }
 
   private async load(maintenant: Instant): Promise<void> {
-    let reads:
-      readonly [Promise<Page<OperateurDeclare>>, Promise<Page<JourneeDeTravail>>, Promise<Page<ActiviteDeSupervision>>] | undefined;
     try {
-      reads = [this.readReference(), this.journees.read(), this.activites.read()] as const;
-      const [operateurs, journees, activites] = await Promise.all(reads);
+      const lecture = await this.donnees.read();
       if (this.lifetime.destroyed) {
         return;
       }
-      this.publish(operateurs, journees, activites, maintenant);
+      this.publish(lecture, maintenant);
     } catch (failure: unknown) {
       if (this.lifetime.destroyed) {
         return;
       }
       this.errorHandler.handleError(failure);
       this.current.set({ status: 'failed', supervision: this.current().supervision });
-    } finally {
-      if (reads) {
-        await Promise.allSettled(reads);
-      }
     }
   }
-  private publish(
-    operateurs: Page<OperateurDeclare>,
-    journees: Page<JourneeDeTravail>,
-    activites: Page<ActiviteDeSupervision>,
-    maintenant: Instant,
-  ): void {
-    const complete = [operateurs, journees, activites].every(page => page.isComplete());
-    if (!complete) {
+
+  private publish(lecture: LectureDeSupervision, maintenant: Instant): void {
+    if (lecture.status === 'incomplete') {
       this.current.set({ status: 'failed', supervision: this.current().supervision });
       return;
     }
-    const resultat = SupervisionDeLAtelier.determine(operateurs.elements, journees.elements, activites.elements, maintenant);
+    const { operateurs, journees, activites } = lecture.donnees;
+    const resultat = SupervisionDeLAtelier.determine(operateurs, journees, activites, maintenant);
     if (!resultat.estExploitable) {
       this.current.set({ status: 'failed', supervision: this.current().supervision });
       return;
     }
     this.current.set({ status: 'ready', supervision: resultat.supervision });
-  }
-
-  private async readReference(): Promise<Page<OperateurDeclare>> {
-    if (this.reference) {
-      return this.reference;
-    }
-    const page = await this.operateurs.read();
-    if (page.isComplete()) {
-      this.reference = new Page([...page.elements], page.totalCount);
-      return this.reference;
-    }
-    return page;
   }
 }
