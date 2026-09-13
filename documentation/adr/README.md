@@ -72,3 +72,5 @@ something stays, with a status that says what died.
   domain specs, nothing acting after the first assertion
 - [0031 — Own workshop supervision in Gestion](0031-own-workshop-supervision-in-gestion.md) — dedicated
   `supervision-atelier` context in Gestion to interpret workshop presence, activities and anomalies
+- [0032 — Limit constructor parameters](0032-limit-constructor-parameters.md) — at most three constructor
+  parameters, with named immutable construction contracts for additional data

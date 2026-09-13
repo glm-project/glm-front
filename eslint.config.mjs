@@ -6,6 +6,7 @@ import globals from 'globals';
 import typescript from 'typescript-eslint';
 import { domainReadonlyProperties } from './eslint/rules/domain-readonly-properties.mjs';
 import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
+import { maxConstructorParameters } from './eslint/rules/max-constructor-parameters.mjs';
 import { maxIfCriteria } from './eslint/rules/max-if-criteria.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
 import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
@@ -130,6 +131,7 @@ const local = {
     },
     'given-when-then': givenWhenThen,
     'max-if-criteria': maxIfCriteria,
+    'max-constructor-parameters': maxConstructorParameters,
     'domain-readonly-properties': domainReadonlyProperties,
     'no-as-unknown': noAsUnknown,
     'no-eslint-disable': noEslintDisable,
@@ -155,6 +157,7 @@ export default typescript.config(
     plugins: { local },
     rules: {
       'local/max-if-criteria': 'error',
+      'local/max-constructor-parameters': 'error',
     },
   },
   {

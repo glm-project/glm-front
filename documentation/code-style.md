@@ -34,6 +34,12 @@ Name object contracts that carry a meaningful responsibility. A callback that is
 function type; give it a named type only when its role clarifies the call site. Name reusable defaults rather
 than repeating significant literals.
 
+Constructors accept at most three parameters, including optional and defaulted parameters. When construction
+needs more information, accept a named immutable parameter object or cohesive Value Objects. Keep the fields
+explicit; a rest parameter or an opaque array is not a way around this limit. This limit concerns constructors,
+not ordinary methods or functions. ESLint enforces it through `local/max-constructor-parameters`.
+See [ADR 0032](adr/0032-limit-constructor-parameters.md).
+
 ## Extract methods when the logic obscures the intent
 
 Extract a coherent step as soon as it needs its own explanation, mixes orchestration with details, or
