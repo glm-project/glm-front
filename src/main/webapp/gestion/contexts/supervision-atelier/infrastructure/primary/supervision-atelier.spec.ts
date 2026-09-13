@@ -1,4 +1,5 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
+import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
@@ -10,19 +11,6 @@ import { Instant } from '../../domain/Instant';
 import { JourneeDeTravail } from '../../domain/JourneeDeTravail';
 import { OperateurDeclare } from '../../domain/OperateurDeclare';
 import { SupervisionAtelier } from './supervision-atelier';
-
-class DeferredFixture<T> {
-  resolve: (value: T) => void = () => {
-    throw new Error('Uninitialized fixture');
-  };
-  reject: (error: Error) => void = () => {
-    throw new Error('Uninitialized fixture');
-  };
-  readonly promise = new Promise<T>((resolve, reject) => {
-    this.resolve = resolve;
-    this.reject = reject;
-  });
-}
 
 class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
   arrival = new DeferredFixture<void>();

@@ -1,16 +1,11 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
+import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
 import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 import { Pointage } from './pointage';
-
-interface DeferredFixture {
-  promise: Promise<void>;
-  resolve: () => void;
-  reject: () => void;
-}
 
 const pointageFixture: VueDePointage = {
   moules: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
@@ -26,14 +21,14 @@ describe('Pointage screen', () => {
   let nextExecution: ExecutionDePointage;
   let intentions: IntentionDePointage[];
   let emitted: string[];
-  let capture: DeferredFixture;
+  let capture: DeferredFixture<void>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({ providers: [{ provide: ComponentFixtureAutoDetect, useValue: true }] }).compileComponents();
     fixture = TestBed.createComponent(Pointage);
     intentions = [];
     emitted = [];
-    capture = deferredFixture();
+    capture = new DeferredFixture<void>();
     nextExecution = { kind: 'CAPTURE', completion: capture.promise };
     const commander: PointageCommand = {
       execute: intention => {
@@ -168,7 +163,7 @@ describe('Pointage screen', () => {
     await whenRendering();
   };
   const whenCaptureFails = async (): Promise<void> => {
-    capture.reject();
+    capture.reject(new Error('disk failure'));
     await capture.promise.catch(() => undefined);
     await Promise.resolve();
     await Promise.resolve();
@@ -248,20 +243,4 @@ describe('Pointage screen', () => {
 const requiredElement = <T>(element: T | null, description: string): T => {
   if (element === null) throw new Error(`Missing ${description} fixture.`);
   return element;
-};
-
-const hasInitializedDeferred = (
-  callbacks: Partial<Pick<DeferredFixture, 'resolve' | 'reject'>>,
-): callbacks is Pick<DeferredFixture, 'resolve' | 'reject'> => !(callbacks.resolve === undefined || callbacks.reject === undefined);
-
-const deferredFixture = (): DeferredFixture => {
-  const callbacks: { resolve?: () => void; reject?: () => void } = {};
-  const promise = new Promise<void>((complete, fail) => {
-    callbacks.resolve = complete;
-    callbacks.reject = () => {
-      fail(new Error('disk failure'));
-    };
-  });
-  if (!hasInitializedDeferred(callbacks)) throw new Error('Deferred fixture is not initialized.');
-  return { promise, ...callbacks };
 };
