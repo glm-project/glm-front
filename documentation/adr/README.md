@@ -70,3 +70,5 @@ something stays, with a status that says what died.
   single-criterion limit for `if` conditions, with named predicates placed by responsibility
 - [0030 — Shape scenarios at lint](0030-shape-scenarios-at-lint.md) — branchless scenarios everywhere and, on
   domain specs, nothing acting after the first assertion
+- [0031 — Own workshop supervision in Gestion](0031-own-workshop-supervision-in-gestion.md) — dedicated
+  `supervision-atelier` context in Gestion to interpret workshop presence, activities and anomalies
