@@ -30,6 +30,24 @@ describe.each([
     expect(page.isComplete()).toBe(true);
   });
 
+  it('should retain activities independent of subsequent scenario array changes', async () => {
+    const activiteFixture = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('act-1'),
+      operateurId: new IdentifiantOperateur('alice'),
+      nom: 'OF-42',
+      categorie: new CategorieActivite('NC'),
+      debut: new Instant('2026-09-13T08:00:00Z'),
+    });
+    const elementsFixture = [activiteFixture];
+    const port = create(new Page(elementsFixture, 1));
+    elementsFixture.length = 0;
+
+    const page = await port.read();
+
+    expect(page.elements).toEqual([activiteFixture]);
+    expect(page.isComplete()).toBe(true);
+  });
+
   it('should reject a failed activity read', async () => {
     const failureFixture = new Error('Activity source unavailable');
     const port = create(failureFixture);

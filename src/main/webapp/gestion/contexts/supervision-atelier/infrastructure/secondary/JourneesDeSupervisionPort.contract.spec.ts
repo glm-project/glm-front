@@ -21,6 +21,18 @@ describe.each([
     expect(page.isComplete()).toBe(true);
   });
 
+  it('should retain working visits independent of subsequent scenario array changes', async () => {
+    const journeeFixture = JourneeDeTravail.open(new IdentifiantOperateur('alice'), 'EN_PAUSE');
+    const elementsFixture = [journeeFixture];
+    const port = create(new Page(elementsFixture, 1));
+    elementsFixture.length = 0;
+
+    const page = await port.read();
+
+    expect(page.elements).toEqual([journeeFixture]);
+    expect(page.isComplete()).toBe(true);
+  });
+
   it('should reject a failed working visit read', async () => {
     const failureFixture = new Error('Visit source unavailable');
     const port = create(failureFixture);

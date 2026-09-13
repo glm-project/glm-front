@@ -1,5 +1,7 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ActiviteDeSupervision } from '../domain/ActiviteDeSupervision';
 import { ActivitesDeSupervisionPort } from '../domain/ActivitesDeSupervisionPort';
@@ -30,6 +32,7 @@ class LectureFixture<T> {
   readCount = 0;
   private arrival = new DeferredFixture<void>();
   private response = new DeferredFixture<Page<T>>();
+  private synchronousFailure: Error | undefined;
   get arrived(): Promise<void> {
     return this.arrival.promise;
   }
@@ -37,11 +40,19 @@ class LectureFixture<T> {
   prepare(): void {
     this.arrival = new DeferredFixture<void>();
     this.response = new DeferredFixture<Page<T>>();
+    this.synchronousFailure = undefined;
+  }
+
+  failImmediately(error: Error): void {
+    this.synchronousFailure = error;
   }
 
   read(): Promise<Page<T>> {
     this.readCount += 1;
     this.arrival.resolve();
+    if (this.synchronousFailure) {
+      throw this.synchronousFailure;
+    }
     return this.response.promise;
   }
 
@@ -71,17 +82,20 @@ class ChargementFixture {
   readonly operateurs = new LectureFixture<OperateurDeclare>();
   readonly journees = new LectureFixture<JourneeDeTravail>();
   readonly activites = new LectureFixture<ActiviteDeSupervision>();
+  readonly errorHandler: ErrorHandlerFixture;
   readonly chargement: ChargementSupervision;
 
   constructor() {
     TestBed.configureTestingModule({
       providers: [
         ChargementSupervision,
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
         { provide: OperateursDeSupervisionPort, useValue: this.operateurs },
         { provide: JourneesDeSupervisionPort, useValue: this.journees },
         { provide: ActivitesDeSupervisionPort, useValue: this.activites },
       ],
     });
+    this.errorHandler = TestBed.inject(ErrorHandlerPort) as ErrorHandlerFixture;
     this.chargement = TestBed.inject(ChargementSupervision);
   }
 
@@ -391,5 +405,79 @@ describe('ChargementSupervision', () => {
       { operateur: { prenom: 'Alice' }, presence: 'ABSENT' },
     ]);
     expect(chargementFixture.operateurs.readCount).toBe(1);
+  });
+
+  it('should route read failures to the error handler', async () => {
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.arrived();
+    chargementFixture.operateurs.release(new Page([aliceFixture], 1));
+    chargementFixture.journees.fail();
+    chargementFixture.activites.release(new Page([], 0));
+
+    await loading;
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
+    expect(chargementFixture.errorHandler.errors).toHaveLength(1);
+    expect((chargementFixture.errorHandler.errors[0] as Error).message).toBe('Source unavailable');
+  });
+
+  it('should handle and report synchronous port failures without an unhandled rejection', async () => {
+    chargementFixture.journees.failImmediately(new Error('Immediate failure'));
+
+    await chargementFixture.chargement.refresh(maintenantFixture);
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
+    expect(chargementFixture.errorHandler.errors).toHaveLength(1);
+    expect((chargementFixture.errorHandler.errors[0] as Error).message).toBe('Immediate failure');
+  });
+
+  it('should retry reading operators and publish grid once the reference becomes complete', async () => {
+    const firstLoading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.arrived();
+    chargementFixture.operateurs.release(new Page([aliceFixture], 2));
+    chargementFixture.journees.release(new Page([], 0));
+    chargementFixture.activites.release(new Page([], 0));
+    await firstLoading;
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
+    expect(chargementFixture.operateurs.readCount).toBe(1);
+
+    chargementFixture.operateurs.prepare();
+    chargementFixture.journees.prepare();
+    chargementFixture.activites.prepare();
+
+    const secondLoading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.arrived();
+    chargementFixture.operateurs.release(new Page([aliceFixture], 1));
+    chargementFixture.journees.release(new Page([], 0));
+    chargementFixture.activites.release(new Page([], 0));
+    await secondLoading;
+
+    expect(chargementFixture.chargement.state().status).toBe('ready');
+    expect(chargementFixture.operateurs.readCount).toBe(2);
+    expect(chargementFixture.chargement.state().supervision?.operateurs).toMatchObject([
+      { operateur: { nom: 'Martin', prenom: 'Alice' }, presence: 'ABSENT' },
+    ]);
+  });
+
+  it('should retain a cached reference independent of subsequent source array changes', async () => {
+    const elementsFixture = [aliceFixture];
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.arrived();
+    chargementFixture.operateurs.release(new Page(elementsFixture, 1));
+    chargementFixture.journees.release(new Page([], 0));
+    chargementFixture.activites.release(new Page([], 0));
+    await loading;
+    elementsFixture.length = 0;
+
+    chargementFixture.journees.prepare();
+    chargementFixture.activites.prepare();
+    const secondLoading = chargementFixture.chargement.refresh(maintenantFixture);
+    await Promise.all([chargementFixture.journees.arrived, chargementFixture.activites.arrived]);
+    chargementFixture.journees.release(new Page([], 0));
+    chargementFixture.activites.release(new Page([], 0));
+    await secondLoading;
+
+    expect(chargementFixture.chargement.state().supervision?.operateurs).toMatchObject([{ operateur: { nom: 'Martin', prenom: 'Alice' } }]);
   });
 });

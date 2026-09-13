@@ -1,3 +1,4 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { ActiviteDeSupervision } from '../domain/ActiviteDeSupervision';
@@ -17,6 +18,7 @@ export type EtatChargementSupervision =
 @Injectable()
 export class ChargementSupervision {
   private readonly lifetime = inject(DestroyRef);
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly operateurs = inject(OperateursDeSupervisionPort);
   private readonly journees = inject(JourneesDeSupervisionPort);
   private readonly activites = inject(ActivitesDeSupervisionPort);
@@ -36,20 +38,25 @@ export class ChargementSupervision {
   }
 
   private async load(maintenant: Instant): Promise<void> {
-    const reads = [this.readReference(), this.journees.read(), this.activites.read()] as const;
+    let reads:
+      readonly [Promise<Page<OperateurDeclare>>, Promise<Page<JourneeDeTravail>>, Promise<Page<ActiviteDeSupervision>>] | undefined;
     try {
+      reads = [this.readReference(), this.journees.read(), this.activites.read()] as const;
       const [operateurs, journees, activites] = await Promise.all(reads);
       if (this.lifetime.destroyed) {
         return;
       }
       this.publish(operateurs, journees, activites, maintenant);
-    } catch {
+    } catch (failure: unknown) {
       if (this.lifetime.destroyed) {
         return;
       }
+      this.errorHandler.handleError(failure);
       this.current.set({ status: 'failed', supervision: this.current().supervision });
     } finally {
-      await Promise.allSettled(reads);
+      if (reads) {
+        await Promise.allSettled(reads);
+      }
     }
   }
   private publish(
