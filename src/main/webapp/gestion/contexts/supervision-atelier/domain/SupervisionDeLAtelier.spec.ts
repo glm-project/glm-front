@@ -21,7 +21,7 @@ describe('SupervisionDeLAtelier', () => {
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T22:00:00Z'));
 
     expect(exploitableFixture(resultat).operateurs[0]).toMatchObject({
-      heureDOuverture: new Instant('2026-09-13T05:00:00Z'),
+      heureDOuverture: { value: '2026-09-13T05:00:00.000Z' },
       anomalies: ['JOURNEE_OUVERTE_PLUS_DE_16_HEURES'],
     });
   });
@@ -54,7 +54,7 @@ describe('SupervisionDeLAtelier', () => {
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T22:00:00Z'));
 
     expect(exploitableFixture(resultat).operateurs[0]).toMatchObject({
-      heureDOuverture: new Instant('2026-09-13T05:00:00Z'),
+      heureDOuverture: { value: '2026-09-13T05:00:00.000Z' },
       anomalies: ['JOURNEE_OUVERTE_PLUS_DE_16_HEURES'],
     });
   });
@@ -64,7 +64,7 @@ describe('SupervisionDeLAtelier', () => {
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T09:00:00Z'));
 
-    expect(exploitableFixture(resultat).operateurs[0]).toMatchObject({ heureDOuverture: new Instant('2026-09-13T08:00:00Z') });
+    expect(exploitableFixture(resultat).operateurs[0]?.heureDOuverture?.value).toBe('2026-09-13T08:00:00.000Z');
   });
   it('should produce an empty supervision when no operators are declared', () => {
     const resultat = SupervisionDeLAtelier.determine([], [], [], new Instant('2026-09-13T09:00:00Z'));
@@ -379,11 +379,11 @@ describe('SupervisionDeLAtelier', () => {
     expect(operateurSupervise?.heureDOuverture).toBeUndefined();
   });
 
-  it('should detect anomaly for open working visit exceeding 16 hours since first presence window', () => {
+  it('should detect a visit exceeding 16 hours by one millisecond while preserving presence and activities', () => {
     const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T06:00:00Z'));
     const journeeLongue = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
-    const maintenant = '2026-09-13T22:30:00Z';
+    const maintenant = '2026-09-13T22:00:00.001Z';
 
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
@@ -410,17 +410,6 @@ describe('SupervisionDeLAtelier', () => {
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant(exactementSeizeHeures));
 
     expect(exploitableFixture(resultat).operateurs[0]?.anomalies).toEqual([]);
-  });
-
-  it('should detect anomaly when open working visit duration exceeds 16 hours by one millisecond', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
-    const fenetre = new FenetreDePresence(new Instant('2026-09-13T06:00:00.000Z'));
-    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
-    const seizeHeuresEtUneMs = '2026-09-13T22:00:00.001Z';
-
-    const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant(seizeHeuresEtUneMs));
-
-    expect(exploitableFixture(resultat).operateurs[0]?.anomalies).toEqual(['JOURNEE_OUVERTE_PLUS_DE_16_HEURES']);
   });
 
   it('should return unexploitable result when an activity has no operator identifier', () => {

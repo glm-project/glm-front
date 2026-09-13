@@ -1,4 +1,4 @@
-import { ESLint, Linter, RuleTester } from 'eslint';
+import { ESLint, RuleTester } from 'eslint';
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 import typescript from 'typescript-eslint';
@@ -25,14 +25,11 @@ tester.run('max-constructor-parameters', maxConstructorParameters, {
 const eslint = new ESLint();
 for (const file of ['src/main/webapp/gestion/app.ts', 'src/test/webapp/unit/HexagonalArchTest.spec.ts', 'eslint.config.mjs']) {
   it(`should enforce the constructor limit through the repository configuration in ${file}`, async () => {
-    const config = await eslint.calculateConfigForFile(file);
-    const messages = new Linter().verify('class Example { constructor(a, b, c, d) {} }', {
-      plugins: { local: config.plugins.local },
-      rules: { 'local/max-constructor-parameters': config.rules['local/max-constructor-parameters'] },
-    });
+    const [result] = await eslint.lintText('class Example { constructor(a, b, c, d) {} }', { filePath: file });
+    const messages = result.messages.filter(message => message.ruleId === 'local/max-constructor-parameters');
 
-    assert.deepEqual(config.rules['local/max-constructor-parameters'], [2]);
     assert.equal(messages.length, 1);
+    assert.equal(messages[0].severity, 2);
     assert.equal(messages[0].messageId, 'useNamedParameters');
   });
 }

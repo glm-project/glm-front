@@ -21,10 +21,6 @@ export class Instant {
     );
   }
 
-  equals(other: Instant): boolean {
-    return this.milliseconds === other.milliseconds;
-  }
-
   compare(other: Instant): number {
     return this.milliseconds - other.milliseconds;
   }

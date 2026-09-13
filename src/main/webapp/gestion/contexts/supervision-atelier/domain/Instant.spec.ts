@@ -8,18 +8,9 @@ describe('Instant', () => {
     },
   );
 
-  it('should identify equivalent instants regardless of their time zone', () => {
-    const utc = new Instant('2026-09-13T08:00:00Z');
+  it('should expose an absolute instant in UTC regardless of its input time zone', () => {
     const paris = new Instant('2026-09-13T10:00:00+02:00');
 
-    expect(utc.equals(paris)).toBe(true);
     expect(paris.value).toBe('2026-09-13T08:00:00.000Z');
-  });
-
-  it('should distinguish different instants', () => {
-    const debut = new Instant('2026-09-13T08:00:00Z');
-    const suivant = new Instant('2026-09-13T08:00:00.001Z');
-
-    expect(debut.equals(suivant)).toBe(false);
   });
 });
