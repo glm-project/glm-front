@@ -72,6 +72,11 @@ ruleTester.run('scenario-shape', scenarioShape, {
   ],
   invalid: [
     {
+      code: `test('should refuse acting after a Node assertion', () => { const result = whenReading(); assert.equal(result, 1); whenWriting(); });`,
+      options: [{ order: true }],
+      errors: [{ messageId: 'actionAfterAssertion' }],
+    },
+    {
       code: `
         it('should refuse a conditional assertion', () => {
           const decision = whenDeciding();
@@ -148,15 +153,24 @@ ruleTester.run('scenario-shape', scenarioShape, {
   ],
 });
 
-const componentFilesFixture = [
+const testFilesFixture = [
   'src/main/webapp/gestion/contexts/supervision-atelier/infrastructure/primary/supervision-atelier.spec.ts',
   'src/main/webapp/gestion/header/header.spec.ts',
   'src/main/webapp/pupitre/app.spec.ts',
   'src/test/webapp/component/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
+  'src/test/webapp/application/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
+  'src/test/webapp/unit/HexagonalArchTest.spec.ts',
+  'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.spec.ts',
+  'src/main/webapp/pupitre/shared/local-storage/infrastructure/secondary/LocalStoragePort.contract.spec.ts',
+  'eslint/rules/scenario-shape.spec.mjs',
+  'scripts/generate-api-contract.spec.mjs',
+  'documentation/documentation.spec.mjs',
+  'example.test.js',
+  'example.test.ts',
 ];
 
-for (const file of componentFilesFixture) {
-  it(`should reject a second component action after verification in ${file}`, async () => {
+for (const file of testFilesFixture) {
+  it(`should reject a second action after verification in ${file}`, async () => {
     const messages = await whenLintingSequentialActions(file);
 
     assert.deepEqual(
@@ -165,12 +179,6 @@ for (const file of componentFilesFixture) {
     );
   });
 }
-
-it('should retain sequential actions and observations in application journeys', async () => {
-  const messages = await whenLintingSequentialActions('src/test/webapp/application/gestion/supervision-atelier/SupervisionAtelier.spec.ts');
-
-  assert.deepEqual(messages, []);
-});
 
 const whenLintingSequentialActions = async file => {
   const config = await new ESLint().calculateConfigForFile(file);

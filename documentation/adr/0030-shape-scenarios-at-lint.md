@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Extended during MR5 (#141) to component scenarios and observation helpers. Amends [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md).
+Accepted. Extended during MR5 (#141) to every test and to observation helpers. Amends [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md).
 
 ## Context
 
@@ -18,7 +18,7 @@ and observations is the narrative being written.
 
 ## Considered options
 
-- Extend the local rules with a syntactic shape check, scoped per folder — **kept**.
+- Extend the local rules with a syntactic shape check, applied to every test — **kept**.
 - Add `eslint-plugin-jest` or `@vitest/eslint-plugin` for `no-conditional-expect` — rejected: a new
   dependency and its ADR for one check, when the local rule already reads a scenario.
 - Rely on `sonarjs/assertions-in-tests`, already enabled — rejected: it requires an assertion to be present,
@@ -33,11 +33,15 @@ Refuse any `if`, loop, `switch` or `try` in the body of an `it` or `test`, on ev
 by a helper that returns the narrowed value or throws; cases are a table through `it.each`; a teardown that
 must run whatever happens belongs to the fixture, not around the assertions.
 
-Refuse an act after the first assertion where the `order` option is set. Apply it to domain specs,
-primary adapters, front shells and headers, and Cypress component specs. A scenario that acts again after
-concluding is split while preserving each observation and its required arrangement. Application journeys
-explicitly retain alternating actions and observations; application coordinators and secondary port
-contracts keep their existing order policy.
+Refuse an act after the first assertion in every test, including application journeys, production offline
+restarts, architecture, application coordinators, secondary port contracts and Node tooling. Match test
+filenames (`*.spec.*` and `*.test.*`) across JavaScript and TypeScript extensions, without folder exceptions.
+Recognize Node `assert` alongside `expect` and `then…` helpers.
+
+Split separate behaviors while preserving each observation and its required arrangement. When one behavior
+requires a chronology, capture public observations during the action and assert them afterwards. A pending
+operation must still be released; a snapshot must keep the value from the relevant instant. Cypress uses
+static aliases to prevent replaying a command when asserting its earlier result.
 
 The MR5 review exposed two other gaps: DOM assertions embedded selector plumbing in scenarios, and a
 `then…` helper moved focus before checking it. Extend `local/given-when-then` to recognize DOM access,
@@ -63,8 +67,6 @@ than an intermediate structure stays a review question, stated in [testing.md](.
 
 - A guard clause that throws is refused as well, although it never produced a false green; uniformity is
   paid with one helper.
-- The order policy remains scoped: application journeys deliberately allow several action/observation
-  pairs, and coordinators and secondary contracts are not migrated by this decision.
 - Gesture and DOM checks recognize known syntax and names; arbitrary indirect calls and semantic
   misclassification of helpers remain review concerns.
 - Splitting a scenario duplicates its arrangement, which lengthens some specs.

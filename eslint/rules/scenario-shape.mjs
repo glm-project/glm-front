@@ -20,7 +20,7 @@ const isThenHelperCall = node => {
 
 const isAssertion = node => {
   if (node.type !== 'CallExpression') return false;
-  if (rootIdentifier(node) === 'expect') return true;
+  if (['expect', 'assert'].includes(rootIdentifier(node))) return true;
   return isThenHelperCall(node);
 };
 
