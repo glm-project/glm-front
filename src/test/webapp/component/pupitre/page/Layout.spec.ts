@@ -18,14 +18,19 @@ describe('Pupitre layout in a browser', () => {
     thenCaptureTheScreen('landscape-keypad');
   });
 
-  it('should keep operator commands and workstation choices within a narrow screen', () => {
+  it('should keep operator commands within a narrow screen', () => {
     givenThePupitre(390, 844);
-
     whenDesignatingJean();
 
     thenControlsFitTheScreen(['header-operator', 'finish', 'pause', 'resume', 'stop-all']);
     thenCaptureTheScreen('narrow-pointage');
+  });
+
+  it('should keep workstation choices within a narrow screen', () => {
+    givenThePupitre(390, 844);
+    whenDesignatingJean();
     whenOpeningWorkstationChoice();
+
     thenControlsFitTheScreen(['workstation-tour', 'workstation-fraiseuse', 'cancel-workstation']);
     thenCaptureTheScreen('narrow-workstation');
   });

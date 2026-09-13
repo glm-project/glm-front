@@ -107,25 +107,38 @@ Structure scenarios as given, when and then. Use named helpers when they express
 hide TestBed, browser, HTTP, storage, clock or selector plumbing. A short scenario may call its public
 contract and assert directly when extracting helpers would only rename those calls.
 
-Vitest specs are held to it as much as Cypress ones. What varies is where the seam falls: wiring the TestBed
+Every test is held to it: Vitest, Cypress, architecture, port contracts, application coordinators, scripts,
+documentation and tooling tests. There is no folder exception. What varies is where the seam falls: wiring the TestBed
 stays in `beforeEach` — it is plumbing, not a business precondition — while rendering with the inputs under
 test is the action (`pupitre/header/header.spec.ts`).
 
-`local/given-when-then` rejects technical APIs directly in a scenario; it permits direct public calls and
-assertions. It cannot judge whether a helper adds business meaning, so that remains a review concern. Data
-declarations and fixture construction remain readable in the scenario. `HexagonalArchTest.spec.ts` is the
-sole exception: its `arch-unit-ts` fluent DSL is itself the architecture rule being stated.
+Before the first red run, write the scenario's preconditions, action and observable result in functional
+vocabulary. After each green run, check that those three responsibilities are still separate. A `then…`
+helper observes: clicking, focusing, navigating, advancing time or releasing pending work belongs to a
+`given…` or `when…` helper. Wait for an action's prerequisites inside that action helper; moving focus out
+of an assertion must not lose the wait for the control to become enabled.
+
+`local/given-when-then` rejects technical APIs, selector construction and known DOM accesses directly in a
+scenario, including inline callbacks. It also rejects known browser/clock actions and calls to `given…`
+or `when…` from a `then…` helper, including nested callbacks. An action deferred inside `expect(() => …)`
+remains legal for assertions such as `toThrow`. Direct public calls, simple assertions, data declarations
+and fixture construction remain legal; wrapping them mechanically adds no meaning.
+The `arch-unit-ts` fluent DSL remains a direct public contract and follows the same rules.
 
 `local/scenario-shape` holds the shape ([ADR 0030](adr/0030-shape-scenarios-at-lint.md)). **A scenario never
 branches**: an assertion under a condition can be skipped, and a skipped assertion still reads green. Narrow a
 union through a helper that returns the narrowed value or throws — `gesturesOf`, `requiredFixture` — write
-cases as an `it.each` table, and let the fixture own a teardown that must run whatever happens. **On domain
-specs a scenario also stops at its assertions**: acting again after concluding means two scenarios. The other
-layers are not held to that second half yet, and a Cypress journey legitimately alternates acts and
-observations.
+cases as an `it.each` table, and let the fixture own a teardown that must run whatever happens. **Every scenario stops at its assertions**: acting again after concluding means separate scenarios,
+each with the necessary arrangement. For one behavior spanning concurrent operations or several restarts,
+capture public observations as the action progresses, release pending work, then assert those captured
+results. Preserve the timing of the observations; moving a read to the end would change what is proved.
+Cypress snapshots use static aliases so later assertions cannot replay earlier commands. The order check
+recognizes `expect`, Node `assert` and `then…` helpers and applies to every `*.spec.*` and `*.test.*` file
+in the supported JavaScript and TypeScript extensions, without folder exclusions.
 
-Neither check knows what an assertion targets. Asserting an observable business result rather than an
-intermediate structure stays yours, and the section below is where it is decided.
+These checks recognize syntax and known names, not business intent or arbitrary indirect calls. Review
+still checks helper responsibilities and that assertions target an observable result. A passing lint run
+does not prove that a helper named `then…` tells a useful story.
 
 ## Select on `data-selector`, never on CSS classes or text
 

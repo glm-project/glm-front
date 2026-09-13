@@ -78,13 +78,13 @@ const filesFixture = [
 for (const file of filesFixture) {
   it(`should reject two if criteria through the repository configuration in ${file}`, async () => {
     const config = await eslint.calculateConfigForFile(file);
-    assert.deepEqual(config.rules['local/max-if-criteria'], [2]);
 
     const messages = linter.verify('if (first || second) act();', {
       plugins: { local: config.plugins.local },
       rules: { 'local/max-if-criteria': config.rules['local/max-if-criteria'] },
     });
 
+    assert.deepEqual(config.rules['local/max-if-criteria'], [2]);
     assert.equal(messages.length, 1);
     assert.equal(messages[0].messageId, 'extractPredicate');
   });

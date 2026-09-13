@@ -69,16 +69,22 @@ describe('Pupitre header', () => {
     thenItShowsTheRecordingError();
   });
 
-  it('should ask to reset the enrolment only after the logo is held for three seconds', () => {
+  it('should not request reset before the logo has been held for three seconds', () => {
     givenAConnectedPupitre();
     givenAControlledClock();
-
     whenRenderingTheHeaderAtOnce();
     whenPressingTheLogo();
     whenTimePasses(2_999);
 
     thenResetsRequestedAre(0);
+  });
 
+  it('should request reset when the logo has been held for three seconds', () => {
+    givenAConnectedPupitre();
+    givenAControlledClock();
+    whenRenderingTheHeaderAtOnce();
+    whenPressingTheLogo();
+    whenTimePasses(2_999);
     whenTimePasses(1);
 
     thenResetsRequestedAre(1);

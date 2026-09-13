@@ -9,47 +9,69 @@ describe('Pupitre common page in a browser', () => {
     cy.viewport(1280, 800);
   });
 
-  it('should keep the enrolment screen under the header before the first reference, then reveal the keypad', () => {
+  it('should keep enrolment under the header before the first reference', () => {
     givenThePageWithoutAReference();
-    thenTheHeaderStandsAboveTheEnrolmentScreen();
 
+    thenTheHeaderStandsAboveTheEnrolmentScreen();
+  });
+
+  it('should reveal the keypad when the first reference becomes ready', () => {
+    givenThePageWithoutAReference();
     whenTheReferenceBecomesReady();
 
     thenTheKeypadIsVisible();
   });
 
-  it('should move from designation to identity and pointage, then finish on an empty keypad', () => {
+  it('should show identity and pointage after designation', () => {
     givenThePage();
-
     whenDesignatingJean();
-    thenJeanAndPointageAreVisible();
 
+    thenJeanAndPointageAreVisible();
+  });
+
+  it('should return to an empty keypad after finishing', () => {
+    givenThePage();
+    whenDesignatingJean();
     whenFinishing();
 
     thenAnEmptyKeypadIsVisible();
   });
 
-  it('should expire the pointage and its open workstation choice', () => {
+  it('should display the workstation choice over pointage', () => {
     givenTheControlledPage();
     whenDesignatingJeanWithControlledTime();
     whenOpeningAWorkstationChoice();
-    thenTheWorkstationChoiceIsVisible();
 
+    thenTheWorkstationChoiceIsVisible();
+  });
+
+  it('should close pointage and its workstation choice on expiration', () => {
+    givenTheControlledPage();
+    whenDesignatingJeanWithControlledTime();
+    whenOpeningAWorkstationChoice();
     whenTimePasses(30_001);
 
     thenPointageAndWorkstationChoiceAreClosed();
   });
 
-  it('should renew the operator window on a press outside the keypad', () => {
+  it('should keep pointage open after renewing on a header press', () => {
     givenTheControlledPage();
     whenDesignatingJeanWithControlledTime();
     whenTimePasses(29_000);
-
     whenPressingTheHeader();
     whenTimePasses(29_000);
-    thenThePointageIsVisible();
 
+    thenThePointageIsVisible();
+  });
+
+  it('should expire pointage at the renewed deadline', () => {
+    givenTheControlledPage();
+    whenDesignatingJeanWithControlledTime();
+    whenTimePasses(29_000);
+    whenPressingTheHeader();
+    whenTimePasses(29_000);
     whenTimePasses(1_000);
+
     thenTheKeypadIsVisible();
   });
 
@@ -63,27 +85,38 @@ describe('Pupitre common page in a browser', () => {
     thenOnlyTheKeypadIsVisible();
   });
 
-  it('should accept the first digit after the expiry timer already reset the keypad', () => {
+  it('should clear the code at the designation deadline', () => {
     givenTheControlledPage();
     whenEnteringDigit('0');
     whenTimePasses(30_000);
-    thenTheCodeIs('');
 
+    thenTheCodeIs('');
+  });
+
+  it('should accept the first digit after the expiry timer reset the keypad', () => {
+    givenTheControlledPage();
+    whenEnteringDigit('0');
+    whenTimePasses(30_000);
     whenEnteringDigit('9');
 
     thenTheCodeIs('9');
   });
 
-  it('should disable every tile and global command during global acceptance while keeping finish available', () => {
+  it('should disable workshop gestures but keep finish available during acceptance', () => {
     givenThePageWithDelayedAcceptance();
     whenDesignatingJean();
-
     whenPressingPause();
 
     thenWorkshopGesturesAreUnavailable();
     thenFinishIsAvailable();
+  });
 
+  it('should allow finishing while global acceptance is pending', () => {
+    givenThePageWithDelayedAcceptance();
+    whenDesignatingJean();
+    whenPressingPause();
     whenFinishing();
+
     thenTheKeypadIsVisible();
   });
 

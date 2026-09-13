@@ -81,47 +81,39 @@ describe('Production pupitre offline restart', () => {
 
   it('should boot offline and publish one durable gesture with its original identity after several restarts', () => {
     whenBootingTheProductionPupitre();
-
-    thenTheProductionPupitreIsOnline();
-    thenTheDeviceIsEnrolledOnce();
-    thenTheInitialReferenceHasBeenFetched();
-    thenTheServiceWorkerIsActivated();
+    whenReadingOnlinePupitre('initial', 2);
+    whenWaitingForServiceWorkerActivation();
     whenRestartingTheProductionPupitre();
-    thenTheProductionPupitreIsOnline();
-    thenTheServiceWorkerControlsTheRestartedPupitre();
-    thenTheDeviceIsEnrolledOnce();
-    thenTheReferenceHasBeenFetchedAfterTheOnlineRestart();
+    whenReadingOnlinePupitre('online-restart', 4);
     whenOpeningTheJournalFixture();
-    thenTheJournalFixtureIsReady();
     whenPreparingDurableStateThroughTheJournalPort();
-    thenAnUncachedBrowserRequestSucceeds();
+    whenProbingBrowserNetwork('initial-network');
     whenCuttingTheBrowserNetwork();
-    thenAnUncachedBrowserRequestFails();
-    thenTheControlledPupitreCannotReachANoncachedUrl();
+    whenProbingBrowserNetwork('offline-network');
+    whenProbingControlledPupitre('offline-controlled-network');
     whenRestartingTheProductionPupitre();
-
-    thenTheProductionPupitreBootsOffline();
-    thenThePendingJournalAndReferenceSurvivedTheOfflineRestart();
-    thenNoGestureReachedTheServer();
+    whenReadingOfflinePupitre('first-offline-restart');
     whenRestartingTheProductionPupitre();
-    thenTheProductionPupitreBootsOffline();
-    thenThePendingJournalAndReferenceSurvivedTheOfflineRestart();
-    thenNoGestureReachedTheServer();
+    whenReadingOfflinePupitre('second-offline-restart');
     whenRestoringTheBrowserNetwork();
-    thenAnUncachedBrowserRequestSucceeds();
-    thenTheControlledPupitreCanReachTheNetwork();
+    whenProbingBrowserNetwork('restored-network');
+    whenProbingControlledPupitre('restored-controlled-network');
     whenAnnouncingTheNetworkReturn();
-
-    thenTheOriginalGestureReachedTheServerExactlyOnce();
+    whenReadingPendingReplay();
     whenReleasingTheGestureResponse();
-    thenTheReplayHasSettledThroughTheJournalPort();
-    thenTheOriginalGestureIsAcceptedInTheJournal();
-    thenTheReferenceIsRefreshedAfterReconnect();
+    whenReadingAcceptedReplay();
     whenRestartingTheProductionPupitre();
-    thenTheProductionPupitreIsOnline();
-    thenTheReferenceIsRefreshedAfterTheFinalRestart();
-    thenTheOriginalGestureStillReachedTheServerExactlyOnce();
-    thenTheDeviceIsEnrolledOnce();
+    whenReadingOnlinePupitre('final-restart', 8);
+    whenReadingJournal('final-journal');
+
+    thenOnlinePupitreWasObserved('initial', 2);
+    thenTheWorkerActivatedAndControlledTheOnlineRestart();
+    thenOnlinePupitreWasObserved('online-restart', 4);
+    thenTheBrowserNetworkWasCutAndRestored();
+    thenOfflineRestartPreservedPendingWork('first-offline-restart');
+    thenOfflineRestartPreservedPendingWork('second-offline-restart');
+    thenTheOriginalGestureWasReplayedAndAccepted();
+    thenOnlinePupitreWasObserved('final-restart', 8);
     thenTheJournalAndReferenceSurvivedEveryRestart();
   });
 });
@@ -158,7 +150,7 @@ const whenRestartingTheProductionPupitre = (): void => {
 const whenOpeningTheJournalFixture = (): void => appendFrame('journal-fixture', '/__fixture');
 
 const whenPreparingDurableStateThroughTheJournalPort = (): void => {
-  thenProductionFixture().then(fixture => fixture.prepare(entrepriseFixture, referenceFixture, gestureFixture));
+  readProductionFixture().then(fixture => fixture.prepare(entrepriseFixture, referenceFixture, gestureFixture));
 };
 
 const whenCuttingTheBrowserNetwork = (): void => {
@@ -170,7 +162,7 @@ const whenRestoringTheBrowserNetwork = (): void => {
 };
 
 const whenAnnouncingTheNetworkReturn = (): void => {
-  thenPupitreWindow().then(window => {
+  readPupitreWindow().then(window => {
     window.dispatchEvent(new Event('online'));
   });
 };
@@ -179,91 +171,97 @@ const whenReleasingTheGestureResponse = (): void => {
   cy.request('POST', '/__control/release-gesture-responses');
 };
 
-const thenTheProductionPupitreIsOnline = (): void => {
-  thenPupitreContains('pupitre-shell');
-  thenPupitreContains('pupitre-connected');
+const whenReadingOnlinePupitre = (alias: string, referenceRequests: number): void => {
+  waitForPupitre('pupitre-connected');
+  readPupitreWindow()
+    .then(window => ({
+      shell: window.document.querySelector(dataSelector('pupitre-shell')) !== null,
+      connected: window.document.querySelector(dataSelector('pupitre-connected')) !== null,
+      controller: window.navigator.serviceWorker.controller?.scriptURL,
+    }))
+    .as(`${alias}-view`, { type: 'static' });
+  readServerState('referenceRequests', referenceRequests).as(`${alias}-server`, { type: 'static' });
 };
 
-const thenTheProductionPupitreBootsOffline = (): void => {
-  thenPupitreContains('pupitre-shell');
-  thenPupitreContains('pupitre-disconnected');
+const whenWaitingForServiceWorkerActivation = (): void => {
+  readPupitreWindow()
+    .then(window => cy.wrap(window.navigator.serviceWorker.ready, { timeout: 40_000 }).its('active.state').should('equal', 'activated'))
+    .as('worker-state', { type: 'static' });
 };
 
-const thenTheServiceWorkerIsActivated = (): void => {
-  thenPupitreWindow().then(window =>
-    cy.wrap(window.navigator.serviceWorker.ready, { timeout: 40_000 }).its('active.state').should('equal', 'activated'),
-  );
+const whenReadingOfflinePupitre = (alias: string): void => {
+  waitForPupitre('pupitre-disconnected');
+  readPupitreWindow()
+    .then(window => ({
+      shell: window.document.querySelector(dataSelector('pupitre-shell')) !== null,
+      disconnected: window.document.querySelector(dataSelector('pupitre-disconnected')) !== null,
+    }))
+    .as(`${alias}-view`, { type: 'static' });
+  whenReadingJournal(`${alias}-journal`);
+  readServerState().as(`${alias}-server`, { type: 'static' });
 };
 
-const thenTheServiceWorkerControlsTheRestartedPupitre = (): void => {
-  thenPupitreWindow().should(window => {
-    expect(window.navigator.serviceWorker.controller?.scriptURL).to.match(/\/ngsw-worker\.js$/);
-  });
-};
-
-const thenTheDeviceIsEnrolledOnce = (): void => {
-  thenServerState('authorizationRequests', 1).its('authorizationRequests').should('equal', 1);
-};
-
-const thenTheInitialReferenceHasBeenFetched = (): void => {
-  thenServerState('referenceRequests', 2).its('referenceRequests').should('be.at.least', 2);
-};
-
-const thenTheReferenceHasBeenFetchedAfterTheOnlineRestart = (): void => {
-  thenServerState('referenceRequests', 4).its('referenceRequests').should('be.at.least', 4);
-};
-
-const thenTheReferenceIsRefreshedAfterReconnect = (): void => {
-  thenServerState('referenceRequests', 6).its('referenceRequests').should('be.at.least', 6);
-};
-
-const thenTheReferenceIsRefreshedAfterTheFinalRestart = (): void => {
-  thenServerState('referenceRequests', 8).its('referenceRequests').should('be.at.least', 8);
-};
-
-const thenTheJournalFixtureIsReady = (): void => {
-  thenProductionFixture().should('exist');
-};
-
-const thenAnUncachedBrowserRequestFails = (): void => {
-  browserNetworkProbe().then(result => {
-    expect(result).to.deep.equal({ failureName: 'TypeError', reached: false });
-  });
-};
-
-const thenAnUncachedBrowserRequestSucceeds = (): void => {
-  browserNetworkProbe().its('reached').should('equal', true);
-};
-
-const thenTheControlledPupitreCannotReachANoncachedUrl = (): void => {
-  thenPupitreWindow()
-    .then(window => window.fetch(`/__network-probe?offline=${Date.now()}`, { cache: 'no-store' }))
-    .its('ok')
-    .should('equal', false);
-};
-
-const thenTheControlledPupitreCanReachTheNetwork = (): void => {
-  thenPupitreWindow()
-    .then(window => window.fetch(`/__network-probe?restored=${Date.now()}`, { cache: 'no-store' }))
-    .its('ok')
-    .should('equal', true);
-};
-
-const thenNoGestureReachedTheServer = (): void => {
-  thenServerState().its('pushes').should('have.length', 0);
-};
-
-const thenThePendingJournalAndReferenceSurvivedTheOfflineRestart = (): void => {
-  thenProductionFixture()
+const whenReadingJournal = (alias: string): void => {
+  readProductionFixture()
     .then(fixture => fixture.read(entrepriseFixture))
-    .then(state => {
-      expect(state.referentiel).to.deep.equal(referenceFixture);
-      expect(state.evenements).to.deep.equal([{ geste: gestureFixture, etat: 'EN_ATTENTE' }]);
-    });
+    .as(alias, { type: 'static' });
 };
 
-const thenTheOriginalGestureReachedTheServerExactlyOnce = (): void => {
-  thenServerState('pushes', 1).should(state => {
+const whenProbingBrowserNetwork = (alias: string): void => {
+  browserNetworkProbe().as(alias, { type: 'static' });
+};
+
+const whenProbingControlledPupitre = (alias: string): void => {
+  readPupitreWindow()
+    .then(window => window.fetch(`/__network-probe?probe=${Date.now()}`, { cache: 'no-store' }))
+    .its('ok')
+    .as(alias, { type: 'static' });
+};
+
+const whenReadingPendingReplay = (): void => {
+  readServerState('pushes', 1).as('pending-replay', { type: 'static' });
+};
+
+const whenReadingAcceptedReplay = (): void => {
+  readProductionFixture().then(fixture => fixture.waitForSynchronization());
+  whenReadingJournal('accepted-journal');
+  readServerState('referenceRequests', 6).as('accepted-server', { type: 'static' });
+};
+
+const thenOnlinePupitreWasObserved = (alias: string, referenceRequests: number): void => {
+  cy.get(`@${alias}-view`).should('include', { shell: true, connected: true });
+  cy.get<ServerStateFixture>(`@${alias}-server`).should(state => {
+    expect(state.authorizationRequests).to.equal(1);
+    expect(state.referenceRequests).to.be.at.least(referenceRequests);
+  });
+};
+
+const thenTheWorkerActivatedAndControlledTheOnlineRestart = (): void => {
+  cy.get('@worker-state').should('equal', 'activated');
+  cy.get('@online-restart-view')
+    .its('controller')
+    .should('match', /\/ngsw-worker\.js$/);
+};
+
+const thenTheBrowserNetworkWasCutAndRestored = (): void => {
+  cy.get('@initial-network').should('deep.equal', { reached: true });
+  cy.get('@offline-network').should('deep.equal', { failureName: 'TypeError', reached: false });
+  cy.get('@offline-controlled-network').should('equal', false);
+  cy.get('@restored-network').should('deep.equal', { reached: true });
+  cy.get('@restored-controlled-network').should('equal', true);
+};
+
+const thenOfflineRestartPreservedPendingWork = (alias: string): void => {
+  cy.get(`@${alias}-view`).should('deep.equal', { shell: true, disconnected: true });
+  cy.get(`@${alias}-journal`).its('referentiel').should('deep.equal', referenceFixture);
+  cy.get(`@${alias}-journal`)
+    .its('evenements')
+    .should('deep.equal', [{ geste: gestureFixture, etat: 'EN_ATTENTE' }]);
+  cy.get(`@${alias}-server`).its('pushes').should('have.length', 0);
+};
+
+const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
+  cy.get<ServerStateFixture>('@pending-replay').should(state => {
     expect(state.gestureResponsesReleased).to.equal(false);
     expect(state.pushes).to.deep.equal([
       {
@@ -272,30 +270,14 @@ const thenTheOriginalGestureReachedTheServerExactlyOnce = (): void => {
       },
     ]);
   });
-};
-
-const thenTheReplayHasSettledThroughTheJournalPort = (): void => {
-  thenProductionFixture().then(fixture => fixture.waitForSynchronization());
-};
-
-const thenTheOriginalGestureIsAcceptedInTheJournal = (): void => {
-  thenProductionFixture()
-    .then(fixture => fixture.read(entrepriseFixture))
-    .its('evenements')
-    .should('deep.equal', [acceptedGestureFixture]);
-};
-
-const thenTheOriginalGestureStillReachedTheServerExactlyOnce = (): void => {
-  thenServerState().its('pushes').should('have.length', 1);
+  cy.get('@accepted-journal').its('evenements').should('deep.equal', [acceptedGestureFixture]);
+  cy.get('@accepted-server').its('referenceRequests').should('be.at.least', 6);
 };
 
 const thenTheJournalAndReferenceSurvivedEveryRestart = (): void => {
-  thenProductionFixture()
-    .then(fixture => fixture.read(entrepriseFixture))
-    .then(state => {
-      expect(state.referentiel).to.deep.equal(referenceFixture);
-      expect(state.evenements).to.deep.equal([acceptedGestureFixture]);
-    });
+  cy.get('@final-journal').its('referentiel').should('deep.equal', referenceFixture);
+  cy.get('@final-journal').its('evenements').should('deep.equal', [acceptedGestureFixture]);
+  cy.get('@final-restart-server').its('pushes').should('have.length', 1);
 };
 
 const appendFrame = (selector: string, source: string): void => {
@@ -311,31 +293,31 @@ const pupitreFrame = (): Cypress.Chainable<JQuery<HTMLIFrameElement>> => cy.get(
 
 const fixtureFrame = (): Cypress.Chainable<JQuery<HTMLIFrameElement>> => cy.get(dataSelector('journal-fixture'));
 
-const thenPupitreWindow = (): Cypress.Chainable<Window> =>
+const readPupitreWindow = (): Cypress.Chainable<Window> =>
   pupitreFrame().then(frame => {
     const window = requiredFixture(frame[0], 'production pupitre frame').contentWindow;
     if (window === null) throw new Error('The production pupitre browsing context is unavailable.');
     return window;
   });
 
-const thenFixtureWindow = (): Cypress.Chainable<FixtureWindow> =>
+const readFixtureWindow = (): Cypress.Chainable<FixtureWindow> =>
   fixtureFrame().then(frame => {
     const window = requiredFixture(frame[0], 'journal fixture frame').contentWindow;
     if (window === null) throw new Error('The journal fixture browsing context is unavailable.');
     return window as FixtureWindow;
   });
 
-const thenProductionFixture = (): Cypress.Chainable<ProductionPupitreFixture> =>
-  thenFixtureWindow().its('pupitreProductionFixture').should('exist');
+const readProductionFixture = (): Cypress.Chainable<ProductionPupitreFixture> =>
+  readFixtureWindow().its('pupitreProductionFixture').should('exist');
 
-const thenPupitreContains = (selector: string): void => {
+const waitForPupitre = (selector: string): void => {
   pupitreFrame().should(frame => {
     const pupitre = requiredFixture(frame[0], 'production pupitre frame');
     expect(pupitre.contentDocument?.querySelector(dataSelector(selector)) ?? null).not.to.equal(null);
   });
 };
 
-const thenServerState = (until?: string, atLeast?: number): Cypress.Chainable<ServerStateFixture> => {
+const readServerState = (until?: string, atLeast?: number): Cypress.Chainable<ServerStateFixture> => {
   const query = until === undefined ? '' : `?until=${encodeURIComponent(until)}&atLeast=${String(atLeast ?? 0)}`;
   return cy.request<ServerStateFixture>({ url: `/__control${query}`, timeout: 40_000 }).its('body');
 };

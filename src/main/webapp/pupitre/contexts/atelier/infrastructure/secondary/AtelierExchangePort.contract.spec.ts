@@ -180,11 +180,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   it('should preserve event identity and original business time on each write route', async () => {
     const arrivee = whenSending(arriveeFixture);
     const arriveeRequest = await whenServerAcceptsWrite('/api/atelier/journees');
-    await thenWriteSucceededWith(arrivee, arriveeRequest, {
-      id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
-      operateur: 'jean',
-    });
 
     const presence = whenSending({
       ...arriveeFixture,
@@ -194,15 +189,24 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       assuranceArriveeId: 'arrivee-assuree',
     });
     const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
+
+    const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
+    const pointageRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+
+    const pointageSansPoste = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
+    const pointageSansPosteRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+
+    await thenWriteSucceededWith(arrivee, arriveeRequest, {
+      id: 'geste',
+      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      operateur: 'jean',
+    });
     await thenWriteSucceededWith(presence, presenceRequest, {
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'REPRISE',
     });
-
-    const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
-    const pointageRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
     await thenWriteSucceededWith(pointage, pointageRequest, {
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
@@ -210,9 +214,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       type: 'DEBUT',
       poste: 'tour',
     });
-
-    const pointageSansPoste = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
-    const pointageSansPosteRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
     await thenWriteSucceededWith(pointageSansPoste, pointageSansPosteRequest, {
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
@@ -250,16 +251,16 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenTransportFailureIs(refused);
   });
 
-  it('should reread the affected aggregate before the caller replays a concurrent gesture', async () => {
+  it('should reread the operator day before replaying presence', async () => {
     const presence = whenRereading(arriveeFixture);
-
     const operatorDayRequest = await whenServerReturnsOperatorDay();
 
     thenItRequestedTheOperatorDay(operatorDayRequest);
     await thenRereadCompletes(presence);
+  });
 
+  it('should reread the workshop element before replaying pointage', async () => {
     const pointage = whenRereading({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
-
     const workshopElementRequest = await whenServerReturnsWorkshopElement();
 
     thenItRequestedTheWorkshopElement(workshopElementRequest);

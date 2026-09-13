@@ -291,18 +291,10 @@ export default typescript.config(
     },
   },
   {
-    files: ['src/**/*.spec.ts'],
-    ignores: ['src/test/webapp/unit/HexagonalArchTest.spec.ts'],
+    files: ['**/*.{spec,test}.{js,mjs,cjs,ts,tsx,jsx}'],
     plugins: { local },
     rules: {
       'local/given-when-then': 'error',
-      'local/scenario-shape': 'error',
-    },
-  },
-  {
-    files: ['src/main/webapp/**/domain/**/*.spec.ts'],
-    plugins: { local },
-    rules: {
       'local/scenario-shape': ['error', { order: true }],
     },
   },

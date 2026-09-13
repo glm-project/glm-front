@@ -91,18 +91,21 @@ describe('Pupitre synchronization over stalled HTTP', () => {
 
       await whenThirtySecondsElapse();
 
-      thenTheRequestWasCancelled(stalled);
-      await thenTheSessionWriteCompletes(sessionWrite);
-      await thenSynchronizationCompletes(first);
-      thenReferentialWasNotRead();
-      await thenGestureIsPending();
+      const sessionResult = await sessionWrite;
+      await first;
+      const referenceRequests = readPendingReferenceRequests();
+      const pendingState = await journal.read(entrepriseFixture);
 
       const retry = whenSynchronizing();
       const request = await whenRequestArrives();
       whenServerAccepts(request);
       await whenReferenceRefreshCompletes();
-      await thenSynchronizationCompletes(retry);
+      await retry;
 
+      thenTheRequestWasCancelled(stalled);
+      expect(sessionResult).toBe('session updated');
+      expect(referenceRequests).toEqual([]);
+      thenGestureIsPending(pendingState);
       thenTheGestureKeepsItsOriginalIdentity(request);
       await thenGestureIsAccepted();
     },
@@ -136,16 +139,8 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   const thenTheRequestWasCancelled = (request: TestRequest): void => {
     expect(request.cancelled).toBe(true);
   };
-  const thenTheSessionWriteCompletes = async (write: Promise<string>): Promise<void> => {
-    await expect(write).resolves.toBe('session updated');
-  };
-  const thenSynchronizationCompletes = async (synchronization: Promise<void>): Promise<void> => {
-    await synchronization;
-  };
-  const thenReferentialWasNotRead = (): void => {
-    http.expectNone(request => request.url === '/api/operateurs');
-    http.expectNone(request => request.url === '/api/atelier/suivis');
-  };
+  const readPendingReferenceRequests = (): TestRequest[] =>
+    http.match(request => ['/api/operateurs', '/api/atelier/suivis'].includes(request.url));
   const thenTheGestureKeepsItsOriginalIdentity = (request: TestRequest): void => {
     expect(request.request.body).toEqual({ id: 'arrivee-originale', dateDeSurvenue: '2026-09-05T08:00:00Z', operateur: 'jean' });
   };
@@ -156,8 +151,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
       request.flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
     }
   };
-  const thenGestureIsPending = async (): Promise<void> => {
-    const state = await journal.read(entrepriseFixture);
+  const thenGestureIsPending = (state: Awaited<ReturnType<JournauxDuPupitrePort['read']>>): void => {
     expect(state.evenements).toEqual([{ geste: gesteFixture, etat: 'EN_ATTENTE' }]);
     expect(state.connecte).toBe(false);
   };

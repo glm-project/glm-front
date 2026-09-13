@@ -211,14 +211,16 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await whenTheRenewalIsDue();
     await whenTheServerGrantsARenewal();
 
-    thenSessionIs(authentication, tokenFixture, 'entreprise-a');
+    const beforeCommit = readSession(authentication);
 
     await whenRenewalPersistenceCompletes();
 
-    thenSessionIs(authentication, rotatedFixture, 'entreprise-a');
+    const afterCommit = readSession(authentication);
 
     const restarted = await whenRestartingAndAttemptingRenewal();
 
+    expect(beforeCommit).toEqual({ token: tokenFixture, tenant: 'entreprise-a' });
+    expect(afterCommit).toEqual({ token: rotatedFixture, tenant: 'entreprise-a' });
     thenRestartedSessionRenewsWith(restarted, 'refresh-2', rotatedFixture, 'entreprise-a');
   });
 
@@ -251,15 +253,17 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     thenSessionIs(restarted, undefined, 'entreprise-a');
   });
 
-  it('should expose no session when storage cannot be read or committed', async () => {
+  it('should expose no session when storage cannot be read', async () => {
     givenStorageCannotBeRead();
-
     await whenRestoring();
 
     thenSessionIs(authentication, undefined, undefined);
+  });
 
+  it('should expose no session when storage cannot be committed', async () => {
+    givenStorageCannotBeRead();
+    await whenRestoring();
     givenStorageCanBeReadButNotCommitted();
-
     await whenEnrolling(tokenFixture);
 
     thenSessionIs(authentication, undefined, undefined);
@@ -443,9 +447,9 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
 
     await whenThirtySecondsElapse();
 
-    thenTheRequestWasCancelled(request);
     await whenLogoutPersistenceCompletes();
     const restarted = await whenRestartingWithoutAStoredCredential();
+    thenTheRequestWasCancelled(request);
     thenSessionIs(restarted, undefined, 'entreprise-a');
   });
 
@@ -736,6 +740,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     return http.expectOne(url);
   };
 
+  const readSession = (session: AuthenticationPort) => ({ token: session.currentToken(), tenant: session.currentTenant() });
   const thenSessionIs = (session: AuthenticationPort, token: string | undefined, tenant: string | undefined): void => {
     expect(session.currentToken()).toBe(token);
     expect(session.currentTenant()).toBe(tenant);
@@ -802,15 +807,19 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 
     await whenTheServerIssuesTheCode();
 
-    thenTheCodeShownIs({
-      userCode: 'WDJB-MJHT',
-      verificationUri: verificationUriFixture,
-      verificationUriComplete: `${verificationUriFixture}?user_code=WDJB-MJHT`,
-      expiresIn: 600,
-    });
+    const codesBeforeApproval = [...codesShown];
 
     await whenTheServerGrantsTheTokens();
 
+    thenTheCodeShownIs(
+      {
+        userCode: 'WDJB-MJHT',
+        verificationUri: verificationUriFixture,
+        verificationUriComplete: `${verificationUriFixture}?user_code=WDJB-MJHT`,
+        expiresIn: 600,
+      },
+      codesBeforeApproval,
+    );
     await thenTheOutcomeIs(outcome, 'ENROLLED');
   });
 
@@ -1178,8 +1187,8 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
     expect(result.restoredToken).toBe(anotherCompanyTokenFixture);
   };
 
-  const thenTheCodeShownIs = (expected: DeviceAuthorizationCode): void => {
-    expect(codesShown).toEqual([expected]);
+  const thenTheCodeShownIs = (expected: DeviceAuthorizationCode, shown = codesShown): void => {
+    expect(shown).toEqual([expected]);
   };
 
   const thenNoCodeWasShown = (): void => {
@@ -1226,11 +1235,12 @@ describe('Device session coordination, through DeviceSessionPort', () => {
     });
     await whenAllowingTurnToEnter();
 
-    thenChronologyIs(chronology, [`${key}-held`]);
+    const waitingChronology = [...chronology];
 
     held.release();
     await Promise.all([held.completion, queued]);
 
+    thenChronologyIs(waitingChronology, [`${key}-held`]);
     thenChronologyIs(chronology, [`${key}-held`, `${key}-released`, 'session-action']);
   });
 

@@ -58,13 +58,7 @@ test('should resolve every local Markdown link', () => {
 
 test('should give every bounded context matching agent documents', () => {
   assert.ok(boundedContextDirectories.length > 0);
-  for (const context of boundedContextDirectories) {
-    const agents = resolve(context, 'AGENTS.md');
-    const claude = resolve(context, 'CLAUDE.md');
-    assert.ok(existsSync(agents), `${context} has no AGENTS.md`);
-    assert.ok(existsSync(claude), `${context} has no CLAUDE.md`);
-    assert.equal(readFileSync(claude, 'utf8'), '@AGENTS.md\n');
-  }
+  thenEveryContextHasMatchingAgentDocuments(boundedContextDirectories);
 });
 
 test('should route every indexed topic document from AGENTS.md', () => {
@@ -73,3 +67,13 @@ test('should route every indexed topic document from AGENTS.md', () => {
 
   assert.deepEqual(routed.sort(), indexed.sort());
 });
+
+const thenEveryContextHasMatchingAgentDocuments = contexts => {
+  for (const context of contexts) {
+    const agents = resolve(context, 'AGENTS.md');
+    const claude = resolve(context, 'CLAUDE.md');
+    assert.ok(existsSync(agents), `${context} has no AGENTS.md`);
+    assert.ok(existsSync(claude), `${context} has no CLAUDE.md`);
+    assert.equal(readFileSync(claude, 'utf8'), '@AGENTS.md\n');
+  }
+};

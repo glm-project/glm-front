@@ -595,13 +595,16 @@ describe('Device Authentication, beyond the contract', () => {
     thenTokenIs(authentication, DEVICE_TOKEN);
   });
 
-  it('should hold its first claim back to the pace RFC 8628 sets when the server names none', async () => {
+  it('should withhold the first claim until the default RFC 8628 interval', async () => {
     const authentication = givenAuthentication({ authorizations: [authorizingWithoutNamingAPace] });
-
     await whenEnrolmentHasBegun(authentication);
 
     thenNoTokenIsAvailable(authentication);
+  });
 
+  it('should claim after the default RFC 8628 interval', async () => {
+    const authentication = givenAuthentication({ authorizations: [authorizingWithoutNamingAPace] });
+    await whenEnrolmentHasBegun(authentication);
     await whenTheSlowerPaceHasPassed();
 
     thenTokenIs(authentication, DEVICE_TOKEN);

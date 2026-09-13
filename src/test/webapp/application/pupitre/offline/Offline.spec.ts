@@ -9,20 +9,19 @@ const bodyFixture = { id: idFixture, dateDeSurvenue: dateFixture, operateur: ope
 
 describe('Pupitre offline restart', () => {
   let online: boolean;
-  let completedPushes: number;
 
   it('should restore its enrolment and retry the same durable gesture after restarting without a network', () => {
     givenAnEnrolledPupitreWithAPendingGesture();
 
-    whenRestartingPupitre();
-    thenItKeepsTheGestureAndSignsTheFailedPush();
-    whenRestartingPupitre();
-    thenItKeepsTheGestureAndSignsTheFailedPush();
+    whenRestartingAndReadingFailedPush('first-restart');
+    whenRestartingAndReadingFailedPush('second-restart');
     whenTheNetworkReturns();
-
-    thenItAcknowledgesTheSameGestureWithoutEnrollingAgain();
+    whenReadingAcceptedPush();
     whenRestartingPupitre();
 
+    thenFailedPushRetainedItsIdentityAndCredential('first-restart');
+    thenFailedPushRetainedItsIdentityAndCredential('second-restart');
+    thenTheSameGestureWasAcceptedWithoutEnrollingAgain();
     thenItDoesNotReplayAnAcknowledgedGesture();
   });
 
@@ -35,7 +34,6 @@ describe('Pupitre offline restart', () => {
     cy.intercept('GET', '/api/operateurs*', { body: { content: [], totalElementsCount: 0 } }).as('operateurs');
     cy.intercept('GET', '/api/atelier/suivis*', { body: { content: [], totalElementsCount: 0 } }).as('reference');
     cy.intercept('POST', '/api/atelier/journees', request => {
-      thenOriginalGestureIsSent(request.body);
       if (online) {
         request.reply({ statusCode: 200, body: {} });
       } else {
@@ -59,36 +57,42 @@ describe('Pupitre offline restart', () => {
     });
     cy.window().then(window => window.dispatchEvent(new Event('online')));
   };
-  const thenItKeepsTheGestureAndSignsTheFailedPush = (): void => {
-    thenPushUsesTheRestoredCredential();
-    cy.get(dataSelector('pupitre-disconnected')).should('be.visible').and('contain.text', 'Hors ligne');
-    thenReferentialWasNotRead();
+  const whenRestartingAndReadingFailedPush = (alias: string): void => {
+    whenRestartingPupitre();
+    cy.wait('@push').its('request').as(`${alias}-request`, { type: 'static' });
+    cy.get(dataSelector('pupitre-disconnected')).should('be.visible').invoke('text').as(`${alias}-status`, { type: 'static' });
+    cy.get('@operateurs.all').its('length').as(`${alias}-operators`, { type: 'static' });
+    cy.get('@reference.all').its('length').as(`${alias}-reference`, { type: 'static' });
   };
-  const thenReferentialWasNotRead = (): void => {
-    cy.get('@operateurs.all').should('have.length', 0);
-    cy.get('@reference.all').should('have.length', 0);
+  const whenReadingAcceptedPush = (): void => {
+    cy.wait('@push').its('request').as('accepted-request', { type: 'static' });
+    cy.get(dataSelector('pupitre-connected')).should('be.visible');
+    cy.wait('@reference');
+    cy.get('@push.all').its('length').as('accepted-push-count', { type: 'static' });
+    cy.get('@enrolment.all').its('length').as('accepted-enrolment-count', { type: 'static' });
+  };
+  const thenFailedPushRetainedItsIdentityAndCredential = (alias: string): void => {
+    thenOriginalSignedGestureWasSent(`${alias}-request`);
+    cy.get(`@${alias}-status`).should('contain', 'Hors ligne');
+    cy.get(`@${alias}-operators`).should('equal', 0);
+    cy.get(`@${alias}-reference`).should('equal', 0);
+  };
+  const thenTheSameGestureWasAcceptedWithoutEnrollingAgain = (): void => {
+    thenOriginalSignedGestureWasSent('accepted-request');
+    cy.get('@accepted-enrolment-count').should('equal', 1);
   };
   const thenItDoesNotReplayAnAcknowledgedGesture = (): void => {
     cy.wait('@reference');
-    cy.get<unknown[]>('@push.all').should(pushes => expect(pushes).to.have.length(completedPushes));
-    cy.get('@enrolment.all').should('have.length', 1);
-    cy.get(dataSelector('pupitre-connected')).should('be.visible');
-  };
-  const thenItAcknowledgesTheSameGestureWithoutEnrollingAgain = (): void => {
-    thenPushUsesTheRestoredCredential();
-    cy.get(dataSelector('pupitre-connected')).should('be.visible');
-    cy.wait('@reference');
-    cy.get<unknown[]>('@push.all').then(pushes => {
-      completedPushes = pushes.length;
+    cy.get<number>('@accepted-push-count').then(completedPushes => {
+      cy.get('@push.all').should('have.length', completedPushes);
     });
     cy.get('@enrolment.all').should('have.length', 1);
+    cy.get(dataSelector('pupitre-connected')).should('be.visible');
   };
-  const thenOriginalGestureIsSent = (body: unknown): void => {
-    expect(body).to.deep.equal(bodyFixture);
-  };
-  const thenPushUsesTheRestoredCredential = (): void => {
-    cy.wait('@push')
-      .its('request.headers.authorization')
+  const thenOriginalSignedGestureWasSent = (alias: string): void => {
+    cy.get(`@${alias}`).its('body').should('deep.equal', bodyFixture);
+    cy.get(`@${alias}`)
+      .its('headers.authorization')
       .should('equal', `Bearer ${pupitreTokenFixture(entrepriseFixture)}`);
   };
 });

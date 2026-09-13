@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md).
+Accepted. Extended during MR5 (#141) to every test and to observation helpers. Amends [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md).
 
 ## Context
 
@@ -18,7 +18,7 @@ and observations is the narrative being written.
 
 ## Considered options
 
-- Extend the local rules with a syntactic shape check, scoped per folder — **kept**.
+- Extend the local rules with a syntactic shape check, applied to every test — **kept**.
 - Add `eslint-plugin-jest` or `@vitest/eslint-plugin` for `no-conditional-expect` — rejected: a new
   dependency and its ADR for one check, when the local rule already reads a scenario.
 - Rely on `sonarjs/assertions-in-tests`, already enabled — rejected: it requires an assertion to be present,
@@ -33,9 +33,24 @@ Refuse any `if`, loop, `switch` or `try` in the body of an `it` or `test`, on ev
 by a helper that returns the narrowed value or throws; cases are a table through `it.each`; a teardown that
 must run whatever happens belongs to the fixture, not around the assertions.
 
-Refuse an act after the first assertion where the `order` option is set, and set it on
-`src/main/webapp/**/domain/**/*.spec.ts`. A scenario that acts again after concluding is two scenarios.
-Widening the option to the other layers is a later decision, not a pending obligation.
+Refuse an act after the first assertion in every test, including application journeys, production offline
+restarts, architecture, application coordinators, secondary port contracts and Node tooling. Match test
+filenames (`*.spec.*` and `*.test.*`) across JavaScript and TypeScript extensions, without folder exceptions.
+Recognize Node `assert` alongside `expect` and `then…` helpers.
+
+Split separate behaviors while preserving each observation and its required arrangement. When one behavior
+requires a chronology, capture public observations during the action and assert them afterwards. A pending
+operation must still be released; a snapshot must keep the value from the relevant instant. Cypress uses
+static aliases to prevent replaying a command when asserting its earlier result.
+
+The MR5 review exposed two other gaps: DOM assertions embedded selector plumbing in scenarios, and a
+`then…` helper moved focus before checking it. Extend `local/given-when-then` to recognize DOM access,
+including callbacks, and to reject known gestures, clock changes and calls to `given…`/`when…` inside
+`then…`. An action deferred in an `expect` callback remains valid for exception assertions. Test both
+rejection and acceptance, and exercise the order rule through the actual repository configuration.
+
+Keep direct public calls and simple assertions legal. The goal is a readable separation of responsibilities,
+not mandatory wrappers around every statement. [Testing](../testing.md) owns the per-cycle writing check.
 
 Neither check judges what an assertion targets. That a scenario asserts an observable business result rather
 than an intermediate structure stays a review question, stated in [testing.md](../testing.md).
@@ -52,8 +67,8 @@ than an intermediate structure stays a review question, stated in [testing.md](.
 
 - A guard clause that throws is refused as well, although it never produced a false green; uniformity is
   paid with one helper.
-- The `order` check is on for one folder only, so the same defect stays legal in the application,
-  infrastructure and Cypress specs until each is cleaned.
+- Gesture and DOM checks recognize known syntax and names; arbitrary indirect calls and semantic
+  misclassification of helpers remain review concerns.
 - Splitting a scenario duplicates its arrangement, which lengthens some specs.
 - Syntax cannot see that two scenarios state the same rule, nor that an assertion targets an internal
   mechanism; both remain review concerns.

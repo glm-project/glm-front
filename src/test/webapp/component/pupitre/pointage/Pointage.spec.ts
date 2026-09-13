@@ -14,12 +14,17 @@ describe('Pointage screen in a browser', () => {
     thenTheCompleteScreenChromeIsVisible();
   });
 
-  it('should choose a workstation only when opening an activity and keep the tile spatially stable', () => {
+  it('should propose workstations when opening an activity', () => {
+    givenThePointageScreen();
+    whenPressingTileTarget('of-1', 'primary-target');
+
+    thenWorkstationsAreProposed();
+  });
+
+  it('should keep the tile spatially stable after choosing a workstation', () => {
     givenThePointageScreen();
     const position = givenTheTilePosition('of-1');
-
     whenPressingTileTarget('of-1', 'primary-target');
-    thenWorkstationsAreProposed();
     whenChoosingWorkstation('tour');
 
     thenTheTileIsActiveAt('of-1', position);

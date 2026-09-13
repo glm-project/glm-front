@@ -1,4 +1,6 @@
-import { RuleTester } from 'eslint';
+import { ESLint, Linter, RuleTester } from 'eslint';
+import assert from 'node:assert/strict';
+import { it } from 'node:test';
 import { scenarioShape } from './scenario-shape.mjs';
 
 const ruleTester = new RuleTester({
@@ -69,6 +71,11 @@ ruleTester.run('scenario-shape', scenarioShape, {
     },
   ],
   invalid: [
+    {
+      code: `test('should refuse acting after a Node assertion', () => { const result = whenReading(); assert.equal(result, 1); whenWriting(); });`,
+      options: [{ order: true }],
+      errors: [{ messageId: 'actionAfterAssertion' }],
+    },
     {
       code: `
         it('should refuse a conditional assertion', () => {
@@ -145,3 +152,41 @@ ruleTester.run('scenario-shape', scenarioShape, {
     },
   ],
 });
+
+const testFilesFixture = [
+  'src/main/webapp/gestion/contexts/supervision-atelier/infrastructure/primary/supervision-atelier.spec.ts',
+  'src/main/webapp/gestion/header/header.spec.ts',
+  'src/main/webapp/pupitre/app.spec.ts',
+  'src/test/webapp/component/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
+  'src/test/webapp/application/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
+  'src/test/webapp/unit/HexagonalArchTest.spec.ts',
+  'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.spec.ts',
+  'src/main/webapp/pupitre/shared/local-storage/infrastructure/secondary/LocalStoragePort.contract.spec.ts',
+  'eslint/rules/scenario-shape.spec.mjs',
+  'scripts/generate-api-contract.spec.mjs',
+  'documentation/documentation.spec.mjs',
+  'example.test.js',
+  'example.test.ts',
+];
+
+for (const file of testFilesFixture) {
+  it(`should reject a second action after verification in ${file}`, async () => {
+    const messages = await whenLintingSequentialActions(file);
+
+    assert.deepEqual(
+      messages.map(message => message.messageId),
+      ['actionAfterAssertion'],
+    );
+  });
+}
+
+const whenLintingSequentialActions = async file => {
+  const config = await new ESLint().calculateConfigForFile(file);
+  return new Linter().verify(
+    "it('should update GLM', () => { whenOpening(); thenGlmIsVisible(); whenActivityArrives(); thenGlmIsAbsent(); });",
+    {
+      plugins: { local: config.plugins.local },
+      rules: { 'local/scenario-shape': config.rules['local/scenario-shape'] },
+    },
+  );
+};

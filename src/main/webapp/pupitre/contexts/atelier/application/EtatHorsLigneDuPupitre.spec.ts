@@ -64,11 +64,16 @@ describe('EtatHorsLigneDuPupitre', () => {
     thenConnectionIs(true);
   });
 
-  it('should reset view to empty journal and preserve connection signal when restoring without an enrolled tenant', async () => {
+  it('should restore the disconnected journal state', async () => {
     givenDisconnectedStateInJournal('entreprise-a');
     await whenRefreshingRestore();
-    thenConnectionIs(false);
 
+    thenConnectionIs(false);
+  });
+
+  it('should preserve disconnection when restoring without an enrolled tenant', async () => {
+    givenDisconnectedStateInJournal('entreprise-a');
+    await whenRefreshingRestore();
     whenTenantChangesTo(undefined);
     let reconciledWithTenant: Entreprise | undefined = Entreprise.of('initial');
     await whenRefreshingRestore(entreprise => {

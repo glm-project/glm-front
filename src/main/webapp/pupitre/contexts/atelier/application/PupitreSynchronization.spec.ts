@@ -189,16 +189,23 @@ describe('PupitreSynchronization', () => {
     thenServerReceived();
   });
 
-  it('should retry pending work after storage synchronization recovers', async () => {
+  it('should report unavailable synchronization storage', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
     givenUnavailableStorage();
-
     const synchronization = whenSynchronizing();
+    await Promise.allSettled([synchronization]);
 
     await thenSynchronizationFails(synchronization);
-    whenStorageRecovers();
+  });
 
+  it('should retry pending work after storage recovers', async () => {
+    await givenASelectedCompanyWithPendingWork();
+    givenAnAuthorizedSession();
+    givenUnavailableStorage();
+    const synchronization = whenSynchronizing();
+    await Promise.allSettled([synchronization]);
+    whenStorageRecovers();
     await whenSynchronizing();
 
     thenServerReceived(gesteFixture);

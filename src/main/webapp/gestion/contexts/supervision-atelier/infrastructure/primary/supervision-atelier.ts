@@ -4,6 +4,8 @@ import { Instant } from '../../domain/Instant';
 import { OperateurSupervise } from '../../domain/OperateurSupervise';
 import { SupervisionDeLAtelier } from '../../domain/SupervisionDeLAtelier';
 
+import { LIBELLES_SUPERVISION } from './LibellesSupervision';
+
 export type EtatVueSupervision =
   | { readonly kind: 'CHARGEMENT' }
   | { readonly kind: 'ERREUR' }
@@ -15,6 +17,7 @@ export type EtatVueSupervision =
   host: { 'data-selector': 'supervision-atelier' },
 })
 export class SupervisionAtelier {
+  protected readonly libelles = LIBELLES_SUPERVISION;
   private readonly donneesPort = inject(DonneesDeSupervisionPort);
   protected readonly donnees = resource({ loader: () => this.donneesPort.read() });
 

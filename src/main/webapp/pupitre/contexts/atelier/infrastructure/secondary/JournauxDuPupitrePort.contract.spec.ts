@@ -151,7 +151,9 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     const second = whenStartingTheSecondOperation(chronology);
     await whenAppendingArrival();
 
-    await thenOnlyTheFirstOperationRunsUntilReleased(chronology, release, first, second);
+    const beforeRelease = await whenCompletingConcurrentOperations(chronology, release, first, second);
+
+    thenChronologyIs(beforeRelease, ['first']);
 
     thenChronologyIs(chronology, ['first', 'second']);
   });
@@ -182,17 +184,15 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: repriseFixture, etat: 'ACCEPTE' });
   };
 
-  const thenOnlyTheFirstOperationRunsUntilReleased = async (
+  const whenCompletingConcurrentOperations = async (
     chronology: string[],
     release: SignalFixture,
     first: Promise<void>,
     second: Promise<void>,
-  ): Promise<void> => {
-    try {
-      thenChronologyIs(chronology, ['first']);
-    } finally {
-      await whenReleasingTheOperations(release, first, second);
-    }
+  ): Promise<string[]> => {
+    const beforeRelease = [...chronology];
+    await whenReleasingTheOperations(release, first, second);
+    return beforeRelease;
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
   const whenAppendingTheCompleteOpening = (): Promise<void> =>
@@ -263,11 +263,12 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     const queued = whenStartingSynchronization(journal, chronology);
     await whenAllowingTurnToEnter();
 
-    thenChronologyIs(chronology, ['lock-entered']);
+    const waitingChronology = [...chronology];
 
     await whenReleasingOperation(release, held);
     await queued;
 
+    thenChronologyIs(waitingChronology, ['lock-entered']);
     thenChronologyIs(chronology, ['lock-entered', 'lock-released', 'journal-run']);
   });
 

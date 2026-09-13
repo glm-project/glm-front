@@ -83,14 +83,16 @@ describe('PupitreRuntime', () => {
   it('should leave the first workshop load to the enrolment, then refresh on reconnection and every thirty seconds', async () => {
     await whenStartingPupitre();
 
-    await thenSynchronizationAttemptsAre(0);
+    const initialAttempts = await readSynchronizationAttempts();
 
     whenNetworkReturns();
 
-    await thenSynchronizationAttemptsAre(1);
+    const reconnectionAttempts = await readSynchronizationAttempts();
 
     await whenThirtySecondsPass();
 
+    expect(initialAttempts).toBe(0);
+    expect(reconnectionAttempts).toBe(1);
     await thenSynchronizationAttemptsAre(2);
   });
 
@@ -139,9 +141,11 @@ describe('PupitreRuntime', () => {
     const startup = whenStartingPupitre();
     whenNetworkReturns();
 
-    await thenSynchronizationAttemptsAre(1);
+    const attemptsDuringEnrolment = await readSynchronizationAttempts();
 
     await whenTheEnrolmentCompletes(startup);
+
+    expect(attemptsDuringEnrolment).toBe(1);
   });
 
   it('should refresh again after a background failure', async () => {
@@ -149,12 +153,14 @@ describe('PupitreRuntime', () => {
 
     await whenStartingPupitre();
     whenNetworkReturns();
-    await thenSynchronizationAttemptsAre(1);
-    thenTheSynchronizationFailureWasLogged();
+    const attemptsBeforeRecovery = await readSynchronizationAttempts();
+    const failuresBeforeRecovery = [...errorHandler.errors];
 
     whenSynchronizationRecovers();
     whenNetworkReturns();
 
+    expect(attemptsBeforeRecovery).toBe(1);
+    expect(failuresBeforeRecovery).toEqual([new Error('synchronisation indisponible')]);
     await thenSynchronizationAttemptsAre(2);
   });
 
@@ -187,11 +193,12 @@ describe('PupitreRuntime', () => {
   const whenJustUnderThirtySecondsPass = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(29_999);
   };
+  const readSynchronizationAttempts = async (): Promise<number> => {
+    await pupitre.settle();
+    return pupitre.synchronizationAttempts;
+  };
   const thenSynchronizationAttemptsAre = async (expected: number): Promise<void> => {
     await pupitre.settle();
     expect(pupitre.synchronizationAttempts).toBe(expected);
-  };
-  const thenTheSynchronizationFailureWasLogged = (): void => {
-    expect(errorHandler.errors).toEqual([new Error('synchronisation indisponible')]);
   };
 });

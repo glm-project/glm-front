@@ -32,12 +32,15 @@ describe('Pupitre enrolment screen in a browser', () => {
     });
   }
 
-  it('should keep the keypad hidden until the workshop reference makes the pupitre ready', () => {
+  it('should keep the keypad hidden while waiting for the workshop reference', () => {
     givenAPupitreAwaitingItsWorkshop();
 
     thenTheStatusReads("Appareil validé — En attente de connexion pour charger l'atelier");
     thenTheKeypadIsHidden();
+  });
 
+  it('should reveal the keypad when the workshop reference becomes ready', () => {
+    givenAPupitreAwaitingItsWorkshop();
     whenTheReferenceBecomesReady();
 
     thenTheKeypadIsVisible();
