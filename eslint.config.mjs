@@ -300,7 +300,13 @@ export default typescript.config(
     },
   },
   {
-    files: ['src/main/webapp/**/domain/**/*.spec.ts'],
+    files: [
+      'src/main/webapp/**/domain/**/*.spec.ts',
+      'src/main/webapp/**/infrastructure/primary/**/*.spec.ts',
+      'src/main/webapp/{gestion,pupitre}/app.spec.ts',
+      'src/main/webapp/{gestion,pupitre}/header/**/*.spec.ts',
+      'src/test/webapp/component/**/*.spec.ts',
+    ],
     plugins: { local },
     rules: {
       'local/scenario-shape': ['error', { order: true }],

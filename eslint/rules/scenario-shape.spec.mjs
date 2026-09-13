@@ -1,4 +1,6 @@
-import { RuleTester } from 'eslint';
+import { ESLint, Linter, RuleTester } from 'eslint';
+import assert from 'node:assert/strict';
+import { it } from 'node:test';
 import { scenarioShape } from './scenario-shape.mjs';
 
 const ruleTester = new RuleTester({
@@ -145,3 +147,38 @@ ruleTester.run('scenario-shape', scenarioShape, {
     },
   ],
 });
+
+const componentFilesFixture = [
+  'src/main/webapp/gestion/contexts/supervision-atelier/infrastructure/primary/supervision-atelier.spec.ts',
+  'src/main/webapp/gestion/header/header.spec.ts',
+  'src/main/webapp/pupitre/app.spec.ts',
+  'src/test/webapp/component/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
+];
+
+for (const file of componentFilesFixture) {
+  it(`should reject a second component action after verification in ${file}`, async () => {
+    const messages = await whenLintingSequentialActions(file);
+
+    assert.deepEqual(
+      messages.map(message => message.messageId),
+      ['actionAfterAssertion'],
+    );
+  });
+}
+
+it('should retain sequential actions and observations in application journeys', async () => {
+  const messages = await whenLintingSequentialActions('src/test/webapp/application/gestion/supervision-atelier/SupervisionAtelier.spec.ts');
+
+  assert.deepEqual(messages, []);
+});
+
+const whenLintingSequentialActions = async file => {
+  const config = await new ESLint().calculateConfigForFile(file);
+  return new Linter().verify(
+    "it('should update GLM', () => { whenOpening(); thenGlmIsVisible(); whenActivityArrives(); thenGlmIsAbsent(); });",
+    {
+      plugins: { local: config.plugins.local },
+      rules: { 'local/scenario-shape': config.rules['local/scenario-shape'] },
+    },
+  );
+};

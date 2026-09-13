@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md).
+Accepted. Extended during MR5 (#141) to component scenarios and observation helpers. Amends [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md).
 
 ## Context
 
@@ -33,9 +33,20 @@ Refuse any `if`, loop, `switch` or `try` in the body of an `it` or `test`, on ev
 by a helper that returns the narrowed value or throws; cases are a table through `it.each`; a teardown that
 must run whatever happens belongs to the fixture, not around the assertions.
 
-Refuse an act after the first assertion where the `order` option is set, and set it on
-`src/main/webapp/**/domain/**/*.spec.ts`. A scenario that acts again after concluding is two scenarios.
-Widening the option to the other layers is a later decision, not a pending obligation.
+Refuse an act after the first assertion where the `order` option is set. Apply it to domain specs,
+primary adapters, front shells and headers, and Cypress component specs. A scenario that acts again after
+concluding is split while preserving each observation and its required arrangement. Application journeys
+explicitly retain alternating actions and observations; application coordinators and secondary port
+contracts keep their existing order policy.
+
+The MR5 review exposed two other gaps: DOM assertions embedded selector plumbing in scenarios, and a
+`then…` helper moved focus before checking it. Extend `local/given-when-then` to recognize DOM access,
+including callbacks, and to reject known gestures, clock changes and calls to `given…`/`when…` inside
+`then…`. An action deferred in an `expect` callback remains valid for exception assertions. Test both
+rejection and acceptance, and exercise the order rule through the actual repository configuration.
+
+Keep direct public calls and simple assertions legal. The goal is a readable separation of responsibilities,
+not mandatory wrappers around every statement. [Testing](../testing.md) owns the per-cycle writing check.
 
 Neither check judges what an assertion targets. That a scenario asserts an observable business result rather
 than an intermediate structure stays a review question, stated in [testing.md](../testing.md).
@@ -52,8 +63,10 @@ than an intermediate structure stays a review question, stated in [testing.md](.
 
 - A guard clause that throws is refused as well, although it never produced a false green; uniformity is
   paid with one helper.
-- The `order` check is on for one folder only, so the same defect stays legal in the application,
-  infrastructure and Cypress specs until each is cleaned.
+- The order policy remains scoped: application journeys deliberately allow several action/observation
+  pairs, and coordinators and secondary contracts are not migrated by this decision.
+- Gesture and DOM checks recognize known syntax and names; arbitrary indirect calls and semantic
+  misclassification of helpers remain review concerns.
 - Splitting a scenario duplicates its arrangement, which lengthens some specs.
 - Syntax cannot see that two scenarios state the same rule, nor that an assertion targets an internal
   mechanism; both remain review concerns.
