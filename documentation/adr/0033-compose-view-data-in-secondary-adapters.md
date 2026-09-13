@@ -38,14 +38,17 @@ guarantees that every required collection was acquired completely. An acquisitio
 truncation, is reported once through `ErrorHandlerPort` by the secondary adapter and rejects the read.
 The domain separately decides whether the complete data is exploitable through `SupervisionDeLAtelier.determine`.
 
-Use a primary Angular resource to load and interpret these data. An acquisition failure or an inexploitable
-domain result puts the view in error, including after a successful load; the last grid is not retained.
-The primary maps a domain refusal to the resource error without logging it as an acquisition failure.
-Use resource's reload and destruction lifecycle instead of an application loading coordinator. Read the
-evaluation time at the start of each load and pass it explicitly to the domain. A Promise port does not imply
-that resource cancellation aborts the underlying HTTP requests; the HTTP adapter owns request completion.
+Use a resource directly in the primary component to load the raw data. An acquisition failure puts the
+view in error, including after a successful load; previous data are not retained. The primary displays the
+error without logging it again. Use resource's reload and destruction lifecycle instead of an application
+loading coordinator or a separate resource factory.
 
-MR3 provides `InMemoryDonneesDeSupervision` for complete and failed scenarios and the primary resource factory.
+MR3 provides `InMemoryDonneesDeSupervision` and a first component showing acquisition state and collection
+counts. The component deliberately does not interpret presence, activities or business validity. Those rules
+remain in the domain and will be invoked when implementing the supervision grid. Test acquisition through
+the component's rendered HTML and refresh button; keep domain rules and the secondary contract in their own
+suites. A Promise port does not imply that resource cancellation aborts the underlying HTTP requests.
+
 Implement HTTP acquisition later in one adapter with direct `ApiClient` calls and private mapping methods.
 That adapter will own the mounted operator cache and drain engaged requests before completing a read.
 The generated backend contract must first support the required open-working-visit query. The HTTP

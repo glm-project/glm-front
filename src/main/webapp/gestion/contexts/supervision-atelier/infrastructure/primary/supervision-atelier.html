@@ -1,0 +1,35 @@
+<section class="space-y-6 p-6 text-ink">
+  <header class="flex flex-wrap items-center justify-between gap-4">
+    <h1 class="text-title">Supervision de l’atelier</h1>
+    <button
+      type="button"
+      class="min-h-touch rounded border border-border-strong px-4 text-body-sm focus-visible:outline-2 focus-visible:outline-accent"
+      data-selector="supervision-refresh"
+      [disabled]="donnees.isLoading()"
+      (click)="donnees.reload()"
+    >
+      Actualiser
+    </button>
+  </header>
+
+  @if (donnees.isLoading()) {
+  <p role="status" data-selector="supervision-loading">Chargement des données de supervision…</p>
+  } @else if (donnees.error()) {
+  <p role="alert" data-selector="supervision-error">Impossible de charger les données de supervision. Réessayez avec « Actualiser ».</p>
+  } @else if (donnees.hasValue()) {
+  <dl class="flex flex-wrap gap-8" data-selector="supervision-data">
+    <div>
+      <dt class="text-body-sm text-ink-muted">Opérateurs</dt>
+      <dd class="text-section" data-selector="supervision-operateurs-count">{{ donnees.value().operateurs.length }}</dd>
+    </div>
+    <div>
+      <dt class="text-body-sm text-ink-muted">Journées de travail</dt>
+      <dd class="text-section" data-selector="supervision-journees-count">{{ donnees.value().journees.length }}</dd>
+    </div>
+    <div>
+      <dt class="text-body-sm text-ink-muted">Activités</dt>
+      <dd class="text-section" data-selector="supervision-activites-count">{{ donnees.value().activites.length }}</dd>
+    </div>
+  </dl>
+  }
+</section>
