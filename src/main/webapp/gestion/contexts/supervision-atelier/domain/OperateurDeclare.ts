@@ -12,6 +12,10 @@ export class OperateurDeclare {
     if (comparisonNom !== 0) {
       return comparisonNom;
     }
-    return this.prenom.localeCompare(other.prenom, 'fr');
+    const comparisonPrenom = this.prenom.localeCompare(other.prenom, 'fr');
+    if (comparisonPrenom !== 0) {
+      return comparisonPrenom;
+    }
+    return this.id.value.localeCompare(other.id.value);
   }
 }

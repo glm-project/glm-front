@@ -79,7 +79,7 @@ describe('SupervisionDeLAtelier', () => {
     ]);
   });
 
-  it('should determine operator as present for a working visit crossing midnight', () => {
+  it('should determine operator as present for an open working visit crossing midnight without calendar filtering', () => {
     const operateur = new OperateurDeclare(new IdentifiantOperateur('op-night'), 'Nuit', 'Marc');
     const fenetre = new FenetreDePresence('2026-09-12T22:00:00Z');
     const journeeDeNuit = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
@@ -89,7 +89,7 @@ describe('SupervisionDeLAtelier', () => {
     expect(supervision.operateurs).toEqual([new OperateurSupervise(operateur, 'PRESENT')]);
   });
 
-  it('should determine operator as present for an old working visit that remains open', () => {
+  it('should determine operator as present for an old open working visit without calendar filtering', () => {
     const operateur = new OperateurDeclare(new IdentifiantOperateur('op-old'), 'Ancien', 'Paul');
     const fenetreAncienne = new FenetreDePresence('2026-09-08T07:00:00Z');
     const journeeAncienne = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetreAncienne]);
@@ -104,11 +104,33 @@ describe('SupervisionDeLAtelier', () => {
     const bernard = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bernard', 'Claude');
     const charles = new OperateurDeclare(new IdentifiantOperateur('op-3'), 'Charles', 'David');
 
-    const supervisionAvecPresencesInversees = SupervisionDeLAtelier.determine(
+    const initialSupervision = SupervisionDeLAtelier.determine(
+      [charles, alain, bernard],
+      [
+        JourneeDeTravail.open(alain.id, 'PRESENT'),
+        JourneeDeTravail.open(bernard.id, 'PRESENT'),
+        JourneeDeTravail.open(charles.id, 'PRESENT'),
+      ],
+    );
+    const updatedSupervision = SupervisionDeLAtelier.determine(
       [charles, alain, bernard],
       [JourneeDeTravail.open(charles.id, 'PRESENT'), JourneeDeTravail.open(bernard.id, 'EN_PAUSE'), JourneeDeTravail.closed(alain.id)],
     );
 
-    expect(supervisionAvecPresencesInversees.operateurs.map(ligne => ligne.operateur.nom)).toEqual(['Alain', 'Bernard', 'Charles']);
+    expect(updatedSupervision.operateurs.map(ligne => ligne.operateur.nom)).toEqual(
+      initialSupervision.operateurs.map(ligne => ligne.operateur.nom),
+    );
+  });
+
+  it('should break ties deterministically by operator identifier for homonyms', () => {
+    const premierHomonyme = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const secondHomonyme = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Dupont', 'Jean');
+
+    const supervision = SupervisionDeLAtelier.determine([secondHomonyme, premierHomonyme], []);
+
+    expect(supervision.operateurs).toEqual([
+      new OperateurSupervise(premierHomonyme, 'ABSENT'),
+      new OperateurSupervise(secondHomonyme, 'ABSENT'),
+    ]);
   });
 });
