@@ -15,10 +15,12 @@ import { OperateurDeclare } from '../../domain/OperateurDeclare';
 import { SupervisionAtelier } from './supervision-atelier';
 
 class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
+  reads = 0;
   arrival = new DeferredFixture<void>();
   response = new DeferredFixture<DonneesDeSupervision>();
 
   read(): Promise<DonneesDeSupervision> {
+    this.reads += 1;
     this.arrival.resolve();
     return this.response.promise;
   }
@@ -43,8 +45,9 @@ describe('Supervision atelier component', () => {
   let sourceFixture: DonneesDeSupervisionFixture;
 
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
     vi.setSystemTime(new Date(2026, 8, 13, 10, 0));
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
     sourceFixture = new DonneesDeSupervisionFixture();
     TestBed.configureTestingModule({
       providers: [
@@ -58,8 +61,250 @@ describe('Supervision atelier component', () => {
   afterEach(async () => {
     sourceFixture.response.resolve({ operateurs: [], journees: [], activites: [] });
     await componentFixture.whenStable();
+    componentFixture.destroy();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
+
+  it('should reload at thirty seconds and leave the grid unchanged before then', async () => {
+    await givenDonneesDisplayed();
+
+    sourceFixture.prepare();
+    await whenTimePasses(29_999);
+    const beforeDeadline = displayedOperatorCount();
+    await whenTimePasses(1);
+    const atDeadline = isLoadingDisplayed();
+    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+
+    expect(beforeDeadline).toBe(3);
+    expect(atDeadline).toBe(true);
+    thenEmptyStateIsDisplayed();
+  });
+
+  it('should suspend hidden polling and restart immediately with a new thirty-second cadence', async () => {
+    await givenDonneesDisplayed();
+
+    await whenTimePasses(10_000);
+    whenVisibilityChanges('hidden');
+    sourceFixture.prepare();
+    await whenTimePasses(60_000);
+    const whileHidden = displayedOperatorCount();
+    whenVisibilityChanges('visible');
+    await whenSupervisionOpened();
+    const onReturn = isLoadingDisplayed();
+    await whenDonneesArrive();
+    sourceFixture.prepare();
+    await whenTimePasses(29_999);
+    const beforeNextDeadline = displayedOperatorCount();
+    await whenTimePasses(1);
+    const atNextDeadline = isLoadingDisplayed();
+    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+
+    expect(whileHidden).toBe(3);
+    expect(onReturn).toBe(true);
+    expect(beforeNextDeadline).toBe(3);
+    expect(atNextDeadline).toBe(true);
+    thenEmptyStateIsDisplayed();
+  });
+
+  it('should finish a slow read before reading again on visibility return without displaying its obsolete result', async () => {
+    await givenDonneesDisplayed();
+    await refresh();
+    const obsoleteResponse = sourceFixture.response;
+
+    whenVisibilityChanges('hidden');
+    whenVisibilityChanges('visible');
+    await whenTimePasses(60_000);
+    const readsBeforeRelease = sourceFixture.reads;
+    sourceFixture.prepare();
+    obsoleteResponse.resolve({ operateurs: [], journees: [], activites: [] });
+    await whenSupervisionOpened();
+    const obsoleteResultWasWithheld = isLoadingDisplayed();
+    const readsAfterRelease = sourceFixture.reads;
+    await whenDonneesArrive();
+
+    expect(readsBeforeRelease).toBe(2);
+    expect(readsAfterRelease).toBe(3);
+    expect(obsoleteResultWasWithheld).toBe(true);
+    expect(displayedOperatorCount()).toBe(3);
+  });
+
+  it('should perform the visibility return read even when the pending acquisition fails', async () => {
+    await givenAcquisitionInProgress();
+    const obsoleteResponse = sourceFixture.response;
+
+    whenVisibilityChanges('hidden');
+    whenVisibilityChanges('visible');
+    sourceFixture.prepare();
+    obsoleteResponse.reject(new Error('Old acquisition failed'));
+    await whenSupervisionOpened();
+    const readsAfterFailure = sourceFixture.reads;
+    await whenDonneesArrive();
+
+    expect(readsAfterFailure).toBe(2);
+    expect(displayedOperatorCount()).toBe(3);
+  });
+
+  it('should discard a pending visibility refresh when unmounted and protect a newly mounted view', async () => {
+    await givenDonneesDisplayed();
+    await refresh();
+    const obsoleteResponse = sourceFixture.response;
+    whenVisibilityChanges('hidden');
+    whenVisibilityChanges('visible');
+
+    whenSupervisionClosed();
+    sourceFixture.prepare();
+    whenSupervisionRemounted();
+    await whenSupervisionOpened();
+    await whenDonneesArrive();
+    obsoleteResponse.resolve({ operateurs: [], journees: [], activites: [] });
+    await obsoleteResponse.promise;
+    await whenViewSettles();
+
+    expect(sourceFixture.reads).toBe(3);
+    expect(displayedOperatorCount()).toBe(3);
+  });
+
+  it('should cancel a deferred visibility read when the tab is hidden again before completion', async () => {
+    await givenAcquisitionInProgress();
+
+    whenVisibilityChanges('hidden');
+    whenVisibilityChanges('visible');
+    whenVisibilityChanges('hidden');
+    await whenDonneesArrive();
+    await whenTimePasses(60_000);
+
+    expect(sourceFixture.reads).toBe(1);
+    expect(displayedOperatorCount()).toBe(3);
+  });
+
+  it('should skip elapsed polling deadlines and disabled manual refresh during a slow read without queuing retries', async () => {
+    await givenDonneesDisplayed();
+    await refresh();
+
+    await whenTimePasses(90_000);
+    whenRefreshClicked();
+    const readsWhilePending = sourceFixture.reads;
+    const manualRefreshDisabled = isRefreshDisabled();
+    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+
+    expect(readsWhilePending).toBe(2);
+    expect(sourceFixture.reads).toBe(2);
+    expect(manualRefreshDisabled).toBe(true);
+    thenEmptyStateIsDisplayed();
+  });
+
+  it('should replace an automatic refresh failure with fresh data at the next deadline', async () => {
+    await givenDonneesDisplayed();
+    sourceFixture.prepare();
+    await whenTimePasses(30_000);
+    await whenAcquisitionFails();
+    const failure = { gridSize: displayedOperatorCount(), error: isErrorDisplayed() };
+
+    sourceFixture.prepare();
+    await whenTimePasses(30_000);
+    await whenDonneesArrive();
+
+    expect(failure).toEqual({ gridSize: 0, error: true });
+    expect(displayedOperatorCount()).toBe(3);
+    expect(isErrorDisplayed()).toBe(false);
+  });
+
+  it('should reevaluate the same acquired data at each read while keeping absolute times fixed between reads', async () => {
+    await givenAcquisitionInProgress();
+    const donneesAtThreshold = {
+      ...donneesFixture,
+      journees: [
+        JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 18, 0).toISOString()))]),
+      ],
+      activites: [activiteFixture('act-1', 'Moule 1015')],
+    };
+    await whenDonneesArrive(donneesAtThreshold);
+
+    await whenTimePasses(29_999);
+    const beforeRead = displayedAnomalies();
+    sourceFixture.prepare();
+    await whenTimePasses(1);
+    await whenDonneesArrive(donneesAtThreshold);
+
+    expect(beforeRead).toEqual([]);
+    expect(displayedAnomalies()).toEqual(['Journée ouverte depuis plus de 16 h']);
+    expect(displayedActivityStart()).toBe('08:12');
+  });
+
+  it('should leave no polling timer after unmount and restart one cadence on remount', async () => {
+    await givenDonneesDisplayed();
+
+    whenSupervisionClosed();
+    const timersAfterClosing = pollingTimerCount();
+    whenVisibilityChanges('hidden');
+    whenVisibilityChanges('visible');
+    await whenTimePasses(60_000);
+    const readsAfterClosing = sourceFixture.reads;
+    sourceFixture.prepare();
+    whenSupervisionRemounted();
+    await whenSupervisionOpened();
+    await whenDonneesArrive();
+    sourceFixture.prepare();
+    await whenTimePasses(30_000);
+    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+
+    expect(timersAfterClosing).toBe(0);
+    expect(readsAfterClosing).toBe(1);
+    expect(sourceFixture.reads).toBe(3);
+    expect(pollingTimerCount()).toBe(1);
+    thenEmptyStateIsDisplayed();
+  });
+
+  it('should keep polling suspended when mounted in an already hidden tab', async () => {
+    whenSupervisionClosed();
+    whenVisibilityChanges('hidden');
+    whenSupervisionRemounted();
+    await givenDonneesDisplayed();
+
+    await whenTimePasses(60_000);
+
+    expect(sourceFixture.reads).toBe(1);
+    expect(pollingTimerCount()).toBe(0);
+    expect(displayedOperatorCount()).toBe(3);
+  });
+
+  const pollingTimerCount = (): number => vi.getTimerCount();
+
+  const displayedAnomalies = (): string[] => elements('supervision-anomalie').map(anomalie => anomalie.textContent.trim());
+  const displayedActivityStart = (): string | undefined => element('supervision-activite-debut')?.textContent.trim();
+
+  const isErrorDisplayed = (): boolean => element('supervision-error') !== null;
+
+  const whenRefreshClicked = (): void => {
+    refreshButton().click();
+  };
+  const isRefreshDisabled = (): boolean => refreshButton().disabled;
+
+  const whenSupervisionClosed = (): void => {
+    componentFixture.destroy();
+  };
+  const whenSupervisionRemounted = (): void => {
+    componentFixture = TestBed.createComponent(SupervisionAtelier);
+  };
+
+  const displayedOperatorCount = (): number => elements('supervision-tuile').length;
+  const isLoadingDisplayed = (): boolean => element('supervision-loading') !== null;
+
+  const whenVisibilityChanges = (visibility: DocumentVisibilityState): void => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(visibility);
+    document.dispatchEvent(new Event('visibilitychange'));
+    componentFixture.detectChanges();
+  };
+
+  const whenViewSettles = async (): Promise<void> => {
+    await componentFixture.whenStable();
+  };
+
+  const whenTimePasses = async (milliseconds: number): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(milliseconds);
+    componentFixture.detectChanges();
+  };
 
   it('should display loading until the data arrives', async () => {
     givenDonneesPending();

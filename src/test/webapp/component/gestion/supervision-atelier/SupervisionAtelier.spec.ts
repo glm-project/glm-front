@@ -13,6 +13,15 @@ describe('Supervision tile readability', () => {
     });
   });
 
+  it('should reevaluate supervision only when the thirty-second refresh reads again', () => {
+    whenOpeningSupervisionWithPollingClock();
+    whenReachingTheNextAnomalyThreshold();
+    whenCapturingBeforePollingDeadline();
+    whenReachingPollingDeadline();
+
+    thenOnlyTheNewReadChangesTheAnomalies();
+  });
+
   it('should preserve presence colours when GLM, NC or an anomaly is displayed', () => {
     whenOpeningSupervision();
 
@@ -68,4 +77,31 @@ const thenPresenceColoursRemainIndependent = (): void => {
   cy.get(dataSelector('supervision-presence')).eq(4).should('have.css', 'background-color', 'rgb(22, 101, 52)');
   cy.get(dataSelector('supervision-presence')).eq(5).should('have.css', 'background-color', 'rgb(133, 77, 14)');
   cy.get(dataSelector('supervision-presence')).eq(6).should('have.css', 'background-color', 'rgb(185, 28, 28)');
+};
+
+const whenOpeningSupervisionWithPollingClock = (): void => {
+  cy.clock(new Date(2026, 8, 13, 10, 0).getTime(), ['Date', 'setInterval', 'clearInterval']);
+  cy.visit('/');
+  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled');
+};
+
+const whenReachingTheNextAnomalyThreshold = (): void => {
+  cy.clock().then(clock => clock.setSystemTime(new Date(2026, 8, 13, 23, 0).getTime()));
+};
+
+const whenCapturingBeforePollingDeadline = (): void => {
+  cy.tick(29_999);
+  cy.get(dataSelector('supervision-anomalie')).its('length').as('anomaliesBeforeDeadline', { type: 'static' });
+};
+
+const whenReachingPollingDeadline = (): void => {
+  cy.tick(1);
+};
+
+const thenOnlyTheNewReadChangesTheAnomalies = (): void => {
+  cy.get('@anomaliesBeforeDeadline').should('equal', 3);
+  cy.get(dataSelector('supervision-anomalie')).should('have.length', 5);
+  cy.get(dataSelector('supervision-activite-debut')).first().should('have.text', '08:12');
+  cy.get(dataSelector('supervision-tuile')).should('have.length', 7);
+  cy.screenshot('supervision-automatic-refresh', { capture: 'fullPage' });
 };
