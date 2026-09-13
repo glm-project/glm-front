@@ -5,6 +5,7 @@ import { OperateurSupervise } from '../../domain/OperateurSupervise';
 import { SupervisionDeLAtelier } from '../../domain/SupervisionDeLAtelier';
 
 import { LIBELLES_SUPERVISION } from './LibellesSupervision';
+import { SupervisionRefreshCycle } from './SupervisionRefreshCycle';
 
 export type EtatVueSupervision =
   | { readonly kind: 'CHARGEMENT' }
@@ -19,7 +20,8 @@ export type EtatVueSupervision =
 export class SupervisionAtelier {
   protected readonly libelles = LIBELLES_SUPERVISION;
   private readonly donneesPort = inject(DonneesDeSupervisionPort);
-  protected readonly donnees = resource({ loader: () => this.donneesPort.read() });
+  protected readonly donnees = resource({ loader: () => this.refreshCycle.run(() => this.donneesPort.read()) });
+  private readonly refreshCycle: SupervisionRefreshCycle = new SupervisionRefreshCycle(() => this.donnees.reload());
 
   protected readonly etat = computed<EtatVueSupervision>(() => {
     if (this.donnees.isLoading()) {
