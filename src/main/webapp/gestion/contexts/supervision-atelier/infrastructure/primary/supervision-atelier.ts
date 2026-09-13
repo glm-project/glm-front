@@ -27,22 +27,37 @@ export class SupervisionAtelier {
 
   constructor() {
     this.startPolling();
+    this.observeVisibility();
+  }
+
+  private observeVisibility(): void {
     const visibilityChanged = (): void => {
-      this.refreshOnReturnRequested = false;
-      this.stopPolling();
-      if (this.document.visibilityState === 'visible') {
-        if (!this.donnees.reload()) {
-          this.refreshOnReturnRequested = true;
-        }
-        this.startPolling();
-      }
+      this.refreshOnVisibilityChange();
     };
     this.document.addEventListener('visibilitychange', visibilityChanged);
     inject(DestroyRef).onDestroy(() => {
-      this.refreshOnReturnRequested = false;
-      this.stopPolling();
+      this.suspendRefreshing();
       this.document.removeEventListener('visibilitychange', visibilityChanged);
     });
+  }
+
+  private refreshOnVisibilityChange(): void {
+    this.suspendRefreshing();
+    if (this.document.visibilityState === 'visible') {
+      this.resumeRefreshing();
+    }
+  }
+
+  private suspendRefreshing(): void {
+    this.refreshOnReturnRequested = false;
+    this.stopPolling();
+  }
+
+  private resumeRefreshing(): void {
+    if (!this.donnees.reload()) {
+      this.refreshOnReturnRequested = true;
+    }
+    this.startPolling();
   }
 
   private async read(): Promise<DonneesDeSupervision> {
