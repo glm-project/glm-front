@@ -4,6 +4,9 @@
 
 Accepted.
 
+Complemented by [0033](0033-compose-view-data-in-secondary-adapters.md): for composed view reads, the
+secondary adapter reports acquisition failures once and rejects; the primary resource displays the error.
+
 ## Context
 
 Asynchronous background operations, device grant token renewals, OIDC logout calls, and workshop synchronization loops can experience unexpected technical or transport failures.

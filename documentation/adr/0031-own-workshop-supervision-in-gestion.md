@@ -12,7 +12,8 @@ owns the interpretation of workshop presence, activities and anomalies.
 Amended by [0033](0033-compose-view-data-in-secondary-adapters.md): the application consumes one supervision
 data port, with one InMemory adapter for scenarios and direct API calls in the future HTTP adapter.
 Intermediate source ports and mixed per-source adapter wiring are replaced by this single acquisition boundary.
-The domain still interprets presence, activities and anomalies.
+The domain still interprets presence, activities and anomalies. A primary resource displays acquisition
+failures and domain refusals as errors, without retaining the previous grid.
 
 ## Context
 
@@ -45,10 +46,10 @@ Use the following vocabulary for this responsibility (living vocabulary and inva
 - **Lecture complète**: all required collections have been obtained without truncation or an activity whose operator cannot be identified.
 - **Anomalie**: a situation flagged by the supervision rules, without correcting the source data or changing its presence colour.
 
-Treat incomplete pages and activities without an identifiable operator as failed reads. At initial loading,
-show a failure without a grid. During refresh, retain the last complete grid and use the passive failure
-indication already specified in #12. Do not silently omit an unassignable activity: it could create a false
-GLM indication.
+Reject incomplete acquisition in the secondary adapter. Let the domain refuse activities without an
+identifiable operator. Show an error without a grid in both cases, including during refresh, as amended by
+[0033](0033-compose-view-data-in-secondary-adapters.md). Silently omitting an unassignable activity could
+create a false GLM indication.
 
 For an open working visit with no presence windows, display « Journée ouverte sans heure d'ouverture ».
 Do not invent an opening timestamp. For an activity without a workstation, retain the activity and omit

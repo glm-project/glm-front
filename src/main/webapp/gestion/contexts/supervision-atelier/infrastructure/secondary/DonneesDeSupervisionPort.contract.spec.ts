@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
 import { CategorieActivite } from '../../domain/CategorieActivite';
-import { DonneesDeSupervisionPort, LectureDeSupervision } from '../../domain/DonneesDeSupervisionPort';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
 import { IdentifiantActivite } from '../../domain/IdentifiantActivite';
 import { IdentifiantOperateur } from '../../domain/IdentifiantOperateur';
 import { Instant } from '../../domain/Instant';
@@ -18,21 +21,24 @@ const activiteFixture = new ActiviteDeSupervision({
   categorie: new CategorieActivite('NC'),
   debut: new Instant('2026-09-13T08:00:00Z'),
 });
-const lectureFixture: LectureDeSupervision = {
-  status: 'complete',
-  donnees: {
-    operateurs: [aliceFixture],
-    journees: [journeeFixture],
-    activites: [activiteFixture],
-  },
+const lectureFixture: DonneesDeSupervision = {
+  operateurs: [aliceFixture],
+  journees: [journeeFixture],
+  activites: [activiteFixture],
 };
 
 describe.each([
   {
     name: 'InMemory',
-    create: (lecture: LectureDeSupervision | Error): DonneesDeSupervisionPort => new InMemoryDonneesDeSupervision(lecture),
+    create: (lecture: DonneesDeSupervision | Error): DonneesDeSupervisionPort =>
+      TestBed.runInInjectionContext(() => new InMemoryDonneesDeSupervision(lecture)),
   },
 ])('$name supervision data read contract', ({ create }) => {
+  let errorHandlerFixture: ErrorHandlerFixture;
+  beforeEach(() => {
+    errorHandlerFixture = new ErrorHandlerFixture();
+    TestBed.configureTestingModule({ providers: [{ provide: ErrorHandlerPort, useValue: errorHandlerFixture }] });
+  });
   it('should return the complete supervision data', async () => {
     const port = create(lectureFixture);
 
@@ -41,19 +47,12 @@ describe.each([
     expect(result).toEqual(lectureFixture);
   });
 
-  it('should expose incomplete acquisition without returning partial data', async () => {
-    const port = create({ status: 'incomplete' });
-
-    const result = await port.read();
-
-    expect(result).toEqual({ status: 'incomplete' });
-  });
-
-  it('should reject a failed acquisition', async () => {
-    const failureFixture = new Error('Source unavailable');
+  it.each(['Source unavailable', 'Incomplete acquisition'])('should report and reject acquisition failure: %s', async message => {
+    const failureFixture = new Error(message);
     const port = create(failureFixture);
 
     await expect(port.read()).rejects.toBe(failureFixture);
+    expect(errorHandlerFixture.errors).toEqual([failureFixture]);
   });
 
   it('should retain the data independently of subsequent scenario collection changes', async () => {
@@ -61,12 +60,9 @@ describe.each([
     const journeesFixture = [journeeFixture];
     const activitesFixture = [activiteFixture];
     const port = create({
-      status: 'complete',
-      donnees: {
-        operateurs: operateursFixture,
-        journees: journeesFixture,
-        activites: activitesFixture,
-      },
+      operateurs: operateursFixture,
+      journees: journeesFixture,
+      activites: activitesFixture,
     });
     operateursFixture.length = 0;
     journeesFixture.length = 0;

@@ -1,28 +1,28 @@
-import { DonneesDeSupervisionPort, LectureDeSupervision } from '../../domain/DonneesDeSupervisionPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { inject } from '@angular/core';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
 
 export class InMemoryDonneesDeSupervision extends DonneesDeSupervisionPort {
-  private readonly lecture: LectureDeSupervision | Error;
+  private readonly errorHandler = inject(ErrorHandlerPort);
+  private readonly donnees: DonneesDeSupervision | Error;
 
-  constructor(lecture: LectureDeSupervision | Error) {
+  constructor(donnees: DonneesDeSupervision | Error) {
     super();
-    if (lecture instanceof Error) {
-      this.lecture = lecture;
-      return;
-    }
-    this.lecture =
-      lecture.status === 'complete'
-        ? {
-            status: 'complete',
-            donnees: {
-              operateurs: [...lecture.donnees.operateurs],
-              journees: [...lecture.donnees.journees],
-              activites: [...lecture.donnees.activites],
-            },
-          }
-        : lecture;
+    this.donnees =
+      donnees instanceof Error
+        ? donnees
+        : {
+            operateurs: [...donnees.operateurs],
+            journees: [...donnees.journees],
+            activites: [...donnees.activites],
+          };
   }
 
-  read(): Promise<LectureDeSupervision> {
-    return this.lecture instanceof Error ? Promise.reject(this.lecture) : Promise.resolve(this.lecture);
+  read(): Promise<DonneesDeSupervision> {
+    if (this.donnees instanceof Error) {
+      this.errorHandler.handleError(this.donnees);
+      return Promise.reject(this.donnees);
+    }
+    return Promise.resolve(this.donnees);
   }
 }

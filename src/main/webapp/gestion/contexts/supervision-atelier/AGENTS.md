@@ -39,7 +39,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - L'ouverture est le plus ancien début de fenêtre, indépendamment de l'ordre reçu. La supervision expose cet instant ou son absence.
 - La détection d'une anomalie préserve l'état de présence et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
-- Une activité sans opérateur identifiable rend le résultat inexploitable afin que la couche de coordination (MR3) puisse rejeter ou préserver l'état en conséquence.
+- Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver la grille précédente.
 - La grille de supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.

@@ -8,9 +8,6 @@ export interface DonneesDeSupervision {
   readonly activites: readonly ActiviteDeSupervision[];
 }
 
-export type LectureDeSupervision =
-  { readonly status: 'complete'; readonly donnees: DonneesDeSupervision } | { readonly status: 'incomplete' };
-
 export abstract class DonneesDeSupervisionPort {
-  abstract read(): Promise<LectureDeSupervision>;
+  abstract read(): Promise<DonneesDeSupervision>;
 }
