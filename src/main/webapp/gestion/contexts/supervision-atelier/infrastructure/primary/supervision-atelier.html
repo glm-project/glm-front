@@ -2,7 +2,7 @@
 
 <section class="space-y-6 p-6 text-ink">
   <header class="flex flex-wrap items-center justify-between gap-4">
-    <h1 class="text-title">Supervision de l’atelier</h1>
+    <h1 class="text-title">{{ libelles.titre }}</h1>
     <button
       type="button"
       class="min-h-touch rounded border border-border-strong px-4 text-body-sm focus-visible:outline-2 focus-visible:outline-accent"
@@ -10,16 +10,16 @@
       [disabled]="vue.kind === 'CHARGEMENT'"
       (click)="donnees.reload()"
     >
-      Actualiser
+      {{ libelles.actualiser }}
     </button>
   </header>
 
   @switch (vue.kind) { @case ('CHARGEMENT') {
-  <p role="status" data-selector="supervision-loading">Chargement des données de supervision…</p>
+  <p role="status" data-selector="supervision-loading">{{ libelles.chargement }}</p>
   } @case ('ERREUR') {
-  <p role="alert" data-selector="supervision-error">Impossible de charger les données de supervision. Réessayez avec « Actualiser ».</p>
+  <p role="alert" data-selector="supervision-error">{{ libelles.erreur }}</p>
   } @case ('SUCCES') { @if (vue.operateurs.length === 0) {
-  <p class="text-body text-ink-muted" data-selector="supervision-empty">Aucun opérateur déclaré.</p>
+  <p class="text-body text-ink-muted" data-selector="supervision-empty">{{ libelles.vide }}</p>
   } @else {
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" data-selector="supervision-grille">
     @for (supervise of vue.operateurs; track supervise.operateur.id.value) {
@@ -33,11 +33,17 @@
           {{ supervise.operateur.nom }} {{ supervise.operateur.prenom }}
         </h2>
         @switch (supervise.presence) { @case ('PRESENT') {
-        <span class="rounded bg-ok px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence"> Présent </span>
+        <span class="rounded bg-ok px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+          {{ libelles.presences[supervise.presence] }}
+        </span>
         } @case ('EN_PAUSE') {
-        <span class="rounded bg-warn px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence"> En pause </span>
+        <span class="rounded bg-warn px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+          {{ libelles.presences[supervise.presence] }}
+        </span>
         } @case ('ABSENT') {
-        <span class="rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence"> Absent </span>
+        <span class="rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+          {{ libelles.presences[supervise.presence] }}
+        </span>
         } }
       </div>
     </article>
