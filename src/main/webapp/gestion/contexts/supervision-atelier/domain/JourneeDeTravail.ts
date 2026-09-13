@@ -29,4 +29,8 @@ export class JourneeDeTravail {
   isOpenFor(operateurId: IdentifiantOperateur): boolean {
     return this.isOpen() && this.isFor(operateurId);
   }
+
+  heureDOuverture(): string | undefined {
+    return this.fenetres[0]?.debut;
+  }
 }

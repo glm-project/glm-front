@@ -18,3 +18,8 @@ export const resultatSupervisionExploitable = (supervision: SupervisionDeLAtelie
   estExploitable: true,
   supervision,
 });
+
+export const resultatSupervisionInexploitable = (motif: MotifSupervisionInexploitable): ResultatSupervision => ({
+  estExploitable: false,
+  motif,
+});
