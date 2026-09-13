@@ -1,33 +1,40 @@
+import { CategorieActivite } from './CategorieActivite';
+import { IdentifiantActivite } from './IdentifiantActivite';
 import { IdentifiantOperateur } from './IdentifiantOperateur';
+import { Instant } from './Instant';
 import { OperateurDeclare } from './OperateurDeclare';
 
+export interface DescriptionActivite {
+  readonly id: IdentifiantActivite;
+  readonly operateurId: IdentifiantOperateur | undefined;
+  readonly nom: string;
+  readonly categorie: CategorieActivite;
+  readonly debut: Instant;
+  readonly poste?: string;
+}
+
 export class ActiviteDeSupervision {
-  constructor(
-    readonly id: string,
-    readonly operateurId: IdentifiantOperateur | undefined,
-    readonly nom: string,
-    readonly categorie: string,
-    readonly debut: string,
-    readonly poste?: string,
-  ) {}
+  readonly id: IdentifiantActivite;
+  readonly operateurId: IdentifiantOperateur | undefined;
+  readonly nom: string;
+  readonly categorie: CategorieActivite;
+  readonly debut: Instant;
+  readonly poste: string | undefined;
+
+  constructor(description: DescriptionActivite) {
+    this.id = description.id;
+    this.operateurId = description.operateurId;
+    this.nom = description.nom;
+    this.categorie = description.categorie;
+    this.debut = description.debut;
+    this.poste = description.poste;
+  }
 
   isFor(operateurId: IdentifiantOperateur): boolean {
-    const id = this.operateurId;
-    if (id === undefined) {
-      return false;
-    }
-    return id.equals(operateurId);
+    return this.operateurId?.equals(operateurId) === true;
   }
 
-  isNc(): boolean {
-    return this.categorie === 'NC';
-  }
-
-  aUnOperateurIdentifiable(operateursDeclares: readonly OperateurDeclare[]): boolean {
-    const id = this.operateurId;
-    if (id === undefined) {
-      return false;
-    }
-    return operateursDeclares.some(operateur => operateur.id.equals(id));
+  hasOperateurIdentifiable(operateursDeclares: readonly OperateurDeclare[]): boolean {
+    return operateursDeclares.some(operateur => this.isFor(operateur.id));
   }
 }

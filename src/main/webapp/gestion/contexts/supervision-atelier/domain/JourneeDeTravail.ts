@@ -1,14 +1,19 @@
 import { FenetreDePresence } from './FenetreDePresence';
 import { IdentifiantOperateur } from './IdentifiantOperateur';
+import { Instant } from './Instant';
 
 export type EtatSession = 'PRESENT' | 'EN_PAUSE';
 
 export class JourneeDeTravail {
+  readonly fenetres: readonly FenetreDePresence[];
+
   private constructor(
     readonly operateurId: IdentifiantOperateur,
     readonly session: EtatSession | undefined,
-    readonly fenetres: readonly FenetreDePresence[],
-  ) {}
+    fenetres: readonly FenetreDePresence[],
+  ) {
+    this.fenetres = [...fenetres];
+  }
 
   static open(operateurId: IdentifiantOperateur, session: EtatSession, fenetres: readonly FenetreDePresence[] = []): JourneeDeTravail {
     return new JourneeDeTravail(operateurId, session, fenetres);
@@ -30,7 +35,7 @@ export class JourneeDeTravail {
     return this.isOpen() && this.isFor(operateurId);
   }
 
-  heureDOuverture(): string | undefined {
-    return this.fenetres[0]?.debut;
+  openingInstant(): Instant | undefined {
+    return [...this.fenetres].sort((left, right) => left.debut.compare(right.debut))[0]?.debut;
   }
 }

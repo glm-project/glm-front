@@ -16,6 +16,10 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Activité de supervision** : activité en cours rattachée à un opérateur, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
 
+**Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
+
+**Catégorie d'activité** : valeur reçue qui détermine notamment le caractère `NC` de l'activité.
+
 **GLM** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours.
 
 **Anomalie de supervision** : signalement d'incohérence constaté lors de l'évaluation de la supervision (`JOURNEE_OUVERTE_PLUS_DE_16_HEURES`, `JOURNEE_OUVERTE_SANS_FENETRES`, `ACTIVITE_D_UN_ABSENT`).
@@ -31,10 +35,13 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - GLM est un état dérivé : un opérateur est en GLM si et seulement s'il est présent et n'a aucune activité en cours.
 - L'absence de poste ou l'absence d'heure d'ouverture est représentée sans valeur fabriquée (`undefined`).
 - Le temps affichable reste un instant absolu, jamais une durée calculée par le domaine.
+- L'instant d'évaluation est obligatoire. Les instants invalides ou dépourvus de fuseau sont refusés à la construction.
+- L'ouverture est le plus ancien début de fenêtre, indépendamment de l'ordre reçu. La supervision expose cet instant ou son absence.
 - La détection d'une anomalie préserve l'état de présence et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
 - Une activité sans opérateur identifiable rend le résultat inexploitable afin que la couche de coordination (MR3) puisse rejeter ou préserver l'état en conséquence.
 - La grille de supervision est immuable.
+- Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
 - La consommation d'opérateurs depuis le contexte `operateur` passe par un adaptateur TypeScript, sans import direct de son domaine.
 
