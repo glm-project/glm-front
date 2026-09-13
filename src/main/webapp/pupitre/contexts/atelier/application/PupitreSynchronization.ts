@@ -15,6 +15,7 @@ import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/Refu
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { BilanDePublication } from '@/pupitre/contexts/atelier/domain/synchronisation/BilanDePublication';
 import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
+import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { inject, Injectable } from '@angular/core';
 
@@ -122,15 +123,13 @@ export class PupitreSynchronization {
     publish: PupitrePublisher,
   ): Promise<EvenementDuJournal | undefined> {
     try {
-      const journeeOuverte = await this.withSession(async () => {
+      const result = await this.withSession(async () => {
         await this.authentication.synchronizeSession();
         return this.push(entreprise, evenement.geste, evenements);
       });
-      return acceptPublication(evenement.geste, journeeOuverte);
+      return result.ok ? acceptPublication(evenement.geste, result.value) : refusePublication(evenement.geste, result.error);
     } catch (failure: unknown) {
-      if (failure instanceof RefusDePublication) {
-        return refusePublication(evenement.geste, failure);
-      }
+      this.errorHandler.handleError(failure);
       await this.markDisconnected(entreprise, publish);
       return undefined;
     }
@@ -148,38 +147,43 @@ export class PupitreSynchronization {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: Entreprise, geste: GesteDAtelier, evenements: EvenementsDuJournal): Promise<boolean> {
-    try {
-      this.requireExchange(entreprise);
-      await this.serveur.send(geste);
-      return true;
-    } catch (failure: unknown) {
-      if (decideReplay(operationFor(geste, evenements), failure) === 'RELIRE_ET_REJOUER') {
-        return this.retryAfterConcurrence(entreprise, geste, evenements);
-      }
-      this.absorbOrThrow(geste, evenements, failure);
-      return false;
+  private async push(
+    entreprise: Entreprise,
+    geste: GesteDAtelier,
+    evenements: EvenementsDuJournal,
+  ): Promise<Result<boolean, RefusDePublication>> {
+    this.requireExchange(entreprise);
+    const result = await this.serveur.send(geste);
+    if (result.ok) {
+      return ok(true);
     }
+    if (decideReplay(operationFor(geste, evenements), result.error) === 'RELIRE_ET_REJOUER') {
+      return this.retryAfterConcurrence(entreprise, geste, evenements);
+    }
+    return this.absorbOrRefuse(geste, evenements, result.error);
   }
 
-  private async retryAfterConcurrence(entreprise: Entreprise, geste: GesteDAtelier, evenements: EvenementsDuJournal): Promise<boolean> {
+  private async retryAfterConcurrence(
+    entreprise: Entreprise,
+    geste: GesteDAtelier,
+    evenements: EvenementsDuJournal,
+  ): Promise<Result<boolean, RefusDePublication>> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
-    try {
-      await this.serveur.send(geste);
-      return true;
-    } catch (failure: unknown) {
-      this.absorbOrThrow(geste, evenements, failure);
-      return false;
+    const result = await this.serveur.send(geste);
+    if (result.ok) {
+      return ok(true);
     }
+    return this.absorbOrRefuse(geste, evenements, result.error);
   }
 
-  private absorbOrThrow(geste: GesteDAtelier, evenements: EvenementsDuJournal, failure: unknown): void {
-    if (decideReplay(operationFor(geste, evenements), failure, 'REJEU') === 'ACCEPTER') {
-      return;
-    }
-    throw failure;
+  private absorbOrRefuse(
+    geste: GesteDAtelier,
+    evenements: EvenementsDuJournal,
+    refusal: RefusDePublication,
+  ): Result<boolean, RefusDePublication> {
+    return decideReplay(operationFor(geste, evenements), refusal, 'REJEU') === 'ACCEPTER' ? ok(false) : err(refusal);
   }
 
   private requireExchange(entreprise: Entreprise): void {

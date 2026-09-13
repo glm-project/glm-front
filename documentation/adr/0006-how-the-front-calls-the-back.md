@@ -4,7 +4,8 @@
 
 Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): the offline reference traverses all pages,
 and concurrent writes reread the affected aggregate before an identical retry. The original account below
-records the earlier implementation.
+records the earlier implementation. The publication amendment below replaces rejected business promises
+only for `AtelierExchangePort.send`; durable local acceptance remains separate.
 
 ## Context
 
@@ -97,6 +98,20 @@ This record also names two revisions of issue 6:
 ground under the unbounded queue of issue 53; the day it falls, that is the ticket to reopen.
 
 ## Consequences
+
+### Publication amendment
+
+The durable journal now separates local acceptance from the actual server exchange. Therefore
+`AtelierExchangePort.send` returns `Promise<Result<void, RefusDePublication>>`: success confirms the server
+answered, and a recognized business refusal is a typed value carrying its original code, message and motif.
+As required by ADR 0007 and ADR 0009, structured business refusals without a known replay motif remain
+durable refusals. Unexpected technical failures still reject the promise; synchronization reports them
+through `ErrorHandlerPort`, marks disconnection and leaves pending work for a later attempt.
+
+The structural readonly `Result<T, E>` and its `ok` / `err` constructors belong to
+`pupitre/contexts/atelier/domain/synchronisation`, their nearest common owner. No package, shared kernel,
+combinator or asynchronous wrapper is introduced. Immutability is a TypeScript contract, not a deep runtime
+freeze. Replay and absorption continue to belong to `GesteReplayPolicy`.
 
 ### Positive
 

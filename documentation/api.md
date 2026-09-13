@@ -73,6 +73,14 @@ A known business refusal rejects the promise with the context refusal and origin
 stays a technical failure: expanding the domain union is a deliberate change, and a forgotten code must fail
 loudly rather than take the wrong business branch.
 
+Workshop publication is the exception: `AtelierExchangePort.send` resolves a readonly
+`Result<void, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
+its original code and message, including codes without a known replay motif, as required by ADR 0007 and
+ADR 0009. Unexpected technical failures still reject; synchronization reports them through `ErrorHandlerPort`
+and preserves pending work while marking disconnection. This result describes the server exchange, not local
+durable acceptance. Its minimal type and constructors stay in the atelier synchronization domain; see the
+[publication amendment in ADR 0006](adr/0006-how-the-front-calls-the-back.md#publication-amendment).
+
 Absorption belongs to a business operation. Arrival assurance may absorb an already-open day; implicit
 resumption may absorb a forbidden presence transition. The same HTTP status on an explicit operator gesture
 remains visible.

@@ -14,6 +14,7 @@ import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal
 import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -143,16 +144,20 @@ class ServerFixture extends AtelierExchangePort {
     }
     return this.reference;
   }
-  override async send(geste: GesteDAtelier): Promise<void> {
+  override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     this.chronology.push(geste.id);
     this.beforeSend?.();
     this.beforeSend = undefined;
     const failure = this.failures.shift();
+    if (failure instanceof RefusDePublication) {
+      return err(failure);
+    }
     if (failure !== undefined) {
       throw failure;
     }
     this.journal.push(structuredClone(geste));
+    return ok(undefined);
   }
   override async reread(): Promise<void> {
     await roundTrip();

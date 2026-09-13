@@ -4,7 +4,9 @@ import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/P
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
@@ -124,7 +126,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
     return barrier;
   }
 
-  override async send(): Promise<void> {
+  override async send(): Promise<Result<void, RefusDePublication>> {
     this.tokenDuringReplay = this.authentication().currentToken();
     const barrier = this.nextSend;
     this.nextSend = undefined;
@@ -132,9 +134,10 @@ class AtelierExchangeFixture extends AtelierExchangePort {
       this.chronology.push('replay-started');
       await barrier.hold();
       this.chronology.push('replay-finished');
-      return;
+      return ok(undefined);
     }
     this.chronology.push('replay');
+    return ok(undefined);
   }
 
   override reread(): Promise<void> {
