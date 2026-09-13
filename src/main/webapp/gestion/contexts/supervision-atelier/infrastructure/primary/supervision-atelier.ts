@@ -19,10 +19,9 @@ export type EtatVueSupervision =
 export class SupervisionAtelier {
   protected readonly libelles = LIBELLES_SUPERVISION;
   private readonly donneesPort = inject(DonneesDeSupervisionPort);
-  protected readonly donnees = resource({ loader: () => this.read() });
+  protected readonly donnees = resource({ loader: ({ abortSignal }) => this.read(abortSignal) });
 
   private readonly document = inject(DOCUMENT);
-  private refreshOnReturnRequested = false;
   private timer: ReturnType<typeof setInterval> | undefined;
 
   constructor() {
@@ -36,47 +35,43 @@ export class SupervisionAtelier {
     };
     this.document.addEventListener('visibilitychange', visibilityChanged);
     inject(DestroyRef).onDestroy(() => {
-      this.suspendRefreshing();
+      this.stopPolling();
       this.document.removeEventListener('visibilitychange', visibilityChanged);
     });
   }
 
   private refreshOnVisibilityChange(): void {
-    this.suspendRefreshing();
+    this.stopPolling();
     if (this.document.visibilityState === 'visible') {
       this.resumeRefreshing();
     }
   }
 
-  private suspendRefreshing(): void {
-    this.refreshOnReturnRequested = false;
-    this.stopPolling();
-  }
-
   private resumeRefreshing(): void {
-    if (!this.donnees.reload()) {
-      this.refreshOnReturnRequested = true;
-    }
+    this.donnees.reload();
     this.startPolling();
   }
 
-  private async read(): Promise<DonneesDeSupervision> {
-    this.refreshOnReturnRequested = false;
+  private async read(abortSignal: AbortSignal): Promise<DonneesDeSupervision> {
+    let refreshOnReturnRequested = false;
+    const visibilityChanged = (): void => {
+      refreshOnReturnRequested = this.document.visibilityState === 'visible';
+    };
+    const shouldReadAgain = (): boolean => refreshOnReturnRequested && !abortSignal.aborted;
+    this.document.addEventListener('visibilitychange', visibilityChanged, { signal: abortSignal });
     try {
       const donnees = await this.donneesPort.read();
-      if (!this.shouldReadAgain()) {
+      if (!shouldReadAgain()) {
         return donnees;
       }
     } catch (error) {
-      if (!this.shouldReadAgain()) {
+      if (!shouldReadAgain()) {
         throw error;
       }
+    } finally {
+      this.document.removeEventListener('visibilitychange', visibilityChanged);
     }
-    return this.read();
-  }
-
-  private shouldReadAgain(): boolean {
-    return this.refreshOnReturnRequested;
+    return this.read(abortSignal);
   }
 
   private startPolling(): void {
