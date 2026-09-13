@@ -1,6 +1,7 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
 import { CategorieActivite } from '../../domain/CategorieActivite';
@@ -29,19 +30,11 @@ class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
 
 const aliceFixture = new OperateurDeclare(new IdentifiantOperateur('alice'), 'Martin', 'Alice');
 const bobFixture = new OperateurDeclare(new IdentifiantOperateur('bob'), 'Durand', 'Bob');
+const chloeFixture = new OperateurDeclare(new IdentifiantOperateur('chloe'), 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
-  operateurs: [aliceFixture, bobFixture],
-  journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT')],
-  activites: ['act-1', 'act-2', 'act-3'].map(
-    id =>
-      new ActiviteDeSupervision({
-        id: new IdentifiantActivite(id),
-        operateurId: undefined,
-        nom: 'OF-42',
-        categorie: new CategorieActivite('NC'),
-        debut: new Instant('2026-09-13T10:00:00Z'),
-      }),
-  ),
+  operateurs: [aliceFixture, bobFixture, chloeFixture],
+  journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT'), JourneeDeTravail.open(bobFixture.id, 'EN_PAUSE')],
+  activites: [],
 };
 
 describe('Supervision atelier component', () => {
@@ -72,20 +65,44 @@ describe('Supervision atelier component', () => {
     thenLoadingIsDisplayed();
   });
 
-  it('should display the acquired collections without interpreting their business validity', async () => {
+  it('should display a tile for each declared operator with their presence status', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive();
 
-    thenCollectionsAreDisplayed(2, 1, 3);
+    thenOperatorsAreDisplayed([
+      { nomComplet: 'Bernard Chloé', presence: 'Absent' },
+      { nomComplet: 'Durand Bob', presence: 'En pause' },
+      { nomComplet: 'Martin Alice', presence: 'Présent' },
+    ]);
   });
 
-  it('should display empty collections as a successful acquisition', async () => {
+  it('should display an empty state when there are no declared operators', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
 
-    thenCollectionsAreDisplayed(0, 0, 0);
+    thenEmptyStateIsDisplayed();
+  });
+
+  it('should display an error without grid when acquired data produces an unexploitable supervision result', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({
+      operateurs: [aliceFixture],
+      journees: [],
+      activites: [
+        new ActiviteDeSupervision({
+          id: new IdentifiantActivite('act-orphan'),
+          operateurId: undefined,
+          nom: 'OF-42',
+          categorie: new CategorieActivite('NC'),
+          debut: new Instant('2026-09-13T10:00:00Z'),
+        }),
+      ],
+    });
+
+    thenErrorReplacesDataAndRetryIsAvailable();
   });
 
   it('should display an acquisition error without data', async () => {
@@ -104,12 +121,37 @@ describe('Supervision atelier component', () => {
     thenErrorReplacesDataAndRetryIsAvailable();
   });
 
+  it('should replace previously displayed data with an error when refresh returns an unexploitable result', async () => {
+    await givenDonneesDisplayed();
+
+    await refresh();
+    await whenDonneesArrive({
+      operateurs: [aliceFixture],
+      journees: [],
+      activites: [
+        new ActiviteDeSupervision({
+          id: new IdentifiantActivite('act-orphan-refresh'),
+          operateurId: undefined,
+          nom: 'OF-42',
+          categorie: new CategorieActivite('NC'),
+          debut: new Instant('2026-09-13T10:00:00Z'),
+        }),
+      ],
+    });
+
+    thenErrorReplacesDataAndRetryIsAvailable();
+  });
+
   it('should display fresh data when the user retries after an error', async () => {
     await givenAcquisitionFailed();
 
     await whenRetrySucceeds();
 
-    thenCollectionsAreDisplayed(2, 1, 3);
+    thenOperatorsAreDisplayed([
+      { nomComplet: 'Bernard Chloé', presence: 'Absent' },
+      { nomComplet: 'Durand Bob', presence: 'En pause' },
+      { nomComplet: 'Martin Alice', presence: 'Présent' },
+    ]);
   });
 
   const givenDonneesPending = (): void => {
@@ -158,21 +200,34 @@ describe('Supervision atelier component', () => {
 
   const thenLoadingIsDisplayed = (): void => {
     expect(element('supervision-loading')?.textContent).toContain('Chargement');
-    expect(element('supervision-data')).toBeNull();
+    expect(element('supervision-grille')).toBeNull();
     expect(refreshButton().disabled).toBe(true);
   };
 
-  const thenCollectionsAreDisplayed = (operateurs: number, journees: number, activites: number): void => {
-    expect(element('supervision-operateurs-count')?.textContent.trim()).toBe(String(operateurs));
-    expect(element('supervision-journees-count')?.textContent.trim()).toBe(String(journees));
-    expect(element('supervision-activites-count')?.textContent.trim()).toBe(String(activites));
+  const thenOperatorsAreDisplayed = (expected: readonly { nomComplet: string; presence: string }[]): void => {
+    const tiles = elements('supervision-tuile');
+    expect(tiles).toHaveLength(expected.length);
+    tiles.forEach((tile, index) => {
+      const exp = requiredFixture(expected[index], `expected operator at ${index}`);
+      const nom = tile.querySelector(dataSelector('supervision-operateur-nom'))?.textContent.trim();
+      const presence = tile.querySelector(dataSelector('supervision-presence'))?.textContent.trim();
+      expect(nom).toBe(exp.nomComplet);
+      expect(presence).toBe(exp.presence);
+    });
+    expect(element('supervision-loading')).toBeNull();
+    expect(element('supervision-error')).toBeNull();
+  };
+
+  const thenEmptyStateIsDisplayed = (): void => {
+    expect(element('supervision-empty')?.textContent).toContain('Aucun opérateur déclaré');
+    expect(elements('supervision-tuile')).toHaveLength(0);
     expect(element('supervision-loading')).toBeNull();
     expect(element('supervision-error')).toBeNull();
   };
 
   const thenErrorReplacesDataAndRetryIsAvailable = (): void => {
     expect(element('supervision-error')?.textContent).toContain('Impossible de charger');
-    expect(element('supervision-data')).toBeNull();
+    expect(element('supervision-grille')).toBeNull();
     expect(refreshButton().disabled).toBe(false);
   };
 
@@ -185,6 +240,11 @@ describe('Supervision atelier component', () => {
   const element = (selector: string): HTMLElement | null => {
     const host = componentFixture.nativeElement as HTMLElement;
     return host.querySelector(dataSelector(selector));
+  };
+
+  const elements = (selector: string): HTMLElement[] => {
+    const host = componentFixture.nativeElement as HTMLElement;
+    return Array.from(host.querySelectorAll(dataSelector(selector)));
   };
 
   const refreshButton = (): HTMLButtonElement => {

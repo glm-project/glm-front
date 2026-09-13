@@ -1,5 +1,4 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { NgOptimizedImage } from '@angular/common';
 import { Component, ErrorHandler, inject, OnInit, signal } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
@@ -10,7 +9,7 @@ import { GestionHeader } from './header/header';
   selector: 'glm-root',
   host: { 'data-selector': 'gestion-shell' },
   templateUrl: './app.html',
-  imports: [RouterModule, NgOptimizedImage, GestionHeader],
+  imports: [RouterModule, GestionHeader],
   styleUrl: './app.css',
 })
 export class App implements OnInit {
