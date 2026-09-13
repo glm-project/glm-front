@@ -7,6 +7,7 @@ describe('Supervision tile readability', () => {
       givenViewport(width);
 
       whenOpeningSupervision();
+      whenFocusingRefresh();
 
       thenTilesRemainReadable();
     });
@@ -26,6 +27,10 @@ const givenViewport = (width: number): void => {
 const whenOpeningSupervision = (): void => {
   cy.clock(new Date(2026, 8, 13, 10, 0).getTime(), ['Date']);
   cy.visit('/');
+};
+
+const whenFocusingRefresh = (): void => {
+  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled').focus();
 };
 
 const thenTilesRemainReadable = (): void => {
@@ -51,7 +56,6 @@ const thenTilesRemainReadable = (): void => {
       const element = requiredFixture(view[0], 'rendered supervision content');
       expect(element.scrollWidth).to.be.at.most(element.clientWidth);
     });
-  cy.get(dataSelector('supervision-refresh')).focus();
   cy.get(dataSelector('supervision-refresh')).should('have.focus').and('have.css', 'outline-style', 'solid');
   cy.screenshot('supervision-responsive', { capture: 'fullPage' });
 };

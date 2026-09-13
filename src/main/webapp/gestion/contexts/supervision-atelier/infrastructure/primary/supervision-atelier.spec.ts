@@ -166,9 +166,7 @@ describe('Supervision atelier component', () => {
       activites: [activiteFixture('act-1', 'Moule 1015'), activiteFixture('act-2', 'OF-2026-000042')],
     });
 
-    expect(elements('supervision-activite-nom').map(activite => activite.textContent.trim())).toEqual(['Moule 1015', 'OF-2026-000042']);
-    expect(tileFor('alice').querySelectorAll(dataSelector('supervision-activite'))).toHaveLength(2);
-    expect(tileFor('bob').querySelectorAll(dataSelector('supervision-activite'))).toHaveLength(0);
+    thenEveryElementIsInItsOperatorTile();
   });
 
   it('should display an absolute start time and omit a missing workstation', async () => {
@@ -179,10 +177,7 @@ describe('Supervision atelier component', () => {
       activites: [activiteFixture('act-1', 'Moule 1015', 'Tour 1'), activiteFixture('act-2', 'OF-2026-000042')],
     });
 
-    expect(elements('supervision-activite-debut').map(debut => debut.textContent.trim())).toEqual(['08:12', '08:12']);
-    expect(element('supervision-activite-debut')?.getAttribute('datetime')).toBe(new Date(2026, 8, 13, 8, 12).toISOString());
-    expect(elements('supervision-activite-poste').map(poste => poste.textContent.trim())).toEqual(['Tour 1']);
-    expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-activite-poste'))).toBeNull();
+    thenActivityDetailsShowAbsoluteTimesAndOnlyKnownWorkstations();
   });
 
   it('should mark only a present operator without activities as GLM', async () => {
@@ -190,14 +185,16 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive();
 
-    expect(tileFor('alice').querySelector(dataSelector('supervision-glm'))?.textContent).toContain('GLM');
-    expect(elements('supervision-glm')).toHaveLength(1);
-    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
+    thenOnlyThePresentIdleOperatorIsInGlm();
+  });
+
+  it('should remove GLM when an activity arrives for a present operator', async () => {
+    await givenDonneesDisplayed();
 
     await refresh();
     await whenDonneesArrive({ ...donneesFixture, activites: [activiteFixture('act-1', 'Moule 1015')] });
 
-    expect(elements('supervision-glm')).toHaveLength(0);
+    thenNoOperatorIsInGlm();
   });
 
   it('should mark the nonconforming activity without changing presence or hiding other activities', async () => {
@@ -208,11 +205,7 @@ describe('Supervision atelier component', () => {
       activites: [activiteFixture('act-nc', 'Moule 1015', 'Tour 1', 'NC'), activiteFixture('act-bon', 'OF-42')],
     });
 
-    expect(elements('supervision-nc').map(marque => marque.textContent.trim())).toEqual(['NC']);
-    expect(elements('supervision-activite')[0]?.querySelector(dataSelector('supervision-nc'))).not.toBeNull();
-    expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-nc'))).toBeNull();
-    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-    expect(elements('supervision-activite')).toHaveLength(2);
+    thenOnlyTheNonconformingActivityIsMarked();
   });
 
   it('should display the absolute opening date and time supplied by the working visit', async () => {
@@ -225,9 +218,7 @@ describe('Supervision atelier component', () => {
       ],
     });
 
-    expect(tileFor('alice').querySelector(dataSelector('supervision-ouverture'))?.textContent).toContain('12/09/2026 06:04');
-    expect(elements('supervision-ouverture')).toHaveLength(1);
-    expect(element('supervision-ouverture')?.getAttribute('datetime')).toBe(new Date(2026, 8, 12, 6, 4).toISOString());
+    thenTheWorkingVisitOpeningIsDated();
   });
 
   it('should flag an old open visit while retaining its presence and activity', async () => {
@@ -241,13 +232,7 @@ describe('Supervision atelier component', () => {
       activites: [activiteFixture('act-1', 'Moule 1015')],
     });
 
-    expect(tileFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toContain(
-      'Journée ouverte depuis plus de 16 h',
-    );
-    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-    expect(tileFor('alice').querySelector(dataSelector('supervision-activite-nom'))?.textContent).toContain('Moule 1015');
-    expect(tileFor('bob').querySelector(dataSelector('supervision-anomalie'))).toBeNull();
-    expect(tileFor('alice').querySelector('a, button')).toBeNull();
+    thenTheOldVisitIsFlaggedWithoutCorrectingIt();
   });
 
   it('should explain a working visit without windows without inventing an opening time', async () => {
@@ -255,13 +240,7 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive();
 
-    expect(tileFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe(
-      "Journée ouverte sans heure d'ouverture",
-    );
-    expect(tileFor('alice').querySelector(dataSelector('supervision-ouverture'))).toBeNull();
-    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-    expect(tileFor('bob').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe("Journée ouverte sans heure d'ouverture");
-    expect(tileFor('bob').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('En pause');
+    thenVisitsWithoutWindowsHaveNoInventedOpening();
   });
 
   it('should flag an absent operator activity while retaining its details and absent status', async () => {
@@ -273,6 +252,67 @@ describe('Supervision atelier component', () => {
       activites: [activiteFixture('act-1', 'Moule 1015', 'Tour 1')],
     });
 
+    thenTheAbsentOperatorKeepsTheActivityDetails();
+  });
+
+  const thenEveryElementIsInItsOperatorTile = (): void => {
+    expect(elements('supervision-activite-nom').map(activite => activite.textContent.trim())).toEqual(['Moule 1015', 'OF-2026-000042']);
+    expect(tileFor('alice').querySelectorAll(dataSelector('supervision-activite'))).toHaveLength(2);
+    expect(tileFor('bob').querySelectorAll(dataSelector('supervision-activite'))).toHaveLength(0);
+  };
+
+  const thenActivityDetailsShowAbsoluteTimesAndOnlyKnownWorkstations = (): void => {
+    expect(elements('supervision-activite-debut').map(debut => debut.textContent.trim())).toEqual(['08:12', '08:12']);
+    expect(element('supervision-activite-debut')?.getAttribute('datetime')).toBe(new Date(2026, 8, 13, 8, 12).toISOString());
+    expect(elements('supervision-activite-poste').map(poste => poste.textContent.trim())).toEqual(['Tour 1']);
+    expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-activite-poste'))).toBeNull();
+  };
+
+  const thenOnlyThePresentIdleOperatorIsInGlm = (): void => {
+    expect(tileFor('alice').querySelector(dataSelector('supervision-glm'))?.textContent).toContain('GLM');
+    expect(elements('supervision-glm')).toHaveLength(1);
+    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
+  };
+
+  const thenNoOperatorIsInGlm = (): void => {
+    expect(elements('supervision-glm')).toHaveLength(0);
+  };
+
+  const thenOnlyTheNonconformingActivityIsMarked = (): void => {
+    expect(elements('supervision-nc').map(marque => marque.textContent.trim())).toEqual(['NC']);
+    expect(elements('supervision-activite')[0]?.querySelector(dataSelector('supervision-nc'))).not.toBeNull();
+    expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-nc'))).toBeNull();
+    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
+    expect(elements('supervision-activite')).toHaveLength(2);
+  };
+
+  const thenTheWorkingVisitOpeningIsDated = (): void => {
+    expect(tileFor('alice').querySelector(dataSelector('supervision-ouverture'))?.textContent).toContain('12/09/2026 06:04');
+    expect(elements('supervision-ouverture')).toHaveLength(1);
+    expect(element('supervision-ouverture')?.getAttribute('datetime')).toBe(new Date(2026, 8, 12, 6, 4).toISOString());
+  };
+
+  const thenTheOldVisitIsFlaggedWithoutCorrectingIt = (): void => {
+    expect(tileFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toContain(
+      'Journée ouverte depuis plus de 16 h',
+    );
+    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
+    expect(tileFor('alice').querySelector(dataSelector('supervision-activite-nom'))?.textContent).toContain('Moule 1015');
+    expect(tileFor('bob').querySelector(dataSelector('supervision-anomalie'))).toBeNull();
+    expect(tileFor('alice').querySelector('a, button')).toBeNull();
+  };
+
+  const thenVisitsWithoutWindowsHaveNoInventedOpening = (): void => {
+    expect(tileFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe(
+      "Journée ouverte sans heure d'ouverture",
+    );
+    expect(tileFor('alice').querySelector(dataSelector('supervision-ouverture'))).toBeNull();
+    expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
+    expect(tileFor('bob').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe("Journée ouverte sans heure d'ouverture");
+    expect(tileFor('bob').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('En pause');
+  };
+
+  const thenTheAbsentOperatorKeepsTheActivityDetails = (): void => {
     expect(tileFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe('Activité d’un opérateur absent');
     expect(tileFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Absent');
     expect(tileFor('alice').querySelector(dataSelector('supervision-activite-nom'))?.textContent).toContain('Moule 1015');
@@ -280,7 +320,7 @@ describe('Supervision atelier component', () => {
     expect(tileFor('alice').querySelector(dataSelector('supervision-activite-debut'))?.textContent).toBe('08:12');
     expect(tileFor('alice').querySelector(dataSelector('supervision-ouverture'))).toBeNull();
     expect(tileFor('alice').querySelector(dataSelector('supervision-glm'))).toBeNull();
-  });
+  };
 
   const tileFor = (id: string): HTMLElement =>
     requiredFixture(
