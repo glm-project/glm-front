@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.route';
 import { authProvider } from './auth.provider';
+import { supervisionDemonstrationProvider } from './supervision.provider';
 
 import { environment } from './environments/environment';
 
@@ -20,6 +21,7 @@ bootstrapApplication(App, {
     provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
     provideRouter(routes),
     authProvider,
+    supervisionDemonstrationProvider,
   ],
 }).catch((err: unknown) => {
   console.error(err);

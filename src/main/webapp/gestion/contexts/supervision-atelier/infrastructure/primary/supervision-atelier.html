@@ -1,3 +1,5 @@
+@let vue = etat();
+
 <section class="space-y-6 p-6 text-ink">
   <header class="flex flex-wrap items-center justify-between gap-4">
     <h1 class="text-title">Supervision de l’atelier</h1>
@@ -5,31 +7,41 @@
       type="button"
       class="min-h-touch rounded border border-border-strong px-4 text-body-sm focus-visible:outline-2 focus-visible:outline-accent"
       data-selector="supervision-refresh"
-      [disabled]="donnees.isLoading()"
+      [disabled]="vue.kind === 'CHARGEMENT'"
       (click)="donnees.reload()"
     >
       Actualiser
     </button>
   </header>
 
-  @if (donnees.isLoading()) {
+  @switch (vue.kind) { @case ('CHARGEMENT') {
   <p role="status" data-selector="supervision-loading">Chargement des données de supervision…</p>
-  } @else if (donnees.error()) {
+  } @case ('ERREUR') {
   <p role="alert" data-selector="supervision-error">Impossible de charger les données de supervision. Réessayez avec « Actualiser ».</p>
-  } @else if (donnees.hasValue()) {
-  <dl class="flex flex-wrap gap-8" data-selector="supervision-data">
-    <div>
-      <dt class="text-body-sm text-ink-muted">Opérateurs</dt>
-      <dd class="text-section" data-selector="supervision-operateurs-count">{{ donnees.value().operateurs.length }}</dd>
-    </div>
-    <div>
-      <dt class="text-body-sm text-ink-muted">Journées de travail</dt>
-      <dd class="text-section" data-selector="supervision-journees-count">{{ donnees.value().journees.length }}</dd>
-    </div>
-    <div>
-      <dt class="text-body-sm text-ink-muted">Activités</dt>
-      <dd class="text-section" data-selector="supervision-activites-count">{{ donnees.value().activites.length }}</dd>
-    </div>
-  </dl>
-  }
+  } @case ('SUCCES') { @if (vue.operateurs.length === 0) {
+  <p class="text-body text-ink-muted" data-selector="supervision-empty">Aucun opérateur déclaré.</p>
+  } @else {
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" data-selector="supervision-grille">
+    @for (supervise of vue.operateurs; track supervise.operateur.id.value) {
+    <article
+      class="flex flex-col justify-between rounded border border-border bg-surface p-4 shadow-xs"
+      data-selector="supervision-tuile"
+      [attr.data-operateur-id]="supervise.operateur.id.value"
+    >
+      <div class="flex items-start justify-between gap-2">
+        <h2 class="text-section font-semibold text-ink" data-selector="supervision-operateur-nom">
+          {{ supervise.operateur.nom }} {{ supervise.operateur.prenom }}
+        </h2>
+        @switch (supervise.presence) { @case ('PRESENT') {
+        <span class="rounded bg-ok px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence"> Présent </span>
+        } @case ('EN_PAUSE') {
+        <span class="rounded bg-warn px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence"> En pause </span>
+        } @case ('ABSENT') {
+        <span class="rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence"> Absent </span>
+        } }
+      </div>
+    </article>
+    }
+  </div>
+  } } }
 </section>
