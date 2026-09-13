@@ -154,11 +154,13 @@ describe('Pupitre page', () => {
     vi.useRealTimers();
   });
 
-  it('should keep the enrolment screen under the header until a reference makes the keypad available', () => {
+  it('should keep the enrolment screen under the header before a reference arrives', () => {
     thenVisible('pupitre-header', true);
     thenVisible('enrolement', true);
     thenVisible('designation', false);
+  });
 
+  it('should show the keypad when a reference arrives', () => {
     givenReference();
 
     thenVisible('enrolement', false);
@@ -199,7 +201,7 @@ describe('Pupitre page', () => {
     expect(pupitre.globales).toEqual(['REPRENDRE']);
   });
 
-  it('should remove an open workstation choice with the pointage view', () => {
+  it('should display the requested workstation choice', () => {
     givenPointage({
       kind: 'CHOIX_POSTE_REQUIS',
       numero: NumeroDElement.assigned('204'),
@@ -207,8 +209,18 @@ describe('Pupitre page', () => {
       choose: () => Promise.resolve(),
     });
     whenPressing('primary-target');
-    thenVisible('workstation-dialog', true);
 
+    thenVisible('workstation-dialog', true);
+  });
+
+  it('should remove the workstation choice when pointage closes', () => {
+    givenPointage({
+      kind: 'CHOIX_POSTE_REQUIS',
+      numero: NumeroDElement.assigned('204'),
+      postes: [{ id: 'tour', libelle: 'Tour' }],
+      choose: () => Promise.resolve(),
+    });
+    whenPressing('primary-target');
     whenPointageCloses();
 
     thenVisible('workstation-dialog', false);
@@ -237,12 +249,16 @@ describe('Pupitre page', () => {
     thenHeaderMessageIs('Action non enregistrée — recommencez');
   });
 
-  it('should confirm an administration reset before revoking the enrolment', () => {
+  it('should request confirmation before an administration reset', () => {
     givenReference();
-
     whenTheAdministrationGestureIsHeld();
-    thenVisible('reinitialisation', true);
 
+    thenVisible('reinitialisation', true);
+  });
+
+  it('should revoke enrolment after reset confirmation', () => {
+    givenReference();
+    whenTheAdministrationGestureIsHeld();
     whenPressing('reset-confirm');
 
     thenVisible('reinitialisation', false);
@@ -418,14 +434,20 @@ describe('Pupitre page with its designation keypad', () => {
     thenFocused('reset-cancel');
   });
 
-  it('should prevent a reset when an operator designation completes during the confirmation', async () => {
+  it('should retain an operator designation completed during reset confirmation', async () => {
     givenTheReadyKeypad();
     whenStartingAValidDesignationOnThePhysicalKeyboard();
     whenTheResetConfirmationIsOpen();
-
     await whenRenderingSettles();
-    thenTheOperatorIsDesignatedBehindTheConfirmation();
 
+    thenTheOperatorIsDesignatedBehindTheConfirmation();
+  });
+
+  it('should prevent reset after designation completes during confirmation', async () => {
+    givenTheReadyKeypad();
+    whenStartingAValidDesignationOnThePhysicalKeyboard();
+    whenTheResetConfirmationIsOpen();
+    await whenRenderingSettles();
     whenConfirmingTheReset();
 
     thenTheResetConfirmationRemainsOpenAndUnavailable();

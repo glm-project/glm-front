@@ -124,11 +124,17 @@ describe('Designation du pupitre', () => {
     vi.useRealTimers();
   });
 
-  it('should preserve leading zeros and designate only on explicit validation', async () => {
+  it('should preserve leading zeros before validation', () => {
     whenEntering('049');
+
     thenCodeIs('049');
     thenNoOperatorIsDesignated();
+  });
+
+  it('should designate the operator on explicit validation', async () => {
+    whenEntering('049');
     await whenValidating();
+
     thenOperatorIsDesignated();
   });
   it('should ignore empty validation and non numeric input', async () => {
@@ -137,33 +143,66 @@ describe('Designation du pupitre', () => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
   });
-  it('should replace an unknown code with an error then start fresh with the next digit', async () => {
+  it('should display an unknown code error', async () => {
     whenEntering('7');
     await whenValidating();
+
     thenUnknownCodeIsShown();
+  });
+
+  it('should start fresh with the next digit after an unknown code', async () => {
+    whenEntering('7');
+    await whenValidating();
     whenEntering('0');
+
     thenCodeIs('0');
   });
-  it('should erase the error or the last digit and tolerate erasing an empty code', async () => {
+  it('should erase an unknown code error', async () => {
     whenEntering('7');
     await whenValidating();
     whenErasing();
-    thenCodeIs('');
-    whenEntering('049');
-    whenErasing();
-    thenCodeIs('04');
-    whenErasing();
-    whenErasing();
-    whenErasing();
+
     thenCodeIs('');
   });
-  it('should reset a partial code after thirty seconds and renew on a blank screen press', async () => {
+
+  it('should erase only the last digit', async () => {
+    whenEntering('7');
+    await whenValidating();
+    whenErasing();
+    whenEntering('049');
+    whenErasing();
+
+    thenCodeIs('04');
+  });
+
+  it('should tolerate erasing an empty code', async () => {
+    whenEntering('7');
+    await whenValidating();
+    whenErasing();
+    whenEntering('049');
+    whenErasing();
+    whenErasing();
+    whenErasing();
+    whenErasing();
+
+    thenCodeIs('');
+  });
+  it('should renew a partial code deadline on a blank screen press', async () => {
     whenEntering('04');
     await whenTimePasses(29_000);
     whenPressing();
     await whenTimePasses(29_000);
+
     thenCodeIs('04');
+  });
+
+  it('should clear a partial code at its renewed deadline', async () => {
+    whenEntering('04');
+    await whenTimePasses(29_000);
+    whenPressing();
+    await whenTimePasses(29_000);
     await whenTimePasses(1_000);
+
     thenCodeIs('');
   });
   it('should clear an error after inactivity', async () => {
@@ -172,23 +211,39 @@ describe('Designation du pupitre', () => {
     await whenTimePasses(30_000);
     thenCodeIs('');
   });
-  it('should close the designation on completion and on inactivity', async () => {
+  it('should close the designation on completion', async () => {
     whenEntering('049');
     await whenValidating();
     await whenFinishing();
+
     thenClosed();
+  });
+
+  it('should close the designation on inactivity', async () => {
+    whenEntering('049');
+    await whenValidating();
+    await whenFinishing();
     whenEntering('049');
     await whenValidating();
     await whenTimePasses(30_000);
+
     thenClosed();
   });
   it('should consume the first press after sleeping beyond the deadline', () => {
     whenEntering('04');
     whenSleeping(31_000);
     const accepted = whenPressing();
+
     thenPressIsRejected(accepted);
     thenCodeIs('');
+  });
+
+  it('should accept a digit after consuming an expired press', () => {
+    whenEntering('04');
+    whenSleeping(31_000);
+    whenPressing();
     whenEntering('9');
+
     thenCodeIs('9');
   });
   it('should freeze input and prevent duplicate validation while resolving and while designated', async () => {
@@ -222,12 +277,11 @@ describe('Designation du pupitre', () => {
     await whenResolutionCompletes(pending);
     thenClosed();
   });
-  it('should report a local read failure and let the operator retry the same code', async () => {
+  it('should retain the code and report a local read failure', async () => {
     const reject = givenDelayedFailure();
     whenEntering('049');
     const pending = whenValidating();
     await whenReadStarts();
-
     whenRejecting(reject);
     await whenResolutionCompletes(pending);
 
@@ -236,7 +290,15 @@ describe('Designation du pupitre', () => {
     thenValidationIsAvailable();
     thenTheLocalReadFailureWasReported();
     thenNoExchangeWasAttempted();
+  });
 
+  it('should designate the operator after retrying a failed local read', async () => {
+    const reject = givenDelayedFailure();
+    whenEntering('049');
+    const pending = whenValidating();
+    await whenReadStarts();
+    whenRejecting(reject);
+    await whenResolutionCompletes(pending);
     await whenValidating();
 
     thenOperatorIsDesignated();
@@ -285,15 +347,16 @@ describe('Designation du pupitre', () => {
     await whenReadStarts();
     whenEntering('9');
     await whenValidating();
-    thenCodeIs('9');
-    thenNoOperatorIsDesignated();
-    thenValidationIsUnavailable();
+    const duringClosure = readDesignation();
     whenClosingCompletes(resolve);
     await whenCheckingExpiration();
-    thenCodeIs('9');
+    const afterClosure = readDesignation();
     whenErasing();
     whenEntering('049');
     await whenValidating();
+    expect(duringClosure).toEqual({ code: '9', unknown: false, operateur: undefined, canValidate: false });
+    expect(afterClosure.code).toBe('9');
+    expect(afterClosure.unknown).toBe(false);
     thenOperatorIsDesignated();
   });
 
@@ -552,6 +615,12 @@ describe('Designation du pupitre', () => {
   const whenRejecting = (reject: (reason: Error) => void): void => {
     reject(new Error('Unavailable'));
   };
+  const readDesignation = () => ({
+    code: designation.code(),
+    unknown: designation.unknownCode(),
+    operateur: designation.operateur(),
+    canValidate: designation.canValidate(),
+  });
   const thenCodeIs = (code: string): void => {
     expect(designation.code()).toBe(code);
     expect(designation.unknownCode()).toBe(false);
@@ -571,9 +640,6 @@ describe('Designation du pupitre', () => {
     thenCodeIs('');
     thenNoOperatorIsDesignated();
     expect(() => TestBed.inject(AtelierCoordinator).executeGlobale('PAUSE')).toThrow('Aucune fenetre operateur ouverte.');
-  };
-  const thenValidationIsUnavailable = (): void => {
-    expect(designation.canValidate()).toBe(false);
   };
   const thenValidationIsAvailable = (): void => {
     expect(designation.canValidate()).toBe(true);

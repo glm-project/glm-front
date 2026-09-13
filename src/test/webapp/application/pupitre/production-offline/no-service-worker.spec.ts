@@ -28,13 +28,14 @@ describe('Production pupitre without its service worker', () => {
   it('should fail to load its shell after an offline restart', () => {
     whenBootingTheProductionPupitre();
 
-    thenTheProductionPupitreBootsOnline();
-    thenNoServiceWorkerControlsIt();
-    thenAnUncachedBrowserRequestSucceeds();
+    whenReadingTheOnlinePupitre();
+    whenProbingTheBrowserNetwork('online-probe');
     whenCuttingTheBrowserNetwork();
-    thenAnUncachedBrowserRequestFails();
+    whenProbingTheBrowserNetwork('offline-probe');
     whenRestartingTheProductionPupitreWithoutAServiceWorker();
 
+    thenThePupitreWasOnlineWithoutAServiceWorker();
+    thenTheBrowserNetworkChanged();
     thenTheOfflineNavigationHasNoPupitreShell();
   });
 });
@@ -81,33 +82,34 @@ const whenRestartingTheProductionPupitreWithoutAServiceWorker = (): void => {
   );
 };
 
-const thenTheProductionPupitreBootsOnline = (): void => {
+const whenReadingTheOnlinePupitre = (): void => {
   pupitreFrame().should(frame => {
-    const pupitre = requiredFixture(frame[0], 'production pupitre frame');
-    expect(pupitre.contentDocument?.querySelector(dataSelector('pupitre-shell')) ?? null).not.to.equal(null);
+    expect(
+      requiredFixture(frame[0], 'production pupitre frame').contentDocument?.querySelector(dataSelector('pupitre-shell')) ?? null,
+    ).not.to.equal(null);
   });
-};
-
-const thenNoServiceWorkerControlsIt = (): void => {
-  thenPupitreWindow().then(window => {
-    expect(window.navigator.serviceWorker.controller).to.equal(null);
-    return window.navigator.serviceWorker.getRegistrations().then(registrations => {
-      const usableWorkers = registrations
+  thenPupitreWindow()
+    .then(async window => ({
+      shell: window.document.querySelector(dataSelector('pupitre-shell')) !== null,
+      controlled: window.navigator.serviceWorker.controller !== null,
+      usableWorkers: (await window.navigator.serviceWorker.getRegistrations())
         .flatMap(registration => [registration.active, registration.waiting])
-        .filter(worker => worker !== null);
-      expect(usableWorkers).to.have.length(0);
-    });
-  });
+        .filter(worker => worker !== null).length,
+    }))
+    .as('online-pupitre', { type: 'static' });
 };
 
-const thenAnUncachedBrowserRequestFails = (): void => {
-  browserNetworkProbe().then(result => {
-    expect(result).to.deep.equal({ failureName: 'TypeError', reached: false });
-  });
+const whenProbingTheBrowserNetwork = (alias: string): void => {
+  browserNetworkProbe().as(alias, { type: 'static' });
 };
 
-const thenAnUncachedBrowserRequestSucceeds = (): void => {
-  browserNetworkProbe().its('reached').should('equal', true);
+const thenThePupitreWasOnlineWithoutAServiceWorker = (): void => {
+  cy.get('@online-pupitre').should('deep.equal', { shell: true, controlled: false, usableWorkers: 0 });
+};
+
+const thenTheBrowserNetworkChanged = (): void => {
+  cy.get('@online-probe').should('deep.equal', { reached: true });
+  cy.get('@offline-probe').should('deep.equal', { failureName: 'TypeError', reached: false });
 };
 
 const thenTheOfflineNavigationHasNoPupitreShell = (): void => {

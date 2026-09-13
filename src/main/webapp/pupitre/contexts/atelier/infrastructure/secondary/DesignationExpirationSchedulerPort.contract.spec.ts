@@ -23,19 +23,30 @@ describe.each(adapters)('DesignationExpirationSchedulerPort contract, honoured b
 
   afterEach(() => vi.useRealTimers());
 
-  it('should replace the previous deadline and cancel it when no deadline remains', () => {
+  it('should replace the previous expiration deadline', () => {
     givenExpirationAt(2_000);
-
     whenReplacingExpirationAt(3_000);
     whenTimePasses(1_000);
 
     thenNothingExpired();
+  });
 
+  it('should cancel expiration when no deadline remains', () => {
+    givenExpirationAt(2_000);
+    whenReplacingExpirationAt(3_000);
+    whenTimePasses(1_000);
     whenCancellingExpiration();
     whenTimePasses(1_000);
 
     thenNothingExpired();
+  });
 
+  it('should accept a new expiration after cancellation', () => {
+    givenExpirationAt(2_000);
+    whenReplacingExpirationAt(3_000);
+    whenTimePasses(1_000);
+    whenCancellingExpiration();
+    whenTimePasses(1_000);
     givenExpirationAt(4_000);
     whenTimePasses(1_000);
 

@@ -63,8 +63,9 @@ describe('ApiClient', () => {
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DE_SUIVIS);
 
-    thenItReached(requete, '/api/atelier/suivis?etats=EN_ATTENTE&etats=EN_COURS&size=100');
     await whenTheRequestCompletes(lecture);
+
+    thenItReached(requete, '/api/atelier/suivis?etats=EN_ATTENTE&etats=EN_COURS&size=100');
   });
 
   it('should leave out a parameter the caller did not fill', async () => {
@@ -72,8 +73,9 @@ describe('ApiClient', () => {
 
     const requete = await whenTheServerAnswers(UNE_PAGE_DOPERATEURS);
 
-    thenItReached(requete, '/api/operateurs?size=100');
     await whenTheRequestCompletes(lecture);
+
+    thenItReached(requete, '/api/operateurs?size=100');
   });
 
   it('should put the path parameters the caller gave into the URL', async () => {
@@ -81,8 +83,9 @@ describe('ApiClient', () => {
 
     const requete = await whenTheServerAnswers(UN_SUIVI);
 
-    thenItReached(requete, `/api/atelier/suivis/${SUIVI_ID}/pointages`);
     await whenTheRequestCompletes(ecriture);
+
+    thenItReached(requete, `/api/atelier/suivis/${SUIVI_ID}/pointages`);
   });
 
   it('should send the body the caller gave to write', async () => {
@@ -90,8 +93,9 @@ describe('ApiClient', () => {
 
     const requete = await whenTheServerAnswers({});
 
-    thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
     await whenTheRequestCompletes(ecriture);
+
+    thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
   });
 
   it.each(['read', 'write'] as const)('should cancel a stalled %s after thirty seconds', async operation => {

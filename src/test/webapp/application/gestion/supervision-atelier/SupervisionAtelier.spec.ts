@@ -5,7 +5,10 @@ describe('Supervision atelier in back office', () => {
     whenVisitingTheRoot();
 
     thenTheSupervisionGridIsDisplayed();
+  });
 
+  it('should retain activities and anomalies after refreshing supervision', () => {
+    whenVisitingTheRoot();
     whenRefreshingTheWorkshop();
 
     thenTheActivityAndAnomaliesRemainVisible();

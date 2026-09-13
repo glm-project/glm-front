@@ -263,11 +263,12 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     const queued = whenStartingSynchronization(journal, chronology);
     await whenAllowingTurnToEnter();
 
-    thenChronologyIs(chronology, ['lock-entered']);
+    const waitingChronology = [...chronology];
 
     await whenReleasingOperation(release, held);
     await queued;
 
+    thenChronologyIs(waitingChronology, ['lock-entered']);
     thenChronologyIs(chronology, ['lock-entered', 'lock-released', 'journal-run']);
   });
 

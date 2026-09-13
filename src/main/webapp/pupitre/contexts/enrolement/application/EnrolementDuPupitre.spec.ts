@@ -137,13 +137,16 @@ describe('EnrolementDuPupitre', () => {
     thenAuthorizationsAskedAre(1);
   });
 
-  it('should show the issued code and count the seconds down as the screen refreshes', () => {
+  it('should show the issued code lifetime', () => {
     whenEnrolling();
-
     whenTheServerIssuesTheCode();
 
     thenSecondsLeftAre(DIX_MINUTES_EN_SECONDES);
+  });
 
+  it('should count the issued code lifetime down', () => {
+    whenEnrolling();
+    whenTheServerIssuesTheCode();
     whenOneSecondPasses();
 
     thenSecondsLeftAre(DIX_MINUTES_EN_SECONDES - 1);
@@ -159,14 +162,18 @@ describe('EnrolementDuPupitre', () => {
     thenAuthorizationsAskedAre(1);
   });
 
-  it('should load the workshop once the device is approved, then hand the screen over when its reference lands', async () => {
+  it('should show workshop loading after device approval', async () => {
     whenEnrolling();
     whenTheServerIssuesTheCode();
-
     await whenTheAttemptAnswers('ENROLLED');
 
     thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
+  });
 
+  it('should hand the screen over when the reference lands', async () => {
+    whenEnrolling();
+    whenTheServerIssuesTheCode();
+    await whenTheAttemptAnswers('ENROLLED');
     whenTheFirstReferenceLands();
 
     thenTheScreenShows('ENROLE_ET_PRET');
@@ -215,18 +222,24 @@ describe('EnrolementDuPupitre', () => {
     thenWorkshopLoadsAre(0);
   });
 
-  it('should ignore the authorization code of an attempt a new request has replaced', () => {
+  it('should ignore the code of a replaced authorization attempt', () => {
+    whenEnrolling();
+    whenAskingForANewCode();
+    whenTheServerIssuesTheCode(codeFixture, 0);
+
+    thenTheScreenShows('DEMANDE_EN_COURS');
+  });
+
+  it('should display the code of the replacement authorization attempt', () => {
     const nouveauCode: DeviceAuthorizationCode = {
       ...codeFixture,
       userCode: 'AAAA-BBBB',
     };
     whenEnrolling();
     whenAskingForANewCode();
-
     whenTheServerIssuesTheCode(codeFixture, 0);
-    thenTheScreenShows('DEMANDE_EN_COURS');
-
     whenTheServerIssuesTheCode(nouveauCode, 1);
+
     thenTheScreenShows('EN_ATTENTE_D_APPROBATION');
     thenTheScreenShowsCode('AAAA-BBBB');
   });
@@ -265,15 +278,17 @@ describe('EnrolementDuPupitre', () => {
     givenTheWorkshopLoadFails();
     whenEnrolling();
     await whenTheAttemptAnswers('ENROLLED');
-    thenTheScreenShows('ATTENTE_RESEAU_ATELIER');
+    const failedView = enrolement.vue().kind;
 
     const retry = whenRetryingTheWorkshopLoad();
-    thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
+    const retryView = enrolement.vue().kind;
 
     givenTheWorkshopLoadRecovers();
     await retry;
     whenTheFirstReferenceLands();
 
+    expect(failedView).toBe('ATTENTE_RESEAU_ATELIER');
+    expect(retryView).toBe('VALIDE_CHARGEMENT_ATELIER');
     thenTheScreenShows('ENROLE_ET_PRET');
     thenAuthorizationsAskedAre(1);
   });
@@ -289,10 +304,11 @@ describe('EnrolementDuPupitre', () => {
 
     previousLoad.settle('ECHEC');
     await previousRetry;
-    thenTheScreenShows('VALIDE_CHARGEMENT_ATELIER');
+    const viewBeforeTheOtherLoadSettles = enrolement.vue().kind;
 
     currentLoad.settle('ECHEC');
     await currentRetry;
+    expect(viewBeforeTheOtherLoadSettles).toBe('VALIDE_CHARGEMENT_ATELIER');
     thenTheScreenShows('ATTENTE_RESEAU_ATELIER');
   });
 
@@ -308,11 +324,12 @@ describe('EnrolementDuPupitre', () => {
     currentLoad.settle('CHARGE');
     await currentRetry;
     whenTheFirstReferenceLands();
-    thenTheScreenShows('ENROLE_ET_PRET');
+    const viewBeforeTheOtherLoadSettles = enrolement.vue().kind;
 
     previousLoad.settle('ECHEC');
     await previousRetry;
 
+    expect(viewBeforeTheOtherLoadSettles).toBe('ENROLE_ET_PRET');
     thenTheScreenShows('ENROLE_ET_PRET');
   });
 

@@ -48,21 +48,35 @@ interface RequeteMetier {
 
 describe('Pupitre workshop journey', () => {
   let requetes: RequeteMetier[];
+  let pendingResponse: ReturnType<typeof interceptForever> | undefined;
 
   beforeEach(() => {
     requetes = [];
+    pendingResponse = undefined;
   });
 
-  afterEach(() => clearPupitreStorageFixture());
+  afterEach(() => {
+    cy.then(() => pendingResponse?.send());
+    clearPupitreStorageFixture();
+  });
 
-  it('should restore an enrolled pupitre and send its first pointage then one global pause in business order', () => {
+  it('should restore an enrolled pupitre and send its first pointage in business order', () => {
     givenAnEnrolledPupitre(referentielFixture);
 
     whenDesignatingOperator049();
     whenStartingElement('piece-1');
 
     thenTheFirstGestureWasSentInBusinessOrder();
+    thenNoNewDeviceAuthorizationWasRequested();
+  });
+
+  it('should send one global pause after the first pointage', () => {
+    givenAnEnrolledPupitre(referentielFixture);
+
+    whenDesignatingOperator049();
+    whenStartingElement('piece-1');
     whenPausingAllWork();
+
     thenPauseWasSentOnceWithoutPointagePerElement();
     thenNoNewDeviceAuthorizationWasRequested();
   });
@@ -76,30 +90,45 @@ describe('Pupitre workshop journey', () => {
     thenEveryFinishWasSentBeforeDeparture();
   });
 
+  it('should show a pointage optimistically while the server response is pending', () => {
+    givenAnEnrolledPupitre(referentielFixture);
+    whenDesignatingOperator049();
+    givenStartingElementWillBeRefused();
+
+    whenStartingElementOptimistically('piece-1');
+
+    thenElementIsOptimisticallyActive('piece-1');
+  });
+
   it('should remove an optimistic pointage and show its server refusal in the permanent header', () => {
     givenAnEnrolledPupitre(referentielFixture);
     whenDesignatingOperator049();
     const refusal = givenStartingElementWillBeRefused();
 
     whenStartingElementOptimistically('piece-1');
-    thenElementIsOptimisticallyActive('piece-1');
     whenServerAnswers(refusal);
 
     thenRefusalReconcilesElementAndHeader('piece-1', '204', 'Pointage refusé par le serveur');
   });
 
-  it('should close a workstation popup on finish and expiry without sending a workshop request', () => {
+  it('should close workstation choice on finish without sending work', () => {
     givenAControlledClock();
     givenAnEnrolledPupitre(referentielMultiPosteFixture, true);
     whenDesignatingOperator049(true);
     whenOpeningWorkstationChoice('piece-1');
-
     whenFinishingDesignation();
 
     thenTheKeypadIsEmptyAndNoWorkshopRequestWasSent();
+  });
+
+  it('should close workstation choice on expiry without sending work', () => {
+    givenAControlledClock();
+    givenAnEnrolledPupitre(referentielMultiPosteFixture, true);
     whenDesignatingOperator049(true);
     whenOpeningWorkstationChoice('piece-1');
-
+    whenFinishingDesignation();
+    whenDesignatingOperator049(true);
+    whenOpeningWorkstationChoice('piece-1');
     whenDesignationExpires();
 
     thenTheKeypadIsEmptyAndNoWorkshopRequestWasSent();
@@ -191,8 +220,8 @@ describe('Pupitre workshop journey', () => {
     cy.wait('@pointage');
   };
 
-  const givenStartingElementWillBeRefused = (): ReturnType<typeof interceptForever> =>
-    interceptForever(
+  const givenStartingElementWillBeRefused = (): ReturnType<typeof interceptForever> => {
+    pendingResponse = interceptForever(
       { method: 'POST', url: '/api/atelier/suivis/piece-1/pointages' },
       {
         statusCode: 409,
@@ -200,6 +229,8 @@ describe('Pupitre workshop journey', () => {
       },
       'refusedPointage',
     );
+    return pendingResponse;
+  };
 
   const whenStartingElementOptimistically = (elementId: string): void => {
     cy.get(dataSelector(`tile-${elementId}`))

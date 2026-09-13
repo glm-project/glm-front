@@ -256,17 +256,20 @@ describe('AtelierCoordinator', () => {
     const releaseCapture = givenDelayedCapture();
 
     const stopping = whenStoppingEverything();
-    thenGlobalIdentityWasSampledOnlyAtInitiation(identitySourceFixture);
+    const initialIdentitySamples = identitySourceFixture.mock.calls.length;
     whenBusinessTimeBecomes('2026-09-05T09:00:00Z');
     whenReleasingCapture(releaseCapture);
     await stopping;
 
-    const gestures = await thenQueuedGesturesHaveDistinctIdentitiesAt('2026-09-05T08:00:00.000Z');
+    const gestures = await readQueuedGestures();
     await whenRestoring();
-    await thenQueuedGesturesAre(gestures);
+    const restoredGestures = await readQueuedGestures();
     givenAuthorizedAccess();
     await whenSynchronizing();
 
+    expect(initialIdentitySamples).toBe(1);
+    thenGesturesHaveDistinctIdentitiesAt(gestures, '2026-09-05T08:00:00.000Z');
+    expect(restoredGestures).toEqual(gestures);
     thenReplayedGesturesAre(gestures);
     thenGlobalIdentityWasSampledOnlyAtInitiation(identitySourceFixture);
   });
@@ -306,13 +309,15 @@ describe('AtelierCoordinator', () => {
 
     const pointage = whenStarting();
     const stopping = whenStoppingEverything();
-    thenGlobalGesturesAreAvailable(false);
+    const gesturesBeforeClosing = designation.gestesDisponibles();
     const closing = whenClosing();
 
-    thenNoWindowPresentationRemains();
+    const closingPresentation = readWindowPresentation();
     whenReleasingCapture(releaseCapture);
     await Promise.all([pointage, stopping, closing]);
 
+    expect(gesturesBeforeClosing).toBe(false);
+    thenNoWindowPresentationRemains(closingPresentation);
     thenGlobalGesturesAreAvailable(true);
     thenAcceptedBatchesAre([
       ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
@@ -325,30 +330,41 @@ describe('AtelierCoordinator', () => {
     givenLocalWriteFailsOnce();
 
     const pausing = whenPausingGlobally();
-    thenGlobalGesturesAreAvailable(false);
-    await thenFails(pausing, 'disque plein');
-
-    thenGlobalRecordingFailed();
-    thenGlobalGesturesAreAvailable(true);
-
+    const availabilityDuringPause = designation.gestesDisponibles();
+    await Promise.allSettled([pausing]);
+    const failedPresentation = readWindowPresentation();
+    const availabilityAfterFailure = designation.gestesDisponibles();
     const resuming = whenResumingGlobally();
-    thenGlobalGesturesAreAvailable(false);
+    const availabilityDuringResume = designation.gestesDisponibles();
     await resuming;
 
+    expect(availabilityDuringPause).toBe(false);
+    await thenFails(pausing, 'disque plein');
+    expect(failedPresentation.echecLocal).toBe(true);
+    expect(availabilityAfterFailure).toBe(true);
+    expect(availabilityDuringResume).toBe(false);
     thenGlobalRecordingRecovered();
     thenGlobalGesturesAreAvailable(true);
     thenAcceptedBatchesAre([['ARRIVEE', 'REPRISE']]);
   });
 
-  it('should publish and clear a local presence failure through the common workshop message', async () => {
+  it('should publish a local presence failure', async () => {
     await givenAnOpenWindow();
     givenLocalWriteFailsOnce();
-
     const pausing = whenPausingGlobally();
+    await Promise.allSettled([pausing]);
+
     await thenFails(pausing, 'disque plein');
     thenGlobalRecordingFailed();
+  });
 
+  it('should clear the local presence failure after a successful retry', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+    const pausing = whenPausingGlobally();
+    await Promise.allSettled([pausing]);
     await whenPausingGlobally();
+
     thenGlobalRecordingRecovered();
   });
 
@@ -383,16 +399,22 @@ describe('AtelierCoordinator', () => {
     expect(duringCapture).toEqual({ echecLocal: false, refus: undefined });
   });
 
-  it('should reject a gesture explicitly if local commit fails and accept the next retry durably', async () => {
+  it('should reject a gesture when its local commit fails', async () => {
     await givenAnOpenWindow();
     givenLocalWriteFailsOnce();
-
     const failedStart = whenStarting();
+    await Promise.allSettled([failedStart]);
 
     await thenFails(failedStart, 'disque plein');
     await thenQueueHas(0);
     thenNoActivity();
+  });
 
+  it('should accept a gesture durably after retrying a failed commit', async () => {
+    await givenAnOpenWindow();
+    givenLocalWriteFailsOnce();
+    const failedStart = whenStarting();
+    await Promise.allSettled([failedStart]);
     await whenStarting();
 
     await thenQueueHas(3);
@@ -414,10 +436,14 @@ describe('AtelierCoordinator', () => {
 
   it('should create no gesture before the final workstation choice', async () => {
     await givenAMultiWorkstationOpenWindow();
-
-    const choice = whenPressingPrimaryTarget();
+    whenPressingPrimaryTarget();
 
     await thenNoGestureExistsBeforeChoice();
+  });
+
+  it('should record the finally chosen workstation', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    const choice = whenPressingPrimaryTarget();
     await whenChoosingWorkstation(choice, 'fraiseuse');
 
     await thenPointageUsesWorkstation('fraiseuse');
@@ -444,47 +470,64 @@ describe('AtelierCoordinator', () => {
     await thenPointageUsesWorkstation('fraiseuse');
   });
 
-  it('should retain the failed push and replay exactly the same identifiers and dates on reconnection', async () => {
+  it('should retain a failed push', async () => {
     await givenPendingArrival();
     givenAuthorizedAccess();
     givenServerFailures(new Error('reseau absent'));
-
     await whenSynchronizing();
 
     thenConnectedIs(false);
     await thenPendingIs(1);
+  });
 
+  it('should replay the same gesture after reconnection', async () => {
+    await givenPendingArrival();
+    givenAuthorizedAccess();
+    givenServerFailures(new Error('reseau absent'));
+    await whenSynchronizing();
     await whenSynchronizing();
 
     thenConnectedIs(true);
     thenJournalIs([arriveeFixture]);
   });
 
-  it('should replay a server acceptance whose local acknowledgement was interrupted', async () => {
+  it('should retain a server acceptance when local acknowledgement fails', async () => {
     await givenPendingArrival();
     givenAuthorizedAccess();
     givenAcknowledgementFailsOnce();
-
     const failedSynchronization = whenSynchronizing();
+    await Promise.allSettled([failedSynchronization]);
 
     await thenFails(failedSynchronization, 'disque plein');
     await thenPendingIs(1);
+  });
 
+  it('should replay a server acceptance after local acknowledgement failure', async () => {
+    await givenPendingArrival();
+    givenAuthorizedAccess();
+    givenAcknowledgementFailsOnce();
+    const failedSynchronization = whenSynchronizing();
+    await Promise.allSettled([failedSynchronization]);
     await whenSynchronizing();
 
     thenJournalIs([arriveeFixture, arriveeFixture]);
     await thenPendingIs(0);
   });
 
-  it('should preserve a final refusal with its cause and continue subsequent gestures for the same operator', async () => {
+  it('should remove activity rejected by the server', async () => {
     await givenWorkStartedOffline();
     givenAuthorizedAccess();
     givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
-
     await whenSynchronizing();
 
     thenNoActivity();
+  });
 
+  it('should retain a final refusal while processing subsequent gestures', async () => {
+    await givenWorkStartedOffline();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    await whenSynchronizing();
     await whenStoppingEverything();
     await whenSynchronizing();
     await whenClosing();
@@ -529,21 +572,28 @@ describe('AtelierCoordinator', () => {
     await thenDiagnosticsCountIs(0);
   });
 
-  it('should retain an explicit resumption refusal after restart when arrival assurance found an open day', async () => {
+  it('should retain pending resumption when arrival finds an already open day', async () => {
     await givenAnOpenWindow();
     await pupitre.executeGlobale('REPRENDRE');
     await whenSynchronizing();
     givenAuthorizedAccess();
     givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
-
     await whenSynchronizing();
+
     await thenArrivalOpenedDay(false);
     await thenPendingIs(1);
+  });
 
+  it('should retain the explicit resumption refusal after restart', async () => {
+    await givenAnOpenWindow();
+    await pupitre.executeGlobale('REPRENDRE');
+    await whenSynchronizing();
+    givenAuthorizedAccess();
+    givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
+    await whenSynchronizing();
     pupitre = buildPupitre();
     await pupitre.restore();
     givenServerFailures(refusalFixture('transition-de-presence-interdite'));
-
     await whenSynchronizing();
 
     await thenPendingIs(0);
@@ -583,16 +633,21 @@ describe('AtelierCoordinator', () => {
     await thenPendingIs(0);
   });
 
-  it('should reconcile a refreshed referential while retaining the designated operator', async () => {
+  it('should retain designation while refreshing the referential', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
     givenRefreshedMatricule('050');
-
     await whenSynchronizing();
 
     thenMatriculeIs('050');
     thenDesignatedMatriculeIs('049');
+  });
 
+  it('should retain the refreshed referential after closing designation', async () => {
+    await givenAnOpenWindow();
+    givenAuthorizedAccess();
+    givenRefreshedMatricule('050');
+    await whenSynchronizing();
     await whenClosing();
 
     thenMatriculeIs('050');
@@ -608,34 +663,67 @@ describe('AtelierCoordinator', () => {
     thenConnectedIs(true);
   });
 
-  it('should suspend the old company queue and reject an active window after reenrolment', async () => {
+  it('should reject a gesture on an old company window after reenrolment', async () => {
     await givenWorkStartedOffline();
     givenReenrolledForAnotherCompany();
-
     const failedStart = whenStarting();
+    await Promise.allSettled([failedStart]);
 
     await thenFails(failedStart, 'fenetre operateur a change');
+  });
 
+  it('should suspend the old company queue after reenrolment', async () => {
+    await givenWorkStartedOffline();
+    givenReenrolledForAnotherCompany();
+    const failedStart = whenStarting();
+    await Promise.allSettled([failedStart]);
     await whenSynchronizing();
 
     await thenOldCompanyPendingIs(3);
     thenJournalIs([]);
+  });
 
+  it('should reject an unknown operator after reenrolment', async () => {
+    await givenWorkStartedOffline();
+    givenReenrolledForAnotherCompany();
+    const failedStart = whenStarting();
+    await Promise.allSettled([failedStart]);
+    await whenSynchronizing();
     const unknownOpening = whenOpeningMatricule('inconnu');
+    await Promise.allSettled([unknownOpening]);
 
     await thenFails(unknownOpening, 'Matricule absent');
+  });
+
+  it('should report a local failure before changing company', async () => {
+    await givenWorkStartedOffline();
+    givenLocalWriteFailsOnce();
+    const failedStop = whenStarting();
+    await Promise.allSettled([failedStop]);
+
+    await thenFails(failedStop, 'disque plein');
+  });
+
+  it('should retain the operator presentation before changing company', async () => {
+    await givenWorkStartedOffline();
+    givenLocalWriteFailsOnce();
+    const failedStop = whenStarting();
+    await Promise.allSettled([failedStop]);
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    await whenSynchronizing();
+
+    thenTheWindowPresentationIsPopulated();
   });
 
   it('should clear every operator presentation when restoring another company', async () => {
     await givenWorkStartedOffline();
     givenLocalWriteFailsOnce();
     const failedStop = whenStarting();
-    await thenFails(failedStop, 'disque plein');
+    await Promise.allSettled([failedStop]);
     givenAuthorizedAccess();
     givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
-    thenTheWindowPresentationIsPopulated();
-
     givenReenrolledForAnotherCompany();
     await whenRestoring();
 
@@ -690,52 +778,61 @@ describe('AtelierCoordinator', () => {
 
     const openings = await whenOpeningBothOperators();
 
-    const acceptedOperator = thenOnlyOneWindowIsAccepted(openings);
-
     await whenPausingGlobally();
     givenAuthorizedAccess();
     await whenSynchronizing();
 
+    const acceptedOperator = thenOnlyOneWindowIsAccepted(openings);
     thenPresenceBelongsTo(acceptedOperator);
   });
 
-  it('should reject unknown codes, overlapping windows and unauthorized workstations', async () => {
+  it('should reject an unknown operator code', async () => {
     const unknownOpening = whenOpeningMatricule('inconnu');
+    await Promise.allSettled([unknownOpening]);
 
     await thenFails(unknownOpening, 'Matricule absent');
+  });
 
+  it('should reject overlapping windows and unauthorized workstations', async () => {
+    const unknownOpening = whenOpeningMatricule('inconnu');
+    await Promise.allSettled([unknownOpening]);
     await givenAMultiWorkstationOpenWindow();
-
     const overlappingOpening = whenOpening();
     const unauthorizedPointage = whenStartingOn('interdit');
 
     await thenOpeningAndPointageAreRefused(overlappingOpening, unauthorizedPointage);
-
     await thenQueueHas(0);
   });
 
-  it('should clear the exposed reference when the durable company selection disappears', async () => {
+  it('should expose the restored company reference', async () => {
     await givenRestoredPupitre();
 
     thenMatriculeIs('049');
+  });
 
+  it('should clear the reference when durable company selection disappears', async () => {
+    await givenRestoredPupitre();
     givenNoCompanySelected();
-
     await whenSynchronizing();
 
     thenNoReference();
   });
 
-  it('should require an initial enrolment and an operator window', async () => {
+  it('should require enrolment before opening an operator', async () => {
     givenNoCompanySelected();
-
     await whenRestoring();
     const opening = whenOpening();
+    await Promise.allSettled([opening]);
 
     await thenFails(opening, 'enrole');
-
     thenNoReference();
+  });
 
+  it('should require an operator window before pausing', async () => {
+    givenNoCompanySelected();
+    await whenRestoring();
+    const opening = whenOpening();
+    await Promise.allSettled([opening]);
     const pausing = await whenPausingWithoutWindow();
 
     thenGestureNeedsAWindow(pausing);
@@ -749,29 +846,41 @@ describe('AtelierCoordinator', () => {
     await thenFails(opening, 'entreprise du pupitre a change');
   });
 
-  it('should expose an empty diagnostic before any gesture or reference exists', async () => {
+  it('should expose no reference before any data exists', async () => {
     givenEmptyCompanySelected();
-
     await whenRestoring();
 
     thenNoReference();
+  });
 
+  it('should expose an empty diagnostic for an unknown operator', async () => {
+    givenEmptyCompanySelected();
+    await whenRestoring();
     const opening = whenOpening();
+    await Promise.allSettled([opening]);
 
     await thenFails(opening, 'Matricule absent');
     await thenDiagnosticsCountIs(0);
   });
 
-  it('should contain a background synchronization failure after the gesture was durably accepted', async () => {
+  it('should report a background acknowledgement failure', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
     givenAcknowledgementFailsOnce();
-
     await whenStarting();
     const failedSynchronization = whenSynchronizing();
+    await Promise.allSettled([failedSynchronization]);
 
     await thenFails(failedSynchronization, 'disque plein');
+  });
 
+  it('should retain a durably accepted gesture after background failure and restart', async () => {
+    await givenAnOpenWindow();
+    givenAuthorizedAccess();
+    givenAcknowledgementFailsOnce();
+    await whenStarting();
+    const failedSynchronization = whenSynchronizing();
+    await Promise.allSettled([failedSynchronization]);
     await whenRestarting();
 
     await thenQueueHas(3);
@@ -798,11 +907,13 @@ describe('AtelierCoordinator', () => {
     whenSleepingPastDesignation();
     const closing = whenExpiring();
 
-    thenGestureIsRefusedDuringClosure();
+    const closureFailure = whenAttemptingPointageDuringClosure();
 
     whenReleasingCapture(releaseCapture);
     await whenCaptureAndClosureComplete(pointage, closing);
 
+    expect(closureFailure).toBeInstanceOf(Error);
+    expect(closureFailure).toHaveProperty('message', 'Aucune fenetre operateur ouverte.');
     await thenQueueHas(3);
     await thenPointageKeepsItsOriginalOperatorAndTime();
   });
@@ -845,46 +956,54 @@ describe('AtelierCoordinator', () => {
   it('should disable validation while resolving and drain window if resolution expired during opening', async () => {
     givenBusinessTime();
     givenDigitsEntered('049');
-    thenValidationIsAvailable(true);
+    const validationBeforeOpening = designation.canValidate();
 
     const opening = whenValidating();
-    thenValidationIsAvailable(false);
+    const validationDuringOpening = designation.canValidate();
 
     whenSleepingPastDesignation();
     await opening;
 
+    expect(validationBeforeOpening).toBe(true);
+    expect(validationDuringOpening).toBe(false);
     thenNoWindowPresentationRemains();
   });
 
   it('should clear errors immediately when closing begins and restore validate capability when closure completes', async () => {
     await givenAnOpenWindow();
     await givenFailedLocalSemanticCapture();
-    thenGlobalRecordingFailed();
+    const failureBeforeClosing = pupitre.echecCaptureLocale();
 
     const releaseCapture = givenDelayedCapture();
     const pointage = whenStarting();
     const closing = whenClosing();
 
-    thenWorkshopMessageIsCleared();
+    const closingPresentation = readWindowPresentation();
     givenDigitsEntered('0');
-    thenValidationIsAvailable(false);
+    const validationDuringClosure = designation.canValidate();
 
     whenReleasingCapture(releaseCapture);
     await whenCaptureAndClosureComplete(pointage, closing);
 
+    expect(failureBeforeClosing).toBe(true);
+    thenWorkshopMessageIsCleared(closingPresentation);
+    expect(validationDuringClosure).toBe(false);
     thenValidationIsAvailable(true);
   });
 
   it('should clear active refusals immediately when closing begins', async () => {
     await givenAMultiWorkstationOpenWindow();
     await givenServerRefusalOnStart('tour');
-    thenWorkshopMessageIsDefined();
+    const messageBeforeClosing = designation.refusAtelier();
 
     const closing = whenClosing();
 
-    thenWorkshopMessageIsCleared();
+    const closingPresentation = readWindowPresentation();
 
     await closing;
+
+    expect(messageBeforeClosing).toBeDefined();
+    thenWorkshopMessageIsCleared(closingPresentation);
   });
 
   it('should expose pointage projection immediately when window is opened', async () => {
@@ -894,11 +1013,16 @@ describe('AtelierCoordinator', () => {
     thenDesignatedMatriculeIs('049');
   });
 
-  it('should clear existing refusal immediately upon pressing a target requiring workstation choice', async () => {
+  it('should display the existing workstation refusal', async () => {
     await givenAMultiWorkstationOpenWindow();
     await givenServerRefusalOnStart('tour');
-    thenWorkshopMessageIsDefined();
 
+    thenWorkshopMessageIsDefined();
+  });
+
+  it('should clear a refusal when requesting another workstation choice', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    await givenServerRefusalOnStart('tour');
     const choice = whenPressingPrimaryTarget();
 
     thenChoiceRequiresWorkstation(choice);
@@ -915,11 +1039,16 @@ describe('AtelierCoordinator', () => {
     thenBackgroundSynchronizationInterruptionWasReported();
   });
 
-  it('should clear an existing refusal when the window is closed during company change', async () => {
+  it('should display the existing refusal before company change', async () => {
     await givenAnOpenWindow();
     await givenServerRefusalOnStart('tour');
-    thenWorkshopMessageIsDefined();
 
+    thenWorkshopMessageIsDefined();
+  });
+
+  it('should clear an existing refusal when changing company', async () => {
+    await givenAnOpenWindow();
+    await givenServerRefusalOnStart('tour');
     givenReenrolledForAnotherCompany();
     await whenRestoring();
 
@@ -968,8 +1097,12 @@ describe('AtelierCoordinator', () => {
   const whenCaptureAndClosureComplete = async (pointage: Promise<void>, closing: Promise<void>): Promise<void> => {
     await Promise.all([pointage, closing]);
   };
-  const thenGestureIsRefusedDuringClosure = (): void => {
-    expect(() => pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' })).toThrow('Aucune fenetre operateur ouverte.');
+  const whenAttemptingPointageDuringClosure = (): unknown => {
+    try {
+      return pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
+    } catch (failure: unknown) {
+      return failure;
+    }
   };
   const thenPointageKeepsItsOriginalOperatorAndTime = async (): Promise<void> => {
     const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
@@ -1236,16 +1369,13 @@ describe('AtelierCoordinator', () => {
     expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
     expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
   };
-  const thenQueuedGesturesHaveDistinctIdentitiesAt = async (instant: string): Promise<readonly GesteDAtelier[]> => {
-    const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
+  const readQueuedGestures = async (): Promise<readonly GesteDAtelier[]> =>
+    (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
+  const thenGesturesHaveDistinctIdentitiesAt = (gestes: readonly GesteDAtelier[], instant: string): void => {
     const identities = gestes.map(geste => geste.id);
     expect(gestes).toHaveLength(4);
     expect(new Set(identities).size).toBe(gestes.length);
     expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
-    return gestes;
-  };
-  const thenQueuedGesturesAre = async (gestures: readonly GesteDAtelier[]): Promise<void> => {
-    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste)).toEqual(gestures);
   };
   const thenReplayedGesturesAre = (gestures: readonly GesteDAtelier[]): void => {
     expect(serveur.journal).toEqual(gestures);
@@ -1308,11 +1438,17 @@ describe('AtelierCoordinator', () => {
     expect(designation.pointage()).toBeDefined();
     expect(pupitre.echecCaptureLocale()).toBe(true);
   };
-  const thenNoWindowPresentationRemains = (): void => {
-    expect(designation.operateur()).toBeUndefined();
-    expect(designation.pointage()).toBeUndefined();
-    expect(pupitre.echecCaptureLocale()).toBe(false);
-    expect(designation.refusAtelier()).toBeUndefined();
+  const readWindowPresentation = () => ({
+    operateur: designation.operateur(),
+    pointage: designation.pointage(),
+    echecLocal: pupitre.echecCaptureLocale(),
+    refus: designation.refusAtelier(),
+  });
+  const thenNoWindowPresentationRemains = (presentation = readWindowPresentation()): void => {
+    expect(presentation.operateur).toBeUndefined();
+    expect(presentation.pointage).toBeUndefined();
+    expect(presentation.echecLocal).toBe(false);
+    expect(presentation.refus).toBeUndefined();
   };
   const thenGestureNeedsAWindow = (failure: unknown): void => {
     expect(failure).toBeInstanceOf(Error);
@@ -1349,9 +1485,9 @@ describe('AtelierCoordinator', () => {
   const thenWorkshopMessageIsDefined = (): void => {
     expect(designation.refusAtelier()).toBeDefined();
   };
-  const thenWorkshopMessageIsCleared = (): void => {
-    expect(pupitre.echecCaptureLocale()).toBe(false);
-    expect(designation.refusAtelier()).toBeUndefined();
+  const thenWorkshopMessageIsCleared = (presentation = readWindowPresentation()): void => {
+    expect(presentation.echecLocal).toBe(false);
+    expect(presentation.refus).toBeUndefined();
   };
   const thenChoiceRequiresWorkstation = (choice: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(choice.kind).toBe('CHOIX_POSTE_REQUIS');

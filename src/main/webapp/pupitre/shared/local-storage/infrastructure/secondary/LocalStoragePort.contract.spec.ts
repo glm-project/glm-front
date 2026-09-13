@@ -111,11 +111,16 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     thenTabsCompletedInOrder(chronology);
   });
 
-  it('should release a failed synchronization so another tab can continue', async () => {
+  it('should report a failed synchronization', async () => {
     const failure = whenSynchronizationFails();
+    await Promise.allSettled([failure]);
 
     await thenItFails(failure, 'reseau');
+  });
 
+  it('should let another tab synchronize after failure', async () => {
+    const failure = whenSynchronizationFails();
+    await Promise.allSettled([failure]);
     const result = await whenAnotherTabSynchronizes();
 
     thenItCompleted(result);
@@ -153,8 +158,10 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
 
     const operations = whenAcquiringLocksOnDifferentKeys(stockage, buildStockage(), firstEntered, secondEntered, releaseBoth);
 
-    await thenBothLocksAreActiveConcurrently(firstEntered, secondEntered);
+    const entered = await Promise.all([firstEntered.promise, secondEntered.promise]);
     await whenReleasingConcurrentLocks(releaseBoth, operations);
+
+    expect(entered).toEqual([undefined, undefined]);
   });
 
   const givenACommittedQueue = (): Promise<string[]> => whenRecording('atelier-a', ['premier']);
@@ -257,9 +264,6 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
   };
   const thenTabsCompletedInOrder = (chronology: string[]): void => {
     expect(chronology).toEqual(['first entered', 'first completed', 'second entered', 'second completed']);
-  };
-  const thenBothLocksAreActiveConcurrently = async (firstEntered: SignalFixture, secondEntered: SignalFixture): Promise<void> => {
-    await expect(Promise.all([firstEntered.promise, secondEntered.promise])).resolves.toEqual([undefined, undefined]);
   };
   const thenItContains = async (store: LocalStoragePort, key: string, value: unknown): Promise<void> => {
     expect(await store.read(key)).toEqual(value);

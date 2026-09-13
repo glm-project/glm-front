@@ -42,61 +42,77 @@ describe('Pupitre enrolment', () => {
     thenTheWorkshopLoadsAndTheKeypadAppears();
   });
 
-  it('should ask for a new code once the previous one expired, rather than rotating it silently', () => {
+  it('should display expiration without silently rotating the code', () => {
     givenAnAuthorizationServerAnswering('expired_token');
-
     whenVisitingTheRoot();
 
     thenTheScreenSays("Le code d'autorisation a expiré");
     thenTheCodeIsNoLongerOffered();
+  });
 
+  it('should request a new code after recovery from expiration', () => {
+    givenAnAuthorizationServerAnswering('expired_token');
+    whenVisitingTheRoot();
     whenPressingTheRecovery('Demander un nouveau code');
 
     thenAnotherCodeWasRequested();
   });
 
-  it('should let the pupitre start over after an administrator refused it', () => {
+  it('should display an administrator refusal', () => {
     givenAnAuthorizationServerAnswering('access_denied');
-
     whenVisitingTheRoot();
 
     thenTheScreenSays("Autorisation refusée par l'administrateur");
+  });
 
+  it('should restart enrolment after an administrator refusal', () => {
+    givenAnAuthorizationServerAnswering('access_denied');
+    whenVisitingTheRoot();
     whenPressingTheRecovery('Recommencer');
 
     thenAnotherCodeWasRequested();
   });
 
-  it('should ask to retry when no network is available for the first enrolment', () => {
+  it('should explain the missing network during first enrolment', () => {
     givenAnUnreachableAuthorizationServer();
-
     whenVisitingTheRoot();
 
     thenTheScreenSays("Connexion Internet requise pour enrôler l'appareil");
+  });
 
+  it('should retry first enrolment on request', () => {
+    givenAnUnreachableAuthorizationServer();
+    whenVisitingTheRoot();
     whenPressingTheRecovery('Réessayer');
 
     thenAnotherCodeWasRequested();
   });
 
-  it('should return to enrolment when an administrator holds the logo and confirms the reset', () => {
+  it('should explain reset before administrator confirmation', () => {
     givenAnEnrolledPupitre();
-
     whenHoldingTheLogo();
 
     thenTheResetIsExplainedBeforeItHappens();
+  });
 
+  it('should return to enrolment after administrator confirmation', () => {
+    givenAnEnrolledPupitre();
+    whenHoldingTheLogo();
     whenConfirmingTheReset();
 
     thenThePupitreAsksForANewCodeAgain();
   });
 
-  it('should keep operator designation inactive while the administration reset awaits confirmation', () => {
+  it('should offer only reset actions while confirmation is pending', () => {
     givenAnEnrolledPupitre();
-
     whenHoldingTheLogo();
-    thenOnlyTheResetActionsAreActive();
 
+    thenOnlyTheResetActionsAreActive();
+  });
+
+  it('should ignore operator entry while reset confirmation is pending', () => {
+    givenAnEnrolledPupitre();
+    whenHoldingTheLogo();
     whenTypingAValidMatriculeOnThePhysicalKeyboard();
 
     thenNoOperatorIsDesignated();
