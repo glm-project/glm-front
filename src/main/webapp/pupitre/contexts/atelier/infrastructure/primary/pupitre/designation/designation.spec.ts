@@ -130,10 +130,14 @@ describe('Designation keypad', () => {
     vi.useRealTimers();
   });
 
-  it('should render twelve telephone ordered keys with explicit disabled validation', () => {
+  it('should render twelve telephone ordered keys with disabled validation', () => {
     thenKeysAre(['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Effacer', '0', 'Valider']);
     thenValidationIsDisabled(true);
+  });
+
+  it('should enable validation after the first digit', () => {
     whenClicking('digit-0');
+
     thenDisplayedCodeIs('0');
     thenValidationIsDisabled(false);
   });
@@ -151,37 +155,70 @@ describe('Designation keypad', () => {
     whenClicking('erase');
     thenDisplayedCodeIs('');
   });
-  it('should consume a touch after sleep and accept the next touch', () => {
+  it('should consume the touch that discovers expiration after sleep', () => {
     whenClicking('digit-0');
     whenSleeping();
     whenTouching('digit-4');
+
     thenDisplayedCodeIs('');
+  });
+
+  it('should accept the next touch after discovering expiration', () => {
+    whenClicking('digit-0');
+    whenSleeping();
+    whenTouching('digit-4');
     whenTouching('digit-9');
+
     thenDisplayedCodeIs('9');
   });
-  it('should renew on a blank area press but not mouse movement or held keys', () => {
+  it('should renew designation on a blank area press', () => {
     whenClicking('digit-0');
     whenTimePasses(29_000);
     whenTouching('designation');
     whenTimePasses(29_000);
+
     thenDisplayedCodeIs('0');
+  });
+
+  it('should not renew designation on mouse movement or held keys', () => {
+    whenClicking('digit-0');
+    whenTimePasses(29_000);
+    whenTouching('designation');
+    whenTimePasses(29_000);
     whenMovingMouse();
     whenPressingKey({ key: '0', repeat: true });
     whenTimePasses(1_000);
+
     thenDisplayedCodeIs('');
   });
-  it('should show an unknown code in place then recover and validate by touch', async () => {
+  it('should show an unknown code in place', async () => {
     whenTouching('digit-7');
     whenTouching('validate');
     await whenResolutionSettles();
+
     thenUnknownCodeIsDisplayed();
+  });
+
+  it('should erase an unknown code', async () => {
+    whenTouching('digit-7');
+    whenTouching('validate');
+    await whenResolutionSettles();
     whenTouching('erase');
+
     thenDisplayedCodeIs('');
+  });
+
+  it('should designate an operator after correcting an unknown code', async () => {
+    whenTouching('digit-7');
+    whenTouching('validate');
+    await whenResolutionSettles();
+    whenTouching('erase');
     whenTouching('digit-0');
     whenTouching('digit-4');
     whenTouching('digit-9');
     whenTouching('validate');
     await whenResolutionSettles();
+
     thenOperatorIsDesignated();
   });
 
@@ -207,11 +244,17 @@ describe('Designation keypad', () => {
     thenValidationIsDisabled(false);
   });
 
-  it('should produce one touch action and not renew inactivity when a held touch is released', () => {
+  it('should enter a digit once when a touch is held', () => {
     whenHolding('digit-0');
+
     thenDisplayedCodeIs('0');
+  });
+
+  it('should consume the release of a held touch after expiration', () => {
+    whenHolding('digit-0');
     whenTimePasses(30_000);
     whenClicking('digit-0');
+
     thenDisplayedCodeIs('');
   });
 

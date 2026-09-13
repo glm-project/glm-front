@@ -104,7 +104,9 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     const second = whenTakingLock(buildStockage(), chronology);
     await whenTheSecondTabHasHadATurnToEnter();
 
-    await thenOnlyTheFirstTabRunsUntilReleased(chronology, release, first, second);
+    const beforeRelease = await whenCompletingConcurrentTabs(chronology, release, first, second);
+
+    thenOnlyFirstTabHasEntered(beforeRelease);
 
     thenTabsCompletedInOrder(chronology);
   });
@@ -174,17 +176,15 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     releaseBoth: new SignalFixture(),
   });
 
-  const thenOnlyTheFirstTabRunsUntilReleased = async (
+  const whenCompletingConcurrentTabs = async (
     chronology: string[],
     release: SignalFixture,
     first: Promise<void>,
     second: Promise<void>,
-  ): Promise<void> => {
-    try {
-      thenOnlyFirstTabHasEntered(chronology);
-    } finally {
-      await whenReleasingTheTabs(release, first, second);
-    }
+  ): Promise<string[]> => {
+    const beforeRelease = [...chronology];
+    await whenReleasingTheTabs(release, first, second);
+    return beforeRelease;
   };
   const givenANewerDatabase = (): Promise<void> =>
     new Promise<void>((resolve, reject) => {

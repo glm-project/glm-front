@@ -57,12 +57,18 @@ describe('Pointage screen', () => {
     thenOnlyActiveGlmRemains();
   });
 
-  it('should disable both targets of only the pressed tile until durable acceptance', async () => {
+  it('should disable both targets of only the pressed tile during acceptance', async () => {
     await whenRendering();
-
     whenPressing('moule-1015', 'primary-target');
     await whenRendering();
+
     thenOnlyThePressedTileIsBusy();
+  });
+
+  it('should ignore a second target press and release the tile after acceptance', async () => {
+    await whenRendering();
+    whenPressing('moule-1015', 'primary-target');
+    await whenRendering();
     whenPressing('moule-1015', 'secondary-target');
     await whenCaptureSucceeds();
 
@@ -70,23 +76,52 @@ describe('Pointage screen', () => {
     thenEveryTileIsAvailable();
   });
 
-  it('should request a workstation, disable choices during selection, dismiss after failure, and re-enable choices on retry', async () => {
+  it('should request a workstation when an activity requires a choice', async () => {
     givenAWorkstationChoice();
     await whenRendering();
-
     whenPressing('of-generated', 'secondary-target');
     await whenRendering();
+
     thenWorkstationChoiceIsVisible();
+  });
+
+  it('should disable workstation choices and cancellation during acceptance', async () => {
+    givenAWorkstationChoice();
+    await whenRendering();
+    whenPressing('of-generated', 'secondary-target');
+    await whenRendering();
     whenChoosing('fraiseuse');
     await whenRendering();
+
     thenEveryWorkstationChoiceIsDisabled();
     thenCancellingWorkstationIsDisabled();
+  });
+
+  it('should dismiss workstation choices after acceptance fails', async () => {
+    givenAWorkstationChoice();
+    await whenRendering();
+    whenPressing('of-generated', 'secondary-target');
+    await whenRendering();
+    whenChoosing('fraiseuse');
+    await whenRendering();
     whenChoosing('tour');
     await whenCaptureFails();
 
     thenWorkstationChoiceIsClosed();
+  });
+
+  it('should re-enable workstation choices when retrying after failure', async () => {
+    givenAWorkstationChoice();
+    await whenRendering();
     whenPressing('of-generated', 'secondary-target');
     await whenRendering();
+    whenChoosing('fraiseuse');
+    await whenRendering();
+    whenChoosing('tour');
+    await whenCaptureFails();
+    whenPressing('of-generated', 'secondary-target');
+    await whenRendering();
+
     thenWorkstationChoiceIsVisible();
     thenEveryWorkstationChoiceIsAvailable();
   });

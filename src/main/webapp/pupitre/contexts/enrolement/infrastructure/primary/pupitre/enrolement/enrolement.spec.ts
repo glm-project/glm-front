@@ -139,14 +139,18 @@ describe('Enrolement screen', () => {
     thenThereIsNoAction();
   });
 
-  it('should push the clock forward every second while it is on screen, and stop once it leaves', () => {
+  it('should push the clock forward every second while on screen', () => {
     givenTheScreenShows({ kind: 'EN_ATTENTE_D_APPROBATION', code: codeFixture });
     whenRendering();
-
     whenTwoSecondsPass();
 
     thenClockPushesAre(2);
+  });
 
+  it('should stop pushing the clock after leaving the screen', () => {
+    givenTheScreenShows({ kind: 'EN_ATTENTE_D_APPROBATION', code: codeFixture });
+    whenRendering();
+    whenTwoSecondsPass();
     whenLeavingTheScreen();
     whenTwoSecondsPass();
 

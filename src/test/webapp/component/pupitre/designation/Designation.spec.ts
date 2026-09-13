@@ -5,81 +5,184 @@ import { holdTouchFixture, releaseTouchFixture, touchFixture } from '../../../ut
 const longCodeFixture = '0123456789'.repeat(5);
 
 describe('Designation keypad in a browser', () => {
+  let heldTouchFixture = false;
   beforeEach(() => {
     cy.viewport(1024, 768);
   });
 
-  it('should enter each digit once using real touchscreen presses and resolve the operator locally', () => {
-    givenTheKeypad();
+  afterEach(() => {
+    cy.then(() => {
+      if (heldTouchFixture) whenReleasing();
+    });
+    whenReleasingFour();
+  });
 
+  it('should enter the first digit once using a real touchscreen press', () => {
+    givenTheKeypad();
     whenTouching('digit-0');
+
     thenCodeIs('0');
+  });
+
+  it('should append a second digit once using a real touchscreen press', () => {
+    givenTheKeypad();
+    whenTouching('digit-0');
     whenTouching('digit-4');
+
     thenCodeIs('04');
+  });
+
+  it('should append a third digit once using a real touchscreen press', () => {
+    givenTheKeypad();
+    whenTouching('digit-0');
+    whenTouching('digit-4');
     whenTouching('digit-9');
+
     thenCodeIs('049');
+  });
+
+  it('should resolve the operator locally after touchscreen entry', () => {
+    givenTheKeypad();
+    whenTouching('digit-0');
+    whenTouching('digit-4');
+    whenTouching('digit-9');
     whenTouching('validate');
 
     thenJeanIsDesignated();
   });
 
-  it('should follow a long code on one line and let the operator scroll back to its beginning', () => {
+  it('should follow the last digits of a long code on one line', () => {
     givenTheKeypad();
-
     whenTyping(longCodeFixture);
 
     thenCodeIs(longCodeFixture);
     thenLastDigitsAreVisibleOnOneLine();
+  });
+
+  it('should let the operator scroll back to the beginning of a long code', () => {
+    givenTheKeypad();
+    whenTyping(longCodeFixture);
     whenScrollingToTheBeginning();
+
     thenFirstDigitsAreVisible();
   });
 
-  it('should not act again when a held touch is released after expiration', () => {
+  it('should enter one digit when a touchscreen press is held', () => {
     givenTheKeypad();
     givenAControlledClock();
-
     whenHolding('digit-0');
     whenTimePasses(0);
+
     thenCodeIs('0');
+  });
+
+  it('should expire the code while a touchscreen press remains held', () => {
+    givenTheKeypad();
+    givenAControlledClock();
+    whenHolding('digit-0');
+    whenTimePasses(0);
     whenTimePasses(30_000);
+
     thenCodeIs('');
+  });
+
+  it('should ignore a held touchscreen release after expiration', () => {
+    givenTheKeypad();
+    givenAControlledClock();
+    whenHolding('digit-0');
+    whenTimePasses(0);
+    whenTimePasses(30_000);
     whenReleasing();
+
     thenCodeIs('');
+  });
+
+  it('should accept the next touchscreen press after an expired hold', () => {
+    givenTheKeypad();
+    givenAControlledClock();
+    whenHolding('digit-0');
+    whenTimePasses(0);
+    whenTimePasses(30_000);
+    whenReleasing();
     whenTouching('digit-9');
     whenTimePasses(0);
+
     thenCodeIs('9');
   });
 
-  it('should erase and validate with native physical keyboard commands', () => {
+  it('should erase the last digit with native Backspace', () => {
     givenTheKeypad();
     givenKeyboardFocus();
-
     whenPressing('0');
     whenPressing('4');
     whenPressing('8');
     whenPressing(Cypress.Keyboard.Keys.BACKSPACE);
+
     thenCodeIs('04');
+  });
+
+  it('should validate the corrected code with native Enter', () => {
+    givenTheKeypad();
+    givenKeyboardFocus();
+    whenPressing('0');
+    whenPressing('4');
+    whenPressing('8');
+    whenPressing(Cypress.Keyboard.Keys.BACKSPACE);
     whenPressing('9');
     whenPressing(Cypress.Keyboard.Keys.ENTER);
 
     thenJeanIsDesignated();
   });
 
-  it('should ignore native keyboard repetition without prolonging the designation deadline', () => {
+  it('should enter a digit on native keydown', () => {
     givenTheKeypad();
     givenKeyboardFocus();
     givenAControlledClock();
-
     whenHoldingFour(false);
     whenTimePasses(0);
+
     thenCodeIs('4');
+  });
+
+  it('should ignore native keyboard repetition', () => {
+    givenTheKeypad();
+    givenKeyboardFocus();
+    givenAControlledClock();
+    whenHoldingFour(false);
+    whenTimePasses(0);
     whenTimePasses(29_000);
     whenHoldingFour(true);
     whenTimePasses(0);
+
     thenCodeIs('4');
+  });
+
+  it('should expire designation despite native keyboard repetition', () => {
+    givenTheKeypad();
+    givenKeyboardFocus();
+    givenAControlledClock();
+    whenHoldingFour(false);
+    whenTimePasses(0);
+    whenTimePasses(29_000);
+    whenHoldingFour(true);
+    whenTimePasses(0);
     whenTimePasses(1_000);
+
     thenCodeIs('');
+  });
+
+  it('should ignore native keyup after designation expired', () => {
+    givenTheKeypad();
+    givenKeyboardFocus();
+    givenAControlledClock();
+    whenHoldingFour(false);
+    whenTimePasses(0);
+    whenTimePasses(29_000);
+    whenHoldingFour(true);
+    whenTimePasses(0);
+    whenTimePasses(1_000);
     whenReleasingFour();
+
     thenCodeIs('');
   });
 
@@ -142,9 +245,15 @@ describe('Designation keypad in a browser', () => {
   };
   const whenHolding = (selector: string): void => {
     holdTouchFixture(dataSelector(selector));
+    cy.then(() => {
+      heldTouchFixture = true;
+    });
   };
   const whenReleasing = (): void => {
     releaseTouchFixture();
+    cy.then(() => {
+      heldTouchFixture = false;
+    });
   };
   const whenTouching = (selector: string): void => {
     touchFixture(dataSelector(selector));
