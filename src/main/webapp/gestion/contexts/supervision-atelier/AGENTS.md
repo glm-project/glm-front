@@ -43,7 +43,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - La grille de supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
-- La consommation d'opérateurs depuis le contexte `operateur` passe par un adaptateur TypeScript, sans import direct de son domaine.
+- L’adaptateur HTTP de supervision lit les données opérateurs via l’API et les traduit dans ses propres modèles, sans importer le domaine `operateur`.
 
 ## Règles locales
 

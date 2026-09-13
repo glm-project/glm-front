@@ -2,12 +2,19 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ActiviteDeSupervision } from '../domain/ActiviteDeSupervision';
+import { CategorieActivite } from '../domain/CategorieActivite';
 import { DonneesDeSupervisionPort, LectureDeSupervision } from '../domain/DonneesDeSupervisionPort';
+import { IdentifiantActivite } from '../domain/IdentifiantActivite';
+import { IdentifiantOperateur } from '../domain/IdentifiantOperateur';
 import { Instant } from '../domain/Instant';
+import { JourneeDeTravail } from '../domain/JourneeDeTravail';
+import { OperateurDeclare } from '../domain/OperateurDeclare';
 import { ChargementSupervision } from './ChargementSupervision';
 
 class DonneesFixture extends DonneesDeSupervisionPort {
   readCount = 0;
+  private synchronousFailure: Error | undefined;
   private release: (lecture: LectureDeSupervision) => void = () => {
     throw new Error('Uninitialized fixture');
   };
@@ -17,22 +24,39 @@ class DonneesFixture extends DonneesDeSupervisionPort {
   private announce: () => void = () => {
     throw new Error('Uninitialized fixture');
   };
-  readonly arrived = new Promise<void>(resolve => {
+  arrived = new Promise<void>(resolve => {
     this.announce = resolve;
   });
-  private readonly response = new Promise<LectureDeSupervision>((resolve, reject) => {
+  private response = new Promise<LectureDeSupervision>((resolve, reject) => {
     this.release = resolve;
     this.reject = reject;
   });
 
   read(): Promise<LectureDeSupervision> {
+    if (this.synchronousFailure) {
+      throw this.synchronousFailure;
+    }
     this.readCount += 1;
     this.announce();
     return this.response;
   }
 
-  complete(): void {
-    this.release({ status: 'complete', donnees: { operateurs: [], journees: [], activites: [] } });
+  prepare(): void {
+    this.arrived = new Promise<void>(resolve => {
+      this.announce = resolve;
+    });
+    this.response = new Promise<LectureDeSupervision>((resolve, reject) => {
+      this.release = resolve;
+      this.reject = reject;
+    });
+  }
+
+  complete(lecture: LectureDeSupervision = lectureFixture): void {
+    this.release(lecture);
+  }
+
+  failImmediately(error: Error): void {
+    this.synchronousFailure = error;
   }
 
   fail(): void {
@@ -40,6 +64,8 @@ class DonneesFixture extends DonneesDeSupervisionPort {
   }
 }
 
+const aliceFixture = new OperateurDeclare(new IdentifiantOperateur('alice'), 'Martin', 'Alice');
+const lectureFixture: LectureDeSupervision = { status: 'complete', donnees: { operateurs: [aliceFixture], journees: [], activites: [] } };
 const maintenantFixture = new Instant('2026-09-13T10:00:00Z');
 
 class ChargementFixture {
@@ -56,6 +82,14 @@ class ChargementFixture {
       ],
     });
     this.chargement = TestBed.inject(ChargementSupervision);
+  }
+
+  async loadInitial(): Promise<void> {
+    const loading = this.chargement.refresh(maintenantFixture);
+    await this.donnees.arrived;
+    this.donnees.complete();
+    await loading;
+    this.donnees.prepare();
   }
 
   destroy(): void {
@@ -132,5 +166,135 @@ describe('ChargementSupervision', () => {
 
     expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
     expect(chargementFixture.errorHandler.errors).toEqual([new Error('Source unavailable')]);
+  });
+
+  it('should handle and report synchronous port failures without an unhandled rejection', async () => {
+    chargementFixture.donnees.failImmediately(new Error('Immediate failure'));
+
+    await chargementFixture.chargement.refresh(maintenantFixture);
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
+    expect(chargementFixture.errorHandler.errors).toEqual([new Error('Immediate failure')]);
+  });
+
+  it('should reject incomplete acquisition without publishing a grid', async () => {
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.complete({ status: 'incomplete' });
+
+    await loading;
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
+  });
+
+  it.each([undefined, new IdentifiantOperateur('unknown')])(
+    'should reject an activity without an identifiable operator (%s)',
+    async operateurId => {
+      const activiteFixture = new ActiviteDeSupervision({
+        id: new IdentifiantActivite('act-1'),
+        operateurId,
+        nom: 'OF-42',
+        categorie: new CategorieActivite('NC'),
+        debut: maintenantFixture,
+      });
+      const loading = chargementFixture.chargement.refresh(maintenantFixture);
+      await chargementFixture.donnees.arrived;
+      chargementFixture.donnees.complete({
+        status: 'complete',
+        donnees: { operateurs: [aliceFixture], journees: [], activites: [activiteFixture] },
+      });
+
+      await loading;
+
+      expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: undefined });
+    },
+  );
+
+  it('should retain the last complete grid after a refresh failure', async () => {
+    await chargementFixture.loadInitial();
+    const previous = chargementFixture.chargement.state().supervision;
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.fail();
+
+    await loading;
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: previous });
+  });
+
+  it('should retain the last complete grid after incomplete acquisition', async () => {
+    await chargementFixture.loadInitial();
+    const previous = chargementFixture.chargement.state().supervision;
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.complete({ status: 'incomplete' });
+
+    await loading;
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: previous });
+  });
+
+  it('should retain the last complete grid after an unidentifiable activity', async () => {
+    await chargementFixture.loadInitial();
+    const previous = chargementFixture.chargement.state().supervision;
+    const activiteFixture = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('act-1'),
+      operateurId: undefined,
+      nom: 'OF-42',
+      categorie: new CategorieActivite('NC'),
+      debut: maintenantFixture,
+    });
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.complete({
+      status: 'complete',
+      donnees: { operateurs: [aliceFixture], journees: [], activites: [activiteFixture] },
+    });
+
+    await loading;
+
+    expect(chargementFixture.chargement.state()).toEqual({ status: 'failed', supervision: previous });
+  });
+
+  it('should publish a grid once initially incomplete acquisition succeeds', async () => {
+    const first = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.complete({ status: 'incomplete' });
+    await first;
+    chargementFixture.donnees.prepare();
+
+    const second = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.complete();
+    await second;
+
+    expect(chargementFixture.chargement.state().status).toBe('ready');
+    expect(chargementFixture.chargement.state().supervision?.operateurs).toMatchObject([
+      { operateur: { nom: 'Martin', prenom: 'Alice' }, presence: 'ABSENT' },
+    ]);
+  });
+
+  it('should recover after a failed refresh and replace the stale grid', async () => {
+    await chargementFixture.loadInitial();
+    const failed = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.fail();
+    await failed;
+    chargementFixture.donnees.prepare();
+
+    const loading = chargementFixture.chargement.refresh(maintenantFixture);
+    await chargementFixture.donnees.arrived;
+    chargementFixture.donnees.complete({
+      status: 'complete',
+      donnees: {
+        operateurs: [aliceFixture],
+        journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT')],
+        activites: [],
+      },
+    });
+    await loading;
+
+    expect(chargementFixture.chargement.state().status).toBe('ready');
+    expect(chargementFixture.chargement.state().supervision?.operateurs[0]?.isEnGlm()).toBe(true);
   });
 });

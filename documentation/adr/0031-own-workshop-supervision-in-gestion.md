@@ -10,7 +10,8 @@ Complements [0012](0012-own-business-contexts-by-front.md): Gestion's `supervisi
 owns the interpretation of workshop presence, activities and anomalies.
 
 Amended by [0033](0033-compose-view-data-in-secondary-adapters.md): the application consumes one supervision
-data port; a secondary composition adapter owns the three specialized reads and the mounted operator cache.
+data port, with one InMemory adapter for scenarios and direct API calls in the future HTTP adapter.
+Intermediate source ports and mixed per-source adapter wiring are replaced by this single acquisition boundary.
 The domain still interprets presence, activities and anomalies.
 
 ## Context
@@ -32,8 +33,9 @@ filter. Online reads are bounded and expose whether their results are complete.
 ## Decision
 
 Place the grid and its business rules in Gestion's `supervision-atelier`. Consume the operator reference
-through a public TypeScript adapter of `operateur`, without importing its domain. Read working visits and
-workshop activities through ports owned by supervision. Keep transport translation in HTTP adapters.
+without importing the `operateur` domain. As amended by [0033](0033-compose-view-data-in-secondary-adapters.md),
+read the required resources directly in one secondary adapter implementing the supervision data port.
+Keep transport translation in that adapter.
 
 Use the following vocabulary for this responsibility (living vocabulary and invariants belong to
 [`supervision-atelier` AGENTS.md](../../src/main/webapp/gestion/contexts/supervision-atelier/AGENTS.md)):
@@ -53,11 +55,9 @@ Do not invent an opening timestamp. For an activity without a workstation, retai
 the workstation label. Use the workshop tracking name while its reference is unavailable, as already
 specified by #60.
 
-Initially wire working visits to InMemory and activities to HTTP, using the available ongoing-state filter.
-Keep the existing online operator read. Align scenario operator identifiers with the loaded reference.
-Provide a fully InMemory configuration for reproducible scenarios. Choose adapters per port in the
-composition root; an HTTP failure never selects simulated data. Replace the working-visit adapter when the
-required backend contract is available and pinned.
+Provide a fully InMemory adapter for reproducible scenarios. Wire the HTTP adapter once the backend contract
+supports reading open working visits. Choose the implementation of the single data port in the composition
+root; an HTTP failure never selects simulated data.
 
 ## Consequences
 
@@ -69,8 +69,7 @@ required backend contract is available and pinned.
 
 ### Negative
 
-- Another context and a TypeScript bridge must be maintained.
+- Another context and its API-to-domain translation must be maintained.
 - One unassignable activity prevents the whole grid from refreshing.
-- Mixed HTTP and InMemory data can describe inconsistent situations; this validates the proposed screen,
-  not the production integration. Fully simulated scenarios provide controlled examples.
+- Fully simulated scenarios validate the proposed screen, not the production integration.
 - HTTP working-visit integration and validation against the real backend remain outstanding.

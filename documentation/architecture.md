@@ -162,8 +162,10 @@ folder.
 
 When a view needs data from several APIs, define one domain-owned read port for that view's functional
 need. Its secondary adapter composes the source reads, translates transport data, handles pagination and
-source caching, and reports complete data or an explicit incomplete outcome. Keep source-specific readers
-behind this adapter. The primary adapter and application caller remain independent of the number of APIs.
+source caching, and reports complete data or an explicit incomplete outcome. Implement the API calls directly
+in this adapter, using private methods when useful. A call to one endpoint does not justify an additional
+port, injected reader or callback contract. The primary adapter and application caller remain independent
+of the number of APIs. An InMemory adapter implements the same single port for scenarios.
 
 Keep interpretation and business validity in the domain. The application invokes that interpretation and
 owns loading state, refresh lifetime and preservation of the last usable view. Assembly of several responses
