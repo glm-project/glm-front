@@ -86,7 +86,7 @@ caller reconstructing another owner's rule behind that owner's interface.
 - `signal()` for local component state (`App.appName`, `gestion/app.ts:17`);
 - `input.required()` for what a parent gives a component (`pupitre/header/header.ts`);
 - standalone components, no `NgModule`;
-- signals expose state, `computed()` derives it, and application commands trigger work. `effect()` and
+- signals expose state, `computed()` derives it, and explicit application commands drive business mutations. `effect()` and
   `afterRenderEffect()` do not orchestrate a business operation or propagate application state. A primary
   presentation adapter may use one for a narrow imperative browser integration when its lifetime and cleanup
   are explicit; keep the reason in a local comment. ESLint permits these imports only in
