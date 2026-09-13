@@ -58,10 +58,20 @@ describe('CodeDEnrolement', () => {
 });
 
 const givenACodeReachableBy = (lienComplet: string | undefined): CodeDEnrolement =>
-  new CodeDEnrolement(USER_CODE, VERIFICATION_URI, lienComplet, MAINTENANT + UNE_MINUTE);
+  new CodeDEnrolement({
+    userCode: USER_CODE,
+    verificationUri: VERIFICATION_URI,
+    verificationUriComplete: lienComplet,
+    limite: MAINTENANT + UNE_MINUTE,
+  });
 
 const givenACodeExpiringIn = (duree: number): CodeDEnrolement =>
-  new CodeDEnrolement(USER_CODE, VERIFICATION_URI, undefined, MAINTENANT + duree);
+  new CodeDEnrolement({
+    userCode: USER_CODE,
+    verificationUri: VERIFICATION_URI,
+    verificationUriComplete: undefined,
+    limite: MAINTENANT + duree,
+  });
 
 const whenProjectingAt = (code: CodeDEnrolement, maintenant: number): VueDuCodeDEnrolement => code.snapshot(maintenant);
 

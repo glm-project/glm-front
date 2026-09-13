@@ -26,7 +26,7 @@ describe('Operateur', () => {
   });
 
   const unOperateurFixture = (matricule: string | undefined): Operateur =>
-    new Operateur('0a1b2c3d', 'Dupont', 'Jean', SANS_POSTE, new Matricule(matricule));
+    new Operateur({ id: '0a1b2c3d', nom: 'Dupont', prenom: 'Jean', postes: SANS_POSTE, matricule: new Matricule(matricule) });
 
   const thenItAnswersTo = (operateur: Operateur, code: string): void => {
     expect(operateur.matchesCode(code)).toBe(true);

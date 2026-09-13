@@ -19,12 +19,12 @@ const ISSUE_APRES_TENTATIVE: Record<Exclude<DeviceEnrolmentOutcome, 'ABANDONED'>
 };
 
 const codeExpiringAt = (code: DeviceAuthorizationCode, maintenant: number): CodeDEnrolement =>
-  new CodeDEnrolement(
-    code.userCode,
-    code.verificationUri,
-    code.verificationUriComplete,
-    maintenant + code.expiresIn * MILLISECONDS_PER_SECOND,
-  );
+  new CodeDEnrolement({
+    userCode: code.userCode,
+    verificationUri: code.verificationUri,
+    verificationUriComplete: code.verificationUriComplete,
+    limite: maintenant + code.expiresIn * MILLISECONDS_PER_SECOND,
+  });
 
 @Injectable()
 export class EnrolementDuPupitre {

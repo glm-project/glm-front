@@ -14,7 +14,13 @@ type RestPosteHabilite = components['schemas']['RestPosteHabilite'];
 const toPosteHabilite = (poste: RestPosteHabilite): PosteHabilite => new PosteHabilite(poste.id, poste.libelle);
 
 const toOperateur = (operateur: RestOperateur): Operateur =>
-  new Operateur(operateur.id, operateur.nom, operateur.prenom, operateur.postes.map(toPosteHabilite), new Matricule(operateur.matricule));
+  new Operateur({
+    id: operateur.id,
+    nom: operateur.nom,
+    prenom: operateur.prenom,
+    postes: operateur.postes.map(toPosteHabilite),
+    matricule: new Matricule(operateur.matricule),
+  });
 
 @Injectable()
 export class HttpOperateurs extends OperateursPort {
