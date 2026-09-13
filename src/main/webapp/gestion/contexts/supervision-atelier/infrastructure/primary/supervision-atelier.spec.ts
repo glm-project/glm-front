@@ -40,18 +40,20 @@ class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
 }
 
 const aliceFixture = new OperateurDeclare(new IdentifiantOperateur('alice'), 'Martin', 'Alice');
+const bobFixture = new OperateurDeclare(new IdentifiantOperateur('bob'), 'Durand', 'Bob');
 const donneesFixture: DonneesDeSupervision = {
-  operateurs: [aliceFixture],
+  operateurs: [aliceFixture, bobFixture],
   journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT')],
-  activites: [
-    new ActiviteDeSupervision({
-      id: new IdentifiantActivite('act-1'),
-      operateurId: undefined,
-      nom: 'OF-42',
-      categorie: new CategorieActivite('NC'),
-      debut: new Instant('2026-09-13T10:00:00Z'),
-    }),
-  ],
+  activites: ['act-1', 'act-2', 'act-3'].map(
+    id =>
+      new ActiviteDeSupervision({
+        id: new IdentifiantActivite(id),
+        operateurId: undefined,
+        nom: 'OF-42',
+        categorie: new CategorieActivite('NC'),
+        debut: new Instant('2026-09-13T10:00:00Z'),
+      }),
+  ),
 };
 
 class SupervisionFixture {
@@ -152,7 +154,7 @@ describe('Supervision atelier component', () => {
 
     await supervisionFixture.receiveDonnees();
 
-    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '1', journees: '1', activites: '1' });
+    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '2', journees: '1', activites: '3' });
     expect(supervisionFixture.loadingMessage()).toBeUndefined();
     expect(supervisionFixture.errorMessage()).toBeUndefined();
   });
@@ -193,7 +195,7 @@ describe('Supervision atelier component', () => {
 
     await supervisionFixture.receiveDonnees();
 
-    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '1', journees: '1', activites: '1' });
+    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '2', journees: '1', activites: '3' });
     expect(supervisionFixture.errorMessage()).toBeUndefined();
   });
 });
