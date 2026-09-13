@@ -1,3 +1,5 @@
+import { InstantInvalide } from './InstantInvalide';
+
 export class Instant {
   readonly value: string;
   private readonly milliseconds: number;
@@ -5,7 +7,7 @@ export class Instant {
   constructor(value: string) {
     const milliseconds = Date.parse(value);
     if (!Instant.isAbsolute(value, milliseconds)) {
-      throw new Error('Invalid absolute supervision instant');
+      throw new InstantInvalide(value);
     }
     this.milliseconds = milliseconds;
     this.value = new Date(milliseconds).toISOString();
