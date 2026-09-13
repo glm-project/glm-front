@@ -56,168 +56,154 @@ const donneesFixture: DonneesDeSupervision = {
   ),
 };
 
-class SupervisionFixture {
-  constructor(
-    private readonly component: ComponentFixture<SupervisionAtelier>,
-    private readonly donneesFixture: DonneesDeSupervisionFixture,
-  ) {}
+describe('Supervision atelier component', () => {
+  let componentFixture: ComponentFixture<SupervisionAtelier>;
+  let sourceFixture: DonneesDeSupervisionFixture;
 
-  displayedCounts(): { operateurs: string | undefined; journees: string | undefined; activites: string | undefined } {
-    return {
-      operateurs: this.element('supervision-operateurs-count')?.textContent.trim(),
-      journees: this.element('supervision-journees-count')?.textContent.trim(),
-      activites: this.element('supervision-activites-count')?.textContent.trim(),
-    };
-  }
+  beforeEach(() => {
+    sourceFixture = new DonneesDeSupervisionFixture();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ComponentFixtureAutoDetect, useValue: true },
+        { provide: DonneesDeSupervisionPort, useValue: sourceFixture },
+      ],
+    });
+    componentFixture = TestBed.createComponent(SupervisionAtelier);
+  });
 
-  loadingMessage(): string | undefined {
-    return this.element('supervision-loading')?.textContent;
-  }
+  afterEach(async () => {
+    sourceFixture.response.resolve({ operateurs: [], journees: [], activites: [] });
+    await componentFixture.whenStable();
+  });
 
-  errorMessage(): string | undefined {
-    return this.element('supervision-error')?.textContent;
-  }
+  it('should display loading until the data arrives', async () => {
+    givenDonneesPending();
 
-  hasDisplayedData(): boolean {
-    return this.element('supervision-data') !== null;
-  }
+    await whenSupervisionOpened();
 
-  canRefresh(): boolean {
-    return !this.refreshButton().disabled;
-  }
+    thenLoadingIsDisplayed();
+  });
 
-  async whenSupervisionOpened(): Promise<void> {
-    this.component.detectChanges();
-    await this.donneesFixture.arrival.promise;
-  }
+  it('should display the acquired collections without interpreting their business validity', async () => {
+    await givenAcquisitionInProgress();
 
-  private element(selector: string): HTMLElement | null {
-    const host = this.component.nativeElement as HTMLElement;
+    await whenDonneesArrive();
+
+    thenCollectionsAreDisplayed(2, 1, 3);
+  });
+
+  it('should display empty collections as a successful acquisition', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+
+    thenCollectionsAreDisplayed(0, 0, 0);
+  });
+
+  it('should display an acquisition error without data', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenAcquisitionFails();
+
+    thenErrorReplacesDataAndRetryIsAvailable();
+  });
+
+  it('should replace previously displayed data with an error when refresh fails', async () => {
+    await givenDonneesDisplayed();
+
+    await whenRefreshFails();
+
+    thenErrorReplacesDataAndRetryIsAvailable();
+  });
+
+  it('should display fresh data when the user retries after an error', async () => {
+    await givenAcquisitionFailed();
+
+    await whenRetrySucceeds();
+
+    thenCollectionsAreDisplayed(2, 1, 3);
+  });
+
+  const givenDonneesPending = (): void => {
+    sourceFixture.prepare();
+  };
+
+  const givenAcquisitionInProgress = async (): Promise<void> => {
+    givenDonneesPending();
+    await whenSupervisionOpened();
+  };
+
+  const givenDonneesDisplayed = async (): Promise<void> => {
+    await givenAcquisitionInProgress();
+    await whenDonneesArrive();
+  };
+
+  const givenAcquisitionFailed = async (): Promise<void> => {
+    await givenAcquisitionInProgress();
+    await whenAcquisitionFails();
+  };
+
+  const whenSupervisionOpened = async (): Promise<void> => {
+    componentFixture.detectChanges();
+    await sourceFixture.arrival.promise;
+  };
+
+  const whenDonneesArrive = async (donnees: DonneesDeSupervision = donneesFixture): Promise<void> => {
+    sourceFixture.response.resolve(donnees);
+    await componentFixture.whenStable();
+  };
+
+  const whenAcquisitionFails = async (): Promise<void> => {
+    sourceFixture.response.reject(new Error('Source unavailable'));
+    await componentFixture.whenStable();
+  };
+
+  const whenRefreshFails = async (): Promise<void> => {
+    await refresh();
+    await whenAcquisitionFails();
+  };
+
+  const whenRetrySucceeds = async (): Promise<void> => {
+    await refresh();
+    await whenDonneesArrive();
+  };
+
+  const thenLoadingIsDisplayed = (): void => {
+    expect(element('supervision-loading')?.textContent).toContain('Chargement');
+    expect(element('supervision-data')).toBeNull();
+    expect(refreshButton().disabled).toBe(true);
+  };
+
+  const thenCollectionsAreDisplayed = (operateurs: number, journees: number, activites: number): void => {
+    expect(element('supervision-operateurs-count')?.textContent.trim()).toBe(String(operateurs));
+    expect(element('supervision-journees-count')?.textContent.trim()).toBe(String(journees));
+    expect(element('supervision-activites-count')?.textContent.trim()).toBe(String(activites));
+    expect(element('supervision-loading')).toBeNull();
+    expect(element('supervision-error')).toBeNull();
+  };
+
+  const thenErrorReplacesDataAndRetryIsAvailable = (): void => {
+    expect(element('supervision-error')?.textContent).toContain('Impossible de charger');
+    expect(element('supervision-data')).toBeNull();
+    expect(refreshButton().disabled).toBe(false);
+  };
+
+  const refresh = async (): Promise<void> => {
+    sourceFixture.prepare();
+    refreshButton().click();
+    await whenSupervisionOpened();
+  };
+
+  const element = (selector: string): HTMLElement | null => {
+    const host = componentFixture.nativeElement as HTMLElement;
     return host.querySelector(dataSelector(selector));
-  }
+  };
 
-  async whenDonneesArrive(donnees: DonneesDeSupervision = donneesFixture): Promise<void> {
-    this.donneesFixture.response.resolve(donnees);
-    await this.component.whenStable();
-  }
-
-  async whenAcquisitionFails(): Promise<void> {
-    this.donneesFixture.response.reject(new Error('Source unavailable'));
-    await this.component.whenStable();
-  }
-
-  private async refresh(): Promise<void> {
-    this.donneesFixture.prepare();
-    this.refreshButton().click();
-    await this.whenSupervisionOpened();
-  }
-
-  private refreshButton(): HTMLButtonElement {
-    const button = this.element('supervision-refresh');
+  const refreshButton = (): HTMLButtonElement => {
+    const button = element('supervision-refresh');
     if (!(button instanceof HTMLButtonElement)) {
       throw new Error('Missing refresh button');
     }
     return button;
-  }
-
-  async givenAcquisitionInProgress(): Promise<void> {
-    await this.whenSupervisionOpened();
-  }
-
-  async givenDonneesDisplayed(): Promise<void> {
-    await this.whenSupervisionOpened();
-    await this.whenDonneesArrive();
-  }
-
-  async givenAcquisitionFailed(): Promise<void> {
-    await this.whenSupervisionOpened();
-    await this.whenAcquisitionFails();
-  }
-
-  async whenRefreshFails(): Promise<void> {
-    await this.refresh();
-    await this.whenAcquisitionFails();
-  }
-
-  async whenRetrySucceeds(): Promise<void> {
-    await this.refresh();
-    await this.whenDonneesArrive();
-  }
-
-  async settlePendingAcquisition(): Promise<void> {
-    await this.whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
-  }
-}
-
-describe('Supervision atelier component', () => {
-  let supervisionFixture: SupervisionFixture;
-  beforeEach(() => {
-    const donneesFixture = new DonneesDeSupervisionFixture();
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: DonneesDeSupervisionPort, useValue: donneesFixture },
-      ],
-    });
-    supervisionFixture = new SupervisionFixture(TestBed.createComponent(SupervisionAtelier), donneesFixture);
-  });
-
-  afterEach(async () => {
-    await supervisionFixture.settlePendingAcquisition();
-  });
-
-  it('should display loading until the data arrives', async () => {
-    await supervisionFixture.whenSupervisionOpened();
-
-    expect(supervisionFixture.loadingMessage()).toContain('Chargement');
-    expect(supervisionFixture.hasDisplayedData()).toBe(false);
-    expect(supervisionFixture.canRefresh()).toBe(false);
-  });
-
-  it('should display the acquired collections without interpreting their business validity', async () => {
-    await supervisionFixture.givenAcquisitionInProgress();
-
-    await supervisionFixture.whenDonneesArrive();
-
-    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '2', journees: '1', activites: '3' });
-    expect(supervisionFixture.loadingMessage()).toBeUndefined();
-    expect(supervisionFixture.errorMessage()).toBeUndefined();
-  });
-
-  it('should display empty collections as a successful acquisition', async () => {
-    await supervisionFixture.givenAcquisitionInProgress();
-
-    await supervisionFixture.whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
-
-    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '0', journees: '0', activites: '0' });
-    expect(supervisionFixture.errorMessage()).toBeUndefined();
-  });
-
-  it('should display an acquisition error without data', async () => {
-    await supervisionFixture.givenAcquisitionInProgress();
-
-    await supervisionFixture.whenAcquisitionFails();
-
-    expect(supervisionFixture.errorMessage()).toContain('Impossible de charger');
-    expect(supervisionFixture.hasDisplayedData()).toBe(false);
-    expect(supervisionFixture.canRefresh()).toBe(true);
-  });
-
-  it('should replace previously displayed data with an error when refresh fails', async () => {
-    await supervisionFixture.givenDonneesDisplayed();
-
-    await supervisionFixture.whenRefreshFails();
-
-    expect(supervisionFixture.errorMessage()).toContain('Impossible de charger');
-    expect(supervisionFixture.hasDisplayedData()).toBe(false);
-  });
-
-  it('should display fresh data when the user retries after an error', async () => {
-    await supervisionFixture.givenAcquisitionFailed();
-
-    await supervisionFixture.whenRetrySucceeds();
-
-    expect(supervisionFixture.displayedCounts()).toEqual({ operateurs: '2', journees: '1', activites: '3' });
-    expect(supervisionFixture.errorMessage()).toBeUndefined();
-  });
+  };
 });
