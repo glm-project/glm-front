@@ -74,3 +74,5 @@ something stays, with a status that says what died.
   `supervision-atelier` context in Gestion to interpret workshop presence, activities and anomalies
 - [0032 — Limit constructor parameters](0032-limit-constructor-parameters.md) — at most three constructor
   parameters, with named immutable construction contracts for additional data
+- [0033 — Compose view data in secondary adapters](0033-compose-view-data-in-secondary-adapters.md) — one
+  functional read port per view by default, with API composition owned by secondary adapters

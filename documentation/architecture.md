@@ -158,6 +158,22 @@ from `infrastructure/secondary`.
 Use the `@/*` alias across context or root boundaries. Relative imports remain appropriate inside one local
 folder.
 
+## Acquire a view through one read port by default
+
+When a view needs data from several APIs, define one domain-owned read port for that view's functional
+need. Its secondary adapter composes the source reads, translates transport data, handles pagination and
+source caching, and reports complete data or an explicit incomplete outcome. Keep source-specific readers
+behind this adapter. The primary adapter and application caller remain independent of the number of APIs.
+
+Keep interpretation and business validity in the domain. The application invokes that interpretation and
+owns loading state, refresh lifetime and preservation of the last usable view. Assembly of several responses
+does not establish a transactional snapshot across APIs.
+
+Use several application ports when their coordination expresses distinct business steps or independently
+usable view sections; record that functional reason with the owning context. API decomposition alone is not
+such a reason. In review, replacing several endpoints with one must leave the application caller unchanged.
+[ADR 0033](adr/0033-compose-view-data-in-secondary-adapters.md) records the default and its costs.
+
 ## Put behavior at the nearest owner
 
 The nearest common owner wins. Promote code to a shared kernel, global stylesheet or root provider only once

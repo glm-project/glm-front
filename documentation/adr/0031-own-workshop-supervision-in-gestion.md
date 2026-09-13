@@ -9,6 +9,10 @@ Complements [0012](0012-own-business-contexts-by-front.md): Gestion's `supervisi
 
 owns the interpretation of workshop presence, activities and anomalies.
 
+Amended by [0033](0033-compose-view-data-in-secondary-adapters.md): the application consumes one supervision
+data port; a secondary composition adapter owns the three specialized reads and the mounted operator cache.
+The domain still interprets presence, activities and anomalies.
+
 ## Context
 
 The real-time grid combines declared operators, working visits and ongoing activities. Gestion's

@@ -47,4 +47,6 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 ## Règles locales
 
+Pour l'acquisition des données de la vue, appliquer la [règle de composition des lectures](../../../../../../documentation/architecture.md#acquire-a-view-through-one-read-port-by-default).
+
 Consulter l'[ADR 0031](../../../../../../documentation/adr/0031-own-workshop-supervision-in-gestion.md) pour les arbitrages d'architecture et la séparation des responsabilités.
