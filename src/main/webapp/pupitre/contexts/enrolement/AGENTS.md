@@ -14,7 +14,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il possède le cycle de vie v
 
 **Chargement de l'atelier** : période entre l'obtention des jetons et l'activation du premier référentiel complet. Elle appartient à l'enrôlement parce que l'écran la montre; le référentiel lui-même appartient au contexte `atelier`.
 
-**Issue du chargement de l'atelier** : résultat `CHARGE` ou `ECHEC` d'une tentative de chargement. Elle reste distincte de la connexion observée par la publication des gestes.
+**Issue du chargement de l'atelier** : résultat `CHARGE`, `ECHEC` ou `TENANT_ABSENT` d'une tentative de chargement. Elle reste distincte de la connexion observée par la publication des gestes.
 
 **Réinitialisation** : geste d'administration qui révoque l'enrôlement sur le serveur et ramène le pupitre à sa demande initiale. Ce n'est ni une déconnexion d'opérateur ni un effacement des journaux d'atelier.
 
@@ -23,7 +23,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il possède le cycle de vie v
 - Le domaine possède l'échéance du code et la décision d'expiration. Il reçoit l'instant courant; il ne le lit jamais lui-même.
 - L'expiration est dérivée : un compte à rebours local atteint et une réponse `expired_token` du serveur produisent la même vue. Aucune rotation automatique du code.
 - Le modèle `Enrolement` est immuable. Chaque transition `after…` retourne la version suivante; l'application remplace sa référence.
-- La vue est une projection pure de l'étape stockée, de l'instant courant et de l'état du chargement de l'atelier. Elle porte les sept états de la spécification et ne décide rien d'autre.
+- La vue est une projection pure de l'étape stockée, de l'instant courant et de l'état du chargement de l'atelier. Elle distingue explicitement un jeton sans tenant d'une panne réseau et ne décide rien d'autre.
 - L'application pilote l'adaptateur d'enrôlement : elle appelle `enrol(showCode)` et reçoit l'issue. L'adaptateur ne rappelle jamais l'application, ce qui fermerait un cycle d'injection par `AuthenticationPort`.
 - Une tentative périmée n'écrit plus rien : chaque `enroler()` prend un jeton de tentative et ignore l'issue et le code d'une tentative remplacée.
 - Chaque chargement de l'atelier prend aussi un jeton de tentative. Une reprise remet l'écran en chargement et l'issue tardive d'un chargement remplacé ne modifie plus la vue.

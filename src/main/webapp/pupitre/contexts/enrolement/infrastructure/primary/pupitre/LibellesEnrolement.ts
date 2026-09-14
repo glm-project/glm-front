@@ -12,6 +12,7 @@ const STATUTS: Record<VueDEnrolement['kind'], string> = {
   ERREUR_RESEAU_INITIALE: "Connexion Internet requise pour enrôler l'appareil",
   VALIDE_CHARGEMENT_ATELIER: "Appareil validé — Chargement de l'atelier en cours...",
   ATTENTE_RESEAU_ATELIER: "Appareil validé — En attente de connexion pour charger l'atelier",
+  JETON_SANS_TENANT: "Appareil validé — Aucun tenant dans le jeton d'accès",
   ENROLE_ET_PRET: 'Appareil enrôlé',
 };
 

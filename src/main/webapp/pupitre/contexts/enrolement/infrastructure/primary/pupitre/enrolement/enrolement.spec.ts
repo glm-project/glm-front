@@ -119,16 +119,22 @@ describe('Enrolement screen', () => {
     },
   );
 
-  it('should retry the workshop load, not the enrolment, while its first reference is missing', () => {
-    givenTheScreenShows({ kind: 'ATTENTE_RESEAU_ATELIER' });
+  it.each([
+    ['ATTENTE_RESEAU_ATELIER', "Appareil validé — En attente de connexion pour charger l'atelier"],
+    ['JETON_SANS_TENANT', "Appareil validé — Aucun tenant dans le jeton d'accès"],
+  ] satisfies readonly [VueDEnrolement['kind'], string][])(
+    'should retry the workshop load, not the enrolment, while showing %s',
+    (kind, status) => {
+      givenTheScreenShows({ kind });
 
-    whenRendering();
-    whenPressingTheAction();
+      whenRendering();
+      whenPressingTheAction();
 
-    thenItReads('enrolement-status', "Appareil validé — En attente de connexion pour charger l'atelier");
-    thenWorkshopLoadsAre(1);
-    thenAuthorizationRequestsAre(0);
-  });
+      thenItReads('enrolement-status', status);
+      thenWorkshopLoadsAre(1);
+      thenAuthorizationRequestsAre(0);
+    },
+  );
 
   it('should say the workshop is loading, with nothing for the operator to do', () => {
     givenTheScreenShows({ kind: 'VALIDE_CHARGEMENT_ATELIER' });

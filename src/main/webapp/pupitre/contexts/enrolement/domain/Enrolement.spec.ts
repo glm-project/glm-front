@@ -61,6 +61,14 @@ describe('Enrolement', () => {
     },
   );
 
+  it('should report the missing tenant after the initial workshop load', () => {
+    const enrolement = givenAnAttemptAnsweredWith('ENROLE').afterLoadingAtelier('TENANT_ABSENT');
+
+    const vue = whenProjectingAt(enrolement, MAINTENANT, ATELIER_EN_CHARGEMENT);
+
+    thenTheScreenShows(vue, 'JETON_SANS_TENANT');
+  });
+
   it('should leave the previous version untouched when a code is issued', () => {
     const demande = givenAnEnrolementBeingRequested();
 

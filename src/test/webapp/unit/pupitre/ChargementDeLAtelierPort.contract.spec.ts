@@ -45,15 +45,18 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
   let chargement: ChargementDeLAtelierPort;
   let pupitre: AtelierCoordinatorFixture;
   let errorHandler: ErrorHandlerFixture;
+  let tenant: string | undefined;
 
   beforeEach(() => {
     pupitre = new AtelierCoordinatorFixture();
     errorHandler = new ErrorHandlerFixture();
+    tenant = 'entreprise-a';
     TestBed.configureTestingModule({
       providers: [
         ...chargementProviders,
         { provide: AtelierCoordinator, useValue: pupitre },
         { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
+        { provide: AuthenticationPort, useValue: { currentTenant: () => tenant } },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
@@ -112,6 +115,14 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
     expect(issue).toBe('ECHEC');
   });
 
+  it('should report a missing tenant as a distinct outcome', async () => {
+    givenTheTokenHasNoTenant();
+
+    const issue = await whenLoadingTheWorkshop();
+
+    expect(issue).toBe('TENANT_ABSENT');
+  });
+
   const givenAnActiveReference = (): void => {
     pupitre.reference.set(referentielFixture);
   };
@@ -147,6 +158,7 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
         { provide: ChargementDeLAtelierPort, useClass: AtelierChargement },
         { provide: AtelierCoordinator, useValue: { synchronize: () => Promise.resolve() } },
         { provide: EtatHorsLigneDuPupitre, useValue: etatHorsLigne },
+        { provide: AuthenticationPort, useValue: { currentTenant: () => 'entreprise-b' } },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     }).get(ChargementDeLAtelierPort);
@@ -157,6 +169,10 @@ describe('ChargementDeLAtelierPort contract, honoured by the workshop adapter', 
 
   const givenSynchronizationFails = (): void => {
     pupitre.failure = new Error('atelier injoignable');
+  };
+
+  const givenTheTokenHasNoTenant = (): void => {
+    tenant = undefined;
   };
 
   const whenReadingTheWorkshopState = (): ChargementDeLAtelier => chargement.etat();

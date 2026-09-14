@@ -21,6 +21,7 @@ export type VueDEnrolement =
   | { readonly kind: 'ERREUR_RESEAU_INITIALE' }
   | { readonly kind: 'VALIDE_CHARGEMENT_ATELIER' }
   | { readonly kind: 'ATTENTE_RESEAU_ATELIER' }
+  | { readonly kind: 'JETON_SANS_TENANT' }
   | { readonly kind: 'ENROLE_ET_PRET' };
 
 const ETAPE_APRES_TENTATIVE: Record<IssueDEnrolement, EtapeSansCode['kind']> = {
@@ -36,6 +37,9 @@ const vueDuChargement = (
 ): VueDEnrolement => {
   if (referentielDisponible) {
     return { kind: 'ENROLE_ET_PRET' };
+  }
+  if (issue === 'TENANT_ABSENT') {
+    return { kind: 'JETON_SANS_TENANT' };
   }
   if (issue === 'ECHEC') {
     return { kind: 'ATTENTE_RESEAU_ATELIER' };

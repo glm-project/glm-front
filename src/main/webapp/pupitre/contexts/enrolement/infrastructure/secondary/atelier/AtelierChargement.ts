@@ -1,3 +1,4 @@
+import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { TypeScriptChargementDeLAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/TypeScriptChargementDeLAtelier';
 import {
@@ -15,6 +16,7 @@ const ISSUE_PAR_DISPONIBILITE: Readonly<Record<`${boolean}`, IssueDuChargementDe
 @Injectable()
 export class AtelierChargement extends ChargementDeLAtelierPort {
   private readonly atelier = inject(TypeScriptChargementDeLAtelier);
+  private readonly authentication = inject(AuthenticationPort);
   private readonly errorHandler = inject(ErrorHandlerPort);
 
   override etat(): ChargementDeLAtelier {
@@ -24,10 +26,16 @@ export class AtelierChargement extends ChargementDeLAtelierPort {
   override charger(): Promise<IssueDuChargementDeLAtelier> {
     return this.atelier
       .charger()
-      .then(() => ISSUE_PAR_DISPONIBILITE[`${this.atelier.referentielDisponible()}`])
+      .then(() => this.issue())
       .catch((failure: unknown) => {
         this.errorHandler.handleError(failure);
         return 'ECHEC';
       });
+  }
+
+  private issue(): IssueDuChargementDeLAtelier {
+    return this.authentication.currentTenant() === undefined
+      ? 'TENANT_ABSENT'
+      : ISSUE_PAR_DISPONIBILITE[`${this.atelier.referentielDisponible()}`];
   }
 }
