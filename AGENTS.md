@@ -25,6 +25,7 @@ npm run typecheck
 npm run typecheck:watch
 npm run api:generate       # requires authenticated `gh`
 npm run deployed:build:pupitre  # pupitre bundle for Cloudflare Pages; needs DEPLOYED_KEYCLOAK_URL
+npm run deployed:build:gestion  # gestion bundle for Cloudflare Pages; needs DEPLOYED_KEYCLOAK_URL
 npm run validate:quick
 npm run validate:complete  # coverage, builds, then serial browser suites
 ```
