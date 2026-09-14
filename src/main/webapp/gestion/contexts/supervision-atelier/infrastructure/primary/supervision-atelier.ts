@@ -1,15 +1,15 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
-import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
-import { DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
-import { Instant } from '../../domain/Instant';
-import { OperateurSupervise } from '../../domain/OperateurSupervise';
-import { SupervisionDeLAtelier } from '../../domain/SupervisionDeLAtelier';
+import { ActiviteDeSupervision } from '../../domain/activite/ActiviteDeSupervision';
+import { Instant } from '../../domain/instant/Instant';
+import { DonneesDeSupervisionPort } from '../../domain/supervision/DonneesDeSupervisionPort';
+import { OperateurSupervise } from '../../domain/supervision/OperateurSupervise';
+import { SupervisionDeLAtelier } from '../../domain/supervision/SupervisionDeLAtelier';
 import { FriseSupervision } from './FriseSupervision';
 
 import { LIBELLES_SUPERVISION } from './LibellesSupervision';
 import { SupervisionRefreshCycle } from './SupervisionRefreshCycle';
 
-export type { StatistiquesSupervision } from '../../domain/StatistiquesSupervision';
+export type { StatistiquesSupervision } from '../../domain/supervision/StatistiquesSupervision';
 
 export type EtatVueSupervision =
   | { readonly kind: 'CHARGEMENT' }

@@ -1,14 +1,14 @@
 import { Provider } from '@angular/core';
-import { ActiviteDeSupervision } from './contexts/supervision-atelier/domain/ActiviteDeSupervision';
-import { CategorieActivite } from './contexts/supervision-atelier/domain/CategorieActivite';
-import { DonneesDeSupervision, DonneesDeSupervisionPort } from './contexts/supervision-atelier/domain/DonneesDeSupervisionPort';
-import { FenetreDePresence } from './contexts/supervision-atelier/domain/FenetreDePresence';
-import { IdentifiantActivite } from './contexts/supervision-atelier/domain/IdentifiantActivite';
-import { IdentifiantOperateur } from './contexts/supervision-atelier/domain/IdentifiantOperateur';
-import { Instant } from './contexts/supervision-atelier/domain/Instant';
-import { JourneeDeTravail } from './contexts/supervision-atelier/domain/JourneeDeTravail';
-import { OperateurDeclare } from './contexts/supervision-atelier/domain/OperateurDeclare';
-import { InMemoryDonneesDeSupervision } from './contexts/supervision-atelier/infrastructure/secondary/InMemoryDonneesDeSupervision';
+import { ActiviteDeSupervision } from './contexts/supervision-atelier/domain/activite/ActiviteDeSupervision';
+import { CategorieActivite } from './contexts/supervision-atelier/domain/activite/CategorieActivite';
+import { IdentifiantActivite } from './contexts/supervision-atelier/domain/activite/IdentifiantActivite';
+import { Instant } from './contexts/supervision-atelier/domain/instant/Instant';
+import { IdentifiantOperateur } from './contexts/supervision-atelier/domain/operateur/IdentifiantOperateur';
+import { OperateurDeclare } from './contexts/supervision-atelier/domain/operateur/OperateurDeclare';
+import { FenetreDePresence } from './contexts/supervision-atelier/domain/presence/FenetreDePresence';
+import { JourneeDeTravail } from './contexts/supervision-atelier/domain/presence/JourneeDeTravail';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from './contexts/supervision-atelier/domain/supervision/DonneesDeSupervisionPort';
+import { InMemoryDonneesDeSupervision } from './contexts/supervision-atelier/infrastructure/secondary/supervision/InMemoryDonneesDeSupervision';
 
 const instantDemonstration = Date.now();
 const instantBefore = (minutes: number): Instant => new Instant(new Date(instantDemonstration - minutes * 60_000).toISOString());

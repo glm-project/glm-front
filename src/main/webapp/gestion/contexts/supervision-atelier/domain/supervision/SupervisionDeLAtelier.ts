@@ -1,9 +1,9 @@
-import { ActiviteDeSupervision } from './ActiviteDeSupervision';
+import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
+import { Instant } from '../instant/Instant';
+import { OperateurDeclare } from '../operateur/OperateurDeclare';
+import { EtatDePresence } from '../presence/EtatDePresence';
+import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
-import { EtatDePresence } from './EtatDePresence';
-import { Instant } from './Instant';
-import { JourneeDeTravail } from './JourneeDeTravail';
-import { OperateurDeclare } from './OperateurDeclare';
 import { OperateurSupervise } from './OperateurSupervise';
 import { ResultatSupervision, resultatSupervisionExploitable, resultatSupervisionInexploitable } from './ResultatSupervision';
 import { StatistiquesSupervision } from './StatistiquesSupervision';

@@ -3,15 +3,15 @@ import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
-import { CategorieActivite } from '../../domain/CategorieActivite';
-import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
-import { FenetreDePresence } from '../../domain/FenetreDePresence';
-import { IdentifiantActivite } from '../../domain/IdentifiantActivite';
-import { IdentifiantOperateur } from '../../domain/IdentifiantOperateur';
-import { Instant } from '../../domain/Instant';
-import { JourneeDeTravail } from '../../domain/JourneeDeTravail';
-import { OperateurDeclare } from '../../domain/OperateurDeclare';
+import { ActiviteDeSupervision } from '../../domain/activite/ActiviteDeSupervision';
+import { CategorieActivite } from '../../domain/activite/CategorieActivite';
+import { IdentifiantActivite } from '../../domain/activite/IdentifiantActivite';
+import { Instant } from '../../domain/instant/Instant';
+import { IdentifiantOperateur } from '../../domain/operateur/IdentifiantOperateur';
+import { OperateurDeclare } from '../../domain/operateur/OperateurDeclare';
+import { FenetreDePresence } from '../../domain/presence/FenetreDePresence';
+import { JourneeDeTravail } from '../../domain/presence/JourneeDeTravail';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../domain/supervision/DonneesDeSupervisionPort';
 import { SupervisionAtelier } from './supervision-atelier';
 
 class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {

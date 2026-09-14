@@ -2,14 +2,14 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
-import { CategorieActivite } from '../../domain/CategorieActivite';
-import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
-import { IdentifiantActivite } from '../../domain/IdentifiantActivite';
-import { IdentifiantOperateur } from '../../domain/IdentifiantOperateur';
-import { Instant } from '../../domain/Instant';
-import { JourneeDeTravail } from '../../domain/JourneeDeTravail';
-import { OperateurDeclare } from '../../domain/OperateurDeclare';
+import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
+import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { Instant } from '../../../domain/instant/Instant';
+import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
+import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { InMemoryDonneesDeSupervision } from './InMemoryDonneesDeSupervision';
 
 const aliceFixture = new OperateurDeclare(new IdentifiantOperateur('alice'), 'Martin', 'Alice');

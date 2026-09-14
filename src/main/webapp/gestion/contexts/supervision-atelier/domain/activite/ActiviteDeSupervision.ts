@@ -1,8 +1,8 @@
+import { Instant } from '../instant/Instant';
+import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
+import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { CategorieActivite } from './CategorieActivite';
 import { IdentifiantActivite } from './IdentifiantActivite';
-import { IdentifiantOperateur } from './IdentifiantOperateur';
-import { Instant } from './Instant';
-import { OperateurDeclare } from './OperateurDeclare';
 
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;

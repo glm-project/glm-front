@@ -1,4 +1,4 @@
-import { Instant } from './Instant';
+import { Instant } from '../instant/Instant';
 
 export interface DescriptionSegmentDePresence {
   readonly debut: Instant;

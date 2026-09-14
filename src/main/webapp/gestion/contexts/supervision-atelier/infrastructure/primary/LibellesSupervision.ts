@@ -1,6 +1,6 @@
-import { AnomalieDeSupervision } from '../../domain/AnomalieDeSupervision';
-import { EtatDePresence } from '../../domain/EtatDePresence';
-import { Instant } from '../../domain/Instant';
+import { Instant } from '../../domain/instant/Instant';
+import { EtatDePresence } from '../../domain/presence/EtatDePresence';
+import { AnomalieDeSupervision } from '../../domain/supervision/AnomalieDeSupervision';
 
 const PRESENCES: Record<EtatDePresence, string> = {
   PRESENT: 'Présent',

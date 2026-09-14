@@ -1,9 +1,9 @@
-import { ActiviteDeSupervision } from './ActiviteDeSupervision';
+import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
+import { Instant } from '../instant/Instant';
+import { OperateurDeclare } from '../operateur/OperateurDeclare';
+import { EtatDePresence } from '../presence/EtatDePresence';
+import { SegmentDePresence } from '../presence/SegmentDePresence';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
-import { EtatDePresence } from './EtatDePresence';
-import { Instant } from './Instant';
-import { OperateurDeclare } from './OperateurDeclare';
-import { SegmentDePresence } from './SegmentDePresence';
 
 export interface SituationOperateur {
   readonly activites: readonly ActiviteDeSupervision[];

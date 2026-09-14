@@ -1,6 +1,6 @@
+import { Instant } from '../instant/Instant';
+import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { FenetreDePresence } from './FenetreDePresence';
-import { IdentifiantOperateur } from './IdentifiantOperateur';
-import { Instant } from './Instant';
 import { SegmentDePresence } from './SegmentDePresence';
 
 export type EtatSession = 'PRESENT' | 'EN_PAUSE';

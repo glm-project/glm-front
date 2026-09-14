@@ -1,6 +1,6 @@
-import { ActiviteDeSupervision } from './ActiviteDeSupervision';
-import { JourneeDeTravail } from './JourneeDeTravail';
-import { OperateurDeclare } from './OperateurDeclare';
+import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
+import { OperateurDeclare } from '../operateur/OperateurDeclare';
+import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 
 export interface DonneesDeSupervision {
   readonly operateurs: readonly OperateurDeclare[];
