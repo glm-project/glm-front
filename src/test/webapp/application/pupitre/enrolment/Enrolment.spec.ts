@@ -42,6 +42,15 @@ describe('Pupitre enrolment', () => {
     thenTheWorkshopLoadsAndTheKeypadAppears();
   });
 
+  it('should explain a granted token without a tenant before loading the workshop', () => {
+    givenAnAuthorizationServerGrantingTokensWithoutATenant();
+
+    whenVisitingTheRoot();
+
+    thenTheScreenSays("Appareil validé — Aucun tenant dans le jeton d'accès");
+    thenNoWorkshopRequestWasMade();
+  });
+
   it('should display expiration without silently rotating the code', () => {
     givenAnAuthorizationServerAnswering('expired_token');
     whenVisitingTheRoot();
@@ -144,6 +153,18 @@ const givenAnAuthorizationServerWaitingForTheCode = (): void => {
 const givenAnAuthorizationServerAnswering = (refusal: string): void => {
   cy.intercept('POST', `${OPENID_CONNECT}/auth/device`, theDeviceAuthorizationFixture()).as('deviceAuthorization');
   cy.intercept('POST', `${OPENID_CONNECT}/token`, { statusCode: 400, body: { error: refusal } }).as('tokenClaim');
+};
+
+const givenAnAuthorizationServerGrantingTokensWithoutATenant = (): void => {
+  cy.intercept('POST', `${OPENID_CONNECT}/auth/device`, theDeviceAuthorizationFixture()).as('deviceAuthorization');
+  cy.intercept('POST', `${OPENID_CONNECT}/token`, {
+    statusCode: 200,
+    body: {
+      access_token: `header.${btoa(JSON.stringify({}))}.signature`,
+      refresh_token: 'an-offline-refresh-token',
+      expires_in: 300,
+    },
+  }).as('tokenClaim');
 };
 
 const givenAnUnreachableAuthorizationServer = (): void => {
@@ -253,6 +274,11 @@ const thenTheWorkshopLoadsAndTheKeypadAppears = (): void => {
 
 const thenTheScreenSays = (message: string): void => {
   cy.get(dataSelector('enrolement-status')).should('have.text', message);
+};
+
+const thenNoWorkshopRequestWasMade = (): void => {
+  cy.get<unknown[]>('@operators.all').should('have.length', 0);
+  cy.get<unknown[]>('@workshop.all').should('have.length', 0);
 };
 
 const thenTheCodeIsNoLongerOffered = (): void => {

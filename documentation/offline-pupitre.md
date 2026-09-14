@@ -96,9 +96,10 @@ in the same continuation as that final check.
 
 Only push outcomes set connectivity. The browser online event is a trigger, not evidence that the server is
 reachable. A received business refusal proves connectivity even though the gesture remains refused.
-The initial workshop load reports its own `CHARGE` or `ECHEC` outcome to enrolment without changing that
-connectivity. A reference is available there only when the active journal view belongs to the currently
-selected company.
+The initial workshop load reports its own `CHARGE`, `ECHEC` or `TENANT_ABSENT` outcome to enrolment without
+changing that connectivity. The last outcome distinguishes a token missing its tenant claim from a network
+failure. A reference is available there only when the active journal view belongs to the currently selected
+company.
 
 ## Runtime lifecycle is explicit
 

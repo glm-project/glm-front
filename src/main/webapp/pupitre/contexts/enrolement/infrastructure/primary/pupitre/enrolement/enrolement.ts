@@ -18,6 +18,7 @@ const ACTIONS: Partial<Record<VueDEnrolement['kind'], ActionDEnrolement>> = {
   REFUSE: { libelle: LIBELLES_ENROLEMENT.recommencer, intention: 'NOUVELLE_DEMANDE' },
   ERREUR_RESEAU_INITIALE: { libelle: LIBELLES_ENROLEMENT.reessayer, intention: 'NOUVELLE_DEMANDE' },
   ATTENTE_RESEAU_ATELIER: { libelle: LIBELLES_ENROLEMENT.reessayer, intention: 'CHARGER_ATELIER' },
+  JETON_SANS_TENANT: { libelle: LIBELLES_ENROLEMENT.reessayer, intention: 'CHARGER_ATELIER' },
 };
 
 @Component({
