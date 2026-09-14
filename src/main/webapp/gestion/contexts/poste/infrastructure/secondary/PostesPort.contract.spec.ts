@@ -57,23 +57,26 @@ describe.each([['HTTP', () => TestBed.inject(HttpPostes)] as const])('PostesPort
   });
 
   it('should collect sorted distinct natures from every page of the workshop', async () => {
+    const postes = [
+      ...Array.from({ length: 200 }, (_, index) => ({ ...tourFixture, id: 'tour-' + String(index) })),
+      { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' },
+    ];
     const result = port.natures();
-    await whenPageAnswers([tourFixture, { ...tourFixture, id: 'tour-2' }], 3, 0, 100);
-    await whenPageAnswers([{ id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' }], 3, 1, 100);
+    await whenReferentialAnswers(postes);
 
     expect(await result).toEqual([{ value: 'sciage' }, { value: 'tournage' }]);
   });
 
   it('should return no suggested natures for an empty workshop', async () => {
     const result = port.natures();
-    await whenPageAnswers([], 0, 0, 100);
+    await whenReferentialAnswers([]);
 
     expect(await result).toEqual([]);
   });
 
   it('should reject incomplete nature acquisition when the server stops providing entries', async () => {
     const result = port.natures().catch((failure: unknown) => failure);
-    await whenPageAnswers([], 1, 0, 100);
+    await whenReferentialAnswers([], 1);
 
     expect(await result).toEqual(new Error('Le référentiel des natures est incomplet.'));
   });
@@ -145,6 +148,18 @@ describe.each([['HTTP', () => TestBed.inject(HttpPostes)] as const])('PostesPort
     const successStatus = { creer: 201, modifier: 200, supprimer: 204 };
     request.flush(body ?? null, { status: status ?? successStatus[action], statusText: 'Response' });
     return request;
+  };
+
+  const whenReferentialAnswers = async (postes: RestPoste[], totalElementsCount = postes.length): Promise<void> => {
+    let end: number;
+    do {
+      await new Promise(resolve => setTimeout(resolve));
+      const request = server.expectOne(request => request.method === 'GET' && request.url === '/api/postes-de-travail');
+      const page = Number(request.request.params.get('page'));
+      const size = Number(request.request.params.get('size'));
+      end = (page + 1) * size;
+      request.flush({ content: postes.slice(page * size, end), currentPage: page, pageSize: size, totalElementsCount });
+    } while (end < totalElementsCount);
   };
 
   const whenPageAnswers = async (content: RestPoste[], totalElementsCount: number, page = 0, size = 20): Promise<void> => {

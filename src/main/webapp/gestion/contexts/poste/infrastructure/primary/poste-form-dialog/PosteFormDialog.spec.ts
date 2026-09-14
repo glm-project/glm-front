@@ -158,15 +158,27 @@ describe('PosteFormDialog', () => {
     await whenFillingValidEntries();
     await whenSubmitting();
     const busy = button('poste-save').disabled;
-    const protectedClose = dialog.disableClose;
+    await whenPressingEscape();
+    const remainedOpen = text('poste-form-title');
+    const dismissals = [...closed];
     await whenSubmitting();
     deferred.resolve(ok(undefined));
     await whenClosed();
 
     expect(busy).toBe(true);
-    expect(protectedClose).toBe(true);
+    expect(remainedOpen).toBe('Nouveau poste');
+    expect(dismissals).toEqual([]);
     expect(port.enregistrements).toHaveLength(1);
     expect(closed).toEqual([true]);
+  });
+
+  it('should dismiss with Escape without writing when no save is pending', async () => {
+    await whenOpening();
+    await whenPressingEscape();
+    await whenClosed();
+
+    expect(port.enregistrements).toEqual([]);
+    expect(closed).toEqual([undefined]);
   });
 
   it('should cancel without writing', async () => {
@@ -194,6 +206,10 @@ describe('PosteFormDialog', () => {
     dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteDeTravail | null, boolean>(PosteFormDialog, { data: poste });
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));
+    await fixture.whenStable();
+  };
+  const whenPressingEscape = async (): Promise<void> => {
+    input('poste-libelle').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
     await fixture.whenStable();
   };
   const whenClosed = async (): Promise<void> => {

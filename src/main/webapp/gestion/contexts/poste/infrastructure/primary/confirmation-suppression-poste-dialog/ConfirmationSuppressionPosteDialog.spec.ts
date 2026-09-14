@@ -64,6 +64,15 @@ describe('ConfirmationSuppressionPosteDialog', () => {
     expect(port.suppressions).toEqual([]);
   });
 
+  it('should dismiss with Escape without deleting when no deletion is pending', async () => {
+    await whenOpening();
+    await whenPressingEscape();
+    await whenClosed();
+
+    expect(port.suppressions).toEqual([]);
+    expect(closed).toEqual([undefined]);
+  });
+
   it('should cancel without removing the workstation', async () => {
     await whenOpening();
     await whenClicking('poste-delete-cancel');
@@ -107,13 +116,16 @@ describe('ConfirmationSuppressionPosteDialog', () => {
     await whenOpening();
     await whenConfirmingTwice();
     const busy = button('poste-delete-confirm').disabled;
-    const protectedClose = dialog.disableClose;
+    await whenPressingEscape();
+    const remainedOpen = text('poste-delete-description');
+    const dismissals = [...closed];
     deferred.resolve(ok(undefined));
     await whenClosed();
 
     expect(port.suppressions).toHaveLength(1);
     expect(busy).toBe(true);
-    expect(protectedClose).toBe(true);
+    expect(remainedOpen).toContain('Tour 1');
+    expect(dismissals).toEqual([]);
     expect(closed).toEqual([true]);
   });
 
@@ -124,6 +136,10 @@ describe('ConfirmationSuppressionPosteDialog', () => {
     );
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));
+    await fixture.whenStable();
+  };
+  const whenPressingEscape = async (): Promise<void> => {
+    button('poste-delete-cancel').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
     await fixture.whenStable();
   };
   const whenClosed = async (): Promise<void> => {
