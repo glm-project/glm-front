@@ -23,5 +23,9 @@ new test. A commit that is not green is not a commit.
 the behavior), one bullet for what is still to be decided, one verification line. The detail lives in the
 commit messages and in the diff.
 
+Before opening or updating an MR, apply the [test-value review](testing.md#reviewing-test-value)
+and complete the repository [MR template](../.github/pull_request_template.md). Record the test rationale
+for each changed behavior; for a pure refactoring, name the existing scenarios retained.
+
 Husky + lint-staged run `eslint --fix` and `prettier --write` on staged files. Do not bypass them with
 `--no-verify`.

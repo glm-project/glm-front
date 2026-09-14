@@ -83,3 +83,6 @@ something stays, with a status that says what died.
   minimal shared kernel Result<T, E> for interactive domain commands and explicit business refusal typing
 - [0036 — Model user interactions and forms in rich domain models](0036-rich-domain-models-for-form-interactions.md) —
   pure immutable domain models for data entry, keystroke transitions and validation without framework forms
+
+- [0037 — Require production consumers for tested members](0037-require-production-consumers.md) —
+  compiler-backed ESLint check across production, tests and Angular templates

@@ -10,6 +10,7 @@ import { maxConstructorParameters } from './eslint/rules/max-constructor-paramet
 import { maxIfCriteria } from './eslint/rules/max-if-criteria.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
 import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
+import { noTestOnlyProduction } from './eslint/rules/no-test-only-production.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
 import { scenarioShape } from './eslint/rules/scenario-shape.mjs';
 
@@ -135,6 +136,7 @@ const local = {
     'domain-readonly-properties': domainReadonlyProperties,
     'no-as-unknown': noAsUnknown,
     'no-eslint-disable': noEslintDisable,
+    'no-test-only-production': noTestOnlyProduction,
     'responsibility-cohesion': responsibilityCohesion,
     'scenario-shape': scenarioShape,
   },
@@ -312,6 +314,7 @@ export default typescript.config(
     plugins: { local },
     rules: {
       'local/responsibility-cohesion': 'error',
+      'local/no-test-only-production': 'error',
     },
   },
 );
