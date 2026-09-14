@@ -17,6 +17,7 @@ describe('Supervision atelier in back office', () => {
 });
 
 const whenVisitingTheRoot = (): void => {
+  cy.viewport(1280, 900);
   cy.clock(new Date(2026, 8, 13, 10, 0).getTime(), ['Date']);
   cy.visit('/');
 };

@@ -233,6 +233,8 @@
               [attr.aria-expanded]="ligneDepliee() === supervise.operateur.id.value"
               [attr.aria-controls]="'journal-' + supervise.operateur.id.value"
               (click)="toggleJournal(supervise.operateur.id.value)"
+              (keydown.enter)="$event.preventDefault(); toggleJournal(supervise.operateur.id.value)"
+              (keydown.space)="$event.preventDefault(); toggleJournal(supervise.operateur.id.value)"
             >
               <span aria-hidden="true">{{ ligneDepliee() === supervise.operateur.id.value ? '−' : '+' }}</span>
             </button>
