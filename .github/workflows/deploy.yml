@@ -65,4 +65,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy target/deployed/gestion --project-name=glm-gestion --commit-dirty=true
+          command: pages deploy target/deployed/gestion --project-name=glm-supervision --commit-dirty=true
