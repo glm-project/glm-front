@@ -81,11 +81,13 @@ caller reconstructing another owner's rule behind that owner's interface.
 
 ## Follow the Angular idioms already in the code, not the older ones that still compile
 
-- `inject()`, never constructor injection (`gestion/app.ts:18`, `gestion/header/header.ts:19`,
+- `inject()`, never constructor injection (`gestion/app/app.ts:16`, `gestion/header/header.ts:19`,
   `KeycloakOidcAuthentication.ts:9`);
-- `signal()` for local component state (`App.appName`, `gestion/app.ts:17`);
+- `signal()` for local component state (`App.appName`, `gestion/app/app.ts:15`);
 - `input.required()` for what a parent gives a component (`pupitre/header/header.ts`);
 - standalone components, no `NgModule`;
+- each Angular component lives in its own folder. Co-locate its TypeScript, template, styles, unit spec and
+  every file owned exclusively by that component; place shared files with their nearest shared owner;
 - signals expose state, `computed()` derives it, and explicit application commands drive business mutations. `effect()` and
   `afterRenderEffect()` do not orchestrate a business operation or propagate application state. A primary
   presentation adapter may use one for a narrow imperative browser integration when its lifetime and cleanup
