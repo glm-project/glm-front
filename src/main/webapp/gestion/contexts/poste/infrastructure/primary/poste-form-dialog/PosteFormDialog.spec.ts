@@ -78,7 +78,12 @@ describe('PosteFormDialog', () => {
     await whenClosed();
 
     expect(port.enregistrements).toEqual([
-      { libelle: new LibellePoste('Tour 1'), nature: new NatureDeTravail('tournage'), coutHoraire: new CoutHoraire(45.5) },
+      {
+        type: 'CREATION',
+        libelle: new LibellePoste('Tour 1'),
+        nature: new NatureDeTravail('tournage'),
+        coutHoraire: new CoutHoraire(45.5),
+      },
     ]);
     expect(closed).toEqual([true]);
   });
@@ -98,6 +103,7 @@ describe('PosteFormDialog', () => {
 
     expect(initialCost).toBe('45.5');
     expect(port.enregistrements[0]).toEqual({
+      type: 'MODIFICATION',
       id: new PosteDeTravailId('tour-1'),
       libelle: new LibellePoste('Tour 2'),
       nature: new NatureDeTravail('tournage'),
@@ -107,7 +113,7 @@ describe('PosteFormDialog', () => {
   });
 
   it('should show a duplicate label refusal until the manager changes the label', async () => {
-    port.enregistrement = err(new LibellePosteDejaUtilise());
+    givenDuplicateLabelIsRefused();
     await whenOpening();
     await whenFillingValidEntries();
     await whenSubmitting();
@@ -121,7 +127,7 @@ describe('PosteFormDialog', () => {
   });
 
   it('should display a missing workstation refusal without closing', async () => {
-    port.enregistrement = err(new PosteIntrouvable());
+    givenWorkstationIsMissing();
     await whenOpening();
     await whenFillingValidEntries();
     await whenSubmitting();
@@ -131,7 +137,7 @@ describe('PosteFormDialog', () => {
   });
 
   it('should display a technical failure and report it through the error boundary', async () => {
-    port.ecritureFailure = new Error('Network down');
+    givenSavingFails();
     await whenOpening();
     await whenFillingValidEntries();
     await whenSubmitting();
@@ -153,7 +159,7 @@ describe('PosteFormDialog', () => {
 
   it('should prevent duplicate submission and closing while saving', async () => {
     const deferred = new DeferredFixture<Result<void, RefusModificationPoste>>();
-    port.ecritureDifferee = deferred.promise;
+    givenSavingIsPending(deferred);
     await whenOpening();
     await whenFillingValidEntries();
     await whenSubmitting();
@@ -191,7 +197,7 @@ describe('PosteFormDialog', () => {
   });
 
   it('should suggest matching existing natures and accept a selection', async () => {
-    port.suggestions = [new NatureDeTravail('soudage'), new NatureDeTravail('tournage')];
+    givenExistingNatures('soudage', 'tournage');
     await whenOpening();
     await whenEntering('poste-nature', 'sou');
     const suggestions = texts('poste-nature-option');
@@ -201,9 +207,25 @@ describe('PosteFormDialog', () => {
     expect(input('poste-nature').value).toBe('soudage');
   });
 
+  const givenDuplicateLabelIsRefused = (): void => {
+    port.enregistrement = err(new LibellePosteDejaUtilise());
+  };
+  const givenWorkstationIsMissing = (): void => {
+    port.enregistrement = err(new PosteIntrouvable());
+  };
+  const givenSavingFails = (): void => {
+    port.ecritureFailure = new Error('Network down');
+  };
+  const givenSavingIsPending = (deferred: DeferredFixture<Result<void, RefusModificationPoste>>): void => {
+    port.ecritureDifferee = deferred.promise;
+  };
+  const givenExistingNatures = (...natures: string[]): void => {
+    port.suggestions = natures.map(nature => new NatureDeTravail(nature));
+  };
+
   const whenOpening = async (poste: PosteDeTravail | null = null): Promise<void> => {
     dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
-      data: { poste, natures: port.suggestions, afterSave: () => Promise.resolve() },
+      data: { poste },
     });
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));

@@ -70,7 +70,7 @@ describe('PostesDeTravail page', () => {
 
   it('should show loading without displaying the empty state prematurely', async () => {
     const deferred = new DeferredFixture<Page<PosteDeTravail>>();
-    port.lectureDifferee = deferred.promise;
+    givenReadingIsPending(deferred);
     await whenOpening();
     const loading = text('postes-loading');
     const empty = text('postes-empty');
@@ -82,10 +82,10 @@ describe('PostesDeTravail page', () => {
   });
 
   it('should allow retry after an acquisition failure', async () => {
-    port.lectureFailure = new Error('Network down');
+    givenReadingFails('Network down');
     await whenOpening();
     const failure = text('postes-error');
-    port.lectureFailure = undefined;
+    givenReadingSucceeds();
     givenWorkstations();
 
     await whenClicking('postes-retry');
@@ -147,11 +147,11 @@ describe('PostesDeTravail page', () => {
     await whenClicking('postes-new');
     await whenEntering('poste-libelle', 'Tour 1');
     await whenEntering('poste-nature', 'tournage');
-    port.lectureFailure = new Error('Read failed');
+    givenReadingFails('Read failed');
     await whenConfirmingDialog('poste-save');
     const failure = text('postes-error');
     const form = text('poste-form-title');
-    port.lectureFailure = undefined;
+    givenReadingSucceeds();
     await whenClicking('postes-retry');
 
     expect(failure).toContain('Impossible de charger les postes');
@@ -187,9 +187,11 @@ describe('PostesDeTravail page', () => {
     givenManyWorkstations(21);
     await whenOpening();
     const old = new DeferredFixture<Page<PosteDeTravail>>();
-    port.lectureDifferee = old.promise;
+    givenReadingIsPending(old);
+    const arrival = port.signalLecture();
     whenSelectingPage(0, 20);
-    port.lectureDifferee = undefined;
+    await arrival;
+    givenReadingSucceeds();
     await whenPageSelected(1, 20);
     old.resolve(new Page([tourFixture], 1));
     await whenViewSettles();
@@ -202,11 +204,15 @@ describe('PostesDeTravail page', () => {
     givenManyWorkstations(21);
     await whenOpening();
     const old = new DeferredFixture<Page<PosteDeTravail>>();
-    port.lectureDifferee = old.promise;
+    givenReadingIsPending(old);
+    const firstArrival = port.signalLecture();
     whenSelectingPage(0, 20);
+    await firstArrival;
     const current = new DeferredFixture<Page<PosteDeTravail>>();
-    port.lectureDifferee = current.promise;
+    givenReadingIsPending(current);
+    const secondArrival = port.signalLecture();
     whenSelectingPage(1, 20);
+    await secondArrival;
     old.reject(new Error('Obsolete read failed'));
     await whenViewSettles();
     const loading = text('postes-loading');
@@ -240,6 +246,16 @@ describe('PostesDeTravail page', () => {
 
   const givenWorkstations = (): void => {
     port.liste = [tourFixture, scieFixture];
+  };
+  const givenReadingIsPending = (deferred: DeferredFixture<Page<PosteDeTravail>>): void => {
+    port.lectureDifferee = deferred.promise;
+  };
+  const givenReadingFails = (message: string): void => {
+    port.lectureFailure = new Error(message);
+  };
+  const givenReadingSucceeds = (): void => {
+    port.lectureFailure = undefined;
+    port.lectureDifferee = undefined;
   };
   const whenLoaded = async (): Promise<void> => {
     await vi.waitUntil(() => text('postes-loading') === '');

@@ -8,7 +8,6 @@ import { RefusSuppressionPoste } from '../../../domain/RefusSuppressionPoste';
 
 export interface ConfirmationSuppressionPosteDialogData {
   readonly poste: PosteDeTravail;
-  readonly afterDelete: () => Promise<void>;
 }
 
 @Component({
@@ -41,7 +40,6 @@ export class ConfirmationSuppressionPosteDialog {
     try {
       const resultat = await this.port.supprimer(this.poste.id);
       if (resultat.ok) {
-        await this.data.afterDelete();
         this.dialog.close(true);
       } else {
         this.refus.set(resultat.error);

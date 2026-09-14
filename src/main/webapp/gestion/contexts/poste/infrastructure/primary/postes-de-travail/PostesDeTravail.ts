@@ -1,12 +1,10 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Component, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
-import { NatureDeTravail } from '../../../domain/NatureDeTravail';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
 import { RequetePostes } from '../../../domain/RequetePostes';
@@ -22,7 +20,6 @@ interface EtatPostes {
   readonly page: number;
   readonly taille: number;
   readonly chargement: boolean;
-  readonly natures: readonly NatureDeTravail[];
   readonly echec: boolean;
 }
 
@@ -54,12 +51,10 @@ export class PostesDeTravail implements OnInit {
     page: 0,
     taille: 20,
     chargement: false,
-    natures: [],
     echec: false,
   });
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
-  private readonly errors = inject(ErrorHandlerPort);
   private readonly currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
   protected readonly colonnes = ['libelle', 'nature', 'coutHoraire', 'actions'];
 
@@ -68,7 +63,7 @@ export class PostesDeTravail implements OnInit {
   }
 
   protected reload(): void {
-    this.errors.observe(this.load());
+    void this.load();
   }
 
   protected changePage(event: PageEvent): void {
@@ -77,43 +72,49 @@ export class PostesDeTravail implements OnInit {
   }
 
   protected openForm(poste: PosteDeTravail | null = null): void {
-    this.dialogs.open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
-      data: { poste, natures: this.etat().natures, afterSave: () => this.load() },
+    const dialogRef = this.dialogs.open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
+      data: { poste },
       viewContainerRef: this.viewContainerRef,
       width: '36rem',
       maxWidth: 'calc(100vw - 2rem)',
     });
+    dialogRef.afterClosed().subscribe(saved => {
+      if (saved) {
+        void this.load();
+      }
+    });
   }
 
   protected confirmDeletion(poste: PosteDeTravail): void {
-    this.dialogs.open<ConfirmationSuppressionPosteDialog, ConfirmationSuppressionPosteDialogData, boolean>(
+    const dialogRef = this.dialogs.open<ConfirmationSuppressionPosteDialog, ConfirmationSuppressionPosteDialogData, boolean>(
       ConfirmationSuppressionPosteDialog,
       {
-        data: { poste, afterDelete: () => this.reloadAfterDeletion() },
+        data: { poste },
         viewContainerRef: this.viewContainerRef,
         width: '32rem',
         maxWidth: 'calc(100vw - 2rem)',
         autoFocus: '[data-selector="poste-delete-cancel"]',
       },
     );
+    dialogRef.afterClosed().subscribe(deleted => {
+      if (deleted) {
+        void this.reloadAfterDeletion();
+      }
+    });
   }
 
   private async load(): Promise<void> {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const [page, natures] = await Promise.all([
-        this.port.postes(new RequetePostes(this.etat().page, this.etat().taille)),
-        this.port.natures(),
-      ]);
+      const page = await this.port.postes(new RequetePostes(this.etat().page, this.etat().taille));
       if (lecture === this.lecture) {
-        this.etat.update(etat => ({ ...etat, postes: page.elements, totalElementsCount: page.totalCount, natures }));
+        this.etat.update(etat => ({ ...etat, postes: page.elements, totalElementsCount: page.totalCount }));
       }
-    } catch (failure) {
+    } catch {
       if (lecture === this.lecture) {
         this.etat.update(etat => ({ ...etat, echec: true }));
       }
-      this.errors.handleError(failure);
     } finally {
       if (lecture === this.lecture) {
         this.etat.update(etat => ({ ...etat, chargement: false }));

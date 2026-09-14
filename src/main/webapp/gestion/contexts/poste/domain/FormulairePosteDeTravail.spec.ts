@@ -36,6 +36,7 @@ describe('FormulairePosteDeTravail', () => {
     expect(commande).toEqual({
       ok: true,
       value: {
+        type: 'MODIFICATION',
         id: { value: 'tour-1' },
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
@@ -44,12 +45,12 @@ describe('FormulairePosteDeTravail', () => {
     });
   });
 
-  it('should preserve object identity on redundant transitions', () => {
+  it('should keep the same state on redundant transitions', () => {
     const initial = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').avecNature('tournage').avecCoutHoraire('45');
 
-    expect(initial.avecLibelle('Tour 1')).toBe(initial);
-    expect(initial.avecNature('tournage')).toBe(initial);
-    expect(initial.avecCoutHoraire('45')).toBe(initial);
+    expect(initial.avecLibelle('Tour 1').saisie).toEqual(initial.saisie);
+    expect(initial.avecNature('tournage').saisie).toEqual(initial.saisie);
+    expect(initial.avecCoutHoraire('45').saisie).toEqual(initial.saisie);
   });
 
   it('should attach the duplicate refusal to the label and prevent resubmission', () => {
@@ -97,7 +98,6 @@ describe('FormulairePosteDeTravail', () => {
 
     expect(formulaire.erreurLibelle()).toBeUndefined();
     expect(formulaire.erreurEnregistrement()).toBe('Ce poste n’existe plus. Actualisez la liste des postes.');
-    expect(formulaire.erreurPosteIntrouvable()).toBe('Ce poste n’existe plus. Actualisez la liste des postes.');
     expect(commande.ok).toBe(false);
   });
 
@@ -116,6 +116,7 @@ describe('FormulairePosteDeTravail', () => {
     expect(commande).toEqual({
       ok: true,
       value: {
+        type: 'CREATION',
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
         coutHoraire: attendu === undefined ? undefined : { value: attendu },

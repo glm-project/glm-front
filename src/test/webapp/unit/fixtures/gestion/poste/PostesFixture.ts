@@ -11,6 +11,8 @@ import { RefusModificationPoste } from '@/gestion/contexts/poste/domain/RefusMod
 import { RefusSuppressionPoste } from '@/gestion/contexts/poste/domain/RefusSuppressionPoste';
 import { RequetePostes } from '@/gestion/contexts/poste/domain/RequetePostes';
 
+import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
+
 export class PostesFixture extends PostesPort {
   liste: readonly PosteDeTravail[] = [];
   suggestions: readonly NatureDeTravail[] = [];
@@ -23,8 +25,16 @@ export class PostesFixture extends PostesPort {
   lectureDifferee: Promise<Page<PosteDeTravail>> | undefined;
   ecritureDifferee: Promise<Result<void, RefusModificationPoste>> | undefined;
   suppressionDifferee: Promise<Result<void, RefusSuppressionPoste>> | undefined;
+  private lectureSignal: SignalFixture | undefined;
+
+  signalLecture(): Promise<void> {
+    this.lectureSignal = new SignalFixture();
+    return this.lectureSignal.promise;
+  }
 
   override postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
+    this.lectureSignal?.release();
+    this.lectureSignal = undefined;
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
     return (
       this.lectureDifferee
@@ -36,10 +46,14 @@ export class PostesFixture extends PostesPort {
     if (this.suggestions.length > 0) {
       return Promise.resolve(this.suggestions);
     }
-    const distinct = Array.from(new Set(this.liste.map(poste => poste.nature.value)))
-      .sort((left, right) => left.localeCompare(right))
-      .map(nature => new NatureDeTravail(nature));
-    return Promise.resolve(distinct);
+    const distinct = new Map<string, NatureDeTravail>();
+    for (const poste of this.liste) {
+      const cle = poste.nature.cleNormalisee();
+      if (!distinct.has(cle)) {
+        distinct.set(cle, poste.nature);
+      }
+    }
+    return Promise.resolve([...distinct.values()].sort((left, right) => left.compare(right)));
   }
 
   override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {

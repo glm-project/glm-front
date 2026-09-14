@@ -90,7 +90,7 @@ describe('ConfirmationSuppressionPosteDialog', () => {
   });
 
   it.each([new PosteNonSupprimable(), new PosteIntrouvable()])('should display the refusal without closing: %s', async refus => {
-    port.suppression = err(refus);
+    givenDeletionIsRefused(refus);
     await whenOpening();
     await whenClicking('poste-delete-confirm');
 
@@ -99,7 +99,7 @@ describe('ConfirmationSuppressionPosteDialog', () => {
   });
 
   it('should report a technical failure and leave the dialog open', async () => {
-    port.ecritureFailure = new Error('Network down');
+    givenDeletionFails();
     await whenOpening();
     await whenClicking('poste-delete-confirm');
 
@@ -110,7 +110,7 @@ describe('ConfirmationSuppressionPosteDialog', () => {
 
   it('should send only one deletion when confirmation is clicked twice before rendering', async () => {
     const deferred = new DeferredFixture<Result<void, RefusSuppressionPoste>>();
-    port.suppressionDifferee = deferred.promise;
+    givenDeletionIsPending(deferred);
     await whenOpening();
     await whenConfirmingTwice();
     const busy = button('poste-delete-confirm').disabled;
@@ -127,10 +127,20 @@ describe('ConfirmationSuppressionPosteDialog', () => {
     expect(closed).toEqual([true]);
   });
 
+  const givenDeletionIsRefused = (refus: RefusSuppressionPoste): void => {
+    port.suppression = err(refus);
+  };
+  const givenDeletionFails = (): void => {
+    port.ecritureFailure = new Error('Network down');
+  };
+  const givenDeletionIsPending = (deferred: DeferredFixture<Result<void, RefusSuppressionPoste>>): void => {
+    port.suppressionDifferee = deferred.promise;
+  };
+
   const whenOpening = async (): Promise<void> => {
     dialog = TestBed.inject(MatDialog).open<ConfirmationSuppressionPosteDialog, ConfirmationSuppressionPosteDialogData, boolean>(
       ConfirmationSuppressionPosteDialog,
-      { data: { poste: tourFixture, afterDelete: () => Promise.resolve() } },
+      { data: { poste: tourFixture } },
     );
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));

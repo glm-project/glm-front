@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
@@ -68,37 +69,63 @@ const pageManquante = (extrait: Page<PosteDeTravail>, lus: number): boolean => e
 @Injectable()
 export class HttpPostes extends PostesPort {
   private readonly api = inject(ApiClient);
+  private readonly errors = inject(ErrorHandlerPort);
   private cachedNatures: readonly NatureDeTravail[] | undefined;
 
   override async postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
-    const response = await this.api.read('/api/postes-de-travail', {
-      queryParams: { page: requete.page, size: requete.taille },
-    });
-    return buildPageFrom(response, toPoste);
+    try {
+      return await this.fetchPage(requete);
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
   }
 
   override async natures(): Promise<readonly NatureDeTravail[]> {
     if (this.cachedNatures !== undefined) {
       return this.cachedNatures;
     }
+    try {
+      this.cachedNatures = await this.readAllNatures();
+      return this.cachedNatures;
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  private async readAllNatures(): Promise<readonly NatureDeTravail[]> {
     const natures = new Map<string, NatureDeTravail>();
     let page = 0;
     let lus = 0;
     let total: number;
     do {
-      const extrait = await this.postes(new RequetePostes(page, PAGE_SIZE));
+      const extrait = await this.fetchPage(new RequetePostes(page, PAGE_SIZE));
       total = extrait.totalCount;
       lus += extrait.elements.length;
       if (pageManquante(extrait, lus)) {
         throw new Error('Le référentiel des natures est incomplet.');
       }
-      for (const poste of extrait.elements) {
-        natures.set(poste.nature.value, poste.nature);
-      }
+      this.collectNatures(natures, extrait.elements);
       page += 1;
     } while (lus < total);
-    this.cachedNatures = [...natures.values()].sort((left, right) => left.compare(right));
-    return this.cachedNatures;
+    return [...natures.values()].sort((left, right) => left.compare(right));
+  }
+
+  private collectNatures(natures: Map<string, NatureDeTravail>, elements: readonly PosteDeTravail[]): void {
+    for (const poste of elements) {
+      const cle = poste.nature.cleNormalisee();
+      if (!natures.has(cle)) {
+        natures.set(cle, poste.nature);
+      }
+    }
+  }
+
+  private async fetchPage(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
+    const response = await this.api.read('/api/postes-de-travail', {
+      queryParams: { page: requete.page, size: requete.taille },
+    });
+    return buildPageFrom(response, toPoste);
   }
 
   override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {

@@ -15,7 +15,11 @@ export class NatureDeTravail {
   }
 
   equals(other: NatureDeTravail | undefined): boolean {
-    return other !== undefined && this.value === other.value;
+    return other !== undefined && this.cleNormalisee() === other.cleNormalisee();
+  }
+
+  cleNormalisee(): string {
+    return this.value.toLocaleLowerCase('fr');
   }
 
   compare(other: NatureDeTravail): number {
@@ -23,6 +27,6 @@ export class NatureDeTravail {
   }
 
   correspondA(recherche: string): boolean {
-    return this.value.toLocaleLowerCase('fr').includes(recherche.trim().toLocaleLowerCase('fr'));
+    return this.cleNormalisee().includes(recherche.trim().toLocaleLowerCase('fr'));
   }
 }

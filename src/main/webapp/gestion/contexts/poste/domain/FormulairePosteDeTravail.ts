@@ -52,9 +52,9 @@ export class FormulairePosteDeTravail {
     const coutHoraire = this.coutEstRenseigne() ? new CoutHoraire(this.coutNumerique()) : undefined;
 
     if (this.id === undefined) {
-      return ok({ libelle, nature, coutHoraire });
+      return ok({ type: 'CREATION', libelle, nature, coutHoraire });
     }
-    return ok({ id: this.id, libelle, nature, coutHoraire });
+    return ok({ type: 'MODIFICATION', id: this.id, libelle, nature, coutHoraire });
   }
 
   avecLibelle(libelle: string): FormulairePosteDeTravail {
@@ -99,10 +99,6 @@ export class FormulairePosteDeTravail {
   }
 
   erreurEnregistrement(): string | undefined {
-    return this.erreurPosteIntrouvable();
-  }
-
-  erreurPosteIntrouvable(): string | undefined {
     return this.refus?.code === 'poste-introuvable' ? this.refus.message : undefined;
   }
 

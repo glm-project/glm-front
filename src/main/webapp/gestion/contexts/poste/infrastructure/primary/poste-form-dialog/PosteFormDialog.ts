@@ -1,5 +1,5 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -10,8 +10,6 @@ import { PostesPort } from '../../../domain/PostesPort';
 
 export interface PosteFormDialogData {
   readonly poste: PosteDeTravail | null;
-  readonly natures: readonly NatureDeTravail[];
-  readonly afterSave: () => Promise<void>;
 }
 
 @Component({
@@ -20,7 +18,7 @@ export interface PosteFormDialogData {
   styleUrl: './PosteFormDialog.css',
   imports: [MatDialogModule, MatButtonModule, MatAutocompleteModule],
 })
-export class PosteFormDialog {
+export class PosteFormDialog implements OnInit {
   private readonly data = inject<PosteFormDialogData>(MAT_DIALOG_DATA);
   private readonly dialog = inject<MatDialogRef<PosteFormDialog, boolean>>(MatDialogRef);
   private readonly port = inject(PostesPort);
@@ -33,10 +31,19 @@ export class PosteFormDialog {
   protected readonly soumis = signal(false);
   protected readonly enregistrement = signal(false);
   protected readonly erreurTechnique = signal(false);
+  protected readonly natures = signal<readonly NatureDeTravail[]>([]);
   protected readonly suggestions = computed(() => {
     const saisie = this.formulaire().saisie.nature;
-    return this.data.natures.filter(nature => nature.correspondA(saisie));
+    return this.natures().filter(nature => nature.correspondA(saisie));
   });
+
+  ngOnInit(): void {
+    this.errors.observe(
+      this.port.natures().then(natures => {
+        this.natures.set(natures);
+      }),
+    );
+  }
 
   protected changeLibelle(libelle: string): void {
     this.formulaire.update(formulaire => formulaire.avecLibelle(libelle));
@@ -66,7 +73,6 @@ export class PosteFormDialog {
     try {
       const resultat = await this.execute(commande.value);
       if (resultat.ok) {
-        await this.data.afterSave();
         this.dialog.close(true);
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));
@@ -81,6 +87,6 @@ export class PosteFormDialog {
   }
 
   private execute(commande: CommandePoste) {
-    return 'id' in commande ? this.port.modifier(commande) : this.port.creer(commande);
+    return commande.type === 'MODIFICATION' ? this.port.modifier(commande) : this.port.creer(commande);
   }
 }
