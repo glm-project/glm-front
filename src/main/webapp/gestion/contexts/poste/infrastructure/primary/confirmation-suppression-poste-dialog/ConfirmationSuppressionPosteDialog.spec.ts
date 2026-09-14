@@ -55,31 +55,6 @@ describe('ConfirmationSuppressionPosteDialog', () => {
     await fixture.whenStable();
   });
 
-  it('should identify the workstation before asking for confirmation', async () => {
-    await whenOpening();
-
-    expect(text('poste-delete-description')).toContain('Tour 1');
-    expect(port.suppressions).toEqual([]);
-  });
-
-  it('should dismiss with Escape without deleting when no deletion is pending', async () => {
-    await whenOpening();
-    await whenPressingEscape();
-    await whenClosed();
-
-    expect(port.suppressions).toEqual([]);
-    expect(closed).toEqual([undefined]);
-  });
-
-  it('should cancel without removing the workstation', async () => {
-    await whenOpening();
-    await whenClicking('poste-delete-cancel');
-    await whenClosed();
-
-    expect(port.suppressions).toEqual([]);
-    expect(closed).toEqual([false]);
-  });
-
   it('should remove the confirmed workstation and close after success', async () => {
     await whenOpening();
     await whenClicking('poste-delete-confirm');

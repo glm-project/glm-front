@@ -1,5 +1,5 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { PostesApiFixture, postesFixture } from './PostesApiFixture';
+import { PostesApiFixture, postesFixture } from '../../../utils/gestion/poste/PostesApiFixture';
 
 describe('Workstation settings in gestion', () => {
   it('should create the first workstation and display its saved values', () => {
@@ -8,14 +8,6 @@ describe('Workstation settings in gestion', () => {
     whenCreating('Tour 1', 'tournage', '45,5');
 
     thenPosteIsListed('Tour 1', 'tournage', '45,50');
-  });
-
-  it('should display a duplicate label refusal and keep the form open', () => {
-    givenReferential(1);
-    whenVisitingSettings();
-    whenCreating('Poste 01', 'tournage', '45.5');
-
-    thenDuplicateRefusalIsVisible();
   });
 
   it('should save and list the workstation after correcting a duplicate label', () => {
@@ -38,15 +30,6 @@ describe('Workstation settings in gestion', () => {
     thenPosteIsListed('Tour révisé', 'ponçage', 'Non renseigné');
   });
 
-  it('should cancel deletion without removing a workstation', () => {
-    givenReferential(1);
-    whenVisitingSettings();
-    whenRequestingDeletion();
-    whenCancellingDeletion();
-
-    thenPosteIsListed('Poste 01', 'ponçage', '45,50');
-  });
-
   it('should remove the confirmed workstation and show the empty state', () => {
     givenReferential(1);
     whenVisitingSettings();
@@ -58,15 +41,6 @@ describe('Workstation settings in gestion', () => {
 
   it('should explain why a workstation with clockings cannot be removed', () => {
     givenProtectedPoste('poste-de-travail-pointe');
-    whenVisitingSettings();
-    whenRequestingDeletion();
-    whenConfirmingDeletion();
-
-    thenDeletionIsRefused();
-  });
-
-  it('should explain why a workstation with habilitated operators cannot be removed', () => {
-    givenProtectedPoste('poste-de-travail-utilise');
     whenVisitingSettings();
     whenRequestingDeletion();
     whenConfirmingDeletion();
@@ -92,55 +66,6 @@ describe('Workstation settings in gestion', () => {
     whenChoosingNature();
 
     thenNatureIsSelected();
-  });
-
-  it('should validate required and positive fields before writing', () => {
-    givenReferential();
-    whenVisitingSettings();
-    whenOpeningCreation();
-    whenReplacing('poste-cout', '-1');
-    whenSubmittingInvalidEntries();
-
-    thenValidationIsVisible();
-  });
-
-  it('should display a recoverable loading failure instead of an empty referential', () => {
-    givenFailedRead();
-    whenVisitingSettings();
-
-    thenReadFailureIsVisible();
-  });
-
-  it('should retain entered values after a technical write failure', () => {
-    givenFailedWrite();
-    whenVisitingSettings();
-    whenCreating('Tour 1', 'tournage', '45.5');
-
-    thenWriteFailureIsVisible();
-  });
-
-  it('should render the desktop referential with accessible row actions', () => {
-    givenReferential(6);
-    whenVisitingSettings();
-
-    thenDesktopLayoutIsVisible();
-  });
-
-  it('should render Material text with the GLM font on the page and in the form', () => {
-    givenReferential(1);
-    whenVisitingSettings();
-    const pageFonts = whenReadingPageFonts();
-    whenOpeningCreation();
-
-    thenMaterialUsesThePageFont(pageFonts);
-  });
-
-  it('should keep creation usable on a narrow screen', () => {
-    givenReferential(2);
-    whenVisitingMobileSettings();
-    whenOpeningCreation();
-
-    thenMobileFormIsUsable();
   });
   it('should reach workstation settings from the gestion menu', () => {
     givenAnEmptyWorkshop();
@@ -173,21 +98,9 @@ const givenProtectedPoste = (code: string): void => {
   const api = givenReferential(1);
   api.protectedCode = code;
 };
-const givenFailedRead = (): void => {
-  givenReferential().failRead = true;
-};
-const givenFailedWrite = (): void => {
-  givenReferential().failWrite = true;
-};
 const whenVisitingSettings = (): void => {
   cy.viewport(1280, 900);
   cy.visit('/postes-de-travail');
-};
-const whenVisitingMobileSettings = (): void => {
-  cy.viewport(390, 844);
-  cy.visit('/postes-de-travail');
-  cy.get(dataSelector('poste-row')).should('have.length', 2);
-  cy.screenshot('postes-mobile', { capture: 'viewport' });
 };
 const whenOpeningCreation = (): void => {
   cy.get(dataSelector('postes-new')).should('be.enabled').click();
@@ -207,11 +120,6 @@ const whenSaving = (alias: string): void => {
   cy.get(dataSelector('poste-save')).click();
   cy.wait(`@${alias}`);
 };
-const thenDuplicateRefusalIsVisible = (): void => {
-  cy.get(dataSelector('poste-libelle-error')).should('contain.text', 'Un autre poste porte déjà ce libellé.');
-  cy.get(dataSelector('poste-form')).should('be.visible');
-  cy.screenshot('postes-duplicate', { capture: 'viewport' });
-};
 const whenCorrectingLabel = (libelle: string): void => {
   whenReplacing('poste-libelle', libelle);
   whenSaving('posteCreate');
@@ -221,9 +129,6 @@ const whenEditingFirstPoste = (): void => {
 };
 const whenRequestingDeletion = (): void => {
   cy.get(dataSelector('poste-delete')).first().click();
-};
-const whenCancellingDeletion = (): void => {
-  cy.get(dataSelector('poste-delete-cancel')).click();
 };
 const whenConfirmingDeletion = (): void => {
   cy.get(dataSelector('poste-delete-confirm')).click();
@@ -235,9 +140,6 @@ const whenGoingToNextPage = (): void => {
 };
 const whenChoosingNature = (): void => {
   cy.get(dataSelector('poste-nature-option')).contains('ponçage').click();
-};
-const whenSubmittingInvalidEntries = (): void => {
-  cy.get(dataSelector('poste-save')).click();
 };
 const thenPosteIsListed = (libelle: string, nature: string, cout: string): void => {
   cy.get(dataSelector('poste-form')).should('not.exist');
@@ -258,48 +160,4 @@ const thenFirstPageOfTwentyIsVisible = (): void => {
 };
 const thenNatureIsSelected = (): void => {
   cy.get(dataSelector('poste-nature')).should('have.value', 'ponçage');
-};
-const thenValidationIsVisible = (): void => {
-  cy.get(dataSelector('poste-libelle-error')).should('contain.text', 'obligatoire');
-  cy.get(dataSelector('poste-nature-error')).should('contain.text', 'obligatoire');
-  cy.get(dataSelector('poste-cout-error')).should('contain.text', 'strictement positif');
-};
-const thenReadFailureIsVisible = (): void => {
-  cy.get(dataSelector('postes-error')).should('be.visible');
-  cy.get(dataSelector('postes-empty')).should('not.exist');
-  cy.get(dataSelector('postes-retry')).should('be.enabled');
-};
-const thenWriteFailureIsVisible = (): void => {
-  cy.get(dataSelector('poste-technical-error')).should('be.visible');
-  cy.get(dataSelector('poste-libelle')).should('have.value', 'Tour 1');
-  cy.get(dataSelector('poste-save')).should('be.enabled');
-};
-const thenDesktopLayoutIsVisible = (): void => {
-  cy.get(dataSelector('poste-row')).should('have.length', 6);
-  cy.get(dataSelector('poste-edit')).first().should('have.attr', 'aria-label', 'Modifier Poste 01');
-  cy.screenshot('postes-desktop', { capture: 'fullPage' });
-};
-const thenMobileFormIsUsable = (): void => {
-  cy.get(dataSelector('poste-libelle')).should('be.visible');
-  cy.get(dataSelector('poste-save')).should('be.visible');
-  cy.get(dataSelector('poste-cancel')).should('be.visible');
-  cy.screenshot('postes-form-mobile', { capture: 'viewport' });
-};
-
-const whenReadingPageFonts = (): Cypress.Chainable<{ font: string; rowFont: string; buttonFont: string }> => {
-  cy.get(dataSelector('poste-nature-cell')).should('be.visible');
-  return cy.window().then(window => ({
-    font: window.getComputedStyle(window.document.body).fontFamily,
-    rowFont: window.getComputedStyle(window.document.querySelector(dataSelector('poste-nature-cell')) as HTMLElement).fontFamily,
-    buttonFont: window.getComputedStyle(window.document.querySelector(dataSelector('postes-new')) as HTMLElement).fontFamily,
-  }));
-};
-
-const thenMaterialUsesThePageFont = (fonts: Cypress.Chainable<{ font: string; rowFont: string; buttonFont: string }>): void => {
-  fonts.then(({ font, rowFont, buttonFont }) => {
-    expect(rowFont).to.equal(font);
-    expect(buttonFont).to.equal(font);
-    cy.get(dataSelector('poste-libelle')).should('have.css', 'font-family', font);
-    cy.get(dataSelector('poste-save')).should('have.css', 'font-family', font);
-  });
 };

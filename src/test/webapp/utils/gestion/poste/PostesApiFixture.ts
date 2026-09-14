@@ -8,6 +8,7 @@ export class PostesApiFixture {
   failWrite = false;
   protectedCode: string | undefined;
   readonly writes: Commande[] = [];
+  readonly deletions: string[] = [];
 
   constructor(postes: RestPoste[] = []) {
     this.postes = postes;
@@ -54,7 +55,7 @@ export class PostesApiFixture {
   private installModification(): void {
     cy.intercept('PUT', '/api/postes-de-travail/*', request => {
       const commande = request.body as Commande;
-      const id = request.url.split('/').at(-1);
+      const id = request.url.split('/').slice(-1)[0];
       this.writes.push(commande);
       this.postes = this.postes.map(poste => (poste.id === id ? { id, ...commande } : poste));
       request.reply({ statusCode: 200, body: this.postes.find(poste => poste.id === id) });
@@ -63,7 +64,8 @@ export class PostesApiFixture {
 
   private installDeletion(): void {
     cy.intercept('DELETE', '/api/postes-de-travail/*', request => {
-      const id = request.url.split('/').at(-1);
+      this.deletions.push(request.url);
+      const id = request.url.split('/').slice(-1)[0];
       if (this.protectedCode !== undefined) {
         request.reply({ statusCode: 409, body: { type: 'urn:glm:erreur:poste-de-travail:' + this.protectedCode } });
         return;
@@ -77,7 +79,7 @@ export class PostesApiFixture {
 export const postesFixture = (nombre: number): RestPoste[] =>
   Array.from({ length: nombre }, (_, index) => ({
     id: 'poste-' + String(index + 1),
-    libelle: 'Poste ' + String(index + 1).padStart(2, '0'),
+    libelle: 'Poste ' + (index < 9 ? '0' + String(index + 1) : String(index + 1)),
     nature: index === nombre - 1 ? 'ponçage' : 'tournage',
     coutHoraire: 45.5,
   }));

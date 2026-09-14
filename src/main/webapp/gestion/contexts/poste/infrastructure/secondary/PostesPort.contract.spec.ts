@@ -202,7 +202,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     thenPageMatches(page, 0, []);
   });
 
-  it('should derive distinct sorted natures using French collation across pages', async () => {
+  it('should return distinct suggestions in French alphabetical order', async () => {
     givenWorkstations([
       { id: '1', libelle: 'Poste 1', nature: 'tournage' },
       { id: '2', libelle: 'Poste 2', nature: 'sciage' },
@@ -210,9 +210,22 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
       { id: '4', libelle: 'Poste 4', nature: 'ébavurage' },
     ]);
 
+    await whenQueryingNatures();
     const natures = await whenQueryingNatures();
 
     thenNaturesAre(natures, ['ébavurage', 'sciage', 'tournage']);
+  });
+
+  it('should include a nature beyond the first hundred workstations and deduplicate across pages', async () => {
+    givenWorkstations([
+      ...Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' })),
+      { id: 'p-100', libelle: 'Poste 100', nature: 'Tournage' },
+      { id: 'p-101', libelle: 'Poste 101', nature: 'soudage' },
+    ]);
+
+    const natures = await whenQueryingNatures();
+
+    thenNaturesAre(natures, ['soudage', 'tournage']);
   });
 
   it('should return no suggested natures for an empty workshop', async () => {
@@ -224,13 +237,16 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
   });
 
   it('should create a workstation with hourly cost and reflect it in queries', async () => {
+    givenWorkstations([scieFixture]);
+    await whenQueryingNatures();
     const resultat = await whenCreatingWorkstation('Tour 1', 'tournage', 45.5);
 
     thenCommandSucceeded(resultat);
-    await thenWorkstationExists('Tour 1', 'tournage', 45.5);
+    await thenWorkstationExists('Tour 1', 'tournage', 45.5, ['sciage', 'tournage']);
   });
 
   it('should create a workstation without hourly cost and reflect it in queries', async () => {
+    await whenQueryingNatures();
     const resultat = await whenCreatingWorkstation('Scie 1', 'sciage');
 
     thenCommandSucceeded(resultat);
@@ -240,6 +256,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
   it('should update an existing workstation and reflect changes in queries', async () => {
     givenWorkstations([tourFixture]);
 
+    await whenQueryingNatures();
     const resultat = await whenModifyingWorkstation('tour-1', 'Tour 1 Modifié', 'fraisage', 52);
 
     thenCommandSucceeded(resultat);
@@ -249,10 +266,13 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
   it('should remove a workstation and reflect its absence in queries', async () => {
     givenWorkstations([tourFixture]);
 
+    await whenQueryingNatures();
     const resultat = await whenDeletingWorkstation('tour-1');
+    const natures = await whenQueryingNatures();
 
     thenCommandSucceeded(resultat);
     await thenWorkstationDoesNotExist('tour-1');
+    thenNaturesAre(natures, []);
   });
 
   const givenWorkstations = (postes: readonly RestPoste[]): void => {
@@ -327,7 +347,12 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     expect(natures).toEqual(expected.map(nature => new NatureDeTravail(nature)));
   };
 
-  const thenWorkstationExists = async (libelle: string, nature: string, coutHoraire?: number): Promise<void> => {
+  const thenWorkstationExists = async (
+    libelle: string,
+    nature: string,
+    coutHoraire?: number,
+    expectedNatures: string[] = [nature],
+  ): Promise<void> => {
     const page = await port.postes(new RequetePostes(0, 20));
     const matching = page.elements.find(poste => poste.libelle.value === libelle);
     expect(matching).toBeDefined();
@@ -335,7 +360,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     expect(matching?.coutHoraire?.value).toBe(coutHoraire);
 
     const natures = await port.natures();
-    expect(natures.some(n => n.cleNormalisee() === new NatureDeTravail(nature).cleNormalisee())).toBe(true);
+    expect(natures.map(value => value.value)).toEqual(expectedNatures);
   };
 
   const thenWorkstationDoesNotExist = async (id: string): Promise<void> => {
@@ -369,65 +394,6 @@ describe('Beyond the contract: HttpPostes', () => {
     server.verify();
   });
 
-  it('should reuse cached natures on subsequent calls without querying the server again', async () => {
-    const initial = port.natures();
-    await whenReferentialAnswers([{ id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' }]);
-    const premier = await initial;
-    const second = await port.natures();
-
-    expect([premier, second]).toEqual([[{ value: 'sciage' }], [{ value: 'sciage' }]]);
-  });
-
-  it('should query the referential again after a write invalidates the cache', async () => {
-    const initial = port.natures();
-    await whenReferentialAnswers([{ id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' }]);
-    await initial;
-    const save = port.creer({
-      type: 'CREATION',
-      libelle: new LibellePoste('Tour 1'),
-      nature: new NatureDeTravail('tournage'),
-      coutHoraire: undefined,
-    });
-    await whenWriteAnswers('/api/postes-de-travail', 201, { id: 'tour-1', libelle: 'Tour 1', nature: 'tournage' });
-    await save;
-    const refreshed = port.natures();
-    await whenReferentialAnswers([{ id: 'tour-1', libelle: 'Tour 1', nature: 'tournage' }]);
-
-    expect(await refreshed).toEqual([{ value: 'tournage' }]);
-  });
-
-  it('should query the referential again after a modification invalidates the cache', async () => {
-    const initial = port.natures();
-    await whenReferentialAnswers([{ id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' }]);
-    await initial;
-    const update = port.modifier({
-      type: 'MODIFICATION',
-      id: new PosteDeTravailId('scie-1'),
-      libelle: new LibellePoste('Scie 1'),
-      nature: new NatureDeTravail('sciage fin'),
-      coutHoraire: undefined,
-    });
-    await whenWriteAnswers('/api/postes-de-travail/scie-1', 200, { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage fin' });
-    await update;
-    const refreshed = port.natures();
-    await whenReferentialAnswers([{ id: 'scie-1', libelle: 'Scie 1', nature: 'sciage fin' }]);
-
-    expect(await refreshed).toEqual([{ value: 'sciage fin' }]);
-  });
-
-  it('should query the referential again after a deletion invalidates the cache', async () => {
-    const initial = port.natures();
-    await whenReferentialAnswers([{ id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' }]);
-    await initial;
-    const deletion = port.supprimer(new PosteDeTravailId('scie-1'));
-    await whenWriteAnswers('/api/postes-de-travail/scie-1', 204, null);
-    await deletion;
-    const refreshed = port.natures();
-    await whenReferentialAnswers([]);
-
-    expect(await refreshed).toEqual([]);
-  });
-
   it('should reject incomplete nature acquisition when the server stops providing entries', async () => {
     const result = port.natures().catch((failure: unknown) => failure);
     await whenReferentialAnswers([], 1);
@@ -435,6 +401,22 @@ describe('Beyond the contract: HttpPostes', () => {
     expect(await result).toEqual(new Error('Le référentiel des natures est incomplet.'));
     expect(errorHandler.errors).toHaveLength(1);
     expect(errorHandler.errors[0]).toEqual(new Error('Le référentiel des natures est incomplet.'));
+  });
+
+  it('should reject a failed later page without retaining partial suggestions and allow retry', async () => {
+    const result = port.natures().catch((failure: unknown) => failure);
+    await whenFirstNaturePageAnswers();
+    await whenServerFails('/api/postes-de-travail?page=1&size=100', 500);
+    const failure = await result;
+    const retry = port.natures();
+    await whenReferentialAnswers([
+      ...Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' })),
+      { id: 'p-100', libelle: 'Poste 100', nature: 'soudage' },
+    ]);
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toEqual([failure]);
+    expect((await retry).map(nature => nature.value)).toEqual(['soudage', 'tournage']);
   });
 
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
@@ -578,6 +560,17 @@ describe('Beyond the contract: HttpPostes', () => {
     return request;
   };
 
+  const whenFirstNaturePageAnswers = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    const request = server.expectOne('/api/postes-de-travail?page=0&size=100');
+    request.flush({
+      content: Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' })),
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 101,
+    });
+  };
+
   const whenReferentialAnswers = async (postes: RestPoste[], totalElementsCount = postes.length): Promise<void> => {
     let end: number;
     do {
@@ -593,34 +586,5 @@ describe('Beyond the contract: HttpPostes', () => {
   const whenServerFails = async (url: string, status: number, body: object = {}): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
     server.expectOne(url).flush(body, { status, statusText: 'Failure' });
-  };
-});
-
-describe('Beyond the contract: PostesFixture', () => {
-  let double: PostesFixture;
-
-  beforeEach(() => {
-    double = new PostesFixture();
-  });
-
-  it('should return preset suggestions if specified', async () => {
-    givenPresetSuggestions('special');
-
-    const natures = await double.natures();
-
-    expect(natures).toEqual([new NatureDeTravail('special')]);
-  });
-
-  it('should notify on signalLecture when read arrives', async () => {
-    const arrival = double.signalLecture();
-    const read = double.postes(new RequetePostes(0, 20));
-    await arrival;
-    const page = await read;
-
-    expect(page.totalCount).toBe(0);
-  });
-
-  const givenPresetSuggestions = (...natures: string[]): void => {
-    double.suggestions = natures.map(nature => new NatureDeTravail(nature));
   };
 });

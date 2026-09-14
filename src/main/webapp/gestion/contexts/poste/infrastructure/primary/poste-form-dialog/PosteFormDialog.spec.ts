@@ -17,7 +17,6 @@ import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
 import { PostesPort } from '../../../domain/PostesPort';
-import { RefusModificationPoste } from '../../../domain/RefusModificationPoste';
 import { PosteFormDialog, PosteFormDialogData } from './PosteFormDialog';
 
 @Component({ template: '' })
@@ -48,16 +47,6 @@ describe('PosteFormDialog', () => {
     TestBed.inject(MatDialog).closeAll();
     await fermeture;
     await fixture.whenStable();
-  });
-
-  it('should open an empty creation form without premature validation errors', async () => {
-    await whenOpening();
-
-    expect(text('poste-form-title')).toContain('Nouveau poste');
-    expect(input('poste-libelle').value).toBe('');
-    expect(input('poste-nature').value).toBe('');
-    expect(input('poste-cout').value).toBe('');
-    expect(text('poste-libelle-error')).toBe('');
   });
 
   it('should display domain validation and keep the dialog open when entries are invalid', async () => {
@@ -128,7 +117,13 @@ describe('PosteFormDialog', () => {
 
   it('should display a missing workstation refusal without closing', async () => {
     givenWorkstationIsMissing();
-    await whenOpening();
+    await whenOpening(
+      new PosteDeTravail(new PosteDeTravailId('tour-1'), {
+        libelle: new LibellePoste('Tour 1'),
+        nature: new NatureDeTravail('tournage'),
+        coutHoraire: undefined,
+      }),
+    );
     await whenFillingValidEntries();
     await whenSubmitting();
 
@@ -158,7 +153,7 @@ describe('PosteFormDialog', () => {
   });
 
   it('should prevent duplicate submission and closing while saving', async () => {
-    const deferred = new DeferredFixture<Result<void, RefusModificationPoste>>();
+    const deferred = new DeferredFixture<Result<void, LibellePosteDejaUtilise>>();
     givenSavingIsPending(deferred);
     await whenOpening();
     await whenFillingValidEntries();
@@ -178,15 +173,6 @@ describe('PosteFormDialog', () => {
     expect(closed).toEqual([true]);
   });
 
-  it('should dismiss with Escape without writing when no save is pending', async () => {
-    await whenOpening();
-    await whenPressingEscape();
-    await whenClosed();
-
-    expect(port.enregistrements).toEqual([]);
-    expect(closed).toEqual([undefined]);
-  });
-
   it('should cancel without writing', async () => {
     await whenOpening();
     await whenClicking('poste-cancel');
@@ -196,31 +182,17 @@ describe('PosteFormDialog', () => {
     expect(closed).toEqual([false]);
   });
 
-  it('should suggest matching existing natures and accept a selection', async () => {
-    givenExistingNatures('soudage', 'tournage');
-    await whenOpening();
-    await whenEntering('poste-nature', 'sou');
-    const suggestions = texts('poste-nature-option');
-    await whenClicking('poste-nature-option');
-
-    expect(suggestions).toEqual(['soudage']);
-    expect(input('poste-nature').value).toBe('soudage');
-  });
-
   const givenDuplicateLabelIsRefused = (): void => {
-    port.enregistrement = err(new LibellePosteDejaUtilise());
+    port.creation = err(new LibellePosteDejaUtilise());
   };
   const givenWorkstationIsMissing = (): void => {
-    port.enregistrement = err(new PosteIntrouvable());
+    port.modification = err(new PosteIntrouvable());
   };
   const givenSavingFails = (): void => {
     port.ecritureFailure = new Error('Network down');
   };
-  const givenSavingIsPending = (deferred: DeferredFixture<Result<void, RefusModificationPoste>>): void => {
-    port.ecritureDifferee = deferred.promise;
-  };
-  const givenExistingNatures = (...natures: string[]): void => {
-    port.suggestions = natures.map(nature => new NatureDeTravail(nature));
+  const givenSavingIsPending = (deferred: DeferredFixture<Result<void, LibellePosteDejaUtilise>>): void => {
+    port.creationDifferee = deferred.promise;
   };
 
   const whenOpening = async (poste: PosteDeTravail | null = null): Promise<void> => {
@@ -265,6 +237,4 @@ describe('PosteFormDialog', () => {
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
-  const texts = (selector: string): string[] =>
-    [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
 });

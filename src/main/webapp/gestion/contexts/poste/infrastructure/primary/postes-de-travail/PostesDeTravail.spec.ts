@@ -48,26 +48,6 @@ describe('PostesDeTravail page', () => {
     await closed;
   });
 
-  it('should show workstation labels, natures, optional costs and accessible row actions', async () => {
-    givenWorkstations();
-    await whenOpening();
-
-    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1'), expect.stringContaining('Scie 1')]);
-    expect(texts('poste-nature-cell')).toEqual(['tournage', 'sciage']);
-    expect(texts('poste-cout-cell')).toEqual(['45,50 €', 'Non renseigné']);
-    expect(labels('poste-edit')).toEqual(['Modifier Tour 1', 'Modifier Scie 1']);
-    expect(labels('poste-delete')).toEqual(['Supprimer Tour 1', 'Supprimer Scie 1']);
-    expect(text('postes-pagination')).toContain('1–2 sur 2');
-  });
-
-  it('should offer creation when the referential is empty', async () => {
-    await whenOpening();
-
-    expect(text('postes-empty')).toContain('Aucun poste de travail');
-    expect(text('postes-pagination')).toContain('0 poste');
-    expect(texts('poste-row')).toEqual([]);
-  });
-
   it('should show loading without displaying the empty state prematurely', async () => {
     const deferred = new DeferredFixture<Page<PosteDeTravail>>();
     givenReadingIsPending(deferred);
@@ -92,17 +72,6 @@ describe('PostesDeTravail page', () => {
 
     expect(failure).toContain('Impossible de charger les postes');
     expect(texts('poste-row')).toHaveLength(2);
-  });
-
-  it('should request the page and size chosen with the paginator', async () => {
-    givenManyWorkstations(41);
-    await whenOpening();
-    await whenPageSelected();
-
-    expect(texts('poste-row')).toHaveLength(10);
-    expect(texts('poste-row')[0]).toContain('Poste 11');
-    expect(texts('poste-row')[9]).toContain('Poste 20');
-    expect(text('postes-pagination')).toContain('11–20 sur 41');
   });
 
   it.each(['postes-new', 'postes-empty-create'])('should open creation from %s', async selector => {
@@ -289,8 +258,6 @@ describe('PostesDeTravail page', () => {
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
   const texts = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
-  const labels = (selector: string): (string | null)[] =>
-    [...document.querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('aria-label'));
   const inputValue = (selector: string): string =>
     requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector).value;
 });

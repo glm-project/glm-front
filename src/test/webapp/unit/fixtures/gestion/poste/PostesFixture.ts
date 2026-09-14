@@ -15,15 +15,15 @@ import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 
 export class PostesFixture extends PostesPort {
   liste: readonly PosteDeTravail[] = [];
-  suggestions: readonly NatureDeTravail[] = [];
   readonly enregistrements: (CommandeCreationPoste | CommandeModificationPoste)[] = [];
   readonly suppressions: PosteDeTravailId[] = [];
-  enregistrement: Result<void, RefusModificationPoste> = ok(undefined);
+  creation: Result<void, LibellePosteDejaUtilise> = ok(undefined);
+  modification: Result<void, RefusModificationPoste> = ok(undefined);
   suppression: Result<void, RefusSuppressionPoste> = ok(undefined);
   lectureFailure: Error | undefined;
   ecritureFailure: Error | undefined;
   lectureDifferee: Promise<Page<PosteDeTravail>> | undefined;
-  ecritureDifferee: Promise<Result<void, RefusModificationPoste>> | undefined;
+  creationDifferee: Promise<Result<void, LibellePosteDejaUtilise>> | undefined;
   suppressionDifferee: Promise<Result<void, RefusSuppressionPoste>> | undefined;
   private lectureSignal: SignalFixture | undefined;
 
@@ -43,9 +43,6 @@ export class PostesFixture extends PostesPort {
   }
 
   override natures(): Promise<readonly NatureDeTravail[]> {
-    if (this.suggestions.length > 0) {
-      return Promise.resolve(this.suggestions);
-    }
     const distinct = new Map<string, NatureDeTravail>();
     for (const poste of this.liste) {
       const cle = poste.nature.cleNormalisee();
@@ -58,7 +55,7 @@ export class PostesFixture extends PostesPort {
 
   override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {
     this.enregistrements.push(commande);
-    const resultat = (await this.answerEnregistrement()) as Result<void, LibellePosteDejaUtilise>;
+    const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {
       this.liste = [...this.liste, new PosteDeTravail(new PosteDeTravailId('created-poste'), commande)];
     }
@@ -67,7 +64,7 @@ export class PostesFixture extends PostesPort {
 
   override async modifier(commande: CommandeModificationPoste): Promise<Result<void, RefusModificationPoste>> {
     this.enregistrements.push(commande);
-    const resultat = await this.answerEnregistrement();
+    const resultat = await this.answerEnregistrement(Promise.resolve(this.modification));
     if (resultat.ok) {
       this.liste = this.liste.map(poste => (poste.id.value === commande.id.value ? new PosteDeTravail(poste.id, commande) : poste));
     }
@@ -84,8 +81,8 @@ export class PostesFixture extends PostesPort {
     return resultat;
   }
 
-  private answerEnregistrement(): Promise<Result<void, RefusModificationPoste>> {
+  private answerEnregistrement<Refus>(resultat: Promise<Result<void, Refus>>): Promise<Result<void, Refus>> {
     if (this.ecritureFailure !== undefined) return Promise.reject(this.ecritureFailure);
-    return this.ecritureDifferee ?? Promise.resolve(this.enregistrement);
+    return resultat;
   }
 }
