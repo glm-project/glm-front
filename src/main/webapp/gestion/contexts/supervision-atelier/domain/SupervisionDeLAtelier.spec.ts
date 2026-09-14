@@ -444,6 +444,73 @@ describe('SupervisionDeLAtelier', () => {
     expect(resultat.estExploitable).toBe(false);
     expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
   });
+
+  it('should compute workshop-wide statistics across presence states, GLM and anomalies', () => {
+    const op1 = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Alice', 'Martin');
+    const op2 = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bob', 'Durand');
+    const op3 = new OperateurDeclare(new IdentifiantOperateur('op-3'), 'Chloé', 'Bernard');
+
+    const journeeOp1 = JourneeDeTravail.open(op1.id, 'PRESENT', [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
+    const journeeOp2 = JourneeDeTravail.open(op2.id, 'EN_PAUSE', [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
+    const actOp2 = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('act-1'),
+      operateurId: op2.id,
+      nom: 'Montage',
+      categorie: new CategorieActivite('PROD'),
+      debut: new Instant('2026-09-13T08:30:00Z'),
+    });
+    const actOp3 = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('act-2'),
+      operateurId: op3.id,
+      nom: 'Contrôle',
+      categorie: new CategorieActivite('NC'),
+      debut: new Instant('2026-09-13T08:30:00Z'),
+    });
+
+    const resultat = SupervisionDeLAtelier.determine(
+      [op1, op2, op3],
+      [journeeOp1, journeeOp2],
+      [actOp2, actOp3],
+      new Instant('2026-09-13T09:00:00Z'),
+    );
+
+    const supervision = exploitableFixture(resultat);
+    expect(supervision.statistiques).toEqual({
+      total: 3,
+      presents: 1,
+      enPause: 1,
+      absents: 1,
+      glm: 1,
+      anomalies: 1,
+    });
+  });
+
+  it('should populate presence segments on the supervised operator', () => {
+    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const debut = new Instant('2026-09-13T08:00:00Z');
+    const fin = new Instant('2026-09-13T10:00:00Z');
+    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(debut, fin)]);
+
+    const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T11:00:00Z'));
+
+    const supervise = exploitableFixture(resultat).operateurs[0];
+    expect(supervise?.segments).toEqual([{ debut, fin, pause: false, enCours: false }]);
+  });
+
+  it('should identify whether an operator is absent with no activities and no anomalies', () => {
+    const opCalme = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Calme', 'Jean');
+    const superviseCalme = new OperateurSupervise(opCalme, 'ABSENT', { activites: [], anomalies: [] });
+    expect(superviseCalme.isSansJourneeOuverte()).toBe(true);
+
+    const opPresent = new OperateurSupervise(opCalme, 'PRESENT', { activites: [], anomalies: [] });
+    expect(opPresent.isSansJourneeOuverte()).toBe(false);
+
+    const opAvecAnomalie = new OperateurSupervise(opCalme, 'ABSENT', {
+      activites: [],
+      anomalies: ['ACTIVITE_D_UN_ABSENT'],
+    });
+    expect(opAvecAnomalie.isSansJourneeOuverte()).toBe(false);
+  });
 });
 
 function exploitableFixture(resultat: ResultatSupervision): SupervisionDeLAtelier {
