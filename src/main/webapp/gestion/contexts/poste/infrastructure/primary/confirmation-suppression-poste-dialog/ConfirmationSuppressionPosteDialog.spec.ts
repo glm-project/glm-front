@@ -9,7 +9,6 @@ import { PostesFixture } from '@test/unit/fixtures/gestion/poste/PostesFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
-import { PostesCoordinator } from '../../../application/PostesCoordinator';
 import { LibellePoste } from '../../../domain/LibellePoste';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
@@ -18,7 +17,7 @@ import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
 import { PosteNonSupprimable } from '../../../domain/PosteNonSupprimable';
 import { PostesPort } from '../../../domain/PostesPort';
 import { RefusSuppressionPoste } from '../../../domain/RefusSuppressionPoste';
-import { ConfirmationSuppressionPosteDialog } from './ConfirmationSuppressionPosteDialog';
+import { ConfirmationSuppressionPosteDialog, ConfirmationSuppressionPosteDialogData } from './ConfirmationSuppressionPosteDialog';
 
 @Component({ template: '' })
 class DialogHostFixture {}
@@ -44,7 +43,6 @@ describe('ConfirmationSuppressionPosteDialog', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        PostesCoordinator,
         { provide: PostesPort, useValue: port },
         { provide: ErrorHandlerPort, useValue: errors },
       ],
@@ -130,9 +128,9 @@ describe('ConfirmationSuppressionPosteDialog', () => {
   });
 
   const whenOpening = async (): Promise<void> => {
-    dialog = TestBed.inject(MatDialog).open<ConfirmationSuppressionPosteDialog, PosteDeTravail, boolean>(
+    dialog = TestBed.inject(MatDialog).open<ConfirmationSuppressionPosteDialog, ConfirmationSuppressionPosteDialogData, boolean>(
       ConfirmationSuppressionPosteDialog,
-      { data: tourFixture },
+      { data: { poste: tourFixture, afterDelete: () => Promise.resolve() } },
     );
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));

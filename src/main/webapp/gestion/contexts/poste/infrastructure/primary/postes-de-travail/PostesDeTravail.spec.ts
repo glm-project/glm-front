@@ -9,7 +9,6 @@ import { PostesFixture } from '@test/unit/fixtures/gestion/poste/PostesFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
-import { PostesCoordinator } from '../../../application/PostesCoordinator';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
 import { LibellePoste } from '../../../domain/LibellePoste';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
@@ -37,7 +36,6 @@ describe('PostesDeTravail page', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        PostesCoordinator,
         { provide: PostesPort, useValue: port },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
@@ -97,15 +95,13 @@ describe('PostesDeTravail page', () => {
   });
 
   it('should request the page and size chosen with the paginator', async () => {
-    givenWorkstations();
-    port.total = 41;
+    givenManyWorkstations(41);
     await whenOpening();
     await whenPageSelected();
 
-    expect(port.lectures).toEqual([
-      { page: 0, taille: 20 },
-      { page: 1, taille: 10 },
-    ]);
+    expect(texts('poste-row')).toHaveLength(10);
+    expect(texts('poste-row')[0]).toContain('Poste 11');
+    expect(texts('poste-row')[9]).toContain('Poste 20');
     expect(text('postes-pagination')).toContain('11–20 sur 41');
   });
 
@@ -134,11 +130,131 @@ describe('PostesDeTravail page', () => {
     expect(port.suppressions).toEqual([]);
   });
 
+  it('should show the saved workstation after the creation dialog succeeds', async () => {
+    await whenOpening();
+    await whenClicking('postes-new');
+    await whenEntering('poste-libelle', 'Tour 1');
+    await whenEntering('poste-nature', 'tournage');
+    await whenConfirmingDialog('poste-save');
+
+    expect(text('poste-form-title')).toBe('');
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1')]);
+    expect(texts('poste-nature-cell')).toEqual(['tournage']);
+  });
+
+  it('should keep a successful write acknowledged when refreshing the list fails', async () => {
+    await whenOpening();
+    await whenClicking('postes-new');
+    await whenEntering('poste-libelle', 'Tour 1');
+    await whenEntering('poste-nature', 'tournage');
+    port.lectureFailure = new Error('Read failed');
+    await whenConfirmingDialog('poste-save');
+    const failure = text('postes-error');
+    const form = text('poste-form-title');
+    port.lectureFailure = undefined;
+    await whenClicking('postes-retry');
+
+    expect(failure).toContain('Impossible de charger les postes');
+    expect(form).toBe('');
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1')]);
+  });
+
+  it('should return to the previous page after deleting its last workstation', async () => {
+    givenManyWorkstations(21);
+    await whenOpening();
+    await whenPageSelected(1, 20);
+    await whenClicking('poste-delete');
+    await whenConfirmingDialog('poste-delete-confirm');
+
+    expect(text('poste-delete-description')).toBe('');
+    expect(texts('poste-row')).toHaveLength(20);
+    expect(texts('poste-row')[0]).toContain('Poste 1');
+    expect(text('postes-pagination')).toContain('1–20 sur 20');
+  });
+
+  it('should reload the current page after deleting one of its workstations', async () => {
+    givenWorkstations();
+    await whenOpening();
+    await whenClicking('poste-delete');
+    await whenConfirmingDialog('poste-delete-confirm');
+
+    expect(text('poste-delete-description')).toBe('');
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
+    expect(text('postes-pagination')).toContain('1–1 sur 1');
+  });
+
+  it('should keep the most recently requested page when an older response arrives last', async () => {
+    givenManyWorkstations(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<PosteDeTravail>>();
+    port.lectureDifferee = old.promise;
+    whenSelectingPage(0, 20);
+    port.lectureDifferee = undefined;
+    await whenPageSelected(1, 20);
+    old.resolve(new Page([tourFixture], 1));
+    await whenViewSettles();
+
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Poste 21')]);
+    expect(text('postes-pagination')).toContain('21–21 sur 21');
+  });
+
+  it('should keep loading the current page when an obsolete read fails', async () => {
+    givenManyWorkstations(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<PosteDeTravail>>();
+    port.lectureDifferee = old.promise;
+    whenSelectingPage(0, 20);
+    const current = new DeferredFixture<Page<PosteDeTravail>>();
+    port.lectureDifferee = current.promise;
+    whenSelectingPage(1, 20);
+    old.reject(new Error('Obsolete read failed'));
+    await whenViewSettles();
+    const loading = text('postes-loading');
+    const failure = text('postes-error');
+    current.resolve(new Page([scieFixture], 21));
+    await whenLoaded();
+
+    expect(loading).toContain('Chargement');
+    expect(failure).toBe('');
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
+    expect(text('postes-pagination')).toContain('21–21 sur 21');
+  });
+
+  const givenManyWorkstations = (count: number): void => {
+    port.liste = Array.from(
+      { length: count },
+      (_, index) =>
+        new PosteDeTravail(new PosteDeTravailId(String(index)), {
+          libelle: new LibellePoste('Poste ' + String(index + 1)),
+          nature: new NatureDeTravail('tournage'),
+          coutHoraire: undefined,
+        }),
+    );
+  };
+  const whenEntering = async (selector: string, value: string): Promise<void> => {
+    const field = requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector);
+    field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+  };
+
   const givenWorkstations = (): void => {
     port.liste = [tourFixture, scieFixture];
-    port.total = 2;
   };
-  const whenViewSettles = (): Promise<void> => fixture.whenStable();
+  const whenLoaded = async (): Promise<void> => {
+    await vi.waitUntil(() => text('postes-loading') === '');
+    await fixture.whenStable();
+  };
+  const whenConfirmingDialog = async (selector: string): Promise<void> => {
+    const closed = firstValueFrom(TestBed.inject(MatDialog).afterAllClosed);
+    await whenClicking(selector);
+    await closed;
+    await fixture.whenStable();
+  };
+  const whenViewSettles = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    await fixture.whenStable();
+  };
   const whenOpening = async (): Promise<void> => {
     fixture = TestBed.createComponent(PostesDeTravail);
     await fixture.whenStable();
@@ -147,8 +263,11 @@ describe('PostesDeTravail page', () => {
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector).click();
     await fixture.whenStable();
   };
-  const whenPageSelected = async (): Promise<void> => {
-    fixture.debugElement.query(By.css(dataSelector('postes-pagination'))).triggerEventHandler('page', { pageIndex: 1, pageSize: 10 });
+  const whenSelectingPage = (pageIndex: number, pageSize: number): void => {
+    fixture.debugElement.query(By.css(dataSelector('postes-pagination'))).triggerEventHandler('page', { pageIndex, pageSize });
+  };
+  const whenPageSelected = async (pageIndex = 1, pageSize = 10): Promise<void> => {
+    whenSelectingPage(pageIndex, pageSize);
     await fixture.whenStable();
   };
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';

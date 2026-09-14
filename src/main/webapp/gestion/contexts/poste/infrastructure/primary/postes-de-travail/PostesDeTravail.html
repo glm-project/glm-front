@@ -4,20 +4,20 @@
       <h1 id="postes-heading" class="text-title">Postes de travail</h1>
       <p class="mt-2 text-body text-ink-muted">Configurez les postes et leurs coûts horaires pour votre atelier.</p>
     </div>
-    <button mat-flat-button (click)="openForm()" [disabled]="coordinateur.chargement()" data-selector="postes-new">
+    <button mat-flat-button (click)="openForm()" [disabled]="etat().chargement" data-selector="postes-new">
       <glm-icon name="plus" /> Nouveau poste
     </button>
   </header>
 
-  <section [attr.aria-busy]="coordinateur.chargement()" aria-label="Référentiel des postes de travail">
-    @if (coordinateur.chargement()) {
+  <section [attr.aria-busy]="etat().chargement" aria-label="Référentiel des postes de travail">
+    @if (etat().chargement) {
     <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="postes-loading">Chargement des postes de travail…</p>
-    } @else if (coordinateur.echec()) {
+    } @else if (etat().echec) {
     <div role="alert" class="py-12 text-center" data-selector="postes-error">
       <p class="mb-4 text-body text-nc">Impossible de charger les postes. Vérifiez la connexion puis réessayez.</p>
       <button mat-stroked-button (click)="reload()" data-selector="postes-retry">Réessayer</button>
     </div>
-    } @else if (coordinateur.totalElementsCount() === 0) {
+    } @else if (etat().totalElementsCount === 0) {
     <div class="empty-state text-center" data-selector="postes-empty">
       <h2 class="text-section">Aucun poste de travail</h2>
       <p class="mx-auto mb-6 mt-3 max-w-lg text-body text-ink-muted">
@@ -29,7 +29,7 @@
     </div>
     } @else {
     <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des postes, défilement horizontal disponible">
-      <table mat-table [dataSource]="coordinateur.postes()" aria-label="Postes de travail">
+      <table mat-table [dataSource]="etat().postes" aria-label="Postes de travail">
         <ng-container matColumnDef="libelle">
           <th mat-header-cell *matHeaderCellDef scope="col">Libellé</th>
           <td mat-cell *matCellDef="let poste" class="font-semibold">{{ poste.libelle.value }}</td>
@@ -70,11 +70,11 @@
     }
 
     <mat-paginator
-      [length]="coordinateur.totalElementsCount()"
-      [pageIndex]="coordinateur.page()"
-      [pageSize]="coordinateur.taille()"
+      [length]="etat().totalElementsCount"
+      [pageIndex]="etat().page"
+      [pageSize]="etat().taille"
       [pageSizeOptions]="[10, 20, 50]"
-      [disabled]="coordinateur.chargement() || coordinateur.echec()"
+      [disabled]="etat().chargement || etat().echec"
       showFirstLastButtons
       (page)="changePage($event)"
       aria-label="Pagination des postes de travail"

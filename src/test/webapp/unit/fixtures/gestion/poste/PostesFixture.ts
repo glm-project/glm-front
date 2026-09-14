@@ -10,9 +10,7 @@ import { RefusSuppressionPoste } from '@/gestion/contexts/poste/domain/RefusSupp
 
 export class PostesFixture extends PostesPort {
   liste: readonly PosteDeTravail[] = [];
-  total = 0;
   suggestions: readonly NatureDeTravail[] = [];
-  readonly lectures: { page: number; taille: number }[] = [];
   readonly enregistrements: { id: PosteDeTravailId | undefined; commande: CommandeEnregistrementPoste }[] = [];
   readonly suppressions: PosteDeTravailId[] = [];
   enregistrement: Result<void, RefusEnregistrementPoste> = ok(undefined);
@@ -24,25 +22,36 @@ export class PostesFixture extends PostesPort {
   suppressionDifferee: Promise<Result<void, RefusSuppressionPoste>> | undefined;
 
   override postes(page: number, taille: number): Promise<Page<PosteDeTravail>> {
-    this.lectures.push({ page, taille });
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
-    return this.lectureDifferee ?? Promise.resolve(new Page(this.liste, this.total));
+    return this.lectureDifferee ?? Promise.resolve(new Page(this.liste.slice(page * taille, (page + 1) * taille), this.liste.length));
   }
   override natures(): Promise<readonly NatureDeTravail[]> {
     return Promise.resolve(this.suggestions);
   }
-  override creer(commande: CommandeEnregistrementPoste): Promise<Result<void, RefusEnregistrementPoste>> {
+  override async creer(commande: CommandeEnregistrementPoste): Promise<Result<void, RefusEnregistrementPoste>> {
     this.enregistrements.push({ id: undefined, commande });
-    return this.answerEnregistrement();
+    const resultat = await this.answerEnregistrement();
+    if (resultat.ok) {
+      this.liste = [...this.liste, new PosteDeTravail(new PosteDeTravailId('created-poste'), commande)];
+    }
+    return resultat;
   }
-  override modifier(id: PosteDeTravailId, commande: CommandeEnregistrementPoste): Promise<Result<void, RefusEnregistrementPoste>> {
+  override async modifier(id: PosteDeTravailId, commande: CommandeEnregistrementPoste): Promise<Result<void, RefusEnregistrementPoste>> {
     this.enregistrements.push({ id, commande });
-    return this.answerEnregistrement();
+    const resultat = await this.answerEnregistrement();
+    if (resultat.ok) {
+      this.liste = this.liste.map(poste => (poste.id.value === id.value ? new PosteDeTravail(id, commande) : poste));
+    }
+    return resultat;
   }
-  override supprimer(id: PosteDeTravailId): Promise<Result<void, RefusSuppressionPoste>> {
+  override async supprimer(id: PosteDeTravailId): Promise<Result<void, RefusSuppressionPoste>> {
     this.suppressions.push(id);
     if (this.ecritureFailure !== undefined) return Promise.reject(this.ecritureFailure);
-    return this.suppressionDifferee ?? Promise.resolve(this.suppression);
+    const resultat = await (this.suppressionDifferee ?? Promise.resolve(this.suppression));
+    if (resultat.ok) {
+      this.liste = this.liste.filter(poste => poste.id.value !== id.value);
+    }
+    return resultat;
   }
   private answerEnregistrement(): Promise<Result<void, RefusEnregistrementPoste>> {
     if (this.ecritureFailure !== undefined) return Promise.reject(this.ecritureFailure);

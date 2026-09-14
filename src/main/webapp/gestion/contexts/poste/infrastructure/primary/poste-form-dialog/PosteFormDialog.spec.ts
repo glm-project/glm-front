@@ -9,7 +9,6 @@ import { PostesFixture } from '@test/unit/fixtures/gestion/poste/PostesFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
-import { PostesCoordinator } from '../../../application/PostesCoordinator';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
 import { LibellePoste } from '../../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../../domain/LibellePosteDejaUtilise';
@@ -19,7 +18,7 @@ import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
 import { PostesPort } from '../../../domain/PostesPort';
 import { RefusEnregistrementPoste } from '../../../domain/RefusEnregistrementPoste';
-import { PosteFormDialog } from './PosteFormDialog';
+import { PosteFormDialog, PosteFormDialogData } from './PosteFormDialog';
 
 @Component({ template: '' })
 class DialogHostFixture {}
@@ -39,7 +38,6 @@ describe('PosteFormDialog', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        PostesCoordinator,
         { provide: PostesPort, useValue: port },
         { provide: ErrorHandlerPort, useValue: errors },
       ],
@@ -202,8 +200,9 @@ describe('PosteFormDialog', () => {
   });
 
   const whenOpening = async (poste: PosteDeTravail | null = null): Promise<void> => {
-    await TestBed.inject(PostesCoordinator).charger();
-    dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteDeTravail | null, boolean>(PosteFormDialog, { data: poste });
+    dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
+      data: { poste, natures: port.suggestions, afterSave: () => Promise.resolve() },
+    });
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));
     await fixture.whenStable();

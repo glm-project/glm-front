@@ -2,9 +2,14 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { PostesCoordinator } from '../../../application/PostesCoordinator';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
+import { PostesPort } from '../../../domain/PostesPort';
 import { RefusSuppressionPoste } from '../../../domain/RefusSuppressionPoste';
+
+export interface ConfirmationSuppressionPosteDialogData {
+  readonly poste: PosteDeTravail;
+  readonly afterDelete: () => Promise<void>;
+}
 
 @Component({
   selector: 'glm-confirmation-suppression-poste-dialog',
@@ -13,9 +18,10 @@ import { RefusSuppressionPoste } from '../../../domain/RefusSuppressionPoste';
   imports: [MatDialogModule, MatButtonModule],
 })
 export class ConfirmationSuppressionPosteDialog {
-  protected readonly poste = inject<PosteDeTravail>(MAT_DIALOG_DATA);
+  private readonly data = inject<ConfirmationSuppressionPosteDialogData>(MAT_DIALOG_DATA);
+  protected readonly poste = this.data.poste;
   private readonly dialog = inject<MatDialogRef<ConfirmationSuppressionPosteDialog, boolean>>(MatDialogRef);
-  private readonly coordinateur = inject(PostesCoordinator);
+  private readonly port = inject(PostesPort);
   private readonly errors = inject(ErrorHandlerPort);
 
   protected readonly suppression = signal(false);
@@ -33,8 +39,9 @@ export class ConfirmationSuppressionPosteDialog {
     this.erreurTechnique.set(false);
     this.dialog.disableClose = true;
     try {
-      const resultat = await this.coordinateur.supprimer(this.poste.id);
+      const resultat = await this.port.supprimer(this.poste.id);
       if (resultat.ok) {
+        await this.data.afterDelete();
         this.dialog.close(true);
       } else {
         this.refus.set(resultat.error);
