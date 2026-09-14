@@ -4,7 +4,7 @@
 
 Accepted. Complements [ADR 0006](0006-how-the-front-calls-the-back.md): the generated routes still serve as
 URLs as they are, and no base URL is configured anywhere. What changes is who answers `/api/**` once the
-pupitre is deployed.
+front is deployed.
 
 ## Context
 
@@ -77,10 +77,12 @@ target `src/**` only, and none of the five `tsconfig` projects reaches the repos
 Function would escape every net the repository holds; in JavaScript it lives under the same lint, formatting
 and `node:test` regime as `scripts/*.mjs`.
 
-**Give the deployed pupitre its own environment.** `environment.deployed.ts` is committed and names its
-Keycloak through `NG_DEPLOYED_KEYCLOAK_URL`, a global the `--define` of `deployed:build:pupitre` replaces from
-`DEPLOYED_KEYCLOAK_URL`; a `deployed` configuration of `build-pupitre` substitutes that file and writes to
-`target/deployed/pupitre`. It is listed in the `files` of `tsconfig.app.json` beside `auth.provider.cypress.ts`,
+**Give each deployed front its own environment.** `environment.deployed.ts` is committed and names its
+Keycloak through `NG_DEPLOYED_KEYCLOAK_URL`, a global the `--define` of `deployed:build:pupitre` and
+`deployed:build:gestion` replaces from `DEPLOYED_KEYCLOAK_URL`; a `deployed` configuration of the front's build
+target substitutes that file and writes to `target/deployed/<front>`. The declaration of that global lives once,
+at `src/main/webapp/deployment.d.ts`, because one TypeScript program compiles both fronts. Each
+`environment.deployed.ts` is listed in the `files` of `tsconfig.app.json` beside `auth.provider.cypress.ts`,
 the other replacement target, so it is type-checked and linted like ordinary source. The default `production` build keeps local values,
 because `serve-production-pupitre-fixture.mjs` needs them, and the separate output directory keeps a deployed
 bundle from ever being served to that harness.
@@ -129,8 +131,12 @@ fails with its own message when the variable is unset **or empty** — and empty
   would mean the generator this decision removed; the format is documented with the variable instead.
 - `deployed:build:pupitre` relies on POSIX `${VAR:?message}`, so it runs under `sh`, not on Windows. The
   repository already assumes this in its Cypress scripts.
-- **`gestion` is left with a production environment that has no target.** It is not deployed, provides no
-  `ApiClient`, and its Keycloak `redirectUris` are still on localhost. The day it ships, this record reopens.
+- **`gestion` now ships through the same shape, and pays the same price twice.** It has its own `deployed`
+  configuration, its own Pages project and its own job in `deploy.yml`; both fronts read one
+  `DEPLOYED_KEYCLOAK_URL`, so they cannot point at different Keycloak origins without a second variable. Its
+  Keycloak client `web_app` needs `redirectUris` and web origins naming the deployed host, and that lives in
+  Keycloak, where nothing here can check it: a localhost-only client answers with a refused redirect, not with
+  a build failure.
 - The Function runs on a platform the validation graph never starts: `npx wrangler pages dev` exercises it by
   hand, but no command in `validate:complete` does, so only its exported relay is under test.
 

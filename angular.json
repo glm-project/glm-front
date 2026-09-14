@@ -51,6 +51,18 @@
               ],
               "outputHashing": "all"
             },
+            "deployed": {
+              "outputPath": {
+                "base": "target/deployed/gestion",
+                "browser": ""
+              },
+              "fileReplacements": [
+                {
+                  "replace": "src/main/webapp/gestion/environments/environment.ts",
+                  "with": "src/main/webapp/gestion/environments/environment.deployed.ts"
+                }
+              ]
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
