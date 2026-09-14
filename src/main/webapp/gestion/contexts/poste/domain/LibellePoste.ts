@@ -13,4 +13,8 @@ export class LibellePoste {
     const longueur = value.trim().length;
     return longueur === 0 || longueur > 100 ? 'Le libellé est obligatoire et limité à 100 caractères.' : undefined;
   }
+
+  equals(other: LibellePoste | undefined): boolean {
+    return other !== undefined && this.value === other.value;
+  }
 }

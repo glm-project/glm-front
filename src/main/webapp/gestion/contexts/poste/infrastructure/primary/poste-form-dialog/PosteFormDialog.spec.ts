@@ -17,7 +17,7 @@ import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
 import { PostesPort } from '../../../domain/PostesPort';
-import { RefusEnregistrementPoste } from '../../../domain/RefusEnregistrementPoste';
+import { RefusModificationPoste } from '../../../domain/RefusModificationPoste';
 import { PosteFormDialog, PosteFormDialogData } from './PosteFormDialog';
 
 @Component({ template: '' })
@@ -78,7 +78,7 @@ describe('PosteFormDialog', () => {
     await whenClosed();
 
     expect(port.enregistrements).toEqual([
-      { id: undefined, commande: { libelle: { value: 'Tour 1' }, nature: { value: 'tournage' }, coutHoraire: { value: 45.5 } } },
+      { libelle: new LibellePoste('Tour 1'), nature: new NatureDeTravail('tournage'), coutHoraire: new CoutHoraire(45.5) },
     ]);
     expect(closed).toEqual([true]);
   });
@@ -98,8 +98,10 @@ describe('PosteFormDialog', () => {
 
     expect(initialCost).toBe('45.5');
     expect(port.enregistrements[0]).toEqual({
-      id: { value: 'tour-1' },
-      commande: { libelle: { value: 'Tour 2' }, nature: { value: 'tournage' }, coutHoraire: undefined },
+      id: new PosteDeTravailId('tour-1'),
+      libelle: new LibellePoste('Tour 2'),
+      nature: new NatureDeTravail('tournage'),
+      coutHoraire: undefined,
     });
     expect(closed).toEqual([true]);
   });
@@ -150,7 +152,7 @@ describe('PosteFormDialog', () => {
   });
 
   it('should prevent duplicate submission and closing while saving', async () => {
-    const deferred = new DeferredFixture<Result<void, RefusEnregistrementPoste>>();
+    const deferred = new DeferredFixture<Result<void, RefusModificationPoste>>();
     port.ecritureDifferee = deferred.promise;
     await whenOpening();
     await whenFillingValidEntries();

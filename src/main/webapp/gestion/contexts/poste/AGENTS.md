@@ -17,11 +17,16 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 ## Modèle de domaine
 
 - **PosteDeTravail** : agrégat racine représentant un poste déclaré, portant son identifiant immuable, son libellé, sa nature et son coût horaire éventuel.
+- **PosteDeTravailId** : Value Object représentant l'identifiant unique et immuable d'un poste.
 - **LibellePoste** : Value Object garantissant un libellé textuel non vide et borné à 100 caractères.
-- **NatureDeTravail** : Value Object garantissant un métier non vide et borné à 50 caractères.
+- **NatureDeTravail** : Value Object garantissant un métier non vide et borné à 50 caractères, avec comparaison et correspondance insensible à la casse.
 - **CoutHoraire** : Value Object représentant une valeur monétaire horaire strictement positive.
-- **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes et effaçant l'erreur de doublon dès que le libellé est modifié.
-- **PostesPort** : port secondaire exposant la consultation paginée, la collecte des natures uniques de l'atelier, la création, la modification et la suppression protégée par un `Result<T, Refus>`.
+- **CommandeCreationPoste** : commande encapsulant les attributs validés pour la création d'un nouveau poste (`libelle`, `nature`, `coutHoraire`).
+- **CommandeModificationPoste** : commande encapsulant l'identifiant et les attributs validés pour la modification d'un poste existant (`id`, `libelle`, `nature`, `coutHoraire`).
+- **RequetePostes** : objet de requête paginée portant l'indice de page et le nombre d'éléments par page (`page`, `taille`).
+- **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié.
+- **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la collecte des natures uniques de l'atelier, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
+- **Refus de commande** : `LibellePosteDejaUtilise` (unicité de libellé en création/modification), `PosteIntrouvable` (poste inexistant en modification/suppression), et `PosteNonSupprimable` (pointages ou habilitations associées en suppression).
 
 ## Responsabilités et invariants
 
@@ -33,7 +38,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 ## Relations de contexte
 
-- `gestion/contexts/operateur` : consomme les postes de travail sous forme de `PosteHabilite` (id, libellé). L'habilitation d'un opérateur sur un poste interdit sa suppression en amont.
+- `gestion/contexts/operateur` : contexte autonome consommant les postes de travail sous sa propre projection `PosteHabilite` (id, libellé). L'habilitation d'un opérateur sur un poste interdit sa suppression en amont côté serveur.
 - `app/shared/result` : utilise le shared kernel commun `Result<T, E>` pour les retours d'écriture de `PostesPort`.
 - `app/shared/pagination` : utilise `Page<T>` pour la consultation paginée des postes.
 

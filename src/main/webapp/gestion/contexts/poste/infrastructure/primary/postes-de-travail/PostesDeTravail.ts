@@ -9,6 +9,7 @@ import { CoutHoraire } from '../../../domain/CoutHoraire';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
+import { RequetePostes } from '../../../domain/RequetePostes';
 import {
   ConfirmationSuppressionPosteDialog,
   ConfirmationSuppressionPosteDialogData,
@@ -101,7 +102,10 @@ export class PostesDeTravail implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const [page, natures] = await Promise.all([this.port.postes(this.etat().page, this.etat().taille), this.port.natures()]);
+      const [page, natures] = await Promise.all([
+        this.port.postes(new RequetePostes(this.etat().page, this.etat().taille)),
+        this.port.natures(),
+      ]);
       if (lecture === this.lecture) {
         this.etat.update(etat => ({ ...etat, postes: page.elements, totalElementsCount: page.totalCount, natures }));
       }

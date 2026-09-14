@@ -20,7 +20,36 @@ describe('FormulairePosteDeTravail', () => {
     const formulaire = FormulairePosteDeTravail.pourModification(poste);
 
     expect(formulaire.saisie).toEqual({ libelle: 'Tour 1', nature: 'tournage', coutHoraire: saisie });
+    expect(formulaire.id?.value).toBe('tour-1');
     expect(formulaire.estValide()).toBe(true);
+  });
+
+  it('should produce a modification command containing the target workstation identity', () => {
+    const poste = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
+      libelle: new LibellePoste('Tour 1'),
+      nature: new NatureDeTravail('tournage'),
+      coutHoraire: undefined,
+    });
+    const formulaire = FormulairePosteDeTravail.pourModification(poste);
+    const commande = formulaire.produireCommande();
+
+    expect(commande).toEqual({
+      ok: true,
+      value: {
+        id: { value: 'tour-1' },
+        libelle: { value: 'Tour 1' },
+        nature: { value: 'tournage' },
+        coutHoraire: undefined,
+      },
+    });
+  });
+
+  it('should preserve object identity on redundant transitions', () => {
+    const initial = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').avecNature('tournage').avecCoutHoraire('45');
+
+    expect(initial.avecLibelle('Tour 1')).toBe(initial);
+    expect(initial.avecNature('tournage')).toBe(initial);
+    expect(initial.avecCoutHoraire('45')).toBe(initial);
   });
 
   it('should attach the duplicate refusal to the label and prevent resubmission', () => {
@@ -68,14 +97,16 @@ describe('FormulairePosteDeTravail', () => {
 
     expect(formulaire.erreurLibelle()).toBeUndefined();
     expect(formulaire.erreurEnregistrement()).toBe('Ce poste n’existe plus. Actualisez la liste des postes.');
+    expect(formulaire.erreurPosteIntrouvable()).toBe('Ce poste n’existe plus. Actualisez la liste des postes.');
     expect(commande.ok).toBe(false);
   });
+
   it.each([
     ['', undefined],
     ['  ', undefined],
     ['45.5', 45.5],
     ['45,5', 45.5],
-  ])('should produce a validated command from entries with hourly cost %s', (cout, attendu) => {
+  ])('should produce a validated creation command from entries with hourly cost %s', (cout, attendu) => {
     const initial = FormulairePosteDeTravail.pourCreation();
     const formulaire = initial.avecLibelle('  Tour 1 ').avecNature(' tournage ').avecCoutHoraire(cout);
     const commande = formulaire.produireCommande();
@@ -115,6 +146,7 @@ describe('FormulairePosteDeTravail', () => {
     expect(formulaire.estValide()).toBe(false);
     expect(commande.ok).toBe(false);
   });
+
   it('should start creation with empty entries and refuse an incomplete command', () => {
     const formulaire = FormulairePosteDeTravail.pourCreation();
     const commande = formulaire.produireCommande();

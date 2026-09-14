@@ -3,8 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { CommandeEnregistrementPoste } from '../../../domain/CommandeEnregistrementPoste';
-import { FormulairePosteDeTravail } from '../../../domain/FormulairePosteDeTravail';
+import { CommandePoste, FormulairePosteDeTravail } from '../../../domain/FormulairePosteDeTravail';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
@@ -23,21 +22,20 @@ export interface PosteFormDialogData {
 })
 export class PosteFormDialog {
   private readonly data = inject<PosteFormDialogData>(MAT_DIALOG_DATA);
-  private readonly poste = this.data.poste;
   private readonly dialog = inject<MatDialogRef<PosteFormDialog, boolean>>(MatDialogRef);
   private readonly port = inject(PostesPort);
   private readonly errors = inject(ErrorHandlerPort);
 
-  protected readonly titre = this.poste === null ? 'Nouveau poste' : 'Modifier le poste';
   protected readonly formulaire = signal(
-    this.poste === null ? FormulairePosteDeTravail.pourCreation() : FormulairePosteDeTravail.pourModification(this.poste),
+    this.data.poste === null ? FormulairePosteDeTravail.pourCreation() : FormulairePosteDeTravail.pourModification(this.data.poste),
   );
+  protected readonly titre = this.formulaire().id === undefined ? 'Nouveau poste' : 'Modifier le poste';
   protected readonly soumis = signal(false);
   protected readonly enregistrement = signal(false);
   protected readonly erreurTechnique = signal(false);
   protected readonly suggestions = computed(() => {
-    const saisie = this.formulaire().saisie.nature.toLocaleLowerCase('fr');
-    return this.data.natures.filter(nature => nature.value.toLocaleLowerCase('fr').includes(saisie));
+    const saisie = this.formulaire().saisie.nature;
+    return this.data.natures.filter(nature => nature.correspondA(saisie));
   });
 
   protected changeLibelle(libelle: string): void {
@@ -82,7 +80,7 @@ export class PosteFormDialog {
     }
   }
 
-  private execute(commande: CommandeEnregistrementPoste) {
-    return this.poste === null ? this.port.creer(commande) : this.port.modifier(this.poste.id, commande);
+  private execute(commande: CommandePoste) {
+    return 'id' in commande ? this.port.modifier(commande) : this.port.creer(commande);
   }
 }

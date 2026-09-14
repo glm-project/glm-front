@@ -1,11 +1,13 @@
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
-import { CommandeEnregistrementPoste } from './CommandeEnregistrementPoste';
+import { CommandeCreationPoste } from './CommandeCreationPoste';
+import { CommandeModificationPoste } from './CommandeModificationPoste';
 import { CoutHoraire } from './CoutHoraire';
 import { ErreursFormulairePoste } from './ErreursFormulairePoste';
 import { LibellePoste } from './LibellePoste';
 import { NatureDeTravail } from './NatureDeTravail';
 import { PosteDeTravail } from './PosteDeTravail';
-import { RefusEnregistrementPoste } from './RefusEnregistrementPoste';
+import { PosteDeTravailId } from './PosteDeTravailId';
+import { RefusModificationPoste } from './RefusModificationPoste';
 
 interface SaisiePoste {
   readonly libelle: string;
@@ -13,10 +15,13 @@ interface SaisiePoste {
   readonly coutHoraire: string;
 }
 
+export type CommandePoste = CommandeCreationPoste | CommandeModificationPoste;
+
 export class FormulairePosteDeTravail {
   private constructor(
     readonly saisie: SaisiePoste,
-    private readonly refus?: RefusEnregistrementPoste,
+    readonly id?: PosteDeTravailId,
+    private readonly refus?: RefusModificationPoste,
   ) {}
 
   static pourCreation(): FormulairePosteDeTravail {
@@ -24,45 +29,61 @@ export class FormulairePosteDeTravail {
   }
 
   static pourModification(poste: PosteDeTravail): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail({
-      libelle: poste.libelle.value,
-      nature: poste.nature.value,
-      coutHoraire: poste.coutHoraire?.value.toString() ?? '',
-    });
+    return new FormulairePosteDeTravail(
+      {
+        libelle: poste.libelle.value,
+        nature: poste.nature.value,
+        coutHoraire: poste.coutHoraire?.value.toString() ?? '',
+      },
+      poste.id,
+    );
   }
 
   estValide(): boolean {
     return Object.values(this.erreurs()).every(erreur => erreur === undefined);
   }
 
-  produireCommande(): Result<CommandeEnregistrementPoste, ErreursFormulairePoste> {
+  produireCommande(): Result<CommandePoste, ErreursFormulairePoste> {
     if (!this.estValide()) {
       return err(this.erreurs());
     }
-    return ok({
-      libelle: new LibellePoste(this.saisie.libelle),
-      nature: new NatureDeTravail(this.saisie.nature),
-      coutHoraire: this.coutEstRenseigne() ? new CoutHoraire(this.coutNumerique()) : undefined,
-    });
+    const libelle = new LibellePoste(this.saisie.libelle);
+    const nature = new NatureDeTravail(this.saisie.nature);
+    const coutHoraire = this.coutEstRenseigne() ? new CoutHoraire(this.coutNumerique()) : undefined;
+
+    if (this.id === undefined) {
+      return ok({ libelle, nature, coutHoraire });
+    }
+    return ok({ id: this.id, libelle, nature, coutHoraire });
   }
 
   avecLibelle(libelle: string): FormulairePosteDeTravail {
     if (libelle === this.saisie.libelle) {
       return this;
     }
-    return new FormulairePosteDeTravail({ ...this.saisie, libelle }, this.refus?.code === 'libelle-deja-utilise' ? undefined : this.refus);
+    return new FormulairePosteDeTravail(
+      { ...this.saisie, libelle },
+      this.id,
+      this.refus?.code === 'libelle-deja-utilise' ? undefined : this.refus,
+    );
   }
 
   avecNature(nature: string): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail({ ...this.saisie, nature }, this.refus);
+    if (nature === this.saisie.nature) {
+      return this;
+    }
+    return new FormulairePosteDeTravail({ ...this.saisie, nature }, this.id, this.refus);
   }
 
   avecCoutHoraire(coutHoraire: string): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail({ ...this.saisie, coutHoraire }, this.refus);
+    if (coutHoraire === this.saisie.coutHoraire) {
+      return this;
+    }
+    return new FormulairePosteDeTravail({ ...this.saisie, coutHoraire }, this.id, this.refus);
   }
 
-  avecRefus(refus: RefusEnregistrementPoste): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail(this.saisie, refus);
+  avecRefus(refus: RefusModificationPoste): FormulairePosteDeTravail {
+    return new FormulairePosteDeTravail(this.saisie, this.id, refus);
   }
 
   erreurLibelle(): string | undefined {
@@ -78,6 +99,10 @@ export class FormulairePosteDeTravail {
   }
 
   erreurEnregistrement(): string | undefined {
+    return this.erreurPosteIntrouvable();
+  }
+
+  erreurPosteIntrouvable(): string | undefined {
     return this.refus?.code === 'poste-introuvable' ? this.refus.message : undefined;
   }
 

@@ -5,7 +5,8 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
-import { CommandeEnregistrementPoste } from '../../domain/CommandeEnregistrementPoste';
+import { CommandeCreationPoste } from '../../domain/CommandeCreationPoste';
+import { CommandeModificationPoste } from '../../domain/CommandeModificationPoste';
 import { CoutHoraire } from '../../domain/CoutHoraire';
 import { LibellePoste } from '../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../domain/LibellePosteDejaUtilise';
@@ -15,8 +16,9 @@ import { PosteDeTravailId } from '../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../domain/PosteIntrouvable';
 import { PosteNonSupprimable } from '../../domain/PosteNonSupprimable';
 import { PostesPort } from '../../domain/PostesPort';
-import { RefusEnregistrementPoste } from '../../domain/RefusEnregistrementPoste';
+import { RefusModificationPoste } from '../../domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '../../domain/RefusSuppressionPoste';
+import { RequetePostes } from '../../domain/RequetePostes';
 
 const toPoste = (poste: components['schemas']['RestPosteDeTravail']): PosteDeTravail =>
   new PosteDeTravail(new PosteDeTravailId(poste.id), {
@@ -25,13 +27,20 @@ const toPoste = (poste: components['schemas']['RestPosteDeTravail']): PosteDeTra
     coutHoraire: poste.coutHoraire === undefined ? undefined : new CoutHoraire(poste.coutHoraire),
   });
 
-const toRequest = (commande: CommandeEnregistrementPoste): components['schemas']['RestCreationPosteDeTravail'] => ({
+const toRequest = (commande: CommandeCreationPoste | CommandeModificationPoste): components['schemas']['RestCreationPosteDeTravail'] => ({
   libelle: commande.libelle.value,
   nature: commande.nature.value,
   ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire.value }),
 });
 
-const refusEnregistrement = (urn: string | undefined): RefusEnregistrementPoste | undefined => {
+const refusCreation = (urn: string | undefined): LibellePosteDejaUtilise | undefined => {
+  if (urn === 'urn:glm:erreur:poste-de-travail:libelle-deja-utilise') {
+    return new LibellePosteDejaUtilise();
+  }
+  return undefined;
+};
+
+const refusModification = (urn: string | undefined): RefusModificationPoste | undefined => {
   switch (urn) {
     case 'urn:glm:erreur:poste-de-travail:libelle-deja-utilise':
       return new LibellePosteDejaUtilise();
@@ -59,19 +68,25 @@ const pageManquante = (extrait: Page<PosteDeTravail>, lus: number): boolean => e
 @Injectable()
 export class HttpPostes extends PostesPort {
   private readonly api = inject(ApiClient);
+  private cachedNatures: readonly NatureDeTravail[] | undefined;
 
-  override async postes(page: number, taille: number): Promise<Page<PosteDeTravail>> {
-    const response = await this.api.read('/api/postes-de-travail', { queryParams: { page, size: taille } });
+  override async postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
+    const response = await this.api.read('/api/postes-de-travail', {
+      queryParams: { page: requete.page, size: requete.taille },
+    });
     return buildPageFrom(response, toPoste);
   }
 
   override async natures(): Promise<readonly NatureDeTravail[]> {
+    if (this.cachedNatures !== undefined) {
+      return this.cachedNatures;
+    }
     const natures = new Map<string, NatureDeTravail>();
     let page = 0;
     let lus = 0;
     let total: number;
     do {
-      const extrait = await this.postes(page, PAGE_SIZE);
+      const extrait = await this.postes(new RequetePostes(page, PAGE_SIZE));
       total = extrait.totalCount;
       lus += extrait.elements.length;
       if (pageManquante(extrait, lus)) {
@@ -82,21 +97,35 @@ export class HttpPostes extends PostesPort {
       }
       page += 1;
     } while (lus < total);
-    return [...natures.values()].sort((left, right) => left.value.localeCompare(right.value, 'fr'));
-  }
-  override creer(commande: CommandeEnregistrementPoste): Promise<Result<void, RefusEnregistrementPoste>> {
-    return this.execute(this.api.write('/api/postes-de-travail', { body: toRequest(commande) }), refusEnregistrement);
+    this.cachedNatures = [...natures.values()].sort((left, right) => left.compare(right));
+    return this.cachedNatures;
   }
 
-  override modifier(id: PosteDeTravailId, commande: CommandeEnregistrementPoste): Promise<Result<void, RefusEnregistrementPoste>> {
-    return this.execute(
-      this.api.update('/api/postes-de-travail/{id}', { pathParams: { id: id.value }, body: toRequest(commande) }),
-      refusEnregistrement,
+  override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {
+    const resultat = await this.execute(this.api.write('/api/postes-de-travail', { body: toRequest(commande) }), refusCreation);
+    if (resultat.ok) {
+      this.cachedNatures = undefined;
+    }
+    return resultat;
+  }
+
+  override async modifier(commande: CommandeModificationPoste): Promise<Result<void, RefusModificationPoste>> {
+    const resultat = await this.execute(
+      this.api.update('/api/postes-de-travail/{id}', { pathParams: { id: commande.id.value }, body: toRequest(commande) }),
+      refusModification,
     );
+    if (resultat.ok) {
+      this.cachedNatures = undefined;
+    }
+    return resultat;
   }
 
-  override supprimer(id: PosteDeTravailId): Promise<Result<void, RefusSuppressionPoste>> {
-    return this.execute(this.api.delete('/api/postes-de-travail/{id}', { pathParams: { id: id.value } }), refusSuppression);
+  override async supprimer(id: PosteDeTravailId): Promise<Result<void, RefusSuppressionPoste>> {
+    const resultat = await this.execute(this.api.delete('/api/postes-de-travail/{id}', { pathParams: { id: id.value } }), refusSuppression);
+    if (resultat.ok) {
+      this.cachedNatures = undefined;
+    }
+    return resultat;
   }
 
   private async execute<Refus>(

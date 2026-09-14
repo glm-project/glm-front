@@ -10,11 +10,18 @@ describe('Workstation settings in gestion', () => {
     thenPosteIsListed('Tour 1', 'tournage', '45,50');
   });
 
-  it('should keep a duplicate label error in the form and allow correction', () => {
+  it('should display a duplicate label refusal and keep the form open', () => {
     givenReferential(1);
     whenVisitingSettings();
     whenCreating('Poste 01', 'tournage', '45.5');
-    whenDuplicateRefusalArrives();
+
+    thenDuplicateRefusalIsVisible();
+  });
+
+  it('should save and list the workstation after correcting a duplicate label', () => {
+    givenReferential(1);
+    whenVisitingSettings();
+    whenCreating('Poste 01', 'tournage', '45.5');
     whenCorrectingLabel('Tour 2');
 
     thenPosteIsListed('Tour 2', 'tournage', '45,50');
@@ -200,8 +207,9 @@ const whenSaving = (alias: string): void => {
   cy.get(dataSelector('poste-save')).click();
   cy.wait(`@${alias}`);
 };
-const whenDuplicateRefusalArrives = (): void => {
+const thenDuplicateRefusalIsVisible = (): void => {
   cy.get(dataSelector('poste-libelle-error')).should('contain.text', 'Un autre poste porte déjà ce libellé.');
+  cy.get(dataSelector('poste-form')).should('be.visible');
   cy.screenshot('postes-duplicate', { capture: 'viewport' });
 };
 const whenCorrectingLabel = (libelle: string): void => {
