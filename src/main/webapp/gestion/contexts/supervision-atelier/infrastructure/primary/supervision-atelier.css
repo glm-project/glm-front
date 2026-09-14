@@ -1,0 +1,45 @@
+.synoptique {
+  min-width: 64rem;
+}
+.ligne-horaire,
+.ligne-synoptique {
+  display: grid;
+  grid-template-columns: 18rem minmax(0, 1fr);
+}
+.identite {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+.repere-heure {
+  transform: translateX(-50%);
+}
+.repere-heure:first-child {
+  transform: none;
+}
+.repere-heure:last-of-type {
+  transform: translateX(-100%);
+}
+
+.pistes {
+  min-height: 5rem;
+}
+.encre-activite {
+  min-width: 4px;
+}
+.glm-maintenant {
+  transform: translateX(-50%);
+}
+
+@media (max-width: 40rem) {
+  .ligne-horaire,
+  .ligne-synoptique {
+    grid-template-columns: 10rem minmax(0, 1fr);
+  }
+  .identite {
+    gap: 0.25rem;
+    padding-inline: 0.25rem;
+  }
+}
