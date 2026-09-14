@@ -2,7 +2,6 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
 import { DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
 import { Instant } from '../../domain/Instant';
-import { JourneeDeTravail } from '../../domain/JourneeDeTravail';
 import { OperateurSupervise } from '../../domain/OperateurSupervise';
 import { SupervisionDeLAtelier } from '../../domain/SupervisionDeLAtelier';
 import { FriseSupervision } from './FriseSupervision';
@@ -10,26 +9,19 @@ import { FriseSupervision } from './FriseSupervision';
 import { LIBELLES_SUPERVISION } from './LibellesSupervision';
 import { SupervisionRefreshCycle } from './SupervisionRefreshCycle';
 
+export type { StatistiquesSupervision } from '../../domain/StatistiquesSupervision';
+
 export type EtatVueSupervision =
   | { readonly kind: 'CHARGEMENT' }
   | { readonly kind: 'ERREUR' }
   | {
       readonly kind: 'SUCCES';
       readonly operateurs: readonly OperateurSupervise[];
-      readonly journees: readonly JourneeDeTravail[];
+      readonly supervision: SupervisionDeLAtelier;
       readonly frise: FriseSupervision;
     };
 
 export type FiltreSupervision = 'TOUS' | 'PRESENT' | 'EN_PAUSE' | 'ABSENT' | 'GLM' | 'ANOMALIE';
-
-export interface StatistiquesSupervision {
-  readonly total: number;
-  readonly presents: number;
-  readonly enPause: number;
-  readonly absents: number;
-  readonly glm: number;
-  readonly anomalies: number;
-}
 
 function correspondAuFiltre(supervise: OperateurSupervise, filtre: Exclude<FiltreSupervision, 'TOUS'> | null): boolean {
   if (filtre === null) {
@@ -75,37 +67,6 @@ function correspondALaRecherche(supervise: OperateurSupervise, recherche: string
   return supervise.activites.some(act => activiteCorrespond(act, recherche));
 }
 
-function compterPresents(operateurs: readonly OperateurSupervise[]): number {
-  return operateurs.filter(op => op.presence === 'PRESENT').length;
-}
-
-function compterEnPause(operateurs: readonly OperateurSupervise[]): number {
-  return operateurs.filter(op => op.presence === 'EN_PAUSE').length;
-}
-
-function compterAbsents(operateurs: readonly OperateurSupervise[]): number {
-  return operateurs.filter(op => op.presence === 'ABSENT').length;
-}
-
-function compterGlm(operateurs: readonly OperateurSupervise[]): number {
-  return operateurs.filter(op => op.isEnGlm()).length;
-}
-
-function compterAnomalies(operateurs: readonly OperateurSupervise[]): number {
-  return operateurs.filter(op => op.anomalies.length > 0).length;
-}
-
-function calculerStatistiques(operateurs: readonly OperateurSupervise[]): StatistiquesSupervision {
-  return {
-    total: operateurs.length,
-    presents: compterPresents(operateurs),
-    enPause: compterEnPause(operateurs),
-    absents: compterAbsents(operateurs),
-    glm: compterGlm(operateurs),
-    anomalies: compterAnomalies(operateurs),
-  };
-}
-
 @Component({
   selector: 'glm-supervision-atelier',
   templateUrl: './supervision-atelier.html',
@@ -144,7 +105,12 @@ export class SupervisionAtelier {
     if (!resultat.estExploitable) {
       return { kind: 'ERREUR' };
     }
-    return { kind: 'SUCCES', operateurs: resultat.supervision.operateurs, journees: raw.journees, frise: new FriseSupervision(maintenant) };
+    return {
+      kind: 'SUCCES',
+      operateurs: resultat.supervision.operateurs,
+      supervision: resultat.supervision,
+      frise: new FriseSupervision(maintenant),
+    };
   });
 
   protected readonly derniereLecture = computed<string | null>(() => {
@@ -176,9 +142,9 @@ export class SupervisionAtelier {
         ),
       ].join(' · '),
       activites: vue.frise.activites(supervise.activites),
-      presence: vue.frise.presence(vue.journees.filter(journee => journee.isFor(supervise.operateur.id))),
+      presence: vue.frise.presence(supervise.segments),
     }));
-    return { ...vue, statistiques: calculerStatistiques(vue.operateurs), lignes };
+    return { ...vue, statistiques: vue.supervision.statistiques, lignes };
   });
 
   protected basculerFiltre(filtre: FiltreSupervision): void {
@@ -203,12 +169,6 @@ export class SupervisionAtelier {
   }
 
   protected estAbsentCalme(supervise: OperateurSupervise): boolean {
-    if (supervise.presence !== 'ABSENT') {
-      return false;
-    }
-    if (supervise.activites.length > 0) {
-      return false;
-    }
-    return supervise.anomalies.length === 0;
+    return supervise.isSansJourneeOuverte();
   }
 }

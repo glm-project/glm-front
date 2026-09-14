@@ -1,6 +1,6 @@
 import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
 import { Instant } from '../../domain/Instant';
-import { JourneeDeTravail } from '../../domain/JourneeDeTravail';
+import { SegmentDePresence } from '../../domain/SegmentDePresence';
 import { LIBELLES_SUPERVISION } from './LibellesSupervision';
 
 export interface SegmentPresence {
@@ -47,8 +47,14 @@ export class FriseSupervision {
     return { gauche: this.percent(gauche), largeur: this.percent(droite) - this.percent(gauche) };
   }
 
-  presence(journees: readonly JourneeDeTravail[]): readonly SegmentPresence[] {
-    return journees.flatMap(journee => this.segmentsJournee(journee)).sort((left, right) => left.debut.compare(right.debut));
+  presence(segments: readonly SegmentDePresence[]): readonly SegmentPresence[] {
+    return segments.map(segment => ({
+      debut: segment.debut,
+      fin: segment.fin,
+      pause: segment.pause,
+      libelle: `${segment.pause ? 'Pause' : 'Présence'} · ${LIBELLES_SUPERVISION.heure(segment.debut)} – ${LIBELLES_SUPERVISION.heure(segment.fin)}${segment.enCours ? ' (en cours)' : ''}`,
+      position: this.position(segment.debut, segment.fin),
+    }));
   }
 
   activites(activites: readonly ActiviteDeSupervision[]): readonly SegmentActivite[] {
@@ -62,26 +68,6 @@ export class FriseSupervision {
         libelle: `${description} · Depuis ${LIBELLES_SUPERVISION.heure(activite.debut)} · ${minutes} min · En cours`,
       };
     });
-  }
-
-  private segmentsJournee(journee: JourneeDeTravail): SegmentPresence[] {
-    const fenetres = [...journee.fenetres].sort((left, right) => left.debut.compare(right.debut));
-    return fenetres.flatMap((fenetre, index) => {
-      const fin = fenetre.fin ?? this.maintenant;
-      const segments = [this.segment(fenetre.debut, fin, false, fenetre.fin === undefined)];
-      const reprise = fenetres[index + 1]?.debut;
-      if (reprise) {
-        segments.push(this.segment(fin, reprise, true, false));
-      } else if (journee.session === 'EN_PAUSE') {
-        segments.push(this.segment(fin, this.maintenant, true, true));
-      }
-      return segments.filter(segment => segment.fin.compare(segment.debut) > 0);
-    });
-  }
-
-  private segment(debut: Instant, fin: Instant, pause: boolean, enCours: boolean): SegmentPresence {
-    const libelle = `${pause ? 'Pause' : 'Présence'} · ${LIBELLES_SUPERVISION.heure(debut)} – ${LIBELLES_SUPERVISION.heure(fin)}${enCours ? ' (en cours)' : ''}`;
-    return { debut, fin, pause, libelle, position: this.position(debut, fin) };
   }
 
   private percent(instant: number): number {

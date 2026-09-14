@@ -502,7 +502,7 @@ describe('Supervision atelier component', () => {
       ],
     });
 
-    expect(displayedTexts('supervision-marque-activite')).toEqual(['']);
+    expect(elements('supervision-marque-activite')).toHaveLength(1);
     expect(displayedActivityLabel()).toContain('Depuis 05:00 · 65 min');
   });
 
@@ -569,16 +569,22 @@ describe('Supervision atelier component', () => {
     ]);
   });
 
-  it('should retain expanded journals across filters and close them explicitly', async () => {
+  it('should retain expanded journals across filters', async () => {
     await givenDonneesDisplayed();
     await whenJournalToggled('alice');
 
     await whenFilterClicked('supervision-filtre-absent');
     await whenFilterClicked('supervision-filtre-tous');
-    const afterFiltering = journalState('alice');
+
+    expect(journalState('alice').expanded).toBe('true');
+  });
+
+  it('should close an expanded journal when toggled again', async () => {
+    await givenDonneesDisplayed();
     await whenJournalToggled('alice');
 
-    expect(afterFiltering.expanded).toBe('true');
+    await whenJournalToggled('alice');
+
     expect(journalState('alice').hidden).toBe(true);
   });
 

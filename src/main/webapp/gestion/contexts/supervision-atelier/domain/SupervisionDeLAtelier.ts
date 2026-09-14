@@ -6,6 +6,7 @@ import { JourneeDeTravail } from './JourneeDeTravail';
 import { OperateurDeclare } from './OperateurDeclare';
 import { OperateurSupervise } from './OperateurSupervise';
 import { ResultatSupervision, resultatSupervisionExploitable, resultatSupervisionInexploitable } from './ResultatSupervision';
+import { StatistiquesSupervision } from './StatistiquesSupervision';
 
 export const SEUIL_DUREE_JOURNEE_OUVERTE_MAXIMALE_MS = 16 * 60 * 60 * 1000;
 
@@ -49,15 +50,32 @@ const superviseOperateur = (
   const presence: EtatDePresence = journeeOuverte?.session ?? 'ABSENT';
   const activitesOperateur = activites.filter(activite => activite.isFor(operateur.id));
   const anomalies = detectAnomalies(journeeOuverte, presence, activitesOperateur, maintenant);
+  const journeesOperateur = journees.filter(journee => journee.isFor(operateur.id));
+  const segments = journeesOperateur
+    .flatMap(journee => journee.segments(maintenant))
+    .sort((left, right) => left.debut.compare(right.debut));
+
   return new OperateurSupervise(operateur, presence, {
     activites: activitesOperateur,
     anomalies,
     heureDOuverture: journeeOuverte?.openingInstant(),
+    segments,
   });
 };
 
 export class SupervisionDeLAtelier {
-  private constructor(readonly operateurs: readonly OperateurSupervise[]) {}
+  readonly statistiques: StatistiquesSupervision;
+
+  private constructor(readonly operateurs: readonly OperateurSupervise[]) {
+    this.statistiques = {
+      total: operateurs.length,
+      presents: operateurs.filter(op => op.presence === 'PRESENT').length,
+      enPause: operateurs.filter(op => op.presence === 'EN_PAUSE').length,
+      absents: operateurs.filter(op => op.presence === 'ABSENT').length,
+      glm: operateurs.filter(op => op.isEnGlm()).length,
+      anomalies: operateurs.filter(op => op.anomalies.length > 0).length,
+    };
+  }
 
   static determine(
     operateursDeclares: readonly OperateurDeclare[],
