@@ -150,3 +150,6 @@ cypress/
 
 # Local cache of `wrangler pages dev`, which exercises the API relay of functions/.
 /.wrangler/
+
+# Generated state of the local design detector.
+/.impeccable/hook.cache.json

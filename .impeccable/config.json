@@ -1,0 +1,15 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": ["src/main/webapp/gestion/header/header.html"],
+        "createdAt": "2026-09-14T16:24:11.504Z",
+        "reason": "Codex: Angular NgOptimizedImage uses ngSrc=content/images/AngularLogo.svg; the bundled file exists and header unit tests render it."
+      }
+    ]
+  }
+}
