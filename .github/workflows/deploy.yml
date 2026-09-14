@@ -37,3 +37,32 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy target/deployed/pupitre --project-name=glm-pupitre --commit-dirty=true
+          
+  gestion:
+    name: gestion
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CYPRESS_INSTALL_BINARY: 0
+      DEPLOYED_KEYCLOAK_URL: ${{ vars.DEPLOYED_KEYCLOAK_URL }}
+    steps:
+      - name: 'Setup: checkout project'
+        uses: actions/checkout@v5
+      - name: 'Setup: runtime'
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.9.1
+      - name: 'Setup: verify runtime'
+        run: npm run runtime:check
+      - name: 'Setup: install dependencies'
+        run: npm ci
+      - name: 'Build: generate API contract'
+        run: npm run api:generate
+      - name: 'Build: supervision for its deployed origins'
+        run: npm run deployed:build:gestion
+      - name: 'Deploy: Cloudflare Pages'
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy target/deployed/gestion --project-name=glm-gestion --commit-dirty=true
