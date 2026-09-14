@@ -3,8 +3,4 @@ export class Page<T> {
     readonly elements: readonly T[],
     readonly totalCount: number,
   ) {}
-
-  isComplete(): boolean {
-    return this.elements.length === this.totalCount;
-  }
 }

@@ -63,7 +63,7 @@ do not duplicate it in a mapping table without a semantic translation.
 ## Reads state their bounds
 
 Online list ports make one request with `PAGE_SIZE` and return `Page<T>`.
-`buildPageFrom` preserves the server total so `isComplete()` tells callers whether the page is truncated.
+`buildPageFrom` preserves the server total alongside the returned elements so callers can identify truncation.
 A bounded read is acceptable only when the bound is visible in the result.
 
 The offline pupitre reference is different: it traverses every page and activates neither operators nor

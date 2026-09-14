@@ -62,7 +62,7 @@ Engineering skill configuration:
 
 Background and decisions:
 
-- Bounded-context agent docs — [gestion opérateur](src/main/webapp/gestion/contexts/operateur/AGENTS.md)
+- Bounded-context agent docs — [gestion poste](src/main/webapp/gestion/contexts/poste/AGENTS.md)
   and [pupitre atelier](src/main/webapp/pupitre/contexts/atelier/AGENTS.md) own their vocabulary, responsibilities, invariants and local rules
 - [Hexagonal architecture](documentation/hexagonal-architecture.md) — the theory behind the layout
 - [Architecture Decision Records](documentation/adr/README.md) — structural decisions, the options weighed

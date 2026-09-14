@@ -3,7 +3,6 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
-import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
@@ -19,6 +18,7 @@ import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/Device
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { matriculeFixture } from '@test/unit/fixtures/pupitre/atelier/MatriculeFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { MockInstance, vi } from 'vitest';
@@ -563,7 +563,7 @@ describe('AtelierCoordinator', () => {
     await whenSynchronizing();
 
     pupitre = buildPupitre();
-    await pupitre.restore();
+    await whenRestoring();
     givenServerFailures(refusalFixture('transition-de-presence-interdite'));
 
     await whenSynchronizing();
@@ -592,7 +592,7 @@ describe('AtelierCoordinator', () => {
     givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
     await whenSynchronizing();
     pupitre = buildPupitre();
-    await pupitre.restore();
+    await whenRestoring();
     givenServerFailures(refusalFixture('transition-de-presence-interdite'));
     await whenSynchronizing();
 
@@ -1135,12 +1135,12 @@ describe('AtelierCoordinator', () => {
   const whenRestarting = async (): Promise<void> => {
     await pupitre.synchronize();
     pupitre = buildPupitre();
-    await pupitre.restore();
+    await whenRestoring();
   };
-  const whenOpening = (): Promise<unknown> => designation.openWindow(Matricule.of('049'));
-  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(Matricule.of(matricule));
+  const whenOpening = (): Promise<unknown> => designation.openWindow(matriculeFixture('049'));
+  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(matriculeFixture(matricule));
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
-    Promise.allSettled([designation.openWindow(Matricule.of('049')), designation.openWindow(Matricule.of('050'))]);
+    Promise.allSettled([designation.openWindow(matriculeFixture('049')), designation.openWindow(matriculeFixture('050'))]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
   const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
     pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
@@ -1166,7 +1166,10 @@ describe('AtelierCoordinator', () => {
     await Promise.all([pupitre.synchronize(), pupitre.synchronize()]);
   };
   const whenClosing = (): Promise<void> => designation.finish();
-  const whenRestoring = (): Promise<void> => pupitre.restore();
+  const whenRestoring = (): Promise<void> =>
+    etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
+      designation.reconcile(entreprise, state);
+    });
   const whenPausingWithoutWindow = async (): Promise<unknown> => {
     try {
       await whenPausingGlobally();
@@ -1179,7 +1182,7 @@ describe('AtelierCoordinator', () => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), structuredClone(reference));
   };
   const givenAnOpenWindow = async (): Promise<void> => {
-    await designation.openWindow(Matricule.of('049'));
+    await designation.openWindow(matriculeFixture('049'));
   };
   const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
@@ -1221,7 +1224,7 @@ describe('AtelierCoordinator', () => {
     await pupitre.executeGlobale('REPRENDRE');
   };
   const givenRestoredPupitre = async (): Promise<void> => {
-    await pupitre.restore();
+    await whenRestoring();
   };
   const givenPendingArrival = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
@@ -1411,7 +1414,7 @@ describe('AtelierCoordinator', () => {
     expect(serveur.chronology).toEqual(events);
   };
   const thenRefusalIs = async (code: string): Promise<void> => {
-    const diagnostics = await etatHorsLigne.diagnostics();
+    const diagnostics = (await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'REFUSE');
     expect(diagnostics).toHaveLength(1);
     expect(requiredFixture(diagnostics[0], 'diagnostic').refus).toEqual({
       code: `urn:glm:erreur:atelier:${code}`,
@@ -1419,7 +1422,7 @@ describe('AtelierCoordinator', () => {
     });
   };
   const thenDiagnosticsCountIs = async (count: number): Promise<void> => {
-    expect(await etatHorsLigne.diagnostics()).toHaveLength(count);
+    expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'REFUSE')).toHaveLength(count);
   };
   const thenMatriculeIs = (code: string): void => {
     expect(requiredFixture(etatHorsLigne.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);

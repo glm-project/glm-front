@@ -160,10 +160,6 @@ export class EvenementsDuJournal {
     return this.evenements.find(evenement => evenement.etat === 'EN_ATTENTE');
   }
 
-  refusals(): readonly EvenementRefuse[] {
-    return this.evenements.filter(evenement => evenement.etat === 'REFUSE');
-  }
-
   records(gesteId: string): boolean {
     return this.evenements.some(evenement => evenement.geste.id === gesteId);
   }

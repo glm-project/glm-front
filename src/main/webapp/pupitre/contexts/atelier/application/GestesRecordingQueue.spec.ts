@@ -3,7 +3,6 @@ import { ContextesParGeste } from '@/pupitre/contexts/atelier/domain/designation
 import { LotDeGestesDAtelier } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/DecisionDePointage';
 import { FenetreOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
-import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
@@ -14,6 +13,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { matriculeFixture } from '@test/unit/fixtures/pupitre/atelier/MatriculeFixture';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
@@ -149,7 +149,7 @@ describe('GestesRecordingQueue', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );

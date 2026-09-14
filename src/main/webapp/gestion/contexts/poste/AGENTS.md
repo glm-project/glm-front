@@ -38,7 +38,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 ## Relations de contexte
 
-- `gestion/contexts/operateur` : contexte autonome consommant les postes de travail sous sa propre projection `PosteHabilite` (id, libellé). L'habilitation d'un opérateur sur un poste interdit sa suppression en amont côté serveur.
+- Le serveur possède les habilitations des opérateurs ; une habilitation existante interdit la suppression du poste.
 - `app/shared/result` : utilise le shared kernel commun `Result<T, E>` pour les retours d'écriture de `PostesPort`.
 - `app/shared/pagination` : utilise `Page<T>` pour la consultation paginée des postes.
 

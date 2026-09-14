@@ -1,11 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
-import {
-  EMPTY_JOURNAL_DU_PUPITRE,
-  EvenementRefuse,
-  EvenementsDuJournal,
-  JournalDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { inject, Injectable, signal } from '@angular/core';
@@ -56,11 +51,6 @@ export class EtatHorsLigneDuPupitre {
       });
     }
     return this.restore(reconcile);
-  }
-
-  async diagnostics(): Promise<readonly EvenementRefuse[]> {
-    const state = await this.journal.read(this.requireEntreprise());
-    return new EvenementsDuJournal(state.evenements).refusals();
   }
 
   publish(state: JournalDuPupitre): void {
