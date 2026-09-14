@@ -1,4 +1,4 @@
-import { Instant } from './Instant';
+import { Instant } from '../instant/Instant';
 
 export class FenetreDePresence {
   constructor(

@@ -1,6 +1,6 @@
-import { ActiviteDeSupervision } from '../../domain/ActiviteDeSupervision';
-import { Instant } from '../../domain/Instant';
-import { SegmentDePresence } from '../../domain/SegmentDePresence';
+import { ActiviteDeSupervision } from '../../domain/activite/ActiviteDeSupervision';
+import { Instant } from '../../domain/instant/Instant';
+import { SegmentDePresence } from '../../domain/presence/SegmentDePresence';
 import { LIBELLES_SUPERVISION } from './LibellesSupervision';
 
 export interface SegmentPresence {
