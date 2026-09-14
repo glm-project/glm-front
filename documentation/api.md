@@ -39,6 +39,13 @@ path parameters, query parameters, body and response together at compilation. It
 so the global bearer interceptor applies. Device-enrolment protocol traffic is the separate `HttpBackend`
 exception described in [`authentication.md`](authentication.md).
 
+Routes reach the back end on the front's own origin, with no base URL configured anywhere. Development
+holds that through `proxy.conf.json`; a deployed pupitre holds it through `functions/api/_middleware.js`, the
+Cloudflare Pages Function that relays `/api/**` to the back-end origin its `API_ORIGIN` variable names, and
+that answers 500 rather than proxy anywhere when that variable is missing. Keep the front same-origin rather than
+giving `ApiClient` an absolute origin: see [ADR 0034](adr/0034-proxy-the-api-at-the-edge.md) for what that
+buys and what it costs.
+
 Bound each `ApiClient` read and write to thirty seconds. A timeout cancels the outstanding HTTP subscription
 and remains a technical failure. In the pupitre, it releases the exchange locks and leaves the gesture pending
 for a later synchronization with the same identity and business timestamp; it never becomes a business refusal.

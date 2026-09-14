@@ -76,3 +76,6 @@ something stays, with a status that says what died.
   parameters, with named immutable construction contracts for additional data
 - [0033 — Compose view data in secondary adapters](0033-compose-view-data-in-secondary-adapters.md) — one
   functional read port per view by default, with API composition owned by secondary adapters
+- [0034 — Proxy the API at the edge](0034-proxy-the-api-at-the-edge.md) — a Cloudflare Pages Function
+  answers `/api/**` so the deployed pupitre stays same-origin, with its Keycloak origin in a committed
+  deployed environment
