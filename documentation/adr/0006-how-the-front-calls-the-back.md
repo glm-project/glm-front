@@ -6,6 +6,8 @@ Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): the offline re
 and concurrent writes reread the affected aggregate before an identical retry. The original account below
 records the earlier implementation. The publication amendment below replaces rejected business promises
 only for `AtelierExchangePort.send`; durable local acceptance remains separate.
+Complemented by [ADR 0034](0034-proxy-the-api-at-the-edge.md): the routes still serve as URLs as they
+are, and a Cloudflare Pages Function answers `/api/**` for the deployed pupitre.
 
 ## Context
 
