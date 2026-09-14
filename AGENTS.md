@@ -24,6 +24,7 @@ npm run prettier:check
 npm run typecheck
 npm run typecheck:watch
 npm run api:generate       # requires authenticated `gh`
+npm run deployed:build:pupitre  # pupitre bundle for Cloudflare Pages; needs DEPLOYED_KEYCLOAK_URL
 npm run validate:quick
 npm run validate:complete  # coverage, builds, then serial browser suites
 ```
@@ -36,6 +37,7 @@ npm run validate:complete  # coverage, builds, then serial browser suites
 - Create `package-info.ts` before code in a new bounded context so `arch-unit-ts` discovers it. `app/generated/` deliberately has none, preventing domain code from importing wire types.
 - Create the bounded context's `AGENTS.md` and a sibling `CLAUDE.md` containing only `@AGENTS.md` before code; keep vocabulary, responsibilities, invariants and local rules with their owner.
 - Treat `HexagonalArchTest.spec.ts` failures as architecture failures; fix the dependency instead of weakening the test.
+- Keep `functions/` at the repository root: `wrangler pages deploy` reads it from the working directory, never from the published one, and a misplaced Function deploys silently while `/api/**` answers the `index.html`.
 - Let `httpAuthInterceptor` attach bearer tokens. Device-enrolment traffic is the exception and uses `HttpBackend` to bypass interceptors.
 - Apply Tidy First from Kent Beck to every change: when a behavior-preserving structural cleanup helps, isolate it in a preceding `refactor:` or `chore:` commit; keep behavioral work in a separate commit. Do not add speculative cleanup.
 

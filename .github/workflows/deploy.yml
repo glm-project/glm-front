@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 15
     env:
       CYPRESS_INSTALL_BINARY: 0
+      DEPLOYED_KEYCLOAK_URL: ${{ vars.DEPLOYED_KEYCLOAK_URL }}
     steps:
       - name: 'Setup: checkout project'
         uses: actions/checkout@v5
@@ -28,11 +29,11 @@ jobs:
         run: npm ci
       - name: 'Build: generate API contract'
         run: npm run api:generate
-      - name: 'Build: pupitre'
-        run: npm run build:pupitre
+      - name: 'Build: pupitre for its deployed origins'
+        run: npm run deployed:build:pupitre
       - name: 'Deploy: Cloudflare Pages'
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy target/classes/static/pupitre --project-name=glm-pupitre --commit-dirty=true
+          command: pages deploy target/deployed/pupitre --project-name=glm-pupitre --commit-dirty=true

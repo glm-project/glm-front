@@ -134,6 +134,18 @@
               ],
               "outputHashing": "all"
             },
+            "deployed": {
+              "outputPath": {
+                "base": "target/deployed/pupitre",
+                "browser": ""
+              },
+              "fileReplacements": [
+                {
+                  "replace": "src/main/webapp/pupitre/environments/environment.ts",
+                  "with": "src/main/webapp/pupitre/environments/environment.deployed.ts"
+                }
+              ]
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,

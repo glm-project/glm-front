@@ -22,7 +22,12 @@ Keep the replacement at build time: a runtime flag would ship the bypass in the 
 `pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,
 the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort` and
 `DeviceEnrolmentPort`) with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
-client ID stay in front environments; no client secret belongs in a browser repository.
+client ID stay in front environments; no client secret belongs in a browser repository. The `deployed`
+configuration of `build-pupitre` substitutes `environment.deployed.ts`, whose Keycloak origin is the
+`NG_DEPLOYED_KEYCLOAK_URL` identifier that `--define` replaces at build time from `DEPLOYED_KEYCLOAK_URL`;
+Keycloak is always called directly, never through the API proxy of
+[ADR 0034](adr/0034-proxy-the-api-at-the-edge.md), because the token's `iss` and the verification URI the
+operator reads must name the real host.
 
 Application-specific adapters do not import one another. The port contract runs the shared behavior against each
 implementation; adapter-specific behavior stays beside that contract.
