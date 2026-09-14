@@ -1,0 +1,28 @@
+<h2 mat-dialog-title class="text-section">Supprimer le poste ?</h2>
+<mat-dialog-content>
+  <p class="text-body" data-selector="poste-delete-description">
+    Le poste <strong>{{ poste.libelle.value }}</strong> sera retiré du référentiel. Cette action est définitive.
+  </p>
+  @if (refus(); as erreur) {
+  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="poste-delete-refusal">{{ erreur.message }}</p>
+  } @if (erreurTechnique()) {
+  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="poste-delete-technical-error">
+    La suppression a échoué. Vérifiez la connexion puis réessayez.
+  </p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [mat-dialog-close]="false" [disabled]="suppression()" data-selector="poste-delete-cancel">
+    Annuler
+  </button>
+  <button
+    mat-flat-button
+    type="button"
+    class="delete-button"
+    (click)="confirm()"
+    [disabled]="suppression()"
+    data-selector="poste-delete-confirm"
+  >
+    {{ suppression() ? 'Suppression…' : 'Supprimer' }}
+  </button>
+</mat-dialog-actions>

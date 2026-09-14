@@ -1,0 +1,85 @@
+<h2 mat-dialog-title class="text-section" data-selector="poste-form-title">{{ titre }}</h2>
+<form novalidate (submit)="save($event)" data-selector="poste-form">
+  <mat-dialog-content>
+    <p class="mb-6 text-body-sm text-ink-muted">Définissez le poste et le travail qui s’y effectue. Le coût horaire est facultatif.</p>
+    <fieldset [disabled]="enregistrement()" class="fields">
+      <div>
+        <label for="poste-libelle" class="field-label">Libellé <span class="text-ink-muted">(obligatoire)</span></label>
+        <input
+          #libelle
+          id="poste-libelle"
+          name="libelle"
+          class="field-input"
+          autocomplete="off"
+          required
+          [value]="formulaire().saisie.libelle"
+          (input)="changeLibelle(libelle.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurLibelle() !== undefined"
+          aria-describedby="poste-libelle-error"
+          data-selector="poste-libelle"
+        />
+        <p id="poste-libelle-error" class="field-error" aria-live="polite" data-selector="poste-libelle-error">
+          {{ soumis() ? formulaire().erreurLibelle() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="poste-nature" class="field-label">Nature <span class="text-ink-muted">(obligatoire)</span></label>
+        <input
+          #nature
+          id="poste-nature"
+          name="nature"
+          class="field-input"
+          autocomplete="off"
+          required
+          [value]="formulaire().saisie.nature"
+          (input)="changeNature(nature.value)"
+          [matAutocomplete]="natures"
+          [attr.aria-invalid]="soumis() && formulaire().erreurNature() !== undefined"
+          aria-describedby="poste-nature-help poste-nature-error"
+          data-selector="poste-nature"
+        />
+        <mat-autocomplete #natures="matAutocomplete" (optionSelected)="changeNature($event.option.viewValue)">
+          @for (nature of suggestions(); track nature.value) {
+          <mat-option [value]="nature.value" data-selector="poste-nature-option">{{ nature.value }}</mat-option>
+          }
+        </mat-autocomplete>
+        <p id="poste-nature-help" class="mt-2 text-body-sm text-ink-muted">Choisissez une nature existante ou saisissez-en une nouvelle.</p>
+        <p id="poste-nature-error" class="field-error" aria-live="polite" data-selector="poste-nature-error">
+          {{ soumis() ? formulaire().erreurNature() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="poste-cout" class="field-label">Coût horaire <span class="text-ink-muted">(€/h, facultatif)</span></label>
+        <input
+          #cout
+          id="poste-cout"
+          name="coutHoraire"
+          class="field-input"
+          inputmode="decimal"
+          autocomplete="off"
+          [value]="formulaire().saisie.coutHoraire"
+          (input)="changeCoutHoraire(cout.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurCoutHoraire() !== undefined"
+          aria-describedby="poste-cout-error"
+          data-selector="poste-cout"
+        />
+        <p id="poste-cout-error" class="field-error" aria-live="polite" data-selector="poste-cout-error">
+          {{ soumis() ? formulaire().erreurCoutHoraire() : '' }}
+        </p>
+      </div>
+    </fieldset>
+    @if (formulaire().erreurEnregistrement(); as erreur) {
+    <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="poste-enregistrement-error">{{ erreur }}</p>
+    } @if (erreurTechnique()) {
+    <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="poste-technical-error">
+      L’enregistrement a échoué. Vérifiez la connexion puis réessayez.
+    </p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" [mat-dialog-close]="false" [disabled]="enregistrement()" data-selector="poste-cancel">Annuler</button>
+    <button mat-flat-button type="submit" [disabled]="enregistrement()" data-selector="poste-save">
+      {{ enregistrement() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </mat-dialog-actions>
+</form>

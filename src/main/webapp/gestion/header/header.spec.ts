@@ -3,6 +3,7 @@ import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructu
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { dataSelector } from '@test/utils/DataSelector';
 import { GestionHeader } from './header';
 
@@ -13,6 +14,7 @@ describe('Gestion header', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: AuthenticationPort, useClass: InMemoryAuthentication },
       ],
@@ -35,6 +37,27 @@ describe('Gestion header', () => {
   it('should show the heading supplied by gestion', () => {
     thenItShowsTheHeading('glmfront');
   });
+
+  it.each([
+    ['gestion-navigation-supervision', '/', 'Supervision atelier'],
+    ['gestion-navigation-postes', '/postes-de-travail', 'Postes de travail'],
+  ])('should offer the %s destination in the navigation menu', async (selector, href, label) => {
+    await whenOpeningMenu();
+
+    thenMenuLinksTo(selector, href, label);
+  });
+
+  const whenOpeningMenu = async (): Promise<void> => {
+    const button = fixture.debugElement.query(By.css(dataSelector('gestion-menu'))).nativeElement as HTMLButtonElement;
+    button.click();
+    await fixture.whenStable();
+  };
+
+  const thenMenuLinksTo = (selector: string, href: string, label: string): void => {
+    const link = document.querySelector(dataSelector(selector));
+    expect(link?.getAttribute('href')).toBe(href);
+    expect(link?.textContent).toContain(label);
+  };
 
   const thenItShowsTheHeading = (heading: string): void => {
     const header = fixture.nativeElement as HTMLElement;
