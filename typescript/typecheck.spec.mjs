@@ -16,7 +16,7 @@ const projects = {
 const negativeProofs = [
   ['gestion production', projects.production, 'src/main/webapp/gestion/main.ts'],
   ['pupitre production', projects.production, 'src/main/webapp/pupitre/main.ts'],
-  ['co-located unit tests', projects.unit, 'src/main/webapp/gestion/app.spec.ts'],
+  ['co-located unit tests', projects.unit, 'src/main/webapp/gestion/app/app.spec.ts'],
   ['cross-application unit tests', projects.unit, 'src/test/webapp/unit/AuthenticationPort.contract.spec.ts'],
   ['Cypress application suites', projects.application, 'src/test/webapp/application/pupitre/shell/Shell.spec.ts'],
   ['Cypress component suites', projects.component, 'src/test/webapp/component/pupitre/designation/Designation.spec.ts'],

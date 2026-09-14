@@ -154,9 +154,9 @@ ruleTester.run('scenario-shape', scenarioShape, {
 });
 
 const testFilesFixture = [
-  'src/main/webapp/gestion/contexts/supervision-atelier/infrastructure/primary/supervision-atelier.spec.ts',
+  'src/main/webapp/gestion/contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier.spec.ts',
   'src/main/webapp/gestion/header/header.spec.ts',
-  'src/main/webapp/pupitre/app.spec.ts',
+  'src/main/webapp/pupitre/app/app.spec.ts',
   'src/test/webapp/component/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
   'src/test/webapp/application/gestion/supervision-atelier/SupervisionAtelier.spec.ts',
   'src/test/webapp/unit/HexagonalArchTest.spec.ts',

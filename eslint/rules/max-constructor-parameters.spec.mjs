@@ -23,7 +23,7 @@ tester.run('max-constructor-parameters', maxConstructorParameters, {
 });
 
 const eslint = new ESLint();
-for (const file of ['src/main/webapp/gestion/app.ts', 'src/test/webapp/unit/HexagonalArchTest.spec.ts', 'eslint.config.mjs']) {
+for (const file of ['src/main/webapp/gestion/app/app.ts', 'src/test/webapp/unit/HexagonalArchTest.spec.ts', 'eslint.config.mjs']) {
   it(`should enforce the constructor limit through the repository configuration in ${file}`, async () => {
     const config = await eslint.calculateConfigForFile(file);
     const messages = new Linter().verify('class Example { constructor(a, b, c, d) {} }', {

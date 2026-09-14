@@ -158,7 +158,7 @@ journeys (e.g. the supervision grid mounted on `/`) are asserted in dedicated sp
 ## Mock at the boundary
 
 Bind the port, never the library: a spec that needs authentication provides `AuthenticationPort` with
-`InMemoryAuthentication` (see `gestion/app.spec.ts`, `gestion/header/header.spec.ts`) rather than reaching a real Keycloak
+`InMemoryAuthentication` (see `gestion/app/app.spec.ts`, `gestion/header/header.spec.ts`) rather than reaching a real Keycloak
 instance. That double is production code, so the compiler holds it to the port's signature and the contract
 suite below holds it to the port's behavior. Mock ports and I/O, not the domain logic under test.
 

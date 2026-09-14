@@ -6,8 +6,8 @@ const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
   'src/main/webapp/pupitre/contexts/atelier/application/AtelierCoordinator.ts',
-  'src/main/webapp/gestion/app.ts',
-  'src/main/webapp/pupitre/app.ts',
+  'src/main/webapp/gestion/app/app.ts',
+  'src/main/webapp/pupitre/app/app.ts',
   'src/test/webapp/component/pupitre/designation/Designation.spec.ts',
   'src/test/webapp/application/pupitre/EffectPolicyFixture.spec.ts',
   'src/test/webapp/unit/HexagonalArchTest.spec.ts',
@@ -48,9 +48,9 @@ for (const file of filesFixture) {
 }
 
 it('should preserve the existing boundaries between fronts', async () => {
-  const results = await whenLintingImports('src/main/webapp/gestion/app.ts', [
-    "import { App } from '@/pupitre/app';",
-    "export async function load() { return import('@/pupitre/app'); }",
+  const results = await whenLintingImports('src/main/webapp/gestion/app/app.ts', [
+    "import { App } from '@/pupitre/app/app';",
+    "export async function load() { return import('@/pupitre/app/app'); }",
   ]);
 
   thenImportsAreRejected(results);
@@ -59,13 +59,13 @@ it('should preserve the existing boundaries between fronts', async () => {
 const presentationPrimaryFiles = [
   [
     'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.ts',
-    "import { App } from '@/gestion/app';",
+    "import { App } from '@/gestion/app/app';",
   ],
   [
     'src/main/webapp/pupitre/shared/authentication/infrastructure/primary/http-device-authorization.interceptor.ts',
-    "import { App } from '@/gestion/app';",
+    "import { App } from '@/gestion/app/app';",
   ],
-  ['src/main/webapp/app/shared/design-system/infrastructure/primary/icon/icon.ts', "import { App } from '@/pupitre/app';"],
+  ['src/main/webapp/app/shared/design-system/infrastructure/primary/icon/icon.ts', "import { App } from '@/pupitre/app/app';"],
 ];
 
 for (const [file, forbiddenImport] of presentationPrimaryFiles) {
@@ -91,7 +91,7 @@ it('should reject business imports from app-specific shared code', async () => {
 });
 
 it('should reject a static inline token bypass', async () => {
-  const config = await eslint.calculateConfigForFile('src/main/webapp/pupitre/app.ts');
+  const config = await eslint.calculateConfigForFile('src/main/webapp/pupitre/app/app.ts');
   const results = linter.verify(`const template = '<div style="color: #ff0000"></div>';`, {
     plugins: { local: config.plugins.local },
     rules: { 'local/no-token-bypass': config.rules['local/no-token-bypass'] },

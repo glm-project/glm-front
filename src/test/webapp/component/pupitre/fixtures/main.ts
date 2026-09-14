@@ -15,7 +15,7 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
-import { PupitrePage } from '@/pupitre/page';
+import { PupitrePage } from '@/pupitre/page/page';
 import { DeviceEnrolmentOutcome, DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Component, inject } from '@angular/core';

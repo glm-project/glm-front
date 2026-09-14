@@ -9,7 +9,7 @@ import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/E
 import { Enrolement } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/enrolement/enrolement';
 import { Reinitialisation } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/reinitialisation/reinitialisation';
 import { ChangeDetectorRef, Component, computed, ElementRef, ErrorHandler, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { MessageDAtelierVisible, PupitreHeader } from './header/header';
+import { MessageDAtelierVisible, PupitreHeader } from '../header/header';
 
 @Component({
   selector: 'glm-pupitre-page',

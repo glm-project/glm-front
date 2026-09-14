@@ -9,8 +9,8 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { provideRouter, Router } from '@angular/router';
 import { dataSelector } from '@test/utils/DataSelector';
 
+import { routes } from '../app.route';
 import { App } from './app';
-import { routes } from './app.route';
 
 class PupitreRuntimeFixture {
   readonly connected = signal(true).asReadonly();

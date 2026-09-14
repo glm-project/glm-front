@@ -116,7 +116,7 @@ describe('pre-push mutation', () => {
       remoteName: 'origin',
       git: arguments_ => {
         if (arguments_[1] === '--unified=0') return '@@ -4,2 +5,3 @@\n';
-        return ['src/main/webapp/pupitre/page.ts', 'src/main/webapp/pupitre/page.spec.ts'].join('\n');
+        return ['src/main/webapp/pupitre/page/page.ts', 'src/main/webapp/pupitre/page/page.spec.ts'].join('\n');
       },
       runMutation: () => assert.fail('Stryker should not run when changes are outside the domain.'),
       write: message => messages.push(message),

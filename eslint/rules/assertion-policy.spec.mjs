@@ -7,8 +7,8 @@ const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
   'src/main/webapp/app/shared/authentication/domain/AuthenticationPort.ts',
-  'src/main/webapp/gestion/app.ts',
-  'src/main/webapp/pupitre/app.ts',
+  'src/main/webapp/gestion/app/app.ts',
+  'src/main/webapp/pupitre/app/app.ts',
   'src/test/webapp/component/pupitre/designation/Designation.spec.ts',
   'src/test/webapp/application/pupitre/shell/Shell.spec.ts',
   'src/test/webapp/unit/fixtures/SignalFixture.ts',
