@@ -69,7 +69,7 @@ export class PostesFixture extends PostesPort {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement();
     if (resultat.ok) {
-      this.liste = this.liste.map(poste => (poste.identifiePar(commande.id) ? poste.modifier(commande) : poste));
+      this.liste = this.liste.map(poste => (poste.id.value === commande.id.value ? new PosteDeTravail(poste.id, commande) : poste));
     }
     return resultat;
   }
@@ -79,7 +79,7 @@ export class PostesFixture extends PostesPort {
     if (this.ecritureFailure !== undefined) return Promise.reject(this.ecritureFailure);
     const resultat = await (this.suppressionDifferee ?? Promise.resolve(this.suppression));
     if (resultat.ok) {
-      this.liste = this.liste.filter(poste => !poste.identifiePar(id));
+      this.liste = this.liste.filter(poste => poste.id.value !== id.value);
     }
     return resultat;
   }

@@ -22,12 +22,4 @@ export class PosteDeTravail {
     this.nature = configuration.nature;
     this.coutHoraire = configuration.coutHoraire;
   }
-
-  identifiePar(id: PosteDeTravailId): boolean {
-    return this.id.equals(id);
-  }
-
-  modifier(configuration: ConfigurationPoste): PosteDeTravail {
-    return new PosteDeTravail(this.id, configuration);
-  }
 }

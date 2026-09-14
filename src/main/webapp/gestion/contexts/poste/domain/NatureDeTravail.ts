@@ -14,10 +14,6 @@ export class NatureDeTravail {
     return longueur === 0 || longueur > 50 ? 'La nature est obligatoire et limitée à 50 caractères.' : undefined;
   }
 
-  equals(other: NatureDeTravail | undefined): boolean {
-    return other !== undefined && this.cleNormalisee() === other.cleNormalisee();
-  }
-
   cleNormalisee(): string {
     return this.value.toLocaleLowerCase('fr');
   }

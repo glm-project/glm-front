@@ -17,16 +17,6 @@ describe('NatureDeTravail', () => {
     expect(() => new NatureDeTravail(value)).toThrow('La nature est obligatoire et limitée à 50 caractères.');
   });
 
-  it('should be equal case-insensitively to a nature carrying the same value', () => {
-    const nature = new NatureDeTravail('tournage');
-
-    expect(nature.equals(new NatureDeTravail('tournage'))).toBe(true);
-    expect(nature.equals(new NatureDeTravail('TOURNAGE'))).toBe(true);
-    expect(nature.equals(new NatureDeTravail('Tournage'))).toBe(true);
-    expect(nature.equals(new NatureDeTravail('fraisage'))).toBe(false);
-    expect(nature.equals(undefined)).toBe(false);
-  });
-
   it('should compare alphabetically using French collation', () => {
     const tournage = new NatureDeTravail('tournage');
     const usinage = new NatureDeTravail('usinage');
