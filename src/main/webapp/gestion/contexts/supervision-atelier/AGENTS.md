@@ -14,6 +14,10 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Fenêtre de présence** : intervalle de présence effective d'un opérateur, pauses déduites, au sein d'une journée de travail.
 
+**Segment de présence** : intervalle temporel de présence ou de pause au sein d'une ou plusieurs journées de travail, avec son début, sa fin, son type (présence ou pause) et l'indication d'un segment en cours.
+
+**Statistiques de supervision** : synthèse instantanée de l'atelier comptabilisant le nombre total d'opérateurs déclarés, présents, en pause, absents, en GLM et en anomalie.
+
 **Activité de supervision** : activité en cours rattachée à un opérateur, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
@@ -31,6 +35,8 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - La présence d'un opérateur déclaré est déterminée exclusivement par sa journée de travail : présent ou en pause si une journée est ouverte, absent en l'absence de journée ouverte.
 - Une journée de travail est une venue indépendante du calendrier : les venues traversant minuit et les anciennes journées restées ouvertes sont prises en compte sans filtre calendaire.
 - L'ordre des opérateurs dans la grille de supervision est strictement alphabétique et indépendant de leur état de présence.
+- Les segments de présence d'un opérateur sont dérivés de ses journées de travail : les intervalles effectifs et les pauses intercalaires ou de session sont calculés par le domaine.
+- Les statistiques de supervision sont évaluées par l'agrégat SupervisionDeLAtelier.
 - Les activités en cours sont associées aux opérateurs déclarés correspondants ; un opérateur peut avoir 0 à N activités.
 - GLM est un état dérivé : un opérateur est en GLM si et seulement s'il est présent et n'a aucune activité en cours.
 - L'absence de poste ou l'absence d'heure d'ouverture est représentée sans valeur fabriquée (`undefined`).

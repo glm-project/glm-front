@@ -1,6 +1,7 @@
+import { Instant } from '../instant/Instant';
+import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { FenetreDePresence } from './FenetreDePresence';
-import { IdentifiantOperateur } from './IdentifiantOperateur';
-import { Instant } from './Instant';
+import { SegmentDePresence } from './SegmentDePresence';
 
 export type EtatSession = 'PRESENT' | 'EN_PAUSE';
 
@@ -37,5 +38,22 @@ export class JourneeDeTravail {
 
   openingInstant(): Instant | undefined {
     return [...this.fenetres].sort((left, right) => left.debut.compare(right.debut))[0]?.debut;
+  }
+
+  segments(maintenant: Instant): readonly SegmentDePresence[] {
+    const fenetres = [...this.fenetres].sort((left, right) => left.debut.compare(right.debut));
+    return fenetres.flatMap((fenetre, index) => {
+      const fin = fenetre.fin ?? maintenant;
+      const segments: SegmentDePresence[] = [
+        new SegmentDePresence({ debut: fenetre.debut, fin, pause: false, enCours: fenetre.fin === undefined }),
+      ];
+      const reprise = fenetres[index + 1]?.debut;
+      if (reprise) {
+        segments.push(new SegmentDePresence({ debut: fin, fin: reprise, pause: true }));
+      } else if (this.session === 'EN_PAUSE') {
+        segments.push(new SegmentDePresence({ debut: fin, fin: maintenant, pause: true, enCours: true }));
+      }
+      return segments.filter(segment => segment.fin.compare(segment.debut) > 0);
+    });
   }
 }

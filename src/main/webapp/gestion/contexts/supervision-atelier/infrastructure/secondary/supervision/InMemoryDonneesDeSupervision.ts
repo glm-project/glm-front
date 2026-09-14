@@ -1,6 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject } from '@angular/core';
-import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../domain/DonneesDeSupervisionPort';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 
 export class InMemoryDonneesDeSupervision extends DonneesDeSupervisionPort {
   private readonly errorHandler = inject(ErrorHandlerPort);

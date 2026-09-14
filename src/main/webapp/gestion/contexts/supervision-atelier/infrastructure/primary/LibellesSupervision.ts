@@ -1,6 +1,6 @@
-import { AnomalieDeSupervision } from '../../domain/AnomalieDeSupervision';
-import { EtatDePresence } from '../../domain/EtatDePresence';
-import { Instant } from '../../domain/Instant';
+import { Instant } from '../../domain/instant/Instant';
+import { EtatDePresence } from '../../domain/presence/EtatDePresence';
+import { AnomalieDeSupervision } from '../../domain/supervision/AnomalieDeSupervision';
 
 const PRESENCES: Record<EtatDePresence, string> = {
   PRESENT: 'Présent',
@@ -28,8 +28,18 @@ export const LIBELLES_SUPERVISION = {
   anomalies: ANOMALIES,
   nc: 'NC',
   glm: 'GLM',
+  glmDetails: 'GLM · Aucune activité en cours',
   ouverture: 'Journée ouverte depuis le',
   dateHeure: (instant: Instant): string => dateHeure.format(new Date(instant.value)),
   depuis: 'Depuis',
   heure: (instant: Instant): string => heure.format(new Date(instant.value)),
+  tous: 'Tous',
+  recherchePlaceholder: 'Rechercher un opérateur, un poste, une activité…',
+  rechercheAriaLabel: 'Rechercher un opérateur, un poste ou une activité',
+  reinitialiser: 'Réinitialiser',
+  aucunResultat: 'Aucun opérateur ne correspond aux critères de recherche.',
+  derniereLecture: (heureStr: string): string => `Dernière lecture réussie à ${heureStr} · Actualisation automatique toutes les 30 s`,
+  ratioAffiches: (affiches: number, total: number): string =>
+    `${affiches} affiché${affiches > 1 ? 's' : ''} sur ${total} déclaré${total > 1 ? 's' : ''}`,
+  sansJourneeOuverte: 'Aucune journée ouverte',
 } as const;

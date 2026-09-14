@@ -1,11 +1,16 @@
-@let vue = etat();
+@let vue = presentation();
 
-<section class="space-y-6 p-6 text-ink">
+<section class="space-y-4 p-3 sm:p-6 text-ink">
   <header class="flex flex-wrap items-center justify-between gap-4">
-    <h1 class="text-title">{{ libelles.titre }}</h1>
+    <div>
+      <h1 class="text-title">{{ libelles.titre }}</h1>
+      @if (derniereLecture(); as heureLecture) {
+      <p class="text-body-sm text-ink-muted" data-selector="supervision-derniere-lecture">{{ libelles.derniereLecture(heureLecture) }}</p>
+      }
+    </div>
     <button
       type="button"
-      class="min-h-touch rounded border border-border-strong px-4 text-body-sm focus-visible:outline-2 focus-visible:outline-accent"
+      class="min-h-touch rounded border border-border-strong px-4 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
       data-selector="supervision-refresh"
       [disabled]="vue.kind === 'CHARGEMENT'"
       (click)="donnees.reload()"
@@ -20,70 +25,386 @@
   <p role="alert" data-selector="supervision-error">{{ libelles.erreur }}</p>
   } @case ('SUCCES') { @if (vue.operateurs.length === 0) {
   <p class="text-body text-ink-muted" data-selector="supervision-empty">{{ libelles.vide }}</p>
-  } @else {
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" data-selector="supervision-grille">
-    @for (supervise of vue.operateurs; track supervise.operateur.id.value) {
-    <article
-      class="flex flex-col justify-between rounded border border-border bg-surface p-4 shadow-xs"
-      data-selector="supervision-tuile"
-      [attr.data-operateur-id]="supervise.operateur.id.value"
-    >
-      <div class="flex items-start justify-between gap-2">
-        <h2 class="text-section font-semibold text-ink" data-selector="supervision-operateur-nom">
-          {{ supervise.operateur.nom }} {{ supervise.operateur.prenom }}
-        </h2>
-        @switch (supervise.presence) { @case ('PRESENT') {
-        <span class="rounded bg-ok px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
-          {{ libelles.presences[supervise.presence] }}
-        </span>
-        } @case ('EN_PAUSE') {
-        <span class="rounded bg-warn px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
-          {{ libelles.presences[supervise.presence] }}
-        </span>
-        } @case ('ABSENT') {
-        <span class="rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
-          {{ libelles.presences[supervise.presence] }}
-        </span>
-        } }
+  } @else { @let stats = vue.statistiques; @let filtre = filtreActif(); @let listeAffichee = vue.lignes;
+
+  <div class="space-y-4 rounded border border-border bg-surface p-4 shadow-xs" data-selector="supervision-barometre">
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+          [class.bg-sunken]="filtre === null"
+          [class.border-border-strong]="filtre === null"
+          [class.border-border]="filtre !== null"
+          data-selector="supervision-filtre-tous"
+          [attr.aria-pressed]="filtre === null"
+          (click)="basculerFiltre('TOUS')"
+        >
+          {{ libelles.tous }}
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-total">({{ stats.total }})</span>
+        </button>
+
+        <button
+          type="button"
+          class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+          [class.bg-sunken]="filtre === 'PRESENT'"
+          [class.border-border-strong]="filtre === 'PRESENT'"
+          [class.border-border]="filtre !== 'PRESENT'"
+          data-selector="supervision-filtre-present"
+          [attr.aria-pressed]="filtre === 'PRESENT'"
+          (click)="basculerFiltre('PRESENT')"
+        >
+          <span class="mr-1 inline-block h-2 w-2 rounded-full bg-ok"></span>
+          {{ libelles.presences.PRESENT }}
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-present">({{ stats.presents }})</span>
+        </button>
+
+        <button
+          type="button"
+          class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+          [class.bg-sunken]="filtre === 'EN_PAUSE'"
+          [class.border-border-strong]="filtre === 'EN_PAUSE'"
+          [class.border-border]="filtre !== 'EN_PAUSE'"
+          data-selector="supervision-filtre-en-pause"
+          [attr.aria-pressed]="filtre === 'EN_PAUSE'"
+          (click)="basculerFiltre('EN_PAUSE')"
+        >
+          <span class="mr-1 inline-block h-2 w-2 rounded-full bg-warn"></span>
+          {{ libelles.presences.EN_PAUSE }}
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-en-pause">({{ stats.enPause }})</span>
+        </button>
+
+        <button
+          type="button"
+          class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+          [class.bg-sunken]="filtre === 'ABSENT'"
+          [class.border-border-strong]="filtre === 'ABSENT'"
+          [class.border-border]="filtre !== 'ABSENT'"
+          data-selector="supervision-filtre-absent"
+          [attr.aria-pressed]="filtre === 'ABSENT'"
+          (click)="basculerFiltre('ABSENT')"
+        >
+          <span class="mr-1 inline-block h-2 w-2 rounded-full bg-nc"></span>
+          {{ libelles.presences.ABSENT }}
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-absent">({{ stats.absents }})</span>
+        </button>
       </div>
-      @if (supervise.isEnGlm()) {
-      <p class="mt-4 text-body-sm font-semibold text-glm" data-selector="supervision-glm">{{ libelles.glm }}</p>
-      } @if (supervise.activites.length > 0) {
-      <ul class="mt-4 space-y-3">
-        @for (activite of supervise.activites; track activite.id.value) {
-        <li class="text-body-sm text-ink" data-selector="supervision-activite">
-          <div class="flex items-start justify-between gap-2">
-            <p class="wrap-anywhere" data-selector="supervision-activite-nom">{{ activite.nom }}</p>
-            @if (activite.categorie.isNc()) {
-            <span class="shrink-0 text-label text-nc" data-selector="supervision-nc">{{ libelles.nc }}</span>
-            }
-          </div>
-          @if (activite.poste; as poste) {
-          <p class="wrap-anywhere text-ink-muted" data-selector="supervision-activite-poste">{{ poste }}</p>
-          }
-          <p class="text-ink-muted">
-            {{ libelles.depuis }}
-            <time data-selector="supervision-activite-debut" [attr.datetime]="activite.debut.value"
-              >{{ libelles.heure(activite.debut) }}</time
-            >
-          </p>
-        </li>
+
+      <div class="hidden h-6 w-px bg-border sm:block" aria-hidden="true"></div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+          [class.bg-sunken]="filtre === 'GLM'"
+          [class.border-border-strong]="filtre === 'GLM'"
+          [class.border-border]="filtre !== 'GLM'"
+          data-selector="supervision-filtre-glm"
+          [attr.aria-pressed]="filtre === 'GLM'"
+          (click)="basculerFiltre('GLM')"
+        >
+          <span class="mr-1 text-glm font-bold">⚡</span>
+          {{ libelles.glm }}
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-glm">({{ stats.glm }})</span>
+        </button>
+
+        <button
+          type="button"
+          class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+          [class.bg-sunken]="filtre === 'ANOMALIE'"
+          [class.border-border-strong]="filtre === 'ANOMALIE'"
+          [class.border-border]="filtre !== 'ANOMALIE'"
+          data-selector="supervision-filtre-anomalie"
+          [attr.aria-pressed]="filtre === 'ANOMALIE'"
+          (click)="basculerFiltre('ANOMALIE')"
+        >
+          <span class="mr-1 text-nc font-bold">⚠️</span>
+          Anomalies
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-anomalie">({{ stats.anomalies }})</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-3">
+      <div class="relative min-w-0 w-full flex-1 sm:max-w-md">
+        <input
+          type="search"
+          class="min-h-touch w-full rounded border border-border bg-canvas px-3 text-body-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-accent"
+          [placeholder]="libelles.recherchePlaceholder"
+          [attr.aria-label]="libelles.rechercheAriaLabel"
+          [value]="recherche()"
+          data-selector="supervision-recherche-input"
+          (input)="modifierRecherche($any($event.target).value)"
+        />
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class="text-body-sm text-ink-muted" data-selector="supervision-ratio-affiches">
+          {{ libelles.ratioAffiches(listeAffichee.length, stats.total) }}
+        </span>
+
+        @if (aFiltreOuRechercheActif()) {
+        <button
+          type="button"
+          class="min-h-touch rounded border border-border px-3 py-1 text-body-sm text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+          data-selector="supervision-reset-filtres"
+          (click)="reinitialiserFiltres()"
+        >
+          {{ libelles.reinitialiser }}
+        </button>
         }
-      </ul>
-      } @if (supervise.heureDOuverture; as ouverture) {
-      <p class="mt-4 text-body-sm text-ink-muted">
-        {{ libelles.ouverture }}
-        <time data-selector="supervision-ouverture" [attr.datetime]="ouverture.value">{{ libelles.dateHeure(ouverture) }}</time>
-      </p>
-      } @if (supervise.anomalies.length > 0) {
-      <ul class="mt-4 space-y-2 border-t border-border pt-3 text-body-sm font-semibold text-ink">
-        @for (anomalie of supervise.anomalies; track anomalie) {
-        <li data-selector="supervision-anomalie">{{ libelles.anomalies[anomalie] }}</li>
-        }
-      </ul>
-      }
-    </article>
-    }
+      </div>
+    </div>
   </div>
-  } } }
+
+  @if (listeAffichee.length === 0) {
+  <div class="rounded border border-border bg-surface p-8 text-center" data-selector="supervision-aucun-resultat">
+    <p class="text-body text-ink-muted">{{ libelles.aucunResultat }}</p>
+    <button
+      type="button"
+      class="min-h-touch mt-4 rounded border border-border-strong px-4 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
+      (click)="reinitialiserFiltres()"
+    >
+      {{ libelles.reinitialiser }}
+    </button>
+  </div>
+  } @else {
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-body-sm text-ink-muted" aria-label="Légende de la chronologie">
+    <span><span class="inline-block h-2 w-4 rounded-sm bg-ok" aria-hidden="true"></span> Présence</span>
+    <span><span class="inline-block h-2 w-4 rounded-sm bg-warn" aria-hidden="true"></span> Pause</span>
+    <span><span class="inline-block h-2 w-4 rounded-sm bg-accent" aria-hidden="true"></span> Activité en cours</span>
+    <span><span class="inline-block h-2 w-4 rounded-sm bg-nc" aria-hidden="true"></span> NC</span>
+    <span class="text-glm">GLM à l’instant courant</span>
+  </div>
+  <p class="text-body-sm text-ink-muted">
+    Les activités terminées ne figurent pas encore sur la frise. Les espaces vides ne prouvent pas une inactivité.
+  </p>
+  <div
+    class="overflow-x-auto border border-border bg-surface focus-visible:outline-2 focus-visible:outline-accent"
+    data-selector="supervision-grille"
+    tabindex="0"
+    role="region"
+    aria-label="Chronologie de l’atelier de 06:00 à 22:00"
+  >
+    <div class="synoptique">
+      <div class="ligne-horaire border-b border-border bg-sunken">
+        <div class="identite p-3 text-body-sm text-ink-muted">Opérateur · Présence</div>
+        <div class="relative mr-12 min-h-touch" [class.h-20]="vue.frise.positionMaintenant === undefined">
+          @for (heure of vue.frise.reperes; track heure; let index = $index) {
+          <span
+            class="repere-heure absolute top-3 text-label text-ink-muted tabular-nums first:pl-2"
+            [style.left.%]="index * 12.5"
+            data-selector="supervision-repere-heure"
+            >{{ heure }}</span
+          >
+          } @if (vue.frise.positionMaintenant !== undefined) {
+          <div
+            class="absolute inset-y-0 w-1 border-l border-accent"
+            [style.left.%]="vue.frise.positionMaintenant"
+            [title]="vue.frise.libelleMaintenant"
+            [attr.aria-label]="vue.frise.libelleMaintenant"
+            role="img"
+            data-selector="supervision-maintenant"
+          ></div>
+          } @else {
+          <p class="absolute bottom-2 text-body-sm text-accent" data-selector="supervision-maintenant-hors-plage">
+            {{ vue.frise.libelleMaintenant }}
+          </p>
+          }
+        </div>
+      </div>
+      @for (ligne of vue.lignes; track ligne.supervise.operateur.id.value) { @let supervise = ligne.supervise; @let estCalme =
+      estAbsentCalme(supervise);
+      <article
+        class="border-b border-border last:border-b-0"
+        data-selector="supervision-ligne"
+        [attr.data-operateur-id]="supervise.operateur.id.value"
+      >
+        <div class="ligne-synoptique">
+          <div class="identite flex items-center gap-3 p-3" [title]="ligne.resume" data-selector="supervision-identite">
+            <span class="sr-only" [id]="'resume-' + supervise.operateur.id.value">{{ ligne.resume }}</span>
+            <button
+              type="button"
+              class="min-h-touch min-w-touch rounded border border-border text-body focus-visible:outline-2 focus-visible:outline-accent"
+              data-selector="supervision-deplier"
+              [id]="'deplier-' + supervise.operateur.id.value"
+              [attr.aria-label]="'Journal de ' + supervise.operateur.nom + ' ' + supervise.operateur.prenom"
+              [attr.aria-describedby]="'resume-' + supervise.operateur.id.value"
+              [attr.aria-expanded]="ligneDepliee() === supervise.operateur.id.value"
+              [attr.aria-controls]="'journal-' + supervise.operateur.id.value"
+              (click)="toggleJournal(supervise.operateur.id.value)"
+              (keydown.enter)="$event.preventDefault(); toggleJournal(supervise.operateur.id.value)"
+              (keydown.space)="$event.preventDefault(); toggleJournal(supervise.operateur.id.value)"
+            >
+              <span aria-hidden="true">{{ ligneDepliee() === supervise.operateur.id.value ? '−' : '+' }}</span>
+            </button>
+            <div class="min-w-0 flex flex-wrap items-center gap-2">
+              <h2 class="w-full text-body-sm font-semibold text-ink wrap-anywhere" data-selector="supervision-operateur-nom">
+                {{ supervise.operateur.nom }} {{ supervise.operateur.prenom }}
+              </h2>
+              @switch (supervise.presence) { @case ('PRESENT') {
+              <span class="shrink-0 rounded bg-ok px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+                {{ libelles.presences[supervise.presence] }}
+              </span>
+              } @case ('EN_PAUSE') {
+              <span class="shrink-0 rounded bg-warn px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+                {{ libelles.presences[supervise.presence] }}
+              </span>
+              } @case ('ABSENT') {
+              <span class="shrink-0 rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+                {{ libelles.presences[supervise.presence] }}
+              </span>
+              } } @if (supervise.isEnGlm()) {
+              <span class="text-label text-glm" data-selector="supervision-indicateur-glm"><span aria-hidden="true">⚡</span> GLM</span>
+              } @if (supervise.anomalies.length > 0) {
+              <span class="text-label text-nc" data-selector="supervision-indicateur-anomalies"
+                ><span aria-hidden="true">⚠️</span> {{ supervise.anomalies.length }} anomalie{{ supervise.anomalies.length > 1 ? 's' : ''
+                }}</span
+              >
+              }
+            </div>
+          </div>
+          <div class="pistes relative mr-12 py-3">
+            <div class="graduations absolute inset-0 pointer-events-none" aria-hidden="true">
+              @for (heure of vue.frise.reperes; track heure; let index = $index) {
+              <span class="absolute inset-y-0 border-l border-border" [style.left.%]="index * 12.5"></span>
+              }
+            </div>
+            @if (vue.frise.positionMaintenant !== undefined) {
+            <span
+              class="absolute inset-y-0 z-10 border-l border-accent pointer-events-none"
+              [style.left.%]="vue.frise.positionMaintenant"
+              aria-hidden="true"
+            ></span>
+            }
+            <div class="relative h-4" aria-label="Présence et pauses">
+              @for (segment of ligne.presence; track $index) { @if (segment.position; as position) {
+              <span
+                class="absolute h-4 rounded-sm"
+                [class.bg-ok]="!segment.pause"
+                [class.bg-warn]="segment.pause"
+                [style.left.%]="position.gauche"
+                [style.width.%]="position.largeur"
+                [attr.aria-label]="segment.libelle"
+                [title]="segment.libelle"
+                data-selector="supervision-segment-presence"
+              ></span>
+              } }
+            </div>
+            @for (segment of ligne.activites; track segment.activite.id.value) {
+            <div class="relative h-4" data-selector="supervision-piste-activite">
+              @if (segment.position; as position) {
+              <div
+                class="absolute inset-y-0"
+                [style.left.%]="position.gauche"
+                [style.width.%]="position.largeur"
+                data-selector="supervision-position-activite"
+              >
+                <span
+                  class="encre-activite absolute inset-0 rounded-sm"
+                  [class.bg-accent]="!segment.activite.categorie.isNc()"
+                  [class.bg-nc]="segment.activite.categorie.isNc()"
+                  data-selector="supervision-marque-activite"
+                  aria-hidden="true"
+                >
+                </span>
+                <button
+                  type="button"
+                  class="absolute inset-0 min-w-touch rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  [attr.aria-label]="segment.libelle"
+                  [title]="segment.libelle"
+                  (click)="openJournal(supervise.operateur.id.value)"
+                  data-selector="supervision-segment-activite"
+                ></button>
+              </div>
+              } @else {
+              <button
+                type="button"
+                class="relative h-4 min-w-touch px-2 text-label text-ink-muted focus-visible:outline-2 focus-visible:outline-accent"
+                [title]="segment.libelle"
+                (click)="openJournal(supervise.operateur.id.value)"
+              >
+                Activité hors plage
+              </button>
+              }
+            </div>
+            } @if (supervise.isEnGlm()) { @if (vue.frise.positionMaintenant !== undefined) {
+            <span
+              class="glm-maintenant absolute bottom-3 rounded-sm border border-glm bg-surface px-1 text-label text-glm"
+              [style.left.%]="vue.frise.positionMaintenant"
+              data-selector="supervision-zone-glm"
+              aria-label="GLM à l’instant courant"
+              >GLM</span
+            >
+            } @else {
+            <span class="relative text-label text-glm">GLM à l’instant courant · hors plage</span>
+            } }
+          </div>
+        </div>
+        <div
+          class="p-4 border-t border-border bg-sunken"
+          data-selector="supervision-journal"
+          role="region"
+          [id]="'journal-' + supervise.operateur.id.value"
+          [attr.aria-labelledby]="'deplier-' + supervise.operateur.id.value"
+          [hidden]="ligneDepliee() !== supervise.operateur.id.value"
+        >
+          <h3 class="text-section mb-2">Journal de présence et d’activités</h3>
+          <ul class="space-y-1 text-body-sm mb-4">
+            @for (segment of ligne.presence; track $index) {
+            <li>{{ segment.libelle }} · <time [attr.datetime]="segment.debut.value">{{ libelles.dateHeure(segment.debut) }}</time></li>
+            }
+          </ul>
+          @if (supervise.anomalies.length > 0) {
+          <div class="rounded border border-nc bg-sunken p-2.5">
+            <ul class="space-y-1 text-body-sm font-semibold text-nc">
+              @for (anomalie of supervise.anomalies; track anomalie) {
+              <li data-selector="supervision-anomalie">{{ libelles.anomalies[anomalie] }}</li>
+              }
+            </ul>
+          </div>
+          } @if (supervise.isEnGlm()) {
+          <div class="rounded border border-glm bg-sunken p-2.5">
+            <p class="text-body-sm font-semibold text-glm" data-selector="supervision-glm">{{ libelles.glmDetails }}</p>
+          </div>
+          } @if (supervise.activites.length > 0) {
+          <div class="rounded bg-sunken p-3">
+            <ul class="space-y-3">
+              @for (activite of supervise.activites; track activite.id.value) {
+              <li class="space-y-0.5 text-body-sm text-ink" data-selector="supervision-activite">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="font-medium wrap-anywhere" data-selector="supervision-activite-nom">{{ activite.nom }}</p>
+                  @if (activite.categorie.isNc()) {
+                  <span class="shrink-0 rounded bg-nc px-1.5 py-0.5 text-label text-on-accent" data-selector="supervision-nc"
+                    >{{ libelles.nc }}</span
+                  >
+                  }
+                </div>
+                @if (activite.poste; as poste) {
+                <p class="wrap-anywhere text-ink-muted" data-selector="supervision-activite-poste">{{ poste }}</p>
+                }
+                <p class="text-ink-muted">
+                  {{ libelles.depuis }}
+                  <time data-selector="supervision-activite-debut" [attr.datetime]="activite.debut.value"
+                    >{{ libelles.heure(activite.debut) }}</time
+                  >
+                </p>
+              </li>
+              }
+            </ul>
+          </div>
+          } @if (estCalme) {
+          <p class="text-body-sm text-ink-muted">{{ libelles.sansJourneeOuverte }}</p>
+          } @if (supervise.heureDOuverture; as ouverture) {
+          <div class="mt-4 border-t border-border pt-2 text-body-sm text-ink-muted">
+            {{ libelles.ouverture }}
+            <time data-selector="supervision-ouverture" [attr.datetime]="ouverture.value">{{ libelles.dateHeure(ouverture) }}</time>
+          </div>
+          }
+        </div>
+      </article>
+      }
+    </div>
+  </div>
+  } } } }
 </section>
