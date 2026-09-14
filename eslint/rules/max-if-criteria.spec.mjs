@@ -61,7 +61,7 @@ ruleTester.run('max-if-criteria', maxIfCriteria, {
 const eslint = new ESLint();
 const linter = new Linter();
 const filesFixture = [
-  'src/main/webapp/gestion/app.ts',
+  'src/main/webapp/gestion/app/app.ts',
   'src/main/webapp/pupitre/contexts/atelier/domain/designation/DesignationOperateur.ts',
   'src/main/webapp/pupitre/contexts/atelier/application/CurrentOperateurLifecycle.ts',
   'src/main/webapp/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication.ts',

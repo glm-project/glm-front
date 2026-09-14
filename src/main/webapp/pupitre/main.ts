@@ -6,8 +6,8 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 
-import { App } from './app';
 import { routes } from './app.route';
+import { App } from './app/app';
 import { authProvider } from './auth.provider';
 import { enrolementProvider } from './enrolement.provider';
 import { offlineProvider } from './offline.provider';

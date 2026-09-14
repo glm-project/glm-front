@@ -4,8 +4,8 @@ import { ErrorHandler } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
+import { routes } from '../app.route';
 import { App } from './app';
-import { routes } from './app.route';
 
 describe('Gestion shell', () => {
   let comp: App;
