@@ -37,7 +37,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy target/deployed/pupitre --project-name=glm-pupitre --commit-dirty=true
-          
+
   gestion:
     name: gestion
     runs-on: ubuntu-latest
