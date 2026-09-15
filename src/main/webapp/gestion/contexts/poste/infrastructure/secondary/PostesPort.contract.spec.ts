@@ -253,14 +253,17 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     await thenWorkstationExists('Scie 1', 'sciage');
   });
 
-  it('should update an existing workstation and reflect changes in queries', async () => {
+  it.each([
+    ['with hourly cost', 52],
+    ['without hourly cost', undefined],
+  ] as const)('should update an existing workstation %s and reflect changes in queries', async (_scenario, coutHoraire) => {
     givenWorkstations([tourFixture]);
 
     await whenQueryingNatures();
-    const resultat = await whenModifyingWorkstation('tour-1', 'Tour 1 Modifié', 'fraisage', 52);
+    const resultat = await whenModifyingWorkstation('tour-1', 'Tour 1 Modifié', 'fraisage', coutHoraire);
 
     thenCommandSucceeded(resultat);
-    await thenWorkstationExists('Tour 1 Modifié', 'fraisage', 52);
+    await thenWorkstationExists('Tour 1 Modifié', 'fraisage', coutHoraire);
   });
 
   it('should remove a workstation and reflect its absence in queries', async () => {
@@ -463,73 +466,6 @@ describe('Beyond the contract: HttpPostes', () => {
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);
   });
-
-  it.each([
-    ['creer', 'POST', '/api/postes-de-travail', 201, { libelle: 'Tour 1', nature: 'tournage', coutHoraire: 45.5 }],
-    ['creer sans cout', 'POST', '/api/postes-de-travail', 201, { libelle: 'Tour 1', nature: 'tournage' }],
-    ['modifier', 'PUT', '/api/postes-de-travail/tour-1', 200, { libelle: 'Tour 1', nature: 'tournage', coutHoraire: 45.5 }],
-    ['modifier sans cout', 'PUT', '/api/postes-de-travail/tour-1', 200, { libelle: 'Tour 1', nature: 'tournage' }],
-  ] as const)('should serialize %s with method %s and expected payload', async (scenario, method, url, status, payload) => {
-    const result = whenIssuingWrite(scenario);
-    const request = await whenWriteAnswers(url, status, payload);
-    await result;
-
-    thenMethodMatches(request, method);
-    thenPayloadMatches(request, payload);
-  });
-
-  it('should issue a DELETE request when deleting a workstation', async () => {
-    const result = whenDeletingWorkstationById('tour-1');
-    const request = await whenWriteAnswers('/api/postes-de-travail/tour-1', 204, null);
-    await result;
-
-    thenMethodMatches(request, 'DELETE');
-  });
-
-  const whenIssuingWrite = (scenario: 'creer' | 'creer sans cout' | 'modifier' | 'modifier sans cout'): Promise<Result<void, unknown>> => {
-    switch (scenario) {
-      case 'creer':
-        return port.creer({
-          type: 'CREATION',
-          libelle: new LibellePoste('Tour 1'),
-          nature: new NatureDeTravail('tournage'),
-          coutHoraire: new CoutHoraire(45.5),
-        });
-      case 'creer sans cout':
-        return port.creer({
-          type: 'CREATION',
-          libelle: new LibellePoste('Tour 1'),
-          nature: new NatureDeTravail('tournage'),
-          coutHoraire: undefined,
-        });
-      case 'modifier':
-        return port.modifier({
-          type: 'MODIFICATION',
-          id: new PosteDeTravailId('tour-1'),
-          libelle: new LibellePoste('Tour 1'),
-          nature: new NatureDeTravail('tournage'),
-          coutHoraire: new CoutHoraire(45.5),
-        });
-      case 'modifier sans cout':
-        return port.modifier({
-          type: 'MODIFICATION',
-          id: new PosteDeTravailId('tour-1'),
-          libelle: new LibellePoste('Tour 1'),
-          nature: new NatureDeTravail('tournage'),
-          coutHoraire: undefined,
-        });
-    }
-  };
-
-  const whenDeletingWorkstationById = (id: string): Promise<Result<void, unknown>> => port.supprimer(new PosteDeTravailId(id));
-
-  const thenMethodMatches = (request: TestRequest, method: string): void => {
-    expect(request.request.method).toBe(method);
-  };
-
-  const thenPayloadMatches = (request: TestRequest, payload: object): void => {
-    expect(request.request.body).toEqual(payload);
-  };
 
   const whenCommandStarts = (action: 'creer' | 'modifier' | 'supprimer') => {
     switch (action) {

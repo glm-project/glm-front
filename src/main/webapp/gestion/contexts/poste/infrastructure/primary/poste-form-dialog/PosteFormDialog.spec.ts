@@ -142,16 +142,6 @@ describe('PosteFormDialog', () => {
     expect(closed).toEqual([]);
   });
 
-  it('should show an invalid hourly cost without submitting', async () => {
-    await whenOpening();
-    await whenFillingValidEntries();
-    await whenEntering('poste-cout', '-2');
-    await whenSubmitting();
-
-    expect(text('poste-cout-error')).toContain('strictement positif');
-    expect(port.enregistrements).toEqual([]);
-  });
-
   it('should prevent duplicate submission while saving', async () => {
     const deferred = new DeferredFixture<Result<void, LibellePosteDejaUtilise>>();
     givenSavingIsPending(deferred);

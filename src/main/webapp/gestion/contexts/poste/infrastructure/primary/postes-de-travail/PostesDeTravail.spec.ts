@@ -74,39 +74,49 @@ describe('PostesDeTravail page', () => {
     expect(texts('poste-row')).toHaveLength(2);
   });
 
-  it.each(['postes-new', 'postes-empty-create'])('should open creation from %s', async selector => {
+  it.each(['postes-new', 'postes-empty-create'])('should reload the list after creation succeeds from %s', async selector => {
     await whenOpening();
+    givenWorkstations();
     await whenClicking(selector);
-
-    expect(text('poste-form-title')).toBe('Nouveau poste');
-  });
-
-  it('should open the selected workstation for editing', async () => {
-    givenWorkstations();
-    await whenOpening();
-    await whenClicking('poste-edit');
-
-    expect(inputValue('poste-libelle')).toBe('Tour 1');
-    expect(text('poste-form-title')).toBe('Modifier le poste');
-  });
-
-  it('should ask for confirmation before deleting the selected workstation', async () => {
-    givenWorkstations();
-    await whenOpening();
-    await whenClicking('poste-delete');
-
-    expect(text('poste-delete-description')).toContain('Tour 1');
-    expect(port.suppressions).toEqual([]);
-  });
-
-  it('should reload the list after the creation dialog succeeds', async () => {
-    await whenOpening();
-    givenWorkstations();
-    await whenClicking('postes-new');
     await whenClosingDialog(true);
 
     expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1'), expect.stringContaining('Scie 1')]);
     expect(texts('poste-nature-cell')).toEqual(['tournage', 'sciage']);
+  });
+
+  it('should keep the list unchanged when creation is cancelled', async () => {
+    givenWorkstations();
+    await whenOpening();
+    await whenClicking('postes-new');
+    await whenClosingDialog(false);
+
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1'), expect.stringContaining('Scie 1')]);
+  });
+
+  it('should reload the list after modifying the selected workstation', async () => {
+    givenWorkstations();
+    await whenOpening();
+    port.liste = [
+      new PosteDeTravail(tourFixture.id, {
+        libelle: new LibellePoste('Tour Modifié'),
+        nature: tourFixture.nature,
+        coutHoraire: tourFixture.coutHoraire,
+      }),
+    ];
+    await whenClicking('poste-edit');
+    await whenClosingDialog(true);
+
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour Modifié')]);
+  });
+
+  it('should keep the workstation when deletion is cancelled', async () => {
+    givenWorkstations();
+    await whenOpening();
+    await whenClicking('poste-delete');
+    await whenClosingDialog(false);
+
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1'), expect.stringContaining('Scie 1')]);
+    expect(port.suppressions).toEqual([]);
   });
 
   it('should keep a successful write acknowledged when refreshing the list fails', async () => {
@@ -247,6 +257,4 @@ describe('PostesDeTravail page', () => {
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
   const texts = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
-  const inputValue = (selector: string): string =>
-    requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector).value;
 });

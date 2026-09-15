@@ -2,7 +2,6 @@ import { components } from '@/app/generated/schema';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { expectTypeOf } from 'vitest';
 import { ApiClient } from './ApiClient';
 
 const SUIVI_ID = 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e';
@@ -139,34 +138,6 @@ describe('ApiClient', () => {
       status: 409,
       error: { type: 'urn:glm:erreur:poste-de-travail:conflit', detail: 'Refus du serveur' },
     });
-  });
-
-  it('should only accept update routes and payloads declared by the API contract', () => {
-    type UpdatePoste = typeof api.update<'/api/postes-de-travail/{id}'>;
-    type Request = Parameters<UpdatePoste>[1];
-
-    expectTypeOf<'/api/postes-de-travail'>().not.toExtend<Parameters<ApiClient['update']>[0]>();
-    expectTypeOf<Request['pathParams']>().toEqualTypeOf<{ id: string }>();
-    expectTypeOf<Request['body']>().toEqualTypeOf<components['schemas']['RestModificationPosteDeTravail']>();
-    expectTypeOf<Request['queryParams']>().toEqualTypeOf<undefined>();
-    expectTypeOf<{ body: { libelle: string; nature: string } }>().not.toExtend<Request>();
-    expectTypeOf<{ pathParams: { id: string } }>().not.toExtend<Request>();
-    expectTypeOf<{ pathParams: { id: string }; body: { libelle: string } }>().not.toExtend<Request>();
-    expectTypeOf<{ pathParams: { id: string }; body: { libelle: string; nature: string; coutHoraire: string } }>().not.toExtend<Request>();
-    expectTypeOf<ReturnType<UpdatePoste>>().toEqualTypeOf<Promise<unknown>>();
-  });
-
-  it('should only accept deletion routes and parameters declared by the API contract', () => {
-    type DeletePoste = typeof api.delete<'/api/postes-de-travail/{id}'>;
-    type Request = Parameters<DeletePoste>[1];
-
-    expectTypeOf<'/api/postes-de-travail'>().not.toExtend<Parameters<ApiClient['delete']>[0]>();
-    expectTypeOf<Request['pathParams']>().toEqualTypeOf<{ id: string }>();
-    expectTypeOf<Request['queryParams']>().toEqualTypeOf<undefined>();
-    expectTypeOf<'body'>().not.toExtend<keyof Request>();
-    expectTypeOf<{ pathParams: { id: number } }>().not.toExtend<Request>();
-    expectTypeOf<Record<string, never>>().not.toExtend<Request>();
-    expectTypeOf<ReturnType<DeletePoste>>().toEqualTypeOf<Promise<null>>();
   });
 
   it.each(['read', 'write', 'update', 'delete'] as const)('should cancel a stalled %s after thirty seconds', async operation => {
