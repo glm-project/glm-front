@@ -9,6 +9,7 @@
   "files": [
     "src/main/webapp/gestion/main.ts",
     "src/main/webapp/gestion/auth.provider.cypress.ts",
+    "src/main/webapp/gestion/environments/environment.deployed.ts",
     "src/main/webapp/pupitre/main.ts",
     "src/main/webapp/pupitre/environments/environment.deployed.ts",
     "src/test/webapp/application/pupitre/production-offline/fixtures/main.ts"

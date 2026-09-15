@@ -17,6 +17,7 @@
     "component:gestion": "cypress open --e2e --config-file src/test/webapp/component/gestion/cypress-config.ts",
     "component:headless:gestion": "cypress run --headless --config-file src/test/webapp/component/gestion/cypress-config.ts",
     "component:headless:pupitre": "cypress run --headless --config-file src/test/webapp/component/pupitre/cypress-config.ts",
+    "deployed:build:gestion": "ng run project:build-gestion:production,deployed --define \"NG_DEPLOYED_KEYCLOAK_URL='${DEPLOYED_KEYCLOAK_URL:?must name the deployed Keycloak origin, without a trailing slash}'\"",
     "deployed:build:pupitre": "ng run project:build-pupitre:production,deployed --define \"NG_DEPLOYED_KEYCLOAK_URL='${DEPLOYED_KEYCLOAK_URL:?must name the deployed Keycloak origin, without a trailing slash}'\"",
     "dev:gestion": "ng run project:serve-gestion",
     "dev:pupitre": "ng run project:serve-pupitre",
