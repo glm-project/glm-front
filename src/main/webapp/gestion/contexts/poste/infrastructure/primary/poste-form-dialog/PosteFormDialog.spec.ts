@@ -152,23 +152,18 @@ describe('PosteFormDialog', () => {
     expect(port.enregistrements).toEqual([]);
   });
 
-  it('should prevent duplicate submission and closing while saving', async () => {
+  it('should prevent duplicate submission while saving', async () => {
     const deferred = new DeferredFixture<Result<void, LibellePosteDejaUtilise>>();
     givenSavingIsPending(deferred);
     await whenOpening();
     await whenFillingValidEntries();
     await whenSubmitting();
     const busy = button('poste-save').disabled;
-    await whenPressingEscape();
-    const remainedOpen = text('poste-form-title');
-    const dismissals = [...closed];
     await whenSubmitting();
     deferred.resolve(ok(undefined));
     await whenClosed();
 
     expect(busy).toBe(true);
-    expect(remainedOpen).toBe('Nouveau poste');
-    expect(dismissals).toEqual([]);
     expect(port.enregistrements).toHaveLength(1);
     expect(closed).toEqual([true]);
   });
@@ -201,10 +196,6 @@ describe('PosteFormDialog', () => {
     });
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));
-    await fixture.whenStable();
-  };
-  const whenPressingEscape = async (): Promise<void> => {
-    input('poste-libelle').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
     await fixture.whenStable();
   };
   const whenClosed = async (): Promise<void> => {

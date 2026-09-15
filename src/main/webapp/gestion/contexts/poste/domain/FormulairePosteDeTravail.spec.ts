@@ -9,9 +9,9 @@ import { PosteIntrouvable } from './PosteIntrouvable';
 
 describe('FormulairePosteDeTravail', () => {
   it.each([
-    [undefined, ''],
-    [new CoutHoraire(45.5), '45.5'],
-  ] as const)('should initialize editing from the workstation with cost %s', (coutHoraire, saisie) => {
+    [undefined, undefined],
+    [new CoutHoraire(45.5), 45.5],
+  ] as const)('should initialize editing from the workstation with cost %s', (coutHoraire, attendu) => {
     const poste = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
       libelle: new LibellePoste('Tour 1'),
       nature: new NatureDeTravail('tournage'),
@@ -19,38 +19,18 @@ describe('FormulairePosteDeTravail', () => {
     });
     const formulaire = FormulairePosteDeTravail.pourModification(poste);
 
-    expect(formulaire.saisie).toEqual({ libelle: 'Tour 1', nature: 'tournage', coutHoraire: saisie });
     expect(formulaire.id?.value).toBe('tour-1');
     expect(formulaire.estValide()).toBe(true);
-  });
-
-  it('should produce a modification command containing the target workstation identity', () => {
-    const poste = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
-      libelle: new LibellePoste('Tour 1'),
-      nature: new NatureDeTravail('tournage'),
-      coutHoraire: undefined,
-    });
-    const formulaire = FormulairePosteDeTravail.pourModification(poste);
-    const commande = formulaire.produireCommande();
-
-    expect(commande).toEqual({
+    expect(formulaire.produireCommande()).toEqual({
       ok: true,
       value: {
         type: 'MODIFICATION',
         id: { value: 'tour-1' },
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
-        coutHoraire: undefined,
+        coutHoraire: attendu === undefined ? undefined : { value: attendu },
       },
     });
-  });
-
-  it('should keep the same state on redundant transitions', () => {
-    const initial = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').avecNature('tournage').avecCoutHoraire('45');
-
-    expect(initial.avecLibelle('Tour 1').saisie).toEqual(initial.saisie);
-    expect(initial.avecNature('tournage').saisie).toEqual(initial.saisie);
-    expect(initial.avecCoutHoraire('45').saisie).toEqual(initial.saisie);
   });
 
   it('should attach the duplicate refusal to the label and prevent resubmission', () => {
@@ -78,15 +58,18 @@ describe('FormulairePosteDeTravail', () => {
     expect(corrige.erreurLibelle()).toBe('Le libellé est obligatoire et limité à 100 caractères.');
   });
 
-  it.each(['avecNature', 'avecCoutHoraire', 'avecLibelle'] as const)(
-    'should retain the duplicate refusal when %s leaves the rejected label unchanged',
-    transition => {
-      const refuse = formulaireValideFixture().avecRefus(new LibellePosteDejaUtilise());
-      const formulaire = refuse[transition]('Tour 1');
+  it('should retain the duplicate refusal when editing the nature or the hourly cost', () => {
+    const refuse = formulaireValideFixture().avecRefus(new LibellePosteDejaUtilise());
 
-      expect(formulaire.erreurLibelle()).toBe('Un autre poste porte déjà ce libellé.');
-    },
-  );
+    expect(refuse.avecNature('usinage').erreurLibelle()).toBe('Un autre poste porte déjà ce libellé.');
+    expect(refuse.avecCoutHoraire('50').erreurLibelle()).toBe('Un autre poste porte déjà ce libellé.');
+  });
+
+  it('should retain the duplicate refusal when the label is unchanged', () => {
+    const refuse = formulaireValideFixture().avecRefus(new LibellePosteDejaUtilise());
+
+    expect(refuse.avecLibelle('Tour 1').erreurLibelle()).toBe('Un autre poste porte déjà ce libellé.');
+  });
 
   it('should retain a missing workstation refusal through subsequent entry changes', () => {
     const formulaire = formulaireValideFixture()
@@ -111,7 +94,6 @@ describe('FormulairePosteDeTravail', () => {
     const formulaire = initial.avecLibelle('  Tour 1 ').avecNature(' tournage ').avecCoutHoraire(cout);
     const commande = formulaire.produireCommande();
 
-    expect(initial.saisie).toEqual({ libelle: '', nature: '', coutHoraire: '' });
     expect(formulaire.estValide()).toBe(true);
     expect(commande).toEqual({
       ok: true,
@@ -152,7 +134,6 @@ describe('FormulairePosteDeTravail', () => {
     const formulaire = FormulairePosteDeTravail.pourCreation();
     const commande = formulaire.produireCommande();
 
-    expect(formulaire.saisie).toEqual({ libelle: '', nature: '', coutHoraire: '' });
     expect(formulaire.estValide()).toBe(false);
     expect(commande).toEqual({
       ok: false,

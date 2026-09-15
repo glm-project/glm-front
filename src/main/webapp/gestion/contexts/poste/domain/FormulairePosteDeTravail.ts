@@ -58,27 +58,18 @@ export class FormulairePosteDeTravail {
   }
 
   avecLibelle(libelle: string): FormulairePosteDeTravail {
-    if (libelle === this.saisie.libelle) {
-      return this;
-    }
     return new FormulairePosteDeTravail(
       { ...this.saisie, libelle },
       this.id,
-      this.refus?.code === 'libelle-deja-utilise' ? undefined : this.refus,
+      libelle !== this.saisie.libelle && this.refus?.code === 'libelle-deja-utilise' ? undefined : this.refus,
     );
   }
 
   avecNature(nature: string): FormulairePosteDeTravail {
-    if (nature === this.saisie.nature) {
-      return this;
-    }
     return new FormulairePosteDeTravail({ ...this.saisie, nature }, this.id, this.refus);
   }
 
   avecCoutHoraire(coutHoraire: string): FormulairePosteDeTravail {
-    if (coutHoraire === this.saisie.coutHoraire) {
-      return this;
-    }
     return new FormulairePosteDeTravail({ ...this.saisie, coutHoraire }, this.id, this.refus);
   }
 

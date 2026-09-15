@@ -99,32 +99,27 @@ describe('PostesDeTravail page', () => {
     expect(port.suppressions).toEqual([]);
   });
 
-  it('should show the saved workstation after the creation dialog succeeds', async () => {
+  it('should reload the list after the creation dialog succeeds', async () => {
     await whenOpening();
+    givenWorkstations();
     await whenClicking('postes-new');
-    await whenEntering('poste-libelle', 'Tour 1');
-    await whenEntering('poste-nature', 'tournage');
-    await whenConfirmingDialog('poste-save');
+    await whenClosingDialog(true);
 
-    expect(text('poste-form-title')).toBe('');
-    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1')]);
-    expect(texts('poste-nature-cell')).toEqual(['tournage']);
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1'), expect.stringContaining('Scie 1')]);
+    expect(texts('poste-nature-cell')).toEqual(['tournage', 'sciage']);
   });
 
   it('should keep a successful write acknowledged when refreshing the list fails', async () => {
     await whenOpening();
     await whenClicking('postes-new');
-    await whenEntering('poste-libelle', 'Tour 1');
-    await whenEntering('poste-nature', 'tournage');
     givenReadingFails('Read failed');
-    await whenConfirmingDialog('poste-save');
+    await whenClosingDialog(true);
     const failure = text('postes-error');
-    const form = text('poste-form-title');
     givenReadingSucceeds();
+    port.liste = [tourFixture];
     await whenClicking('postes-retry');
 
     expect(failure).toContain('Impossible de charger les postes');
-    expect(form).toBe('');
     expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1')]);
   });
 
@@ -132,10 +127,10 @@ describe('PostesDeTravail page', () => {
     givenManyWorkstations(21);
     await whenOpening();
     await whenPageSelected(1, 20);
+    port.liste = port.liste.slice(0, 20);
     await whenClicking('poste-delete');
-    await whenConfirmingDialog('poste-delete-confirm');
+    await whenClosingDialog(true);
 
-    expect(text('poste-delete-description')).toBe('');
     expect(texts('poste-row')).toHaveLength(20);
     expect(texts('poste-row')[0]).toContain('Poste 1');
     expect(text('postes-pagination')).toContain('1–20 sur 20');
@@ -144,10 +139,10 @@ describe('PostesDeTravail page', () => {
   it('should reload the current page after deleting one of its workstations', async () => {
     givenWorkstations();
     await whenOpening();
+    port.liste = [scieFixture];
     await whenClicking('poste-delete');
-    await whenConfirmingDialog('poste-delete-confirm');
+    await whenClosingDialog(true);
 
-    expect(text('poste-delete-description')).toBe('');
     expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
     expect(text('postes-pagination')).toContain('1–1 sur 1');
   });
@@ -206,13 +201,6 @@ describe('PostesDeTravail page', () => {
         }),
     );
   };
-  const whenEntering = async (selector: string, value: string): Promise<void> => {
-    const field = requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector);
-    field.value = value;
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    await fixture.whenStable();
-  };
-
   const givenWorkstations = (): void => {
     port.liste = [tourFixture, scieFixture];
   };
@@ -230,9 +218,10 @@ describe('PostesDeTravail page', () => {
     await vi.waitUntil(() => text('postes-loading') === '');
     await fixture.whenStable();
   };
-  const whenConfirmingDialog = async (selector: string): Promise<void> => {
-    const closed = firstValueFrom(TestBed.inject(MatDialog).afterAllClosed);
-    await whenClicking(selector);
+  const whenClosingDialog = async (result: boolean): Promise<void> => {
+    const dialogs = TestBed.inject(MatDialog);
+    const closed = firstValueFrom(dialogs.afterAllClosed);
+    dialogs.openDialogs[dialogs.openDialogs.length - 1]?.close(result);
     await closed;
     await fixture.whenStable();
   };

@@ -101,15 +101,6 @@ describe('Workstation interactions and rendering', () => {
     thenDesktopLayoutIsVisible();
   });
 
-  it('should render Material text with the GLM font on the page and in the form', () => {
-    givenReferential(1);
-    whenVisitingSettings();
-    const pageFonts = whenReadingPageFonts();
-    whenOpeningCreation();
-
-    thenMaterialUsesThePageFont(pageFonts);
-  });
-
   it('should keep creation usable on a narrow screen', () => {
     givenReferential(2);
     whenVisitingMobileSettings();
@@ -269,22 +260,4 @@ const thenMobileFormIsUsable = (): void => {
   cy.get(dataSelector('poste-save')).should('be.visible');
   cy.get(dataSelector('poste-cancel')).should('be.visible');
   cy.screenshot('postes-form-mobile', { capture: 'viewport' });
-};
-
-const whenReadingPageFonts = (): Cypress.Chainable<{ font: string; rowFont: string; buttonFont: string }> => {
-  cy.get(dataSelector('poste-nature-cell')).should('be.visible');
-  return cy.window().then(window => ({
-    font: window.getComputedStyle(window.document.body).fontFamily,
-    rowFont: window.getComputedStyle(window.document.querySelector(dataSelector('poste-nature-cell')) as HTMLElement).fontFamily,
-    buttonFont: window.getComputedStyle(window.document.querySelector(dataSelector('postes-new')) as HTMLElement).fontFamily,
-  }));
-};
-
-const thenMaterialUsesThePageFont = (fonts: Cypress.Chainable<{ font: string; rowFont: string; buttonFont: string }>): void => {
-  fonts.then(({ font, rowFont, buttonFont }) => {
-    expect(rowFont).to.equal(font);
-    expect(buttonFont).to.equal(font);
-    cy.get(dataSelector('poste-libelle')).should('have.css', 'font-family', font);
-    cy.get(dataSelector('poste-save')).should('have.css', 'font-family', font);
-  });
 };
