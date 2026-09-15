@@ -7,10 +7,6 @@ export class Matricule {
     return new Matricule('');
   }
 
-  static of(valeur: string): Matricule {
-    return new Matricule(valeur);
-  }
-
   static accepts(caractere: string): boolean {
     return UN_CHIFFRE.test(caractere);
   }

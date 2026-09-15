@@ -10,13 +10,14 @@ describe('buildPageFrom', () => {
     const extrait = buildPageFrom(unePageFixture(['Dupont', 'Martin'], 2), enMajuscules);
 
     thenItCarries(extrait, ['DUPONT', 'MARTIN']);
-    thenItSaysItIsComplete(extrait);
+    thenTotalIs(extrait, 2);
   });
 
   it('should say the extract is partial when the server counted more than the page holds', () => {
     const extrait = buildPageFrom(unePageFixture(['Dupont'], PLUS_QUE_LA_PAGE_N_EN_PORTE), enMajuscules);
 
-    thenItSaysItIsPartialOf(extrait, PLUS_QUE_LA_PAGE_N_EN_PORTE);
+    thenItCarries(extrait, ['DUPONT']);
+    thenTotalIs(extrait, PLUS_QUE_LA_PAGE_N_EN_PORTE);
   });
 
   const unePageFixture = (noms: string[], totalCount: number): RestPage<string> => ({
@@ -30,12 +31,7 @@ describe('buildPageFrom', () => {
     expect(extrait.elements).toEqual(elements);
   };
 
-  const thenItSaysItIsComplete = (extrait: Page<string>): void => {
-    expect(extrait.isComplete()).toBe(true);
-  };
-
-  const thenItSaysItIsPartialOf = (extrait: Page<string>, totalCount: number): void => {
-    expect(extrait.isComplete()).toBe(false);
+  const thenTotalIs = (extrait: Page<string>, totalCount: number): void => {
     expect(extrait.totalCount).toBe(totalCount);
   };
 });

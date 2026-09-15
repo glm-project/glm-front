@@ -1,12 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
-import { Icon } from './icon';
+import { Icon, IconName } from './icon';
 
 @Component({
   imports: [Icon],
-  template: '<glm-icon name="menu" />',
+  template: '<glm-icon [name]="name()" />',
 })
-class IconFixture {}
+class IconFixture {
+  readonly name = input.required<IconName>();
+}
+
+const icons: IconName[] = ['menu', 'plus', 'pencil', 'trash2'];
 
 describe('Icon', () => {
   let fixture: ComponentFixture<IconFixture>;
@@ -18,14 +22,15 @@ describe('Icon', () => {
     }).compileComponents();
   });
 
-  it('should draw the icon it is named as an SVG the bundle already carries', async () => {
-    await whenRenderingAnIcon();
+  it.each(icons)('should draw %s as an SVG the bundle already carries', async name => {
+    await whenRenderingAnIcon(name);
 
     thenItDrawsAnSvg();
   });
 
-  const whenRenderingAnIcon = async (): Promise<void> => {
+  const whenRenderingAnIcon = async (name: IconName): Promise<void> => {
     fixture = TestBed.createComponent(IconFixture);
+    fixture.componentRef.setInput('name', name);
     await fixture.whenStable();
   };
 

@@ -1,8 +1,8 @@
 import { Component, input } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideMenu } from '@ng-icons/lucide';
+import { lucideMenu, lucidePencil, lucidePlus, lucideTrash2 } from '@ng-icons/lucide';
 
-const DRAWINGS = { menu: lucideMenu };
+const DRAWINGS = { menu: lucideMenu, plus: lucidePlus, pencil: lucidePencil, trash2: lucideTrash2 };
 
 export type IconName = keyof typeof DRAWINGS;
 

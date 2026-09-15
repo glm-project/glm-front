@@ -76,7 +76,7 @@ describe('FenetreOperateur', () => {
     fenetre = FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -700,7 +700,7 @@ describe('FenetreOperateur', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       journal,
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(identity),
     );
@@ -737,7 +737,7 @@ describe('FenetreOperateur', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     ).operateur;
@@ -778,7 +778,7 @@ describe('FenetreOperateur', () => {
           operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
         },
       },
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(2),
     );
@@ -789,7 +789,7 @@ describe('FenetreOperateur', () => {
     return FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       { ...vueFixture, referentiel: { ...referentiel, operateurs: [{ ...operateur, postes: [] }] } },
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(3),
     );
@@ -863,7 +863,7 @@ describe('FenetreOperateur', () => {
           ],
         },
       },
-      Matricule.of('049'),
+      matriculeFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(4),
     );
@@ -873,7 +873,7 @@ describe('FenetreOperateur', () => {
       return FenetreOperateur.open(
         Entreprise.of('entreprise-a'),
         vue,
-        Matricule.of('inconnu'),
+        matriculeFixture('inconnu'),
         Date.parse('2026-09-05T09:00:00Z'),
         new IdentiteDeFenetre(5),
       );
@@ -995,3 +995,6 @@ describe('FenetreOperateur', () => {
     expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false, operateurId: 'jean' });
   };
 });
+
+const matriculeFixture = (saisie: string): Matricule =>
+  Array.from(saisie).reduce((matricule, caractere) => matricule.afterDigit(caractere), Matricule.empty());

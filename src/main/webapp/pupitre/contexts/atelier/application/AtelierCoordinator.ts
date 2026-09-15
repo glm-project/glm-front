@@ -6,7 +6,6 @@ import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleI
 import { IdentiteDuGeste } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { CommandeGlobale, IntentionGlobale } from './CommandeGlobale';
 import { CurrentOperateurLifecycle } from './CurrentOperateurLifecycle';
-import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { GestesRecordingQueue, IntentionDeCapture } from './GestesRecordingQueue';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from './PointageCommand';
 
@@ -18,7 +17,6 @@ const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
 export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
-  private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly designation = inject(CurrentOperateurLifecycle);
   private readonly acceptationLocale = inject(GestesRecordingQueue);
   private readonly echecLocal = signal<IdentiteDeFenetre | undefined>(undefined);
@@ -54,12 +52,6 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
     this.designation.acceptDecision(fenetre);
     return this.capture(fenetre, { kind: 'GLOBALE', commande: initiee }).finally(() => {
       this.designation.completeGlobal(fenetre.identity());
-    });
-  }
-
-  restore(): Promise<void> {
-    return this.etatHorsLigne.refresh('RESTORE', (entreprise, state) => {
-      this.designation.reconcile(entreprise, state);
     });
   }
 

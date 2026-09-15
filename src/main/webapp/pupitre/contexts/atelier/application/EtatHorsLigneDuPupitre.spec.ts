@@ -1,10 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
-import {
-  EMPTY_JOURNAL_DU_PUPITRE,
-  EvenementDuJournal,
-  JournalDuPupitre,
-} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
@@ -98,24 +94,6 @@ describe('EtatHorsLigneDuPupitre', () => {
     await expect(whenOpeningSource()).rejects.toThrow('L’entreprise du pupitre a change.');
   });
 
-  it('should read diagnostics from journal filtering refused events', async () => {
-    const refusedEvent: EvenementDuJournal = {
-      geste: { id: 'g1', dateDeSurvenue: '2026-09-06T10:00:00Z', operateurId: 'jean', nature: 'ARRIVEE' },
-      etat: 'REFUSE',
-      refus: { code: 'refuse', message: 'erreur' },
-    };
-    const acceptedEvent: EvenementDuJournal = {
-      geste: { id: 'g2', dateDeSurvenue: '2026-09-06T10:05:00Z', operateurId: 'jean', nature: 'ARRIVEE' },
-      etat: 'ACCEPTE',
-      journeeOuverte: true,
-    };
-    givenEventsInJournal('entreprise-a', [refusedEvent, acceptedEvent]);
-
-    const diagnostics = await whenReadingDiagnostics();
-
-    thenDiagnosticsContainOnlyRefusedEvents(diagnostics, [refusedEvent]);
-  });
-
   it('should publish given journal state to view', () => {
     const state: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -129,10 +107,6 @@ describe('EtatHorsLigneDuPupitre', () => {
 
   const givenDisconnectedStateInJournal = (entreprise: string): void => {
     journal.seedJournal(Entreprise.of(entreprise), { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
-  };
-
-  const givenEventsInJournal = (entreprise: string, evenements: EvenementDuJournal[]): void => {
-    journal.seedJournal(Entreprise.of(entreprise), { ...EMPTY_JOURNAL_DU_PUPITRE, evenements });
   };
 
   const whenTenantChangesTo = (newTenant: string | undefined): void => {
@@ -153,8 +127,6 @@ describe('EtatHorsLigneDuPupitre', () => {
 
   const whenOpeningSource = async (): Promise<SourceDOuverture> => etatHorsLigne.openingSource();
 
-  const whenReadingDiagnostics = async (): Promise<readonly EvenementDuJournal[]> => etatHorsLigne.diagnostics();
-
   const whenPublishing = (state: JournalDuPupitre): void => {
     etatHorsLigne.publish(state);
   };
@@ -169,10 +141,6 @@ describe('EtatHorsLigneDuPupitre', () => {
 
   const thenReconciledTenantIs = (actual: Entreprise | undefined, expected: Entreprise | undefined): void => {
     expect(Entreprise.same(actual, expected)).toBe(true);
-  };
-
-  const thenDiagnosticsContainOnlyRefusedEvents = (actual: readonly EvenementDuJournal[], expected: EvenementDuJournal[]): void => {
-    expect(actual).toEqual(expected);
   };
 
   const thenReferentielContainsOperator = (expectedNom: string): void => {

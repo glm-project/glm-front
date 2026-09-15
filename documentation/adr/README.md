@@ -79,3 +79,10 @@ something stays, with a status that says what died.
 - [0034 — Proxy the API at the edge](0034-proxy-the-api-at-the-edge.md) — a Cloudflare Pages Function
   answers `/api/**` so the deployed pupitre stays same-origin, with its Keycloak origin in a committed
   deployed environment
+- [0035 — Share a structural Result type for domain ports](0035-shared-result-type-for-domain-ports.md) — a
+  minimal shared kernel Result<T, E> for interactive domain commands and explicit business refusal typing
+- [0036 — Model user interactions and forms in rich domain models](0036-rich-domain-models-for-form-interactions.md) —
+  pure immutable domain models for data entry, keystroke transitions and validation without framework forms
+
+- [0037 — Require production consumers for tested members](0037-require-production-consumers.md) —
+  compiler-backed ESLint check across production, tests and Angular templates

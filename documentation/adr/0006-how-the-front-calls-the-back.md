@@ -8,6 +8,8 @@ records the earlier implementation. The publication amendment below replaces rej
 only for `AtelierExchangePort.send`; durable local acceptance remains separate.
 Complemented by [ADR 0034](0034-proxy-the-api-at-the-edge.md): the routes still serve as URLs as they
 are, and a Cloudflare Pages Function answers `/api/**` for the deployed pupitre.
+Amended by [ADR 0037](0037-require-production-consumers.md): the unused `Page.isComplete()` helper is removed;
+pages still expose their elements and the server total.
 
 ## Context
 

@@ -7,6 +7,13 @@ import { ApiClient } from './ApiClient';
 const SUIVI_ID = 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e';
 const OPERATEUR_ID = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d';
 const PLEINE_PAGE = 100;
+const POSTE_ID = 'poste/avec espace';
+const MODIFICATION_POSTE = {
+  libelle: 'Tour 2',
+  nature: 'tournage',
+  coutHoraire: 45.5,
+} satisfies components['schemas']['RestModificationPosteDeTravail'];
+const UN_POSTE = { id: POSTE_ID, ...MODIFICATION_POSTE } satisfies components['schemas']['RestPosteDeTravail'];
 
 const UNE_PAGE_DOPERATEURS = {
   content: [{ id: OPERATEUR_ID, nom: 'Dupont', prenom: 'Jean', natures: [], postes: [] }],
@@ -98,7 +105,42 @@ describe('ApiClient', () => {
     thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
   });
 
-  it.each(['read', 'write'] as const)('should cancel a stalled %s after thirty seconds', async operation => {
+  it('should update the requested workstation and return the server answer', async () => {
+    const modification = whenUpdatingAWorkstation();
+
+    const request = await whenTheServerAnswers(UN_POSTE);
+    const result = await modification;
+
+    thenItReached(request, '/api/postes-de-travail/poste%2Favec%20espace');
+    thenItUsed(request, 'PUT');
+    thenItSent(request, MODIFICATION_POSTE);
+    thenItHandedBack(result, UN_POSTE);
+  });
+
+  it('should delete the requested workstation without sending a body', async () => {
+    const deletion = whenDeletingAWorkstation();
+
+    const request = await whenTheServerAnswers(null, 204);
+    const result = await deletion;
+
+    thenItReached(request, '/api/postes-de-travail/poste%2Favec%20espace');
+    thenItUsed(request, 'DELETE');
+    thenItSent(request, null);
+    thenItHandedBack(result, null);
+  });
+
+  it.each(['update', 'delete'] as const)('should propagate an HTTP failure from %s unchanged', async operation => {
+    const result = whenStartingAStalledRequest(operation);
+
+    await whenTheServerAnswers({ type: 'urn:glm:erreur:poste-de-travail:conflit', detail: 'Refus du serveur' }, 409);
+
+    expect(await result).toMatchObject({
+      status: 409,
+      error: { type: 'urn:glm:erreur:poste-de-travail:conflit', detail: 'Refus du serveur' },
+    });
+  });
+
+  it.each(['read', 'write', 'update', 'delete'] as const)('should cancel a stalled %s after thirty seconds', async operation => {
     givenAStoppedNetworkClock();
     const result = whenStartingAStalledRequest(operation);
     const request = givenTheServerDoesNotAnswer();
@@ -113,8 +155,15 @@ describe('ApiClient', () => {
     vi.useFakeTimers();
   };
 
-  const whenStartingAStalledRequest = (operation: 'read' | 'write'): Promise<unknown> =>
-    (operation === 'read' ? whenReadingOperators() : whenPausingWork()).catch((error: unknown) => error);
+  const whenStartingAStalledRequest = (operation: 'read' | 'write' | 'update' | 'delete'): Promise<unknown> => {
+    const requests = {
+      read: whenReadingOperators,
+      write: whenPausingWork,
+      update: whenUpdatingAWorkstation,
+      delete: whenDeletingAWorkstation,
+    };
+    return requests[operation]().catch((error: unknown) => error);
+  };
 
   const givenTheServerDoesNotAnswer = (): TestRequest => serveur.expectOne(() => true);
 
@@ -141,11 +190,16 @@ describe('ApiClient', () => {
   const whenPausingWork = (): Promise<unknown> =>
     api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' } });
 
-  const whenTheServerAnswers = async (reponse: object): Promise<TestRequest> => {
+  const whenUpdatingAWorkstation = (): Promise<unknown> =>
+    api.update('/api/postes-de-travail/{id}', { pathParams: { id: POSTE_ID }, body: MODIFICATION_POSTE });
+
+  const whenDeletingAWorkstation = (): Promise<null> => api.delete('/api/postes-de-travail/{id}', { pathParams: { id: POSTE_ID } });
+
+  const whenTheServerAnswers = async (reponse: object | null, status = 200): Promise<TestRequest> => {
     await unTourDeBoucle();
 
     const requete = serveur.expectOne(() => true);
-    requete.flush(reponse);
+    requete.flush(reponse, { status, statusText: 'OK' });
 
     return requete;
   };
@@ -160,6 +214,10 @@ describe('ApiClient', () => {
 
   const thenItSent = (requete: TestRequest, body: unknown): void => {
     expect(requete.request.body).toEqual(body);
+  };
+
+  const thenItUsed = (request: TestRequest, method: string): void => {
+    expect(request.request.method).toBe(method);
   };
 
   const thenItHandedBack = (recu: unknown, attendu: unknown): void => {

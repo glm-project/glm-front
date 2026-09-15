@@ -224,6 +224,28 @@ not a testing defect. Changing private helpers, internal state representation or
 the expected business result intact. For example, assert that the last digits are visible and the operator
 can scroll back, rather than fabricating a width and asserting the component's exact scroll assignment.
 
+## Reviewing test value
+
+For each added or changed scenario, record in the MR the functional rule, the public entry point and the
+observable expected result. Name one behavior-preserving implementation change that must leave that result
+intact. A new file, branch coverage or a helper extraction alone does not establish a test requirement.
+
+Check the fixture as part of that argument: its results must belong to the called operation's contract,
+its data must actually cross the boundary named by the scenario, and delayed work must remain pending until
+the scenario releases it. For example, collecting beyond the first HTTP page needs more entries than that
+page holds; pagination on screen alone does not prove complete acquisition.
+
+Give each scenario an owner: domain decisions in unit tests, browser interactions in component tests, and
+application composition in representative journeys. Retain overlap only when it catches a distinct wiring
+or runtime failure. Pure getter/constant assertions normally belong to the existing caller's scenario.
+
+`local/no-test-only-production` enforces production consumers across both fronts, using TypeScript symbols
+and Angular template type-check blocks. Tests, their fixtures, imports and re-exports alone cannot keep a
+method, field, function or module variable alive. The rule follows dependencies from tested operations and
+recognizes inherited contracts and configured Angular file replacements. It does not prove semantic test
+value or runtime reachability. Untyped template member accesses are treated conservatively by name; review
+still owns reflection and dynamic access. See [ADR 0037](adr/0037-require-production-consumers.md).
+
 ## Domain mutation policy and mutation checks
 
 Under the Domain mutation policy ([ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md)), mutation testing focuses its blocking gate on the domain core:

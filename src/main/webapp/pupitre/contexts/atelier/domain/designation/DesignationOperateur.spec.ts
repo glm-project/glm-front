@@ -91,7 +91,7 @@ describe('DesignationOperateur', () => {
   it('should leave a designation unchanged when another operator window tries to replace it', () => {
     givenDesignatedOperator();
     const before = designation;
-    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1, new IdentiteDeFenetre(1));
+    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, matriculeFixture('049'), 1, new IdentiteDeFenetre(1));
 
     designation = designation.afterReplacingWindow(other);
 
@@ -249,7 +249,7 @@ describe('DesignationOperateur', () => {
     designation = designation.afterErasing(now);
   };
   const whenOpeningAWindow = (): FenetreOperateur => {
-    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, Matricule.of('049'), 1);
+    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, matriculeFixture('049'), 1);
     designation = opening.designation;
     return opening.fenetre;
   };
@@ -309,3 +309,6 @@ describe('DesignationOperateur', () => {
     });
   };
 });
+
+const matriculeFixture = (saisie: string): Matricule =>
+  Array.from(saisie).reduce((matricule, caractere) => matricule.afterDigit(caractere), Matricule.empty());

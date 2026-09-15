@@ -112,11 +112,16 @@ const enrolmentFixture: DeviceEnrolmentPort = {
 const chargementProvider = {
   provide: ChargementDeLAtelierPort,
   useFactory: (): ChargementDeLAtelierPort => {
-    const pupitre = inject(AtelierCoordinator);
+    const designation = inject(CurrentOperateurLifecycle);
     const etatHorsLigne = inject(EtatHorsLigneDuPupitre);
     return {
       etat: () => ({ referentielDisponible: etatHorsLigne.referentielDisponible(), connecte: etatHorsLigne.connected() }),
-      charger: () => pupitre.restore().then(() => (etatHorsLigne.referentielDisponible() ? ('CHARGE' as const) : ('ECHEC' as const))),
+      charger: () =>
+        etatHorsLigne
+          .refresh('RESTORE', (entreprise, state) => {
+            designation.reconcile(entreprise, state);
+          })
+          .then(() => (etatHorsLigne.referentielDisponible() ? ('CHARGE' as const) : ('ECHEC' as const))),
     };
   },
 };

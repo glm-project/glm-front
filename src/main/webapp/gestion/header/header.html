@@ -1,10 +1,13 @@
 <mat-toolbar color="primary">
   <span data-selector="header-heading">{{ heading() }}</span>
   <span class="flex-auto"></span>
-  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu">
+  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu" data-selector="gestion-menu">
     <glm-icon name="menu" />
   </button>
-  <mat-menu #menu="matMenu"></mat-menu>
+  <mat-menu #menu="matMenu">
+    <a mat-menu-item routerLink="/" data-selector="gestion-navigation-supervision">Supervision atelier</a>
+    <a mat-menu-item routerLink="/postes-de-travail" data-selector="gestion-navigation-postes">Postes de travail</a>
+  </mat-menu>
   <img alt="Angular logo" class="angular-logo" ngSrc="content/images/AngularLogo.svg" width="50" height="50" priority />
   <button mat-raised-button (click)="logout()" data-selector="gestion-logout">Logout</button>
 </mat-toolbar>

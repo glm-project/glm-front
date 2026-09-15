@@ -11,15 +11,21 @@ interface Operation {
 
 type ReadRoute = { [Route in keyof paths]: paths[Route]['get'] extends Operation ? Route : never }[keyof paths];
 type WriteRoute = { [Route in keyof paths]: paths[Route]['post'] extends Operation ? Route : never }[keyof paths];
+type UpdateRoute = { [Route in keyof paths]: paths[Route]['put'] extends Operation ? Route : never }[keyof paths];
+type DeleteRoute = { [Route in keyof paths]: paths[Route]['delete'] extends Operation ? Route : never }[keyof paths];
 
 type ReadOperation<Route extends ReadRoute> = paths[Route]['get'];
 type WriteOperation<Route extends WriteRoute> = paths[Route]['post'];
+type UpdateOperation<Route extends UpdateRoute> = paths[Route]['put'];
+type DeleteOperation<Route extends DeleteRoute> = paths[Route]['delete'];
 
 type ResponseBody<Op> = Op extends { responses: { 200: { content: { '*/*': infer Body } } } }
   ? Body
   : Op extends { responses: { 201: { content: { '*/*': infer Body } } } }
     ? Body
-    : never;
+    : Op extends { responses: { 204: unknown } }
+      ? null
+      : unknown;
 
 type PathParameters<Op> = Op extends { parameters: { path: infer Values } } ? { pathParams: Values } : { pathParams?: never };
 
@@ -36,6 +42,12 @@ type ReadRequest<Route extends ReadRoute> = PathParameters<ReadOperation<Route>>
 type WriteRequest<Route extends WriteRoute> = PathParameters<WriteOperation<Route>>
   & QueryParameters<WriteOperation<Route>>
   & RequestBody<WriteOperation<Route>>;
+
+type UpdateRequest<Route extends UpdateRoute> = PathParameters<UpdateOperation<Route>>
+  & QueryParameters<UpdateOperation<Route>>
+  & RequestBody<UpdateOperation<Route>>;
+
+type DeleteRequest<Route extends DeleteRoute> = PathParameters<DeleteOperation<Route>> & QueryParameters<DeleteOperation<Route>>;
 
 type QueryValue = string | number | boolean | readonly (string | number | boolean)[];
 
@@ -74,6 +86,26 @@ export class ApiClient {
     return firstValueFrom(
       this.http
         .post<ResponseBody<WriteOperation<Route>>>(buildUrlFor(route, pathParams), body, { params: buildParamsFrom(queryParams) })
+        .pipe(timeout(NETWORK_TIMEOUT_MS)),
+    );
+  }
+
+  update<Route extends UpdateRoute>(route: Route, request: UpdateRequest<Route>): Promise<ResponseBody<UpdateOperation<Route>>> {
+    const { pathParams, queryParams, body } = request as RawRequest;
+
+    return firstValueFrom(
+      this.http
+        .put<ResponseBody<UpdateOperation<Route>>>(buildUrlFor(route, pathParams), body, { params: buildParamsFrom(queryParams) })
+        .pipe(timeout(NETWORK_TIMEOUT_MS)),
+    );
+  }
+
+  delete<Route extends DeleteRoute>(route: Route, request: DeleteRequest<Route>): Promise<ResponseBody<DeleteOperation<Route>>> {
+    const { pathParams, queryParams } = request as RawRequest;
+
+    return firstValueFrom(
+      this.http
+        .delete<ResponseBody<DeleteOperation<Route>>>(buildUrlFor(route, pathParams), { params: buildParamsFrom(queryParams) })
         .pipe(timeout(NETWORK_TIMEOUT_MS)),
     );
   }

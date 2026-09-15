@@ -2,6 +2,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -12,7 +13,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
   host: { 'data-selector': 'gestion-header' },
   templateUrl: './header.html',
   styleUrl: './header.css',
-  imports: [Icon, MatButtonModule, MatMenuModule, MatToolbarModule, NgOptimizedImage],
+  imports: [Icon, MatButtonModule, MatMenuModule, MatToolbarModule, NgOptimizedImage, RouterLink],
 })
 export class GestionHeader {
   readonly heading = input.required<string>();
