@@ -3,6 +3,7 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
@@ -38,6 +39,7 @@ describe('MoulesEtOf page', () => {
     port = new ElementsDeFabricationFixture();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ElementsDeFabricationPort, useValue: port },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },

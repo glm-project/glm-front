@@ -74,6 +74,15 @@
             >
               <glm-icon name="pencil" />
             </button>
+            <a
+              mat-stroked-button
+              [routerLink]="['/atelier']"
+              [queryParams]="{ element: identifiantDe(element) }"
+              [attr.aria-label]="libelles.miseALAtelierDe(element.type, element.numero())"
+              data-selector="element-mise-a-l-atelier"
+            >
+              {{ libelles.miseALAtelier }}
+            </a>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="colonnes"></tr>

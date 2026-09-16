@@ -33,23 +33,22 @@ td {
   width: 6rem;
   white-space: nowrap;
 }
-.mat-column-reference {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
 .mat-column-nom {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.mat-column-libelle {
-  width: 40%;
-  max-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.mat-column-etat {
+  width: 8rem;
   white-space: nowrap;
 }
+.mat-column-engagement,
+.mat-column-cloture {
+  width: 12rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 .mat-column-actions {
-  width: 14rem;
+  width: 9rem;
   white-space: nowrap;
 }
 .mat-mdc-row:hover {

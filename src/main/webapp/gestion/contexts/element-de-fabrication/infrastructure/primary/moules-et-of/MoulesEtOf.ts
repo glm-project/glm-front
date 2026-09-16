@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
+import { RouterLink } from '@angular/router';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { RequeteElements } from '../../../domain/RequeteElements';
@@ -38,7 +39,7 @@ const paginatorLabels = (): MatPaginatorIntl =>
   host: { 'data-selector': 'elements-page' },
   templateUrl: './MoulesEtOf.html',
   styleUrl: './MoulesEtOf.css',
-  imports: [Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
+  imports: [Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
   providers: [{ provide: MatPaginatorIntl, useFactory: paginatorLabels }],
 })
 export class MoulesEtOf implements OnInit {
@@ -72,6 +73,10 @@ export class MoulesEtOf implements OnInit {
 
   protected libelleDuType(element: ElementDeFabrication): string {
     return this.libelles.types[element.type];
+  }
+
+  protected identifiantDe(element: ElementDeFabrication): string {
+    return element.id.value;
   }
 
   protected openCreation(type: TypeDElementDeFabrication): void {
