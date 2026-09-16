@@ -113,7 +113,7 @@
           aria-describedby="operateur-poste-help"
           data-selector="operateur-poste-recherche"
         />
-        <mat-autocomplete #postes="matAutocomplete" (optionSelected)="ajouterPoste($event.option.value)">
+        <mat-autocomplete #postes="matAutocomplete" [displayWith]="showNothing" (optionSelected)="ajouterPoste($event.option.value)">
           @for (poste of suggestions(); track poste.id.value) {
           <mat-option [value]="poste" data-selector="operateur-poste-option">{{ poste.libelle }} — {{ poste.nature }}</mat-option>
           }
