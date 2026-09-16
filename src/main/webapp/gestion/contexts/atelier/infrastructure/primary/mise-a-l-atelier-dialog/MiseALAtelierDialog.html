@@ -1,0 +1,89 @@
+<h2 mat-dialog-title class="text-section">{{ libelles.titre }}</h2>
+<mat-dialog-content>
+  <p class="text-body text-ink-muted" data-selector="atelier-engagement-introduction">{{ libelles.introduction }}</p>
+
+  @if (vue().kind === 'CHARGEMENT') {
+  <p role="status" class="py-8 text-center text-body text-ink-muted" data-selector="atelier-engagement-loading">
+    {{ libelles.chargement }}
+  </p>
+  } @if (vue().kind === 'ECHEC') {
+  <div role="alert" class="py-8 text-center" data-selector="atelier-engagement-error">
+    <p class="mb-4 text-body text-nc">{{ libelles.erreur }}</p>
+    <button mat-stroked-button type="button" (click)="reload()" data-selector="atelier-engagement-retry">{{ libelles.reessayer }}</button>
+  </div>
+  } @if (vue().kind === 'INTROUVABLE') {
+  <p role="alert" class="py-8 text-center text-body text-nc" data-selector="atelier-engagement-missing">{{ libelles.introuvable }}</p>
+  } @if (candidat(); as element) {
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded border border-border-strong p-4">
+    <div>
+      <p class="text-body-sm text-ink-muted" data-selector="atelier-candidat-type">{{ libelleDuType(element) }}</p>
+      <p class="text-section font-semibold" data-selector="atelier-candidat-designation">{{ element.designation.value }}</p>
+    </div>
+    <button
+      mat-flat-button
+      type="button"
+      (click)="engager(element)"
+      [disabled]="engagement()"
+      [attr.aria-label]="libelles.engagementDe(element.designation.value)"
+      data-selector="atelier-engagement-confirm"
+    >
+      {{ engagement() ? libelles.engagement : libelles.engager }}
+    </button>
+  </div>
+  } @if (choix(); as liste) { @if (liste.total === 0) {
+  <p class="py-8 text-center text-body text-ink-muted" data-selector="atelier-engagement-empty">{{ libelles.vide }}</p>
+  } @else {
+  <div class="table-scroll mt-4" tabindex="0" role="region" [attr.aria-label]="libelles.tableau">
+    <table mat-table [dataSource]="liste.elements" [attr.aria-label]="libelles.tableau">
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
+        <td mat-cell *matCellDef="let element" data-selector="engageable-type-cell">{{ libelleDuType(element) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="designation">
+        <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.designation }}</th>
+        <td mat-cell *matCellDef="let element" class="font-semibold" data-selector="engageable-designation-cell">
+          {{ element.designation.value }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.actions }}</th>
+        <td mat-cell *matCellDef="let element">
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="engager(element)"
+            [disabled]="engagement()"
+            [attr.aria-label]="libelles.engagementDe(element.designation.value)"
+            data-selector="engageable-engage"
+          >
+            <glm-icon name="plus" /> {{ libelles.engager }}
+          </button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+      <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="engageable-row"></tr>
+    </table>
+  </div>
+  }
+  <mat-paginator
+    [length]="liste.total"
+    [pageIndex]="page()"
+    [pageSize]="taille()"
+    [pageSizeOptions]="[10, 20, 50]"
+    [disabled]="engagement()"
+    showFirstLastButtons
+    (page)="changePage($event)"
+    [attr.aria-label]="libelles.pagination.aria"
+    data-selector="atelier-engagement-pagination"
+  />
+  } @if (refus(); as erreur) {
+  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-engagement-refusal">{{ erreur.message }}</p>
+  } @if (erreurTechnique()) {
+  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-engagement-technical-error">{{ libelles.erreurTechnique }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [mat-dialog-close]="false" [disabled]="engagement()" data-selector="atelier-engagement-close">
+    {{ libelles.fermer }}
+  </button>
+</mat-dialog-actions>

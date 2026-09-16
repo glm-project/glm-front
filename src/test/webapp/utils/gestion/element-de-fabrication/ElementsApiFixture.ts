@@ -25,6 +25,7 @@ export class ElementsApiFixture {
   }
 
   install(): void {
+    this.installSingleRead();
     cy.intercept({ method: 'GET', pathname: ROUTE }, request => {
       if (this.failRead) {
         request.reply({ statusCode: 500, body: {} });
@@ -41,6 +42,18 @@ export class ElementsApiFixture {
     }).as('elementsRead');
     this.installCreation();
     this.installModification();
+  }
+
+  private installSingleRead(): void {
+    cy.intercept('GET', `${ROUTE}/*`, request => {
+      const id = request.url.split('/').slice(-1)[0];
+      const element = this.elements.find(candidat => candidat.id === id);
+      if (element === undefined) {
+        request.reply({ statusCode: 404, body: { type: `${URN}element-de-fabrication-introuvable` } });
+        return;
+      }
+      request.reply({ statusCode: 200, body: element });
+    }).as('elementRead');
   }
 
   private installCreation(): void {

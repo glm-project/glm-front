@@ -21,6 +21,8 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   types: TYPES,
   creations: CREATIONS,
   modification: (type: TypeDElementDeFabrication, numero: string): string => `${MODIFICATIONS[type]} ${numero}`,
+  miseALAtelier: 'Mettre à l’atelier',
+  miseALAtelierDe: (type: TypeDElementDeFabrication, numero: string): string => `Mettre ${TYPES[type]} ${numero} à l’atelier`,
   colonnes: {
     type: 'Type',
     reference: 'Référence',

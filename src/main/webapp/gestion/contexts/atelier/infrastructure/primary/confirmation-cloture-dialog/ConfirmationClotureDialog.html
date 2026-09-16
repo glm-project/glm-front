@@ -1,0 +1,17 @@
+<h2 mat-dialog-title class="text-section">{{ libelles.titre }}</h2>
+<mat-dialog-content>
+  <p class="text-body" data-selector="atelier-cloture-description">{{ libelles.description(element.nom.value) }}</p>
+  @if (refus(); as erreur) {
+  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-cloture-refusal">{{ erreur.message }}</p>
+  } @if (erreurTechnique()) {
+  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-cloture-technical-error">{{ libelles.erreurTechnique }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [mat-dialog-close]="false" [disabled]="cloture()" data-selector="atelier-cloture-cancel">
+    {{ libelles.annuler }}
+  </button>
+  <button mat-flat-button type="button" (click)="confirm()" [disabled]="cloture()" data-selector="atelier-cloture-confirm">
+    {{ cloture() ? libelles.encours : libelles.confirmer }}
+  </button>
+</mat-dialog-actions>

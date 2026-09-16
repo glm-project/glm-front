@@ -1,0 +1,8 @@
+:host {
+  --mat-dialog-subhead-font: var(--font-sans);
+  --mat-dialog-supporting-text-font: var(--font-sans);
+  --mat-button-filled-label-text-font: var(--font-sans);
+  --mat-button-text-label-text-font: var(--font-sans);
+  display: block;
+  color: var(--color-ink);
+}
