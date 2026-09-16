@@ -131,10 +131,10 @@ describe('FormulaireOperateur', () => {
     expect(inchange.estDejaHabilite(tourFixture.id)).toBe(true);
   });
 
-  it('should withdraw a granted habilitation', () => {
-    const formulaire = formulaireValideFixture().avecPosteAjoute(tourFixture).avecPosteRetire(tourFixture.id);
+  it('should withdraw only the designated habilitation', () => {
+    const formulaire = formulaireValideFixture().avecPosteAjoute(tourFixture).avecPosteAjoute(scieFixture).avecPosteRetire(tourFixture.id);
 
-    expect(formulaire.saisie.postes).toEqual([]);
+    expect(formulaire.saisie.postes).toEqual([scieFixture]);
     expect(formulaire.estDejaHabilite(tourFixture.id)).toBe(false);
   });
 
@@ -150,10 +150,34 @@ describe('FormulaireOperateur', () => {
     expect(corrige.erreurNom()).toBeUndefined();
   });
 
-  it('should keep a duplicate identity refusal while the identity is retyped identically', () => {
-    const refuse = formulaireValideFixture().avecRefus(new IdentiteDejaUtilisee()).avecNom('Dupont');
+  it.each([
+    ['avecNom', (formulaire: FormulaireOperateur): FormulaireOperateur => formulaire.avecNom('Dupont')],
+    ['avecPrenom', (formulaire: FormulaireOperateur): FormulaireOperateur => formulaire.avecPrenom('Jean')],
+  ])('should keep a duplicate identity refusal while %s retypes the same entry', (_transition, retype) => {
+    const refuse = retype(formulaireValideFixture().avecRefus(new IdentiteDejaUtilisee()));
 
     expect(refuse.erreurNom()).toBe('Un autre opérateur porte déjà ce nom et ce prénom.');
+  });
+
+  it('should keep a duplicate payroll number refusal while the payroll number is retyped identically', () => {
+    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(new MatriculeDejaUtilise()).avecMatricule('049');
+
+    expect(refuse.erreurMatricule()).toBe('Un autre opérateur porte déjà ce matricule.');
+  });
+
+  it('should keep a duplicate payroll number refusal when another entry changes', () => {
+    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(new MatriculeDejaUtilise()).avecNom('Durand');
+
+    expect(refuse.erreurMatricule()).toBe('Un autre opérateur porte déjà ce matricule.');
+  });
+
+  it.each([
+    ['a duplicate identity', new IdentiteDejaUtilisee()],
+    ['a duplicate payroll number', new MatriculeDejaUtilise()],
+  ])('should not report %s as a saving failure', (_refus, refus) => {
+    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(refus);
+
+    expect(refuse.erreurEnregistrement()).toBeUndefined();
   });
 
   it('should clear a duplicate payroll number refusal once the payroll number changes', () => {

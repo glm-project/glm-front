@@ -19,12 +19,25 @@ describe('PosteHabilitable', () => {
   });
 
   it.each([
-    ['tou', true],
-    ['  TOUR  ', true],
-    ['tournage', true],
-    ['TOURNAGE', true],
-    ['soudage', false],
-  ])('should match the search term %s on label or trade: %s', (recherche, expected) => {
+    ['a label fragment', 'tou', true],
+    ['a differently cased fragment', 'TOUR', true],
+    ['a fragment surrounded by spaces', '  Tour  ', true],
+    ['the whole label', 'Tour 1', true],
+    ['the trade', 'tournage', true],
+    ['an unrelated term', 'soudage', false],
+    ['a term longer than the label', 'Tour 1 et demi', false],
+  ])('should match %s: %s', (_intention, recherche, expected) => {
     expect(posteFixture('Tour 1', 'tournage').correspondA(recherche)).toBe(expected);
+  });
+
+  it('should match a search typed without its accents', () => {
+    const poncage = posteFixture('Ponceuse', 'ponçage');
+
+    expect(poncage.correspondA('poncage')).toBe(true);
+    expect(poncage.correspondA('PONÇAGE')).toBe(true);
+  });
+
+  it('should suggest every workstation while the search is empty', () => {
+    expect(posteFixture('Tour 1', 'tournage').correspondA('')).toBe(true);
   });
 });

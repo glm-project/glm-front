@@ -5,7 +5,13 @@ export interface DescriptionDePoste {
   readonly nature: string;
 }
 
-const normalise = (value: string): string => value.trim().toLocaleLowerCase('fr');
+const RECHERCHE = new Intl.Collator('fr', { sensitivity: 'base', usage: 'search' });
+
+const departsPossibles = (valeur: string, terme: string): number[] =>
+  Array.from({ length: Math.max(valeur.length - terme.length + 1, 0) }, (_, index) => index);
+
+const contient = (valeur: string, terme: string): boolean =>
+  departsPossibles(valeur, terme).some(index => RECHERCHE.compare(valeur.slice(index, index + terme.length), terme) === 0);
 
 export class PosteHabilitable {
   readonly libelle: string;
@@ -24,9 +30,9 @@ export class PosteHabilitable {
   }
 
   correspondA(recherche: string): boolean {
-    const terme = normalise(recherche);
-    const libelleCorrespond = normalise(this.libelle).includes(terme);
-    const natureCorrespond = normalise(this.nature).includes(terme);
+    const terme = recherche.trim();
+    const libelleCorrespond = contient(this.libelle, terme);
+    const natureCorrespond = contient(this.nature, terme);
     return libelleCorrespond || natureCorrespond;
   }
 }
