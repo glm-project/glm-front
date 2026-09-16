@@ -10,7 +10,7 @@ class IconFixture {
   readonly name = input.required<IconName>();
 }
 
-const icons: IconName[] = ['menu', 'plus', 'pencil', 'trash2'];
+const icons: IconName[] = ['menu', 'plus', 'pencil', 'trash2', 'x'];
 
 describe('Icon', () => {
   let fixture: ComponentFixture<IconFixture>;

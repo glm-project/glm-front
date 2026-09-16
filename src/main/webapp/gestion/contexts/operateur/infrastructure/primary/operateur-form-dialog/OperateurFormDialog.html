@@ -1,0 +1,135 @@
+<h2 mat-dialog-title class="text-section" data-selector="operateur-form-title">{{ titre }}</h2>
+<form novalidate (submit)="save($event)" data-selector="operateur-form">
+  <mat-dialog-content>
+    <p class="mb-6 text-body-sm text-ink-muted">
+      Déclarez la personne et les postes sur lesquels elle est habilitée. Ses métiers en sont déduits.
+    </p>
+    @if (formulaire().erreurEnregistrement(); as erreur) {
+    <p role="alert" class="mb-4 text-body-sm text-nc" data-selector="operateur-enregistrement-error">{{ erreur }}</p>
+    } @if (erreurTechnique()) {
+    <p role="alert" class="mb-4 text-body-sm text-nc" data-selector="operateur-technical-error">
+      L’enregistrement a échoué. Vérifiez la connexion puis réessayez.
+    </p>
+    }
+    <fieldset [disabled]="enregistrement()" class="fields">
+      <div>
+        <label for="operateur-nom" class="field-label">Nom <span class="text-ink-muted">(obligatoire)</span></label>
+        <input
+          #nom
+          id="operateur-nom"
+          name="nom"
+          class="field-input"
+          autocomplete="off"
+          required
+          [value]="formulaire().saisie.nom"
+          (input)="changeNom(nom.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurNom() !== undefined"
+          aria-describedby="operateur-nom-error"
+          data-selector="operateur-nom"
+        />
+        <p id="operateur-nom-error" class="field-error" aria-live="polite" data-selector="operateur-nom-error">
+          {{ soumis() ? formulaire().erreurNom() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="operateur-prenom" class="field-label">Prénom <span class="text-ink-muted">(obligatoire)</span></label>
+        <input
+          #prenom
+          id="operateur-prenom"
+          name="prenom"
+          class="field-input"
+          autocomplete="off"
+          required
+          [value]="formulaire().saisie.prenom"
+          (input)="changePrenom(prenom.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurPrenom() !== undefined"
+          aria-describedby="operateur-prenom-error"
+          data-selector="operateur-prenom"
+        />
+        <p id="operateur-prenom-error" class="field-error" aria-live="polite" data-selector="operateur-prenom-error">
+          {{ soumis() ? formulaire().erreurPrenom() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="operateur-matricule" class="field-label">Matricule <span class="text-ink-muted">(facultatif)</span></label>
+        <input
+          #matricule
+          id="operateur-matricule"
+          name="matricule"
+          class="field-input"
+          autocomplete="off"
+          [value]="formulaire().saisie.matricule"
+          (input)="changeMatricule(matricule.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurMatricule() !== undefined"
+          aria-describedby="operateur-matricule-error"
+          data-selector="operateur-matricule"
+        />
+        <p id="operateur-matricule-error" class="field-error" aria-live="polite" data-selector="operateur-matricule-error">
+          {{ soumis() ? formulaire().erreurMatricule() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="operateur-taux" class="field-label">Taux horaire <span class="text-ink-muted">(€/h, facultatif)</span></label>
+        <input
+          #taux
+          id="operateur-taux"
+          name="tauxHoraire"
+          class="field-input"
+          inputmode="decimal"
+          autocomplete="off"
+          [value]="formulaire().saisie.tauxHoraire"
+          (input)="changeTauxHoraire(taux.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurTauxHoraire() !== undefined"
+          aria-describedby="operateur-taux-error"
+          data-selector="operateur-taux"
+        />
+        <p id="operateur-taux-error" class="field-error" aria-live="polite" data-selector="operateur-taux-error">
+          {{ soumis() ? formulaire().erreurTauxHoraire() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="operateur-poste-recherche" class="field-label">Postes habilités <span class="text-ink-muted">(facultatif)</span></label>
+        @if (formulaire().saisie.postes.length > 0) {
+        <mat-chip-set class="mb-2" aria-label="Postes habilités">
+          @for (poste of formulaire().saisie.postes; track poste.id.value) {
+          <mat-chip (removed)="retirerPoste(poste)" data-selector="operateur-poste-chip">
+            {{ poste.libelle }}
+            <button matChipRemove type="button" [attr.aria-label]="'Retirer ' + poste.libelle" data-selector="operateur-poste-remove">
+              <glm-icon name="x" />
+            </button>
+          </mat-chip>
+          }
+        </mat-chip-set>
+        }
+        <input
+          #rechercheInput
+          id="operateur-poste-recherche"
+          name="posteRecherche"
+          class="field-input"
+          autocomplete="off"
+          [value]="recherche()"
+          (input)="chercher(rechercheInput.value)"
+          [matAutocomplete]="postes"
+          aria-describedby="operateur-poste-help"
+          data-selector="operateur-poste-recherche"
+        />
+        <mat-autocomplete #postes="matAutocomplete" (optionSelected)="ajouterPoste($event.option.value)">
+          @for (poste of suggestions(); track poste.id.value) {
+          <mat-option [value]="poste" data-selector="operateur-poste-option">{{ poste.libelle }} — {{ poste.nature }}</mat-option>
+          }
+        </mat-autocomplete>
+        <p id="operateur-poste-help" class="mt-2 text-body-sm text-ink-muted">
+          Cherchez un poste par son nom ou son métier, puis choisissez-le pour l’ajouter.
+        </p>
+      </div>
+    </fieldset>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" [mat-dialog-close]="false" [disabled]="enregistrement()" data-selector="operateur-cancel">
+      Annuler
+    </button>
+    <button mat-flat-button type="submit" [disabled]="enregistrement()" data-selector="operateur-save">
+      {{ enregistrement() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </mat-dialog-actions>
+</form>
