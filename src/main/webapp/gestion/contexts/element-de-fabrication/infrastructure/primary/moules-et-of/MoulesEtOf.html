@@ -1,0 +1,97 @@
+<main class="mx-auto max-w-6xl p-4 text-ink md:p-8" aria-labelledby="elements-heading">
+  <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 id="elements-heading" class="text-title">{{ libelles.titre }}</h1>
+      <p class="mt-2 text-body text-ink-muted">{{ libelles.sousTitre }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button mat-flat-button (click)="openCreation('PRODUIT')" [disabled]="etat().chargement" data-selector="elements-new-moule">
+        <glm-icon name="plus" /> {{ libelles.creations.PRODUIT }}
+      </button>
+      <button
+        mat-stroked-button
+        (click)="openCreation('ORDRE_DE_FABRICATION')"
+        [disabled]="etat().chargement"
+        data-selector="elements-new-of"
+      >
+        <glm-icon name="plus" /> {{ libelles.creations.ORDRE_DE_FABRICATION }}
+      </button>
+    </div>
+  </header>
+
+  <section [attr.aria-busy]="etat().chargement" [attr.aria-label]="libelles.referentiel">
+    @if (etat().chargement) {
+    <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="elements-loading">{{ libelles.chargement }}</p>
+    } @else if (etat().echec) {
+    <div role="alert" class="py-12 text-center" data-selector="elements-error">
+      <p class="mb-4 text-body text-nc">{{ libelles.erreur }}</p>
+      <button mat-stroked-button (click)="reload()" data-selector="elements-retry">{{ libelles.reessayer }}</button>
+    </div>
+    } @else if (etat().totalElementsCount === 0) {
+    <div class="empty-state text-center" data-selector="elements-empty">
+      <h2 class="text-section">{{ libelles.vide }}</h2>
+      <p class="mx-auto mb-6 mt-3 max-w-lg text-body text-ink-muted">{{ libelles.videDetails }}</p>
+      <div class="flex flex-wrap justify-center gap-2">
+        <button mat-flat-button (click)="openCreation('PRODUIT')" data-selector="elements-empty-create-moule">
+          <glm-icon name="plus" /> {{ libelles.creations.PRODUIT }}
+        </button>
+        <button mat-stroked-button (click)="openCreation('ORDRE_DE_FABRICATION')" data-selector="elements-empty-create-of">
+          <glm-icon name="plus" /> {{ libelles.creations.ORDRE_DE_FABRICATION }}
+        </button>
+      </div>
+    </div>
+    } @else {
+    <div class="table-scroll" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
+      <table mat-table [dataSource]="etat().elements" [attr.aria-label]="libelles.tableau">
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
+          <td mat-cell *matCellDef="let element" data-selector="element-type-cell">{{ libelleDuType(element) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="reference">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.reference }}</th>
+          <td mat-cell *matCellDef="let element" class="font-semibold" data-selector="element-reference-cell">
+            {{ element.reference?.value ?? libelles.sansValeur }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="nom">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.nom }}</th>
+          <td mat-cell *matCellDef="let element" class="text-ink-muted" data-selector="element-nom-cell">{{ element.nom.value }}</td>
+        </ng-container>
+        <ng-container matColumnDef="libelle">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.libelle }}</th>
+          <td mat-cell *matCellDef="let element" data-selector="element-libelle-cell">
+            {{ element.libelle?.value ?? libelles.sansValeur }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.actions }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button
+              mat-icon-button
+              (click)="openModification(element)"
+              [attr.aria-label]="libelles.modification(element.type, element.numero())"
+              data-selector="element-edit"
+            >
+              <glm-icon name="pencil" />
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="element-row"></tr>
+      </table>
+    </div>
+    }
+
+    <mat-paginator
+      [length]="etat().totalElementsCount"
+      [pageIndex]="etat().page"
+      [pageSize]="etat().taille"
+      [pageSizeOptions]="[10, 20, 50]"
+      [disabled]="etat().chargement || etat().echec"
+      showFirstLastButtons
+      (page)="changePage($event)"
+      [attr.aria-label]="libelles.pagination.aria"
+      data-selector="elements-pagination"
+    />
+  </section>
+</main>
