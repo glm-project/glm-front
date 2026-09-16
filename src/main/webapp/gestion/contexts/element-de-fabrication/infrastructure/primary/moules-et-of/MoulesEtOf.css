@@ -1,0 +1,67 @@
+:host {
+  --mat-table-header-headline-font: var(--font-sans);
+  --mat-table-row-item-label-text-font: var(--font-sans);
+  --mat-paginator-container-text-font: var(--font-sans);
+  --mat-select-trigger-text-font: var(--font-sans);
+  --mat-button-filled-label-text-font: var(--font-sans);
+  --mat-button-outlined-label-text-font: var(--font-sans);
+  display: block;
+  min-height: 100%;
+  background: var(--color-canvas);
+}
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: var(--color-surface);
+}
+.table-scroll:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+table {
+  width: 100%;
+  min-width: 42rem;
+}
+th {
+  color: var(--color-ink-muted);
+}
+td {
+  color: var(--color-ink);
+}
+.mat-column-type {
+  width: 6rem;
+  white-space: nowrap;
+}
+.mat-column-reference {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mat-column-nom {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mat-column-libelle {
+  width: 40%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mat-column-actions {
+  width: 5rem;
+  white-space: nowrap;
+}
+.mat-mdc-row:hover {
+  background: var(--color-sunken);
+}
+.empty-state {
+  padding: 4rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+}
+mat-paginator {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}

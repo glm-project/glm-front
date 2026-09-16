@@ -1,0 +1,63 @@
+<h2 mat-dialog-title class="text-section" data-selector="element-form-title">{{ titre }}</h2>
+<form novalidate (submit)="save($event)" data-selector="element-form">
+  <mat-dialog-content>
+    <p class="mb-6 text-body-sm text-ink-muted">{{ libelles.introduction }}</p>
+    <fieldset [disabled]="enregistrement()" class="fields">
+      <div>
+        <label for="element-reference" class="field-label">
+          {{ libelles.reference }} <span class="text-ink-muted">{{ libelles.referenceComplement }}</span>
+        </label>
+        <input
+          #reference
+          id="element-reference"
+          name="reference"
+          class="field-input"
+          autocomplete="off"
+          [value]="formulaire().saisie.reference"
+          (input)="changeReference(reference.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurReference() !== undefined"
+          aria-describedby="element-reference-help element-reference-error"
+          data-selector="element-reference"
+        />
+        <p id="element-reference-help" class="mt-2 text-body-sm text-ink-muted">{{ libelles.referenceAide }}</p>
+        <p id="element-reference-error" class="field-error" aria-live="polite" data-selector="element-reference-error">
+          {{ soumis() ? formulaire().erreurReference() : '' }}
+        </p>
+      </div>
+      <div>
+        <label for="element-libelle" class="field-label">
+          {{ libelles.libelle }} <span class="text-ink-muted">{{ libelles.libelleComplement }}</span>
+        </label>
+        <input
+          #libelle
+          id="element-libelle"
+          name="libelle"
+          class="field-input"
+          autocomplete="off"
+          [value]="formulaire().saisie.libelle"
+          (input)="changeLibelle(libelle.value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurLibelle() !== undefined"
+          aria-describedby="element-libelle-help element-libelle-error"
+          data-selector="element-libelle"
+        />
+        <p id="element-libelle-help" class="mt-2 text-body-sm text-ink-muted">{{ libelles.libelleAide }}</p>
+        <p id="element-libelle-error" class="field-error" aria-live="polite" data-selector="element-libelle-error">
+          {{ soumis() ? formulaire().erreurLibelle() : '' }}
+        </p>
+      </div>
+    </fieldset>
+    @if (formulaire().erreurEnregistrement(); as erreur) {
+    <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="element-enregistrement-error">{{ erreur }}</p>
+    } @if (erreurTechnique()) {
+    <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="element-technical-error">{{ libelles.erreurTechnique }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" [mat-dialog-close]="false" [disabled]="enregistrement()" data-selector="element-cancel">
+      {{ libelles.annuler }}
+    </button>
+    <button mat-flat-button type="submit" [disabled]="enregistrement()" data-selector="element-save">
+      {{ enregistrement() ? libelles.enregistrement : libelles.enregistrer }}
+    </button>
+  </mat-dialog-actions>
+</form>
