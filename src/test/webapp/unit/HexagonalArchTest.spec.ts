@@ -29,7 +29,9 @@ describe('HexagonalArchTest', () => {
 
   it('should discover every declared architectural boundary', () => {
     expect(businessContexts).toEqual(
-      expect.arrayContaining(['gestion.contexts.poste', 'pupitre.contexts.atelier'].map(context => `src.main.webapp.${context}`)),
+      expect.arrayContaining(
+        ['gestion.contexts.operateur', 'gestion.contexts.poste', 'pupitre.contexts.atelier'].map(context => `src.main.webapp.${context}`),
+      ),
     );
     expect(sharedKernels.length).toBeGreaterThan(0);
   });

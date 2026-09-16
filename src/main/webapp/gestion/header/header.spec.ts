@@ -41,6 +41,7 @@ describe('Gestion header', () => {
   it.each([
     ['gestion-navigation-supervision', '/', 'Supervision atelier'],
     ['gestion-navigation-postes', '/postes-de-travail', 'Postes de travail'],
+    ['gestion-navigation-operateurs', '/operateurs', 'Opérateurs'],
   ])('should offer the %s destination in the navigation menu', async (selector, href, label) => {
     await whenOpeningMenu();
 

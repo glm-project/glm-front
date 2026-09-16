@@ -1,0 +1,105 @@
+<main class="mx-auto max-w-6xl p-4 text-ink md:p-8" aria-labelledby="operateurs-heading">
+  <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 id="operateurs-heading" class="text-title">Opérateurs</h1>
+      <p class="mt-2 text-body text-ink-muted">Déclarez les personnes qui pointent et les postes sur lesquels elles sont habilitées.</p>
+    </div>
+    <button mat-flat-button (click)="openForm()" [disabled]="etat().chargement" data-selector="operateurs-new">
+      <glm-icon name="plus" /> Nouvel opérateur
+    </button>
+  </header>
+
+  <section [attr.aria-busy]="etat().chargement" aria-label="Référentiel des opérateurs">
+    @if (etat().chargement) {
+    <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="operateurs-loading">Chargement des opérateurs…</p>
+    } @else if (etat().echec) {
+    <div role="alert" class="py-12 text-center" data-selector="operateurs-error">
+      <p class="mb-4 text-body text-nc">Impossible de charger les opérateurs. Vérifiez la connexion puis réessayez.</p>
+      <button mat-stroked-button (click)="reload()" data-selector="operateurs-retry">Réessayer</button>
+    </div>
+    } @else if (etat().totalElementsCount === 0 && etat().atelierSansPoste) {
+    <div class="empty-state text-center" data-selector="operateurs-empty-sans-poste">
+      <h2 class="text-section">Configurez d’abord vos postes</h2>
+      <p class="mx-auto mb-6 mt-3 max-w-lg text-body text-ink-muted">
+        Un opérateur se déclare habilité sur des postes. Décrivez les machines et les emplacements de votre atelier avant de déclarer les
+        personnes qui y travaillent.
+      </p>
+      <a mat-flat-button routerLink="/postes-de-travail" data-selector="operateurs-empty-postes-link">Aller aux postes de travail</a>
+    </div>
+    } @else if (etat().totalElementsCount === 0) {
+    <div class="empty-state text-center" data-selector="operateurs-empty">
+      <h2 class="text-section">Aucun opérateur</h2>
+      <p class="mx-auto mb-6 mt-3 max-w-lg text-body text-ink-muted">
+        Ajoutez le premier opérateur pour décrire les personnes qui pointent dans votre atelier.
+      </p>
+      <button mat-flat-button (click)="openForm()" data-selector="operateurs-empty-create">
+        <glm-icon name="plus" /> Déclarer le premier opérateur
+      </button>
+    </div>
+    } @else {
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des opérateurs, défilement horizontal disponible">
+      <table mat-table [dataSource]="etat().operateurs" aria-label="Opérateurs">
+        <ng-container matColumnDef="nom">
+          <th mat-header-cell *matHeaderCellDef scope="col">Nom</th>
+          <td mat-cell *matCellDef="let operateur" class="font-semibold">{{ operateur.nom.value }}</td>
+        </ng-container>
+        <ng-container matColumnDef="prenom">
+          <th mat-header-cell *matHeaderCellDef scope="col">Prénom</th>
+          <td mat-cell *matCellDef="let operateur" data-selector="operateur-prenom-cell">{{ operateur.prenom.value }}</td>
+        </ng-container>
+        <ng-container matColumnDef="matricule">
+          <th mat-header-cell *matHeaderCellDef scope="col">Matricule</th>
+          <td mat-cell *matCellDef="let operateur" data-selector="operateur-matricule-cell">{{ formatMatricule(operateur.matricule) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="natures">
+          <th mat-header-cell *matHeaderCellDef scope="col">Métiers</th>
+          <td mat-cell *matCellDef="let operateur" data-selector="operateur-natures-cell">{{ formatNatures(operateur.natures) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="postes">
+          <th mat-header-cell *matHeaderCellDef scope="col">Postes habilités</th>
+          <td mat-cell *matCellDef="let operateur" data-selector="operateur-postes-cell">{{ formatPostes(operateur.postes) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="tauxHoraire">
+          <th mat-header-cell *matHeaderCellDef scope="col">Taux horaire</th>
+          <td mat-cell *matCellDef="let operateur" data-selector="operateur-taux-cell">{{ formatTaux(operateur.tauxHoraire) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef scope="col">Actions</th>
+          <td mat-cell *matCellDef="let operateur">
+            <button
+              mat-icon-button
+              (click)="openForm(operateur)"
+              [attr.aria-label]="'Modifier ' + operateur.prenom.value + ' ' + operateur.nom.value"
+              data-selector="operateur-edit"
+            >
+              <glm-icon name="pencil" />
+            </button>
+            <button
+              mat-icon-button
+              (click)="confirmDeletion(operateur)"
+              [attr.aria-label]="'Supprimer ' + operateur.prenom.value + ' ' + operateur.nom.value"
+              data-selector="operateur-delete"
+            >
+              <glm-icon name="trash2" />
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="operateur-row"></tr>
+      </table>
+    </div>
+    }
+
+    <mat-paginator
+      [length]="etat().totalElementsCount"
+      [pageIndex]="etat().page"
+      [pageSize]="etat().taille"
+      [pageSizeOptions]="[10, 20, 50]"
+      [disabled]="etat().chargement || etat().echec"
+      showFirstLastButtons
+      (page)="changePage($event)"
+      aria-label="Pagination des opérateurs"
+      data-selector="operateurs-pagination"
+    />
+  </section>
+</main>
