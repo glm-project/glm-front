@@ -139,6 +139,17 @@ describe('OperateurFormDialog', () => {
     expect(input('operateur-poste-recherche').value).toBe('');
   });
 
+  it('should keep the search box empty when granting a second habilitation from an empty search', async () => {
+    await whenOpening();
+    await whenEntering('operateur-poste-recherche', 'tour');
+    await whenClicking('operateur-poste-option');
+    await whenReopeningSuggestions();
+    await whenClicking('operateur-poste-option');
+
+    expect(texts('operateur-poste-chip')).toEqual([expect.stringContaining('Scie 1'), expect.stringContaining('Tour 1')]);
+    expect(input('operateur-poste-recherche').value).toBe('');
+  });
+
   it('should stop suggesting a habilitation that is already granted', async () => {
     await whenOpening();
     await whenEntering('operateur-poste-recherche', 'tour');
@@ -268,6 +279,13 @@ describe('OperateurFormDialog', () => {
     const field = input(selector);
     field.focus();
     field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+  };
+  const whenReopeningSuggestions = async (): Promise<void> => {
+    const field = input('operateur-poste-recherche');
+    field.focus();
+    field.dispatchEvent(new Event('focusin', { bubbles: true }));
     field.dispatchEvent(new Event('input', { bubbles: true }));
     await fixture.whenStable();
   };

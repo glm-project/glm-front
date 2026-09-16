@@ -65,6 +65,10 @@ export class OperateurFormDialog implements OnInit {
     this.formulaire.update(formulaire => formulaire.avecTauxHoraire(tauxHoraire));
   }
 
+  // Un poste choisi quitte la recherche pour devenir une puce : sans cela,
+  // Material ecrirait l'objet choisi dans le champ.
+  protected readonly showNothing = (): string => '';
+
   protected chercher(recherche: string): void {
     this.recherche.set(recherche);
   }
