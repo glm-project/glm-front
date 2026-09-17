@@ -45,7 +45,7 @@ td {
   font-variant-numeric: tabular-nums;
 }
 .mat-column-actions {
-  width: 8rem;
+  width: 13rem;
   white-space: nowrap;
 }
 .mat-mdc-row:hover {

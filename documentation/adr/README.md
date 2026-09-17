@@ -86,3 +86,6 @@ something stays, with a status that says what died.
 
 - [0037 — Require production consumers for tested members](0037-require-production-consumers.md) —
   compiler-backed ESLint check across production, tests and Angular templates
+
+- [0038 — Hold the view state of a parameterised read screen in its URL](0038-hold-view-state-in-the-url.md) —
+  reactive `ActivatedRoute` reads, a domain-validated address, and a refused address that issues no request
