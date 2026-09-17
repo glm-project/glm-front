@@ -39,8 +39,13 @@ class RouterFixture {
   }
 }
 
-const pointageFixture = (type: 'ARRIVEE' | 'DEPART', instant: string): PointageDeReleve =>
-  new PointageDeReleve(type, new InstantDeReleve(instant));
+/**
+ * L'écran affiche l'heure d'un pointage dans le fuseau du navigateur. Une fixture écrite en UTC rendrait donc
+ * l'attente dépendante du fuseau de la machine — 08:02 à Paris, 06:02 sur un runner en UTC. Partir d'une heure
+ * locale garde le scénario vrai partout, sans cesser de prouver que l'écran formate bien l'instant reçu.
+ */
+const pointageFixture = (type: 'ARRIVEE' | 'DEPART', heure: number, minute: number): PointageDeReleve =>
+  new PointageDeReleve(type, new InstantDeReleve(new Date(2026, 8, 14, heure, minute).toISOString()));
 
 const releveFixture = (semaine: SemaineISO, premierJour: JourDeReleve): ReleveDesHeures =>
   new ReleveDesHeures(semaine, {
@@ -51,14 +56,14 @@ const releveFixture = (semaine: SemaineISO, premierJour: JourDeReleve): ReleveDe
 
 const jourTravailleFixture = (semaine: SemaineISO): JourDeReleve =>
   new JourDeReleve(new JourCalendaire(semaine.lundi().value), new DureeTravaillee('PT7H30M'), [
-    pointageFixture('ARRIVEE', '2026-09-14T06:02:00Z'),
-    pointageFixture('DEPART', '2026-09-14T15:32:00Z'),
+    pointageFixture('ARRIVEE', 8, 2),
+    pointageFixture('DEPART', 17, 32),
   ]);
 
 const jourPointeSansDureeFixture = (semaine: SemaineISO): JourDeReleve =>
   new JourDeReleve(new JourCalendaire(semaine.lundi().value), new DureeTravaillee('PT0S'), [
-    pointageFixture('ARRIVEE', '2026-09-14T06:02:00Z'),
-    pointageFixture('DEPART', '2026-09-14T06:02:30Z'),
+    pointageFixture('ARRIVEE', 8, 2),
+    pointageFixture('DEPART', 8, 2),
   ]);
 
 describe('Synthese des heures component', () => {
