@@ -82,6 +82,14 @@
             >
               <glm-icon name="trash2" />
             </button>
+            <a
+              mat-stroked-button
+              [routerLink]="['/operateurs', operateur.id.value, 'heures']"
+              [attr.aria-label]="'Voir la synthèse des heures de ' + operateur.prenom.value + ' ' + operateur.nom.value"
+              data-selector="operateur-heures"
+            >
+              Heures
+            </a>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
