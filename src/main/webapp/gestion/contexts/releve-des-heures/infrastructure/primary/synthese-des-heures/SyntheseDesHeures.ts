@@ -1,7 +1,6 @@
-import { Component, computed, inject, resource, Signal } from '@angular/core';
+import { Component, computed, inject, resource, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
@@ -12,15 +11,21 @@ import { semaineDemandee } from '../../../domain/semaine/SemaineDemandee';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { jourCourant } from '../jourCourant';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
+import { FriseDeLaSemaine, PlageDessinee } from './FriseDeLaSemaine';
 
 const ANNEES_OFFERTES = 6;
+
+export interface PlageAffichee {
+  readonly dessin: PlageDessinee;
+  readonly libelle: string;
+}
 
 export type EtatVueSynthese =
   | { readonly kind: 'ADRESSE_INVALIDE' }
   | { readonly kind: 'CHARGEMENT' }
   | { readonly kind: 'ERREUR' }
   | { readonly kind: 'OPERATEUR_INTROUVABLE' }
-  | { readonly kind: 'SUCCES'; readonly releve: ReleveDesHeures };
+  | { readonly kind: 'SUCCES'; readonly releve: ReleveDesHeures; readonly frise: FriseDeLaSemaine };
 
 /** Les semaines à venir ne portent aucun pointage : le back refuse une saisie postérieure à l'instant courant. */
 const semaineOfferte = (semaine: SemaineISO | undefined, courante: SemaineISO): SemaineISO | undefined =>
@@ -34,11 +39,13 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
   host: { 'data-selector': 'synthese-page' },
   templateUrl: './SyntheseDesHeures.html',
   styleUrl: './SyntheseDesHeures.css',
-  imports: [MatButtonModule, MatTableModule, RouterLink],
+  imports: [MatButtonModule, RouterLink],
 })
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;
-  protected readonly colonnes = ['jour', 'duree', 'pointages'];
+
+  /** Le jour dont le journal est déplié. La frise dessine ; les heures exactes se lisent d'un geste. */
+  protected readonly jourDeplie = signal<string | null>(null);
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -125,6 +132,22 @@ export class SyntheseDesHeures {
     return jour.estSansPointage() ? this.libelles.sansValeur : this.libelles.duree(jour.duree);
   }
 
+  /** Le dessin d'une plage et le mot qui la nomme : la frise place, les libellés disent. */
+  protected plagesAffichees(frise: FriseDeLaSemaine, jour: JourDeReleve): readonly PlageAffichee[] {
+    return jour.plages().map(plage => ({
+      dessin: frise.dessine(plage),
+      libelle: this.libelles.plage(plage.pause, plage.debut, plage.fin),
+    }));
+  }
+
+  protected basculerLeJour(jour: JourDeReleve): void {
+    this.jourDeplie.update(courant => (courant === jour.jour.value ? null : jour.jour.value));
+  }
+
+  protected estDeplie(jour: JourDeReleve): boolean {
+    return this.jourDeplie() === jour.jour.value;
+  }
+
   private naviguerVers(semaine: SemaineISO): Promise<boolean> {
     return this.router.navigate([], { relativeTo: this.route, queryParams: this.parametresDe(semaine) });
   }
@@ -137,6 +160,9 @@ export class SyntheseDesHeures {
       return { kind: 'ERREUR' };
     }
     const releve = this.releve.value();
-    return releve === undefined ? { kind: 'OPERATEUR_INTROUVABLE' } : { kind: 'SUCCES', releve };
+    if (releve === undefined) {
+      return { kind: 'OPERATEUR_INTROUVABLE' };
+    }
+    return { kind: 'SUCCES', releve, frise: new FriseDeLaSemaine(releve.jours) };
   }
 }

@@ -48,6 +48,8 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - **JourDeReleve** : Value Object d'un jour du relevé — sa date, sa durée travaillée et ses pointages.
   `estSansPointage()` distingue un jour vide d'un jour à durée nulle.
 - **PointageDeReleve** : Value Object d'un pointage — son type et son instant.
+- **PlageDeReleve** : Value Object d'un intervalle lu dans le journal — une présence, ou la pause qui la coupe.
+  `fin` manque quand le dernier pointage du jour n'a pas été refermé.
 - **TypeDePointage** : union des quatre types du journal de présence.
 - **InstantDeReleve** : Value Object d'un instant reçu du back, refusé s'il n'est pas un instant absolu.
 - **IdentiteOperateur** : Value Object du nom et du prénom que le rapport a résolus au référentiel.
@@ -72,6 +74,17 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   doit pas avoir l'air absent.
 - **Les pointages ne sont jamais réordonnés.** Le serveur promet l'ordre des heures ; les retrier côté client
   demanderait d'interpréter des décalages horaires que ce contexte n'a pas.
+- **La frise dessine le journal ; les chiffres restent ceux du serveur.** La route de la synthèse ne rend
+  aucune plage de présence — c'est la feuille de temps qui les porte — donc les intervalles dessinés sont
+  appariés ici, à partir des pointages. **Aucune durée n'en est dérivée** : la colonne « Travaillé » et le total
+  viennent du back, et c'est ce qui empêche cet appariement de devenir un second avis sur les heures d'une
+  personne.
+- **Une plage encore ouverte se marque, elle ne s'étire pas.** Le dernier pointage d'un jour en cours n'a pas de
+  fin ; dessiner une barre jusqu'à maintenant inventerait du temps, et le domaine n'a d'ailleurs pas le droit de
+  lire l'horloge. Un repère, et le journal dit le reste.
+- **Tout pointage referme l'intervalle ouvert.** Un journal incohérent produit donc un dessin approximatif
+  plutôt que rien, et le journal du jour reste affiché tel quel — c'est lui la vérité. Le back valide tout le
+  journal à chaque écriture ; le cas n'est pas censé arriver.
 - **Un opérateur inconnu du référentiel est une réponse, pas une panne.** Le port rend l'absence, l'écran
   l'explique, et `ErrorHandlerPort` n'est pas dérangé.
 - **La semaine en cours se déduit d'un jour fourni**, jamais d'une horloge lue par le domaine. L'instant vient
@@ -103,6 +116,10 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   posé sur l'écran des opérateurs : « les heures de cette personne, cette semaine ». La réécrire demanderait un
   `effect()`, que la politique de lint du dépôt refuse, et figerait un lien que l'on voulait justement vivant.
   Conséquence assumée : une adresse nue relue la semaine suivante montre la semaine suivante.
+- **L'axe de la frise se déduit des pointages de la semaine**, jamais figé de 6 h à 22 h : une équipe de nuit
+  tomberait hors d'une fenêtre figée sans que personne ne voie qu'il manque quelque chose. Dès qu'une plage
+  franchit minuit, l'axe couvre la journée entière et la plage se dessine en deux morceaux — le jour auquel une
+  heure appartient est celui que le back a tranché, pas celui de l'horloge.
 - **L'heure d'un pointage est affichée dans le fuseau du navigateur.** `dateDeSurvenue` est un
   `java.time.Instant` sérialisé en UTC : la tranche brute de la chaîne afficherait 06:02 pour un pointage de
   08:02 en France. Aucune configuration de ce front ne porte le fuseau de l'entreprise, et le navigateur du

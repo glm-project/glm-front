@@ -37,9 +37,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   optionSemaine: (numero: number): string => `Semaine ${numero}`,
 
   types: TYPES,
-  colonnes: { jour: 'Jour', duree: 'Travaillé', pointages: 'Pointages' },
+  colonnes: { jour: 'Jour', journee: 'Journée', duree: 'Travaillé' },
   tableau: 'Heures travaillées de la semaine, jour par jour',
-  defilement: 'Tableau des heures, défilement horizontal disponible',
+  defilement: 'Frise des heures, défilement horizontal disponible',
+  regle: 'Échelle des heures',
 
   sansPointage: 'Aucun pointage',
   sansValeur: '—',
@@ -58,4 +59,13 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   duree: formatDuree,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
   pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${HEURE.format(instant.value)}`,
+
+  plage: (pause: boolean, debut: InstantDeReleve, fin: InstantDeReleve | undefined): string => {
+    const nature = pause ? 'Pause' : 'Présence';
+    if (fin === undefined) {
+      return `${nature} depuis ${HEURE.format(debut.value)} · en cours`;
+    }
+    return `${nature} ${HEURE.format(debut.value)} – ${HEURE.format(fin.value)}`;
+  },
+  voirLesPointages: (jour: JourCalendaire): string => `Voir les pointages du ${JOUR.format(dateDe(jour))}`,
 } as const;
