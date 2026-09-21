@@ -83,6 +83,14 @@
             >
               {{ libelles.miseALAtelier }}
             </a>
+            <a
+              mat-stroked-button
+              [routerLink]="['/couts-de-revient', identifiantDe(element)]"
+              [attr.aria-label]="libelles.coutDeRevientDe(element.type, element.numero())"
+              data-selector="element-cout-de-revient"
+            >
+              {{ libelles.coutDeRevient }}
+            </a>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="colonnes"></tr>

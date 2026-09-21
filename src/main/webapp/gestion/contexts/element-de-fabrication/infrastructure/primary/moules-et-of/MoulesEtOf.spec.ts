@@ -92,6 +92,23 @@ describe('MoulesEtOf page', () => {
     expect(editLabels()).toEqual(['Modifier le moule 1015', 'Modifier l’OF OF-2026-000042']);
   });
 
+  it('should offer the cost of manufacture of every element, addressed by the element itself', async () => {
+    givenReferential();
+    await whenOpening();
+
+    expect(hrefs('element-cout-de-revient')).toEqual(['/couts-de-revient/moule-1', '/couts-de-revient/of-1']);
+  });
+
+  it('should name the cost link by the element it opens', async () => {
+    givenReferential();
+    await whenOpening();
+
+    expect(labels('element-cout-de-revient')).toEqual([
+      'Voir le coût de revient du moule 1015',
+      'Voir le coût de revient de l’OF OF-2026-000042',
+    ]);
+  });
+
   it('should never offer to delete an element', async () => {
     givenReferential();
     await whenOpening();
@@ -271,4 +288,8 @@ describe('MoulesEtOf page', () => {
     [...document.querySelectorAll(dataSelector('element-edit'))].map(element => element.getAttribute('aria-label'));
   const actionsCount = (): number[] =>
     [...document.querySelectorAll(dataSelector('element-row'))].map(row => row.querySelectorAll('button').length);
+  const hrefs = (selector: string): string[] =>
+    [...document.querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('href') ?? '');
+  const labels = (selector: string): (string | null)[] =>
+    [...document.querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('aria-label'));
 });

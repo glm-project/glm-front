@@ -68,6 +68,11 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - `app/shared/result` : `Result<T, E>` pour les retours d'écriture.
 - `app/shared/pagination` : `Page<T>` pour la consultation paginée.
 - L'atelier engage un élément existant ; ce contexte ignore les suivis, les états et les temps.
+- `cout-de-revient` chiffre ce que la fabrication d'un élément a coûté. **Ce contexte ne l'importe pas** :
+  le lien est un `routerLink` vers `/couts-de-revient/<id>`, posé sur chaque ligne sans condition. Le
+  référentiel ne porte aucun statut d'atelier et ne peut donc pas savoir si l'élément a déjà été engagé ;
+  c'est l'écran de coût de revient qui dit qu'aucun temps n'a été pointé, et cette réponse-là vaut mieux
+  qu'un lien absent sans explication.
 
 ## Règles locales
 
