@@ -49,8 +49,12 @@ td {
   white-space: nowrap;
 }
 .mat-column-actions {
-  width: 14rem;
+  width: 23rem;
   white-space: nowrap;
+}
+
+.mat-column-actions a {
+  margin-left: 0.5rem;
 }
 .mat-mdc-row:hover {
   background: var(--color-sunken);

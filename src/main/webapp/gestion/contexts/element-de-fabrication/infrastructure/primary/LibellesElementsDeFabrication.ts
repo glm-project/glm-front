@@ -15,6 +15,11 @@ const MODIFICATIONS: Record<TypeDElementDeFabrication, string> = {
   ORDRE_DE_FABRICATION: 'Modifier l’OF',
 };
 
+const COUTS_DE_REVIENT: Record<TypeDElementDeFabrication, string> = {
+  PRODUIT: 'Voir le coût de revient du moule',
+  ORDRE_DE_FABRICATION: 'Voir le coût de revient de l’OF',
+};
+
 export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   titre: 'Moules et OF',
   sousTitre: 'Créez et tenez à jour les moules et les OF de l’atelier.',
@@ -23,6 +28,8 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   modification: (type: TypeDElementDeFabrication, numero: string): string => `${MODIFICATIONS[type]} ${numero}`,
   miseALAtelier: 'Mettre à l’atelier',
   miseALAtelierDe: (type: TypeDElementDeFabrication, numero: string): string => `Mettre ${TYPES[type]} ${numero} à l’atelier`,
+  coutDeRevient: 'Coût de revient',
+  coutDeRevientDe: (type: TypeDElementDeFabrication, numero: string): string => `${COUTS_DE_REVIENT[type]} ${numero}`,
   colonnes: {
     type: 'Type',
     reference: 'Référence',
