@@ -77,6 +77,15 @@
   line-height: 1;
 }
 
+/* Les extrémités de l'axe se collent à son bord : centrées, leur moitié extérieure était coupée. */
+.repere.ancre-gauche {
+  transform: none;
+}
+
+.repere.ancre-droite {
+  transform: translateX(-100%);
+}
+
 .piste {
   position: relative;
   display: block;

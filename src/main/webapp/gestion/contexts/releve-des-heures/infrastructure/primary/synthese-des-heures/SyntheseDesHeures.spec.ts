@@ -171,12 +171,12 @@ describe('Synthese des heures component', () => {
     expect(nombreDe('synthese-piste')).toBe(1);
   });
 
-  it('should scale the week on the hours it covers', async () => {
+  it('should scale the week on the working day', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-repere')).toEqual(['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']);
+    expect(textes('synthese-repere')).toEqual(['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']);
   });
 
   it('should display a day carrying no clocking as no clocking at all', async () => {
