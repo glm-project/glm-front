@@ -100,6 +100,14 @@
               {{ libelles.cloturer }}
             </button>
             }
+            <a
+              mat-stroked-button
+              [routerLink]="['/couts-de-revient', element.element.value]"
+              [attr.aria-label]="libelles.coutDeRevientDe(element.nom.value)"
+              data-selector="atelier-cout-de-revient"
+            >
+              {{ libelles.coutDeRevient }}
+            </a>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="colonnes"></tr>

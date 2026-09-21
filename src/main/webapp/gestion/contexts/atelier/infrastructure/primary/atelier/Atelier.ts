@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AtelierPort } from '../../../domain/AtelierPort';
 import { ElementALAtelier } from '../../../domain/ElementALAtelier';
 import { ElementEngageId } from '../../../domain/ElementEngageId';
@@ -45,7 +45,7 @@ const paginatorLabels = (): MatPaginatorIntl =>
   host: { 'data-selector': 'atelier-page' },
   templateUrl: './Atelier.html',
   styleUrl: './Atelier.css',
-  imports: [Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
+  imports: [Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
   providers: [{ provide: MatPaginatorIntl, useFactory: paginatorLabels }],
 })
 export class Atelier implements OnInit {

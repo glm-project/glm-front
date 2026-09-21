@@ -108,6 +108,7 @@ const toRest = (suivi: SuiviFixture): RestSuivi => ({
 
 const toDomain = (suivi: SuiviFixture): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi.id), {
+    element: new ElementEngageId(suivi.element),
     nom: new NomDElementEngage(suivi.nom),
     type: suivi.type,
     etat: suivi.etat,
@@ -263,7 +264,6 @@ const createFixtureHarness = (): AtelierHarness => {
     port: fixture,
     seed: (suivis: readonly SuiviFixture[]) => {
       fixture.liste = suivis.map(toDomain);
-      for (const suivi of suivis) fixture.elementsEngages.set(suivi.id, suivi.element);
     },
     seedReferentiel: (photographies: readonly [string, PhotographieDElement][]) => {
       for (const [id, photographie] of photographies) fixture.photographies.set(id, photographie);

@@ -89,3 +89,6 @@ something stays, with a status that says what died.
 
 - [0038 — Hold the view state of a parameterised read screen in its URL](0038-hold-view-state-in-the-url.md) —
   reactive `ActivatedRoute` reads, a domain-validated address, and a refused address that issues no request
+
+- [0039 — Load each gestion screen on demand](0039-load-gestion-screens-on-demand.md) — `loadComponent` on
+  every gestion route, one chunk per screen, and budgets set from the measured initial bundle

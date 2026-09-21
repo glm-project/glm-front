@@ -37,6 +37,7 @@ const elementFixture = (
   cloture: ActeDAtelier | undefined,
 ): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi), {
+    element: new ElementEngageId(`element-de-${suivi}`),
     nom: new NomDElementEngage(nom),
     type,
     etat,
@@ -120,6 +121,21 @@ describe('Atelier page', () => {
 
     expect(texts('atelier-close')).toEqual(['Clôturer', 'Clôturer']);
     expect(texts('atelier-reopen')).toEqual([]);
+  });
+
+  it('should offer the cost of manufacture of every element at the workshop, addressed by the element', async () => {
+    givenWorkshop();
+    await whenOpening();
+
+    expect(hrefs('atelier-cout-de-revient')).toEqual(['/couts-de-revient/element-de-suivi-1', '/couts-de-revient/element-de-suivi-2']);
+  });
+
+  it('should offer the cost of manufacture of a closed element too', async () => {
+    givenWorkshopWithClosedElement();
+    await whenOpening();
+    await whenClicking('atelier-filtre-CLOTURES');
+
+    expect(hrefs('atelier-cout-de-revient')).toEqual(['/couts-de-revient/element-de-suivi-3']);
   });
 
   it('should show closed elements with who closed them, and offer reopening', async () => {
@@ -371,4 +387,7 @@ describe('Atelier page', () => {
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
   const texts = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
+
+  const hrefs = (selector: string): string[] =>
+    [...document.querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('href') ?? '');
 });

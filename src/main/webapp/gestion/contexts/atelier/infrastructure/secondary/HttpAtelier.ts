@@ -29,6 +29,7 @@ const toCloture = (suivi: RestSuivi): ActeDAtelier | undefined =>
 
 const toElement = (suivi: RestSuivi): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi.id), {
+    element: new ElementEngageId(suivi.element),
     nom: new NomDElementEngage(suivi.nom),
     type: suivi.type,
     etat: suivi.etat,

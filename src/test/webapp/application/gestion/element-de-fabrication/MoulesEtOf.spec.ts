@@ -105,7 +105,9 @@ const whenCorrectingReference = (reference: string): void => {
 const whenEditingFirstElement = (): void => {
   cy.get(dataSelector('element-edit')).first().click();
 };
+/* La première lecture doit être arrivée : cliquer avant la fait revenir sur la page qu'elle rend. */
 const whenGoingToNextPage = (): void => {
+  cy.wait('@elementsRead');
   cy.get(dataSelector('elements-pagination')).find('button[aria-label="Page suivante"]').click();
 };
 const thenReferentialIsVisible = (): void => {
