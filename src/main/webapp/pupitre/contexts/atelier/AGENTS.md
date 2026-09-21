@@ -43,7 +43,7 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - Un geste conserve l'opérateur, l'identifiant et l'heure fixés à son initiation.
 - « Tout arrêter » forme un unique lot local atomique et ordonné : toutes les fins des activités personnelles connues, puis le départ. Un échec d'acceptation locale n'en conserve aucune partie; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
 - Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
-- Une référence incomplète ou un échec de rafraîchissement ne remplace jamais la dernière référence complète.
+- Un échec de la lecture du référentiel ne remplace jamais le dernier référentiel complet. Cette lecture est un appel unique et non paginé dont le serveur garantit lui-même l'instantanéité et l'unicité des identifiants; le pupitre ignore la version qu'elle porte et ne revérifie ni l'une ni l'autre.
 - Un référentiel n'est disponible pour l'enrôlement que si la vue active appartient à l'entreprise actuellement sélectionnée.
 - Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
 - La fraîcheur du référentiel se pousse en arrière-plan, par une synchronisation complète qui publie d'abord les gestes en attente, et ne se place jamais sur le chemin d'un geste.

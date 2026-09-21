@@ -1,10 +1,8 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
-import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import {
-  ETATS_DU_REFERENTIEL_DU_PUPITRE,
   GesteDAtelier,
   OperateurDuPupitre,
   ReferentielDuPupitre,
@@ -17,94 +15,41 @@ import { inject, Injectable } from '@angular/core';
 
 import { toRefusDAtelier } from '../toRefusDAtelier';
 
-type RestOperateur = components['schemas']['RestOperateur'];
-type RestPosteHabilite = components['schemas']['RestPosteHabilite'];
-type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
+type RestActiviteDuPupitre = components['schemas']['RestActiviteDuPupitre'];
+type RestOperateurDuPupitre = components['schemas']['RestOperateurDuPupitre'];
+type RestPosteDuPupitre = components['schemas']['RestPosteDuPupitre'];
+type RestSuiviDuPupitre = components['schemas']['RestSuiviDuPupitre'];
 
-interface ReferentielEntry {
-  id: string;
-}
+const toPosteHabilite = (poste: RestPosteDuPupitre): OperateurDuPupitre['postes'][number] => ({ id: poste.id, libelle: poste.libelle });
 
-interface Page<T> {
-  content: T[];
-  currentPage: number;
-  pageSize: number;
-  totalElementsCount: number;
-}
-
-const isUnstablePage = (previousTotal: number | undefined, count: number, received: number, pageSize: number): boolean =>
-  (previousTotal !== undefined && previousTotal !== count) || (pageSize === 0 && received < count);
-
-const requireStablePage = (previousTotal: number | undefined, count: number, received: number, pageSize: number): void => {
-  if (isUnstablePage(previousTotal, count, received, pageSize)) {
-    throw new Error('Le referentiel a change pendant sa lecture.');
-  }
-};
-
-const hasDuplicateOrExcessElements = (elements: ReferentielEntry[], total: number): boolean =>
-  new Set(elements.map(element => element.id)).size !== elements.length || elements.length > total;
-
-const requireUniqueElements = (elements: ReferentielEntry[], total: number): void => {
-  if (hasDuplicateOrExcessElements(elements, total)) {
-    throw new Error('Le referentiel contient des doublons.');
-  }
-};
-
-const readAll = async <T extends ReferentielEntry>(read: (page: number) => Promise<Page<T>>): Promise<T[]> => {
-  const elements: T[] = [];
-  let total: number | undefined;
-  for (let page = 0; ; page++) {
-    const answer = await read(page);
-    const count = answer.totalElementsCount;
-    const content = answer.content;
-    requireStablePage(total, count, elements.length, content.length);
-    total = count;
-    elements.push(...content);
-    requireUniqueElements(elements, total);
-    if (elements.length === total) {
-      return elements;
-    }
-  }
-};
-
-const toPosteHabilite = (poste: RestPosteHabilite): OperateurDuPupitre['postes'][number] => ({ id: poste.id, libelle: poste.libelle });
-
-const toOperateurWithoutMatricule = (operateur: RestOperateur): OperateurDuPupitre => ({
+const toOperateurWithoutMatricule = (operateur: RestOperateurDuPupitre): OperateurDuPupitre => ({
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
   postes: operateur.postes.map(toPosteHabilite),
 });
 
-const toOperateur = (operateur: RestOperateur): OperateurDuPupitre =>
+const toOperateur = (operateur: RestOperateurDuPupitre): OperateurDuPupitre =>
   operateur.matricule === undefined
     ? toOperateurWithoutMatricule(operateur)
     : { ...toOperateurWithoutMatricule(operateur), matricule: operateur.matricule };
 
-const toActivite = (activite: RestSuiviDAtelierEnGrille['activitesEnCours'][number]): SuiviDuPupitre['activites'][number] => {
-  const operateurId = required(activite.operateur, 'activite.operateur').id;
-  return activite.poste === undefined
-    ? {
-        operateurId,
-        categorie: activite.categorie,
-        depuis: activite.depuis,
-      }
-    : {
-        operateurId,
-        categorie: activite.categorie,
-        depuis: activite.depuis,
-        posteId: activite.poste.id,
-      };
-};
+const toActivite = (activite: RestActiviteDuPupitre): SuiviDuPupitre['activites'][number] =>
+  activite.poste === undefined
+    ? { operateurId: activite.operateur, categorie: activite.categorie, depuis: activite.depuis }
+    : { operateurId: activite.operateur, categorie: activite.categorie, depuis: activite.depuis, posteId: activite.poste };
 
-const toSuivi = (suivi: RestSuiviDAtelierEnGrille): SuiviDuPupitre => ({
+const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => ({
   id: suivi.id,
   nom: suivi.nom,
   etat: suivi.etat,
   type: suivi.type,
   evenements: [],
-  activites: suivi.activitesEnCours.map(toActivite),
+  activites: suivi.activites.map(toActivite),
 });
+
+const toSuivi = (suivi: RestSuiviDuPupitre): SuiviDuPupitre =>
+  suivi.reference === undefined ? toSuiviWithoutReference(suivi) : { ...toSuiviWithoutReference(suivi), reference: suivi.reference };
 
 @Injectable()
 export class HttpAtelierExchange extends AtelierExchangePort {
@@ -112,18 +57,9 @@ export class HttpAtelierExchange extends AtelierExchangePort {
   private readonly api = inject(ApiClient);
 
   override async referentiel(): Promise<ReferentielDuPupitre> {
-    const token = this.authentication.currentToken();
-    const operateurs = await readAll(page => {
-      this.requireToken(token);
-      return this.api.read('/api/operateurs', { queryParams: { page, size: 100 } });
-    });
-    const suivis = await readAll(page => {
-      this.requireToken(token);
-      return this.api.read('/api/atelier/suivis', {
-        queryParams: { etats: [...ETATS_DU_REFERENTIEL_DU_PUPITRE], page, size: 100 },
-      });
-    });
-    return { operateurs: operateurs.map(toOperateur), suivis: suivis.map(toSuivi) };
+    this.requireAuthorization();
+    const referentiel = await this.api.read('/api/pupitre/referentiel', {});
+    return { operateurs: referentiel.operateurs.map(toOperateur), suivis: referentiel.suivis.map(toSuivi) };
   }
 
   override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
@@ -147,14 +83,10 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     await this.api.read('/api/atelier/journees', { queryParams: { operateur: geste.operateurId, size: 100 } });
   }
 
-  private requireToken(token: string | undefined): void {
-    if (this.hasLostReadAuthorization(token)) {
-      throw new Error('L’autorisation a change pendant la lecture.');
+  private requireAuthorization(): void {
+    if (this.authentication.currentToken() === undefined) {
+      throw new Error('Aucune autorisation pour lire le référentiel.');
     }
-  }
-
-  private hasLostReadAuthorization(token: string | undefined): boolean {
-    return token === undefined || this.authentication.currentToken() !== token;
   }
 
   private write(geste: GesteDAtelier): Promise<unknown> {

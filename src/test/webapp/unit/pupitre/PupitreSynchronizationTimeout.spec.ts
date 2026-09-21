@@ -139,17 +139,14 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   const thenTheRequestWasCancelled = (request: TestRequest): void => {
     expect(request.cancelled).toBe(true);
   };
-  const readPendingReferenceRequests = (): TestRequest[] =>
-    http.match(request => ['/api/operateurs', '/api/atelier/suivis'].includes(request.url));
+  const readPendingReferenceRequests = (): TestRequest[] => http.match(request => request.url === '/api/pupitre/referentiel');
   const thenTheGestureKeepsItsOriginalIdentity = (request: TestRequest): void => {
     expect(request.request.body).toEqual({ id: 'arrivee-originale', dateDeSurvenue: '2026-09-05T08:00:00Z', operateur: 'jean' });
   };
   const whenReferenceRefreshCompletes = async (): Promise<void> => {
-    for (const url of ['/api/operateurs', '/api/atelier/suivis']) {
-      const request = await whenRequestArrives();
-      expect(request.request.url).toBe(url);
-      request.flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
-    }
+    await requestArrived.promise;
+    requestArrived = new SignalFixture();
+    http.expectOne('/api/pupitre/referentiel').flush({ genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [] });
   };
   const thenGestureIsPending = (state: Awaited<ReturnType<JournauxDuPupitrePort['read']>>): void => {
     expect(state.evenements).toEqual([{ geste: gesteFixture, etat: 'EN_ATTENTE' }]);
