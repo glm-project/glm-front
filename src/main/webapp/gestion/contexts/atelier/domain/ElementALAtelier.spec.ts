@@ -1,5 +1,6 @@
 import { ActeDAtelier } from './ActeDAtelier';
 import { ElementALAtelier } from './ElementALAtelier';
+import { ElementEngageId } from './ElementEngageId';
 import { EtatALAtelier } from './EtatALAtelier';
 import { InstantDAtelier } from './InstantDAtelier';
 import { NomDElementEngage } from './NomDElementEngage';
@@ -37,6 +38,7 @@ describe('ElementALAtelier', () => {
 
   const elementFixture = (etat: EtatALAtelier, cloture: ActeDAtelier | undefined): ElementALAtelier =>
     new ElementALAtelier(new SuiviId('suivi-1'), {
+      element: new ElementEngageId('element-1'),
       nom: new NomDElementEngage('PRD-2026-000001'),
       type: 'PRODUIT',
       etat,

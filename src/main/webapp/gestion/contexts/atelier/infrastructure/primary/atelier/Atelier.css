@@ -48,8 +48,12 @@ td {
   font-variant-numeric: tabular-nums;
 }
 .mat-column-actions {
-  width: 9rem;
+  width: 18rem;
   white-space: nowrap;
+}
+
+.mat-column-actions a {
+  margin-left: 0.5rem;
 }
 .mat-mdc-row:hover {
   background: var(--color-sunken);

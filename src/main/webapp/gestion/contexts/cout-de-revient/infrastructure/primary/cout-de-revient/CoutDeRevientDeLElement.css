@@ -1,0 +1,118 @@
+:host {
+  --mat-button-outlined-label-text-font: var(--font-sans);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+}
+
+.table-scroll:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.rapport {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: collapse;
+}
+
+.rapport th,
+.rapport td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.rapport thead th {
+  background: var(--color-sunken);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.rapport tbody tr:not(.detail-row) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rapport tfoot tr {
+  border-top: 2px solid var(--color-border-strong);
+  font-weight: 600;
+}
+
+.colonne-nature {
+  width: 10rem;
+}
+
+/*
+ * Un chiffre se lit en colonne : même chasse, aligné à droite, et jamais coupé en deux lignes. Le sélecteur
+ * porte la table parce que `.rapport th, .rapport td` aligne à gauche et l'emporterait sinon.
+ */
+.rapport .colonne-duree,
+.rapport .colonne-montant {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rapport .colonne-duree {
+  width: 6rem;
+}
+
+.rapport .colonne-montant {
+  width: 7rem;
+}
+
+.rapport .colonne-detail {
+  width: var(--spacing-touch);
+}
+
+.detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-touch);
+  height: var(--spacing-touch);
+  padding: 0;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.detail:hover {
+  background: var(--color-sunken);
+}
+
+.detail:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.detail-row td {
+  padding-top: 0;
+  padding-bottom: 0.75rem;
+}
+
+.empty-state {
+  padding: 4rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+}

@@ -1,0 +1,131 @@
+<main class="mx-auto max-w-5xl p-4 text-ink md:p-8" aria-labelledby="cout-de-revient-heading">
+  <header class="mb-8">
+    <a
+      class="text-body-sm font-semibold text-accent"
+      routerLink="/atelier"
+      [attr.aria-label]="libelles.retourAria"
+      data-selector="cout-retour"
+      >← {{ libelles.retour }}</a
+    >
+    <h1 id="cout-de-revient-heading" class="mt-3 text-title">{{ libelles.titre }}</h1>
+    @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
+    <p class="mt-1 text-section" data-selector="cout-identite">
+      {{ libelles.identite(vue.rapport.element.type, vue.rapport.element.nom) }}
+    </p>
+    } }
+    <p class="mt-2 text-body text-ink-muted">{{ libelles.sousTitre }}</p>
+  </header>
+
+  @switch (etat().kind) { @case ('CHARGEMENT') {
+  <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="cout-loading">{{ libelles.chargement }}</p>
+  } @case ('ELEMENT_INTROUVABLE') {
+  <p role="alert" class="py-12 text-center text-body text-nc" data-selector="cout-element-introuvable">{{ libelles.elementIntrouvable }}</p>
+  } @case ('ERREUR') {
+  <div role="alert" class="py-12 text-center" data-selector="cout-error">
+    <p class="mb-4 text-body text-nc">{{ libelles.echec }}</p>
+    <button mat-stroked-button type="button" (click)="reload()" data-selector="cout-retry">{{ libelles.reessayer }}</button>
+  </div>
+  } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
+  <section class="mb-8 grid gap-4 sm:grid-cols-2" [attr.aria-label]="libelles.titre">
+    <div class="rounded border border-border bg-surface p-4 shadow-xs" data-selector="cout-indicateur-cout">
+      <p class="text-label uppercase text-ink-muted">{{ libelles.indicateurCout }}</p>
+      <p class="mt-2 text-display tabular" data-selector="cout-total">{{ libelles.montant(vue.rapport.cout.total) }}</p>
+      <p class="mt-2 text-body-sm text-ink-muted" [attr.aria-label]="libelles.repartitionAria" data-selector="cout-repartition">
+        {{ libelles.repartition(vue.rapport.cout) }}
+      </p>
+    </div>
+    <div class="rounded border border-border bg-surface p-4 shadow-xs" data-selector="cout-indicateur-temps">
+      <p class="text-label uppercase text-ink-muted">{{ libelles.indicateurTemps }}</p>
+      <p class="mt-2 text-display tabular" data-selector="cout-temps-total">{{ libelles.duree(vue.rapport.temps.total) }}</p>
+      @if (vue.rapport.temps.porteUneNonConformite()) {
+      <p class="mt-2 text-body-sm text-nc" data-selector="cout-temps-non-conformite">{{ libelles.dontNonConformite(vue.rapport.temps) }}</p>
+      }
+    </div>
+  </section>
+
+  @if (vue.rapport.estSansTravail()) {
+  <div class="empty-state text-center" data-selector="cout-sans-travail">
+    <h2 class="text-section">{{ libelles.sansTravail }}</h2>
+    <p class="mx-auto mt-3 max-w-lg text-body text-ink-muted">{{ libelles.sansTravailDetails }}</p>
+  </div>
+  } @else {
+  <div class="table-scroll" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
+    <table class="rapport" [attr.aria-label]="libelles.tableau">
+      <thead>
+        <tr>
+          <th scope="col" class="colonne-nature">{{ libelles.colonnes.nature }}</th>
+          <th scope="col" class="colonne-duree">{{ libelles.colonnes.travail }}</th>
+          <th scope="col" class="colonne-duree">{{ libelles.colonnes.nonConformite }}</th>
+          <th scope="col" class="colonne-duree">{{ libelles.colonnes.tempsTotal }}</th>
+          <th scope="col" class="colonne-montant">{{ libelles.colonnes.machine }}</th>
+          <th scope="col" class="colonne-montant">{{ libelles.colonnes.mainDOeuvre }}</th>
+          <th scope="col" class="colonne-montant">{{ libelles.colonnes.coutTotal }}</th>
+          <th scope="col" class="colonne-detail"><span class="sr-only">{{ libelles.colonnes.detail }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ligne of vue.rapport.lignes; track cleDe(ligne)) {
+        <tr data-selector="cout-ligne-row">
+          <th
+            scope="row"
+            class="colonne-nature font-semibold"
+            [class.text-ink-muted]="ligne.estSansPoste()"
+            data-selector="cout-nature-cell"
+          >
+            {{ libelles.nature(ligne.nature?.value) }}
+          </th>
+          <td class="colonne-duree" data-selector="cout-travail-cell">{{ libelles.duree(ligne.temps.travail) }}</td>
+          <td class="colonne-duree" [class.text-nc]="ligne.temps.porteUneNonConformite()" data-selector="cout-non-conformite-cell">
+            {{ libelles.duree(ligne.temps.nonConformite) }}
+          </td>
+          <td class="colonne-duree" data-selector="cout-temps-cell">{{ libelles.duree(ligne.temps.total) }}</td>
+          <td class="colonne-montant" data-selector="cout-machine-cell">{{ libelles.montant(ligne.cout.machine) }}</td>
+          <td class="colonne-montant" data-selector="cout-main-d-oeuvre-cell">{{ libelles.montant(ligne.cout.mainDOeuvre) }}</td>
+          <td class="colonne-montant font-semibold" data-selector="cout-ligne-total-cell">{{ libelles.montant(ligne.cout.total) }}</td>
+          <td class="colonne-detail">
+            <button
+              type="button"
+              class="detail"
+              (click)="basculerLaLigne(ligne)"
+              [attr.aria-expanded]="estDepliee(ligne)"
+              [attr.aria-label]="libelles.detailDe(ligne.nature?.value)"
+              data-selector="cout-detail-toggle"
+            >
+              <span aria-hidden="true">{{ estDepliee(ligne) ? '▾' : '▸' }}</span>
+            </button>
+          </td>
+        </tr>
+        @if (estDepliee(ligne)) {
+        <tr class="detail-row" data-selector="cout-detail">
+          <td colspan="8">
+            <p class="text-body-sm" data-selector="cout-periode">
+              <span class="text-ink-muted">{{ libelles.periodeLabel }} :</span> {{ libelles.periode(ligne.periode) }}
+            </p>
+            <p class="mt-1 text-body-sm">
+              <span class="text-ink-muted">{{ libelles.nonConformitesLabel }} :</span>
+              @if (ligne.nonConformites.length === 0) {
+              <span data-selector="cout-sans-non-conformite">{{ libelles.sansNonConformite }}</span>
+              } @else { @for (reprise of ligne.nonConformites; track $index) {
+              <span class="mr-3 whitespace-nowrap text-nc" data-selector="cout-non-conformite">{{ libelles.periode(reprise) }}</span>
+              } }
+            </p>
+          </td>
+        </tr>
+        } }
+      </tbody>
+      <tfoot>
+        <tr data-selector="cout-total-row">
+          <th scope="row" class="colonne-nature">{{ libelles.totalLigne }}</th>
+          <td class="colonne-duree" data-selector="cout-total-travail">{{ libelles.duree(vue.rapport.temps.travail) }}</td>
+          <td class="colonne-duree" data-selector="cout-total-non-conformite">{{ libelles.duree(vue.rapport.temps.nonConformite) }}</td>
+          <td class="colonne-duree" data-selector="cout-total-temps">{{ libelles.duree(vue.rapport.temps.total) }}</td>
+          <td class="colonne-montant" data-selector="cout-total-machine">{{ libelles.montant(vue.rapport.cout.machine) }}</td>
+          <td class="colonne-montant" data-selector="cout-total-main-d-oeuvre">{{ libelles.montant(vue.rapport.cout.mainDOeuvre) }}</td>
+          <td class="colonne-montant" data-selector="cout-total-cout">{{ libelles.montant(vue.rapport.cout.total) }}</td>
+          <td class="colonne-detail"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  } } }
+</main>

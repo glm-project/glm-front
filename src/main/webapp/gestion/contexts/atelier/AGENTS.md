@@ -31,13 +31,16 @@ l'expression.
 ## Modèle de domaine
 
 - **ElementALAtelier** : agrégat racine, adressé par son seul `suivi`. Il porte son nom et son type copiés à
-  l'engagement, son état, son acte d'engagement et son acte de clôture éventuel. `estCloture()` répond à la
+  l'engagement, son état, son acte d'engagement, son acte de clôture éventuel, et l'identifiant de l'élément
+  engagé — qu'aucun acte n'emploie, seulement le lien vers le coût de revient. `estCloture()` répond à la
   question « peut-on encore pointer dessus ».
-- **SuiviId** : Value Object de l'identifiant du suivi. **C'est lui, et lui seul, qui porte les URLs.**
-- **ElementEngageId** : Value Object de l'identifiant de l'élément de fabrication. Il sert **uniquement** à
-  choisir et à engager ; une fois l'élément à l'atelier, plus rien ne s'adresse par lui, et l'agrégat ne le
-  porte donc pas. `RestSuiviDAtelierEnGrille` expose les deux — ne pas confondre `id` et `element` en lisant
-  la réponse.
+- **SuiviId** : Value Object de l'identifiant du suivi. **C'est lui, et lui seul, qui porte les URLs de ce
+  contexte** — les actes comme les lectures. Le coût de revient n'en est pas une : c'est un autre contexte,
+  une autre adresse, et il s'adresse par l'élément.
+- **ElementEngageId** : Value Object de l'identifiant de l'élément de fabrication. Il sert à choisir, à
+  engager, et à ouvrir le coût de revient — le seul écran qui s'adresse par l'élément et non par le suivi.
+  L'agrégat le porte pour ce lien, et pour lui seul. `RestSuiviDAtelierEnGrille` expose les deux — ne pas
+  confondre `id` et `element` en lisant la réponse.
 - **NomDElementEngage** : Value Object du nom **copié à l'engagement**, non vide.
 - **TypeDElementEngage** : union des deux valeurs du type, structurellement compatible avec l'énum de l'API.
 - **EtatALAtelier** : union des quatre états déduits par le back.
@@ -85,6 +88,10 @@ l'expression.
 - `element-de-fabrication` possède le référentiel et ses règles de saisie. **Ce contexte ne l'importe pas** : il
   lit `/api/elements-de-fabrication` par son propre port, avec sa propre vue minimale. Le lien entre les deux
   écrans est un `routerLink` vers `/atelier?element=<id>`, jamais un import.
+- `cout-de-revient` chiffre ce que la fabrication d'un élément a coûté. **Ce contexte ne l'importe pas** : le
+  lien est un `routerLink` vers `/couts-de-revient/<id>`, posé sur chaque ligne parce qu'un coût de revient
+  ne se consulte qu'une fois l'élément mis à l'atelier. Un élément réengagé occupe plusieurs lignes et tous
+  ces liens mènent au même rapport, qui additionne les passages.
 
 ## Règles locales
 

@@ -41,6 +41,8 @@ export const LIBELLES_ATELIER = {
   rouvrir: 'Rouvrir',
   clotureDe: (nom: string): string => `Clôturer ${nom}`,
   reouvertureDe: (nom: string): string => `Rouvrir ${nom}`,
+  coutDeRevient: 'Coût de revient',
+  coutDeRevientDe: (nom: string): string => `Voir le coût de revient de ${nom}`,
   colonnes: {
     type: 'Type',
     nom: 'Nom',

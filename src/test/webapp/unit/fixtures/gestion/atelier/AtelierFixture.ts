@@ -29,8 +29,6 @@ export const CLOTURE_FIXTURE = '2026-09-15T16:00:00.000Z';
 export class AtelierFixture extends AtelierPort {
   liste: readonly ElementALAtelier[] = [];
   readonly photographies = new Map<string, PhotographieDElement>();
-  /** L'agrégat ne porte que l'identifiant du suivi : le lien vers l'élément reste ici, comme au back. */
-  readonly elementsEngages = new Map<string, string>();
   readonly lectures: RequeteAtelier[] = [];
   readonly engagements: ElementEngageId[] = [];
   readonly clotures: SuiviId[] = [];
@@ -93,14 +91,17 @@ export class AtelierFixture extends AtelierPort {
   }
 
   private estLeMemeElementEncoreOuvert(candidat: ElementALAtelier, element: ElementEngageId): boolean {
-    return this.elementsEngages.get(candidat.suivi.value) === element.value && !candidat.estCloture();
+    if (candidat.element.value !== element.value) {
+      return false;
+    }
+    return !candidat.estCloture();
   }
 
   private engage(element: ElementEngageId, photographie: PhotographieDElement): ElementALAtelier {
     this.suivant += 1;
     const suivi = new SuiviId(`suivi-cree-${String(this.suivant)}`);
-    this.elementsEngages.set(suivi.value, element.value);
     return new ElementALAtelier(suivi, {
+      element,
       nom: new NomDElementEngage(photographie.nom),
       type: photographie.type,
       etat: 'EN_ATTENTE',
@@ -111,6 +112,7 @@ export class AtelierFixture extends AtelierPort {
 
   private ferme(element: ElementALAtelier): ElementALAtelier {
     return new ElementALAtelier(element.suivi, {
+      element: element.element,
       nom: element.nom,
       type: element.type,
       etat: 'CLOTURE',
@@ -121,6 +123,7 @@ export class AtelierFixture extends AtelierPort {
 
   private ouvre(element: ElementALAtelier): ElementALAtelier {
     return new ElementALAtelier(element.suivi, {
+      element: element.element,
       nom: element.nom,
       type: element.type,
       etat: 'EN_ATTENTE',

@@ -10,6 +10,7 @@ import { firstValueFrom } from 'rxjs';
 import { ActeDAtelier } from '../../../domain/ActeDAtelier';
 import { AtelierPort } from '../../../domain/AtelierPort';
 import { ElementALAtelier } from '../../../domain/ElementALAtelier';
+import { ElementEngageId } from '../../../domain/ElementEngageId';
 import { InstantDAtelier } from '../../../domain/InstantDAtelier';
 import { NomDElementEngage } from '../../../domain/NomDElementEngage';
 import { SuiviId } from '../../../domain/SuiviId';
@@ -20,6 +21,7 @@ import { ConfirmationClotureDialog, ConfirmationClotureDialogData } from './Conf
 class DialogHostFixture {}
 
 const mouleFixture = new ElementALAtelier(new SuiviId('suivi-1'), {
+  element: new ElementEngageId('element-1'),
   nom: new NomDElementEngage('PRD-2026-000001'),
   type: 'PRODUIT',
   etat: 'EN_COURS',
