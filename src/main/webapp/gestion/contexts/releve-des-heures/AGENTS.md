@@ -116,10 +116,17 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   posé sur l'écran des opérateurs : « les heures de cette personne, cette semaine ». La réécrire demanderait un
   `effect()`, que la politique de lint du dépôt refuse, et figerait un lien que l'on voulait justement vivant.
   Conséquence assumée : une adresse nue relue la semaine suivante montre la semaine suivante.
-- **L'axe de la frise se déduit des pointages de la semaine**, jamais figé de 6 h à 22 h : une équipe de nuit
-  tomberait hors d'une fenêtre figée sans que personne ne voie qu'il manque quelque chose. Dès qu'une plage
-  franchit minuit, l'axe couvre la journée entière et la plage se dessine en deux morceaux — le jour auquel une
-  heure appartient est celui que le back a tranché, pas celui de l'horloge.
+- **L'axe de la frise est ancré sur la journée de travail, de 6 h à 22 h**, pour que deux semaines se comparent
+  et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur la **journée entière** dès qu'un
+  pointage tombe en dehors, ou qu'une plage franchit minuit — une équipe de nuit resterait invisible sur une
+  fenêtre figée, et personne ne verrait qu'il manque quelque chose. Une plage à cheval se dessine alors en deux
+  morceaux : le jour auquel une heure appartient est celui que le back a tranché, pas celui de l'horloge.
+  Un axe déduit des pointages a été essayé puis écarté : il rendait deux semaines incomparables et sortait de
+  la journée dès que l'amplitude minimale poussait sa fin au-delà de minuit.
+- **Les repères d'extrémité de l'axe s'ancrent sur son bord.** Centrés comme les autres, leur moitié extérieure
+  sort de la cellule et se fait couper par le défilement horizontal : le dernier repère disparaissait, et l'axe
+  paraissait plus court qu'il n'était. Chaque repère porte aussi sa minute, seule clé de suivi possible —
+  sur la journée entière, le premier et le dernier se nomment tous deux `00:00`.
 - **L'heure d'un pointage est affichée dans le fuseau du navigateur.** `dateDeSurvenue` est un
   `java.time.Instant` sérialisé en UTC : la tranche brute de la chaîne afficherait 06:02 pour un pointage de
   08:02 en France. Aucune configuration de ce front ne porte le fuseau de l'entreprise, et le navigateur du

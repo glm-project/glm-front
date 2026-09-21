@@ -93,8 +93,15 @@
           <th scope="col">
             <span class="sr-only">{{ libelles.colonnes.journee }}</span>
             <div class="regle" [attr.aria-label]="libelles.regle" data-selector="synthese-regle">
-              @for (repere of vue.frise.reperes(); track repere.libelle) {
-              <span class="repere" [style.left.%]="repere.gauche" data-selector="synthese-repere">{{ repere.libelle }}</span>
+              @for (repere of vue.frise.reperes(); track repere.minutes) {
+              <span
+                class="repere"
+                [class.ancre-gauche]="repere.ancrage === 'gauche'"
+                [class.ancre-droite]="repere.ancrage === 'droite'"
+                [style.left.%]="repere.gauche"
+                data-selector="synthese-repere"
+                >{{ repere.libelle }}</span
+              >
               }
             </div>
           </th>

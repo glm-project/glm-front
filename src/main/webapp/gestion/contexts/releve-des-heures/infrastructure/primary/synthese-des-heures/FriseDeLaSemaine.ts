@@ -3,10 +3,9 @@ import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 
 const MINUTES_PAR_HEURE = 60;
 const MINUTES_PAR_JOUR = 24 * MINUTES_PAR_HEURE;
-const AMPLITUDE_MINIMALE = 8 * MINUTES_PAR_HEURE;
 const PAS_DES_REPERES = 2 * MINUTES_PAR_HEURE;
-const DEBUT_PAR_DEFAUT = 6 * MINUTES_PAR_HEURE;
-const FIN_PAR_DEFAUT = 22 * MINUTES_PAR_HEURE;
+const DEBUT_DE_TRAVAIL = 6 * MINUTES_PAR_HEURE;
+const FIN_DE_TRAVAIL = 22 * MINUTES_PAR_HEURE;
 
 export interface PieceDePlage {
   readonly gauche: number;
@@ -19,9 +18,14 @@ export interface PlageDessinee {
   readonly pieces: readonly PieceDePlage[];
 }
 
+/** L'ancrage d'un repère : les extrémités de l'axe se collent à son bord, faute de quoi elles sont coupées. */
+export type AncrageDuRepere = 'gauche' | 'centre' | 'droite';
+
 export interface RepereHoraire {
+  readonly minutes: number;
   readonly libelle: string;
   readonly gauche: number;
+  readonly ancrage: AncrageDuRepere;
 }
 
 const minutesDe = (date: Date): number => date.getHours() * MINUTES_PAR_HEURE + date.getMinutes();
@@ -45,9 +49,6 @@ const bornesDe = (plages: readonly PlageDeReleve[]): readonly number[] =>
     return fin === undefined ? [debutDe(plage)] : [debutDe(plage), fin];
   });
 
-const arrondiBas = (minutes: number): number => Math.floor(minutes / MINUTES_PAR_HEURE) * MINUTES_PAR_HEURE;
-const arrondiHaut = (minutes: number): number => Math.ceil(minutes / MINUTES_PAR_HEURE) * MINUTES_PAR_HEURE;
-
 /** Minuit ferme la journée : le repère de fin se nomme `00:00`, jamais `24:00`, qui n'est l'heure de personne. */
 const libelleDuRepere = (minutes: number): string => {
   const heure = Math.floor(minutes / MINUTES_PAR_HEURE) % 24;
@@ -59,21 +60,24 @@ interface Fenetre {
   readonly fin: number;
 }
 
-/**
- * Une amplitude tient dans une journée, de 00:00 à minuit. Élargir une plage trop étroite pour être lue ne doit
- * donc pas déborder : la fenêtre s'étend vers la fin de journée, puis recule son début si elle manque encore de
- * place. Sans cette garde, une semaine de nuit affichait des repères à 26:00 et 28:00.
- */
-const fenetreDansLaJournee = (debutBrut: number, finBrut: number): Fenetre => {
-  const fin = Math.min(MINUTES_PAR_JOUR, Math.max(finBrut, debutBrut + AMPLITUDE_MINIMALE));
-  return { debut: Math.max(0, Math.min(debutBrut, fin - AMPLITUDE_MINIMALE)), fin };
+const JOURNEE_DE_TRAVAIL: Fenetre = { debut: DEBUT_DE_TRAVAIL, fin: FIN_DE_TRAVAIL };
+const JOURNEE_ENTIERE: Fenetre = { debut: 0, fin: MINUTES_PAR_JOUR };
+
+const depasseLaJourneeDeTravail = (bornes: readonly number[]): boolean =>
+  Math.min(...bornes) < DEBUT_DE_TRAVAIL || Math.max(...bornes) > FIN_DE_TRAVAIL;
+
+const ancrageDe = (gauche: number): AncrageDuRepere => {
+  if (gauche === 0) {
+    return 'gauche';
+  }
+  return gauche === 100 ? 'droite' : 'centre';
 };
 
 /**
- * L'axe d'une frise hebdomadaire. Il se déduit des pointages de la semaine plutôt que d'être figé de 6 h à
- * 22 h : une équipe de nuit tomberait hors d'une fenêtre figée, et personne ne verrait qu'il manque quelque
- * chose. Dès qu'une plage franchit minuit, l'axe couvre la journée entière — c'est le seul repère qui reste
- * juste.
+ * L'axe d'une frise hebdomadaire. Il est ancré sur la journée de travail, de 6 h à 22 h, pour que deux semaines
+ * se comparent et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur la journée entière dès
+ * qu'un pointage tombe en dehors — une équipe de nuit resterait invisible sur une fenêtre figée, et personne ne
+ * verrait qu'il manque quelque chose.
  */
 export class FriseDeLaSemaine {
   readonly debut: number;
@@ -88,22 +92,22 @@ export class FriseDeLaSemaine {
 
   private static fenetreDe(plages: readonly PlageDeReleve[]): Fenetre {
     if (plages.some(franchitMinuit)) {
-      return { debut: 0, fin: MINUTES_PAR_JOUR };
+      return JOURNEE_ENTIERE;
     }
     const bornes = bornesDe(plages);
     if (bornes.length === 0) {
-      return { debut: DEBUT_PAR_DEFAUT, fin: FIN_PAR_DEFAUT };
+      return JOURNEE_DE_TRAVAIL;
     }
-    return fenetreDansLaJournee(arrondiBas(Math.min(...bornes)), arrondiHaut(Math.max(...bornes)));
+    return depasseLaJourneeDeTravail(bornes) ? JOURNEE_ENTIERE : JOURNEE_DE_TRAVAIL;
   }
 
   reperes(): readonly RepereHoraire[] {
     const premier = Math.ceil(this.debut / PAS_DES_REPERES) * PAS_DES_REPERES;
     const nombre = Math.floor((this.fin - premier) / PAS_DES_REPERES) + 1;
-    return Array.from({ length: Math.max(nombre, 0) }, (_, rang) => premier + rang * PAS_DES_REPERES).map(minutes => ({
-      libelle: libelleDuRepere(minutes),
-      gauche: this.pourcentage(minutes),
-    }));
+    return Array.from({ length: Math.max(nombre, 0) }, (_, rang) => premier + rang * PAS_DES_REPERES).map(minutes => {
+      const gauche = this.pourcentage(minutes);
+      return { minutes, libelle: libelleDuRepere(minutes), gauche, ancrage: ancrageDe(gauche) };
+    });
   }
 
   dessine(plage: PlageDeReleve): PlageDessinee {
