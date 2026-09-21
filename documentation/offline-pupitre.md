@@ -71,7 +71,7 @@ usually closes it sooner: the operator types their code again and it works.
 
 That last trigger fires once per code. Retyping a matricule that the freshly pushed reference still does not
 know reads nothing new, and a mistyped code on a keypad repeats easily, so `FraicheurDuReferentiel` holds it
-back rather than paging the whole reference again. Any successful designation releases the hold.
+back rather than reading the whole reference again. Any successful designation releases the hold.
 
 ## Synchronization preserves evidence
 
@@ -83,8 +83,9 @@ retry once; retain a second refusal. Never generate a new UUID or occurrence tim
 
 Only a completed publication allows synchronization to refresh the complete operator and workshop reference.
 Known business refusals do not prevent completion; a technical interruption preserves the previous reference
-without attempting a new read. Publish the pair only
-after every page of both collections passes total, duplicate and progress checks. Activating that post-write
+without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, whose single
+repeatable-read server transaction is what makes operators and workshop elements one instant. Its `genereLe`
+version is ignored: freshness here is pushed, not dated. Activating that post-write
 snapshot records accepted pointage identifiers in the local reference so their optimistic effects are no
 longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
 complete cache and its optimistic effects.

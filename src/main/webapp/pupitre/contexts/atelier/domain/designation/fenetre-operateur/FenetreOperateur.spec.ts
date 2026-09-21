@@ -618,6 +618,25 @@ describe('FenetreOperateur', () => {
     expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['OF-1', 'OF-2', 'OF-10']);
   });
 
+  it('should sort elements on their company reference rather than on their generated name', () => {
+    const referencedJournal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        suivis: [
+          { id: 'of-1', nom: 'OF-1', reference: 'M-30', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { id: 'of-3', nom: 'OF-3', reference: 'M-4', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+        ],
+      },
+    };
+    const sortWindow = givenAWindowOpenedOn(referencedJournal);
+
+    const pointage = whenReadingPointage(sortWindow);
+
+    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
+  });
+
   it('should indicate glmActif is true when the operator has no active activities', () => {
     const inactiveJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,

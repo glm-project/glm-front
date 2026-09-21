@@ -2,9 +2,10 @@
 
 ## Status
 
-Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): the offline reference traverses all pages,
-and concurrent writes reread the affected aggregate before an identical retry. The original account below
-records the earlier implementation. The publication amendment below replaces rejected business promises
+Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): concurrent writes reread the affected
+aggregate before an identical retry. The paged offline reference that record added is gone since issue 165:
+the pupitre reads `GET /api/pupitre/referentiel`, one unpaged server snapshot, so the bounded-read rules below
+now govern the online list ports only. The original account below records the earlier implementation. The publication amendment below replaces rejected business promises
 only for `AtelierExchangePort.send`; durable local acceptance remains separate.
 Complemented by [ADR 0034](0034-proxy-the-api-at-the-edge.md): the routes still serve as URLs as they
 are, and a Cloudflare Pages Function answers `/api/**` for the deployed pupitre.
@@ -130,12 +131,12 @@ freeze. Replay and absorption continue to belong to `GesteReplayPolicy`.
 
 ### Negative
 
-- **A read is truncated at 100 and the pupitre has no way to ask for more.** `isComplete()` says it; nothing
+- **A read is truncated at 100 and the caller has no way to ask for more.** `isComplete()` says it; nothing
   yet shows it. For `GET /api/atelier/suivis`, sorted by engagement date descending, the elements lost are the
-  oldest ones still open — precisely those an operator is most likely to be looking for. Issue 62 is the lever;
-  until it lands the bound is real.
-- **A hundred `RestSuiviDAtelier` carry a hundred complete journals**, around 3 MB, none of it read by the
-  pupitre and none of it excludable.
+  oldest ones still open. Issue 62 is the lever; until it lands the bound is real for the online views. The
+  pupitre escaped it with its own unpaged route.
+- **A hundred `RestSuiviDAtelier` carry a hundred complete journals**, around 3 MB, none of it excludable. The
+  pupitre no longer pays it: `RestSuiviDuPupitre` carries no event journal.
 - `ApiClient` casts its own request object once, at the point where a generic intersection meets the runtime.
   The cast is confined to two lines and every call site above it is checked.
 - `findApiErrorIn` trusts the back's catalogue: an URN the front's union does not know crosses as a technical

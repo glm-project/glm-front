@@ -31,15 +31,11 @@ const operator = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  natures: [],
   postes: [],
 };
 
 const workshopItem = {
-  activitesEnCours: [],
-  element: 'element-1',
-  engageLe: '2026-09-05T07:30:00Z',
-  engagePar: 'manager-1',
+  activites: [],
   etat: 'EN_ATTENTE',
   id: 'workshop-item-1',
   nom: 'OF-1',
@@ -138,7 +134,7 @@ const needsMoreObservations = (field, count, atLeast) => field !== null && count
 
 const isPostTo = (request, url, pathname) => request.method === 'POST' && url.pathname === pathname;
 const isPostToEndpoint = (request, url, endpoint) => request.method === 'POST' && url.pathname.endsWith(endpoint);
-const isReferentielRequest = url => url.pathname === '/api/operateurs' || url.pathname === '/api/atelier/suivis';
+const isReferentielRequest = url => url.pathname === '/api/pupitre/referentiel';
 const isDisabledServiceWorkerRequest = url => serviceWorker === 'disabled' && ['/ngsw-worker.js', '/ngsw.json'].includes(url.pathname);
 
 const appServer = createServer(async (request, response) => {
@@ -188,8 +184,7 @@ const appServer = createServer(async (request, response) => {
   if (isReferentielRequest(url)) {
     state.referenceRequests += 1;
     recordEvidence();
-    const content = url.pathname === '/api/operateurs' ? [operator] : [workshopItem];
-    json(response, 200, { content, currentPage: 0, pageSize: 100, totalElementsCount: content.length });
+    json(response, 200, { genereLe: '2026-09-05T08:05:00Z', operateurs: [operator], suivis: [workshopItem] });
     return;
   }
   if (isPostTo(request, url, '/api/atelier/journees')) {

@@ -129,11 +129,8 @@ describe('Pupitre enrolment', () => {
 });
 
 const givenAWorkshopBehindTheAuthorizationServer = (): void => {
-  cy.intercept('GET', '/api/operateurs*', {
-    body: { content: [{ ...OPERATEUR, natures: [] }], currentPage: 0, pageSize: 100, totalElementsCount: 1 },
-  }).as('operators');
-  cy.intercept('GET', '/api/atelier/suivis*', {
-    body: { content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 },
+  cy.intercept('GET', '/api/pupitre/referentiel', {
+    body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [OPERATEUR], suivis: [] },
   }).as('workshop');
   cy.intercept('POST', `${OPENID_CONNECT}/logout`, { statusCode: 204, body: {} }).as('logout');
 };
@@ -178,7 +175,7 @@ const givenAnEnrolledPupitre = (): void => {
   cy.wait('@deviceAuthorization');
   givenEnrolledPupitreFixture({ entreprise: ENTREPRISE, referentiel: { operateurs: [OPERATEUR], suivis: [] } });
   cy.reload();
-  cy.wait(['@operators', '@workshop']);
+  cy.wait('@workshop');
   cy.tick(0);
   cy.get(dataSelector('designation')).should('be.visible');
 };
@@ -267,7 +264,7 @@ const thenTheCountdownRunsDown = (): void => {
 };
 
 const thenTheWorkshopLoadsAndTheKeypadAppears = (): void => {
-  cy.wait(['@operators', '@workshop']);
+  cy.wait('@workshop');
   cy.get(dataSelector('designation')).should('be.visible');
   cy.get(dataSelector('enrolement')).should('not.exist');
 };
@@ -277,7 +274,6 @@ const thenTheScreenSays = (message: string): void => {
 };
 
 const thenNoWorkshopRequestWasMade = (): void => {
-  cy.get<unknown[]>('@operators.all').should('have.length', 0);
   cy.get<unknown[]>('@workshop.all').should('have.length', 0);
 };
 

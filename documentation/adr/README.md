@@ -27,9 +27,9 @@ something stays, with a status that says what died.
 - [0005 — Draw icons from an SVG the bundle carries](0005-icons-as-svg-the-bundle-carries.md) — `glm-icon`
   over `@ng-icons`, one typed set, no icon font and no CDN link
 - [0006 — Call the back through a typed client](0006-how-the-front-calls-the-back.md) — a typed client and
-  adapter translation, with complete offline reads and aggregate rereads added later
+  adapter translation, bounded online reads and aggregate rereads added later
 - [0007 — Persist the pupitre before acknowledging a gesture](0007-durable-offline-pupitre.md) — IndexedDB,
-  company partitions, a durable FIFO, complete reference activation between operator windows
+  company partitions, a durable FIFO, one unpaged reference snapshot activated between operator windows
 - [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — named cohesive steps
   when long methods, nested logic or callbacks obscure the workflow
 - [0009 — Give operator windows and replay rules a domain owner](0009-pupitre-domain-responsibilities.md) —

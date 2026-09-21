@@ -9,73 +9,67 @@ import { Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { requiredFixture } from '@test/utils/RequiredFixture';
 import { HttpAtelierExchange } from './http/HttpAtelierExchange';
 
-type RestOperateur = components['schemas']['RestOperateur'];
-type RestOperateurDAtelier = components['schemas']['RestOperateurDAtelier'];
-type RestPosteDAtelier = components['schemas']['RestPosteDAtelier'];
+type RestOperateurDuPupitre = components['schemas']['RestOperateurDuPupitre'];
+type RestReferentielDuPupitre = components['schemas']['RestReferentielDuPupitre'];
 type RestSuiviDAtelier = components['schemas']['RestSuiviDAtelier'];
 type RestSuiviDAtelierEnGrille = components['schemas']['RestSuiviDAtelierEnGrille'];
-type UnstableReferenceKind = 'count' | 'empty' | 'duplicate' | 'overflow';
-
-const UNSTABLE_REFERENCE_KINDS = ['count', 'empty', 'duplicate', 'overflow'] satisfies UnstableReferenceKind[];
+type RestSuiviDuPupitre = components['schemas']['RestSuiviDuPupitre'];
 
 const operateurFixture = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  natures: [],
   postes: [],
-} satisfies RestOperateur;
+} satisfies RestOperateurDuPupitre;
 const operateurSansMatriculeFixture = {
   id: 'marie',
   nom: 'Martin',
   prenom: 'Marie',
-  natures: ['tournage'],
-  postes: [{ id: 'tour', libelle: 'Tour', nature: 'tournage' }],
-} satisfies RestOperateur;
-const operateurDAtelierFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean' } satisfies RestOperateurDAtelier;
-const posteDAtelierFixture = { id: 'tour', libelle: 'Tour' } satisfies RestPosteDAtelier;
-const suiviFixture = {
+  postes: [{ id: 'tour', libelle: 'Tour' }],
+} satisfies RestOperateurDuPupitre;
+const suiviSansReferenceFixture = {
+  activites: [],
+  etat: 'EN_ATTENTE',
+  id: 'piece',
+  nom: 'PR-2026-000001',
+  type: 'PRODUIT',
+} satisfies RestSuiviDuPupitre;
+const suiviAvecReferenceFixture = {
+  ...suiviSansReferenceFixture,
+  id: 'piece-2',
+  nom: 'PR-2026-000002',
+  reference: 'M-1187',
+  activites: [
+    { operateur: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', poste: 'tour' },
+    { operateur: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
+  ],
+} satisfies RestSuiviDuPupitre;
+const referentielFixture = {
+  genereLe: '2026-09-05T08:05:00Z',
+  operateurs: [operateurFixture, operateurSansMatriculeFixture],
+  suivis: [suiviSansReferenceFixture, suiviAvecReferenceFixture],
+} satisfies RestReferentielDuPupitre;
+const suiviDetailleFixture = {
   activitesEnCours: [],
   element: 'element',
   engageLe: '2026-09-05T07:30:00Z',
   engagePar: 'gestionnaire',
   etat: 'EN_ATTENTE',
   id: 'piece',
+  journal: [],
   nom: 'OF-1',
   type: 'PRODUIT',
-} satisfies RestSuiviDAtelierEnGrille;
-const secondSuiviFixture = {
-  ...suiviFixture,
-  id: 'piece-2',
-  activitesEnCours: [
-    {
-      operateur: operateurDAtelierFixture,
-      categorie: 'TRAVAIL',
-      depuis: '2026-09-05T08:00:00Z',
-      poste: posteDAtelierFixture,
-    },
-    { operateur: operateurDAtelierFixture, categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
-  ],
-} satisfies RestSuiviDAtelierEnGrille;
-const suiviDetailleFixture = { ...suiviFixture, journal: [] } satisfies RestSuiviDAtelier;
+} satisfies RestSuiviDAtelier & RestSuiviDAtelierEnGrille;
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'geste', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
 const adapters = [['HTTP', () => TestBed.inject(HttpAtelierExchange)]] as const;
-interface PageFixture {
-  url: string;
-  page: number;
-  content: unknown[];
-  totalElementsCount: number;
-}
 
 describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapter, build) => {
   let serveur: AtelierExchangePort;
   let http: HttpTestingController;
   let token: string | undefined;
-  let referencePages: PageFixture[];
 
   beforeEach(() => {
     token = 'autorise';
@@ -90,83 +84,18 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     });
     serveur = build();
     http = TestBed.inject(HttpTestingController);
-    referencePages = [];
   });
   afterEach(() => {
     http.verify();
   });
 
-  it('should cache all pages of operators and active workshop elements without filtering by operator', async () => {
-    givenCompleteReferencePagesFixture();
-
+  it('should read the whole pupitre reference in a single unbounded request', async () => {
     const reference = whenReadingReference();
 
-    const pages = await whenServerReturnsReferencePages();
+    const request = await whenServerReturnsTheReference();
 
-    thenPagesRequestTheWholeActiveReference(pages);
+    thenItAskedForTheWholeReference(request);
     await thenReferenceIsComplete(reference);
-  });
-
-  it.each(UNSTABLE_REFERENCE_KINDS)('should reject a partial or unstable referential (%s)', async kind => {
-    const reference = whenReadingReference();
-
-    await whenServerReturnsAnUnstableReference(kind);
-
-    const expectedMessages: Record<UnstableReferenceKind, string> = {
-      count: 'Le referentiel a change pendant sa lecture.',
-      empty: 'Le referentiel a change pendant sa lecture.',
-      duplicate: 'Le referentiel contient des doublons.',
-      overflow: 'Le referentiel contient des doublons.',
-    };
-    await thenItFailed(reference, expectedMessages[kind]);
-  });
-
-  it('should accept an empty referential without error', async () => {
-    const reference = whenReadingReference();
-
-    await whenServerReturnsPage('/api/operateurs', 0, [], 0);
-    await whenServerReturnsPage('/api/atelier/suivis', 0, [], 0);
-
-    const result = await reference;
-    expect(result.operateurs).toEqual([]);
-    expect(result.suivis).toEqual([]);
-  });
-
-  it('should refuse to mix companies when authorization changes between pages', async () => {
-    const reference = whenReadingReference();
-
-    givenAuthorizationChanges();
-    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 2);
-
-    await thenItFailed(reference, 'L’autorisation a change pendant la lecture.');
-  });
-
-  it('should refuse to continue reading workshop elements when authorization changes', async () => {
-    const reference = whenReadingReference();
-
-    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 1);
-    givenAuthorizationChanges();
-
-    await thenItFailed(reference, 'L’autorisation a change pendant la lecture.');
-  });
-
-  it('should reject a workshop element activity missing its operator', async () => {
-    const reference = whenReadingReference();
-
-    const activityWithoutOperator = {
-      activitesEnCours: [{ categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' }],
-      element: 'element',
-      engageLe: '2026-09-05T07:30:00Z',
-      engagePar: 'gestionnaire',
-      etat: 'EN_ATTENTE',
-      id: 'piece-sans-operateur',
-      nom: 'OF-SANS-OP',
-      type: 'PRODUIT',
-    };
-    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 1);
-    await whenServerReturnsPage('/api/atelier/suivis', 0, [activityWithoutOperator], 1);
-
-    await thenItFailed(reference, 'activite.operateur manque dans la réponse du serveur');
   });
 
   it('should make no referential request without authorization', async () => {
@@ -174,7 +103,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
 
     const reference = whenReadingReference();
 
-    await thenItFailed(reference, 'L’autorisation a change pendant la lecture.');
+    await thenItFailed(reference, 'Aucune autorisation pour lire le référentiel.');
   });
 
   it('should preserve event identity and original business time on each write route', async () => {
@@ -267,19 +196,8 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenRereadCompletes(pointage);
   });
 
-  const givenAuthorizationChanges = (): void => {
-    token = 'autre-entreprise';
-  };
   const givenNoAuthorization = (): void => {
     token = undefined;
-  };
-  const givenCompleteReferencePagesFixture = (): void => {
-    referencePages = [
-      { url: '/api/operateurs', page: 0, content: [operateurFixture], totalElementsCount: 2 },
-      { url: '/api/operateurs', page: 1, content: [operateurSansMatriculeFixture], totalElementsCount: 2 },
-      { url: '/api/atelier/suivis', page: 0, content: [suiviFixture], totalElementsCount: 2 },
-      { url: '/api/atelier/suivis', page: 1, content: [secondSuiviFixture], totalElementsCount: 2 },
-    ];
   };
   const observeRejection = <T>(operation: Promise<T>): Promise<T> => {
     void operation.catch(() => undefined);
@@ -288,41 +206,10 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
   const whenSending = (geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> => observeRejection(serveur.send(geste));
   const whenRereading = (geste: GesteDAtelier): Promise<void> => serveur.reread(geste);
-  const whenServerReturnsReferencePages = async (): Promise<TestRequest[]> => {
-    const requests: TestRequest[] = [];
-    for (const page of referencePages) {
-      requests.push(await whenServerReturnsPage(page.url, page.page, page.content, page.totalElementsCount));
-    }
-    return requests;
-  };
-  const whenServerReturnsAnUnstableReference = async (kind: UnstableReferenceKind): Promise<void> => {
-    await whenServerReturnsPage('/api/operateurs', 0, [operateurFixture], 2);
-    const unstablePages: Record<UnstableReferenceKind, PageFixture> = {
-      count: { url: '/api/operateurs', page: 1, content: [{ ...operateurFixture, id: 'marie' }], totalElementsCount: 3 },
-      empty: { url: '/api/operateurs', page: 1, content: [], totalElementsCount: 2 },
-      duplicate: { url: '/api/operateurs', page: 1, content: [operateurFixture], totalElementsCount: 2 },
-      overflow: {
-        url: '/api/operateurs',
-        page: 1,
-        content: [
-          { ...operateurFixture, id: 'marie' },
-          { ...operateurFixture, id: 'paul' },
-        ],
-        totalElementsCount: 2,
-      },
-    };
-    const page = unstablePages[kind];
-    await whenServerReturnsPage(page.url, page.page, page.content, page.totalElementsCount);
-  };
-  const whenServerReturnsPage = async (
-    url: string,
-    page: number,
-    content: unknown[],
-    totalElementsCount: number,
-  ): Promise<ReturnType<HttpTestingController['expectOne']>> => {
+  const whenServerReturnsTheReference = async (): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
-    const request = http.expectOne(request => request.url === url && request.params.get('page') === String(page));
-    request.flush({ content, currentPage: page, pageSize: 100, totalElementsCount });
+    const request = http.expectOne('/api/pupitre/referentiel');
+    request.flush(referentielFixture);
     return request;
   };
   const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
@@ -351,13 +238,8 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     request.flush(suiviDetailleFixture);
     return request;
   };
-  const thenPagesRequestTheWholeActiveReference = (pages: TestRequest[]): void => {
-    pages.forEach(page => {
-      expect(page.request.params.has('operateur')).toBe(false);
-      if (page.request.url === '/api/atelier/suivis') {
-        expect(page.request.params.getAll('etats')).toEqual(['EN_ATTENTE', 'EN_COURS', 'INTERROMPU']);
-      }
-    });
+  const thenItAskedForTheWholeReference = (request: TestRequest): void => {
+    expect(request.request.params.keys()).toEqual([]);
   };
   const thenWriteSucceededWith = async (
     write: Promise<Result<void, RefusDePublication>>,
@@ -369,16 +251,30 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   };
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
-    expect(reference.operateurs).toHaveLength(2);
-    const secondOperator = requiredFixture(reference.operateurs[1], 'second operator');
-    expect(secondOperator.postes).toEqual([{ id: 'tour', libelle: 'Tour' }]);
-    expect(secondOperator.matricule).toBeUndefined();
-    expect(reference.suivis).toHaveLength(2);
-    expect(reference.suivis[0]?.evenements).toEqual([]);
-    expect(reference.suivis[1]?.evenements).toEqual([]);
-    const activities = requiredFixture(reference.suivis[1], 'second workshop element').activites;
-    expect(requiredFixture(activities[0], 'workstation activity').posteId).toBe('tour');
-    expect(requiredFixture(activities[1], 'activity without workstation').posteId).toBeUndefined();
+    expect(reference.operateurs).toEqual([
+      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] },
+      { id: 'marie', nom: 'Martin', prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },
+    ]);
+    expect(reference.suivis[0]).toEqual({
+      id: 'piece',
+      nom: 'PR-2026-000001',
+      etat: 'EN_ATTENTE',
+      type: 'PRODUIT',
+      activites: [],
+      evenements: [],
+    });
+    expect(reference.suivis[1]).toEqual({
+      id: 'piece-2',
+      nom: 'PR-2026-000002',
+      reference: 'M-1187',
+      etat: 'EN_ATTENTE',
+      type: 'PRODUIT',
+      activites: [
+        { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', posteId: 'tour' },
+        { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
+      ],
+      evenements: [],
+    });
   };
   const thenItFailed = async (operation: Promise<unknown>, expectedMessage?: string): Promise<void> => {
     if (expectedMessage !== undefined) {

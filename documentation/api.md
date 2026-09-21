@@ -66,9 +66,10 @@ Online list ports make one request with `PAGE_SIZE` and return `Page<T>`.
 `buildPageFrom` preserves the server total alongside the returned elements so callers can identify truncation.
 A bounded read is acceptable only when the bound is visible in the result.
 
-The offline pupitre reference is different: it traverses every page and activates neither operators nor
-workshop data until both collections are complete. [`offline-pupitre.md`](offline-pupitre.md) owns that
-workflow.
+The offline pupitre reference is different: `GET /api/pupitre/referentiel` returns operators and workshop
+elements together, unpaged, from one repeatable-read server transaction. It takes no page, size or state
+parameter, and its `genereLe` version is deliberately ignored. [`offline-pupitre.md`](offline-pupitre.md)
+owns that workflow.
 
 ## Translate refusals by stable code
 

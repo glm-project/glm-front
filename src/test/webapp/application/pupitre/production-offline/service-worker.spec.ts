@@ -81,10 +81,10 @@ describe('Production pupitre offline restart', () => {
 
   it('should boot offline and publish one durable gesture with its original identity after several restarts', () => {
     whenBootingTheProductionPupitre();
-    whenReadingOnlinePupitre('initial', 2);
+    whenReadingOnlinePupitre('initial', 1);
     whenWaitingForServiceWorkerActivation();
     whenRestartingTheProductionPupitre();
-    whenReadingOnlinePupitre('online-restart', 4);
+    whenReadingOnlinePupitre('online-restart', 2);
     whenOpeningTheJournalFixture();
     whenPreparingDurableStateThroughTheJournalPort();
     whenProbingBrowserNetwork('initial-network');
@@ -103,17 +103,17 @@ describe('Production pupitre offline restart', () => {
     whenReleasingTheGestureResponse();
     whenReadingAcceptedReplay();
     whenRestartingTheProductionPupitre();
-    whenReadingOnlinePupitre('final-restart', 8);
+    whenReadingOnlinePupitre('final-restart', 4);
     whenReadingJournal('final-journal');
 
-    thenOnlinePupitreWasObserved('initial', 2);
+    thenOnlinePupitreWasObserved('initial', 1);
     thenTheWorkerActivatedAndControlledTheOnlineRestart();
-    thenOnlinePupitreWasObserved('online-restart', 4);
+    thenOnlinePupitreWasObserved('online-restart', 2);
     thenTheBrowserNetworkWasCutAndRestored();
     thenOfflineRestartPreservedPendingWork('first-offline-restart');
     thenOfflineRestartPreservedPendingWork('second-offline-restart');
     thenTheOriginalGestureWasReplayedAndAccepted();
-    thenOnlinePupitreWasObserved('final-restart', 8);
+    thenOnlinePupitreWasObserved('final-restart', 4);
     thenTheJournalAndReferenceSurvivedEveryRestart();
   });
 });
@@ -225,7 +225,7 @@ const whenReadingPendingReplay = (): void => {
 const whenReadingAcceptedReplay = (): void => {
   readProductionFixture().then(fixture => fixture.waitForSynchronization());
   whenReadingJournal('accepted-journal');
-  readServerState('referenceRequests', 6).as('accepted-server', { type: 'static' });
+  readServerState('referenceRequests', 3).as('accepted-server', { type: 'static' });
 };
 
 const thenOnlinePupitreWasObserved = (alias: string, referenceRequests: number): void => {
@@ -271,7 +271,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     ]);
   });
   cy.get('@accepted-journal').its('evenements').should('deep.equal', [acceptedGestureFixture]);
-  cy.get('@accepted-server').its('referenceRequests').should('be.at.least', 6);
+  cy.get('@accepted-server').its('referenceRequests').should('be.at.least', 3);
 };
 
 const thenTheJournalAndReferenceSurvivedEveryRestart = (): void => {

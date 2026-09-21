@@ -8,6 +8,9 @@ pagination and retry assumptions in [ADR 0006](0006-how-the-front-calls-the-back
 [ADR 0009](0009-pupitre-domain-responsibilities.md), which moves the window and replay rules out of the
 application coordinator into domain owners. Complemented by
 [ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md), which gives the enrolment its screen.
+The paged reference read below no longer holds: issue 165 replaced it with one unpaged
+`GET /api/pupitre/referentiel`, whose single repeatable-read server transaction supplies the instantaneous
+version that offset pagination could not prove. Everything else recorded here stands.
 
 ## Context
 
@@ -53,9 +56,9 @@ Every other published business code likewise becomes a durable refusal with its 
 even for the same operator. Unknown technical failures remain pending and stop that push. No record has an
 application size limit, expiry, rotation or purge; acknowledged events are retained too.
 
-`HttpAtelierExchange` reads every page of operators and workshop elements, without filtering by operator.
-It publishes the pair only after both collections complete, rejects changed totals, empty intermediate pages
-and duplicate identifiers, and aborts if the credential changes during reading. A failed refresh preserves
+`HttpAtelierExchange` reads operators and workshop elements together, unpaged and unfiltered by operator, in
+one `GET /api/pupitre/referentiel` the server answers from a single repeatable-read transaction. It emits no
+request at all without a credential, and ignores the response's `genereLe` version. A failed refresh preserves
 the previous complete cache indefinitely. Refresh is attempted on the triggers listed in
 [Offline pupitre](../offline-pupitre.md); all of them run in the background except the enrolment screen's
 retry. The online event is only a trigger; it never sets the connectivity
@@ -102,9 +105,9 @@ inaccessible to injected same-origin code; this is the explicit trade required b
 - Each company document grows with its event history, with no size limit, expiry, rotation or purge.
   Transactions copy that document today; an event-indexed store is the next change if measured growth makes
   this costly, and it must preserve the same atomic contract.
-- Offset pagination has no server snapshot version. Count and identity checks detect common concurrent edits,
-  but an equal-size replacement across pages can escape them. A server cursor/snapshot is required to prove
-  one instantaneous reference version; a failed detectable refresh always keeps the previous one.
+- The reference read trusts the server for its own consistency. Its repeatable-read transaction is what makes
+  operators and workshop elements one instant, and the front has no way to verify that claim; a failed refresh
+  always keeps the previous complete reference.
 - Persisting the refresh credential puts a bearer token where injected same-origin code can read it. That is
   the explicit price of unattended restart, and no browser storage removes it.
 - Manual refusal replay/correction, service-screen diagnostics and back-office supervision remain out of scope.

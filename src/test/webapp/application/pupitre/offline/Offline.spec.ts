@@ -31,8 +31,9 @@ describe('Pupitre offline restart', () => {
     online = false;
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('enrolment');
     cy.intercept('POST', '**/protocol/openid-connect/token', { forceNetworkError: true });
-    cy.intercept('GET', '/api/operateurs*', { body: { content: [], totalElementsCount: 0 } }).as('operateurs');
-    cy.intercept('GET', '/api/atelier/suivis*', { body: { content: [], totalElementsCount: 0 } }).as('reference');
+    cy.intercept('GET', '/api/pupitre/referentiel', {
+      body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [] },
+    }).as('reference');
     cy.intercept('POST', '/api/atelier/journees', request => {
       if (online) {
         request.reply({ statusCode: 200, body: {} });
@@ -61,7 +62,6 @@ describe('Pupitre offline restart', () => {
     whenRestartingPupitre();
     cy.wait('@push').its('request').as(`${alias}-request`, { type: 'static' });
     cy.get(dataSelector('pupitre-disconnected')).should('be.visible').invoke('text').as(`${alias}-status`, { type: 'static' });
-    cy.get('@operateurs.all').its('length').as(`${alias}-operators`, { type: 'static' });
     cy.get('@reference.all').its('length').as(`${alias}-reference`, { type: 'static' });
   };
   const whenReadingAcceptedPush = (): void => {
@@ -74,7 +74,6 @@ describe('Pupitre offline restart', () => {
   const thenFailedPushRetainedItsIdentityAndCredential = (alias: string): void => {
     thenOriginalSignedGestureWasSent(`${alias}-request`);
     cy.get(`@${alias}-status`).should('contain', 'Hors ligne');
-    cy.get(`@${alias}-operators`).should('equal', 0);
     cy.get(`@${alias}-reference`).should('equal', 0);
   };
   const thenTheSameGestureWasAcceptedWithoutEnrollingAgain = (): void => {

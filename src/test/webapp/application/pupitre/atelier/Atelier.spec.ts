@@ -141,7 +141,7 @@ describe('Pupitre workshop journey', () => {
     givenEnrolledPupitreFixture({ entreprise: entrepriseFixture, referentiel });
 
     cy.reload();
-    cy.wait(['@operators', '@workshop']);
+    cy.wait('@workshop');
     if (withClock) cy.tick(0);
     cy.get(dataSelector('designation')).should('be.visible');
   };
@@ -153,33 +153,23 @@ describe('Pupitre workshop journey', () => {
   const givenAuthorizationAndWorkshopEdges = (referentiel: ReferentielDuPupitre): void => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
-    cy.intercept('GET', '/api/operateurs*', {
+    cy.intercept('GET', '/api/pupitre/referentiel', {
       body: {
-        content: referentiel.operateurs.map(operateur => ({ ...operateur, natures: [] })),
-        currentPage: 0,
-        pageSize: 100,
-        totalElementsCount: referentiel.operateurs.length,
-      },
-    }).as('operators');
-    cy.intercept('GET', '/api/atelier/suivis*', {
-      body: {
-        content: referentiel.suivis.map(suivi => ({
-          activitesEnCours: suivi.activites.map(activite => ({
-            operateur: { id: activite.operateurId, nom: operateurFixture.nom, prenom: operateurFixture.prenom },
-            categorie: activite.categorie,
-            depuis: activite.depuis,
-          })),
-          element: suivi.id,
-          engageLe: '2026-09-05T07:30:00Z',
-          engagePar: 'gestionnaire',
-          etat: suivi.etat,
+        genereLe: '2026-09-05T08:05:00Z',
+        operateurs: referentiel.operateurs,
+        suivis: referentiel.suivis.map(suivi => ({
           id: suivi.id,
           nom: suivi.nom,
+          etat: suivi.etat,
           type: suivi.type,
+          ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
+          activites: suivi.activites.map(activite => ({
+            operateur: activite.operateurId,
+            categorie: activite.categorie,
+            depuis: activite.depuis,
+            ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
+          })),
         })),
-        currentPage: 0,
-        pageSize: 100,
-        totalElementsCount: referentiel.suivis.length,
       },
     }).as('workshop');
     observeWorkshopWrites();
