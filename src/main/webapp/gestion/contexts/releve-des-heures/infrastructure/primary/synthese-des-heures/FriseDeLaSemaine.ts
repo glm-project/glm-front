@@ -48,7 +48,26 @@ const bornesDe = (plages: readonly PlageDeReleve[]): readonly number[] =>
 const arrondiBas = (minutes: number): number => Math.floor(minutes / MINUTES_PAR_HEURE) * MINUTES_PAR_HEURE;
 const arrondiHaut = (minutes: number): number => Math.ceil(minutes / MINUTES_PAR_HEURE) * MINUTES_PAR_HEURE;
 
-const libelleDuRepere = (minutes: number): string => `${String(Math.floor(minutes / MINUTES_PAR_HEURE)).padStart(2, '0')}:00`;
+/** Minuit ferme la journée : le repère de fin se nomme `00:00`, jamais `24:00`, qui n'est l'heure de personne. */
+const libelleDuRepere = (minutes: number): string => {
+  const heure = Math.floor(minutes / MINUTES_PAR_HEURE) % 24;
+  return `${String(heure).padStart(2, '0')}:00`;
+};
+
+interface Fenetre {
+  readonly debut: number;
+  readonly fin: number;
+}
+
+/**
+ * Une amplitude tient dans une journée, de 00:00 à minuit. Élargir une plage trop étroite pour être lue ne doit
+ * donc pas déborder : la fenêtre s'étend vers la fin de journée, puis recule son début si elle manque encore de
+ * place. Sans cette garde, une semaine de nuit affichait des repères à 26:00 et 28:00.
+ */
+const fenetreDansLaJournee = (debutBrut: number, finBrut: number): Fenetre => {
+  const fin = Math.min(MINUTES_PAR_JOUR, Math.max(finBrut, debutBrut + AMPLITUDE_MINIMALE));
+  return { debut: Math.max(0, Math.min(debutBrut, fin - AMPLITUDE_MINIMALE)), fin };
+};
 
 /**
  * L'axe d'une frise hebdomadaire. Il se déduit des pointages de la semaine plutôt que d'être figé de 6 h à
@@ -62,24 +81,20 @@ export class FriseDeLaSemaine {
 
   constructor(jours: readonly JourDeReleve[]) {
     const plages = jours.flatMap(jour => [...jour.plages()]);
+    const fenetre = FriseDeLaSemaine.fenetreDe(plages);
+    this.debut = fenetre.debut;
+    this.fin = fenetre.fin;
+  }
+
+  private static fenetreDe(plages: readonly PlageDeReleve[]): Fenetre {
+    if (plages.some(franchitMinuit)) {
+      return { debut: 0, fin: MINUTES_PAR_JOUR };
+    }
     const bornes = bornesDe(plages);
-    this.debut = FriseDeLaSemaine.debutDeLAxe(bornes, plages);
-    this.fin = FriseDeLaSemaine.finDeLAxe(bornes, plages, this.debut);
-  }
-
-  private static debutDeLAxe(bornes: readonly number[], plages: readonly PlageDeReleve[]): number {
-    if (plages.some(franchitMinuit)) {
-      return 0;
+    if (bornes.length === 0) {
+      return { debut: DEBUT_PAR_DEFAUT, fin: FIN_PAR_DEFAUT };
     }
-    return bornes.length === 0 ? DEBUT_PAR_DEFAUT : arrondiBas(Math.min(...bornes));
-  }
-
-  private static finDeLAxe(bornes: readonly number[], plages: readonly PlageDeReleve[], debut: number): number {
-    if (plages.some(franchitMinuit)) {
-      return MINUTES_PAR_JOUR;
-    }
-    const brute = bornes.length === 0 ? FIN_PAR_DEFAUT : arrondiHaut(Math.max(...bornes));
-    return Math.max(brute, debut + AMPLITUDE_MINIMALE);
+    return fenetreDansLaJournee(arrondiBas(Math.min(...bornes)), arrondiHaut(Math.max(...bornes)));
   }
 
   reperes(): readonly RepereHoraire[] {
