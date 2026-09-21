@@ -171,6 +171,17 @@ describe('Synthese des heures component', () => {
     expect(optionsDe('synthese-annee')).toEqual(['2026', '2025', '2024', '2023', '2022', '2021']);
   });
 
+  it.each([
+    ['synthese-annee', '2026'],
+    ['synthese-semaine', '38'],
+  ])('should show %s selected on the week in progress', async (selector, attendu) => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+
+    await whenEcranAffiche();
+
+    expect(valeurChoisie(selector)).toBe(attendu);
+  });
+
   it('should stop the weeks it offers at the week in progress', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
@@ -397,6 +408,8 @@ describe('Synthese des heures component', () => {
     [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => normalise(element.textContent));
 
   const present = (selector: string): boolean => racine().querySelector(dataSelector(selector)) !== null;
+
+  const valeurChoisie = (selector: string): string => selectRequis(selector).value;
 
   const optionsDe = (selector: string): string[] => [...selectRequis(selector).options].map(option => option.value);
 });

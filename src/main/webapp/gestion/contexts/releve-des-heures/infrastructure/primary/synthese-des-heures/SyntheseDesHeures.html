@@ -24,12 +24,11 @@
         <select
           id="synthese-annee"
           class="min-h-touch rounded border border-border-strong bg-surface px-3 text-body focus-visible:outline-2 focus-visible:outline-accent"
-          [value]="semaineAffichee.annee"
           (change)="choisirAnnee($any($event.target).value, semaineAffichee)"
           data-selector="synthese-annee"
         >
           @for (annee of annees(); track annee) {
-          <option [value]="annee">{{ annee }}</option>
+          <option [value]="annee" [selected]="annee === semaineAffichee.annee">{{ annee }}</option>
           }
         </select>
       </div>
@@ -38,12 +37,11 @@
         <select
           id="synthese-semaine"
           class="min-h-touch rounded border border-border-strong bg-surface px-3 text-body focus-visible:outline-2 focus-visible:outline-accent"
-          [value]="semaineAffichee.numero"
           (change)="choisirSemaine($any($event.target).value, semaineAffichee)"
           data-selector="synthese-semaine"
         >
           @for (numero of semainesOffertes(semaineAffichee); track numero) {
-          <option [value]="numero">{{ libelles.optionSemaine(numero) }}</option>
+          <option [value]="numero" [selected]="numero === semaineAffichee.numero">{{ libelles.optionSemaine(numero) }}</option>
           }
         </select>
       </div>
