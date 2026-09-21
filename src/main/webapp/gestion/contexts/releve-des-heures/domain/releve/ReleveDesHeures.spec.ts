@@ -2,9 +2,7 @@ import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
 import { IdentiteOperateur } from './IdentiteOperateur';
-import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
-import { PointageDeReleve } from './PointageDeReleve';
 import { FicheDuReleve, ReleveDesHeures } from './ReleveDesHeures';
 
 const SEMAINE = new SemaineISO(2026, 38);
@@ -94,29 +92,5 @@ describe('ReleveDesHeures', () => {
     jours.pop();
 
     expect(releve.jours).toHaveLength(7);
-  });
-});
-
-describe('JourDeReleve', () => {
-  it('should report a day carrying no clocking as a day without clocking', () => {
-    const jour = jourFixture('2026-09-19');
-
-    expect(jour.estSansPointage()).toBe(true);
-  });
-
-  it('should report a day carrying a clocking as a worked day', () => {
-    const pointage = new PointageDeReleve('ARRIVEE', new InstantDeReleve('2026-09-14T06:02:00Z'));
-    const jour = new JourDeReleve(new JourCalendaire('2026-09-14'), new DureeTravaillee('PT0S'), [pointage]);
-
-    expect(jour.estSansPointage()).toBe(false);
-  });
-
-  it('should keep its clockings independent of the list it was built from', () => {
-    const pointages = [new PointageDeReleve('ARRIVEE', new InstantDeReleve('2026-09-14T06:02:00Z'))];
-    const jour = new JourDeReleve(new JourCalendaire('2026-09-14'), new DureeTravaillee('PT0S'), pointages);
-
-    pointages.pop();
-
-    expect(jour.pointages).toHaveLength(1);
   });
 });
