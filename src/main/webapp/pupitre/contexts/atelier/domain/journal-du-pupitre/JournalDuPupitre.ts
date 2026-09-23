@@ -2,12 +2,14 @@ export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
 export type TypeDePresence = 'PAUSE' | 'REPRISE' | 'DEPART';
+export type EtatDePresence = 'ABSENT' | 'PRESENT' | 'EN_PAUSE';
 
 export interface OperateurDuPupitre {
   readonly id: string;
   readonly nom: string;
   readonly prenom: string;
   readonly matricule?: string;
+  readonly etat: EtatDePresence;
   readonly postes: readonly { readonly id: string; readonly libelle: string }[];
 }
 

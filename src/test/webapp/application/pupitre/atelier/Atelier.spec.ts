@@ -5,7 +5,7 @@ import { interceptForever } from '../../../utils/Interceptor';
 import { clearPupitreStorageFixture, givenEnrolledPupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
-const operateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] } as const;
+const operateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [] } as const;
 const elementFixture = {
   id: 'piece-1',
   nom: '204',

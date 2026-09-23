@@ -10,7 +10,7 @@ const ONE_SECOND_BETWEEN_CLAIMS = 1;
 const VERIFICATION_URI = 'http://localhost:9080/realms/glmproject/device';
 const USER_CODE = 'WXYZ-ABCD';
 const ENTREPRISE = 'entreprise-a';
-const OPERATEUR = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] };
+const OPERATEUR = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [] } as const;
 
 let authorizationsBeforeTheRecovery = 0;
 

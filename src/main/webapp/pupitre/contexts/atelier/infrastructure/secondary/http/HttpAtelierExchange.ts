@@ -26,6 +26,7 @@ const toOperateurWithoutMatricule = (operateur: RestOperateurDuPupitre): Operate
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
+  etat: operateur.etat,
   postes: operateur.postes.map(toPosteHabilite),
 });
 

@@ -72,6 +72,7 @@ const referentielFixture = {
       nom: 'Dupont',
       prenom: 'Jean',
       matricule: '049',
+      etat: 'ABSENT' as const,
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },
