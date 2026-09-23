@@ -44,7 +44,7 @@ describe('Pointage screen', () => {
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
   });
 
-  it('should render the two workshop zones, personal states, frozen durations', async () => {
+  it('should render the two workshop zones, personal states and frozen durations', async () => {
     await whenRendering();
 
     thenThePersonalPointageViewIsRendered();

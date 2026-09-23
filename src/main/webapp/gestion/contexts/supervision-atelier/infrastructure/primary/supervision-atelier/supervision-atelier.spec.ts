@@ -456,6 +456,15 @@ describe('Supervision atelier component', () => {
     expect(displayedText('supervision-maintenant-hors-plage')).toContain(`Maintenant (${String(heure).padStart(2, '0')}:00) — hors plage`);
   });
 
+  it('should report sans affectation outside the scale when now is outside it', async () => {
+    await givenAcquisitionInProgress();
+    givenCurrentHour(23);
+
+    await whenDonneesArrive();
+
+    thenSansAffectationIsReportedOutsideTheScale();
+  });
+
   it('should show an activity starting exactly now as a small marker rather than outside the scale', async () => {
     await givenAcquisitionInProgress();
 
@@ -928,6 +937,7 @@ describe('Supervision atelier component', () => {
     await whenFilterClicked('supervision-filtre-sans-affectation');
 
     thenOperatorsAreDisplayed([{ nomComplet: 'Martin Alice', presence: 'Présent' }]);
+    expect(displayedText('supervision-filtre-sans-affectation')?.replace(/\s+/g, ' ').trim()).toBe('⚡ Sans affectation (1)');
   });
 
   it('should toggle off active filter and restore full list', async () => {
@@ -994,7 +1004,13 @@ describe('Supervision atelier component', () => {
       'Sans affectation · Aucune activité en cours',
     );
     expect(elements('supervision-indicateur-sans-affectation')).toHaveLength(1);
+    expect(legend().textContent).toContain('Sans affectation à l’instant courant');
     expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
+  };
+
+  const thenSansAffectationIsReportedOutsideTheScale = (): void => {
+    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))).toBeNull();
+    expect(rowFor('alice').textContent).toContain('Sans affectation à l’instant courant · hors plage');
   };
 
   const thenNoOperatorIsSansAffectation = (): void => {
@@ -1203,6 +1219,11 @@ describe('Supervision atelier component', () => {
   const elements = (selector: string): HTMLElement[] => {
     const host = componentFixture.nativeElement as HTMLElement;
     return Array.from(host.querySelectorAll(dataSelector(selector)));
+  };
+
+  const legend = (): HTMLElement => {
+    const host = componentFixture.nativeElement as HTMLElement;
+    return requiredFixture(host.querySelector<HTMLElement>('[aria-label="Légende de la chronologie"]'), 'legend');
   };
 
   const refreshButton = (): HTMLButtonElement => {
