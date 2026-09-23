@@ -21,7 +21,7 @@ export class PupitreHeader implements OnDestroy {
   readonly heading = input.required<string>();
   readonly connected = input.required<boolean>();
   readonly operateur = input<IdentiteOperateurDesigne>();
-  readonly presence = input<EtatDePresence>();
+  readonly presence = input.required<EtatDePresence>();
   readonly message = input<MessageDAtelierVisible>();
   readonly finRequested = output();
   readonly reinitialisationRequested = output();

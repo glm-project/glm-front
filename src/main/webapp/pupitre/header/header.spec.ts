@@ -139,13 +139,24 @@ describe('Pupitre header', () => {
     thenItShowsThePresence(libelle);
   });
 
-  it('should show no presence indicator without a designated operator', async () => {
+  it('should show the presence indicator as soon as an operator is designated', async () => {
+    givenAConnectedPupitre();
+    givenADesignatedOperator();
+    givenAPresence('PRESENT');
+
+    await whenRenderingTheHeader();
+
+    thenItShowsThePresence('Présent');
+  });
+
+  it('should show no nominative header at all without a designated operator', async () => {
     givenAConnectedPupitre();
     givenAPresence('PRESENT');
 
     await whenRenderingTheHeader();
 
     thenItShowsNoPresence();
+    thenThereIsNoDesignatedOperator();
   });
 
   const givenAConnectedPupitre = (): void => {
@@ -157,6 +168,7 @@ describe('Pupitre header', () => {
   };
   const givenADesignatedOperator = (): void => {
     fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
+    fixture.componentRef.setInput('presence', 'ABSENT');
   };
   const givenAPresence = (etat: EtatDePresence): void => {
     fixture.componentRef.setInput('presence', etat);
@@ -240,6 +252,10 @@ describe('Pupitre header', () => {
 
   const thenThereIsNoLogo = (): void => {
     expect(logo()).toBeNull();
+  };
+
+  const thenThereIsNoDesignatedOperator = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-operator'))).toBeNull();
   };
 
   const thenItShowsThePresence = (libelle: string): void => {
