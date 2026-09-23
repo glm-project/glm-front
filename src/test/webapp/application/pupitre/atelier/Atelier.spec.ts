@@ -28,6 +28,11 @@ const referentielFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
 };
+const operateurPresentFixture = { ...operateurFixture, etat: 'PRESENT' } as const;
+const referentielOperateurPresentFixture: ReferentielDuPupitre = {
+  operateurs: [operateurPresentFixture],
+  suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
+};
 const activiteFixture = { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' } as const;
 const referentielActifFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
@@ -117,6 +122,27 @@ describe('Pupitre workshop journey', () => {
     whenServerAnswers(refusal);
 
     thenRefusalReconcilesElementAndHeader('piece-1', '204', 'Pointage refusé par le serveur');
+  });
+
+  it('should show a pause optimistically while the server response is pending', () => {
+    givenAnEnrolledPupitre(referentielOperateurPresentFixture);
+    whenDesignatingOperator049();
+    givenPausingWillBeRefused();
+
+    whenPausingOptimistically();
+
+    thenPresenceIsOptimisticallyInPause();
+  });
+
+  it('should restore the server presence and show its refusal after an optimistic pause is refused', () => {
+    givenAnEnrolledPupitre(referentielOperateurPresentFixture);
+    whenDesignatingOperator049();
+    const refusal = givenPausingWillBeRefused();
+
+    whenPausingOptimistically();
+    whenServerAnswers(refusal);
+
+    thenPresenceRefusalReconciles('PAUSE', 'Pause refusée par le serveur');
   });
 
   it('should close workstation choice on finish without sending work', () => {
@@ -245,6 +271,22 @@ describe('Pupitre workshop journey', () => {
     cy.wait('@presence');
   };
 
+  const givenPausingWillBeRefused = (): ReturnType<typeof interceptForever> => {
+    pendingResponse = interceptForever(
+      { method: 'POST', url: '/api/atelier/journees/pointages' },
+      {
+        statusCode: 409,
+        body: { type: 'urn:glm:erreur:atelier:transition-de-presence-interdite', message: 'Pause refusée par le serveur' },
+      },
+      'refusedPresence',
+    );
+    return pendingResponse;
+  };
+
+  const whenPausingOptimistically = (): void => {
+    cy.get(dataSelector('pause')).click();
+  };
+
   const whenStoppingAllWork = (): void => {
     cy.get(dataSelector('stop-all')).click();
     cy.wait('@presence');
@@ -307,6 +349,18 @@ describe('Pupitre workshop journey', () => {
     cy.get(dataSelector(`tile-${elementId}`))
       .find(dataSelector('duration'))
       .should('not.exist');
+    cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
+  };
+
+  const thenPresenceIsOptimisticallyInPause = (): void => {
+    cy.get(dataSelector('header-presence')).should('contain.text', 'En pause');
+    cy.get(dataSelector('pause')).should('be.disabled');
+  };
+
+  const thenPresenceRefusalReconciles = (context: string, message: string): void => {
+    cy.wait('@refusedPresence');
+    cy.get(dataSelector('header-presence')).should('contain.text', 'Présent');
+    cy.get(dataSelector('pause')).should('not.be.disabled');
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
   };
 
