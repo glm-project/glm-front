@@ -1,3 +1,4 @@
+import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, computed, inject, resource, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +20,7 @@ export type EtatVueCoutDeRevient =
   host: { 'data-selector': 'cout-de-revient-page' },
   templateUrl: './CoutDeRevientDeLElement.html',
   styleUrl: './CoutDeRevientDeLElement.css',
-  imports: [MatButtonModule, RouterLink],
+  imports: [Icon, MatButtonModule, RouterLink],
 })
 export class CoutDeRevientDeLElement {
   protected readonly libelles = LIBELLES_COUT_DE_REVIENT;

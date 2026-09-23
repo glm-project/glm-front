@@ -1,3 +1,4 @@
+import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, computed, inject, resource, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -39,7 +40,7 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
   host: { 'data-selector': 'synthese-page' },
   templateUrl: './SyntheseDesHeures.html',
   styleUrl: './SyntheseDesHeures.css',
-  imports: [MatButtonModule, RouterLink],
+  imports: [Icon, MatButtonModule, RouterLink],
 })
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;

@@ -1,29 +1,25 @@
-<main class="mx-auto max-w-5xl p-4 text-ink md:p-8" aria-labelledby="synthese-heading">
-  <header class="mb-8">
-    <a
-      class="text-body-sm font-semibold text-accent"
-      routerLink="/operateurs"
-      [attr.aria-label]="libelles.retourAria"
-      data-selector="synthese-retour"
-      >← {{ libelles.retour }}</a
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="synthese-heading">
+  <header class="mb-6">
+    <a class="gestion-retour" routerLink="/operateurs" [attr.aria-label]="libelles.retourAria" data-selector="synthese-retour"
+      ><glm-icon name="arrowLeft" /> {{ libelles.retour }}</a
     >
-    <h1 id="synthese-heading" class="mt-3 text-title">{{ libelles.titre }}</h1>
+    <h1 id="synthese-heading" class="mt-2 text-title">{{ libelles.titre }}</h1>
     @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
-    <p class="mt-1 text-section" data-selector="synthese-identite">
+    <p class="mt-1 text-section text-ink" data-selector="synthese-identite">
       {{ libelles.identite(vue.releve.operateur.nom, vue.releve.operateur.prenom) }}
     </p>
     } }
-    <p class="mt-2 text-body text-ink-muted">{{ libelles.sousTitre }}</p>
+    <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
   </header>
 
   @if (semaine(); as semaineAffichee) {
-  <section class="mb-6 flex flex-wrap items-end justify-between gap-4" aria-label="Semaine consultée">
+  <section class="mb-4 flex flex-wrap items-end justify-between gap-4" aria-label="Semaine consultée">
     <div class="flex flex-wrap items-end gap-3">
       <div class="flex flex-col gap-1">
-        <label class="text-label uppercase text-ink-muted" for="synthese-annee">{{ libelles.anneeLabel }}</label>
+        <label class="text-body-sm font-semibold text-ink-muted" for="synthese-annee">{{ libelles.anneeLabel }}</label>
         <select
           id="synthese-annee"
-          class="min-h-touch rounded border border-border-strong bg-surface px-3 text-body focus-visible:outline-2 focus-visible:outline-accent"
+          class="choix min-h-touch rounded-control border border-border-strong bg-surface pl-3 pr-9 text-body text-ink focus-visible:outline-2 focus-visible:outline-accent"
           (change)="choisirAnnee($any($event.target).value, semaineAffichee)"
           data-selector="synthese-annee"
         >
@@ -33,10 +29,10 @@
         </select>
       </div>
       <div class="flex flex-col gap-1">
-        <label class="text-label uppercase text-ink-muted" for="synthese-semaine">{{ libelles.semaineLabel }}</label>
+        <label class="text-body-sm font-semibold text-ink-muted" for="synthese-semaine">{{ libelles.semaineLabel }}</label>
         <select
           id="synthese-semaine"
-          class="min-h-touch rounded border border-border-strong bg-surface px-3 text-body focus-visible:outline-2 focus-visible:outline-accent"
+          class="choix min-h-touch rounded-control border border-border-strong bg-surface pl-3 pr-9 text-body text-ink focus-visible:outline-2 focus-visible:outline-accent"
           (change)="choisirSemaine($any($event.target).value, semaineAffichee)"
           data-selector="synthese-semaine"
         >
@@ -49,27 +45,27 @@
         @if (precedente(); as cible) {
         <a
           mat-stroked-button
-          class="min-h-touch min-w-touch"
+          class="pas"
           [routerLink]="[]"
           [queryParams]="parametresDe(cible)"
           [attr.aria-label]="libelles.semainePrecedenteAria"
           data-selector="synthese-semaine-precedente"
-          ><span aria-hidden="true">{{ libelles.glyphePrecedente }}</span></a
-        >
+          ><glm-icon name="chevronLeft"
+        /></a>
         } @if (suivante(); as cible) {
         <a
           mat-stroked-button
-          class="min-h-touch min-w-touch"
+          class="pas"
           [routerLink]="[]"
           [queryParams]="parametresDe(cible)"
           [attr.aria-label]="libelles.semaineSuivanteAria"
           data-selector="synthese-semaine-suivante"
-          ><span aria-hidden="true">{{ libelles.glypheSuivante }}</span></a
-        >
+          ><glm-icon name="chevronRight"
+        /></a>
         }
       </div>
     </div>
-    <p class="text-body font-semibold" data-selector="synthese-semaine-libelle">{{ libelles.semaine(semaineAffichee) }}</p>
+    <p class="text-section" data-selector="synthese-semaine-libelle">{{ libelles.semaine(semaineAffichee) }}</p>
   </section>
   } @switch (etat().kind) { @case ('ADRESSE_INVALIDE') {
   <p role="alert" class="py-12 text-center text-body text-nc" data-selector="synthese-adresse-invalide">{{ libelles.adresseInvalide }}</p>
@@ -85,73 +81,75 @@
     <button mat-stroked-button type="button" (click)="reload()" data-selector="synthese-retry">{{ libelles.reessayer }}</button>
   </div>
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
-  <div class="table-scroll" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
-    <table class="frise" [attr.aria-label]="libelles.tableau">
-      <thead>
-        <tr>
-          <th scope="col" class="colonne-jour">{{ libelles.colonnes.jour }}</th>
-          <th scope="col">
-            <span class="sr-only">{{ libelles.colonnes.journee }}</span>
-            <div class="regle" [attr.aria-label]="libelles.regle" data-selector="synthese-regle">
-              @for (repere of vue.frise.reperes(); track repere.minutes) {
-              <span
-                class="repere"
-                [class.ancre-gauche]="repere.ancrage === 'gauche'"
-                [class.ancre-droite]="repere.ancrage === 'droite'"
-                [style.left.%]="repere.gauche"
-                data-selector="synthese-repere"
-                >{{ repere.libelle }}</span
+  <div class="gestion-carte">
+    <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
+      <table class="frise" [attr.aria-label]="libelles.tableau">
+        <thead>
+          <tr>
+            <th scope="col" class="colonne-jour">{{ libelles.colonnes.jour }}</th>
+            <th scope="col">
+              <span class="sr-only">{{ libelles.colonnes.journee }}</span>
+              <div class="regle" [attr.aria-label]="libelles.regle" data-selector="synthese-regle">
+                @for (repere of vue.frise.reperes(); track repere.minutes) {
+                <span
+                  class="repere"
+                  [class.ancre-gauche]="repere.ancrage === 'gauche'"
+                  [class.ancre-droite]="repere.ancrage === 'droite'"
+                  [style.left.%]="repere.gauche"
+                  data-selector="synthese-repere"
+                  >{{ repere.libelle }}</span
+                >
+                }
+              </div>
+            </th>
+            <th scope="col" class="colonne-duree">{{ libelles.colonnes.duree }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (jour of vue.releve.jours; track jour.jour.value) {
+          <tr [class.jour-deplie]="estDeplie(jour)" data-selector="synthese-jour-row">
+            <th scope="row" class="colonne-jour font-semibold" data-selector="synthese-jour-cell">{{ libelles.jour(jour.jour) }}</th>
+            <td>
+              @if (jour.estSansPointage()) {
+              <span class="text-body-sm text-ink-muted" data-selector="synthese-jour-sans-pointage">{{ libelles.sansPointage }}</span>
+              } @else {
+              <button
+                type="button"
+                class="piste"
+                (click)="basculerLeJour(jour)"
+                [attr.aria-expanded]="estDeplie(jour)"
+                [attr.aria-label]="libelles.voirLesPointages(jour.jour)"
+                data-selector="synthese-piste"
               >
+                @for (plage of plagesAffichees(vue.frise, jour); track $index) { @for (piece of plage.dessin.pieces; track $index) {
+                <span
+                  class="segment"
+                  [class.pause]="plage.dessin.pause"
+                  [class.ouverte]="plage.dessin.ouverte"
+                  [style.left.%]="piece.gauche"
+                  [style.width.%]="piece.largeur"
+                  [title]="plage.libelle"
+                  data-selector="synthese-segment"
+                ></span>
+                } }
+              </button>
               }
-            </div>
-          </th>
-          <th scope="col" class="colonne-duree">{{ libelles.colonnes.duree }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (jour of vue.releve.jours; track jour.jour.value) {
-        <tr data-selector="synthese-jour-row">
-          <th scope="row" class="colonne-jour font-semibold" data-selector="synthese-jour-cell">{{ libelles.jour(jour.jour) }}</th>
-          <td>
-            @if (jour.estSansPointage()) {
-            <span class="text-body-sm text-ink-muted" data-selector="synthese-jour-sans-pointage">{{ libelles.sansPointage }}</span>
-            } @else {
-            <button
-              type="button"
-              class="piste"
-              (click)="basculerLeJour(jour)"
-              [attr.aria-expanded]="estDeplie(jour)"
-              [attr.aria-label]="libelles.voirLesPointages(jour.jour)"
-              data-selector="synthese-piste"
-            >
-              @for (plage of plagesAffichees(vue.frise, jour); track $index) { @for (piece of plage.dessin.pieces; track $index) {
-              <span
-                class="segment"
-                [class.pause]="plage.dessin.pause"
-                [class.ouverte]="plage.dessin.ouverte"
-                [style.left.%]="piece.gauche"
-                [style.width.%]="piece.largeur"
-                [title]="plage.libelle"
-                data-selector="synthese-segment"
-              ></span>
-              } }
-            </button>
-            }
-          </td>
-          <td class="colonne-duree" data-selector="synthese-duree-cell">{{ dureeDuJour(jour) }}</td>
-        </tr>
-        @if (estDeplie(jour)) {
-        <tr class="journal" data-selector="synthese-journal">
-          <td colspan="3">
-            @for (pointage of jour.pointages; track $index) {
-            <span class="mr-3 whitespace-nowrap text-body-sm" data-selector="synthese-pointage">{{ libelleDuPointage(pointage) }}</span>
-            }
-          </td>
-        </tr>
-        } }
-      </tbody>
-    </table>
+            </td>
+            <td class="colonne-duree" data-selector="synthese-duree-cell">{{ dureeDuJour(jour) }}</td>
+          </tr>
+          @if (estDeplie(jour)) {
+          <tr class="journal" data-selector="synthese-journal">
+            <td colspan="3">
+              @for (pointage of jour.pointages; track $index) {
+              <span class="pointage" data-selector="synthese-pointage">{{ libelleDuPointage(pointage) }}</span>
+              }
+            </td>
+          </tr>
+          } }
+        </tbody>
+      </table>
+    </div>
+    <p class="total" data-selector="synthese-total">{{ libelles.total(vue.releve.total) }}</p>
   </div>
-  <p class="mt-4 text-right text-section" data-selector="synthese-total">{{ libelles.total(vue.releve.total) }}</p>
   } }
 </main>
