@@ -30,7 +30,17 @@ import { PupitreSynchronization } from './PupitreSynchronization';
 
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+  operateurs: [
+    {
+      id: 'jean',
+      nom: 'Dupont',
+      prenom: 'Jean',
+      matricule: '049',
+      etat: 'ABSENT',
+      postes: [{ id: 'tour', libelle: 'Tour' }],
+      evenements: [],
+    },
+  ],
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
@@ -1279,7 +1289,7 @@ describe('AtelierCoordinator', () => {
       ...referenceFixture,
       operateurs: [
         ...referenceFixture.operateurs,
-        { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', etat: 'ABSENT', postes: [] },
+        { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', etat: 'ABSENT', postes: [], evenements: [] },
       ],
     });
   };

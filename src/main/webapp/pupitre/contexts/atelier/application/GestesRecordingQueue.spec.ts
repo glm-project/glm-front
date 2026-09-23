@@ -21,7 +21,15 @@ const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
     operateurs: [
-      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [{ id: 'tour', libelle: 'Tour' }] },
+      {
+        id: 'jean',
+        nom: 'Dupont',
+        prenom: 'Jean',
+        matricule: '049',
+        etat: 'ABSENT',
+        postes: [{ id: 'tour', libelle: 'Tour' }],
+        evenements: [],
+      },
     ],
     suivis: [
       {

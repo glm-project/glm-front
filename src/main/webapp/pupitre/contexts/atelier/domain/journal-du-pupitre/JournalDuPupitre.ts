@@ -11,6 +11,7 @@ export interface OperateurDuPupitre {
   readonly matricule?: string;
   readonly etat: EtatDePresence;
   readonly postes: readonly { readonly id: string; readonly libelle: string }[];
+  readonly evenements: readonly string[];
 }
 
 export interface ActiviteDuPupitre {
@@ -126,6 +127,7 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
           operateurs: journal.referentiel.operateurs.map(operateur => ({
             ...operateur,
             postes: operateur.postes.map(poste => ({ ...poste })),
+            evenements: [...operateur.evenements],
           })),
           suivis: journal.referentiel.suivis.map(suivi => ({
             ...suivi,
@@ -143,6 +145,9 @@ const isRefusalAmong =
 
 const isAcceptedPointageOf = (evenement: EvenementDuJournal, suiviId: string): boolean =>
   evenement.etat === 'ACCEPTE' && evenement.geste.nature === 'POINTAGE' && evenement.geste.suiviId === suiviId;
+
+const isAcceptedPresenceOf = (evenement: EvenementDuJournal, operateurId: string): boolean =>
+  evenement.etat === 'ACCEPTE' && evenement.geste.nature !== 'POINTAGE' && evenement.geste.operateurId === operateurId;
 
 const opensTheDay = (evenement: EvenementDuJournal, arriveeId: string, operateurId: string): boolean =>
   evenement.geste.id === arriveeId
@@ -175,6 +180,10 @@ export class EvenementsDuJournal {
 
   acceptedPointageIds(suiviId: string): readonly string[] {
     return this.evenements.filter(evenement => isAcceptedPointageOf(evenement, suiviId)).map(evenement => evenement.geste.id);
+  }
+
+  acceptedPresenceIds(operateurId: string): readonly string[] {
+    return this.evenements.filter(evenement => isAcceptedPresenceOf(evenement, operateurId)).map(evenement => evenement.geste.id);
   }
 }
 

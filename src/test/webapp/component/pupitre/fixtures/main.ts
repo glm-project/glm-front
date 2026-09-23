@@ -77,6 +77,7 @@ const referentielFixture = {
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },
       ],
+      evenements: [],
     },
   ],
   suivis: baseSuivis,

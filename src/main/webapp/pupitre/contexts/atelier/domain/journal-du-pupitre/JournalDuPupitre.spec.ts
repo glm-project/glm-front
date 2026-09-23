@@ -26,7 +26,7 @@ describe('JournalDuPupitre', () => {
     const journal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
         suivis: [
           {
             id: 'suivi-1',
@@ -51,7 +51,15 @@ describe('JournalDuPupitre', () => {
       connecte: true,
       referentiel: {
         operateurs: [
-          { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [{ id: 'p1', libelle: 'Poste 1' }] },
+          {
+            id: 'jean',
+            nom: 'Dupont',
+            prenom: 'Jean',
+            matricule: '049',
+            etat: 'ABSENT',
+            postes: [{ id: 'p1', libelle: 'Poste 1' }],
+            evenements: ['arr-1'],
+          },
         ],
         suivis: [
           {
@@ -83,6 +91,7 @@ describe('JournalDuPupitre', () => {
     expect(snapshot).toEqual(journal);
     expect(snapshot).not.toBe(journal);
     expect(snapshot.referentiel?.operateurs[0]?.postes).not.toBe(journal.referentiel?.operateurs[0]?.postes);
+    expect(snapshot.referentiel?.operateurs[0]?.evenements).not.toBe(journal.referentiel?.operateurs[0]?.evenements);
     expect(snapshot.referentiel?.suivis[0]?.activites).not.toBe(journal.referentiel?.suivis[0]?.activites);
   });
 });

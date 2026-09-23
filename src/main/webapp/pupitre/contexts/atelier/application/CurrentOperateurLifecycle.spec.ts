@@ -26,7 +26,15 @@ import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { FraicheurDuReferentiel } from './FraicheurDuReferentiel';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
-const operateurFixture: OperateurDuPupitre = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [] };
+const operateurFixture: OperateurDuPupitre = {
+  id: 'jean',
+  nom: 'Dupont',
+  prenom: 'Jean',
+  matricule: '049',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
 
 const operateurAjouteFixture: OperateurDuPupitre = {
@@ -36,6 +44,7 @@ const operateurAjouteFixture: OperateurDuPupitre = {
   matricule: '050',
   etat: 'ABSENT',
   postes: [],
+  evenements: [],
 };
 const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050' };
 

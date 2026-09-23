@@ -16,7 +16,7 @@ const gestureFixture: GesteDAtelier = {
 };
 const acceptedGestureFixture = { geste: gestureFixture, etat: 'ACCEPTE', journeeOuverte: true } as const;
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [] }],
+  operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
   suivis: [
     {
       id: 'workshop-item-1',

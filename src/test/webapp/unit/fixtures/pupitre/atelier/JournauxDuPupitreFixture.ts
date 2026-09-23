@@ -37,16 +37,21 @@ const appendBarrier = (): AppendBarrier => {
   return { started, ...callbacks, wait: () => waiting };
 };
 
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => {
-  const journal = new EvenementsDuJournal(evenements);
-  return {
-    ...referentiel,
-    suivis: referentiel.suivis.map(suivi => ({
-      ...suivi,
-      evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
-    })),
-  };
-};
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
+  ...referentiel,
+  suivis: referentiel.suivis.map(suivi => ({
+    ...suivi,
+    evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
+  })),
+});
+
+const includeAcceptedPresences = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
+  ...referentiel,
+  operateurs: referentiel.operateurs.map(operateur => ({
+    ...operateur,
+    evenements: [...new Set([...operateur.evenements, ...journal.acceptedPresenceIds(operateur.id)])],
+  })),
+});
 
 export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly entreprises = new Map<string, JournalDuPupitre>();
@@ -77,7 +82,10 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     }));
   }
   override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
-    return this.update(entreprise, state => ({ ...state, referentiel: includeAcceptedPointages(referentiel, state.evenements) }));
+    return this.update(entreprise, state => {
+      const journal = new EvenementsDuJournal(state.evenements);
+      return { ...state, referentiel: includeAcceptedPresences(includeAcceptedPointages(referentiel, journal), journal) };
+    });
   }
   override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({

@@ -76,6 +76,9 @@ const isProjectablePresence = (evenement: EvenementDuJournal, geste: GesteDAteli
 const cleDeTransitionFor = (geste: GesteDArrivee | GesteDePresence): CleDeTransition =>
   geste.nature === 'ARRIVEE' ? 'ARRIVEE' : geste.type;
 
+const isAlreadyProjectedOrUnrelatedPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | GesteDePresence): boolean =>
+  operateur.id !== geste.operateurId || operateur.evenements.includes(geste.id);
+
 const applyPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | GesteDePresence): OperateurDuPupitre => {
   const etatSuivant = TRANSITIONS_DE_PRESENCE[operateur.etat][cleDeTransitionFor(geste)];
   return etatSuivant === undefined ? operateur : { ...operateur, etat: etatSuivant };
@@ -88,7 +91,7 @@ const applyEvenementDePresence = (operateurs: OperateurDuPupitre[], evenement: E
   }
   return applyToMatching(
     operateurs,
-    operateur => operateur.id === geste.operateurId,
+    operateur => !isAlreadyProjectedOrUnrelatedPresence(operateur, geste),
     operateur => applyPresence(operateur, geste),
   );
 };

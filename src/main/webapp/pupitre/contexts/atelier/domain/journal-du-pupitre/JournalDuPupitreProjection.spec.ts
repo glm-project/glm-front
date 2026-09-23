@@ -28,6 +28,7 @@ const operateurJeanFixture: OperateurDuPupitre = {
   prenom: 'Jean',
   etat: 'ABSENT',
   postes: [],
+  evenements: [],
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [operateurJeanFixture],
@@ -207,6 +208,14 @@ describe('JournalDuPupitreProjection', () => {
     thenOperatorStateIs(projection, 'jean', 'ABSENT');
   });
 
+  it('should leave an operator’s current state alone when an old departure is already reflected by the referential', () => {
+    const state = givenPresenceEventsAlreadyReflected('PRESENT', ['ancien-depart'], [givenAcceptedPresence('DEPART', 'ancien-depart')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'PRESENT');
+  });
+
   const givenEvents = (evenements: EvenementDuJournal[]): JournalDuPupitre => ({
     referentiel: referenceFixture,
     evenements,
@@ -217,6 +226,19 @@ describe('JournalDuPupitreProjection', () => {
     referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat }] },
     evenements,
     connecte: true,
+  });
+  const givenPresenceEventsAlreadyReflected = (
+    etat: EtatDePresence,
+    evenementsDejaReflechis: readonly string[],
+    evenements: EvenementDuJournal[],
+  ): JournalDuPupitre => ({
+    referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat, evenements: evenementsDejaReflechis }] },
+    evenements,
+    connecte: true,
+  });
+  const givenAcceptedPresence = (type: TypeDePresence, id: string): EvenementDuJournal => ({
+    geste: { ...gestePresence(type, 'jean'), id },
+    etat: 'ACCEPTE',
   });
   const gestePresence = (type: TypeDePresence, operateurId: string): GesteDePresence => ({
     nature: 'PRESENCE',

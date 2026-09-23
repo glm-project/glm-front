@@ -254,8 +254,8 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
     expect(reference.operateurs).toEqual([
-      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'EN_PAUSE', postes: [] },
-      { id: 'marie', nom: 'Martin', prenom: 'Marie', etat: 'ABSENT', postes: [{ id: 'tour', libelle: 'Tour' }] },
+      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'EN_PAUSE', postes: [], evenements: [] },
+      { id: 'marie', nom: 'Martin', prenom: 'Marie', etat: 'ABSENT', postes: [{ id: 'tour', libelle: 'Tour' }], evenements: [] },
     ]);
     expect(reference.suivis[0]).toEqual({
       id: 'piece',

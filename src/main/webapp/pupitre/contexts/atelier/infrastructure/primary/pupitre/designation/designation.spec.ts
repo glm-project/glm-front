@@ -33,7 +33,7 @@ interface KeyFixture {
 }
 
 const referentielFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
   suivis: [],
 };
 
