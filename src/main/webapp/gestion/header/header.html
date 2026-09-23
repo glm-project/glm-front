@@ -1,16 +1,51 @@
-<mat-toolbar color="primary">
-  <span data-selector="header-heading">{{ heading() }}</span>
-  <span class="flex-auto"></span>
-  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu" data-selector="gestion-menu">
-    <glm-icon name="menu" />
-  </button>
-  <mat-menu #menu="matMenu">
-    <a mat-menu-item routerLink="/" data-selector="gestion-navigation-supervision">Supervision atelier</a>
-    <a mat-menu-item routerLink="/atelier" data-selector="gestion-navigation-atelier">Atelier</a>
-    <a mat-menu-item routerLink="/moules-et-of" data-selector="gestion-navigation-elements">Moules et OF</a>
-    <a mat-menu-item routerLink="/postes-de-travail" data-selector="gestion-navigation-postes">Postes de travail</a>
-    <a mat-menu-item routerLink="/operateurs" data-selector="gestion-navigation-operateurs">Opérateurs</a>
-  </mat-menu>
-  <img alt="Angular logo" class="angular-logo" ngSrc="content/images/AngularLogo.svg" width="50" height="50" priority />
-  <button mat-raised-button (click)="logout()" data-selector="gestion-logout">Logout</button>
-</mat-toolbar>
+<header class="barre">
+  <div class="mx-auto flex h-full max-w-7xl items-center gap-8 px-4 md:px-8">
+    <a routerLink="/" class="marque" [attr.aria-label]="libelles.accueil(heading())">
+      <span class="marque-nom" data-selector="header-heading">{{ heading() }}</span>
+      <span class="marque-produit">{{ libelles.produit }}</span>
+    </a>
+
+    <nav
+      id="gestion-navigation"
+      class="navigation"
+      [class.navigation-ouverte]="menuOuvert()"
+      [attr.aria-label]="libelles.navigation"
+      data-selector="gestion-navigation"
+    >
+      <ul class="navigation-liste">
+        @for (destination of destinations; track destination.route) {
+        <li>
+          <a
+            class="lien"
+            [routerLink]="destination.route"
+            routerLinkActive="lien-actif"
+            [routerLinkActiveOptions]="{ exact: destination.exacte }"
+            ariaCurrentWhenActive="page"
+            [attr.data-selector]="destination.selecteur"
+            (click)="fermerMenu()"
+            >{{ destination.libelle }}</a
+          >
+        </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-1">
+      <button type="button" class="action" [attr.aria-label]="libelles.deconnexion" data-selector="gestion-logout" (click)="logout()">
+        <glm-icon name="logOut" />
+        <span class="action-libelle" aria-hidden="true">{{ libelles.deconnexion }}</span>
+      </button>
+      <button
+        type="button"
+        class="action bascule-menu"
+        [attr.aria-label]="libelles.menu"
+        [attr.aria-expanded]="menuOuvert()"
+        aria-controls="gestion-navigation"
+        data-selector="gestion-menu"
+        (click)="basculerMenu()"
+      >
+        <glm-icon [name]="menuOuvert() ? 'x' : 'menu'" />
+      </button>
+    </div>
+  </div>
+</header>

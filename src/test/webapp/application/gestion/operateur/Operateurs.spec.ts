@@ -78,7 +78,7 @@ describe('Operator referential in gestion', () => {
 
   it('should reach the operator referential from the gestion menu', () => {
     givenReferential();
-    whenOpeningFromTheMenu();
+    whenOpeningFromTheNavigation();
 
     thenOperateurReferentialIsEmpty();
   });
@@ -104,10 +104,9 @@ const whenVisitingOperateurs = (): void => {
   cy.viewport(1280, 900);
   cy.visit('/operateurs');
 };
-const whenOpeningFromTheMenu = (): void => {
+const whenOpeningFromTheNavigation = (): void => {
   cy.viewport(1280, 900);
   cy.visit('/');
-  cy.get(dataSelector('gestion-menu')).click();
   cy.get(dataSelector('gestion-navigation-operateurs')).click();
 };
 const whenReplacing = (selector: string, value: string): void => {

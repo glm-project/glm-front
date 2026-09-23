@@ -7,12 +7,12 @@ import { GestionHeader } from '../header/header';
 
 @Component({
   selector: 'glm-root',
-  host: { 'data-selector': 'gestion-shell' },
+  host: { 'data-selector': 'gestion-shell', class: 'flex min-h-dvh flex-col bg-canvas text-ink' },
   templateUrl: './app.html',
   imports: [RouterModule, GestionHeader],
 })
 export class App implements OnInit {
-  appName = signal('glmfront');
+  appName = signal('GLM');
   private readonly authentication = inject(AuthenticationPort);
   private readonly errorHandler = inject(ErrorHandler);
 

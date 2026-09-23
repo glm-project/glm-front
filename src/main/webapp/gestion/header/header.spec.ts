@@ -14,7 +14,7 @@ describe('Gestion header', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: '**', children: [] }]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: AuthenticationPort, useClass: InMemoryAuthentication },
       ],
@@ -39,22 +39,56 @@ describe('Gestion header', () => {
   });
 
   it.each([
-    ['gestion-navigation-supervision', '/', 'Supervision atelier'],
+    ['gestion-navigation-supervision', '/', 'Supervision'],
+    ['gestion-navigation-atelier', '/atelier', 'Atelier'],
+    ['gestion-navigation-elements', '/moules-et-of', 'Moules et OF'],
     ['gestion-navigation-postes', '/postes-de-travail', 'Postes de travail'],
     ['gestion-navigation-operateurs', '/operateurs', 'Opérateurs'],
-  ])('should offer the %s destination in the navigation menu', async (selector, href, label) => {
-    await whenOpeningMenu();
-
-    thenMenuLinksTo(selector, href, label);
+  ])('should offer the %s destination in the navigation', (selector, href, label) => {
+    thenNavigationLinksTo(selector, href, label);
   });
 
-  const whenOpeningMenu = async (): Promise<void> => {
-    const button = fixture.debugElement.query(By.css(dataSelector('gestion-menu'))).nativeElement as HTMLButtonElement;
-    button.click();
+  it('should unfold the navigation from its menu button', async () => {
+    await whenTogglingMenu();
+
+    thenMenuIsExpanded(true);
+  });
+
+  it('should fold the navigation again from its menu button', async () => {
+    await whenTogglingMenu();
+
+    await whenTogglingMenu();
+
+    thenMenuIsExpanded(false);
+  });
+
+  it('should fold the navigation once a destination is chosen', async () => {
+    await whenTogglingMenu();
+
+    await whenChoosing('gestion-navigation-postes');
+
+    thenMenuIsExpanded(false);
+  });
+
+  const whenTogglingMenu = async (): Promise<void> => {
+    menuButton().click();
     await fixture.whenStable();
   };
 
-  const thenMenuLinksTo = (selector: string, href: string, label: string): void => {
+  const whenChoosing = async (selector: string): Promise<void> => {
+    const link = fixture.debugElement.query(By.css(dataSelector(selector))).nativeElement as HTMLAnchorElement;
+    link.click();
+    await fixture.whenStable();
+  };
+
+  const menuButton = (): HTMLButtonElement =>
+    fixture.debugElement.query(By.css(dataSelector('gestion-menu'))).nativeElement as HTMLButtonElement;
+
+  const thenMenuIsExpanded = (expanded: boolean): void => {
+    expect(menuButton().getAttribute('aria-expanded')).toBe(String(expanded));
+  };
+
+  const thenNavigationLinksTo = (selector: string, href: string, label: string): void => {
     const link = document.querySelector(dataSelector(selector));
     expect(link?.getAttribute('href')).toBe(href);
     expect(link?.textContent).toContain(label);

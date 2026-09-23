@@ -28,7 +28,7 @@ describe('Gestion shell', () => {
   it('should have appName', async () => {
     await whenBootingTheShell();
 
-    thenItsNameIsGlmfront();
+    thenItsNameIsGlm();
   });
 
   it('should hold a bearer token once it has booted', async () => {
@@ -55,8 +55,8 @@ describe('Gestion shell', () => {
     comp = fixture.componentInstance;
   };
 
-  const thenItsNameIsGlmfront = (): void => {
-    expect(comp.appName()).toBe('glmfront');
+  const thenItsNameIsGlm = (): void => {
+    expect(comp.appName()).toBe('GLM');
   };
 
   const thenItHoldsABearerToken = (): void => {
