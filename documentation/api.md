@@ -42,7 +42,10 @@ exception described in [`authentication.md`](authentication.md).
 Routes reach the back end on the front's own origin, with no base URL configured anywhere. Development
 holds that through `proxy.conf.json`; a deployed pupitre holds it through `functions/api/_middleware.js`, the
 Cloudflare Pages Function that relays `/api/**` to the back-end origin its `API_ORIGIN` variable names, and
-that answers 500 rather than proxy anywhere when that variable is missing. Keep the front same-origin rather than
+that answers 500 rather than proxy anywhere when that variable is missing. `dev:gestion:hprod` swaps the
+development proxy for `proxy.hprod.conf.json`, which relays `/api/**` to `glm-supervision.pages.dev` and so
+through that Function; it builds with the `deployed` environment and the non-production Keycloak origin,
+because that back end accepts only tokens its own Keycloak issued. Keep the front same-origin rather than
 giving `ApiClient` an absolute origin: see [ADR 0034](adr/0034-proxy-the-api-at-the-edge.md) for what that
 buys and what it costs.
 

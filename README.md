@@ -33,6 +33,9 @@ npm run dev:gestion # http://localhost:9000
 npm run dev:pupitre # http://localhost:9001
 ```
 
+`npm run dev:gestion:hprod` serves gestion on http://localhost:9000 against the non-production instance: its
+API through `glm-supervision.pages.dev` and its Keycloak, with no local back end.
+
 ## Documentation
 
 Conventions, one document per topic:
