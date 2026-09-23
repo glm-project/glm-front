@@ -22,12 +22,14 @@ const operateurFixture = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
+  etat: 'EN_PAUSE',
   postes: [],
 } satisfies RestOperateurDuPupitre;
 const operateurSansMatriculeFixture = {
   id: 'marie',
   nom: 'Martin',
   prenom: 'Marie',
+  etat: 'ABSENT',
   postes: [{ id: 'tour', libelle: 'Tour' }],
 } satisfies RestOperateurDuPupitre;
 const suiviSansReferenceFixture = {
