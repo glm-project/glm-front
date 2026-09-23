@@ -70,7 +70,12 @@ const TRANSITIONS_DE_PRESENCE: Record<EtatDePresence, Partial<Record<CleDeTransi
   EN_PAUSE: { REPRISE: 'PRESENT', DEPART: 'ABSENT' },
 };
 
+// Mutant equivalent sur le garde-fou POINTAGE ci-dessous (ADR 0024) : TypeDePointage (DEBUT/NON_CONFORMITE/FIN) et
+// CleDeTransition (ARRIVEE/PAUSE/REPRISE/DEPART) sont des alphabets disjoints. Meme si un pointage franchissait ce
+// garde-fou, cleDeTransitionFor(geste).type ne correspondrait jamais a une cle de TRANSITIONS_DE_PRESENCE, et
+// applyPresence rend alors l'operateur inchange (etatSuivant === undefined). Aucun etat observable ne differe.
 const isProjectablePresence = (evenement: EvenementDuJournal, geste: GesteDAtelier): geste is GesteDArrivee | GesteDePresence =>
+  // Stryker disable next-line ConditionalExpression
   !(evenement.etat === 'REFUSE' || geste.nature === 'POINTAGE');
 
 const cleDeTransitionFor = (geste: GesteDArrivee | GesteDePresence): CleDeTransition =>

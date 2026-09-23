@@ -68,6 +68,26 @@ const departJeanFixture: GesteDAtelier = {
   type: 'DEPART',
   implicite: false,
 };
+const operateurMarieFixture: OperateurDuPupitre = {
+  id: 'marie',
+  nom: 'Martin',
+  prenom: 'Marie',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
+const referenceAvecDeuxOperateursFixture: ReferentielDuPupitre = {
+  operateurs: [operateurJeanFixture, operateurMarieFixture],
+  suivis: [],
+};
+const departMarieFixture: GesteDAtelier = {
+  ...arriveeJeanFixture,
+  id: 'depart-marie',
+  nature: 'PRESENCE',
+  type: 'DEPART',
+  implicite: false,
+  operateurId: 'marie',
+};
 
 const adapters = [
   ['local storage', () => TestBed.inject(IndexedDbJournauxDuPupitre)],
@@ -165,6 +185,24 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     thenOperatorEventsAre(state, 'jean', ['arrivee-jean']);
   });
 
+  it('should not mark an accepted pointage as one of the operator’s presence events', async () => {
+    await givenACompanyReferenceWithOperator();
+    await givenAnAcceptedPointageForTheOperator();
+
+    const state = await whenSavingAFreshReferenceWithOperator();
+
+    thenOperatorEventsAre(state, 'jean', []);
+  });
+
+  it('should keep an operator’s presence events isolated from another operator’s accepted gesture', async () => {
+    await givenACompanyReferenceWithTwoOperators();
+    await givenAnAcceptedDepartureForMarie();
+
+    const state = await whenSavingAFreshReferenceWithTwoOperators();
+
+    thenOperatorEventsAre(state, 'jean', []);
+  });
+
   it('should record disconnected state when synchronization marks the company offline', async () => {
     await givenACompanyReference();
 
@@ -202,6 +240,17 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   const givenAnAcceptedArrivalAndAPendingDeparture = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [arriveeJeanFixture, departJeanFixture]);
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: arriveeJeanFixture, etat: 'ACCEPTE', journeeOuverte: true });
+  };
+  const givenAnAcceptedPointageForTheOperator = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [pointageFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageFixture, etat: 'ACCEPTE' });
+  };
+  const givenACompanyReferenceWithTwoOperators = async (): Promise<void> => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceAvecDeuxOperateursFixture);
+  };
+  const givenAnAcceptedDepartureForMarie = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [departMarieFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: departMarieFixture, etat: 'ACCEPTE' });
   };
 
   const completeOpeningFixture = (): JournalDuPupitre => ({
@@ -244,6 +293,8 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     journal.saveReferentiel(Entreprise.of('entreprise-a'), refreshedReferenceFixture);
   const whenSavingAFreshReferenceWithOperator = (): Promise<JournalDuPupitre> =>
     journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceRafraichieAvecOperateurFixture);
+  const whenSavingAFreshReferenceWithTwoOperators = (): Promise<JournalDuPupitre> =>
+    journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceAvecDeuxOperateursFixture);
   const whenMarkingCompanyDisconnected = (company: string): Promise<JournalDuPupitre> => journal.markDisconnected(Entreprise.of(company));
   const whenSavingARefusalWhileAppending = async (refusal: EvenementDuJournal): Promise<void> => {
     await Promise.all([

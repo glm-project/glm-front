@@ -50,6 +50,14 @@ const debutGesteFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
 };
 const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
+const operateurMarieFixture: OperateurDuPupitre = {
+  id: 'marie',
+  nom: 'Martin',
+  prenom: 'Marie',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
 
 describe('JournalDuPupitreProjection', () => {
   it('should reconstruct an offline activity and its original starting time', () => {
@@ -208,6 +216,15 @@ describe('JournalDuPupitreProjection', () => {
     thenOperatorStateIs(projection, 'jean', 'ABSENT');
   });
 
+  it('should apply an arrival only to the targeted operator when another operator is also absent', () => {
+    const state = givenPresenceEventsForTwoOperators('ABSENT', 'ABSENT', [givenArrivee('marie')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'marie', 'PRESENT');
+    thenOperatorStateIs(projection, 'jean', 'ABSENT');
+  });
+
   it('should leave an operator’s current state alone when an old departure is already reflected by the referential', () => {
     const state = givenPresenceEventsAlreadyReflected('PRESENT', ['ancien-depart'], [givenAcceptedPresence('DEPART', 'ancien-depart')]);
 
@@ -226,6 +243,25 @@ describe('JournalDuPupitreProjection', () => {
     referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat }] },
     evenements,
     connecte: true,
+  });
+  const givenPresenceEventsForTwoOperators = (
+    etatJean: EtatDePresence,
+    etatMarie: EtatDePresence,
+    evenements: EvenementDuJournal[],
+  ): JournalDuPupitre => ({
+    referentiel: {
+      ...referenceFixture,
+      operateurs: [
+        { ...operateurJeanFixture, etat: etatJean },
+        { ...operateurMarieFixture, etat: etatMarie },
+      ],
+    },
+    evenements,
+    connecte: true,
+  });
+  const givenArrivee = (operateurId: string): EvenementDuJournal => ({
+    geste: { ...arriveeGesteFixture, operateurId },
+    etat: 'EN_ATTENTE',
   });
   const givenPresenceEventsAlreadyReflected = (
     etat: EtatDePresence,
