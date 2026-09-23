@@ -16,6 +16,8 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 **Vue de pointage** : projection personnelle prête à rendre des éléments de l'atelier, regroupés et ordonnés avec leur numéro résolu, l'activité de l'opérateur désigné, sa catégorie et sa durée figée. Elle ne porte ni libellé d'écran ni choix de style.
 
+**État de présence** : position de l'opérateur dans sa journée de travail — absent, présent ou en pause. Le serveur l'établit, le journal local le fait avancer par les gestes non encore publiés, et c'est lui qui dit quelles commandes globales sont légales. Il ne se confond pas avec l'état d'atelier d'un élément, ni avec la connexion observée du pupitre.
+
 **Numéro d'élément** : référence attribuée par l'entreprise lorsqu'elle existe, sinon nom généré de l'élément. C'est l'identifiant visible et la clé du tri naturel sur la vue de pointage.
 
 **Journal du pupitre** : document durable propre à une entreprise, qui conserve le dernier référentiel complet, les gestes dans leur ordre d'acceptation locale, leur résultat de publication et l'état de connexion observé. C'est la racine de cohérence locale; le référentiel qu'il contient reste un modèle de lecture et non un agrégat du pupitre.
@@ -37,6 +39,9 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - Lorsqu'une ouverture exige de choisir parmi plusieurs postes habilités, la fenêtre opérateur retourne explicitement ce besoin. La pop-up ne conserve qu'une attente éphémère, et le domaine revalide la fenêtre et le poste au choix final; fermer ou laisser expirer cette attente ne produit aucun geste.
 - Un pointage sans choix de poste reçoit son identifiant et son heure à la pression sur sa cible. Avec une pop-up multiposte, ils naissent au choix final du poste; ouvrir puis abandonner la pop-up ne crée aucune identité de geste.
 - Une fenêtre ouverte réconcilie chaque nouvelle version du journal de son entreprise sans changer l'opérateur désigné ni son instant d'observation. La projection optimiste disparaît ainsi dès qu'un geste de cette fenêtre est refusé.
+- La fenêtre expose l'état de présence **vivant** de l'opérateur désigné : il se relit du référentiel projeté à chaque réconciliation, contrairement à l'instant d'ouverture que les durées figent. Un opérateur absent du référentiel projeté est lu absent; il n'existe pas d'état inconnu.
+- Seules les commandes globales que cet état rend légales sont offertes. Depuis l'état absent les trois le restent : l'assurance d'arrivée ouvre la journée avant le geste demandé, ce qui les rend toutes légales. Griser ce que l'automate interdit depuis l'état brut régresserait sur ce comportement.
+- La projection replie les gestes de présence locaux non refusés sur l'état de l'opérateur, en suivant l'automate du serveur; une transition illégale laisse l'état inchangé. Un geste déjà reflété par le référentiel n'est plus rejoué — le journal n'est jamais purgé, et sans ce marqueur le départ de la veille écraserait l'état du jour.
 - La fenêtre expose au plus le dernier refus d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
 - Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
