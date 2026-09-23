@@ -42,6 +42,9 @@
   --spacing-touch: 44px;
   --spacing-touch-lg: 52px;
 
+  --radius-control: 0.5rem;
+  --radius-surface: 0.75rem;
+
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }

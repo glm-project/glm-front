@@ -17,6 +17,9 @@ reading distance.
 `@theme static` is required. Tailwind scans templates, not stylesheets, while Material and component CSS read
 tokens through `var()`. Static publication keeps every role available even when no utility currently names it.
 
+Two radius roles shape every surface: `radius-control` (buttons, inputs, segmented filters) and
+`radius-surface` (cards, dialogs). Material reads them through its bridge.
+
 `--font-sans` is the page family and uses a system stack. `--font-mono` is the family for a character-by-character
 value the reader has to transcribe, such as the pupitre's enrolment code. Both are system stacks: boot documents
 load no remote font.
@@ -46,6 +49,13 @@ binding is required, justify the narrow tooling directive in the commit or MR.
 
 State colours also serve as text on `sunken`; preserve their measured contrast and rerun the token test after
 changing any colour.
+
+## Gestion shares its screen surfaces
+
+`gestion/shared/design-system/infrastructure/primary/surfaces.css` owns what every gestion screen repeats:
+the card that carries a table and its paginator, the table scroller, the segmented filter, the state dot, the
+type tag, the row actions and the back link. Its classes are prefixed `gestion-` so they never meet a
+component's local class. A screen keeps only its own column widths and specific drawings.
 
 ## Only rendering code depends on the design system
 

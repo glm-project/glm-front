@@ -30,7 +30,8 @@
             "styles": [
               "src/main/webapp/styles.css",
               "@angular/material/prebuilt-themes/azure-blue.css",
-              "src/main/webapp/gestion/shared/design-system/infrastructure/primary/material-bridge.css"
+              "src/main/webapp/gestion/shared/design-system/infrastructure/primary/material-bridge.css",
+              "src/main/webapp/gestion/shared/design-system/infrastructure/primary/surfaces.css"
             ],
             "scripts": [],
             "allowedCommonJsDependencies": ["base64-js", "js-sha256", "keycloak-js"]

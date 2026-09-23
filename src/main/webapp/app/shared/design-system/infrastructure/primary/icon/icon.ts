@@ -1,8 +1,40 @@
 import { Component, input } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideMenu, lucidePencil, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
+import {
+  lucideArrowLeft,
+  lucideChevronDown,
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideCircleDashed,
+  lucideClock,
+  lucideLogOut,
+  lucideMenu,
+  lucidePencil,
+  lucidePlus,
+  lucideRefreshCw,
+  lucideSearch,
+  lucideTrash2,
+  lucideTriangleAlert,
+  lucideX,
+} from '@ng-icons/lucide';
 
-const DRAWINGS = { menu: lucideMenu, plus: lucidePlus, pencil: lucidePencil, trash2: lucideTrash2, x: lucideX };
+const DRAWINGS = {
+  arrowLeft: lucideArrowLeft,
+  chevronDown: lucideChevronDown,
+  chevronLeft: lucideChevronLeft,
+  chevronRight: lucideChevronRight,
+  circleDashed: lucideCircleDashed,
+  clock: lucideClock,
+  logOut: lucideLogOut,
+  menu: lucideMenu,
+  plus: lucidePlus,
+  pencil: lucidePencil,
+  refresh: lucideRefreshCw,
+  search: lucideSearch,
+  trash2: lucideTrash2,
+  triangleAlert: lucideTriangleAlert,
+  x: lucideX,
+};
 
 export type IconName = keyof typeof DRAWINGS;
 
