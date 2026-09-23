@@ -1,14 +1,4 @@
 :host {
-  --mat-dialog-subhead-font: var(--font-sans);
-  --mat-dialog-supporting-text-font: var(--font-sans);
-  --mat-button-filled-label-text-font: var(--font-sans);
-  --mat-button-outlined-label-text-font: var(--font-sans);
-  --mat-button-text-label-text-font: var(--font-sans);
-  --mat-table-header-headline-font: var(--font-sans);
-  --mat-table-row-item-label-text-font: var(--font-sans);
   display: block;
   color: var(--color-ink);
-}
-.table-scroll {
-  overflow-x: auto;
 }

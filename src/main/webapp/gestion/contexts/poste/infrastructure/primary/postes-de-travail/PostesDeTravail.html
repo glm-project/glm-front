@@ -1,26 +1,26 @@
-<main class="mx-auto max-w-6xl p-4 text-ink md:p-8" aria-labelledby="postes-heading">
-  <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="postes-heading">
+  <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 id="postes-heading" class="text-title">Postes de travail</h1>
-      <p class="mt-2 text-body text-ink-muted">Configurez les postes et leurs coûts horaires pour votre atelier.</p>
+      <p class="mt-1 max-w-3xl text-body text-ink-muted">Configurez les postes et leurs coûts horaires pour votre atelier.</p>
     </div>
     <button mat-flat-button (click)="openForm()" [disabled]="etat().chargement" data-selector="postes-new">
       <glm-icon name="plus" /> Nouveau poste
     </button>
   </header>
 
-  <section [attr.aria-busy]="etat().chargement" aria-label="Référentiel des postes de travail">
+  <section class="gestion-carte" [attr.aria-busy]="etat().chargement" aria-label="Référentiel des postes de travail">
     @if (etat().chargement) {
-    <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="postes-loading">Chargement des postes de travail…</p>
+    <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">Chargement des postes de travail…</p>
     } @else if (etat().echec) {
-    <div role="alert" class="py-12 text-center" data-selector="postes-error">
+    <div role="alert" class="py-16 text-center" data-selector="postes-error">
       <p class="mb-4 text-body text-nc">Impossible de charger les postes. Vérifiez la connexion puis réessayez.</p>
       <button mat-stroked-button (click)="reload()" data-selector="postes-retry">Réessayer</button>
     </div>
     } @else if (etat().totalElementsCount === 0) {
-    <div class="empty-state text-center" data-selector="postes-empty">
+    <div class="px-6 py-16 text-center" data-selector="postes-empty">
       <h2 class="text-section">Aucun poste de travail</h2>
-      <p class="mx-auto mb-6 mt-3 max-w-lg text-body text-ink-muted">
+      <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">
         Ajoutez le premier poste pour décrire les machines et les emplacements de votre atelier.
       </p>
       <button mat-flat-button (click)="openForm()" data-selector="postes-empty-create">
@@ -28,7 +28,7 @@
       </button>
     </div>
     } @else {
-    <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des postes, défilement horizontal disponible">
+    <div class="gestion-table" tabindex="0" role="region" aria-label="Tableau des postes, défilement horizontal disponible">
       <table mat-table [dataSource]="etat().postes" aria-label="Postes de travail">
         <ng-container matColumnDef="libelle">
           <th mat-header-cell *matHeaderCellDef scope="col">Libellé</th>
@@ -40,27 +40,31 @@
         </ng-container>
         <ng-container matColumnDef="coutHoraire">
           <th mat-header-cell *matHeaderCellDef scope="col">Coût horaire</th>
-          <td mat-cell *matCellDef="let poste" data-selector="poste-cout-cell">{{ formatCout(poste.coutHoraire) }}</td>
+          <td mat-cell *matCellDef="let poste" [class.text-ink-muted]="poste.coutHoraire === undefined" data-selector="poste-cout-cell">
+            {{ formatCout(poste.coutHoraire) }}
+          </td>
         </ng-container>
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef scope="col">Actions</th>
+          <th mat-header-cell *matHeaderCellDef scope="col"><span class="sr-only">Actions</span></th>
           <td mat-cell *matCellDef="let poste">
-            <button
-              mat-icon-button
-              (click)="openForm(poste)"
-              [attr.aria-label]="'Modifier ' + poste.libelle.value"
-              data-selector="poste-edit"
-            >
-              <glm-icon name="pencil" />
-            </button>
-            <button
-              mat-icon-button
-              (click)="confirmDeletion(poste)"
-              [attr.aria-label]="'Supprimer ' + poste.libelle.value"
-              data-selector="poste-delete"
-            >
-              <glm-icon name="trash2" />
-            </button>
+            <div class="gestion-actions">
+              <button
+                mat-icon-button
+                (click)="openForm(poste)"
+                [attr.aria-label]="'Modifier ' + poste.libelle.value"
+                data-selector="poste-edit"
+              >
+                <glm-icon name="pencil" />
+              </button>
+              <button
+                mat-icon-button
+                (click)="confirmDeletion(poste)"
+                [attr.aria-label]="'Supprimer ' + poste.libelle.value"
+                data-selector="poste-delete"
+              >
+                <glm-icon name="trash2" />
+              </button>
+            </div>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="colonnes"></tr>

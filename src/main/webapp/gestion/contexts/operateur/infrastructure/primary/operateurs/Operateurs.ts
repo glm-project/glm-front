@@ -61,7 +61,7 @@ export class Operateurs implements OnInit {
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
-  protected readonly colonnes = ['nom', 'prenom', 'matricule', 'natures', 'postes', 'tauxHoraire', 'actions'];
+  protected readonly colonnes = ['identite', 'matricule', 'natures', 'postes', 'tauxHoraire', 'actions'];
 
   ngOnInit(): void {
     this.reload();
