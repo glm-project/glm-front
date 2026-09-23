@@ -614,7 +614,7 @@ describe('Supervision atelier component', () => {
     await whenFilterClicked('supervision-filtre-anomalie');
 
     expect(displayedTexts('supervision-operateur-nom')).toEqual(['Durand Bob', 'Martin Alice']);
-    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual(['⚡ Sans affectation']);
+    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual(['Sans affectation']);
     expect(displayedTexts('supervision-indicateur-anomalies')).toHaveLength(2);
   });
 
@@ -914,12 +914,12 @@ describe('Supervision atelier component', () => {
     await givenDonneesDisplayed();
 
     thenWorkshopCountersMatch({
-      total: '(3)',
-      presents: '(1)',
-      enPause: '(1)',
-      absents: '(1)',
-      sansAffectation: '(1)',
-      anomalies: '(2)',
+      total: '3',
+      presents: '1',
+      enPause: '1',
+      absents: '1',
+      sansAffectation: '1',
+      anomalies: '2',
     });
   });
 
@@ -937,7 +937,7 @@ describe('Supervision atelier component', () => {
     await whenFilterClicked('supervision-filtre-sans-affectation');
 
     thenOperatorsAreDisplayed([{ nomComplet: 'Martin Alice', presence: 'Présent' }]);
-    expect(displayedText('supervision-filtre-sans-affectation')?.replace(/\s+/g, ' ').trim()).toBe('⚡ Sans affectation (1)');
+    expect(displayedText('supervision-filtre-sans-affectation')?.replace(/\s+/g, ' ').trim()).toBe('Sans affectation 1');
   });
 
   it('should toggle off active filter and restore full list', async () => {
@@ -991,7 +991,7 @@ describe('Supervision atelier component', () => {
 
   const thenOnlyThePresentIdleOperatorIsSansAffectation = (): void => {
     expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))?.textContent.trim()).toBe(
-      '⚡ Sans affectation',
+      'Sans affectation',
     );
     expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.textContent.trim()).toBe('Sans affectation');
     expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.getAttribute('aria-label')).toBe(

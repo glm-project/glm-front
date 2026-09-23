@@ -1,3 +1,4 @@
+import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { Instant } from '../../../domain/instant/Instant';
@@ -72,6 +73,7 @@ function correspondALaRecherche(supervise: OperateurSupervise, recherche: string
   templateUrl: './supervision-atelier.html',
   styleUrl: './supervision-atelier.css',
   host: { 'data-selector': 'supervision-atelier' },
+  imports: [Icon],
 })
 export class SupervisionAtelier {
   protected readonly libelles = LIBELLES_SUPERVISION;
