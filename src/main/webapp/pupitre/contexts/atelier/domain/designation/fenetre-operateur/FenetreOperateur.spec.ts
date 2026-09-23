@@ -652,21 +652,6 @@ describe('FenetreOperateur', () => {
     expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
   });
 
-  it('should indicate glmActif is true when the operator has no active activities', () => {
-    const inactiveJournal: JournalDuPupitre = {
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
-        suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
-      },
-    };
-    const inactiveWindow = givenAWindowOpenedOn(inactiveJournal);
-
-    const pointage = whenReadingPointage(inactiveWindow);
-
-    expect(pointage.glmActif).toBe(true);
-  });
-
   it('should capture arrival, implicit resumption and pointage when confirming a workstation choice', () => {
     const multiposte = givenAMultiWorkstationWindow();
 
@@ -1022,7 +1007,6 @@ describe('FenetreOperateur', () => {
     expect(pointage.ordresDeFabrication[1]?.isActive()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.isNonConforme()).toBe(false);
     expect(pointage.ordresDeFabrication[1]?.dureeMs()).toBe(0);
-    expect(pointage.glmActif).toBe(false);
   };
   const thenPointageTypesAre = (decision: DecisionDePointage, types: string[]): void => {
     expect(pointagesOf(decision).map(geste => geste.type)).toEqual(types);
@@ -1071,7 +1055,7 @@ describe('FenetreOperateur', () => {
     expect(pointage.moules[0]?.dureeMs()).toBe(0);
   };
   const thenPointageViewIsEmpty = (): void => {
-    expect(fenetre.pointage()).toEqual({ moules: [], ordresDeFabrication: [], glmActif: true });
+    expect(fenetre.pointage()).toEqual({ moules: [], ordresDeFabrication: [] });
   };
   const thenWindowIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);

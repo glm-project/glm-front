@@ -66,11 +66,6 @@
   </article>
 </ng-template>
 
-<aside class="glm" [class.glm--active]="vue().glmActif" data-selector="glm-band">
-  <strong class="text-section">{{ labels.glm }}</strong>
-  <span class="text-body">{{ vue().glmActif ? labels.glmActif : labels.glmInactif }}</span>
-</aside>
-
 <nav class="global-actions flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actionsGlobales">
   <button
     type="button"

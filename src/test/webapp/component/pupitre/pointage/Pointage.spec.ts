@@ -70,7 +70,6 @@ describe('Pointage screen in a browser', () => {
   };
   const thenTheCompleteScreenChromeIsVisible = (): void => {
     cy.get(dataSelector('header-operator')).should('contain.text', 'Dupont Jean');
-    cy.get(dataSelector('glm-band')).should('be.visible');
     cy.get(dataSelector('pause')).should('be.visible');
     cy.get(dataSelector('resume')).should('be.visible');
     cy.get(dataSelector('stop-all')).should('be.visible');

@@ -6,7 +6,6 @@ import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-ope
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
 import { EtatDePresence } from '../../../../domain/journal-du-pupitre/JournalDuPupitre';
-import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 import { Pointage } from './pointage';
 
 const pointageFixture: VueDePointage = {
@@ -15,7 +14,6 @@ const pointageFixture: VueDePointage = {
     new ElementDePointage('of-204', NumeroDElement.assigned('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
     new ElementDePointage('of-generated', NumeroDElement.generated('OF-2026-000042'), undefined),
   ],
-  glmActif: false,
 };
 
 describe('Pointage screen', () => {
@@ -46,18 +44,18 @@ describe('Pointage screen', () => {
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
   });
 
-  it('should render the two workshop zones, personal states, frozen durations and inactive GLM', async () => {
+  it('should render the two workshop zones, personal states, frozen durations', async () => {
     await whenRendering();
 
     thenThePersonalPointageViewIsRendered();
   });
 
-  it('should hide empty zones and light GLM when no element is active', async () => {
+  it('should hide empty zones when no element is active', async () => {
     givenAnEmptyWorkshop();
 
     await whenRendering();
 
-    thenOnlyActiveGlmRemains();
+    thenNoZoneIsRendered();
   });
 
   it('should disable both targets of only the pressed tile during acceptance', async () => {
@@ -201,7 +199,7 @@ describe('Pointage screen', () => {
   });
 
   const givenAnEmptyWorkshop = (): void => {
-    fixture.componentRef.setInput('vue', { moules: [], ordresDeFabrication: [], glmActif: true });
+    fixture.componentRef.setInput('vue', { moules: [], ordresDeFabrication: [] });
   };
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
@@ -261,12 +259,10 @@ describe('Pointage screen', () => {
     expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('BON');
     expect(requiredElement(root().querySelector(dataSelector('tile-moule-1015')), 'active tile').textContent).toContain('depuis 2 h 14');
     expect(requiredElement(root().querySelector(dataSelector('tile-of-generated')), 'inactive tile').textContent).toContain('DÉMARRER');
-    expect(requiredElement(root().querySelector(dataSelector('glm-band')), 'GLM').textContent).toContain(LIBELLES_POINTAGE.glmInactif);
   };
-  const thenOnlyActiveGlmRemains = (): void => {
+  const thenNoZoneIsRendered = (): void => {
     expect(root().querySelector(dataSelector('moules-zone'))).toBeNull();
     expect(root().querySelector(dataSelector('of-zone'))).toBeNull();
-    expect(requiredElement(root().querySelector(dataSelector('glm-band')), 'GLM').textContent).toContain(LIBELLES_POINTAGE.glmActif);
   };
   const thenOnlyThePressedTileIsBusy = (): void => {
     expect(targetsFor('moule-1015').every(target => target.disabled)).toBe(true);
