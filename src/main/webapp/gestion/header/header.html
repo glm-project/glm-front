@@ -1,8 +1,15 @@
 <header class="barre">
   <div class="mx-auto flex h-full max-w-7xl items-center gap-8 px-4 md:px-8">
     <a routerLink="/" class="marque" [attr.aria-label]="libelles.accueil(heading())">
-      <span class="marque-nom" data-selector="header-heading">{{ heading() }}</span>
-      <span class="marque-produit">{{ libelles.produit }}</span>
+      <svg class="marque-logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <rect class="marque-logo-fond" width="32" height="32" rx="8" />
+        <path class="marque-logo-moule" d="M6 7h9v4a5 5 0 0 0 0 10v4H6z" />
+        <path class="marque-logo-moule" d="M17 7h9v18h-9v-4a5 5 0 0 0 0-10z" />
+      </svg>
+      <span class="marque-texte">
+        <span class="marque-nom" data-selector="header-heading">{{ heading() }}</span>
+        <span class="marque-produit">{{ libelles.produit }}</span>
+      </span>
     </a>
 
     <nav

@@ -16,11 +16,32 @@
 .marque {
   display: flex;
   flex-shrink: 0;
-  align-items: baseline;
+  align-items: center;
   gap: 0.625rem;
   border-radius: var(--radius-control);
   color: var(--color-ink);
   text-decoration: none;
+}
+
+/* Un moule ouvert vu de profil : deux blocs de part et d'autre du plan de joint, l'empreinte à cheval. */
+.marque-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+}
+
+.marque-logo-fond {
+  fill: var(--color-accent);
+}
+
+.marque-logo-moule {
+  fill: var(--color-on-accent);
+}
+
+.marque-texte {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
 }
 
 .marque-nom {
