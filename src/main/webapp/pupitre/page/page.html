@@ -3,6 +3,7 @@
     heading="glmfront"
     [connected]="etatHorsLigne.connected()"
     [operateur]="designation.operateur()"
+    [presence]="designation.presence().etat"
     [message]="messageAtelier()"
     (finRequested)="finish()"
     (reinitialisationRequested)="askReset()"

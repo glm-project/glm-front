@@ -1,3 +1,4 @@
+import { EtatDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { dataSelector } from '@test/utils/DataSelector';
@@ -124,6 +125,29 @@ describe('Pupitre header', () => {
     thenThereIsNoLogo();
   });
 
+  it.each<[EtatDePresence, string]>([
+    ['ABSENT', 'Pas encore arrivé'],
+    ['PRESENT', 'Présent'],
+    ['EN_PAUSE', 'En pause'],
+  ])('should show the operator presence %s as "%s" under the name', async (etat, libelle) => {
+    givenAConnectedPupitre();
+    givenADesignatedOperator();
+    givenAPresence(etat);
+
+    await whenRenderingTheHeader();
+
+    thenItShowsThePresence(libelle);
+  });
+
+  it('should show no presence indicator without a designated operator', async () => {
+    givenAConnectedPupitre();
+    givenAPresence('PRESENT');
+
+    await whenRenderingTheHeader();
+
+    thenItShowsNoPresence();
+  });
+
   const givenAConnectedPupitre = (): void => {
     fixture.componentRef.setInput('connected', true);
   };
@@ -133,6 +157,9 @@ describe('Pupitre header', () => {
   };
   const givenADesignatedOperator = (): void => {
     fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
+  };
+  const givenAPresence = (etat: EtatDePresence): void => {
+    fixture.componentRef.setInput('presence', etat);
   };
   const givenACurrentRefusal = (): void => {
     fixture.componentRef.setInput('message', { contexte: '1015', message: "L'élément a été clôturé." });
@@ -213,6 +240,14 @@ describe('Pupitre header', () => {
 
   const thenThereIsNoLogo = (): void => {
     expect(logo()).toBeNull();
+  };
+
+  const thenItShowsThePresence = (libelle: string): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-presence'))?.textContent.trim()).toBe(libelle);
+  };
+
+  const thenItShowsNoPresence = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-presence'))).toBeNull();
   };
 
   const showsSign = (sign: string): boolean => {

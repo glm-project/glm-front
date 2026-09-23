@@ -202,6 +202,15 @@ describe('Pupitre page', () => {
     expect((element('resume') as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('should relay the operator presence to the header', () => {
+    givenPointage();
+
+    givenPresence('EN_PAUSE');
+    whenRenderingThePage();
+
+    thenHeaderPresenceIs('En pause');
+  });
+
   it('should consume the click following a refused page press and accept the next complete press', () => {
     givenPointage();
     givenTheNextPagePressIsRefused();
@@ -354,6 +363,9 @@ describe('Pupitre page', () => {
 
   const thenHeaderMessageIs = (expected: string): void => {
     expect(element('header-message').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+  const thenHeaderPresenceIs = (expected: string): void => {
+    expect(element('header-presence').textContent.trim()).toBe(expected);
   };
   const thenVisible = (selector: string, visible: boolean): void => {
     expect(root().querySelector(dataSelector(selector)) !== null).toBe(visible);

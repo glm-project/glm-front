@@ -3,7 +3,9 @@
     @if (operateur(); as designated) {
     <div class="truncate text-title" data-selector="header-operator">{{ designated.nom }} {{ designated.prenom }}</div>
     <div class="text-body-sm text-ink-muted" data-selector="header-code">{{ labels.code(designated.matricule) }}</div>
-    } @else {
+    @if (presence(); as etat) {
+    <div class="text-body-sm text-ink-muted" data-selector="header-presence">{{ labels.presence[etat] }}</div>
+    } } @else {
     <button
       type="button"
       class="heading-target truncate text-section"
