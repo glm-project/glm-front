@@ -13,6 +13,7 @@
     [vue]="vue"
     [commander]="pupitre"
     [gestesDisponibles]="designation.gestesDisponibles()"
+    [presence]="designation.presence()"
     (pauseRequested)="executeGlobale('PAUSE')"
     (repriseRequested)="executeGlobale('REPRENDRE')"
     (arretTotalRequested)="executeGlobale('TOUT_ARRETER')"

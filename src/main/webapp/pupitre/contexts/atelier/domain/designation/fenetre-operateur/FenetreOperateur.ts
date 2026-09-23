@@ -28,6 +28,7 @@ import {
   LotDeGestesDAtelier,
 } from './DecisionDePointage';
 import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
+import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
 
@@ -90,6 +91,10 @@ export class FenetreOperateur {
   }
   snapshot(): JournalDuPupitre {
     return snapshotDuJournal(this.etat.vue);
+  }
+  presence(): PresenceDeLOperateur {
+    const operateur = projectReferentiel(this.etat.vue)?.operateurs.find(candidat => this.etat.operateurDesigne.owns(candidat.id));
+    return new PresenceDeLOperateur(operateur?.etat ?? 'ABSENT');
   }
   pointage(): VueDePointage {
     const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({

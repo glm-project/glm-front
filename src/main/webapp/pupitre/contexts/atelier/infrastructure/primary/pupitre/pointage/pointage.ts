@@ -2,6 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, input, output, signal } from '@angular/core';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
 import { CibleDePointage } from '../../../../domain/designation/fenetre-operateur/DecisionDePointage';
+import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 
@@ -21,6 +22,7 @@ export class Pointage {
   readonly vue = input.required<VueDePointage>();
   readonly commander = input.required<PointageCommand>();
   readonly gestesDisponibles = input(true);
+  readonly presence = input.required<PresenceDeLOperateur>();
   readonly pauseRequested = output();
   readonly repriseRequested = output();
   readonly arretTotalRequested = output();

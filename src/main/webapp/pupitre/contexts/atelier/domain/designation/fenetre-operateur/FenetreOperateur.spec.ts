@@ -2,6 +2,7 @@ import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation
 import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
+  EtatDePresence,
   GesteDAtelier,
   GesteDePointage,
   IdentiteDuGeste,
@@ -10,8 +11,10 @@ import {
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
 import { Matricule } from '../Matricule';
 import { NumeroDElement } from '../NumeroDElement';
+import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
 import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
+import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -712,6 +715,78 @@ describe('FenetreOperateur', () => {
 
     thenGesturesAre(captured, ['ARRIVEE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
   });
+
+  it.each([
+    { etat: 'ABSENT' as const, intention: 'PAUSE' as const, permet: true },
+    { etat: 'ABSENT' as const, intention: 'REPRENDRE' as const, permet: true },
+    { etat: 'ABSENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
+    { etat: 'PRESENT' as const, intention: 'PAUSE' as const, permet: true },
+    { etat: 'PRESENT' as const, intention: 'REPRENDRE' as const, permet: false },
+    { etat: 'PRESENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
+    { etat: 'EN_PAUSE' as const, intention: 'PAUSE' as const, permet: false },
+    { etat: 'EN_PAUSE' as const, intention: 'REPRENDRE' as const, permet: true },
+    { etat: 'EN_PAUSE' as const, intention: 'TOUT_ARRETER' as const, permet: true },
+  ])('should $permet $intention when the designated operator is $etat', ({ etat, intention, permet }) => {
+    const window = givenAWindowWithOperatorState(etat);
+
+    const presence = whenReadingThePresence(window);
+
+    thenPresenceStateIs(presence, etat);
+    thenPresencePermits(presence, intention, permet);
+  });
+
+  it('should offer every global command while the arrival assurance has not yet opened the day', () => {
+    const window = givenAWindowWithOperatorState('ABSENT');
+
+    const presence = whenReadingThePresence(window);
+
+    (['PAUSE', 'REPRENDRE', 'TOUT_ARRETER'] as const).forEach(intention => {
+      thenPresencePermits(presence, intention, true);
+    });
+  });
+
+  it('should reflect a locally captured pause in the exposed presence', () => {
+    whenAcceptingAnExplicitPause();
+
+    const presence = whenReadingThePresence(fenetre);
+
+    thenPresenceStateIs(presence, 'EN_PAUSE');
+  });
+
+  it('should reflect a refreshed referential in the exposed presence', () => {
+    whenReconciling(givenAJournalWithOperatorState('PRESENT'));
+
+    const presence = whenReadingThePresence(fenetre);
+
+    thenPresenceStateIs(presence, 'PRESENT');
+  });
+
+  it('should read an absent presence when the designated operator no longer appears in the projected referential', () => {
+    whenReconciling(givenAJournalWithoutTheDesignatedOperator());
+
+    const presence = whenReadingThePresence(fenetre);
+
+    thenPresenceStateIs(presence, 'ABSENT');
+  });
+
+  const givenAJournalWithOperatorState = (etat: EtatDePresence): JournalDuPupitre => {
+    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
+    const operateur = requiredFixture(referentiel.operateurs[0], 'operator');
+    return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [{ ...operateur, etat }] } };
+  };
+  const givenAWindowWithOperatorState = (etat: EtatDePresence): FenetreOperateur =>
+    givenAWindowOpenedOn(givenAJournalWithOperatorState(etat));
+  const givenAJournalWithoutTheDesignatedOperator = (): JournalDuPupitre => {
+    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
+    return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [] } };
+  };
+  const whenReadingThePresence = (window: FenetreOperateur): PresenceDeLOperateur => window.presence();
+  const thenPresenceStateIs = (presence: PresenceDeLOperateur, etat: EtatDePresence): void => {
+    expect(presence.etat).toBe(etat);
+  };
+  const thenPresencePermits = (presence: PresenceDeLOperateur, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
+    expect(presence.permet(intention)).toBe(permet);
+  };
 
   const identifyFixture = (): IdentiteDuGeste => {
     const id = crypto.randomUUID();

@@ -10,6 +10,7 @@ import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/ate
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
+import { PresenceDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/NumeroDElement';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
@@ -50,6 +51,7 @@ class AtelierCoordinatorFixture {
   readonly refusAtelier = signal<ReturnType<CurrentOperateurLifecycle['refusAtelier']>>(undefined);
   readonly pointage = signal<VueDePointage | undefined>(undefined);
   readonly gestesDisponibles = signal(true);
+  readonly presence = signal(new PresenceDeLOperateur('ABSENT'));
   readonly code = signal('');
   readonly unknownCode = signal(false);
   readonly canValidate = signal(true);
@@ -191,6 +193,15 @@ describe('Pupitre page', () => {
     expect(pupitre.finish).toHaveBeenCalledOnce();
   });
 
+  it('should relay the operator presence legality to the pointage screen', () => {
+    givenPointage();
+
+    givenPresence('PRESENT');
+    whenRenderingThePage();
+
+    expect((element('resume') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('should consume the click following a refused page press and accept the next complete press', () => {
     givenPointage();
     givenTheNextPagePressIsRefused();
@@ -300,6 +311,9 @@ describe('Pupitre page', () => {
   const givenReference = (): void => {
     pupitre.publishReference();
     fixture.detectChanges();
+  };
+  const givenPresence = (etat: 'ABSENT' | 'PRESENT' | 'EN_PAUSE'): void => {
+    pupitre.presence.set(new PresenceDeLOperateur(etat));
   };
   const givenTheNextPagePressIsRefused = (): void => {
     pupitre.registerPress.mockReturnValueOnce(false);

@@ -2,8 +2,10 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
+import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
+import { EtatDePresence } from '../../../../domain/journal-du-pupitre/JournalDuPupitre';
 import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 import { Pointage } from './pointage';
 
@@ -38,6 +40,7 @@ describe('Pointage screen', () => {
     };
     fixture.componentRef.setInput('vue', pointageFixture);
     fixture.componentRef.setInput('commander', commander);
+    fixture.componentRef.setInput('presence', new PresenceDeLOperateur('ABSENT'));
     fixture.componentInstance.pauseRequested.subscribe(() => emitted.push('pause'));
     fixture.componentInstance.repriseRequested.subscribe(() => emitted.push('reprendre'));
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
@@ -160,6 +163,33 @@ describe('Pointage screen', () => {
     thenEveryWorkstationChoiceIsDisabled();
   });
 
+  it.each<[EtatDePresence, string, boolean]>([
+    ['ABSENT', 'pause', false],
+    ['ABSENT', 'resume', false],
+    ['ABSENT', 'stop-all', false],
+    ['PRESENT', 'pause', false],
+    ['PRESENT', 'resume', true],
+    ['PRESENT', 'stop-all', false],
+    ['EN_PAUSE', 'pause', true],
+    ['EN_PAUSE', 'resume', false],
+    ['EN_PAUSE', 'stop-all', false],
+  ])('should disable the %s command exactly when presence %s forbids it (%s)', async (etat, selector, expectedDisabled) => {
+    givenPresence(etat);
+    await whenRendering();
+
+    thenCommandDisabledStateIs(selector, expectedDisabled);
+  });
+
+  it('should emit no gesture when a command illegal for the current presence is pressed', async () => {
+    givenPresence('PRESENT');
+    await whenRendering();
+
+    whenPressingGlobalCommand('resume');
+    await whenRendering();
+
+    thenNoGlobalIntentionIsExposed();
+  });
+
   it('should leave a tile available when the command boundary refuses a stale reentry', async () => {
     givenTheNextPointageIsUnavailable();
     await whenRendering();
@@ -175,6 +205,9 @@ describe('Pointage screen', () => {
   };
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
+  };
+  const givenPresence = (etat: EtatDePresence): void => {
+    fixture.componentRef.setInput('presence', new PresenceDeLOperateur(etat));
   };
   const givenTheNextPointageIsUnavailable = (): void => {
     nextExecution = { kind: 'INDISPONIBLE' };
@@ -218,6 +251,9 @@ describe('Pointage screen', () => {
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector('pause')), 'pause').click();
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector('resume')), 'resume').click();
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector('stop-all')), 'stop all').click();
+  };
+  const whenPressingGlobalCommand = (selector: string): void => {
+    button(selector).click();
   };
   const thenThePersonalPointageViewIsRendered = (): void => {
     expect(root().querySelector(dataSelector('moules-zone'))).not.toBeNull();
@@ -263,6 +299,12 @@ describe('Pointage screen', () => {
   };
   const thenGlobalIntentionsAreExposed = (): void => {
     expect(emitted).toEqual(['pause', 'reprendre', 'tout-arreter']);
+  };
+  const thenNoGlobalIntentionIsExposed = (): void => {
+    expect(emitted).toEqual([]);
+  };
+  const thenCommandDisabledStateIs = (selector: string, expected: boolean): void => {
+    expect(button(selector).disabled).toBe(expected);
   };
   const targetsFor = (elementId: string): HTMLButtonElement[] => {
     const tile = requiredElement(root().querySelector(dataSelector(`tile-${elementId}`)), 'tile');
