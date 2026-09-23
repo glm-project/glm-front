@@ -33,7 +33,7 @@ export class OperateurSupervise {
     return this.operateur.compareAlphabetically(other.operateur);
   }
 
-  isEnGlm(): boolean {
+  isSansAffectation(): boolean {
     return this.presence === 'PRESENT' && this.activites.length === 0;
   }
 

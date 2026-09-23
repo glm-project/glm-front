@@ -50,14 +50,14 @@ const PAIRS_THE_SCREENS_SHOW: TextOnBackground[] = [
   { text: 'ok', background: 'sunken' },
   { text: 'nc', background: 'surface' },
   { text: 'nc', background: 'sunken' },
-  { text: 'glm', background: 'surface' },
-  { text: 'glm', background: 'sunken' },
+  { text: 'sans-affectation', background: 'surface' },
+  { text: 'sans-affectation', background: 'sunken' },
   { text: 'warn', background: 'surface' },
   { text: 'warn', background: 'sunken' },
   { text: 'on-accent', background: 'accent' },
   { text: 'on-accent', background: 'ok' },
   { text: 'on-accent', background: 'nc' },
-  { text: 'on-accent', background: 'glm' },
+  { text: 'on-accent', background: 'sans-affectation' },
   { text: 'on-accent', background: 'warn' },
 ];
 

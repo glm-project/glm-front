@@ -96,16 +96,18 @@
         <button
           type="button"
           class="min-h-touch rounded border px-3 py-1.5 text-body-sm font-semibold focus-visible:outline-2 focus-visible:outline-accent"
-          [class.bg-sunken]="filtre === 'GLM'"
-          [class.border-border-strong]="filtre === 'GLM'"
-          [class.border-border]="filtre !== 'GLM'"
-          data-selector="supervision-filtre-glm"
-          [attr.aria-pressed]="filtre === 'GLM'"
-          (click)="basculerFiltre('GLM')"
+          [class.bg-sunken]="filtre === 'SANS_AFFECTATION'"
+          [class.border-border-strong]="filtre === 'SANS_AFFECTATION'"
+          [class.border-border]="filtre !== 'SANS_AFFECTATION'"
+          data-selector="supervision-filtre-sans-affectation"
+          [attr.aria-pressed]="filtre === 'SANS_AFFECTATION'"
+          (click)="basculerFiltre('SANS_AFFECTATION')"
         >
-          <span class="mr-1 text-glm font-bold">⚡</span>
-          {{ libelles.glm }}
-          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-glm">({{ stats.glm }})</span>
+          <span class="mr-1 text-sans-affectation font-bold">⚡</span>
+          {{ libelles.sansAffectation }}
+          <span class="ml-1 text-label text-ink-muted" data-selector="supervision-compteur-sans-affectation"
+            >({{ stats.sansAffectation }})</span
+          >
         </button>
 
         <button
@@ -174,7 +176,7 @@
     <span><span class="inline-block h-2 w-4 rounded-sm bg-warn" aria-hidden="true"></span> Pause</span>
     <span><span class="inline-block h-2 w-4 rounded-sm bg-accent" aria-hidden="true"></span> Activité en cours</span>
     <span><span class="inline-block h-2 w-4 rounded-sm bg-nc" aria-hidden="true"></span> NC</span>
-    <span class="text-glm">GLM à l’instant courant</span>
+    <span class="text-sans-affectation">{{ libelles.sansAffectationMaintenant }}</span>
   </div>
   <p class="text-body-sm text-ink-muted">
     Les activités terminées ne figurent pas encore sur la frise. Les espaces vides ne prouvent pas une inactivité.
@@ -254,8 +256,10 @@
               <span class="shrink-0 rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
                 {{ libelles.presences[supervise.presence] }}
               </span>
-              } } @if (supervise.isEnGlm()) {
-              <span class="text-label text-glm" data-selector="supervision-indicateur-glm"><span aria-hidden="true">⚡</span> GLM</span>
+              } } @if (supervise.isSansAffectation()) {
+              <span class="text-label text-sans-affectation" data-selector="supervision-indicateur-sans-affectation"
+                ><span aria-hidden="true">⚡</span> {{ libelles.sansAffectation }}</span
+              >
               } @if (supervise.anomalies.length > 0) {
               <span class="text-label text-nc" data-selector="supervision-indicateur-anomalies"
                 ><span aria-hidden="true">⚠️</span> {{ supervise.anomalies.length }} anomalie{{ supervise.anomalies.length > 1 ? 's' : ''
@@ -328,16 +332,16 @@
               </button>
               }
             </div>
-            } @if (supervise.isEnGlm()) { @if (vue.frise.positionMaintenant !== undefined) {
+            } @if (supervise.isSansAffectation()) { @if (vue.frise.positionMaintenant !== undefined) {
             <span
-              class="glm-maintenant absolute bottom-3 rounded-sm border border-glm bg-surface px-1 text-label text-glm"
+              class="sans-affectation-maintenant absolute bottom-3 rounded-sm border border-sans-affectation bg-surface px-1 text-label text-sans-affectation"
               [style.left.%]="vue.frise.positionMaintenant"
-              data-selector="supervision-zone-glm"
-              aria-label="GLM à l’instant courant"
-              >GLM</span
+              data-selector="supervision-zone-sans-affectation"
+              [attr.aria-label]="libelles.sansAffectationMaintenant"
+              >{{ libelles.sansAffectation }}</span
             >
             } @else {
-            <span class="relative text-label text-glm">GLM à l’instant courant · hors plage</span>
+            <span class="relative text-label text-sans-affectation">{{ libelles.sansAffectationMaintenantHorsPlage }}</span>
             } }
           </div>
         </div>
@@ -363,9 +367,11 @@
               }
             </ul>
           </div>
-          } @if (supervise.isEnGlm()) {
-          <div class="rounded border border-glm bg-sunken p-2.5">
-            <p class="text-body-sm font-semibold text-glm" data-selector="supervision-glm">{{ libelles.glmDetails }}</p>
+          } @if (supervise.isSansAffectation()) {
+          <div class="rounded border border-sans-affectation bg-sunken p-2.5">
+            <p class="text-body-sm font-semibold text-sans-affectation" data-selector="supervision-sans-affectation">
+              {{ libelles.sansAffectationDetails }}
+            </p>
           </div>
           } @if (supervise.activites.length > 0) {
           <div class="rounded bg-sunken p-3">

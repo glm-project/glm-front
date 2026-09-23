@@ -72,7 +72,7 @@ export class SupervisionDeLAtelier {
       presents: operateurs.filter(op => op.presence === 'PRESENT').length,
       enPause: operateurs.filter(op => op.presence === 'EN_PAUSE').length,
       absents: operateurs.filter(op => op.presence === 'ABSENT').length,
-      glm: operateurs.filter(op => op.isEnGlm()).length,
+      sansAffectation: operateurs.filter(op => op.isSansAffectation()).length,
       anomalies: operateurs.filter(op => op.anomalies.length > 0).length,
     };
   }

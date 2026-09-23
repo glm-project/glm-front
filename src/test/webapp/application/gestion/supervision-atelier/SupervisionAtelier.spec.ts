@@ -52,7 +52,7 @@ const whenRefreshingTheWorkshop = (): void => {
 const thenTheActivityAndAnomaliesRemainVisible = (): void => {
   cy.get(dataSelector('supervision-journal')).filter(':visible').should('have.length', 1);
   cy.get(dataSelector('supervision-activite-nom')).filter(':visible').should('have.length', 1).and('contain.text', 'OF-2026-000044');
-  cy.get(dataSelector('supervision-indicateur-glm')).should('have.length', 1).and('be.visible');
+  cy.get(dataSelector('supervision-indicateur-sans-affectation')).should('have.length', 1).and('be.visible');
   cy.get(dataSelector('supervision-indicateur-anomalies')).should('have.length', 3).and('be.visible');
   cy.get(dataSelector('supervision-anomalie'))
     .filter(':visible')

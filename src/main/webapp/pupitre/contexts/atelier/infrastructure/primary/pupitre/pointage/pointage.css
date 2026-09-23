@@ -50,9 +50,9 @@
 }
 
 .glm--active {
-  border-color: var(--color-glm);
-  color: var(--color-glm);
-  background: color-mix(in srgb, var(--color-glm) 12%, var(--color-surface));
+  border-color: var(--color-sans-affectation);
+  color: var(--color-sans-affectation);
+  background: color-mix(in srgb, var(--color-sans-affectation) 12%, var(--color-surface));
 }
 
 .dialog-backdrop {

@@ -270,7 +270,7 @@ describe('SupervisionDeLAtelier', () => {
     ]);
   });
 
-  it('should identify operator as in GLM when present without ongoing activity', () => {
+  it('should identify operator as sans affectation when present without ongoing activity', () => {
     const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
@@ -278,10 +278,10 @@ describe('SupervisionDeLAtelier', () => {
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T09:00:00Z'));
 
     const operateurSupervise = exploitableFixture(resultat).operateurs[0];
-    expect(operateurSupervise?.isEnGlm()).toBe(true);
+    expect(operateurSupervise?.isSansAffectation()).toBe(true);
   });
 
-  it('should not identify operator as in GLM when present with activities or when on pause', () => {
+  it('should not identify operator as sans affectation when present with activities or when on pause', () => {
     const alain = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Alain', 'Paul');
     const bernard = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bernard', 'Claude');
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
@@ -302,8 +302,8 @@ describe('SupervisionDeLAtelier', () => {
 
     const alainSupervise = exploitableFixture(resultat).operateurs.find(op => op.operateur.id.equals(alain.id));
     const bernardSupervise = exploitableFixture(resultat).operateurs.find(op => op.operateur.id.equals(bernard.id));
-    expect(alainSupervise?.isEnGlm()).toBe(false);
-    expect(bernardSupervise?.isEnGlm()).toBe(false);
+    expect(alainSupervise?.isSansAffectation()).toBe(false);
+    expect(bernardSupervise?.isSansAffectation()).toBe(false);
   });
 
   it('should identify activity as NC when its category is NC', () => {
@@ -445,7 +445,7 @@ describe('SupervisionDeLAtelier', () => {
     expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
   });
 
-  it('should compute workshop-wide statistics across presence states, GLM and anomalies', () => {
+  it('should compute workshop-wide statistics across presence states, sans affectation and anomalies', () => {
     const op1 = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Alice', 'Martin');
     const op2 = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bob', 'Durand');
     const op3 = new OperateurDeclare(new IdentifiantOperateur('op-3'), 'Chloé', 'Bernard');
@@ -480,7 +480,7 @@ describe('SupervisionDeLAtelier', () => {
       presents: 1,
       enPause: 1,
       absents: 1,
-      glm: 1,
+      sansAffectation: 1,
       anomalies: 1,
     });
   });
