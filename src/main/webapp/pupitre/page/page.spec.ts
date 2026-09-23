@@ -41,7 +41,6 @@ const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', 
 const pointageFixture: VueDePointage = {
   moules: [],
   ordresDeFabrication: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)],
-  glmActif: false,
 };
 
 class AtelierCoordinatorFixture {

@@ -21,7 +21,7 @@ export type EtatVueSupervision =
       readonly frise: FriseSupervision;
     };
 
-export type FiltreSupervision = 'TOUS' | 'PRESENT' | 'EN_PAUSE' | 'ABSENT' | 'GLM' | 'ANOMALIE';
+export type FiltreSupervision = 'TOUS' | 'PRESENT' | 'EN_PAUSE' | 'ABSENT' | 'SANS_AFFECTATION' | 'ANOMALIE';
 
 function correspondAuFiltre(supervise: OperateurSupervise, filtre: Exclude<FiltreSupervision, 'TOUS'> | null): boolean {
   if (filtre === null) {
@@ -34,8 +34,8 @@ function correspondAuFiltre(supervise: OperateurSupervise, filtre: Exclude<Filtr
       return supervise.presence === 'EN_PAUSE';
     case 'ABSENT':
       return supervise.presence === 'ABSENT';
-    case 'GLM':
-      return supervise.isEnGlm();
+    case 'SANS_AFFECTATION':
+      return supervise.isSansAffectation();
     case 'ANOMALIE':
       return supervise.anomalies.length > 0;
   }
@@ -135,7 +135,7 @@ export class SupervisionAtelier {
       supervise,
       resume: [
         `${supervise.operateur.nom} ${supervise.operateur.prenom} · ${this.libelles.presences[supervise.presence]}`,
-        ...(supervise.isEnGlm() ? [this.libelles.glmDetails] : []),
+        ...(supervise.isSansAffectation() ? [this.libelles.sansAffectationDetails] : []),
         ...supervise.anomalies.map(anomalie => this.libelles.anomalies[anomalie]),
         ...supervise.activites.map(activite =>
           [activite.nom, activite.poste, `Depuis ${this.libelles.heure(activite.debut)}`].filter(Boolean).join(' · '),

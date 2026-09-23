@@ -6,7 +6,7 @@ colour, typography, touch size and font-family tokens.
 ## Name roles, not values
 
 Use the thirteen colour roles already declared: surfaces and text (`canvas`, `surface`, `sunken`, `border`,
-`border-strong`, `ink`, `ink-muted`), action (`accent`, `on-accent`) and state (`ok`, `nc`, `glm`, `warn`).
+`border-strong`, `ink`, `ink-muted`), action (`accent`, `on-accent`) and state (`ok`, `nc`, `sans-affectation`, `warn`).
 Choose the role that matches the meaning; a screen does not create a second value for an existing role.
 
 Typography has six levels: `display`, `title`, `section`, `body`, `body-sm` and `label`. Use their Tailwind

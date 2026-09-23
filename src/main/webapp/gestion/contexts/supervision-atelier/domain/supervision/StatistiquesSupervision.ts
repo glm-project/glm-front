@@ -3,6 +3,6 @@ export interface StatistiquesSupervision {
   readonly presents: number;
   readonly enPause: number;
   readonly absents: number;
-  readonly glm: number;
+  readonly sansAffectation: number;
   readonly anomalies: number;
 }

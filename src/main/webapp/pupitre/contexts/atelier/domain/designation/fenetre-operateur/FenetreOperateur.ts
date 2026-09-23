@@ -105,7 +105,6 @@ export class FenetreOperateur {
     return {
       moules: sorted.filter(({ type }) => type === 'PRODUIT').map(({ element }) => element),
       ordresDeFabrication: sorted.filter(({ type }) => type === 'ORDRE_DE_FABRICATION').map(({ element }) => element),
-      glmActif: elements.every(({ element }) => !element.isActive()),
     };
   }
 

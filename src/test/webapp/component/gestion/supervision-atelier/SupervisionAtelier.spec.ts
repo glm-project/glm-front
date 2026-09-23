@@ -48,7 +48,7 @@ describe('Supervision timeline readability', () => {
     thenOnlyTheNewReadChangesTheAnomalies();
   });
 
-  it('should preserve presence colours when GLM, NC or an anomaly is displayed', () => {
+  it('should preserve presence colours when sans affectation, NC or an anomaly is displayed', () => {
     whenOpeningSupervision();
 
     thenPresenceColoursRemainIndependent();

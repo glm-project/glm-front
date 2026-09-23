@@ -26,6 +26,8 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 **Entreprise** : portée d'un journal du pupitre et de tous les gestes qu'il contient. Deux journaux d'entreprises différentes restent indépendants.
 
+> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. La présence sans affectation n'en est pas, et aucun type, champ ni sélecteur ne s'appelle GLM.
+
 ## Responsabilités et invariants
 
 - La saisie, la validation et l'expiration de la désignation, ainsi que les gestes permis pendant la fenêtre, appartiennent au domaine.

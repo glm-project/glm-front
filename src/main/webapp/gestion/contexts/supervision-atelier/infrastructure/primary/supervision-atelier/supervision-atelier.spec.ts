@@ -456,6 +456,15 @@ describe('Supervision atelier component', () => {
     expect(displayedText('supervision-maintenant-hors-plage')).toContain(`Maintenant (${String(heure).padStart(2, '0')}:00) — hors plage`);
   });
 
+  it('should report sans affectation outside the scale when now is outside it', async () => {
+    await givenAcquisitionInProgress();
+    givenCurrentHour(23);
+
+    await whenDonneesArrive();
+
+    thenSansAffectationIsReportedOutsideTheScale();
+  });
+
   it('should show an activity starting exactly now as a small marker rather than outside the scale', async () => {
     await givenAcquisitionInProgress();
 
@@ -547,7 +556,7 @@ describe('Supervision atelier component', () => {
       { left: '6.25%', width: '12.5%', label: 'Présence · 07:00 – 09:00' },
       { left: '18.75%', width: '6.25%', label: 'Pause · 09:00 – 10:00 (en cours)' },
     ]);
-    expect(displayedTexts('supervision-indicateur-glm')).toEqual([]);
+    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual([]);
   });
 
   it('should clip overnight presence and omit old windows without joining separate visits with a pause', async () => {
@@ -599,13 +608,13 @@ describe('Supervision atelier component', () => {
     expect(displayedTexts('supervision-operateur-nom')).toEqual([nom]);
   });
 
-  it('should filter anomalies independently of presence and GLM', async () => {
+  it('should filter anomalies independently of presence and sans affectation', async () => {
     await givenDonneesDisplayed();
 
     await whenFilterClicked('supervision-filtre-anomalie');
 
     expect(displayedTexts('supervision-operateur-nom')).toEqual(['Durand Bob', 'Martin Alice']);
-    expect(displayedTexts('supervision-indicateur-glm')).toEqual(['⚡ GLM']);
+    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual(['⚡ Sans affectation']);
     expect(displayedTexts('supervision-indicateur-anomalies')).toHaveLength(2);
   });
 
@@ -815,21 +824,21 @@ describe('Supervision atelier component', () => {
     thenActivityDetailsShowAbsoluteTimesAndOnlyKnownWorkstations();
   });
 
-  it('should mark only a present operator without activities as GLM', async () => {
+  it('should mark only a present operator without activities as sans affectation', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive();
 
-    thenOnlyThePresentIdleOperatorIsInGlm();
+    thenOnlyThePresentIdleOperatorIsSansAffectation();
   });
 
-  it('should remove GLM when an activity arrives for a present operator', async () => {
+  it('should remove sans affectation when an activity arrives for a present operator', async () => {
     await givenDonneesDisplayed();
 
     await refresh();
     await whenDonneesArrive({ ...donneesFixture, activites: [activiteFixture('act-1', 'Moule 1015')] });
 
-    thenNoOperatorIsInGlm();
+    thenNoOperatorIsSansAffectation();
   });
 
   it('should mark the nonconforming activity without changing presence or hiding other activities', async () => {
@@ -909,7 +918,7 @@ describe('Supervision atelier component', () => {
       presents: '(1)',
       enPause: '(1)',
       absents: '(1)',
-      glm: '(1)',
+      sansAffectation: '(1)',
       anomalies: '(2)',
     });
   });
@@ -922,12 +931,13 @@ describe('Supervision atelier component', () => {
     thenOperatorsAreDisplayed([{ nomComplet: 'Martin Alice', presence: 'Présent' }]);
   });
 
-  it('should filter operators by GLM state', async () => {
+  it('should filter operators by sans affectation state', async () => {
     await givenDonneesDisplayed();
 
-    await whenFilterClicked('supervision-filtre-glm');
+    await whenFilterClicked('supervision-filtre-sans-affectation');
 
     thenOperatorsAreDisplayed([{ nomComplet: 'Martin Alice', presence: 'Présent' }]);
+    expect(displayedText('supervision-filtre-sans-affectation')?.replace(/\s+/g, ' ').trim()).toBe('⚡ Sans affectation (1)');
   });
 
   it('should toggle off active filter and restore full list', async () => {
@@ -979,14 +989,32 @@ describe('Supervision atelier component', () => {
     expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-activite-poste'))).toBeNull();
   };
 
-  const thenOnlyThePresentIdleOperatorIsInGlm = (): void => {
-    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-glm'))?.textContent).toContain('GLM');
-    expect(elements('supervision-indicateur-glm')).toHaveLength(1);
+  const thenOnlyThePresentIdleOperatorIsSansAffectation = (): void => {
+    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))?.textContent.trim()).toBe(
+      '⚡ Sans affectation',
+    );
+    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.textContent.trim()).toBe('Sans affectation');
+    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.getAttribute('aria-label')).toBe(
+      'Sans affectation à l’instant courant',
+    );
+    expect(rowFor('alice').querySelector(dataSelector('supervision-sans-affectation'))?.textContent.trim()).toBe(
+      'Sans affectation · Aucune activité en cours',
+    );
+    expect(rowFor('alice').querySelector(dataSelector('supervision-identite'))?.getAttribute('title')).toContain(
+      'Sans affectation · Aucune activité en cours',
+    );
+    expect(elements('supervision-indicateur-sans-affectation')).toHaveLength(1);
+    expect(legend().textContent).toContain('Sans affectation à l’instant courant');
     expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
   };
 
-  const thenNoOperatorIsInGlm = (): void => {
-    expect(elements('supervision-indicateur-glm')).toHaveLength(0);
+  const thenSansAffectationIsReportedOutsideTheScale = (): void => {
+    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))).toBeNull();
+    expect(rowFor('alice').textContent).toContain('Sans affectation à l’instant courant · hors plage');
+  };
+
+  const thenNoOperatorIsSansAffectation = (): void => {
+    expect(elements('supervision-indicateur-sans-affectation')).toHaveLength(0);
   };
 
   const thenOnlyTheNonconformingActivityIsMarked = (): void => {
@@ -1031,7 +1059,7 @@ describe('Supervision atelier component', () => {
     expect(rowFor('alice').querySelector(dataSelector('supervision-activite-poste'))?.textContent).toContain('Tour 1');
     expect(rowFor('alice').querySelector(dataSelector('supervision-activite-debut'))?.textContent).toBe('08:12');
     expect(rowFor('alice').querySelector(dataSelector('supervision-ouverture'))).toBeNull();
-    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-glm'))).toBeNull();
+    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))).toBeNull();
   };
 
   const rowFor = (id: string): HTMLElement =>
@@ -1122,14 +1150,14 @@ describe('Supervision atelier component', () => {
     presents: string;
     enPause: string;
     absents: string;
-    glm: string;
+    sansAffectation: string;
     anomalies: string;
   }): void => {
     expect(element('supervision-compteur-total')?.textContent.trim()).toBe(expected.total);
     expect(element('supervision-compteur-present')?.textContent.trim()).toBe(expected.presents);
     expect(element('supervision-compteur-en-pause')?.textContent.trim()).toBe(expected.enPause);
     expect(element('supervision-compteur-absent')?.textContent.trim()).toBe(expected.absents);
-    expect(element('supervision-compteur-glm')?.textContent.trim()).toBe(expected.glm);
+    expect(element('supervision-compteur-sans-affectation')?.textContent.trim()).toBe(expected.sansAffectation);
     expect(element('supervision-compteur-anomalie')?.textContent.trim()).toBe(expected.anomalies);
   };
 
@@ -1191,6 +1219,11 @@ describe('Supervision atelier component', () => {
   const elements = (selector: string): HTMLElement[] => {
     const host = componentFixture.nativeElement as HTMLElement;
     return Array.from(host.querySelectorAll(dataSelector(selector)));
+  };
+
+  const legend = (): HTMLElement => {
+    const host = componentFixture.nativeElement as HTMLElement;
+    return requiredFixture(host.querySelector<HTMLElement>('[aria-label="Légende de la chronologie"]'), 'legend');
   };
 
   const refreshButton = (): HTMLButtonElement => {

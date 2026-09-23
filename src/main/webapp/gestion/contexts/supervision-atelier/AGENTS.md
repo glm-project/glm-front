@@ -16,7 +16,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Segment de présence** : intervalle temporel de présence ou de pause au sein d'une ou plusieurs journées de travail, avec son début, sa fin, son type (présence ou pause) et l'indication d'un segment en cours.
 
-**Statistiques de supervision** : synthèse instantanée de l'atelier comptabilisant le nombre total d'opérateurs déclarés, présents, en pause, absents, en GLM et en anomalie.
+**Statistiques de supervision** : synthèse instantanée de l'atelier comptabilisant le nombre total d'opérateurs déclarés, présents, en pause, absents, sans affectation et en anomalie.
 
 **Activité de supervision** : activité en cours rattachée à un opérateur, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
 
@@ -24,7 +24,9 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Catégorie d'activité** : valeur reçue qui détermine notamment le caractère `NC` de l'activité.
 
-**GLM** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours.
+**Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours.
+
+> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. La présence sans affectation n'en est pas, et aucun type, champ ni sélecteur ne s'appelle GLM.
 
 **Anomalie de supervision** : signalement d'incohérence constaté lors de l'évaluation de la supervision (`JOURNEE_OUVERTE_PLUS_DE_16_HEURES`, `JOURNEE_OUVERTE_SANS_FENETRES`, `ACTIVITE_D_UN_ABSENT`).
 
@@ -38,7 +40,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - Les segments de présence d'un opérateur sont dérivés de ses journées de travail : les intervalles effectifs et les pauses intercalaires ou de session sont calculés par le domaine.
 - Les statistiques de supervision sont évaluées par l'agrégat SupervisionDeLAtelier.
 - Les activités en cours sont associées aux opérateurs déclarés correspondants ; un opérateur peut avoir 0 à N activités.
-- GLM est un état dérivé : un opérateur est en GLM si et seulement s'il est présent et n'a aucune activité en cours.
+- « Sans affectation » est un état dérivé : un opérateur est sans affectation si et seulement s'il est présent et n'a aucune activité en cours.
 - L'absence de poste ou l'absence d'heure d'ouverture est représentée sans valeur fabriquée (`undefined`).
 - Le temps affichable reste un instant absolu, jamais une durée calculée par le domaine.
 - L'instant d'évaluation est obligatoire. Les instants invalides ou dépourvus de fuseau sont refusés à la construction.

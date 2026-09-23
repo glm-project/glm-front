@@ -28,5 +28,4 @@ export class ElementDePointage {
 export interface VueDePointage {
   readonly moules: readonly ElementDePointage[];
   readonly ordresDeFabrication: readonly ElementDePointage[];
-  readonly glmActif: boolean;
 }
