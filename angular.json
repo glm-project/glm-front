@@ -110,6 +110,13 @@
             },
             "cypress": {
               "buildTarget": "project:build-gestion:cypress"
+            },
+            "hprod": {
+              "buildTarget": "project:build-gestion:development,deployed",
+              "proxyConfig": "proxy.hprod.conf.json",
+              "define": {
+                "NG_DEPLOYED_KEYCLOAK_URL": "'https://auth-glm.cleverapps.io'"
+              }
             }
           },
           "defaultConfiguration": "development"

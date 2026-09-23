@@ -1,0 +1,7 @@
+{
+  "/api": {
+    "target": "https://glm-supervision.pages.dev",
+    "secure": true,
+    "changeOrigin": true
+  }
+}

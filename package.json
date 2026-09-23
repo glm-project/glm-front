@@ -20,6 +20,7 @@
     "deployed:build:gestion": "ng run project:build-gestion:production,deployed --define \"NG_DEPLOYED_KEYCLOAK_URL='${DEPLOYED_KEYCLOAK_URL:?must name the deployed Keycloak origin, without a trailing slash}'\"",
     "deployed:build:pupitre": "ng run project:build-pupitre:production,deployed --define \"NG_DEPLOYED_KEYCLOAK_URL='${DEPLOYED_KEYCLOAK_URL:?must name the deployed Keycloak origin, without a trailing slash}'\"",
     "dev:gestion": "ng run project:serve-gestion",
+    "dev:gestion:hprod": "ng run project:serve-gestion:hprod",
     "dev:pupitre": "ng run project:serve-pupitre",
     "lint": "npm run test:documentation && npm run test:reproducibility && npm run test:functions && node --test eslint/rules/*.spec.mjs && eslint .",
     "measure": "node scripts/measure-command.mjs",
