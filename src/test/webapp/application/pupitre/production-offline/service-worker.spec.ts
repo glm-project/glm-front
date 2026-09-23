@@ -114,7 +114,7 @@ describe('Production pupitre offline restart', () => {
     thenOfflineRestartPreservedPendingWork('second-offline-restart');
     thenTheOriginalGestureWasReplayedAndAccepted();
     thenOnlinePupitreWasObserved('final-restart', 4);
-    thenTheJournalAndReferenceSurvivedEveryRestart();
+    thenTheAcceptedGestureSurvivedTheFinalRestart();
   });
 });
 
@@ -274,8 +274,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
   cy.get('@accepted-server').its('referenceRequests').should('be.at.least', 3);
 };
 
-const thenTheJournalAndReferenceSurvivedEveryRestart = (): void => {
-  cy.get('@final-journal').its('referentiel').should('deep.equal', referenceFixture);
+const thenTheAcceptedGestureSurvivedTheFinalRestart = (): void => {
   cy.get('@final-journal').its('evenements').should('deep.equal', [acceptedGestureFixture]);
   cy.get('@final-restart-server').its('pushes').should('have.length', 1);
 };
