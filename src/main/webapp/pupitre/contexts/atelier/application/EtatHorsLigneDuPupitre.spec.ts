@@ -97,7 +97,10 @@ describe('EtatHorsLigneDuPupitre', () => {
   it('should publish given journal state to view', () => {
     const state: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: { operateurs: [{ id: 'op1', matricule: '123', nom: 'Durand', prenom: 'Paul', postes: [] }], suivis: [] },
+      referentiel: {
+        operateurs: [{ id: 'op1', matricule: '123', nom: 'Durand', prenom: 'Paul', etat: 'ABSENT', postes: [], evenements: [] }],
+        suivis: [],
+      },
     };
 
     whenPublishing(state);

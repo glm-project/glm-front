@@ -1,7 +1,7 @@
 import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
 import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
-import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
+import { EtatDePresence, TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 
 const formatDuree = (dureeMs: number): string => {
   const minutes = Math.floor(dureeMs / 60_000);
@@ -18,6 +18,12 @@ const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
   PAUSE: 'PAUSE',
   REPRENDRE: 'REPRENDRE',
   TOUT_ARRETER: 'TOUT ARRÊTER',
+};
+
+const PRESENCES: Record<EtatDePresence, string> = {
+  ABSENT: 'Pas encore arrivé',
+  PRESENT: 'Présent',
+  EN_PAUSE: 'En pause',
 };
 
 export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
@@ -43,6 +49,7 @@ export const LIBELLES_POINTAGE = {
 
 export const LIBELLES_ENTETE_PUPITRE = {
   code: (matricule: string): string => `Code ${matricule}`,
+  presence: PRESENCES,
   enLigne: 'En ligne',
   horsLigne: 'Hors ligne',
   fin: "J'ai fini",

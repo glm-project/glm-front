@@ -5,6 +5,7 @@ import { DesignationOperateur, DesignationResolution, isFenetreIdentifiedBy } fr
 import { AcceptationDeGestes } from '../domain/designation/fenetre-operateur/DecisionDePointage';
 import { FenetreOperateur } from '../domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteOperateurDesigne } from '../domain/designation/fenetre-operateur/OperateurDesigne';
+import { PresenceDeLOperateur } from '../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
 import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';
@@ -35,6 +36,7 @@ export class CurrentOperateurLifecycle {
   readonly pointage = computed(() => this.designation().visibleWindow()?.pointage());
   readonly refusAtelier = computed(() => this.designation().visibleWindow()?.refusal());
   readonly gestesDisponibles = computed(() => this.designation().window()?.allowsGestures() ?? true);
+  readonly presence = computed(() => this.designation().visibleWindow()?.presence() ?? new PresenceDeLOperateur('ABSENT'));
 
   registerPress(): boolean {
     const press = this.designation().afterPress(Date.now());

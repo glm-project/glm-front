@@ -2,6 +2,7 @@ import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation
 import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
+  EtatDePresence,
   GesteDAtelier,
   GesteDePointage,
   IdentiteDuGeste,
@@ -10,8 +11,10 @@ import {
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
 import { Matricule } from '../Matricule';
 import { NumeroDElement } from '../NumeroDElement';
+import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
 import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
+import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -28,7 +31,17 @@ const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][n
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
-    operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+    operateurs: [
+      {
+        id: 'jean',
+        nom: 'Dupont',
+        prenom: 'Jean',
+        matricule: '049',
+        etat: 'ABSENT',
+        postes: [{ id: 'tour', libelle: 'Tour' }],
+        evenements: [],
+      },
+    ],
     suivis: [
       {
         id: 'moule-1015',
@@ -538,7 +551,7 @@ describe('FenetreOperateur', () => {
     const onlyNcJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
         suivis: [
           {
             id: 'of-nc',
@@ -568,11 +581,13 @@ describe('FenetreOperateur', () => {
             nom: 'Dupont',
             prenom: 'Jean',
             matricule: '049',
+            etat: 'ABSENT',
             postes: [
               { id: 'poste-1', libelle: 'Poste 1' },
               { id: 'poste-2', libelle: 'Poste 2' },
               { id: 'poste-3', libelle: 'Poste 3' },
             ],
+            evenements: [],
           },
         ],
         suivis: [
@@ -603,7 +618,7 @@ describe('FenetreOperateur', () => {
     const unsortedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
         suivis: [
           { id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
           { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
@@ -622,7 +637,7 @@ describe('FenetreOperateur', () => {
     const referencedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
         suivis: [
           { id: 'of-1', nom: 'OF-1', reference: 'M-30', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
           { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
@@ -641,7 +656,7 @@ describe('FenetreOperateur', () => {
     const inactiveJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
         suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
       },
     };
@@ -701,6 +716,78 @@ describe('FenetreOperateur', () => {
     thenGesturesAre(captured, ['ARRIVEE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
   });
 
+  it.each([
+    { etat: 'ABSENT' as const, intention: 'PAUSE' as const, permet: true },
+    { etat: 'ABSENT' as const, intention: 'REPRENDRE' as const, permet: true },
+    { etat: 'ABSENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
+    { etat: 'PRESENT' as const, intention: 'PAUSE' as const, permet: true },
+    { etat: 'PRESENT' as const, intention: 'REPRENDRE' as const, permet: false },
+    { etat: 'PRESENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
+    { etat: 'EN_PAUSE' as const, intention: 'PAUSE' as const, permet: false },
+    { etat: 'EN_PAUSE' as const, intention: 'REPRENDRE' as const, permet: true },
+    { etat: 'EN_PAUSE' as const, intention: 'TOUT_ARRETER' as const, permet: true },
+  ])('should $permet $intention when the designated operator is $etat', ({ etat, intention, permet }) => {
+    const window = givenAWindowWithOperatorState(etat);
+
+    const presence = whenReadingThePresence(window);
+
+    thenPresenceStateIs(presence, etat);
+    thenPresencePermits(presence, intention, permet);
+  });
+
+  it('should offer every global command while the arrival assurance has not yet opened the day', () => {
+    const window = givenAWindowWithOperatorState('ABSENT');
+
+    const presence = whenReadingThePresence(window);
+
+    (['PAUSE', 'REPRENDRE', 'TOUT_ARRETER'] as const).forEach(intention => {
+      thenPresencePermits(presence, intention, true);
+    });
+  });
+
+  it('should reflect a locally captured pause in the exposed presence', () => {
+    whenAcceptingAnExplicitPause();
+
+    const presence = whenReadingThePresence(fenetre);
+
+    thenPresenceStateIs(presence, 'EN_PAUSE');
+  });
+
+  it('should reflect a refreshed referential in the exposed presence', () => {
+    whenReconciling(givenAJournalWithOperatorState('PRESENT'));
+
+    const presence = whenReadingThePresence(fenetre);
+
+    thenPresenceStateIs(presence, 'PRESENT');
+  });
+
+  it('should read an absent presence when the designated operator no longer appears in the projected referential', () => {
+    whenReconciling(givenAJournalWithoutTheDesignatedOperator());
+
+    const presence = whenReadingThePresence(fenetre);
+
+    thenPresenceStateIs(presence, 'ABSENT');
+  });
+
+  const givenAJournalWithOperatorState = (etat: EtatDePresence): JournalDuPupitre => {
+    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
+    const operateur = requiredFixture(referentiel.operateurs[0], 'operator');
+    return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [{ ...operateur, etat }] } };
+  };
+  const givenAWindowWithOperatorState = (etat: EtatDePresence): FenetreOperateur =>
+    givenAWindowOpenedOn(givenAJournalWithOperatorState(etat));
+  const givenAJournalWithoutTheDesignatedOperator = (): JournalDuPupitre => {
+    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
+    return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [] } };
+  };
+  const whenReadingThePresence = (window: FenetreOperateur): PresenceDeLOperateur => window.presence();
+  const thenPresenceStateIs = (presence: PresenceDeLOperateur, etat: EtatDePresence): void => {
+    expect(presence.etat).toBe(etat);
+  };
+  const thenPresencePermits = (presence: PresenceDeLOperateur, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
+    expect(presence.permet(intention)).toBe(permet);
+  };
+
   const identifyFixture = (): IdentiteDuGeste => {
     const id = crypto.randomUUID();
     const dateDeSurvenue = new Date(Date.parse(dateDuGeste) + identities.size).toISOString();
@@ -727,7 +814,7 @@ describe('FenetreOperateur', () => {
     const inactiveJournalFixture: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
         suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
       },
     };

@@ -1,6 +1,7 @@
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
+import { PresenceDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
@@ -33,6 +34,7 @@ class AtelierCoordinatorPageFixture {
   readonly refusAtelier = signal(undefined);
   readonly pointage = signal(undefined);
   readonly gestesDisponibles = signal(true);
+  readonly presence = signal(new PresenceDeLOperateur('ABSENT'));
 
   referentiel(): undefined {
     return undefined;

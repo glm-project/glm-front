@@ -20,7 +20,17 @@ import { GestesRecordingQueue } from './GestesRecordingQueue';
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
-    operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+    operateurs: [
+      {
+        id: 'jean',
+        nom: 'Dupont',
+        prenom: 'Jean',
+        matricule: '049',
+        etat: 'ABSENT',
+        postes: [{ id: 'tour', libelle: 'Tour' }],
+        evenements: [],
+      },
+    ],
     suivis: [
       {
         id: 'moule-1015',

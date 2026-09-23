@@ -31,6 +31,7 @@ const operator = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
+  etat: 'ABSENT',
   postes: [],
 };
 

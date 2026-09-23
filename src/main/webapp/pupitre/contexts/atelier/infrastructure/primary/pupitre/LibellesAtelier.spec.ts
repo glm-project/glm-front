@@ -45,5 +45,8 @@ describe('LibellesAtelier', () => {
     expect(LIBELLES_ENTETE_PUPITRE.enLigne).toBe('En ligne');
     expect(LIBELLES_ENTETE_PUPITRE.horsLigne).toBe('Hors ligne');
     expect(LIBELLES_ENTETE_PUPITRE.fin).toBe("J'ai fini");
+    expect(LIBELLES_ENTETE_PUPITRE.presence.ABSENT).toBe('Pas encore arrivé');
+    expect(LIBELLES_ENTETE_PUPITRE.presence.PRESENT).toBe('Présent');
+    expect(LIBELLES_ENTETE_PUPITRE.presence.EN_PAUSE).toBe('En pause');
   });
 });

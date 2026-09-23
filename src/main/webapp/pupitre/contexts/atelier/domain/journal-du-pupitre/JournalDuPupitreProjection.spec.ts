@@ -1,10 +1,15 @@
 import {
+  EtatDePresence,
   EvenementAccepte,
   EvenementDuJournal,
+  GesteDArrivee,
   GesteDAtelier,
   GesteDePointage,
+  GesteDePresence,
   JournalDuPupitre,
+  OperateurDuPupitre,
   ReferentielDuPupitre,
+  TypeDePresence,
 } from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
@@ -17,10 +22,25 @@ const requiredFixture = <T>(value: T | null | undefined, description: string): T
   return value;
 };
 
+const operateurJeanFixture: OperateurDuPupitre = {
+  id: 'jean',
+  nom: 'Dupont',
+  prenom: 'Jean',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [],
+  operateurs: [operateurJeanFixture],
   suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
+const arriveeGesteFixture: GesteDArrivee = {
+  nature: 'ARRIVEE',
+  operateurId: 'jean',
+  id: 'arrivee',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
+};
+const arriveeFixture: EvenementDuJournal = { geste: arriveeGesteFixture, etat: 'EN_ATTENTE' };
 const debutGesteFixture: GesteDePointage = {
   nature: 'POINTAGE',
   operateurId: 'jean',
@@ -30,6 +50,14 @@ const debutGesteFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
 };
 const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
+const operateurMarieFixture: OperateurDuPupitre = {
+  id: 'marie',
+  nom: 'Martin',
+  prenom: 'Marie',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
 
 describe('JournalDuPupitreProjection', () => {
   it('should reconstruct an offline activity and its original starting time', () => {
@@ -132,12 +160,139 @@ describe('JournalDuPupitreProjection', () => {
     thenReferenceIsMissing(projection);
   });
 
+  it('should make an absent operator present after a local arrival', () => {
+    const state = givenPresenceEvents('ABSENT', [arriveeFixture]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'PRESENT');
+  });
+
+  it('should put an operator on pause through the arrival assurance from absent', () => {
+    const state = givenPresenceEvents('ABSENT', [arriveeFixture, givenPresence('PAUSE')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'EN_PAUSE');
+  });
+
+  it('should put a paused operator back to work after a local resumption', () => {
+    const state = givenPresenceEvents('EN_PAUSE', [givenPresence('REPRISE')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'PRESENT');
+  });
+
+  it.each(['PRESENT', 'EN_PAUSE'] as const)('should make a %s operator absent after a local departure', etatDeDepart => {
+    const state = givenPresenceEvents(etatDeDepart, [givenPresence('DEPART')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'ABSENT');
+  });
+
+  it('should leave the state unchanged on an illegal transition', () => {
+    const state = givenPresenceEvents('EN_PAUSE', [givenPresence('PAUSE')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'EN_PAUSE');
+  });
+
+  it('should ignore a refused presence gesture', () => {
+    const state = givenPresenceEvents('PRESENT', [givenRefusedPresence('PAUSE')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'PRESENT');
+  });
+
+  it('should not move an operator targeted by another operator’s gesture', () => {
+    const state = givenPresenceEvents('ABSENT', [givenPresence('PAUSE', 'marie')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'ABSENT');
+  });
+
+  it('should apply an arrival only to the targeted operator when another operator is also absent', () => {
+    const state = givenPresenceEventsForTwoOperators('ABSENT', 'ABSENT', [givenArrivee('marie')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'marie', 'PRESENT');
+    thenOperatorStateIs(projection, 'jean', 'ABSENT');
+  });
+
+  it('should leave an operator’s current state alone when an old departure is already reflected by the referential', () => {
+    const state = givenPresenceEventsAlreadyReflected('PRESENT', ['ancien-depart'], [givenAcceptedPresence('DEPART', 'ancien-depart')]);
+
+    const projection = whenProjecting(state);
+
+    thenOperatorStateIs(projection, 'jean', 'PRESENT');
+  });
+
   const givenEvents = (evenements: EvenementDuJournal[]): JournalDuPupitre => ({
     referentiel: referenceFixture,
     evenements,
     connecte: true,
   });
   const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
+  const givenPresenceEvents = (etat: EtatDePresence, evenements: EvenementDuJournal[]): JournalDuPupitre => ({
+    referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat }] },
+    evenements,
+    connecte: true,
+  });
+  const givenPresenceEventsForTwoOperators = (
+    etatJean: EtatDePresence,
+    etatMarie: EtatDePresence,
+    evenements: EvenementDuJournal[],
+  ): JournalDuPupitre => ({
+    referentiel: {
+      ...referenceFixture,
+      operateurs: [
+        { ...operateurJeanFixture, etat: etatJean },
+        { ...operateurMarieFixture, etat: etatMarie },
+      ],
+    },
+    evenements,
+    connecte: true,
+  });
+  const givenArrivee = (operateurId: string): EvenementDuJournal => ({
+    geste: { ...arriveeGesteFixture, operateurId },
+    etat: 'EN_ATTENTE',
+  });
+  const givenPresenceEventsAlreadyReflected = (
+    etat: EtatDePresence,
+    evenementsDejaReflechis: readonly string[],
+    evenements: EvenementDuJournal[],
+  ): JournalDuPupitre => ({
+    referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat, evenements: evenementsDejaReflechis }] },
+    evenements,
+    connecte: true,
+  });
+  const givenAcceptedPresence = (type: TypeDePresence, id: string): EvenementDuJournal => ({
+    geste: { ...gestePresence(type, 'jean'), id },
+    etat: 'ACCEPTE',
+  });
+  const gestePresence = (type: TypeDePresence, operateurId: string): GesteDePresence => ({
+    nature: 'PRESENCE',
+    operateurId,
+    type,
+    implicite: false,
+    id: crypto.randomUUID(),
+    dateDeSurvenue: '2026-09-05T09:00:00Z',
+  });
+  const givenPresence = (type: TypeDePresence, operateurId = 'jean'): EvenementDuJournal => ({
+    geste: gestePresence(type, operateurId),
+    etat: 'EN_ATTENTE',
+  });
+  const givenRefusedPresence = (type: TypeDePresence, operateurId = 'jean'): EvenementDuJournal => ({
+    geste: gestePresence(type, operateurId),
+    etat: 'REFUSE',
+    refus: { code: 'refuse', message: 'refuse' },
+  });
   const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
     geste: { ...debutGesteFixture, id: 'debut-marie', operateurId: 'marie' },
@@ -214,5 +369,12 @@ describe('JournalDuPupitreProjection', () => {
   };
   const thenReferenceIsMissing = (projection: unknown): void => {
     expect(projection).toBeUndefined();
+  };
+  const thenOperatorStateIs = (projection: ReferentielDuPupitre | undefined, operateurId: string, etat: EtatDePresence): void => {
+    const operateur = requiredFixture(
+      projection?.operateurs.find(candidate => candidate.id === operateurId),
+      'projected operator',
+    );
+    expect(operateur.etat).toBe(etat);
   };
 });

@@ -34,16 +34,21 @@ const restoreJournal = (journal: JournalDuPupitreStocke): JournalDuPupitre => ({
   evenements: journal.evenements.map(restoreEvenement),
 });
 
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, evenements: readonly EvenementDuJournal[]): ReferentielDuPupitre => {
-  const journal = new EvenementsDuJournal(evenements);
-  return {
-    ...referentiel,
-    suivis: referentiel.suivis.map(suivi => ({
-      ...suivi,
-      evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
-    })),
-  };
-};
+const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
+  ...referentiel,
+  suivis: referentiel.suivis.map(suivi => ({
+    ...suivi,
+    evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
+  })),
+});
+
+const includeAcceptedPresences = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
+  ...referentiel,
+  operateurs: referentiel.operateurs.map(operateur => ({
+    ...operateur,
+    evenements: [...new Set([...operateur.evenements, ...journal.acceptedPresenceIds(operateur.id)])],
+  })),
+});
 
 @Injectable()
 export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
@@ -62,10 +67,13 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
   }
 
   override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
-    return this.update(entreprise, current => ({
-      ...current,
-      referentiel: includeAcceptedPointages(referentiel, current.evenements),
-    }));
+    return this.update(entreprise, current => {
+      const journal = new EvenementsDuJournal(current.evenements);
+      return {
+        ...current,
+        referentiel: includeAcceptedPresences(includeAcceptedPointages(referentiel, journal), journal),
+      };
+    });
   }
 
   override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {

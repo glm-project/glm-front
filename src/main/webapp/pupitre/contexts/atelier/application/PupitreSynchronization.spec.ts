@@ -512,13 +512,19 @@ describe('PupitreSynchronization', () => {
   const givenSessionCompanySwitchesDuringReferentialRefresh = (): void => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       tenant = 'entreprise-b';
-      return { operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }], suivis: [] };
+      return {
+        operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', etat: 'ABSENT', postes: [], evenements: [] }],
+        suivis: [],
+      };
     };
   };
   const givenSessionTokenSwitchesDuringReferentialRefresh = (): void => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       token = 'autre-token';
-      return { operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }], suivis: [] };
+      return {
+        operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', etat: 'ABSENT', postes: [], evenements: [] }],
+        suivis: [],
+      };
     };
   };
   const givenFailedReferentialExchange = (): void => {
@@ -575,7 +581,7 @@ describe('PupitreSynchronization', () => {
   };
   const givenANewReferentialAvailableOnServer = (): void => {
     server.onReferentiel = (): ReferentielDuPupitre => ({
-      operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
+      operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', etat: 'ABSENT', postes: [], evenements: [] }],
       suivis: [],
     });
   };

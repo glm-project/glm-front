@@ -4,6 +4,7 @@ import {
   EvenementDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
+  OperateurDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
@@ -41,6 +42,51 @@ const pointageAutreSuiviFixture: GesteDAtelier = {
   nature: 'POINTAGE',
   type: 'DEBUT',
   suiviId: 'autre-piece',
+};
+
+const operateurJeanFixture: OperateurDuPupitre = {
+  id: 'jean',
+  nom: 'Dupont',
+  prenom: 'Jean',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
+const operateurJeanPresentFixture: OperateurDuPupitre = { ...operateurJeanFixture, etat: 'PRESENT' };
+const referenceAvecOperateurFixture: ReferentielDuPupitre = { operateurs: [operateurJeanFixture], suivis: [] };
+const referenceRafraichieAvecOperateurFixture: ReferentielDuPupitre = { operateurs: [operateurJeanPresentFixture], suivis: [] };
+const arriveeJeanFixture: GesteDAtelier = {
+  nature: 'ARRIVEE',
+  id: 'arrivee-jean',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
+  operateurId: 'jean',
+};
+const departJeanFixture: GesteDAtelier = {
+  ...arriveeJeanFixture,
+  id: 'depart-jean',
+  nature: 'PRESENCE',
+  type: 'DEPART',
+  implicite: false,
+};
+const operateurMarieFixture: OperateurDuPupitre = {
+  id: 'marie',
+  nom: 'Martin',
+  prenom: 'Marie',
+  etat: 'ABSENT',
+  postes: [],
+  evenements: [],
+};
+const referenceAvecDeuxOperateursFixture: ReferentielDuPupitre = {
+  operateurs: [operateurJeanFixture, operateurMarieFixture],
+  suivis: [],
+};
+const departMarieFixture: GesteDAtelier = {
+  ...arriveeJeanFixture,
+  id: 'depart-marie',
+  nature: 'PRESENCE',
+  type: 'DEPART',
+  implicite: false,
+  operateurId: 'marie',
 };
 
 const adapters = [
@@ -130,6 +176,33 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     });
   });
 
+  it('should retain its audit trail while registering accepted presence gestures in a fresh reference', async () => {
+    await givenACompanyReferenceWithOperator();
+    await givenAnAcceptedArrivalAndAPendingDeparture();
+
+    const state = await whenSavingAFreshReferenceWithOperator();
+
+    thenOperatorEventsAre(state, 'jean', ['arrivee-jean']);
+  });
+
+  it('should not mark an accepted pointage as one of the operator’s presence events', async () => {
+    await givenACompanyReferenceWithOperator();
+    await givenAnAcceptedPointageForTheOperator();
+
+    const state = await whenSavingAFreshReferenceWithOperator();
+
+    thenOperatorEventsAre(state, 'jean', []);
+  });
+
+  it('should keep an operator’s presence events isolated from another operator’s accepted gesture', async () => {
+    await givenACompanyReferenceWithTwoOperators();
+    await givenAnAcceptedDepartureForMarie();
+
+    const state = await whenSavingAFreshReferenceWithTwoOperators();
+
+    thenOperatorEventsAre(state, 'jean', []);
+  });
+
   it('should record disconnected state when synchronization marks the company offline', async () => {
     await givenACompanyReference();
 
@@ -160,6 +233,24 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
 
   const givenACompanyReference = async (): Promise<void> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
+  };
+  const givenACompanyReferenceWithOperator = async (): Promise<void> => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceAvecOperateurFixture);
+  };
+  const givenAnAcceptedArrivalAndAPendingDeparture = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [arriveeJeanFixture, departJeanFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: arriveeJeanFixture, etat: 'ACCEPTE', journeeOuverte: true });
+  };
+  const givenAnAcceptedPointageForTheOperator = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [pointageFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageFixture, etat: 'ACCEPTE' });
+  };
+  const givenACompanyReferenceWithTwoOperators = async (): Promise<void> => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceAvecDeuxOperateursFixture);
+  };
+  const givenAnAcceptedDepartureForMarie = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [departMarieFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: departMarieFixture, etat: 'ACCEPTE' });
   };
 
   const completeOpeningFixture = (): JournalDuPupitre => ({
@@ -200,6 +291,10 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   const whenAppendingArrival = (): Promise<void> => journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
   const whenSavingAFreshReference = (): Promise<JournalDuPupitre> =>
     journal.saveReferentiel(Entreprise.of('entreprise-a'), refreshedReferenceFixture);
+  const whenSavingAFreshReferenceWithOperator = (): Promise<JournalDuPupitre> =>
+    journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceRafraichieAvecOperateurFixture);
+  const whenSavingAFreshReferenceWithTwoOperators = (): Promise<JournalDuPupitre> =>
+    journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceAvecDeuxOperateursFixture);
   const whenMarkingCompanyDisconnected = (company: string): Promise<JournalDuPupitre> => journal.markDisconnected(Entreprise.of(company));
   const whenSavingARefusalWhileAppending = async (refusal: EvenementDuJournal): Promise<void> => {
     await Promise.all([
@@ -228,6 +323,13 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   };
   const thenCompanyStateIs = async (company: string, expected: JournalDuPupitre): Promise<void> => {
     thenStateIs(await journal.read(Entreprise.of(company)), expected);
+  };
+  const thenOperatorEventsAre = (state: JournalDuPupitre, operateurId: string, expected: readonly string[]): void => {
+    const operateur = requiredFixture(
+      state.referentiel?.operateurs.find(candidate => candidate.id === operateurId),
+      'refreshed operator',
+    );
+    expect(operateur.evenements).toEqual(expected);
   };
 });
 
