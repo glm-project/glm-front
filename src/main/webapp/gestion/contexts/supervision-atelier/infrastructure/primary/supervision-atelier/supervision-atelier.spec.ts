@@ -605,7 +605,7 @@ describe('Supervision atelier component', () => {
     await whenFilterClicked('supervision-filtre-anomalie');
 
     expect(displayedTexts('supervision-operateur-nom')).toEqual(['Durand Bob', 'Martin Alice']);
-    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual(['⚡ GLM']);
+    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual(['⚡ Sans affectation']);
     expect(displayedTexts('supervision-indicateur-anomalies')).toHaveLength(2);
   });
 
@@ -980,7 +980,19 @@ describe('Supervision atelier component', () => {
   };
 
   const thenOnlyThePresentIdleOperatorIsSansAffectation = (): void => {
-    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))?.textContent).toContain('GLM');
+    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))?.textContent.trim()).toBe(
+      '⚡ Sans affectation',
+    );
+    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.textContent.trim()).toBe('Sans affectation');
+    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.getAttribute('aria-label')).toBe(
+      'Sans affectation à l’instant courant',
+    );
+    expect(rowFor('alice').querySelector(dataSelector('supervision-sans-affectation'))?.textContent.trim()).toBe(
+      'Sans affectation · Aucune activité en cours',
+    );
+    expect(rowFor('alice').querySelector(dataSelector('supervision-identite'))?.getAttribute('title')).toContain(
+      'Sans affectation · Aucune activité en cours',
+    );
     expect(elements('supervision-indicateur-sans-affectation')).toHaveLength(1);
     expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
   };
