@@ -93,7 +93,7 @@ describe('Weekly hours report in gestion', () => {
 
   const thenTheTableScrollsHorizontally = (): void => {
     cy.get(dataSelector('synthese-jour-row')).should('have.length', 7);
-    cy.get('.table-scroll').should($region => {
+    cy.get('[role="region"]').should($region => {
       expect($region[0]?.scrollWidth).to.be.greaterThan($region[0]?.clientWidth ?? 0);
     });
     cy.screenshot('synthese-des-heures-mobile', { capture: 'fullPage' });

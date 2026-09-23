@@ -30,8 +30,6 @@ export const LIBELLES_RELEVE_DES_HEURES = {
 
   anneeLabel: 'Année',
   semaineLabel: 'Semaine',
-  glyphePrecedente: '◀',
-  glypheSuivante: '▶',
   semainePrecedenteAria: 'Semaine précédente',
   semaineSuivanteAria: 'Semaine suivante',
   optionSemaine: (numero: number): string => `Semaine ${numero}`,

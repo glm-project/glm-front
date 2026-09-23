@@ -1,0 +1,160 @@
+/*
+ * Les surfaces que les écrans de gestion partagent : la carte qui porte un tableau et sa pagination, le filtre
+ * segmenté, la pastille d'état et le groupe d'actions d'une ligne. Préfixées `gestion-` pour ne jamais rencontrer
+ * une classe locale de composant.
+ */
+
+.gestion-carte {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+
+.gestion-carte .mat-mdc-paginator {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.gestion-table {
+  /* Positionné pour que les libellés `sr-only`, absolus, restent pris dans le défilement au lieu d'élargir la page. */
+  position: relative;
+  overflow-x: auto;
+}
+
+.gestion-table:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.gestion-table table {
+  width: 100%;
+}
+
+.gestion-table .mat-mdc-header-cell {
+  background: var(--color-canvas);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gestion-table .mat-mdc-cell {
+  color: var(--color-ink);
+}
+
+.gestion-table .mat-mdc-row {
+  transition: background-color 150ms ease-out;
+}
+
+.gestion-table .mat-mdc-row:hover {
+  background: color-mix(in srgb, var(--color-sunken) 45%, var(--color-surface));
+}
+
+.gestion-table .mat-mdc-row:last-child .mat-mdc-cell {
+  border-bottom: 0;
+}
+
+.gestion-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.gestion-actions .mat-mdc-icon-button {
+  color: var(--color-ink-muted);
+}
+
+.gestion-actions .mat-mdc-icon-button:hover {
+  color: var(--color-ink);
+}
+
+.gestion-segments {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-control);
+  background: var(--color-sunken);
+}
+
+.gestion-segment {
+  min-height: 2.5rem;
+  padding-inline: 1rem;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 0.125rem);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+.gestion-segment:hover {
+  color: var(--color-ink);
+}
+
+.gestion-segment[aria-pressed='true'] {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 14%, transparent);
+}
+
+.gestion-segment:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.gestion-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.gestion-pastille {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.gestion-type {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gestion-retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--spacing-touch);
+  border-radius: var(--radius-control);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 150ms ease-out;
+}
+
+.gestion-retour:hover {
+  color: var(--color-accent);
+}
+
+.gestion-retour:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

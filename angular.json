@@ -30,7 +30,8 @@
             "styles": [
               "src/main/webapp/styles.css",
               "@angular/material/prebuilt-themes/azure-blue.css",
-              "src/main/webapp/gestion/shared/design-system/infrastructure/primary/material-bridge.css"
+              "src/main/webapp/gestion/shared/design-system/infrastructure/primary/material-bridge.css",
+              "src/main/webapp/gestion/shared/design-system/infrastructure/primary/surfaces.css"
             ],
             "scripts": [],
             "allowedCommonJsDependencies": ["base64-js", "js-sha256", "keycloak-js"]
@@ -45,8 +46,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "2kb",
-                  "maximumError": "4kb"
+                  "maximumWarning": "5kb",
+                  "maximumError": "8kb"
                 }
               ],
               "outputHashing": "all"
@@ -147,8 +148,8 @@
               "budgets": [
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "2kb",
-                  "maximumError": "4kb"
+                  "maximumWarning": "5kb",
+                  "maximumError": "8kb"
                 }
               ],
               "outputHashing": "all"

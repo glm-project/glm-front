@@ -12,6 +12,29 @@
   --mat-sys-error: var(--color-nc);
   --mat-sys-on-error: var(--color-on-accent);
 
+  --mat-sys-display-large-font: var(--font-sans);
+  --mat-sys-display-medium-font: var(--font-sans);
+  --mat-sys-display-small-font: var(--font-sans);
+  --mat-sys-headline-large-font: var(--font-sans);
+  --mat-sys-headline-medium-font: var(--font-sans);
+  --mat-sys-headline-small-font: var(--font-sans);
+  --mat-sys-title-large-font: var(--font-sans);
+  --mat-sys-title-medium-font: var(--font-sans);
+  --mat-sys-title-small-font: var(--font-sans);
+  --mat-sys-body-large-font: var(--font-sans);
+  --mat-sys-body-medium-font: var(--font-sans);
+  --mat-sys-body-small-font: var(--font-sans);
+  --mat-sys-label-large-font: var(--font-sans);
+  --mat-sys-label-medium-font: var(--font-sans);
+  --mat-sys-label-small-font: var(--font-sans);
+
+  --mat-sys-corner-extra-large: var(--radius-surface);
+  --mat-button-filled-container-shape: var(--radius-control);
+  --mat-button-outlined-container-shape: var(--radius-control);
+  --mat-button-protected-container-shape: var(--radius-control);
+  --mat-button-text-container-shape: var(--radius-control);
+  --mat-button-tonal-container-shape: var(--radius-control);
+
   --mat-sys-headline-small-size: var(--text-title);
   --mat-sys-headline-small-line-height: var(--text-title--line-height);
 

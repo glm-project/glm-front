@@ -1,9 +1,4 @@
 :host {
-  --mat-dialog-subhead-font: var(--font-sans);
-  --mat-dialog-supporting-text-font: var(--font-sans);
-  --mat-button-filled-label-text-font: var(--font-sans);
-  --mat-button-text-label-text-font: var(--font-sans);
-  --mat-chip-label-text-font: var(--font-sans);
   display: block;
   color: var(--color-ink);
 }
@@ -58,8 +53,4 @@
 
 mat-chip {
   --mat-chip-container-shape-radius: 0.375rem;
-}
-
-mat-option {
-  --mat-option-label-text-font: var(--font-sans);
 }

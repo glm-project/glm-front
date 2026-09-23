@@ -1,8 +1,200 @@
 :host {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: block;
 }
 
-.angular-logo {
-  width: 50px;
-  height: 50px;
+.barre {
+  position: relative;
+  height: 3.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.marque {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+/* Un moule ouvert vu de profil : deux blocs de part et d'autre du plan de joint, l'empreinte à cheval. */
+.marque-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+}
+
+.marque-logo-fond {
+  fill: var(--color-accent);
+}
+
+.marque-logo-moule {
+  fill: var(--color-on-accent);
+}
+
+.marque-texte {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.marque-nom {
+  font-size: var(--text-section);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.marque-produit {
+  font-size: var(--text-body-sm);
+  line-height: 1;
+  color: var(--color-ink-muted);
+}
+
+.navigation-liste {
+  display: flex;
+  height: 100%;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lien {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-inline: 0.75rem;
+  border-radius: var(--radius-control);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 150ms ease-out;
+}
+
+.lien:hover {
+  color: var(--color-ink);
+}
+
+.lien-actif {
+  color: var(--color-ink);
+}
+
+.lien-actif::after {
+  position: absolute;
+  inset-inline: 0.75rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-accent);
+  content: '';
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: var(--spacing-touch);
+  min-height: var(--spacing-touch);
+  padding-inline: 0.75rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.action:hover {
+  background: var(--color-sunken);
+  color: var(--color-ink);
+}
+
+.action glm-icon {
+  font-size: 1.125rem;
+  line-height: 0;
+}
+
+.marque:focus-visible,
+.lien:focus-visible,
+.action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.bascule-menu {
+  display: none;
+}
+
+.navigation {
+  height: 100%;
+}
+
+/* Sous 1024 px, cinq destinations et la déconnexion ne tiennent plus sur une ligne : la navigation se replie. */
+@media (max-width: 63.999rem) {
+  .bascule-menu {
+    display: inline-flex;
+  }
+
+  .navigation {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    display: none;
+    height: auto;
+    padding: 0.5rem 1rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: 0 12px 24px -12px color-mix(in srgb, var(--color-ink) 25%, transparent);
+  }
+
+  .navigation-ouverte {
+    display: block;
+  }
+
+  .navigation-liste {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .lien {
+    min-height: var(--spacing-touch);
+    padding-inline: 0.75rem;
+    font-size: var(--text-body);
+  }
+
+  .lien-actif {
+    background: var(--color-sunken);
+  }
+
+  .lien-actif::after {
+    inset-block: 0.625rem;
+    inset-inline: 0 auto;
+    width: 3px;
+    height: auto;
+    border-radius: 0 2px 2px 0;
+  }
+}
+
+@media (max-width: 39.999rem) {
+  .marque-produit,
+  .action-libelle {
+    display: none;
+  }
 }

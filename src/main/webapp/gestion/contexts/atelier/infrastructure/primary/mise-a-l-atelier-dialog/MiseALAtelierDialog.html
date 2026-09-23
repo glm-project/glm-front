@@ -30,52 +30,55 @@
       {{ engagement() ? libelles.engagement : libelles.engager }}
     </button>
   </div>
-  } @if (choix(); as liste) { @if (liste.total === 0) {
-  <p class="py-8 text-center text-body text-ink-muted" data-selector="atelier-engagement-empty">{{ libelles.vide }}</p>
-  } @else {
-  <div class="table-scroll mt-4" tabindex="0" role="region" [attr.aria-label]="libelles.tableau">
-    <table mat-table [dataSource]="liste.elements" [attr.aria-label]="libelles.tableau">
-      <ng-container matColumnDef="type">
-        <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
-        <td mat-cell *matCellDef="let element" data-selector="engageable-type-cell">{{ libelleDuType(element) }}</td>
-      </ng-container>
-      <ng-container matColumnDef="designation">
-        <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.designation }}</th>
-        <td mat-cell *matCellDef="let element" class="font-semibold" data-selector="engageable-designation-cell">
-          {{ element.designation.value }}
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.actions }}</th>
-        <td mat-cell *matCellDef="let element">
-          <button
-            mat-stroked-button
-            type="button"
-            (click)="engager(element)"
-            [disabled]="engagement()"
-            [attr.aria-label]="libelles.engagementDe(element.designation.value)"
-            data-selector="engageable-engage"
-          >
-            <glm-icon name="plus" /> {{ libelles.engager }}
-          </button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-      <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="engageable-row"></tr>
-    </table>
+  } @if (choix(); as liste) {
+  <div class="gestion-carte mt-4">
+    @if (liste.total === 0) {
+    <p class="py-8 text-center text-body text-ink-muted" data-selector="atelier-engagement-empty">{{ libelles.vide }}</p>
+    } @else {
+    <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.tableau">
+      <table mat-table [dataSource]="liste.elements" [attr.aria-label]="libelles.tableau">
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
+          <td mat-cell *matCellDef="let element" data-selector="engageable-type-cell">{{ libelleDuType(element) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="designation">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.designation }}</th>
+          <td mat-cell *matCellDef="let element" class="font-semibold" data-selector="engageable-designation-cell">
+            {{ element.designation.value }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef scope="col"><span class="sr-only">{{ libelles.colonnes.actions }}</span></th>
+          <td mat-cell *matCellDef="let element" class="text-right">
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="engager(element)"
+              [disabled]="engagement()"
+              [attr.aria-label]="libelles.engagementDe(element.designation.value)"
+              data-selector="engageable-engage"
+            >
+              <glm-icon name="plus" /> {{ libelles.engager }}
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="engageable-row"></tr>
+      </table>
+    </div>
+    }
+    <mat-paginator
+      [length]="liste.total"
+      [pageIndex]="page()"
+      [pageSize]="taille()"
+      [pageSizeOptions]="[10, 20, 50]"
+      [disabled]="engagement()"
+      showFirstLastButtons
+      (page)="changePage($event)"
+      [attr.aria-label]="libelles.pagination.aria"
+      data-selector="atelier-engagement-pagination"
+    />
   </div>
-  }
-  <mat-paginator
-    [length]="liste.total"
-    [pageIndex]="page()"
-    [pageSize]="taille()"
-    [pageSizeOptions]="[10, 20, 50]"
-    [disabled]="engagement()"
-    showFirstLastButtons
-    (page)="changePage($event)"
-    [attr.aria-label]="libelles.pagination.aria"
-    data-selector="atelier-engagement-pagination"
-  />
   } @if (refus(); as erreur) {
   <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-engagement-refusal">{{ erreur.message }}</p>
   } @if (erreurTechnique()) {

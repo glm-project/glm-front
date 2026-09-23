@@ -1,30 +1,9 @@
 :host {
-  --mat-button-outlined-label-text-font: var(--font-sans);
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  display: block;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
-}
-
-.table-scroll {
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  background: var(--color-surface);
-}
-
-.table-scroll:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
 }
 
 .rapport {
@@ -35,23 +14,31 @@
 
 .rapport th,
 .rapport td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 1rem;
   text-align: left;
   vertical-align: middle;
 }
 
 .rapport thead th {
-  background: var(--color-sunken);
+  background: var(--color-canvas);
   border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.rapport tbody tr:not(.detail-row) {
+.rapport tbody tr {
   border-bottom: 1px solid var(--color-border);
+}
+
+.rapport tbody tr.ligne-depliee {
+  border-bottom: 0;
 }
 
 .rapport tfoot tr {
-  border-top: 2px solid var(--color-border-strong);
+  border-top: 1px solid var(--color-border-strong);
+  background: var(--color-canvas);
   font-weight: 600;
 }
 
@@ -79,7 +66,8 @@
 }
 
 .rapport .colonne-detail {
-  width: var(--spacing-touch);
+  width: calc(var(--spacing-touch) + 1rem);
+  padding-block: 0.25rem;
 }
 
 .detail {
@@ -90,14 +78,28 @@
   height: var(--spacing-touch);
   padding: 0;
   border: 0;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-ink-muted);
+  font-size: 1.125rem;
   cursor: pointer;
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.detail glm-icon {
+  line-height: 0;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.detail[aria-expanded='true'] glm-icon {
+  transform: rotate(180deg);
 }
 
 .detail:hover {
   background: var(--color-sunken);
+  color: var(--color-ink);
 }
 
 .detail:focus-visible {
@@ -107,12 +109,11 @@
 
 .detail-row td {
   padding-top: 0;
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.875rem;
 }
 
-.empty-state {
-  padding: 4rem 1.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+@media (prefers-reduced-motion: reduce) {
+  .detail glm-icon {
+    transition: none;
+  }
 }

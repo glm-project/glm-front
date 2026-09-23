@@ -1,23 +1,25 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 
 describe('Material bridge', () => {
   it('should paint the Material chrome with the design tokens', () => {
-    const colours = whenVisitingTheRoot();
+    const colours = whenVisitingTheWorkshop();
 
-    thenTheLogoutButtonWearsTheAccentOnASurface(colours);
+    thenThePrimaryActionWearsTheAccent(colours);
   });
 });
 
 interface ColoursFixture {
   readonly accent: string;
-  readonly surface: string;
+  readonly onAccent: string;
 }
 
-const whenVisitingTheRoot = (): Cypress.Chainable<ColoursFixture> => {
-  cy.visit('/');
+const whenVisitingTheWorkshop = (): Cypress.Chainable<ColoursFixture> => {
+  new AtelierApiFixture().install();
+  cy.visit('/atelier');
   return cy.window().then(window => ({
     accent: givenTheBrowsersValueOf(window, '--color-accent'),
-    surface: givenTheBrowsersValueOf(window, '--color-surface'),
+    onAccent: givenTheBrowsersValueOf(window, '--color-on-accent'),
   }));
 };
 
@@ -30,8 +32,8 @@ const givenTheBrowsersValueOf = (window: Window, token: string): string => {
   return resolved;
 };
 
-const thenTheLogoutButtonWearsTheAccentOnASurface = (colours: Cypress.Chainable<ColoursFixture>): void => {
-  colours.then(({ accent, surface }) => {
-    cy.get(dataSelector('gestion-logout')).should('have.css', 'color', accent).and('have.css', 'background-color', surface);
+const thenThePrimaryActionWearsTheAccent = (colours: Cypress.Chainable<ColoursFixture>): void => {
+  colours.then(({ accent, onAccent }) => {
+    cy.get(dataSelector('atelier-new')).should('have.css', 'background-color', accent).and('have.css', 'color', onAccent);
   });
 };

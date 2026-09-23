@@ -120,7 +120,7 @@ describe('Cost of manufacture in gestion', () => {
 
   const thenTheTableScrollsHorizontally = (): void => {
     cy.get(dataSelector('cout-ligne-row')).should('have.length', 3);
-    cy.get('.table-scroll').should($region => {
+    cy.get('[role="region"]').should($region => {
       expect($region[0]?.scrollWidth).to.be.greaterThan($region[0]?.clientWidth ?? 0);
     });
     cy.screenshot('cout-de-revient-mobile', { capture: 'fullPage' });
