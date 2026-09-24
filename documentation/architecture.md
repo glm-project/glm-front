@@ -153,7 +153,8 @@ adds an adapter; it does not add transport concepts to the domain.
 
 Ports used as Angular injection tokens are abstract classes so they exist at runtime. Their signatures stay
 framework-free. Application and domain code depend on the port; the composition root binds it to an adapter
-from `infrastructure/secondary`.
+from `infrastructure/secondary`. `ErrorHandlerPort` is bound nowhere else than in `provideErrorHandler`: the
+composition root passes it the adapter ([ADR 0025](adr/0025-route-runtime-errors-through-error-handler-port.md)).
 
 Use the `@/*` alias across context or root boundaries. Relative imports remain appropriate inside one local
 folder.

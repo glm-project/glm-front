@@ -1,6 +1,4 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
@@ -23,5 +21,4 @@ export const authProvider: Provider[] = [
   { provide: AuthenticationPort, useExisting: DeviceAuthentication },
   { provide: DeviceSessionPort, useExisting: DeviceAuthentication },
   { provide: DeviceEnrolmentPort, useExisting: DeviceAuthentication },
-  { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
 ];

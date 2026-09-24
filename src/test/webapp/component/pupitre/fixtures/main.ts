@@ -1,5 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
@@ -132,6 +132,7 @@ const bootstrapFixture = async (): Promise<void> => {
   if (!parameters.has('reference-delay')) journalFixture.seedReferentiel(Entreprise.of('atelier'), referentielFixture);
   const application = await bootstrapApplication(PupitrePageFixture, {
     providers: [
+      provideErrorHandler(ConsoleErrorHandler),
       GestesRecordingQueue,
       EtatHorsLigneDuPupitre,
       FraicheurDuReferentiel,
@@ -146,7 +147,6 @@ const bootstrapFixture = async (): Promise<void> => {
       { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
       { provide: AuthenticationPort, useValue: authenticationFixture },
       { provide: AtelierExchangePort, useValue: serveurFixture },
-      { provide: ErrorHandlerPort, useClass: ConsoleErrorHandler },
     ],
   });
   const enrolement = application.injector.get(EnrolementDuPupitre);
