@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { Component, ErrorHandler, inject, OnInit, signal } from '@angular/core';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { Component, inject, OnInit, signal } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
 
@@ -14,11 +15,9 @@ import { GestionHeader } from '../header/header';
 export class App implements OnInit {
   appName = signal('GLM');
   private readonly authentication = inject(AuthenticationPort);
-  private readonly errorHandler = inject(ErrorHandler);
+  private readonly errorHandler = inject(ErrorHandlerPort);
 
   ngOnInit(): void {
-    this.authentication.authenticate().catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
+    this.errorHandler.observe(this.authentication.authenticate());
   }
 }

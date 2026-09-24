@@ -1,7 +1,9 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
-import { ErrorHandler, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { Enrolement } from './enrolement';
 
@@ -34,28 +36,20 @@ class EnrolementDuPupitreFixture {
   }
 }
 
-class ScreenErrorHandlerFixture extends ErrorHandler {
-  failure: unknown;
-
-  override handleError(failure: unknown): void {
-    this.failure = failure;
-  }
-}
-
 describe('Enrolement screen', () => {
   let fixture: ComponentFixture<Enrolement>;
   let enrolement: EnrolementDuPupitreFixture;
-  let errorHandler: ScreenErrorHandlerFixture;
+  let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
     vi.useFakeTimers();
     enrolement = new EnrolementDuPupitreFixture();
-    errorHandler = new ScreenErrorHandlerFixture();
+    errorHandler = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       imports: [Enrolement],
       providers: [
         { provide: EnrolementDuPupitre, useValue: enrolement },
-        { provide: ErrorHandler, useValue: errorHandler },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     fixture = TestBed.createComponent(Enrolement);
@@ -236,7 +230,7 @@ describe('Enrolement screen', () => {
   };
 
   const thenTheFailureWasReported = (): void => {
-    expect(errorHandler.failure).toEqual(new Error('enrôlement indisponible'));
+    expect(errorHandler.errors).toEqual([new Error('enrôlement indisponible')]);
   };
 
   const element = (selector: string): HTMLElement => {

@@ -1,5 +1,6 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
-import { Component, ErrorHandler, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -10,11 +11,9 @@ import { RouterModule } from '@angular/router';
 })
 export class App implements OnInit {
   private readonly runtime = inject(PupitreRuntime);
-  private readonly errorHandler = inject(ErrorHandler);
+  private readonly errorHandler = inject(ErrorHandlerPort);
 
   ngOnInit(): void {
-    this.runtime.start().catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
+    this.errorHandler.observe(this.runtime.start());
   }
 }

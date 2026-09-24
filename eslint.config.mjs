@@ -57,6 +57,12 @@ const FORBIDDEN_ANGULAR_EFFECTS = {
   importNames: ['effect', 'afterRenderEffect'],
   message: 'Angular effects hide orchestration: use application commands or a one-shot render hook — see documentation/code-style.md.',
 };
+const FORBIDDEN_ANGULAR_ERROR_HANDLER = {
+  name: '@angular/core',
+  importNames: ['ErrorHandler'],
+  message:
+    "Report failures through ErrorHandlerPort: only the primary layer of app/shared/error-handler routes Angular's ErrorHandler to it — see documentation/adr/0025-route-runtime-errors-through-error-handler-port.md.",
+};
 const FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS = [
   "ImportExpression[source.value='@angular/core']",
   "ImportExpression > TemplateLiteral[expressions.length=0] > TemplateElement[value.cooked='@angular/core']",
@@ -229,6 +235,15 @@ export default typescript.config(
       'local/no-eslint-disable': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
       'no-restricted-syntax': restrictedSyntax(),
+    },
+  },
+  {
+    // A rule instance of its own: each boundary below replaces the options of `no-restricted-imports`, so
+    // exempting the error-handler primary layer there would mean restating every boundary for it.
+    files: ['src/**/*.ts'],
+    ignores: ['src/main/webapp/app/shared/error-handler/infrastructure/primary/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_ERROR_HANDLER] }],
     },
   },
   {
