@@ -1,3 +1,5 @@
+import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { authProvider } from '@/pupitre/auth.provider';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
@@ -24,7 +26,7 @@ declare global {
 
 enableProdMode();
 
-createApplication({ providers: [authProvider, offlineProvider] })
+createApplication({ providers: [provideErrorHandler(ConsoleErrorHandler), authProvider, offlineProvider] })
   .then(application => {
     const journal = application.injector.get(JournauxDuPupitrePort);
     window.pupitreProductionFixture = {

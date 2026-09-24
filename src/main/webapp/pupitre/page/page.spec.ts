@@ -22,7 +22,7 @@ import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/C
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
-import { computed, ErrorHandler, signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
@@ -118,25 +118,17 @@ class EnrolementDuPupitreFixture {
   }
 }
 
-class PageErrorHandlerFixture extends ErrorHandler {
-  failure: unknown;
-
-  override handleError(failure: unknown): void {
-    this.failure = failure;
-  }
-}
-
 describe('Pupitre page', () => {
   let fixture: ComponentFixture<PupitrePage>;
   let pupitre: AtelierCoordinatorFixture;
   let enrolement: EnrolementDuPupitreFixture;
-  let errorHandler: PageErrorHandlerFixture;
+  let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
     vi.useFakeTimers();
     pupitre = new AtelierCoordinatorFixture();
     enrolement = new EnrolementDuPupitreFixture(pupitre);
-    errorHandler = new PageErrorHandlerFixture();
+    errorHandler = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       imports: [PupitrePage],
       providers: [
@@ -144,7 +136,7 @@ describe('Pupitre page', () => {
         { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
         { provide: CurrentOperateurLifecycle, useValue: pupitre },
         { provide: EnrolementDuPupitre, useValue: enrolement },
-        { provide: ErrorHandler, useValue: errorHandler },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     fixture = TestBed.createComponent(PupitrePage);
@@ -301,7 +293,7 @@ describe('Pupitre page', () => {
     await Promise.resolve();
 
     expect(pupitre.finish).toHaveBeenCalledOnce();
-    expect(errorHandler.failure).toEqual(new Error('closure unavailable'));
+    expect(errorHandler.errors).toEqual([new Error('closure unavailable')]);
   });
 
   const givenPointage = (execution?: ExecutionDePointage): void => {

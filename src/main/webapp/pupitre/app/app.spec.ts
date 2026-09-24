@@ -1,3 +1,4 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
@@ -5,9 +6,10 @@ import { PresenceDeLOperateur } from '@/pupitre/contexts/atelier/domain/designat
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
-import { ErrorHandler, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 
 import { routes } from '../app.route';
@@ -83,7 +85,7 @@ describe('Pupitre shell', () => {
         { provide: EtatHorsLigneDuPupitre, useExisting: AtelierCoordinator },
         { provide: EnrolementDuPupitre, useClass: EnrolementPageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: ErrorHandler, useValue: errorHandler },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     }).compileComponents();
   });
@@ -143,7 +145,7 @@ describe('Pupitre shell', () => {
   };
 
   const thenTheAuthenticationFailureIsReported = (): void => {
-    expect(errorHandler.failure).toEqual(new Error('enrolment refused'));
+    expect(errorHandler.errors).toEqual([new Error('enrolment refused')]);
   };
   const thenTheRuntimeDidNotStart = (): void => {
     expect(runtime.started).toBe(false);
@@ -152,11 +154,3 @@ describe('Pupitre shell', () => {
     expect(runtime.started).toBe(true);
   };
 });
-
-class ErrorHandlerFixture extends ErrorHandler {
-  failure: unknown;
-
-  override handleError(failure: unknown): void {
-    this.failure = failure;
-  }
-}

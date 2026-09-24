@@ -1,6 +1,7 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
-import { Component, computed, ErrorHandler, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
 import { LIBELLES_ENROLEMENT } from '../LibellesEnrolement';
 import { QrCode } from '../qr-code/qr-code';
 
@@ -31,7 +32,7 @@ const ACTIONS: Partial<Record<VueDEnrolement['kind'], ActionDEnrolement>> = {
 export class Enrolement implements OnInit, OnDestroy {
   protected readonly labels = LIBELLES_ENROLEMENT;
   protected readonly enrolement = inject(EnrolementDuPupitre);
-  private readonly errorHandler = inject(ErrorHandler);
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private tic: ReturnType<typeof setInterval> | undefined;
 
   protected readonly statut = computed<string>(() => LIBELLES_ENROLEMENT.statut(this.enrolement.vue().kind));
@@ -48,12 +49,6 @@ export class Enrolement implements OnInit, OnDestroy {
   }
 
   protected declencher(intention: IntentionDEnrolement): void {
-    this.observe(intention === 'CHARGER_ATELIER' ? this.enrolement.chargerLAtelier() : this.enrolement.enroler());
-  }
-
-  private observe(operation: Promise<void>): void {
-    void operation.catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
+    this.errorHandler.observe(intention === 'CHARGER_ATELIER' ? this.enrolement.chargerLAtelier() : this.enrolement.enroler());
   }
 }

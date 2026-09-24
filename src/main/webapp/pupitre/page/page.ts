@@ -1,3 +1,4 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/CommandeGlobale';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
@@ -8,7 +9,7 @@ import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupi
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { Enrolement } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/enrolement/enrolement';
 import { Reinitialisation } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/reinitialisation/reinitialisation';
-import { ChangeDetectorRef, Component, computed, ElementRef, ErrorHandler, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { MessageDAtelierVisible, PupitreHeader } from '../header/header';
 
 @Component({
@@ -23,7 +24,7 @@ export class PupitrePage implements OnInit, OnDestroy {
   protected readonly designation = inject(CurrentOperateurLifecycle);
   protected readonly enrolement = inject(EnrolementDuPupitre);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly errorHandler = inject(ErrorHandler);
+  private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private consumeNextClick = false;
   protected readonly resetRequested = signal(false);
@@ -57,11 +58,11 @@ export class PupitrePage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.host.nativeElement.removeEventListener('pointerdown', this.guardPointerDown, true);
     this.host.nativeElement.removeEventListener('click', this.guardClick, true);
-    this.observe(this.designation.finish());
+    this.errorHandler.observe(this.designation.finish());
   }
 
   protected finish(): void {
-    this.observe(this.designation.finish());
+    this.errorHandler.observe(this.designation.finish());
   }
 
   protected askReset(): void {
@@ -75,17 +76,11 @@ export class PupitrePage implements OnInit, OnDestroy {
   protected confirmReset(): void {
     if (this.designation.operateur() !== undefined) return;
     this.resetRequested.set(false);
-    this.observe(this.enrolement.reinitialiser());
+    this.errorHandler.observe(this.enrolement.reinitialiser());
   }
 
   protected executeGlobale(intention: IntentionGlobale): void {
-    this.observe(this.pupitre.executeGlobale(intention));
-  }
-
-  private observe(operation: Promise<void>): void {
-    void operation.catch((failure: unknown) => {
-      this.errorHandler.handleError(failure);
-    });
+    this.errorHandler.observe(this.pupitre.executeGlobale(intention));
   }
 
   private comesFromKeypad(event: Event): boolean {

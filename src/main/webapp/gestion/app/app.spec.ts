@@ -1,8 +1,9 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
-import { ErrorHandler } from '@angular/core';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 
 import { routes } from '../app.route';
 import { App } from './app';
@@ -20,7 +21,7 @@ describe('Gestion shell', () => {
         provideRouter(routes),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: AuthenticationPort, useClass: InMemoryAuthentication },
-        { provide: ErrorHandler, useValue: errorHandler },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     }).compileComponents();
   });
@@ -63,17 +64,9 @@ describe('Gestion shell', () => {
     expect(TestBed.inject(AuthenticationPort).currentToken()).toBeDefined();
   };
   const thenTheAuthenticationFailureIsReported = (): void => {
-    expect(errorHandler.failure).toEqual(new Error('login refused'));
+    expect(errorHandler.errors).toEqual([new Error('login refused')]);
   };
 });
-
-class ErrorHandlerFixture extends ErrorHandler {
-  failure: unknown;
-
-  override handleError(failure: unknown): void {
-    this.failure = failure;
-  }
-}
 
 class RefusedAuthenticationFixture extends AuthenticationPort {
   override authenticate(): Promise<void> {
