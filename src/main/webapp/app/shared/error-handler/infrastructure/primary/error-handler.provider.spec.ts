@@ -39,13 +39,17 @@ describe('Error handler provider', () => {
   };
 
   const whenARejectionGoesUnhandled = (failure: Error): void => {
-    const promise = Promise.reject(failure);
-    // The event below stands for the browser's report; Node must not report this rejection to Vitest as well.
-    promise.catch(() => undefined);
+    const promise = rejectionLeftToTheBrowserFixture(failure);
     window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise, reason: failure, cancelable: true }));
   };
 
   const thenThePortReceived = (failure: Error): void => {
     expect(TestBed.inject(ErrorHandlerPort)).toMatchObject({ errors: [failure] });
+  };
+
+  const rejectionLeftToTheBrowserFixture = (failure: Error): Promise<never> => {
+    const promise = Promise.reject(failure);
+    promise.catch(() => undefined);
+    return promise;
   };
 });
