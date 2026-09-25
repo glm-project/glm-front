@@ -93,3 +93,9 @@ something stays, with a status that says what died.
 
 - [0039 — Load each gestion screen on demand](0039-load-gestion-screens-on-demand.md) — `loadComponent` on
   every gestion route, one chunk per screen, and budgets set from the measured initial bundle
+
+- [0040 — Colour non-conformity yellow and absence red](0040-colour-non-conformity-yellow.md) — `nc` renamed
+  `danger` for errors and absence, a new yellow `nc` never used as a foreground colour
+
+- [0041 — Sort workshop supervision into state lanes](0041-sort-workshop-supervision-into-state-lanes.md) — four
+  derived lanes in a fixed order, alphabetical within each, the NC laid over the activity and no duration shown

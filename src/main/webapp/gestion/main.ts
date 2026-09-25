@@ -1,6 +1,8 @@
 import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
 import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
+import { DonneesDeSupervisionPort } from '@/gestion/contexts/supervision-atelier/domain/supervision/DonneesDeSupervisionPort';
+import { InMemoryDonneesDeSupervision } from '@/gestion/contexts/supervision-atelier/infrastructure/secondary/supervision/InMemoryDonneesDeSupervision';
 import { httpSessionRefreshInterceptor } from '@/gestion/shared/authentication/infrastructure/primary/http-session-refresh.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
@@ -10,7 +12,6 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.route';
 import { App } from './app/app';
 import { authProvider } from './auth.provider';
-import { supervisionDemonstrationProvider } from './supervision.provider';
 
 import { environment } from './environments/environment';
 
@@ -24,7 +25,7 @@ bootstrapApplication(App, {
     provideRouter(routes),
     provideErrorHandler(ConsoleErrorHandler),
     authProvider,
-    supervisionDemonstrationProvider,
+    { provide: DonneesDeSupervisionPort, useClass: InMemoryDonneesDeSupervision },
   ],
 }).catch((err: unknown) => {
   console.error(err);

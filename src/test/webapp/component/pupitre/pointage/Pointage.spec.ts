@@ -30,6 +30,14 @@ describe('Pointage screen in a browser', () => {
     thenTheTileIsActiveAt('of-1', position);
   });
 
+  it('should mark a nonconforming tile in yellow with ink text', () => {
+    givenThePointageScreen();
+    givenAnOngoingActivity('of-1', 'tour');
+    whenPressingTileTarget('of-1', 'secondary-target');
+
+    thenTheNonConformityMarkerIsYellowWithInkText('of-1');
+  });
+
   it('should use scrolling as a safety valve for an extreme workshop volume', () => {
     givenThePointageScreen('?many');
 
@@ -43,6 +51,11 @@ describe('Pointage screen in a browser', () => {
     cy.get(dataSelector('digit-9')).click();
     cy.get(dataSelector('validate')).click();
     cy.get(dataSelector('pointage'));
+  };
+  const givenAnOngoingActivity = (id: string, workstation: string): void => {
+    whenPressingTileTarget(id, 'primary-target');
+    whenChoosingWorkstation(workstation);
+    cy.get(dataSelector(`tile-${id}`)).should('contain.text', 'ARRÊTER');
   };
   const givenTheTilePosition = (id: string): Cypress.Chainable<DOMRect> =>
     cy.get(dataSelector(`tile-${id}`)).then(tile => requiredFixture(tile[0], 'tile').getBoundingClientRect());
@@ -92,6 +105,12 @@ describe('Pointage screen in a browser', () => {
         expect(tile.text()).to.contain('ARRÊTER');
       });
     });
+  };
+  const thenTheNonConformityMarkerIsYellowWithInkText = (id: string): void => {
+    cy.get(dataSelector(`tile-${id}`))
+      .find(dataSelector('nc-marker'))
+      .should('have.css', 'background-color', 'rgb(234, 179, 8)')
+      .and('have.css', 'color', 'rgb(15, 24, 36)');
   };
   const thenTheGridCanScrollWithoutHidingTiles = (): void => {
     cy.get(dataSelector('pointage-grid')).should(grid => {

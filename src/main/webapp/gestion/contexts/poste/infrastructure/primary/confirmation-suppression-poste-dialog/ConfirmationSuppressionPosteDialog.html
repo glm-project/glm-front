@@ -4,9 +4,9 @@
     Le poste <strong>{{ poste.libelle.value }}</strong> sera retiré du référentiel. Cette action est définitive.
   </p>
   @if (refus(); as erreur) {
-  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="poste-delete-refusal">{{ erreur.message }}</p>
+  <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="poste-delete-refusal">{{ erreur.message }}</p>
   } @if (erreurTechnique()) {
-  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="poste-delete-technical-error">
+  <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="poste-delete-technical-error">
     La suppression a échoué. Vérifiez la connexion puis réessayez.
   </p>
   }

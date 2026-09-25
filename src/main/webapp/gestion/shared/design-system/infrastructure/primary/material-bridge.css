@@ -9,7 +9,7 @@
   --mat-sys-on-background: var(--color-ink);
   --mat-sys-outline: var(--color-border-strong);
   --mat-sys-outline-variant: var(--color-border);
-  --mat-sys-error: var(--color-nc);
+  --mat-sys-error: var(--color-danger);
   --mat-sys-on-error: var(--color-on-accent);
 
   --mat-sys-display-large-font: var(--font-sans);

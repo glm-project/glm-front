@@ -16,7 +16,7 @@
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="operateurs-loading">Chargement des opérateurs…</p>
     } @else if (etat().echec) {
     <div role="alert" class="py-16 text-center" data-selector="operateurs-error">
-      <p class="mb-4 text-body text-nc">Impossible de charger les opérateurs. Vérifiez la connexion puis réessayez.</p>
+      <p class="mb-4 text-body text-danger">Impossible de charger les opérateurs. Vérifiez la connexion puis réessayez.</p>
       <button mat-stroked-button (click)="reload()" data-selector="operateurs-retry">Réessayer</button>
     </div>
     } @else if (etat().totalElementsCount === 0 && etat().atelierSansPoste) {

@@ -24,9 +24,9 @@
   </div>
 
   @if (refusAction(); as erreur) {
-  <p role="alert" class="mb-4 text-body-sm text-nc" data-selector="atelier-action-refusal">{{ erreur.message }}</p>
+  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="atelier-action-refusal">{{ erreur.message }}</p>
   } @if (erreurAction()) {
-  <p role="alert" class="mb-4 text-body-sm text-nc" data-selector="atelier-action-error">{{ libelles.erreur }}</p>
+  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="atelier-action-error">{{ libelles.erreur }}</p>
   }
 
   <section class="gestion-carte" [attr.aria-busy]="etat().chargement" [attr.aria-label]="libelles.tableau">
@@ -34,7 +34,7 @@
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="atelier-loading">{{ libelles.chargement }}</p>
     } @else if (etat().echec) {
     <div role="alert" class="py-16 text-center" data-selector="atelier-error">
-      <p class="mb-4 text-body text-nc">{{ libelles.erreur }}</p>
+      <p class="mb-4 text-body text-danger">{{ libelles.erreur }}</p>
       <button mat-stroked-button type="button" (click)="reload()" data-selector="atelier-retry">{{ libelles.reessayer }}</button>
     </div>
     } @else if (etat().totalElementsCount === 0) {

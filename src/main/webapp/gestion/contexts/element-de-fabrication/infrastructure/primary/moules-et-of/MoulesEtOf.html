@@ -24,7 +24,7 @@
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="elements-loading">{{ libelles.chargement }}</p>
     } @else if (etat().echec) {
     <div role="alert" class="py-16 text-center" data-selector="elements-error">
-      <p class="mb-4 text-body text-nc">{{ libelles.erreur }}</p>
+      <p class="mb-4 text-body text-danger">{{ libelles.erreur }}</p>
       <button mat-stroked-button (click)="reload()" data-selector="elements-retry">{{ libelles.reessayer }}</button>
     </div>
     } @else if (etat().totalElementsCount === 0) {

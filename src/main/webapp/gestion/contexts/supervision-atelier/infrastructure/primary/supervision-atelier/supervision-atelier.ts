@@ -1,72 +1,37 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { Component, computed, inject, resource, signal } from '@angular/core';
-import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
+import { Component, inject, linkedSignal, resource, ResourceStatus } from '@angular/core';
 import { Instant } from '../../../domain/instant/Instant';
+import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
 import { DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { OperateurSupervise } from '../../../domain/supervision/OperateurSupervise';
 import { SupervisionDeLAtelier } from '../../../domain/supervision/SupervisionDeLAtelier';
-import { FriseSupervision } from './FriseSupervision';
-
-import { LIBELLES_SUPERVISION } from './LibellesSupervision';
+import { LIBELLES_SUPERVISION, MomentAffiche } from './LibellesSupervision';
 import { SupervisionRefreshCycle } from './SupervisionRefreshCycle';
 
-export type { StatistiquesSupervision } from '../../../domain/supervision/StatistiquesSupervision';
-
 export type EtatVueSupervision =
-  | { readonly kind: 'CHARGEMENT' }
-  | { readonly kind: 'ERREUR' }
-  | {
-      readonly kind: 'SUCCES';
-      readonly operateurs: readonly OperateurSupervise[];
-      readonly supervision: SupervisionDeLAtelier;
-      readonly frise: FriseSupervision;
-    };
+  { readonly kind: 'CHARGEMENT' } | { readonly kind: 'ERREUR' } | { readonly kind: 'SUCCES'; readonly supervision: SupervisionDeLAtelier };
 
-export type FiltreSupervision = 'TOUS' | 'PRESENT' | 'EN_PAUSE' | 'ABSENT' | 'SANS_AFFECTATION' | 'ANOMALIE';
-
-function correspondAuFiltre(supervise: OperateurSupervise, filtre: Exclude<FiltreSupervision, 'TOUS'> | null): boolean {
-  if (filtre === null) {
-    return true;
-  }
-  switch (filtre) {
-    case 'PRESENT':
-      return supervise.presence === 'PRESENT';
-    case 'EN_PAUSE':
-      return supervise.presence === 'EN_PAUSE';
-    case 'ABSENT':
-      return supervise.presence === 'ABSENT';
-    case 'SANS_AFFECTATION':
-      return supervise.isSansAffectation();
-    case 'ANOMALIE':
-      return supervise.anomalies.length > 0;
-  }
+export interface SignalAffiche {
+  readonly nombre: number;
+  readonly texte: string;
 }
 
-function activiteCorrespond(activite: ActiviteDeSupervision, recherche: string): boolean {
-  if (activite.nom.toLowerCase().includes(recherche)) {
-    return true;
-  }
-  const poste = activite.poste;
-  if (poste === undefined) {
-    return false;
-  }
-  return poste.toLowerCase().includes(recherche);
-}
+const SLUGS: Record<CouloirDeSupervision, string> = {
+  AU_TRAVAIL: 'au-travail',
+  SANS_AFFECTATION: 'sans-affectation',
+  EN_PAUSE: 'en-pause',
+  ABSENT: 'absents',
+};
 
-function correspondALaRecherche(supervise: OperateurSupervise, recherche: string): boolean {
-  if (recherche === '') {
-    return true;
-  }
-  const nomComplet = `${supervise.operateur.nom} ${supervise.operateur.prenom}`.toLowerCase();
-  if (nomComplet.includes(recherche)) {
-    return true;
-  }
-  const prenomNom = `${supervise.operateur.prenom} ${supervise.operateur.nom}`.toLowerCase();
-  if (prenomNom.includes(recherche)) {
-    return true;
-  }
-  return supervise.activites.some(act => activiteCorrespond(act, recherche));
-}
+const CHARGEMENT: EtatVueSupervision = { kind: 'CHARGEMENT' };
+
+const pendantLaLecture = (precedent: EtatVueSupervision | undefined): EtatVueSupervision =>
+  precedent?.kind === 'SUCCES' ? precedent : CHARGEMENT;
+
+const nomComplet = (supervise: OperateurSupervise): string => `${supervise.operateur.nom} ${supervise.operateur.prenom}`;
+
+const momentOf = (prefixe: string, instant: Instant | undefined, reference: Instant): MomentAffiche | undefined =>
+  instant === undefined ? undefined : LIBELLES_SUPERVISION.moment(prefixe, instant, reference);
 
 @Component({
   selector: 'glm-supervision-atelier',
@@ -77,27 +42,19 @@ function correspondALaRecherche(supervise: OperateurSupervise, recherche: string
 })
 export class SupervisionAtelier {
   protected readonly libelles = LIBELLES_SUPERVISION;
+  protected readonly slugs = SLUGS;
   private readonly donneesPort = inject(DonneesDeSupervisionPort);
   protected readonly donnees = resource({ loader: () => this.refreshCycle.run(() => this.donneesPort.read()) });
   private readonly refreshCycle: SupervisionRefreshCycle = new SupervisionRefreshCycle(() => this.donnees.reload());
 
-  protected readonly ligneDepliee = signal<string | null>(null);
+  // Réévaluer à chaque changement de statut, et non de valeur : une relecture peut rendre le même objet, et doit
+  // pourtant redater la supervision. Pendant la relecture, la dernière évaluation reste affichée.
+  protected readonly etat = linkedSignal<ResourceStatus, EtatVueSupervision>({
+    source: () => this.donnees.status(),
+    computation: (_status, precedent) => (this.donnees.isLoading() ? pendantLaLecture(precedent?.value) : this.evaluate()),
+  });
 
-  protected openJournal(id: string): void {
-    this.ligneDepliee.set(id);
-  }
-
-  protected toggleJournal(id: string): void {
-    this.ligneDepliee.update(current => (current === id ? null : id));
-  }
-
-  protected readonly recherche = signal('');
-  protected readonly filtreActif = signal<Exclude<FiltreSupervision, 'TOUS'> | null>(null);
-
-  protected readonly etat = computed<EtatVueSupervision>(() => {
-    if (this.donnees.isLoading()) {
-      return { kind: 'CHARGEMENT' };
-    }
+  private evaluate(): EtatVueSupervision {
     if (!this.donnees.hasValue()) {
       return { kind: 'ERREUR' };
     }
@@ -107,70 +64,32 @@ export class SupervisionAtelier {
     if (!resultat.estExploitable) {
       return { kind: 'ERREUR' };
     }
-    return {
-      kind: 'SUCCES',
-      operateurs: resultat.supervision.operateurs,
-      supervision: resultat.supervision,
-      frise: new FriseSupervision(maintenant),
-    };
-  });
-
-  protected readonly derniereLecture = computed<string | null>(() => {
-    const vue = this.etat();
-    if (vue.kind !== 'SUCCES') {
-      return null;
-    }
-    return this.libelles.heure(vue.frise.maintenant);
-  });
-
-  protected readonly aFiltreOuRechercheActif = computed(() => this.filtreActif() !== null || this.recherche().trim() !== '');
-
-  protected readonly presentation = computed(() => {
-    const vue = this.etat();
-    if (vue.kind !== 'SUCCES') {
-      return vue;
-    }
-    const filtre = this.filtreActif();
-    const recherche = this.recherche().trim().toLowerCase();
-    const operateursFiltres = vue.operateurs.filter(op => correspondAuFiltre(op, filtre) && correspondALaRecherche(op, recherche));
-    const lignes = operateursFiltres.map(supervise => ({
-      supervise,
-      resume: [
-        `${supervise.operateur.nom} ${supervise.operateur.prenom} · ${this.libelles.presences[supervise.presence]}`,
-        ...(supervise.isSansAffectation() ? [this.libelles.sansAffectationDetails] : []),
-        ...supervise.anomalies.map(anomalie => this.libelles.anomalies[anomalie]),
-        ...supervise.activites.map(activite =>
-          [activite.nom, activite.poste, `Depuis ${this.libelles.heure(activite.debut)}`].filter(Boolean).join(' · '),
-        ),
-      ].join(' · '),
-      activites: vue.frise.activites(supervise.activites),
-      presence: vue.frise.presence(supervise.segments),
-    }));
-    return { ...vue, statistiques: vue.supervision.statistiques, lignes };
-  });
-
-  protected basculerFiltre(filtre: FiltreSupervision): void {
-    if (filtre === 'TOUS') {
-      this.filtreActif.set(null);
-      return;
-    }
-    if (this.filtreActif() === filtre) {
-      this.filtreActif.set(null);
-    } else {
-      this.filtreActif.set(filtre);
-    }
+    return { kind: 'SUCCES', supervision: resultat.supervision };
   }
 
-  protected modifierRecherche(valeur: string): void {
-    this.recherche.set(valeur);
+  protected signalNc(supervision: SupervisionDeLAtelier): SignalAffiche {
+    const enNc = supervision.operateursEnNonConformite();
+    const texte = this.libelles.signal(this.libelles.enNc, enNc.map(nomComplet));
+    if (!supervision.areNonConformitesSuspendues()) {
+      return { nombre: enNc.length, texte };
+    }
+    return { nombre: enNc.length, texte: `${texte} ${enNc.length > 1 ? this.libelles.suspendues : this.libelles.suspendue}` };
   }
 
-  protected reinitialiserFiltres(): void {
-    this.filtreActif.set(null);
-    this.recherche.set('');
+  protected signalAVerifier(supervision: SupervisionDeLAtelier): SignalAffiche {
+    const aVerifier = supervision.operateursAVerifier();
+    return { nombre: aVerifier.length, texte: this.libelles.signal(this.libelles.aVerifier, aVerifier.map(nomComplet)) };
   }
 
-  protected estAbsentCalme(supervise: OperateurSupervise): boolean {
-    return supervise.isSansJourneeOuverte();
+  protected momentDeLaCarte(supervise: OperateurSupervise, reference: Instant): MomentAffiche | undefined {
+    switch (supervise.couloir()) {
+      case 'AU_TRAVAIL':
+      case 'SANS_AFFECTATION':
+        return momentOf(this.libelles.arrivee, supervise.heureDOuverture, reference);
+      case 'EN_PAUSE':
+        return momentOf(this.libelles.pauseDepuis, supervise.debutDeLaPauseEnCours(), reference);
+      case 'ABSENT':
+        return undefined;
+    }
   }
 }

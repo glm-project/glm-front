@@ -68,16 +68,18 @@
     <p class="text-section" data-selector="synthese-semaine-libelle">{{ libelles.semaine(semaineAffichee) }}</p>
   </section>
   } @switch (etat().kind) { @case ('ADRESSE_INVALIDE') {
-  <p role="alert" class="py-12 text-center text-body text-nc" data-selector="synthese-adresse-invalide">{{ libelles.adresseInvalide }}</p>
+  <p role="alert" class="py-12 text-center text-body text-danger" data-selector="synthese-adresse-invalide">
+    {{ libelles.adresseInvalide }}
+  </p>
   } @case ('CHARGEMENT') {
   <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="synthese-loading">{{ libelles.chargement }}</p>
   } @case ('OPERATEUR_INTROUVABLE') {
-  <p role="alert" class="py-12 text-center text-body text-nc" data-selector="synthese-operateur-introuvable">
+  <p role="alert" class="py-12 text-center text-body text-danger" data-selector="synthese-operateur-introuvable">
     {{ libelles.operateurIntrouvable }}
   </p>
   } @case ('ERREUR') {
   <div role="alert" class="py-12 text-center" data-selector="synthese-error">
-    <p class="mb-4 text-body text-nc">{{ libelles.echec }}</p>
+    <p class="mb-4 text-body text-danger">{{ libelles.echec }}</p>
     <button mat-stroked-button type="button" (click)="reload()" data-selector="synthese-retry">{{ libelles.reessayer }}</button>
   </div>
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {

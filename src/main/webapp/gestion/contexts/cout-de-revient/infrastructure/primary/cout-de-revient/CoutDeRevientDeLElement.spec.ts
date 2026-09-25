@@ -114,6 +114,14 @@ describe('Cout de revient component', () => {
     expect(texte(selector)).toBe(attendu);
   });
 
+  it('should mark the nonconformity time of the element with its NC label', async () => {
+    givenRapport([ligneFixture()]);
+
+    await whenEcranAffiche();
+
+    expect(marquesNcDans('cout-indicateur-temps')).toEqual(['NC']);
+  });
+
   it('should name a mould by the word the company uses', async () => {
     givenRapportDe([ligneFixture()], 'PRODUIT');
 
@@ -145,12 +153,20 @@ describe('Cout de revient component', () => {
 
     expect([
       texte('cout-travail-cell'),
-      texte('cout-non-conformite-cell'),
+      texte('cout-non-conformite-duree'),
       texte('cout-temps-cell'),
       texte('cout-machine-cell'),
       texte('cout-main-d-oeuvre-cell'),
       texte('cout-ligne-total-cell'),
     ]).toEqual(['2 h 00', '1 h 00', '3 h 00', '90,00 €', '40,00 €', '130,00 €']);
+  });
+
+  it('should mark only the rows carrying nonconformity time with the NC label', async () => {
+    givenRapport([ligneFixture({ nonConformite: 'PT1H', total: 'PT3H' }), ligneFixture({ nature: 'Tournage' })]);
+
+    await whenEcranAffiche();
+
+    expect(marquesNcParLigne()).toEqual([['NC'], []]);
   });
 
   it('should display the totals the server computed, never the sum of the rows', async () => {
@@ -185,6 +201,15 @@ describe('Cout de revient component', () => {
     await whenDetailDeplie();
 
     expect(textes('cout-non-conformite')).toEqual(['11 mai 2026, 10:00 – 11:00']);
+  });
+
+  it('should mark the reworks of a row with the NC label once its detail is opened', async () => {
+    givenRapport([ligneFixture({ nonConformite: 'PT1H', reprises: [periodeFixture(10, 11)] })]);
+    await whenEcranAffiche();
+
+    await whenDetailDeplie();
+
+    expect(marquesNcDans('cout-detail')).toEqual(['NC']);
   });
 
   it('should say that a row carries no rework', async () => {
@@ -325,6 +350,14 @@ describe('Cout de revient component', () => {
 
   const textes = (selector: string): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => normalise(element.textContent));
+
+  const marquesNcDans = (selector: string): string[] =>
+    [...requis(selector).querySelectorAll<HTMLElement>(dataSelector('cout-marque-nc'))].map(element => normalise(element.textContent));
+
+  const marquesNcParLigne = (): string[][] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('cout-ligne-row'))].map(ligne =>
+      [...ligne.querySelectorAll<HTMLElement>(dataSelector('cout-marque-nc'))].map(element => normalise(element.textContent)),
+    );
 
   const present = (selector: string): boolean => racine().querySelector(dataSelector(selector)) !== null;
 });

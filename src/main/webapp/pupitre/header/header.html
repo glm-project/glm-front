@@ -18,11 +18,11 @@
     </button>
     }
   </div>
-  <div class="min-w-0 text-body text-nc" data-selector="header-message">
+  <div class="min-w-0 text-body text-danger" data-selector="header-message">
     @if (message(); as currentMessage) {
     <span aria-live="polite">
       @if (currentMessage.contexte; as contexte) {
-      <strong class="rounded bg-nc px-2 text-on-accent">{{ contexte }}</strong>
+      <strong class="rounded bg-danger px-2 text-on-accent">{{ contexte }}</strong>
       } {{ currentMessage.message }}
     </span>
     }

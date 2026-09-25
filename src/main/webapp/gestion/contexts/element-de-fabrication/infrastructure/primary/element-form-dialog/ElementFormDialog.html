@@ -47,9 +47,9 @@
       </div>
     </fieldset>
     @if (formulaire().erreurEnregistrement(); as erreur) {
-    <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="element-enregistrement-error">{{ erreur }}</p>
+    <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="element-enregistrement-error">{{ erreur }}</p>
     } @if (erreurTechnique()) {
-    <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="element-technical-error">{{ libelles.erreurTechnique }}</p>
+    <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="element-technical-error">{{ libelles.erreurTechnique }}</p>
     }
   </mat-dialog-content>
   <mat-dialog-actions align="end">

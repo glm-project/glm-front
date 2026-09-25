@@ -100,6 +100,39 @@ it('should reject a static inline token bypass', async () => {
   thenImportsAreRejected([results]);
 });
 
+it('should reject nc as a foreground colour, variants and opacity included', async () => {
+  const results = await whenLintingTokens([
+    `const template = '<span class="text-nc">NC</span>';`,
+    `const template = '<span class="hover:text-nc">NC</span>';`,
+    `const template = '<span class="text-nc/50">NC</span>';`,
+    `const template = '<span [class.decoration-nc]="nc">NC</span>';`,
+    `const template = '<svg class="fill-nc"></svg>';`,
+    `const template = '<svg class="stroke-nc"></svg>';`,
+    `const template = '<input class="caret-nc" />';`,
+    `const template = '<input class="placeholder-nc" />';`,
+  ]);
+
+  thenImportsAreRejected(results);
+});
+
+it('should accept ink text on an nc background and nc-named classes', async () => {
+  const results = await whenLintingTokens([
+    `const template = '<span class="rounded bg-nc px-1.5 text-label text-ink" data-selector="nc-marker">NC</span>';`,
+    `const template = '<div class="tile--nc border-nc ring-nc outline-nc"></div>';`,
+  ]);
+
+  thenImportsAreAccepted(results);
+});
+
+const whenLintingTokens = async sources => {
+  const config = await eslint.calculateConfigForFile('src/main/webapp/pupitre/app/app.ts');
+  return sources.map(source =>
+    linter.verify(source, {
+      plugins: { local: config.plugins.local },
+      rules: { 'local/no-token-bypass': config.rules['local/no-token-bypass'] },
+    }),
+  );
+};
 const whenLintingImports = async (file, sources) => {
   const config = await eslint.calculateConfigForFile(file);
   const rules = {

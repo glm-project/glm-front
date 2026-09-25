@@ -4,11 +4,18 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
-import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
+import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
+import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
+import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
+import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
 import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
@@ -31,14 +38,178 @@ class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
   }
 }
 
-const aliceFixture = new OperateurDeclare(new IdentifiantOperateur('alice'), 'Martin', 'Alice');
-const bobFixture = new OperateurDeclare(new IdentifiantOperateur('bob'), 'Durand', 'Bob');
-const chloeFixture = new OperateurDeclare(new IdentifiantOperateur('chloe'), 'Bernard', 'Chloé');
+const operateurFixture = (id: string, nom: string, prenom: string, metiers: readonly string[] = []): OperateurDeclare =>
+  new OperateurDeclare({ id: new IdentifiantOperateur(id), nom, prenom, metiers: metiers.map(metier => new NatureDeTravail(metier)) });
+
+const posteFixture = (libelle: string, nature: string): PosteDeSupervision =>
+  new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle, nature: new NatureDeTravail(nature) });
+
+/** L'écran affiche les instants dans le fuseau du navigateur : partir d'une heure locale garde les attentes vraies partout. */
+const instantFixture = (heure: number, minute = 0, jour = 13): Instant => new Instant(new Date(2026, 8, jour, heure, minute).toISOString());
+const veilleFixture = (heure: number, minute = 0): Instant => instantFixture(heure, minute, 12);
+
+const mouleFixture = (reference: string, nom = 'PRD-2026-000001'): ElementTravaille =>
+  new ElementTravaille({ type: 'PRODUIT', nom, reference: new ReferenceDElement(reference) });
+const ofFixture = (reference: string, nom = 'OF-2026-000042'): ElementTravaille =>
+  new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom, reference: new ReferenceDElement(reference) });
+const ofSansReferenceFixture = (nom: string): ElementTravaille => new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom });
+
+interface ActiviteFixture {
+  readonly id: string;
+  readonly objet: ObjetDeLActivite;
+  readonly debut: Instant;
+  readonly poste?: PosteDeSupervision;
+  readonly categorie?: ValeurCategorieActivite;
+}
+
+const activiteFixture = (
+  operateur: OperateurDeclare,
+  { id, objet, debut, poste, categorie = 'TRAVAIL' }: ActiviteFixture,
+): ActiviteDeSupervision =>
+  new ActiviteDeSupervision({
+    id: new IdentifiantActivite(id),
+    operateurId: operateur.id,
+    objet,
+    categorie: new CategorieActivite(categorie),
+    debut,
+    ...(poste === undefined ? {} : { poste }),
+  });
+
+const aliceFixture = operateurFixture('alice', 'Martin', 'Alice');
+const bobFixture = operateurFixture('bob', 'Durand', 'Bob');
+const chloeFixture = operateurFixture('chloe', 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
   operateurs: [aliceFixture, bobFixture, chloeFixture],
   journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT'), JourneeDeTravail.open(bobFixture.id, 'EN_PAUSE')],
   activites: [],
 };
+
+const aubertFixture = operateurFixture('op-aubert', 'Aubert', 'Lucas');
+const dumasFixture = operateurFixture('op-dumas', 'Dumas', 'Julien');
+const fabreFixture = operateurFixture('op-fabre', 'Fabre', 'Lucie', ['Fraisage']);
+const lefevreFixture = operateurFixture('op-lefevre', 'Lefèvre', 'Sophie', ['Dessin']);
+const marchandFixture = operateurFixture('op-marchand', 'Marchand', 'Kevin');
+const perrinFixture = operateurFixture('op-perrin', 'Perrin', 'Loïc');
+const rouxFixture = operateurFixture('op-roux', 'Roux', 'Nathalie', ['Soudage', 'Tournage']);
+const schmittFixture = operateurFixture('op-schmitt', 'Schmitt', 'Yanis');
+const vidalFixture = operateurFixture('op-vidal', 'Vidal', 'Hugo');
+
+const atelierFixture: DonneesDeSupervision = {
+  operateurs: [
+    vidalFixture,
+    schmittFixture,
+    rouxFixture,
+    perrinFixture,
+    marchandFixture,
+    lefevreFixture,
+    fabreFixture,
+    dumasFixture,
+    aubertFixture,
+  ],
+  journees: [
+    JourneeDeTravail.open(aubertFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(6, 58))]),
+    JourneeDeTravail.open(dumasFixture.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(6, 45), instantFixture(9, 0))]),
+    JourneeDeTravail.open(lefevreFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(8, 55))]),
+    JourneeDeTravail.open(marchandFixture.id, 'PRESENT', [new FenetreDePresence(veilleFixture(6, 4))]),
+    JourneeDeTravail.closed(perrinFixture.id, [new FenetreDePresence(instantFixture(6, 30), instantFixture(9, 20))]),
+    JourneeDeTravail.open(rouxFixture.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(6, 40), instantFixture(9, 45))]),
+    JourneeDeTravail.open(schmittFixture.id, 'EN_PAUSE'),
+    JourneeDeTravail.open(vidalFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(9, 48))]),
+  ],
+  activites: [
+    activiteFixture(aubertFixture, {
+      id: 'act-aubert-3004',
+      objet: ofFixture('3004'),
+      poste: posteFixture('Tour 1', 'Tournage'),
+      categorie: 'NON_CONFORMITE',
+      debut: instantFixture(9, 40),
+    }),
+    activiteFixture(aubertFixture, {
+      id: 'act-aubert-1015',
+      objet: mouleFixture('1015'),
+      poste: posteFixture('Fraiseuse 1', 'Fraisage'),
+      debut: instantFixture(7, 5),
+    }),
+    activiteFixture(dumasFixture, {
+      id: 'act-dumas',
+      objet: ofFixture('3002', 'OF-2026-000040'),
+      poste: posteFixture('Scie 1', 'Sciage'),
+      debut: instantFixture(7, 10),
+    }),
+    activiteFixture(marchandFixture, {
+      id: 'act-marchand',
+      objet: ofFixture('3001', 'OF-2026-000039'),
+      poste: posteFixture('Fraiseuse 2', 'Fraisage'),
+      debut: veilleFixture(14, 20),
+    }),
+    activiteFixture(perrinFixture, {
+      id: 'act-perrin',
+      objet: ofFixture('3006', 'OF-2026-000044'),
+      poste: posteFixture('Tour 1', 'Tournage'),
+      categorie: 'NON_CONFORMITE',
+      debut: instantFixture(7, 0),
+    }),
+    activiteFixture(vidalFixture, { id: 'act-vidal', objet: ofSansReferenceFixture('OF-2026-000048'), debut: instantFixture(9, 52) }),
+  ],
+};
+
+const absentsActifsFixture = (nombre: number): DonneesDeSupervision => {
+  const operateurs = Array.from({ length: nombre }, (_, index) => operateurFixture(`op-${index}`, `Absent ${index}`, 'Actif'));
+  return {
+    operateurs,
+    journees: [],
+    activites: operateurs.map(operateur =>
+      activiteFixture(operateur, { id: `act-${operateur.id.value}`, objet: ofFixture('3001', 'OF-2026-000039'), debut: instantFixture(7) }),
+    ),
+  };
+};
+
+const nonConformitesFixture = ({
+  auTravail,
+  enPause,
+}: {
+  readonly auTravail: readonly OperateurDeclare[];
+  readonly enPause: readonly OperateurDeclare[];
+}): DonneesDeSupervision => ({
+  operateurs: [...auTravail, ...enPause],
+  journees: [
+    ...auTravail.map(operateur => JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(instantFixture(7))])),
+    ...enPause.map(operateur =>
+      JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
+    ),
+  ],
+  activites: [...auTravail, ...enPause].map(operateur =>
+    activiteFixture(operateur, {
+      id: `act-${operateur.id.value}`,
+      objet: mouleFixture('1015'),
+      categorie: 'NON_CONFORMITE',
+      debut: instantFixture(8),
+    }),
+  ),
+});
+
+const nonConformitesSuspenduesFixture = (operateurs: readonly OperateurDeclare[]): DonneesDeSupervision => ({
+  operateurs,
+  journees: operateurs.map(operateur =>
+    JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
+  ),
+  activites: operateurs.map(operateur =>
+    activiteFixture(operateur, {
+      id: `act-${operateur.id.value}`,
+      objet: mouleFixture('1015'),
+      categorie: 'NON_CONFORMITE',
+      debut: instantFixture(8),
+    }),
+  ),
+});
+
+interface ActiviteAffichee {
+  readonly element: string | undefined;
+  readonly poste: string | undefined;
+  readonly debut: string | undefined;
+  readonly nc: string | undefined;
+  readonly suspendue: string | undefined;
+}
 
 describe('Supervision atelier component', () => {
   let componentFixture: ComponentFixture<SupervisionAtelier>;
@@ -66,18 +237,18 @@ describe('Supervision atelier component', () => {
     vi.useRealTimers();
   });
 
-  it('should reload at thirty seconds and leave the grid unchanged before then', async () => {
+  it('should keep the lanes displayed while reloading at thirty seconds, and leave them unchanged before then', async () => {
     await givenDonneesDisplayed();
 
     sourceFixture.prepare();
     await whenTimePasses(29_999);
-    const beforeDeadline = displayedOperatorCount();
+    const beforeDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     await whenTimePasses(1);
-    const atDeadline = isLoadingDisplayed();
+    const atDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
 
-    expect(beforeDeadline).toBe(3);
-    expect(atDeadline).toBe(true);
+    expect(beforeDeadline).toEqual({ cards: 3, reading: false });
+    expect(atDeadline).toEqual({ cards: 3, reading: true });
     thenEmptyStateIsDisplayed();
   });
 
@@ -91,13 +262,13 @@ describe('Supervision atelier component', () => {
     const whileHidden = displayedOperatorCount();
     whenVisibilityChanges('visible');
     await whenSupervisionOpened();
-    const onReturn = isLoadingDisplayed();
+    const onReturn = isReadingAgain();
     await whenDonneesArrive();
     sourceFixture.prepare();
     await whenTimePasses(29_999);
     const beforeNextDeadline = displayedOperatorCount();
     await whenTimePasses(1);
-    const atNextDeadline = isLoadingDisplayed();
+    const atNextDeadline = isReadingAgain();
     await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
 
     expect(whileHidden).toBe(3);
@@ -119,13 +290,13 @@ describe('Supervision atelier component', () => {
     sourceFixture.prepare();
     obsoleteResponse.resolve({ operateurs: [], journees: [], activites: [] });
     await whenSupervisionOpened();
-    const obsoleteResultWasWithheld = isLoadingDisplayed();
+    const obsoleteResultWasWithheld = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     const readsAfterRelease = sourceFixture.reads;
     await whenDonneesArrive();
 
     expect(readsBeforeRelease).toBe(2);
     expect(readsAfterRelease).toBe(3);
-    expect(obsoleteResultWasWithheld).toBe(true);
+    expect(obsoleteResultWasWithheld).toEqual({ cards: 3, reading: true });
     expect(displayedOperatorCount()).toBe(3);
   });
 
@@ -199,13 +370,13 @@ describe('Supervision atelier component', () => {
     sourceFixture.prepare();
     await whenTimePasses(30_000);
     await whenAcquisitionFails();
-    const failure = { gridSize: displayedOperatorCount(), error: isErrorDisplayed() };
+    const failure = { cards: displayedOperatorCount(), error: isErrorDisplayed() };
 
     sourceFixture.prepare();
     await whenTimePasses(30_000);
     await whenDonneesArrive();
 
-    expect(failure).toEqual({ gridSize: 0, error: true });
+    expect(failure).toEqual({ cards: 0, error: true });
     expect(displayedOperatorCount()).toBe(3);
     expect(isErrorDisplayed()).toBe(false);
   });
@@ -217,7 +388,7 @@ describe('Supervision atelier component', () => {
       journees: [
         JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 18, 0).toISOString()))]),
       ],
-      activites: [activiteFixture('act-1', 'Moule 1015')],
+      activites: [activiteFixture(aliceFixture, { id: 'act-1', objet: mouleFixture('1015'), debut: instantFixture(8, 12) })],
     };
     await whenDonneesArrive(donneesAtThreshold);
 
@@ -228,8 +399,8 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive(donneesAtThreshold);
 
     expect(beforeRead).toEqual([]);
-    expect(displayedAnomalies()).toEqual(['Journée ouverte depuis plus de 16 h']);
-    expect(displayedActivityStart()).toBe('08:12');
+    expect(displayedAnomalies()).toEqual(['Aucun départ pointé depuis plus de 16 h']);
+    expect(displayedActivityStart()).toBe('depuis 08:12');
   });
 
   it('should leave no polling timer after unmount and restart one cadence on remount', async () => {
@@ -271,8 +442,8 @@ describe('Supervision atelier component', () => {
 
   const pollingTimerCount = (): number => vi.getTimerCount();
 
-  const displayedAnomalies = (): string[] => elements('supervision-anomalie').map(anomalie => anomalie.textContent.trim());
-  const displayedActivityStart = (): string | undefined => element('supervision-activite-debut')?.textContent.trim();
+  const displayedAnomalies = (): string[] => elements('supervision-anomalie').map(anomalie => texte(anomalie));
+  const displayedActivityStart = (): string => texte(requiredFixture(element('supervision-activite-debut'), 'activity start'));
 
   const isErrorDisplayed = (): boolean => element('supervision-error') !== null;
 
@@ -288,8 +459,8 @@ describe('Supervision atelier component', () => {
     componentFixture = TestBed.createComponent(SupervisionAtelier);
   };
 
-  const displayedOperatorCount = (): number => elements('supervision-ligne').length;
-  const isLoadingDisplayed = (): boolean => element('supervision-loading') !== null;
+  const displayedOperatorCount = (): number => elements('supervision-carte').length;
+  const isReadingAgain = (): boolean => element('supervision-plateau')?.getAttribute('aria-busy') === 'true';
 
   const whenVisibilityChanges = (visibility: DocumentVisibilityState): void => {
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(visibility);
@@ -314,412 +485,229 @@ describe('Supervision atelier component', () => {
     thenLoadingIsDisplayed();
   });
 
-  it('should display a row for each declared operator with their presence status', async () => {
+  it('should render each lane with its count and its operators', async () => {
     await givenAcquisitionInProgress();
 
-    await whenDonneesArrive();
+    await whenDonneesArrive(atelierFixture);
 
-    thenOperatorsAreDisplayed([
-      { nomComplet: 'Bernard Chloé', presence: 'Absent' },
-      { nomComplet: 'Durand Bob', presence: 'En pause' },
-      { nomComplet: 'Martin Alice', presence: 'Présent' },
+    thenLanesAre([
+      { couloir: 'au-travail', nombre: '3', operateurs: ['Aubert Lucas', 'Marchand Kevin', 'Vidal Hugo'] },
+      { couloir: 'sans-affectation', nombre: '1', operateurs: ['Lefèvre Sophie'] },
+      { couloir: 'en-pause', nombre: '3', operateurs: ['Dumas Julien', 'Roux Nathalie', 'Schmitt Yanis'] },
+      { couloir: 'absents', nombre: '2', operateurs: ['Fabre Lucie', 'Perrin Loïc'] },
     ]);
   });
 
-  it('should expose a collapsed journal that can be expanded and stays open after polling', async () => {
-    await givenDonneesDisplayed();
-    const initiallyCollapsed = journalState('alice');
-
-    await whenJournalToggled('alice');
-    sourceFixture.prepare();
-    await whenTimePasses(30_000);
-    await whenDonneesArrive();
-
-    expect(initiallyCollapsed).toEqual({ expanded: 'false', hidden: true, linked: true });
-    expect(journalState('alice')).toEqual({ expanded: 'true', hidden: false, linked: true });
-    expect(journalState('bob').expanded).toBe('false');
-  });
-
-  it('should close the previous journal when another row is expanded and retain that selection after polling', async () => {
-    await givenDonneesDisplayed();
-    await whenJournalToggled('alice');
-
-    await whenJournalToggled('bob');
-    sourceFixture.prepare();
-    await whenTimePasses(30_000);
-    await whenDonneesArrive();
-
-    expect(journalState('alice')).toEqual({ expanded: 'false', hidden: true, linked: true });
-    expect(journalState('bob')).toEqual({ expanded: 'true', hidden: false, linked: true });
-  });
-
-  it('should select only the activity owner journal and keep it open on repeated activity clicks', async () => {
-    await givenAcquisitionInProgress();
-    await whenDonneesArrive({ ...donneesFixture, activites: [activiteFixture('act', 'OF-42')] });
-    await whenJournalToggled('bob');
-
-    await whenActivityOpened();
-    await whenActivityOpened();
-
-    expect(journalState('alice')).toEqual({ expanded: 'true', hidden: false, linked: true });
-    expect(journalState('bob')).toEqual({ expanded: 'false', hidden: true, linked: true });
-  });
-
-  it('should use native titles for activity and operator hover details', async () => {
+  it('should show « Personne » in an empty lane', async () => {
     await givenAcquisitionInProgress();
 
-    await whenDonneesArrive({ ...donneesFixture, activites: [activiteFixture('act', 'OF-42', 'Tour 1')] });
+    await whenDonneesArrive();
 
-    thenNativeTitlesDescribeTheActivityAndOperator();
+    expect(texte(lane('au-travail'))).toContain('Personne');
+    expect(texte(lane('sans-affectation'))).not.toContain('Personne');
   });
 
-  const thenNativeTitlesDescribeTheActivityAndOperator = (): void => {
-    const activity = requiredFixture(element('supervision-segment-activite'), 'activity');
-    expect(activity.title).toBe('OF-42 · FABRICATION · Tour 1 · Depuis 08:12 · 108 min · En cours');
-    expect(activity.getAttribute('aria-label')).toBe(activity.title);
-    expect(operatorRow('alice').querySelector<HTMLElement>(dataSelector('supervision-identite'))?.title).toContain(
-      'Martin Alice · Présent',
+  it('should show the activity reference, workstation, trade and start without interaction', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
+      { element: 'Moule 1015', poste: 'Fraiseuse 1 · Fraisage', debut: 'depuis 07:05' },
+      { element: 'OF 3004', poste: 'Tour 1 · Tournage', debut: 'depuis 09:40' },
+    ]);
+  });
+
+  it('should name an element by its name when it has no reference, and say it has no workstation', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(activitiesOf('op-vidal').map(({ element, poste }) => ({ element, poste }))).toEqual([
+      { element: 'OF OF-2026-000048', poste: 'Sans poste' },
+    ]);
+  });
+
+  it('should label non-billable work « Hors OF » without any reference', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({
+      operateurs: [aubertFixture],
+      journees: [JourneeDeTravail.open(aubertFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(6, 58))])],
+      activites: [
+        activiteFixture(aubertFixture, {
+          id: 'act-hors-of',
+          objet: new HorsOf(),
+          poste: posteFixture('Tour 3', 'Tournage'),
+          debut: instantFixture(7, 45),
+        }),
+      ],
+    });
+
+    expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
+      { element: 'Hors OF', poste: 'Tour 3 · Tournage', debut: 'depuis 07:45' },
+    ]);
+  });
+
+  it('should say that an unassigned or paused operator has no activity in progress, and nothing for an absent one', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect([idleNoticeOf('op-lefevre'), idleNoticeOf('op-roux'), idleNoticeOf('op-fabre')]).toEqual([
+      'Aucune activité en cours',
+      'Aucune activité en cours',
+      undefined,
+    ]);
+  });
+
+  it('should list the trades of an unassigned or paused operator without activity, never those of an absent one', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(['op-lefevre', 'op-roux', 'op-schmitt', 'op-fabre'].map(id => tradesOf(id))).toEqual([
+      'Métier : Dessin',
+      'Métiers : Soudage, Tournage',
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it('should mark a nonconforming activity with its NC label', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(activitiesOf('op-aubert').map(({ nc }) => nc)).toEqual([undefined, 'NC']);
+  });
+
+  it('should mark the activities of a paused operator as suspended', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(activitiesOf('op-dumas').map(({ suspendue }) => suspendue)).toEqual(['suspendue']);
+    expect(activitiesOf('op-aubert').map(({ suspendue }) => suspendue)).toEqual([undefined, undefined]);
+  });
+
+  it('should show an absent operator’s activities, NC included, without naming them in the NC signal', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(activitiesOf('op-perrin')).toEqual([
+      { element: 'OF 3006', poste: 'Tour 1 · Tournage', debut: 'depuis 07:00', nc: 'NC', suspendue: undefined },
+    ]);
+    expect(signal('supervision-signal-nc')).toBe('1 en NC : Aubert Lucas');
+  });
+
+  it('should show the arrival and pause start times, with the date when they fall on another day than the evaluation instant', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(['op-aubert', 'op-marchand', 'op-lefevre', 'op-dumas', 'op-schmitt', 'op-perrin'].map(id => hourOf(id))).toEqual([
+      'arrivée 06:58',
+      'arrivée le 12/09 à 06:04',
+      'arrivée 08:55',
+      'pause depuis 09:00',
+      undefined,
+      undefined,
+    ]);
+    expect(activitiesOf('op-marchand').map(({ debut }) => debut)).toEqual(['depuis le 12/09 à 14:20']);
+  });
+
+  it('should show an anomaly band without moving the operator out of the lane', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(anomaliesIn('au-travail')).toEqual({ 'op-marchand': ['Aucun départ pointé depuis plus de 16 h'] });
+    expect(anomaliesIn('en-pause')).toEqual({ 'op-schmitt': ['Venue ouverte sans heure d’arrivée'] });
+    expect(anomaliesIn('absents')).toEqual({ 'op-perrin': ['Activité d’un opérateur absent'] });
+  });
+
+  it('should name nonconforming and to-check operators in the signal line', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect([signal('supervision-signal-nc'), signal('supervision-signal-a-verifier')]).toEqual([
+      '1 en NC : Aubert Lucas',
+      '3 à vérifier : Marchand Kevin, Perrin Loïc, Schmitt Yanis',
+    ]);
+  });
+
+  it('should still name six operators to check', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(absentsActifsFixture(6));
+
+    expect(signal('supervision-signal-a-verifier')).toBe(
+      '6 à vérifier : Absent 0 Actif, Absent 1 Actif, Absent 2 Actif, Absent 3 Actif, Absent 4 Actif, Absent 5 Actif',
     );
-  };
-
-  it('should share a 06 to 22 scale and place now at 10 without a timer per row', async () => {
-    await givenDonneesDisplayed();
-
-    await whenViewSettles();
-
-    expect(displayedTexts('supervision-repere-heure')).toEqual([
-      '06:00',
-      '08:00',
-      '10:00',
-      '12:00',
-      '14:00',
-      '16:00',
-      '18:00',
-      '20:00',
-      '22:00',
-    ]);
-    thenNowIsAnUnlabelledMarker();
-    expect(pollingTimerCount()).toBe(1);
   });
 
-  it('should display actual presence and breaks in chronological proportions', async () => {
+  it('should count the operators to check without naming them beyond six', async () => {
     await givenAcquisitionInProgress();
 
-    await whenDonneesArrive({
-      operateurs: [aliceFixture],
-      activites: [],
-      journees: [
-        JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [
-          new FenetreDePresence(instantFixture(9)),
-          new FenetreDePresence(instantFixture(6), instantFixture(8)),
-        ]),
-      ],
-    });
-    await whenJournalToggled('alice');
+    await whenDonneesArrive(absentsActifsFixture(7));
 
-    expect(segmentPositions('supervision-segment-presence')).toEqual([
-      { left: '0%', width: '12.5%', label: 'Présence · 06:00 – 08:00' },
-      { left: '12.5%', width: '6.25%', label: 'Pause · 08:00 – 09:00' },
-      { left: '18.75%', width: '6.25%', label: 'Présence · 09:00 – 10:00 (en cours)' },
-    ]);
-    expect(displayedText('supervision-journal')).toContain('Pause · 08:00 – 09:00');
-  });
-
-  it('should show only coloured activity markers while keeping full accessible details', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [
-        activiteFixture('long', 'Fabrication', 'Tour 1'),
-        new ActiviteDeSupervision({
-          id: new IdentifiantActivite('short'),
-          operateurId: aliceFixture.id,
-          nom: 'Contrôle de non-conformité très court',
-          categorie: new CategorieActivite('NC'),
-          debut: instantFixture(9, 55),
-          poste: 'Tour 2',
-        }),
-      ],
-    });
-
-    thenActivitiesHaveSeparateTracksAndCompleteDetails();
-  });
-
-  it.each([5, 23])('should report now outside the scale at %i without a clamped time bar', async heure => {
-    await givenAcquisitionInProgress();
-    givenCurrentHour(heure);
-
-    await whenDonneesArrive();
-
-    expect(element('supervision-maintenant')).toBeNull();
-    expect(displayedText('supervision-maintenant-hors-plage')).toContain(`Maintenant (${String(heure).padStart(2, '0')}:00) — hors plage`);
-  });
-
-  it('should report sans affectation outside the scale when now is outside it', async () => {
-    await givenAcquisitionInProgress();
-    givenCurrentHour(23);
-
-    await whenDonneesArrive();
-
-    thenSansAffectationIsReportedOutsideTheScale();
-  });
-
-  it('should show an activity starting exactly now as a small marker rather than outside the scale', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [
-        new ActiviteDeSupervision({
-          id: new IdentifiantActivite('just-started'),
-          operateurId: aliceFixture.id,
-          nom: 'Démarrage',
-          categorie: new CategorieActivite('FABRICATION'),
-          debut: instantFixture(10),
-        }),
-      ],
-    });
-    await whenActivityOpened();
-
-    expect(displayedActivityLabel()).toContain('Depuis 10:00 · 0 min');
-    expect(element('supervision-position-activite')?.style.left).toBe('25%');
-    expect(journalState('alice').expanded).toBe('true');
-  });
-
-  const displayedActivityLabel = (): string | null | undefined => element('supervision-segment-activite')?.getAttribute('aria-label');
-
-  const whenActivityOpened = async (): Promise<void> => {
-    requiredFixture(element('supervision-segment-activite'), 'activity segment').click();
-    await whenViewSettles();
-  };
-
-  it('should keep an old activity legible when only five minutes fit after the scale opening', async () => {
-    await givenAcquisitionInProgress();
-    givenCurrentTime(6, 5);
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [
-        new ActiviteDeSupervision({
-          id: new IdentifiantActivite('early'),
-          operateurId: aliceFixture.id,
-          nom: 'Fabrication commencée avant la plage',
-          categorie: new CategorieActivite('FABRICATION'),
-          debut: instantFixture(5),
-        }),
-      ],
-    });
-
-    expect(elements('supervision-marque-activite')).toHaveLength(1);
-    expect(displayedActivityLabel()).toContain('Depuis 05:00 · 65 min');
-  });
-
-  const givenCurrentTime = (heure: number, minute: number): void => {
-    vi.setSystemTime(new Date(2026, 8, 13, heure, minute));
-  };
-
-  it('should keep activities available in text when the current time precedes the scale', async () => {
-    await givenAcquisitionInProgress();
-    givenCurrentHour(5);
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [
-        new ActiviteDeSupervision({
-          id: new IdentifiantActivite('night'),
-          operateurId: aliceFixture.id,
-          nom: 'Fabrication de nuit',
-          categorie: new CategorieActivite('FABRICATION'),
-          debut: instantFixture(4),
-        }),
-      ],
-    });
-    await whenJournalToggled('alice');
-
-    expect(element('supervision-segment-activite')).toBeNull();
-    expect(displayedTexts('supervision-piste-activite')).toEqual(['Activité hors plage']);
-    expect(displayedTexts('supervision-activite-nom')).toEqual(['Fabrication de nuit']);
-    expect(journalState('alice').hidden).toBe(false);
-  });
-
-  it('should draw a current pause only after the last real presence window', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      operateurs: [aliceFixture],
-      activites: [],
-      journees: [JourneeDeTravail.open(aliceFixture.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))])],
-    });
-
-    expect(segmentPositions('supervision-segment-presence')).toEqual([
-      { left: '6.25%', width: '12.5%', label: 'Présence · 07:00 – 09:00' },
-      { left: '18.75%', width: '6.25%', label: 'Pause · 09:00 – 10:00 (en cours)' },
-    ]);
-    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual([]);
-  });
-
-  it('should clip overnight presence and omit old windows without joining separate visits with a pause', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      operateurs: [aliceFixture],
-      activites: [],
-      journees: [
-        JourneeDeTravail.closed(aliceFixture.id, [new FenetreDePresence(instantFixture(-4), instantFixture(7))]),
-        JourneeDeTravail.closed(aliceFixture.id, [new FenetreDePresence(instantFixture(-22), instantFixture(-20))]),
-        JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(9))]),
-      ],
-    });
-
-    expect(segmentPositions('supervision-segment-presence')).toEqual([
-      { left: '0%', width: '6.25%', label: 'Présence · 20:00 – 07:00' },
-      { left: '18.75%', width: '6.25%', label: 'Présence · 09:00 – 10:00 (en cours)' },
-    ]);
-  });
-
-  it('should retain expanded journals across filters', async () => {
-    await givenDonneesDisplayed();
-    await whenJournalToggled('alice');
-
-    await whenFilterClicked('supervision-filtre-absent');
-    await whenFilterClicked('supervision-filtre-tous');
-
-    expect(journalState('alice').expanded).toBe('true');
-  });
-
-  it('should close an expanded journal when toggled again', async () => {
-    await givenDonneesDisplayed();
-    await whenJournalToggled('alice');
-
-    await whenJournalToggled('alice');
-
-    expect(journalState('alice').hidden).toBe(true);
+    expect([signal('supervision-signal-nc'), signal('supervision-signal-a-verifier')]).toEqual(['0 en NC', '7 à vérifier']);
   });
 
   it.each([
-    ['supervision-filtre-en-pause', 'Durand Bob'],
-    ['supervision-filtre-absent', 'Bernard Chloé'],
-  ])('should retain the %s presence filter', async (filtre, nom) => {
-    await givenDonneesDisplayed();
-
-    await whenFilterClicked(filtre);
-
-    expect(displayedTexts('supervision-operateur-nom')).toEqual([nom]);
-  });
-
-  it('should filter anomalies independently of presence and sans affectation', async () => {
-    await givenDonneesDisplayed();
-
-    await whenFilterClicked('supervision-filtre-anomalie');
-
-    expect(displayedTexts('supervision-operateur-nom')).toEqual(['Durand Bob', 'Martin Alice']);
-    expect(displayedTexts('supervision-indicateur-sans-affectation')).toEqual(['Sans affectation']);
-    expect(displayedTexts('supervision-indicateur-anomalies')).toHaveLength(2);
-  });
-
-  it.each(['TOUR 1', 'fabrication', 'alice martin'])('should search names, activities and workstations using %s', async recherche => {
+    { operateurs: [dumasFixture], attendu: '1 en NC : Dumas Julien (suspendue)' },
+    { operateurs: [dumasFixture, rouxFixture], attendu: '2 en NC : Dumas Julien, Roux Nathalie (suspendues)' },
+  ])('should say when every counted nonconformity is suspended: $attendu', async ({ operateurs, attendu }) => {
     await givenAcquisitionInProgress();
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [activiteFixture('act', 'Fabrication', 'Tour 1'), activiteFixture('other', 'Contrôle')],
-    });
 
-    await whenSearchInputChanged(recherche);
+    await whenDonneesArrive(nonConformitesSuspenduesFixture(operateurs));
 
-    expect(displayedTexts('supervision-operateur-nom')).toEqual(['Martin Alice']);
+    expect(signal('supervision-signal-nc')).toBe(attendu);
   });
 
-  it('should omit missing workstations from search results', async () => {
+  it('should not call the nonconformities suspended while one of them is being worked on', async () => {
     await givenAcquisitionInProgress();
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [activiteFixture('act', 'Fabrication'), activiteFixture('other', 'Contrôle', 'Tour 2')],
-    });
 
-    await whenSearchInputChanged('Tour 1');
+    await whenDonneesArrive(nonConformitesFixture({ auTravail: [aubertFixture], enPause: [dumasFixture] }));
 
-    thenEmptySearchResultIsDisplayed();
+    expect(signal('supervision-signal-nc')).toBe('2 en NC : Aubert Lucas, Dumas Julien');
   });
 
-  it('should preserve the name, firstname and identifier ordering independently of presence', async () => {
+  it('should count present operators, paused and absent ones excluded', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect([signal('supervision-presents'), signal('supervision-presents-compact')]).toEqual(['Présents 4', '4 présents']);
+  });
+
+  it('should speak of a single operator and a single present one in the singular', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
-      operateurs: [
-        new OperateurDeclare(new IdentifiantOperateur('z'), 'Martin', 'Alice'),
-        new OperateurDeclare(new IdentifiantOperateur('b'), 'Martin', 'Zoé'),
-        new OperateurDeclare(new IdentifiantOperateur('a'), 'Martin', 'Alice'),
-      ],
-      journees: [JourneeDeTravail.open(new IdentifiantOperateur('z'), 'PRESENT')],
+      operateurs: [lefevreFixture],
+      journees: [JourneeDeTravail.open(lefevreFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(8, 55))])],
       activites: [],
     });
 
-    expect(displayedOperatorIds()).toEqual(['a', 'z', 'b']);
+    expect([signal('supervision-derniere-lecture'), signal('supervision-presents-compact')]).toEqual([
+      '1 opérateur · d’après les pointages reçus jusqu’à 10:00 · actualisé toutes les 30 s',
+      '1 présent',
+    ]);
   });
 
-  const displayedOperatorIds = (): (string | undefined)[] => elements('supervision-ligne').map(row => row.dataset['operateurId']);
+  it('should date the freshness of the lanes from the evaluation instant', async () => {
+    await givenAcquisitionInProgress();
 
-  const givenCurrentHour = (heure: number): void => {
-    vi.setSystemTime(new Date(2026, 8, 13, heure));
-  };
-  const thenActivitiesHaveSeparateTracksAndCompleteDetails = (): void => {
-    const tracks = elements('supervision-piste-activite');
-    expect(tracks).toHaveLength(2);
-    expect(tracks.map(track => track.querySelectorAll(dataSelector('supervision-segment-activite')).length)).toEqual([1, 1]);
-    const short = requiredFixture(elements('supervision-segment-activite')[1], 'short activity');
-    expect(short.getAttribute('aria-label')).toContain('Contrôle de non-conformité très court · NC · Tour 2 · Depuis 09:55 · 5 min');
-    expect(
-      Number.parseFloat(requiredFixture(elements('supervision-position-activite')[1], 'short segment position').style.width),
-    ).toBeCloseTo(0.5208, 4);
-    expect(displayedTexts('supervision-marque-activite')).toEqual(['', '']);
-    expect(short.tabIndex).toBe(0);
-    expect(short.title).toBe(short.getAttribute('aria-label'));
-    expect(operatorRow('alice').querySelector<HTMLElement>(dataSelector('supervision-identite'))?.title).toContain(
-      'Martin Alice · Présent',
+    await whenDonneesArrive(atelierFixture);
+
+    expect(signal('supervision-derniere-lecture')).toBe(
+      '9 opérateurs · d’après les pointages reçus jusqu’à 10:00 · actualisé toutes les 30 s',
     );
-  };
-
-  const thenNowIsAnUnlabelledMarker = (): void => {
-    const marker = requiredFixture(element('supervision-maintenant'), 'current time marker');
-    expect(marker.textContent.trim()).toBe('');
-    expect(marker.title).toBe('Maintenant (10:00)');
-    expect(marker.getAttribute('aria-label')).toBe('Maintenant (10:00)');
-    expect(marker.style.left).toBe('25%');
-  };
-
-  const displayedText = (selector: string): string | undefined => element(selector)?.textContent;
-
-  const displayedTexts = (selector: string): string[] => elements(selector).map(item => item.textContent.trim());
-  const segmentPositions = (selector: string): { left: string; width: string; label: string | null }[] =>
-    elements(selector).map(segment => ({
-      left: segment.style.left,
-      width: segment.style.width,
-      label: segment.getAttribute('aria-label'),
-    }));
-
-  const operatorRow = (id: string): HTMLElement =>
-    requiredFixture(
-      elements('supervision-ligne').find(row => row.dataset['operateurId'] === id),
-      `operator ${id}`,
-    );
-
-  const journalState = (id: string): { expanded: string | null; hidden: boolean; linked: boolean } => {
-    const row = operatorRow(id);
-    const button = requiredFixture(row.querySelector(dataSelector('supervision-deplier')), 'journal button');
-    const journal = requiredFixture(row.querySelector<HTMLElement>(dataSelector('supervision-journal')), 'journal');
-    return {
-      expanded: button.getAttribute('aria-expanded'),
-      hidden: journal.hidden,
-      linked: button.getAttribute('aria-controls') === journal.id,
-    };
-  };
-
-  const whenJournalToggled = async (id: string): Promise<void> => {
-    const button = requiredFixture(operatorRow(id).querySelector<HTMLButtonElement>(dataSelector('supervision-deplier')), 'journal button');
-    button.click();
-    await whenViewSettles();
-  };
+  });
 
   it('should display an empty state when there are no declared operators', async () => {
     await givenAcquisitionInProgress();
@@ -729,7 +717,7 @@ describe('Supervision atelier component', () => {
     thenEmptyStateIsDisplayed();
   });
 
-  it('should display an error without grid when acquired data produces an unexploitable supervision result', async () => {
+  it('should display an error without lanes when acquired data produces an unexploitable supervision result', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
@@ -739,8 +727,8 @@ describe('Supervision atelier component', () => {
         new ActiviteDeSupervision({
           id: new IdentifiantActivite('act-orphan'),
           operateurId: undefined,
-          nom: 'OF-42',
-          categorie: new CategorieActivite('NC'),
+          objet: ofFixture('42'),
+          categorie: new CategorieActivite('NON_CONFORMITE'),
           debut: new Instant('2026-09-13T10:00:00Z'),
         }),
       ],
@@ -776,8 +764,8 @@ describe('Supervision atelier component', () => {
         new ActiviteDeSupervision({
           id: new IdentifiantActivite('act-orphan-refresh'),
           operateurId: undefined,
-          nom: 'OF-42',
-          categorie: new CategorieActivite('NC'),
+          objet: ofFixture('42'),
+          categorie: new CategorieActivite('NON_CONFORMITE'),
           debut: new Instant('2026-09-13T10:00:00Z'),
         }),
       ],
@@ -791,282 +779,13 @@ describe('Supervision atelier component', () => {
 
     await whenRetrySucceeds();
 
-    thenOperatorsAreDisplayed([
-      { nomComplet: 'Bernard Chloé', presence: 'Absent' },
-      { nomComplet: 'Durand Bob', presence: 'En pause' },
-      { nomComplet: 'Martin Alice', presence: 'Présent' },
+    thenLanesAre([
+      { couloir: 'au-travail', nombre: '0', operateurs: [] },
+      { couloir: 'sans-affectation', nombre: '1', operateurs: ['Martin Alice'] },
+      { couloir: 'en-pause', nombre: '1', operateurs: ['Durand Bob'] },
+      { couloir: 'absents', nombre: '1', operateurs: ['Bernard Chloé'] },
     ]);
   });
-
-  it('should display every ongoing element in its operator row', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [activiteFixture('act-1', 'Moule 1015'), activiteFixture('act-2', 'OF-2026-000042')],
-    });
-
-    await whenJournalToggled('alice');
-
-    thenEveryElementIsInItsOperatorRow();
-  });
-
-  it('should display an absolute start time and omit a missing workstation', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [activiteFixture('act-1', 'Moule 1015', 'Tour 1'), activiteFixture('act-2', 'OF-2026-000042')],
-    });
-
-    await whenJournalToggled('alice');
-
-    thenActivityDetailsShowAbsoluteTimesAndOnlyKnownWorkstations();
-  });
-
-  it('should mark only a present operator without activities as sans affectation', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive();
-
-    thenOnlyThePresentIdleOperatorIsSansAffectation();
-  });
-
-  it('should remove sans affectation when an activity arrives for a present operator', async () => {
-    await givenDonneesDisplayed();
-
-    await refresh();
-    await whenDonneesArrive({ ...donneesFixture, activites: [activiteFixture('act-1', 'Moule 1015')] });
-
-    thenNoOperatorIsSansAffectation();
-  });
-
-  it('should mark the nonconforming activity without changing presence or hiding other activities', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      activites: [activiteFixture('act-nc', 'Moule 1015', 'Tour 1', 'NC'), activiteFixture('act-bon', 'OF-42')],
-    });
-
-    await whenJournalToggled('alice');
-
-    thenOnlyTheNonconformingActivityIsMarked();
-  });
-
-  it('should display the absolute opening date and time supplied by the working visit', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      journees: [
-        JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 6, 4).toISOString()))]),
-      ],
-    });
-
-    await whenJournalToggled('alice');
-
-    thenTheWorkingVisitOpeningIsDated();
-  });
-
-  it('should flag an old open visit while retaining its presence and activity', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      journees: [
-        JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 6, 4).toISOString()))]),
-      ],
-      activites: [activiteFixture('act-1', 'Moule 1015')],
-    });
-
-    await whenJournalToggled('alice');
-
-    thenTheOldVisitIsFlaggedWithoutCorrectingIt();
-  });
-
-  it('should explain a working visit without windows without inventing an opening time', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive();
-
-    await whenJournalToggled('alice');
-    await whenJournalToggled('bob');
-
-    thenVisitsWithoutWindowsHaveNoInventedOpening();
-  });
-
-  it('should flag an absent operator activity while retaining its details and absent status', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive({
-      ...donneesFixture,
-      journees: [],
-      activites: [activiteFixture('act-1', 'Moule 1015', 'Tour 1')],
-    });
-
-    await whenJournalToggled('alice');
-
-    thenTheAbsentOperatorKeepsTheActivityDetails();
-  });
-
-  it('should compute workshop counters accurately on success', async () => {
-    await givenDonneesDisplayed();
-
-    thenWorkshopCountersMatch({
-      total: '3',
-      presents: '1',
-      enPause: '1',
-      absents: '1',
-      sansAffectation: '1',
-      anomalies: '2',
-    });
-  });
-
-  it('should filter operators by presence status while preserving alphabetical order', async () => {
-    await givenDonneesDisplayed();
-
-    await whenFilterClicked('supervision-filtre-present');
-
-    thenOperatorsAreDisplayed([{ nomComplet: 'Martin Alice', presence: 'Présent' }]);
-  });
-
-  it('should filter operators by sans affectation state', async () => {
-    await givenDonneesDisplayed();
-
-    await whenFilterClicked('supervision-filtre-sans-affectation');
-
-    thenOperatorsAreDisplayed([{ nomComplet: 'Martin Alice', presence: 'Présent' }]);
-    expect(displayedText('supervision-filtre-sans-affectation')?.replace(/\s+/g, ' ').trim()).toBe('Sans affectation 1');
-  });
-
-  it('should toggle off active filter and restore full list', async () => {
-    await givenDonneesDisplayed();
-
-    await whenFilterClicked('supervision-filtre-present');
-    await whenFilterClicked('supervision-filtre-present');
-
-    thenAllThreeOperatorsAreDisplayed();
-  });
-
-  it('should filter operators by search query matching name', async () => {
-    await givenDonneesDisplayed();
-
-    await whenSearchInputChanged('Durand');
-
-    thenOperatorsAreDisplayed([{ nomComplet: 'Durand Bob', presence: 'En pause' }]);
-  });
-
-  it('should restore all operators when resetting filters and search', async () => {
-    await givenDonneesDisplayed();
-
-    await whenSearchInputChanged('Durand');
-    await whenResetClicked();
-
-    thenAllThreeOperatorsAreDisplayed();
-  });
-
-  it('should display empty search state when no operator matches criteria', async () => {
-    await givenDonneesDisplayed();
-
-    await whenSearchInputChanged('Introuvable');
-
-    thenEmptySearchResultIsDisplayed();
-  });
-
-  const thenEveryElementIsInItsOperatorRow = (): void => {
-    expect(journalState('alice').hidden).toBe(false);
-    expect(elements('supervision-activite-nom').map(activite => activite.textContent.trim())).toEqual(['Moule 1015', 'OF-2026-000042']);
-    expect(rowFor('alice').querySelectorAll(dataSelector('supervision-activite'))).toHaveLength(2);
-    expect(rowFor('bob').querySelectorAll(dataSelector('supervision-activite'))).toHaveLength(0);
-  };
-
-  const thenActivityDetailsShowAbsoluteTimesAndOnlyKnownWorkstations = (): void => {
-    expect(journalState('alice').hidden).toBe(false);
-    expect(elements('supervision-activite-debut').map(debut => debut.textContent.trim())).toEqual(['08:12', '08:12']);
-    expect(element('supervision-activite-debut')?.getAttribute('datetime')).toBe(new Date(2026, 8, 13, 8, 12).toISOString());
-    expect(elements('supervision-activite-poste').map(poste => poste.textContent.trim())).toEqual(['Tour 1']);
-    expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-activite-poste'))).toBeNull();
-  };
-
-  const thenOnlyThePresentIdleOperatorIsSansAffectation = (): void => {
-    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))?.textContent.trim()).toBe(
-      'Sans affectation',
-    );
-    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.textContent.trim()).toBe('Sans affectation');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))?.getAttribute('aria-label')).toBe(
-      'Sans affectation à l’instant courant',
-    );
-    expect(rowFor('alice').querySelector(dataSelector('supervision-sans-affectation'))?.textContent.trim()).toBe(
-      'Sans affectation · Aucune activité en cours',
-    );
-    expect(rowFor('alice').querySelector(dataSelector('supervision-identite'))?.getAttribute('title')).toContain(
-      'Sans affectation · Aucune activité en cours',
-    );
-    expect(elements('supervision-indicateur-sans-affectation')).toHaveLength(1);
-    expect(legend().textContent).toContain('Sans affectation à l’instant courant');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-  };
-
-  const thenSansAffectationIsReportedOutsideTheScale = (): void => {
-    expect(rowFor('alice').querySelector(dataSelector('supervision-zone-sans-affectation'))).toBeNull();
-    expect(rowFor('alice').textContent).toContain('Sans affectation à l’instant courant · hors plage');
-  };
-
-  const thenNoOperatorIsSansAffectation = (): void => {
-    expect(elements('supervision-indicateur-sans-affectation')).toHaveLength(0);
-  };
-
-  const thenOnlyTheNonconformingActivityIsMarked = (): void => {
-    expect(journalState('alice').hidden).toBe(false);
-    expect(elements('supervision-nc').map(marque => marque.textContent.trim())).toEqual(['NC']);
-    expect(elements('supervision-activite')[0]?.querySelector(dataSelector('supervision-nc'))).not.toBeNull();
-    expect(elements('supervision-activite')[1]?.querySelector(dataSelector('supervision-nc'))).toBeNull();
-    expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-    expect(elements('supervision-activite')).toHaveLength(2);
-  };
-
-  const thenTheWorkingVisitOpeningIsDated = (): void => {
-    expect(journalState('alice').hidden).toBe(false);
-    expect(rowFor('alice').querySelector(dataSelector('supervision-ouverture'))?.textContent).toContain('12/09/2026 06:04');
-    expect(elements('supervision-ouverture')).toHaveLength(1);
-    expect(element('supervision-ouverture')?.getAttribute('datetime')).toBe(new Date(2026, 8, 12, 6, 4).toISOString());
-  };
-
-  const thenTheOldVisitIsFlaggedWithoutCorrectingIt = (): void => {
-    expect(journalState('alice').hidden).toBe(false);
-    expect(rowFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toContain(
-      'Journée ouverte depuis plus de 16 h',
-    );
-    expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-activite-nom'))?.textContent).toContain('Moule 1015');
-    expect(rowFor('bob').querySelector(dataSelector('supervision-anomalie'))).toBeNull();
-  };
-
-  const thenVisitsWithoutWindowsHaveNoInventedOpening = (): void => {
-    expect(rowFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe("Journée ouverte sans heure d'ouverture");
-    expect(rowFor('alice').querySelector(dataSelector('supervision-ouverture'))).toBeNull();
-    expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Présent');
-    expect(rowFor('bob').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe("Journée ouverte sans heure d'ouverture");
-    expect(rowFor('bob').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('En pause');
-  };
-
-  const thenTheAbsentOperatorKeepsTheActivityDetails = (): void => {
-    expect(journalState('alice').hidden).toBe(false);
-    expect(rowFor('alice').querySelector(dataSelector('supervision-anomalie'))?.textContent).toBe('Activité d’un opérateur absent');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-presence'))?.textContent).toContain('Absent');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-activite-nom'))?.textContent).toContain('Moule 1015');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-activite-poste'))?.textContent).toContain('Tour 1');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-activite-debut'))?.textContent).toBe('08:12');
-    expect(rowFor('alice').querySelector(dataSelector('supervision-ouverture'))).toBeNull();
-    expect(rowFor('alice').querySelector(dataSelector('supervision-indicateur-sans-affectation'))).toBeNull();
-  };
-
-  const rowFor = (id: string): HTMLElement =>
-    requiredFixture(
-      elements('supervision-ligne').find(tile => tile.dataset['operateurId'] === id),
-      'operator row',
-    );
 
   const givenDonneesPending = (): void => {
     sourceFixture.prepare();
@@ -1113,96 +832,34 @@ describe('Supervision atelier component', () => {
   };
 
   const thenLoadingIsDisplayed = (): void => {
-    expect(displayedText('supervision-loading')).toContain('Chargement');
-    expect(element('supervision-grille')).toBeNull();
+    expect(texte(requiredFixture(element('supervision-loading'), 'loading'))).toContain('Chargement');
+    expect(element('supervision-plateau')).toBeNull();
     expect(refreshButton().disabled).toBe(true);
   };
 
-  const thenOperatorsAreDisplayed = (expected: readonly { nomComplet: string; presence: string }[]): void => {
-    const tiles = elements('supervision-ligne');
-    expect(tiles).toHaveLength(expected.length);
-    tiles.forEach((tile, index) => {
-      const exp = requiredFixture(expected[index], `expected operator at ${index}`);
-      const nom = tile.querySelector(dataSelector('supervision-operateur-nom'))?.textContent.trim();
-      const presence = tile.querySelector(dataSelector('supervision-presence'))?.textContent.trim();
-      expect(nom).toBe(exp.nomComplet);
-      expect(presence).toBe(exp.presence);
-    });
+  const thenLanesAre = (expected: readonly { couloir: string; nombre: string; operateurs: readonly string[] }[]): void => {
+    expect(
+      expected.map(({ couloir }) => ({
+        couloir,
+        nombre: texte(requiredFixture(lane(couloir).querySelector<HTMLElement>(dataSelector('supervision-couloir-nombre')), 'lane count')),
+        operateurs: [...lane(couloir).querySelectorAll<HTMLElement>(dataSelector('supervision-operateur-nom'))].map(nom => texte(nom)),
+      })),
+    ).toEqual(expected);
     expect(element('supervision-loading')).toBeNull();
     expect(element('supervision-error')).toBeNull();
   };
 
   const thenEmptyStateIsDisplayed = (): void => {
-    expect(displayedText('supervision-empty')).toContain('Aucun opérateur déclaré');
-    expect(elements('supervision-ligne')).toHaveLength(0);
+    expect(texte(requiredFixture(element('supervision-empty'), 'empty state'))).toContain('Aucun opérateur déclaré');
+    expect(elements('supervision-carte')).toHaveLength(0);
     expect(element('supervision-loading')).toBeNull();
     expect(element('supervision-error')).toBeNull();
   };
 
   const thenErrorReplacesDataAndRetryIsAvailable = (): void => {
-    expect(displayedText('supervision-error')).toContain('Impossible de charger');
-    expect(element('supervision-grille')).toBeNull();
+    expect(texte(requiredFixture(element('supervision-error'), 'error'))).toContain('Impossible de charger');
+    expect(element('supervision-plateau')).toBeNull();
     expect(refreshButton().disabled).toBe(false);
-  };
-
-  const thenWorkshopCountersMatch = (expected: {
-    total: string;
-    presents: string;
-    enPause: string;
-    absents: string;
-    sansAffectation: string;
-    anomalies: string;
-  }): void => {
-    expect(element('supervision-compteur-total')?.textContent.trim()).toBe(expected.total);
-    expect(element('supervision-compteur-present')?.textContent.trim()).toBe(expected.presents);
-    expect(element('supervision-compteur-en-pause')?.textContent.trim()).toBe(expected.enPause);
-    expect(element('supervision-compteur-absent')?.textContent.trim()).toBe(expected.absents);
-    expect(element('supervision-compteur-sans-affectation')?.textContent.trim()).toBe(expected.sansAffectation);
-    expect(element('supervision-compteur-anomalie')?.textContent.trim()).toBe(expected.anomalies);
-  };
-
-  const whenFilterClicked = async (selector: string): Promise<void> => {
-    const button = element(selector);
-    if (!(button instanceof HTMLButtonElement)) {
-      throw new Error(`Missing filter button ${selector}`);
-    }
-    button.click();
-    componentFixture.detectChanges();
-    await componentFixture.whenStable();
-  };
-
-  const whenSearchInputChanged = async (query: string): Promise<void> => {
-    const input = element('supervision-recherche-input');
-    if (!(input instanceof HTMLInputElement)) {
-      throw new Error('Missing search input');
-    }
-    input.value = query;
-    input.dispatchEvent(new Event('input'));
-    componentFixture.detectChanges();
-    await componentFixture.whenStable();
-  };
-
-  const whenResetClicked = async (): Promise<void> => {
-    const button = element('supervision-reset-filtres');
-    if (!(button instanceof HTMLButtonElement)) {
-      throw new Error('Missing reset button');
-    }
-    button.click();
-    componentFixture.detectChanges();
-    await componentFixture.whenStable();
-  };
-
-  const thenAllThreeOperatorsAreDisplayed = (): void => {
-    thenOperatorsAreDisplayed([
-      { nomComplet: 'Bernard Chloé', presence: 'Absent' },
-      { nomComplet: 'Durand Bob', presence: 'En pause' },
-      { nomComplet: 'Martin Alice', presence: 'Présent' },
-    ]);
-  };
-
-  const thenEmptySearchResultIsDisplayed = (): void => {
-    expect(displayedText('supervision-aucun-resultat')).toContain('Aucun opérateur ne correspond');
-    expect(elements('supervision-ligne')).toHaveLength(0);
   };
 
   const refresh = async (): Promise<void> => {
@@ -1210,6 +867,49 @@ describe('Supervision atelier component', () => {
     refreshButton().click();
     await whenSupervisionOpened();
   };
+
+  const lane = (couloir: string): HTMLElement => requiredFixture(element(`supervision-couloir-${couloir}`), `lane ${couloir}`);
+
+  const card = (id: string): HTMLElement =>
+    requiredFixture(
+      elements('supervision-carte').find(carte => carte.dataset['operateurId'] === id),
+      `card ${id}`,
+    );
+
+  const textIn = (parent: HTMLElement, selector: string): string | undefined => {
+    const child = parent.querySelector<HTMLElement>(dataSelector(selector));
+    return child === null ? undefined : texte(child);
+  };
+
+  const activitiesOf = (id: string): ActiviteAffichee[] =>
+    [...card(id).querySelectorAll<HTMLElement>(dataSelector('supervision-activite'))].map(activite => ({
+      element: textIn(activite, 'supervision-activite-element'),
+      poste: textIn(activite, 'supervision-activite-poste'),
+      debut: textIn(activite, 'supervision-activite-debut'),
+      nc: textIn(activite, 'supervision-marque-nc'),
+      suspendue: textIn(activite, 'supervision-suspendue'),
+    }));
+
+  const hourOf = (id: string): string | undefined => textIn(card(id), 'supervision-heure');
+
+  const idleNoticeOf = (id: string): string | undefined => textIn(card(id), 'supervision-aucune-activite');
+
+  const tradesOf = (id: string): string | undefined => textIn(card(id), 'supervision-metiers');
+
+  const anomaliesIn = (couloir: string): Record<string, string[]> => {
+    const anomaliesParCarte: [string, string[]][] = [...lane(couloir).querySelectorAll<HTMLElement>(dataSelector('supervision-carte'))].map(
+      carte => [
+        carte.dataset['operateurId'] ?? '',
+        [...carte.querySelectorAll<HTMLElement>(dataSelector('supervision-anomalie'))].map(texte),
+      ],
+    );
+    return Object.fromEntries(anomaliesParCarte.filter(([, anomalies]) => anomalies.length > 0));
+  };
+
+  const signal = (selector: string): string => texte(requiredFixture(element(selector), selector));
+
+  /** `\s` couvre aussi les espaces insécables des libellés : les attentes s'écrivent avec des espaces simples. */
+  const texte = (node: HTMLElement): string => node.textContent.replace(/\s+/g, ' ').trim();
 
   const element = (selector: string): HTMLElement | null => {
     const host = componentFixture.nativeElement as HTMLElement;
@@ -1221,11 +921,6 @@ describe('Supervision atelier component', () => {
     return Array.from(host.querySelectorAll(dataSelector(selector)));
   };
 
-  const legend = (): HTMLElement => {
-    const host = componentFixture.nativeElement as HTMLElement;
-    return requiredFixture(host.querySelector<HTMLElement>('[aria-label="Légende de la chronologie"]'), 'legend');
-  };
-
   const refreshButton = (): HTMLButtonElement => {
     const button = element('supervision-refresh');
     if (!(button instanceof HTMLButtonElement)) {
@@ -1234,15 +929,3 @@ describe('Supervision atelier component', () => {
     return button;
   };
 });
-
-const activiteFixture = (id: string, nom: string, poste?: string, categorie = 'FABRICATION'): ActiviteDeSupervision =>
-  new ActiviteDeSupervision({
-    id: new IdentifiantActivite(id),
-    operateurId: aliceFixture.id,
-    nom,
-    categorie: new CategorieActivite(categorie),
-    debut: new Instant(new Date(2026, 8, 13, 8, 12).toISOString()),
-    ...(poste === undefined ? {} : { poste }),
-  });
-
-const instantFixture = (heure: number, minute = 0): Instant => new Instant(new Date(2026, 8, 13, heure, minute).toISOString());

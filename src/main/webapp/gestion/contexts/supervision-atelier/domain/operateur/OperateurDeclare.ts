@@ -1,11 +1,25 @@
+import { NatureDeTravail } from '../poste/NatureDeTravail';
 import { IdentifiantOperateur } from './IdentifiantOperateur';
 
+export interface DescriptionOperateur {
+  readonly id: IdentifiantOperateur;
+  readonly nom: string;
+  readonly prenom: string;
+  readonly metiers?: readonly NatureDeTravail[];
+}
+
 export class OperateurDeclare {
-  constructor(
-    readonly id: IdentifiantOperateur,
-    readonly nom: string,
-    readonly prenom: string,
-  ) {}
+  readonly id: IdentifiantOperateur;
+  readonly nom: string;
+  readonly prenom: string;
+  readonly metiers: readonly NatureDeTravail[];
+
+  constructor(description: DescriptionOperateur) {
+    this.id = description.id;
+    this.nom = description.nom;
+    this.prenom = description.prenom;
+    this.metiers = [...(description.metiers ?? [])];
+  }
 
   compareAlphabetically(other: OperateurDeclare): number {
     const comparisonNom = this.nom.localeCompare(other.nom, 'fr');

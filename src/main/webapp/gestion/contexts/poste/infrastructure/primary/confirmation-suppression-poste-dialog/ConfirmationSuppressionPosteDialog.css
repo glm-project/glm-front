@@ -3,6 +3,6 @@
   color: var(--color-ink);
 }
 .delete-button {
-  --mat-button-filled-container-color: var(--color-nc);
+  --mat-button-filled-container-color: var(--color-danger);
   --mat-button-filled-label-text-color: var(--color-on-accent);
 }

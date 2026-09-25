@@ -58,6 +58,7 @@ export const LIBELLES_COUT_DE_REVIENT = {
   defilement: 'Tableau du coût de revient, défilement horizontal disponible',
   totalLigne: 'Total',
 
+  nc: 'NC',
   periodeLabel: 'Période',
   nonConformitesLabel: 'Reprises de non-conformité',
   sansNonConformite: 'Aucune reprise',

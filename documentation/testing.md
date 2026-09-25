@@ -152,7 +152,7 @@ Each front's shell carries its marker as a host attribute (`host: { 'data-select
 and its **application** smoke test asserts nothing else. That is deliberate: `<glm-root>` sits in the static
 `index.html` already, so the attribute appears only once Angular has bootstrapped — the one assertion a
 title check cannot make, because a title reads green on a blank page. Context-specific routes and their nominal
-journeys (e.g. the supervision grid mounted on `/`) are asserted in dedicated specs beside it
+journeys (e.g. the supervision lanes mounted on `/`) are asserted in dedicated specs beside it
 (`application/<front>/<context>/*.spec.ts`), not inside the shell smoke test or unit tests.
 
 ## Mock at the boundary

@@ -50,6 +50,7 @@ const TOKEN_BYPASS = new RegExp(
 );
 const INLINE_STYLE_TOKEN_BYPASS =
   /\bstyle\s*=\s*(['"])[^'"]*\b(?:color|background(?:-color)?|font-size)\s*:\s*(?:#[0-9a-fA-F]{3,8}|[\d.]+(?:px|rem|em|pt))/g;
+const NC_FOREGROUND = /(?<![\w-])(?:text|decoration|caret|placeholder|fill|stroke)-nc(?![\w-])/g;
 
 const FRONTS = ['gestion', 'pupitre'];
 const FORBIDDEN_ANGULAR_EFFECTS = {
@@ -126,14 +127,21 @@ const local = {
   rules: {
     'no-token-bypass': {
       create: context => ({
-        Program: () =>
+        Program: () => {
           [...context.sourceCode.text.matchAll(new RegExp(`${TOKEN_BYPASS.source}|${INLINE_STYLE_TOKEN_BYPASS.source}`, 'g'))].forEach(
             bypass =>
               context.report({
                 loc: context.sourceCode.getLocFromIndex(bypass.index),
                 message: `'${bypass[0]}' steps outside the design tokens: name a role — see documentation/design-system.md.`,
               }),
-          ),
+          );
+          [...context.sourceCode.text.matchAll(NC_FOREGROUND)].forEach(foreground =>
+            context.report({
+              loc: context.sourceCode.getLocFromIndex(foreground.index),
+              message: `'${foreground[0]}' : \`nc\` n’est jamais une couleur de premier plan : écris du texte \`ink\` sur \`bg-nc\` — voir documentation/design-system.md.`,
+            }),
+          );
+        },
       }),
     },
     'given-when-then': givenWhenThen,
