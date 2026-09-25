@@ -42,10 +42,10 @@ export class OperateurSupervise {
   }
 
   isEnNonConformite(): boolean {
-    return this.hasVenueOuverte() && this.activites.some(activite => activite.categorie.isNc());
+    return this.hasJourneeOuverte() && this.activites.some(activite => activite.categorie.isNc());
   }
 
-  private hasVenueOuverte(): boolean {
+  private hasJourneeOuverte(): boolean {
     return this.presence !== 'ABSENT';
   }
 
