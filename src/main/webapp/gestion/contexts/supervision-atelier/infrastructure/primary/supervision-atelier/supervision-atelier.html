@@ -150,9 +150,9 @@
                   <span class="rounded bg-nc px-1.5 text-label text-ink" data-selector="supervision-marque-nc">{{ libelles.nc }}</span>
                   } @let objet = activite.objet;
                   <span class="flex min-w-0 flex-wrap items-center gap-x-1" data-selector="supervision-activite-element">
-                    @if (objet.isHorsOf()) {
+                    @switch (objet.kind) { @case ('HORS_OF') {
                     <span class="rounded bg-border px-1.5 text-label text-ink">{{ libelles.horsOf }}</span>
-                    } @else {
+                    } @case ('ELEMENT_TRAVAILLE') {
                     <span
                       class="inline-flex h-5 items-center rounded border border-border px-1.5 text-label whitespace-nowrap text-ink-muted"
                       >{{ libelles.types[objet.type] }}</span
@@ -160,7 +160,7 @@
                     <span class="text-body font-semibold tabular-nums">{{ reference.value }}</span>
                     } @else {
                     <span class="text-body-sm font-semibold text-ink-muted tabular-nums wrap-anywhere">{{ objet.nom }}</span>
-                    } }
+                    } } }
                   </span>
                   <time
                     class="ml-auto whitespace-nowrap text-body-sm text-ink-muted tabular-nums"

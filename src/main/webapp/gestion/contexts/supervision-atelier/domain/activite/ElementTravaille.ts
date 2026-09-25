@@ -1,4 +1,3 @@
-import { HorsOf } from './HorsOf';
 import { ReferenceDElement } from './ReferenceDElement';
 import { TypeDElement } from './TypeDElement';
 
@@ -9,6 +8,7 @@ export interface DescriptionElementTravaille {
 }
 
 export class ElementTravaille {
+  readonly kind = 'ELEMENT_TRAVAILLE';
   readonly type: TypeDElement;
   readonly nom: string;
   readonly reference: ReferenceDElement | undefined;
@@ -17,9 +17,5 @@ export class ElementTravaille {
     this.type = description.type;
     this.nom = description.nom;
     this.reference = description.reference;
-  }
-
-  isHorsOf(): this is HorsOf {
-    return false;
   }
 }
