@@ -85,5 +85,5 @@ export const LIBELLES_SUPERVISION = {
   moment: (prefixe: string, instant: Instant, reference: Instant): MomentAffiche =>
     isMemeJour(instant, reference)
       ? { instant, avant: `${prefixe} `, jour: undefined, apres: heure(instant) }
-      : { instant, avant: `${prefixe} le `, jour: JOUR.format(new Date(instant.value)), apres: ` à ${heure(instant)}` },
+      : { instant, avant: `${prefixe} `, jour: `le ${JOUR.format(new Date(instant.value))}`, apres: ` à ${heure(instant)}` },
 } as const;

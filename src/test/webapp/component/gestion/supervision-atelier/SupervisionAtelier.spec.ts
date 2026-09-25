@@ -127,6 +127,12 @@ const thenTheLanesHoldTheDemonstrationOperators = (): void => {
 
 const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-heure')), 'arrivée le 23/09 à 06:04');
+  cardOf('op-marchand')
+    .find(dataSelector('supervision-heure'))
+    .find(dataSelector('supervision-jour'))
+    .should('have.text', 'le 23/09')
+    .and('have.css', 'font-weight', '600')
+    .and('have.css', 'color', 'rgb(15, 24, 36)');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-activite-debut')), 'depuis le 23/09 à 14:20');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Aucun départ pointé depuis plus de 16 h');
   thenTextIs(cardOf('op-dumas').find(dataSelector('supervision-heure')), 'pause depuis 09:00');

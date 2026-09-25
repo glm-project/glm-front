@@ -38,12 +38,14 @@
     </p>
     <span class="text-ink-muted lg:hidden" aria-hidden="true">·</span>
     <p class="flex items-center gap-2" [class.text-ink-muted]="nc.nombre === 0">
-      <span class="rounded bg-nc px-1.5 text-label text-ink" aria-hidden="true">{{ libelles.nc }}</span>
+      <span class="rounded px-1.5 text-label" [class.bg-nc]="nc.nombre > 0" [class.bg-sunken]="nc.nombre === 0" aria-hidden="true"
+        >{{ libelles.nc }}</span
+      >
       <span data-selector="supervision-signal-nc"><strong class="font-semibold tabular-nums">{{ nc.nombre }}</strong> {{ nc.texte }}</span>
     </p>
     <span class="text-ink-muted" aria-hidden="true">·</span>
     <p class="flex items-center gap-2" [class.text-ink-muted]="aVerifier.nombre === 0">
-      <glm-icon name="triangleAlert" class="icone text-ink" aria-hidden="true" />
+      <glm-icon name="triangleAlert" class="icone" aria-hidden="true" />
       <span data-selector="supervision-signal-a-verifier"
         ><strong class="font-semibold tabular-nums">{{ aVerifier.nombre }}</strong> {{ aVerifier.texte }}</span
       >
@@ -124,8 +126,12 @@
                 class="whitespace-nowrap text-ink-muted tabular-nums"
                 [attr.datetime]="moment.instant.value"
                 data-selector="supervision-heure"
-                >{{ moment.avant }}@if (moment.jour) {<span class="font-semibold" [class.text-ink]="!absent">{{ moment.jour }}</span>}{{
-                moment.apres }}</time
+                >{{ moment.avant }}@if (moment.jour) {<span
+                  class="font-semibold"
+                  [class.text-ink]="!absent"
+                  data-selector="supervision-jour"
+                  >{{ moment.jour }}</span
+                >}{{ moment.apres }}</time
               >
               }
             </div>
@@ -160,8 +166,12 @@
                     class="ml-auto whitespace-nowrap text-body-sm text-ink-muted tabular-nums"
                     [attr.datetime]="depuis.instant.value"
                     data-selector="supervision-activite-debut"
-                    >{{ depuis.avant }}@if (depuis.jour) {<span class="font-semibold" [class.text-ink]="!absent">{{ depuis.jour }}</span>}{{
-                    depuis.apres }}</time
+                    >{{ depuis.avant }}@if (depuis.jour) {<span
+                      class="font-semibold"
+                      [class.text-ink]="!absent"
+                      data-selector="supervision-jour"
+                      >{{ depuis.jour }}</span
+                    >}{{ depuis.apres }}</time
                   >
                 </div>
                 @if (activite.poste; as poste) {
