@@ -37,8 +37,10 @@ spacing definitions in the shared theme.
 
 - `local/no-token-bypass` rejects static native Tailwind colour families, white/black shortcuts, arbitrary hex
   colours, arbitrary text sizes and literal inline `color`, `background` or `font-size` declarations whose raw
-  value is a hex colour or a numeric size in TypeScript and templates. It does not parse computed bindings,
-  stylesheets or semantic role choices; review those against this document.
+  value is a hex colour or a numeric size in TypeScript and templates. It also refuses `nc` as a foreground
+  colour (`text-nc`, `decoration-nc`, `caret-nc`, `placeholder-nc`, `fill-nc`, `stroke-nc`, variants and opacity
+  included). It does not parse computed bindings, stylesheets or semantic role choices; review those against
+  this document.
 - `DesignTokensTest` verifies token publication, front overrides, Material references and WCAG AA contrast
   for the text/background pairs used by screens.
 - `MaterialBridge.spec.ts` verifies computed browser styles so a declaration that never reaches the page
