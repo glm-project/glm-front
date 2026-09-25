@@ -509,6 +509,26 @@ describe('SupervisionDeLAtelier', () => {
     expect(supervision.operateursEnNonConformite().map(supervise => supervise.operateur.id.value)).toEqual(['op-present', 'op-pause']);
   });
 
+  it.each([
+    { cas: 'every operator in NC is on pause', sessions: ['EN_PAUSE', 'EN_PAUSE'], categorie: 'NON_CONFORMITE', attendu: true },
+    { cas: 'one operator in NC is working', sessions: ['EN_PAUSE', 'PRESENT'], categorie: 'NON_CONFORMITE', attendu: false },
+    { cas: 'nobody is in NC', sessions: ['EN_PAUSE', 'EN_PAUSE'], categorie: 'TRAVAIL', attendu: false },
+  ] as const)(
+    'should call the nonconformities suspended only when $cas',
+    ({ sessions: [sessionPremier, sessionSecond], categorie, attendu }) => {
+      const premier = operateurFixture('op-a', 'Aubert');
+      const second = operateurFixture('op-b', 'Benali');
+
+      const supervision = supervisionFixture(
+        [premier, second],
+        [journeeOuverteFixture(premier, sessionPremier), journeeOuverteFixture(second, sessionSecond)],
+        [activiteFixture(premier, categorie), activiteFixture(second, categorie)],
+      );
+
+      expect(supervision.areNonConformitesSuspendues()).toBe(attendu);
+    },
+  );
+
   it('should list operators carrying an anomaly', () => {
     const sansFenetres = operateurFixture('op-sans-fenetres', 'Aubert');
     const absentActif = operateurFixture('op-absent-actif', 'Benali');

@@ -85,6 +85,11 @@ export class SupervisionDeLAtelier {
     return this.operateurs.filter(supervise => supervise.isEnNonConformite());
   }
 
+  areNonConformitesSuspendues(): boolean {
+    const enNonConformite = this.operateursEnNonConformite();
+    return enNonConformite.length > 0 && enNonConformite.every(supervise => supervise.hasActivitesSuspendues());
+  }
+
   operateursAVerifier(): readonly OperateurSupervise[] {
     return this.operateurs.filter(supervise => supervise.anomalies.length > 0);
   }

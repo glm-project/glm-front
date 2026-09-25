@@ -30,9 +30,6 @@ const pendantLaLecture = (precedent: EtatVueSupervision | undefined): EtatVueSup
 
 const nomComplet = (supervise: OperateurSupervise): string => `${supervise.operateur.nom} ${supervise.operateur.prenom}`;
 
-const areToutesSuspendues = (operateurs: readonly OperateurSupervise[]): boolean =>
-  operateurs.length > 0 && operateurs.every(supervise => supervise.hasActivitesSuspendues());
-
 const momentOf = (prefixe: string, instant: Instant | undefined, reference: Instant): MomentAffiche | undefined =>
   instant === undefined ? undefined : LIBELLES_SUPERVISION.moment(prefixe, instant, reference);
 
@@ -73,7 +70,7 @@ export class SupervisionAtelier {
   protected signalNc(supervision: SupervisionDeLAtelier): SignalAffiche {
     const enNc = supervision.operateursEnNonConformite();
     const texte = this.libelles.signal(this.libelles.enNc, enNc.map(nomComplet));
-    if (!areToutesSuspendues(enNc)) {
+    if (!supervision.areNonConformitesSuspendues()) {
       return { nombre: enNc.length, texte };
     }
     return { nombre: enNc.length, texte: `${texte} ${enNc.length > 1 ? this.libelles.suspendues : this.libelles.suspendue}` };
