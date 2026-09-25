@@ -15,8 +15,8 @@ import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
 import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 
-const TRAVAIL = new CategorieActivite('FABRICATION');
-const NON_CONFORMITE = new CategorieActivite('NC');
+const TRAVAIL = new CategorieActivite('TRAVAIL');
+const NON_CONFORMITE = new CategorieActivite('NON_CONFORMITE');
 
 const moule = (reference: string, nom: string): ElementTravaille =>
   new ElementTravaille({ type: 'PRODUIT', nom, reference: new ReferenceDElement(reference) });

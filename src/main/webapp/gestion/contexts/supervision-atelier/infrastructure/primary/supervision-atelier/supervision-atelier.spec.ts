@@ -4,7 +4,7 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
-import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
@@ -59,12 +59,12 @@ interface ActiviteFixture {
   readonly objet: ObjetDeLActivite;
   readonly debut: Instant;
   readonly poste?: PosteDeSupervision;
-  readonly categorie?: string;
+  readonly categorie?: ValeurCategorieActivite;
 }
 
 const activiteFixture = (
   operateur: OperateurDeclare,
-  { id, objet, debut, poste, categorie = 'FABRICATION' }: ActiviteFixture,
+  { id, objet, debut, poste, categorie = 'TRAVAIL' }: ActiviteFixture,
 ): ActiviteDeSupervision =>
   new ActiviteDeSupervision({
     id: new IdentifiantActivite(id),
@@ -121,7 +121,7 @@ const atelierFixture: DonneesDeSupervision = {
       id: 'act-aubert-3004',
       objet: ofFixture('3004'),
       poste: posteFixture('Tour 1', 'Tournage'),
-      categorie: 'NC',
+      categorie: 'NON_CONFORMITE',
       debut: instantFixture(9, 40),
     }),
     activiteFixture(aubertFixture, {
@@ -146,7 +146,7 @@ const atelierFixture: DonneesDeSupervision = {
       id: 'act-perrin',
       objet: ofFixture('3006', 'OF-2026-000044'),
       poste: posteFixture('Tour 1', 'Tournage'),
-      categorie: 'NC',
+      categorie: 'NON_CONFORMITE',
       debut: instantFixture(7, 0),
     }),
     activiteFixture(vidalFixture, { id: 'act-vidal', objet: ofSansReferenceFixture('OF-2026-000048'), debut: instantFixture(9, 52) }),
@@ -170,7 +170,12 @@ const nonConformitesSuspenduesFixture = (operateurs: readonly OperateurDeclare[]
     JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
   ),
   activites: operateurs.map(operateur =>
-    activiteFixture(operateur, { id: `act-${operateur.id.value}`, objet: mouleFixture('1015'), categorie: 'NC', debut: instantFixture(8) }),
+    activiteFixture(operateur, {
+      id: `act-${operateur.id.value}`,
+      objet: mouleFixture('1015'),
+      categorie: 'NON_CONFORMITE',
+      debut: instantFixture(8),
+    }),
   ),
 });
 
@@ -666,7 +671,7 @@ describe('Supervision atelier component', () => {
           id: new IdentifiantActivite('act-orphan'),
           operateurId: undefined,
           objet: ofFixture('42'),
-          categorie: new CategorieActivite('NC'),
+          categorie: new CategorieActivite('NON_CONFORMITE'),
           debut: new Instant('2026-09-13T10:00:00Z'),
         }),
       ],
@@ -703,7 +708,7 @@ describe('Supervision atelier component', () => {
           id: new IdentifiantActivite('act-orphan-refresh'),
           operateurId: undefined,
           objet: ofFixture('42'),
-          categorie: new CategorieActivite('NC'),
+          categorie: new CategorieActivite('NON_CONFORMITE'),
           debut: new Instant('2026-09-13T10:00:00Z'),
         }),
       ],

@@ -1,5 +1,5 @@
 import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
-import { CategorieActivite } from '../activite/CategorieActivite';
+import { CategorieActivite, ValeurCategorieActivite } from '../activite/CategorieActivite';
 import { ElementTravaille } from '../activite/ElementTravaille';
 import { HorsOf } from '../activite/HorsOf';
 import { IdentifiantActivite } from '../activite/IdentifiantActivite';
@@ -37,7 +37,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
     const activites = [activite];
@@ -240,7 +240,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-1'),
       operateurId: dupont.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
       poste: posteFixture('Poste-1'),
     });
@@ -248,7 +248,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-2'),
       operateurId: dupont.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T09:30:00Z'),
       poste: posteFixture('Poste-2'),
     });
@@ -256,7 +256,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-3'),
       operateurId: martin.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:15:00Z'),
       poste: posteFixture('Poste-3'),
     });
@@ -276,25 +276,17 @@ describe('SupervisionDeLAtelier', () => {
     ]);
   });
 
-  it('should identify activity as NC when its category is NC', () => {
-    const operateurId = new IdentifiantOperateur('op-1');
-    const activiteNc = new ActiviteDeSupervision({
-      id: new IdentifiantActivite('act-1'),
-      operateurId: operateurId,
-      objet: MOULE_1015,
-      categorie: new CategorieActivite('NC'),
-      debut: new Instant('2026-09-13T08:00:00Z'),
-    });
-    const activiteStandard = new ActiviteDeSupervision({
-      id: new IdentifiantActivite('act-2'),
-      operateurId: operateurId,
-      objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
-      debut: new Instant('2026-09-13T08:30:00Z'),
-    });
+  it('should treat only NON_CONFORMITE as nonconforming', () => {
+    const enNonConformite = operateurFixture('op-nc', 'Aubert');
+    const auTravail = operateurFixture('op-travail', 'Benali');
 
-    expect(activiteNc.categorie.isNc()).toBe(true);
-    expect(activiteStandard.categorie.isNc()).toBe(false);
+    const supervision = supervisionFixture(
+      [enNonConformite, auTravail],
+      [journeeOuverteFixture(enNonConformite, 'PRESENT'), journeeOuverteFixture(auTravail, 'PRESENT')],
+      [activiteFixture(enNonConformite, 'NON_CONFORMITE'), activiteFixture(auTravail, 'TRAVAIL')],
+    );
+
+    expect(supervision.operateursEnNonConformite().map(supervise => supervise.operateur.id.value)).toEqual(['op-nc']);
   });
 
   it('should model absent workstation as undefined without fabricating a value', () => {
@@ -303,7 +295,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-1'),
       operateurId: operateurId,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
@@ -316,7 +308,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
@@ -336,7 +328,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('NC'),
+      categorie: new CategorieActivite('NON_CONFORMITE'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
@@ -359,7 +351,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('NC'),
+      categorie: new CategorieActivite('NON_CONFORMITE'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
@@ -388,7 +380,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-orphan'),
       operateurId: undefined,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
@@ -405,7 +397,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-unknown'),
       operateurId: operateurInconnuId,
       objet: MOULE_1015,
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
@@ -494,7 +486,12 @@ describe('SupervisionDeLAtelier', () => {
     const supervision = supervisionFixture(
       [present, enPause, absent, conforme],
       [journeeOuverteFixture(present, 'PRESENT'), journeeOuverteFixture(enPause, 'EN_PAUSE'), journeeOuverteFixture(conforme, 'PRESENT')],
-      [activiteFixture(present, 'NC'), activiteFixture(enPause, 'NC'), activiteFixture(absent, 'NC'), activiteFixture(conforme, 'PROD')],
+      [
+        activiteFixture(present, 'NON_CONFORMITE'),
+        activiteFixture(enPause, 'NON_CONFORMITE'),
+        activiteFixture(absent, 'NON_CONFORMITE'),
+        activiteFixture(conforme, 'TRAVAIL'),
+      ],
     );
 
     expect(supervision.operateursEnNonConformite().map(supervise => supervise.operateur.id.value)).toEqual(['op-present', 'op-pause']);
@@ -618,7 +615,7 @@ describe('SupervisionDeLAtelier', () => {
       id: new IdentifiantActivite('act-hors-of'),
       operateurId: operateur.id,
       objet: new HorsOf(),
-      categorie: new CategorieActivite('PROD'),
+      categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:30:00Z'),
     });
 
@@ -655,7 +652,7 @@ const operateurFixture = (id: string, nom = 'Dupont', prenom = 'Jean'): Operateu
 const journeeOuverteFixture = (operateur: OperateurDeclare, session: EtatSession): JourneeDeTravail =>
   JourneeDeTravail.open(operateur.id, session, [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
 
-const activiteFixture = (operateur: OperateurDeclare, categorie = 'PROD'): ActiviteDeSupervision =>
+const activiteFixture = (operateur: OperateurDeclare, categorie: ValeurCategorieActivite = 'TRAVAIL'): ActiviteDeSupervision =>
   new ActiviteDeSupervision({
     id: new IdentifiantActivite(`act-${operateur.id.value}-${categorie}`),
     operateurId: operateur.id,
@@ -673,7 +670,7 @@ const activiteSurPosteFixture = (
     id: new IdentifiantActivite(id),
     operateurId: operateur.id,
     objet: MOULE_1015,
-    categorie: new CategorieActivite('PROD'),
+    categorie: new CategorieActivite('TRAVAIL'),
     debut: new Instant(`2026-09-13T${debut}:00Z`),
     ...(poste === undefined ? {} : { poste: posteFixture(poste) }),
   });

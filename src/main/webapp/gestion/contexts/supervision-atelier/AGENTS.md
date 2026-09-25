@@ -22,7 +22,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Segment de présence** : intervalle temporel de présence ou de pause au sein d'une ou plusieurs journées de travail, avec son début, sa fin, son type (présence ou pause) et l'indication d'un segment en cours.
 
-**Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
+**Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NON_CONFORMITE`), d'un instant de début et facultativement d'un poste.
 
 **Poste** : poste de travail d'une activité, avec son identifiant, son libellé et facultativement sa nature de travail. Les activités d'un opérateur s'ordonnent par libellé de poste, celles sans poste en dernier, puis par début.
 
@@ -36,7 +36,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
 
-**Catégorie d'activité** : valeur reçue qui détermine notamment le caractère `NC` de l'activité.
+**Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`, les valeurs du contrat de l'API ; `NON_CONFORMITE` fait d'une activité une activité NC.
 
 **Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`.
 
