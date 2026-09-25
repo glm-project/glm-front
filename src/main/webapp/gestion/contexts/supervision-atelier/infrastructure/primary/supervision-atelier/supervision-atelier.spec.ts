@@ -31,9 +31,9 @@ class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
   }
 }
 
-const aliceFixture = new OperateurDeclare(new IdentifiantOperateur('alice'), 'Martin', 'Alice');
-const bobFixture = new OperateurDeclare(new IdentifiantOperateur('bob'), 'Durand', 'Bob');
-const chloeFixture = new OperateurDeclare(new IdentifiantOperateur('chloe'), 'Bernard', 'Chloé');
+const aliceFixture = new OperateurDeclare({ id: new IdentifiantOperateur('alice'), nom: 'Martin', prenom: 'Alice' });
+const bobFixture = new OperateurDeclare({ id: new IdentifiantOperateur('bob'), nom: 'Durand', prenom: 'Bob' });
+const chloeFixture = new OperateurDeclare({ id: new IdentifiantOperateur('chloe'), nom: 'Bernard', prenom: 'Chloé' });
 const donneesFixture: DonneesDeSupervision = {
   operateurs: [aliceFixture, bobFixture, chloeFixture],
   journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT'), JourneeDeTravail.open(bobFixture.id, 'EN_PAUSE')],
@@ -647,9 +647,9 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive({
       operateurs: [
-        new OperateurDeclare(new IdentifiantOperateur('z'), 'Martin', 'Alice'),
-        new OperateurDeclare(new IdentifiantOperateur('b'), 'Martin', 'Zoé'),
-        new OperateurDeclare(new IdentifiantOperateur('a'), 'Martin', 'Alice'),
+        new OperateurDeclare({ id: new IdentifiantOperateur('z'), nom: 'Martin', prenom: 'Alice' }),
+        new OperateurDeclare({ id: new IdentifiantOperateur('b'), nom: 'Martin', prenom: 'Zoé' }),
+        new OperateurDeclare({ id: new IdentifiantOperateur('a'), nom: 'Martin', prenom: 'Alice' }),
       ],
       journees: [JourneeDeTravail.open(new IdentifiantOperateur('z'), 'PRESENT')],
       activites: [],

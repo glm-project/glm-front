@@ -13,7 +13,7 @@ import { SupervisionDeLAtelier } from './SupervisionDeLAtelier';
 
 describe('SupervisionDeLAtelier', () => {
   it('should retain a working visit opening when its source windows are cleared', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetres = [new FenetreDePresence(new Instant('2026-09-13T05:00:00Z'))];
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', fenetres);
 
@@ -26,7 +26,7 @@ describe('SupervisionDeLAtelier', () => {
     });
   });
   it('should keep the supervised state unchanged when source collections are changed', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
@@ -45,7 +45,7 @@ describe('SupervisionDeLAtelier', () => {
     expect(supervise.anomalies).toEqual(['ACTIVITE_D_UN_ABSENT']);
   });
   it('should detect a long working visit regardless of the order of its presence windows', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [
       new FenetreDePresence(new Instant('2026-09-13T12:00:00Z')),
       new FenetreDePresence(new Instant('2026-09-13T05:00:00Z')),
@@ -59,7 +59,7 @@ describe('SupervisionDeLAtelier', () => {
     });
   });
   it('should expose the opening instant of the supervised working visit', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T09:00:00Z'));
@@ -73,7 +73,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as absent when no open working visit exists', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [], [], new Instant('2026-09-13T09:00:00Z'));
 
@@ -83,7 +83,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as present when an open working visit is present', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
 
@@ -95,7 +95,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as absent when their working visit is closed', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const journeeFermee = JourneeDeTravail.closed(operateur.id);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journeeFermee], [], new Instant('2026-09-13T09:00:00Z'));
@@ -106,7 +106,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as present when they have both a closed working visit and an open working visit', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const journeeFermee = JourneeDeTravail.closed(operateur.id);
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
     const journeeOuverte = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
@@ -119,7 +119,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as on pause when an open working visit is on pause', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
     const journee = JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [fenetre]);
 
@@ -131,10 +131,10 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should order operators alphabetically regardless of their presence state', () => {
-    const martin = new OperateurDeclare(new IdentifiantOperateur('op-3'), 'Martin', 'Alice');
-    const bernardClaude = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bernard', 'Claude');
-    const dupont = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
-    const bernardAlexandre = new OperateurDeclare(new IdentifiantOperateur('op-4'), 'Bernard', 'Alexandre');
+    const martin = new OperateurDeclare({ id: new IdentifiantOperateur('op-3'), nom: 'Martin', prenom: 'Alice' });
+    const bernardClaude = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Bernard', prenom: 'Claude' });
+    const dupont = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
+    const bernardAlexandre = new OperateurDeclare({ id: new IdentifiantOperateur('op-4'), nom: 'Bernard', prenom: 'Alexandre' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
 
     const journees = [
@@ -159,7 +159,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as present for an open working visit crossing midnight without calendar filtering', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-night'), 'Nuit', 'Marc');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-night'), nom: 'Nuit', prenom: 'Marc' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-12T22:00:00Z'));
     const journeeDeNuit = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
 
@@ -171,7 +171,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should determine operator as present for an old open working visit without calendar filtering', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-old'), 'Ancien', 'Paul');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-old'), nom: 'Ancien', prenom: 'Paul' });
     const fenetreAncienne = new FenetreDePresence(new Instant('2026-09-08T07:00:00Z'));
     const journeeAncienne = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetreAncienne]);
 
@@ -183,9 +183,9 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should preserve identical alphabetical ordering when presence states change', () => {
-    const alain = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Alain', 'Paul');
-    const bernard = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bernard', 'Claude');
-    const charles = new OperateurDeclare(new IdentifiantOperateur('op-3'), 'Charles', 'David');
+    const alain = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Alain', prenom: 'Paul' });
+    const bernard = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Bernard', prenom: 'Claude' });
+    const charles = new OperateurDeclare({ id: new IdentifiantOperateur('op-3'), nom: 'Charles', prenom: 'David' });
 
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
 
@@ -216,8 +216,8 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should break ties deterministically by operator identifier for homonyms', () => {
-    const premierHomonyme = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
-    const secondHomonyme = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Dupont', 'Jean');
+    const premierHomonyme = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
+    const secondHomonyme = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Dupont', prenom: 'Jean' });
 
     const resultat = SupervisionDeLAtelier.determine([secondHomonyme, premierHomonyme], [], [], new Instant('2026-09-13T09:00:00Z'));
 
@@ -228,8 +228,8 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should associate zero to multiple activities with their declared operator', () => {
-    const dupont = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
-    const martin = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Martin', 'Alice');
+    const dupont = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
+    const martin = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Martin', prenom: 'Alice' });
     const premiereActivite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: dupont.id,
@@ -271,7 +271,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should identify operator as sans affectation when present without ongoing activity', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
 
@@ -282,8 +282,8 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should not identify operator as sans affectation when present with activities or when on pause', () => {
-    const alain = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Alain', 'Paul');
-    const bernard = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bernard', 'Claude');
+    const alain = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Alain', prenom: 'Paul' });
+    const bernard = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Bernard', prenom: 'Claude' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
@@ -341,7 +341,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should detect anomaly for activity of an absent operator while preserving absence and activity', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
@@ -359,7 +359,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should detect anomaly for open working visit without presence windows while preserving presence', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const journeeSansFenetres = JourneeDeTravail.open(operateur.id, 'PRESENT');
 
     const activite = new ActiviteDeSupervision({
@@ -380,7 +380,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should detect a visit exceeding 16 hours by one millisecond while preserving presence and activities', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T06:00:00Z'));
     const journeeLongue = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
     const maintenant = '2026-09-13T22:00:00.001Z';
@@ -402,7 +402,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should not detect anomaly when open working visit duration is exactly 16 hours', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T06:00:00.000Z'));
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
     const exactementSeizeHeures = '2026-09-13T22:00:00.000Z';
@@ -413,7 +413,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should return unexploitable result when an activity has no operator identifier', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const activiteSansOperateur = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-orphan'),
       operateurId: undefined,
@@ -429,7 +429,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should return unexploitable result when an activity has an unknown operator identifier not among declared operators', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const operateurInconnuId = new IdentifiantOperateur('op-unknown');
     const activiteInconnue = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-unknown'),
@@ -446,9 +446,9 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should compute workshop-wide statistics across presence states, sans affectation and anomalies', () => {
-    const op1 = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Alice', 'Martin');
-    const op2 = new OperateurDeclare(new IdentifiantOperateur('op-2'), 'Bob', 'Durand');
-    const op3 = new OperateurDeclare(new IdentifiantOperateur('op-3'), 'Chloé', 'Bernard');
+    const op1 = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Alice', prenom: 'Martin' });
+    const op2 = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Bob', prenom: 'Durand' });
+    const op3 = new OperateurDeclare({ id: new IdentifiantOperateur('op-3'), nom: 'Chloé', prenom: 'Bernard' });
 
     const journeeOp1 = JourneeDeTravail.open(op1.id, 'PRESENT', [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
     const journeeOp2 = JourneeDeTravail.open(op2.id, 'EN_PAUSE', [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
@@ -486,7 +486,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should populate presence segments on the supervised operator', () => {
-    const operateur = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Dupont', 'Jean');
+    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const debut = new Instant('2026-09-13T08:00:00Z');
     const fin = new Instant('2026-09-13T10:00:00Z');
     const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(debut, fin)]);
@@ -498,7 +498,7 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should identify whether an operator is absent with no activities and no anomalies', () => {
-    const opCalme = new OperateurDeclare(new IdentifiantOperateur('op-1'), 'Calme', 'Jean');
+    const opCalme = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Calme', prenom: 'Jean' });
     const superviseCalme = new OperateurSupervise(opCalme, 'ABSENT', { activites: [], anomalies: [] });
     expect(superviseCalme.isSansJourneeOuverte()).toBe(true);
 

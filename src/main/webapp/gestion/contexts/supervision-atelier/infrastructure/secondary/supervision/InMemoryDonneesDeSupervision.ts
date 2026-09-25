@@ -12,13 +12,13 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
   const instantBefore = (minutes: number): Instant => new Instant(new Date(instantDemonstration - minutes * 60_000).toISOString());
   return {
     operateurs: [
-      new OperateurDeclare(new IdentifiantOperateur('op-chloe'), 'Bernard', 'Chloé'),
-      new OperateurDeclare(new IdentifiantOperateur('op-bob'), 'Durand', 'Bob'),
-      new OperateurDeclare(new IdentifiantOperateur('op-alice'), 'Martin', 'Alice'),
-      new OperateurDeclare(new IdentifiantOperateur('op-david'), 'Petit', 'David'),
-      new OperateurDeclare(new IdentifiantOperateur('op-emma'), 'Robert', 'Emma'),
-      new OperateurDeclare(new IdentifiantOperateur('op-fatima'), 'Simon', 'Fatima'),
-      new OperateurDeclare(new IdentifiantOperateur('op-gabriel'), 'Thomas', 'Gabriel'),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-chloe'), nom: 'Bernard', prenom: 'Chloé' }),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-bob'), nom: 'Durand', prenom: 'Bob' }),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-alice'), nom: 'Martin', prenom: 'Alice' }),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-david'), nom: 'Petit', prenom: 'David' }),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-emma'), nom: 'Robert', prenom: 'Emma' }),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-fatima'), nom: 'Simon', prenom: 'Fatima' }),
+      new OperateurDeclare({ id: new IdentifiantOperateur('op-gabriel'), nom: 'Thomas', prenom: 'Gabriel' }),
     ],
     journees: [
       JourneeDeTravail.open(new IdentifiantOperateur('op-bob'), 'EN_PAUSE', [new FenetreDePresence(instantBefore(180), instantBefore(15))]),
