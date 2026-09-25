@@ -600,13 +600,13 @@ describe('SupervisionDeLAtelier', () => {
       [operateur],
       [journeeOuverteFixture(operateur, 'PRESENT')],
       [
-        activite('sans-poste', undefined, '07:00'),
         activite('sans-poste-tot', undefined, '06:50'),
         activite('tour-10', 'Tour 10', '07:10'),
         activite('tour-2-tard', 'Tour 2', '08:30'),
         activite('tour-2-b', 'Tour 2', '08:10'),
         activite('tour-2-a', 'Tour 2', '08:10'),
         activite('erodeuse', 'Érodeuse', '08:40'),
+        activite('sans-poste', undefined, '07:00'),
       ],
     );
 

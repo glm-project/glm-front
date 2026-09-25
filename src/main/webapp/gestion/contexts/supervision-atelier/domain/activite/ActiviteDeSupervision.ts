@@ -9,7 +9,9 @@ import { ObjetDeLActivite } from './ObjetDeLActivite';
 const rangDuPoste = (poste: PosteDeSupervision | undefined): number => (poste === undefined ? 1 : 0);
 
 const comparePostes = (poste: PosteDeSupervision | undefined, autre: PosteDeSupervision | undefined): number =>
-  rangDuPoste(poste) - rangDuPoste(autre) || (poste?.libelle ?? '').localeCompare(autre?.libelle ?? '', 'fr', { numeric: true });
+  poste === undefined || autre === undefined
+    ? rangDuPoste(poste) - rangDuPoste(autre)
+    : poste.libelle.localeCompare(autre.libelle, 'fr', { numeric: true });
 
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
