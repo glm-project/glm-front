@@ -10,14 +10,8 @@
       </p>
       }
     </div>
-    <button
-      type="button"
-      class="bouton"
-      data-selector="supervision-refresh"
-      [disabled]="vue.kind === 'CHARGEMENT'"
-      (click)="donnees.reload()"
-    >
-      <glm-icon name="refresh" class="icone" [class.icone-en-cours]="vue.kind === 'CHARGEMENT'" />
+    <button type="button" class="bouton" data-selector="supervision-refresh" [disabled]="donnees.isLoading()" (click)="donnees.reload()">
+      <glm-icon name="refresh" class="icone" [class.icone-en-cours]="donnees.isLoading()" />
       {{ libelles.actualiser }}
     </button>
   </header>
@@ -62,7 +56,7 @@
     </p>
   </div>
 
-  <div class="grid gap-3 lg:grid-cols-4" data-selector="supervision-plateau">
+  <div class="grid gap-3 lg:grid-cols-4" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
     @for (couloir of supervision.couloirs(); track couloir.couloir) { @let slug = slugs[couloir.couloir]; @let libelleCouloir =
     libelles.couloirs[couloir.couloir];
     <section

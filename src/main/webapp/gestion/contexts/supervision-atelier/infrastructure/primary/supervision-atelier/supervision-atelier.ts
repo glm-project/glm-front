@@ -1,5 +1,5 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { Component, computed, inject, resource } from '@angular/core';
+import { Component, inject, linkedSignal, resource, ResourceStatus } from '@angular/core';
 import { Instant } from '../../../domain/instant/Instant';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
 import { DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
@@ -23,6 +23,11 @@ const SLUGS: Record<CouloirDeSupervision, string> = {
   ABSENT: 'absents',
 };
 
+const CHARGEMENT: EtatVueSupervision = { kind: 'CHARGEMENT' };
+
+const pendantLaLecture = (precedent: EtatVueSupervision | undefined): EtatVueSupervision =>
+  precedent?.kind === 'SUCCES' ? precedent : CHARGEMENT;
+
 const nomComplet = (supervise: OperateurSupervise): string => `${supervise.operateur.nom} ${supervise.operateur.prenom}`;
 
 const areToutesSuspendues = (operateurs: readonly OperateurSupervise[]): boolean =>
@@ -45,10 +50,14 @@ export class SupervisionAtelier {
   protected readonly donnees = resource({ loader: () => this.refreshCycle.run(() => this.donneesPort.read()) });
   private readonly refreshCycle: SupervisionRefreshCycle = new SupervisionRefreshCycle(() => this.donnees.reload());
 
-  protected readonly etat = computed<EtatVueSupervision>(() => {
-    if (this.donnees.isLoading()) {
-      return { kind: 'CHARGEMENT' };
-    }
+  // Réévaluer à chaque changement de statut, et non de valeur : une relecture peut rendre le même objet, et doit
+  // pourtant redater la supervision. Pendant la relecture, la dernière évaluation reste affichée.
+  protected readonly etat = linkedSignal<ResourceStatus, EtatVueSupervision>({
+    source: () => this.donnees.status(),
+    computation: (_status, precedent) => (this.donnees.isLoading() ? pendantLaLecture(precedent?.value) : this.evaluate()),
+  });
+
+  private evaluate(): EtatVueSupervision {
     if (!this.donnees.hasValue()) {
       return { kind: 'ERREUR' };
     }
@@ -59,7 +68,7 @@ export class SupervisionAtelier {
       return { kind: 'ERREUR' };
     }
     return { kind: 'SUCCES', supervision: resultat.supervision };
-  });
+  }
 
   protected signalNc(supervision: SupervisionDeLAtelier): SignalAffiche {
     const enNc = supervision.operateursEnNonConformite();

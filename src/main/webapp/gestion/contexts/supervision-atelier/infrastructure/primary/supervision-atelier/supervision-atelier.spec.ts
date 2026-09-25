@@ -213,18 +213,18 @@ describe('Supervision atelier component', () => {
     vi.useRealTimers();
   });
 
-  it('should reload at thirty seconds and leave the lanes unchanged before then', async () => {
+  it('should keep the lanes displayed while reloading at thirty seconds, and leave them unchanged before then', async () => {
     await givenDonneesDisplayed();
 
     sourceFixture.prepare();
     await whenTimePasses(29_999);
-    const beforeDeadline = displayedOperatorCount();
+    const beforeDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     await whenTimePasses(1);
-    const atDeadline = isLoadingDisplayed();
+    const atDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
 
-    expect(beforeDeadline).toBe(3);
-    expect(atDeadline).toBe(true);
+    expect(beforeDeadline).toEqual({ cards: 3, reading: false });
+    expect(atDeadline).toEqual({ cards: 3, reading: true });
     thenEmptyStateIsDisplayed();
   });
 
@@ -238,13 +238,13 @@ describe('Supervision atelier component', () => {
     const whileHidden = displayedOperatorCount();
     whenVisibilityChanges('visible');
     await whenSupervisionOpened();
-    const onReturn = isLoadingDisplayed();
+    const onReturn = isReadingAgain();
     await whenDonneesArrive();
     sourceFixture.prepare();
     await whenTimePasses(29_999);
     const beforeNextDeadline = displayedOperatorCount();
     await whenTimePasses(1);
-    const atNextDeadline = isLoadingDisplayed();
+    const atNextDeadline = isReadingAgain();
     await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
 
     expect(whileHidden).toBe(3);
@@ -266,13 +266,13 @@ describe('Supervision atelier component', () => {
     sourceFixture.prepare();
     obsoleteResponse.resolve({ operateurs: [], journees: [], activites: [] });
     await whenSupervisionOpened();
-    const obsoleteResultWasWithheld = isLoadingDisplayed();
+    const obsoleteResultWasWithheld = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     const readsAfterRelease = sourceFixture.reads;
     await whenDonneesArrive();
 
     expect(readsBeforeRelease).toBe(2);
     expect(readsAfterRelease).toBe(3);
-    expect(obsoleteResultWasWithheld).toBe(true);
+    expect(obsoleteResultWasWithheld).toEqual({ cards: 3, reading: true });
     expect(displayedOperatorCount()).toBe(3);
   });
 
@@ -436,7 +436,7 @@ describe('Supervision atelier component', () => {
   };
 
   const displayedOperatorCount = (): number => elements('supervision-carte').length;
-  const isLoadingDisplayed = (): boolean => element('supervision-loading') !== null;
+  const isReadingAgain = (): boolean => element('supervision-plateau')?.getAttribute('aria-busy') === 'true';
 
   const whenVisibilityChanges = (visibility: DocumentVisibilityState): void => {
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(visibility);
