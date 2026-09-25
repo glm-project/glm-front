@@ -3,6 +3,7 @@ import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { CategorieActivite } from './CategorieActivite';
 import { IdentifiantActivite } from './IdentifiantActivite';
+import { ObjetDeLActivite } from './ObjetDeLActivite';
 
 const rangDuPoste = (poste: string | undefined): number => (poste === undefined ? 1 : 0);
 
@@ -12,7 +13,7 @@ const comparePostes = (poste: string | undefined, autre: string | undefined): nu
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
-  readonly nom: string;
+  readonly objet: ObjetDeLActivite;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
   readonly poste?: string;
@@ -21,7 +22,7 @@ export interface DescriptionActivite {
 export class ActiviteDeSupervision {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
-  readonly nom: string;
+  readonly objet: ObjetDeLActivite;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
   readonly poste: string | undefined;
@@ -29,7 +30,7 @@ export class ActiviteDeSupervision {
   constructor(description: DescriptionActivite) {
     this.id = description.id;
     this.operateurId = description.operateurId;
-    this.nom = description.nom;
+    this.objet = description.objet;
     this.categorie = description.categorie;
     this.debut = description.debut;
     this.poste = description.poste;

@@ -5,7 +5,11 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
+import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
+import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -38,9 +42,15 @@ const operateurFixture = (id: string, nom: string, prenom: string): OperateurDec
 const instantFixture = (heure: number, minute = 0, jour = 13): Instant => new Instant(new Date(2026, 8, jour, heure, minute).toISOString());
 const veilleFixture = (heure: number, minute = 0): Instant => instantFixture(heure, minute, 12);
 
+const mouleFixture = (reference: string, nom = 'PRD-2026-000001'): ElementTravaille =>
+  new ElementTravaille({ type: 'PRODUIT', nom, reference: new ReferenceDElement(reference) });
+const ofFixture = (reference: string, nom = 'OF-2026-000042'): ElementTravaille =>
+  new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom, reference: new ReferenceDElement(reference) });
+const ofSansReferenceFixture = (nom: string): ElementTravaille => new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom });
+
 interface ActiviteFixture {
   readonly id: string;
-  readonly nom: string;
+  readonly objet: ObjetDeLActivite;
   readonly debut: Instant;
   readonly poste?: string;
   readonly categorie?: string;
@@ -48,12 +58,12 @@ interface ActiviteFixture {
 
 const activiteFixture = (
   operateur: OperateurDeclare,
-  { id, nom, debut, poste, categorie = 'FABRICATION' }: ActiviteFixture,
+  { id, objet, debut, poste, categorie = 'FABRICATION' }: ActiviteFixture,
 ): ActiviteDeSupervision =>
   new ActiviteDeSupervision({
     id: new IdentifiantActivite(id),
     operateurId: operateur.id,
-    nom,
+    objet,
     categorie: new CategorieActivite(categorie),
     debut,
     ...(poste === undefined ? {} : { poste }),
@@ -103,16 +113,37 @@ const atelierFixture: DonneesDeSupervision = {
   activites: [
     activiteFixture(aubertFixture, {
       id: 'act-aubert-3004',
-      nom: 'OF 3004',
+      objet: ofFixture('3004'),
       poste: 'Tour 1',
       categorie: 'NC',
       debut: instantFixture(9, 40),
     }),
-    activiteFixture(aubertFixture, { id: 'act-aubert-1015', nom: 'Moule 1015', poste: 'Fraiseuse 1', debut: instantFixture(7, 5) }),
-    activiteFixture(dumasFixture, { id: 'act-dumas', nom: 'OF 3002', poste: 'Scie 1', debut: instantFixture(7, 10) }),
-    activiteFixture(marchandFixture, { id: 'act-marchand', nom: 'OF 3001', poste: 'Fraiseuse 2', debut: veilleFixture(14, 20) }),
-    activiteFixture(perrinFixture, { id: 'act-perrin', nom: 'OF 3006', poste: 'Tour 1', categorie: 'NC', debut: instantFixture(7, 0) }),
-    activiteFixture(vidalFixture, { id: 'act-vidal', nom: 'OF-2026-000048', debut: instantFixture(9, 52) }),
+    activiteFixture(aubertFixture, {
+      id: 'act-aubert-1015',
+      objet: mouleFixture('1015'),
+      poste: 'Fraiseuse 1',
+      debut: instantFixture(7, 5),
+    }),
+    activiteFixture(dumasFixture, {
+      id: 'act-dumas',
+      objet: ofFixture('3002', 'OF-2026-000040'),
+      poste: 'Scie 1',
+      debut: instantFixture(7, 10),
+    }),
+    activiteFixture(marchandFixture, {
+      id: 'act-marchand',
+      objet: ofFixture('3001', 'OF-2026-000039'),
+      poste: 'Fraiseuse 2',
+      debut: veilleFixture(14, 20),
+    }),
+    activiteFixture(perrinFixture, {
+      id: 'act-perrin',
+      objet: ofFixture('3006', 'OF-2026-000044'),
+      poste: 'Tour 1',
+      categorie: 'NC',
+      debut: instantFixture(7, 0),
+    }),
+    activiteFixture(vidalFixture, { id: 'act-vidal', objet: ofSansReferenceFixture('OF-2026-000048'), debut: instantFixture(9, 52) }),
   ],
 };
 
@@ -122,7 +153,7 @@ const absentsActifsFixture = (nombre: number): DonneesDeSupervision => {
     operateurs,
     journees: [],
     activites: operateurs.map(operateur =>
-      activiteFixture(operateur, { id: `act-${operateur.id.value}`, nom: 'OF 3001', debut: instantFixture(7) }),
+      activiteFixture(operateur, { id: `act-${operateur.id.value}`, objet: ofFixture('3001', 'OF-2026-000039'), debut: instantFixture(7) }),
     ),
   };
 };
@@ -133,12 +164,12 @@ const nonConformitesSuspenduesFixture = (operateurs: readonly OperateurDeclare[]
     JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
   ),
   activites: operateurs.map(operateur =>
-    activiteFixture(operateur, { id: `act-${operateur.id.value}`, nom: 'Moule 1015', categorie: 'NC', debut: instantFixture(8) }),
+    activiteFixture(operateur, { id: `act-${operateur.id.value}`, objet: mouleFixture('1015'), categorie: 'NC', debut: instantFixture(8) }),
   ),
 });
 
 interface ActiviteAffichee {
-  readonly nom: string | undefined;
+  readonly element: string | undefined;
   readonly poste: string | undefined;
   readonly debut: string | undefined;
   readonly nc: string | undefined;
@@ -322,7 +353,7 @@ describe('Supervision atelier component', () => {
       journees: [
         JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 18, 0).toISOString()))]),
       ],
-      activites: [activiteFixture(aliceFixture, { id: 'act-1', nom: 'Moule 1015', debut: instantFixture(8, 12) })],
+      activites: [activiteFixture(aliceFixture, { id: 'act-1', objet: mouleFixture('1015'), debut: instantFixture(8, 12) })],
     };
     await whenDonneesArrive(donneesAtThreshold);
 
@@ -441,16 +472,41 @@ describe('Supervision atelier component', () => {
     expect(texte(lane('sans-affectation'))).not.toContain('Personne');
   });
 
-  it('should show the activity name, workstation and start without interaction', async () => {
+  it('should show the activity reference, workstation and start without interaction', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
-    expect(activitiesOf('op-aubert').map(({ nom, poste, debut }) => ({ nom, poste, debut }))).toEqual([
-      { nom: 'Moule 1015', poste: 'Fraiseuse 1', debut: 'depuis 07:05' },
-      { nom: 'OF 3004', poste: 'Tour 1', debut: 'depuis 09:40' },
+    expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
+      { element: 'Moule 1015', poste: 'Fraiseuse 1', debut: 'depuis 07:05' },
+      { element: 'OF 3004', poste: 'Tour 1', debut: 'depuis 09:40' },
     ]);
-    expect(activitiesOf('op-vidal').map(({ nom, poste }) => ({ nom, poste }))).toEqual([{ nom: 'OF-2026-000048', poste: undefined }]);
+  });
+
+  it('should name an element by its name when it has no reference', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(activitiesOf('op-vidal').map(({ element, poste }) => ({ element, poste }))).toEqual([
+      { element: 'OF OF-2026-000048', poste: undefined },
+    ]);
+  });
+
+  it('should label non-billable work « Hors OF » without any reference', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({
+      operateurs: [aubertFixture],
+      journees: [JourneeDeTravail.open(aubertFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(6, 58))])],
+      activites: [
+        activiteFixture(aubertFixture, { id: 'act-hors-of', objet: new HorsOf(), poste: 'Tour 3', debut: instantFixture(7, 45) }),
+      ],
+    });
+
+    expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
+      { element: 'Hors OF', poste: 'Tour 3', debut: 'depuis 07:45' },
+    ]);
   });
 
   it('should say that an unassigned or paused operator has no activity in progress, and nothing for an absent one', async () => {
@@ -487,7 +543,9 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive(atelierFixture);
 
-    expect(activitiesOf('op-perrin')).toEqual([{ nom: 'OF 3006', poste: 'Tour 1', debut: 'depuis 07:00', nc: 'NC', suspendue: undefined }]);
+    expect(activitiesOf('op-perrin')).toEqual([
+      { element: 'OF 3006', poste: 'Tour 1', debut: 'depuis 07:00', nc: 'NC', suspendue: undefined },
+    ]);
     expect(signal('supervision-signal-nc')).toBe('1 en NC : Aubert Lucas');
   });
 
@@ -583,7 +641,7 @@ describe('Supervision atelier component', () => {
         new ActiviteDeSupervision({
           id: new IdentifiantActivite('act-orphan'),
           operateurId: undefined,
-          nom: 'OF-42',
+          objet: ofFixture('42'),
           categorie: new CategorieActivite('NC'),
           debut: new Instant('2026-09-13T10:00:00Z'),
         }),
@@ -620,7 +678,7 @@ describe('Supervision atelier component', () => {
         new ActiviteDeSupervision({
           id: new IdentifiantActivite('act-orphan-refresh'),
           operateurId: undefined,
-          nom: 'OF-42',
+          objet: ofFixture('42'),
           categorie: new CategorieActivite('NC'),
           debut: new Instant('2026-09-13T10:00:00Z'),
         }),
@@ -739,7 +797,7 @@ describe('Supervision atelier component', () => {
 
   const activitiesOf = (id: string): ActiviteAffichee[] =>
     [...card(id).querySelectorAll<HTMLElement>(dataSelector('supervision-activite'))].map(activite => ({
-      nom: textIn(activite, 'supervision-activite-nom'),
+      element: textIn(activite, 'supervision-activite-element'),
       poste: textIn(activite, 'supervision-activite-poste'),
       debut: textIn(activite, 'supervision-activite-debut'),
       nc: textIn(activite, 'supervision-marque-nc'),

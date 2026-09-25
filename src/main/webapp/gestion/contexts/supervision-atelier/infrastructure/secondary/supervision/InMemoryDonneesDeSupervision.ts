@@ -1,6 +1,10 @@
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
+import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
+import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -11,9 +15,24 @@ import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/
 const TRAVAIL = new CategorieActivite('FABRICATION');
 const NON_CONFORMITE = new CategorieActivite('NC');
 
+const moule = (reference: string, nom: string): ElementTravaille =>
+  new ElementTravaille({ type: 'PRODUIT', nom, reference: new ReferenceDElement(reference) });
+const ordreDeFabrication = (reference: string, nom: string): ElementTravaille =>
+  new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom, reference: new ReferenceDElement(reference) });
+
+const MOULE_1015 = moule('1015', 'PRD-2026-000001');
+const MOULE_1016 = moule('1016', 'PRD-2026-000002');
+const MOULE_1017 = moule('1017', 'PRD-2026-000003');
+const OF_3001 = ordreDeFabrication('3001', 'OF-2026-000039');
+const OF_3002 = ordreDeFabrication('3002', 'OF-2026-000040');
+const OF_3004 = ordreDeFabrication('3004', 'OF-2026-000042');
+const OF_3005 = ordreDeFabrication('3005', 'OF-2026-000043');
+const OF_3006 = ordreDeFabrication('3006', 'OF-2026-000044');
+const OF_SANS_REFERENCE = new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000048' });
+
 interface ActiviteDeDemonstration {
   readonly operateur: string;
-  readonly element: string;
+  readonly objet: ObjetDeLActivite;
   readonly poste?: string;
   readonly categorie: CategorieActivite;
   readonly minutes: number;
@@ -36,18 +55,18 @@ const OPERATEURS: readonly (readonly [string, string, string])[] = [
 ];
 
 const ACTIVITES: readonly ActiviteDeDemonstration[] = [
-  { operateur: 'op-aubert', element: 'Moule 1015', poste: 'Fraiseuse 1', categorie: TRAVAIL, minutes: 125 },
-  { operateur: 'op-aubert', element: 'OF 3004', poste: 'Tour 1', categorie: TRAVAIL, minutes: 30 },
-  { operateur: 'op-benali', element: 'Moule 1016', poste: 'Erodeuse F', categorie: TRAVAIL, minutes: 115 },
-  { operateur: 'op-benali', element: 'Moule 1016', poste: 'Erodeuse G', categorie: TRAVAIL, minutes: 90 },
-  { operateur: 'op-chevalier', element: 'OF 3004', poste: 'Tour 3', categorie: TRAVAIL, minutes: 65 },
-  { operateur: 'op-dumas', element: 'OF 3002', poste: 'Scie 1', categorie: TRAVAIL, minutes: 120 },
-  { operateur: 'op-garnier', element: 'Moule 1017', poste: 'Fraiseuse 2', categorie: NON_CONFORMITE, minutes: 23 },
-  { operateur: 'op-marchand', element: 'OF 3001', poste: 'Fraiseuse 2', categorie: TRAVAIL, minutes: 1130 },
-  { operateur: 'op-morel', element: 'OF 3005', poste: 'Fil 1', categorie: TRAVAIL, minutes: 150 },
-  { operateur: 'op-morel', element: 'Moule 1015', poste: 'Fil 2', categorie: NON_CONFORMITE, minutes: 50 },
-  { operateur: 'op-perrin', element: 'OF 3006', poste: 'Tour 1', categorie: TRAVAIL, minutes: 170 },
-  { operateur: 'op-vidal', element: 'OF-2026-000048', categorie: TRAVAIL, minutes: 8 },
+  { operateur: 'op-aubert', objet: MOULE_1015, poste: 'Fraiseuse 1', categorie: TRAVAIL, minutes: 125 },
+  { operateur: 'op-aubert', objet: OF_3004, poste: 'Tour 1', categorie: TRAVAIL, minutes: 30 },
+  { operateur: 'op-benali', objet: MOULE_1016, poste: 'Erodeuse F', categorie: TRAVAIL, minutes: 115 },
+  { operateur: 'op-benali', objet: MOULE_1016, poste: 'Erodeuse G', categorie: TRAVAIL, minutes: 90 },
+  { operateur: 'op-chevalier', objet: new HorsOf(), poste: 'Tour 3', categorie: TRAVAIL, minutes: 65 },
+  { operateur: 'op-dumas', objet: OF_3002, poste: 'Scie 1', categorie: TRAVAIL, minutes: 120 },
+  { operateur: 'op-garnier', objet: MOULE_1017, poste: 'Fraiseuse 2', categorie: NON_CONFORMITE, minutes: 23 },
+  { operateur: 'op-marchand', objet: OF_3001, poste: 'Fraiseuse 2', categorie: TRAVAIL, minutes: 1130 },
+  { operateur: 'op-morel', objet: OF_3005, poste: 'Fil 1', categorie: TRAVAIL, minutes: 150 },
+  { operateur: 'op-morel', objet: MOULE_1015, poste: 'Fil 2', categorie: NON_CONFORMITE, minutes: 50 },
+  { operateur: 'op-perrin', objet: OF_3006, poste: 'Tour 1', categorie: TRAVAIL, minutes: 170 },
+  { operateur: 'op-vidal', objet: OF_SANS_REFERENCE, categorie: TRAVAIL, minutes: 8 },
 ];
 
 const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision => {
@@ -76,7 +95,7 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
         new ActiviteDeSupervision({
           id: new IdentifiantActivite(`act-${String(index + 1)}`),
           operateurId: operateur(activite.operateur),
-          nom: activite.element,
+          objet: activite.objet,
           categorie: activite.categorie,
           debut: instantBefore(activite.minutes),
           ...(activite.poste === undefined ? {} : { poste: activite.poste }),

@@ -1,6 +1,9 @@
 import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../activite/CategorieActivite';
+import { ElementTravaille } from '../activite/ElementTravaille';
+import { HorsOf } from '../activite/HorsOf';
 import { IdentifiantActivite } from '../activite/IdentifiantActivite';
+import { ReferenceDElement } from '../activite/ReferenceDElement';
 import { Instant } from '../instant/Instant';
 import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
@@ -31,7 +34,7 @@ describe('SupervisionDeLAtelier', () => {
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
-      nom: 'Usinage',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -234,7 +237,7 @@ describe('SupervisionDeLAtelier', () => {
     const premiereActivite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: dupont.id,
-      nom: 'Usinage carter',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
       poste: 'Poste-1',
@@ -242,7 +245,7 @@ describe('SupervisionDeLAtelier', () => {
     const secondeActivite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-2'),
       operateurId: dupont.id,
-      nom: 'Contrôle dimensionnel',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T09:30:00Z'),
       poste: 'Poste-2',
@@ -250,7 +253,7 @@ describe('SupervisionDeLAtelier', () => {
     const activiteMartin = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-3'),
       operateurId: martin.id,
-      nom: 'Montage sous-ensemble',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:15:00Z'),
       poste: 'Poste-3',
@@ -276,14 +279,14 @@ describe('SupervisionDeLAtelier', () => {
     const activiteNc = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateurId,
-      nom: 'Retouche carter',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('NC'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
     const activiteStandard = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-2'),
       operateurId: operateurId,
-      nom: 'Usinage standard',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:30:00Z'),
     });
@@ -297,7 +300,7 @@ describe('SupervisionDeLAtelier', () => {
     const activiteSansPoste = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateurId,
-      nom: 'Tri manuel',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -310,7 +313,7 @@ describe('SupervisionDeLAtelier', () => {
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
-      nom: 'Usinage',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -330,7 +333,7 @@ describe('SupervisionDeLAtelier', () => {
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
-      nom: 'Usinage',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('NC'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -353,7 +356,7 @@ describe('SupervisionDeLAtelier', () => {
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
       operateurId: operateur.id,
-      nom: 'Usinage',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('NC'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -382,7 +385,7 @@ describe('SupervisionDeLAtelier', () => {
     const activiteSansOperateur = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-orphan'),
       operateurId: undefined,
-      nom: 'Usinage anonyme',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -399,7 +402,7 @@ describe('SupervisionDeLAtelier', () => {
     const activiteInconnue = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-unknown'),
       operateurId: operateurInconnuId,
-      nom: 'Usinage externe',
+      objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
@@ -606,6 +609,21 @@ describe('SupervisionDeLAtelier', () => {
       'sans-poste',
     ]);
   });
+
+  it('should count a non-billable activity as work', () => {
+    const operateur = operateurFixture('op-1');
+    const horsOf = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('act-hors-of'),
+      operateurId: operateur.id,
+      objet: new HorsOf(),
+      categorie: new CategorieActivite('PROD'),
+      debut: new Instant('2026-09-13T08:30:00Z'),
+    });
+
+    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur, 'PRESENT')], [horsOf]);
+
+    expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
+  });
 });
 
 function exploitableFixture(resultat: ResultatSupervision): SupervisionDeLAtelier {
@@ -624,6 +642,8 @@ function inexploitableFixture(resultat: ResultatSupervision): MotifSupervisionIn
 
 const MAINTENANT = new Instant('2026-09-13T09:00:00Z');
 
+const MOULE_1015 = new ElementTravaille({ type: 'PRODUIT', nom: 'PRD-2026-000001', reference: new ReferenceDElement('1015') });
+
 const operateurFixture = (id: string, nom = 'Dupont', prenom = 'Jean'): OperateurDeclare =>
   new OperateurDeclare({ id: new IdentifiantOperateur(id), nom, prenom });
 
@@ -634,7 +654,7 @@ const activiteFixture = (operateur: OperateurDeclare, categorie = 'PROD'): Activ
   new ActiviteDeSupervision({
     id: new IdentifiantActivite(`act-${operateur.id.value}-${categorie}`),
     operateurId: operateur.id,
-    nom: 'Moule 1015',
+    objet: MOULE_1015,
     categorie: new CategorieActivite(categorie),
     debut: new Instant('2026-09-13T08:30:00Z'),
   });
@@ -647,7 +667,7 @@ const activiteSurPosteFixture = (
   new ActiviteDeSupervision({
     id: new IdentifiantActivite(id),
     operateurId: operateur.id,
-    nom: 'Moule 1015',
+    objet: MOULE_1015,
     categorie: new CategorieActivite('PROD'),
     debut: new Instant(`2026-09-13T${debut}:00Z`),
     ...(poste === undefined ? {} : { poste }),

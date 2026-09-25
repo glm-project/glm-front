@@ -132,10 +132,18 @@
                 <div class="flex flex-wrap items-center gap-x-1">
                   @if (activite.categorie.isNc()) {
                   <span class="rounded bg-nc px-1.5 text-label text-ink" data-selector="supervision-marque-nc">{{ libelles.nc }}</span>
-                  }
-                  <span class="text-body font-semibold tabular-nums wrap-anywhere" data-selector="supervision-activite-nom"
-                    >{{ activite.nom }}</span
-                  >
+                  } @let objet = activite.objet;
+                  <span class="flex min-w-0 flex-wrap items-center gap-x-1" data-selector="supervision-activite-element">
+                    @if (objet.isHorsOf()) {
+                    <span class="rounded bg-border px-1.5 text-label text-ink">{{ libelles.horsOf }}</span>
+                    } @else {
+                    <span class="gestion-type type-compacte">{{ libelles.types[objet.type] }}</span>&ngsp;@if (objet.reference; as
+                    reference) {
+                    <span class="text-body font-semibold tabular-nums">{{ reference.value }}</span>
+                    } @else {
+                    <span class="text-body-sm font-semibold text-ink-muted tabular-nums wrap-anywhere">{{ objet.nom }}</span>
+                    } }
+                  </span>
                   <time
                     class="moment ml-auto text-body-sm"
                     [attr.datetime]="depuis.instant.value"

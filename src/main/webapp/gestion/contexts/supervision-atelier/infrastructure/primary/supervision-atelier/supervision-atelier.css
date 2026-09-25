@@ -163,6 +163,18 @@
   font-weight: 600;
 }
 
+/* La version compacte de `.gestion-type` tient dans la ligne d'une activité. */
+.type-compacte {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  letter-spacing: var(--text-label--letter-spacing);
+}
+
 .activite {
   display: flex;
   flex-direction: column;

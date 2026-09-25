@@ -47,7 +47,7 @@ const thenTheActivityAndAnomaliesRemainVisible = (): void => {
     .find(dataSelector('supervision-carte'))
     .filter('[data-operateur-id="op-perrin"]')
     .within(() => {
-      cy.get(dataSelector('supervision-activite-nom')).should('contain.text', 'OF 3006');
+      cy.get(dataSelector('supervision-activite-element')).should('contain.text', 'OF').and('contain.text', '3006');
       cy.get(dataSelector('supervision-anomalie')).should('contain.text', 'Activité d’un opérateur absent');
     });
   cy.get(dataSelector('supervision-signal-nc')).should('contain.text', '2 en NC').and('contain.text', 'Garnier Thomas, Morel Inès');

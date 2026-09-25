@@ -22,7 +22,13 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Segment de présence** : intervalle temporel de présence ou de pause au sein d'une ou plusieurs journées de travail, avec son début, sa fin, son type (présence ou pause) et l'indication d'un segment en cours.
 
-**Activité de supervision** : activité en cours rattachée à un opérateur, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
+**Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
+
+**Objet de l'activité** : ce sur quoi porte une activité : un élément travaillé, ou Hors OF.
+
+**Élément travaillé** : moule (`PRODUIT`) ou OF (`ORDRE_DE_FABRICATION`) sur lequel l'opérateur travaille, avec son nom et sa référence facultative. Sans référence, l'écran le désigne par son nom ; aucune référence n'est fabriquée.
+
+**Hors OF** : activité sans élément travaillé, pour le travail non facturable. Elle compte comme du travail : son opérateur est Au travail.
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
 
@@ -32,7 +38,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT` ou `EN_PAUSE`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ a arrêté son temps.
 
-> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. La présence sans affectation n'en est pas, et aucun type, champ ni sélecteur ne s'appelle GLM.
+> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail est désormais modélisé comme « Hors OF ». La présence sans affectation n'en est pas, et toujours aucun type, champ ni sélecteur ne s'appelle GLM.
 
 **Anomalie de supervision** : signalement d'incohérence constaté lors de l'évaluation de la supervision (`JOURNEE_OUVERTE_PLUS_DE_16_HEURES`, `JOURNEE_OUVERTE_SANS_FENETRES`, `ACTIVITE_D_UN_ABSENT`).
 

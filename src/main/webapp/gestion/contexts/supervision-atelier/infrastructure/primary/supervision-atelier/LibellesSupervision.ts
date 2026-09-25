@@ -1,3 +1,4 @@
+import { TypeDElement } from '../../../domain/activite/TypeDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { AnomalieDeSupervision } from '../../../domain/supervision/AnomalieDeSupervision';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
@@ -26,6 +27,11 @@ const ANOMALIES: Record<AnomalieDeSupervision, string> = {
   ACTIVITE_D_UN_ABSENT: 'Activité d’un opérateur absent',
   JOURNEE_OUVERTE_SANS_FENETRES: 'Venue ouverte sans heure d’arrivée',
   JOURNEE_OUVERTE_PLUS_DE_16_HEURES: 'Aucun départ pointé depuis plus de 16\u00a0h',
+};
+
+const TYPES: Record<TypeDElement, string> = {
+  PRODUIT: 'Moule',
+  ORDRE_DE_FABRICATION: 'OF',
 };
 
 const NOMS_CITES_AU_PLUS = 6;
@@ -59,6 +65,8 @@ export const LIBELLES_SUPERVISION = {
   suspendue: '(suspendue)',
   suspendues: '(suspendues)',
   nc: 'NC',
+  types: TYPES,
+  horsOf: 'Hors OF',
   aucuneActivite: 'Aucune activité en cours',
   activiteSuspendue: 'suspendue',
   arrivee: 'arrivée',
