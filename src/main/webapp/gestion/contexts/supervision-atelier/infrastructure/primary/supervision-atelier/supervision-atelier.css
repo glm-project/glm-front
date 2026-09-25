@@ -37,10 +37,6 @@
   font-size: 1rem;
   line-height: 0;
 }
-.icone-petite {
-  font-size: 0.75rem;
-  line-height: 0;
-}
 .icone-en-cours {
   animation: tourne 900ms linear infinite;
 }
@@ -48,11 +44,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.nombre {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* L'accolade coiffe les deux premiers couloirs : ses ergots descendent vers Au travail et Sans affectation. */
@@ -78,63 +69,9 @@
   line-height: 1.25rem;
 }
 
-.couloir {
-  --couleur: var(--color-border-strong);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 0 6px 6px;
-  border-top: 4px solid var(--couleur);
-  border-radius: var(--radius-surface);
-  background: var(--color-sunken);
-}
-.couloir--au-travail {
-  --couleur: var(--color-ok);
-}
-.couloir--en-pause {
-  --couleur: var(--color-warn);
-}
-.couloir--absents {
-  --couleur: var(--color-danger);
-}
-.couloir-entete {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 6px 10px;
-}
-.marqueur {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 1rem;
-  height: 1rem;
-}
-.pastille {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-}
-.carre {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-}
-
-/* `--lisere` trace le bord gauche de la carte et de ses bandeaux ; `--encre` éteint tout le texte d'un absent. */
+/* `--lisere` trace le bord gauche d'une carte et le prolonge dans ses bandeaux d'anomalie. */
 .carte {
   --lisere: transparent;
-  --encre: var(--color-ink);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-surface);
-  background: var(--color-surface);
-  color: var(--encre);
   box-shadow:
     inset 3px 0 0 var(--lisere),
     0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
@@ -147,62 +84,24 @@
 }
 .carte--absents {
   --lisere: var(--color-danger);
-  --encre: var(--color-ink-muted);
-  border-color: var(--color-border-strong);
-  background: transparent;
   box-shadow: inset 3px 0 0 var(--lisere);
 }
-
-.moment {
-  color: var(--color-ink-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.bandeau {
+  box-shadow: inset 3px 0 0 var(--lisere);
 }
-.jour {
-  color: var(--encre);
-  font-weight: 600;
+.bandeau:last-child {
+  margin-bottom: -10px;
+  border-radius: 0 0 calc(var(--radius-surface) - 1px) calc(var(--radius-surface) - 1px);
 }
 
-/* La version compacte de `.gestion-type` tient dans la ligne d'une activité. */
-.type-compacte {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 4px;
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-  letter-spacing: var(--text-label--letter-spacing);
-}
-
-.activite {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: 4px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-}
 /* Le jaune est pâle : la hachure et la marque « NC » portent la non-conformité, jamais la seule bordure. */
-.activite--nc {
+.activite-nc {
   padding-left: calc(8px + 0.3rem);
   border-color: var(--color-nc);
   background:
     repeating-linear-gradient(135deg, transparent 0 0.45rem, color-mix(in srgb, var(--color-nc) 35%, transparent) 0.45rem 0.9rem),
     color-mix(in srgb, var(--color-nc) 12%, var(--color-surface));
   box-shadow: inset 0.3rem 0 var(--color-nc);
-}
-
-.bandeau {
-  margin: 2px -10px 0;
-  padding: 8px 10px;
-  background: var(--color-sunken);
-  box-shadow: inset 3px 0 0 var(--lisere);
-}
-.bandeau:last-child {
-  margin-bottom: -10px;
-  border-radius: 0 0 calc(var(--radius-surface) - 1px) calc(var(--radius-surface) - 1px);
 }
 
 @media (prefers-reduced-motion: reduce) {
