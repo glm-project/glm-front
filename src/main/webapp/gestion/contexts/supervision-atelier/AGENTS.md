@@ -6,7 +6,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Supervision de l'atelier** : interprétation en temps réel des opérateurs déclarés, de la présence et des activités en cours pour les couloirs de supervision.
 
-**Opérateur déclaré** : opérateur référencé pour la supervision de l'atelier, identifié et ordonné alphabétiquement.
+**Opérateur déclaré** : opérateur référencé pour la supervision de l'atelier, identifié et ordonné alphabétiquement. Il porte ses métiers, les natures de travail pour lesquelles il est habilité ; la liste peut être vide.
 
 **Journée de travail** : une venue sur l'atelier, bornée par une arrivée et un départ, qui peut traverser minuit ; ce n'est pas un jour calendaire. À l'écran, une journée de travail se dit _venue_ : « journée » y évoquerait un jour calendaire, et « présence » désigne déjà l'état de l'opérateur.
 
@@ -23,6 +23,10 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 **Segment de présence** : intervalle temporel de présence ou de pause au sein d'une ou plusieurs journées de travail, avec son début, sa fin, son type (présence ou pause) et l'indication d'un segment en cours.
 
 **Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
+
+**Poste** : poste de travail d'une activité, avec son identifiant, son libellé et facultativement sa nature de travail. Les activités d'un opérateur s'ordonnent par libellé de poste, celles sans poste en dernier, puis par début.
+
+**Nature de travail** : texte libre non vide, affiché tel que saisi et nommé « Métier » à l'écran ; c'est la nature d'un poste et les métiers d'un opérateur.
 
 **Objet de l'activité** : ce sur quoi porte une activité : un élément travaillé, ou Hors OF.
 

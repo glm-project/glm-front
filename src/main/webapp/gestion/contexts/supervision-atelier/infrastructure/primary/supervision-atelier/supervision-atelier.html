@@ -152,7 +152,15 @@
                   >
                 </div>
                 @if (activite.poste; as poste) {
-                <p class="text-body-sm font-semibold wrap-anywhere" data-selector="supervision-activite-poste">{{ poste }}</p>
+                <p class="flex flex-wrap items-center gap-x-1.5 text-body-sm" data-selector="supervision-activite-poste">
+                  <span class="font-semibold wrap-anywhere">{{ poste.libelle }}</span>@if (poste.nature; as nature) {&ngsp;<span
+                    class="text-ink-muted"
+                    aria-hidden="true"
+                    >·</span
+                  >&ngsp;<span class="wrap-anywhere">{{ nature.value }}</span>}
+                </p>
+                } @else {
+                <p class="text-body-sm text-ink-muted" data-selector="supervision-activite-poste">{{ libelles.sansPoste }}</p>
                 } @if (supervise.hasActivitesSuspendues()) {
                 <p class="flex items-center gap-1 text-label text-warn" data-selector="supervision-suspendue">
                   <glm-icon name="pause" class="icone-petite" aria-hidden="true" />{{ libelles.activiteSuspendue }}
@@ -161,12 +169,21 @@
               </li>
               }
             </ul>
-            } @else if (couloir.couloir !== 'ABSENT') {
-            <p class="flex items-center gap-1.5 text-body-sm text-ink-muted" data-selector="supervision-aucune-activite">
-              @if (couloir.couloir === 'SANS_AFFECTATION') {
-              <glm-icon name="circleDashed" class="icone text-sans-affectation" aria-hidden="true" />
-              } {{ libelles.aucuneActivite }}
-            </p>
+            } @else if (couloir.couloir !== 'ABSENT') { @let metiers = supervise.operateur.metiers;
+            <div class="flex flex-col gap-0.5 text-body-sm">
+              <p class="flex items-center gap-1.5 text-ink-muted" data-selector="supervision-aucune-activite">
+                @if (couloir.couloir === 'SANS_AFFECTATION') {
+                <glm-icon name="circleDashed" class="icone text-sans-affectation" aria-hidden="true" />
+                } {{ libelles.aucuneActivite }}
+              </p>
+              @if (metiers.length > 0) {
+              <p data-selector="supervision-metiers">
+                <span class="text-ink-muted">{{ metiers.length > 1 ? libelles.metiers : libelles.metier }}</span>&ngsp;<span
+                  >{{ libelles.listeDesMetiers(metiers) }}</span
+                >
+              </p>
+              }
+            </div>
             } @for (anomalie of supervise.anomalies; track anomalie) {
             <p class="bandeau flex items-start gap-1.5 text-body-sm font-semibold text-ink" data-selector="supervision-anomalie">
               <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.anomalies[anomalie] }}

@@ -13,6 +13,9 @@ import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
+import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
+import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
 import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
@@ -35,8 +38,11 @@ class DonneesDeSupervisionFixture extends DonneesDeSupervisionPort {
   }
 }
 
-const operateurFixture = (id: string, nom: string, prenom: string): OperateurDeclare =>
-  new OperateurDeclare({ id: new IdentifiantOperateur(id), nom, prenom });
+const operateurFixture = (id: string, nom: string, prenom: string, metiers: readonly string[] = []): OperateurDeclare =>
+  new OperateurDeclare({ id: new IdentifiantOperateur(id), nom, prenom, metiers: metiers.map(metier => new NatureDeTravail(metier)) });
+
+const posteFixture = (libelle: string, nature: string): PosteDeSupervision =>
+  new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle, nature: new NatureDeTravail(nature) });
 
 /** L'écran affiche les instants dans le fuseau du navigateur : partir d'une heure locale garde les attentes vraies partout. */
 const instantFixture = (heure: number, minute = 0, jour = 13): Instant => new Instant(new Date(2026, 8, jour, heure, minute).toISOString());
@@ -52,7 +58,7 @@ interface ActiviteFixture {
   readonly id: string;
   readonly objet: ObjetDeLActivite;
   readonly debut: Instant;
-  readonly poste?: string;
+  readonly poste?: PosteDeSupervision;
   readonly categorie?: string;
 }
 
@@ -80,11 +86,11 @@ const donneesFixture: DonneesDeSupervision = {
 
 const aubertFixture = operateurFixture('op-aubert', 'Aubert', 'Lucas');
 const dumasFixture = operateurFixture('op-dumas', 'Dumas', 'Julien');
-const fabreFixture = operateurFixture('op-fabre', 'Fabre', 'Lucie');
-const lefevreFixture = operateurFixture('op-lefevre', 'Lefèvre', 'Sophie');
+const fabreFixture = operateurFixture('op-fabre', 'Fabre', 'Lucie', ['Fraisage']);
+const lefevreFixture = operateurFixture('op-lefevre', 'Lefèvre', 'Sophie', ['Dessin']);
 const marchandFixture = operateurFixture('op-marchand', 'Marchand', 'Kevin');
 const perrinFixture = operateurFixture('op-perrin', 'Perrin', 'Loïc');
-const rouxFixture = operateurFixture('op-roux', 'Roux', 'Nathalie');
+const rouxFixture = operateurFixture('op-roux', 'Roux', 'Nathalie', ['Soudage', 'Tournage']);
 const schmittFixture = operateurFixture('op-schmitt', 'Schmitt', 'Yanis');
 const vidalFixture = operateurFixture('op-vidal', 'Vidal', 'Hugo');
 
@@ -114,32 +120,32 @@ const atelierFixture: DonneesDeSupervision = {
     activiteFixture(aubertFixture, {
       id: 'act-aubert-3004',
       objet: ofFixture('3004'),
-      poste: 'Tour 1',
+      poste: posteFixture('Tour 1', 'Tournage'),
       categorie: 'NC',
       debut: instantFixture(9, 40),
     }),
     activiteFixture(aubertFixture, {
       id: 'act-aubert-1015',
       objet: mouleFixture('1015'),
-      poste: 'Fraiseuse 1',
+      poste: posteFixture('Fraiseuse 1', 'Fraisage'),
       debut: instantFixture(7, 5),
     }),
     activiteFixture(dumasFixture, {
       id: 'act-dumas',
       objet: ofFixture('3002', 'OF-2026-000040'),
-      poste: 'Scie 1',
+      poste: posteFixture('Scie 1', 'Sciage'),
       debut: instantFixture(7, 10),
     }),
     activiteFixture(marchandFixture, {
       id: 'act-marchand',
       objet: ofFixture('3001', 'OF-2026-000039'),
-      poste: 'Fraiseuse 2',
+      poste: posteFixture('Fraiseuse 2', 'Fraisage'),
       debut: veilleFixture(14, 20),
     }),
     activiteFixture(perrinFixture, {
       id: 'act-perrin',
       objet: ofFixture('3006', 'OF-2026-000044'),
-      poste: 'Tour 1',
+      poste: posteFixture('Tour 1', 'Tournage'),
       categorie: 'NC',
       debut: instantFixture(7, 0),
     }),
@@ -472,24 +478,24 @@ describe('Supervision atelier component', () => {
     expect(texte(lane('sans-affectation'))).not.toContain('Personne');
   });
 
-  it('should show the activity reference, workstation and start without interaction', async () => {
+  it('should show the activity reference, workstation, trade and start without interaction', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
     expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
-      { element: 'Moule 1015', poste: 'Fraiseuse 1', debut: 'depuis 07:05' },
-      { element: 'OF 3004', poste: 'Tour 1', debut: 'depuis 09:40' },
+      { element: 'Moule 1015', poste: 'Fraiseuse 1 · Fraisage', debut: 'depuis 07:05' },
+      { element: 'OF 3004', poste: 'Tour 1 · Tournage', debut: 'depuis 09:40' },
     ]);
   });
 
-  it('should name an element by its name when it has no reference', async () => {
+  it('should name an element by its name when it has no reference, and say it has no workstation', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
     expect(activitiesOf('op-vidal').map(({ element, poste }) => ({ element, poste }))).toEqual([
-      { element: 'OF OF-2026-000048', poste: undefined },
+      { element: 'OF OF-2026-000048', poste: 'Sans poste' },
     ]);
   });
 
@@ -500,12 +506,17 @@ describe('Supervision atelier component', () => {
       operateurs: [aubertFixture],
       journees: [JourneeDeTravail.open(aubertFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(6, 58))])],
       activites: [
-        activiteFixture(aubertFixture, { id: 'act-hors-of', objet: new HorsOf(), poste: 'Tour 3', debut: instantFixture(7, 45) }),
+        activiteFixture(aubertFixture, {
+          id: 'act-hors-of',
+          objet: new HorsOf(),
+          poste: posteFixture('Tour 3', 'Tournage'),
+          debut: instantFixture(7, 45),
+        }),
       ],
     });
 
     expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
-      { element: 'Hors OF', poste: 'Tour 3', debut: 'depuis 07:45' },
+      { element: 'Hors OF', poste: 'Tour 3 · Tournage', debut: 'depuis 07:45' },
     ]);
   });
 
@@ -517,6 +528,19 @@ describe('Supervision atelier component', () => {
     expect([idleNoticeOf('op-lefevre'), idleNoticeOf('op-roux'), idleNoticeOf('op-fabre')]).toEqual([
       'Aucune activité en cours',
       'Aucune activité en cours',
+      undefined,
+    ]);
+  });
+
+  it('should list the trades of an unassigned or paused operator without activity, never those of an absent one', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(atelierFixture);
+
+    expect(['op-lefevre', 'op-roux', 'op-schmitt', 'op-fabre'].map(id => tradesOf(id))).toEqual([
+      'Métier : Dessin',
+      'Métiers : Soudage, Tournage',
+      undefined,
       undefined,
     ]);
   });
@@ -544,7 +568,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive(atelierFixture);
 
     expect(activitiesOf('op-perrin')).toEqual([
-      { element: 'OF 3006', poste: 'Tour 1', debut: 'depuis 07:00', nc: 'NC', suspendue: undefined },
+      { element: 'OF 3006', poste: 'Tour 1 · Tournage', debut: 'depuis 07:00', nc: 'NC', suspendue: undefined },
     ]);
     expect(signal('supervision-signal-nc')).toBe('1 en NC : Aubert Lucas');
   });
@@ -807,6 +831,8 @@ describe('Supervision atelier component', () => {
   const hourOf = (id: string): string | undefined => textIn(card(id), 'supervision-heure');
 
   const idleNoticeOf = (id: string): string | undefined => textIn(card(id), 'supervision-aucune-activite');
+
+  const tradesOf = (id: string): string | undefined => textIn(card(id), 'supervision-metiers');
 
   const anomaliesIn = (couloir: string): Record<string, string[]> => {
     const anomaliesParCarte: [string, string[]][] = [...lane(couloir).querySelectorAll<HTMLElement>(dataSelector('supervision-carte'))].map(

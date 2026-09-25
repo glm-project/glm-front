@@ -1,5 +1,6 @@
 import { TypeDElement } from '../../../domain/activite/TypeDElement';
 import { Instant } from '../../../domain/instant/Instant';
+import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { AnomalieDeSupervision } from '../../../domain/supervision/AnomalieDeSupervision';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
 
@@ -67,6 +68,9 @@ export const LIBELLES_SUPERVISION = {
   nc: 'NC',
   types: TYPES,
   horsOf: 'Hors OF',
+  sansPoste: 'Sans poste',
+  metier: 'Métier\u00a0:',
+  metiers: 'Métiers\u00a0:',
   aucuneActivite: 'Aucune activité en cours',
   activiteSuspendue: 'suspendue',
   arrivee: 'arrivée',
@@ -76,6 +80,7 @@ export const LIBELLES_SUPERVISION = {
     'Absent = aucune venue ouverte. Une arrivée non pointée ou un pupitre hors ligne peut faire paraître absent quelqu’un qui est là, ou présent quelqu’un qui est parti.',
   fraicheur: (total: number, instant: Instant): string =>
     `${total} ${pluriel(total, 'opérateur', 'opérateurs')} · d’après les pointages reçus jusqu’à ${heure(instant)} · actualisé toutes les 30 s`,
+  listeDesMetiers: (metiers: readonly NatureDeTravail[]): string => metiers.map(metier => metier.value).join(', '),
   signal: (libelle: string, noms: readonly string[]): string => (citeLesNoms(noms) ? `${libelle}\u00a0: ${noms.join(', ')}` : libelle),
   moment: (prefixe: string, instant: Instant, reference: Instant): MomentAffiche =>
     isMemeJour(instant, reference)

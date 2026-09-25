@@ -7,6 +7,8 @@ import { ReferenceDElement } from '../activite/ReferenceDElement';
 import { Instant } from '../instant/Instant';
 import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../poste/IdentifiantPoste';
+import { PosteDeSupervision } from '../poste/PosteDeSupervision';
 import { FenetreDePresence } from '../presence/FenetreDePresence';
 import { EtatSession, JourneeDeTravail } from '../presence/JourneeDeTravail';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
@@ -240,7 +242,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:00:00Z'),
-      poste: 'Poste-1',
+      poste: posteFixture('Poste-1'),
     });
     const secondeActivite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-2'),
@@ -248,7 +250,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T09:30:00Z'),
-      poste: 'Poste-2',
+      poste: posteFixture('Poste-2'),
     });
     const activiteMartin = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-3'),
@@ -256,7 +258,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('PROD'),
       debut: new Instant('2026-09-13T08:15:00Z'),
-      poste: 'Poste-3',
+      poste: posteFixture('Poste-3'),
     });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T07:30:00Z'));
     const journees = [JourneeDeTravail.open(dupont.id, 'PRESENT', [fenetre]), JourneeDeTravail.open(martin.id, 'PRESENT', [fenetre])];
@@ -642,6 +644,9 @@ function inexploitableFixture(resultat: ResultatSupervision): MotifSupervisionIn
 
 const MAINTENANT = new Instant('2026-09-13T09:00:00Z');
 
+const posteFixture = (libelle: string): PosteDeSupervision =>
+  new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle });
+
 const MOULE_1015 = new ElementTravaille({ type: 'PRODUIT', nom: 'PRD-2026-000001', reference: new ReferenceDElement('1015') });
 
 const operateurFixture = (id: string, nom = 'Dupont', prenom = 'Jean'): OperateurDeclare =>
@@ -670,7 +675,7 @@ const activiteSurPosteFixture = (
     objet: MOULE_1015,
     categorie: new CategorieActivite('PROD'),
     debut: new Instant(`2026-09-13T${debut}:00Z`),
-    ...(poste === undefined ? {} : { poste }),
+    ...(poste === undefined ? {} : { poste: posteFixture(poste) }),
   });
 
 const activitesFixture = (operateur: OperateurDeclare, nombre: number): ActiviteDeSupervision[] =>

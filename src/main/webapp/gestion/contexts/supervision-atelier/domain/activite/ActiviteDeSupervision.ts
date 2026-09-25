@@ -1,14 +1,15 @@
 import { Instant } from '../instant/Instant';
 import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
+import { PosteDeSupervision } from '../poste/PosteDeSupervision';
 import { CategorieActivite } from './CategorieActivite';
 import { IdentifiantActivite } from './IdentifiantActivite';
 import { ObjetDeLActivite } from './ObjetDeLActivite';
 
-const rangDuPoste = (poste: string | undefined): number => (poste === undefined ? 1 : 0);
+const rangDuPoste = (poste: PosteDeSupervision | undefined): number => (poste === undefined ? 1 : 0);
 
-const comparePostes = (poste: string | undefined, autre: string | undefined): number =>
-  rangDuPoste(poste) - rangDuPoste(autre) || (poste ?? '').localeCompare(autre ?? '', 'fr', { numeric: true });
+const comparePostes = (poste: PosteDeSupervision | undefined, autre: PosteDeSupervision | undefined): number =>
+  rangDuPoste(poste) - rangDuPoste(autre) || (poste?.libelle ?? '').localeCompare(autre?.libelle ?? '', 'fr', { numeric: true });
 
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
@@ -16,7 +17,7 @@ export interface DescriptionActivite {
   readonly objet: ObjetDeLActivite;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
-  readonly poste?: string;
+  readonly poste?: PosteDeSupervision;
 }
 
 export class ActiviteDeSupervision {
@@ -25,7 +26,7 @@ export class ActiviteDeSupervision {
   readonly objet: ObjetDeLActivite;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
-  readonly poste: string | undefined;
+  readonly poste: PosteDeSupervision | undefined;
 
   constructor(description: DescriptionActivite) {
     this.id = description.id;

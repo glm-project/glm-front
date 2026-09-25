@@ -8,6 +8,9 @@ import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
+import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
+import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
 import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
@@ -30,42 +33,55 @@ const OF_3005 = ordreDeFabrication('3005', 'OF-2026-000043');
 const OF_3006 = ordreDeFabrication('3006', 'OF-2026-000044');
 const OF_SANS_REFERENCE = new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000048' });
 
+const poste = (id: string, libelle: string, nature: string): PosteDeSupervision =>
+  new PosteDeSupervision({ id: new IdentifiantPoste(id), libelle, nature: new NatureDeTravail(nature) });
+
+const FRAISEUSE_1 = poste('poste-fraiseuse-1', 'Fraiseuse 1', 'Fraisage');
+const FRAISEUSE_2 = poste('poste-fraiseuse-2', 'Fraiseuse 2', 'Fraisage');
+const TOUR_1 = poste('poste-tour-1', 'Tour 1', 'Tournage');
+const TOUR_3 = poste('poste-tour-3', 'Tour 3', 'Tournage');
+const ERODEUSE_F = poste('poste-erodeuse-f', 'Erodeuse F', 'Érosion');
+const ERODEUSE_G = poste('poste-erodeuse-g', 'Erodeuse G', 'Érosion');
+const FIL_1 = poste('poste-fil-1', 'Fil 1', 'Découpe à fil');
+const FIL_2 = poste('poste-fil-2', 'Fil 2', 'Découpe à fil');
+const SCIE_1 = poste('poste-scie-1', 'Scie 1', 'Sciage');
+
 interface ActiviteDeDemonstration {
   readonly operateur: string;
   readonly objet: ObjetDeLActivite;
-  readonly poste?: string;
+  readonly poste?: PosteDeSupervision;
   readonly categorie: CategorieActivite;
   readonly minutes: number;
 }
 
-const OPERATEURS: readonly (readonly [string, string, string])[] = [
-  ['op-aubert', 'Aubert', 'Lucas'],
-  ['op-benali', 'Benali', 'Samir'],
-  ['op-chevalier', 'Chevalier', 'Mathis'],
-  ['op-dumas', 'Dumas', 'Julien'],
-  ['op-fabre', 'Fabre', 'Lucie'],
-  ['op-garnier', 'Garnier', 'Thomas'],
-  ['op-lefevre', 'Lefèvre', 'Sophie'],
-  ['op-marchand', 'Marchand', 'Kevin'],
-  ['op-morel', 'Morel', 'Inès'],
-  ['op-perrin', 'Perrin', 'Loïc'],
-  ['op-roux', 'Roux', 'Nathalie'],
-  ['op-schmitt', 'Schmitt', 'Yanis'],
-  ['op-vidal', 'Vidal', 'Hugo'],
+const OPERATEURS: readonly (readonly [string, string, string, readonly string[]])[] = [
+  ['op-aubert', 'Aubert', 'Lucas', ['Fraisage', 'Tournage', 'Érosion']],
+  ['op-benali', 'Benali', 'Samir', ['Érosion', 'Découpe à fil']],
+  ['op-chevalier', 'Chevalier', 'Mathis', ['Tournage']],
+  ['op-dumas', 'Dumas', 'Julien', ['Sciage', 'Tournage']],
+  ['op-fabre', 'Fabre', 'Lucie', ['Fraisage']],
+  ['op-garnier', 'Garnier', 'Thomas', ['Fraisage']],
+  ['op-lefevre', 'Lefèvre', 'Sophie', ['Dessin']],
+  ['op-marchand', 'Marchand', 'Kevin', ['Fraisage']],
+  ['op-morel', 'Morel', 'Inès', ['Découpe à fil', 'Érosion']],
+  ['op-perrin', 'Perrin', 'Loïc', ['Tournage']],
+  ['op-roux', 'Roux', 'Nathalie', ['Soudage']],
+  ['op-schmitt', 'Schmitt', 'Yanis', ['Fraisage']],
+  ['op-vidal', 'Vidal', 'Hugo', []],
 ];
 
 const ACTIVITES: readonly ActiviteDeDemonstration[] = [
-  { operateur: 'op-aubert', objet: MOULE_1015, poste: 'Fraiseuse 1', categorie: TRAVAIL, minutes: 125 },
-  { operateur: 'op-aubert', objet: OF_3004, poste: 'Tour 1', categorie: TRAVAIL, minutes: 30 },
-  { operateur: 'op-benali', objet: MOULE_1016, poste: 'Erodeuse F', categorie: TRAVAIL, minutes: 115 },
-  { operateur: 'op-benali', objet: MOULE_1016, poste: 'Erodeuse G', categorie: TRAVAIL, minutes: 90 },
-  { operateur: 'op-chevalier', objet: new HorsOf(), poste: 'Tour 3', categorie: TRAVAIL, minutes: 65 },
-  { operateur: 'op-dumas', objet: OF_3002, poste: 'Scie 1', categorie: TRAVAIL, minutes: 120 },
-  { operateur: 'op-garnier', objet: MOULE_1017, poste: 'Fraiseuse 2', categorie: NON_CONFORMITE, minutes: 23 },
-  { operateur: 'op-marchand', objet: OF_3001, poste: 'Fraiseuse 2', categorie: TRAVAIL, minutes: 1130 },
-  { operateur: 'op-morel', objet: OF_3005, poste: 'Fil 1', categorie: TRAVAIL, minutes: 150 },
-  { operateur: 'op-morel', objet: MOULE_1015, poste: 'Fil 2', categorie: NON_CONFORMITE, minutes: 50 },
-  { operateur: 'op-perrin', objet: OF_3006, poste: 'Tour 1', categorie: TRAVAIL, minutes: 170 },
+  { operateur: 'op-aubert', objet: MOULE_1015, poste: FRAISEUSE_1, categorie: TRAVAIL, minutes: 125 },
+  { operateur: 'op-aubert', objet: OF_3004, poste: TOUR_1, categorie: TRAVAIL, minutes: 30 },
+  { operateur: 'op-benali', objet: MOULE_1016, poste: ERODEUSE_F, categorie: TRAVAIL, minutes: 115 },
+  { operateur: 'op-benali', objet: MOULE_1016, poste: ERODEUSE_G, categorie: TRAVAIL, minutes: 90 },
+  { operateur: 'op-chevalier', objet: new HorsOf(), poste: TOUR_3, categorie: TRAVAIL, minutes: 65 },
+  { operateur: 'op-dumas', objet: OF_3002, poste: SCIE_1, categorie: TRAVAIL, minutes: 120 },
+  { operateur: 'op-garnier', objet: MOULE_1017, poste: FRAISEUSE_2, categorie: NON_CONFORMITE, minutes: 23 },
+  { operateur: 'op-marchand', objet: OF_3001, poste: FRAISEUSE_2, categorie: TRAVAIL, minutes: 1130 },
+  { operateur: 'op-morel', objet: OF_3005, poste: FIL_1, categorie: TRAVAIL, minutes: 150 },
+  { operateur: 'op-morel', objet: MOULE_1015, poste: FIL_2, categorie: NON_CONFORMITE, minutes: 50 },
+  { operateur: 'op-perrin', objet: OF_3006, poste: TOUR_1, categorie: TRAVAIL, minutes: 170 },
   { operateur: 'op-vidal', objet: OF_SANS_REFERENCE, categorie: TRAVAIL, minutes: 8 },
 ];
 
@@ -75,7 +91,10 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
     fin === undefined ? new FenetreDePresence(instantBefore(debut)) : new FenetreDePresence(instantBefore(debut), instantBefore(fin));
   const operateur = (id: string): IdentifiantOperateur => new IdentifiantOperateur(id);
   return {
-    operateurs: OPERATEURS.map(([id, nom, prenom]) => new OperateurDeclare({ id: operateur(id), nom, prenom })),
+    operateurs: OPERATEURS.map(
+      ([id, nom, prenom, metiers]) =>
+        new OperateurDeclare({ id: operateur(id), nom, prenom, metiers: metiers.map(metier => new NatureDeTravail(metier)) }),
+    ),
     journees: [
       JourneeDeTravail.open(operateur('op-aubert'), 'PRESENT', [fenetre(132)]),
       JourneeDeTravail.open(operateur('op-benali'), 'PRESENT', [fenetre(128)]),
