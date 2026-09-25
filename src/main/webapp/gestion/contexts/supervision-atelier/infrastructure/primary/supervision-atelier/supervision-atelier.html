@@ -1,12 +1,12 @@
-@let vue = presentation();
+@let vue = etat();
 
 <main class="mx-auto max-w-7xl space-y-4 px-4 py-6 text-ink md:px-8 md:py-8">
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="text-title">{{ libelles.titre }}</h1>
-      @if (derniereLecture(); as heureLecture) {
-      <p class="mt-1 text-body-sm text-ink-muted" data-selector="supervision-derniere-lecture">
-        {{ libelles.derniereLecture(heureLecture) }}
+      @if (vue.kind === 'SUCCES') {
+      <p class="mt-1 text-body-sm text-ink-muted tabular-nums" data-selector="supervision-derniere-lecture">
+        {{ libelles.fraicheur(vue.supervision.operateurs.length, vue.supervision.instantDEvaluation) }}
       </p>
       }
     </div>
@@ -27,367 +27,152 @@
     {{ libelles.chargement }}
   </p>
   } @case ('ERREUR') {
-  <p role="alert" class="gestion-carte py-16 text-center text-body text-danger" data-selector="supervision-error">{{ libelles.erreur }}</p>
-  } @case ('SUCCES') { @if (vue.operateurs.length === 0) {
-  <p class="gestion-carte py-16 text-center text-body text-ink-muted" data-selector="supervision-empty">{{ libelles.vide }}</p>
-  } @else { @let stats = vue.statistiques; @let filtre = filtreActif(); @let listeAffichee = vue.lignes;
-
-  <div class="gestion-carte space-y-3 p-3 sm:p-4" data-selector="supervision-barometre">
-    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-      <div class="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          class="filtre"
-          data-selector="supervision-filtre-tous"
-          [attr.aria-pressed]="filtre === null"
-          (click)="basculerFiltre('TOUS')"
-        >
-          {{ libelles.tous }}
-          <span class="compteur" data-selector="supervision-compteur-total">{{ stats.total }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="filtre"
-          data-selector="supervision-filtre-present"
-          [attr.aria-pressed]="filtre === 'PRESENT'"
-          (click)="basculerFiltre('PRESENT')"
-        >
-          <span class="gestion-pastille bg-ok" aria-hidden="true"></span>
-          {{ libelles.presences.PRESENT }}
-          <span class="compteur" data-selector="supervision-compteur-present">{{ stats.presents }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="filtre"
-          data-selector="supervision-filtre-en-pause"
-          [attr.aria-pressed]="filtre === 'EN_PAUSE'"
-          (click)="basculerFiltre('EN_PAUSE')"
-        >
-          <span class="gestion-pastille bg-warn" aria-hidden="true"></span>
-          {{ libelles.presences.EN_PAUSE }}
-          <span class="compteur" data-selector="supervision-compteur-en-pause">{{ stats.enPause }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="filtre"
-          data-selector="supervision-filtre-absent"
-          [attr.aria-pressed]="filtre === 'ABSENT'"
-          (click)="basculerFiltre('ABSENT')"
-        >
-          <span class="gestion-pastille bg-danger" aria-hidden="true"></span>
-          {{ libelles.presences.ABSENT }}
-          <span class="compteur" data-selector="supervision-compteur-absent">{{ stats.absents }}</span>
-        </button>
-      </div>
-
-      <div class="hidden h-6 w-px bg-border sm:block" aria-hidden="true"></div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          class="filtre"
-          data-selector="supervision-filtre-sans-affectation"
-          [attr.aria-pressed]="filtre === 'SANS_AFFECTATION'"
-          (click)="basculerFiltre('SANS_AFFECTATION')"
-        >
-          <glm-icon name="circleDashed" class="icone text-sans-affectation" aria-hidden="true" />
-          {{ libelles.sansAffectation }}
-          <span class="compteur" data-selector="supervision-compteur-sans-affectation">{{ stats.sansAffectation }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="filtre"
-          data-selector="supervision-filtre-anomalie"
-          [attr.aria-pressed]="filtre === 'ANOMALIE'"
-          (click)="basculerFiltre('ANOMALIE')"
-        >
-          <glm-icon name="triangleAlert" class="icone text-danger" aria-hidden="true" />
-          Anomalies
-          <span class="compteur" data-selector="supervision-compteur-anomalie">{{ stats.anomalies }}</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-      <div class="relative w-full min-w-0 sm:w-auto sm:max-w-md sm:flex-1">
-        <glm-icon name="search" class="recherche-icone" aria-hidden="true" />
-        <input
-          type="search"
-          class="recherche"
-          [placeholder]="libelles.recherchePlaceholder"
-          [attr.aria-label]="libelles.rechercheAriaLabel"
-          [value]="recherche()"
-          data-selector="supervision-recherche-input"
-          (input)="modifierRecherche($any($event.target).value)"
-        />
-      </div>
-
-      <div class="flex items-center gap-3">
-        <span class="text-body-sm text-ink-muted" data-selector="supervision-ratio-affiches">
-          {{ libelles.ratioAffiches(listeAffichee.length, stats.total) }}
-        </span>
-
-        @if (aFiltreOuRechercheActif()) {
-        <button type="button" class="bouton bouton-discret" data-selector="supervision-reset-filtres" (click)="reinitialiserFiltres()">
-          {{ libelles.reinitialiser }}
-        </button>
-        }
-      </div>
-    </div>
-  </div>
-
-  @if (listeAffichee.length === 0) {
-  <div class="gestion-carte px-6 py-12 text-center" data-selector="supervision-aucun-resultat">
-    <p class="text-body text-ink-muted">{{ libelles.aucunResultat }}</p>
-    <button type="button" class="bouton mt-4" (click)="reinitialiserFiltres()">{{ libelles.reinitialiser }}</button>
-  </div>
-  } @else {
-  <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm text-ink-muted" aria-label="Légende de la chronologie">
-    <span><span class="legende bg-ok" aria-hidden="true"></span> Présence</span>
-    <span><span class="legende bg-warn" aria-hidden="true"></span> Pause</span>
-    <span><span class="legende bg-accent" aria-hidden="true"></span> Activité en cours</span>
-    <span><span class="legende bg-nc" aria-hidden="true"></span> NC</span>
-    <span class="inline-flex items-center gap-1.5 text-sans-affectation"
-      ><glm-icon name="circleDashed" aria-hidden="true" /> {{ libelles.sansAffectationMaintenant }}</span
-    >
-  </div>
-  <p class="-mt-2 text-body-sm text-ink-muted">
-    Les activités terminées ne figurent pas encore sur la frise. Les espaces vides ne prouvent pas une inactivité.
-  </p>
-  <div
-    class="gestion-carte grille overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent"
-    data-selector="supervision-grille"
-    tabindex="0"
-    role="region"
-    aria-label="Chronologie de l’atelier de 06:00 à 22:00"
+  <p
+    role="alert"
+    class="gestion-carte flex items-center justify-center gap-2 px-4 py-16 text-center text-body text-ink"
+    data-selector="supervision-error"
   >
-    <div class="synoptique">
-      <div class="ligne-horaire border-b border-border bg-canvas">
-        <div class="identite entete p-3 text-body-sm font-semibold text-ink-muted">Opérateur · Présence</div>
-        <div class="relative mr-12 min-h-touch" [class.h-20]="vue.frise.positionMaintenant === undefined">
-          @for (heure of vue.frise.reperes; track heure; let index = $index) {
-          <span
-            class="repere-heure absolute top-3 text-label text-ink-muted tabular-nums first:pl-2"
-            [style.left.%]="index * 12.5"
-            data-selector="supervision-repere-heure"
-            >{{ heure }}</span
-          >
-          } @if (vue.frise.positionMaintenant !== undefined) {
-          <div
-            class="absolute inset-y-0 w-1 border-l border-accent"
-            [style.left.%]="vue.frise.positionMaintenant"
-            [title]="vue.frise.libelleMaintenant"
-            [attr.aria-label]="vue.frise.libelleMaintenant"
-            role="img"
-            data-selector="supervision-maintenant"
-          ></div>
-          } @else {
-          <p class="absolute bottom-2 text-body-sm text-accent" data-selector="supervision-maintenant-hors-plage">
-            {{ vue.frise.libelleMaintenant }}
-          </p>
-          }
-        </div>
-      </div>
-      @for (ligne of vue.lignes; track ligne.supervise.operateur.id.value) { @let supervise = ligne.supervise; @let estCalme =
-      estAbsentCalme(supervise);
-      <article
-        class="border-b border-border last:border-b-0"
-        data-selector="supervision-ligne"
-        [attr.data-operateur-id]="supervise.operateur.id.value"
+    <glm-icon name="triangleAlert" class="icone" aria-hidden="true" />{{ libelles.erreur }}
+  </p>
+  } @case ('SUCCES') { @let supervision = vue.supervision; @if (supervision.operateurs.length === 0) {
+  <p class="gestion-carte py-16 text-center text-body text-ink-muted" data-selector="supervision-empty">{{ libelles.vide }}</p>
+  } @else { @let presents = supervision.countPresents(); @let nc = signalNc(supervision); @let aVerifier = signalAVerifier(supervision);
+
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
+    <p class="lg:hidden" [class.text-ink-muted]="presents === 0" data-selector="supervision-presents-compact">
+      <strong class="nombre">{{ presents }}</strong> {{ libelles.nombreDePresents(presents) }}
+    </p>
+    <span class="text-ink-muted lg:hidden" aria-hidden="true">·</span>
+    <p class="flex items-center gap-2" [class.text-ink-muted]="nc.nombre === 0">
+      <span class="rounded bg-nc px-1.5 text-label text-ink" aria-hidden="true">{{ libelles.nc }}</span>
+      <span data-selector="supervision-signal-nc"><strong class="nombre">{{ nc.nombre }}</strong> {{ nc.texte }}</span>
+    </p>
+    <span class="text-ink-muted" aria-hidden="true">·</span>
+    <p class="flex items-center gap-2" [class.text-ink-muted]="aVerifier.nombre === 0">
+      <glm-icon name="triangleAlert" class="icone text-ink" aria-hidden="true" />
+      <span data-selector="supervision-signal-a-verifier"
+        ><strong class="nombre">{{ aVerifier.nombre }}</strong> {{ aVerifier.texte }}</span
       >
-        <div class="ligne-synoptique">
-          <div class="identite flex items-center gap-3 p-3" [title]="ligne.resume" data-selector="supervision-identite">
-            <span class="sr-only" [id]="'resume-' + supervise.operateur.id.value">{{ ligne.resume }}</span>
-            <button
-              type="button"
-              class="deplier"
-              data-selector="supervision-deplier"
-              [id]="'deplier-' + supervise.operateur.id.value"
-              [attr.aria-label]="'Journal de ' + supervise.operateur.nom + ' ' + supervise.operateur.prenom"
-              [attr.aria-describedby]="'resume-' + supervise.operateur.id.value"
-              [attr.aria-expanded]="ligneDepliee() === supervise.operateur.id.value"
-              [attr.aria-controls]="'journal-' + supervise.operateur.id.value"
-              (click)="toggleJournal(supervise.operateur.id.value)"
-              (keydown.enter)="$event.preventDefault(); toggleJournal(supervise.operateur.id.value)"
-              (keydown.space)="$event.preventDefault(); toggleJournal(supervise.operateur.id.value)"
-            >
-              <glm-icon name="chevronDown" aria-hidden="true" />
-            </button>
-            <div class="min-w-0 flex flex-wrap items-center gap-2">
-              <h2 class="w-full text-body-sm font-semibold text-ink wrap-anywhere" data-selector="supervision-operateur-nom">
-                {{ supervise.operateur.nom }} {{ supervise.operateur.prenom }}
-              </h2>
-              @switch (supervise.presence) { @case ('PRESENT') {
-              <span class="shrink-0 rounded bg-ok px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
-                {{ libelles.presences[supervise.presence] }}
-              </span>
-              } @case ('EN_PAUSE') {
-              <span class="shrink-0 rounded bg-warn px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
-                {{ libelles.presences[supervise.presence] }}
-              </span>
-              } @case ('ABSENT') {
-              <span class="shrink-0 rounded bg-danger px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
-                {{ libelles.presences[supervise.presence] }}
-              </span>
-              } } @if (supervise.isSansAffectation()) {
-              <span class="indicateur text-sans-affectation" data-selector="supervision-indicateur-sans-affectation"
-                ><glm-icon name="circleDashed" aria-hidden="true" />{{ libelles.sansAffectation }}</span
-              >
-              } @if (supervise.anomalies.length > 0) {
-              <span class="indicateur text-danger" data-selector="supervision-indicateur-anomalies"
-                ><glm-icon name="triangleAlert" aria-hidden="true" />{{ supervise.anomalies.length }} anomalie{{ supervise.anomalies.length
-                > 1 ? 's' : '' }}</span
-              >
-              }
-            </div>
-          </div>
-          <div class="pistes relative mr-12 py-3">
-            <div class="graduations absolute inset-0 pointer-events-none" aria-hidden="true">
-              @for (heure of vue.frise.reperes; track heure; let index = $index) {
-              <span class="absolute inset-y-0 border-l border-border" [style.left.%]="index * 12.5"></span>
-              }
-            </div>
-            @if (vue.frise.positionMaintenant !== undefined) {
-            <span
-              class="absolute inset-y-0 z-10 border-l border-accent pointer-events-none"
-              [style.left.%]="vue.frise.positionMaintenant"
-              aria-hidden="true"
-            ></span>
-            }
-            <div class="relative h-4" aria-label="Présence et pauses">
-              @for (segment of ligne.presence; track $index) { @if (segment.position; as position) {
-              <span
-                class="absolute h-4 rounded-sm"
-                [class.bg-ok]="!segment.pause"
-                [class.bg-warn]="segment.pause"
-                [style.left.%]="position.gauche"
-                [style.width.%]="position.largeur"
-                [attr.aria-label]="segment.libelle"
-                [title]="segment.libelle"
-                data-selector="supervision-segment-presence"
-              ></span>
-              } }
-            </div>
-            @for (segment of ligne.activites; track segment.activite.id.value) {
-            <div class="relative h-4" data-selector="supervision-piste-activite">
-              @if (segment.position; as position) {
-              <div
-                class="absolute inset-y-0"
-                [style.left.%]="position.gauche"
-                [style.width.%]="position.largeur"
-                data-selector="supervision-position-activite"
-              >
-                <span
-                  class="encre-activite absolute inset-0 rounded-sm"
-                  [class.bg-accent]="!segment.activite.categorie.isNc()"
-                  [class.bg-nc]="segment.activite.categorie.isNc()"
-                  data-selector="supervision-marque-activite"
-                  aria-hidden="true"
-                >
-                </span>
-                <button
-                  type="button"
-                  class="absolute inset-0 min-w-touch rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                  [attr.aria-label]="segment.libelle"
-                  [title]="segment.libelle"
-                  (click)="openJournal(supervise.operateur.id.value)"
-                  data-selector="supervision-segment-activite"
-                ></button>
-              </div>
-              } @else {
-              <button
-                type="button"
-                class="relative h-4 min-w-touch px-2 text-label text-ink-muted focus-visible:outline-2 focus-visible:outline-accent"
-                [title]="segment.libelle"
-                (click)="openJournal(supervise.operateur.id.value)"
-              >
-                Activité hors plage
-              </button>
-              }
-            </div>
-            } @if (supervise.isSansAffectation()) { @if (vue.frise.positionMaintenant !== undefined) {
-            <span
-              class="sans-affectation-maintenant absolute bottom-3 rounded-sm border border-sans-affectation bg-surface px-1 text-label text-sans-affectation"
-              [style.left.%]="vue.frise.positionMaintenant"
-              data-selector="supervision-zone-sans-affectation"
-              [attr.aria-label]="libelles.sansAffectationMaintenant"
-              >{{ libelles.sansAffectation }}</span
-            >
-            } @else {
-            <span class="relative text-label text-sans-affectation">{{ libelles.sansAffectationMaintenantHorsPlage }}</span>
+    </p>
+  </div>
+
+  <div class="hidden gap-3 lg:grid lg:grid-cols-4">
+    <p class="accolade col-span-2" data-selector="supervision-presents">
+      <span class="accolade-libelle">{{ libelles.presents }} <span class="tabular-nums">{{ presents }}</span></span>
+    </p>
+  </div>
+
+  <div class="grid gap-3 lg:grid-cols-4" data-selector="supervision-plateau">
+    @for (couloir of supervision.couloirs(); track couloir.couloir) { @let slug = slugs[couloir.couloir]; @let libelleCouloir =
+    libelles.couloirs[couloir.couloir];
+    <section
+      class="couloir"
+      [class]="'couloir--' + slug"
+      [attr.aria-labelledby]="'couloir-' + slug + '-titre'"
+      [attr.data-selector]="'supervision-couloir-' + slug"
+    >
+      <div class="couloir-entete">
+        <div class="flex items-center gap-2">
+          <span class="marqueur" aria-hidden="true">
+            @switch (couloir.couloir) { @case ('AU_TRAVAIL') {
+            <span class="pastille bg-ok"></span>
+            } @case ('SANS_AFFECTATION') {
+            <glm-icon name="circleDashed" class="text-sans-affectation" />
+            } @case ('EN_PAUSE') {
+            <glm-icon name="pause" class="text-warn" />
+            } @case ('ABSENT') {
+            <span class="carre bg-danger"></span>
             } }
-          </div>
+          </span>
+          <h2 [id]="'couloir-' + slug + '-titre'" class="text-body-sm font-semibold">{{ libelleCouloir.titre }}</h2>
+          <span
+            class="ml-auto text-title tabular-nums"
+            [class.text-ink-muted]="couloir.operateurs.length === 0"
+            data-selector="supervision-couloir-nombre"
+            >{{ couloir.operateurs.length }}</span
+          >
         </div>
-        <div
-          class="journal"
-          data-selector="supervision-journal"
-          role="region"
-          [id]="'journal-' + supervise.operateur.id.value"
-          [attr.aria-labelledby]="'deplier-' + supervise.operateur.id.value"
-          [hidden]="ligneDepliee() !== supervise.operateur.id.value"
-        >
-          <h3 class="mb-2 text-body font-semibold">Journal de présence et d’activités</h3>
-          <ul class="space-y-1 text-body-sm mb-4">
-            @for (segment of ligne.presence; track $index) {
-            <li>{{ segment.libelle }} · <time [attr.datetime]="segment.debut.value">{{ libelles.dateHeure(segment.debut) }}</time></li>
-            }
-          </ul>
-          @if (supervise.anomalies.length > 0) {
-          <div class="mb-3 rounded-control border border-danger bg-surface px-3 py-2.5">
-            <ul class="space-y-1 text-body-sm font-semibold text-danger">
-              @for (anomalie of supervise.anomalies; track anomalie) {
-              <li data-selector="supervision-anomalie">{{ libelles.anomalies[anomalie] }}</li>
+        <p class="text-label font-normal text-ink-muted">{{ libelleCouloir.definition }}</p>
+      </div>
+
+      @if (couloir.operateurs.length === 0) {
+      <p class="py-6 text-center text-body-sm text-ink-muted">{{ libelles.personne }}</p>
+      }
+      <ul role="list" class="flex flex-col gap-2">
+        @for (supervise of couloir.operateurs; track supervise.operateur.id.value) { @let id = supervise.operateur.id.value;
+        <li class="min-w-0">
+          <article
+            class="carte"
+            [class]="'carte--' + slug"
+            [attr.aria-labelledby]="'carte-' + id"
+            data-selector="supervision-carte"
+            [attr.data-operateur-id]="id"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-x-1.5 text-body-sm">
+              <h3 [id]="'carte-' + id" class="flex min-w-0 items-center gap-1 text-body-sm font-normal">
+                @if (couloir.couloir === 'EN_PAUSE') {
+                <glm-icon name="pause" class="shrink-0 text-warn" aria-hidden="true" />
+                }
+                <span class="wrap-anywhere" data-selector="supervision-operateur-nom"
+                  ><span class="font-semibold">{{ supervise.operateur.nom }}</span> {{ supervise.operateur.prenom }}</span
+                >
+              </h3>
+              @if (momentDeLaCarte(supervise, supervision.instantDEvaluation); as moment) {
+              <time class="moment" [attr.datetime]="moment.instant.value" data-selector="supervision-heure"
+                >{{ moment.avant }}@if (moment.jour) {<span class="jour">{{ moment.jour }}</span>}{{ moment.apres }}</time
+              >
               }
-            </ul>
-          </div>
-          } @if (supervise.isSansAffectation()) {
-          <div class="mb-3 rounded-control border border-sans-affectation bg-surface px-3 py-2.5">
-            <p class="text-body-sm font-semibold text-sans-affectation" data-selector="supervision-sans-affectation">
-              {{ libelles.sansAffectationDetails }}
-            </p>
-          </div>
-          } @if (supervise.activites.length > 0) {
-          <div class="mb-3 rounded-control border border-border bg-surface p-3">
-            <ul class="space-y-3">
-              @for (activite of supervise.activites; track activite.id.value) {
-              <li class="space-y-0.5 text-body-sm text-ink" data-selector="supervision-activite">
-                <div class="flex items-start justify-between gap-2">
-                  <p class="font-medium wrap-anywhere" data-selector="supervision-activite-nom">{{ activite.nom }}</p>
+            </div>
+
+            @if (supervise.activites.length > 0) {
+            <ul role="list" class="flex flex-col gap-1">
+              @for (activite of supervise.activites; track activite.id.value) { @let depuis = libelles.moment(libelles.depuis,
+              activite.debut, supervision.instantDEvaluation);
+              <li class="activite" [class.activite--nc]="activite.categorie.isNc()" data-selector="supervision-activite">
+                <div class="flex flex-wrap items-center gap-x-1">
                   @if (activite.categorie.isNc()) {
-                  <span class="shrink-0 rounded bg-nc px-1.5 py-0.5 text-label text-ink" data-selector="supervision-nc"
-                    >{{ libelles.nc }}</span
-                  >
+                  <span class="rounded bg-nc px-1.5 text-label text-ink" data-selector="supervision-marque-nc">{{ libelles.nc }}</span>
                   }
+                  <span class="text-body font-semibold tabular-nums wrap-anywhere" data-selector="supervision-activite-nom"
+                    >{{ activite.nom }}</span
+                  >
+                  <time
+                    class="moment ml-auto text-body-sm"
+                    [attr.datetime]="depuis.instant.value"
+                    data-selector="supervision-activite-debut"
+                    >{{ depuis.avant }}@if (depuis.jour) {<span class="jour">{{ depuis.jour }}</span>}{{ depuis.apres }}</time
+                  >
                 </div>
                 @if (activite.poste; as poste) {
-                <p class="wrap-anywhere text-ink-muted" data-selector="supervision-activite-poste">{{ poste }}</p>
-                }
-                <p class="text-ink-muted">
-                  {{ libelles.depuis }}
-                  <time data-selector="supervision-activite-debut" [attr.datetime]="activite.debut.value"
-                    >{{ libelles.heure(activite.debut) }}</time
-                  >
+                <p class="text-body-sm font-semibold wrap-anywhere" data-selector="supervision-activite-poste">{{ poste }}</p>
+                } @if (supervise.hasActivitesSuspendues()) {
+                <p class="flex items-center gap-1 text-label text-warn" data-selector="supervision-suspendue">
+                  <glm-icon name="pause" class="icone-petite" aria-hidden="true" />{{ libelles.activiteSuspendue }}
                 </p>
+                }
               </li>
               }
             </ul>
-          </div>
-          } @if (estCalme) {
-          <p class="text-body-sm text-ink-muted">{{ libelles.sansJourneeOuverte }}</p>
-          } @if (supervise.heureDOuverture; as ouverture) {
-          <div class="mt-4 border-t border-border pt-2 text-body-sm text-ink-muted">
-            {{ libelles.ouverture }}
-            <time data-selector="supervision-ouverture" [attr.datetime]="ouverture.value">{{ libelles.dateHeure(ouverture) }}</time>
-          </div>
-          }
-        </div>
-      </article>
+            } @else if (couloir.couloir !== 'ABSENT') {
+            <p class="flex items-center gap-1.5 text-body-sm text-ink-muted" data-selector="supervision-aucune-activite">
+              @if (couloir.couloir === 'SANS_AFFECTATION') {
+              <glm-icon name="circleDashed" class="icone text-sans-affectation" aria-hidden="true" />
+              } {{ libelles.aucuneActivite }}
+            </p>
+            } @for (anomalie of supervise.anomalies; track anomalie) {
+            <p class="bandeau flex items-start gap-1.5 text-body-sm font-semibold text-ink" data-selector="supervision-anomalie">
+              <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.anomalies[anomalie] }}
+            </p>
+            }
+          </article>
+        </li>
+        }
+      </ul>
+      @if (couloir.couloir === 'ABSENT') {
+      <p class="mx-1.5 mt-3 text-body-sm text-ink-muted">{{ libelles.noteAbsents }}</p>
       }
-    </div>
+    </section>
+    }
   </div>
-  } } } }
+  } } }
 </main>

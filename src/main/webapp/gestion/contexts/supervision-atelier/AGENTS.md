@@ -22,15 +22,15 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Segment de présence** : intervalle temporel de présence ou de pause au sein d'une ou plusieurs journées de travail, avec son début, sa fin, son type (présence ou pause) et l'indication d'un segment en cours.
 
-**Statistiques de supervision** : synthèse instantanée de l'atelier comptabilisant le nombre total d'opérateurs déclarés, présents, en pause, absents, sans affectation et en anomalie.
-
 **Activité de supervision** : activité en cours rattachée à un opérateur, dotée d'une catégorie (ex: `NC`), d'un instant de début et facultativement d'un poste.
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
 
 **Catégorie d'activité** : valeur reçue qui détermine notamment le caractère `NC` de l'activité.
 
-**Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours.
+**Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`.
+
+**Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT` ou `EN_PAUSE`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ a arrêté son temps.
 
 > « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. La présence sans affectation n'en est pas, et aucun type, champ ni sélecteur ne s'appelle GLM.
 
@@ -45,14 +45,14 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - Chaque opérateur déclaré apparaît dans exactement un couloir de supervision. Les quatre couloirs existent toujours, dans l'ordre fixe, même vides ; l'ordre des opérateurs est alphabétique (nom, prénom, identifiant) à l'intérieur de chaque couloir.
 - La NC est une surcouche de l'activité, jamais un couloir.
 - Les segments de présence d'un opérateur sont dérivés de ses journées de travail : les intervalles effectifs et les pauses intercalaires ou de session sont calculés par le domaine.
-- Les statistiques de supervision sont évaluées par l'agrégat SupervisionDeLAtelier.
+- Le nombre de présents et les listes d'opérateurs en NC et à vérifier sont évalués par l'agrégat SupervisionDeLAtelier.
 - Les activités en cours sont associées aux opérateurs déclarés correspondants ; un opérateur peut avoir 0 à N activités.
 - « Sans affectation » est un état dérivé : un opérateur est sans affectation si et seulement s'il est présent et n'a aucune activité en cours.
 - L'absence de poste ou l'absence d'heure d'ouverture est représentée sans valeur fabriquée (`undefined`).
 - Le temps affichable reste un instant absolu, jamais une durée calculée par le domaine.
 - L'instant d'évaluation est obligatoire. Les instants invalides ou dépourvus de fuseau sont refusés à la construction.
 - L'ouverture est le plus ancien début de fenêtre, indépendamment de l'ordre reçu. La supervision expose cet instant ou son absence.
-- La détection d'une anomalie préserve l'état de présence et les activités de l'opérateur supervisé.
+- La détection d'une anomalie préserve l'état de présence, le couloir et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
 - Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
 - La supervision est immuable.

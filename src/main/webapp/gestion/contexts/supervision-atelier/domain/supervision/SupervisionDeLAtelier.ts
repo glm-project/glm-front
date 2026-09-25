@@ -4,9 +4,9 @@ import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { EtatDePresence } from '../presence/EtatDePresence';
 import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
+import { COULOIRS_DE_SUPERVISION, CouloirDeSupervision } from './CouloirDeSupervision';
 import { OperateurSupervise } from './OperateurSupervise';
 import { ResultatSupervision, resultatSupervisionExploitable, resultatSupervisionInexploitable } from './ResultatSupervision';
-import { StatistiquesSupervision } from './StatistiquesSupervision';
 
 export const SEUIL_DUREE_JOURNEE_OUVERTE_MAXIMALE_MS = 16 * 60 * 60 * 1000;
 
@@ -63,18 +63,34 @@ const superviseOperateur = (
   });
 };
 
-export class SupervisionDeLAtelier {
-  readonly statistiques: StatistiquesSupervision;
+export interface CouloirSupervise {
+  readonly couloir: CouloirDeSupervision;
+  readonly operateurs: readonly OperateurSupervise[];
+}
 
-  private constructor(readonly operateurs: readonly OperateurSupervise[]) {
-    this.statistiques = {
-      total: operateurs.length,
-      presents: operateurs.filter(op => op.presence === 'PRESENT').length,
-      enPause: operateurs.filter(op => op.presence === 'EN_PAUSE').length,
-      absents: operateurs.filter(op => op.presence === 'ABSENT').length,
-      sansAffectation: operateurs.filter(op => op.isSansAffectation()).length,
-      anomalies: operateurs.filter(op => op.anomalies.length > 0).length,
-    };
+export class SupervisionDeLAtelier {
+  private constructor(
+    readonly operateurs: readonly OperateurSupervise[],
+    readonly instantDEvaluation: Instant,
+  ) {}
+
+  couloirs(): readonly CouloirSupervise[] {
+    return COULOIRS_DE_SUPERVISION.map(couloir => ({
+      couloir,
+      operateurs: this.operateurs.filter(supervise => supervise.couloir() === couloir),
+    }));
+  }
+
+  operateursEnNonConformite(): readonly OperateurSupervise[] {
+    return this.operateurs.filter(supervise => supervise.isEnNonConformite());
+  }
+
+  operateursAVerifier(): readonly OperateurSupervise[] {
+    return this.operateurs.filter(supervise => supervise.anomalies.length > 0);
+  }
+
+  countPresents(): number {
+    return this.operateurs.filter(supervise => supervise.presence === 'PRESENT').length;
   }
 
   static determine(
@@ -92,6 +108,6 @@ export class SupervisionDeLAtelier {
       .map(operateur => superviseOperateur(operateur, journees, activites, maintenant))
       .sort((left, right) => left.compareAlphabetically(right));
 
-    return resultatSupervisionExploitable(new SupervisionDeLAtelier(operateurs));
+    return resultatSupervisionExploitable(new SupervisionDeLAtelier(operateurs, maintenant));
   }
 }

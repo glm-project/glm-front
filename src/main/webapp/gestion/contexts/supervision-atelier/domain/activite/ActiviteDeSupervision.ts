@@ -4,6 +4,11 @@ import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { CategorieActivite } from './CategorieActivite';
 import { IdentifiantActivite } from './IdentifiantActivite';
 
+const rangDuPoste = (poste: string | undefined): number => (poste === undefined ? 1 : 0);
+
+const comparePostes = (poste: string | undefined, autre: string | undefined): number =>
+  rangDuPoste(poste) - rangDuPoste(autre) || (poste ?? '').localeCompare(autre ?? '', 'fr', { numeric: true });
+
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
@@ -28,6 +33,10 @@ export class ActiviteDeSupervision {
     this.categorie = description.categorie;
     this.debut = description.debut;
     this.poste = description.poste;
+  }
+
+  compare(other: ActiviteDeSupervision): number {
+    return comparePostes(this.poste, other.poste) || this.debut.compare(other.debut) || this.id.value.localeCompare(other.id.value);
   }
 
   isFor(operateurId: IdentifiantOperateur): boolean {
