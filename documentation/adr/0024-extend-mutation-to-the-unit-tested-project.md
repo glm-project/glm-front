@@ -2,9 +2,15 @@
 
 ## Status
 
-Accepted. This record states the whole pre-push gate and the whole mutation policy. It replaces records 0018
+Accepted, except its pre-push hook. This record states the whole mutation policy. It replaces records 0018
 and 0020, which held the first bounded mutation experiment and the earlier pre-push gate; both were deleted
 once their reasoning had moved here, and both numbers stay free.
+
+The pre-push hook no longer exists: #130 deleted `.husky/pre-push`, so nothing runs `validate:quick` or
+`test:mutation:diff` on push. The policy, the 100 % threshold on changed domain lines, the runner and the
+checker stand; developers run the diff mutation explicitly with the command in
+[Validation](../validation.md#one-command-graph). Read the passages below that describe the hook as the
+account of a gate that was.
 
 ## Context
 
