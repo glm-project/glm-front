@@ -164,6 +164,30 @@ const absentsActifsFixture = (nombre: number): DonneesDeSupervision => {
   };
 };
 
+const nonConformitesFixture = ({
+  auTravail,
+  enPause,
+}: {
+  readonly auTravail: readonly OperateurDeclare[];
+  readonly enPause: readonly OperateurDeclare[];
+}): DonneesDeSupervision => ({
+  operateurs: [...auTravail, ...enPause],
+  journees: [
+    ...auTravail.map(operateur => JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(instantFixture(7))])),
+    ...enPause.map(operateur =>
+      JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
+    ),
+  ],
+  activites: [...auTravail, ...enPause].map(operateur =>
+    activiteFixture(operateur, {
+      id: `act-${operateur.id.value}`,
+      objet: mouleFixture('1015'),
+      categorie: 'NON_CONFORMITE',
+      debut: instantFixture(8),
+    }),
+  ),
+});
+
 const nonConformitesSuspenduesFixture = (operateurs: readonly OperateurDeclare[]): DonneesDeSupervision => ({
   operateurs,
   journees: operateurs.map(operateur =>
@@ -615,6 +639,16 @@ describe('Supervision atelier component', () => {
     ]);
   });
 
+  it('should still name six operators to check', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(absentsActifsFixture(6));
+
+    expect(signal('supervision-signal-a-verifier')).toBe(
+      '6 à vérifier : Absent 0 Actif, Absent 1 Actif, Absent 2 Actif, Absent 3 Actif, Absent 4 Actif, Absent 5 Actif',
+    );
+  });
+
   it('should count the operators to check without naming them beyond six', async () => {
     await givenAcquisitionInProgress();
 
@@ -634,12 +668,35 @@ describe('Supervision atelier component', () => {
     expect(signal('supervision-signal-nc')).toBe(attendu);
   });
 
+  it('should not call the nonconformities suspended while one of them is being worked on', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive(nonConformitesFixture({ auTravail: [aubertFixture], enPause: [dumasFixture] }));
+
+    expect(signal('supervision-signal-nc')).toBe('2 en NC : Aubert Lucas, Dumas Julien');
+  });
+
   it('should count present operators, paused and absent ones excluded', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
     expect([signal('supervision-presents'), signal('supervision-presents-compact')]).toEqual(['Présents 4', '4 présents']);
+  });
+
+  it('should speak of a single operator and a single present one in the singular', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({
+      operateurs: [lefevreFixture],
+      journees: [JourneeDeTravail.open(lefevreFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(8, 55))])],
+      activites: [],
+    });
+
+    expect([signal('supervision-derniere-lecture'), signal('supervision-presents-compact')]).toEqual([
+      '1 opérateur · d’après les pointages reçus jusqu’à 10:00 · actualisé toutes les 30 s',
+      '1 présent',
+    ]);
   });
 
   it('should date the freshness of the lanes from the evaluation instant', async () => {

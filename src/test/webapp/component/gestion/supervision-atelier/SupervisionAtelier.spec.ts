@@ -20,6 +20,13 @@ describe('Supervision lanes readability', () => {
     thenLaneColoursFollowTheClientCode();
   });
 
+  it('should show the demonstration workshop as the plan describes it', () => {
+    whenOpeningSupervision();
+
+    thenTheLanesHoldTheDemonstrationOperators();
+    thenTheCardsTellTheirTimesActivitiesAndAnomalies();
+  });
+
   it('should keep a visible focus ring on « Actualiser »', () => {
     whenOpeningSupervision();
 
@@ -96,7 +103,51 @@ const thenLaneColoursFollowTheClientCode = (): void => {
     .first()
     .should('have.css', 'background-color', 'rgb(234, 179, 8)')
     .and('have.css', 'color', 'rgb(15, 24, 36)');
+  cardOf('op-perrin').should('have.css', 'color', 'rgb(74, 90, 107)').and('have.css', 'opacity', '1');
+  cardOf('op-perrin').find(dataSelector('supervision-activite')).should('have.css', 'opacity', '1');
 };
+
+const thenTheLanesHoldTheDemonstrationOperators = (): void => {
+  [
+    {
+      couloir: 'au-travail',
+      operateurs: ['Aubert Lucas', 'Benali Samir', 'Chevalier Mathis', 'Garnier Thomas', 'Marchand Kevin', 'Morel Inès', 'Vidal Hugo'],
+    },
+    { couloir: 'sans-affectation', operateurs: ['Lefèvre Sophie'] },
+    { couloir: 'en-pause', operateurs: ['Dumas Julien', 'Roux Nathalie', 'Schmitt Yanis'] },
+    { couloir: 'absents', operateurs: ['Fabre Lucie', 'Perrin Loïc'] },
+  ].forEach(({ couloir, operateurs }) => {
+    cy.get(dataSelector(`supervision-couloir-${couloir}`))
+      .find(dataSelector('supervision-operateur-nom'))
+      .should(noms => {
+        expect(noms.toArray().map(nom => normalise(nom.textContent))).to.deep.equal(operateurs);
+      });
+  });
+};
+
+const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
+  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-heure')), 'arrivée le 23/09 à 06:04');
+  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-activite-debut')), 'depuis le 23/09 à 14:20');
+  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Aucun départ pointé depuis plus de 16 h');
+  thenTextIs(cardOf('op-dumas').find(dataSelector('supervision-heure')), 'pause depuis 09:00');
+  thenTextIs(cardOf('op-dumas').find(dataSelector('supervision-suspendue')), 'suspendue');
+  cardOf('op-schmitt').find(dataSelector('supervision-heure')).should('not.exist');
+  thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-anomalie')), 'Venue ouverte sans heure d’arrivée');
+  thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Hors OF');
+  thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
+  thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
+  thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-anomalie')), 'Activité d’un opérateur absent');
+};
+
+const thenTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {
+  element.should(noeud => {
+    expect(normalise(noeud.text())).to.equal(attendu);
+  });
+};
+
+const cardOf = (id: string): Cypress.Chainable<JQuery> => cy.get(dataSelector('supervision-carte')).filter(`[data-operateur-id="${id}"]`);
+
+const normalise = (texte: string | null): string => (texte ?? '').replace(/\s+/g, ' ').trim();
 
 const thenRefreshShowsItsFocusRing = (): void => {
   cy.get(dataSelector('supervision-refresh')).should('have.focus').and('have.css', 'outline-style', 'solid');

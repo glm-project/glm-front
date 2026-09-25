@@ -415,6 +415,18 @@ describe('SupervisionDeLAtelier', () => {
     expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
   });
 
+  it('should place a present operator whose only activity is nonconforming in the working lane', () => {
+    const operateur = operateurFixture('op-1');
+
+    const supervision = supervisionFixture(
+      [operateur],
+      [journeeOuverteFixture(operateur, 'PRESENT')],
+      [activiteFixture(operateur, 'NON_CONFORMITE')],
+    );
+
+    expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
+  });
+
   it('should place a present operator without activity in the unassigned lane', () => {
     const operateur = operateurFixture('op-1');
 

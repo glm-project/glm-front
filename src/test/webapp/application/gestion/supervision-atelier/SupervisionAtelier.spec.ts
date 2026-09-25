@@ -23,6 +23,8 @@ const whenVisitingTheRoot = (): void => {
 
 const whenRefreshingTheWorkshop = (): void => {
   cy.get(dataSelector('supervision-refresh')).should('not.be.disabled').click();
+  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled');
+  cy.get(dataSelector('supervision-plateau')).should('not.have.attr', 'aria-busy');
 };
 
 const thenTheFourLanesAreDisplayed = (): void => {

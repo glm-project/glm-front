@@ -106,8 +106,10 @@ it('should reject nc as a foreground colour, variants and opacity included', asy
     `const template = '<span class="hover:text-nc">NC</span>';`,
     `const template = '<span class="text-nc/50">NC</span>';`,
     `const template = '<span [class.decoration-nc]="nc">NC</span>';`,
-    `const template = '<svg class="fill-nc stroke-nc"></svg>';`,
-    `const template = '<input class="caret-nc placeholder-nc" />';`,
+    `const template = '<svg class="fill-nc"></svg>';`,
+    `const template = '<svg class="stroke-nc"></svg>';`,
+    `const template = '<input class="caret-nc" />';`,
+    `const template = '<input class="placeholder-nc" />';`,
   ]);
 
   thenImportsAreRejected(results);
