@@ -1,16 +1,22 @@
 # Supervision de l'atelier
 
-Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel les opérateurs déclarés, leur présence et leurs activités pour la grille de supervision d'atelier.
+Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel les opérateurs déclarés, leur présence et leurs activités pour les couloirs de supervision.
 
 ## Langage
 
-**Supervision de l'atelier** : interprétation en temps réel des opérateurs déclarés, de la présence et des activités en cours pour la grille d'atelier.
+**Supervision de l'atelier** : interprétation en temps réel des opérateurs déclarés, de la présence et des activités en cours pour les couloirs de supervision.
 
 **Opérateur déclaré** : opérateur référencé pour la supervision de l'atelier, identifié et ordonné alphabétiquement.
 
-**Journée de travail** : une venue sur l'atelier, bornée par une arrivée et un départ, qui peut traverser minuit ; ce n'est pas un jour calendaire.
+**Journée de travail** : une venue sur l'atelier, bornée par une arrivée et un départ, qui peut traverser minuit ; ce n'est pas un jour calendaire. À l'écran, une journée de travail se dit _venue_ : « journée » y évoquerait un jour calendaire, et « présence » désigne déjà l'état de l'opérateur.
 
 **Présence de l'opérateur** : état instantané d'un opérateur déclaré (`PRESENT`, `EN_PAUSE` ou `ABSENT`). `ABSENT` est caractérisé par l'absence de journée ouverte.
+
+**Couloir de supervision** : place d'un opérateur déclaré sur l'écran, dérivée de sa présence et de ses activités, parmi quatre couloirs dans un ordre fixe : `AU_TRAVAIL`, `SANS_AFFECTATION`, `EN_PAUSE`, `ABSENT`. `ABSENT` → Absents, même avec une activité ouverte ou une anomalie ; `EN_PAUSE` → En pause ; `PRESENT` sans activité → Sans affectation ; `PRESENT` avec au moins une activité → Au travail. La valeur est l'état au singulier ; le pluriel « Absents » n'existe que dans le libellé.
+
+**Au travail** : couloir d'un opérateur présent qui a au moins une activité en cours, y compris hors OF. C'est un couloir dérivé, jamais un état de présence.
+
+**Activité suspendue** : activité en cours d'un opérateur `EN_PAUSE`. La pause ne ferme pas les activités : elles restent ouvertes et s'affichent suspendues.
 
 **Fenêtre de présence** : intervalle de présence effective d'un opérateur, pauses déduites, au sein d'une journée de travail.
 
@@ -36,7 +42,8 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 - La présence d'un opérateur déclaré est déterminée exclusivement par sa journée de travail : présent ou en pause si une journée est ouverte, absent en l'absence de journée ouverte.
 - Une journée de travail est une venue indépendante du calendrier : les venues traversant minuit et les anciennes journées restées ouvertes sont prises en compte sans filtre calendaire.
-- L'ordre des opérateurs dans la grille de supervision est strictement alphabétique et indépendant de leur état de présence.
+- Chaque opérateur déclaré apparaît dans exactement un couloir de supervision. Les quatre couloirs existent toujours, dans l'ordre fixe, même vides ; l'ordre des opérateurs est alphabétique (nom, prénom, identifiant) à l'intérieur de chaque couloir.
+- La NC est une surcouche de l'activité, jamais un couloir.
 - Les segments de présence d'un opérateur sont dérivés de ses journées de travail : les intervalles effectifs et les pauses intercalaires ou de session sont calculés par le domaine.
 - Les statistiques de supervision sont évaluées par l'agrégat SupervisionDeLAtelier.
 - Les activités en cours sont associées aux opérateurs déclarés correspondants ; un opérateur peut avoir 0 à N activités.
@@ -47,11 +54,10 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - L'ouverture est le plus ancien début de fenêtre, indépendamment de l'ordre reçu. La supervision expose cet instant ou son absence.
 - La détection d'une anomalie préserve l'état de présence et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
-- Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver la grille précédente.
-- La grille de supervision est immuable.
+- Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
+- La supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
-- L’adaptateur HTTP de supervision lit les données opérateurs via l’API et les traduit dans ses propres modèles, sans importer le domaine `operateur`.
 
 ## Règles locales
 
