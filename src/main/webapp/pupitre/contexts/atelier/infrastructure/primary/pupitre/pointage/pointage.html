@@ -36,7 +36,7 @@
           >{{ element.numero }}</span
         >
         @if (element.isNonConforme()) {
-        <span class="rounded bg-nc px-2 text-label text-on-accent" data-selector="nc-marker">{{ labels.nonConformite }}</span>
+        <span class="rounded bg-danger px-2 text-label text-on-accent" data-selector="nc-marker">{{ labels.nonConformite }}</span>
         }
       </div>
       @if (element.isActive()) {
@@ -57,7 +57,7 @@
         type="button"
         [disabled]="!gestesDisponibles() || busy().has(element.id)"
         (click)="press(element, 'SECONDAIRE')"
-        class="min-h-touch rounded border border-nc bg-surface px-3 text-label text-nc disabled:opacity-50"
+        class="min-h-touch rounded border border-danger bg-surface px-3 text-label text-danger disabled:opacity-50"
         data-selector="secondary-target"
       >
         {{ labels.actionSecondaire(element) }}
@@ -89,7 +89,7 @@
     type="button"
     [disabled]="!gestesDisponibles() || !presence().permet('TOUT_ARRETER')"
     (click)="arretTotalRequested.emit()"
-    class="min-h-touch-lg flex-1 rounded border-2 border-nc bg-surface text-section text-nc disabled:opacity-50"
+    class="min-h-touch-lg flex-1 rounded border-2 border-danger bg-surface text-section text-danger disabled:opacity-50"
     data-selector="stop-all"
   >
     {{ labels.arretTotal }}

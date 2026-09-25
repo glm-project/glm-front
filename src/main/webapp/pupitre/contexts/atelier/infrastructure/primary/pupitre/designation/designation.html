@@ -9,7 +9,7 @@
     class="min-h-touch-lg overflow-x-auto whitespace-nowrap rounded border border-border bg-sunken p-4 text-display text-ink"
   >
     @if (designation.unknownCode()) {
-    <span class="text-nc">Code inconnu</span>
+    <span class="text-danger">Code inconnu</span>
     } @else { {{ designation.code() }} }
   </div>
   <div class="grid min-h-0 auto-rows-fr grid-cols-3 gap-3">

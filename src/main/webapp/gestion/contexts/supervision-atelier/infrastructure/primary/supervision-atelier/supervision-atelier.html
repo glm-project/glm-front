@@ -27,7 +27,7 @@
     {{ libelles.chargement }}
   </p>
   } @case ('ERREUR') {
-  <p role="alert" class="gestion-carte py-16 text-center text-body text-nc" data-selector="supervision-error">{{ libelles.erreur }}</p>
+  <p role="alert" class="gestion-carte py-16 text-center text-body text-danger" data-selector="supervision-error">{{ libelles.erreur }}</p>
   } @case ('SUCCES') { @if (vue.operateurs.length === 0) {
   <p class="gestion-carte py-16 text-center text-body text-ink-muted" data-selector="supervision-empty">{{ libelles.vide }}</p>
   } @else { @let stats = vue.statistiques; @let filtre = filtreActif(); @let listeAffichee = vue.lignes;
@@ -77,7 +77,7 @@
           [attr.aria-pressed]="filtre === 'ABSENT'"
           (click)="basculerFiltre('ABSENT')"
         >
-          <span class="gestion-pastille bg-nc" aria-hidden="true"></span>
+          <span class="gestion-pastille bg-danger" aria-hidden="true"></span>
           {{ libelles.presences.ABSENT }}
           <span class="compteur" data-selector="supervision-compteur-absent">{{ stats.absents }}</span>
         </button>
@@ -105,7 +105,7 @@
           [attr.aria-pressed]="filtre === 'ANOMALIE'"
           (click)="basculerFiltre('ANOMALIE')"
         >
-          <glm-icon name="triangleAlert" class="icone text-nc" aria-hidden="true" />
+          <glm-icon name="triangleAlert" class="icone text-danger" aria-hidden="true" />
           Anomalies
           <span class="compteur" data-selector="supervision-compteur-anomalie">{{ stats.anomalies }}</span>
         </button>
@@ -150,7 +150,7 @@
     <span><span class="legende bg-ok" aria-hidden="true"></span> Présence</span>
     <span><span class="legende bg-warn" aria-hidden="true"></span> Pause</span>
     <span><span class="legende bg-accent" aria-hidden="true"></span> Activité en cours</span>
-    <span><span class="legende bg-nc" aria-hidden="true"></span> NC</span>
+    <span><span class="legende bg-danger" aria-hidden="true"></span> NC</span>
     <span class="inline-flex items-center gap-1.5 text-sans-affectation"
       ><glm-icon name="circleDashed" aria-hidden="true" /> {{ libelles.sansAffectationMaintenant }}</span
     >
@@ -230,7 +230,7 @@
                 {{ libelles.presences[supervise.presence] }}
               </span>
               } @case ('ABSENT') {
-              <span class="shrink-0 rounded bg-nc px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
+              <span class="shrink-0 rounded bg-danger px-2 py-0.5 text-label text-on-accent" data-selector="supervision-presence">
                 {{ libelles.presences[supervise.presence] }}
               </span>
               } } @if (supervise.isSansAffectation()) {
@@ -238,7 +238,7 @@
                 ><glm-icon name="circleDashed" aria-hidden="true" />{{ libelles.sansAffectation }}</span
               >
               } @if (supervise.anomalies.length > 0) {
-              <span class="indicateur text-nc" data-selector="supervision-indicateur-anomalies"
+              <span class="indicateur text-danger" data-selector="supervision-indicateur-anomalies"
                 ><glm-icon name="triangleAlert" aria-hidden="true" />{{ supervise.anomalies.length }} anomalie{{ supervise.anomalies.length
                 > 1 ? 's' : '' }}</span
               >
@@ -284,7 +284,7 @@
                 <span
                   class="encre-activite absolute inset-0 rounded-sm"
                   [class.bg-accent]="!segment.activite.categorie.isNc()"
-                  [class.bg-nc]="segment.activite.categorie.isNc()"
+                  [class.bg-danger]="segment.activite.categorie.isNc()"
                   data-selector="supervision-marque-activite"
                   aria-hidden="true"
                 >
@@ -337,8 +337,8 @@
             }
           </ul>
           @if (supervise.anomalies.length > 0) {
-          <div class="mb-3 rounded-control border border-nc bg-surface px-3 py-2.5">
-            <ul class="space-y-1 text-body-sm font-semibold text-nc">
+          <div class="mb-3 rounded-control border border-danger bg-surface px-3 py-2.5">
+            <ul class="space-y-1 text-body-sm font-semibold text-danger">
               @for (anomalie of supervise.anomalies; track anomalie) {
               <li data-selector="supervision-anomalie">{{ libelles.anomalies[anomalie] }}</li>
               }
@@ -358,7 +358,7 @@
                 <div class="flex items-start justify-between gap-2">
                   <p class="font-medium wrap-anywhere" data-selector="supervision-activite-nom">{{ activite.nom }}</p>
                   @if (activite.categorie.isNc()) {
-                  <span class="shrink-0 rounded bg-nc px-1.5 py-0.5 text-label text-on-accent" data-selector="supervision-nc"
+                  <span class="shrink-0 rounded bg-danger px-1.5 py-0.5 text-label text-on-accent" data-selector="supervision-nc"
                     >{{ libelles.nc }}</span
                   >
                   }

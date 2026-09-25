@@ -8,11 +8,11 @@
   </p>
   } @if (vue().kind === 'ECHEC') {
   <div role="alert" class="py-8 text-center" data-selector="atelier-engagement-error">
-    <p class="mb-4 text-body text-nc">{{ libelles.erreur }}</p>
+    <p class="mb-4 text-body text-danger">{{ libelles.erreur }}</p>
     <button mat-stroked-button type="button" (click)="reload()" data-selector="atelier-engagement-retry">{{ libelles.reessayer }}</button>
   </div>
   } @if (vue().kind === 'INTROUVABLE') {
-  <p role="alert" class="py-8 text-center text-body text-nc" data-selector="atelier-engagement-missing">{{ libelles.introuvable }}</p>
+  <p role="alert" class="py-8 text-center text-body text-danger" data-selector="atelier-engagement-missing">{{ libelles.introuvable }}</p>
   } @if (candidat(); as element) {
   <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded border border-border-strong p-4">
     <div>
@@ -80,9 +80,11 @@
     />
   </div>
   } @if (refus(); as erreur) {
-  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-engagement-refusal">{{ erreur.message }}</p>
+  <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="atelier-engagement-refusal">{{ erreur.message }}</p>
   } @if (erreurTechnique()) {
-  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="atelier-engagement-technical-error">{{ libelles.erreurTechnique }}</p>
+  <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="atelier-engagement-technical-error">
+    {{ libelles.erreurTechnique }}
+  </p>
   }
 </mat-dialog-content>
 <mat-dialog-actions align="end">

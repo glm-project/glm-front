@@ -31,11 +31,11 @@
 }
 
 .tile--nc {
-  border-color: var(--color-nc);
-  box-shadow: inset 0.3rem 0 var(--color-nc);
+  border-color: var(--color-danger);
+  box-shadow: inset 0.3rem 0 var(--color-danger);
   background:
-    repeating-linear-gradient(135deg, transparent 0 0.45rem, color-mix(in srgb, var(--color-nc) 13%, transparent) 0.45rem 0.9rem),
-    color-mix(in srgb, var(--color-nc) 7%, var(--color-surface));
+    repeating-linear-gradient(135deg, transparent 0 0.45rem, color-mix(in srgb, var(--color-danger) 13%, transparent) 0.45rem 0.9rem),
+    color-mix(in srgb, var(--color-danger) 7%, var(--color-surface));
 }
 
 .dialog-backdrop {

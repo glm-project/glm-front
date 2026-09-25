@@ -5,9 +5,9 @@
     définitive.
   </p>
   @if (refus(); as erreur) {
-  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="operateur-delete-refusal">{{ erreur.message }}</p>
+  <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="operateur-delete-refusal">{{ erreur.message }}</p>
   } @if (erreurTechnique()) {
-  <p role="alert" class="mt-4 text-body-sm text-nc" data-selector="operateur-delete-technical-error">
+  <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="operateur-delete-technical-error">
     La suppression a échoué. Vérifiez la connexion puis réessayez.
   </p>
   }

@@ -15,10 +15,12 @@
   @switch (etat().kind) { @case ('CHARGEMENT') {
   <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="cout-loading">{{ libelles.chargement }}</p>
   } @case ('ELEMENT_INTROUVABLE') {
-  <p role="alert" class="py-12 text-center text-body text-nc" data-selector="cout-element-introuvable">{{ libelles.elementIntrouvable }}</p>
+  <p role="alert" class="py-12 text-center text-body text-danger" data-selector="cout-element-introuvable">
+    {{ libelles.elementIntrouvable }}
+  </p>
   } @case ('ERREUR') {
   <div role="alert" class="py-12 text-center" data-selector="cout-error">
-    <p class="mb-4 text-body text-nc">{{ libelles.echec }}</p>
+    <p class="mb-4 text-body text-danger">{{ libelles.echec }}</p>
     <button mat-stroked-button type="button" (click)="reload()" data-selector="cout-retry">{{ libelles.reessayer }}</button>
   </div>
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
@@ -34,7 +36,9 @@
       <h2 class="text-body-sm font-semibold text-ink-muted">{{ libelles.indicateurTemps }}</h2>
       <p class="mt-2 text-display tabular" data-selector="cout-temps-total">{{ libelles.duree(vue.rapport.temps.total) }}</p>
       @if (vue.rapport.temps.porteUneNonConformite()) {
-      <p class="mt-2 text-body-sm text-nc" data-selector="cout-temps-non-conformite">{{ libelles.dontNonConformite(vue.rapport.temps) }}</p>
+      <p class="mt-2 text-body-sm text-danger" data-selector="cout-temps-non-conformite">
+        {{ libelles.dontNonConformite(vue.rapport.temps) }}
+      </p>
       }
     </div>
   </section>
@@ -72,7 +76,7 @@
               {{ libelles.nature(ligne.nature?.value) }}
             </th>
             <td class="colonne-duree" data-selector="cout-travail-cell">{{ libelles.duree(ligne.temps.travail) }}</td>
-            <td class="colonne-duree" [class.text-nc]="ligne.temps.porteUneNonConformite()" data-selector="cout-non-conformite-cell">
+            <td class="colonne-duree" [class.text-danger]="ligne.temps.porteUneNonConformite()" data-selector="cout-non-conformite-cell">
               {{ libelles.duree(ligne.temps.nonConformite) }}
             </td>
             <td class="colonne-duree" data-selector="cout-temps-cell">{{ libelles.duree(ligne.temps.total) }}</td>
@@ -103,7 +107,7 @@
                 @if (ligne.nonConformites.length === 0) {
                 <span data-selector="cout-sans-non-conformite">{{ libelles.sansNonConformite }}</span>
                 } @else { @for (reprise of ligne.nonConformites; track $index) {
-                <span class="mr-3 whitespace-nowrap text-nc" data-selector="cout-non-conformite">{{ libelles.periode(reprise) }}</span>
+                <span class="mr-3 whitespace-nowrap text-danger" data-selector="cout-non-conformite">{{ libelles.periode(reprise) }}</span>
                 } }
               </p>
             </td>
