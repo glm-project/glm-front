@@ -9,12 +9,24 @@ application tests and the production offline restart. The browser groups run in 
 servers never share one workspace at the same time.
 
 CI invokes the same grouped commands in separate workspaces. Each job records its duration as an artifact.
-The pre-push hook runs `validate:quick`, then mutates the added or modified lines of handwritten domain
-TypeScript in every ref in the push. Each step records its duration on standard output and returns its exit code. It does not rerun
-coverage, builds or browser suites before the CI jobs that own those checks. The complete local graph runs
-on explicit invocation with `npm run validate:complete`. See
-[ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md) for the pre-push gate and
-[ADR 0017](adr/0017-use-one-validation-graph-at-every-gate.md) for the graph the other gates share.
+
+No pre-push hook is registered and CI runs no mutation, so nothing checks a push before CI unless you do.
+Before pushing, run `npm run validate:quick`. When the branch adds or modifies handwritten domain TypeScript,
+also mutate those lines against the point where the branch left `main`:
+
+```bash
+printf 'HEAD %s refs/heads/main %s\n' "$(git rev-parse HEAD)" "$(git merge-base HEAD origin/main)" \
+  | npm run test:mutation:diff -- origin
+```
+
+`test:mutation:diff` reads ref lines in the pre-push format on standard input, mutates only the changed
+domain lines and fails below the 100 % threshold. Without a mutable domain line it prints
+`No changed domain TypeScript files to mutate.` and exits 0. Neither command reruns coverage, builds or
+browser suites, which the CI jobs own. The complete local graph runs on explicit invocation with
+`npm run validate:complete`. See [ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md) for the
+mutation policy and [ADR 0017](adr/0017-use-one-validation-graph-at-every-gate.md) for the graph the gates
+share.
+
 The pre-commit hook scans the staged diff for secrets before lint-staged runs ESLint fixes and then Prettier on
 TypeScript, Angular templates and JavaScript tooling scripts. Other supported staged files only run through Prettier.
 

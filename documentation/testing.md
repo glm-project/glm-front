@@ -248,7 +248,7 @@ still owns reflection and dynamic access. See [ADR 0037](adr/0037-require-produc
 
 ## Domain mutation policy and mutation checks
 
-Under the Domain mutation policy ([ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md)), mutation testing focuses its blocking gate on the domain core:
+Under the Domain mutation policy ([ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md)), mutation testing focuses its blocking threshold on the domain core:
 
 - All changed domain code (`src/main/webapp/**/domain/**/*.ts`) must be mutation-tested.
 - No surviving mutant affecting a business invariant is allowed in the domain core (100 % blocking threshold).
@@ -261,5 +261,5 @@ The mutation scope excludes specs, declarations and package-info files. Componen
 
 The command runner has no per-test instrumentation, so `coverageAnalysis` is off. Its report cannot distinguish a mutant that was not executed from one that executed and survived: a displayed zero `NoCoverage` count is therefore not evidence of mutation coverage. Keep the regular Istanbul 100 % per-file gate as separate source-coverage evidence. The TypeScript checker uses `tsconfig.stryker.json` to classify invalid mutations as `CompileError`; Stryker separately reports killed valid mutants, survivors and timeouts.
 
-Project-level HTML and JSON reports are written under `reports/mutation/`. Mutation is an explicitly invoked local diagnostic and does not belong to GitHub Actions. The pre-push hook runs `npm run test:mutation:diff` against the added or modified domain lines in the refs being pushed; a push containing no mutable domain line skips mutation entirely. The complete whole-project run `npm run test:mutation:project` remains an explicitly invoked diagnostic that reports mutation score across shells, UI components and infrastructure without a blocking threshold.
+Project-level HTML and JSON reports are written under `reports/mutation/`. Mutation is an explicitly invoked local check and does not belong to GitHub Actions; no hook runs it. Before pushing a change to domain code, run `npm run test:mutation:diff` against the added or modified domain lines with the command in [Validation](validation.md#one-command-graph); a change containing no mutable domain line skips mutation entirely. The complete whole-project run `npm run test:mutation:project` remains an explicitly invoked diagnostic that reports mutation score across shells, UI components and infrastructure without a blocking threshold.
 [ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md) records the runner, the threshold and the domain mutation policy.

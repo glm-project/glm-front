@@ -2,8 +2,9 @@
 
 ## Status
 
-Accepted, except two of its gates. The pre-push gate no longer runs the complete graph;
-[ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md) states what it runs instead. The Codex Stop
+Accepted, except two of its gates. The pre-push gate no longer exists:
+[ADR 0024](0024-extend-mutation-to-the-unit-tested-project.md) first reduced it to `validate:quick` and the
+diff mutation, then #130 deleted `.husky/pre-push`; both are now explicit developer invocations. The Codex Stop
 gate no longer exists: #107 removed `.codex/hooks.json` and `scripts/codex-stop-validation.mjs`, so
 `validate:complete` is an explicit developer invocation and nothing triggers it on completion. Read the Codex
 passages below as the account of a gate that was, not one to reinstate.

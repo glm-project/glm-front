@@ -57,7 +57,8 @@ something stays, with a status that says what died.
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — a conjunctive
   production tripwire for stateful coordinators, with responsibility review at the enforcement point
 - [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) —
-  100 % mutation score enforced on changed domain core, informational outside domain; owns the whole pre-push gate
+  100 % mutation score enforced on changed domain core, informational outside domain; its pre-push hook was
+  removed by #130
 - [0025 — Route runtime errors through ErrorHandlerPort](0025-route-runtime-errors-through-error-handler-port.md) —
   one error channel per front: a shared technical port bound once, which Angular's `ErrorHandler` and `window` errors also reach
 - [0026 — Show the pupitre enrolment and delegate its approval to Keycloak](0026-enrol-pupitre-screen-and-keycloak-delegation.md) —
