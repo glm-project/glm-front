@@ -4,6 +4,8 @@
 
 `Accepted`
 
+- `Complemented by 0041: the supervision lanes apply this code, green at work, brown warn the pause, red danger the absence, and yellow nc laid over an activity.`
+
 ## Context
 
 On 25/09/2026 the client fixed the colour code of the workshop: green for an operator at work, orange for a

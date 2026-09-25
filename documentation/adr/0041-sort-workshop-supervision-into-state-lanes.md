@@ -4,7 +4,7 @@
 
 `Accepted`
 
-- `Amends 0031: the grid becomes four state lanes, ordered alphabetically within each lane, and the screen calls an open working visit « venue ouverte ».`
+- `Amends 0031: the grid becomes four state lanes, ordered alphabetically within each lane, the screen calls an open working visit « venue ouverte », and an activity without a workstation shows « Sans poste » instead of omitting the workstation.`
 - `Complements 0040: green means at work, brown warn the pause, red danger the absence, and yellow nc a non-conformity laid over an activity.`
 
 ## Context
@@ -53,7 +53,13 @@ operator's activities stay visible on their card, dimmed, but never count in the
 stopped their time.
 
 Work that no manufacturing order bills stays in "Au travail", marked « Hors OF » in place of the mould or order.
-Nothing is called « GLM ».
+Nothing is called « GLM ». Neither the pupitre nor the API declares such work yet: an activity whose element is
+missing is never turned into « Hors OF », which would fabricate the very indication 0031 forbids.
+
+Show the trade as « Métier »: it is the nature of the activity's workstation, free text shown as typed. An
+activity without a workstation says « Sans poste » rather than omitting the line. An operator without any
+activity, unassigned or on pause, lists their trades instead; an absent operator shows none. Show nothing more
+when two people work on the same machine: the page stays one card per person.
 
 Show no duration anywhere, only instants: « arrivée », « pause depuis », « depuis » on each task. Remove the
 filters, the search field and the log. Show each anomaly as a band on the card, without changing the lane, and
@@ -62,6 +68,9 @@ count the operators carrying one in a « à vérifier » signal.
 On screen, call a working visit a « venue »: « journée » would suggest a calendar day, and « présence »
 already names the PRESENT, EN_PAUSE or ABSENT state. « Venue ouverte sans heure d'arrivée » replaces the
 label « Journée ouverte sans heure d'ouverture » that 0031 prescribed. The code keeps `JourneeDeTravail`.
+
+Keep the demonstration dataset hard-coded in the InMemory adapter, the only one wired, in production too, and
+show no « démonstration » notice: the HTTP adapter waits for the API to expose open working visits.
 
 Remove the timeline. The dated history that
 [glm-back#32](https://github.com/glm-project/glm-back/issues/32) asks for does not belong on this screen.

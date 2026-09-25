@@ -14,7 +14,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Couloir de supervision** : place d'un opérateur déclaré sur l'écran, dérivée de sa présence et de ses activités, parmi quatre couloirs dans un ordre fixe : `AU_TRAVAIL`, `SANS_AFFECTATION`, `EN_PAUSE`, `ABSENT`. `ABSENT` → Absents, même avec une activité ouverte ou une anomalie ; `EN_PAUSE` → En pause ; `PRESENT` sans activité → Sans affectation ; `PRESENT` avec au moins une activité → Au travail. La valeur est l'état au singulier ; le pluriel « Absents » n'existe que dans le libellé.
 
-**Au travail** : couloir d'un opérateur présent qui a au moins une activité en cours, y compris hors OF. C'est un couloir dérivé, jamais un état de présence.
+**Au travail** : couloir d'un opérateur présent qui a au moins une activité en cours, quelle qu'elle soit : NC ou hors OF comprises. C'est un couloir dérivé, jamais un état de présence, et il ne se confond pas avec la catégorie d'activité `TRAVAIL`.
 
 **Activité suspendue** : activité en cours d'un opérateur `EN_PAUSE`. La pause ne ferme pas les activités : elles restent ouvertes et s'affichent suspendues.
 
@@ -24,7 +24,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NON_CONFORMITE`), d'un instant de début et facultativement d'un poste.
 
-**Poste** : poste de travail d'une activité, avec son identifiant, son libellé et facultativement sa nature de travail. Les activités d'un opérateur s'ordonnent par libellé de poste, celles sans poste en dernier, puis par début.
+**Poste de supervision** : poste de travail d'une activité, avec son identifiant, son libellé et facultativement sa nature de travail. Les activités d'un opérateur s'ordonnent par libellé de poste, celles sans poste en dernier, puis par début.
 
 **Nature de travail** : texte libre non vide, affiché tel que saisi et nommé « Métier » à l'écran ; c'est la nature d'un poste et les métiers d'un opérateur.
 
@@ -32,7 +32,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Élément travaillé** : moule (`PRODUIT`) ou OF (`ORDRE_DE_FABRICATION`) sur lequel l'opérateur travaille, avec son nom et sa référence facultative. Sans référence, l'écran le désigne par son nom ; aucune référence n'est fabriquée.
 
-**Hors OF** : activité sans élément travaillé, pour le travail non facturable. Elle compte comme du travail : son opérateur est Au travail.
+**Hors OF** : activité sans élément travaillé, pour le travail non facturable. Elle compte comme du travail : son opérateur est Au travail. Ni le pupitre ni l'API ne déclarent encore ce travail ; une activité dont l'élément manque n'est jamais convertie en Hors OF.
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
 
@@ -41,6 +41,10 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 **Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`.
 
 **Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT` ou `EN_PAUSE`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ a arrêté son temps.
+
+**Non-conformités suspendues** : situation où l'atelier compte au moins un opérateur en non-conformité et où tous sont en pause ; le signal NC la dit « (suspendue) » ou « (suspendues) ».
+
+**Opérateur à vérifier** : opérateur qui porte au moins une anomalie de supervision.
 
 > « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail est désormais modélisé comme « Hors OF ». La présence sans affectation n'en est pas, et toujours aucun type, champ ni sélecteur ne s'appelle GLM.
 
@@ -55,7 +59,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - Chaque opérateur déclaré apparaît dans exactement un couloir de supervision. Les quatre couloirs existent toujours, dans l'ordre fixe, même vides ; l'ordre des opérateurs est alphabétique (nom, prénom, identifiant) à l'intérieur de chaque couloir.
 - La NC est une surcouche de l'activité, jamais un couloir.
 - Les segments de présence d'un opérateur sont dérivés de ses journées de travail : les intervalles effectifs et les pauses intercalaires ou de session sont calculés par le domaine.
-- Le nombre de présents et les listes d'opérateurs en NC et à vérifier sont évalués par l'agrégat SupervisionDeLAtelier.
+- Le nombre de présents, les listes d'opérateurs en NC et à vérifier, et la suspension des non-conformités sont évalués par l'agrégat SupervisionDeLAtelier.
 - Les activités en cours sont associées aux opérateurs déclarés correspondants ; un opérateur peut avoir 0 à N activités.
 - « Sans affectation » est un état dérivé : un opérateur est sans affectation si et seulement s'il est présent et n'a aucune activité en cours.
 - L'absence de poste ou l'absence d'heure d'ouverture est représentée sans valeur fabriquée (`undefined`).
@@ -65,7 +69,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - La détection d'une anomalie préserve l'état de présence, le couloir et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
 - Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
-- Pendant une relecture (toutes les 30 s ou « Actualiser »), les couloirs affichés restent visibles et se réévaluent à la fin de la lecture ; seul le premier chargement affiche l'écran de chargement, et une erreur remplace toujours les couloirs.
+- Pendant une relecture (toutes les 30 s ou « Actualiser »), les couloirs affichés restent visibles et se réévaluent à la fin de la lecture ; l'écran de chargement ne s'affiche que tant qu'aucun couloir n'est affiché, au premier chargement ou lors d'un nouvel essai après une erreur, et une erreur remplace toujours les couloirs.
 - La supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
