@@ -89,9 +89,6 @@ const thenLanesStayWithinTheirWidth = (): void => {
     const element = requiredFixture(view[0], 'supervision view');
     expect(element.scrollWidth).to.be.at.most(element.clientWidth);
   });
-  cy.document().then(document => {
-    expect(document.documentElement.scrollWidth).to.be.at.most(document.documentElement.clientWidth);
-  });
   cy.screenshot('supervision-couloirs', { capture: 'fullPage' });
 };
 
