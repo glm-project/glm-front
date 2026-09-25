@@ -192,6 +192,13 @@
   }
 }
 
+/* De 1024 à 1279 px, la navigation dépliée remplit la ligne : le sous-titre lui cède sa place, le nom accessible de la marque le garde. */
+@media (min-width: 64rem) and (max-width: 79.999rem) {
+  .marque-produit {
+    display: none;
+  }
+}
+
 @media (max-width: 39.999rem) {
   .marque-produit,
   .action-libelle {
