@@ -76,3 +76,5 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 Pour l'acquisition des données de la vue, appliquer la [règle de composition des lectures](../../../../../../documentation/architecture.md#acquire-a-view-through-one-read-port-by-default).
 
 Consulter l'[ADR 0031](../../../../../../documentation/adr/0031-own-workshop-supervision-in-gestion.md) pour les arbitrages d'architecture et la séparation des responsabilités.
+
+Consulter l'[ADR 0041](../../../../../../documentation/adr/0041-sort-workshop-supervision-into-state-lanes.md) pour la forme en couloirs d'état et les règles d'affichage retenues avec le client, et l'[ADR 0040](../../../../../../documentation/adr/0040-colour-non-conformity-yellow.md) pour les couleurs.
