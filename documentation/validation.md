@@ -11,16 +11,18 @@ servers never share one workspace at the same time.
 CI invokes the same grouped commands in separate workspaces. Each job records its duration as an artifact.
 
 No pre-push hook is registered and CI runs no mutation, so nothing checks a push before CI unless you do.
-Before pushing, run `npm run validate:quick`. When the branch adds or modifies handwritten domain TypeScript,
-also mutate those lines against the point where the branch left `main`:
+Before pushing, run `npm run validate:quick`. When the commits you are about to push add or modify
+handwritten domain TypeScript, also mutate those lines, and only those:
 
 ```bash
-printf 'HEAD %s refs/heads/main %s\n' "$(git rev-parse HEAD)" "$(git merge-base HEAD origin/main)" \
-  | npm run test:mutation:diff -- origin
+printf 'HEAD %s HEAD %040d\n' "$(git rev-parse HEAD)" 0 | npm run test:mutation:diff -- origin
 ```
 
-`test:mutation:diff` reads ref lines in the pre-push format on standard input, mutates only the changed
-domain lines and fails below the 100 % threshold. Without a mutable domain line it prints
+`test:mutation:diff` reads ref lines in the pre-push format on standard input. The zero remote object id is
+what Git gives a pre-push hook for a ref the remote lacks: the script then mutates the changed domain lines of
+the commits that no `origin` ref contains yet, and fails below the 100 % threshold. Lines already pushed were
+checked before their own push, so the rest of the branch is not mutated again. Fetch first so the `origin`
+refs are current; after a rebase, every rewritten commit counts as unpushed. Without a mutable domain line it prints
 `No changed domain TypeScript files to mutate.` and exits 0. Neither command reruns coverage, builds or
 browser suites, which the CI jobs own. The complete local graph runs on explicit invocation with
 `npm run validate:complete`. See [ADR 0024](adr/0024-extend-mutation-to-the-unit-tested-project.md) for the
