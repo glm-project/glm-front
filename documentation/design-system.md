@@ -5,9 +5,14 @@ colour, typography, touch size and font-family tokens.
 
 ## Name roles, not values
 
-Use the thirteen colour roles already declared: surfaces and text (`canvas`, `surface`, `sunken`, `border`,
-`border-strong`, `ink`, `ink-muted`), action (`accent`, `on-accent`) and state (`ok`, `danger`, `sans-affectation`, `warn`).
-Choose the role that matches the meaning; a screen does not create a second value for an existing role.
+Use the fourteen colour roles already declared: surfaces and text (`canvas`, `surface`, `sunken`, `border`,
+`border-strong`, `ink`, `ink-muted`), action (`accent`, `on-accent`) and state (`ok`, `danger`, `nc`, `sans-affectation`,
+`warn`). Choose the role that matches the meaning; a screen does not create a second value for an existing role.
+
+`danger` carries errors, refusals, destructive actions and, in supervision, absence. `nc` carries the
+non-conformity: it is never a foreground colour, and text placed on `nc` is `ink`. It paints backgrounds, borders
+and hatching; never let its border alone signal an NC, since it reaches only 1.9:1 on `surface`. See
+[ADR 0040](adr/0040-colour-non-conformity-yellow.md).
 
 Typography has six levels: `display`, `title`, `section`, `body`, `body-sm` and `label`. Use their Tailwind
 utilities rather than assembling a seventh size/weight combination. Touch targets use `spacing-touch`
@@ -49,8 +54,8 @@ spacing definitions in the shared theme.
 Dynamic class bindings are outside the lint rule's static reach. Prefer literal role classes. If a computed
 binding is required, justify the narrow tooling directive in the commit or MR.
 
-State colours also serve as text on `sunken`; preserve their measured contrast and rerun the token test after
-changing any colour.
+State colours other than `nc` also serve as text on `sunken`; preserve their measured contrast and rerun the token
+test after changing any colour.
 
 ## Gestion shares its screen surfaces
 

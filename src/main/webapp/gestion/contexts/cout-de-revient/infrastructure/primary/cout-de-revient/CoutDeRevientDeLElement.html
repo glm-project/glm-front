@@ -36,8 +36,9 @@
       <h2 class="text-body-sm font-semibold text-ink-muted">{{ libelles.indicateurTemps }}</h2>
       <p class="mt-2 text-display tabular" data-selector="cout-temps-total">{{ libelles.duree(vue.rapport.temps.total) }}</p>
       @if (vue.rapport.temps.porteUneNonConformite()) {
-      <p class="mt-2 text-body-sm text-danger" data-selector="cout-temps-non-conformite">
-        {{ libelles.dontNonConformite(vue.rapport.temps) }}
+      <p class="mt-2 flex items-center gap-2 text-body-sm text-ink">
+        <span class="rounded bg-nc px-1.5 text-label text-ink" data-selector="cout-marque-nc">{{ libelles.nc }}</span>
+        <span data-selector="cout-temps-non-conformite">{{ libelles.dontNonConformite(vue.rapport.temps) }}</span>
       </p>
       }
     </div>
@@ -76,8 +77,11 @@
               {{ libelles.nature(ligne.nature?.value) }}
             </th>
             <td class="colonne-duree" data-selector="cout-travail-cell">{{ libelles.duree(ligne.temps.travail) }}</td>
-            <td class="colonne-duree" [class.text-danger]="ligne.temps.porteUneNonConformite()" data-selector="cout-non-conformite-cell">
-              {{ libelles.duree(ligne.temps.nonConformite) }}
+            <td class="colonne-duree">
+              @if (ligne.temps.porteUneNonConformite()) {
+              <span class="mr-1.5 rounded bg-nc px-1.5 text-label text-ink" data-selector="cout-marque-nc">{{ libelles.nc }}</span>
+              }
+              <span data-selector="cout-non-conformite-duree">{{ libelles.duree(ligne.temps.nonConformite) }}</span>
             </td>
             <td class="colonne-duree" data-selector="cout-temps-cell">{{ libelles.duree(ligne.temps.total) }}</td>
             <td class="colonne-montant" data-selector="cout-machine-cell">{{ libelles.montant(ligne.cout.machine) }}</td>
@@ -106,8 +110,10 @@
                 <span class="mr-1 text-ink-muted">{{ libelles.nonConformitesLabel }} :</span>
                 @if (ligne.nonConformites.length === 0) {
                 <span data-selector="cout-sans-non-conformite">{{ libelles.sansNonConformite }}</span>
-                } @else { @for (reprise of ligne.nonConformites; track $index) {
-                <span class="mr-3 whitespace-nowrap text-danger" data-selector="cout-non-conformite">{{ libelles.periode(reprise) }}</span>
+                } @else {
+                <span class="mr-1.5 rounded bg-nc px-1.5 text-label text-ink" data-selector="cout-marque-nc">{{ libelles.nc }}</span>
+                @for (reprise of ligne.nonConformites; track $index) {
+                <span class="mr-3 whitespace-nowrap" data-selector="cout-non-conformite">{{ libelles.periode(reprise) }}</span>
                 } }
               </p>
             </td>

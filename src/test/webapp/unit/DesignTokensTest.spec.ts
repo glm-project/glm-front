@@ -59,6 +59,7 @@ const PAIRS_THE_SCREENS_SHOW: TextOnBackground[] = [
   { text: 'on-accent', background: 'danger' },
   { text: 'on-accent', background: 'sans-affectation' },
   { text: 'on-accent', background: 'warn' },
+  { text: 'ink', background: 'nc' },
 ];
 
 const ONLY_THE_ROOT_FONT_SIZE: StyleRule[] = [{ selector: 'html', properties: ['font-size'] }];

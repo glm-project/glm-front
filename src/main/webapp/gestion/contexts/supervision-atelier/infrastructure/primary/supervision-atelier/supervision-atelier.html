@@ -150,7 +150,7 @@
     <span><span class="legende bg-ok" aria-hidden="true"></span> Présence</span>
     <span><span class="legende bg-warn" aria-hidden="true"></span> Pause</span>
     <span><span class="legende bg-accent" aria-hidden="true"></span> Activité en cours</span>
-    <span><span class="legende bg-danger" aria-hidden="true"></span> NC</span>
+    <span><span class="legende bg-nc" aria-hidden="true"></span> NC</span>
     <span class="inline-flex items-center gap-1.5 text-sans-affectation"
       ><glm-icon name="circleDashed" aria-hidden="true" /> {{ libelles.sansAffectationMaintenant }}</span
     >
@@ -284,7 +284,7 @@
                 <span
                   class="encre-activite absolute inset-0 rounded-sm"
                   [class.bg-accent]="!segment.activite.categorie.isNc()"
-                  [class.bg-danger]="segment.activite.categorie.isNc()"
+                  [class.bg-nc]="segment.activite.categorie.isNc()"
                   data-selector="supervision-marque-activite"
                   aria-hidden="true"
                 >
@@ -358,7 +358,7 @@
                 <div class="flex items-start justify-between gap-2">
                   <p class="font-medium wrap-anywhere" data-selector="supervision-activite-nom">{{ activite.nom }}</p>
                   @if (activite.categorie.isNc()) {
-                  <span class="shrink-0 rounded bg-danger px-1.5 py-0.5 text-label text-on-accent" data-selector="supervision-nc"
+                  <span class="shrink-0 rounded bg-nc px-1.5 py-0.5 text-label text-ink" data-selector="supervision-nc"
                     >{{ libelles.nc }}</span
                   >
                   }
