@@ -58,6 +58,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - La supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
+- Seul l'adaptateur InMemory existe ; il porte en dur le jeu de démonstration, y compris en production, jusqu'à ce que l'API expose les journées ouvertes.
 
 ## Règles locales
 
