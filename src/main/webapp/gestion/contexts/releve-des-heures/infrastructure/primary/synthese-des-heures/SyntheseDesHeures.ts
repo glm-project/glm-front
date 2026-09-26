@@ -1,32 +1,31 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { Component, computed, inject, resource, signal, Signal } from '@angular/core';
+import { Component, computed, inject, resource, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
-import { PointageDeReleve } from '../../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
 import { semaineDemandee } from '../../../domain/semaine/SemaineDemandee';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { jourCourant } from '../jourCourant';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AgendaDeLaSemaine, PlageDessinee } from './AgendaDeLaSemaine';
+import { AgendaDeLaSemaine } from './AgendaDeLaSemaine';
+import { ColonneAffichee, toColonneAffichee } from './ColonneAffichee';
 
 const ANNEES_OFFERTES = 6;
-
-export interface PlageAffichee {
-  readonly dessin: PlageDessinee;
-  readonly libelle: string;
-}
 
 export type EtatVueSynthese =
   | { readonly kind: 'ADRESSE_INVALIDE' }
   | { readonly kind: 'CHARGEMENT' }
   | { readonly kind: 'ERREUR' }
   | { readonly kind: 'OPERATEUR_INTROUVABLE' }
-  | { readonly kind: 'SUCCES'; readonly releve: ReleveDesHeures; readonly agenda: AgendaDeLaSemaine };
+  | {
+      readonly kind: 'SUCCES';
+      readonly releve: ReleveDesHeures;
+      readonly agenda: AgendaDeLaSemaine;
+      readonly colonnes: readonly ColonneAffichee[];
+    };
 
 /** Les semaines à venir ne portent aucun pointage : le back refuse une saisie postérieure à l'instant courant. */
 const semaineOfferte = (semaine: SemaineISO | undefined, courante: SemaineISO): SemaineISO | undefined =>
@@ -45,15 +44,13 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;
 
-  /** Le jour dont le journal est déplié. L'agenda dessine ; les heures exactes se lisent d'un geste. */
-  protected readonly jourDeplie = signal<string | null>(null);
-
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly port = inject(SyntheseDesHeuresPort);
 
-  /** La semaine en cours est figée à l'ouverture : un relevé qu'on lit ne doit pas changer de semaine tout seul. */
-  private readonly semaineCourante = SemaineISO.contenant(jourCourant());
+  /** Le jour et la semaine en cours sont figés à l'ouverture : un relevé qu'on lit ne doit pas changer tout seul. */
+  private readonly aujourdhui = jourCourant();
+  private readonly semaineCourante = SemaineISO.contenant(this.aujourdhui);
 
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
@@ -125,30 +122,6 @@ export class SyntheseDesHeures {
     this.releve.reload();
   }
 
-  protected libelleDuPointage(pointage: PointageDeReleve): string {
-    return this.libelles.pointage(pointage.type, pointage.instant);
-  }
-
-  protected dureeDuJour(jour: JourDeReleve): string {
-    return jour.estVide() ? this.libelles.sansValeur : this.libelles.duree(jour.dureePointee);
-  }
-
-  /** Le dessin d'une plage et le mot qui la nomme : l'agenda place, les libellés disent. */
-  protected plagesAffichees(agenda: AgendaDeLaSemaine, jour: JourDeReleve): readonly PlageAffichee[] {
-    return jour.plages.map(plage => ({
-      dessin: agenda.dessine(plage),
-      libelle: this.libelles.plage(plage.presumee, plage.debut, plage.fin),
-    }));
-  }
-
-  protected basculerLeJour(jour: JourDeReleve): void {
-    this.jourDeplie.update(courant => (courant === jour.jour.value ? null : jour.jour.value));
-  }
-
-  protected estDeplie(jour: JourDeReleve): boolean {
-    return this.jourDeplie() === jour.jour.value;
-  }
-
   private naviguerVers(semaine: SemaineISO): Promise<boolean> {
     return this.router.navigate([], { relativeTo: this.route, queryParams: this.parametresDe(semaine) });
   }
@@ -164,6 +137,8 @@ export class SyntheseDesHeures {
     if (releve === undefined) {
       return { kind: 'OPERATEUR_INTROUVABLE' };
     }
-    return { kind: 'SUCCES', releve, agenda: new AgendaDeLaSemaine(releve.jours) };
+    const agenda = new AgendaDeLaSemaine(releve.jours);
+    const colonnes = releve.jours.map(jour => toColonneAffichee(agenda, jour, this.aujourdhui));
+    return { kind: 'SUCCES', releve, agenda, colonnes };
   }
 }

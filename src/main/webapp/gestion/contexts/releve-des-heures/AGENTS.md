@@ -59,14 +59,18 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - **SemaineISO** : Value Object de la semaine. Il sait combien de semaines une année porte, quel lundi l'ouvre,
   quelle semaine la précède et laquelle la suit, et quelle semaine contient un jour donné.
 - **JourCalendaire** : Value Object d'une date `AAAA-MM-JJ`, refusée si le calendrier ne la porte pas. Il sait
-  se déplacer d'un nombre de jours et nommer son jour de la semaine.
+  se déplacer d'un nombre de jours, nommer son jour de la semaine et se reconnaître aujourd'hui.
 - **DureeTravaillee** : Value Object d'une durée ISO-8601, exprimée en heures et minutes. `estNulle()` la juge à la
   minute près, comme elle s'affiche.
 - **JourDeReleve** : Value Object d'un jour du relevé, construit d'une `FicheDuJour` — sa date, ses durées pointée
-  et présumée, ses pointages et ses plages. `estVide()` : ni pointage ni plage.
+  et présumée, ses pointages et ses plages. `estVide()` : ni pointage ni plage. `pauses()` lit ses pauses dans
+  ses pointages ; `typeDuPointageA()` nomme le pointage d'un instant, et rien à minuit.
 - **PointageDeReleve** : Value Object d'un pointage — son type et son instant.
 - **PlageDeReleve** : Value Object d'une plage lue dans la feuille de temps — son début, sa fin facultative et
   `presumee`. Refusée présumée sans fin, ou finissant avant de commencer ; une fin égale au début est acceptée.
+- **PauseDeReleve** : Value Object d'une pause — son début, absent quand elle vient de la veille, et sa fin,
+  absente quand le jour ne la reprend pas. Sans fuseau, le front ne sait pas construire l'instant de minuit :
+  l'absence le dit. Refusée sans début ni fin.
 - **TypeDePointage** : union des quatre types du journal de présence.
 - **InstantDeReleve** : Value Object d'un instant reçu du back, refusé s'il n'est pas un instant absolu. Les
   instants se comparent entre eux, jamais par leurs libellés.
@@ -100,6 +104,13 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   l'amplitude maximale, jamais une anomalie. Dessiner une barre jusqu'à maintenant inventerait du temps, et le
   domaine n'a d'ailleurs pas le droit de lire l'horloge. Le back ne coupe pas une plage ouverte à minuit : elle
   reste sur son jour de début. Une journée abandonnée, elle, arrive close, avec une fin présumée.
+- **Une pause va d'une `PAUSE` au pointage suivant du même jour**, reprise ou départ, puisque le back permet de
+  partir pendant une pause. Un jour qui commence par une reprise, ou par un départ qu'aucune plage ne termine,
+  commence en pause depuis la veille. Rien d'autre n'est une pause : le front lit ses pauses dans les pointages
+  tant que la feuille de temps n'en rend pas.
+- **Une pause sans reprise se marque, elle ne s'étire pas.** Le front ne distingue pas une pause qui passe minuit
+  d'une pause en cours ou d'une journée abandonnée pendant sa pause, et n'invente aucun temps : un repère sans
+  hauteur, en cours aujourd'hui.
 - **Une plage qui finit avant de commencer est refusée**, comme une plage présumée sans fin : sur un relevé qui
   alimente la paie, un dessin faux et silencieux est pire qu'une erreur visible.
 - **Limite acceptée : l'instant de lecture décide de l'abandon.** Les deux rapports sont lus à des instants
@@ -140,14 +151,14 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   Conséquence assumée : une adresse nue relue la semaine suivante montre la semaine suivante.
 - **L'axe de l'agenda est ancré sur les heures de jour, de 6 h à 22 h**, pour que deux semaines se comparent
   et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur le **jour entier** dès qu'une
-  borne de plage tombe en dehors, ou qu'une plage touche minuit — une équipe de nuit resterait invisible sur une
-  fenêtre figée, et personne ne verrait qu'il manque quelque chose. Le back coupe à minuit : une fin datée du
-  lendemain à 00:00 ferme le jour et vaut 1 440 minutes. Un axe déduit des pointages a été essayé puis écarté :
-  il rendait deux semaines incomparables et sortait des heures de jour dès que l'amplitude minimale poussait sa
-  fin au-delà de minuit.
-- **Les repères d'extrémité de l'axe s'ancrent sur son bord.** Centrés comme les autres, leur moitié extérieure
-  sort de la cellule et se fait couper par le défilement horizontal : le dernier repère disparaissait, et l'axe
-  paraissait plus court qu'il n'était. Chaque repère porte aussi sa minute, seule clé de suivi possible —
+  borne de plage ou de pause tombe en dehors, ou qu'une plage ou une pause touche minuit — une équipe de nuit
+  resterait invisible sur une fenêtre figée, et personne ne verrait qu'il manque quelque chose. Le back coupe à
+  minuit : une fin datée du lendemain à 00:00 ferme le jour et vaut 1 440 minutes. Un axe déduit des pointages a
+  été essayé puis écarté : il rendait deux semaines incomparables et sortait des heures de jour dès que
+  l'amplitude minimale poussait sa fin au-delà de minuit.
+- **Les repères d'extrémité de l'axe s'ancrent sur ses bords haut et bas.** Centrés comme les autres, leur moitié
+  extérieure sort de la cellule et se fait couper : le dernier repère disparaissait, et l'axe paraissait plus court
+  qu'il n'était. Chaque repère porte aussi sa minute, seule clé de suivi possible —
   sur le jour entier, le premier et le dernier se nomment tous deux `00:00`.
 - **L'heure d'un pointage est affichée dans le fuseau du navigateur.** `dateDeSurvenue` est un
   `java.time.Instant` sérialisé en UTC : la tranche brute de la chaîne afficherait 06:02 pour un pointage de

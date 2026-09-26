@@ -28,158 +28,331 @@
 
 .agenda {
   width: 100%;
-  min-width: 46rem;
+  min-width: calc(56px + 7 * 120px);
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
-.agenda th,
-.agenda td {
-  padding: 0.5rem 1rem;
-  text-align: left;
-  vertical-align: middle;
+.agenda .gouttiere {
+  width: 56px;
+  padding: 0;
+}
+
+.agenda thead th,
+.agenda thead td {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-canvas);
 }
 
 .agenda thead th {
-  background: var(--color-canvas);
-  border-bottom: 1px solid var(--color-border);
+  padding: 0.625rem 0.75rem 0.5rem;
+  border-left: 1px solid var(--color-border);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: top;
+}
+
+.agenda thead th.aujourdhui {
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-canvas));
+}
+
+/* À 120 px de colonne, « Aujourd’hui » passe sous le jour plutôt que de déborder sur la colonne voisine. */
+.jour {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 0.25rem;
   color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
   font-weight: 600;
-}
-
-.agenda tbody tr {
-  border-bottom: 1px solid var(--color-border);
-}
-
-.agenda tbody tr.jour-deplie {
-  border-bottom: 0;
-}
-
-.agenda tbody tr:last-child {
-  border-bottom: 0;
-}
-
-.colonne-jour {
-  width: 6.5rem;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
-.colonne-duree {
-  width: 9rem;
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.agenda .colonne-duree {
-  text-align: right;
-}
-
-/* L'échelle des heures partage l'assiette de la piste : la même boîte, donc le même repère. */
-.regle {
-  position: relative;
-  height: 1rem;
-}
-
-.repere {
-  position: absolute;
-  top: 0;
-  transform: translateX(-50%);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-ink-muted);
+.mention-aujourdhui {
+  color: var(--color-accent);
   font-size: var(--text-label);
-  font-weight: 500;
-  line-height: 1;
 }
 
-/* Les extrémités de l'axe se collent à son bord : centrées, leur moitié extérieure était coupée. */
-.repere.ancre-gauche {
-  transform: none;
-}
-
-.repere.ancre-droite {
-  transform: translateX(-100%);
-}
-
-.piste {
-  position: relative;
+.duree {
   display: block;
-  width: 100%;
-  height: var(--spacing-touch);
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  background: var(--color-canvas);
-  cursor: pointer;
-  transition:
-    border-color 150ms ease-out,
-    background-color 150ms ease-out;
-}
-
-.piste:hover,
-.piste[aria-expanded='true'] {
-  border-color: var(--color-border);
-  background: var(--color-sunken);
-}
-
-.piste:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.segment {
-  position: absolute;
-  top: 30%;
-  height: 40%;
-  min-width: 2px;
-  border-radius: 0.25rem;
-  background: var(--color-accent);
-}
-
-/* Une plage présumée est à confirmer : ses pointillés ne se confondent jamais avec une présence pointée. */
-.segment.presume {
-  border: 2px dashed var(--color-warn);
-  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
-}
-
-/* Une plage encore ouverte n'a pas de fin à dessiner : un repère, et non une barre qui inventerait du temps. */
-.segment.ouverte {
-  width: 3px;
-  background: var(--color-accent);
-}
-
-.journal td {
-  padding-top: 0;
-  padding-bottom: 0.875rem;
-}
-
-.pointage {
-  display: inline-block;
-  margin: 0 0.375rem 0.375rem 0;
-  padding: 0.125rem 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.375rem;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.duree.sans-valeur {
+  color: var(--color-ink-muted);
+  font-weight: 400;
 }
 
 .presumees {
   display: block;
   color: var(--color-warn);
-  font-size: var(--text-body-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda tbody td {
+  position: relative;
+  padding: 0;
+  vertical-align: top;
+}
+
+.agenda tbody td.colonne {
+  border-left: 1px solid var(--color-border);
+}
+
+.agenda tbody td.aujourdhui {
+  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+}
+
+/* Une ligne par heure : la même grille pour les sept colonnes, puisque l'axe leur est commun. */
+.dessin {
+  position: relative;
+  background-image: repeating-linear-gradient(to bottom, var(--color-sunken) 0 1px, transparent 1px var(--heure));
+}
+
+.gouttiere .dessin {
+  background-image: none;
+}
+
+.repere {
+  position: absolute;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Les extrémités de l'axe se collent à son bord : centrées, leur moitié extérieure était coupée. */
+.repere.ancre-haut {
+  transform: none;
+}
+
+.repere.ancre-bas {
+  transform: translateY(-100%);
+}
+
+.bloc {
+  position: absolute;
+  right: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 3px 0.5rem;
+  border-radius: 5px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-label);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.bloc.moyenne {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+}
+
+.bloc.courte {
+  padding: 0;
+  border-radius: 1px;
+}
+
+/* Une plage présumée est à confirmer : ses pointillés ne se confondent jamais avec une présence pointée. */
+.bloc.presumee {
+  padding: 1px calc(0.5rem - 2px);
+  border: 2px dashed var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
+  color: var(--color-warn);
+}
+
+.bloc.courte.presumee {
+  padding: 0;
+  border-width: 1px;
+}
+
+/* Le bord de minuit reste droit : la plage se poursuit dans la colonne voisine. */
+.bloc.depuis-la-veille,
+.pause.depuis-la-veille {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.bloc.se-poursuit {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Une borne longue, « 15:40 présumée » ou « se poursuit », passe à la ligne plutôt que d'être coupée. */
+.borne {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.25rem;
+  white-space: normal;
+}
+
+.note,
+.puce {
+  position: absolute;
+  right: 0.5rem;
+  left: 0.5rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 3px 0.5rem;
+  border-radius: 6px;
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+
+.note {
+  border: 1px solid var(--color-accent);
+  background: var(--color-surface);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-ink) 12%, transparent);
+  color: var(--color-ink);
   font-weight: 600;
 }
 
-.total {
-  padding: 0.875rem 1rem;
+.puce {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  color: var(--color-accent);
+}
+
+.puce span:first-child {
+  font-weight: 600;
+}
+
+.puce.sans-reprise {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+
+.pause {
+  position: absolute;
+  right: 22px;
+  left: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, var(--color-border-strong) 0 2px, var(--color-surface) 2px 5px);
+}
+
+.pause span {
+  padding: 0 0.25rem;
+  border-radius: 3px;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 13px;
+}
+
+/* Une plage en cours ou une pause sans reprise n'a pas de fin à dessiner : un repère, pas une barre qui inventerait du temps. */
+.trait {
+  position: absolute;
+  right: 0.25rem;
+  left: 0.25rem;
+  height: 3px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.trait.sans-reprise {
+  background: var(--color-border-strong);
+}
+
+.sans {
+  position: absolute;
+  top: 1rem;
+  right: 0;
+  left: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  text-align: center;
+}
+
+.pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 0.875rem 1.5rem;
   border-top: 1px solid var(--color-border);
   background: var(--color-canvas);
+}
+
+.legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  list-style: none;
+}
+
+.legende li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pastille {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.pastille-pointe {
+  background: var(--color-accent);
+}
+
+.pastille-presume {
+  border: 2px dashed var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
+}
+
+.pastille-pause {
+  border: 1px solid var(--color-border);
+  background: repeating-linear-gradient(135deg, var(--color-border-strong) 0 2px, var(--color-surface) 2px 5px);
+}
+
+.pastille-en-cours {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.totaux {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
   font-size: var(--text-body);
   font-weight: 600;
-  text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.totaux .presume {
+  color: var(--color-warn);
 }

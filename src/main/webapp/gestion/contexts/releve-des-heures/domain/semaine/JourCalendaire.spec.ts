@@ -51,4 +51,13 @@ describe('JourCalendaire', () => {
 
     expect(JourCalendaire.depuisEpoque(jour.jourEpoque).value).toBe('2026-09-14');
   });
+
+  it.each([
+    ['2026-09-14', true],
+    ['2026-09-15', false],
+  ])('should tell whether %s is the same day as 2026-09-14: %s', (autre, memeJour) => {
+    const jour = new JourCalendaire('2026-09-14');
+
+    expect(jour.estLeMeme(new JourCalendaire(autre))).toBe(memeJour);
+  });
 });

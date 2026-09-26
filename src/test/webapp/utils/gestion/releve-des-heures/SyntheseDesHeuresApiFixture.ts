@@ -45,10 +45,23 @@ const joursDeFeuille = (annee: number, semaine: number): RestJourDeFeuille[] =>
     presence: rang === 0 ? [{ debut: `${jour}T06:02:00Z`, fin: `${jour}T15:32:00Z`, presumee: false }] : [],
   }));
 
+/** Une semaine semée telle que les deux routes la rendraient : la synthèse et la feuille de temps de mêmes jours. */
+export interface SemaineSemee {
+  readonly synthese: RestSynthese;
+  readonly feuille: RestFeuille;
+}
+
+const cleDe = (annee: number, semaine: number): string => `${String(annee)}|${String(semaine)}`;
+
 export class SyntheseDesHeuresApiFixture {
   failRead = false;
   operateurInconnu = false;
   readonly lectures: { annee: string; semaine: string }[] = [];
+  private readonly semaines = new Map<string, SemaineSemee>();
+
+  seed(semaine: SemaineSemee): void {
+    this.semaines.set(cleDe(Number(semaine.synthese.annee), Number(semaine.synthese.semaine)), semaine);
+  }
 
   install(): void {
     cy.intercept({ method: 'GET', pathname: SYNTHESE }, request => {
@@ -74,14 +87,14 @@ export class SyntheseDesHeuresApiFixture {
     if (this.operateurInconnu) {
       return { statusCode: 404, body: { type: SYNTHESE_INTROUVABLE } };
     }
-    return { body: syntheseFixture(Number(annee), Number(semaine)) };
+    return { body: this.semaines.get(cleDe(Number(annee), Number(semaine)))?.synthese ?? syntheseFixture(Number(annee), Number(semaine)) };
   }
 
   private reponseDeFeuille(annee: number, semaine: number): { statusCode?: number; body: RestFeuille | { type: string } } {
     if (this.operateurInconnu) {
       return { statusCode: 404, body: { type: FEUILLE_INTROUVABLE } };
     }
-    return { body: feuilleFixture(annee, semaine) };
+    return { body: this.semaines.get(cleDe(annee, semaine))?.feuille ?? feuilleFixture(annee, semaine) };
   }
 }
 

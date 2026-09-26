@@ -22,6 +22,25 @@ const dateDe = (jour: JourCalendaire): Date => new Date(`${jour.value}T00:00:00Z
 
 const formatDuree = (duree: DureeTravaillee): string => `${duree.heures} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
 
+const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
+
+const PRESENCE = 'Présence';
+const PAUSE = 'Pause';
+const EN_COURS = 'en cours';
+const DEPUIS_LA_VEILLE = 'depuis la veille';
+const SE_POURSUIT = 'se poursuit';
+
+/** Ce qui nomme une plage fermée : ses bornes, et les continuations qui remplacent minuit. */
+export interface FormeDePlage {
+  readonly presumee: boolean;
+  readonly debut: InstantDeReleve;
+  readonly fin: InstantDeReleve;
+  readonly depuisLaVeille: boolean;
+  readonly seLePoursuit: boolean;
+}
+
+const natureDe = (presumee: boolean): string => (presumee ? `${PRESENCE} présumée` : PRESENCE);
+
 export const LIBELLES_RELEVE_DES_HEURES = {
   titre: 'Synthèse des heures',
   retour: 'Opérateurs',
@@ -34,14 +53,16 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaineSuivanteAria: 'Semaine suivante',
   optionSemaine: (numero: number): string => `Semaine ${numero}`,
 
-  types: TYPES,
-  colonnes: { jour: 'Jour', journee: 'Journée', duree: 'Travaillé' },
   tableau: 'Heures travaillées de la semaine, jour par jour',
-  defilement: 'Frise des heures, défilement horizontal disponible',
-  regle: 'Échelle des heures',
+  defilement: 'Agenda des heures, défilement horizontal disponible',
 
   sansPointage: 'Aucun pointage',
   sansValeur: '—',
+  aujourdhui: 'Aujourd’hui',
+  enCours: EN_COURS,
+  pause: PAUSE,
+  pointages: 'Pointages',
+  legende: { pointe: 'Pointé', presume: 'Présumé, à confirmer', pause: PAUSE, enCours: 'En cours' },
 
   chargement: 'Chargement de la synthèse…',
   echec: 'Impossible de charger la synthèse des heures. Vérifiez la connexion puis réessayez.',
@@ -53,19 +74,39 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaine: (semaine: SemaineISO): string =>
     `Semaine ${semaine.numero} · ${PLAGE.formatRange(dateDe(semaine.lundi()), dateDe(semaine.dimanche()))}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
-  total: (duree: DureeTravaillee): string => `Total : ${formatDuree(duree)}`,
-  totalPresume: (duree: DureeTravaillee): string => `Présumé, à confirmer : ${formatDuree(duree)}`,
+  pointe: (duree: DureeTravaillee): string => `Pointé : ${formatDuree(duree)}`,
+  presume: (duree: DureeTravaillee): string => `Présumé, à confirmer : ${formatDuree(duree)}`,
   duree: formatDuree,
   presumees: (duree: DureeTravaillee): string => `+ ${formatDuree(duree)} présumées`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
-  pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${HEURE.format(instant.value)}`,
+  pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${heure(instant)}`,
 
-  plage: (presumee: boolean, debut: InstantDeReleve, fin: InstantDeReleve | undefined): string => {
-    if (fin === undefined) {
-      return `Présence depuis ${HEURE.format(debut.value)} · en cours`;
+  /** Ce qu'un bloc écrit en haut : « depuis la veille » remplace le minuit d'une plage venue de la veille. */
+  debutDeBloc: (debut: InstantDeReleve, depuisLaVeille: boolean): string => (depuisLaVeille ? DEPUIS_LA_VEILLE : heure(debut)),
+  /** Ce qu'un bloc écrit en bas : « présumée » ne s'accole qu'à une vraie heure de fin. */
+  finDeBloc: (fin: InstantDeReleve, seLePoursuit: boolean, presumee: boolean): string => {
+    if (seLePoursuit) {
+      return SE_POURSUIT;
     }
-    const nature = presumee ? 'Présence présumée' : 'Présence';
-    return `${nature} ${HEURE.format(debut.value)} – ${HEURE.format(fin.value)}`;
+    return presumee ? `${heure(fin)} présumée` : heure(fin);
   },
-  voirLesPointages: (jour: JourCalendaire): string => `Voir les pointages du ${JOUR.format(dateDe(jour))}`,
+  /** Une plage en cours se nomme par le pointage qui l'a ouverte, ou par la présence quand aucun n'a son instant. */
+  puceEnCours: (type: TypeDePointage | undefined, debut: InstantDeReleve): string =>
+    `${type === undefined ? PRESENCE : TYPES[type]} ${heure(debut)}`,
+  pucePause: (debut: InstantDeReleve): string => `${PAUSE} ${heure(debut)}`,
+
+  enonceDePlage: ({ presumee, debut, fin, depuisLaVeille, seLePoursuit }: FormeDePlage): string => {
+    const nature = natureDe(presumee);
+    if (depuisLaVeille) {
+      return seLePoursuit
+        ? `${nature} ${DEPUIS_LA_VEILLE}, se poursuit le lendemain`
+        : `${nature} ${DEPUIS_LA_VEILLE} jusqu’à ${heure(fin)}`;
+    }
+    return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
+  },
+  enonceDePlageEnCours: (debut: InstantDeReleve): string => `${PRESENCE} depuis ${heure(debut)}, ${EN_COURS}`,
+  enonceDePause: (debut: InstantDeReleve | undefined, fin: InstantDeReleve): string =>
+    debut === undefined ? `${PAUSE} ${DEPUIS_LA_VEILLE} jusqu’à ${heure(fin)}` : `${PAUSE} ${heure(debut)} – ${heure(fin)}`,
+  enonceDePauseSansReprise: (debut: InstantDeReleve, enCours: boolean): string =>
+    `${PAUSE} depuis ${heure(debut)}, ${enCours ? EN_COURS : 'sans reprise ce jour'}`,
 } as const;

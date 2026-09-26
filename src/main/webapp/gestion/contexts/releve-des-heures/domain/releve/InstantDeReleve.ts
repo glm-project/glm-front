@@ -34,4 +34,8 @@ export class InstantDeReleve {
   estAvant(autre: InstantDeReleve): boolean {
     return this.value.getTime() < autre.value.getTime();
   }
+
+  estLeMeme(autre: InstantDeReleve): boolean {
+    return this.value.getTime() === autre.value.getTime();
+  }
 }
