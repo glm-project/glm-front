@@ -12,7 +12,7 @@ import { semaineDemandee } from '../../../domain/semaine/SemaineDemandee';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { jourCourant } from '../jourCourant';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { FriseDeLaSemaine, PlageDessinee } from './FriseDeLaSemaine';
+import { AgendaDeLaSemaine, PlageDessinee } from './AgendaDeLaSemaine';
 
 const ANNEES_OFFERTES = 6;
 
@@ -26,7 +26,7 @@ export type EtatVueSynthese =
   | { readonly kind: 'CHARGEMENT' }
   | { readonly kind: 'ERREUR' }
   | { readonly kind: 'OPERATEUR_INTROUVABLE' }
-  | { readonly kind: 'SUCCES'; readonly releve: ReleveDesHeures; readonly frise: FriseDeLaSemaine };
+  | { readonly kind: 'SUCCES'; readonly releve: ReleveDesHeures; readonly agenda: AgendaDeLaSemaine };
 
 /** Les semaines à venir ne portent aucun pointage : le back refuse une saisie postérieure à l'instant courant. */
 const semaineOfferte = (semaine: SemaineISO | undefined, courante: SemaineISO): SemaineISO | undefined =>
@@ -45,7 +45,7 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;
 
-  /** Le jour dont le journal est déplié. La frise dessine ; les heures exactes se lisent d'un geste. */
+  /** Le jour dont le journal est déplié. L'agenda dessine ; les heures exactes se lisent d'un geste. */
   protected readonly jourDeplie = signal<string | null>(null);
 
   private readonly route = inject(ActivatedRoute);
@@ -133,10 +133,10 @@ export class SyntheseDesHeures {
     return jour.estVide() ? this.libelles.sansValeur : this.libelles.duree(jour.dureePointee);
   }
 
-  /** Le dessin d'une plage et le mot qui la nomme : la frise place, les libellés disent. */
-  protected plagesAffichees(frise: FriseDeLaSemaine, jour: JourDeReleve): readonly PlageAffichee[] {
+  /** Le dessin d'une plage et le mot qui la nomme : l'agenda place, les libellés disent. */
+  protected plagesAffichees(agenda: AgendaDeLaSemaine, jour: JourDeReleve): readonly PlageAffichee[] {
     return jour.plages.map(plage => ({
-      dessin: frise.dessine(plage),
+      dessin: agenda.dessine(plage),
       libelle: this.libelles.plage(plage.presumee, plage.debut, plage.fin),
     }));
   }
@@ -164,6 +164,6 @@ export class SyntheseDesHeures {
     if (releve === undefined) {
       return { kind: 'OPERATEUR_INTROUVABLE' };
     }
-    return { kind: 'SUCCES', releve, frise: new FriseDeLaSemaine(releve.jours) };
+    return { kind: 'SUCCES', releve, agenda: new AgendaDeLaSemaine(releve.jours) };
   }
 }

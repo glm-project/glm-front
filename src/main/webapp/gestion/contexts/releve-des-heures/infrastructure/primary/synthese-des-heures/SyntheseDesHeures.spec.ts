@@ -259,7 +259,7 @@ describe('Synthese des heures component', () => {
     expect(nombreDe('synthese-piste')).toBe(1);
   });
 
-  it('should scale the week on the working day', async () => {
+  it('should scale the week on the daytime hours', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();

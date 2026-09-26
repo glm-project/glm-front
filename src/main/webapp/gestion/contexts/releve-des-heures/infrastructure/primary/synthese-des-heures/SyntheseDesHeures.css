@@ -26,20 +26,20 @@
   font-size: 1.125rem;
 }
 
-.frise {
+.agenda {
   width: 100%;
   min-width: 46rem;
   border-collapse: collapse;
 }
 
-.frise th,
-.frise td {
+.agenda th,
+.agenda td {
   padding: 0.5rem 1rem;
   text-align: left;
   vertical-align: middle;
 }
 
-.frise thead th {
+.agenda thead th {
   background: var(--color-canvas);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-ink-muted);
@@ -47,15 +47,15 @@
   font-weight: 600;
 }
 
-.frise tbody tr {
+.agenda tbody tr {
   border-bottom: 1px solid var(--color-border);
 }
 
-.frise tbody tr.jour-deplie {
+.agenda tbody tr.jour-deplie {
   border-bottom: 0;
 }
 
-.frise tbody tr:last-child {
+.agenda tbody tr:last-child {
   border-bottom: 0;
 }
 
@@ -72,7 +72,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.frise .colonne-duree {
+.agenda .colonne-duree {
   text-align: right;
 }
 

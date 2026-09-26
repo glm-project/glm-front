@@ -85,14 +85,14 @@
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
   <div class="gestion-carte">
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
-      <table class="frise" [attr.aria-label]="libelles.tableau">
+      <table class="agenda" [attr.aria-label]="libelles.tableau">
         <thead>
           <tr>
             <th scope="col" class="colonne-jour">{{ libelles.colonnes.jour }}</th>
             <th scope="col">
               <span class="sr-only">{{ libelles.colonnes.journee }}</span>
               <div class="regle" [attr.aria-label]="libelles.regle" data-selector="synthese-regle">
-                @for (repere of vue.frise.reperes(); track repere.minutes) {
+                @for (repere of vue.agenda.reperes(); track repere.minutes) {
                 <span
                   class="repere"
                   [class.ancre-gauche]="repere.ancrage === 'gauche'"
@@ -123,7 +123,7 @@
                 [attr.aria-label]="libelles.voirLesPointages(jour.jour)"
                 data-selector="synthese-piste"
               >
-                @for (plage of plagesAffichees(vue.frise, jour); track $index) {
+                @for (plage of plagesAffichees(vue.agenda, jour); track $index) {
                 <span
                   class="segment"
                   [class.presume]="plage.dessin.presumee"

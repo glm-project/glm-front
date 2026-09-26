@@ -4,8 +4,8 @@ import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 const MINUTES_PAR_HEURE = 60;
 const MINUTES_PAR_JOUR = 24 * MINUTES_PAR_HEURE;
 const PAS_DES_REPERES = 2 * MINUTES_PAR_HEURE;
-const DEBUT_DE_TRAVAIL = 6 * MINUTES_PAR_HEURE;
-const FIN_DE_TRAVAIL = 22 * MINUTES_PAR_HEURE;
+const DEBUT_DES_HEURES_DE_JOUR = 6 * MINUTES_PAR_HEURE;
+const FIN_DES_HEURES_DE_JOUR = 22 * MINUTES_PAR_HEURE;
 
 export interface PlageDessinee {
   readonly presumee: boolean;
@@ -57,11 +57,11 @@ interface Fenetre {
   readonly fin: number;
 }
 
-const JOURNEE_DE_TRAVAIL: Fenetre = { debut: DEBUT_DE_TRAVAIL, fin: FIN_DE_TRAVAIL };
-const JOURNEE_ENTIERE: Fenetre = { debut: 0, fin: MINUTES_PAR_JOUR };
+const HEURES_DE_JOUR: Fenetre = { debut: DEBUT_DES_HEURES_DE_JOUR, fin: FIN_DES_HEURES_DE_JOUR };
+const JOUR_ENTIER: Fenetre = { debut: 0, fin: MINUTES_PAR_JOUR };
 
-const depasseLaJourneeDeTravail = (bornes: readonly number[]): boolean =>
-  Math.min(...bornes) < DEBUT_DE_TRAVAIL || Math.max(...bornes) > FIN_DE_TRAVAIL;
+const sortDesHeuresDeJour = (bornes: readonly number[]): boolean =>
+  Math.min(...bornes) < DEBUT_DES_HEURES_DE_JOUR || Math.max(...bornes) > FIN_DES_HEURES_DE_JOUR;
 
 const ancrageDe = (gauche: number): AncrageDuRepere => {
   if (gauche === 0) {
@@ -71,17 +71,17 @@ const ancrageDe = (gauche: number): AncrageDuRepere => {
 };
 
 /**
- * L'axe d'une frise hebdomadaire. Il est ancré sur la journée de travail, de 6 h à 22 h, pour que deux semaines
- * se comparent et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur la journée entière dès
+ * L'axe de l'agenda de la semaine. Il est ancré sur les heures de jour, de 6 h à 22 h, pour que deux semaines
+ * se comparent et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur le jour entier dès
  * qu'une borne de plage tombe en dehors, ce qui comprend une plage qui touche minuit — une équipe de nuit resterait
  * invisible sur une fenêtre figée, et personne ne verrait qu'il manque quelque chose.
  */
-export class FriseDeLaSemaine {
+export class AgendaDeLaSemaine {
   readonly debut: number;
   readonly fin: number;
 
   constructor(jours: readonly JourDeReleve[]) {
-    const fenetre = FriseDeLaSemaine.fenetreDe(jours.flatMap(jour => jour.plages));
+    const fenetre = AgendaDeLaSemaine.fenetreDe(jours.flatMap(jour => jour.plages));
     this.debut = fenetre.debut;
     this.fin = fenetre.fin;
   }
@@ -89,9 +89,9 @@ export class FriseDeLaSemaine {
   private static fenetreDe(plages: readonly PlageDeReleve[]): Fenetre {
     const bornes = bornesDe(plages);
     if (bornes.length === 0) {
-      return JOURNEE_DE_TRAVAIL;
+      return HEURES_DE_JOUR;
     }
-    return depasseLaJourneeDeTravail(bornes) ? JOURNEE_ENTIERE : JOURNEE_DE_TRAVAIL;
+    return sortDesHeuresDeJour(bornes) ? JOUR_ENTIER : HEURES_DE_JOUR;
   }
 
   reperes(): readonly RepereHoraire[] {

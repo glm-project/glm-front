@@ -3,10 +3,10 @@ import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
-import { FriseDeLaSemaine } from './FriseDeLaSemaine';
+import { AgendaDeLaSemaine } from './AgendaDeLaSemaine';
 
-const JOURNEE_DE_TRAVAIL = [6 * 60, 22 * 60];
-const JOURNEE_ENTIERE = [0, 24 * 60];
+const HEURES_DE_JOUR = [6 * 60, 22 * 60];
+const JOUR_ENTIER = [0, 24 * 60];
 
 /** Une heure locale du lundi 14 septembre ; 24 h désigne le minuit du mardi, borne d'une plage coupée par le back. */
 const instantFixture = (heure: number, minute = 0): InstantDeReleve =>
@@ -32,52 +32,52 @@ const journeeOrdinaireFixture = (): JourDeReleve =>
 
 const arrondi = (valeur: number): number => Math.round(valeur * 10) / 10;
 
-const barresDe = (frise: FriseDeLaSemaine, jour: JourDeReleve): { gauche: number; largeur: number }[] =>
-  jour.plages.map(plage => frise.dessine(plage)).map(dessin => ({ gauche: arrondi(dessin.gauche), largeur: arrondi(dessin.largeur) }));
+const barresDe = (agenda: AgendaDeLaSemaine, jour: JourDeReleve): { gauche: number; largeur: number }[] =>
+  jour.plages.map(plage => agenda.dessine(plage)).map(dessin => ({ gauche: arrondi(dessin.gauche), largeur: arrondi(dessin.largeur) }));
 
-describe('FriseDeLaSemaine', () => {
-  it('should hold an ordinary week on the working day', () => {
-    const frise = new FriseDeLaSemaine([journeeOrdinaireFixture()]);
+describe('AgendaDeLaSemaine', () => {
+  it('should hold an ordinary week on the daytime hours', () => {
+    const agenda = new AgendaDeLaSemaine([journeeOrdinaireFixture()]);
 
-    expect([frise.debut, frise.fin]).toEqual(JOURNEE_DE_TRAVAIL);
+    expect([agenda.debut, agenda.fin]).toEqual(HEURES_DE_JOUR);
   });
 
-  it('should hold a week carrying no interval on the working day', () => {
-    const frise = new FriseDeLaSemaine([jourFixture([])]);
+  it('should hold a week carrying no interval on the daytime hours', () => {
+    const agenda = new AgendaDeLaSemaine([jourFixture([])]);
 
-    expect([frise.debut, frise.fin]).toEqual(JOURNEE_DE_TRAVAIL);
+    expect([agenda.debut, agenda.fin]).toEqual(HEURES_DE_JOUR);
   });
 
   it.each([
-    ['an interval starting before the working day', plageFixture(5, 13)],
-    ['an interval ending after the working day', plageFixture(14, 23)],
-    ['an interval still in progress since before the working day', plageFixture(5, undefined)],
+    ['an interval starting before the daytime hours', plageFixture(5, 13)],
+    ['an interval ending after the daytime hours', plageFixture(14, 23)],
+    ['an interval still in progress since before the daytime hours', plageFixture(5, undefined)],
     ['an interval coming from the day before', plageFixture(0, 7)],
     ['an interval going on the day after', plageFixture(20, 24)],
   ])('should open onto the whole day for %s', (_cas, plage) => {
-    const frise = new FriseDeLaSemaine([jourFixture([plage])]);
+    const agenda = new AgendaDeLaSemaine([jourFixture([plage])]);
 
-    expect([frise.debut, frise.fin]).toEqual(JOURNEE_ENTIERE);
+    expect([agenda.debut, agenda.fin]).toEqual(JOUR_ENTIER);
   });
 
   it('should open onto the whole day for the one day of the week that leaves it', () => {
-    const frise = new FriseDeLaSemaine([journeeOrdinaireFixture(), jourFixture([plageFixture(20, 23)])]);
+    const agenda = new AgendaDeLaSemaine([journeeOrdinaireFixture(), jourFixture([plageFixture(20, 23)])]);
 
-    expect([frise.debut, frise.fin]).toEqual(JOURNEE_ENTIERE);
+    expect([agenda.debut, agenda.fin]).toEqual(JOUR_ENTIER);
   });
 
   it('should draw an interval going on the day after up to the end of the day, in one piece', () => {
     const jour = jourFixture([plageFixture(20, 24)]);
-    const frise = new FriseDeLaSemaine([jour]);
+    const agenda = new AgendaDeLaSemaine([jour]);
 
-    expect(barresDe(frise, jour)).toEqual([{ gauche: arrondi((20 / 24) * 100), largeur: arrondi((4 / 24) * 100) }]);
+    expect(barresDe(agenda, jour)).toEqual([{ gauche: arrondi((20 / 24) * 100), largeur: arrondi((4 / 24) * 100) }]);
   });
 
   it('should place each interval of a day along the span', () => {
     const jour = journeeOrdinaireFixture();
-    const frise = new FriseDeLaSemaine([jour]);
+    const agenda = new AgendaDeLaSemaine([jour]);
 
-    expect(barresDe(frise, jour)).toEqual([
+    expect(barresDe(agenda, jour)).toEqual([
       { gauche: 12.7, largeur: 24.8 },
       { gauche: 43.8, largeur: 28.3 },
     ]);
@@ -85,22 +85,22 @@ describe('FriseDeLaSemaine', () => {
 
   it('should tell a presumed interval apart from a clocked one', () => {
     const jour = jourFixture([plageFixture(8, 10), plageFixture(10, 15, true)]);
-    const frise = new FriseDeLaSemaine([jour]);
+    const agenda = new AgendaDeLaSemaine([jour]);
 
-    expect(jour.plages.map(plage => frise.dessine(plage).presumee)).toEqual([false, true]);
+    expect(jour.plages.map(plage => agenda.dessine(plage).presumee)).toEqual([false, true]);
   });
 
   it('should draw an interval still in progress as a mark without width', () => {
     const jour = jourFixture([plageFixture(8, undefined)]);
-    const frise = new FriseDeLaSemaine([jour]);
+    const agenda = new AgendaDeLaSemaine([jour]);
 
-    expect(jour.plages.map(plage => frise.dessine(plage))).toEqual([{ presumee: false, ouverte: true, gauche: 12.5, largeur: 0 }]);
+    expect(jour.plages.map(plage => agenda.dessine(plage))).toEqual([{ presumee: false, ouverte: true, gauche: 12.5, largeur: 0 }]);
   });
 
-  it('should mark every two hours of the working day', () => {
-    const frise = new FriseDeLaSemaine([journeeOrdinaireFixture()]);
+  it('should mark every two hours of the daytime hours', () => {
+    const agenda = new AgendaDeLaSemaine([journeeOrdinaireFixture()]);
 
-    expect(frise.reperes().map(repere => repere.libelle)).toEqual([
+    expect(agenda.reperes().map(repere => repere.libelle)).toEqual([
       '06:00',
       '08:00',
       '10:00',
@@ -114,29 +114,29 @@ describe('FriseDeLaSemaine', () => {
   });
 
   it('should place each hour mark along the span', () => {
-    const frise = new FriseDeLaSemaine([journeeOrdinaireFixture()]);
+    const agenda = new AgendaDeLaSemaine([journeeOrdinaireFixture()]);
 
-    expect(frise.reperes().map(repere => arrondi(repere.gauche))).toEqual([0, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100]);
+    expect(agenda.reperes().map(repere => arrondi(repere.gauche))).toEqual([0, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100]);
   });
 
   it('should mark every two hours of the whole day, midnight at both ends', () => {
-    const frise = new FriseDeLaSemaine([jourFixture([plageFixture(22, 24)])]);
-    const reperes = frise.reperes();
+    const agenda = new AgendaDeLaSemaine([jourFixture([plageFixture(22, 24)])]);
+    const reperes = agenda.reperes();
 
     expect([reperes.length, reperes[0]?.libelle, reperes[reperes.length - 1]?.libelle]).toEqual([13, '00:00', '00:00']);
   });
 
   /** Sans cet ancrage, la moitié extérieure des repères d'extrémité sort de la cellule et se fait couper. */
   it('should anchor the marks that sit on the edges of the span', () => {
-    const frise = new FriseDeLaSemaine([journeeOrdinaireFixture()]);
-    const ancrages = frise.reperes().map(repere => repere.ancrage);
+    const agenda = new AgendaDeLaSemaine([journeeOrdinaireFixture()]);
+    const ancrages = agenda.reperes().map(repere => repere.ancrage);
 
     expect([ancrages[0], ancrages[4], ancrages[ancrages.length - 1]]).toEqual(['gauche', 'centre', 'droite']);
   });
 
   it('should identify each mark by its own minute, two of them sharing a label', () => {
-    const frise = new FriseDeLaSemaine([jourFixture([plageFixture(22, 24)])]);
-    const minutes = frise.reperes().map(repere => repere.minutes);
+    const agenda = new AgendaDeLaSemaine([jourFixture([plageFixture(22, 24)])]);
+    const minutes = agenda.reperes().map(repere => repere.minutes);
 
     expect(new Set(minutes).size).toBe(minutes.length);
   });
