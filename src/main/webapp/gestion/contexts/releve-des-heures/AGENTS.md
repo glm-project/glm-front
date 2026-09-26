@@ -65,14 +65,16 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - **DureeTravaillee** : Value Object d'une durée ISO-8601, exprimée en heures et minutes. `estNulle()` la juge à la
   minute près, comme elle s'affiche.
 - **JourDeReleve** : Value Object d'un jour du relevé, construit d'une `FicheDuJour` — sa date, ses durées pointée
-  et présumée, ses pointages et ses plages. `estVide()` : ni pointage ni plage. `pauses()` lit ses pauses dans
-  ses pointages ; `typeDuPointageA()` nomme le pointage d'un instant, et rien à minuit.
+  et présumée, ses pointages et ses plages. `estVide()` : ni pointage ni plage. `pauses()` rend les pauses lues
+  dans ses pointages dès la construction, si bien qu'un journal incohérent est refusé à la lecture et non au
+  dessin ; `typeDuPointageA()` nomme le pointage d'un instant, et rien à minuit ; `vientDeLaVeille()` reconnaît
+  une plage qu'aucun pointage du jour n'a ouverte.
 - **PointageDeReleve** : Value Object d'un pointage — son type et son instant.
 - **PlageDeReleve** : Value Object d'une plage lue dans la feuille de temps — son début, sa fin facultative et
   `presumee`. Refusée présumée sans fin, ou finissant avant de commencer ; une fin égale au début est acceptée.
 - **PauseDeReleve** : Value Object d'une pause — son début, absent quand elle vient de la veille, et sa fin,
   absente quand le jour ne la reprend pas. Sans fuseau, le front ne sait pas construire l'instant de minuit :
-  l'absence le dit. Refusée sans début ni fin.
+  l'absence le dit. Refusée sans début ni fin, ou finissant avant de commencer.
 - **TypeDePointage** : union des quatre types du journal de présence.
 - **InstantDeReleve** : Value Object d'un instant reçu du back, refusé s'il n'est pas un instant absolu. Les
   instants se comparent entre eux, jamais par leurs libellés.
@@ -135,6 +137,11 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   est un, et dupliquer `SemaineISO` et `DureeTravaillee` dans deux contextes qui ne peuvent pas s'importer
   ferait payer au front un découpage qui n'est pas le sien. `HttpSyntheseDesHeures` compose donc les deux lectures
   derrière le seul `SyntheseDesHeuresPort` : l'écran ignore combien de routes il y a derrière.
+- **Le domaine rapproche les instants des deux rapports** et s'appuie sur une garantie du back : les bornes d'une
+  plage sont les instants mêmes des pointages, sauf minuit, les bornes de la semaine et une fin présumée posée sur
+  un pointage d'OF. C'est elle qui fait d'une plage qu'aucun pointage n'a ouverte une plage venue de la veille, et
+  d'un premier départ qu'aucune plage ne termine une pause venue de la veille. Un changement de cette garantie —
+  bornes arrondies, fenêtres de pause rendues par la feuille de temps — rompt le contrat de ce contexte.
 
 ## Règles locales
 

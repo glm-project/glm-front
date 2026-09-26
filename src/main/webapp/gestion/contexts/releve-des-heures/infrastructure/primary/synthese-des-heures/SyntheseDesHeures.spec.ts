@@ -232,6 +232,10 @@ describe('Synthese des heures component', () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {
         0: {
+          pointages: [
+            ['ARRIVEE', [8, 0]],
+            ['DEPART', [9, 0]],
+          ],
           plages: [
             [
               [8, 0],
@@ -256,6 +260,27 @@ describe('Synthese des heures component', () => {
       ['Présence présumée 10:20 – 15:40'],
       ['15:40 présumée'],
       ['Présence présumée 10:20 – 15:40'],
+    ]);
+  });
+
+  it('should keep both halves of a presumed interval cut at midnight presumed, the suffix only on a real end hour', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: { presumee: 'PT4H', pointages: [['ARRIVEE', [20, 0]]], plages: [[[20, 0], [24, 0], true]] },
+          1: { presumee: 'PT4H', plages: [[[0, 0], [4, 0], true]] },
+        },
+        'PT8H',
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([titres('synthese-plage-presumee'), textes('synthese-debut'), textes('synthese-fin')]).toEqual([
+      ['Présence présumée depuis 20:00, se poursuit le lendemain', 'Présence présumée depuis la veille jusqu’à 04:00'],
+      ['20:00', 'depuis la veille'],
+      ['se poursuit', '04:00 présumée'],
     ]);
   });
 
@@ -502,7 +527,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-legende')).toEqual(['Pointé', 'Présumé, à confirmer', 'Pause', 'En cours']);
+    expect(textes('synthese-legende')).toEqual(['Pointé', 'Présumé (à confirmer)', 'Pause', 'En cours']);
   });
 
   it('should display the loading status until the report arrives', () => {

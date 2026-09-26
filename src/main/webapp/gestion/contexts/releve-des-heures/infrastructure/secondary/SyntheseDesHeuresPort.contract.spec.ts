@@ -408,7 +408,8 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
   it.each([
     ['a day of another week', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), { jour: '2026-09-21', presence: [] }]],
     ['fewer days than the report', (jours: RestJourDeFeuille[]) => jours.slice(0, 6)],
-    ['a day twice', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), premierDe(jours)]],
+    ['a day twice in place of another', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), premierDe(jours)]],
+    ['the seven days and one of them twice', (jours: RestJourDeFeuille[]) => [...jours, premierDe(jours)]],
   ])('should reject a time sheet carrying %s', async (_cas, retouche) => {
     const feuille = toRestFeuille(semaineFixture());
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
@@ -468,7 +469,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     expect(await result).toEqual(new Error('plage.debut manque dans la réponse du serveur'));
   });
 
-  it('should reject a report the server answered for another week', async () => {
+  it('should reject a synthesis the server answered for another week', async () => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
     await whenBothRoutesAnswer({ ...toRestSynthese(semaineFixture()), semaine: 37 }, toRestFeuille(semaineFixture()));
 
@@ -494,7 +495,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     expect(await result).toEqual(new Error('Le relevé reçu du serveur ne couvre pas les sept jours de la semaine demandée.'));
   });
 
-  it('should reject a duration the report cannot read', async () => {
+  it('should reject a duration the synthesis carries that cannot be read', async () => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
     await whenBothRoutesAnswer({ ...toRestSynthese(semaineFixture()), dureePresumeeTotale: 'P1D' }, toRestFeuille(semaineFixture()));
 

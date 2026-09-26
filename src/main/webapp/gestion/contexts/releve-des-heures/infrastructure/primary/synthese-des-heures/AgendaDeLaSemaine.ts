@@ -218,7 +218,7 @@ export class AgendaDeLaSemaine {
   /** Les dessins d'un jour dans l'ordre des heures, comme l'œil lit la colonne, et les notes de ses plages courtes. */
   colonne(jour: JourDeReleve, estAujourdhui: boolean): ColonneDessinee {
     const pauses = jour.pauses();
-    const plages = jour.plages.flatMap(plage => this.dessineLaPlage(plage));
+    const plages = jour.plages.flatMap(plage => this.dessineLaPlage(plage, jour.vientDeLaVeille(plage)));
     const encombrants = [...plages, ...pauses.flatMap(pause => this.dessineLaPause(pause))];
     const reperes = [
       ...jour.plages.flatMap(plage => this.marqueLaPlageEnCours(plage, encombrants)),
@@ -229,7 +229,7 @@ export class AgendaDeLaSemaine {
   }
 
   /** Une plage courte est dessinée à sa vraie hauteur, trois pixels au moins, et nommée par une note. */
-  private dessineLaPlage(plage: PlageDeReleve): readonly DessinDePlage[] {
+  private dessineLaPlage(plage: PlageDeReleve, depuisLaVeille: boolean): readonly DessinDePlage[] {
     if (plage.fin === undefined) {
       return [];
     }
@@ -246,7 +246,7 @@ export class AgendaDeLaSemaine {
         haut,
         hauteur: Math.max(hauteur, HAUTEUR_MINIMALE),
         classe: classeDe(hauteur),
-        depuisLaVeille: debut === 0,
+        depuisLaVeille,
         seLePoursuit: fin === MINUTES_PAR_JOUR,
       },
     ];

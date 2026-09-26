@@ -145,6 +145,17 @@ describe('JourDeReleve', () => {
     expect(jour.pauses().map(projeterPause)).toEqual(['veille → 01:30']);
   });
 
+  it('should start in a break from the day before a night shift day whose first departure no interval ends, even with a later interval', () => {
+    const jour = new JourDeReleve(
+      ficheFixture({
+        pointages: [pointageFixture('DEPART', 1, 30), pointageFixture('ARRIVEE', 19, 0)],
+        plages: [new PlageDeReleve(instantFixture(19, 0), instantFixture(24, 0), false)],
+      }),
+    );
+
+    expect(jour.pauses().map(projeterPause)).toEqual(['veille → 01:30']);
+  });
+
   it('should not start a day in a break when an interval ends at its first departure', () => {
     const jour = new JourDeReleve(
       ficheFixture({
@@ -185,5 +196,26 @@ describe('JourDeReleve', () => {
     const jour = new JourDeReleve(ficheFixture({ pointages: [pointageFixture('REPRISE', 0, 22)] }));
 
     expect(jour.typeDuPointageA(instantFixture(0, 0))).toBeUndefined();
+  });
+
+  it('should tell an interval no clocking of the day opened, cut at midnight by the server, as coming from the day before', () => {
+    const plage = new PlageDeReleve(instantFixture(0, 0), instantFixture(7, 5), false);
+    const jour = new JourDeReleve(ficheFixture({ pointages: [pointageFixture('DEPART', 7, 5)], plages: [plage] }));
+
+    expect(jour.vientDeLaVeille(plage)).toBe(true);
+  });
+
+  it('should not take an interval opened by an arrival in the first minute after midnight for one coming from the day before', () => {
+    const arrivee = new InstantDeReleve(new Date(2026, 8, 14, 0, 0, 40).toISOString());
+    const plage = new PlageDeReleve(arrivee, instantFixture(8, 0), false);
+    const jour = new JourDeReleve(ficheFixture({ pointages: [new PointageDeReleve('ARRIVEE', arrivee)], plages: [plage] }));
+
+    expect(jour.vientDeLaVeille(plage)).toBe(false);
+  });
+
+  it('should refuse a day whose clockings end a break before it starts', () => {
+    const pointages = [pointageFixture('ARRIVEE', 8, 0), pointageFixture('PAUSE', 12, 45), pointageFixture('REPRISE', 12, 0)];
+
+    expect(() => new JourDeReleve(ficheFixture({ pointages }))).toThrow('La pause reçue du serveur finit avant de commencer.');
   });
 });

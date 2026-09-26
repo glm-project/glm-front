@@ -26,6 +26,7 @@ const FEUILLE = '/api/feuilles-de-temps/{operateurId}';
 const SYNTHESE_INTROUVABLE = 'urn:glm:erreur:synthese-des-heures:operateur-introuvable';
 const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvable';
 
+type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
 type PresenceParJour = ReadonlyMap<string, readonly RestPlage[]>;
 
 interface SemaineRendue {
@@ -41,13 +42,15 @@ const toFin = (fin: string | undefined): InstantDeReleve | undefined => (fin ===
 const toPlage = (plage: RestPlage): PlageDeReleve =>
   new PlageDeReleve(new InstantDeReleve(required(plage.debut, 'plage.debut')), toFin(plage.fin), plage.presumee);
 
-const presenceParJourDe = (feuille: RestFeuille): PresenceParJour =>
-  new Map(
-    required(feuille.jours, 'feuille.jours').map(jour => [
-      required(jour.jour, 'jourDeLaFeuille.jour'),
-      required(jour.presence, 'jourDeLaFeuille.presence'),
-    ]),
-  );
+const presenceParJourDe = (jours: readonly RestJourDeFeuille[]): PresenceParJour =>
+  new Map(jours.map(jour => [required(jour.jour, 'jourDeLaFeuille.jour'), required(jour.presence, 'jourDeLaFeuille.presence')]));
+
+/** Autant de jours, et autant de dates distinctes, que la synthèse : une date manquante ou répétée ne s'apparie pas. */
+const neCorrespondPasUnAUn = (
+  jours: readonly RestJour[],
+  joursDeLaFeuille: readonly RestJourDeFeuille[],
+  presences: PresenceParJour,
+): boolean => joursDeLaFeuille.length !== jours.length || presences.size !== jours.length;
 
 const presenceDu = (jour: string, presences: PresenceParJour): readonly RestPlage[] => {
   const presence = presences.get(jour);
@@ -74,8 +77,9 @@ const toJour = (jour: RestJour, presences: PresenceParJour): JourDeReleve => {
  */
 const toJours = (synthese: RestSynthese, feuille: RestFeuille): readonly JourDeReleve[] => {
   const jours = required(synthese.jours, 'synthese.jours');
-  const presences = presenceParJourDe(feuille);
-  if (presences.size !== jours.length) {
+  const joursDeLaFeuille = required(feuille.jours, 'feuille.jours');
+  const presences = presenceParJourDe(joursDeLaFeuille);
+  if (neCorrespondPasUnAUn(jours, joursDeLaFeuille, presences)) {
     throw new Error('La feuille de temps reçue du serveur ne porte pas les jours de la synthèse.');
   }
   return jours.map(jour => toJour(jour, presences));

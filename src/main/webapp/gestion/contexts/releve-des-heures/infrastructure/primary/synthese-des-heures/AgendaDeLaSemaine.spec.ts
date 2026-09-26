@@ -97,10 +97,10 @@ describe('AgendaDeLaSemaine', () => {
         }),
       ],
       [
-        'a break without resumption after the daytime hours',
+        'a break ending at a departure after the daytime hours, its interval within them',
         jourFixture({
-          pointages: [pointageFixture('ARRIVEE', [14, 0]), pointageFixture('PAUSE', [22, 10])],
-          plages: [plageFixture([14, 0], [22, 10])],
+          pointages: [pointageFixture('ARRIVEE', [14, 0]), pointageFixture('PAUSE', [21, 30]), pointageFixture('DEPART', [22, 30])],
+          plages: [plageFixture([14, 0], [21, 30])],
         }),
       ],
     ])('should open onto the whole day, twenty pixels an hour, for %s', (_cas, jour) => {
@@ -202,13 +202,25 @@ describe('AgendaDeLaSemaine', () => {
     });
 
     it('should draw an interval going on the day after down to the end of the day, and say it goes on', () => {
-      const jour = jourFixture({ plages: [plageFixture([20, 0], [24, 0])] });
+      const jour = jourFixture({ pointages: [pointageFixture('ARRIVEE', [20, 0])], plages: [plageFixture([20, 0], [24, 0])] });
 
       const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
 
       expect(plagesDessinees(colonne).map(dessin => [projeterPlage(dessin), dessin.depuisLaVeille, dessin.seLePoursuit])).toEqual([
         ['longue 400+80', false, true],
       ]);
+    });
+
+    it('should not say that an interval opened by an arrival in the first minute after midnight comes from the day before', () => {
+      const arrivee = new InstantDeReleve(new Date(2026, 8, 14, 0, 0, 40).toISOString());
+      const jour = jourFixture({
+        pointages: [new PointageDeReleve('ARRIVEE', arrivee)],
+        plages: [new PlageDeReleve(arrivee, instantFixture([8, 0]), false)],
+      });
+
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+
+      expect(plagesDessinees(colonne).map(dessin => dessin.depuisLaVeille)).toEqual([false]);
     });
 
     it('should say that an interval starting at midnight comes from the day before', () => {
@@ -312,15 +324,15 @@ describe('AgendaDeLaSemaine', () => {
       expect(colonne.dessins.map(projeterDessin)).toEqual(['plage 379.33', 'sans reprise 473.33, puce dessus 443.33']);
     });
 
-    it('should mark a break without resumption today as still in progress, its chip two lines tall', () => {
+    it('should mark a break without resumption today as still in progress, its chip two lines tall above the end of the grid', () => {
       const jour = jourFixture({
-        pointages: [pointageFixture('ARRIVEE', [8, 0]), pointageFixture('PAUSE', [10, 0])],
-        plages: [plageFixture([8, 0], [10, 0])],
+        pointages: [pointageFixture('ARRIVEE', [14, 0]), pointageFixture('PAUSE', [21, 30])],
+        plages: [plageFixture([14, 0], [21, 30])],
       });
 
       const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, true);
 
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['plage 56', 'sans reprise 112 en cours, puce dessous 118']);
+      expect(colonne.dessins.map(projeterDessin)).toEqual(['plage 224', 'sans reprise 434 en cours, puce dessus 388']);
     });
 
     it('should mark an interval still in progress at its start, without height, its chip under the mark', () => {

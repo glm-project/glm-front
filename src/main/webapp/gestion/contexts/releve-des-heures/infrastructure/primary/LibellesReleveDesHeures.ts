@@ -62,7 +62,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   enCours: EN_COURS,
   pause: PAUSE,
   pointages: 'Pointages',
-  legende: { pointe: 'Pointé', presume: 'Présumé, à confirmer', pause: PAUSE, enCours: 'En cours' },
+  legende: { pointe: 'Pointé', presume: 'Présumé (à confirmer)', pause: PAUSE, enCours: 'En cours' },
 
   chargement: 'Chargement de la synthèse…',
   echec: 'Impossible de charger la synthèse des heures. Vérifiez la connexion puis réessayez.',
@@ -90,6 +90,8 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     }
     return presumee ? `${heure(fin)} présumée` : heure(fin);
   },
+  /** Les deux bornes d'un bloc moyen ou d'une ligne de note, sur une seule ligne. */
+  bornes: (debut: string, fin: string): string => `${debut} – ${fin}`,
   /** Une plage en cours se nomme par le pointage qui l'a ouverte, ou par la présence quand aucun n'a son instant. */
   puceEnCours: (type: TypeDePointage | undefined, debut: InstantDeReleve): string =>
     `${type === undefined ? PRESENCE : TYPES[type]} ${heure(debut)}`,

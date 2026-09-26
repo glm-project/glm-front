@@ -9,6 +9,9 @@ export interface PauseSansReprise {
 const estSansBorne = (debut: InstantDeReleve | undefined, fin: InstantDeReleve | undefined): boolean =>
   debut === undefined && fin === undefined;
 
+const finitAvantDeCommencer = (debut: InstantDeReleve | undefined, fin: InstantDeReleve | undefined): boolean =>
+  debut !== undefined && fin?.estAvant(debut) === true;
+
 /**
  * Une pause lue dans les pointages d'un jour, d'une `PAUSE` au pointage qui la termine. `debut` manque quand elle
  * vient de la veille, `fin` quand elle n'est pas reprise ce jour-là : sans fuseau, le front ne sait pas construire
@@ -21,6 +24,9 @@ export class PauseDeReleve {
   ) {
     if (estSansBorne(debut, fin)) {
       throw new Error('Une pause a au moins un début ou une fin.');
+    }
+    if (finitAvantDeCommencer(debut, fin)) {
+      throw new Error('La pause reçue du serveur finit avant de commencer.');
     }
   }
 

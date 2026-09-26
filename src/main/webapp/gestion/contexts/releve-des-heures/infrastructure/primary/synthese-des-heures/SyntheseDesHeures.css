@@ -176,6 +176,7 @@
   color: var(--color-warn);
 }
 
+/* Haute de trois pixels, une plage courte ne porterait pas deux fois deux pixels de bordure. */
 .bloc.courte.presumee {
   padding: 0;
   border-width: 1px;

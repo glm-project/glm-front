@@ -8,6 +8,12 @@ describe('PauseDeReleve', () => {
     expect(() => new PauseDeReleve(undefined, undefined)).toThrow('Une pause a au moins un début ou une fin.');
   });
 
+  it('should refuse a break ending before it starts', () => {
+    expect(() => new PauseDeReleve(instantFixture('12:45'), instantFixture('12:00'))).toThrow(
+      'La pause reçue du serveur finit avant de commencer.',
+    );
+  });
+
   it.each([
     ['resumed that day', new PauseDeReleve(instantFixture('12:00'), instantFixture('12:45')), false],
     ['coming from the day before', new PauseDeReleve(undefined, instantFixture('00:22')), false],

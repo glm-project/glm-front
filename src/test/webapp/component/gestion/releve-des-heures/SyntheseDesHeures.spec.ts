@@ -22,6 +22,13 @@ interface JourDeMaquette {
   readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
 }
 
+interface EnTeteAttendu {
+  readonly jour: string;
+  readonly duree: string;
+  readonly aujourdhui?: string;
+  readonly presumees?: string;
+}
+
 interface SemaineDeMaquette {
   readonly semaine: number;
   readonly lundi: number;
@@ -279,7 +286,7 @@ describe('Weekly hours report in gestion', () => {
     givenAWeekOfDayShifts(samediEnCoursFixture);
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(1, ['mar. 22', '0 h 00', '+ 5 h 20 présumées']);
+    thenTheHeaderReads(1, { jour: 'mar. 22', duree: '0 h 00', presumees: '+ 5 h 20 présumées' });
     thenThePresumedEndReads(1, '15:40 présumée');
   });
 
@@ -294,7 +301,7 @@ describe('Weekly hours report in gestion', () => {
     givenAWeekOfDayShifts(samediEnCoursFixture);
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(4, ['ven. 25', '0 h 00']);
+    thenTheHeaderReads(4, { jour: 'ven. 25', duree: '0 h 00' });
     thenTheColumnShows(4, { plages: 0, pauses: [], sansPointage: false });
   });
 
@@ -302,7 +309,7 @@ describe('Weekly hours report in gestion', () => {
     givenAWeekOfDayShifts(samediEnCoursFixture);
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(5, ['sam. 26', 'Aujourd’hui', '1 h 58']);
+    thenTheHeaderReads(5, { jour: 'sam. 26', aujourdhui: 'Aujourd’hui', duree: '1 h 58' });
     thenTheChipReads(5, 'synthese-plage-ouverte', ['Reprise 10:20', 'en cours']);
   });
 
@@ -317,7 +324,7 @@ describe('Weekly hours report in gestion', () => {
     givenAWeekOfDayShifts(samediEnCoursFixture);
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(6, ['dim. 27', '—']);
+    thenTheHeaderReads(6, { jour: 'dim. 27', duree: '—' });
     thenTheColumnShows(6, { plages: 0, pauses: [], sansPointage: true });
   });
 
@@ -454,13 +461,17 @@ describe('Weekly hours report in gestion', () => {
       .should('have.length', attendu.sansPointage === true ? 1 : 0);
   };
 
-  const thenTheHeaderReads = (rang: number, textes: string[]): void => {
+  const thenTheHeaderReads = (rang: number, attendu: EnTeteAttendu): void => {
     cy.get(dataSelector('synthese-jour-cell'))
       .eq(rang)
       .should($entete => {
-        expect([...$entete.find('span')].filter(span => span.children.length === 0).map(span => span.textContent.trim())).to.deep.equal(
-          textes,
-        );
+        const texte = (selector: string): string | undefined => $entete.find(dataSelector(selector)).text().trim() || undefined;
+        expect({
+          jour: texte('synthese-jour'),
+          aujourdhui: texte('synthese-aujourdhui'),
+          duree: texte('synthese-duree-cell'),
+          presumees: texte('synthese-duree-presumee'),
+        }).to.deep.equal({ aujourdhui: undefined, presumees: undefined, ...attendu });
       })
       .and('be.visible');
   };

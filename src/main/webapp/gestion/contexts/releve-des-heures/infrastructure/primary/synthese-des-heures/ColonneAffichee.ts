@@ -23,6 +23,7 @@ export interface BlocAffiche {
   readonly seLePoursuit: boolean;
   readonly debut: string;
   readonly fin: string;
+  readonly bornes: string;
   readonly titre: string;
 }
 
@@ -77,22 +78,24 @@ const enonceDe = (dessin: Dessin): string => {
   }
 };
 
-const ligneDeNote = (dessin: DessinDePlage): string =>
-  `${LIBELLES.debutDeBloc(dessin.debut, dessin.depuisLaVeille)} – ${LIBELLES.finDeBloc(dessin.fin, dessin.seLePoursuit, dessin.presumee)}`;
+const toBloc = (dessin: DessinDePlage): BlocAffiche => {
+  const debut = LIBELLES.debutDeBloc(dessin.debut, dessin.depuisLaVeille);
+  const fin = LIBELLES.finDeBloc(dessin.fin, dessin.seLePoursuit, dessin.presumee);
+  return {
+    haut: dessin.haut,
+    hauteur: dessin.hauteur,
+    classe: dessin.classe,
+    presumee: dessin.presumee,
+    depuisLaVeille: dessin.depuisLaVeille,
+    seLePoursuit: dessin.seLePoursuit,
+    debut,
+    fin,
+    bornes: LIBELLES.bornes(debut, fin),
+    titre: enonceDe(dessin),
+  };
+};
 
-const toBloc = (dessin: DessinDePlage): BlocAffiche => ({
-  haut: dessin.haut,
-  hauteur: dessin.hauteur,
-  classe: dessin.classe,
-  presumee: dessin.presumee,
-  depuisLaVeille: dessin.depuisLaVeille,
-  seLePoursuit: dessin.seLePoursuit,
-  debut: LIBELLES.debutDeBloc(dessin.debut, dessin.depuisLaVeille),
-  fin: LIBELLES.finDeBloc(dessin.fin, dessin.seLePoursuit, dessin.presumee),
-  titre: enonceDe(dessin),
-});
-
-const toNote = (note: NoteDePlagesCourtes): NoteAffichee => ({ haut: note.haut, lignes: note.plages.map(ligneDeNote) });
+const toNote = (note: NoteDePlagesCourtes): NoteAffichee => ({ haut: note.haut, lignes: note.plages.map(plage => toBloc(plage).bornes) });
 
 const toPause = (dessin: DessinDePause): PauseAffichee => ({
   haut: dessin.haut,
