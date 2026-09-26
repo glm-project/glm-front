@@ -9,6 +9,8 @@ demande et s'affiche.
 Son écran compose deux rapports du back : la **synthèse des heures**, source des durées et du journal des
 pointages, et la **feuille de temps**, source des plages de présence. C'est le même lecteur, la même semaine et
 le même vocabulaire, et c'est la raison pour laquelle ce contexte ne porte le nom d'aucun des deux rapports.
+« Synthèse des heures » reste aussi le nom de l'écran, tel que le gestionnaire le lit ; dans le code et les
+tests, le **relevé** désigne ce que l'écran compose, la **synthèse** la seule route des durées.
 
 ## Langage
 
@@ -36,8 +38,8 @@ qu'une fois la zone connue — le back la connaît, ce contexte la reçoit.
 **Durée travaillée** : un temps de travail effectif, pauses déduites. Jamais l'amplitude d'une journée de travail.
 
 **Durée pointée** et **durée présumée** : deux durées travaillées, jamais fondues. La première repose sur des
-pointages ; la seconde est le temps d'une journée abandonnée entre sa dernière reprise et sa fin présumée, à
-confirmer par une régularisation avant la paie.
+pointages ; la seconde est le temps d'une journée abandonnée entre le début de sa dernière plage — l'arrivée ou
+la dernière reprise — et sa fin présumée, à confirmer par une régularisation avant la paie.
 
 **Amplitude maximale** : le seuil, paramétré par entreprise, au-delà duquel une journée de travail sans départ est
 **abandonnée**. Le back la ferme alors à sa fin présumée : son dernier fait connu.
@@ -77,7 +79,7 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - **IdentiteOperateur** : Value Object du nom et du prénom que le rapport a résolus au référentiel.
 - **OperateurReleveId** : Value Object de l'identifiant de l'opérateur, opaque à ce contexte.
 - **SemaineDemandee** : traduit ce que porte l'URL, plus le jour courant, en une semaine connue ou refusée.
-- **SyntheseDesHeuresPort** : port secondaire de lecture de la synthèse.
+- **SyntheseDesHeuresPort** : port secondaire de lecture du relevé, composé des deux rapports du back.
 
 ## Responsabilités et invariants
 
@@ -155,7 +157,7 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   resterait invisible sur une fenêtre figée, et personne ne verrait qu'il manque quelque chose. Le back coupe à
   minuit : une fin datée du lendemain à 00:00 ferme le jour et vaut 1 440 minutes. Un axe déduit des pointages a
   été essayé puis écarté : il rendait deux semaines incomparables et sortait des heures de jour dès que
-  l'amplitude minimale poussait sa fin au-delà de minuit.
+  l'étendue minimale de l'axe poussait sa fin au-delà de minuit.
 - **Les repères d'extrémité de l'axe s'ancrent sur ses bords haut et bas.** Centrés comme les autres, leur moitié
   extérieure sort de la cellule et se fait couper : le dernier repère disparaissait, et l'axe paraissait plus court
   qu'il n'était. Chaque repère porte aussi sa minute, seule clé de suivi possible —
@@ -165,8 +167,10 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   08:02 en France. Aucune configuration de ce front ne porte le fuseau de l'entreprise, et le navigateur du
   gestionnaire est le seul repère disponible — c'est déjà le choix de `supervision-atelier`. **Limite connue** :
   un gestionnaire consultant depuis un autre fuseau lit des heures décalées, alors que le découpage en jours,
-  lui, reste celui de l'entreprise puisque le back l'a déjà fait. Un fuseau d'entreprise configuré est la seule
-  vraie réponse ; elle n'est pas de ce lot.
+  lui, reste celui de l'entreprise puisque le back l'a déjà fait. Minuit, lui aussi, se reconnaît dans le fuseau du
+  navigateur — la fin à 1 440 minutes, « se poursuit », l'ouverture de l'axe, la colonne d'aujourd'hui : hors du
+  fuseau de l'entreprise, un poste de nuit se dessine faux. Un fuseau d'entreprise configuré est la seule vraie
+  réponse ; elle n'est pas de ce lot.
 - Un instant sans fuseau est refusé à la construction plutôt que réinterprété en heure locale : sur un relevé
   qui alimente la paie, un décalage silencieux est le pire des résultats.
 - Consulter l'[ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)

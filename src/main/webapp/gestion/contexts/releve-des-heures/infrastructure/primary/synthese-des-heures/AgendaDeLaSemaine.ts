@@ -170,7 +170,7 @@ const groupesDeCourtes = (plages: readonly DessinDePlage[]): readonly (readonly 
 
 const hauteurDEtiquette = (lignes: number): number => MARGE_DE_L_ETIQUETTE + HAUTEUR_DE_LIGNE * lignes;
 
-/** Minuit ferme la journée : le repère de fin se nomme `00:00`, jamais `24:00`, qui n'est l'heure de personne. */
+/** Minuit ferme le jour : le repère de fin se nomme `00:00`, jamais `24:00`, qui n'est l'heure de personne. */
 const libelleDuRepere = (minutes: number): string => {
   const heure = Math.floor(minutes / MINUTES_PAR_HEURE) % 24;
   return `${String(heure).padStart(2, '0')}:00`;

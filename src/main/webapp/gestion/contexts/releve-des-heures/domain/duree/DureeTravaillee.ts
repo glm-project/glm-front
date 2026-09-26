@@ -32,7 +32,7 @@ const minutesDe = (composantes: Composantes): number =>
   + Number(composantes.minutes ?? 0)
   + Math.floor(Number(composantes.secondes ?? 0) / SECONDES_PAR_MINUTE);
 
-/** Un temps de travail effectif, pauses déduites. Jamais l'amplitude d'une venue. */
+/** Un temps de travail effectif, pauses déduites. Jamais l'amplitude d'une journée de travail. */
 export class DureeTravaillee {
   readonly minutes: number;
   readonly heures: number;
