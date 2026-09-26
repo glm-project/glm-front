@@ -130,14 +130,14 @@ export class SyntheseDesHeures {
   }
 
   protected dureeDuJour(jour: JourDeReleve): string {
-    return jour.estSansPointage() ? this.libelles.sansValeur : this.libelles.duree(jour.duree);
+    return jour.estVide() ? this.libelles.sansValeur : this.libelles.duree(jour.dureePointee);
   }
 
   /** Le dessin d'une plage et le mot qui la nomme : la frise place, les libellés disent. */
   protected plagesAffichees(frise: FriseDeLaSemaine, jour: JourDeReleve): readonly PlageAffichee[] {
-    return jour.plages().map(plage => ({
+    return jour.plages.map(plage => ({
       dessin: frise.dessine(plage),
-      libelle: this.libelles.plage(plage.pause, plage.debut, plage.fin),
+      libelle: this.libelles.plage(plage.presumee, plage.debut, plage.fin),
     }));
   }
 

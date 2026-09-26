@@ -66,7 +66,7 @@
 }
 
 .colonne-duree {
-  width: 6.5rem;
+  width: 9rem;
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -137,14 +137,16 @@
   background: var(--color-accent);
 }
 
-.segment.pause {
-  background: var(--color-border-strong);
+/* Une plage présumée est à confirmer : ses pointillés ne se confondent jamais avec une présence pointée. */
+.segment.presume {
+  border: 2px dashed var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
 }
 
 /* Une plage encore ouverte n'a pas de fin à dessiner : un repère, et non une barre qui inventerait du temps. */
 .segment.ouverte {
   width: 3px;
-  background: var(--color-warn);
+  background: var(--color-accent);
 }
 
 .journal td {
@@ -163,6 +165,13 @@
   font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.presumees {
+  display: block;
+  color: var(--color-warn);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
 }
 
 .total {

@@ -54,15 +54,17 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     `Semaine ${semaine.numero} · ${PLAGE.formatRange(dateDe(semaine.lundi()), dateDe(semaine.dimanche()))}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
   total: (duree: DureeTravaillee): string => `Total : ${formatDuree(duree)}`,
+  totalPresume: (duree: DureeTravaillee): string => `Présumé, à confirmer : ${formatDuree(duree)}`,
   duree: formatDuree,
+  presumees: (duree: DureeTravaillee): string => `+ ${formatDuree(duree)} présumées`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
   pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${HEURE.format(instant.value)}`,
 
-  plage: (pause: boolean, debut: InstantDeReleve, fin: InstantDeReleve | undefined): string => {
-    const nature = pause ? 'Pause' : 'Présence';
+  plage: (presumee: boolean, debut: InstantDeReleve, fin: InstantDeReleve | undefined): string => {
     if (fin === undefined) {
-      return `${nature} depuis ${HEURE.format(debut.value)} · en cours`;
+      return `Présence depuis ${HEURE.format(debut.value)} · en cours`;
     }
+    const nature = presumee ? 'Présence présumée' : 'Présence';
     return `${nature} ${HEURE.format(debut.value)} – ${HEURE.format(fin.value)}`;
   },
   voirLesPointages: (jour: JourCalendaire): string => `Voir les pointages du ${JOUR.format(dateDe(jour))}`,

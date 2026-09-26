@@ -50,4 +50,9 @@ export class DureeTravaillee {
     this.heures = Math.floor(this.minutes / MINUTES_PAR_HEURE);
     this.minutesRestantes = this.minutes % MINUTES_PAR_HEURE;
   }
+
+  /** Nulle à la minute près, comme elle s'affiche : quelques secondes se liraient « 0 h 00 ». */
+  estNulle(): boolean {
+    return this.minutes === 0;
+  }
 }

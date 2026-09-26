@@ -22,6 +22,17 @@ describe('DureeTravaillee', () => {
     expect(duree.minutes).toBe(2295);
   });
 
+  it.each([
+    ['PT0S', true],
+    ['PT45S', true],
+    ['PT1M', false],
+    ['PT5H20M', false],
+  ])('should tell whether %s is a zero duration: %s', (value, nulle) => {
+    const duree = new DureeTravaillee(value);
+
+    expect(duree.estNulle()).toBe(nulle);
+  });
+
   it.each(['P1D', 'P1W', 'PT', 'PT-1H', 'PT1H2D', '38h', '1:30', ''])('should refuse %s, which is not a working duration', value => {
     expect(() => new DureeTravaillee(value)).toThrow('n’est pas une durée de travail');
   });

@@ -30,4 +30,8 @@ export class InstantDeReleve {
     }
     this.value = new Date(Date.parse(instant));
   }
+
+  estAvant(autre: InstantDeReleve): boolean {
+    return this.value.getTime() < autre.value.getTime();
+  }
 }

@@ -59,8 +59,14 @@ describe('Weekly hours report in gestion', () => {
     api.install();
   };
 
-  const givenAPendingReport = (): { send: () => void } =>
-    interceptForever({ method: 'GET', pathname: '/api/syntheses-des-heures/*' }, { body: syntheseFixture(2026, 38) }, 'syntheseRead');
+  const givenAPendingReport = (): { send: () => void } => {
+    api.installFeuille();
+    return interceptForever(
+      { method: 'GET', pathname: '/api/syntheses-des-heures/*' },
+      { body: syntheseFixture(2026, 38) },
+      'syntheseRead',
+    );
+  };
 
   const givenAFailingRead = (): void => {
     api.failRead = true;

@@ -112,7 +112,7 @@
           <tr [class.jour-deplie]="estDeplie(jour)" data-selector="synthese-jour-row">
             <th scope="row" class="colonne-jour font-semibold" data-selector="synthese-jour-cell">{{ libelles.jour(jour.jour) }}</th>
             <td>
-              @if (jour.estSansPointage()) {
+              @if (jour.estVide()) {
               <span class="text-body-sm text-ink-muted" data-selector="synthese-jour-sans-pointage">{{ libelles.sansPointage }}</span>
               } @else {
               <button
@@ -123,21 +123,26 @@
                 [attr.aria-label]="libelles.voirLesPointages(jour.jour)"
                 data-selector="synthese-piste"
               >
-                @for (plage of plagesAffichees(vue.frise, jour); track $index) { @for (piece of plage.dessin.pieces; track $index) {
+                @for (plage of plagesAffichees(vue.frise, jour); track $index) {
                 <span
                   class="segment"
-                  [class.pause]="plage.dessin.pause"
+                  [class.presume]="plage.dessin.presumee"
                   [class.ouverte]="plage.dessin.ouverte"
-                  [style.left.%]="piece.gauche"
-                  [style.width.%]="piece.largeur"
+                  [style.left.%]="plage.dessin.gauche"
+                  [style.width.%]="plage.dessin.largeur"
                   [title]="plage.libelle"
-                  data-selector="synthese-segment"
+                  [attr.data-selector]="plage.dessin.presumee ? 'synthese-segment-presume' : 'synthese-segment'"
                 ></span>
-                } }
+                }
               </button>
               }
             </td>
-            <td class="colonne-duree" data-selector="synthese-duree-cell">{{ dureeDuJour(jour) }}</td>
+            <td class="colonne-duree">
+              <span data-selector="synthese-duree-cell">{{ dureeDuJour(jour) }}</span>
+              @if (!jour.dureePresumee.estNulle()) {
+              <span class="presumees" data-selector="synthese-duree-presumee">{{ libelles.presumees(jour.dureePresumee) }}</span>
+              }
+            </td>
           </tr>
           @if (estDeplie(jour)) {
           <tr class="journal" data-selector="synthese-journal">
@@ -151,7 +156,12 @@
         </tbody>
       </table>
     </div>
-    <p class="total" data-selector="synthese-total">{{ libelles.total(vue.releve.total) }}</p>
+    <div class="total">
+      <p data-selector="synthese-total">{{ libelles.total(vue.releve.totalPointe) }}</p>
+      @if (!vue.releve.totalPresume.estNulle()) {
+      <p class="presumees" data-selector="synthese-total-presume">{{ libelles.totalPresume(vue.releve.totalPresume) }}</p>
+      }
+    </div>
   </div>
   } }
 </main>

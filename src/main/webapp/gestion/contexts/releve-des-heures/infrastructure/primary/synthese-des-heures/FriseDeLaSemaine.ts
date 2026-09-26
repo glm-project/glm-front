@@ -7,15 +7,11 @@ const PAS_DES_REPERES = 2 * MINUTES_PAR_HEURE;
 const DEBUT_DE_TRAVAIL = 6 * MINUTES_PAR_HEURE;
 const FIN_DE_TRAVAIL = 22 * MINUTES_PAR_HEURE;
 
-export interface PieceDePlage {
+export interface PlageDessinee {
+  readonly presumee: boolean;
+  readonly ouverte: boolean;
   readonly gauche: number;
   readonly largeur: number;
-}
-
-export interface PlageDessinee {
-  readonly pause: boolean;
-  readonly ouverte: boolean;
-  readonly pieces: readonly PieceDePlage[];
 }
 
 /** L'ancrage d'un repère : les extrémités de l'axe se collent à son bord, faute de quoi elles sont coupées. */
@@ -32,15 +28,16 @@ const minutesDe = (date: Date): number => date.getHours() * MINUTES_PAR_HEURE + 
 
 const debutDe = (plage: PlageDeReleve): number => minutesDe(plage.debut.value);
 
-const finDe = (plage: PlageDeReleve): number | undefined => (plage.fin === undefined ? undefined : minutesDe(plage.fin.value));
-
-/** Une plage dont la fin précède le début a franchi minuit : le jour appartient au découpage du back, pas à l'horloge. */
-const franchitMinuit = (plage: PlageDeReleve): boolean => {
-  const fin = finDe(plage);
+/**
+ * Le back coupe à minuit une plage qui le passe : sa borne de fin est alors l'instant du lendemain à 00:00. Elle
+ * ferme le jour et vaut 1 440 minutes ; lue comme une heure, elle vaudrait 0 et la plage finirait avant de commencer.
+ */
+const finDe = (plage: PlageDeReleve): number | undefined => {
+  const fin = plage.fin?.value;
   if (fin === undefined) {
-    return false;
+    return undefined;
   }
-  return fin < debutDe(plage);
+  return fin.toDateString() === plage.debut.value.toDateString() ? minutesDe(fin) : MINUTES_PAR_JOUR;
 };
 
 const bornesDe = (plages: readonly PlageDeReleve[]): readonly number[] =>
@@ -76,24 +73,20 @@ const ancrageDe = (gauche: number): AncrageDuRepere => {
 /**
  * L'axe d'une frise hebdomadaire. Il est ancré sur la journée de travail, de 6 h à 22 h, pour que deux semaines
  * se comparent et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur la journée entière dès
- * qu'un pointage tombe en dehors — une équipe de nuit resterait invisible sur une fenêtre figée, et personne ne
- * verrait qu'il manque quelque chose.
+ * qu'une borne de plage tombe en dehors, ce qui comprend une plage qui touche minuit — une équipe de nuit resterait
+ * invisible sur une fenêtre figée, et personne ne verrait qu'il manque quelque chose.
  */
 export class FriseDeLaSemaine {
   readonly debut: number;
   readonly fin: number;
 
   constructor(jours: readonly JourDeReleve[]) {
-    const plages = jours.flatMap(jour => [...jour.plages()]);
-    const fenetre = FriseDeLaSemaine.fenetreDe(plages);
+    const fenetre = FriseDeLaSemaine.fenetreDe(jours.flatMap(jour => jour.plages));
     this.debut = fenetre.debut;
     this.fin = fenetre.fin;
   }
 
   private static fenetreDe(plages: readonly PlageDeReleve[]): Fenetre {
-    if (plages.some(franchitMinuit)) {
-      return JOURNEE_ENTIERE;
-    }
     const bornes = bornesDe(plages);
     if (bornes.length === 0) {
       return JOURNEE_DE_TRAVAIL;
@@ -111,24 +104,10 @@ export class FriseDeLaSemaine {
   }
 
   dessine(plage: PlageDeReleve): PlageDessinee {
-    return { pause: plage.pause, ouverte: plage.estOuverte(), pieces: this.piecesDe(plage) };
-  }
-
-  private piecesDe(plage: PlageDeReleve): readonly PieceDePlage[] {
     const debut = debutDe(plage);
-    const fin = finDe(plage);
-    if (fin === undefined) {
-      return [{ gauche: this.pourcentage(debut), largeur: 0 }];
-    }
-    if (fin < debut) {
-      return [this.piece(debut, MINUTES_PAR_JOUR), this.piece(0, fin)];
-    }
-    return [this.piece(debut, fin)];
-  }
-
-  private piece(debut: number, fin: number): PieceDePlage {
     const gauche = this.pourcentage(debut);
-    return { gauche, largeur: this.pourcentage(fin) - gauche };
+    const largeur = this.pourcentage(finDe(plage) ?? debut) - gauche;
+    return { presumee: plage.presumee, ouverte: plage.estOuverte(), gauche, largeur };
   }
 
   private pourcentage(minutes: number): number {
