@@ -53,8 +53,8 @@ something stays, with a status that says what died.
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — stateful invariants and
   pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
-  contextual readability rules and a narrowly scoped presentation-effect exception; its comment rule is
-  replaced by 0042
+  contextual extraction of methods and test helpers; its comment rule and presentation-effect exception are
+  replaced by 0042 and 0043
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — a conjunctive
   production tripwire for stateful coordinators, with responsibility review at the enforcement point
 - [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) —
@@ -103,3 +103,6 @@ something stays, with a status that says what died.
 
 - [0042 — Forbid comments in code](0042-forbid-comments-in-code.md) — no comment or directive in scripts,
   templates and stylesheets, CSS parsed by `@eslint/css`, and no inline configuration that could silence a rule
+
+- [0043 — Forbid Angular effects everywhere](0043-forbid-angular-effects-everywhere.md) — `effect()` and
+  `afterRenderEffect()` refused in every script, presentation adapters included

@@ -10,7 +10,12 @@ Complemented by [ADR 0023](0023-stop-overloaded-coordinators-at-lint.md) for coo
 
 Amended by [ADR 0042](0042-forbid-comments-in-code.md): comments are no longer a review judgment. No comment is
 accepted in scripts, templates or stylesheets, tooling directives included, and lint refuses every one of them.
-The rules below on test helpers and Angular effects still hold.
+
+Amended by [ADR 0043](0043-forbid-angular-effects-everywhere.md): the presentation-adapter exception is
+withdrawn. `effect()` and `afterRenderEffect()` are refused in every JavaScript and TypeScript file, primary
+adapters included; the namespace and dynamic Angular-import guards still hold.
+
+Only the extraction rule for methods and test helpers below still holds as written.
 
 ## Context
 

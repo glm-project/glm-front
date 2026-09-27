@@ -93,12 +93,12 @@ caller reconstructing another owner's rule behind that owner's interface.
 - standalone components, no `NgModule`;
 - each Angular component lives in its own folder. Co-locate its TypeScript, template, styles, unit spec and
   every file owned exclusively by that component; place shared files with their nearest shared owner;
-- signals expose state, `computed()` derives it, and explicit application commands drive business mutations. `effect()` and
-  `afterRenderEffect()` do not orchestrate a business operation or propagate application state. A primary
-  presentation adapter may use one for a narrow imperative browser integration when its lifetime and cleanup
-  are explicit; keep the reason in a local comment. ESLint permits these imports only in
-  `infrastructure/primary/` and cannot determine whether a use is semantically justified. Import Angular Core
-  through named static imports: namespace and dynamic imports remain blocked;
+- signals expose state, `computed()` derives it, and explicit application commands drive business mutations.
+  Never use `effect()` or `afterRenderEffect()`, presentation adapters included: an imperative browser
+  integration belongs to the event handler, the lifecycle hook or the one-shot render callback
+  (`afterNextRender`) that owns it. ESLint refuses both imports in every JavaScript and TypeScript file; import
+  Angular Core through named static imports, since namespace and dynamic imports stay blocked. See
+  [ADR 0043](adr/0043-forbid-angular-effects-everywhere.md);
 - component and directive selectors are prefixed `glm` (`glm-root`, `glm-pupitre-header`) — enforced by
   `angular-eslint`;
 - use `private` for implementation details, `protected` for members consumed only by a component template,

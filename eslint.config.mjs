@@ -95,10 +95,10 @@ const lazyRouteSelectors = forbiddenPathPattern => [
   `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${forbiddenPathPattern}/]`,
 ];
 
-const boundary = (files, restrictions, allowsPresentationEffects = false) => ({
+const boundary = (files, restrictions) => ({
   files,
   rules: {
-    'no-restricted-imports': ['error', { paths: allowsPresentationEffects ? [] : [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
+    'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
     'no-restricted-syntax': restrictedSyntax(
       ...restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
@@ -196,6 +196,13 @@ export default typescript.config(
     },
   },
   {
+    files: ['**/*.{js,mjs,cjs,ts}'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
+      'no-restricted-syntax': restrictedSyntax(),
+    },
+  },
+  {
     files: ['**/*.{js,mjs,cjs}', 'src/**/*.ts'],
     plugins: { local },
     rules: {
@@ -267,8 +274,6 @@ export default typescript.config(
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       'local/no-as-unknown': 'error',
-      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
@@ -310,8 +315,6 @@ export default typescript.config(
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
-      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
@@ -323,11 +326,6 @@ export default typescript.config(
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/**/*.ts`], [noOtherFront(front)])),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/shared/**/*.ts`], [noOtherFront(front), noBusinessContext(front)])),
-  ...FRONTS.map(front => boundary([`src/main/webapp/${front}/contexts/**/infrastructure/primary/**/*.ts`], [noOtherFront(front)], true)),
-  ...FRONTS.map(front =>
-    boundary([`src/main/webapp/${front}/shared/**/infrastructure/primary/**/*.ts`], [noOtherFront(front), noBusinessContext(front)], true),
-  ),
-  boundary(['src/main/webapp/app/shared/**/infrastructure/primary/**/*.ts'], [noFrontAtAll], true),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
