@@ -30,7 +30,8 @@ mutation policy and [ADR 0017](adr/0017-use-one-validation-graph-at-every-gate.m
 share.
 
 The pre-commit hook scans the staged diff for secrets before lint-staged runs ESLint fixes and then Prettier on
-TypeScript, Angular templates and JavaScript tooling scripts. Other supported staged files only run through Prettier.
+TypeScript, Angular templates, stylesheets and JavaScript tooling scripts. Other supported staged files only run
+through Prettier.
 
 ## Security controls
 

@@ -12,6 +12,10 @@ checker stand; developers run the diff mutation explicitly with the command in
 [Validation](../validation.md#one-command-graph). Read the passages below that describe the hook as the
 account of a gate that was.
 
+Amended by [ADR 0042](0042-forbid-comments-in-code.md): an equivalent mutant is no longer waived. Lint refuses
+the `Stryker disable` comment that used to waive one, and the policy offers no other waiver; restructure the
+code to remove the redundancy that produced the mutant instead.
+
 ## Context
 
 The first mutation measurement was deliberately limited to `GesteReplayPolicy.ts`. That experiment proved the Angular command runner, the TypeScript checker and the 100 % threshold, but its report could not say anything about the rest of the applications.

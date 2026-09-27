@@ -1,3 +1,4 @@
+import css from '@eslint/css';
 import eslint from '@eslint/js';
 import angular from 'angular-eslint';
 import cypress from 'eslint-plugin-cypress';
@@ -9,7 +10,7 @@ import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
 import { maxConstructorParameters } from './eslint/rules/max-constructor-parameters.mjs';
 import { maxIfCriteria } from './eslint/rules/max-if-criteria.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
-import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
+import { noComments } from './eslint/rules/no-comments.mjs';
 import { noTestOnlyProduction } from './eslint/rules/no-test-only-production.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
 import { scenarioShape } from './eslint/rules/scenario-shape.mjs';
@@ -149,7 +150,7 @@ const local = {
     'max-constructor-parameters': maxConstructorParameters,
     'domain-readonly-properties': domainReadonlyProperties,
     'no-as-unknown': noAsUnknown,
-    'no-eslint-disable': noEslintDisable,
+    'no-comments': noComments,
     'no-test-only-production': noTestOnlyProduction,
     'responsibility-cohesion': responsibilityCohesion,
     'scenario-shape': scenarioShape,
@@ -167,7 +168,33 @@ export default typescript.config(
   {
     ignores: ['target/', '.angular/', '.stryker-tmp/', '.wrangler/', 'src/main/webapp/app/generated/schema.d.ts'],
   },
-  eslint.configs.recommended,
+  {
+    linterOptions: {
+      noInlineConfig: true,
+    },
+  },
+  {
+    ...eslint.configs.recommended,
+    ignores: ['**/*.css'],
+  },
+  {
+    files: ['**/*.ts'],
+    languageOptions: {
+      parser: typescript.parser,
+    },
+  },
+  {
+    files: ['**/*.css'],
+    plugins: { css },
+    language: 'css/css',
+  },
+  {
+    files: ['**/*.{js,mjs,cjs,ts}', '**/*.html', '**/*.css'],
+    plugins: { local },
+    rules: {
+      'local/no-comments': 'error',
+    },
+  },
   {
     files: ['**/*.{js,mjs,cjs}', 'src/**/*.ts'],
     plugins: { local },
@@ -240,7 +267,6 @@ export default typescript.config(
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       'local/no-as-unknown': 'error',
-      'local/no-eslint-disable': 'error',
       'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
       'no-restricted-syntax': restrictedSyntax(),
     },

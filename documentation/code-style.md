@@ -2,12 +2,17 @@
 
 ## Code carries its own intent
 
-Avoid comments that repeat the code. Write a short local comment only for a constraint, external behavior or
-trade-off the code cannot make clear, and keep it next to the affected code. Put durable rules in the topic
-document that owns them. Tooling directives (`@ts-expect-error`, `prettier-ignore`) state
-why that exceptional instruction remains necessary; disabling ESLint via comments is forbidden (`local/no-eslint-disable`).
-Comments are a review judgment; ESLint does not infer
-their usefulness. Generated files are exempt because the project does not own their text.
+Write no comment, in any form: TypeScript, JavaScript, Angular templates and CSS carry no line or block
+comment, no JSDoc and no tooling directive (`@ts-expect-error`, `/// <reference>`, `prettier-ignore`,
+`Stryker disable`, `eslint-disable`). Carry the intent in names, types, extracted predicates and methods, and
+tests; put a durable rule in the topic document or the context `AGENTS.md` that owns it. When a tool expects a
+directive, restructure the code or configure the tool instead: an equivalent mutant disappears with the
+redundancy that produced it, and a file Prettier must not format goes to `.prettierignore`.
+
+`local/no-comments` refuses every comment in the JavaScript, TypeScript, HTML — inline templates included — and
+CSS files ESLint lints, and `linterOptions.noInlineConfig` stops any comment from switching a rule off. Generated
+files, which the project neither commits nor lints, keep their generator's text. See
+[ADR 0042](adr/0042-forbid-comments-in-code.md).
 
 For an `if` condition combining two or more criteria with `&&` or `||`, extract an explicitly named
 predicate. Even `a && b` and `a || b` require extraction; parentheses do not hide a combination. Put a business predicate

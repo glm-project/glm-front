@@ -252,7 +252,8 @@ Under the Domain mutation policy ([ADR 0024](adr/0024-extend-mutation-to-the-uni
 
 - All changed domain code (`src/main/webapp/**/domain/**/*.ts`) must be mutation-tested.
 - No surviving mutant affecting a business invariant is allowed in the domain core (100 % blocking threshold).
-- Equivalent mutants may be explicitly waived when identified.
+- An equivalent mutant is not waived: no comment may disable Stryker, so restructure the code to remove the
+  redundancy that produced it ([ADR 0042](adr/0042-forbid-comments-in-code.md)).
 - Mutation score is informational outside the domain core (`break: null`).
 
 `npm run test:mutation` mutates the domain core TypeScript (`src/main/webapp/**/domain/**/*.ts`) and runs the suite through `ng test --watch=false`. Stryker's built-in command runner keeps the Angular builder's zoneless TestBed and JIT setup; a direct Vitest runner does not establish that environment. One worker gives every sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.

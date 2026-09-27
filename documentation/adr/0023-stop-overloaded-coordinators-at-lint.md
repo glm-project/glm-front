@@ -5,6 +5,10 @@
 Accepted. Complements [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md) and
 [ADR 0022](0022-keep-conventions-contextual-and-enforceable.md). Amended to forbid any waivers or inline suppressions.
 
+Amended by [ADR 0042](0042-forbid-comments-in-code.md): `local/no-eslint-disable` is gone. `local/no-comments`
+refuses every comment, directives included, and `linterOptions.noInlineConfig` makes ESLint ignore inline
+configuration, so no comment can suppress this rule or any other in any file ESLint lints.
+
 ## Context
 
 `AtelierCoordinator` accumulated persistence, synchronization, presentation state and operator-window coordination.
