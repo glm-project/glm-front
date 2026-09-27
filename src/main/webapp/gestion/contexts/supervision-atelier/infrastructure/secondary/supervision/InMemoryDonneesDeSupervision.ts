@@ -124,7 +124,6 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
 };
 
 export class InMemoryDonneesDeSupervision extends DonneesDeSupervisionPort {
-  // Pris une seule fois : relire l'horloge à chaque lecture ferait avancer tous les « depuis » à chaque actualisation.
   private readonly donnees = buildDemonstration(Date.now());
 
   read(): Promise<DonneesDeSupervision> {

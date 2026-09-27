@@ -12,7 +12,6 @@ const TYPES: Record<TypeDElementChiffre, string> = {
 
 const EUROS = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
-/** Une période est faite d'instants : elle s'affiche dans le fuseau du navigateur. Voir `AGENTS.md`. */
 const DATE_HEURE = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',

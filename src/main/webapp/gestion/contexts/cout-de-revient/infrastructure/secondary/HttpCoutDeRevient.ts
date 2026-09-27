@@ -52,7 +52,6 @@ const toPeriode = (periode: RestPeriode | undefined, chemin: string): PeriodeDeT
   );
 };
 
-/** La nature manque pour un pointage sans poste : c'est une valeur absente du document, pas un champ oublié. */
 const toNature = (nature: string | undefined): NatureDOperation | undefined =>
   nature === undefined ? undefined : new NatureDOperation(nature);
 
@@ -77,11 +76,6 @@ const toRapport = (rapport: RestRapport): CoutDeRevient =>
     cout: toCout(rapport.cout, 'rapport.cout'),
   });
 
-/**
- * L'élément inconnu se reconnaît au statut, pas à une URN : `CoutDeRevientExceptionAdvice` rend un
- * `ProblemDetail` sans `type`, que `findApiErrorIn` ne sait donc pas traduire. Cette route n'a qu'un seul
- * 404 métier, ce qui rend le statut suffisant. Voir `AGENTS.md`.
- */
 const estElementInconnu = (failure: unknown): boolean => {
   if (!(failure instanceof HttpErrorResponse)) {
     return false;

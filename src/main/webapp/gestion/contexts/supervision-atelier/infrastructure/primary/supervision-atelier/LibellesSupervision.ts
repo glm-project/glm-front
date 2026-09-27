@@ -9,7 +9,6 @@ export interface LibellesCouloir {
   readonly definition: string;
 }
 
-/** Un instant découpé pour l'écran : `jour` n'existe que lorsqu'il tombe un autre jour que l'instant d'évaluation. */
 export interface MomentAffiche {
   readonly instant: Instant;
   readonly avant: string;

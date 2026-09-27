@@ -24,10 +24,6 @@ class RouteFixture {
   readonly paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ element: ELEMENT }));
 }
 
-/**
- * Les périodes s'affichent dans le fuseau du navigateur. Partir d'une heure locale garde le scénario vrai
- * sur un runner en UTC comme sur une machine à Paris, sans cesser de prouver que l'écran formate l'instant reçu.
- */
 const instantFixture = (heure: number, minute: number): InstantDeTravail =>
   new InstantDeTravail(new Date(2026, 4, 11, heure, minute).toISOString());
 
@@ -343,7 +339,6 @@ describe('Cout de revient component', () => {
     return element;
   };
 
-  /** `Intl.formatRange` emploie des espaces fines insécables : les normaliser garde les attentes lisibles. */
   const normalise = (valeur: string): string => valeur.replace(/[\u00a0\u2009\u202f]/g, ' ').trim();
 
   const texte = (selector: string): string => normalise(requis(selector).textContent);

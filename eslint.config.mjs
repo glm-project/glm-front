@@ -1,3 +1,4 @@
+import css from '@eslint/css';
 import eslint from '@eslint/js';
 import angular from 'angular-eslint';
 import cypress from 'eslint-plugin-cypress';
@@ -9,7 +10,7 @@ import { givenWhenThen } from './eslint/rules/given-when-then.mjs';
 import { maxConstructorParameters } from './eslint/rules/max-constructor-parameters.mjs';
 import { maxIfCriteria } from './eslint/rules/max-if-criteria.mjs';
 import { noAsUnknown } from './eslint/rules/no-as-unknown.mjs';
-import { noEslintDisable } from './eslint/rules/no-eslint-disable.mjs';
+import { noComments } from './eslint/rules/no-comments.mjs';
 import { noTestOnlyProduction } from './eslint/rules/no-test-only-production.mjs';
 import { responsibilityCohesion } from './eslint/rules/responsibility-cohesion.mjs';
 import { scenarioShape } from './eslint/rules/scenario-shape.mjs';
@@ -94,10 +95,10 @@ const lazyRouteSelectors = forbiddenPathPattern => [
   `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${forbiddenPathPattern}/]`,
 ];
 
-const boundary = (files, restrictions, allowsPresentationEffects = false) => ({
+const boundary = (files, restrictions) => ({
   files,
   rules: {
-    'no-restricted-imports': ['error', { paths: allowsPresentationEffects ? [] : [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
+    'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
     'no-restricted-syntax': restrictedSyntax(
       ...restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
@@ -149,7 +150,7 @@ const local = {
     'max-constructor-parameters': maxConstructorParameters,
     'domain-readonly-properties': domainReadonlyProperties,
     'no-as-unknown': noAsUnknown,
-    'no-eslint-disable': noEslintDisable,
+    'no-comments': noComments,
     'no-test-only-production': noTestOnlyProduction,
     'responsibility-cohesion': responsibilityCohesion,
     'scenario-shape': scenarioShape,
@@ -167,7 +168,40 @@ export default typescript.config(
   {
     ignores: ['target/', '.angular/', '.stryker-tmp/', '.wrangler/', 'src/main/webapp/app/generated/schema.d.ts'],
   },
-  eslint.configs.recommended,
+  {
+    linterOptions: {
+      noInlineConfig: true,
+    },
+  },
+  {
+    ...eslint.configs.recommended,
+    ignores: ['**/*.css'],
+  },
+  {
+    files: ['**/*.ts'],
+    languageOptions: {
+      parser: typescript.parser,
+    },
+  },
+  {
+    files: ['**/*.css'],
+    plugins: { css },
+    language: 'css/css',
+  },
+  {
+    files: ['**/*.{js,mjs,cjs,ts}', '**/*.html', '**/*.css'],
+    plugins: { local },
+    rules: {
+      'local/no-comments': 'error',
+    },
+  },
+  {
+    files: ['**/*.{js,mjs,cjs,ts}'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
+      'no-restricted-syntax': restrictedSyntax(),
+    },
+  },
   {
     files: ['**/*.{js,mjs,cjs}', 'src/**/*.ts'],
     plugins: { local },
@@ -240,14 +274,9 @@ export default typescript.config(
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       'local/no-as-unknown': 'error',
-      'local/no-eslint-disable': 'error',
-      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
-    // A rule instance of its own: each boundary below replaces the options of `no-restricted-imports`, so
-    // exempting the error-handler primary layer there would mean restating every boundary for it.
     files: ['src/**/*.ts'],
     ignores: ['src/main/webapp/app/shared/error-handler/infrastructure/primary/**'],
     rules: {
@@ -286,8 +315,6 @@ export default typescript.config(
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'arrow-body-style': 'error',
-      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
-      'no-restricted-syntax': restrictedSyntax(),
     },
   },
   {
@@ -299,11 +326,6 @@ export default typescript.config(
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/**/*.ts`], [noOtherFront(front)])),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/shared/**/*.ts`], [noOtherFront(front), noBusinessContext(front)])),
-  ...FRONTS.map(front => boundary([`src/main/webapp/${front}/contexts/**/infrastructure/primary/**/*.ts`], [noOtherFront(front)], true)),
-  ...FRONTS.map(front =>
-    boundary([`src/main/webapp/${front}/shared/**/infrastructure/primary/**/*.ts`], [noOtherFront(front), noBusinessContext(front)], true),
-  ),
-  boundary(['src/main/webapp/app/shared/**/infrastructure/primary/**/*.ts'], [noFrontAtAll], true),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],

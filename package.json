@@ -120,6 +120,7 @@
     "@angular/build": "21.2.23",
     "@angular/cli": "21.2.19",
     "@angular/compiler-cli": "21.2.19",
+    "@eslint/css": "2.0.0",
     "@eslint/js": "9.39.4",
     "@prettier/plugin-xml": "3.4.2",
     "@stryker-mutator/core": "10.0.0",

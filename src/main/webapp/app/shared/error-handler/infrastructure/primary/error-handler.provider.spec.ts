@@ -8,7 +8,6 @@ describe('Error handler provider', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideErrorHandler(ErrorHandlerFixture)],
-      // A running front reports an application error once; TestBed would throw it again afterwards.
       rethrowApplicationErrors: false,
     });
   });

@@ -25,7 +25,6 @@ export type EtatVueCoutDeRevient =
 export class CoutDeRevientDeLElement {
   protected readonly libelles = LIBELLES_COUT_DE_REVIENT;
 
-  /** La ligne dont le détail daté est déplié. Le tableau chiffre ; les dates se lisent d'un geste. */
   protected readonly ligneDepliee = signal<string | null>(null);
 
   private readonly route = inject(ActivatedRoute);
@@ -33,7 +32,6 @@ export class CoutDeRevientDeLElement {
 
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
 
-  /** Une adresse sans élément laisse la ressource au repos : Angular n'appelle pas le loader quand `params` est `undefined`. */
   private readonly element = computed<ElementChiffreId | undefined>(() => {
     const element = this.chemin().get('element');
     if (element === null) {
@@ -58,7 +56,6 @@ export class CoutDeRevientDeLElement {
     this.lecture.reload();
   }
 
-  /** La clé de dépliage : la nature, ou le mot qui désigne la ligne sans poste — il n'y en a qu'une. */
   protected cleDe(ligne: LigneDeCout): string {
     return this.libelles.nature(ligne.nature?.value);
   }

@@ -16,7 +16,6 @@ import { TypeDElementEngage } from '@/gestion/contexts/atelier/domain/TypeDEleme
 
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 
-/** Ce que le back recopie sur le suivi au moment de l'engagement. */
 export interface PhotographieDElement {
   readonly nom: string;
   readonly type: TypeDElementEngage;

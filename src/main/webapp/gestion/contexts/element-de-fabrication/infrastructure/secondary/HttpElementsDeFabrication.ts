@@ -22,11 +22,6 @@ import { RequeteElements } from '../../domain/RequeteElements';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
 
-/**
- * Le référentiel ne porte aucune période : seul le suivi d'atelier a des dates. La route exige pourtant
- * `debut` et `fin`, qui filtrent la date de création, alors l'adapter demande toute l'amplitude et l'écran
- * n'expose aucun filtre temporel.
- */
 const PERIODE_DEPUIS_TOUJOURS = { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z' };
 
 const toReference = (reference: string | undefined): ReferenceDElement | undefined =>

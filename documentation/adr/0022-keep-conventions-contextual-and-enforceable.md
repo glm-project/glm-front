@@ -8,6 +8,15 @@ become executable limits: [ADR 0029](0029-name-compound-if-predicates.md) refuse
 any `if`, loop, `switch` or `try` in a scenario, plus any act after the first assertion on a domain spec.
 Complemented by [ADR 0023](0023-stop-overloaded-coordinators-at-lint.md) for coordinator size.
 
+Amended by [ADR 0042](0042-forbid-comments-in-code.md): comments are no longer a review judgment. No comment is
+accepted in scripts, templates or stylesheets, tooling directives included, and lint refuses every one of them.
+
+Amended by [ADR 0043](0043-forbid-angular-effects-everywhere.md): the presentation-adapter exception is
+withdrawn. `effect()` and `afterRenderEffect()` are refused in every JavaScript and TypeScript file, primary
+adapters included; the namespace and dynamic Angular-import guards still hold.
+
+Only the extraction rule for methods and test helpers below still holds as written.
+
 ## Context
 
 The repository turned several readability defaults into absolute rules: no comments, a named helper for every

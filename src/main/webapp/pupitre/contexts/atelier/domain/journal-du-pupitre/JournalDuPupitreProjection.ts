@@ -3,7 +3,6 @@ import {
   EtatDePresence,
   EvenementDuJournal,
   GesteDArrivee,
-  GesteDAtelier,
   GesteDePointage,
   GesteDePresence,
   JournalDuPupitre,
@@ -41,26 +40,18 @@ const etatFor = (activites: number): 'EN_COURS' | 'INTERROMPU' => {
   return 'EN_COURS';
 };
 
-const isProjectablePointage = (evenement: EvenementDuJournal, geste: GesteDAtelier): geste is GesteDePointage =>
-  !(evenement.etat === 'REFUSE' || geste.nature !== 'POINTAGE');
-
 const isAlreadyProjectedOrUnrelated = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
   suivi.id !== geste.suiviId || suivi.evenements.includes(geste.id);
 
 const applyToMatching = <T>(items: readonly T[], matches: (item: T) => boolean, transform: (item: T) => T): T[] =>
   items.map(item => (matches(item) ? transform(item) : item));
 
-const applyEvenement = (suivis: SuiviDuPupitre[], evenement: EvenementDuJournal): SuiviDuPupitre[] => {
-  const geste = evenement.geste;
-  if (!isProjectablePointage(evenement, geste)) {
-    return suivis;
-  }
-  return applyToMatching(
+const projectPointage = (suivis: readonly SuiviDuPupitre[], geste: GesteDePointage): SuiviDuPupitre[] =>
+  applyToMatching(
     suivis,
     suivi => !isAlreadyProjectedOrUnrelated(suivi, geste),
     suivi => applyPointage(suivi, geste),
   );
-};
 
 type CleDeTransition = 'ARRIVEE' | TypeDePresence;
 
@@ -69,14 +60,6 @@ const TRANSITIONS_DE_PRESENCE: Record<EtatDePresence, Partial<Record<CleDeTransi
   PRESENT: { PAUSE: 'EN_PAUSE', DEPART: 'ABSENT' },
   EN_PAUSE: { REPRISE: 'PRESENT', DEPART: 'ABSENT' },
 };
-
-// Mutant equivalent sur le garde-fou POINTAGE ci-dessous (ADR 0024) : TypeDePointage (DEBUT/NON_CONFORMITE/FIN) et
-// CleDeTransition (ARRIVEE/PAUSE/REPRISE/DEPART) sont des alphabets disjoints. Meme si un pointage franchissait ce
-// garde-fou, cleDeTransitionFor(geste).type ne correspondrait jamais a une cle de TRANSITIONS_DE_PRESENCE, et
-// applyPresence rend alors l'operateur inchange (etatSuivant === undefined). Aucun etat observable ne differe.
-const isProjectablePresence = (evenement: EvenementDuJournal, geste: GesteDAtelier): geste is GesteDArrivee | GesteDePresence =>
-  // Stryker disable next-line ConditionalExpression
-  !(evenement.etat === 'REFUSE' || geste.nature === 'POINTAGE');
 
 const cleDeTransitionFor = (geste: GesteDArrivee | GesteDePresence): CleDeTransition =>
   geste.nature === 'ARRIVEE' ? 'ARRIVEE' : geste.type;
@@ -89,25 +72,30 @@ const applyPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | Ges
   return etatSuivant === undefined ? operateur : { ...operateur, etat: etatSuivant };
 };
 
-const applyEvenementDePresence = (operateurs: OperateurDuPupitre[], evenement: EvenementDuJournal): OperateurDuPupitre[] => {
-  const geste = evenement.geste;
-  if (!isProjectablePresence(evenement, geste)) {
-    return operateurs;
-  }
-  return applyToMatching(
+const projectPresence = (operateurs: readonly OperateurDuPupitre[], geste: GesteDArrivee | GesteDePresence): OperateurDuPupitre[] =>
+  applyToMatching(
     operateurs,
     operateur => !isAlreadyProjectedOrUnrelatedPresence(operateur, geste),
     operateur => applyPresence(operateur, geste),
   );
+
+const applyEvenement = (referentiel: ReferentielDuPupitre, evenement: EvenementDuJournal): ReferentielDuPupitre => {
+  if (evenement.etat === 'REFUSE') {
+    return referentiel;
+  }
+  const geste = evenement.geste;
+  switch (geste.nature) {
+    case 'POINTAGE':
+      return { ...referentiel, suivis: projectPointage(referentiel.suivis, geste) };
+    case 'ARRIVEE':
+    case 'PRESENCE':
+      return { ...referentiel, operateurs: projectPresence(referentiel.operateurs, geste) };
+  }
 };
 
 export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupitre | undefined => {
   if (pupitre.referentiel === undefined) {
     return undefined;
   }
-  return {
-    ...pupitre.referentiel,
-    suivis: pupitre.evenements.reduce(applyEvenement, [...pupitre.referentiel.suivis]),
-    operateurs: pupitre.evenements.reduce(applyEvenementDePresence, [...pupitre.referentiel.operateurs]),
-  };
+  return pupitre.evenements.reduce(applyEvenement, pupitre.referentiel);
 };

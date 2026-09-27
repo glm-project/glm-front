@@ -11,6 +11,12 @@ const filesFixture = [
   'src/test/webapp/component/pupitre/designation/Designation.spec.ts',
   'src/test/webapp/application/pupitre/EffectPolicyFixture.spec.ts',
   'src/test/webapp/unit/HexagonalArchTest.spec.ts',
+  'src/main/webapp/gestion/contexts/atelier/infrastructure/primary/atelier/Atelier.ts',
+  'src/main/webapp/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation.ts',
+  'src/main/webapp/pupitre/shared/authentication/infrastructure/primary/http-device-authorization.interceptor.ts',
+  'src/main/webapp/app/shared/design-system/infrastructure/primary/icon/icon.ts',
+  'scripts/check-runtime.mjs',
+  'vitest.config.ts',
 ];
 
 for (const file of filesFixture) {
@@ -69,14 +75,10 @@ const presentationPrimaryFiles = [
 ];
 
 for (const [file, forbiddenImport] of presentationPrimaryFiles) {
-  it(`should allow a presentation effect while retaining the boundary in ${file}`, async () => {
-    const effects = await whenLintingImports(file, ["import { effect, afterRenderEffect } from '@angular/core';"]);
-    const foreignFront = await whenLintingImports(file, [forbiddenImport]);
-    const angularNamespace = await whenLintingImports(file, ["import * as angular from '@angular/core';"]);
+  it(`should keep the boundary between fronts in the presentation adapter ${file}`, async () => {
+    const results = await whenLintingImports(file, [forbiddenImport]);
 
-    thenImportsAreAccepted(effects);
-    thenImportsAreRejected(foreignFront);
-    thenImportsAreRejected(angularNamespace);
+    thenImportsAreRejected(results);
   });
 }
 

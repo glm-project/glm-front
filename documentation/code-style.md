@@ -2,12 +2,17 @@
 
 ## Code carries its own intent
 
-Avoid comments that repeat the code. Write a short local comment only for a constraint, external behavior or
-trade-off the code cannot make clear, and keep it next to the affected code. Put durable rules in the topic
-document that owns them. Tooling directives (`@ts-expect-error`, `prettier-ignore`) state
-why that exceptional instruction remains necessary; disabling ESLint via comments is forbidden (`local/no-eslint-disable`).
-Comments are a review judgment; ESLint does not infer
-their usefulness. Generated files are exempt because the project does not own their text.
+Write no comment, in any form: TypeScript, JavaScript, Angular templates and CSS carry no line or block
+comment, no JSDoc and no tooling directive (`@ts-expect-error`, `/// <reference>`, `prettier-ignore`,
+`Stryker disable`, `eslint-disable`). Carry the intent in names, types, extracted predicates and methods, and
+tests; put a durable rule in the topic document or the context `AGENTS.md` that owns it. When a tool expects a
+directive, restructure the code or configure the tool instead: an equivalent mutant disappears with the
+redundancy that produced it, and a file Prettier must not format goes to `.prettierignore`.
+
+`local/no-comments` refuses every comment in the JavaScript, TypeScript, HTML — inline templates included — and
+CSS files ESLint lints, and `linterOptions.noInlineConfig` stops any comment from switching a rule off. Generated
+files, which the project neither commits nor lints, keep their generator's text. See
+[ADR 0042](adr/0042-forbid-comments-in-code.md).
 
 For an `if` condition combining two or more criteria with `&&` or `||`, extract an explicitly named
 predicate. Even `a && b` and `a || b` require extraction; parentheses do not hide a combination. Put a business predicate
@@ -88,12 +93,12 @@ caller reconstructing another owner's rule behind that owner's interface.
 - standalone components, no `NgModule`;
 - each Angular component lives in its own folder. Co-locate its TypeScript, template, styles, unit spec and
   every file owned exclusively by that component; place shared files with their nearest shared owner;
-- signals expose state, `computed()` derives it, and explicit application commands drive business mutations. `effect()` and
-  `afterRenderEffect()` do not orchestrate a business operation or propagate application state. A primary
-  presentation adapter may use one for a narrow imperative browser integration when its lifetime and cleanup
-  are explicit; keep the reason in a local comment. ESLint permits these imports only in
-  `infrastructure/primary/` and cannot determine whether a use is semantically justified. Import Angular Core
-  through named static imports: namespace and dynamic imports remain blocked;
+- signals expose state, `computed()` derives it, and explicit application commands drive business mutations.
+  Never use `effect()` or `afterRenderEffect()`, presentation adapters included: an imperative browser
+  integration belongs to the event handler, the lifecycle hook or the one-shot render callback
+  (`afterNextRender`) that owns it. ESLint refuses both imports in every JavaScript and TypeScript file; import
+  Angular Core through named static imports, since namespace and dynamic imports stay blocked. See
+  [ADR 0043](adr/0043-forbid-angular-effects-everywhere.md);
 - component and directive selectors are prefixed `glm` (`glm-root`, `glm-pupitre-header`) — enforced by
   `angular-eslint`;
 - use `private` for implementation details, `protected` for members consumed only by a component template,

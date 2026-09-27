@@ -35,10 +35,6 @@ export class ReleveDesHeures {
     this.totalPresume = fiche.totalPresume;
   }
 
-  /**
-   * Sept jours toujours, du lundi au dimanche, vides comprises. Un trou obligerait le lecteur à deviner s'il
-   * manque une journée ou si la personne n'était pas là.
-   */
   private static verifieLesSeptJours(semaine: SemaineISO, jours: readonly JourDeReleve[]): void {
     if (!couvreLaSemaine(semaine, jours)) {
       throw new Error('Le relevé reçu du serveur ne couvre pas les sept jours de la semaine demandée.');

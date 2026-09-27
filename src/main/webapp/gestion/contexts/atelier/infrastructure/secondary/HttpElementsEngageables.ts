@@ -14,10 +14,6 @@ import { RequeteEngageables } from '../../domain/RequeteEngageables';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
 
-/**
- * Le référentiel ne porte aucune période, mais la route exige `debut` et `fin`, qui filtrent la date de
- * création. L'adapter demande toute l'amplitude ; choisir un élément à engager n'a rien d'une question de date.
- */
 const PERIODE_DEPUIS_TOUJOURS = { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z' };
 
 const ELEMENT_INTROUVABLE = 'urn:glm:erreur:element-de-fabrication:element-de-fabrication-introuvable';

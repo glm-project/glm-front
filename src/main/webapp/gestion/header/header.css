@@ -23,7 +23,6 @@
   text-decoration: none;
 }
 
-/* Un moule ouvert vu de profil : deux blocs de part et d'autre du plan de joint, l'empreinte à cheval. */
 .marque-logo {
   width: 1.75rem;
   height: 1.75rem;
@@ -145,7 +144,6 @@
   height: 100%;
 }
 
-/* Sous 1024 px, cinq destinations et la déconnexion ne tiennent plus sur une ligne : la navigation se replie. */
 @media (max-width: 63.999rem) {
   .bascule-menu {
     display: inline-flex;
@@ -192,7 +190,6 @@
   }
 }
 
-/* De 1024 à 1279 px, la navigation dépliée remplit la ligne : le sous-titre lui cède sa place, le nom accessible de la marque le garde. */
 @media (min-width: 64rem) and (max-width: 79.999rem) {
   .marque-produit {
     display: none;

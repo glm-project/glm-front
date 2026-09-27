@@ -46,10 +46,6 @@
   width: 10rem;
 }
 
-/*
- * Un chiffre se lit en colonne : même chasse, aligné à droite, et jamais coupé en deux lignes. Le sélecteur
- * porte la table parce que `.rapport th, .rapport td` aligne à gauche et l'emporterait sinon.
- */
 .rapport .colonne-duree,
 .rapport .colonne-montant {
   text-align: right;

@@ -9,13 +9,6 @@ export interface FicheDuRapport {
   readonly cout: Cout;
 }
 
-/**
- * Le rapport d'un élément de fabrication : une ligne par nature d'opération, et le total.
- *
- * Rien n'est stocké côté serveur : le rapport est recalculé à chaque lecture depuis les journaux de
- * l'atelier. Rien n'est recalculé côté client : le temps total et le coût total sont ceux que le serveur a
- * arrêtés, et les lignes ne sont ni sommées ni réordonnées.
- */
 export class CoutDeRevient {
   readonly lignes: readonly LigneDeCout[];
   readonly temps: TempsPasse;
@@ -30,7 +23,6 @@ export class CoutDeRevient {
     this.cout = fiche.cout;
   }
 
-  /** Un élément engagé sur lequel personne n'a encore pointé : une réponse, pas une absence de réponse. */
   estSansTravail(): boolean {
     return this.lignes.length === 0;
   }

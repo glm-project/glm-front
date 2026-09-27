@@ -44,7 +44,6 @@ const operateurFixture = (id: string, nom: string, prenom: string, metiers: read
 const posteFixture = (libelle: string, nature: string): PosteDeSupervision =>
   new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle, nature: new NatureDeTravail(nature) });
 
-/** L'écran affiche les instants dans le fuseau du navigateur : partir d'une heure locale garde les attentes vraies partout. */
 const instantFixture = (heure: number, minute = 0, jour = 13): Instant => new Instant(new Date(2026, 8, jour, heure, minute).toISOString());
 const veilleFixture = (heure: number, minute = 0): Instant => instantFixture(heure, minute, 12);
 
@@ -908,7 +907,6 @@ describe('Supervision atelier component', () => {
 
   const signal = (selector: string): string => texte(requiredFixture(element(selector), selector));
 
-  /** `\s` couvre aussi les espaces insécables des libellés : les attentes s'écrivent avec des espaces simples. */
   const texte = (node: HTMLElement): string => node.textContent.replace(/\s+/g, ' ').trim();
 
   const element = (selector: string): HTMLElement | null => {

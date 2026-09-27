@@ -15,16 +15,11 @@ const refusee: SemaineDemandee = { estConnue: false };
 
 const nombreDe = (valeur: string): number | undefined => (ENTIER.test(valeur) ? Number(valeur) : undefined);
 
-/** Aucun paramètre : c'est le cas nominal, la semaine en cours, et non une erreur. */
 const neNommeRien = (parametres: ParametresDeSemaine): boolean => parametres.annee === undefined && parametres.semaine === undefined;
 
 const depuisLesNombres = (annee: number, numero: number): SemaineDemandee =>
   SemaineISO.erreur(annee, numero) === undefined ? connue(new SemaineISO(annee, numero)) : refusee;
 
-/**
- * Ce que l'URL désigne. Nommée à moitié, illisible, hors bornes ou inexistante au calendrier, la semaine est
- * refusée : l'écran l'explique et ne demande rien au serveur, ce qui rend le 400 de l'API inatteignable.
- */
 export const semaineDemandee = (parametres: ParametresDeSemaine, jourCourant: JourCalendaire): SemaineDemandee => {
   if (neNommeRien(parametres)) {
     return connue(SemaineISO.contenant(jourCourant));

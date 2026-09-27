@@ -38,8 +38,7 @@ export class PupitrePage implements OnInit, OnDestroy {
   private readonly guardPointerDown = (event: PointerEvent): void => {
     if (this.comesFromKeypad(event)) return;
     this.consumeNextClick = !this.designation.registerPress();
-    // This capture-phase native listener bypasses Angular event dispatch; render expiry before a compatibility click can follow.
-    this.changeDetector.detectChanges();
+    this.renderExpiryBeforeCompatibilityClick();
     if (this.consumeNextClick) event.preventDefault();
   };
 
@@ -81,6 +80,10 @@ export class PupitrePage implements OnInit, OnDestroy {
 
   protected executeGlobale(intention: IntentionGlobale): void {
     this.errorHandler.observe(this.pupitre.executeGlobale(intention));
+  }
+
+  private renderExpiryBeforeCompatibilityClick(): void {
+    this.changeDetector.detectChanges();
   }
 
   private comesFromKeypad(event: Event): boolean {

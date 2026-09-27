@@ -10,6 +10,5 @@ export class DemandeDeReleve {
 }
 
 export abstract class SyntheseDesHeuresPort {
-  /** Rend `undefined` quand le référentiel ne connaît pas cet opérateur : c'est une réponse, pas une panne. */
   abstract synthese(demande: DemandeDeReleve): Promise<ReleveDesHeures | undefined>;
 }

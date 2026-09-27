@@ -53,12 +53,13 @@ something stays, with a status that says what died.
 - [0021 — Own immutable domain contracts](0021-own-immutable-domain-contracts.md) — stateful invariants and
   pure domain policies, immutable public snapshots and exclusive journal event states
 - [0022 — Keep conventions contextual and enforceable](0022-keep-conventions-contextual-and-enforceable.md) —
-  contextual readability rules and a narrowly scoped presentation-effect exception
+  contextual extraction of methods and test helpers; its comment rule and presentation-effect exception are
+  replaced by 0042 and 0043
 - [0023 — Stop overloaded coordinators at lint](0023-stop-overloaded-coordinators-at-lint.md) — a conjunctive
   production tripwire for stateful coordinators, with responsibility review at the enforcement point
 - [0024 — Extend mutation to the unit-tested project](0024-extend-mutation-to-the-unit-tested-project.md) —
   100 % mutation score enforced on changed domain core, informational outside domain; its pre-push hook was
-  removed by #130
+  removed by #130 and its equivalent-mutant waiver by 0042
 - [0025 — Route runtime errors through ErrorHandlerPort](0025-route-runtime-errors-through-error-handler-port.md) —
   one error channel per front: a shared technical port bound once, which Angular's `ErrorHandler` and `window` errors also reach
 - [0026 — Show the pupitre enrolment and delegate its approval to Keycloak](0026-enrol-pupitre-screen-and-keycloak-delegation.md) —
@@ -99,3 +100,9 @@ something stays, with a status that says what died.
 
 - [0041 — Sort workshop supervision into state lanes](0041-sort-workshop-supervision-into-state-lanes.md) — four
   derived lanes in a fixed order, alphabetical within each, the NC laid over the activity and no duration shown
+
+- [0042 — Forbid comments in code](0042-forbid-comments-in-code.md) — no comment or directive in scripts,
+  templates and stylesheets, CSS parsed by `@eslint/css`, and no inline configuration that could silence a rule
+
+- [0043 — Forbid Angular effects everywhere](0043-forbid-angular-effects-everywhere.md) — `effect()` and
+  `afterRenderEffect()` refused in every script, presentation adapters included

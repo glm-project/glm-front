@@ -134,7 +134,6 @@ const whenConfirmingDeletion = (): void => {
   cy.get(dataSelector('poste-delete-confirm')).click();
   cy.wait('@posteDelete');
 };
-/* La première lecture doit être arrivée : cliquer avant la fait revenir sur la page qu'elle rend. */
 const whenGoingToNextPage = (): void => {
   cy.wait('@postesRead');
   cy.get(dataSelector('postes-pagination')).find('button[aria-label="Page suivante"]').click();

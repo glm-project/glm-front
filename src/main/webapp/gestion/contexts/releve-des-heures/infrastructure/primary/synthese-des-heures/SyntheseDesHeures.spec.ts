@@ -42,11 +42,6 @@ class RouterFixture {
   }
 }
 
-/**
- * L'écran affiche l'heure d'un pointage dans le fuseau du navigateur. Une fixture écrite en UTC rendrait donc
- * l'attente dépendante du fuseau de la machine — 08:02 à Paris, 06:02 sur un runner en UTC. Partir d'une heure
- * locale garde le scénario vrai partout, sans cesser de prouver que l'écran formate bien l'instant reçu.
- */
 type Heure = readonly [number, number];
 
 const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
@@ -784,7 +779,6 @@ describe('Synthese des heures component', () => {
     return element;
   };
 
-  /** `Intl.formatRange` emploie des espaces fines insécables : les normaliser garde les attentes lisibles. */
   const normalise = (valeur: string): string => valeur.replace(/[\u00a0\u2009\u202f]/g, ' ').trim();
 
   const texte = (selector: string): string => normalise(requis(selector).textContent);
