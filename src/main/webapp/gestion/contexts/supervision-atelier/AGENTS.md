@@ -69,7 +69,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 - La détection d'une anomalie préserve l'état de présence, le couloir et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
 - Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
-- Pendant une relecture (toutes les 30 s ou « Actualiser »), les couloirs affichés restent visibles et se réévaluent à la fin de la lecture ; l'écran de chargement ne s'affiche que tant qu'aucun couloir n'est affiché, au premier chargement ou lors d'un nouvel essai après une erreur, et une erreur remplace toujours les couloirs.
+- Pendant une relecture (toutes les 30 s ou « Actualiser »), les couloirs affichés restent visibles et se réévaluent à la fin de la lecture, même quand elle rend le même objet — l'InMemory rend toujours le sien, et l'évaluation suit donc le statut de la lecture, jamais sa valeur ; l'écran de chargement ne s'affiche que tant qu'aucun couloir n'est affiché, au premier chargement ou lors d'un nouvel essai après une erreur, et une erreur remplace toujours les couloirs.
 - La supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
