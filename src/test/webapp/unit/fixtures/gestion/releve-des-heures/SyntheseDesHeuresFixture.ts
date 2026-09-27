@@ -4,7 +4,6 @@ import { DemandeDeReleve, SyntheseDesHeuresPort } from '@/gestion/contexts/relev
 const cleDe = (demande: DemandeDeReleve): string =>
   `${demande.operateur.value}|${String(demande.semaine.annee)}|${String(demande.semaine.numero)}`;
 
-/** Répond au tour suivant, jamais par une promesse déjà résolue : sans quoi l'état de chargement est inobservable. */
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));
 
 export class SyntheseDesHeuresFixture extends SyntheseDesHeuresPort {
@@ -27,7 +26,6 @@ export class SyntheseDesHeuresFixture extends SyntheseDesHeuresPort {
     }
     const releve = this.releves.get(cleDe(demande));
     if (releve === undefined) {
-      /* `undefined` ne veut dire qu'une chose ici : opérateur inconnu. Une semaine non semée est un oubli de scénario. */
       return Promise.reject(new Error(`Aucun relevé semé pour ${cleDe(demande)}`));
     }
     return auTourSuivant(releve);

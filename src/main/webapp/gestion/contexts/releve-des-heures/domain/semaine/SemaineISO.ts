@@ -8,17 +8,11 @@ const JOURS_PAR_SEMAINE = 7;
 const LUNDI = 1;
 const JEUDI = 4;
 
-/** Le 4 janvier est la seule date dont la norme garantit qu'elle tombe dans la semaine 1 de son année ISO. */
 const lundiDeLaPremiereSemaine = (annee: number): JourCalendaire => {
   const quatreJanvier = new JourCalendaire(`${annee}-01-04`);
   return quatreJanvier.plus(LUNDI - quatreJanvier.jourDeLaSemaine());
 };
 
-/**
- * Une année porte 53 semaines quand elle commence ou finit un jeudi. C'est la forme équivalente, et sans
- * calcul de bissextilité, de la règle « le 1er janvier est un jeudi, ou l'année est bissextile et le 1er
- * janvier est un mercredi ».
- */
 const estAnneeLongue = (annee: number): boolean =>
   new JourCalendaire(`${annee}-01-01`).jourDeLaSemaine() === JEUDI || new JourCalendaire(`${annee}-12-31`).jourDeLaSemaine() === JEUDI;
 
@@ -27,10 +21,6 @@ const anneeHorsBornes = (annee: number): boolean => !Number.isInteger(annee) || 
 const numeroHorsBornes = (annee: number, numero: number): boolean =>
   !Number.isInteger(numero) || numero < PREMIERE_SEMAINE || numero > SemaineISO.nombreDeSemaines(annee);
 
-/**
- * Une semaine ISO, désignée par son année et son numéro. L'année est celle des semaines, pas celle du
- * calendrier : la semaine 1 de 2026 commence le 29 décembre 2025.
- */
 export class SemaineISO {
   constructor(
     readonly annee: number,
@@ -52,15 +42,10 @@ export class SemaineISO {
     return undefined;
   }
 
-  /**
-   * Cette garde est la seule protection contre le back, qui accepte en silence la semaine 53 d'une année qui
-   * n'en a que 52 et rend alors la première semaine de l'année suivante.
-   */
   static nombreDeSemaines(annee: number): number {
     return estAnneeLongue(annee) ? SEMAINES_COURTES + 1 : SEMAINES_COURTES;
   }
 
-  /** C'est le jeudi qui donne l'année ISO d'une semaine : lui seul tombe toujours dans l'année de sa semaine. */
   static contenant(jour: JourCalendaire): SemaineISO {
     const jeudi = jour.plus(JEUDI - jour.jourDeLaSemaine());
     const annee = Number(jeudi.value.slice(0, 4));

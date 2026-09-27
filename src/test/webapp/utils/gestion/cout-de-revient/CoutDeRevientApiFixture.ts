@@ -23,7 +23,6 @@ const tournage: RestLigne = {
   cout: { machine: 60, mainDOeuvre: 20, total: 80 },
 };
 
-/** Le comportement nominal d'une entreprise sans parc machine : l'opérateur reste payé, la machine ne coûte rien. */
 const sansPoste: RestLigne = {
   periode: PERIODE,
   temps: { travail: 'PT1H', nonConformite: 'PT0S', total: 'PT1H' },
@@ -62,7 +61,6 @@ export class CoutDeRevientApiFixture {
     if (this.failRead) {
       return { statusCode: 500, body: {} };
     }
-    /* Le back ne pose aucune URN sur ce 404 : le double reproduit le `ProblemDetail` nu qu'il rend. */
     if (this.elementInconnu) {
       return { statusCode: 404, body: { title: 'element de fabrication introuvable' } };
     }

@@ -47,8 +47,6 @@ export class SupervisionAtelier {
   protected readonly donnees = resource({ loader: () => this.refreshCycle.run(() => this.donneesPort.read()) });
   private readonly refreshCycle: SupervisionRefreshCycle = new SupervisionRefreshCycle(() => this.donnees.reload());
 
-  // Réévaluer à chaque changement de statut, et non de valeur : une relecture peut rendre le même objet, et doit
-  // pourtant redater la supervision. Pendant la relecture, la dernière évaluation reste affichée.
   protected readonly etat = linkedSignal<ResourceStatus, EtatVueSupervision>({
     source: () => this.donnees.status(),
     computation: (_status, precedent) => (this.donnees.isLoading() ? pendantLaLecture(precedent?.value) : this.evaluate()),

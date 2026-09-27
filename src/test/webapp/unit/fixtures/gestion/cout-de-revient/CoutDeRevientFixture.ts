@@ -2,7 +2,6 @@ import { ElementChiffreId } from '@/gestion/contexts/cout-de-revient/domain/elem
 import { CoutDeRevient } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevientPort';
 
-/** Répond au tour suivant, jamais par une promesse déjà résolue : sans quoi l'état de chargement est inobservable. */
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));
 
 export class CoutDeRevientFixture extends CoutDeRevientPort {
@@ -25,7 +24,6 @@ export class CoutDeRevientFixture extends CoutDeRevientPort {
     }
     const rapport = this.rapports.get(element.value);
     if (rapport === undefined) {
-      /* `undefined` ne veut dire qu'une chose ici : élément inconnu. Un élément non semé est un oubli de scénario. */
       return Promise.reject(new Error(`Aucun rapport semé pour ${element.value}`));
     }
     return auTourSuivant(rapport);

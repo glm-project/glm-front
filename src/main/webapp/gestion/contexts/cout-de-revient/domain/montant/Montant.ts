@@ -1,7 +1,3 @@
-/**
- * Une valeur en euros, déjà arrondie au centime par le serveur. Ce contexte ne fait aucune arithmétique
- * dessus : il la lit, la refuse si elle n'en est pas une, et l'affiche.
- */
 export class Montant {
   constructor(readonly euros: number) {
     const erreur = Montant.erreur(euros);

@@ -120,7 +120,6 @@ export class AtelierApiFixture {
 
 const PARAMETRE_ETAT = 'etats=';
 
-/** `request.query` ne rend qu'une valeur par clé : les états répétés se lisent sur l'URL. */
 const etatsDemandes = (url: string): string[] => {
   const debut = url.indexOf('?');
   if (debut === -1) return [];

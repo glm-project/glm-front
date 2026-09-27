@@ -27,7 +27,6 @@ export type EtatVueSynthese =
       readonly colonnes: readonly ColonneAffichee[];
     };
 
-/** Les semaines à venir ne portent aucun pointage : le back refuse une saisie postérieure à l'instant courant. */
 const semaineOfferte = (semaine: SemaineISO | undefined, courante: SemaineISO): SemaineISO | undefined =>
   semaine !== undefined && !semaine.estApres(courante) ? semaine : undefined;
 
@@ -68,7 +67,6 @@ export class SyntheseDesHeures {
     return demandee.estConnue ? demandee.semaine : undefined;
   });
 
-  /** Une adresse refusée laisse la ressource au repos : Angular n'appelle pas le loader quand `params` est `undefined`. */
   private readonly demande = computed<DemandeDeReleve | undefined>(() => {
     const semaine = this.semaine();
     const operateur = this.operateur();
@@ -106,7 +104,6 @@ export class SyntheseDesHeures {
     return { annee: semaine.annee, semaine: semaine.numero };
   }
 
-  /** Passer à une année plus courte ramène à sa dernière semaine plutôt que de refuser le geste. */
   protected choisirAnnee(valeur: string, courante: SemaineISO): void {
     const annee = Number(valeur);
     const numero = Math.min(courante.numero, derniereSemaineDe(annee, this.semaineCourante));

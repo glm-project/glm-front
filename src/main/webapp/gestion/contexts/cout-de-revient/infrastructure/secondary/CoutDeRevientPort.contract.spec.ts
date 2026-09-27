@@ -108,7 +108,6 @@ const toDomain = (lignes: readonly LigneFixture[]): CoutDeRevient =>
     cout: new Cout(new Montant(COUT_TOTAL.machine), new Montant(COUT_TOTAL.mainDOeuvre), new Montant(COUT_TOTAL.total)),
   });
 
-/** `exactOptionalPropertyTypes` interdit d'écraser un champ optionnel par `undefined` : on retire la clé. */
 const sansChampDuRapport = (rapport: RestRapport, champ: keyof RestRapport): RestRapport =>
   Object.fromEntries(Object.entries(rapport).filter(([cle]) => cle !== champ)) as RestRapport;
 
@@ -135,7 +134,6 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
   lignes: readonly LigneFixture[] = [];
   elementInconnu = false;
 
-  /** La route ne porte aucun filtre qui changerait la réponse : ce double n'a pas besoin de la requête. */
   handle(): Observable<HttpEvent<unknown>> {
     return defer(() => this.answer()).pipe(
       switchMap(answer => (answer instanceof HttpErrorResponse ? throwError(() => answer) : of(answer))),
@@ -373,10 +371,6 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(errorHandler.errors).toHaveLength(1);
   });
 
-  /**
-   * Le back ne pose aucune URN sur ce 404 : le statut nu est le seul signal, contrairement à tous les
-   * autres adaptateurs du dépôt.
-   */
   it('should not report an element the referential does not know', async () => {
     const result = port.rapport(DEMANDE);
     await whenServerFails(404, { title: 'element de fabrication introuvable' });

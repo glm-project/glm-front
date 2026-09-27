@@ -46,7 +46,6 @@
   }
 }
 
-/* L'accolade coiffe les deux premiers couloirs : ses ergots descendent vers Au travail et Sans affectation. */
 .accolade {
   position: relative;
   height: 1.5rem;
@@ -69,7 +68,6 @@
   line-height: 1.25rem;
 }
 
-/* `--lisere` trace le bord gauche d'une carte et le prolonge dans ses bandeaux d'anomalie. */
 .carte {
   --lisere: transparent;
   box-shadow:
@@ -94,7 +92,6 @@
   border-radius: 0 0 calc(var(--radius-surface) - 1px) calc(var(--radius-surface) - 1px);
 }
 
-/* Le jaune est pâle : la hachure et la marque « NC » portent la non-conformité, jamais la seule bordure. */
 .activite-nc {
   padding-left: calc(8px + 0.3rem);
   border-color: var(--color-nc);

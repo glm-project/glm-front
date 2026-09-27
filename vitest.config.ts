@@ -1,5 +1,3 @@
-/// <reference types="vitest" />
-
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
@@ -17,8 +15,6 @@ export default defineConfig({
         perFile: true,
         100: true,
       },
-      // `coverageInclude` / `coverageExclude` live in angular.json: scoping set here would be matched
-      // against on-disk paths, while the builder collects coverage under its own spec-bundle paths.
       provider: 'istanbul',
       reportsDirectory: 'target/test-results/',
       reporter: ['html', 'json', 'json-summary', 'text', 'text-summary', 'lcov', 'clover'],

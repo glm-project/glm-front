@@ -15,7 +15,6 @@ export interface FicheDElementALAtelier {
 }
 
 export class ElementALAtelier {
-  /** L'élément engagé, que le coût de revient adresse. Le suivi, lui, reste la seule adresse de l'atelier. */
   readonly element: ElementEngageId;
   readonly nom: NomDElementEngage;
   readonly type: TypeDElementEngage;

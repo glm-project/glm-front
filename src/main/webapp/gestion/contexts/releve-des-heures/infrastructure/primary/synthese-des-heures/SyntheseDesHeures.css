@@ -125,7 +125,6 @@
   line-height: 1;
 }
 
-/* Les extrémités de l'axe se collent à son bord : centrées, leur moitié extérieure était coupée. */
 .repere.ancre-haut {
   transform: none;
 }

@@ -12,7 +12,6 @@ const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvab
 const MILLISECONDES_PAR_JOUR = 86_400_000;
 const OPERATEUR = { id: 'op-1', nom: 'Dupont', prenom: 'Jean' };
 
-/** Le lundi de la semaine ISO demandée, calculé comme le back le fait, à partir du 4 janvier. */
 const lundiDe = (annee: number, semaine: number): Date => {
   const quatreJanvier = new Date(Date.UTC(annee, 0, 4));
   const jour = quatreJanvier.getUTCDay() === 0 ? 7 : quatreJanvier.getUTCDay();

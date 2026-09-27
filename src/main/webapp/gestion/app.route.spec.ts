@@ -9,11 +9,6 @@ import { PostesDeTravail } from './contexts/poste/infrastructure/primary/postes-
 import { SyntheseDesHeures } from './contexts/releve-des-heures/infrastructure/primary/synthese-des-heures/SyntheseDesHeures';
 import { SupervisionAtelier } from './contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier';
 
-/**
- * Chaque écran est chargé à la demande (ADR 0039). Un `import()` mal recopié désignerait le mauvais écran sans
- * que rien ne le dise à la compilation : ces scénarios appellent chaque chargeur et vérifient ce qu'il rend.
- * Qu'une URL monte bien sa vue reste la charge de la suite application, seule à faire tourner le routeur.
- */
 const ECRANS: [string, unknown][] = [
   ['', SupervisionAtelier],
   ['atelier', Atelier],

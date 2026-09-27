@@ -1,6 +1,5 @@
 import { TypeDElementChiffre } from './TypeDElementChiffre';
 
-/** L'élément que le rapport a résolu au référentiel : son nom et son type, et rien d'autre. */
 export class ElementChiffre {
   constructor(
     readonly nom: string,

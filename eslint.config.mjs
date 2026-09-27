@@ -246,8 +246,6 @@ export default typescript.config(
     },
   },
   {
-    // A rule instance of its own: each boundary below replaces the options of `no-restricted-imports`, so
-    // exempting the error-handler primary layer there would mean restating every boundary for it.
     files: ['src/**/*.ts'],
     ignores: ['src/main/webapp/app/shared/error-handler/infrastructure/primary/**'],
     rules: {

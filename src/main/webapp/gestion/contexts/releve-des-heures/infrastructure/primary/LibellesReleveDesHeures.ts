@@ -11,11 +11,9 @@ const TYPES: Record<TypeDePointage, string> = {
   DEPART: 'Départ',
 };
 
-/** `timeZone: 'UTC'` est indispensable : un jour calendaire est une date, et la lire en heure locale la décale. */
 const PLAGE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
 
-/** L'heure d'un pointage est un instant : elle s'affiche dans le fuseau du navigateur. Voir `AGENTS.md`. */
 const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 const dateDe = (jour: JourCalendaire): Date => new Date(`${jour.value}T00:00:00Z`);
