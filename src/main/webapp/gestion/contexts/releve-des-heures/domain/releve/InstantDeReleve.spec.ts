@@ -19,7 +19,7 @@ describe('InstantDeReleve', () => {
     expect(instant.value.toISOString()).toBe('2026-09-14T06:02:00.500Z');
   });
 
-  it.each(['2026-09-14T08:02:00', '2026-09-14', '2026-02-30T08:02:00Z', 'invalide', ''])(
+  it.each(['2026-09-14T08:02:00', '2026-09-14', '2026-02-30T08:02:00Z', '2026-13-01T08:02:00Z', 'invalide', ''])(
     'should refuse %s, which is not an absolute instant',
     value => {
       expect(() => new InstantDeReleve(value)).toThrow('L’instant reçu du serveur n’est pas un instant absolu.');
