@@ -22,7 +22,6 @@ export class JourDeReleve {
   readonly plages: readonly PlageDeReleve[];
   readonly #pauses: readonly PauseDeReleve[];
 
-  /** Les pauses se lisent dès la construction : un journal incohérent est refusé à la lecture, pas au dessin. */
   constructor(fiche: FicheDuJour) {
     this.jour = fiche.jour;
     this.dureePointee = fiche.dureePointee;
@@ -32,40 +31,22 @@ export class JourDeReleve {
     this.#pauses = [...this.pauseDepuisLaVeille(), ...this.pausesEntrePointages()];
   }
 
-  /**
-   * Un jour vide n'est pas un jour à durée nulle. Une journée de durée nulle a des pointages mais aucune plage ; un
-   * jour entièrement couvert par une présence de plus de vingt-quatre heures a une plage mais aucun pointage.
-   */
   estVide(): boolean {
     return this.pointages.length === 0 && this.plages.length === 0;
   }
 
-  /**
-   * Les pauses du jour, dans l'ordre des heures. Une pause va d'une `PAUSE` au pointage suivant du jour, reprise ou
-   * départ ; elle vient de la veille quand le jour commence en pause, et reste sans reprise quand il y finit.
-   */
   pauses(): readonly PauseDeReleve[] {
     return this.#pauses;
   }
 
-  /**
-   * Les bornes d'une plage sont les instants mêmes des pointages, sauf minuit et les bornes de la semaine. Une plage
-   * qu'aucun pointage du jour n'a ouverte commence donc à minuit : le back l'a coupée, elle vient de la veille. Une
-   * arrivée pointée dans la première minute du jour, elle, ouvre sa propre plage.
-   */
   vientDeLaVeille(plage: PlageDeReleve): boolean {
     return this.typeDuPointageA(plage.debut) === undefined;
   }
 
-  /** Rien à cet instant quand aucun pointage n'y a eu lieu : minuit, ou une fin présumée posée sur un pointage d'OF. */
   typeDuPointageA(instant: InstantDeReleve): TypeDePointage | undefined {
     return this.pointages.find(pointage => pointage.instant.estLeMeme(instant))?.type;
   }
 
-  /**
-   * Un jour commence en pause quand son premier pointage la termine : une reprise, ou un départ qu'aucune plage ne
-   * termine, puisque le back permet de partir pendant une pause.
-   */
   private pauseDepuisLaVeille(): readonly PauseDeReleve[] {
     const premier = this.pointages[0];
     if (premier === undefined) {

@@ -21,10 +21,6 @@ export interface FicheDuReleve {
   readonly totalPresume: DureeTravaillee;
 }
 
-/**
- * Le relevé d'une semaine. Ses totaux pointé et présumé sont ceux que le serveur a calculés : ce contexte
- * n'additionne aucune durée, sous peine de donner à l'écran un second avis sur les heures d'une personne.
- */
 export class ReleveDesHeures {
   readonly operateur: IdentiteOperateur;
   readonly jours: readonly JourDeReleve[];

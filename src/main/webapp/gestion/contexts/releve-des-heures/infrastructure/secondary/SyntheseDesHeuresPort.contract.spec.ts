@@ -62,7 +62,6 @@ const jourTravailleFixture: JourFixture = {
   plages: [{ debut: '2026-09-14T06:02:00Z', fin: '2026-09-14T15:32:00Z', presumee: false }],
 };
 
-/** Une journée de travail sans départ, abandonnée au-delà de l'amplitude maximale : le back la ferme à sa fin présumée. */
 const jourAbandonneFixture: JourFixture = {
   pointee: 'PT0S',
   presumee: 'PT5H20M',
@@ -70,7 +69,6 @@ const jourAbandonneFixture: JourFixture = {
   plages: [{ debut: '2026-09-15T08:20:00Z', fin: '2026-09-15T13:40:00Z', presumee: true }],
 };
 
-/** Sous l'amplitude maximale, une journée sans départ est en cours : sa plage n'a pas de fin. */
 const jourEnCoursFixture: JourFixture = {
   pointee: 'PT0S',
   presumee: 'PT0S',
@@ -140,7 +138,6 @@ const toRestJourDeFeuille = (jour: JourFixture, rang: number): RestJourDeFeuille
   presence: jour.plages.map(toRestPlage),
 });
 
-/** `exactOptionalPropertyTypes` interdit d'écraser un champ optionnel par `undefined` : on retire la clé. */
 const sansChamp = <T extends object>(document: T, champ: keyof T & string): T =>
   Object.fromEntries(Object.entries(document).filter(([cle]) => cle !== champ)) as T;
 
@@ -152,7 +149,6 @@ const premierDe = <T>(elements: readonly T[] | undefined): T => {
   return element;
 };
 
-/** Retouche le premier élément seulement : les jours suivants gardent la réponse complète. */
 const avecPremierRetouche = <T>(elements: readonly T[] | undefined, retouche: (premier: T) => T): T[] => [
   retouche(premierDe(elements)),
   ...(elements ?? []).slice(1),
@@ -194,7 +190,6 @@ const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
     ),
   });
 
-/** Les deux routes répondent au tour suivant, chacune avec son propre document ou son propre code d'erreur. */
 class ReleveHttpBackendFixture implements HttpBackend {
   jours: readonly JourFixture[] = [];
   operateurInconnu = false;
@@ -555,7 +550,6 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     expect(errorHandler.errors).toEqual([]);
   });
 
-  /** La panne arrive la première : une lecture qui s'arrêterait au premier échec la signalerait avant de voir l'absence. */
   it.each([
     [ROUTE_SYNTHESE, SYNTHESE_INTROUVABLE],
     [ROUTE_FEUILLE, FEUILLE_INTROUVABLE],

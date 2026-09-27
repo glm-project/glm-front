@@ -49,7 +49,6 @@ class RouterFixture {
  */
 type Heure = readonly [number, number];
 
-/** Le lundi 14 septembre 2026 ouvre la semaine 38 ; le rang désigne le jour, 24 h le minuit du lendemain. */
 const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14 + rang, heure, minute).toISOString());
 
@@ -100,14 +99,12 @@ const jourTravailleFixture: JourFixture = {
   ],
 };
 
-/** Une journée de travail sans départ, abandonnée au-delà de l'amplitude maximale : le back la ferme à sa fin présumée. */
 const jourAbandonneFixture: JourFixture = {
   presumee: 'PT5H20M',
   pointages: [['ARRIVEE', [10, 20]]],
   plages: [[[10, 20], [15, 40], true]],
 };
 
-/** Une arrivée et un départ au même instant : deux pointages, une durée nulle, et aucune plage. */
 const jourDeDureeNulleFixture: JourFixture = {
   pointages: [
     ['ARRIVEE', [8, 2]],

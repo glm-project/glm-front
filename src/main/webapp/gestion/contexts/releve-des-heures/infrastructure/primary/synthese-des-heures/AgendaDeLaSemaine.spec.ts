@@ -7,7 +7,6 @@ import { TypeDePointage } from '../../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { AgendaDeLaSemaine, ColonneDessinee, Dessin, DessinDePlage } from './AgendaDeLaSemaine';
 
-/** Une heure locale du lundi 14 septembre ; 24 h désigne le minuit du mardi, borne d'une plage coupée par le back. */
 type Heure = readonly [number, number];
 
 const instantFixture = ([heure, minute]: Heure): InstantDeReleve => new InstantDeReleve(new Date(2026, 8, 14, heure, minute).toISOString());
@@ -65,7 +64,6 @@ const projeterDessin = (dessin: Dessin): string => {
 const projeterNotes = (colonne: ColonneDessinee): string[] =>
   colonne.notes.map(note => `${note.placement} ${String(arrondi(note.haut))} (${String(note.plages.length)})`);
 
-/** Le jour entier, vingt pixels par heure : une plage venue de la veille l'ouvre sans rien ajouter d'autre à la colonne. */
 const surLeJourEntier = (plages: readonly PlageDeReleve[]): JourDeReleve =>
   jourFixture({ plages: [plageFixture([0, 0], [0, 30]), ...plages] });
 
@@ -147,7 +145,6 @@ describe('AgendaDeLaSemaine', () => {
       ]);
     });
 
-    /** Sans cet ancrage, la moitié extérieure des repères d'extrémité sort de la cellule et se fait couper. */
     it('should anchor the marks that sit on the edges of the axis', () => {
       const agenda = new AgendaDeLaSemaine([journeeOrdinaireFixture()]);
       const ancrages = agenda.reperes().map(repere => repere.ancrage);

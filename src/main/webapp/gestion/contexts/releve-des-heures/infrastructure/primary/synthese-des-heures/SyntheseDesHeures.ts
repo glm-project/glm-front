@@ -48,7 +48,6 @@ export class SyntheseDesHeures {
   private readonly router = inject(Router);
   private readonly port = inject(SyntheseDesHeuresPort);
 
-  /** Le jour et la semaine en cours sont figés à l'ouverture : un relevé qu'on lit ne doit pas changer tout seul. */
   private readonly aujourdhui = jourCourant();
   private readonly semaineCourante = SemaineISO.contenant(this.aujourdhui);
 

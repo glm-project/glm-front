@@ -4,14 +4,6 @@ const estPresumeeSansFin = (fin: InstantDeReleve | undefined, presumee: boolean)
 
 const finitAvantDeCommencer = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): boolean => fin?.estAvant(debut) === true;
 
-/**
- * Une fenêtre de présence hors pause, lue dans la feuille de temps et déjà ramenée au jour qui la porte. `fin`
- * manque quand l'opérateur est encore là ; une plage présumée est la fin d'une journée de travail abandonnée
- * au-delà de l'amplitude maximale.
- *
- * Ce n'est pas une durée : aucun chiffre du relevé n'en est dérivé. Les durées pointée et présumée restent celles
- * que le serveur a calculées. Ces plages ne servent qu'à dessiner la présence.
- */
 export class PlageDeReleve {
   constructor(
     readonly debut: InstantDeReleve,

@@ -30,7 +30,6 @@ const EN_COURS = 'en cours';
 const DEPUIS_LA_VEILLE = 'depuis la veille';
 const SE_POURSUIT = 'se poursuit';
 
-/** Ce qui nomme une plage fermée : ses bornes, et les continuations qui remplacent minuit. */
 export interface FormeDePlage {
   readonly presumee: boolean;
   readonly debut: InstantDeReleve;
@@ -81,18 +80,14 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
   pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${heure(instant)}`,
 
-  /** Ce qu'un bloc écrit en haut : « depuis la veille » remplace le minuit d'une plage venue de la veille. */
   debutDeBloc: (debut: InstantDeReleve, depuisLaVeille: boolean): string => (depuisLaVeille ? DEPUIS_LA_VEILLE : heure(debut)),
-  /** Ce qu'un bloc écrit en bas : « présumée » ne s'accole qu'à une vraie heure de fin. */
   finDeBloc: (fin: InstantDeReleve, seLePoursuit: boolean, presumee: boolean): string => {
     if (seLePoursuit) {
       return SE_POURSUIT;
     }
     return presumee ? `${heure(fin)} présumée` : heure(fin);
   },
-  /** Les deux bornes d'un bloc moyen ou d'une ligne de note, sur une seule ligne. */
   bornes: (debut: string, fin: string): string => `${debut} – ${fin}`,
-  /** Une plage en cours se nomme par le pointage qui l'a ouverte, ou par la présence quand aucun n'a son instant. */
   puceEnCours: (type: TypeDePointage | undefined, debut: InstantDeReleve): string =>
     `${type === undefined ? PRESENCE : TYPES[type]} ${heure(debut)}`,
   pucePause: (debut: InstantDeReleve): string => `${PAUSE} ${heure(debut)}`,

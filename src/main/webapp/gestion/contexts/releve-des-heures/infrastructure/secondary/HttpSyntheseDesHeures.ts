@@ -45,7 +45,6 @@ const toPlage = (plage: RestPlage): PlageDeReleve =>
 const presenceParJourDe = (jours: readonly RestJourDeFeuille[]): PresenceParJour =>
   new Map(jours.map(jour => [required(jour.jour, 'jourDeLaFeuille.jour'), required(jour.presence, 'jourDeLaFeuille.presence')]));
 
-/** Autant de jours, et autant de dates distinctes, que la synthèse : une date manquante ou répétée ne s'apparie pas. */
 const neCorrespondPasUnAUn = (
   jours: readonly RestJour[],
   joursDeLaFeuille: readonly RestJourDeFeuille[],
@@ -71,10 +70,6 @@ const toJour = (jour: RestJour, presences: PresenceParJour): JourDeReleve => {
   });
 };
 
-/**
- * Chaque jour de la synthèse reçoit la présence que la feuille porte à la même date. Une feuille qui ne porte pas
- * exactement les jours de la synthèse est une réponse invalide, pas un jour sans présence.
- */
 const toJours = (synthese: RestSynthese, feuille: RestFeuille): readonly JourDeReleve[] => {
   const jours = required(synthese.jours, 'synthese.jours');
   const joursDeLaFeuille = required(feuille.jours, 'feuille.jours');
@@ -90,11 +85,6 @@ const toIdentite = (synthese: RestSynthese): IdentiteOperateur => {
   return new IdentiteOperateur(operateur.nom, operateur.prenom);
 };
 
-/**
- * Le back accepte en silence la semaine 53 d'une année qui n'en a que 52 et rend alors la première semaine de
- * l'année suivante. `SemaineISO` rend le cas inatteignable depuis cet écran ; cette vérification, faite sur les deux
- * réponses, le rend inatteignable tout court.
- */
 const verifieLaSemaine = (document: SemaineRendue, source: string, demandee: SemaineISO): void => {
   const rendue = new SemaineISO(required(document.annee, `${source}.annee`), required(document.semaine, `${source}.semaine`));
   if (!rendue.estLaMeme(demandee)) {
@@ -116,10 +106,6 @@ const toReleve = (synthese: RestSynthese, feuille: RestFeuille, demandee: Semain
 const estIntrouvable = (lecture: PromiseSettledResult<unknown>, urn: string): boolean =>
   lecture.status === 'rejected' && findApiErrorIn(lecture.reason)?.urn === urn;
 
-/**
- * Un opérateur introuvable sur l'une des routes l'emporte sur une panne de l'autre : la réponse est vraie et stable,
- * et un nouvel essai ne la changerait pas.
- */
 const operateurIntrouvable = (synthese: PromiseSettledResult<RestSynthese>, feuille: PromiseSettledResult<RestFeuille>): boolean =>
   estIntrouvable(synthese, SYNTHESE_INTROUVABLE) || estIntrouvable(feuille, FEUILLE_INTROUVABLE);
 
@@ -130,12 +116,6 @@ const documentDe = <T>(lecture: PromiseSettledResult<T>): T => {
   return lecture.value;
 };
 
-/**
- * Compose la synthèse, source des durées, et la feuille de temps, source des plages. Les deux lectures partent
- * ensemble, et l'issue ne dépend jamais de l'ordre d'arrivée des réponses. L'instant de lecture décide de l'abandon
- * d'une journée : deux réponses lues à des instants différents peuvent donc se contredire, et aucun instantané
- * cohérent n'est cherché entre elles.
- */
 @Injectable()
 export class HttpSyntheseDesHeures extends SyntheseDesHeuresPort {
   private readonly api = inject(ApiClient);

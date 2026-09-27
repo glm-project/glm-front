@@ -56,7 +56,6 @@
   background: color-mix(in srgb, var(--color-accent) 8%, var(--color-canvas));
 }
 
-/* À 120 px de colonne, « Aujourd’hui » passe sous le jour plutôt que de déborder sur la colonne voisine. */
 .jour {
   display: flex;
   flex-wrap: wrap;
@@ -106,7 +105,6 @@
   background: color-mix(in srgb, var(--color-accent) 4%, transparent);
 }
 
-/* Une ligne par heure : la même grille pour les sept colonnes, puisque l'axe leur est commun. */
 .dessin {
   position: relative;
   background-image: repeating-linear-gradient(to bottom, var(--color-sunken) 0 1px, transparent 1px var(--heure));
@@ -168,7 +166,6 @@
   border-radius: 1px;
 }
 
-/* Une plage présumée est à confirmer : ses pointillés ne se confondent jamais avec une présence pointée. */
 .bloc.presumee {
   padding: 1px calc(0.5rem - 2px);
   border: 2px dashed var(--color-warn);
@@ -176,13 +173,11 @@
   color: var(--color-warn);
 }
 
-/* Haute de trois pixels, une plage courte ne porterait pas deux fois deux pixels de bordure. */
 .bloc.courte.presumee {
   padding: 0;
   border-width: 1px;
 }
 
-/* Le bord de minuit reste droit : la plage se poursuit dans la colonne voisine. */
 .bloc.depuis-la-veille,
 .pause.depuis-la-veille {
   border-top-left-radius: 0;
@@ -194,7 +189,6 @@
   border-bottom-left-radius: 0;
 }
 
-/* Une borne longue, « 15:40 présumée » ou « se poursuit », passe à la ligne plutôt que d'être coupée. */
 .borne {
   display: flex;
   flex-wrap: wrap;
@@ -264,7 +258,6 @@
   line-height: 13px;
 }
 
-/* Une plage en cours ou une pause sans reprise n'a pas de fin à dessiner : un repère, pas une barre qui inventerait du temps. */
 .trait {
   position: absolute;
   right: 0.25rem;

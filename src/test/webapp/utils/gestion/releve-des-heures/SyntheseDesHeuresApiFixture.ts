@@ -24,7 +24,6 @@ const datesDe = (annee: number, semaine: number): string[] => {
   return Array.from({ length: 7 }, (_, rang) => new Date(lundi.getTime() + rang * MILLISECONDES_PAR_JOUR).toISOString().slice(0, 10));
 };
 
-/** Le lundi seul est travaillé, de 06:02 à 15:32 UTC : la synthèse en rend les pointages, la feuille la plage. */
 const joursDeSynthese = (annee: number, semaine: number): RestJour[] =>
   datesDe(annee, semaine).map((jour, rang) => ({
     jour,
@@ -45,7 +44,6 @@ const joursDeFeuille = (annee: number, semaine: number): RestJourDeFeuille[] =>
     presence: rang === 0 ? [{ debut: `${jour}T06:02:00Z`, fin: `${jour}T15:32:00Z`, presumee: false }] : [],
   }));
 
-/** Une semaine semée telle que les deux routes la rendraient : la synthèse et la feuille de temps de mêmes jours. */
 export interface SemaineSemee {
   readonly synthese: RestSynthese;
   readonly feuille: RestFeuille;
@@ -73,7 +71,6 @@ export class SyntheseDesHeuresApiFixture {
     this.installFeuille();
   }
 
-  /** La feuille de temps seule, pour un scénario qui retient la synthèse. */
   installFeuille(): void {
     cy.intercept({ method: 'GET', pathname: FEUILLE }, request => {
       request.reply(this.reponseDeFeuille(Number(request.query['annee']), Number(request.query['semaine'])));

@@ -40,7 +40,6 @@ export interface PauseAffichee {
   readonly titre: string;
 }
 
-/** Le repère sans hauteur d'une plage en cours ou d'une pause sans reprise, et la puce qui le nomme. */
 export interface MarqueAffichee {
   readonly nature: 'plage' | 'pause';
   readonly haut: number;
@@ -49,7 +48,6 @@ export interface MarqueAffichee {
   readonly titre: string;
 }
 
-/** Ce qu'une colonne de l'agenda montre d'un jour : son en-tête, ses dessins placés, et ce qu'elle énonce. */
 export interface ColonneAffichee {
   readonly cle: string;
   readonly jour: string;
@@ -129,7 +127,6 @@ const toMarques = (dessins: readonly Dessin[], jour: JourDeReleve): readonly Mar
     return dessin.kind === 'PAUSE_SANS_REPRISE' ? [toMarqueDePause(dessin)] : [];
   });
 
-/** L'agenda place, les libellés disent : cette projection réunit les deux pour le template, sans rien décider. */
 export const toColonneAffichee = (agenda: AgendaDeLaSemaine, jour: JourDeReleve, aujourdhui: JourCalendaire): ColonneAffichee => {
   const estAujourdhui = jour.jour.estLeMeme(aujourdhui);
   const { dessins, notes } = agenda.colonne(jour, estAujourdhui);

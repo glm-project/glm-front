@@ -10,7 +10,6 @@ import {
 type TypeDePointage = components['schemas']['RestPointageDeSyntheseDesHeures']['type'];
 type Heure = readonly [number, number];
 
-/** Le samedi 26 septembre 2026 à 10:30, en pleine journée : la semaine 39 est celle des maquettes. */
 const HORLOGE = new Date(2026, 8, 26, 10, 30).getTime();
 const SEMAINE_DE_JOUR = '/operateurs/op-1/heures?annee=2026&semaine=39';
 const SEMAINE_DE_NUIT = '/operateurs/op-1/heures?annee=2026&semaine=38';
@@ -37,10 +36,6 @@ interface SemaineDeMaquette {
   readonly jours: readonly JourDeMaquette[];
 }
 
-/**
- * Les heures de la maquette sont des heures locales : l'écran les affiche dans le fuseau du navigateur, et ce
- * scénario les écrit dans ce même fuseau. 24 h désigne le minuit du lendemain, borne d'une plage coupée par le back.
- */
 const instantFixture = (lundi: number, rang: number, [heure, minute]: Heure): string =>
   new Date(2026, 8, lundi + rang, heure, minute).toISOString();
 

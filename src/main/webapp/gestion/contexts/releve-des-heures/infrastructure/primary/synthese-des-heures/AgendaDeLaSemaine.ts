@@ -6,7 +6,6 @@ import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 const MINUTES_PAR_HEURE = 60;
 const MINUTES_PAR_JOUR = 24 * MINUTES_PAR_HEURE;
 
-/** L'ancrage d'un repère : les extrémités de l'axe se collent à son bord, faute de quoi elles sont coupées. */
 export type AncrageDuRepere = 'haut' | 'centre' | 'bas';
 
 export interface RepereHoraire {
@@ -16,10 +15,8 @@ export interface RepereHoraire {
   readonly ancrage: AncrageDuRepere;
 }
 
-/** La hauteur rendue classe une plage : ses heures en haut et en bas, sur une ligne, ou dans une note. */
 export type ClasseDeHauteur = 'longue' | 'moyenne' | 'courte';
 
-/** Où se pose une note ou une puce par rapport à ce qu'elle nomme ; `dessus` quand dessous ne tient pas. */
 export type Placement = 'dessous' | 'dessus';
 
 export interface DessinDePlage {
@@ -34,7 +31,6 @@ export interface DessinDePlage {
   readonly seLePoursuit: boolean;
 }
 
-/** Une plage sans fin : l'opérateur est encore là. Un repère sans hauteur, qui n'invente aucun temps. */
 export interface DessinDePlageEnCours {
   readonly kind: 'PLAGE_EN_COURS';
   readonly debut: InstantDeReleve;
@@ -52,10 +48,6 @@ export interface DessinDePause {
   readonly etiquetee: boolean;
 }
 
-/**
- * Une pause que le jour ne reprend pas : le front ne distingue pas une pause qui passe minuit d'une pause en cours ou
- * d'une journée abandonnée pendant sa pause. Un repère sans hauteur ; aujourd'hui, elle est en cours.
- */
 export interface DessinDePauseSansReprise {
   readonly kind: 'PAUSE_SANS_REPRISE';
   readonly debut: InstantDeReleve;
@@ -112,14 +104,9 @@ const minutesDe = (date: Date): number => date.getHours() * MINUTES_PAR_HEURE + 
 
 const debutDe = (plage: PlageDeReleve): number => minutesDe(plage.debut.value);
 
-/**
- * Le back coupe à minuit une plage qui le passe : sa borne de fin est alors l'instant du lendemain à 00:00. Elle
- * ferme le jour et vaut 1 440 minutes ; lue comme une heure, elle vaudrait 0 et la plage finirait avant de commencer.
- */
 const minutesDeFin = (debut: InstantDeReleve, fin: InstantDeReleve): number =>
   fin.value.toDateString() === debut.value.toDateString() ? minutesDe(fin.value) : MINUTES_PAR_JOUR;
 
-/** Une pause venue de la veille commence à minuit : le front ne connaît pas cet instant, seulement son absence. */
 const debutDeLaPause = (pause: PauseDeReleve): number => (pause.debut === undefined ? 0 : minutesDe(pause.debut.value));
 
 const bornesDeLaPlage = (plage: PlageDeReleve): readonly number[] =>
@@ -154,7 +141,6 @@ const rejointLeGroupe = (
   plage: DessinDePlage,
 ): groupe is DessinDePlage[] => groupe !== undefined && prolongeLeGroupe(precedente, plage);
 
-/** Des plages courtes consécutives et proches partagent une note : une par plage se chevaucheraient. */
 const groupesDeCourtes = (plages: readonly DessinDePlage[]): readonly (readonly DessinDePlage[])[] =>
   plages.reduce<DessinDePlage[][]>((groupes, plage, rang) => {
     if (plage.classe !== 'courte') {
@@ -170,20 +156,11 @@ const groupesDeCourtes = (plages: readonly DessinDePlage[]): readonly (readonly 
 
 const hauteurDEtiquette = (lignes: number): number => MARGE_DE_L_ETIQUETTE + HAUTEUR_DE_LIGNE * lignes;
 
-/** Minuit ferme le jour : le repère de fin se nomme `00:00`, jamais `24:00`, qui n'est l'heure de personne. */
 const libelleDuRepere = (minutes: number): string => {
   const heure = Math.floor(minutes / MINUTES_PAR_HEURE) % 24;
   return `${String(heure).padStart(2, '0')}:00`;
 };
 
-/**
- * L'agenda de la semaine : un axe vertical commun aux sept colonnes, et la place de chaque dessin en pixels. Il est
- * ancré sur les heures de jour, de 6 h à 22 h, pour que deux semaines se comparent et que l'étendue ne change pas
- * sous les yeux du lecteur. Il s'ouvre sur le jour entier dès qu'une borne de plage ou de pause tombe en dehors, ce
- * qui comprend tout ce qui touche minuit — une équipe de nuit resterait invisible sur une fenêtre figée.
- *
- * Aucune durée n'en sort : une hauteur est une géométrie de dessin, jamais un chiffre affiché.
- */
 export class AgendaDeLaSemaine {
   readonly debut: number;
   readonly fin: number;
@@ -215,7 +192,6 @@ export class AgendaDeLaSemaine {
     });
   }
 
-  /** Les dessins d'un jour dans l'ordre des heures, comme l'œil lit la colonne, et les notes de ses plages courtes. */
   colonne(jour: JourDeReleve, estAujourdhui: boolean): ColonneDessinee {
     const pauses = jour.pauses();
     const plages = jour.plages.flatMap(plage => this.dessineLaPlage(plage, jour.vientDeLaVeille(plage)));
@@ -228,7 +204,6 @@ export class AgendaDeLaSemaine {
     return { dessins, notes: this.notesDe(plages, encombrants) };
   }
 
-  /** Une plage courte est dessinée à sa vraie hauteur, trois pixels au moins, et nommée par une note. */
   private dessineLaPlage(plage: PlageDeReleve, depuisLaVeille: boolean): readonly DessinDePlage[] {
     if (plage.fin === undefined) {
       return [];
@@ -315,10 +290,6 @@ export class AgendaDeLaSemaine {
     });
   }
 
-  /**
-   * Une note ou une puce se pose sous ce qu'elle nomme, et au-dessus quand elle y heurterait le bloc suivant ou
-   * sortirait de la grille. Si le dessus sort aussi de la grille, elle reste dessous.
-   */
   private placeUneEtiquette(nommee: Encombrement, lignes: number, obstacles: readonly Encombrement[]): PositionDEtiquette {
     const hauteur = hauteurDEtiquette(lignes);
     const dessous = basDe(nommee) + ECART_DE_L_ETIQUETTE;
