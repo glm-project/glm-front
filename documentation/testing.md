@@ -224,6 +224,13 @@ not a testing defect. Changing private helpers, internal state representation or
 the expected business result intact. For example, assert that the last digits are visible and the operator
 can scroll back, rather than fabricating a width and asserting the component's exact scroll assignment.
 
+**Unit tests run in `America/Sao_Paulo`**, which `vitest.config.ts` pins as `TIME_ZONE_BEHIND_UTC`: UTC−3
+all year, without daylight saving. A calendar date formatted in local time rather than UTC shifts to the day
+before only behind UTC, and an instant formatted in UTC rather than local time shifts as soon as the offset is
+not zero: a machine in Paris hides the first defect, a UTC runner hides both. Build instant fixtures from a
+local time — `new Date(2026, 8, 14, 8, 2).toISOString()` — so the expected text holds in any zone while still
+proving that the screen formats the instant it received.
+
 ## Reviewing test value
 
 For each added or changed scenario, record in the MR the functional rule, the public entry point and the

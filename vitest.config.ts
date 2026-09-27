@@ -1,9 +1,12 @@
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
+const TIME_ZONE_BEHIND_UTC = 'America/Sao_Paulo';
+
 export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
+    env: { TZ: TIME_ZONE_BEHIND_UTC },
     reporters: ['verbose', ['vitest-sonar-reporter', { outputFile: 'target/test-results/TESTS-results-sonar.xml' }]],
     globals: true,
     logHeapUsage: true,
