@@ -7,15 +7,22 @@ import { FicheDuReleve, ReleveDesHeures } from './ReleveDesHeures';
 
 const SEMAINE = new SemaineISO(2026, 38);
 
-const jourFixture = (jour: string, duree = 'PT0S'): JourDeReleve =>
-  new JourDeReleve(new JourCalendaire(jour), new DureeTravaillee(duree), []);
+const jourFixture = (jour: string): JourDeReleve =>
+  new JourDeReleve({
+    jour: new JourCalendaire(jour),
+    dureePointee: new DureeTravaillee('PT0S'),
+    dureePresumee: new DureeTravaillee('PT0S'),
+    pointages: [],
+    plages: [],
+  });
 
 const semaineCompleteFixture = (): readonly JourDeReleve[] => SEMAINE.jours().map(jour => jourFixture(jour.value));
 
 const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   operateur: new IdentiteOperateur('Dupont', 'Jean'),
   jours,
-  total: new DureeTravaillee('PT38H'),
+  totalPointe: new DureeTravaillee('PT38H'),
+  totalPresume: new DureeTravaillee('PT5H20M'),
 });
 
 describe('ReleveDesHeures', () => {
@@ -33,10 +40,16 @@ describe('ReleveDesHeures', () => {
     ]);
   });
 
-  it('should carry the week total the server computed', () => {
+  it('should carry the clocked week total the server computed', () => {
     const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
 
-    expect(releve.total).toMatchObject({ heures: 38, minutesRestantes: 0 });
+    expect(releve.totalPointe).toMatchObject({ heures: 38, minutesRestantes: 0 });
+  });
+
+  it('should carry the presumed week total the server computed, without adding the days up', () => {
+    const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
+
+    expect(releve.totalPresume).toMatchObject({ heures: 5, minutesRestantes: 20 });
   });
 
   it('should carry the operator the report resolved', () => {

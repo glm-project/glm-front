@@ -32,7 +32,6 @@ const minutesDe = (composantes: Composantes): number =>
   + Number(composantes.minutes ?? 0)
   + Math.floor(Number(composantes.secondes ?? 0) / SECONDES_PAR_MINUTE);
 
-/** Un temps de travail effectif, pauses déduites. Jamais l'amplitude d'une venue. */
 export class DureeTravaillee {
   readonly minutes: number;
   readonly heures: number;
@@ -49,5 +48,9 @@ export class DureeTravaillee {
     this.minutes = minutesDe(composantes);
     this.heures = Math.floor(this.minutes / MINUTES_PAR_HEURE);
     this.minutesRestantes = this.minutes % MINUTES_PAR_HEURE;
+  }
+
+  estNulle(): boolean {
+    return this.minutes === 0;
   }
 }

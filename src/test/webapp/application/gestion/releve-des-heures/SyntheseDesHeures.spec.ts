@@ -109,11 +109,11 @@ describe('Weekly hours report of an operator', () => {
 
   const thenTheWeekInProgressIsDisplayed = (): void => {
     cy.get(dataSelector('synthese-semaine-libelle')).should('contain.text', 'Semaine 38');
-    cy.get(dataSelector('synthese-jour-row')).should('have.length', 7);
+    cy.get(dataSelector('synthese-jour-cell')).should('have.length', 7);
   };
 
   const thenTheServerWasAskedFor = (annee: string, semaine: string): void => {
-    cy.get(dataSelector('synthese-jour-row')).should('have.length', 7);
+    cy.get(dataSelector('synthese-jour-cell')).should('have.length', 7);
     cy.wrap(synthese.lectures).should('deep.include', { annee, semaine });
   };
 

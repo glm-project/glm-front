@@ -17,23 +17,22 @@ const couvreLaSemaine = (semaine: SemaineISO, jours: readonly JourDeReleve[]): b
 export interface FicheDuReleve {
   readonly operateur: IdentiteOperateur;
   readonly jours: readonly JourDeReleve[];
-  readonly total: DureeTravaillee;
+  readonly totalPointe: DureeTravaillee;
+  readonly totalPresume: DureeTravaillee;
 }
 
-/**
- * Le relevé d'une semaine. Sa durée totale est celle que le serveur a calculée : ce contexte n'additionne aucune
- * durée, sous peine de donner à l'écran un second avis sur les heures d'une personne.
- */
 export class ReleveDesHeures {
   readonly operateur: IdentiteOperateur;
   readonly jours: readonly JourDeReleve[];
-  readonly total: DureeTravaillee;
+  readonly totalPointe: DureeTravaillee;
+  readonly totalPresume: DureeTravaillee;
 
   constructor(semaine: SemaineISO, fiche: FicheDuReleve) {
     ReleveDesHeures.verifieLesSeptJours(semaine, fiche.jours);
     this.operateur = fiche.operateur;
     this.jours = [...fiche.jours];
-    this.total = fiche.total;
+    this.totalPointe = fiche.totalPointe;
+    this.totalPresume = fiche.totalPresume;
   }
 
   /**

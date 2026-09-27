@@ -8,6 +8,7 @@ import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
 import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
+import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 import { PointageDeReleve } from '../../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
@@ -17,6 +18,7 @@ import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { SyntheseDesHeures } from './SyntheseDesHeures';
 
 const OPERATEUR = 'op-1';
+const SEMAINE_EN_COURS = new SemaineISO(2026, 38);
 
 class RouteFixture {
   readonly paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ operateur: OPERATEUR }));
@@ -45,33 +47,70 @@ class RouterFixture {
  * l'attente dépendante du fuseau de la machine — 08:02 à Paris, 06:02 sur un runner en UTC. Partir d'une heure
  * locale garde le scénario vrai partout, sans cesser de prouver que l'écran formate bien l'instant reçu.
  */
-const pointageFixture = (type: TypeDePointage, heure: number, minute: number): PointageDeReleve =>
-  new PointageDeReleve(type, new InstantDeReleve(new Date(2026, 8, 14, heure, minute).toISOString()));
+type Heure = readonly [number, number];
 
-const releveFixture = (semaine: SemaineISO, premierJour: JourDeReleve): ReleveDesHeures =>
-  new ReleveDesHeures(semaine, {
-    operateur: new IdentiteOperateur('Dupont', 'Jean'),
-    total: new DureeTravaillee('PT7H30M'),
-    jours: semaine.jours().map((jour, rang) => (rang === 0 ? premierJour : new JourDeReleve(jour, new DureeTravaillee('PT0S'), []))),
+const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
+  new InstantDeReleve(new Date(2026, 8, 14 + rang, heure, minute).toISOString());
+
+interface JourFixture {
+  readonly pointee?: string;
+  readonly presumee?: string;
+  readonly pointages?: readonly (readonly [TypeDePointage, Heure])[];
+  readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
+}
+
+const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): JourDeReleve =>
+  new JourDeReleve({
+    jour,
+    dureePointee: new DureeTravaillee(fiche.pointee ?? 'PT0S'),
+    dureePresumee: new DureeTravaillee(fiche.presumee ?? 'PT0S'),
+    pointages: (fiche.pointages ?? []).map(([type, heure]) => new PointageDeReleve(type, instantFixture(rang, heure))),
+    plages: (fiche.plages ?? []).map(
+      ([debut, fin, presumee]) =>
+        new PlageDeReleve(instantFixture(rang, debut), fin === undefined ? undefined : instantFixture(rang, fin), presumee ?? false),
+    ),
   });
 
-const jourTravailleFixture = (semaine: SemaineISO): JourDeReleve =>
-  new JourDeReleve(new JourCalendaire(semaine.lundi().value), new DureeTravaillee('PT7H30M'), [
-    pointageFixture('ARRIVEE', 8, 2),
-    pointageFixture('PAUSE', 12, 0),
-    pointageFixture('REPRISE', 13, 0),
-    pointageFixture('DEPART', 17, 32),
-  ]);
+const releveFixture = (semaine: SemaineISO, jours: Readonly<Record<number, JourFixture>>, totalPresume = 'PT0S'): ReleveDesHeures =>
+  new ReleveDesHeures(semaine, {
+    operateur: new IdentiteOperateur('Dupont', 'Jean'),
+    totalPointe: new DureeTravaillee('PT7H30M'),
+    totalPresume: new DureeTravaillee(totalPresume),
+    jours: semaine.jours().map((jour, rang) => jourFixture(jour, rang, jours[rang] ?? {})),
+  });
 
-/** Une journée encore ouverte : l'opérateur est arrivé et n'est pas parti. C'est le cas de tout jour en cours. */
-const jourEnCoursFixture = (semaine: SemaineISO): JourDeReleve =>
-  new JourDeReleve(new JourCalendaire(semaine.lundi().value), new DureeTravaillee('PT0S'), [pointageFixture('ARRIVEE', 8, 2)]);
+const jourTravailleFixture: JourFixture = {
+  pointee: 'PT7H30M',
+  pointages: [
+    ['ARRIVEE', [8, 2]],
+    ['PAUSE', [12, 0]],
+    ['REPRISE', [13, 0]],
+    ['DEPART', [17, 32]],
+  ],
+  plages: [
+    [
+      [8, 2],
+      [12, 0],
+    ],
+    [
+      [13, 0],
+      [17, 32],
+    ],
+  ],
+};
 
-const jourPointeSansDureeFixture = (semaine: SemaineISO): JourDeReleve =>
-  new JourDeReleve(new JourCalendaire(semaine.lundi().value), new DureeTravaillee('PT0S'), [
-    pointageFixture('ARRIVEE', 8, 2),
-    pointageFixture('DEPART', 8, 2),
-  ]);
+const jourAbandonneFixture: JourFixture = {
+  presumee: 'PT5H20M',
+  pointages: [['ARRIVEE', [10, 20]]],
+  plages: [[[10, 20], [15, 40], true]],
+};
+
+const jourDeDureeNulleFixture: JourFixture = {
+  pointages: [
+    ['ARRIVEE', [8, 2]],
+    ['DEPART', [8, 2]],
+  ],
+};
 
 describe('Synthese des heures component', () => {
   let componentFixture: ComponentFixture<SyntheseDesHeures>;
@@ -103,7 +142,7 @@ describe('Synthese des heures component', () => {
   it.each([
     ['synthese-semaine-libelle', 'Semaine 38 · 14–20 sept. 2026'],
     ['synthese-identite', 'Jean DUPONT'],
-    ['synthese-total', 'Total : 7 h 30'],
+    ['synthese-total', 'Pointé : 7 h 30'],
   ])('should display %s as %s for the week containing today', async (selector, attendu) => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
@@ -112,15 +151,15 @@ describe('Synthese des heures component', () => {
     expect(texte(selector)).toBe(attendu);
   });
 
-  it('should display the seven days of the week', async () => {
+  it('should give each of the seven days its column', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-jour-cell')).toEqual(['lun. 14', 'mar. 15', 'mer. 16', 'jeu. 17', 'ven. 18', 'sam. 19', 'dim. 20']);
+    expect(textes('synthese-jour')).toEqual(['lun. 14', 'mar. 15', 'mer. 16', 'jeu. 17', 'ven. 18', 'sam. 19', 'dim. 20']);
   });
 
-  it('should display the worked time of each day', async () => {
+  it('should head each column with the clocked time of its day', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
@@ -128,50 +167,311 @@ describe('Synthese des heures component', () => {
     expect(textes('synthese-duree-cell')).toEqual(['7 h 30', '—', '—', '—', '—', '—', '—']);
   });
 
-  it('should name each clocking by its kind and its hour once the journal is opened', async () => {
-    givenSemaineSemee(new SemaineISO(2026, 38));
-    await whenEcranAffiche();
-
-    await whenJournalDeplie();
-
-    expect(textes('synthese-pointage')).toEqual(['Arrivée 08:02', 'Pause 12:00', 'Reprise 13:00', 'Départ 17:32']);
-  });
-
-  it('should keep the journal closed until it is asked for', async () => {
-    givenSemaineSemee(new SemaineISO(2026, 38));
+  it('should add the presumed time of a day under its clocked time', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 1: jourAbandonneFixture }, 'PT5H20M'));
 
     await whenEcranAffiche();
 
-    expect(present('synthese-journal')).toBe(false);
+    expect([textes('synthese-duree-cell')[1], textes('synthese-duree-presumee')]).toEqual(['0 h 00', ['+ 5 h 20 présumées']]);
   });
 
-  it('should close the journal a second click dismisses', async () => {
-    givenSemaineSemee(new SemaineISO(2026, 38));
+  it.each(['synthese-duree-presumee', 'synthese-total-presume'])(
+    'should display no %s for a week without presumed time',
+    async selector => {
+      givenSemaineSemee(new SemaineISO(2026, 38));
+
+      await whenEcranAffiche();
+
+      expect(present(selector)).toBe(false);
+    },
+  );
+
+  it('should display the presumed week total, to be confirmed, beside the clocked one', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 1: jourAbandonneFixture }, 'PT5H20M'));
+
     await whenEcranAffiche();
-    await whenJournalDeplie();
 
-    await whenJournalDeplie();
-
-    expect(present('synthese-journal')).toBe(false);
+    expect([texte('synthese-total'), texte('synthese-total-presume')]).toEqual(['Pointé : 7 h 30', 'Présumé, à confirmer : 5 h 20']);
   });
 
-  it('should draw the presence and the break of a worked day', async () => {
-    givenSemaineSemee(new SemaineISO(2026, 38));
-
-    await whenEcranAffiche();
-
-    expect(nombreDe('synthese-segment')).toBe(3);
-  });
-
-  it('should offer no track on a day carrying no clocking', async () => {
+  it('should mark the column of today', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
-    expect(nombreDe('synthese-piste')).toBe(1);
+    expect(jourMarqueAujourdhui()).toBe('jeu. 17');
   });
 
-  it('should scale the week on the working day', async () => {
+  it('should state the presence and the breaks of a day in the order of the hours, then its clockings', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-enonce'), textes('synthese-pointage')]).toEqual([
+      ['Présence 08:02 – 12:00', 'Pause 12:00 – 13:00', 'Présence 13:00 – 17:32'],
+      ['Arrivée 08:02', 'Pause 12:00', 'Reprise 13:00', 'Départ 17:32'],
+    ]);
+  });
+
+  it('should write the hours of a long interval at its top and its bottom', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+
+    await whenEcranAffiche();
+
+    expect([titres('synthese-plage'), textes('synthese-debut'), textes('synthese-fin')]).toEqual([
+      ['Présence 08:02 – 12:00', 'Présence 13:00 – 17:32'],
+      ['08:02', '13:00'],
+      ['12:00', '17:32'],
+    ]);
+  });
+
+  it('should write the hours of a medium interval on one line', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          pointages: [
+            ['ARRIVEE', [8, 0]],
+            ['DEPART', [9, 0]],
+          ],
+          plages: [
+            [
+              [8, 0],
+              [9, 0],
+            ],
+          ],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textes('synthese-plage')).toEqual(['08:00 – 09:00']);
+  });
+
+  it('should draw a presumed interval apart, its end read as presumed', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 1: jourAbandonneFixture }, 'PT5H20M'));
+
+    await whenEcranAffiche();
+
+    expect([titres('synthese-plage-presumee'), textes('synthese-fin'), textes('synthese-enonce')]).toEqual([
+      ['Présence présumée 10:20 – 15:40'],
+      ['15:40 présumée'],
+      ['Présence présumée 10:20 – 15:40'],
+    ]);
+  });
+
+  it('should keep both halves of a presumed interval cut at midnight presumed, the suffix only on a real end hour', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: { presumee: 'PT4H', pointages: [['ARRIVEE', [20, 0]]], plages: [[[20, 0], [24, 0], true]] },
+          1: { presumee: 'PT4H', plages: [[[0, 0], [4, 0], true]] },
+        },
+        'PT8H',
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([titres('synthese-plage-presumee'), textes('synthese-debut'), textes('synthese-fin')]).toEqual([
+      ['Présence présumée depuis 20:00, se poursuit le lendemain', 'Présence présumée depuis la veille jusqu’à 04:00'],
+      ['20:00', 'depuis la veille'],
+      ['se poursuit', '04:00 présumée'],
+    ]);
+  });
+
+  it('should draw the breaks between the clockings, labelled when tall enough', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+
+    await whenEcranAffiche();
+
+    expect([titres('synthese-pause'), textes('synthese-pause')]).toEqual([['Pause 12:00 – 13:00'], ['Pause']]);
+  });
+
+  it('should name short intervals close to one another in one shared note', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        3: {
+          pointages: [
+            ['ARRIVEE', [15, 10]],
+            ['DEPART', [15, 10]],
+            ['ARRIVEE', [15, 20]],
+            ['DEPART', [15, 30]],
+          ],
+          plages: [
+            [
+              [15, 10],
+              [15, 10],
+            ],
+            [
+              [15, 20],
+              [15, 30],
+            ],
+          ],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect([nombreDe('synthese-plage'), lignes('synthese-note')]).toEqual([2, ['15:10 – 15:10', '15:20 – 15:30']]);
+  });
+
+  it('should mark an interval still in progress by the clocking that opened it rather than invent its end', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        3: {
+          pointages: [
+            ['ARRIVEE', [8, 2]],
+            ['PAUSE', [10, 0]],
+            ['REPRISE', [10, 20]],
+          ],
+          plages: [
+            [
+              [8, 2],
+              [10, 0],
+            ],
+            [[10, 20], undefined],
+          ],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect([lignes('synthese-plage-ouverte'), titres('synthese-plage-ouverte')]).toEqual([
+      ['Reprise 10:20', 'en cours'],
+      ['Présence depuis 10:20, en cours'],
+    ]);
+  });
+
+  it('should name an interval in progress by the presence when no clocking of the day shares its start', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 3: { plages: [[[6, 0], undefined]] } }));
+
+    await whenEcranAffiche();
+
+    expect(lignes('synthese-plage-ouverte')).toEqual(['Présence 06:00', 'en cours']);
+  });
+
+  it('should mark a break taken today and not yet resumed as in progress', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        3: {
+          pointages: [
+            ['ARRIVEE', [8, 2]],
+            ['PAUSE', [10, 0]],
+          ],
+          plages: [
+            [
+              [8, 2],
+              [10, 0],
+            ],
+          ],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect([lignes('synthese-pause-sans-reprise'), titres('synthese-pause-sans-reprise')]).toEqual([
+      ['Pause 10:00', 'en cours'],
+      ['Pause depuis 10:00, en cours'],
+    ]);
+  });
+
+  it('should carry a night shift from one day to the next, its break across midnight marked on both sides', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          pointages: [
+            ['ARRIVEE', [18, 58]],
+            ['PAUSE', [23, 40]],
+          ],
+          plages: [
+            [
+              [18, 58],
+              [23, 40],
+            ],
+          ],
+        },
+        1: {
+          pointages: [
+            ['REPRISE', [0, 22]],
+            ['DEPART', [7, 5]],
+            ['ARRIVEE', [19, 0]],
+          ],
+          plages: [
+            [
+              [0, 22],
+              [7, 5],
+            ],
+            [
+              [19, 0],
+              [24, 0],
+            ],
+          ],
+        },
+        2: {
+          pointages: [['DEPART', [7, 0]]],
+          plages: [
+            [
+              [0, 0],
+              [7, 0],
+            ],
+          ],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect([lignes('synthese-pause-sans-reprise'), textes('synthese-enonce')]).toEqual([
+      ['Pause 23:40'],
+      [
+        'Présence 18:58 – 23:40',
+        'Pause depuis 23:40, sans reprise ce jour',
+        'Pause depuis la veille jusqu’à 00:22',
+        'Présence 00:22 – 07:05',
+        'Présence depuis 19:00, se poursuit le lendemain',
+        'Présence depuis la veille jusqu’à 07:00',
+      ],
+    ]);
+  });
+
+  it('should write the continuation of a night shift in place of midnight', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          pointages: [['ARRIVEE', [19, 0]]],
+          plages: [
+            [
+              [19, 0],
+              [24, 0],
+            ],
+          ],
+        },
+        1: {
+          pointages: [['DEPART', [7, 0]]],
+          plages: [
+            [
+              [0, 0],
+              [7, 0],
+            ],
+          ],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-debut'), textes('synthese-fin')]).toEqual([
+      ['19:00', 'depuis la veille'],
+      ['se poursuit', '07:00'],
+    ]);
+  });
+
+  it('should scale the week on the daytime hours', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
@@ -179,38 +479,52 @@ describe('Synthese des heures component', () => {
     expect(textes('synthese-repere')).toEqual(['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']);
   });
 
-  it('should display a day carrying no clocking as no clocking at all', async () => {
+  it('should display a day carrying neither clocking nor interval as no clocking at all', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-jour-sans-pointage')).toHaveLength(6);
+    expect(textes('synthese-jour-sans-pointage')).toEqual(Array(6).fill('Aucun pointage'));
   });
 
-  it('should display a day clocked within the minute as zero hours rather than as absent', async () => {
-    const semaine = new SemaineISO(2026, 38);
-    givenReleve(semaine, releveFixture(semaine, jourPointeSansDureeFixture(semaine)));
+  it('should display a working day of zero duration as zero hours, drawing nothing and stating its clockings', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: jourDeDureeNulleFixture }));
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-duree-cell')[0]).toBe('0 h 00');
+    expect([
+      textes('synthese-duree-cell')[0],
+      nombreDe('synthese-jour-sans-pointage'),
+      nombreDe('synthese-plage'),
+      textes('synthese-pointage'),
+    ]).toEqual(['0 h 00', 6, 0, ['Arrivée 08:02', 'Départ 08:02']]);
   });
 
-  it('should mark a day still in progress as open rather than inventing its end', async () => {
-    const semaine = new SemaineISO(2026, 38);
-    givenReleve(semaine, releveFixture(semaine, jourEnCoursFixture(semaine)));
+  it('should draw a day a presence covers without any clocking rather than call it empty', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          plages: [
+            [
+              [0, 0],
+              [24, 0],
+            ],
+          ],
+        },
+      }),
+    );
 
     await whenEcranAffiche();
 
-    expect(titreDe('synthese-segment')).toBe('Présence depuis 08:02 · en cours');
+    expect([nombreDe('synthese-plage'), nombreDe('synthese-jour-sans-pointage')]).toEqual([1, 6]);
   });
 
-  it('should name a closed presence by its two hours', async () => {
+  it('should explain each mark of the agenda in its legend', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
-    expect(titreDe('synthese-segment')).toBe('Présence 08:02 – 12:00');
+    expect(textes('synthese-legende')).toEqual(['Pointé', 'Présumé (à confirmer)', 'Pause', 'En cours']);
   });
 
   it('should display the loading status until the report arrives', () => {
@@ -395,12 +709,16 @@ describe('Synthese des heures component', () => {
     expect(portFixture.demandes.map(demande => demande.operateur.value)).toEqual([OPERATEUR]);
   });
 
-  const givenReleve = (semaine: SemaineISO, releve: ReleveDesHeures): void => {
+  const givenReleveDe = (semaine: SemaineISO, releve: ReleveDesHeures): void => {
     portFixture.releves.set(`${OPERATEUR}|${String(semaine.annee)}|${String(semaine.numero)}`, releve);
   };
 
+  const givenReleve = (releve: ReleveDesHeures): void => {
+    givenReleveDe(SEMAINE_EN_COURS, releve);
+  };
+
   const givenSemaineSemee = (semaine: SemaineISO): void => {
-    givenReleve(semaine, releveFixture(semaine, jourTravailleFixture(semaine)));
+    givenReleveDe(semaine, releveFixture(semaine, { 0: jourTravailleFixture }));
   };
 
   const givenOperateurInconnu = (): void => {
@@ -443,11 +761,6 @@ describe('Synthese des heures component', () => {
     await componentFixture.whenStable();
   };
 
-  const whenJournalDeplie = async (): Promise<void> => {
-    requis('synthese-piste').click();
-    await componentFixture.whenStable();
-  };
-
   const whenRepriseDemandee = async (): Promise<void> => {
     requis('synthese-retry').click();
     await componentFixture.whenStable();
@@ -483,7 +796,16 @@ describe('Synthese des heures component', () => {
 
   const nombreDe = (selector: string): number => racine().querySelectorAll(dataSelector(selector)).length;
 
-  const titreDe = (selector: string): string => requis(selector).getAttribute('title') ?? '';
+  const lignes = (selector: string): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].flatMap(element =>
+      [...element.children].map(ligne => normalise(ligne.textContent)),
+    );
+
+  const jourMarqueAujourdhui = (): string =>
+    normalise(requis('synthese-aujourdhui').closest('th')?.querySelector(dataSelector('synthese-jour'))?.textContent ?? '');
+
+  const titres = (selector: string): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => element.getAttribute('title') ?? '');
 
   const valeurChoisie = (selector: string): string => selectRequis(selector).value;
 

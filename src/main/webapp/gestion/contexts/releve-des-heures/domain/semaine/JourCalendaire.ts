@@ -45,4 +45,8 @@ export class JourCalendaire {
   plus(jours: number): JourCalendaire {
     return JourCalendaire.depuisEpoque(this.jourEpoque + jours);
   }
+
+  estLeMeme(autre: JourCalendaire): boolean {
+    return this.jourEpoque === autre.jourEpoque;
+  }
 }
