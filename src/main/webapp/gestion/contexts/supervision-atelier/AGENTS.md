@@ -16,7 +16,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Au travail** : couloir d'un opérateur présent qui a au moins une activité en cours, quelle qu'elle soit : NC ou hors OF comprises. C'est un couloir dérivé, jamais un état de présence, et il ne se confond pas avec la catégorie d'activité `TRAVAIL`.
 
-**Fenêtre de présence** : intervalle de présence d'un opérateur au sein d'une journée de travail, de l'arrivée au départ, ou encore ouvert.
+**Fenêtre de présence** : période de présence d'un opérateur au sein d'une journée de travail, dont la supervision ne retient que le début.
 
 **Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NON_CONFORMITE`), d'un instant de début et facultativement d'un poste.
 

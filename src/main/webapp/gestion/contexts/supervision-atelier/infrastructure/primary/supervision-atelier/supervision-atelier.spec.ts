@@ -110,7 +110,7 @@ const atelierFixture: DonneesDeSupervision = {
     JourneeDeTravail.open(dumasFixture.id, [new FenetreDePresence(instantFixture(6, 45))]),
     JourneeDeTravail.open(lefevreFixture.id, [new FenetreDePresence(instantFixture(8, 55))]),
     JourneeDeTravail.open(marchandFixture.id, [new FenetreDePresence(veilleFixture(6, 4))]),
-    JourneeDeTravail.closed(perrinFixture.id, [new FenetreDePresence(instantFixture(6, 30), instantFixture(9, 20))]),
+    JourneeDeTravail.closed(perrinFixture.id, [new FenetreDePresence(instantFixture(6, 30))]),
     JourneeDeTravail.open(rouxFixture.id, [new FenetreDePresence(instantFixture(6, 40))]),
     JourneeDeTravail.open(schmittFixture.id),
     JourneeDeTravail.open(vidalFixture.id, [new FenetreDePresence(instantFixture(9, 48))]),

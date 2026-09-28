@@ -84,8 +84,7 @@ const ACTIVITES: readonly ActiviteDeDemonstration[] = [
 
 const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision => {
   const instantBefore = (minutes: number): Instant => new Instant(new Date(instantDemonstration - minutes * 60_000).toISOString());
-  const fenetre = (debut: number, fin?: number): FenetreDePresence =>
-    fin === undefined ? new FenetreDePresence(instantBefore(debut)) : new FenetreDePresence(instantBefore(debut), instantBefore(fin));
+  const fenetre = (debut: number): FenetreDePresence => new FenetreDePresence(instantBefore(debut));
   const operateur = (id: string): IdentifiantOperateur => new IdentifiantOperateur(id);
   return {
     operateurs: OPERATEURS.map(
@@ -101,7 +100,7 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
       JourneeDeTravail.open(operateur('op-lefevre'), [fenetre(75)]),
       JourneeDeTravail.open(operateur('op-marchand'), [fenetre(1626)]),
       JourneeDeTravail.open(operateur('op-morel'), [fenetre(159)]),
-      JourneeDeTravail.closed(operateur('op-perrin'), [fenetre(180, 40)]),
+      JourneeDeTravail.closed(operateur('op-perrin'), [fenetre(180)]),
       JourneeDeTravail.open(operateur('op-roux'), [fenetre(130)]),
       JourneeDeTravail.open(operateur('op-schmitt')),
       JourneeDeTravail.open(operateur('op-vidal'), [fenetre(12)]),
