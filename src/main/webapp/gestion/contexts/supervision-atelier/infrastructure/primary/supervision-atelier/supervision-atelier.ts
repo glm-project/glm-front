@@ -19,7 +19,6 @@ export interface SignalAffiche {
 const SLUGS: Record<CouloirDeSupervision, string> = {
   AU_TRAVAIL: 'au-travail',
   SANS_AFFECTATION: 'sans-affectation',
-  EN_PAUSE: 'en-pause',
   ABSENT: 'absents',
 };
 
@@ -67,11 +66,7 @@ export class SupervisionAtelier {
 
   protected signalNc(supervision: SupervisionDeLAtelier): SignalAffiche {
     const enNc = supervision.operateursEnNonConformite();
-    const texte = this.libelles.signal(this.libelles.enNc, enNc.map(nomComplet));
-    if (!supervision.areNonConformitesSuspendues()) {
-      return { nombre: enNc.length, texte };
-    }
-    return { nombre: enNc.length, texte: `${texte} ${enNc.length > 1 ? this.libelles.suspendues : this.libelles.suspendue}` };
+    return { nombre: enNc.length, texte: this.libelles.signal(this.libelles.enNc, enNc.map(nomComplet)) };
   }
 
   protected signalAVerifier(supervision: SupervisionDeLAtelier): SignalAffiche {
@@ -84,8 +79,6 @@ export class SupervisionAtelier {
       case 'AU_TRAVAIL':
       case 'SANS_AFFECTATION':
         return momentOf(this.libelles.arrivee, supervise.heureDOuverture, reference);
-      case 'EN_PAUSE':
-        return momentOf(this.libelles.pauseDepuis, supervise.debutDeLaPauseEnCours(), reference);
       case 'ABSENT':
         return undefined;
     }

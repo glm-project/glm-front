@@ -52,20 +52,19 @@
     </p>
   </div>
 
-  <div class="hidden gap-3 lg:grid lg:grid-cols-4">
+  <div class="hidden gap-3 lg:grid lg:grid-cols-3">
     <p class="accolade col-span-2" data-selector="supervision-presents">
       <span class="accolade-libelle">{{ libelles.presents }} <span class="tabular-nums">{{ presents }}</span></span>
     </p>
   </div>
 
-  <div class="grid gap-3 lg:grid-cols-4" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
+  <div class="grid gap-3 lg:grid-cols-3" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
     @for (couloir of supervision.couloirs(); track couloir.couloir) { @let slug = slugs[couloir.couloir]; @let libelleCouloir =
     libelles.couloirs[couloir.couloir];
     <section
       class="flex min-w-0 flex-col rounded-surface border-t-4 bg-sunken px-1.5 pb-1.5"
       [class.border-t-ok]="couloir.couloir === 'AU_TRAVAIL'"
       [class.border-t-border-strong]="couloir.couloir === 'SANS_AFFECTATION'"
-      [class.border-t-warn]="couloir.couloir === 'EN_PAUSE'"
       [class.border-t-danger]="couloir.couloir === 'ABSENT'"
       [attr.aria-labelledby]="'couloir-' + slug + '-titre'"
       [attr.data-selector]="'supervision-couloir-' + slug"
@@ -77,8 +76,6 @@
             <span class="size-2 rounded-full bg-ok"></span>
             } @case ('SANS_AFFECTATION') {
             <glm-icon name="circleDashed" class="text-sans-affectation" />
-            } @case ('EN_PAUSE') {
-            <glm-icon name="pause" class="text-warn" />
             } @case ('ABSENT') {
             <span class="size-3 rounded-xs bg-danger"></span>
             } }
@@ -114,9 +111,6 @@
           >
             <div class="flex flex-wrap items-center justify-between gap-x-1.5 text-body-sm">
               <h3 [id]="'carte-' + id" class="flex min-w-0 items-center gap-1 text-body-sm font-normal">
-                @if (couloir.couloir === 'EN_PAUSE') {
-                <glm-icon name="pause" class="shrink-0 text-warn" aria-hidden="true" />
-                }
                 <span class="wrap-anywhere" data-selector="supervision-operateur-nom"
                   ><span class="font-semibold">{{ supervise.operateur.nom }}</span> {{ supervise.operateur.prenom }}</span
                 >
@@ -184,10 +178,6 @@
                 </p>
                 } @else {
                 <p class="text-body-sm text-ink-muted" data-selector="supervision-activite-poste">{{ libelles.sansPoste }}</p>
-                } @if (supervise.hasActivitesSuspendues()) {
-                <p class="flex items-center gap-1 text-label text-warn" data-selector="supervision-suspendue">
-                  <glm-icon name="pause" class="leading-none" aria-hidden="true" />{{ libelles.activiteSuspendue }}
-                </p>
                 }
               </li>
               }

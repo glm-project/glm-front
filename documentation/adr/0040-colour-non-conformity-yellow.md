@@ -5,6 +5,7 @@
 `Accepted`
 
 - `Complemented by 0041: the supervision lanes apply this code, green at work, brown warn the pause, red danger the absence, and yellow nc laid over an activity.`
+- `Amended by 0046: the supervision no longer shows the pause, so warn paints none of its lanes; warn keeps the pause only as the colour of the pupitre's PAUSE and REPRENDRE commands.`
 
 ## Context
 

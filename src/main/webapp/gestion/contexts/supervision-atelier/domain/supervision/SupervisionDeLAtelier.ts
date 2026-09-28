@@ -47,19 +47,14 @@ const superviseOperateur = (
   maintenant: Instant,
 ): OperateurSupervise => {
   const journeeOuverte = journees.find(journee => journee.isOpenFor(operateur.id));
-  const presence: EtatDePresence = journeeOuverte?.session ?? 'ABSENT';
+  const presence: EtatDePresence = journeeOuverte === undefined ? 'ABSENT' : 'PRESENT';
   const activitesOperateur = activites.filter(activite => activite.isFor(operateur.id));
   const anomalies = detectAnomalies(journeeOuverte, presence, activitesOperateur, maintenant);
-  const journeesOperateur = journees.filter(journee => journee.isFor(operateur.id));
-  const segments = journeesOperateur
-    .flatMap(journee => journee.segments(maintenant))
-    .sort((left, right) => left.debut.compare(right.debut));
 
   return new OperateurSupervise(operateur, presence, {
     activites: activitesOperateur,
     anomalies,
     heureDOuverture: journeeOuverte?.openingInstant(),
-    segments,
   });
 };
 
@@ -83,11 +78,6 @@ export class SupervisionDeLAtelier {
 
   operateursEnNonConformite(): readonly OperateurSupervise[] {
     return this.operateurs.filter(supervise => supervise.isEnNonConformite());
-  }
-
-  areNonConformitesSuspendues(): boolean {
-    const enNonConformite = this.operateursEnNonConformite();
-    return enNonConformite.length > 0 && enNonConformite.every(supervise => supervise.hasActivitesSuspendues());
   }
 
   operateursAVerifier(): readonly OperateurSupervise[] {

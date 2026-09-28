@@ -99,10 +99,15 @@ something stays, with a status that says what died.
   `danger` for errors and absence, a new yellow `nc` never used as a foreground colour
 
 - [0041 — Sort workshop supervision into state lanes](0041-sort-workshop-supervision-into-state-lanes.md) — four
-  derived lanes in a fixed order, alphabetical within each, the NC laid over the activity and no duration shown
+  derived lanes in a fixed order, alphabetical within each, the NC laid over the activity and no duration shown;
+  0046 removed the « En pause » lane
 
 - [0042 — Forbid comments in code](0042-forbid-comments-in-code.md) — no comment or directive in scripts,
   templates and stylesheets, CSS parsed by `@eslint/css`, and no inline configuration that could silence a rule
 
 - [0043 — Forbid Angular effects everywhere](0043-forbid-angular-effects-everywhere.md) — `effect()` and
   `afterRenderEffect()` refused in every script, presentation adapters included
+
+- [0046 — Stop showing the pause in workshop supervision](0046-stop-showing-the-pause-in-workshop-supervision.md) —
+  three lanes, an operator on pause read as present without assignment, no suspended activity or NC, and `warn`
+  left to the pupitre's pause commands

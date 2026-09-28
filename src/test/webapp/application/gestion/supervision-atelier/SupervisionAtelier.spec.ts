@@ -1,10 +1,10 @@
 import { dataSelector } from '../../../utils/DataSelector';
 
 describe('Supervision atelier in back office', () => {
-  it('should display the four supervision lanes on the root path', () => {
+  it('should display the three supervision lanes on the root path', () => {
     whenVisitingTheRoot();
 
-    thenTheFourLanesAreDisplayed();
+    thenTheThreeLanesAreDisplayed();
   });
 
   it('should retain activities and anomalies after refreshing supervision', () => {
@@ -27,16 +27,15 @@ const whenRefreshingTheWorkshop = (): void => {
   cy.get(dataSelector('supervision-plateau')).should('not.have.attr', 'aria-busy');
 };
 
-const thenTheFourLanesAreDisplayed = (): void => {
+const thenTheThreeLanesAreDisplayed = (): void => {
   [
     { couloir: 'supervision-couloir-au-travail', nombre: '7' },
-    { couloir: 'supervision-couloir-sans-affectation', nombre: '1' },
-    { couloir: 'supervision-couloir-en-pause', nombre: '3' },
+    { couloir: 'supervision-couloir-sans-affectation', nombre: '4' },
     { couloir: 'supervision-couloir-absents', nombre: '2' },
   ].forEach(({ couloir, nombre }) => {
     cy.get(dataSelector(couloir)).find(dataSelector('supervision-couloir-nombre')).should('have.text', nombre);
   });
-  cy.get(dataSelector('supervision-presents')).should('contain.text', 'Présents').and('contain.text', '8');
+  cy.get(dataSelector('supervision-presents')).should('contain.text', 'Présents').and('contain.text', '11');
   cy.get(dataSelector('supervision-derniere-lecture')).should(
     'contain.text',
     '13 opérateurs · d’après les pointages reçus jusqu’à 09:10 · actualisé toutes les 30 s',

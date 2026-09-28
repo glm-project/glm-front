@@ -14,6 +14,28 @@ describe('Supervision lanes readability', () => {
     });
   });
 
+  it('should show exactly the lanes « Au travail », « Sans affectation » and « Absents », in this order', () => {
+    whenOpeningSupervision();
+
+    thenThePlateauHoldsTheThreeLanesInOrder();
+  });
+
+  it('should share the plateau width between the three lanes on a wide screen', () => {
+    givenViewport(1440);
+
+    whenOpeningSupervision();
+
+    thenTheLanesFillThePlateau();
+  });
+
+  it('should place the « Présents » label over the lanes of present operators on a wide screen', () => {
+    givenViewport(1440);
+
+    whenOpeningSupervision();
+
+    thenThePresentsLabelSpansTheirLanes();
+  });
+
   it('should colour each lane by its state and mark a nonconformity in yellow with ink text', () => {
     whenOpeningSupervision();
 
@@ -92,9 +114,41 @@ const thenLanesStayWithinTheirWidth = (): void => {
   cy.screenshot('supervision-couloirs', { capture: 'fullPage' });
 };
 
+const thenThePlateauHoldsTheThreeLanesInOrder = (): void => {
+  cy.get(dataSelector('supervision-plateau'))
+    .children()
+    .should('have.length', 3)
+    .find('h2')
+    .should('be.visible')
+    .should(titres => {
+      expect(titres.toArray().map(titre => normalise(titre.innerText))).to.deep.equal(['Au travail', 'Sans affectation', 'Absents']);
+    });
+};
+
+const thenTheLanesFillThePlateau = (): void => {
+  cy.get(dataSelector('supervision-plateau')).then(plateau => {
+    cy.get(dataSelector('supervision-couloir-absents')).should(couloir => {
+      expect(rightEdgeOf(couloir)).to.be.closeTo(rightEdgeOf(plateau), 1);
+    });
+  });
+};
+
+const thenThePresentsLabelSpansTheirLanes = (): void => {
+  cy.get(dataSelector('supervision-couloir-au-travail')).then(auTravail => {
+    cy.get(dataSelector('supervision-couloir-sans-affectation')).then(sansAffectation => {
+      cy.get(dataSelector('supervision-presents')).should(accolade => {
+        expect([leftEdgeOf(accolade), rightEdgeOf(accolade)]).to.deep.equal([leftEdgeOf(auTravail), rightEdgeOf(sansAffectation)]);
+      });
+    });
+  });
+};
+
+const leftEdgeOf = (element: JQuery): number => requiredFixture(element[0], 'measured element').getBoundingClientRect().left;
+
+const rightEdgeOf = (element: JQuery): number => requiredFixture(element[0], 'measured element').getBoundingClientRect().right;
+
 const thenLaneColoursFollowTheClientCode = (): void => {
   cy.get(dataSelector('supervision-couloir-au-travail')).should('have.css', 'border-top-color', 'rgb(22, 101, 52)');
-  cy.get(dataSelector('supervision-couloir-en-pause')).should('have.css', 'border-top-color', 'rgb(133, 77, 14)');
   cy.get(dataSelector('supervision-couloir-absents')).should('have.css', 'border-top-color', 'rgb(185, 28, 28)');
   cy.get(dataSelector('supervision-marque-nc'))
     .first()
@@ -110,8 +164,7 @@ const thenTheLanesHoldTheDemonstrationOperators = (): void => {
       couloir: 'au-travail',
       operateurs: ['Aubert Lucas', 'Benali Samir', 'Chevalier Mathis', 'Garnier Thomas', 'Marchand Kevin', 'Morel Inès', 'Vidal Hugo'],
     },
-    { couloir: 'sans-affectation', operateurs: ['Lefèvre Sophie'] },
-    { couloir: 'en-pause', operateurs: ['Dumas Julien', 'Roux Nathalie', 'Schmitt Yanis'] },
+    { couloir: 'sans-affectation', operateurs: ['Dumas Julien', 'Lefèvre Sophie', 'Roux Nathalie', 'Schmitt Yanis'] },
     { couloir: 'absents', operateurs: ['Fabre Lucie', 'Perrin Loïc'] },
   ].forEach(({ couloir, operateurs }) => {
     cy.get(dataSelector(`supervision-couloir-${couloir}`))
@@ -132,14 +185,19 @@ const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
     .and('have.css', 'color', 'rgb(15, 24, 36)');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-activite-debut')), 'depuis le 23/09 à 14:20');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Aucun départ pointé depuis plus de 16 h');
-  thenTextIs(cardOf('op-dumas').find(dataSelector('supervision-heure')), 'pause depuis 09:00');
-  thenTextIs(cardOf('op-dumas').find(dataSelector('supervision-suspendue')), 'suspendue');
+  thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien arrivée 06:45 Aucune activité en cours Métiers : Sciage, Tournage');
   cardOf('op-schmitt').find(dataSelector('supervision-heure')).should('not.exist');
   thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-anomalie')), 'Venue ouverte sans heure d’arrivée');
   thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Hors OF');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
   thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-anomalie')), 'Activité d’un opérateur absent');
+};
+
+const thenVisibleTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {
+  element.should(noeud => {
+    expect(normalise(requiredFixture(noeud[0], 'observed element').innerText)).to.equal(attendu);
+  });
 };
 
 const thenTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {

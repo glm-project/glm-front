@@ -19,7 +19,6 @@ export interface MomentAffiche {
 const COULOIRS: Record<CouloirDeSupervision, LibellesCouloir> = {
   AU_TRAVAIL: { titre: 'Au travail', definition: 'présents, au moins une activité en cours' },
   SANS_AFFECTATION: { titre: 'Sans affectation', definition: 'présents, aucune activité' },
-  EN_PAUSE: { titre: 'En pause', definition: 'pause en cours ; leurs activités restent ouvertes' },
   ABSENT: { titre: 'Absents', definition: 'aucune venue ouverte' },
 };
 
@@ -62,8 +61,6 @@ export const LIBELLES_SUPERVISION = {
   nombreDePresents: (nombre: number): string => pluriel(nombre, 'présent', 'présents'),
   enNc: 'en NC',
   aVerifier: 'à vérifier',
-  suspendue: '(suspendue)',
-  suspendues: '(suspendues)',
   nc: 'NC',
   types: TYPES,
   horsOf: 'Hors OF',
@@ -71,9 +68,7 @@ export const LIBELLES_SUPERVISION = {
   metier: 'Métier\u00a0:',
   metiers: 'Métiers\u00a0:',
   aucuneActivite: 'Aucune activité en cours',
-  activiteSuspendue: 'suspendue',
   arrivee: 'arrivée',
-  pauseDepuis: 'pause depuis',
   depuis: 'depuis',
   noteAbsents:
     'Absent = aucune venue ouverte. Une arrivée non pointée ou un pupitre hors ligne peut faire paraître absent quelqu’un qui est là, ou présent quelqu’un qui est parti.',

@@ -1,1 +1,1 @@
-export type EtatDePresence = 'PRESENT' | 'EN_PAUSE' | 'ABSENT';
+export type EtatDePresence = 'PRESENT' | 'ABSENT';
