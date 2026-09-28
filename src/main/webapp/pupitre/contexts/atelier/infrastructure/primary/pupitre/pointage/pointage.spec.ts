@@ -7,7 +7,7 @@ import { ElementDePointage, VueDePointage } from '../../../../domain/designation
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
 import { Pointage } from './pointage';
 
-const CONFIRMATION_PRESS_FIXTURE_MS = 1_500;
+const CONFIRMATION_PRESS_FIXTURE_MS = 1_000;
 
 const pointageFixture: VueDePointage = {
   moules: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
@@ -52,18 +52,18 @@ describe('Pointage screen', () => {
     vi.useRealTimers();
   });
 
-  it('should declare no tile intention before its target has been held for one and a half seconds', async () => {
+  it('should declare no tile intention before its target has been held for one second', async () => {
     await whenRendering();
     whenPressingDown('moule-1015', 'primary-target');
-    whenTimePasses(1_499);
+    whenTimePasses(999);
 
     thenIntentionsAre([]);
   });
 
-  it('should declare the tile intention once its target has been held for one and a half seconds', async () => {
+  it('should declare the tile intention once its target has been held for one second', async () => {
     await whenRendering();
     whenPressingDown('moule-1015', 'primary-target');
-    whenTimePasses(1_500);
+    whenTimePasses(1_000);
 
     thenIntentionsAre([{ suiviId: 'moule-1015', cible: 'PRINCIPALE' }]);
   });
@@ -76,10 +76,10 @@ describe('Pointage screen', () => {
     thenIntentionsAre([]);
   });
 
-  it('should declare no tile intention when its target is released before one and a half seconds', async () => {
+  it('should declare no tile intention when its target is released before one second', async () => {
     await whenRendering();
     whenPressingDown('moule-1015', 'primary-target');
-    whenTimePasses(1_000);
+    whenTimePasses(500);
     whenReleasing('moule-1015', 'primary-target');
     whenTimePasses(5_000);
 
@@ -90,7 +90,7 @@ describe('Pointage screen', () => {
     await whenRendering();
     whenPressingDown('moule-1015', 'primary-target');
     whenTheHoldIsInterruptedBy('moule-1015', 'primary-target', interruption);
-    whenTimePasses(1_500);
+    whenTimePasses(1_000);
 
     thenIntentionsAre([]);
   });
@@ -100,7 +100,7 @@ describe('Pointage screen', () => {
     whenPressingDown('moule-1015', 'primary-target');
     givenGlobalGesturesAreUnavailable();
     await whenRendering();
-    whenTimePasses(1_500);
+    whenTimePasses(1_000);
 
     thenIntentionsAre([]);
   });
@@ -111,7 +111,7 @@ describe('Pointage screen', () => {
     whenPressingDown('moule-1015', 'primary-target');
     givenGlobalGesturesAreAvailable();
     await whenRendering();
-    whenTimePasses(1_500);
+    whenTimePasses(1_000);
 
     thenIntentionsAre([]);
   });
@@ -124,10 +124,10 @@ describe('Pointage screen', () => {
     thenNoGlobalIntentionIsExposed();
   });
 
-  it('should expose no pause intention before its command has been held for one and a half seconds', async () => {
+  it('should expose no pause intention before its command has been held for one second', async () => {
     await whenRendering();
     whenPressingDownGlobalCommand('pause');
-    whenTimePasses(1_499);
+    whenTimePasses(999);
 
     thenNoGlobalIntentionIsExposed();
   });
@@ -145,13 +145,13 @@ describe('Pointage screen', () => {
     thenEveryWorkstationChoiceIsAvailable();
   });
 
-  it('should choose no workstation before its choice has been held for one and a half seconds', async () => {
+  it('should choose no workstation before its choice has been held for one second', async () => {
     givenAWorkstationChoice();
     await whenRendering();
     whenHolding('of-generated', 'secondary-target');
     await whenRendering();
     whenPressingDownWorkstation('fraiseuse');
-    whenTimePasses(1_499);
+    whenTimePasses(999);
     await whenRendering();
 
     thenEveryWorkstationChoiceIsAvailable();
@@ -161,7 +161,7 @@ describe('Pointage screen', () => {
     await whenRendering();
     whenPressingDown('moule-1015', 'primary-target');
     whenPressingDown('moule-1015', 'secondary-target');
-    whenTimePasses(1_500);
+    whenTimePasses(1_000);
 
     thenIntentionsAre([{ suiviId: 'moule-1015', cible: 'PRINCIPALE' }]);
   });
@@ -173,7 +173,7 @@ describe('Pointage screen', () => {
     await whenRendering();
     whenPressingDownWorkstation('tour');
     whenPressingDownWorkstation('fraiseuse');
-    whenTimePasses(1_500);
+    whenTimePasses(1_000);
     await whenRendering();
 
     thenChosenWorkstationsAre(['tour']);

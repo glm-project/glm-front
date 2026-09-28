@@ -345,7 +345,7 @@ describe('Pupitre page', () => {
   const whenHolding = (selector: string): void => {
     const held = element(selector);
     held.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
-    vi.advanceTimersByTime(1_500);
+    vi.advanceTimersByTime(1_000);
     held.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
   };
