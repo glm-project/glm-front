@@ -19,6 +19,8 @@ export interface FicheDuReleve {
   readonly jours: readonly JourDeReleve[];
   readonly presencePointee: DureeTravaillee;
   readonly presencePresumee: DureeTravaillee;
+  readonly operationnelPointe: DureeTravaillee;
+  readonly operationnelPresume: DureeTravaillee;
 }
 
 export class ReleveDesHeures {
@@ -26,6 +28,8 @@ export class ReleveDesHeures {
   readonly jours: readonly JourDeReleve[];
   readonly presencePointee: DureeTravaillee;
   readonly presencePresumee: DureeTravaillee;
+  readonly operationnelPointe: DureeTravaillee;
+  readonly operationnelPresume: DureeTravaillee;
 
   constructor(semaine: SemaineISO, fiche: FicheDuReleve) {
     ReleveDesHeures.verifieLesSeptJours(semaine, fiche.jours);
@@ -33,6 +37,8 @@ export class ReleveDesHeures {
     this.jours = [...fiche.jours];
     this.presencePointee = fiche.presencePointee;
     this.presencePresumee = fiche.presencePresumee;
+    this.operationnelPointe = fiche.operationnelPointe;
+    this.operationnelPresume = fiche.operationnelPresume;
   }
 
   private static verifieLesSeptJours(semaine: SemaineISO, jours: readonly JourDeReleve[]): void {

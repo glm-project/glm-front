@@ -17,8 +17,4 @@ export class PlageDeReleve {
       throw new Error('La plage reçue du serveur finit avant de commencer.');
     }
   }
-
-  estOuverte(): boolean {
-    return this.fin === undefined;
-  }
 }

@@ -68,8 +68,8 @@ const toJour = (jour: RestJour, presences: PresenceParJour): JourDeReleve => {
   const date = required(jour.jour, 'jour.jour');
   return new JourDeReleve({
     jour: new JourCalendaire(date),
-    dureePointee: new DureeTravaillee(required(jour.duree, 'jour.duree')),
-    dureePresumee: new DureeTravaillee(required(jour.dureePresumee, 'jour.dureePresumee')),
+    operationnelPointe: new DureeTravaillee(jour.dureeOperationnelle),
+    operationnelPresume: new DureeTravaillee(jour.dureeOperationnellePresumee),
     pointages: required(jour.pointages, 'jour.pointages').filter(estDePresence).map(toPointage),
     plages: presenceDu(date, presences).map(toPlage),
   });
@@ -105,6 +105,8 @@ const toReleve = (synthese: RestSynthese, feuille: RestFeuille, demandee: Semain
     jours: toJours(synthese, feuille),
     presencePointee: new DureeTravaillee(required(synthese.dureeTotale, 'synthese.dureeTotale')),
     presencePresumee: new DureeTravaillee(required(synthese.dureePresumeeTotale, 'synthese.dureePresumeeTotale')),
+    operationnelPointe: new DureeTravaillee(synthese.dureeOperationnelleTotale),
+    operationnelPresume: new DureeTravaillee(synthese.dureeOperationnellePresumeeTotale),
   });
 };
 

@@ -1,29 +1,27 @@
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { JourCalendaire } from '../semaine/JourCalendaire';
-import { InstantDeReleve } from './InstantDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
 import { PointageDeReleve } from './PointageDeReleve';
-import { TypeDePointage } from './TypeDePointage';
 
 export interface FicheDuJour {
   readonly jour: JourCalendaire;
-  readonly dureePointee: DureeTravaillee;
-  readonly dureePresumee: DureeTravaillee;
+  readonly operationnelPointe: DureeTravaillee;
+  readonly operationnelPresume: DureeTravaillee;
   readonly pointages: readonly PointageDeReleve[];
   readonly plages: readonly PlageDeReleve[];
 }
 
 export class JourDeReleve {
   readonly jour: JourCalendaire;
-  readonly dureePointee: DureeTravaillee;
-  readonly dureePresumee: DureeTravaillee;
+  readonly operationnelPointe: DureeTravaillee;
+  readonly operationnelPresume: DureeTravaillee;
   readonly pointages: readonly PointageDeReleve[];
   readonly plages: readonly PlageDeReleve[];
 
   constructor(fiche: FicheDuJour) {
     this.jour = fiche.jour;
-    this.dureePointee = fiche.dureePointee;
-    this.dureePresumee = fiche.dureePresumee;
+    this.operationnelPointe = fiche.operationnelPointe;
+    this.operationnelPresume = fiche.operationnelPresume;
     this.pointages = [...fiche.pointages];
     this.plages = [...fiche.plages];
   }
@@ -33,10 +31,6 @@ export class JourDeReleve {
   }
 
   vientDeLaVeille(plage: PlageDeReleve): boolean {
-    return this.typeDuPointageA(plage.debut) === undefined;
-  }
-
-  typeDuPointageA(instant: InstantDeReleve): TypeDePointage | undefined {
-    return this.pointages.find(pointage => pointage.instant.estLeMeme(instant))?.type;
+    return !this.pointages.some(pointage => pointage.instant.estLeMeme(plage.debut));
   }
 }

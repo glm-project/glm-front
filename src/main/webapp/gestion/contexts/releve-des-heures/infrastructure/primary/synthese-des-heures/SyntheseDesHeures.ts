@@ -10,8 +10,7 @@ import { semaineDemandee } from '../../../domain/semaine/SemaineDemandee';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { jourCourant } from '../jourCourant';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AgendaDeLaSemaine } from './AgendaDeLaSemaine';
-import { ColonneAffichee, toColonneAffichee } from './ColonneAffichee';
+import { FriseDeLaSemaine, friseDeLaSemaine } from './FriseDeLaSemaine';
 
 const ANNEES_OFFERTES = 6;
 
@@ -23,8 +22,7 @@ export type EtatVueSynthese =
   | {
       readonly kind: 'SUCCES';
       readonly releve: ReleveDesHeures;
-      readonly agenda: AgendaDeLaSemaine;
-      readonly colonnes: readonly ColonneAffichee[];
+      readonly frise: FriseDeLaSemaine;
     };
 
 const semaineOfferte = (semaine: SemaineISO | undefined, courante: SemaineISO): SemaineISO | undefined =>
@@ -133,8 +131,6 @@ export class SyntheseDesHeures {
     if (releve === undefined) {
       return { kind: 'OPERATEUR_INTROUVABLE' };
     }
-    const agenda = new AgendaDeLaSemaine(releve.jours);
-    const colonnes = releve.jours.map(jour => toColonneAffichee(agenda, jour, this.aujourdhui));
-    return { kind: 'SUCCES', releve, agenda, colonnes };
+    return { kind: 'SUCCES', releve, frise: friseDeLaSemaine(releve, this.aujourdhui) };
   }
 }

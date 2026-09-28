@@ -10,8 +10,8 @@ const SEMAINE = new SemaineISO(2026, 38);
 const jourFixture = (jour: string): JourDeReleve =>
   new JourDeReleve({
     jour: new JourCalendaire(jour),
-    dureePointee: new DureeTravaillee('PT0S'),
-    dureePresumee: new DureeTravaillee('PT0S'),
+    operationnelPointe: new DureeTravaillee('PT0S'),
+    operationnelPresume: new DureeTravaillee('PT0S'),
     pointages: [],
     plages: [],
   });
@@ -23,6 +23,8 @@ const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   jours,
   presencePointee: new DureeTravaillee('PT38H'),
   presencePresumee: new DureeTravaillee('PT5H20M'),
+  operationnelPointe: new DureeTravaillee('PT57H30M'),
+  operationnelPresume: new DureeTravaillee('PT0S'),
 });
 
 describe('ReleveDesHeures', () => {

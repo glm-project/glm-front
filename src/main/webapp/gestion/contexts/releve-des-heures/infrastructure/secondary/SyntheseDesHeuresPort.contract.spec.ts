@@ -46,15 +46,15 @@ interface PlageFixture {
 }
 
 interface JourFixture {
-  readonly pointee: string;
-  readonly presumee: string;
+  readonly operationnelle: string;
+  readonly operationnellePresumee: string;
   readonly pointages: readonly PointageFixture[];
   readonly plages: readonly PlageFixture[];
 }
 
 const jourTravailleFixture: JourFixture = {
-  pointee: 'PT7H30M',
-  presumee: 'PT0S',
+  operationnelle: 'PT5H10M',
+  operationnellePresumee: 'PT0S',
   pointages: [
     { type: 'ARRIVEE', instant: '2026-09-14T06:02:00Z' },
     { type: 'DEPART', instant: '2026-09-14T15:32:00Z' },
@@ -63,20 +63,25 @@ const jourTravailleFixture: JourFixture = {
 };
 
 const jourAbandonneFixture: JourFixture = {
-  pointee: 'PT0S',
-  presumee: 'PT5H20M',
+  operationnelle: 'PT0S',
+  operationnellePresumee: 'PT1H30M',
   pointages: [{ type: 'ARRIVEE', instant: '2026-09-15T08:20:00Z' }],
   plages: [{ debut: '2026-09-15T08:20:00Z', fin: '2026-09-15T13:40:00Z', presumee: true }],
 };
 
 const jourEnCoursFixture: JourFixture = {
-  pointee: 'PT0S',
-  presumee: 'PT0S',
+  operationnelle: 'PT0S',
+  operationnellePresumee: 'PT0S',
   pointages: [{ type: 'ARRIVEE', instant: '2026-09-16T06:00:00Z' }],
   plages: [{ debut: '2026-09-16T06:00:00Z', presumee: false }],
 };
 
-const jourVideFixture: JourFixture = { pointee: 'PT0S', presumee: 'PT0S', pointages: [], plages: [] };
+const jourVideFixture: JourFixture = {
+  operationnelle: 'PT0S',
+  operationnellePresumee: 'PT0S',
+  pointages: [],
+  plages: [],
+};
 
 const semaineFixture = (): readonly JourFixture[] => [
   jourTravailleFixture,
@@ -96,8 +101,6 @@ interface ProjectionPlage {
 
 interface ProjectionJour {
   readonly jour: string;
-  readonly minutesPointees: number;
-  readonly minutesPresumees: number;
   readonly pointages: readonly string[];
   readonly plages: readonly ProjectionPlage[];
 }
@@ -110,8 +113,6 @@ const projeterPlage = (plage: PlageDeReleve): ProjectionPlage => ({
 
 const projeterJour = (jour: JourDeReleve): ProjectionJour => ({
   jour: jour.jour.value,
-  minutesPointees: jour.dureePointee.minutes,
-  minutesPresumees: jour.dureePresumee.minutes,
   pointages: jour.pointages.map(pointage => `${pointage.type} ${pointage.instant.value.toISOString()}`),
   plages: jour.plages.map(projeterPlage),
 });
@@ -126,10 +127,8 @@ const jourDeLaSemaine = (rang: number): string => {
 
 const toRestJour = (jour: JourFixture, rang: number): RestJour => ({
   jour: jourDeLaSemaine(rang),
-  duree: jour.pointee,
-  dureePresumee: jour.presumee,
-  dureeOperationnelle: 'PT0S',
-  dureeOperationnellePresumee: 'PT0S',
+  dureeOperationnelle: jour.operationnelle,
+  dureeOperationnellePresumee: jour.operationnellePresumee,
   pointages: jour.pointages.map(pointage => ({ type: pointage.type, dateDeSurvenue: pointage.instant })),
 });
 
@@ -162,8 +161,8 @@ const toRestSynthese = (jours: readonly JourFixture[]): RestSynthese => ({
   semaine: SEMAINE.numero,
   dureeTotale: 'PT7H30M',
   dureePresumeeTotale: 'PT5H20M',
-  dureeOperationnelleTotale: 'PT0S',
-  dureeOperationnellePresumeeTotale: 'PT0S',
+  dureeOperationnelleTotale: 'PT57H30M',
+  dureeOperationnellePresumeeTotale: 'PT1H30M',
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   jours: jours.map(toRestJour),
   elements: [],
@@ -184,12 +183,14 @@ const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
     presencePointee: new DureeTravaillee('PT7H30M'),
     presencePresumee: new DureeTravaillee('PT5H20M'),
+    operationnelPointe: new DureeTravaillee('PT57H30M'),
+    operationnelPresume: new DureeTravaillee('PT1H30M'),
     jours: jours.map(
       (jour, rang) =>
         new JourDeReleve({
           jour: new JourCalendaire(jourDeLaSemaine(rang)),
-          dureePointee: new DureeTravaillee(jour.pointee),
-          dureePresumee: new DureeTravaillee(jour.presumee),
+          operationnelPointe: new DureeTravaillee(jour.operationnelle),
+          operationnelPresume: new DureeTravaillee(jour.operationnellePresumee),
           pointages: jour.pointages.map(pointage => new PointageDeReleve(pointage.type, new InstantDeReleve(pointage.instant))),
           plages: jour.plages.map(toPlage),
         }),
@@ -288,28 +289,56 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     ]);
   });
 
-  it('should return the clocked time, the clockings and the presence of a worked day', async () => {
+  it('should return the clockings and the presence of a worked day', async () => {
     givenSemaine(semaineFixture());
 
     const releve = await port.synthese(DEMANDE);
 
     expect(releve?.jours.map(projeterJour)[0]).toEqual({
       jour: '2026-09-14',
-      minutesPointees: 450,
-      minutesPresumees: 0,
       pointages: ['ARRIVEE 2026-09-14T06:02:00.000Z', 'DEPART 2026-09-14T15:32:00.000Z'],
       plages: [{ debut: '2026-09-14T06:02:00.000Z', fin: '2026-09-14T15:32:00.000Z', presumee: false }],
     });
   });
 
-  it('should return the presumed time and the presumed interval of an abandoned working day', async () => {
+  it('should return the operational time of each day as the server counted it', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(releve?.jours.map(jour => jour.operationnelPointe.minutes)).toEqual([310, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('should return the operational time of the week as the server counted it, not the sum of its days', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(releve?.operationnelPointe.minutes).toBe(3450);
+  });
+
+  it('should return the presumed operational time of each day as the server counted it', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(releve?.jours.map(jour => jour.operationnelPresume.minutes)).toEqual([0, 90, 0, 0, 0, 0, 0]);
+  });
+
+  it('should return the presumed operational time of the week as the server counted it', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(releve?.operationnelPresume.minutes).toBe(90);
+  });
+
+  it('should return the presumed interval of an abandoned working day', async () => {
     givenSemaine(semaineFixture());
 
     const releve = await port.synthese(DEMANDE);
 
     expect(releve?.jours.map(projeterJour)[1]).toMatchObject({
-      minutesPointees: 0,
-      minutesPresumees: 320,
       plages: [{ debut: '2026-09-15T08:20:00.000Z', fin: '2026-09-15T13:40:00.000Z', presumee: true }],
     });
   });
@@ -446,7 +475,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     },
   );
 
-  it.each<keyof RestJour>(['jour', 'duree', 'dureePresumee', 'pointages'])('should reject a server answer missing jour.%s', async champ => {
+  it.each<keyof RestJour>(['jour', 'pointages'])('should reject a server answer missing jour.%s', async champ => {
     const synthese = toRestSynthese(semaineFixture());
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
     await whenBothRoutesAnswer(

@@ -26,46 +26,76 @@
   font-size: 1.125rem;
 }
 
-.agenda {
-  width: 100%;
-  min-width: calc(56px + 7 * 120px);
-  border-collapse: collapse;
-  table-layout: fixed;
+.frise {
+  --colonnes: 200px repeat(7, minmax(0, 1fr)) 168px;
+  min-width: calc(200px + 7 * 80px + 168px);
 }
 
-.agenda .gouttiere {
-  width: 56px;
-  padding: 0;
-}
-
-.agenda thead th,
-.agenda thead td {
+.ligne {
+  display: grid;
+  grid-template-columns: var(--colonnes);
   border-bottom: 1px solid var(--color-border);
+}
+
+.ligne > * {
+  min-width: 0;
+}
+
+.entete {
   background: var(--color-canvas);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
 }
 
-.agenda thead th {
-  padding: 0.625rem 0.75rem 0.5rem;
-  border-left: 1px solid var(--color-border);
-  font-weight: 400;
-  text-align: left;
-  vertical-align: top;
+.entete > * {
+  padding: 0.625rem 0.75rem;
 }
 
-.agenda thead th.aujourdhui {
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-canvas));
-}
-
-.jour {
+.entete .jour {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   column-gap: 0.25rem;
-  color: var(--color-ink-muted);
-  font-size: var(--text-body-sm);
-  font-weight: 600;
+  border-left: 1px solid var(--color-border);
   white-space: nowrap;
+}
+
+.entete .jour.aujourdhui {
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-canvas));
+}
+
+.entete .total {
+  border-left: 1px solid var(--color-border);
+  text-align: right;
+}
+
+.reperes {
+  position: relative;
+  display: block;
+  flex: 0 0 calc(100% + 1.5rem);
+  height: 0.875rem;
+  margin-inline: -0.75rem;
+}
+
+.repere {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.repere.debut {
+  transform: none;
+}
+
+.repere.fin {
+  transform: translateX(-100%);
 }
 
 .mention-aujourdhui {
@@ -73,9 +103,58 @@
   font-size: var(--text-label);
 }
 
-.duree {
-  display: block;
+.etiquette {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.entete .etiquette {
+  justify-content: flex-end;
+}
+
+.cellule {
+  position: relative;
+  border-left: 1px solid var(--color-border);
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  border-left: 1px solid var(--color-border);
   font-variant-numeric: tabular-nums;
+}
+
+.operationnel {
+  min-height: 4rem;
+  border-bottom: 2px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+}
+
+.operationnel .etiquette .font-bold {
+  color: var(--color-accent);
+}
+
+.operationnel .cellule {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.operationnel .total {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.duree {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -85,167 +164,46 @@
 }
 
 .presumees {
-  display: block;
   color: var(--color-warn);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.agenda tbody td {
-  position: relative;
-  padding: 0;
-  vertical-align: top;
-}
-
-.agenda tbody td.colonne {
-  border-left: 1px solid var(--color-border);
-}
-
-.agenda tbody td.aujourdhui {
-  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
-}
-
-.dessin {
-  position: relative;
-  background-image: repeating-linear-gradient(to bottom, var(--color-sunken) 0 1px, transparent 1px var(--heure));
-}
-
-.gouttiere .dessin {
-  background-image: none;
-}
-
-.repere {
-  position: absolute;
-  right: 0.5rem;
-  transform: translateY(-50%);
-  color: var(--color-ink-muted);
-  font-size: var(--text-label);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.repere.ancre-haut {
-  transform: none;
-}
-
-.repere.ancre-bas {
-  transform: translateY(-100%);
-}
-
-.bloc {
-  position: absolute;
-  right: 0.5rem;
-  left: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  overflow: hidden;
-  padding: 3px 0.5rem;
-  border-radius: 5px;
-  background: var(--color-accent);
+.operationnel .total .presumees {
   color: var(--color-on-accent);
-  font-size: var(--text-label);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  line-height: 16px;
-  white-space: nowrap;
 }
 
-.bloc.moyenne {
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.5rem;
+.presence {
+  min-height: 2.75rem;
+  background: var(--color-canvas);
 }
 
-.bloc.courte {
-  padding: 0;
-  border-radius: 1px;
-}
-
-.bloc.presumee {
-  padding: 1px calc(0.5rem - 2px);
-  border: 2px dashed var(--color-warn);
-  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
-  color: var(--color-warn);
-}
-
-.bloc.courte.presumee {
-  padding: 0;
-  border-width: 1px;
-}
-
-.bloc.depuis-la-veille {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-
-.bloc.se-poursuit {
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.borne {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 0.25rem;
-  white-space: normal;
-}
-
-.note,
-.puce {
-  position: absolute;
-  right: 0.5rem;
-  left: 0.5rem;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  padding: 3px 0.5rem;
-  border-radius: 6px;
-  font-size: var(--text-label);
-  font-variant-numeric: tabular-nums;
-  line-height: 16px;
-}
-
-.note {
-  border: 1px solid var(--color-accent);
-  background: var(--color-surface);
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-ink) 12%, transparent);
-  color: var(--color-ink);
+.presence .total .duree {
   font-weight: 600;
 }
 
-.puce {
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-surface));
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
-  color: var(--color-accent);
-}
-
-.puce span:first-child {
-  font-weight: 600;
-}
-
-.trait {
-  position: absolute;
-  right: 0.25rem;
-  left: 0.25rem;
-  height: 3px;
-  margin-top: -1px;
-  border-radius: 2px;
-  background: var(--color-accent);
-}
-
-.sans {
+.barre {
   position: absolute;
   top: 1rem;
-  right: 0;
-  left: 0;
-  color: var(--color-ink-muted);
-  font-size: var(--text-body-sm);
-  text-align: center;
+  height: 0.75rem;
+  box-sizing: border-box;
+  border: 1px solid var(--color-ink-muted);
+  border-radius: 3px;
+  background: var(--color-sunken);
+}
+
+.barre.presumee {
+  border: 2px dashed var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
+}
+
+.barre.ouverte {
+  top: 0.625rem;
+  width: 3px;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 2px;
+  background: var(--color-ink-muted);
 }
 
 .pied {
@@ -285,7 +243,8 @@
 }
 
 .pastille-pointe {
-  background: var(--color-accent);
+  border: 1px solid var(--color-ink-muted);
+  background: var(--color-sunken);
 }
 
 .pastille-presume {
@@ -294,20 +253,8 @@
 }
 
 .pastille-en-cours {
-  height: 3px;
+  width: 3px;
+  height: 18px;
   border-radius: 2px;
-  background: var(--color-accent);
-}
-
-.totaux {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1.5rem;
-  font-size: var(--text-body);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.totaux .presume {
-  color: var(--color-warn);
+  background: var(--color-ink-muted);
 }

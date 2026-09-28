@@ -14,8 +14,8 @@ const pointageFixture = (type: TypeDePointage, heure: number, minute: number): P
 
 const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({
   jour: new JourCalendaire('2026-09-14'),
-  dureePointee: new DureeTravaillee('PT0S'),
-  dureePresumee: new DureeTravaillee('PT0S'),
+  operationnelPointe: new DureeTravaillee('PT0S'),
+  operationnelPresume: new DureeTravaillee('PT0S'),
   pointages: [],
   plages: [],
   ...fiche,
@@ -51,18 +51,6 @@ describe('JourDeReleve', () => {
     const jour = new JourDeReleve(ficheFixture({ pointages }));
 
     expect(jour.estVide()).toBe(false);
-  });
-
-  it('should name the clocking that happened at an instant', () => {
-    const jour = new JourDeReleve(ficheFixture({ pointages: [pointageFixture('ARRIVEE', 8, 2), pointageFixture('DEPART', 10, 20)] }));
-
-    expect(jour.typeDuPointageA(instantFixture(10, 20))).toBe('DEPART');
-  });
-
-  it('should name no clocking at an instant none happened at, such as midnight', () => {
-    const jour = new JourDeReleve(ficheFixture({ pointages: [pointageFixture('DEPART', 0, 22)] }));
-
-    expect(jour.typeDuPointageA(instantFixture(0, 0))).toBeUndefined();
   });
 
   it('should tell an interval no clocking of the day opened, cut at midnight by the server, as coming from the day before', () => {

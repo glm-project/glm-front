@@ -3,7 +3,7 @@
     <a class="gestion-retour" routerLink="/operateurs" [attr.aria-label]="libelles.retourAria" data-selector="synthese-retour"
       ><glm-icon name="arrowLeft" /> {{ libelles.retour }}</a
     >
-    <h1 id="synthese-heading" class="mt-2 text-title">{{ libelles.titre }}</h1>
+    <h1 id="synthese-heading" class="mt-2 text-title" data-selector="synthese-titre">{{ libelles.titre }}</h1>
     @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
     <p class="mt-1 text-section text-ink" data-selector="synthese-identite">
       {{ libelles.identite(vue.releve.operateur.nom, vue.releve.operateur.prenom) }}
@@ -85,111 +85,79 @@
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
   <div class="gestion-carte">
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
-      <table class="agenda" [attr.aria-label]="libelles.tableau" [style.--heure]="vue.agenda.pixelsParHeure + 'px'">
-        <thead>
-          <tr>
-            <td class="gouttiere"></td>
-            @for (colonne of vue.colonnes; track colonne.cle) {
-            <th scope="col" [class.aujourdhui]="colonne.aujourdhui" data-selector="synthese-jour-cell">
-              <span class="jour">
-                <span data-selector="synthese-jour">{{ colonne.jour }}</span>
-                @if (colonne.aujourdhui) {
-                <span class="mention-aujourdhui" data-selector="synthese-aujourdhui">{{ libelles.aujourdhui }}</span>
-                }
-              </span>
-              <span class="duree text-section" [class.sans-valeur]="colonne.vide" data-selector="synthese-duree-cell"
-                >{{ colonne.duree }}</span
+      <div class="frise" role="table" [attr.aria-label]="libelles.tableau">
+        <div class="ligne entete" role="row">
+          <span class="etiquette" role="columnheader">{{ libelles.colonneElement }}</span>
+          @for (jour of vue.frise.jours; track jour.cle) {
+          <span class="jour" role="columnheader" [class.aujourdhui]="jour.aujourdhui" data-selector="synthese-jour-cell">
+            <span data-selector="synthese-jour">{{ jour.libelle }}</span>
+            @if (jour.aujourdhui) {
+            <span class="mention-aujourdhui" data-selector="synthese-aujourdhui">{{ libelles.aujourdhui }}</span>
+            }
+            <span class="reperes" aria-hidden="true">
+              @for (repere of jour.reperes; track repere.minutes) {
+              <span [class]="'repere ' + repere.ancrage" [style.left.%]="repere.gauche" data-selector="synthese-repere"
+                >{{ repere.libelle }}</span
               >
-              @if (colonne.presumees; as presumees) {
-              <span class="presumees text-body-sm" data-selector="synthese-duree-presumee">{{ presumees }}</span>
               }
-            </th>
+            </span>
+          </span>
+          }
+          <span class="total" role="columnheader">{{ libelles.colonneSemaine }}</span>
+        </div>
+        <div class="ligne operationnel" role="row">
+          <span class="etiquette" role="rowheader">
+            <span class="text-body font-bold" data-selector="synthese-operationnel-libelle">{{ libelles.operationnel }}</span>
+            <span class="text-body-sm text-ink-muted" data-selector="synthese-operationnel-precision"
+              >{{ libelles.operationnelPrecision }}</span
+            >
+          </span>
+          @for (jour of vue.frise.jours; track jour.cle) {
+          <span class="cellule" role="cell">
+            <span
+              class="duree text-section"
+              [class.sans-valeur]="jour.operationnel === libelles.sansValeur"
+              data-selector="synthese-operationnel-jour"
+              >{{ jour.operationnel }}</span
+            >
+            @if (jour.operationnelPresume; as presume) {
+            <span class="presumees text-body-sm" data-selector="synthese-operationnel-presume">{{ presume }}</span>
             }
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="gouttiere" aria-hidden="true">
-              <div class="dessin" [style.height.px]="vue.agenda.hauteur">
-                @for (repere of vue.agenda.reperes(); track repere.minutes) {
-                <span
-                  class="repere"
-                  [class.ancre-haut]="repere.ancrage === 'haut'"
-                  [class.ancre-bas]="repere.ancrage === 'bas'"
-                  [style.top.px]="repere.haut"
-                  data-selector="synthese-repere"
-                  >{{ repere.libelle }}</span
-                >
-                }
-              </div>
-            </td>
-            @for (colonne of vue.colonnes; track colonne.cle) {
-            <td class="colonne" [class.aujourdhui]="colonne.aujourdhui" data-selector="synthese-colonne">
-              <div class="dessin" aria-hidden="true" [style.height.px]="vue.agenda.hauteur">
-                @for (bloc of colonne.blocs; track $index) {
-                <div
-                  [class]="'bloc ' + bloc.classe"
-                  [class.presumee]="bloc.presumee"
-                  [class.depuis-la-veille]="bloc.depuisLaVeille"
-                  [class.se-poursuit]="bloc.seLePoursuit"
-                  [style.top.px]="bloc.haut"
-                  [style.height.px]="bloc.hauteur"
-                  [title]="bloc.titre"
-                  [attr.data-selector]="bloc.presumee ? 'synthese-plage-presumee' : 'synthese-plage'"
-                >
-                  @switch (bloc.classe) { @case ('longue') {
-                  <span class="borne"
-                    >@if (bloc.depuisLaVeille) {<span aria-hidden="true">↑</span>}<span data-selector="synthese-debut"
-                      >{{ bloc.debut }}</span
-                    ></span
-                  >
-                  <span class="borne"
-                    >@if (bloc.seLePoursuit) {<span aria-hidden="true">↓</span>}<span data-selector="synthese-fin"
-                      >{{ bloc.fin }}</span
-                    ></span
-                  >
-                  } @case ('moyenne') {
-                  <span>{{ bloc.bornes }}</span>
-                  } }
-                </div>
-                } @for (note of colonne.notes; track $index) {
-                <div class="note" [style.top.px]="note.haut" data-selector="synthese-note">
-                  @for (ligne of note.lignes; track $index) {
-                  <span>{{ ligne }}</span>
-                  }
-                </div>
-                } @for (marque of colonne.marques; track $index) {
-                <div class="trait" [style.top.px]="marque.haut"></div>
-                <div class="puce" [style.top.px]="marque.puce" [title]="marque.titre" data-selector="synthese-plage-ouverte">
-                  @for (ligne of marque.lignes; track $index) {
-                  <span>{{ ligne }}</span>
-                  }
-                </div>
-                }
-              </div>
-              @if (colonne.vide) {
-              <span class="sans" data-selector="synthese-jour-sans-pointage">{{ libelles.sansPointage }}</span>
-              } @else {
-              <ul class="sr-only">
-                @for (enonce of colonne.enonces; track $index) {
-                <li data-selector="synthese-enonce">{{ enonce }}</li>
-                } @if (colonne.pointages.length > 0) {
-                <li>
-                  {{ libelles.pointages }}
-                  <ul>
-                    @for (pointage of colonne.pointages; track $index) {
-                    <li data-selector="synthese-pointage">{{ pointage }}</li>
-                    }
-                  </ul>
-                </li>
-                }
-              </ul>
-              }
-            </td>
+          </span>
+          }
+          <span class="total" role="cell">
+            <span class="duree text-title" data-selector="synthese-operationnel-total">{{ vue.frise.operationnelTotal }}</span>
+            @if (vue.frise.operationnelTotalPresume; as presume) {
+            <span class="presumees text-body-sm" data-selector="synthese-operationnel-total-presume">{{ presume }}</span>
             }
-          </tr>
-        </tbody>
-      </table>
+          </span>
+        </div>
+        <div class="ligne presence" role="row">
+          <span class="etiquette text-body-sm text-ink-muted" role="rowheader" data-selector="synthese-presence-libelle"
+            >{{ libelles.presenceLigne }}</span
+          >
+          @for (jour of vue.frise.jours; track jour.cle) {
+          <span class="cellule" role="cell" data-selector="synthese-presence-jour">
+            @for (barre of jour.presence; track $index) {
+            <span
+              [class]="'barre ' + barre.nature"
+              [style.left.%]="barre.gauche"
+              [style.width.%]="barre.largeur"
+              [title]="barre.enonce"
+              [attr.data-selector]="'synthese-presence-' + barre.nature"
+              ><span class="sr-only">{{ barre.enonce }}</span></span
+            >
+            }
+          </span>
+          }
+          <span class="total text-body-sm" role="cell">
+            <span class="duree" data-selector="synthese-presence-total">{{ vue.frise.presenceTotal }}</span>
+            @if (vue.frise.presenceTotalPresume; as presume) {
+            <span class="presumees" data-selector="synthese-presence-total-presume">{{ presume }}</span>
+            }
+          </span>
+        </div>
+      </div>
     </div>
     <div class="pied">
       <ul class="legende">
@@ -199,12 +167,6 @@
           <i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}
         </li>
       </ul>
-      <div class="totaux">
-        <p data-selector="synthese-total">{{ libelles.pointe(vue.releve.presencePointee) }}</p>
-        @if (!vue.releve.presencePresumee.estNulle()) {
-        <p class="presume" data-selector="synthese-total-presume">{{ libelles.presume(vue.releve.presencePresumee) }}</p>
-        }
-      </div>
     </div>
   </div>
   } }

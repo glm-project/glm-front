@@ -16,24 +16,24 @@ const SEMAINE_DE_JOUR = '/operateurs/op-1/heures?annee=2026&semaine=39';
 const SEMAINE_DE_NUIT = '/operateurs/op-1/heures?annee=2026&semaine=38';
 
 interface JourDeMaquette {
-  readonly pointe?: string;
-  readonly presume?: string;
+  readonly operationnelle?: string;
+  readonly operationnellePresumee?: string;
   readonly pointages?: readonly (readonly [TypeDePointage, Heure])[];
   readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
 }
 
 interface EnTeteAttendu {
   readonly jour: string;
-  readonly duree: string;
   readonly aujourdhui?: string;
-  readonly presumees?: string;
 }
 
 interface SemaineDeMaquette {
   readonly semaine: number;
   readonly lundi: number;
-  readonly totalPointe: string;
-  readonly totalPresume: string;
+  readonly presenceTotale: string;
+  readonly presencePresumee: string;
+  readonly operationnelleTotale: string;
+  readonly operationnellePresumeeTotale: string;
   readonly jours: readonly JourDeMaquette[];
 }
 
@@ -42,34 +42,32 @@ const instantFixture = (lundi: number, rang: number, [heure, minute]: Heure): st
 
 const dateFixture = (lundi: number, rang: number): string => new Date(Date.UTC(2026, 8, lundi + rang)).toISOString().slice(0, 10);
 
-const semaineFixture = ({ semaine, lundi, totalPointe, totalPresume, jours }: SemaineDeMaquette): SemaineSemee => ({
+const semaineFixture = (maquette: SemaineDeMaquette): SemaineSemee => ({
   synthese: {
     annee: 2026,
-    semaine,
-    dureeTotale: totalPointe,
-    dureePresumeeTotale: totalPresume,
-    dureeOperationnelleTotale: 'PT0S',
-    dureeOperationnellePresumeeTotale: 'PT0S',
+    semaine: maquette.semaine,
+    dureeTotale: maquette.presenceTotale,
+    dureePresumeeTotale: maquette.presencePresumee,
+    dureeOperationnelleTotale: maquette.operationnelleTotale,
+    dureeOperationnellePresumeeTotale: maquette.operationnellePresumeeTotale,
     elements: [],
     operateur: { id: 'op-1', nom: 'Auve', prenom: 'Jean-Yves' },
-    jours: jours.map((jour, rang) => ({
-      jour: dateFixture(lundi, rang),
-      duree: jour.pointe ?? 'PT0S',
-      dureePresumee: jour.presume ?? 'PT0S',
-      dureeOperationnelle: 'PT0S',
-      dureeOperationnellePresumee: 'PT0S',
-      pointages: (jour.pointages ?? []).map(([type, heure]) => ({ type, dateDeSurvenue: instantFixture(lundi, rang, heure) })),
+    jours: maquette.jours.map((jour, rang) => ({
+      jour: dateFixture(maquette.lundi, rang),
+      dureeOperationnelle: jour.operationnelle ?? 'PT0S',
+      dureeOperationnellePresumee: jour.operationnellePresumee ?? 'PT0S',
+      pointages: (jour.pointages ?? []).map(([type, heure]) => ({ type, dateDeSurvenue: instantFixture(maquette.lundi, rang, heure) })),
     })),
   },
   feuille: {
     annee: 2026,
-    semaine,
+    semaine: maquette.semaine,
     operateur: { id: 'op-1', nom: 'Auve', prenom: 'Jean-Yves' },
-    jours: jours.map((jour, rang) => ({
-      jour: dateFixture(lundi, rang),
+    jours: maquette.jours.map((jour, rang) => ({
+      jour: dateFixture(maquette.lundi, rang),
       presence: (jour.plages ?? []).map(([debut, fin, presumee]) => ({
-        debut: instantFixture(lundi, rang, debut),
-        ...(fin === undefined ? {} : { fin: instantFixture(lundi, rang, fin) }),
+        debut: instantFixture(maquette.lundi, rang, debut),
+        ...(fin === undefined ? {} : { fin: instantFixture(maquette.lundi, rang, fin) }),
         presumee: presumee ?? false,
       })),
       activites: [],
@@ -78,7 +76,7 @@ const semaineFixture = ({ semaine, lundi, totalPointe, totalPresume, jours }: Se
 });
 
 const samediEnCoursFixture: JourDeMaquette = {
-  pointe: 'PT1H58M',
+  operationnelle: 'PT1H58M',
   pointages: [
     ['ARRIVEE', [8, 2]],
     ['DEPART', [10, 0]],
@@ -93,15 +91,17 @@ const samediEnCoursFixture: JourDeMaquette = {
   ],
 };
 
-const semaineDeJourFixture = (samedi: JourDeMaquette): SemaineSemee =>
+const semaineDeJourFixture = (): SemaineSemee =>
   semaineFixture({
     semaine: 39,
     lundi: 21,
-    totalPointe: 'PT39H11M',
-    totalPresume: 'PT5H20M',
+    presenceTotale: 'PT39H11M',
+    presencePresumee: 'PT5H20M',
+    operationnelleTotale: 'PT57H30M',
+    operationnellePresumeeTotale: 'PT5H20M',
     jours: [
       {
-        pointe: 'PT8H31M',
+        operationnelle: 'PT8H31M',
         pointages: [
           ['ARRIVEE', [7, 2]],
           ['DEPART', [12, 0]],
@@ -119,9 +119,9 @@ const semaineDeJourFixture = (samedi: JourDeMaquette): SemaineSemee =>
           ],
         ],
       },
-      { presume: 'PT5H20M', pointages: [['ARRIVEE', [10, 20]]], plages: [[[10, 20], [15, 40], true]] },
+      { operationnellePresumee: 'PT5H20M', pointages: [['ARRIVEE', [10, 20]]], plages: [[[10, 20], [15, 40], true]] },
       {
-        pointe: 'PT7H50M',
+        operationnelle: 'PT7H50M',
         pointages: [
           ['ARRIVEE', [6, 55]],
           ['DEPART', [10, 0]],
@@ -146,7 +146,7 @@ const semaineDeJourFixture = (samedi: JourDeMaquette): SemaineSemee =>
         ],
       },
       {
-        pointe: 'PT7H34M',
+        operationnelle: 'PT7H34M',
         pointages: [
           ['ARRIVEE', [6, 58]],
           ['DEPART', [11, 58]],
@@ -182,7 +182,7 @@ const semaineDeJourFixture = (samedi: JourDeMaquette): SemaineSemee =>
           ['DEPART', [7, 0]],
         ],
       },
-      samedi,
+      samediEnCoursFixture,
       {},
     ],
   });
@@ -191,11 +191,13 @@ const semaineDeNuitFixture = (): SemaineSemee =>
   semaineFixture({
     semaine: 38,
     lundi: 14,
-    totalPointe: 'PT57H22M',
-    totalPresume: 'PT0S',
+    presenceTotale: 'PT57H22M',
+    presencePresumee: 'PT0S',
+    operationnelleTotale: 'PT48H',
+    operationnellePresumeeTotale: 'PT0S',
     jours: [
       {
-        pointe: 'PT11H27M',
+        operationnelle: 'PT11H27M',
         pointages: [
           ['DEPART', [7, 5]],
           ['ARRIVEE', [18, 58]],
@@ -212,7 +214,7 @@ const semaineDeNuitFixture = (): SemaineSemee =>
         ],
       },
       {
-        pointe: 'PT11H37M',
+        operationnelle: 'PT11H37M',
         pointages: [
           ['DEPART', [7, 0]],
           ['ARRIVEE', [19, 1]],
@@ -229,7 +231,7 @@ const semaineDeNuitFixture = (): SemaineSemee =>
         ],
       },
       {
-        pointe: 'PT11H19M',
+        operationnelle: 'PT11H19M',
         pointages: [['DEPART', [7, 4]]],
         plages: [
           [
@@ -252,67 +254,73 @@ describe('Weekly hours report in gestion', () => {
     api = new SyntheseDesHeuresApiFixture();
   });
 
-  it('should draw a day of two visits as two blocks of presence', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+  it('should draw a day of two visits as two presences', () => {
+    givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheColumnShows(0, { plages: 2 });
+    thenThePresenceOfTheDayCounts(0, 2);
   });
 
-  it('should draw a working day abandoned without departure as presumed, beside its clocked zero', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+  it('should draw a working day abandoned without departure as presumed, beside its operational zero', () => {
+    givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(1, { jour: 'mar. 22', duree: '0 h 00', presumees: '+ 5 h 20 présumées' });
-    thenThePresumedEndReads(1, '15:40 présumée');
+    thenTheOperationalTimeOfTheDayReads(1, { duree: '0 h 00', presumees: '+ 5 h 20 présumées' });
+    thenThePresumedPresenceOfTheDayReads(1, 'Présence présumée 10:20 – 15:40');
   });
 
-  it('should name two short intervals clocked close together in one note', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+  it('should display a working day of zero duration as zero hours, drawing no presence', () => {
+    givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheNoteOfTheColumnReads(3, ['15:10 – 15:14', '15:20 – 15:26']);
+    thenTheOperationalTimeOfTheDayReads(4, { duree: '0 h 00' });
+    thenThePresenceOfTheDayCounts(4, 0);
   });
 
-  it('should display a working day of zero duration as zero hours, drawing nothing, never as without clocking', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+  it('should mark today and the presence still in progress where it began', () => {
+    givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(4, { jour: 'ven. 25', duree: '0 h 00' });
-    thenTheColumnShows(4, { plages: 0, sansPointage: false });
+    thenTheHeaderReads(5, { jour: 'sam. 26', aujourdhui: 'Aujourd’hui' });
+    thenThePresenceInProgressOfTheDayReads(5, 'Présence depuis 10:20, en cours');
   });
 
-  it('should mark today and the presence still in progress by the clocking that opened it', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+  it('should display an empty Sunday as without operational time', () => {
+    givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(5, { jour: 'sam. 26', aujourdhui: 'Aujourd’hui', duree: '1 h 58' });
-    thenTheChipReads(5, 'synthese-plage-ouverte', ['Arrivée 10:20', 'en cours']);
+    thenTheHeaderReads(6, { jour: 'dim. 27' });
+    thenTheOperationalTimeOfTheDayReads(6, { duree: '—' });
+    thenThePresenceOfTheDayCounts(6, 0);
   });
 
-  it('should display an empty Sunday as without clocking', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+  it('should total the operational time and the presence of the week apart, each with its presumed part', () => {
+    givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheHeaderReads(6, { jour: 'dim. 27', duree: '—' });
-    thenTheColumnShows(6, { plages: 0, sansPointage: true });
+    thenTheTotalsRead({
+      operationnel: '57 h 30',
+      operationnelPresume: 'Présumé, à confirmer : 5 h 20',
+      presence: '39 h 11',
+      presencePresume: 'Présumé, à confirmer : 5 h 20',
+    });
   });
 
-  it('should total the clocked and the presumed time of the week apart', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheTotalsRead(['Pointé : 39 h 11', 'Présumé, à confirmer : 5 h 20']);
-  });
-
-  it('should open the axis onto the whole day and carry a night shift across midnight', () => {
+  it('should open the axis of a night shift onto the whole day and carry it across midnight', () => {
     givenAWeekOfNightShifts();
     whenVisiting(SEMAINE_DE_NUIT);
 
-    thenTheAxisRuns('00:00', '00:00');
-    thenTheContinuationsRead(0, 'se poursuit');
-    thenTheContinuationsRead(1, 'se poursuit');
-    thenTheContinuationsRead(2, 'depuis la veille');
+    thenTheAxisOfTheDayRuns(0, '0 h', '24 h');
+    thenThePresenceOfTheDayReachesTheEndOfItsDay(0);
+    thenThePresenceOfTheDayStates(0, 'Présence depuis 18:58, se poursuit le lendemain');
+    thenThePresenceOfTheDayStates(1, 'Présence depuis la veille jusqu’à 07:00');
+  });
+
+  it('should keep the marks of the axis of a day inside its own column', () => {
+    givenAWeekOfNightShifts();
+    whenVisiting(SEMAINE_DE_NUIT);
+
+    thenTheMarksOfTheDayStayInsideIt(0);
   });
 
   it('should mention no presumed time for a week that has none', () => {
@@ -323,24 +331,24 @@ describe('Weekly hours report in gestion', () => {
   });
 
   it('should hold the seven days without scrolling at 1024 pixels', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
+    givenAWeekOfDayShifts();
     whenVisitingAt(SEMAINE_DE_JOUR, 1024);
 
-    thenTheAgendaDoesNotScroll('synthese-des-heures-1024');
+    thenTheFriseDoesNotScroll('synthese-des-heures-1024');
   });
 
   it('should hold the seven days of a night week at 1440 pixels', () => {
     givenAWeekOfNightShifts();
     whenVisitingAt(SEMAINE_DE_NUIT, 1440);
 
-    thenTheAgendaDoesNotScroll('synthese-des-heures-nuit-1440');
+    thenTheFriseDoesNotScroll('synthese-des-heures-nuit-1440');
   });
 
-  it('should let the seven days scroll horizontally on a narrow viewport', () => {
-    givenAWeekOfDayShifts(samediEnCoursFixture);
-    whenVisitingAt(SEMAINE_DE_JOUR, 390);
+  it('should let the seven days scroll horizontally below 1024 pixels', () => {
+    givenAWeekOfDayShifts();
+    whenVisitingAt(SEMAINE_DE_JOUR, 768);
 
-    thenTheAgendaScrollsHorizontally();
+    thenTheFriseScrollsHorizontally();
   });
 
   it('should keep the loading status visible until the report arrives', () => {
@@ -372,8 +380,8 @@ describe('Weekly hours report in gestion', () => {
     thenTheWeekSelectorHasFocus();
   });
 
-  const givenAWeekOfDayShifts = (samedi: JourDeMaquette): void => {
-    api.seed(semaineDeJourFixture(samedi));
+  const givenAWeekOfDayShifts = (): void => {
+    api.seed(semaineDeJourFixture());
     api.install();
   };
 
@@ -415,14 +423,25 @@ describe('Weekly hours report in gestion', () => {
     cy.get(dataSelector('synthese-semaine')).focus();
   };
 
-  const colonne = (rang: number): Cypress.Chainable<JQuery> => cy.get(dataSelector('synthese-colonne')).eq(rang);
+  const presenceDuJour = (rang: number): Cypress.Chainable<JQuery> => cy.get(dataSelector('synthese-presence-jour')).eq(rang);
 
-  const thenTheColumnShows = (rang: number, attendu: { plages: number; sansPointage?: boolean }): void => {
-    cy.get(dataSelector('synthese-colonne')).eq(rang).find(dataSelector('synthese-plage')).should('have.length', attendu.plages);
-    cy.get(dataSelector('synthese-colonne'))
+  const thenThePresenceOfTheDayCounts = (rang: number, nombre: number): void => {
+    cy.get(dataSelector('synthese-presence-jour'))
       .eq(rang)
-      .find(dataSelector('synthese-jour-sans-pointage'))
-      .should('have.length', attendu.sansPointage === true ? 1 : 0);
+      .find(`${dataSelector('synthese-presence-plage')}, ${dataSelector('synthese-presence-presumee')}`)
+      .should('have.length', nombre);
+  };
+
+  const thenTheOperationalTimeOfTheDayReads = (rang: number, attendu: { duree: string; presumees?: string }): void => {
+    cy.get(dataSelector('synthese-operationnel-jour'))
+      .eq(rang)
+      .should('have.text', attendu.duree)
+      .and('be.visible')
+      .closest('[role="cell"]')
+      .should($cellule => {
+        const presumees = $cellule.find(dataSelector('synthese-operationnel-presume')).text().trim() || undefined;
+        expect(presumees).to.equal(attendu.presumees);
+      });
   };
 
   const thenTheHeaderReads = (rang: number, attendu: EnTeteAttendu): void => {
@@ -430,79 +449,96 @@ describe('Weekly hours report in gestion', () => {
       .eq(rang)
       .should($entete => {
         const texte = (selector: string): string | undefined => $entete.find(dataSelector(selector)).text().trim() || undefined;
-        expect({
-          jour: texte('synthese-jour'),
-          aujourdhui: texte('synthese-aujourdhui'),
-          duree: texte('synthese-duree-cell'),
-          presumees: texte('synthese-duree-presumee'),
-        }).to.deep.equal({ aujourdhui: undefined, presumees: undefined, ...attendu });
+        expect({ jour: texte('synthese-jour'), aujourdhui: texte('synthese-aujourdhui') }).to.deep.equal({
+          aujourdhui: undefined,
+          ...attendu,
+        });
       })
       .and('be.visible');
   };
 
-  const thenThePresumedEndReads = (rang: number, fin: string): void => {
-    colonne(rang)
-      .find(dataSelector('synthese-plage-presumee'))
-      .find(dataSelector('synthese-fin'))
-      .should('have.text', fin)
+  const thenThePresumedPresenceOfTheDayReads = (rang: number, enonce: string): void => {
+    presenceDuJour(rang).find(dataSelector('synthese-presence-presumee')).should('have.text', enonce).and('be.visible');
+  };
+
+  const thenThePresenceInProgressOfTheDayReads = (rang: number, enonce: string): void => {
+    presenceDuJour(rang).find(dataSelector('synthese-presence-ouverte')).should('have.text', enonce).and('be.visible');
+  };
+
+  const thenThePresenceOfTheDayStates = (rang: number, enonce: string): void => {
+    presenceDuJour(rang).find(dataSelector('synthese-presence-plage')).should('contain.text', enonce);
+  };
+
+  const thenThePresenceOfTheDayReachesTheEndOfItsDay = (rang: number): void => {
+    presenceDuJour(rang)
+      .find(dataSelector('synthese-presence-plage'))
+      .last()
+      .should($barre => {
+        const cellule = $barre.closest(dataSelector('synthese-presence-jour'))[0];
+        expect($barre[0]?.getBoundingClientRect().right).to.be.closeTo(cellule?.getBoundingClientRect().right ?? 0, 2);
+      });
+  };
+
+  const thenTheTotalsRead = (attendu: {
+    operationnel: string;
+    operationnelPresume: string;
+    presence: string;
+    presencePresume: string;
+  }): void => {
+    cy.get(dataSelector('synthese-operationnel-total')).should('have.text', attendu.operationnel).and('be.visible');
+    cy.get(dataSelector('synthese-operationnel-total-presume')).should('have.text', attendu.operationnelPresume).and('be.visible');
+    cy.get(dataSelector('synthese-presence-total')).should('have.text', attendu.presence).and('be.visible');
+    cy.get(dataSelector('synthese-presence-total-presume')).should('have.text', attendu.presencePresume).and('be.visible');
+  };
+
+  const thenTheAxisOfTheDayRuns = (rang: number, premier: string, dernier: string): void => {
+    cy.get(dataSelector('synthese-jour-cell'))
+      .eq(rang)
+      .find(dataSelector('synthese-repere'))
+      .first()
+      .should('have.text', premier)
+      .and('be.visible');
+    cy.get(dataSelector('synthese-jour-cell'))
+      .eq(rang)
+      .find(dataSelector('synthese-repere'))
+      .last()
+      .should('have.text', dernier)
       .and('be.visible');
   };
 
-  const thenTheNoteOfTheColumnReads = (rang: number, lignes: string[]): void => {
-    colonne(rang)
-      .find(dataSelector('synthese-note'))
-      .should('have.length', 1)
-      .and('be.visible')
-      .and($note => {
-        expect([...$note.children()].map(ligne => ligne.textContent.trim())).to.deep.equal(lignes);
+  const thenTheMarksOfTheDayStayInsideIt = (rang: number): void => {
+    cy.get(dataSelector('synthese-jour-cell'))
+      .eq(rang)
+      .should($entete => {
+        const colonne = $entete[0]?.getBoundingClientRect();
+        const reperes = [...$entete.find(dataSelector('synthese-repere'))].map(repere => repere.getBoundingClientRect());
+        expect(reperes.length).to.be.greaterThan(0);
+        expect(Math.min(...reperes.map(repere => repere.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
+        expect(Math.max(...reperes.map(repere => repere.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
       });
-  };
-
-  const thenTheChipReads = (rang: number, selector: string, lignes: string[]): void => {
-    colonne(rang)
-      .find(dataSelector(selector))
-      .should('be.visible')
-      .and($puce => {
-        expect([...$puce.children()].map(ligne => ligne.textContent.trim())).to.deep.equal(lignes);
-      });
-  };
-
-  const thenTheTotalsRead = (totaux: string[]): void => {
-    cy.get(dataSelector('synthese-total')).should('have.text', totaux[0]).and('be.visible');
-    cy.get(dataSelector('synthese-total-presume')).should('have.text', totaux[1]).and('be.visible');
-  };
-
-  const thenTheAxisRuns = (premier: string, dernier: string): void => {
-    cy.get(dataSelector('synthese-repere')).first().should('have.text', premier).and('be.visible');
-    cy.get(dataSelector('synthese-repere')).last().should('have.text', dernier).and('be.visible');
-  };
-
-  const thenTheContinuationsRead = (rang: number, texte: string): void => {
-    colonne(rang)
-      .find(`${dataSelector('synthese-debut')}, ${dataSelector('synthese-fin')}`)
-      .should('contain.text', texte);
   };
 
   const thenNoPresumedTimeIsMentioned = (): void => {
-    cy.get(dataSelector('synthese-total')).should('be.visible');
-    cy.get(dataSelector('synthese-total-presume')).should('not.exist');
-    cy.get(dataSelector('synthese-duree-presumee')).should('not.exist');
+    cy.get(dataSelector('synthese-operationnel-total')).should('be.visible');
+    cy.get(dataSelector('synthese-operationnel-total-presume')).should('not.exist');
+    cy.get(dataSelector('synthese-operationnel-presume')).should('not.exist');
+    cy.get(dataSelector('synthese-presence-total-presume')).should('not.exist');
   };
 
-  const thenTheAgendaDoesNotScroll = (capture: string): void => {
-    cy.get(dataSelector('synthese-total')).should('be.visible');
+  const thenTheFriseDoesNotScroll = (capture: string): void => {
+    cy.get(dataSelector('synthese-operationnel-total')).should('be.visible');
     cy.get('[role="region"]').should($region => {
       expect($region[0]?.scrollWidth).to.equal($region[0]?.clientWidth);
     });
     cy.screenshot(capture, { capture: 'fullPage' });
   };
 
-  const thenTheAgendaScrollsHorizontally = (): void => {
-    cy.get(dataSelector('synthese-total')).should('exist');
+  const thenTheFriseScrollsHorizontally = (): void => {
+    cy.get(dataSelector('synthese-operationnel-total')).should('exist');
     cy.get('[role="region"]').should($region => {
       expect($region[0]?.scrollWidth).to.be.greaterThan($region[0]?.clientWidth ?? 0);
     });
-    cy.screenshot('synthese-des-heures-mobile', { capture: 'fullPage' });
+    cy.screenshot('synthese-des-heures-768', { capture: 'fullPage' });
   };
 
   const thenTheLoadingStatusIsVisible = (pending: { send: () => void }): void => {
@@ -510,7 +546,7 @@ describe('Weekly hours report in gestion', () => {
     cy.then(() => {
       pending.send();
     });
-    cy.get(dataSelector('synthese-total')).should('be.visible');
+    cy.get(dataSelector('synthese-operationnel-total')).should('be.visible');
   };
 
   const thenTheFailureOffersARetry = (): void => {

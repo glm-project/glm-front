@@ -1,13 +1,7 @@
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
-import { TypeDePointage } from '../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
-
-const TYPES: Record<TypeDePointage, string> = {
-  ARRIVEE: 'Arrivée',
-  DEPART: 'Départ',
-};
 
 const PLAGE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -20,10 +14,11 @@ const formatDuree = (duree: DureeTravaillee): string => `${duree.heures} h ${Str
 
 const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
 
+const MINUTES_PAR_HEURE = 60;
+
 const PRESENCE = 'Présence';
 const EN_COURS = 'en cours';
 const DEPUIS_LA_VEILLE = 'depuis la veille';
-const SE_POURSUIT = 'se poursuit';
 
 export interface FormeDePlage {
   readonly presumee: boolean;
@@ -36,10 +31,15 @@ export interface FormeDePlage {
 const natureDe = (presumee: boolean): string => (presumee ? `${PRESENCE} présumée` : PRESENCE);
 
 export const LIBELLES_RELEVE_DES_HEURES = {
-  titre: 'Synthèse des heures',
+  titre: 'Temps opérationnel',
   retour: 'Opérateurs',
   retourAria: 'Revenir au référentiel des opérateurs',
-  sousTitre: 'Le temps travaillé de la semaine, jour par jour.',
+  sousTitre: 'Une ligne par moule ou OF pointé dans la semaine.',
+  operationnel: 'Temps opérationnel',
+  operationnelPrecision: 'pointé sur les moules et OF',
+  presenceLigne: 'Présence',
+  colonneElement: 'Élément',
+  colonneSemaine: 'Semaine',
 
   anneeLabel: 'Année',
   semaineLabel: 'Semaine',
@@ -47,14 +47,11 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaineSuivanteAria: 'Semaine suivante',
   optionSemaine: (numero: number): string => `Semaine ${numero}`,
 
-  tableau: 'Heures travaillées de la semaine, jour par jour',
-  defilement: 'Agenda des heures, défilement horizontal disponible',
+  tableau: 'Temps opérationnel de la semaine, jour par jour',
+  defilement: 'Frise de la semaine, défilement horizontal disponible',
 
-  sansPointage: 'Aucun pointage',
   sansValeur: '—',
   aujourdhui: 'Aujourd’hui',
-  enCours: EN_COURS,
-  pointages: 'Pointages',
   legende: { pointe: 'Pointé', presume: 'Présumé (à confirmer)', enCours: 'En cours' },
 
   chargement: 'Chargement de la synthèse…',
@@ -67,23 +64,11 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaine: (semaine: SemaineISO): string =>
     `Semaine ${semaine.numero} · ${PLAGE.formatRange(dateDe(semaine.lundi()), dateDe(semaine.dimanche()))}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
-  pointe: (duree: DureeTravaillee): string => `Pointé : ${formatDuree(duree)}`,
   presume: (duree: DureeTravaillee): string => `Présumé, à confirmer : ${formatDuree(duree)}`,
   duree: formatDuree,
   presumees: (duree: DureeTravaillee): string => `+ ${formatDuree(duree)} présumées`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
-  pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${heure(instant)}`,
-
-  debutDeBloc: (debut: InstantDeReleve, depuisLaVeille: boolean): string => (depuisLaVeille ? DEPUIS_LA_VEILLE : heure(debut)),
-  finDeBloc: (fin: InstantDeReleve, seLePoursuit: boolean, presumee: boolean): string => {
-    if (seLePoursuit) {
-      return SE_POURSUIT;
-    }
-    return presumee ? `${heure(fin)} présumée` : heure(fin);
-  },
-  bornes: (debut: string, fin: string): string => `${debut} – ${fin}`,
-  puceEnCours: (type: TypeDePointage | undefined, debut: InstantDeReleve): string =>
-    `${type === undefined ? PRESENCE : TYPES[type]} ${heure(debut)}`,
+  repere: (minutes: number): string => `${Math.floor(minutes / MINUTES_PAR_HEURE)} h`,
 
   enonceDePlage: ({ presumee, debut, fin, depuisLaVeille, seLePoursuit }: FormeDePlage): string => {
     const nature = natureDe(presumee);

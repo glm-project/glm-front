@@ -240,17 +240,17 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   plus discrets que le repère de sélection. Le □ porte la clôture d'un élément par un départ sans fin pointée.
   Marqueurs, traits et repères sont dessinés en pourcentage de l'axe du jour, pour que la largeur des colonnes reste
   l'affaire du CSS ; les marqueurs sont des formes CSS, sans icône.
-- **L'axe du jour est ancré sur les heures de jour, de 6 h à 22 h**, pour que deux semaines se comparent
+- **L'axe d'un jour est ancré sur les heures de jour, de 6 h à 22 h**, pour que deux semaines se comparent
   et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur le **jour entier** dès qu'une
   borne dessinée — plage, intervalle ou marqueur isolé — tombe en dehors, ou touche minuit : une équipe de nuit
   resterait invisible sur une fenêtre figée, et personne ne verrait qu'il manque quelque chose. Le back coupe à
   minuit : une fin datée du lendemain à 00:00 ferme le jour et vaut 1 440 minutes. Un axe déduit des pointages a
   été essayé puis écarté : il rendait deux semaines incomparables et sortait des heures de jour dès que
   l'étendue minimale de l'axe poussait sa fin au-delà de minuit.
-- **Les repères d'extrémité de l'axe s'ancrent sur ses bords.** Centrés comme les autres, leur moitié
-  extérieure sort de la cellule et se fait couper : le dernier repère disparaissait, et l'axe paraissait plus court
-  qu'il n'était. Chaque repère porte aussi sa minute, seule clé de suivi possible —
-  sur le jour entier, le premier et le dernier se nomment tous deux `00:00`.
+- **Chaque jour porte son propre axe et le dit sous son nom**, par des repères courts : `8 h`, `14 h`, `20 h` sur les
+  heures de jour ; `0 h`, `12 h`, `24 h` sur le jour entier. Les repères d'extrémité s'ancrent sur les bords de
+  leur colonne : centrés comme les autres, leur moitié extérieure déborderait sur la colonne voisine, et le `24 h` d'un
+  jour recouvrirait le `0 h` du suivant.
 - **La frise tient sans défilement à 1024 px et défile horizontalement en dessous.** Le jour ouvert prend la plus
   grande part, les autres jours se resserrent, les jours vides plus encore, sauf un jour vide ouvert qui prend la
   largeur du jour ouvert. Un nom d'élément long (`OF-2026-000057` sans référence) se tronque par le CSS, jamais
