@@ -8,6 +8,7 @@ import {
   GesteDePointage,
   IdentiteDuGeste,
   JournalDuPupitre,
+  Suspension,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
 import { Matricule } from '../Matricule';
@@ -246,6 +247,22 @@ describe('FenetreOperateur', () => {
     const gestes = paused.capture(paused.prepareReprise(identifyFixture));
 
     thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE']);
+    thenPointagesAre(gestes, [
+      { suiviId: 'moule-1015', type: 'DEBUT', posteId: 'tour', suspension: undefined },
+      { suiviId: 'of-204', type: 'NON_CONFORMITE', posteId: undefined, suspension: undefined },
+    ]);
+  });
+
+  it('should reopen the original activities after a caller changes suspensions in a journal snapshot', () => {
+    const paused = givenAnAcceptedPause(
+      givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
+    );
+    const snapshot = paused.snapshot();
+
+    whenChangingSnapshotSuspension(snapshot, 0, { pause: 'another-pause' });
+    whenChangingSnapshotSuspension(snapshot, 1, { reouverture: 'DEBUT' });
+    const gestes = paused.capture(paused.prepareReprise(identifyFixture));
+
     thenPointagesAre(gestes, [
       { suiviId: 'moule-1015', type: 'DEBUT', posteId: 'tour', suspension: undefined },
       { suiviId: 'of-204', type: 'NON_CONFORMITE', posteId: undefined, suspension: undefined },
@@ -906,6 +923,11 @@ describe('FenetreOperateur', () => {
     if (refusal === undefined) throw new Error('Missing refused event fixture.');
     Object.assign(refusal.geste, { id: 'changed' });
     Object.assign(refusal.refus, { message: 'changed' });
+  };
+  const whenChangingSnapshotSuspension = (snapshot: JournalDuPupitre, index: number, change: Partial<Suspension>): void => {
+    const geste = requiredFixture(snapshot.evenements[index], 'suspended gesture').geste;
+    if (geste.nature !== 'POINTAGE') throw new Error('Missing suspended pointage fixture.');
+    Object.assign(requiredFixture(geste.suspension, 'suspension'), change);
   };
   const whenReadingPointage = (window: FenetreOperateur): ReturnType<FenetreOperateur['pointage']> => window.pointage();
   const givenAMultiWorkstationWindow = (): FenetreOperateur => {

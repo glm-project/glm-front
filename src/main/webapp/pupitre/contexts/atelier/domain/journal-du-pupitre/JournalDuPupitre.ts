@@ -102,7 +102,10 @@ export interface JournalDuPupitre {
 export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], connecte: true };
 
 const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal => {
-  const geste = { ...evenement.geste };
+  const geste =
+    evenement.geste.nature === 'POINTAGE' && evenement.geste.suspension !== undefined
+      ? { ...evenement.geste, suspension: { ...evenement.geste.suspension } }
+      : { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
   if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
   return { geste, etat: 'EN_ATTENTE' };
