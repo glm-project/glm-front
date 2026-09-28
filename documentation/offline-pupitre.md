@@ -115,6 +115,12 @@ The service worker caches the application shell and static assets only. It does 
 implement the durable queue; [ADR 0004](adr/0004-ngsw-caches-the-pupitre-shell-and-nothing-else.md) owns that
 separate boundary.
 
+The production pupitre checks for a new application version every five minutes while it is visible and
+online, when the network returns and when the PWA becomes visible again. Once the service worker has downloaded
+a complete version, the pupitre reloads automatically after the current matricule entry or operator window
+ends and local gesture captures finish. These checks do not run when the service worker is disabled in
+development.
+
 `npm run test:production-offline` exercises that boundary in production Chrome. It waits for the generated
 worker to activate and control a restarted pupitre, verifies the browser is offline with an uncached failed
 request, and recreates the application twice while disconnected. Durable setup and inspection use

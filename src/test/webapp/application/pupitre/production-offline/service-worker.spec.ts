@@ -29,6 +29,7 @@ const referenceFixture: ReferentielDuPupitre = {
   ],
 };
 const serviceWorkerSessions: string[] = [];
+let documentBeforeUpdate: Document | undefined;
 
 interface ServerStateFixture {
   authorizationRequests: number;
@@ -70,6 +71,7 @@ const networkProbeFixtureFrom = (data: NetworkProbeFixture): NetworkProbeFixture
 
 describe('Production pupitre offline restart', () => {
   beforeEach(() => {
+    documentBeforeUpdate = undefined;
     givenACleanBrowserWithHttpCacheDisabled();
     givenTheOfflineDriver();
     thenTheOfflineDriverIsReady();
@@ -116,6 +118,18 @@ describe('Production pupitre offline restart', () => {
     thenOnlinePupitreWasObserved('final-restart', 4);
     thenTheAcceptedGestureSurvivedTheFinalRestart();
   });
+
+  it('should reload a running pupitre after a new version is published', () => {
+    whenBootingTheProductionPupitre();
+    whenWaitingForServiceWorkerActivation();
+    whenRestartingTheProductionPupitre();
+    whenReadingOnlinePupitre('updated-pupitre', 2);
+    whenObservingTheOpenPupitre();
+    whenPublishingANewVersion();
+    whenAnnouncingTheNetworkReturn();
+
+    thenTheNewVersionLoadsWithoutUserNavigation();
+  });
 });
 
 const givenACleanBrowserWithHttpCacheDisabled = (): void => {
@@ -141,6 +155,27 @@ const thenTheOfflineDriverIsReady = (): void => {
 };
 
 const whenBootingTheProductionPupitre = (): void => appendFrame('production-pupitre', '/');
+
+const whenObservingTheOpenPupitre = (): void => {
+  pupitreFrame()
+    .should(frame => expect(requiredFixture(frame[0], 'production pupitre frame').contentDocument?.readyState).to.equal('complete'))
+    .then(frame => {
+      const pupitre = requiredFixture(frame[0], 'production pupitre frame');
+      documentBeforeUpdate = requiredFixture(pupitre.contentDocument, 'open pupitre document');
+    });
+};
+
+const whenPublishingANewVersion = (): void => {
+  cy.request('POST', '/__control/publish-update');
+};
+
+const thenTheNewVersionLoadsWithoutUserNavigation = (): void => {
+  cy.get<HTMLIFrameElement>(dataSelector('production-pupitre'), { timeout: 40_000 }).should(frame => {
+    const pupitre = requiredFixture(frame[0], 'production pupitre frame');
+    expect(pupitre.contentDocument).not.to.equal(documentBeforeUpdate);
+    expect(pupitre.contentDocument?.querySelector(dataSelector('pupitre-shell')) ?? null).not.to.equal(null);
+  });
+};
 
 const whenRestartingTheProductionPupitre = (): void => {
   cy.get(dataSelector('production-pupitre')).then(frame => frame.remove());

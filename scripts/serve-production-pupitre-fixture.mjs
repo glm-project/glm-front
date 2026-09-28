@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 
@@ -25,6 +25,7 @@ const state = {
 };
 const controlWaiters = [];
 const pendingGestureResponses = [];
+let publishedAppVersion = 0;
 
 const operator = {
   id: 'operator-1',
@@ -137,6 +138,7 @@ const isPostTo = (request, url, pathname) => request.method === 'POST' && url.pa
 const isPostToEndpoint = (request, url, endpoint) => request.method === 'POST' && url.pathname.endsWith(endpoint);
 const isReferentielRequest = url => url.pathname === '/api/pupitre/referentiel';
 const isDisabledServiceWorkerRequest = url => serviceWorker === 'disabled' && ['/ngsw-worker.js', '/ngsw.json'].includes(url.pathname);
+const isPublishedManifestRequest = url => url.pathname === '/ngsw.json' && publishedAppVersion > 0;
 
 const appServer = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', origin);
@@ -160,6 +162,11 @@ const appServer = createServer(async (request, response) => {
   }
   if (url.pathname === '/__network-probe') {
     json(response, 200, { online: true });
+    return;
+  }
+  if (isPostTo(request, url, '/__control/publish-update')) {
+    publishedAppVersion += 1;
+    json(response, 200, { publishedAppVersion });
     return;
   }
   if (isPostTo(request, url, '/__control/release-gesture-responses')) {
@@ -201,6 +208,11 @@ const appServer = createServer(async (request, response) => {
   }
   if (isDisabledServiceWorkerRequest(url)) {
     json(response, 404, { unavailable: url.pathname });
+    return;
+  }
+  if (isPublishedManifestRequest(url)) {
+    const manifest = JSON.parse(readFileSync(join(output, 'ngsw.json'), 'utf8'));
+    json(response, 200, { ...manifest, appData: { publishedAppVersion } });
     return;
   }
   const file = staticFileFor(url.pathname);
