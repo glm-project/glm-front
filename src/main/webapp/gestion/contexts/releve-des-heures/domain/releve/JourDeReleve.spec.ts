@@ -4,12 +4,12 @@ import { InstantDeReleve } from './InstantDeReleve';
 import { FicheDuJour, JourDeReleve } from './JourDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
 import { PointageDePresence } from './PointageDePresence';
-import { TypeDePointage } from './TypeDePointage';
+import { TypeDePointageDePresence } from './TypeDePointage';
 
 const instantFixture = (heure: number, minute: number): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14, heure, minute).toISOString());
 
-const pointageFixture = (type: TypeDePointage, heure: number, minute: number): PointageDePresence =>
+const pointageFixture = (type: TypeDePointageDePresence, heure: number, minute: number): PointageDePresence =>
   new PointageDePresence(type, instantFixture(heure, minute));
 
 const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({

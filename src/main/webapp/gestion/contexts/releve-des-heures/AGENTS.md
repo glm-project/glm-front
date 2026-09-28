@@ -247,11 +247,12 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   minuit : une fin datée du lendemain à 00:00 ferme le jour et vaut 1 440 minutes. Un axe déduit des pointages a
   été essayé puis écarté : il rendait deux semaines incomparables et sortait des heures de jour dès que
   l'étendue minimale de l'axe poussait sa fin au-delà de minuit.
-- **Chaque jour porte son propre axe et le dit sous son nom**, par des repères courts : `8 h` et `20 h` sur les
-  heures de jour ; `0 h` et `24 h` sur le jour entier. Le premier repère s'écrit à partir de sa
-  position et le dernier jusqu'à la sienne, à l'intérieur de la colonne : centrés sur leur position, ils déborderaient sur
-  la colonne voisine, et le `24 h` d'un jour recouvrirait le `0 h` du suivant. Une colonne étroite ne porte pas plus de
-  deux repères : trois se touchent et se lisent mal.
+- **Chaque jour porte son propre axe et le dit sous son nom**, par des repères courts. Une colonne fermée en porte
+  deux : `8 h` et `20 h` sur les heures de jour, `0 h` et `24 h` sur le jour entier ; trois se touchent et se lisent
+  mal. Un jour vide fermé n'en porte aucun, sa colonne est la plus étroite. Le jour ouvert en porte un toutes les deux
+  heures sur les heures de jour, toutes les trois sur le jour entier. Le premier repère s'écrit à partir de sa
+  position et le dernier jusqu'à la sienne, à l'intérieur de la colonne : centrés sur leur position, ils déborderaient
+  sur la colonne voisine, et le `24 h` d'un jour recouvrirait le `0 h` du suivant.
 - **La frise tient sans défilement à 1024 px et défile horizontalement en dessous.** Le jour ouvert prend la plus
   grande part, les autres jours se resserrent, les jours vides plus encore, sauf un jour vide ouvert qui prend la
   largeur du jour ouvert. Un nom d'élément long (`OF-2026-000057` sans référence) se tronque par le CSS, jamais

@@ -68,6 +68,38 @@ describe('Weekly hours report of an operator', () => {
     thenTheAddressIsRefusedWithoutAnyRead();
   });
 
+  it('should open today on the week in progress without rewriting the address', () => {
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+
+    thenTheOpenDayIs('jeu. 17');
+    thenTheAddressNamesNoDay();
+  });
+
+  it('should put the day opened by its header in the address', () => {
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+    whenOpeningTheDay(1);
+
+    thenTheAddressNamesTheDay('2026-09-15');
+  });
+
+  it('should open the previous day again when the browser goes back', () => {
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+    whenOpeningTheDay(1);
+    whenGoingBackFromTheOpenedDay('mar. 15');
+
+    thenTheOpenDayIs('jeu. 17');
+  });
+
+  it('should refuse a day the week does not carry, without asking the server', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDay('2026-09-21');
+
+    thenTheAddressIsRefusedWithoutAnyRead();
+  });
+
   const givenReferentialAndReports = (): void => {
     operateurs.install();
     synthese.install();
@@ -84,6 +116,21 @@ describe('Weekly hours report of an operator', () => {
     cy.viewport(1280, 900);
     cy.clock(HORLOGE, ['Date']);
     cy.visit(`/operateurs/op-1/heures?annee=${String(annee)}&semaine=${String(semaine)}`);
+  };
+
+  const whenVisitingTheDay = (jour: string): void => {
+    cy.viewport(1280, 900);
+    cy.clock(HORLOGE, ['Date']);
+    cy.visit(`/operateurs/op-1/heures?annee=2026&semaine=38&jour=${jour}`);
+  };
+
+  const whenOpeningTheDay = (rang: number): void => {
+    cy.get(dataSelector('synthese-jour-lien')).eq(rang).click();
+  };
+
+  const whenGoingBackFromTheOpenedDay = (jour: string): void => {
+    thenTheOpenDayIs(jour);
+    cy.go('back');
   };
 
   const whenOpeningTheHoursOfTheFirstOperateur = (): void => {
@@ -105,6 +152,19 @@ describe('Weekly hours report of an operator', () => {
 
   const whenChoosingTheWeek = (semaine: string): void => {
     cy.get(dataSelector('synthese-semaine')).select(`Semaine ${semaine}`);
+  };
+
+  const thenTheOpenDayIs = (jour: string): void => {
+    cy.get(dataSelector('synthese-jour-lien')).filter('[aria-current="true"]').should('have.length', 1).and('contain.text', jour);
+  };
+
+  const thenTheAddressNamesNoDay = (): void => {
+    cy.get(dataSelector('synthese-jour-cell')).should('have.length', 7);
+    cy.location('search').should('not.contain', 'jour=');
+  };
+
+  const thenTheAddressNamesTheDay = (jour: string): void => {
+    cy.location('search').should('contain', `jour=${jour}`);
   };
 
   const thenTheWeekInProgressIsDisplayed = (): void => {

@@ -18,7 +18,9 @@ import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
 import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
 import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
+import { PointageDElement } from '../../domain/releve/PointageDElement';
 import { PointageDePresence } from '../../domain/releve/PointageDePresence';
+import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
@@ -31,6 +33,7 @@ type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
 type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
 type RestElement = components['schemas']['RestElementDeLaSynthese'];
 type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
+type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
 type RestPlage = components['schemas']['RestPlage'];
 
 const ROUTE_SYNTHESE = '/api/syntheses-des-heures';
@@ -41,10 +44,19 @@ const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvab
 const SEMAINE = new SemaineISO(2026, 38);
 const DEMANDE = new DemandeDeReleve(new OperateurReleveId(OPERATEUR), SEMAINE);
 
-interface PointageFixture {
+interface PointageDePresenceFixture {
   readonly type: 'ARRIVEE' | 'DEPART';
   readonly instant: string;
 }
+
+interface PointageDElementFixture {
+  readonly type: 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
+  readonly instant: string;
+  readonly element: string;
+  readonly poste?: string;
+}
+
+type PointageFixture = PointageDePresenceFixture | PointageDElementFixture;
 
 interface PlageFixture {
   readonly debut: string;
@@ -65,6 +77,9 @@ const jourTravailleFixture: JourFixture = {
   operationnellePresumee: 'PT0S',
   pointages: [
     { type: 'ARRIVEE', instant: '2026-09-14T06:02:00Z' },
+    { type: 'DEBUT', instant: '2026-09-14T06:10:00Z', element: 'element-1', poste: 'poste-1' },
+    { type: 'NON_CONFORMITE', instant: '2026-09-14T10:00:00Z', element: 'element-1' },
+    { type: 'FIN', instant: '2026-09-14T10:30:00Z', element: 'element-1' },
     { type: 'DEPART', instant: '2026-09-14T15:32:00Z' },
   ],
   plages: [{ debut: '2026-09-14T06:02:00Z', fin: '2026-09-14T15:32:00Z', presumee: false }],
@@ -130,6 +145,15 @@ const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
     presumee: activite.presumee,
   });
 
+const toPointage = (pointage: PointageFixture): PointageDeReleve => {
+  const instant = new InstantDeReleve(pointage.instant);
+  if ('element' in pointage) {
+    const poste = pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste);
+    return new PointageDElement(pointage.type, instant, { element: new ElementReleveId(pointage.element), poste });
+  }
+  return new PointageDePresence(pointage.type, instant);
+};
+
 const toElement = (element: RestElement): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId(element.id),
@@ -177,9 +201,17 @@ const projeterPlage = (plage: PlageDeReleve): ProjectionPlage => ({
   presumee: plage.presumee,
 });
 
+const projeterPointage = (pointage: PointageDeReleve): string => {
+  const instant = `${pointage.type} ${pointage.instant.value.toISOString()}`;
+  if (pointage instanceof PointageDElement) {
+    return `${instant} ${pointage.cible.element.value}/${pointage.cible.poste?.value ?? '-'}`;
+  }
+  return instant;
+};
+
 const projeterJour = (jour: JourDeReleve): ProjectionJour => ({
   jour: jour.jour.value,
-  pointages: jour.pointages.map(pointage => `${pointage.type} ${pointage.instant.value.toISOString()}`),
+  pointages: jour.pointages.map(projeterPointage),
   plages: jour.plages.map(projeterPlage),
 });
 
@@ -191,11 +223,23 @@ const jourDeLaSemaine = (rang: number): string => {
   return jour.value;
 };
 
+const toRestPointage = (pointage: PointageFixture): RestPointage => {
+  if ('element' in pointage) {
+    return {
+      type: pointage.type,
+      dateDeSurvenue: pointage.instant,
+      element: pointage.element,
+      ...(pointage.poste === undefined ? {} : { poste: pointage.poste }),
+    };
+  }
+  return { type: pointage.type, dateDeSurvenue: pointage.instant };
+};
+
 const toRestJour = (jour: JourFixture, rang: number): RestJour => ({
   jour: jourDeLaSemaine(rang),
   dureeOperationnelle: jour.operationnelle,
   dureeOperationnellePresumee: jour.operationnellePresumee,
-  pointages: jour.pointages.map(pointage => ({ type: pointage.type, dateDeSurvenue: pointage.instant })),
+  pointages: jour.pointages.map(toRestPointage),
 });
 
 const toRestPlage = (plage: PlageFixture): RestPlage => ({ ...plage });
@@ -259,7 +303,7 @@ const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
           operationnelPointe: new DureeTravaillee(jour.operationnelle),
           operationnelPresume: new DureeTravaillee(jour.operationnellePresumee),
           intervalles: (jour.activites ?? []).map(toIntervalle),
-          pointages: jour.pointages.map(pointage => new PointageDePresence(pointage.type, new InstantDeReleve(pointage.instant))),
+          pointages: jour.pointages.map(toPointage),
           plages: jour.plages.map(toPlage),
         }),
     ),
@@ -357,14 +401,20 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     ]);
   });
 
-  it('should return the clockings and the presence of a worked day', async () => {
+  it('should return the clockings, presence and element ones mixed, and the presence of a worked day', async () => {
     givenSemaine(semaineFixture());
 
     const releve = await port.synthese(DEMANDE);
 
     expect(releve?.jours.map(projeterJour)[0]).toEqual({
       jour: '2026-09-14',
-      pointages: ['ARRIVEE 2026-09-14T06:02:00.000Z', 'DEPART 2026-09-14T15:32:00.000Z'],
+      pointages: [
+        'ARRIVEE 2026-09-14T06:02:00.000Z',
+        'DEBUT 2026-09-14T06:10:00.000Z element-1/poste-1',
+        'NON_CONFORMITE 2026-09-14T10:00:00.000Z element-1/-',
+        'FIN 2026-09-14T10:30:00.000Z element-1/-',
+        'DEPART 2026-09-14T15:32:00.000Z',
+      ],
       plages: [{ debut: '2026-09-14T06:02:00.000Z', fin: '2026-09-14T15:32:00.000Z', presumee: false }],
     });
   });
@@ -554,10 +604,21 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     expect([parametres?.get('annee'), parametres?.get('semaine')]).toEqual(['2026', '38']);
   });
 
-  it('should keep the clockings on an element out of the presence journal of the day', async () => {
+  it.each([
+    [
+      'an element the synthesis does not list',
+      { element: 'carter' },
+      'Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.',
+    ],
+    [
+      'a workstation its element does not carry',
+      { element: 'element-2', poste: 'poste-1' },
+      'Le relevé reçu du serveur désigne un poste que son élément ne porte pas.',
+    ],
+  ])('should reject a clocking on %s, and report it once', async (_cas, cible, message) => {
     const synthese = toRestSynthese(semaineFixture());
-    const pointageDElement = { type: 'DEBUT' as const, dateDeSurvenue: '2026-09-14T06:05:00Z', element: 'carter', poste: 'dmu-50' };
-    const result = port.synthese(DEMANDE);
+    const pointageDElement = { type: 'DEBUT' as const, dateDeSurvenue: '2026-09-14T06:05:00Z', ...cible };
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
     await whenBothRoutesAnswer(
       {
         ...synthese,
@@ -566,8 +627,8 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
       toRestFeuille(semaineFixture()),
     );
 
-    const releve = await result;
-    expect(releve?.jours.map(projeterJour)[0]?.pointages).toEqual(['ARRIVEE 2026-09-14T06:02:00.000Z', 'DEPART 2026-09-14T15:32:00.000Z']);
+    expect(await result).toEqual(new Error(message));
+    expect(errorHandler.errors).toHaveLength(1);
   });
 
   it('should give each day of the report the presence the time sheet carries for the same date', async () => {

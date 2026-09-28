@@ -85,22 +85,45 @@
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
   <div class="gestion-carte">
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
-      <div class="frise" role="table" [attr.aria-label]="libelles.tableau">
+      <div class="frise" role="table" [attr.aria-label]="libelles.tableau" [style.--colonnes]="vue.frise.colonnes">
+        @if (vue.frise.calque; as calque) {
+        <div class="calque" aria-hidden="true">
+          <div class="colonne-du-calque" [style.grid-column]="calque.colonne">
+            @for (trait of calque.traits; track $index) {
+            <span class="trait" [style.left.%]="trait.gauche" [title]="trait.titre" data-selector="synthese-trait-presence"></span>
+            }
+          </div>
+        </div>
+        }
         <div class="ligne entete" role="row">
           <span class="etiquette" role="columnheader">{{ libelles.colonneElement }}</span>
           @for (jour of vue.frise.jours; track jour.cle) {
-          <span class="jour" role="columnheader" [class.aujourdhui]="jour.aujourdhui" data-selector="synthese-jour-cell">
-            <span data-selector="synthese-jour">{{ jour.libelle }}</span>
-            @if (jour.aujourdhui) {
-            <span class="mention-aujourdhui" data-selector="synthese-aujourdhui">{{ libelles.aujourdhui }}</span>
-            }
-            <span class="reperes" aria-hidden="true">
-              @for (repere of jour.reperes; track repere.minutes) {
-              <span [class]="'repere ' + repere.ancrage" [style.left.%]="repere.gauche" data-selector="synthese-repere"
-                >{{ repere.libelle }}</span
-              >
+          <span
+            class="jour"
+            role="columnheader"
+            [class.aujourdhui]="jour.aujourdhui"
+            [class.ouvert]="jour.ouvert"
+            data-selector="synthese-jour-cell"
+          >
+            <a
+              class="lien-jour"
+              [routerLink]="[]"
+              [queryParams]="parametresDuJour(vue.semaine, jour.cle)"
+              [attr.aria-current]="jour.ouvert ? 'true' : null"
+              data-selector="synthese-jour-lien"
+            >
+              <span data-selector="synthese-jour">{{ jour.libelle }}</span>
+              @if (jour.aujourdhui) {
+              <span class="mention-aujourdhui" data-selector="synthese-aujourdhui">{{ libelles.aujourdhui }}</span>
               }
-            </span>
+              <span class="reperes" aria-hidden="true">
+                @for (repere of jour.reperes; track repere.minutes) {
+                <span [class]="'repere ' + repere.ancrage" [style.left.%]="repere.gauche" data-selector="synthese-repere"
+                  >{{ repere.libelle }}</span
+                >
+                }
+              </span>
+            </a>
           </span>
           }
           <span class="total" role="columnheader">{{ libelles.colonneSemaine }}</span>
@@ -113,11 +136,8 @@
             >
           </span>
           @for (jour of vue.frise.jours; track jour.cle) {
-          <span class="cellule" role="cell">
-            <span
-              class="duree text-section"
-              [class.sans-valeur]="jour.operationnel === libelles.sansValeur"
-              data-selector="synthese-operationnel-jour"
+          <span class="cellule" role="cell" [class.ouvert]="jour.ouvert">
+            <span class="duree" [class.sans-valeur]="jour.operationnel === libelles.sansValeur" data-selector="synthese-operationnel-jour"
               >{{ jour.operationnel }}</span
             >
             @if (jour.operationnelPresume; as presume) {
@@ -126,7 +146,7 @@
           </span>
           }
           <span class="total" role="cell">
-            <span class="duree text-title" data-selector="synthese-operationnel-total">{{ vue.frise.operationnelTotal }}</span>
+            <span class="duree" data-selector="synthese-operationnel-total">{{ vue.frise.operationnelTotal }}</span>
             @if (vue.frise.operationnelTotalPresume; as presume) {
             <span class="presumees text-body-sm" data-selector="synthese-operationnel-total-presume">{{ presume }}</span>
             }
@@ -173,7 +193,7 @@
           </span>
           }
           <span class="total" role="cell">
-            <span class="duree text-section" data-selector="synthese-element-total">{{ ligne.total }}</span>
+            <span class="duree" data-selector="synthese-element-total">{{ ligne.total }}</span>
             @if (ligne.nonConformite; as nonConformite) {
             <span class="text-body-sm text-ink-muted" data-selector="synthese-element-nc">{{ nonConformite }}</span>
             }
@@ -193,7 +213,7 @@
         </div>
         } }
         <ng-template #barres let-cellule>
-          @for (barre of cellule; track $index) {
+          @for (barre of cellule.barres; track $index) {
           <span
             [class]="'barre ' + barre.nature"
             [class.presumee]="barre.presumee"
@@ -203,6 +223,14 @@
             [attr.data-selector]="barre.presumee ? 'synthese-barre-presumee' : 'synthese-barre-' + barre.nature"
             ><span class="sr-only">{{ barre.enonce }}</span></span
           >
+          } @for (marque of cellule.marques; track $index) {
+          <span
+            [class]="'marque ' + marque.type"
+            [style.left.%]="marque.gauche"
+            [title]="marque.titre"
+            aria-hidden="true"
+            data-selector="synthese-marque"
+          ></span>
           }
         </ng-template>
       </div>
@@ -219,6 +247,14 @@
         <li data-selector="synthese-legende"><i class="pastille pastille-presume" aria-hidden="true"></i>{{ libelles.legende.presume }}</li>
         <li data-selector="synthese-legende">
           <i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}
+        </li>
+        <li data-selector="synthese-legende"><i class="marque-legende debut" aria-hidden="true"></i>{{ libelles.legende.debut }}</li>
+        <li data-selector="synthese-legende">
+          <i class="marque-legende nc" aria-hidden="true"></i>{{ libelles.legende.nonConformitePointee }}
+        </li>
+        <li data-selector="synthese-legende"><i class="marque-legende fin" aria-hidden="true"></i>{{ libelles.legende.fin }}</li>
+        <li data-selector="synthese-legende">
+          <i class="pastille pastille-trait" aria-hidden="true"></i>{{ libelles.legende.presenceTrait }}
         </li>
       </ul>
     </div>

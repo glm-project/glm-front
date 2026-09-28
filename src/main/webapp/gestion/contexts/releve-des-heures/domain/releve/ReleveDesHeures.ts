@@ -1,9 +1,9 @@
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementDuReleve } from '../element/ElementDuReleve';
-import { IntervalleDActivite } from '../element/IntervalleDActivite';
 import { SemaineISO } from '../semaine/SemaineISO';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { JourDeReleve } from './JourDeReleve';
+import { CibleDePointage } from './PointageDElement';
 
 const memesJours = (attendus: readonly { readonly value: string }[], jours: readonly JourDeReleve[]): boolean =>
   attendus.every((attendu, rang) => jours[rang]?.jour.value === attendu.value);
@@ -16,16 +16,16 @@ const couvreLaSemaine = (semaine: SemaineISO, jours: readonly JourDeReleve[]): b
   return memesJours(attendus, jours);
 };
 
-const elementDe = (intervalle: IntervalleDActivite, elements: readonly ElementDuReleve[]): ElementDuReleve => {
-  const element = elements.find(candidat => candidat.id.value === intervalle.element.value);
+const elementDe = (cible: CibleDePointage, elements: readonly ElementDuReleve[]): ElementDuReleve => {
+  const element = elements.find(candidat => candidat.id.value === cible.element.value);
   if (element === undefined) {
     throw new Error('Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.');
   }
   return element;
 };
 
-const verifieLePoste = (intervalle: IntervalleDActivite, element: ElementDuReleve): void => {
-  const poste = intervalle.poste;
+const verifieLePoste = (cible: CibleDePointage, element: ElementDuReleve): void => {
+  const poste = cible.poste;
   if (poste === undefined) {
     return;
   }
@@ -71,8 +71,9 @@ export class ReleveDesHeures {
   }
 
   private static verifieLesReferences(elements: readonly ElementDuReleve[], jours: readonly JourDeReleve[]): void {
-    for (const intervalle of jours.flatMap(jour => jour.intervalles)) {
-      verifieLePoste(intervalle, elementDe(intervalle, elements));
+    const cibles = jours.flatMap(jour => [...jour.intervalles, ...jour.pointagesDElement().map(pointage => pointage.cible)]);
+    for (const cible of cibles) {
+      verifieLePoste(cible, elementDe(cible, elements));
     }
   }
 

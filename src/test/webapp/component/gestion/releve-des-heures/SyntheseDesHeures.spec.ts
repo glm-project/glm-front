@@ -21,7 +21,7 @@ interface JourDeMaquette {
   readonly activites?: readonly RestActivite[];
   readonly operationnelle?: string;
   readonly operationnellePresumee?: string;
-  readonly pointages?: readonly (readonly [TypeDePointage, Heure])[];
+  readonly pointages?: readonly (readonly [TypeDePointage, Heure, string?, string?])[];
   readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
 }
 
@@ -60,7 +60,12 @@ const semaineFixture = (maquette: SemaineDeMaquette): SemaineSemee => ({
       jour: dateFixture(maquette.lundi, rang),
       dureeOperationnelle: jour.operationnelle ?? 'PT0S',
       dureeOperationnellePresumee: jour.operationnellePresumee ?? 'PT0S',
-      pointages: (jour.pointages ?? []).map(([type, heure]) => ({ type, dateDeSurvenue: instantFixture(maquette.lundi, rang, heure) })),
+      pointages: (jour.pointages ?? []).map(([type, heure, element, poste]) => ({
+        type,
+        dateDeSurvenue: instantFixture(maquette.lundi, rang, heure),
+        ...(element === undefined ? {} : { element }),
+        ...(poste === undefined ? {} : { poste }),
+      })),
     })),
   },
   feuille: {
@@ -214,8 +219,13 @@ const semaineDeJourFixture = (): SemaineSemee =>
         operationnelle: 'PT8H31M',
         pointages: [
           ['ARRIVEE', [7, 2]],
+          ['DEBUT', [7, 5], 'element-1', 'poste-1'],
+          ['DEBUT', [8, 20], 'element-2', 'poste-2'],
+          ['FIN', [11, 30], 'element-2', 'poste-2'],
           ['DEPART', [12, 0]],
           ['ARRIVEE', [12, 45]],
+          ['NON_CONFORMITE', [14, 30], 'element-1', 'poste-1'],
+          ['FIN', [15, 20], 'element-1', 'poste-1'],
           ['DEPART', [16, 18]],
         ],
         plages: [
@@ -395,6 +405,14 @@ describe('Weekly hours report in gestion', () => {
     thenTheSubRowsRead(['DMU 50', 'Charmilles FO 350']);
   });
 
+  it('should open the day of the address and place the clockings of its elements and its arrivals and departures', () => {
+    givenAWeekOfDayShifts();
+    whenVisitingAt(`${SEMAINE_DE_JOUR}&jour=2026-09-21`, 1024);
+
+    thenTheOpenDayShowsMarkersAndLines({ marques: 5, traits: 4 });
+    thenTheFriseDoesNotScroll('synthese-des-heures-1024-jour-ouvert');
+  });
+
   it('should draw a working day abandoned without departure as presumed, beside its operational zero', () => {
     givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
@@ -448,6 +466,13 @@ describe('Weekly hours report in gestion', () => {
     thenThePresenceOfTheDayReachesTheEndOfItsDay(0);
     thenThePresenceOfTheDayStates(0, 'Présence depuis 18:58, se poursuit le lendemain');
     thenThePresenceOfTheDayStates(1, 'Présence depuis la veille jusqu’à 07:00');
+  });
+
+  it('should give the open day the widest column and an empty day the narrowest', () => {
+    givenAWeekOfDayShifts();
+    whenVisiting(SEMAINE_DE_JOUR);
+
+    thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne(5, 6);
   });
 
   it('should keep the marks of the axis of a day inside its own column', () => {
@@ -669,6 +694,20 @@ describe('Weekly hours report in gestion', () => {
       .last()
       .should('have.text', dernier)
       .and('be.visible');
+  };
+
+  const thenTheOpenDayShowsMarkersAndLines = (attendu: { marques: number; traits: number }): void => {
+    cy.get(dataSelector('synthese-marque')).should('have.length', attendu.marques).and('be.visible');
+    cy.get(dataSelector('synthese-trait-presence')).should('have.length', attendu.traits);
+  };
+
+  const thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne = (ouvert: number, vide: number): void => {
+    cy.get(dataSelector('synthese-jour-cell')).should($entetes => {
+      const largeurs = [...$entetes].map(entete => entete.getBoundingClientRect().width);
+      const autres = largeurs.filter((_largeur, rang) => rang !== ouvert && rang !== vide);
+      expect(largeurs[ouvert]).to.be.greaterThan(Math.max(...autres));
+      expect(largeurs[vide]).to.be.lessThan(Math.min(...autres));
+    });
   };
 
   const thenTheMarksOfTheDayStayInsideIt = (rang: number): void => {

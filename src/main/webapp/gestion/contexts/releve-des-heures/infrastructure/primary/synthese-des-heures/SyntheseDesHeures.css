@@ -27,8 +27,14 @@
 }
 
 .frise {
-  --colonnes: 232px repeat(7, minmax(0, 1fr)) 160px;
-  min-width: calc(232px + 7 * 80px + 160px);
+  --largeur-etiquette: 208px;
+  --largeur-total: 152px;
+  --largeur-ouverte: minmax(280px, 4fr);
+  --largeur-fermee: minmax(0, 1fr);
+  --largeur-vide: minmax(0, 0.7fr);
+  --colonnes: var(--largeur-etiquette) repeat(7, var(--largeur-fermee)) var(--largeur-total);
+  position: relative;
+  min-width: calc(var(--largeur-etiquette) + var(--largeur-total) + 280px + 6 * 52px);
 }
 
 .ligne {
@@ -42,6 +48,8 @@
 }
 
 .entete {
+  position: relative;
+  z-index: 1;
   background: var(--color-canvas);
   color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
@@ -54,14 +62,37 @@
 
 .entete .jour {
   --marge: 0.375rem;
-  padding-inline: var(--marge);
+  padding: 0;
+  border-left: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.lien-jour {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  column-gap: 0.25rem;
-  border-left: 1px solid var(--color-border);
-  white-space: nowrap;
+  box-sizing: border-box;
+  min-height: var(--spacing-touch);
+  height: 100%;
+  padding: 0.625rem var(--marge);
+  color: inherit;
+  text-decoration: none;
+}
+
+.lien-jour:hover {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-canvas));
+}
+
+.lien-jour:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.entete .jour.ouvert .lien-jour {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-canvas));
+  box-shadow: inset 0 -3px 0 var(--color-accent);
+  color: var(--color-ink);
 }
 
 .entete .jour.aujourdhui {
@@ -89,6 +120,10 @@
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+.repere.centre {
+  transform: translateX(-50%);
 }
 
 .repere.debut {
@@ -126,7 +161,7 @@
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem;
   border-left: 1px solid var(--color-border);
   font-variant-numeric: tabular-nums;
 }
@@ -145,10 +180,14 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0.5rem 0.375rem;
+  padding: 0.5rem 0.125rem;
 }
 
 .operationnel .cellule .presumees {
+  font-size: 0.6875rem;
+}
+
+.total .presumees {
   font-size: var(--text-label);
 }
 
@@ -158,9 +197,22 @@
 }
 
 .duree {
+  font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.cellule.ouvert .duree {
+  font-size: var(--text-section);
+}
+
+.operationnel .total .duree {
+  font-size: var(--text-title);
+}
+
+.element .total .duree {
+  font-size: var(--text-section);
 }
 
 .duree.sans-valeur {
@@ -259,6 +311,54 @@
   );
 }
 
+.calque {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--colonnes);
+  pointer-events: none;
+}
+
+.colonne-du-calque {
+  position: relative;
+}
+
+.trait {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--color-ink-muted) 70%, transparent);
+}
+
+.marque {
+  position: absolute;
+  top: 50%;
+  box-sizing: border-box;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin: -0.375rem 0 0 -0.375rem;
+  border: 2px solid var(--color-surface);
+  background: var(--color-ink);
+}
+
+.marque.debut {
+  border-radius: 50%;
+}
+
+.marque.fin {
+  border-radius: 2px;
+}
+
+.marque.nc {
+  width: 0.625rem;
+  height: 0.625rem;
+  margin: -0.3125rem 0 0 -0.3125rem;
+  border: 2px solid var(--color-ink);
+  background: var(--color-nc);
+  transform: rotate(45deg);
+}
+
 .pied {
   display: flex;
   flex-wrap: wrap;
@@ -316,6 +416,38 @@
 .pastille-presume {
   border: 2px dashed var(--color-warn);
   background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
+}
+
+.marque-legende {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--color-surface);
+  background: var(--color-ink);
+}
+
+.marque-legende.debut {
+  border-radius: 50%;
+}
+
+.marque-legende.fin {
+  border-radius: 2px;
+}
+
+.marque-legende.nc {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--color-ink);
+  background: var(--color-nc);
+  transform: rotate(45deg);
+}
+
+.pastille-trait {
+  width: 1px;
+  height: 18px;
+  border-radius: 0;
+  background: var(--color-ink-muted);
 }
 
 .pastille-en-cours {

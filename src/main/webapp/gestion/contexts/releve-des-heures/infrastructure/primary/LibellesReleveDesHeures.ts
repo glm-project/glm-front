@@ -4,6 +4,7 @@ import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { TypeDElement } from '../../domain/element/TypeDElement';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
+import { TypeDePointageDElement, TypeDePointageDePresence } from '../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 
@@ -22,6 +23,10 @@ const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
 const MINUTES_PAR_HEURE = 60;
 
 const TYPES_D_ELEMENT: Record<TypeDElement, string> = { PRODUIT: 'Moule', ORDRE_DE_FABRICATION: 'OF' };
+
+const POINTAGES_DE_PRESENCE: Record<TypeDePointageDePresence, string> = { ARRIVEE: 'Arrivée', DEPART: 'Départ' };
+
+const POINTAGES_D_ELEMENT: Record<TypeDePointageDElement, string> = { DEBUT: 'Début', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' };
 
 const CATEGORIES_D_ACTIVITE: Record<CategorieDActivite, string> = { TRAVAIL: 'travail', NON_CONFORMITE: 'non-conformité' };
 
@@ -88,6 +93,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     presence: 'Présence',
     presume: 'Présumé (à confirmer)',
     enCours: 'En cours',
+    debut: 'Début pointé',
+    nonConformitePointee: 'Non-conformité pointée',
+    fin: 'Fin pointée',
+    presenceTrait: 'Arrivée, départ',
   },
 
   chargement: 'Chargement de la synthèse…',
@@ -95,7 +104,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   reessayer: 'Réessayer',
   operateurIntrouvable: 'Cet opérateur n’existe plus au référentiel : sa synthèse ne peut pas être établie.',
   adresseInvalide:
-    'Cette adresse ne désigne pas une semaine que le calendrier porte. Revenez au référentiel pour repartir de la semaine en cours.',
+    'Cette adresse ne désigne pas une semaine ou un jour que le calendrier porte. Revenez au référentiel pour repartir de la semaine en cours.',
 
   semaine: (semaine: SemaineISO): string =>
     `Semaine ${semaine.numero} · ${PLAGE.formatRange(dateDe(semaine.lundi()), dateDe(semaine.dimanche()))}`,
@@ -106,6 +115,9 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   nonConformite: (duree: DureeTravaillee): string => `NC ${formatDuree(duree)}`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
   typeDElement: (type: TypeDElement): string => TYPES_D_ELEMENT[type],
+  pointageDePresence: (type: TypeDePointageDePresence, instant: InstantDeReleve): string =>
+    `${POINTAGES_DE_PRESENCE[type]} ${heure(instant)}`,
+  pointageDElement: (type: TypeDePointageDElement, instant: InstantDeReleve): string => `${POINTAGES_D_ELEMENT[type]} ${heure(instant)}`,
   postes: (postes: readonly PosteDeLElement[]): string => postes.map(posteEtNature).join(', '),
   repere: (minutes: number): string => `${Math.floor(minutes / MINUTES_PAR_HEURE)} h`,
 

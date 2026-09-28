@@ -14,7 +14,9 @@ import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
+import { CibleDePointage, PointageDElement } from '../../domain/releve/PointageDElement';
 import { PointageDePresence } from '../../domain/releve/PointageDePresence';
+import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
@@ -47,13 +49,23 @@ interface SemaineRendue {
   readonly semaine?: number;
 }
 
-type RestPointageDePresence = RestPointage & { readonly type: 'ARRIVEE' | 'DEPART' };
+const toCible = (pointage: RestPointage): CibleDePointage => ({
+  element: new ElementReleveId(required(pointage.element, 'pointage.element')),
+  poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
+});
 
-const estDePresence = (pointage: RestPointage): pointage is RestPointageDePresence =>
-  pointage.type !== 'DEBUT' && pointage.type !== 'NON_CONFORMITE' && pointage.type !== 'FIN';
-
-const toPointage = (pointage: RestPointageDePresence): PointageDePresence =>
-  new PointageDePresence(pointage.type, new InstantDeReleve(pointage.dateDeSurvenue));
+const toPointage = (pointage: RestPointage): PointageDeReleve => {
+  const instant = new InstantDeReleve(pointage.dateDeSurvenue);
+  switch (pointage.type) {
+    case 'ARRIVEE':
+    case 'DEPART':
+      return new PointageDePresence(pointage.type, instant);
+    case 'DEBUT':
+    case 'NON_CONFORMITE':
+    case 'FIN':
+      return new PointageDElement(pointage.type, instant, toCible(pointage));
+  }
+};
 
 const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
   new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature);
@@ -116,7 +128,7 @@ const toJour = (jour: RestJour, feuilles: FeuilleParJour): JourDeReleve => {
     operationnelPointe: new DureeTravaillee(jour.dureeOperationnelle),
     operationnelPresume: new DureeTravaillee(jour.dureeOperationnellePresumee),
     intervalles: feuille.activites.map(toIntervalle),
-    pointages: required(jour.pointages, 'jour.pointages').filter(estDePresence).map(toPointage),
+    pointages: required(jour.pointages, 'jour.pointages').map(toPointage),
     plages: feuille.presence.map(toPlage),
   });
 };

@@ -2,7 +2,7 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des-heures/SyntheseDesHeuresFixture';
 import { dataSelector } from '@test/utils/DataSelector';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, EMPTY } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
 import { CategorieDActivite } from '../../../domain/element/CategorieDActivite';
@@ -16,10 +16,11 @@ import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
+import { PointageDElement } from '../../../domain/releve/PointageDElement';
 import { PointageDePresence } from '../../../domain/releve/PointageDePresence';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
-import { TypeDePointage } from '../../../domain/releve/TypeDePointage';
+import { TypeDePointageDElement, TypeDePointageDePresence } from '../../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { SyntheseDesHeures } from './SyntheseDesHeures';
@@ -40,8 +41,21 @@ class RouteFixture {
   }
 }
 
+interface UrlTreeFixture {
+  readonly queryParams: Record<string, string>;
+}
+
 class RouterFixture {
   readonly navigations: Record<string, number>[] = [];
+  readonly events = EMPTY;
+
+  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): UrlTreeFixture {
+    return { queryParams: extras?.queryParams ?? {} };
+  }
+
+  serializeUrl(arbre: UrlTreeFixture): string {
+    return `/?${new URLSearchParams(arbre.queryParams).toString()}`;
+  }
 
   navigate(_commands: unknown[], extras?: { queryParams?: Record<string, number> }): Promise<boolean> {
     this.navigations.push(extras?.queryParams ?? {});
@@ -63,11 +77,19 @@ interface IntervalleFixture {
   readonly presumee?: boolean;
 }
 
+interface PointageDElementFixture {
+  readonly type: TypeDePointageDElement;
+  readonly heure: Heure;
+  readonly element?: string;
+  readonly poste?: string;
+}
+
 interface JourFixture {
   readonly intervalles?: readonly IntervalleFixture[];
+  readonly pointagesDElement?: readonly PointageDElementFixture[];
   readonly operationnelle?: string;
   readonly operationnellePresumee?: string;
-  readonly pointages?: readonly (readonly [TypeDePointage, Heure])[];
+  readonly pointages?: readonly (readonly [TypeDePointageDePresence, Heure])[];
   readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
 }
 
@@ -88,7 +110,16 @@ const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): Jo
           presumee: intervalle.presumee ?? false,
         }),
     ),
-    pointages: (fiche.pointages ?? []).map(([type, heure]) => new PointageDePresence(type, instantFixture(rang, heure))),
+    pointages: [
+      ...(fiche.pointages ?? []).map(([type, heure]) => new PointageDePresence(type, instantFixture(rang, heure))),
+      ...(fiche.pointagesDElement ?? []).map(
+        pointage =>
+          new PointageDElement(pointage.type, instantFixture(rang, pointage.heure), {
+            element: new ElementReleveId(pointage.element ?? 'element-1'),
+            poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
+          }),
+      ),
+    ],
     plages: (fiche.plages ?? []).map(
       ([debut, fin, presumee]) =>
         new PlageDeReleve(instantFixture(rang, debut), fin === undefined ? undefined : instantFixture(rang, fin), presumee ?? false),
@@ -778,15 +809,12 @@ describe('Synthese des heures component', () => {
     },
   );
 
-  it('should mark the daytime hours under the name of each day', async () => {
+  it('should mark the daytime hours under the name of a day that carries something, and nothing under an empty one', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
-    expect([reperesDuJour(0), reperesDuJour(6)]).toEqual([
-      ['8 h', '20 h'],
-      ['8 h', '20 h'],
-    ]);
+    expect([reperesDuJour(0), reperesDuJour(6)]).toEqual([['8 h', '20 h'], []]);
   });
 
   it('should mark the whole day, from 0 h to 24 h, under the name of a day whose axis a presence opened', async () => {
@@ -805,10 +833,209 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([reperesDuJour(0), reperesDuJour(1)]).toEqual([
-      ['0 h', '24 h'],
-      ['8 h', '20 h'],
+    expect([reperesDuJour(0), reperesDuJour(1)]).toEqual([['0 h', '24 h'], []]);
+  });
+
+  it('should open today on the week in progress when the address names no day, empty as today may be', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+
+    await whenEcranAffiche();
+
+    expect(joursOuverts()).toEqual(['jeu. 17']);
+  });
+
+  it('should link each day to its own address, in the week that is shown', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+
+    await whenEcranAffiche();
+
+    expect([cibleDuLien('synthese-jour-lien', 0), cibleDuLien('synthese-jour-lien', 6)]).toEqual([
+      '/?annee=2026&semaine=38&jour=2026-09-14',
+      '/?annee=2026&semaine=38&jour=2026-09-20',
     ]);
+  });
+
+  it('should open the day the address names, and only that one', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-16' });
+
+    await whenEcranAffiche();
+
+    expect(joursOuverts()).toEqual(['mer. 16']);
+  });
+
+  it('should open the first day that carries a clocking on a past week, when the address names no day', async () => {
+    givenReleveDe(
+      new SemaineISO(2026, 37),
+      releveFixture(new SemaineISO(2026, 37), {
+        1: { pointages: [['ARRIVEE', [8, 0]]] },
+        4: { pointages: [['ARRIVEE', [8, 0]]] },
+      }),
+    );
+    routeFixture.demande('2026', '37');
+
+    await whenEcranAffiche();
+
+    expect(joursOuverts()).toEqual(['mar. 8']);
+  });
+
+  it('should open no day on a past week that carries no clocking', async () => {
+    givenReleveDe(new SemaineISO(2026, 37), releveFixture(new SemaineISO(2026, 37), {}));
+    routeFixture.demande('2026', '37');
+
+    await whenEcranAffiche();
+
+    expect(joursOuverts()).toEqual([]);
+  });
+
+  it('should leave the day out of the links to the neighbouring weeks, the open day going with the week it belongs to', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 20));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '20', jour: '2026-05-13' });
+
+    await whenEcranAffiche();
+
+    expect([cibleDuLien('synthese-semaine-precedente', 0), cibleDuLien('synthese-semaine-suivante', 0)]).toEqual([
+      '/?annee=2026&semaine=19',
+      '/?annee=2026&semaine=21',
+    ]);
+  });
+
+  it('should place the clockings of an element on its row in the open day, at their instant, and nowhere else', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [{ debut: [8, 0], fin: [14, 0] }],
+            pointagesDElement: [
+              { type: 'DEBUT', heure: [8, 0] },
+              { type: 'NON_CONFORMITE', heure: [12, 0] },
+              { type: 'FIN', heure: [14, 0] },
+            ],
+          },
+          1: { pointagesDElement: [{ type: 'DEBUT', heure: [9, 0] }] },
+        },
+        {},
+        [elementFixture()],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect(marquesDuJourOuvert()).toEqual(['Début 08:00', 'Non-conformité 12:00', 'Fin 14:00']);
+  });
+
+  it('should place a marker on the axis of the open day at the instant of its clocking', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            pointagesDElement: [
+              { type: 'DEBUT', heure: [8, 0] },
+              { type: 'FIN', heure: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [elementFixture()],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect(gauches('synthese-marque')).toEqual([12.5, 50]);
+  });
+
+  it('should keep a marker for a clocking that no bar surrounds, since the row of its element has to show it', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { pointagesDElement: [{ type: 'FIN', heure: [17, 45] }] } }, {}, [elementFixture()]));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([nombreDe('synthese-marque'), nombreDe('synthese-barre-travail')]).toEqual([1, 0]);
+  });
+
+  it('should put the marker of a clocking on the row of the workstation it names when the element is split', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-1', debut: [10, 0], fin: [14, 0] },
+            ],
+            pointagesDElement: [
+              { type: 'DEBUT', heure: [8, 0], poste: 'poste-0' },
+              { type: 'DEBUT', heure: [10, 0], poste: 'poste-1' },
+              { type: 'FIN', heure: [14, 0], poste: 'poste-1' },
+            ],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect(marquesParSousLigne()).toEqual([1, 2]);
+  });
+
+  it('should draw a line across the open day at each arrival and each departure, and none in the other days', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          pointages: [
+            ['ARRIVEE', [8, 0]],
+            ['DEPART', [16, 0]],
+          ],
+        },
+        1: { pointages: [['ARRIVEE', [9, 0]]] },
+      }),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([gauches('synthese-trait-presence'), titres('synthese-trait-presence')]).toEqual([
+      [12.5, 62.5],
+      ['Arrivée 08:00', 'Départ 16:00'],
+    ]);
+  });
+
+  it.each([
+    ['2026-09-14', 'hour by hour on the daytime axis', ['6 h', '8 h', '10 h', '12 h', '14 h', '16 h', '18 h', '20 h', '22 h']],
+    ['2026-09-15', 'every third hour on the whole day', ['0 h', '3 h', '6 h', '9 h', '12 h', '15 h', '18 h', '21 h', '24 h']],
+  ])('should mark the open day %s %s', async (jour, _cas, attendu) => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        1: {
+          plages: [
+            [
+              [19, 0],
+              [24, 0],
+            ],
+          ],
+        },
+      }),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour });
+
+    await whenEcranAffiche();
+
+    expect(reperesDuJour(jour === '2026-09-14' ? 0 : 1)).toEqual(attendu);
   });
 
   it('should mark the column of today', async () => {
@@ -843,7 +1070,17 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-legende')).toEqual(['Travail', 'Non-conformité', 'Présence', 'Présumé (à confirmer)', 'En cours']);
+    expect(textes('synthese-legende')).toEqual([
+      'Travail',
+      'Non-conformité',
+      'Présence',
+      'Présumé (à confirmer)',
+      'En cours',
+      'Début pointé',
+      'Non-conformité pointée',
+      'Fin pointée',
+      'Arrivée, départ',
+    ]);
   });
 
   it('should display the loading status until the report arrives', () => {
@@ -982,8 +1219,21 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(texte('synthese-adresse-invalide')).toContain('ne désigne pas une semaine que le calendrier porte');
+    expect(texte('synthese-adresse-invalide')).toContain('ne désigne pas une semaine ou un jour que le calendrier porte');
     expect(portFixture.demandes).toEqual([]);
+  });
+
+  it.each([
+    [{ annee: '2026', semaine: '38', jour: '2026-09-21' }],
+    [{ jour: '2026-09-21' }],
+    [{ annee: '2026', semaine: '38', jour: 'abc' }],
+    [{ annee: '2026', semaine: '38', jour: '' }],
+  ])('should refuse the day named by %o, out of the week or unreadable, and ask the server for nothing', async parametres => {
+    routeFixture.demandeBrute(parametres);
+
+    await whenEcranAffiche();
+
+    expect([present('synthese-adresse-invalide'), portFixture.demandes]).toEqual([true, []]);
   });
 
   it('should refuse an address naming no operator and ask the server for nothing', async () => {
@@ -991,7 +1241,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(texte('synthese-adresse-invalide')).toContain('ne désigne pas une semaine que le calendrier porte');
+    expect(texte('synthese-adresse-invalide')).toContain('ne désigne pas une semaine ou un jour que le calendrier porte');
     expect(portFixture.demandes).toEqual([]);
   });
 
@@ -1130,6 +1380,22 @@ describe('Synthese des heures component', () => {
       arrondi(element.style.left),
       arrondi(element.style.width),
     ]);
+
+  const joursOuverts = (): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-jour-lien'))]
+      .filter(lien => lien.getAttribute('aria-current') === 'true')
+      .map(lien => normalise(lien.querySelector(dataSelector('synthese-jour'))?.textContent ?? ''));
+
+  const cibleDuLien = (selector: string, rang: number): string =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))][rang]?.getAttribute('href') ?? '';
+
+  const marquesDuJourOuvert = (): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-marque'))].map(marque => marque.getAttribute('title') ?? '');
+
+  const marquesParSousLigne = (): number[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-sous-ligne'))].map(
+      sousLigne => sousLigne.querySelectorAll(dataSelector('synthese-marque')).length,
+    );
 
   const reperesDuJour = (rang: number): string[] => {
     const entete = [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-jour-cell'))][rang];
