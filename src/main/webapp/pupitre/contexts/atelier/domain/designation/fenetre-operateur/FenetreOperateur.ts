@@ -1,7 +1,9 @@
 import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
+  ActiviteDuPupitre,
   EvenementsDuJournal,
   GesteDAtelier,
+  GesteDePointage,
   GesteDePresence,
   IdentiteDuGeste,
   JournalDuPupitre,
@@ -31,6 +33,11 @@ import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
 import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
+
+interface ActivitePersonnelleConnue {
+  readonly suiviId: string;
+  readonly activite: ActiviteDuPupitre;
+}
 
 interface EtatDeFenetreOperateur {
   readonly entreprise: Entreprise;
@@ -221,16 +228,7 @@ export class FenetreOperateur {
       type: 'DEPART' as const,
       implicite: false,
     };
-    const pointages = (projectReferentiel(this.etat.vue)?.suivis ?? []).flatMap(suivi =>
-      suivi.activites
-        .filter(activite => this.etat.operateurDesigne.owns(activite.operateurId))
-        .map(activite =>
-          this.toPointage(suivi.id, activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId }, {
-            ...identify(),
-            dateDeSurvenue: depart.dateDeSurvenue,
-          }),
-        ),
-    );
+    const pointages = this.finsPersonnelles(() => ({ ...identify(), dateDeSurvenue: depart.dateDeSurvenue }));
     const arrivee: GesteDAtelier = {
       ...identify(),
       dateDeSurvenue: depart.dateDeSurvenue,
@@ -246,6 +244,26 @@ export class FenetreOperateur {
       }),
       intention: this.etat.intention,
     };
+  }
+
+  private finsPersonnelles(identify: () => IdentiteDuGeste): readonly GesteDePointage[] {
+    return this.activitesPersonnellesConnues().map(({ suiviId, activite }) => this.finDe(suiviId, activite, identify()));
+  }
+
+  private activitesPersonnellesConnues(): readonly ActivitePersonnelleConnue[] {
+    return (projectReferentiel(this.etat.vue)?.suivis ?? []).flatMap(suivi =>
+      suivi.activites
+        .filter(activite => this.etat.operateurDesigne.owns(activite.operateurId))
+        .map(activite => ({ suiviId: suivi.id, activite })),
+    );
+  }
+
+  private finDe(suiviId: string, activite: ActiviteDuPupitre, identite: IdentiteDuGeste): GesteDePointage {
+    return this.toPointage(
+      suiviId,
+      activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId },
+      identite,
+    );
   }
 
   private afterLocalAcceptance(gestes: readonly GesteDAtelier[], decision: LotDeGestesDAtelier): FenetreOperateur {
@@ -298,7 +316,7 @@ export class FenetreOperateur {
       intention: this.etat.intention,
     };
   }
-  private toPointage(suiviId: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDAtelier {
+  private toPointage(suiviId: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDePointage {
     return { ...identite, ...transition, suiviId, operateurId: this.etat.operateurDesigne.id(), nature: 'POINTAGE' };
   }
   private requireSuivi(suiviId: string): SuiviDuPupitre {
