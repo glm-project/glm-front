@@ -1,6 +1,5 @@
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
-import { PauseDeReleve } from '../../../domain/releve/PauseDeReleve';
 import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 
 const MINUTES_PAR_HEURE = 60;
@@ -38,14 +37,6 @@ export interface DessinDePlageEnCours {
   readonly puce: PositionDEtiquette;
 }
 
-export interface DessinDePause {
-  readonly kind: 'PAUSE';
-  readonly fin: InstantDeReleve;
-  readonly haut: number;
-  readonly hauteur: number;
-  readonly etiquetee: boolean;
-}
-
 export interface PositionDEtiquette {
   readonly haut: number;
   readonly placement: Placement;
@@ -57,7 +48,7 @@ export interface NoteDePlagesCourtes {
   readonly placement: Placement;
 }
 
-export type Dessin = DessinDePlage | DessinDePlageEnCours | DessinDePause;
+export type Dessin = DessinDePlage | DessinDePlageEnCours;
 
 export interface ColonneDessinee {
   readonly dessins: readonly Dessin[];
@@ -76,7 +67,6 @@ const ECART_ENTRE_COURTES = 18;
 const ECART_DE_L_ETIQUETTE = 6;
 const MARGE_DE_L_ETIQUETTE = 8;
 const HAUTEUR_DE_LIGNE = 16;
-const HAUTEUR_DE_L_ETIQUETTE_DE_PAUSE = 16;
 const LIGNES_D_UNE_PUCE_EN_COURS = 2;
 
 interface Fenetre {
@@ -99,12 +89,7 @@ const minutesDeFin = (debut: InstantDeReleve, fin: InstantDeReleve): number =>
 const bornesDeLaPlage = (plage: PlageDeReleve): readonly number[] =>
   plage.fin === undefined ? [debutDe(plage)] : [debutDe(plage), minutesDeFin(plage.debut, plage.fin)];
 
-const bornesDeLaPause = (pause: PauseDeReleve): readonly number[] => [JOUR_ENTIER.debut, minutesDe(pause.fin.value)];
-
-const bornesDu = (jour: JourDeReleve): readonly number[] => [
-  ...jour.plages.flatMap(bornesDeLaPlage),
-  ...jour.pauses().flatMap(bornesDeLaPause),
-];
+const bornesDu = (jour: JourDeReleve): readonly number[] => jour.plages.flatMap(bornesDeLaPlage);
 
 const sortDesHeuresDeJour = (bornes: readonly number[]): boolean =>
   Math.min(...bornes) < HEURES_DE_JOUR.debut || Math.max(...bornes) > HEURES_DE_JOUR.fin;
@@ -180,10 +165,9 @@ export class AgendaDeLaSemaine {
 
   colonne(jour: JourDeReleve): ColonneDessinee {
     const plages = jour.plages.flatMap(plage => this.dessineLaPlage(plage, jour.vientDeLaVeille(plage)));
-    const encombrants = [...plages, ...jour.pauses().map(pause => this.dessineLaPause(pause))];
-    const reperes = jour.plages.flatMap(plage => this.marqueLaPlageEnCours(plage, encombrants));
-    const dessins = [...encombrants, ...reperes].sort((un, autre) => un.haut - autre.haut);
-    return { dessins, notes: this.notesDe(plages, encombrants) };
+    const reperes = jour.plages.flatMap(plage => this.marqueLaPlageEnCours(plage, plages));
+    const dessins = [...plages, ...reperes].sort((un, autre) => un.haut - autre.haut);
+    return { dessins, notes: this.notesDe(plages, plages) };
   }
 
   private dessineLaPlage(plage: PlageDeReleve, depuisLaVeille: boolean): readonly DessinDePlage[] {
@@ -207,12 +191,6 @@ export class AgendaDeLaSemaine {
         seLePoursuit: fin === MINUTES_PAR_JOUR,
       },
     ];
-  }
-
-  private dessineLaPause(pause: PauseDeReleve): DessinDePause {
-    const haut = this.hautDe(JOUR_ENTIER.debut);
-    const hauteur = this.hautDe(minutesDe(pause.fin.value)) - haut;
-    return { kind: 'PAUSE', fin: pause.fin, haut, hauteur, etiquetee: hauteur >= HAUTEUR_DE_L_ETIQUETTE_DE_PAUSE };
   }
 
   private marqueLaPlageEnCours(plage: PlageDeReleve, obstacles: readonly Encombrement[]): readonly DessinDePlageEnCours[] {

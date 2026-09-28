@@ -1,15 +1,7 @@
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import {
-  AgendaDeLaSemaine,
-  ClasseDeHauteur,
-  Dessin,
-  DessinDePause,
-  DessinDePlage,
-  DessinDePlageEnCours,
-  NoteDePlagesCourtes,
-} from './AgendaDeLaSemaine';
+import { AgendaDeLaSemaine, ClasseDeHauteur, Dessin, DessinDePlage, DessinDePlageEnCours, NoteDePlagesCourtes } from './AgendaDeLaSemaine';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
@@ -31,13 +23,6 @@ export interface NoteAffichee {
   readonly lignes: readonly string[];
 }
 
-export interface PauseAffichee {
-  readonly haut: number;
-  readonly hauteur: number;
-  readonly etiquetee: boolean;
-  readonly titre: string;
-}
-
 export interface MarqueAffichee {
   readonly haut: number;
   readonly puce: number;
@@ -54,7 +39,6 @@ export interface ColonneAffichee {
   readonly presumees: string | undefined;
   readonly blocs: readonly BlocAffiche[];
   readonly notes: readonly NoteAffichee[];
-  readonly pauses: readonly PauseAffichee[];
   readonly marques: readonly MarqueAffichee[];
   readonly enonces: readonly string[];
   readonly pointages: readonly string[];
@@ -66,8 +50,6 @@ const enonceDe = (dessin: Dessin): string => {
       return LIBELLES.enonceDePlage(dessin);
     case 'PLAGE_EN_COURS':
       return LIBELLES.enonceDePlageEnCours(dessin.debut);
-    case 'PAUSE':
-      return LIBELLES.enonceDePause(dessin.fin);
   }
 };
 
@@ -89,13 +71,6 @@ const toBloc = (dessin: DessinDePlage): BlocAffiche => {
 };
 
 const toNote = (note: NoteDePlagesCourtes): NoteAffichee => ({ haut: note.haut, lignes: note.plages.map(plage => toBloc(plage).bornes) });
-
-const toPause = (dessin: DessinDePause): PauseAffichee => ({
-  haut: dessin.haut,
-  hauteur: dessin.hauteur,
-  etiquetee: dessin.etiquetee,
-  titre: enonceDe(dessin),
-});
 
 const toMarqueDePlage = (dessin: DessinDePlageEnCours, jour: JourDeReleve): MarqueAffichee => ({
   haut: dessin.haut,
@@ -119,7 +94,6 @@ export const toColonneAffichee = (agenda: AgendaDeLaSemaine, jour: JourDeReleve,
     presumees: jour.dureePresumee.estNulle() ? undefined : LIBELLES.presumees(jour.dureePresumee),
     blocs: dessins.flatMap(dessin => (dessin.kind === 'PLAGE' ? [toBloc(dessin)] : [])),
     notes: notes.map(toNote),
-    pauses: dessins.flatMap(dessin => (dessin.kind === 'PAUSE' ? [toPause(dessin)] : [])),
     marques: toMarques(dessins, jour),
     enonces: dessins.map(enonceDe),
     pointages: jour.pointages.map(pointage => LIBELLES.pointage(pointage.type, pointage.instant)),

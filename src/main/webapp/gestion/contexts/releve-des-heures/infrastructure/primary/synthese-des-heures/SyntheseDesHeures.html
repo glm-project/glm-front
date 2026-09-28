@@ -126,19 +126,7 @@
             @for (colonne of vue.colonnes; track colonne.cle) {
             <td class="colonne" [class.aujourdhui]="colonne.aujourdhui" data-selector="synthese-colonne">
               <div class="dessin" aria-hidden="true" [style.height.px]="vue.agenda.hauteur">
-                @for (pause of colonne.pauses; track $index) {
-                <div
-                  class="pause"
-                  [style.top.px]="pause.haut"
-                  [style.height.px]="pause.hauteur"
-                  [title]="pause.titre"
-                  data-selector="synthese-pause"
-                >
-                  @if (pause.etiquetee) {
-                  <span>{{ libelles.pause }}</span>
-                  }
-                </div>
-                } @for (bloc of colonne.blocs; track $index) {
+                @for (bloc of colonne.blocs; track $index) {
                 <div
                   [class]="'bloc ' + bloc.classe"
                   [class.presumee]="bloc.presumee"
@@ -207,7 +195,6 @@
       <ul class="legende">
         <li data-selector="synthese-legende"><i class="pastille pastille-pointe" aria-hidden="true"></i>{{ libelles.legende.pointe }}</li>
         <li data-selector="synthese-legende"><i class="pastille pastille-presume" aria-hidden="true"></i>{{ libelles.legende.presume }}</li>
-        <li data-selector="synthese-legende"><i class="pastille pastille-pause" aria-hidden="true"></i>{{ libelles.legende.pause }}</li>
         <li data-selector="synthese-legende">
           <i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}
         </li>

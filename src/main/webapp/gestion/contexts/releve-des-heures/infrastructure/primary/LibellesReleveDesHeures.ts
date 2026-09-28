@@ -21,7 +21,6 @@ const formatDuree = (duree: DureeTravaillee): string => `${duree.heures} h ${Str
 const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
 
 const PRESENCE = 'Présence';
-const PAUSE = 'Pause';
 const EN_COURS = 'en cours';
 const DEPUIS_LA_VEILLE = 'depuis la veille';
 const SE_POURSUIT = 'se poursuit';
@@ -40,7 +39,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   titre: 'Synthèse des heures',
   retour: 'Opérateurs',
   retourAria: 'Revenir au référentiel des opérateurs',
-  sousTitre: 'Le temps travaillé de la semaine, jour par jour, pauses déduites.',
+  sousTitre: 'Le temps travaillé de la semaine, jour par jour.',
 
   anneeLabel: 'Année',
   semaineLabel: 'Semaine',
@@ -55,9 +54,8 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   sansValeur: '—',
   aujourdhui: 'Aujourd’hui',
   enCours: EN_COURS,
-  pause: PAUSE,
   pointages: 'Pointages',
-  legende: { pointe: 'Pointé', presume: 'Présumé (à confirmer)', pause: PAUSE, enCours: 'En cours' },
+  legende: { pointe: 'Pointé', presume: 'Présumé (à confirmer)', enCours: 'En cours' },
 
   chargement: 'Chargement de la synthèse…',
   echec: 'Impossible de charger la synthèse des heures. Vérifiez la connexion puis réessayez.',
@@ -97,5 +95,4 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
   },
   enonceDePlageEnCours: (debut: InstantDeReleve): string => `${PRESENCE} depuis ${heure(debut)}, ${EN_COURS}`,
-  enonceDePause: (fin: InstantDeReleve): string => `${PAUSE} ${DEPUIS_LA_VEILLE} jusqu’à ${heure(fin)}`,
 } as const;

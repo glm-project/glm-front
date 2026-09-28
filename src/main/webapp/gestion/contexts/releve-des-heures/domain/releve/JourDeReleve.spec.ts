@@ -2,7 +2,6 @@ import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { InstantDeReleve } from './InstantDeReleve';
 import { FicheDuJour, JourDeReleve } from './JourDeReleve';
-import { PauseDeReleve } from './PauseDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
 import { PointageDeReleve } from './PointageDeReleve';
 import { TypeDePointage } from './TypeDePointage';
@@ -21,11 +20,6 @@ const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({
   plages: [],
   ...fiche,
 });
-
-const heureDe = (instant: InstantDeReleve): string =>
-  `${String(instant.value.getHours()).padStart(2, '0')}:${String(instant.value.getMinutes()).padStart(2, '0')}`;
-
-const projeterPause = (pause: PauseDeReleve): string => `veille → ${heureDe(pause.fin)}`;
 
 describe('JourDeReleve', () => {
   it('should keep its clockings independent of the list it was built from', () => {
@@ -57,56 +51,6 @@ describe('JourDeReleve', () => {
     const jour = new JourDeReleve(ficheFixture({ pointages }));
 
     expect(jour.estVide()).toBe(false);
-  });
-
-  it('should not take the gap between a departure and a new arrival for a break', () => {
-    const jour = new JourDeReleve(
-      ficheFixture({
-        pointages: [
-          pointageFixture('ARRIVEE', 6, 58),
-          pointageFixture('DEPART', 11, 58),
-          pointageFixture('ARRIVEE', 12, 40),
-          pointageFixture('DEPART', 15, 2),
-        ],
-        plages: [
-          new PlageDeReleve(instantFixture(6, 58), instantFixture(11, 58), false),
-          new PlageDeReleve(instantFixture(12, 40), instantFixture(15, 2), false),
-        ],
-      }),
-    );
-
-    expect(jour.pauses()).toEqual([]);
-  });
-
-  it('should start a day that begins with a departure no interval ends in a break coming from the day before', () => {
-    const jour = new JourDeReleve(ficheFixture({ pointages: [pointageFixture('DEPART', 1, 30)] }));
-
-    expect(jour.pauses().map(projeterPause)).toEqual(['veille → 01:30']);
-  });
-
-  it('should start in a break from the day before a night shift day whose first departure no interval ends, even with a later interval', () => {
-    const jour = new JourDeReleve(
-      ficheFixture({
-        pointages: [pointageFixture('DEPART', 1, 30), pointageFixture('ARRIVEE', 19, 0)],
-        plages: [new PlageDeReleve(instantFixture(19, 0), instantFixture(24, 0), false)],
-      }),
-    );
-
-    expect(jour.pauses().map(projeterPause)).toEqual(['veille → 01:30']);
-  });
-
-  it('should not start a day in a break when an interval ends at its first departure', () => {
-    const jour = new JourDeReleve(
-      ficheFixture({
-        pointages: [pointageFixture('DEPART', 7, 5), pointageFixture('ARRIVEE', 18, 58)],
-        plages: [
-          new PlageDeReleve(instantFixture(0, 0), instantFixture(7, 5), false),
-          new PlageDeReleve(instantFixture(18, 58), instantFixture(24, 0), false),
-        ],
-      }),
-    );
-
-    expect(jour.pauses()).toEqual([]);
   });
 
   it('should name the clocking that happened at an instant', () => {

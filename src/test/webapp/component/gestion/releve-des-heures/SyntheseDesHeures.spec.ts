@@ -256,7 +256,7 @@ describe('Weekly hours report in gestion', () => {
     givenAWeekOfDayShifts(samediEnCoursFixture);
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheColumnShows(0, { plages: 2, pauses: [] });
+    thenTheColumnShows(0, { plages: 2 });
   });
 
   it('should draw a working day abandoned without departure as presumed, beside its clocked zero', () => {
@@ -279,7 +279,7 @@ describe('Weekly hours report in gestion', () => {
     whenVisiting(SEMAINE_DE_JOUR);
 
     thenTheHeaderReads(4, { jour: 'ven. 25', duree: '0 h 00' });
-    thenTheColumnShows(4, { plages: 0, pauses: [], sansPointage: false });
+    thenTheColumnShows(4, { plages: 0, sansPointage: false });
   });
 
   it('should mark today and the presence still in progress by the clocking that opened it', () => {
@@ -295,7 +295,7 @@ describe('Weekly hours report in gestion', () => {
     whenVisiting(SEMAINE_DE_JOUR);
 
     thenTheHeaderReads(6, { jour: 'dim. 27', duree: '—' });
-    thenTheColumnShows(6, { plages: 0, pauses: [], sansPointage: true });
+    thenTheColumnShows(6, { plages: 0, sansPointage: true });
   });
 
   it('should total the clocked and the presumed time of the week apart', () => {
@@ -417,14 +417,10 @@ describe('Weekly hours report in gestion', () => {
 
   const colonne = (rang: number): Cypress.Chainable<JQuery> => cy.get(dataSelector('synthese-colonne')).eq(rang);
 
-  const thenTheColumnShows = (rang: number, attendu: { plages: number; pauses: string[]; sansPointage?: boolean }): void => {
-    colonne(rang).find(dataSelector('synthese-plage')).should('have.length', attendu.plages);
-    colonne(rang)
-      .find(dataSelector('synthese-pause'))
-      .should($pauses => {
-        expect([...$pauses].map(pause => pause.textContent.trim())).to.deep.equal(attendu.pauses);
-      });
-    colonne(rang)
+  const thenTheColumnShows = (rang: number, attendu: { plages: number; sansPointage?: boolean }): void => {
+    cy.get(dataSelector('synthese-colonne')).eq(rang).find(dataSelector('synthese-plage')).should('have.length', attendu.plages);
+    cy.get(dataSelector('synthese-colonne'))
+      .eq(rang)
       .find(dataSelector('synthese-jour-sans-pointage'))
       .should('have.length', attendu.sansPointage === true ? 1 : 0);
   };

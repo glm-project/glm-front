@@ -54,8 +54,6 @@ const projeterDessin = (dessin: Dessin): string => {
       return `plage ${String(arrondi(dessin.haut))}`;
     case 'PLAGE_EN_COURS':
       return `en cours ${String(arrondi(dessin.haut))}, puce ${dessin.puce.placement} ${String(arrondi(dessin.puce.haut))}`;
-    case 'PAUSE':
-      return `pause ${String(arrondi(dessin.haut))}+${String(arrondi(dessin.hauteur))}${dessin.etiquetee ? ' étiquetée' : ''}`;
   }
 };
 
@@ -85,7 +83,6 @@ describe('AgendaDeLaSemaine', () => {
       ['an interval still in progress since before the daytime hours', jourFixture({ plages: [plageFixture([5, 0], undefined)] })],
       ['an interval coming from the day before', jourFixture({ plages: [plageFixture([0, 0], [7, 0])] })],
       ['an interval going on the day after', jourFixture({ plages: [plageFixture([20, 0], [24, 0])] })],
-      ['a break coming from the day before', jourFixture({ pointages: [pointageFixture('DEPART', [9, 0])] })],
     ])('should open onto the whole day, twenty pixels an hour, for %s', (_cas, jour) => {
       const agenda = new AgendaDeLaSemaine([jour]);
 
@@ -264,23 +261,7 @@ describe('AgendaDeLaSemaine', () => {
     });
   });
 
-  describe('breaks and marks', () => {
-    it('should draw a break coming from the day before from midnight to the departure no interval ends', () => {
-      const jour = jourFixture({ pointages: [pointageFixture('DEPART', [2, 0])] });
-
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
-
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['pause 0+40 étiquetée']);
-    });
-
-    it('should leave unlabelled a break too short for its label', () => {
-      const jour = jourFixture({ pointages: [pointageFixture('DEPART', [0, 30])] });
-
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
-
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['pause 0+10']);
-    });
-
+  describe('marks of intervals in progress', () => {
     it('should mark an interval still in progress at its start, without height, its chip under the mark', () => {
       const jour = jourFixture({ pointages: [pointageFixture('ARRIVEE', [8, 3])], plages: [plageFixture([8, 3], undefined)] });
 

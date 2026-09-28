@@ -276,12 +276,12 @@ describe('Synthese des heures component', () => {
     ]);
   });
 
-  it('should draw the break coming from the day before, labelled when tall enough', async () => {
+  it('should draw no break before a departure no interval ends, and keep that departure clocked', async () => {
     givenReleve(releveFixture(SEMAINE_EN_COURS, { 1: { pointages: [['DEPART', [10, 0]]] } }));
 
     await whenEcranAffiche();
 
-    expect([titres('synthese-pause'), textes('synthese-pause')]).toEqual([['Pause depuis la veille jusqu’à 10:00'], ['Pause']]);
+    expect([nombreDe('synthese-pause'), textes('synthese-pointage')]).toEqual([0, ['Départ 10:00']]);
   });
 
   it('should name short intervals close to one another in one shared note', async () => {
@@ -434,7 +434,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-legende')).toEqual(['Pointé', 'Présumé (à confirmer)', 'Pause', 'En cours']);
+    expect(textes('synthese-legende')).toEqual(['Pointé', 'Présumé (à confirmer)', 'En cours']);
   });
 
   it('should display the loading status until the report arrives', () => {
