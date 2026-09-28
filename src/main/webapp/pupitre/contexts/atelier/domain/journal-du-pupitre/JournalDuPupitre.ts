@@ -1,7 +1,7 @@
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
-export type TypeDePresence = 'REPRISE' | 'DEPART';
+export type TypeDePresence = 'DEPART';
 export type EtatDePresence = 'ABSENT' | 'PRESENT';
 
 export interface OperateurDuPupitre {
@@ -46,14 +46,11 @@ export interface GesteDArrivee extends IdentiteDuGeste {
   readonly operateurId: string;
 }
 
-interface PresenceCommune extends IdentiteDuGeste {
+export interface GesteDePresence extends IdentiteDuGeste {
   readonly nature: 'PRESENCE';
   readonly operateurId: string;
+  readonly type: TypeDePresence;
 }
-
-export type GesteDePresence =
-  | (PresenceCommune & { readonly type: TypeDePresence; readonly implicite: false })
-  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: true });
 
 export type TypeDOuverture = Exclude<TypeDePointage, 'FIN'>;
 

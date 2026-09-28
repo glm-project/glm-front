@@ -92,9 +92,8 @@ and preserves pending work while marking disconnection. This result describes th
 durable acceptance. Its minimal type and constructors stay in the atelier synchronization domain; see the
 [publication amendment in ADR 0006](adr/0006-how-the-front-calls-the-back.md#publication-amendment).
 
-Absorption belongs to a business operation. Arrival assurance may absorb an already-open day; implicit
-resumption may absorb a forbidden presence transition. The same HTTP status on an explicit operator gesture
-remains visible.
+Absorption belongs to a business operation. Arrival assurance may absorb an already-open day, and nothing else
+is absorbed: the same HTTP status on an explicit operator gesture remains visible.
 
 `GesteReplayPolicy` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread

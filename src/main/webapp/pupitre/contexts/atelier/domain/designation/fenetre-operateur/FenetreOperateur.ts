@@ -131,7 +131,7 @@ export class FenetreOperateur {
     const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
-        ? fenetre.gestes(suiviId, numero, activities.transitions, identify, activities.transitions.premiere.type === 'DEBUT')
+        ? fenetre.gestes(suiviId, numero, activities.transitions, identify)
         : fenetre.ouverture(suiviId, numero, cible, identify);
     return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }
@@ -145,7 +145,6 @@ export class FenetreOperateur {
       NumeroDElement.from(suivi),
       { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
       identify,
-      true,
     );
     return {
       fenetre: this.with({ refusVisible: undefined, contextesParGeste: decision.contextesParGeste }),
@@ -236,7 +235,6 @@ export class FenetreOperateur {
       operateurId: this.etat.operateurDesigne.id(),
       nature: 'PRESENCE' as const,
       type: 'DEPART' as const,
-      implicite: false,
     };
     const pointages = this.finsPersonnelles(() => ({ ...identify(), dateDeSurvenue: depart.dateDeSurvenue }));
     const arrivee: GesteDAtelier = {
@@ -297,14 +295,13 @@ export class FenetreOperateur {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
-      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify, true);
+      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify);
   }
   private gestes(
     suiviId: string,
     numero: NumeroDElement,
     transitions: LotDeTransitions,
     identify: () => IdentiteDuGeste,
-    repriseImplicite: boolean,
   ): LotDeGestesDAtelier {
     const first = this.toPointage(suiviId, transitions.premiere, identify());
     const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
@@ -314,17 +311,9 @@ export class FenetreOperateur {
       operateurId: this.etat.operateurDesigne.id(),
       nature: 'ARRIVEE',
     };
-    const reprise: GesteDePresence = {
-      ...identify(),
-      dateDeSurvenue: first.dateDeSurvenue,
-      operateurId: this.etat.operateurDesigne.id(),
-      nature: 'PRESENCE',
-      type: 'REPRISE',
-      implicite: true,
-    };
     return {
       kind: 'GESTES',
-      capture: (assured = false) => [...(assured ? [] : [arrivee]), ...(repriseImplicite ? [reprise] : []), ...pointages],
+      capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages],
       contextesParGeste: ContextesParGeste.forGestes(pointages, { kind: 'ELEMENT', numero }),
       intention: this.etat.intention,
     };

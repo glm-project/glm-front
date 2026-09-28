@@ -120,7 +120,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     const arrivee = whenSending(arriveeFixture);
     const arriveeRequest = await whenServerAcceptsWrite('/api/atelier/journees');
 
-    const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'DEPART', implicite: false });
+    const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'DEPART' });
     const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
 
     const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });

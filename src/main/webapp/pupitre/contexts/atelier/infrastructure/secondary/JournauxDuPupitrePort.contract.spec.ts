@@ -27,7 +27,7 @@ const refreshedReferenceFixture: ReferentielDuPupitre = {
   ],
 };
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
-const repriseFixture: GesteDAtelier = { ...arriveeFixture, id: 'reprise', nature: 'PRESENCE', type: 'REPRISE', implicite: true };
+const departFixture: GesteDAtelier = { ...arriveeFixture, id: 'depart', nature: 'PRESENCE', type: 'DEPART' };
 const pointageFixture: GesteDAtelier = { ...arriveeFixture, id: 'pointage', nature: 'POINTAGE', type: 'DEBUT', suiviId: 'piece' };
 const pointageEnAttenteFixture: GesteDAtelier = {
   ...arriveeFixture,
@@ -76,7 +76,6 @@ const departJeanFixture: GesteDAtelier = {
   id: 'depart-jean',
   nature: 'PRESENCE',
   type: 'DEPART',
-  implicite: false,
 };
 const operateurMarieFixture: OperateurDuPupitre = {
   id: 'marie',
@@ -95,7 +94,6 @@ const departMarieFixture: GesteDAtelier = {
   id: 'depart-marie',
   nature: 'PRESENCE',
   type: 'DEPART',
-  implicite: false,
   operateurId: 'marie',
 };
 
@@ -171,7 +169,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
 
     await thenCompanyStateIs('entreprise-a', {
       connecte: true,
-      evenements: [refus, { geste: repriseFixture, etat: 'EN_ATTENTE' }, { geste: pointageFixture, etat: 'EN_ATTENTE' }],
+      evenements: [refus, { geste: departFixture, etat: 'EN_ATTENTE' }, { geste: pointageFixture, etat: 'EN_ATTENTE' }],
     });
   });
 
@@ -193,7 +191,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
         { geste: pointageFixture, etat: 'ACCEPTE' },
         { geste: pointageEnAttenteFixture, etat: 'EN_ATTENTE' },
         { geste: pointageAutreSuiviFixture, etat: 'ACCEPTE' },
-        { geste: repriseFixture, etat: 'ACCEPTE' },
+        { geste: departFixture, etat: 'ACCEPTE' },
       ],
     });
   });
@@ -278,10 +276,10 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   const completeOpeningFixture = (): JournalDuPupitre => ({
     referentiel: referenceFixture,
     connecte: true,
-    evenements: [arriveeFixture, repriseFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
+    evenements: [arriveeFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
   });
   const givenADisconnectedQueue = async (): Promise<EvenementDuJournal> => {
-    await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, repriseFixture]);
+    await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, departFixture]);
     await journal.markDisconnected(Entreprise.of('entreprise-a'));
     return { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
   };
@@ -290,11 +288,11 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
       pointageFixture,
       pointageEnAttenteFixture,
       pointageAutreSuiviFixture,
-      repriseFixture,
+      departFixture,
     ]);
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageFixture, etat: 'ACCEPTE' });
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageAutreSuiviFixture, etat: 'ACCEPTE' });
-    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: repriseFixture, etat: 'ACCEPTE' });
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: departFixture, etat: 'ACCEPTE' });
   };
 
   const whenCompletingConcurrentOperations = async (
@@ -313,7 +311,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: suspensionFixture, etat: 'ACCEPTE' });
   };
   const whenAppendingTheCompleteOpening = (): Promise<void> =>
-    journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, repriseFixture, pointageFixture]);
+    journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, pointageFixture]);
   const whenAppendingArrival = (): Promise<void> => journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
   const whenSavingAFreshReference = (): Promise<JournalDuPupitre> =>
     journal.saveReferentiel(Entreprise.of('entreprise-a'), refreshedReferenceFixture);

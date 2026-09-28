@@ -255,7 +255,6 @@ describe('JournalDuPupitreProjection', () => {
     nature: 'PRESENCE',
     operateurId,
     type,
-    implicite: false,
     id: crypto.randomUUID(),
     dateDeSurvenue: '2026-09-05T09:00:00Z',
   });

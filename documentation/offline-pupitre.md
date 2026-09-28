@@ -23,9 +23,8 @@ time.
 
 ## Domain owners decide the gesture
 
-`FenetreOperateur` resolves the operator, checks workstation qualifications, prepares implicit arrival and
-resumption, turns PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator
-window. `PauseEnCours` decides, from the whole journal, whether a pause is in progress and what it reopens. Only a
+`FenetreOperateur` resolves the operator, checks workstation qualifications, prepares the implicit arrival, turns
+PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the whole journal, whether a pause is in progress and what it reopens. Only a
 successfully committed capture advances that view.
 
 `GesteReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
@@ -170,8 +169,8 @@ OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay thres
 
 The first business command in an operator window assures arrival before its requested gestures, including
 `REPRENDRE` and `TOUT ARRÊTER`, but not `PAUSE`, which only closes: opening the day of an absent operator who
-forgot activities would open a day bound to be abandoned. Implicit resumption belongs only to an intention that
-opens or resumes an activity; it never precedes a `FIN` or a global command.
+forgot activities would open a day bound to be abandoned. No resumption precedes any gesture: the pupitre sends
+no presence gesture but the departure.
 
 `TOUT ARRÊTER` is one atomically accepted local batch: every known personal `FIN`, followed by `DEPART`.
 A local storage failure retains none of that batch. Once accepted, normal FIFO replay records known business

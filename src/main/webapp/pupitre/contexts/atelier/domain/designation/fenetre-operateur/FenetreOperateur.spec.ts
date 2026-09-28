@@ -159,8 +159,8 @@ describe('FenetreOperateur', () => {
     const firstGestures = whenAcceptingPointage(first);
     const secondGestures = whenCapturingPointage(second);
 
-    thenGesturesAre(firstGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    thenGesturesAre(secondGestures, ['PRESENCE', 'POINTAGE']);
+    thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(secondGestures, ['POINTAGE']);
     thenIdentitiesWerePreparedBeforeExecution([...firstGestures, ...secondGestures], preparedIdentities);
     thenOpeningSharesBusinessTime(firstGestures);
   });
@@ -174,12 +174,12 @@ describe('FenetreOperateur', () => {
     const committedGestures = whenAcceptingPointage(committed);
     const retriedGestures = whenCapturingPointage(retry);
 
-    thenGesturesAre(firstGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    thenGesturesAre(committedGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    thenGesturesAre(retriedGestures, ['PRESENCE', 'POINTAGE']);
+    thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(committedGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(retriedGestures, ['POINTAGE']);
   });
 
-  it('should assure arrival without an implicit resumption before a first finish', () => {
+  it('should assure arrival before a first finish', () => {
     const fin = whenDeciding('moule-1015', 'PRINCIPALE');
 
     const gestes = captureGestures(fin);
@@ -188,7 +188,7 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should not resume implicitly when moving work to non conformity', () => {
+  it('should assure arrival before moving work to non conformity', () => {
     const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
 
     const gestes = captureGestures(nonConformite);
@@ -197,12 +197,12 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(nonConformite, ['NON_CONFORMITE']);
   });
 
-  it('should resume implicitly when moving non conformity back to work', () => {
+  it('should move non conformity back to work after assuring arrival', () => {
     const travail = whenDeciding('of-204', 'SECONDAIRE');
 
     const gestes = captureGestures(travail);
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE']);
+    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE']);
     thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
   });
 
@@ -222,7 +222,7 @@ describe('FenetreOperateur', () => {
       { suiviId: 'of-204', type: 'FIN', posteId: 'tour' },
       { suiviId: 'of-204', type: 'FIN', posteId: undefined },
     ]);
-    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART', implicite: false });
+    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(new Set(gestes.map(geste => geste.dateDeSurvenue))).toEqual(new Set(['2026-09-05T08:00:00.000Z']));
   });
@@ -291,12 +291,12 @@ describe('FenetreOperateur', () => {
     expect(toutArreter.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
   });
 
-  it('should assure arrival when starting an activity after stopping all in the same operator window', () => {
+  it('should assure arrival again when starting an activity after stopping all in the same operator window', () => {
     const stoppedWindow = givenAnAcceptedStopWithoutActivities();
 
     const gestes = whenStartingAnActivityIn(stoppedWindow);
 
-    thenArrivalPrecedesResumptionAndStart(gestes);
+    thenArrivalPrecedesStart(gestes);
   });
 
   it('should expose a refused finish from the current global stop batch as TOUT ARRÊTER', () => {
@@ -328,7 +328,7 @@ describe('FenetreOperateur', () => {
       'finish gesture',
     );
     const depart = requiredFixture(
-      acceptance.gestes.find(geste => geste.nature === 'PRESENCE' && geste.type === 'DEPART'),
+      acceptance.gestes.find(geste => geste.nature === 'PRESENCE'),
       'departure gesture',
     );
     fenetre = acceptance.applyTo(fenetre);
@@ -666,14 +666,13 @@ describe('FenetreOperateur', () => {
     expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
   });
 
-  it('should capture arrival, implicit resumption and pointage when confirming a workstation choice', () => {
+  it('should capture arrival and pointage when confirming a workstation choice', () => {
     const multiposte = givenAMultiWorkstationWindow();
 
     const gestures = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse').capture();
 
-    thenGesturesAre(gestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    expect(gestures[1]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
-    expect(gestures[2]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
+    thenGesturesAre(gestures, ['ARRIVEE', 'POINTAGE']);
+    expect(gestures[1]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
   });
 
   it('should expose no refusal after a workstation choice until one is reconciled', () => {
@@ -864,8 +863,8 @@ describe('FenetreOperateur', () => {
     const start = window.afterDeciding('of-1', 'PRINCIPALE', identifyFixture);
     return start.fenetre.prepareAcceptance(gesturesOf(start.decision)).gestes;
   };
-  const thenArrivalPrecedesResumptionAndStart = (gestes: readonly GesteDAtelier[]): void => {
-    expect(gestes).toMatchObject([{ nature: 'ARRIVEE' }, { nature: 'PRESENCE', type: 'REPRISE' }, { nature: 'POINTAGE', type: 'DEBUT' }]);
+  const thenArrivalPrecedesStart = (gestes: readonly GesteDAtelier[]): void => {
+    expect(gestes).toMatchObject([{ nature: 'ARRIVEE' }, { nature: 'POINTAGE', type: 'DEBUT' }]);
   };
   const givenAPreparedPointage = (): (() => readonly GesteDAtelier[]) => {
     const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture);
@@ -1125,8 +1124,10 @@ describe('FenetreOperateur', () => {
     ).toEqual(expected);
   };
   const thenOpeningSharesBusinessTime = (gestes: readonly GesteDAtelier[]): void => {
-    const lastGesture = requiredFixture(gestes[2], 'last gesture');
-    expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(Array<string | undefined>(3).fill(identities.get(lastGesture.id)));
+    const lastGesture = requiredFixture(gestes.at(-1), 'last gesture');
+    expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(
+      Array<string | undefined>(gestes.length).fill(identities.get(lastGesture.id)),
+    );
   };
   const thenIdentitiesWerePreparedBeforeExecution = (gestes: readonly GesteDAtelier[], preparedIdentities: Map<string, string>): void => {
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);

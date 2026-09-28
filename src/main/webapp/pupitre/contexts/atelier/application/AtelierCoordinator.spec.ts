@@ -209,15 +209,15 @@ describe('AtelierCoordinator', () => {
     await whenOpening();
 
     thenActivityIs('TRAVAIL');
-    await thenQueueHas(3);
+    await thenQueueHas(2);
   });
 
-  it('should commit arrival once and implicit resumption before each opening activity', async () => {
+  it('should commit arrival once before the opening activities', async () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
 
-    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'PRESENCE', 'POINTAGE']);
+    await thenNatureOrderIs(['ARRIVEE', 'POINTAGE', 'POINTAGE']);
     thenActivityIs('NON_CONFORMITE');
     await thenQueueHasUniqueStableIdentities();
   });
@@ -253,7 +253,7 @@ describe('AtelierCoordinator', () => {
 
     thenNoActivity();
     thenAcceptedBatchesAre([
-      ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
+      ['ARRIVEE', 'DEBUT:piece:tour'],
       ['FIN:piece:tour', 'DEPART'],
     ]);
   });
@@ -329,7 +329,7 @@ describe('AtelierCoordinator', () => {
     thenNoWindowPresentationRemains(closingPresentation);
     thenGlobalGesturesAreAvailable(true);
     thenAcceptedBatchesAre([
-      ['ARRIVEE', 'REPRISE', 'DEBUT:piece:tour'],
+      ['ARRIVEE', 'DEBUT:piece:tour'],
       ['FIN:piece:tour', 'DEPART'],
     ]);
   });
@@ -394,7 +394,7 @@ describe('AtelierCoordinator', () => {
   it('should clear the current refusal as soon as a new business intent starts', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
-    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenStarting();
     await whenSynchronizing();
     const releaseCapture = givenDelayedCapture();
@@ -426,7 +426,7 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([failedStart]);
     await whenStarting();
 
-    await thenQueueHas(3);
+    await thenQueueHas(2);
   });
 
   it('should keep the semantic tile unchanged and expose a persistent message until the next durable acceptance', async () => {
@@ -526,7 +526,7 @@ describe('AtelierCoordinator', () => {
   it('should remove activity rejected by the server', async () => {
     await givenWorkStartedOffline();
     givenAuthorizedAccess();
-    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
 
     thenNoActivity();
@@ -535,7 +535,7 @@ describe('AtelierCoordinator', () => {
   it('should retain a final refusal while processing subsequent gestures', async () => {
     await givenWorkStartedOffline();
     givenAuthorizedAccess();
-    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
     await whenStoppingEverything();
     await whenSynchronizing();
@@ -546,12 +546,11 @@ describe('AtelierCoordinator', () => {
     await thenRefusalIs('suivi-d-atelier-cloture');
   });
 
-  it('should absorb only an existing arrival and an implicitly resumed presence', async () => {
+  it('should absorb only an existing arrival', async () => {
     await givenWorkStoppedOffline();
     givenAuthorizedAccess();
     givenServerFailures(
       refusalFixture('journee-de-travail-deja-ouverte'),
-      refusalFixture('transition-de-presence-interdite'),
       undefined,
       undefined,
       refusalFixture('transition-de-presence-interdite'),
@@ -571,7 +570,7 @@ describe('AtelierCoordinator', () => {
     await whenSynchronizing();
 
     await thenArrivalOpenedDay(false);
-    await thenPendingIs(2);
+    await thenPendingIs(1);
   });
 
   it('should reread before retrying a concurrent gesture with its original body', async () => {
@@ -653,7 +652,7 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([failedStart]);
     await whenSynchronizing();
 
-    await thenOldCompanyPendingIs(3);
+    await thenOldCompanyPendingIs(2);
     thenJournalIs([]);
   });
 
@@ -684,7 +683,7 @@ describe('AtelierCoordinator', () => {
     const failedStop = whenStarting();
     await Promise.allSettled([failedStop]);
     givenAuthorizedAccess();
-    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
 
     thenTheWindowPresentationIsPopulated();
@@ -696,7 +695,7 @@ describe('AtelierCoordinator', () => {
     const failedStop = whenStarting();
     await Promise.allSettled([failedStop]);
     givenAuthorizedAccess();
-    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
     givenReenrolledForAnotherCompany();
     await whenRestoring();
@@ -743,7 +742,7 @@ describe('AtelierCoordinator', () => {
     await whenSynchronizingConcurrently();
     await whenClosing();
 
-    await thenQueueHas(4);
+    await thenQueueHas(3);
     await thenPendingIs(0);
   });
 
@@ -857,7 +856,7 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([failedSynchronization]);
     await whenRestarting();
 
-    await thenQueueHas(3);
+    await thenQueueHas(2);
   });
 
   it('should push a gesture accepted while the reference is being refreshed without waiting for the next minute', async () => {
@@ -888,7 +887,7 @@ describe('AtelierCoordinator', () => {
 
     expect(closureFailure).toBeInstanceOf(Error);
     expect(closureFailure).toHaveProperty('message', 'Aucune fenetre operateur ouverte.');
-    await thenQueueHas(3);
+    await thenQueueHas(2);
     await thenPointageKeepsItsOriginalOperatorAndTime();
   });
 
@@ -903,7 +902,7 @@ describe('AtelierCoordinator', () => {
     append.release();
     await pointage;
 
-    await thenOldCompanyPendingIs(3);
+    await thenOldCompanyPendingIs(2);
     thenNoWindowPresentationRemains();
     expect(pupitre.echecCaptureLocale()).toBe(false);
     expect(designation.refusAtelier()).toBeUndefined();
@@ -1342,11 +1341,9 @@ describe('AtelierCoordinator', () => {
   const thenQueueHasUniqueStableIdentities = async (): Promise<void> => {
     const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(event => event.geste);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
-    const first = requiredFixture(gestes[0], 'first queued gesture');
-    const second = requiredFixture(gestes[1], 'second queued gesture');
-    const third = requiredFixture(gestes[2], 'third queued gesture');
-    expect(first.dateDeSurvenue).toBe(third.dateDeSurvenue);
-    expect(second.dateDeSurvenue).toBe(third.dateDeSurvenue);
+    const arrivee = requiredFixture(gestes[0], 'queued arrival');
+    const premierPointage = requiredFixture(gestes[1], 'first queued pointage');
+    expect(arrivee.dateDeSurvenue).toBe(premierPointage.dateDeSurvenue);
   };
   const readQueuedGestures = async (): Promise<readonly GesteDAtelier[]> =>
     (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
@@ -1371,7 +1368,7 @@ describe('AtelierCoordinator', () => {
   };
   const thenPresenceBelongsTo = (operateurId: string): void => {
     expect(serveur.journal.filter(geste => geste.nature === 'PRESENCE')).toEqual([
-      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'DEPART', implicite: false }),
+      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'DEPART' }),
     ]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
@@ -1447,7 +1444,7 @@ describe('AtelierCoordinator', () => {
   };
   const givenServerRefusalOnStart = async (posteId: string): Promise<void> => {
     givenAuthorizedAccess();
-    givenServerFailures(undefined, undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
     await whenStartingOn(posteId);
     await whenSynchronizing();
   };

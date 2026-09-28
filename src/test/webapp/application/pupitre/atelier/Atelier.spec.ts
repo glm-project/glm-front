@@ -329,7 +329,7 @@ describe('Pupitre workshop journey', () => {
 
   const thenTheFirstGestureWasSentInBusinessOrder = (): void => {
     cy.wrap(requetes).should(requests => {
-      expect(requests.map(({ type }) => type)).to.deep.equal(['ARRIVEE', 'REPRISE', 'DEBUT']);
+      expect(requests.map(({ type }) => type)).to.deep.equal(['ARRIVEE', 'DEBUT']);
       expect(requests.every(({ authorization }) => authorization === `Bearer ${pupitreTokenFixture(entrepriseFixture)}`)).to.equal(true);
     });
   };
