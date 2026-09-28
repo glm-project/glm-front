@@ -21,6 +21,21 @@ describe('Weekly hours report of an operator', () => {
     thenTheWeekInProgressIsDisplayed();
   });
 
+  it('should name the link of an operator after their operational time', () => {
+    givenReferentialAndReports();
+    whenVisitingOperateurs();
+
+    thenTheLinkToTheOperationalTimeIsNamedAfterTheOperator();
+  });
+
+  it('should reach the operational time of an operator under its title, with their name', () => {
+    givenReferentialAndReports();
+    whenVisitingOperateurs();
+    whenOpeningTheHoursOfTheFirstOperateur();
+
+    thenTheOperationalTimeIsTitledWithTheOperator();
+  });
+
   it('should read the week in progress when the address names none', () => {
     givenReferentialAndReports();
     whenVisitingOperateurs();
@@ -152,6 +167,18 @@ describe('Weekly hours report of an operator', () => {
 
   const whenChoosingTheWeek = (semaine: string): void => {
     cy.get(dataSelector('synthese-semaine')).select(`Semaine ${semaine}`);
+  };
+
+  const thenTheLinkToTheOperationalTimeIsNamedAfterTheOperator = (): void => {
+    cy.get(dataSelector('operateur-heures'))
+      .first()
+      .should('have.attr', 'aria-label', 'Voir le temps opérationnel de Prenom 1 Nom 01')
+      .and('contain.text', 'Temps opérationnel');
+  };
+
+  const thenTheOperationalTimeIsTitledWithTheOperator = (): void => {
+    cy.get(dataSelector('synthese-titre')).should('have.text', 'Temps opérationnel');
+    cy.get(dataSelector('synthese-identite')).should('contain.text', 'Jean DUPONT');
   };
 
   const thenTheOpenDayIs = (jour: string): void => {
