@@ -157,11 +157,65 @@
             }
           </span>
         </div>
+        @for (ligne of vue.frise.lignes; track ligne.cle) {
+        <div class="ligne element" role="row" data-selector="synthese-element-ligne">
+          <span class="etiquette" role="rowheader">
+            <span class="titre">
+              <span class="gestion-type" data-selector="synthese-element-type">{{ ligne.type }}</span>
+              <span class="numero text-body font-semibold" data-selector="synthese-element-numero">{{ ligne.numero }}</span>
+            </span>
+            <span class="libelle text-body-sm text-ink-muted" data-selector="synthese-element-libelle">{{ ligne.libelle }}</span>
+            <span class="postes text-body-sm text-ink-muted" data-selector="synthese-element-postes">{{ ligne.postes }}</span>
+          </span>
+          @for (cellule of ligne.cellules; track $index) {
+          <span class="cellule" role="cell" data-selector="synthese-element-jour">
+            <ng-container *ngTemplateOutlet="barres; context: { $implicit: cellule }" />
+          </span>
+          }
+          <span class="total" role="cell">
+            <span class="duree text-section" data-selector="synthese-element-total">{{ ligne.total }}</span>
+            @if (ligne.nonConformite; as nonConformite) {
+            <span class="text-body-sm text-ink-muted" data-selector="synthese-element-nc">{{ nonConformite }}</span>
+            }
+          </span>
+        </div>
+        @for (sousLigne of ligne.sousLignes; track sousLigne.cle) {
+        <div class="ligne sous-ligne" role="row" data-selector="synthese-sous-ligne">
+          <span class="etiquette text-body-sm text-ink-muted" role="rowheader" data-selector="synthese-sous-ligne-poste"
+            >{{ sousLigne.poste }}</span
+          >
+          @for (cellule of sousLigne.cellules; track $index) {
+          <span class="cellule" role="cell" data-selector="synthese-sous-ligne-jour">
+            <ng-container *ngTemplateOutlet="barres; context: { $implicit: cellule }" />
+          </span>
+          }
+          <span class="total" role="cell"></span>
+        </div>
+        } }
+        <ng-template #barres let-cellule>
+          @for (barre of cellule; track $index) {
+          <span
+            [class]="'barre ' + barre.nature"
+            [class.presumee]="barre.presumee"
+            [style.left.%]="barre.gauche"
+            [style.width.%]="barre.largeur"
+            [title]="barre.enonce"
+            [attr.data-selector]="barre.presumee ? 'synthese-barre-presumee' : 'synthese-barre-' + barre.nature"
+            ><span class="sr-only">{{ barre.enonce }}</span></span
+          >
+          }
+        </ng-template>
       </div>
     </div>
     <div class="pied">
       <ul class="legende">
-        <li data-selector="synthese-legende"><i class="pastille pastille-pointe" aria-hidden="true"></i>{{ libelles.legende.pointe }}</li>
+        <li data-selector="synthese-legende"><i class="pastille pastille-travail" aria-hidden="true"></i>{{ libelles.legende.travail }}</li>
+        <li data-selector="synthese-legende">
+          <i class="pastille pastille-nc" aria-hidden="true"></i>{{ libelles.legende.nonConformite }}
+        </li>
+        <li data-selector="synthese-legende">
+          <i class="pastille pastille-presence" aria-hidden="true"></i>{{ libelles.legende.presence }}
+        </li>
         <li data-selector="synthese-legende"><i class="pastille pastille-presume" aria-hidden="true"></i>{{ libelles.legende.presume }}</li>
         <li data-selector="synthese-legende">
           <i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}

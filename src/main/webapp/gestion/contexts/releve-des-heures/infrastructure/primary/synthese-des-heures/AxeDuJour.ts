@@ -13,11 +13,11 @@ interface Fenetre {
 const HEURES_DE_JOUR: Fenetre = {
   debut: 6 * MINUTES_PAR_HEURE,
   fin: 22 * MINUTES_PAR_HEURE,
-  reperes: [8 * MINUTES_PAR_HEURE, 14 * MINUTES_PAR_HEURE, 20 * MINUTES_PAR_HEURE],
+  reperes: [8 * MINUTES_PAR_HEURE, 20 * MINUTES_PAR_HEURE],
 };
-const JOUR_ENTIER: Fenetre = { debut: 0, fin: MINUTES_PAR_JOUR, reperes: [0, 12 * MINUTES_PAR_HEURE, MINUTES_PAR_JOUR] };
+const JOUR_ENTIER: Fenetre = { debut: 0, fin: MINUTES_PAR_JOUR, reperes: [0, MINUTES_PAR_JOUR] };
 
-export type AncrageDuRepere = 'debut' | 'centre' | 'fin';
+export type AncrageDuRepere = 'debut' | 'fin';
 
 export interface RepereDeLAxe {
   readonly minutes: number;
@@ -25,12 +25,7 @@ export interface RepereDeLAxe {
   readonly ancrage: AncrageDuRepere;
 }
 
-const ancrageDe = (gauche: number): AncrageDuRepere => {
-  if (gauche <= 0) {
-    return 'debut';
-  }
-  return gauche >= POURCENT ? 'fin' : 'centre';
-};
+const ancrageDe = (rang: number): AncrageDuRepere => (rang === 0 ? 'debut' : 'fin');
 
 const sortDesHeuresDeJour = (minutes: number): boolean => minutes < HEURES_DE_JOUR.debut || minutes > HEURES_DE_JOUR.fin;
 
@@ -53,10 +48,7 @@ export class AxeDuJour {
   }
 
   reperes(): readonly RepereDeLAxe[] {
-    return this.fenetre.reperes.map(minutes => {
-      const gauche = this.pourcentDe(minutes);
-      return { minutes, gauche, ancrage: ancrageDe(gauche) };
-    });
+    return this.fenetre.reperes.map((minutes, rang) => ({ minutes, gauche: this.pourcentDe(minutes), ancrage: ancrageDe(rang) }));
   }
 
   pourcentDe(minutes: number): number {

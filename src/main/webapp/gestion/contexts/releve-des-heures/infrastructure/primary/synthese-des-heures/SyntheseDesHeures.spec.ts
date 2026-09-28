@@ -5,6 +5,13 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
+import { CategorieDActivite } from '../../../domain/element/CategorieDActivite';
+import { ElementDuReleve } from '../../../domain/element/ElementDuReleve';
+import { ElementReleveId } from '../../../domain/element/ElementReleveId';
+import { IntervalleDActivite } from '../../../domain/element/IntervalleDActivite';
+import { PosteDeLElement } from '../../../domain/element/PosteDeLElement';
+import { PosteReleveId } from '../../../domain/element/PosteReleveId';
+import { TypeDElement } from '../../../domain/element/TypeDElement';
 import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
@@ -47,7 +54,17 @@ type Heure = readonly [number, number];
 const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14 + rang, heure, minute).toISOString());
 
+interface IntervalleFixture {
+  readonly element?: string;
+  readonly poste?: string;
+  readonly categorie?: CategorieDActivite;
+  readonly debut: Heure;
+  readonly fin?: Heure;
+  readonly presumee?: boolean;
+}
+
 interface JourFixture {
+  readonly intervalles?: readonly IntervalleFixture[];
   readonly operationnelle?: string;
   readonly operationnellePresumee?: string;
   readonly pointages?: readonly (readonly [TypeDePointage, Heure])[];
@@ -59,6 +76,18 @@ const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): Jo
     jour,
     operationnelPointe: new DureeTravaillee(fiche.operationnelle ?? 'PT0S'),
     operationnelPresume: new DureeTravaillee(fiche.operationnellePresumee ?? 'PT0S'),
+    intervalles: (fiche.intervalles ?? []).map(
+      intervalle =>
+        new IntervalleDActivite({
+          element: new ElementReleveId(intervalle.element ?? 'element-1'),
+          poste: intervalle.poste === undefined ? undefined : new PosteReleveId(intervalle.poste),
+          nature: undefined,
+          categorie: intervalle.categorie ?? 'TRAVAIL',
+          debut: instantFixture(rang, intervalle.debut),
+          fin: intervalle.fin === undefined ? undefined : instantFixture(rang, intervalle.fin),
+          presumee: intervalle.presumee ?? false,
+        }),
+    ),
     pointages: (fiche.pointages ?? []).map(([type, heure]) => new PointageDeReleve(type, instantFixture(rang, heure))),
     plages: (fiche.plages ?? []).map(
       ([debut, fin, presumee]) =>
@@ -72,8 +101,39 @@ interface TotauxFixture {
   readonly operationnellePresumee?: string;
 }
 
-const releveFixture = (semaine: SemaineISO, jours: Readonly<Record<number, JourFixture>>, totaux: TotauxFixture = {}): ReleveDesHeures =>
+interface ElementFixture {
+  readonly id?: string;
+  readonly type?: TypeDElement;
+  readonly nom?: string;
+  readonly reference?: string;
+  readonly description?: string;
+  readonly postes?: readonly (readonly [string, string | undefined])[];
+  readonly duree?: string;
+  readonly dureeNonConformite?: string;
+}
+
+const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
+  new ElementDuReleve({
+    id: new ElementReleveId(fiche.id ?? 'element-1'),
+    type: fiche.type ?? 'PRODUIT',
+    nom: fiche.nom ?? 'PRD-2026-000015',
+    reference: fiche.reference,
+    description: fiche.description,
+    duree: new DureeTravaillee(fiche.duree ?? 'PT0S'),
+    dureeNonConformite: new DureeTravaillee(fiche.dureeNonConformite ?? 'PT0S'),
+    postes: (fiche.postes ?? []).map(
+      ([libelle, nature], rang) => new PosteDeLElement(new PosteReleveId(`poste-${String(rang)}`), libelle, nature),
+    ),
+  });
+
+const releveFixture = (
+  semaine: SemaineISO,
+  jours: Readonly<Record<number, JourFixture>>,
+  totaux: TotauxFixture = {},
+  elements: readonly ElementDuReleve[] = [],
+): ReleveDesHeures =>
   new ReleveDesHeures(semaine, {
+    elements,
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
     presencePointee: new DureeTravaillee('PT7H30M'),
     presencePresumee: new DureeTravaillee(totaux.presencePresumee ?? 'PT0S'),
@@ -384,6 +444,321 @@ describe('Synthese des heures component', () => {
     ]);
   });
 
+  it('should give each element of the week its row, named by its type, its number, its label and its workstations', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {}, {}, [
+        elementFixture({
+          type: 'PRODUIT',
+          reference: '1015',
+          description: 'Carter de pompe',
+          postes: [
+            ['DMU 50', 'Fraisage'],
+            ['Mazak QT-200', undefined],
+          ],
+        }),
+        elementFixture({ id: 'element-2', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000057' }),
+      ]),
+    );
+
+    await whenEcranAffiche();
+
+    expect([
+      textes('synthese-element-type'),
+      textes('synthese-element-numero'),
+      textes('synthese-element-libelle'),
+      textes('synthese-element-postes'),
+    ]).toEqual([
+      ['Moule', 'OF'],
+      ['1015', 'OF-2026-000057'],
+      ['Carter de pompe', ''],
+      ['DMU 50 · Fraisage, Mazak QT-200', ''],
+    ]);
+  });
+
+  it('should give each element row its week total as the server counted it', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {}, {}, [
+        elementFixture({ duree: 'PT15H30M' }),
+        elementFixture({ id: 'element-2', duree: 'PT2H5M' }),
+      ]),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textes('synthese-element-total')).toEqual(['15 h 30', '2 h 05']);
+  });
+
+  it('should tell the non-conformity time of an element beside its total, and nothing for an element without any', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {}, {}, [
+        elementFixture({ duree: 'PT15H30M', dureeNonConformite: 'PT50M' }),
+        elementFixture({ id: 'element-2', duree: 'PT2H' }),
+      ]),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textes('synthese-element-nc')).toEqual(['NC 0 h 50']);
+  });
+
+  it('should draw the work of an element on its row, in the column of its day, on the axis of that day', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut: [8, 0], fin: [12, 0] }] } }, {}, [elementFixture()]));
+
+    await whenEcranAffiche();
+
+    expect(positions('synthese-barre-travail')).toEqual([[12.5, 25]]);
+  });
+
+  it('should draw a non-conformity apart from the work it follows, at its own place', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { debut: [8, 0], fin: [12, 0] },
+              { categorie: 'NON_CONFORMITE', debut: [12, 0], fin: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [elementFixture()],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([positions('synthese-barre-travail'), positions('synthese-barre-nc')]).toEqual([[[12.5, 25]], [[37.5, 12.5]]]);
+  });
+
+  it('should state each bar by its element, its day, its hours and whether it is work or non-conformity', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { debut: [8, 0], fin: [12, 0] },
+              { categorie: 'NON_CONFORMITE', debut: [12, 0], fin: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [elementFixture({ reference: '1015' })],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-barre-travail'), titres('synthese-barre-travail'), textes('synthese-barre-nc')]).toEqual([
+      ['Moule 1015, lundi 14, 08:00 à 12:00, travail'],
+      ['Moule 1015, lundi 14, 08:00 à 12:00, travail'],
+      ['Moule 1015, lundi 14, 12:00 à 14:00, non-conformité'],
+    ]);
+  });
+
+  it.each([
+    ['starts before the daytime hours', [5, 30], [7, 0], [22.92, 6.25]],
+    ['goes on past midnight', [21, 0], [24, 0], [87.5, 12.5]],
+  ] as const)('should open the axis of a day onto the whole day when the work of an element %s', async (_cas, debut, fin, attendu) => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut, fin }] } }, {}, [elementFixture()]));
+
+    await whenEcranAffiche();
+
+    expect(positions('synthese-barre-travail')).toEqual([attendu]);
+  });
+
+  it('should mark the work still in progress at the place where it began, and state it as in progress', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut: [10, 20] }] } }, {}, [elementFixture({ reference: '1015' })]),
+    );
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-barre-ouverte'), gauches('synthese-barre-ouverte'), nombreDe('synthese-barre-travail')]).toEqual([
+      ['Moule 1015, lundi 14, depuis 10:20, travail, en cours'],
+      [27.08],
+      0,
+    ]);
+  });
+
+  it('should draw a presumed work apart from a clocked one, and state it as presumed', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, { 1: { intervalles: [{ debut: [10, 20], fin: [15, 40], presumee: true }] } }, {}, [
+        elementFixture({ reference: '1015' }),
+      ]),
+    );
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-barre-presumee'), nombreDe('synthese-barre-travail')]).toEqual([
+      ['Moule 1015, mardi 15, 10:20 à 15:40, travail, présumé'],
+      0,
+    ]);
+  });
+
+  it('should split the row of an element worked from two workstations at once into one sub-row per workstation, its total staying on its row', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-1', debut: [10, 0], fin: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            duree: 'PT8H',
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-sous-ligne-poste'), positions('synthese-barre-travail'), textes('synthese-element-total')]).toEqual([
+      ['DMU 50', 'Mazak QT-200'],
+      [
+        [12.5, 25],
+        [25, 25],
+      ],
+      ['8 h 00'],
+    ]);
+  });
+
+  it('should keep whole the row of an element worked from two workstations one after the other', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-1', debut: [12, 0], fin: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([nombreDe('synthese-sous-ligne'), positions('synthese-barre-travail')]).toEqual([
+      0,
+      [
+        [12.5, 25],
+        [37.5, 12.5],
+      ],
+    ]);
+  });
+
+  it.each([
+    [
+      'after',
+      [
+        { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+        { poste: 'poste-1', debut: [10, 0] },
+      ],
+    ],
+    [
+      'before',
+      [
+        { poste: 'poste-1', debut: [10, 0] },
+        { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+      ],
+    ],
+  ] as const)(
+    'should not split the row of an element for an interval still in progress listed %s a closed one, which has no extent yet',
+    async (_cas, intervalles) => {
+      givenReleve(
+        releveFixture(SEMAINE_EN_COURS, { 0: { intervalles } }, {}, [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ]),
+      );
+
+      await whenEcranAffiche();
+
+      expect(nombreDe('synthese-sous-ligne')).toBe(0);
+    },
+  );
+
+  it('should put the work of a split element that has no workstation on a row of its own, said to have none', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { debut: [10, 0], fin: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [elementFixture({ postes: [['DMU 50', 'Fraisage']] })],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textes('synthese-sous-ligne-poste')).toEqual(['DMU 50', 'Sans poste']);
+  });
+
+  it('should split the whole week of an element as soon as two of its intervals overlap, each interval on the row of its workstation', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-1', debut: [10, 0], fin: [14, 0] },
+            ],
+          },
+          1: { intervalles: [{ poste: 'poste-1', debut: [8, 0], fin: [9, 0] }] },
+        },
+        {},
+        [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect(barresParSousLigne()).toEqual([
+      [1, 0, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0],
+    ]);
+  });
+
   it('should give each of the seven days its column', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
@@ -409,8 +784,8 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([reperesDuJour(0), reperesDuJour(6)]).toEqual([
-      ['8 h', '14 h', '20 h'],
-      ['8 h', '14 h', '20 h'],
+      ['8 h', '20 h'],
+      ['8 h', '20 h'],
     ]);
   });
 
@@ -431,8 +806,8 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([reperesDuJour(0), reperesDuJour(1)]).toEqual([
-      ['0 h', '12 h', '24 h'],
-      ['8 h', '14 h', '20 h'],
+      ['0 h', '24 h'],
+      ['8 h', '20 h'],
     ]);
   });
 
@@ -468,7 +843,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-legende')).toEqual(['Pointé', 'Présumé (à confirmer)', 'En cours']);
+    expect(textes('synthese-legende')).toEqual(['Travail', 'Non-conformité', 'Présence', 'Présumé (à confirmer)', 'En cours']);
   });
 
   it('should display the loading status until the report arrives', () => {
@@ -760,6 +1135,13 @@ describe('Synthese des heures component', () => {
     const entete = [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-jour-cell'))][rang];
     return [...(entete?.querySelectorAll<HTMLElement>(dataSelector('synthese-repere')) ?? [])].map(repere => normalise(repere.textContent));
   };
+
+  const barresParSousLigne = (): number[][] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-sous-ligne'))].map(sousLigne =>
+      [...sousLigne.querySelectorAll<HTMLElement>(dataSelector('synthese-sous-ligne-jour'))].map(
+        cellule => cellule.querySelectorAll(`${dataSelector('synthese-barre-travail')}, ${dataSelector('synthese-barre-nc')}`).length,
+      ),
+    );
 
   const gauches = (selector: string): number[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => arrondi(element.style.left));

@@ -5,6 +5,11 @@ import { required } from '@/app/shared/api-client/infrastructure/secondary/requi
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
+import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
+import { ElementReleveId } from '../../domain/element/ElementReleveId';
+import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
+import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
+import { PosteReleveId } from '../../domain/element/PosteReleveId';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
@@ -20,6 +25,9 @@ type RestJour = components['schemas']['RestJourDeSynthese'];
 type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
 type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
 type RestPlage = components['schemas']['RestPlage'];
+type RestElement = components['schemas']['RestElementDeLaSynthese'];
+type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
+type RestPosteDeLElement = components['schemas']['RestPosteDeLElementDeLaSynthese'];
 
 const SYNTHESE = '/api/syntheses-des-heures/{operateurId}';
 const FEUILLE = '/api/feuilles-de-temps/{operateurId}';
@@ -27,7 +35,12 @@ const SYNTHESE_INTROUVABLE = 'urn:glm:erreur:synthese-des-heures:operateur-intro
 const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvable';
 
 type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
-type PresenceParJour = ReadonlyMap<string, readonly RestPlage[]>;
+interface JourDeLaFeuille {
+  readonly presence: readonly RestPlage[];
+  readonly activites: readonly RestActivite[];
+}
+
+type FeuilleParJour = ReadonlyMap<string, JourDeLaFeuille>;
 
 interface SemaineRendue {
   readonly annee?: number;
@@ -42,47 +55,80 @@ const estDePresence = (pointage: RestPointage): pointage is RestPointageDePresen
 const toPointage = (pointage: RestPointageDePresence): PointageDeReleve =>
   new PointageDeReleve(pointage.type, new InstantDeReleve(pointage.dateDeSurvenue));
 
+const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
+  new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature);
+
+const toElement = (element: RestElement): ElementDuReleve =>
+  new ElementDuReleve({
+    id: new ElementReleveId(element.id),
+    type: element.type,
+    nom: element.nom,
+    reference: element.reference,
+    description: element.description,
+    duree: new DureeTravaillee(element.duree),
+    dureeNonConformite: new DureeTravaillee(element.dureeNonConformite),
+    postes: element.postes.map(toPoste),
+  });
+
 const toFin = (fin: string | undefined): InstantDeReleve | undefined => (fin === undefined ? undefined : new InstantDeReleve(fin));
 
 const toPlage = (plage: RestPlage): PlageDeReleve =>
   new PlageDeReleve(new InstantDeReleve(required(plage.debut, 'plage.debut')), toFin(plage.fin), plage.presumee);
 
-const presenceParJourDe = (jours: readonly RestJourDeFeuille[]): PresenceParJour =>
-  new Map(jours.map(jour => [required(jour.jour, 'jourDeLaFeuille.jour'), required(jour.presence, 'jourDeLaFeuille.presence')]));
+const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
+  new IntervalleDActivite({
+    element: new ElementReleveId(activite.element),
+    poste: activite.poste === undefined ? undefined : new PosteReleveId(activite.poste),
+    nature: activite.nature,
+    categorie: activite.categorie,
+    debut: new InstantDeReleve(activite.debut),
+    fin: toFin(activite.fin),
+    presumee: activite.presumee,
+  });
+
+const feuilleParJourDe = (jours: readonly RestJourDeFeuille[]): FeuilleParJour =>
+  new Map(
+    jours.map(jour => [
+      required(jour.jour, 'jourDeLaFeuille.jour'),
+      { presence: required(jour.presence, 'jourDeLaFeuille.presence'), activites: jour.activites },
+    ]),
+  );
 
 const neCorrespondPasUnAUn = (
   jours: readonly RestJour[],
   joursDeLaFeuille: readonly RestJourDeFeuille[],
-  presences: PresenceParJour,
-): boolean => joursDeLaFeuille.length !== jours.length || presences.size !== jours.length;
+  feuilles: FeuilleParJour,
+): boolean => joursDeLaFeuille.length !== jours.length || feuilles.size !== jours.length;
 
-const presenceDu = (jour: string, presences: PresenceParJour): readonly RestPlage[] => {
-  const presence = presences.get(jour);
-  if (presence === undefined) {
+const feuilleDu = (jour: string, feuilles: FeuilleParJour): JourDeLaFeuille => {
+  const feuille = feuilles.get(jour);
+  if (feuille === undefined) {
     throw new Error('La feuille de temps reçue du serveur ne porte pas les jours de la synthèse.');
   }
-  return presence;
+  return feuille;
 };
 
-const toJour = (jour: RestJour, presences: PresenceParJour): JourDeReleve => {
+const toJour = (jour: RestJour, feuilles: FeuilleParJour): JourDeReleve => {
   const date = required(jour.jour, 'jour.jour');
+  const feuille = feuilleDu(date, feuilles);
   return new JourDeReleve({
     jour: new JourCalendaire(date),
     operationnelPointe: new DureeTravaillee(jour.dureeOperationnelle),
     operationnelPresume: new DureeTravaillee(jour.dureeOperationnellePresumee),
+    intervalles: feuille.activites.map(toIntervalle),
     pointages: required(jour.pointages, 'jour.pointages').filter(estDePresence).map(toPointage),
-    plages: presenceDu(date, presences).map(toPlage),
+    plages: feuille.presence.map(toPlage),
   });
 };
 
 const toJours = (synthese: RestSynthese, feuille: RestFeuille): readonly JourDeReleve[] => {
   const jours = required(synthese.jours, 'synthese.jours');
   const joursDeLaFeuille = required(feuille.jours, 'feuille.jours');
-  const presences = presenceParJourDe(joursDeLaFeuille);
-  if (neCorrespondPasUnAUn(jours, joursDeLaFeuille, presences)) {
+  const feuilles = feuilleParJourDe(joursDeLaFeuille);
+  if (neCorrespondPasUnAUn(jours, joursDeLaFeuille, feuilles)) {
     throw new Error('La feuille de temps reçue du serveur ne porte pas les jours de la synthèse.');
   }
-  return jours.map(jour => toJour(jour, presences));
+  return jours.map(jour => toJour(jour, feuilles));
 };
 
 const toIdentite = (synthese: RestSynthese): IdentiteOperateur => {
@@ -102,6 +148,7 @@ const toReleve = (synthese: RestSynthese, feuille: RestFeuille, demandee: Semain
   verifieLaSemaine(feuille, 'feuille', demandee);
   return new ReleveDesHeures(demandee, {
     operateur: toIdentite(synthese),
+    elements: synthese.elements.map(toElement),
     jours: toJours(synthese, feuille),
     presencePointee: new DureeTravaillee(required(synthese.dureeTotale, 'synthese.dureeTotale')),
     presencePresumee: new DureeTravaillee(required(synthese.dureePresumeeTotale, 'synthese.dureePresumeeTotale')),

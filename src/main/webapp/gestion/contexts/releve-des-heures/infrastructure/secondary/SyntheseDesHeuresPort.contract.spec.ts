@@ -8,6 +8,11 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des-heures/SyntheseDesHeuresFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
+import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
+import { ElementReleveId } from '../../domain/element/ElementReleveId';
+import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
+import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
+import { PosteReleveId } from '../../domain/element/PosteReleveId';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
@@ -24,6 +29,8 @@ type RestSynthese = components['schemas']['RestSyntheseDesHeures'];
 type RestJour = components['schemas']['RestJourDeSynthese'];
 type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
 type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
+type RestElement = components['schemas']['RestElementDeLaSynthese'];
+type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
 type RestPlage = components['schemas']['RestPlage'];
 
 const ROUTE_SYNTHESE = '/api/syntheses-des-heures';
@@ -50,6 +57,7 @@ interface JourFixture {
   readonly operationnellePresumee: string;
   readonly pointages: readonly PointageFixture[];
   readonly plages: readonly PlageFixture[];
+  readonly activites?: readonly RestActivite[];
 }
 
 const jourTravailleFixture: JourFixture = {
@@ -60,6 +68,18 @@ const jourTravailleFixture: JourFixture = {
     { type: 'DEPART', instant: '2026-09-14T15:32:00Z' },
   ],
   plages: [{ debut: '2026-09-14T06:02:00Z', fin: '2026-09-14T15:32:00Z', presumee: false }],
+  activites: [
+    {
+      element: 'element-1',
+      poste: 'poste-1',
+      nature: 'Fraisage',
+      categorie: 'TRAVAIL',
+      debut: '2026-09-14T06:10:00Z',
+      fin: '2026-09-14T10:00:00Z',
+      presumee: false,
+    },
+    { element: 'element-1', categorie: 'NON_CONFORMITE', debut: '2026-09-14T10:00:00Z', fin: '2026-09-14T10:30:00Z', presumee: false },
+  ],
 };
 
 const jourAbandonneFixture: JourFixture = {
@@ -75,6 +95,52 @@ const jourEnCoursFixture: JourFixture = {
   pointages: [{ type: 'ARRIVEE', instant: '2026-09-16T06:00:00Z' }],
   plages: [{ debut: '2026-09-16T06:00:00Z', presumee: false }],
 };
+
+const elementsDeLaSemaineFixture: readonly RestElement[] = [
+  {
+    id: 'element-1',
+    type: 'PRODUIT',
+    nom: 'PRD-2026-000015',
+    reference: '1015',
+    description: 'Carter de pompe',
+    duree: 'PT15H30M',
+    dureeNonConformite: 'PT50M',
+    dureePresumee: 'PT0S',
+    postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }, { poste: { id: 'poste-2', libelle: 'Mazak QT-200' } }],
+  },
+  {
+    id: 'element-2',
+    type: 'ORDRE_DE_FABRICATION',
+    nom: 'OF-2026-000057',
+    duree: 'PT2H',
+    dureeNonConformite: 'PT0S',
+    dureePresumee: 'PT0S',
+    postes: [],
+  },
+];
+
+const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
+  new IntervalleDActivite({
+    element: new ElementReleveId(activite.element),
+    poste: activite.poste === undefined ? undefined : new PosteReleveId(activite.poste),
+    nature: activite.nature,
+    categorie: activite.categorie,
+    debut: new InstantDeReleve(activite.debut),
+    fin: activite.fin === undefined ? undefined : new InstantDeReleve(activite.fin),
+    presumee: activite.presumee,
+  });
+
+const toElement = (element: RestElement): ElementDuReleve =>
+  new ElementDuReleve({
+    id: new ElementReleveId(element.id),
+    type: element.type,
+    nom: element.nom,
+    reference: element.reference,
+    description: element.description,
+    duree: new DureeTravaillee(element.duree),
+    dureeNonConformite: new DureeTravaillee(element.dureeNonConformite),
+    postes: element.postes.map(({ poste, nature }) => new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature)),
+  });
 
 const jourVideFixture: JourFixture = {
   operationnelle: 'PT0S',
@@ -137,7 +203,7 @@ const toRestPlage = (plage: PlageFixture): RestPlage => ({ ...plage });
 const toRestJourDeFeuille = (jour: JourFixture, rang: number): RestJourDeFeuille => ({
   jour: jourDeLaSemaine(rang),
   presence: jour.plages.map(toRestPlage),
-  activites: [],
+  activites: [...(jour.activites ?? [])],
 });
 
 const sansChamp = <T extends object>(document: T, champ: keyof T & string): T =>
@@ -165,7 +231,7 @@ const toRestSynthese = (jours: readonly JourFixture[]): RestSynthese => ({
   dureeOperationnellePresumeeTotale: 'PT1H30M',
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   jours: jours.map(toRestJour),
-  elements: [],
+  elements: [...elementsDeLaSemaineFixture],
 });
 
 const toRestFeuille = (jours: readonly JourFixture[]): RestFeuille => ({
@@ -181,6 +247,7 @@ const toPlage = (plage: PlageFixture): PlageDeReleve =>
 const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
   new ReleveDesHeures(SEMAINE, {
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
+    elements: elementsDeLaSemaineFixture.map(toElement),
     presencePointee: new DureeTravaillee('PT7H30M'),
     presencePresumee: new DureeTravaillee('PT5H20M'),
     operationnelPointe: new DureeTravaillee('PT57H30M'),
@@ -191,6 +258,7 @@ const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
           jour: new JourCalendaire(jourDeLaSemaine(rang)),
           operationnelPointe: new DureeTravaillee(jour.operationnelle),
           operationnelPresume: new DureeTravaillee(jour.operationnellePresumee),
+          intervalles: (jour.activites ?? []).map(toIntervalle),
           pointages: jour.pointages.map(pointage => new PointageDeReleve(pointage.type, new InstantDeReleve(pointage.instant))),
           plages: jour.plages.map(toPlage),
         }),
@@ -299,6 +367,66 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
       pointages: ['ARRIVEE 2026-09-14T06:02:00.000Z', 'DEPART 2026-09-14T15:32:00.000Z'],
       plages: [{ debut: '2026-09-14T06:02:00.000Z', fin: '2026-09-14T15:32:00.000Z', presumee: false }],
     });
+  });
+
+  it('should return the elements of the week in the server order, with their type, number, label and workstations', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(
+      releve?.elements.map(element => ({
+        id: element.id.value,
+        type: element.type,
+        numero: element.numero(),
+        description: element.description,
+        postes: element.postes.map(poste => [poste.id.value, poste.libelle, poste.nature]),
+      })),
+    ).toEqual([
+      {
+        id: 'element-1',
+        type: 'PRODUIT',
+        numero: '1015',
+        description: 'Carter de pompe',
+        postes: [
+          ['poste-1', 'DMU 50', 'Fraisage'],
+          ['poste-2', 'Mazak QT-200', undefined],
+        ],
+      },
+      { id: 'element-2', type: 'ORDRE_DE_FABRICATION', numero: 'OF-2026-000057', description: undefined, postes: [] },
+    ]);
+  });
+
+  it('should return the week total of each element as the server counted it, its non-conformity time apart', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(releve?.elements.map(element => [element.duree.minutes, element.dureeNonConformite.minutes])).toEqual([
+      [930, 50],
+      [120, 0],
+    ]);
+  });
+
+  it('should return the activity intervals of each day, with their element, workstation, nature and category', async () => {
+    givenSemaine(semaineFixture());
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(
+      releve?.jours[0]?.intervalles.map(intervalle => [
+        intervalle.element.value,
+        intervalle.poste?.value,
+        intervalle.nature,
+        intervalle.categorie,
+        intervalle.debut.value.toISOString(),
+        intervalle.fin?.value.toISOString(),
+        intervalle.presumee,
+      ]),
+    ).toEqual([
+      ['element-1', 'poste-1', 'Fraisage', 'TRAVAIL', '2026-09-14T06:10:00.000Z', '2026-09-14T10:00:00.000Z', false],
+      ['element-1', undefined, undefined, 'NON_CONFORMITE', '2026-09-14T10:00:00.000Z', '2026-09-14T10:30:00.000Z', false],
+    ]);
   });
 
   it('should return the operational time of each day as the server counted it', async () => {
@@ -513,6 +641,47 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     });
 
     expect(await result).toEqual(new Error('plage.debut manque dans la réponse du serveur'));
+  });
+
+  it('should reject an activity of an element the synthesis does not list, and report it once', async () => {
+    const feuille = toRestFeuille(semaineFixture());
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), {
+      ...feuille,
+      jours: avecPremierRetouche(feuille.jours, jour => ({
+        ...jour,
+        activites: [
+          { element: 'element-inconnu', categorie: 'TRAVAIL', debut: '2026-09-14T08:00:00Z', fin: '2026-09-14T09:00:00Z', presumee: false },
+        ],
+      })),
+    });
+
+    expect(await result).toEqual(new Error('Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject an activity on a workstation its element does not carry, and report it once', async () => {
+    const feuille = toRestFeuille(semaineFixture());
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), {
+      ...feuille,
+      jours: avecPremierRetouche(feuille.jours, jour => ({
+        ...jour,
+        activites: [
+          {
+            element: 'element-2',
+            poste: 'poste-1',
+            categorie: 'TRAVAIL',
+            debut: '2026-09-14T08:00:00Z',
+            fin: '2026-09-14T09:00:00Z',
+            presumee: false,
+          },
+        ],
+      })),
+    });
+
+    expect(await result).toEqual(new Error('Le relevé reçu du serveur désigne un poste que son élément ne porte pas.'));
+    expect(errorHandler.errors).toHaveLength(1);
   });
 
   it('should reject a synthesis the server answered for another week', async () => {

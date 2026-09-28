@@ -8,6 +8,8 @@ import {
 } from '../../../utils/gestion/releve-des-heures/SyntheseDesHeuresApiFixture';
 
 type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
+type RestElement = components['schemas']['RestElementDeLaSynthese'];
+type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
 type TypeDePointage = RestPointage['type'];
 type Heure = readonly [number, number];
 
@@ -16,6 +18,7 @@ const SEMAINE_DE_JOUR = '/operateurs/op-1/heures?annee=2026&semaine=39';
 const SEMAINE_DE_NUIT = '/operateurs/op-1/heures?annee=2026&semaine=38';
 
 interface JourDeMaquette {
+  readonly activites?: readonly RestActivite[];
   readonly operationnelle?: string;
   readonly operationnellePresumee?: string;
   readonly pointages?: readonly (readonly [TypeDePointage, Heure])[];
@@ -34,6 +37,7 @@ interface SemaineDeMaquette {
   readonly presencePresumee: string;
   readonly operationnelleTotale: string;
   readonly operationnellePresumeeTotale: string;
+  readonly elements?: readonly RestElement[];
   readonly jours: readonly JourDeMaquette[];
 }
 
@@ -50,7 +54,7 @@ const semaineFixture = (maquette: SemaineDeMaquette): SemaineSemee => ({
     dureePresumeeTotale: maquette.presencePresumee,
     dureeOperationnelleTotale: maquette.operationnelleTotale,
     dureeOperationnellePresumeeTotale: maquette.operationnellePresumeeTotale,
-    elements: [],
+    elements: [...(maquette.elements ?? [])],
     operateur: { id: 'op-1', nom: 'Auve', prenom: 'Jean-Yves' },
     jours: maquette.jours.map((jour, rang) => ({
       jour: dateFixture(maquette.lundi, rang),
@@ -70,10 +74,114 @@ const semaineFixture = (maquette: SemaineDeMaquette): SemaineSemee => ({
         ...(fin === undefined ? {} : { fin: instantFixture(maquette.lundi, rang, fin) }),
         presumee: presumee ?? false,
       })),
-      activites: [],
+      activites: [...(jour.activites ?? [])],
     })),
   },
 });
+
+const elementsDeJourFixture: readonly RestElement[] = [
+  {
+    id: 'element-1',
+    type: 'PRODUIT',
+    nom: 'PRD-2026-000015',
+    reference: '1015',
+    description: 'Carter de pompe',
+    duree: 'PT15H30M',
+    dureeNonConformite: 'PT50M',
+    dureePresumee: 'PT0S',
+    postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }],
+  },
+  {
+    id: 'element-2',
+    type: 'ORDRE_DE_FABRICATION',
+    nom: 'OF-2026-000057',
+    description: 'Reprise d’empreinte sur un moule dont le libellé est bien trop long pour tenir dans sa colonne',
+    duree: 'PT3H10M',
+    dureeNonConformite: 'PT0S',
+    dureePresumee: 'PT0S',
+    postes: [{ poste: { id: 'poste-2', libelle: 'Mazak QT-200' }, nature: 'Tournage' }],
+  },
+  {
+    id: 'element-3',
+    type: 'PRODUIT',
+    nom: 'PRD-2026-000031',
+    reference: '1031',
+    description: 'Couvercle de boîtier',
+    duree: 'PT6H',
+    dureeNonConformite: 'PT0S',
+    dureePresumee: 'PT0S',
+    postes: [
+      { poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' },
+      { poste: { id: 'poste-3', libelle: 'Charmilles FO 350' }, nature: 'Érosion' },
+    ],
+  },
+];
+
+const activitesDuLundiFixture = (): readonly RestActivite[] => {
+  const instant = (heure: Heure): string => instantFixture(21, 0, heure);
+  return [
+    {
+      element: 'element-1',
+      poste: 'poste-1',
+      nature: 'Fraisage',
+      categorie: 'TRAVAIL',
+      debut: instant([7, 5]),
+      fin: instant([12, 0]),
+      presumee: false,
+    },
+    {
+      element: 'element-1',
+      poste: 'poste-1',
+      nature: 'Fraisage',
+      categorie: 'TRAVAIL',
+      debut: instant([12, 45]),
+      fin: instant([14, 30]),
+      presumee: false,
+    },
+    {
+      element: 'element-1',
+      poste: 'poste-1',
+      nature: 'Fraisage',
+      categorie: 'NON_CONFORMITE',
+      debut: instant([14, 30]),
+      fin: instant([15, 20]),
+      presumee: false,
+    },
+    {
+      element: 'element-2',
+      poste: 'poste-2',
+      nature: 'Tournage',
+      categorie: 'TRAVAIL',
+      debut: instant([8, 20]),
+      fin: instant([11, 30]),
+      presumee: false,
+    },
+  ];
+};
+
+const activitesDuJeudiFixture = (): readonly RestActivite[] => {
+  const instant = (heure: Heure): string => instantFixture(21, 3, heure);
+  return [
+    {
+      element: 'element-3',
+      poste: 'poste-1',
+      nature: 'Fraisage',
+      categorie: 'TRAVAIL',
+      debut: instant([8, 0]),
+      fin: instant([12, 0]),
+      presumee: false,
+    },
+    {
+      element: 'element-3',
+      poste: 'poste-3',
+      nature: 'Érosion',
+      categorie: 'TRAVAIL',
+      debut: instant([10, 0]),
+      fin: instant([14, 0]),
+      presumee: false,
+    },
+  ];
+};
 
 const samediEnCoursFixture: JourDeMaquette = {
   operationnelle: 'PT1H58M',
@@ -99,8 +207,10 @@ const semaineDeJourFixture = (): SemaineSemee =>
     presencePresumee: 'PT5H20M',
     operationnelleTotale: 'PT57H30M',
     operationnellePresumeeTotale: 'PT5H20M',
+    elements: elementsDeJourFixture,
     jours: [
       {
+        activites: activitesDuLundiFixture(),
         operationnelle: 'PT8H31M',
         pointages: [
           ['ARRIVEE', [7, 2]],
@@ -146,6 +256,7 @@ const semaineDeJourFixture = (): SemaineSemee =>
         ],
       },
       {
+        activites: activitesDuJeudiFixture(),
         operationnelle: 'PT7H34M',
         pointages: [
           ['ARRIVEE', [6, 58]],
@@ -259,6 +370,29 @@ describe('Weekly hours report in gestion', () => {
     whenVisiting(SEMAINE_DE_JOUR);
 
     thenThePresenceOfTheDayCounts(0, 2);
+  });
+
+  it('should give each element its row, its work and its non-conformity placed in the column of their day', () => {
+    givenAWeekOfDayShifts();
+    whenVisiting(SEMAINE_DE_JOUR);
+
+    thenTheRowOfTheElementDrawsOnTheDay(0, 0, { travail: 2, nonConformite: 1 });
+    thenTheRowOfTheElementDrawsOnTheDay(1, 0, { travail: 1, nonConformite: 0 });
+    thenTheRowOfTheElementDrawsOnTheDay(1, 1, { travail: 0, nonConformite: 0 });
+  });
+
+  it('should total each element of the week apart, with the non-conformity beside the first', () => {
+    givenAWeekOfDayShifts();
+    whenVisiting(SEMAINE_DE_JOUR);
+
+    thenTheElementTotalsRead(['15 h 30', '3 h 10', '6 h 00'], ['NC 0 h 50']);
+  });
+
+  it('should split an element worked from two workstations at once into one sub-row per workstation', () => {
+    givenAWeekOfDayShifts();
+    whenVisiting(SEMAINE_DE_JOUR);
+
+    thenTheSubRowsRead(['DMU 50', 'Charmilles FO 350']);
   });
 
   it('should draw a working day abandoned without departure as presumed, beside its operational zero', () => {
@@ -430,6 +564,37 @@ describe('Weekly hours report in gestion', () => {
       .eq(rang)
       .find(`${dataSelector('synthese-presence-plage')}, ${dataSelector('synthese-presence-presumee')}`)
       .should('have.length', nombre);
+  };
+
+  const thenTheRowOfTheElementDrawsOnTheDay = (ligne: number, jour: number, attendu: { travail: number; nonConformite: number }): void => {
+    cy.get(dataSelector('synthese-element-ligne'))
+      .eq(ligne)
+      .find(dataSelector('synthese-element-jour'))
+      .eq(jour)
+      .find(dataSelector('synthese-barre-travail'))
+      .should('have.length', attendu.travail);
+    cy.get(dataSelector('synthese-element-ligne'))
+      .eq(ligne)
+      .find(dataSelector('synthese-element-jour'))
+      .eq(jour)
+      .find(dataSelector('synthese-barre-nc'))
+      .should('have.length', attendu.nonConformite);
+  };
+
+  const thenTheSubRowsRead = (postes: string[]): void => {
+    cy.get(dataSelector('synthese-sous-ligne-poste')).should($postes => {
+      expect([...$postes].map(poste => poste.textContent.trim())).to.deep.equal(postes);
+    });
+    cy.get(dataSelector('synthese-sous-ligne-poste')).first().should('be.visible');
+  };
+
+  const thenTheElementTotalsRead = (totaux: string[], nonConformites: string[]): void => {
+    cy.get(dataSelector('synthese-element-total')).should($totaux => {
+      expect([...$totaux].map(total => total.textContent.trim())).to.deep.equal(totaux);
+    });
+    cy.get(dataSelector('synthese-element-nc')).should($nc => {
+      expect([...$nc].map(nc => nc.textContent.trim())).to.deep.equal(nonConformites);
+    });
   };
 
   const thenTheOperationalTimeOfTheDayReads = (rang: number, attendu: { duree: string; presumees?: string }): void => {

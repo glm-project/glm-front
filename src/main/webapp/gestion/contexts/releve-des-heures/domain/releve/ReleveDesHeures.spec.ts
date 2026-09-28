@@ -12,6 +12,7 @@ const jourFixture = (jour: string): JourDeReleve =>
     jour: new JourCalendaire(jour),
     operationnelPointe: new DureeTravaillee('PT0S'),
     operationnelPresume: new DureeTravaillee('PT0S'),
+    intervalles: [],
     pointages: [],
     plages: [],
   });
@@ -20,6 +21,7 @@ const semaineCompleteFixture = (): readonly JourDeReleve[] => SEMAINE.jours().ma
 
 const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   operateur: new IdentiteOperateur('Dupont', 'Jean'),
+  elements: [],
   jours,
   presencePointee: new DureeTravaillee('PT38H'),
   presencePresumee: new DureeTravaillee('PT5H20M'),

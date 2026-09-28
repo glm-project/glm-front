@@ -16,6 +16,7 @@ const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({
   jour: new JourCalendaire('2026-09-14'),
   operationnelPointe: new DureeTravaillee('PT0S'),
   operationnelPresume: new DureeTravaillee('PT0S'),
+  intervalles: [],
   pointages: [],
   plages: [],
   ...fiche,

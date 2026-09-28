@@ -1,10 +1,15 @@
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
+import { CategorieDActivite } from '../../domain/element/CategorieDActivite';
+import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
+import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
+import { TypeDElement } from '../../domain/element/TypeDElement';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 
 const PLAGE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+const JOUR_LONG = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
 
 const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -16,9 +21,33 @@ const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
 
 const MINUTES_PAR_HEURE = 60;
 
+const TYPES_D_ELEMENT: Record<TypeDElement, string> = { PRODUIT: 'Moule', ORDRE_DE_FABRICATION: 'OF' };
+
+const CATEGORIES_D_ACTIVITE: Record<CategorieDActivite, string> = { TRAVAIL: 'travail', NON_CONFORMITE: 'non-conformité' };
+
+const posteEtNature = (poste: PosteDeLElement): string =>
+  poste.nature === undefined ? poste.libelle : `${poste.libelle} · ${poste.nature}`;
+
 const PRESENCE = 'Présence';
+const PRESUME = 'présumé';
 const EN_COURS = 'en cours';
 const DEPUIS_LA_VEILLE = 'depuis la veille';
+
+export interface FormeDActivite {
+  readonly element: ElementDuReleve;
+  readonly jour: JourCalendaire;
+  readonly categorie: CategorieDActivite;
+  readonly debut: InstantDeReleve;
+  readonly fin: InstantDeReleve;
+  readonly presumee: boolean;
+}
+
+export interface FormeDActiviteEnCours {
+  readonly element: ElementDuReleve;
+  readonly jour: JourCalendaire;
+  readonly categorie: CategorieDActivite;
+  readonly debut: InstantDeReleve;
+}
 
 export interface FormeDePlage {
   readonly presumee: boolean;
@@ -35,6 +64,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   retour: 'Opérateurs',
   retourAria: 'Revenir au référentiel des opérateurs',
   sousTitre: 'Une ligne par moule ou OF pointé dans la semaine.',
+  sansPoste: 'Sans poste',
   operationnel: 'Temps opérationnel',
   operationnelPrecision: 'pointé sur les moules et OF',
   presenceLigne: 'Présence',
@@ -52,7 +82,13 @@ export const LIBELLES_RELEVE_DES_HEURES = {
 
   sansValeur: '—',
   aujourdhui: 'Aujourd’hui',
-  legende: { pointe: 'Pointé', presume: 'Présumé (à confirmer)', enCours: 'En cours' },
+  legende: {
+    travail: 'Travail',
+    nonConformite: 'Non-conformité',
+    presence: 'Présence',
+    presume: 'Présumé (à confirmer)',
+    enCours: 'En cours',
+  },
 
   chargement: 'Chargement de la synthèse…',
   echec: 'Impossible de charger la synthèse des heures. Vérifiez la connexion puis réessayez.',
@@ -67,7 +103,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   presume: (duree: DureeTravaillee): string => `Présumé, à confirmer : ${formatDuree(duree)}`,
   duree: formatDuree,
   presumees: (duree: DureeTravaillee): string => `+ ${formatDuree(duree)} présumées`,
+  nonConformite: (duree: DureeTravaillee): string => `NC ${formatDuree(duree)}`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
+  typeDElement: (type: TypeDElement): string => TYPES_D_ELEMENT[type],
+  postes: (postes: readonly PosteDeLElement[]): string => postes.map(posteEtNature).join(', '),
   repere: (minutes: number): string => `${Math.floor(minutes / MINUTES_PAR_HEURE)} h`,
 
   enonceDePlage: ({ presumee, debut, fin, depuisLaVeille, seLePoursuit }: FormeDePlage): string => {
@@ -79,5 +118,11 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     }
     return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
   },
+  enonceDActivite: ({ element, jour, categorie, debut, fin, presumee }: FormeDActivite): string => {
+    const enonce = `${TYPES_D_ELEMENT[element.type]} ${element.numero()}, ${JOUR_LONG.format(dateDe(jour))}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
+    return presumee ? `${enonce}, ${PRESUME}` : enonce;
+  },
+  enonceDActiviteEnCours: ({ element, jour, categorie, debut }: FormeDActiviteEnCours): string =>
+    `${TYPES_D_ELEMENT[element.type]} ${element.numero()}, ${JOUR_LONG.format(dateDe(jour))}, depuis ${heure(debut)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
   enonceDePlageEnCours: (debut: InstantDeReleve): string => `${PRESENCE} depuis ${heure(debut)}, ${EN_COURS}`,
 } as const;
