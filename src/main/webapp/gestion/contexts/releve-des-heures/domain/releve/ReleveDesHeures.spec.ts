@@ -21,8 +21,8 @@ const semaineCompleteFixture = (): readonly JourDeReleve[] => SEMAINE.jours().ma
 const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   operateur: new IdentiteOperateur('Dupont', 'Jean'),
   jours,
-  totalPointe: new DureeTravaillee('PT38H'),
-  totalPresume: new DureeTravaillee('PT5H20M'),
+  presencePointee: new DureeTravaillee('PT38H'),
+  presencePresumee: new DureeTravaillee('PT5H20M'),
 });
 
 describe('ReleveDesHeures', () => {
@@ -43,13 +43,13 @@ describe('ReleveDesHeures', () => {
   it('should carry the clocked week total the server computed', () => {
     const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
 
-    expect(releve.totalPointe).toMatchObject({ heures: 38, minutesRestantes: 0 });
+    expect(releve.presencePointee).toMatchObject({ heures: 38, minutesRestantes: 0 });
   });
 
   it('should carry the presumed week total the server computed, without adding the days up', () => {
     const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
 
-    expect(releve.totalPresume).toMatchObject({ heures: 5, minutesRestantes: 20 });
+    expect(releve.presencePresumee).toMatchObject({ heures: 5, minutesRestantes: 20 });
   });
 
   it('should carry the operator the report resolved', () => {

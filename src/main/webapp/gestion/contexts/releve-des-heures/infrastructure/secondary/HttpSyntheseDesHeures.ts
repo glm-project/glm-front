@@ -103,8 +103,8 @@ const toReleve = (synthese: RestSynthese, feuille: RestFeuille, demandee: Semain
   return new ReleveDesHeures(demandee, {
     operateur: toIdentite(synthese),
     jours: toJours(synthese, feuille),
-    totalPointe: new DureeTravaillee(required(synthese.dureeTotale, 'synthese.dureeTotale')),
-    totalPresume: new DureeTravaillee(required(synthese.dureePresumeeTotale, 'synthese.dureePresumeeTotale')),
+    presencePointee: new DureeTravaillee(required(synthese.dureeTotale, 'synthese.dureeTotale')),
+    presencePresumee: new DureeTravaillee(required(synthese.dureePresumeeTotale, 'synthese.dureePresumeeTotale')),
   });
 };
 

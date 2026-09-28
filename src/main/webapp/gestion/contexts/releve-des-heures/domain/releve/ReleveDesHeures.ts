@@ -17,22 +17,22 @@ const couvreLaSemaine = (semaine: SemaineISO, jours: readonly JourDeReleve[]): b
 export interface FicheDuReleve {
   readonly operateur: IdentiteOperateur;
   readonly jours: readonly JourDeReleve[];
-  readonly totalPointe: DureeTravaillee;
-  readonly totalPresume: DureeTravaillee;
+  readonly presencePointee: DureeTravaillee;
+  readonly presencePresumee: DureeTravaillee;
 }
 
 export class ReleveDesHeures {
   readonly operateur: IdentiteOperateur;
   readonly jours: readonly JourDeReleve[];
-  readonly totalPointe: DureeTravaillee;
-  readonly totalPresume: DureeTravaillee;
+  readonly presencePointee: DureeTravaillee;
+  readonly presencePresumee: DureeTravaillee;
 
   constructor(semaine: SemaineISO, fiche: FicheDuReleve) {
     ReleveDesHeures.verifieLesSeptJours(semaine, fiche.jours);
     this.operateur = fiche.operateur;
     this.jours = [...fiche.jours];
-    this.totalPointe = fiche.totalPointe;
-    this.totalPresume = fiche.totalPresume;
+    this.presencePointee = fiche.presencePointee;
+    this.presencePresumee = fiche.presencePresumee;
   }
 
   private static verifieLesSeptJours(semaine: SemaineISO, jours: readonly JourDeReleve[]): void {

@@ -182,8 +182,8 @@ const toPlage = (plage: PlageFixture): PlageDeReleve =>
 const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
   new ReleveDesHeures(SEMAINE, {
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
-    totalPointe: new DureeTravaillee('PT7H30M'),
-    totalPresume: new DureeTravaillee('PT5H20M'),
+    presencePointee: new DureeTravaillee('PT7H30M'),
+    presencePresumee: new DureeTravaillee('PT5H20M'),
     jours: jours.map(
       (jour, rang) =>
         new JourDeReleve({
@@ -335,7 +335,7 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
 
     const releve = await port.synthese(DEMANDE);
 
-    expect([releve?.totalPointe.minutes, releve?.totalPresume.minutes]).toEqual([450, 320]);
+    expect([releve?.presencePointee.minutes, releve?.presencePresumee.minutes]).toEqual([450, 320]);
   });
 
   it('should return the operator the report resolved', async () => {

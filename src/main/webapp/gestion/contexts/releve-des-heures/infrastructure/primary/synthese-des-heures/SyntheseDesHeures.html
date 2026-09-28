@@ -200,9 +200,9 @@
         </li>
       </ul>
       <div class="totaux">
-        <p data-selector="synthese-total">{{ libelles.pointe(vue.releve.totalPointe) }}</p>
-        @if (!vue.releve.totalPresume.estNulle()) {
-        <p class="presume" data-selector="synthese-total-presume">{{ libelles.presume(vue.releve.totalPresume) }}</p>
+        <p data-selector="synthese-total">{{ libelles.pointe(vue.releve.presencePointee) }}</p>
+        @if (!vue.releve.presencePresumee.estNulle()) {
+        <p class="presume" data-selector="synthese-total-presume">{{ libelles.presume(vue.releve.presencePresumee) }}</p>
         }
       </div>
     </div>

@@ -69,8 +69,8 @@ const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): Jo
 const releveFixture = (semaine: SemaineISO, jours: Readonly<Record<number, JourFixture>>, totalPresume = 'PT0S'): ReleveDesHeures =>
   new ReleveDesHeures(semaine, {
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
-    totalPointe: new DureeTravaillee('PT7H30M'),
-    totalPresume: new DureeTravaillee(totalPresume),
+    presencePointee: new DureeTravaillee('PT7H30M'),
+    presencePresumee: new DureeTravaillee(totalPresume),
     jours: semaine.jours().map((jour, rang) => jourFixture(jour, rang, jours[rang] ?? {})),
   });
 
