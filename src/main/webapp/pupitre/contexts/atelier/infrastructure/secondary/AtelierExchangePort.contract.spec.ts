@@ -22,7 +22,7 @@ const operateurFixture = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  etat: 'EN_PAUSE',
+  etat: 'PRESENT',
   postes: [],
 } satisfies RestOperateurDuPupitre;
 const operateurSansMatriculeFixture = {
@@ -89,14 +89,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   });
   afterEach(() => {
     http.verify();
-  });
-
-  it('should read an operator the server still reports on pause as present, the pause living on the pupitre', async () => {
-    const reference = whenReadingReference();
-
-    await whenServerReturnsTheReference();
-
-    await thenOperatorIsReadAs(reference, 'jean', 'PRESENT');
   });
 
   it('should read the whole pupitre reference in a single unbounded request', async () => {
@@ -299,10 +291,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       ],
       evenements: [],
     });
-  };
-  const thenOperatorIsReadAs = async (operation: Promise<ReferentielDuPupitre>, operateurId: string, etat: string): Promise<void> => {
-    const reference = await operation;
-    expect(reference.operateurs.find(operateur => operateur.id === operateurId)?.etat).toBe(etat);
   };
   const thenItFailed = async (operation: Promise<unknown>, expectedMessage?: string): Promise<void> => {
     if (expectedMessage !== undefined) {

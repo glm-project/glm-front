@@ -34,7 +34,12 @@ interface SemaineRendue {
   readonly semaine?: number;
 }
 
-const toPointage = (pointage: RestPointage): PointageDeReleve =>
+type RestPointageDePresence = RestPointage & { readonly type: 'ARRIVEE' | 'DEPART' };
+
+const estDePresence = (pointage: RestPointage): pointage is RestPointageDePresence =>
+  pointage.type !== 'DEBUT' && pointage.type !== 'NON_CONFORMITE' && pointage.type !== 'FIN';
+
+const toPointage = (pointage: RestPointageDePresence): PointageDeReleve =>
   new PointageDeReleve(pointage.type, new InstantDeReleve(pointage.dateDeSurvenue));
 
 const toFin = (fin: string | undefined): InstantDeReleve | undefined => (fin === undefined ? undefined : new InstantDeReleve(fin));
@@ -65,7 +70,7 @@ const toJour = (jour: RestJour, presences: PresenceParJour): JourDeReleve => {
     jour: new JourCalendaire(date),
     dureePointee: new DureeTravaillee(required(jour.duree, 'jour.duree')),
     dureePresumee: new DureeTravaillee(required(jour.dureePresumee, 'jour.dureePresumee')),
-    pointages: required(jour.pointages, 'jour.pointages').map(toPointage),
+    pointages: required(jour.pointages, 'jour.pointages').filter(estDePresence).map(toPointage),
     plages: presenceDu(date, presences).map(toPlage),
   });
 };

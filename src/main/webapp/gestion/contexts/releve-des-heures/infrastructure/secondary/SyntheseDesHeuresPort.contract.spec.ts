@@ -22,6 +22,7 @@ import { HttpSyntheseDesHeures } from './HttpSyntheseDesHeures';
 
 type RestSynthese = components['schemas']['RestSyntheseDesHeures'];
 type RestJour = components['schemas']['RestJourDeSynthese'];
+type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
 type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
 type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
 type RestPlage = components['schemas']['RestPlage'];
@@ -128,7 +129,9 @@ const toRestJour = (jour: JourFixture, rang: number): RestJour => ({
   jour: jourDeLaSemaine(rang),
   duree: jour.pointee,
   dureePresumee: jour.presumee,
-  pointages: jour.pointages.map(pointage => ({ type: pointage.type, dateDeSurvenue: pointage.instant })),
+  dureeOperationnelle: 'PT0S',
+  dureeOperationnellePresumee: 'PT0S',
+  pointages: jour.pointages.map(pointage => ({ type: pointage.type as RestPointage['type'], dateDeSurvenue: pointage.instant })),
 });
 
 const toRestPlage = (plage: PlageFixture): RestPlage => ({ ...plage });
@@ -136,6 +139,7 @@ const toRestPlage = (plage: PlageFixture): RestPlage => ({ ...plage });
 const toRestJourDeFeuille = (jour: JourFixture, rang: number): RestJourDeFeuille => ({
   jour: jourDeLaSemaine(rang),
   presence: jour.plages.map(toRestPlage),
+  activites: [],
 });
 
 const sansChamp = <T extends object>(document: T, champ: keyof T & string): T =>
@@ -159,8 +163,11 @@ const toRestSynthese = (jours: readonly JourFixture[]): RestSynthese => ({
   semaine: SEMAINE.numero,
   dureeTotale: 'PT7H30M',
   dureePresumeeTotale: 'PT5H20M',
+  dureeOperationnelleTotale: 'PT0S',
+  dureeOperationnellePresumeeTotale: 'PT0S',
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   jours: jours.map(toRestJour),
+  elements: [],
 });
 
 const toRestFeuille = (jours: readonly JourFixture[]): RestFeuille => ({
@@ -391,6 +398,22 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     expect([parametres?.get('annee'), parametres?.get('semaine')]).toEqual(['2026', '38']);
   });
 
+  it('should keep the clockings on an element out of the presence journal of the day', async () => {
+    const synthese = toRestSynthese(semaineFixture());
+    const pointageDElement = { type: 'DEBUT' as const, dateDeSurvenue: '2026-09-14T06:05:00Z', element: 'carter', poste: 'dmu-50' };
+    const result = port.synthese(DEMANDE);
+    await whenBothRoutesAnswer(
+      {
+        ...synthese,
+        jours: avecPremierRetouche(synthese.jours, jour => ({ ...jour, pointages: [...(jour.pointages ?? []), pointageDElement] })),
+      },
+      toRestFeuille(semaineFixture()),
+    );
+
+    const releve = await result;
+    expect(releve?.jours.map(projeterJour)[0]?.pointages).toEqual(['ARRIVEE 2026-09-14T06:02:00.000Z', 'DEPART 2026-09-14T15:32:00.000Z']);
+  });
+
   it('should give each day of the report the presence the time sheet carries for the same date', async () => {
     const feuille = toRestFeuille(semaineFixture());
     const result = port.synthese(DEMANDE);
@@ -401,7 +424,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
   });
 
   it.each([
-    ['a day of another week', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), { jour: '2026-09-21', presence: [] }]],
+    ['a day of another week', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), { jour: '2026-09-21', presence: [], activites: [] }]],
     ['fewer days than the report', (jours: RestJourDeFeuille[]) => jours.slice(0, 6)],
     ['a day twice in place of another', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), premierDe(jours)]],
     ['the seven days and one of them twice', (jours: RestJourDeFeuille[]) => [...jours, premierDe(jours)]],
