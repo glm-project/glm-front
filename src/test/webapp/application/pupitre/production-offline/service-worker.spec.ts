@@ -219,6 +219,7 @@ const whenReadingOnlinePupitre = (alias: string, referenceRequests: number): voi
 };
 
 const whenWaitingForServiceWorkerActivation = (): void => {
+  waitForPupitre('pupitre-connected');
   readPupitreWindow()
     .then(window => cy.wrap(window.navigator.serviceWorker.ready, { timeout: 40_000 }).its('active.state').should('equal', 'activated'))
     .as('worker-state', { type: 'static' });
