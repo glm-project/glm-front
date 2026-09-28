@@ -9,6 +9,7 @@ import {
   JournalDuPupitre,
   snapshotDuJournal,
   SuiviDuPupitre,
+  toReouverture,
   TypeDePointage,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
@@ -20,7 +21,7 @@ import { MatriculeInconnu } from '../MatriculeInconnu';
 import { NumeroDElement } from '../NumeroDElement';
 import { ActivitesPersonnelles } from './ActivitesPersonnelles';
 import { AssuranceDArrivee } from './AssuranceDArrivee';
-import { ContexteDeGesteDAtelier, RefusDAtelier } from './ContexteDeGesteDAtelier';
+import { RefusDAtelier } from './ContexteDeGesteDAtelier';
 import {
   AcceptationDeGestes,
   CibleDePointage,
@@ -30,9 +31,13 @@ import {
   LotDeGestesDAtelier,
 } from './DecisionDePointage';
 import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
+import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
 import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
+
+const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
+  posteId === undefined ? { type: reouverture } : { type: reouverture, posteId };
 
 interface ActivitePersonnelleConnue {
   readonly suiviId: string;
@@ -101,7 +106,11 @@ export class FenetreOperateur {
   }
   presence(): PresenceDeLOperateur {
     const operateur = projectReferentiel(this.etat.vue)?.operateurs.find(candidat => this.etat.operateurDesigne.owns(candidat.id));
-    return new PresenceDeLOperateur(operateur?.etat ?? 'ABSENT');
+    return new PresenceDeLOperateur({
+      etat: operateur?.etat ?? 'ABSENT',
+      activiteEnCours: this.activitesPersonnellesConnues().length > 0,
+      pauseEnCours: this.pauseEnCours() !== undefined,
+    });
   }
   pointage(): VueDePointage {
     const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({
@@ -196,27 +205,28 @@ export class FenetreOperateur {
   capture(decision: LotDeGestesDAtelier): readonly GesteDAtelier[] {
     return decision.capture(this.etat.assuranceArrivee.isAssuree());
   }
-  preparePresence(type: 'PAUSE' | 'REPRISE', identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
-    const presence: GesteDePresence = {
-      ...identify(),
-      operateurId: this.etat.operateurDesigne.id(),
-      nature: 'PRESENCE',
-      type,
-      implicite: false,
-    };
-    const arrivee: GesteDAtelier = {
-      ...identify(),
-      dateDeSurvenue: presence.dateDeSurvenue,
-      operateurId: this.etat.operateurDesigne.id(),
-      nature: 'ARRIVEE',
-    };
-    const presenceApresAssurance: GesteDePresence =
-      type === 'REPRISE' ? { ...presence, type, implicite: false, assuranceArriveeId: arrivee.id } : presence;
-    const contexte = this.contexteFor(type);
+  preparePause(identify: () => IdentiteDuGeste, pause: string): LotDeGestesDAtelier {
+    const fins = this.activitesPersonnellesConnues().map(({ suiviId, activite }) => ({
+      ...this.finDe(suiviId, activite, identify()),
+      suspension: { pause, reouverture: toReouverture(activite) },
+    }));
     return {
       kind: 'GESTES',
-      capture: (assured = false) => (assured ? [presence] : [arrivee, presenceApresAssurance]),
-      contextesParGeste: ContextesParGeste.forGestes([arrivee, presenceApresAssurance], contexte),
+      capture: () => fins,
+      contextesParGeste: ContextesParGeste.forGestes(fins, { kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' }),
+      intention: this.etat.intention,
+    };
+  }
+  prepareReprise(identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
+    const reouvertures = (this.pauseEnCours()?.activitesARouvrir() ?? []).map(activite =>
+      this.toPointage(activite.suiviId, toTransition(activite), identify()),
+    );
+    if (reouvertures.length === 0) return this.sansGeste();
+    const arrivee: GesteDAtelier = { ...identify(), operateurId: this.etat.operateurDesigne.id(), nature: 'ARRIVEE' };
+    return {
+      kind: 'GESTES',
+      capture: assured => [...(assured ? [] : [arrivee]), ...reouvertures],
+      contextesParGeste: ContextesParGeste.forGestes([arrivee, ...reouvertures], { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' }),
       intention: this.etat.intention,
     };
   }
@@ -266,6 +276,14 @@ export class FenetreOperateur {
     );
   }
 
+  private sansGeste(): LotDeGestesDAtelier {
+    return { kind: 'GESTES', capture: () => [], contextesParGeste: ContextesParGeste.empty(), intention: this.etat.intention };
+  }
+
+  private pauseEnCours(): PauseEnCours | undefined {
+    return PauseEnCours.of(this.etat.vue, this.etat.operateurDesigne.id());
+  }
+
   private afterLocalAcceptance(gestes: readonly GesteDAtelier[], decision: LotDeGestesDAtelier): FenetreOperateur {
     const contextesParGeste = decision.intention === this.etat.intention ? decision.contextesParGeste : this.etat.contextesParGeste;
     return this.with({ contextesParGeste }).afterAccept(gestes);
@@ -273,11 +291,6 @@ export class FenetreOperateur {
 
   private contextesOf(decision: DecisionDePointage): ContextesParGeste {
     return decision.kind === 'GESTES' ? decision.contextesParGeste : ContextesParGeste.empty();
-  }
-
-  private contexteFor(type: 'PAUSE' | 'REPRISE'): ContexteDeGesteDAtelier {
-    if (type === 'PAUSE') return { kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' };
-    return { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' };
   }
 
   private ouverture(suiviId: string, numero: NumeroDElement, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionDePointage {

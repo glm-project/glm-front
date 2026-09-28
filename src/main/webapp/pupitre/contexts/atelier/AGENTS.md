@@ -16,7 +16,15 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 
 **Vue de pointage** : projection personnelle prête à rendre des éléments de l'atelier, regroupés et ordonnés avec leur numéro résolu, l'activité de l'opérateur désigné, sa catégorie et sa durée figée. Elle ne porte ni libellé d'écran ni choix de style.
 
-**État de présence** : position de l'opérateur dans sa journée de travail — absent, présent ou en pause. Le serveur l'établit, le journal local le fait avancer par les gestes non encore publiés, et c'est lui qui dit quelles commandes globales sont légales. Il ne se confond pas avec l'état d'atelier d'un élément, ni avec la connexion observée du pupitre.
+**État de présence** : position de l'opérateur dans sa journée de travail — absent ou présent. Le serveur l'établit, le journal local le fait avancer par les gestes non encore publiés. Il ne se confond pas avec l'état d'atelier d'un élément, ni avec la connexion observée du pupitre. « En pause » n'est pas un état de présence : la pause ne change pas la présence.
+
+**Pause** : arrêt, par la commande PAUSE, de toutes les activités personnelles que le pupitre connaît pour l'opérateur désigné, retenu pour être rouvert. Elle est identifiée par l'identité racine de l'intention globale initiée qui l'a prise. Le serveur n'en sait rien : il ne reçoit que des fins. Éviter : pause de présence, état en pause.
+
+**Activité suspendue** : activité arrêtée par une pause, avec son élément, son poste et le pointage qui la rouvrira — `DEBUT`, ou `NON_CONFORMITE` pour une activité en non-conformité. La fin qui l'arrête porte sa **suspension** : la pause et ce pointage de réouverture. Éviter : activité en pause.
+
+**Pause en cours** : la dernière pause d'un opérateur dans le journal de ce pupitre, tant qu'elle n'a pas pris fin et qu'une activité suspendue reste à rouvrir. `PauseEnCours` la lit sur le journal entier, événements et référentiel projeté.
+
+**Situation de l'opérateur** : ce que le chrome annonce de l'opérateur désigné — absent, présent, ou en pause lorsqu'une pause est en cours et que son état de présence est présent. C'est un affichage, pas un état que le serveur connaît.
 
 **Numéro d'élément** : référence attribuée par l'entreprise lorsqu'elle existe, sinon nom généré de l'élément. C'est l'identifiant visible et la clé du tri naturel sur la vue de pointage.
 
@@ -36,20 +44,23 @@ Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'at
 - Une tuile représente toujours un élément et agrège toutes les activités que l'opérateur désigné y a ouvertes sur différents postes. Elle est en non-conformité dès qu'une de ces activités l'est, sa durée part de la plus ancienne activité encore ouverte et ses actions visent tout l'agrégat.
 - La cible principale d'une tuile active termine toutes ses activités personnelles. Sa cible secondaire remet en travail les seules activités en non-conformité dès qu'il en existe une; sinon elle place en non-conformité toutes les activités en travail. Une action n'émet jamais une transition déjà atteinte.
 - L'adaptateur primaire annonce la cible tactile pressée et, lorsque le domaine le demande, le poste choisi. La fenêtre opérateur traduit cette intention en types de pointage et en lot de gestes; le composant ne construit pas d'événement d'atelier.
-- La première commande métier d'une fenêtre assure l'arrivée avant les gestes demandés, y compris pour une commande globale. Une reprise explicite devenue redondante parce que cette assurance vient d'ouvrir la journée est absorbée comme cette seule exception contextuelle.
-- Une reprise implicite précède seulement une intention qui ouvre ou reprend effectivement une activité. Elle ne précède ni une fin d'activité ni une commande explicite de présence.
+- La première commande métier d'une fenêtre assure l'arrivée avant les gestes demandés, y compris pour REPRENDRE et TOUT ARRÊTER. PAUSE ne l'assure pas : elle ne fait que fermer, et assurer l'arrivée d'un opérateur absent qui a oublié des activités ouvrirait une journée vouée à l'abandon.
+- Une reprise implicite précède seulement une intention de tuile qui ouvre ou reprend effectivement une activité. Elle ne précède ni une fin d'activité ni une commande globale.
 - Lorsqu'une ouverture exige de choisir parmi plusieurs postes habilités, la fenêtre opérateur retourne explicitement ce besoin. La pop-up ne conserve qu'une attente éphémère, et le domaine revalide la fenêtre et le poste au choix final; fermer ou laisser expirer cette attente ne produit aucun geste.
 - Un pointage sans choix de poste reçoit son identifiant et son heure à la pression sur sa cible. Avec une pop-up multiposte, ils naissent au choix final du poste; ouvrir puis abandonner la pop-up ne crée aucune identité de geste.
 - Une fenêtre ouverte réconcilie chaque nouvelle version du journal de son entreprise sans changer l'opérateur désigné ni son instant d'observation. La projection optimiste disparaît ainsi dès qu'un geste de cette fenêtre est refusé.
 - La fenêtre expose l'état de présence **vivant** de l'opérateur désigné : il se relit du référentiel projeté à chaque réconciliation, contrairement à l'instant d'ouverture que les durées figent. Un opérateur absent du référentiel projeté est lu absent; il n'existe pas d'état inconnu.
-- Seules les commandes globales que cet état rend légales sont offertes. Depuis l'état absent les trois le restent : l'assurance d'arrivée ouvre la journée avant le geste demandé, ce qui les rend toutes légales. Griser ce que l'automate interdit depuis l'état brut régresserait sur ce comportement.
+- `PresenceDeLOperateur` décide des commandes globales offertes : PAUSE seulement si l'opérateur a au moins une activité personnelle connue, REPRENDRE seulement si une pause est en cours, même lorsque l'opérateur est lu absent (journée abandonnée, départ ailleurs), TOUT ARRÊTER toujours. Elle donne aussi la situation affichée : « En pause » seulement si une pause est en cours et que l'état projeté est présent.
 - La projection replie les gestes de présence locaux non refusés sur l'état de l'opérateur, en suivant l'automate du serveur; une transition illégale laisse l'état inchangé. Un geste déjà reflété par le référentiel n'est plus rejoué — le journal n'est jamais purgé, et sans ce marqueur le départ de la veille écraserait l'état du jour.
 - La fenêtre expose au plus le dernier refus d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
 - Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
 - Un geste conserve l'opérateur, l'identifiant et l'heure fixés à son initiation.
 - « Tout arrêter » forme un unique lot local atomique et ordonné : toutes les fins des activités personnelles connues, puis le départ. Un échec d'acceptation locale n'en conserve aucune partie; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
-- Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
+- PAUSE forme de même un unique lot atomique de fins, sans le départ : une fin par activité personnelle connue, sur son poste, portant sa suspension. La suspension ne quitte jamais le pupitre. Une pause ne ferme que ce que le référentiel du pupitre connaît; une activité ouverte ailleurs depuis le dernier rafraîchissement court pendant la pause.
+- `PauseEnCours` est le seul propriétaire de la fin d'une pause et de ce qu'elle rouvre. La pause d'un opérateur est celle de sa dernière suspension; elle prend fin à REPRENDRE, à tout autre geste de cet opérateur ajouté au journal de ce pupitre, quel que soit son sort à la publication, et dès que le référentiel projeté montre une activité de l'opérateur autre qu'une activité dont la suspension a été refusée. Aucune horloge n'est comparée entre appareils et une pause n'expire jamais.
+- REPRENDRE rouvre, sur le même poste et par le pointage retenu, chaque activité suspendue dont la suspension n'a pas été refusée, dont l'élément est encore au référentiel projeté, dont le poste est encore habilité et qui n'est pas déjà ouverte au même élément et au même poste — un `NON_CONFORMITE` sur une activité en cours la basculerait en non-conformité. La reprise n'a lieu que sur le pupitre qui a pris la pause.
+- Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. PAUSE ou REPRENDRE décidée sur une fenêtre où il n'y a plus rien à suspendre ou à rouvrir n'enregistre aucun geste, pas même l'arrivée. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
 - Un échec de la lecture du référentiel ne remplace jamais le dernier référentiel complet. Cette lecture est un appel unique et non paginé dont le serveur garantit lui-même l'instantanéité et l'unicité des identifiants; le pupitre ignore la version qu'elle porte et ne revérifie ni l'une ni l'autre.
 - Un référentiel n'est disponible pour l'enrôlement que si la vue active appartient à l'entreprise actuellement sélectionnée.
 - Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
@@ -68,7 +79,7 @@ Pendant l'acceptation durable d'une action, l'adaptateur primaire désactive les
 
 Un échec d'acceptation locale affiche dans le chrome « Action non enregistrée — recommencez ». Ce message technique persiste jusqu'à la prochaine acceptation durable réussie ou la fermeture de la fenêtre; il ne se confond ni avec un refus métier ni avec l'état réseau.
 
-Le chrome accompagne un refus métier du numéro de l'élément pour un pointage et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour une présence issue d'une commande globale. Il montre le message du serveur et seulement le dernier refus du lot.
+Le chrome accompagne un refus métier du numéro de l'élément pour un pointage de tuile et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour un geste issu d'une commande globale. Il montre le message du serveur et seulement le dernier refus du lot.
 
 Tant que l'appareil n'est pas enrôlé et que son premier référentiel complet n'est pas actif, la composition rend l'écran d'enrôlement sous le chrome permanent, jamais un pavé ni un pointage. La bascule lit l'état projeté par le contexte [enrôlement](../enrolement/AGENTS.md), pas la seule présence du référentiel. Ce contexte n'expose son état de chargement que par l'adaptateur primaire `TypeScriptChargementDeLAtelier`, appelé depuis un adaptateur secondaire d'`enrolement`.
 
@@ -78,4 +89,10 @@ Les libellés métier du pupitre vivent dans un module unique de ce contexte et 
 
 Le résultat du chargement initial est distinct de la connexion observée. `TypeScriptChargementDeLAtelier` expose la disponibilité du référentiel de l'entreprise courante; l'adaptateur secondaire d'`enrolement` traduit l'achèvement de la synchronisation en `CHARGE` ou `ECHEC`. Cette issue ne modifie pas l'indicateur de connexion, que seuls les résultats de publication établissent.
 
+Tant que le back et le vidage des pupitres ne sont pas passés, un opérateur `EN_PAUSE` peut encore arriver du serveur ou d'un référentiel stocké : `HttpAtelierExchange` et `IndexedDbJournauxDuPupitre` le lisent présent. Voir l'[ADR 0045](../../../../../../documentation/adr/0045-keep-the-pause-on-the-pupitre.md).
+
 Lire [Offline pupitre](../../../../../../documentation/offline-pupitre.md) avant de changer la désignation, le journal, le rejeu ou le runtime, et les [ADR pertinents](../../../../../../documentation/adr/README.md) avant de rouvrir une décision. Les échanges futurs avec un autre contexte de `pupitre` passent par un port et un adaptateur TypeScript, sans import direct de son domaine.
+
+## Points ouverts
+
+- Le bouton global PAUSE n'a jamais été validé de première main par le client : le mécanisme « pause, arrêt, reprise » qu'il décrit est acquis, le bouton qui le déclenche pour toutes les activités à la fois reste à confirmer.

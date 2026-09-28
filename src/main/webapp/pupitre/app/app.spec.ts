@@ -36,7 +36,7 @@ class AtelierCoordinatorPageFixture {
   readonly refusAtelier = signal(undefined);
   readonly pointage = signal(undefined);
   readonly gestesDisponibles = signal(true);
-  readonly presence = signal(new PresenceDeLOperateur('ABSENT'));
+  readonly presence = signal(new PresenceDeLOperateur({ etat: 'ABSENT', activiteEnCours: false, pauseEnCours: false }));
 
   referentiel(): undefined {
     return undefined;

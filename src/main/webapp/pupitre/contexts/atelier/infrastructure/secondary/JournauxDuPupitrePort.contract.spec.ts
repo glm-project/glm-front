@@ -44,6 +44,16 @@ const pointageAutreSuiviFixture: GesteDAtelier = {
   suiviId: 'autre-piece',
 };
 
+const suspensionFixture: GesteDAtelier = {
+  ...arriveeFixture,
+  id: 'fin-pause',
+  nature: 'POINTAGE',
+  type: 'FIN',
+  suiviId: 'piece',
+  posteId: 'tour',
+  suspension: { pause: 'pause-de-midi', reouverture: 'NON_CONFORMITE' },
+};
+
 const operateurJeanFixture: OperateurDuPupitre = {
   id: 'jean',
   nom: 'Dupont',
@@ -140,6 +150,18 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
 
     await thenCompanyStateIs('entreprise-a', completeOpeningFixture());
     await thenCompanyStateIs('entreprise-b', EMPTY_JOURNAL_DU_PUPITRE);
+  });
+
+  it('should keep the pause a finish belongs to across acceptance and a later read', async () => {
+    await givenACompanyReference();
+
+    await whenAppendingAndAcceptingASuspension();
+
+    await thenCompanyStateIs('entreprise-a', {
+      referentiel: referenceFixture,
+      connecte: true,
+      evenements: [{ geste: suspensionFixture, etat: 'ACCEPTE' }],
+    });
   });
 
   it('should preserve a concurrent append and a refusal while recording a push outcome', async () => {
@@ -286,6 +308,10 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     return beforeRelease;
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
+  const whenAppendingAndAcceptingASuspension = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [suspensionFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: suspensionFixture, etat: 'ACCEPTE' });
+  };
   const whenAppendingTheCompleteOpening = (): Promise<void> =>
     journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, repriseFixture, pointageFixture]);
   const whenAppendingArrival = (): Promise<void> => journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
@@ -356,6 +382,14 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     thenEventsAre(state, [{ geste: arriveeFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
   });
 
+  it('should read an operator stored on pause as present, the pause living on the pupitre', async () => {
+    await givenAReferenceStoredWithAnOperatorOnPause();
+
+    const state = await whenReadingCompany('entreprise-a');
+
+    expect(state.referentiel?.operateurs.map(operateur => operateur.etat)).toEqual(['PRESENT']);
+  });
+
   it('should acquire the storage synchronisation lock when synchronizing', async () => {
     const { entered, release, chronology } = givenSynchronizationSignals();
 
@@ -377,6 +411,14 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
   const givenALegacyAcceptedArrival = async (): Promise<void> => {
     const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const }] };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
+  };
+  const givenAReferenceStoredWithAnOperatorOnPause = async (): Promise<void> => {
+    const stored = {
+      connecte: true,
+      evenements: [],
+      referentiel: { operateurs: [{ ...operateurJeanFixture, etat: 'EN_PAUSE' }], suivis: [] },
+    };
+    await storage.update('atelier:entreprise-a', stored, () => stored);
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
   const whenHoldingStorageLock = (

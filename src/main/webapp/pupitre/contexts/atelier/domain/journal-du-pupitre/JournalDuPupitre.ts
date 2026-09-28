@@ -1,8 +1,8 @@
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
-export type TypeDePresence = 'PAUSE' | 'REPRISE' | 'DEPART';
-export type EtatDePresence = 'ABSENT' | 'PRESENT' | 'EN_PAUSE';
+export type TypeDePresence = 'REPRISE' | 'DEPART';
+export type EtatDePresence = 'ABSENT' | 'PRESENT';
 
 export interface OperateurDuPupitre {
   readonly id: string;
@@ -52,9 +52,15 @@ interface PresenceCommune extends IdentiteDuGeste {
 }
 
 export type GesteDePresence =
-  | (PresenceCommune & { readonly type: TypeDePresence; readonly implicite: false; readonly assuranceArriveeId?: never })
-  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: false; readonly assuranceArriveeId: string })
-  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: true; readonly assuranceArriveeId?: never });
+  | (PresenceCommune & { readonly type: TypeDePresence; readonly implicite: false })
+  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: true });
+
+export type TypeDOuverture = Exclude<TypeDePointage, 'FIN'>;
+
+export interface Suspension {
+  readonly pause: string;
+  readonly reouverture: TypeDOuverture;
+}
 
 export interface GesteDePointage extends IdentiteDuGeste {
   readonly nature: 'POINTAGE';
@@ -62,7 +68,11 @@ export interface GesteDePointage extends IdentiteDuGeste {
   readonly suiviId: string;
   readonly type: TypeDePointage;
   readonly posteId?: string;
+  readonly suspension?: Suspension;
 }
+
+export const toReouverture = (activite: ActiviteDuPupitre): TypeDOuverture =>
+  activite.categorie === 'NON_CONFORMITE' ? 'NON_CONFORMITE' : 'DEBUT';
 
 export type GesteDAtelier = GesteDArrivee | GesteDePresence | GesteDePointage;
 
@@ -149,12 +159,6 @@ const isAcceptedPointageOf = (evenement: EvenementDuJournal, suiviId: string): b
 const isAcceptedPresenceOf = (evenement: EvenementDuJournal, operateurId: string): boolean =>
   evenement.etat === 'ACCEPTE' && evenement.geste.nature !== 'POINTAGE' && evenement.geste.operateurId === operateurId;
 
-const opensTheDay = (evenement: EvenementDuJournal, arriveeId: string, operateurId: string): boolean =>
-  evenement.geste.id === arriveeId
-  && evenement.geste.operateurId === operateurId
-  && 'journeeOuverte' in evenement
-  && evenement.journeeOuverte;
-
 export class EvenementsDuJournal {
   private readonly evenements: readonly EvenementDuJournal[];
 
@@ -168,10 +172,6 @@ export class EvenementsDuJournal {
 
   records(gesteId: string): boolean {
     return this.evenements.some(evenement => evenement.geste.id === gesteId);
-  }
-
-  hasOpenedDay(arriveeId: string, operateurId: string): boolean {
-    return this.evenements.some(evenement => opensTheDay(evenement, arriveeId, operateurId));
   }
 
   latestRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {

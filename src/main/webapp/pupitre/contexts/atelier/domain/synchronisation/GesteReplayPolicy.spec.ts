@@ -1,4 +1,4 @@
-import { EvenementDuJournal, EvenementsDuJournal, GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
+import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
 import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
 import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
@@ -16,8 +16,6 @@ const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', 
   ['PRESENCE_ASSUREE', 'transition-de-presence-interdite', 'INITIALE', 'ACCEPTER'],
   ['PRESENCE_ASSUREE', 'transition-de-presence-interdite', 'REJEU', 'ACCEPTER'],
   ['PRESENCE_ASSUREE', 'journee-de-travail-deja-ouverte', 'INITIALE', 'PROPAGER'],
-  ['REPRISE_APRES_ARRIVEE_OUVERTE', 'transition-de-presence-interdite', 'INITIALE', 'ACCEPTER'],
-  ['REPRISE_APRES_ARRIVEE_OUVERTE', 'transition-de-presence-interdite', 'REJEU', 'ACCEPTER'],
   ['GESTE_EXPLICITE', 'transition-de-presence-interdite', 'INITIALE', 'PROPAGER'],
   ['GESTE_EXPLICITE', 'suivi-d-atelier-cloture', 'INITIALE', 'PROPAGER'],
   ['GESTE_EXPLICITE', 'saisie-concurrente', 'INITIALE', 'RELIRE_ET_REJOUER'],
@@ -43,88 +41,6 @@ describe.each(refusFixtures)('GesteReplayPolicy for %s refusals', (_name, refusa
 });
 
 describe('GesteReplayPolicy', () => {
-  it('should absorb an explicit resumption refusal after its correlated arrival actually opened the day', () => {
-    const arrivee: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'jean' };
-    const reprise: GesteDAtelier = {
-      nature: 'PRESENCE',
-      id: 'reprise',
-      dateDeSurvenue: 'date',
-      operateurId: 'jean',
-      type: 'REPRISE',
-      implicite: false,
-      assuranceArriveeId: arrivee.id,
-    };
-    const journal: readonly EvenementDuJournal[] = [{ geste: arrivee, etat: 'ACCEPTE', journeeOuverte: true }];
-
-    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
-    const decision = decideReplay(operation, new RefusDAtelier('transition-de-presence-interdite', 'cause'));
-
-    expect(operation).toBe('REPRISE_APRES_ARRIVEE_OUVERTE');
-    thenDecisionIs(decision, 'ACCEPTER');
-  });
-
-  it('should propagate an explicit resumption refusal when arrival assurance found an already open day', () => {
-    const arrivee: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'jean' };
-    const reprise: GesteDAtelier = {
-      nature: 'PRESENCE',
-      id: 'reprise',
-      dateDeSurvenue: 'date',
-      operateurId: 'jean',
-      type: 'REPRISE',
-      implicite: false,
-      assuranceArriveeId: arrivee.id,
-    };
-    const journal: readonly EvenementDuJournal[] = [{ geste: arrivee, etat: 'ACCEPTE', journeeOuverte: false }];
-
-    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
-    const decision = decideReplay(operation, new RefusDAtelier('transition-de-presence-interdite', 'cause'));
-
-    expect(operation).toBe('GESTE_EXPLICITE');
-    thenDecisionIs(decision, 'PROPAGER');
-  });
-
-  it('should recognize the correlated arrival among unrelated journal events', () => {
-    const arrivee: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'jean' };
-    const autreArrivee: GesteDAtelier = { ...arrivee, id: 'autre-arrivee' };
-    const reprise: GesteDAtelier = {
-      nature: 'PRESENCE',
-      id: 'reprise',
-      dateDeSurvenue: 'date',
-      operateurId: 'jean',
-      type: 'REPRISE',
-      implicite: false,
-      assuranceArriveeId: arrivee.id,
-    };
-    const journal: readonly EvenementDuJournal[] = [
-      { geste: autreArrivee, etat: 'ACCEPTE', journeeOuverte: true },
-      { geste: arrivee, etat: 'ACCEPTE', journeeOuverte: true },
-    ];
-
-    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
-
-    thenOperationIs(operation, 'REPRISE_APRES_ARRIVEE_OUVERTE');
-  });
-
-  it.each([
-    ['another arrival', { nature: 'ARRIVEE', id: 'autre-arrivee', dateDeSurvenue: 'date', operateurId: 'jean' }],
-    ['another operator arrival', { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: 'date', operateurId: 'marie' }],
-  ] satisfies readonly [string, GesteDAtelier][])('should ignore %s when correlating an assured arrival', (_name, unrelatedArrival) => {
-    const reprise: GesteDAtelier = {
-      nature: 'PRESENCE',
-      id: 'reprise',
-      dateDeSurvenue: 'date',
-      operateurId: 'jean',
-      type: 'REPRISE',
-      implicite: false,
-      assuranceArriveeId: 'arrivee',
-    };
-    const journal: readonly EvenementDuJournal[] = [{ geste: unrelatedArrival, etat: 'ACCEPTE', journeeOuverte: true }];
-
-    const operation = operationFor(reprise, new EvenementsDuJournal(journal));
-
-    thenOperationIs(operation, 'GESTE_EXPLICITE');
-  });
-
   it.each([
     new Error('network'),
     new RefusDePublication('refus autre contexte', 'autre contexte'),

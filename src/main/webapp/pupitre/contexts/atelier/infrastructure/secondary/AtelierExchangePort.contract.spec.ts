@@ -91,6 +91,14 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     http.verify();
   });
 
+  it('should read an operator the server still reports on pause as present, the pause living on the pupitre', async () => {
+    const reference = whenReadingReference();
+
+    await whenServerReturnsTheReference();
+
+    await thenOperatorIsReadAs(reference, 'jean', 'PRESENT');
+  });
+
   it('should read the whole pupitre reference in a single unbounded request', async () => {
     const reference = whenReadingReference();
 
@@ -112,13 +120,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     const arrivee = whenSending(arriveeFixture);
     const arriveeRequest = await whenServerAcceptsWrite('/api/atelier/journees');
 
-    const presence = whenSending({
-      ...arriveeFixture,
-      nature: 'PRESENCE',
-      type: 'REPRISE',
-      implicite: false,
-      assuranceArriveeId: 'arrivee-assuree',
-    });
+    const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'DEPART', implicite: false });
     const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
 
     const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
@@ -136,7 +138,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       id: 'geste',
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
-      type: 'REPRISE',
+      type: 'DEPART',
     });
     await thenWriteSucceededWith(pointage, pointageRequest, {
       id: 'geste',
@@ -150,6 +152,26 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'FIN',
+    });
+  });
+
+  it('should never send the pause a finish belongs to, the pause living on the pupitre', async () => {
+    const fin = whenSending({
+      ...arriveeFixture,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      type: 'FIN',
+      posteId: 'tour',
+      suspension: { pause: 'pause-de-midi', reouverture: 'DEBUT' },
+    });
+    const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+
+    await thenWriteSucceededWith(fin, request, {
+      id: 'geste',
+      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      operateur: 'jean',
+      type: 'FIN',
+      poste: 'tour',
     });
   });
 
@@ -254,7 +276,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
     expect(reference.operateurs).toEqual([
-      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'EN_PAUSE', postes: [], evenements: [] },
+      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'PRESENT', postes: [], evenements: [] },
       { id: 'marie', nom: 'Martin', prenom: 'Marie', etat: 'ABSENT', postes: [{ id: 'tour', libelle: 'Tour' }], evenements: [] },
     ]);
     expect(reference.suivis[0]).toEqual({
@@ -277,6 +299,10 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       ],
       evenements: [],
     });
+  };
+  const thenOperatorIsReadAs = async (operation: Promise<ReferentielDuPupitre>, operateurId: string, etat: string): Promise<void> => {
+    const reference = await operation;
+    expect(reference.operateurs.find(operateur => operateur.id === operateurId)?.etat).toBe(etat);
   };
   const thenItFailed = async (operation: Promise<unknown>, expectedMessage?: string): Promise<void> => {
     if (expectedMessage !== undefined) {

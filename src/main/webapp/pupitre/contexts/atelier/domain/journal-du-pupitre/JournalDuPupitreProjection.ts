@@ -57,8 +57,7 @@ type CleDeTransition = 'ARRIVEE' | TypeDePresence;
 
 const TRANSITIONS_DE_PRESENCE: Record<EtatDePresence, Partial<Record<CleDeTransition, EtatDePresence>>> = {
   ABSENT: { ARRIVEE: 'PRESENT' },
-  PRESENT: { PAUSE: 'EN_PAUSE', DEPART: 'ABSENT' },
-  EN_PAUSE: { REPRISE: 'PRESENT', DEPART: 'ABSENT' },
+  PRESENT: { DEPART: 'ABSENT' },
 };
 
 const cleDeTransitionFor = (geste: GesteDArrivee | GesteDePresence): CleDeTransition =>

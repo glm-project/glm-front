@@ -3,7 +3,6 @@ import {
   EvenementAccepte,
   EvenementDuJournal,
   GesteDArrivee,
-  GesteDAtelier,
   GesteDePointage,
   GesteDePresence,
   JournalDuPupitre,
@@ -134,20 +133,12 @@ describe('JournalDuPupitreProjection', () => {
   });
 
   it('should prevent arrival causality from being carried by incompatible gestures and outcomes', () => {
-    const pauseWithArrivalCausality = {
-      ...debutGesteFixture,
-      nature: 'PRESENCE' as const,
-      type: 'PAUSE' as const,
-      implicite: false as const,
-      assuranceArriveeId: 'arrivee',
-    };
     const pointageWithDayOutcome = { geste: debutGesteFixture, etat: 'ACCEPTE' as const, journeeOuverte: true };
     const arrivalWithoutDayOutcome = {
       geste: { ...debutGesteFixture, nature: 'ARRIVEE' as const },
       etat: 'ACCEPTE' as const,
     };
 
-    expectTypeOf(pauseWithArrivalCausality).not.toExtend<GesteDAtelier>();
     expectTypeOf(pointageWithDayOutcome).not.toExtend<EvenementDuJournal>();
     expectTypeOf(arrivalWithoutDayOutcome).not.toExtend<EvenementDuJournal>();
   });
@@ -168,24 +159,8 @@ describe('JournalDuPupitreProjection', () => {
     thenOperatorStateIs(projection, 'jean', 'PRESENT');
   });
 
-  it('should put an operator on pause through the arrival assurance from absent', () => {
-    const state = givenPresenceEvents('ABSENT', [arriveeFixture, givenPresence('PAUSE')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'EN_PAUSE');
-  });
-
-  it('should put a paused operator back to work after a local resumption', () => {
-    const state = givenPresenceEvents('EN_PAUSE', [givenPresence('REPRISE')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'PRESENT');
-  });
-
-  it.each(['PRESENT', 'EN_PAUSE'] as const)('should make a %s operator absent after a local departure', etatDeDepart => {
-    const state = givenPresenceEvents(etatDeDepart, [givenPresence('DEPART')]);
+  it('should make a present operator absent after a local departure', () => {
+    const state = givenPresenceEvents('PRESENT', [givenPresence('DEPART')]);
 
     const projection = whenProjecting(state);
 
@@ -193,15 +168,15 @@ describe('JournalDuPupitreProjection', () => {
   });
 
   it('should leave the state unchanged on an illegal transition', () => {
-    const state = givenPresenceEvents('EN_PAUSE', [givenPresence('PAUSE')]);
+    const state = givenPresenceEvents('ABSENT', [givenPresence('DEPART')]);
 
     const projection = whenProjecting(state);
 
-    thenOperatorStateIs(projection, 'jean', 'EN_PAUSE');
+    thenOperatorStateIs(projection, 'jean', 'ABSENT');
   });
 
   it('should ignore a refused presence gesture', () => {
-    const state = givenPresenceEvents('PRESENT', [givenRefusedPresence('PAUSE')]);
+    const state = givenPresenceEvents('PRESENT', [givenRefusedPresence('DEPART')]);
 
     const projection = whenProjecting(state);
 
@@ -209,11 +184,11 @@ describe('JournalDuPupitreProjection', () => {
   });
 
   it('should not move an operator targeted by another operator’s gesture', () => {
-    const state = givenPresenceEvents('ABSENT', [givenPresence('PAUSE', 'marie')]);
+    const state = givenPresenceEvents('PRESENT', [givenPresence('DEPART', 'marie')]);
 
     const projection = whenProjecting(state);
 
-    thenOperatorStateIs(projection, 'jean', 'ABSENT');
+    thenOperatorStateIs(projection, 'jean', 'PRESENT');
   });
 
   it('should apply an arrival only to the targeted operator when another operator is also absent', () => {

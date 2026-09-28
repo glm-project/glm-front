@@ -1,4 +1,4 @@
-import { EtatDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { SituationDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { dataSelector } from '@test/utils/DataSelector';
@@ -125,11 +125,11 @@ describe('Pupitre header', () => {
     thenThereIsNoLogo();
   });
 
-  it.each<[EtatDePresence, string]>([
+  it.each<[SituationDeLOperateur, string]>([
     ['ABSENT', 'Pas encore arrivé'],
     ['PRESENT', 'Présent'],
     ['EN_PAUSE', 'En pause'],
-  ])('should show the operator presence %s as "%s" under the name', async (etat, libelle) => {
+  ])('should show the operator situation %s as "%s" under the name', async (etat, libelle) => {
     givenAConnectedPupitre();
     givenADesignatedOperator();
     givenAPresence(etat);
@@ -170,7 +170,7 @@ describe('Pupitre header', () => {
     fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
     fixture.componentRef.setInput('presence', 'ABSENT');
   };
-  const givenAPresence = (etat: EtatDePresence): void => {
+  const givenAPresence = (etat: SituationDeLOperateur): void => {
     fixture.componentRef.setInput('presence', etat);
   };
   const givenACurrentRefusal = (): void => {

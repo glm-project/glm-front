@@ -11,6 +11,10 @@ Complemented by [ADR 0034](0034-proxy-the-api-at-the-edge.md): the routes still 
 are, and a Cloudflare Pages Function answers `/api/**` for the deployed pupitre.
 Amended by [ADR 0037](0037-require-production-consumers.md): the unused `Page.isComplete()` helper is removed;
 pages still expose their elements and the server total.
+Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md): clocking in no longer resumes a paused presence, the
+pause having left the server; the only composed gesture left is the arrival assurance, which still swallows
+`journee-de-travail-deja-ouverte` and nothing else. The typed client, the adapter translation and the refusal rules
+below stand.
 
 ## Context
 

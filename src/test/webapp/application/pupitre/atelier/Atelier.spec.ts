@@ -29,10 +29,6 @@ const referentielFixture: ReferentielDuPupitre = {
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
 };
 const operateurPresentFixture = { ...operateurFixture, etat: 'PRESENT' } as const;
-const referentielOperateurPresentFixture: ReferentielDuPupitre = {
-  operateurs: [operateurPresentFixture],
-  suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
-};
 const activiteFixture = { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' } as const;
 const referentielActifFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
@@ -41,6 +37,7 @@ const referentielActifFixture: ReferentielDuPupitre = {
     { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture] },
   ],
 };
+const referentielActifPresentFixture: ReferentielDuPupitre = { ...referentielActifFixture, operateurs: [operateurPresentFixture] };
 const operateurMultiPosteFixture = {
   ...operateurFixture,
   postes: [
@@ -62,10 +59,12 @@ interface RequeteMetier {
 describe('Pupitre workshop journey', () => {
   let requetes: RequeteMetier[];
   let pendingResponse: ReturnType<typeof interceptForever> | undefined;
+  let online: boolean;
 
   beforeEach(() => {
     requetes = [];
     pendingResponse = undefined;
+    online = true;
   });
 
   afterEach(() => {
@@ -83,15 +82,16 @@ describe('Pupitre workshop journey', () => {
     thenNoNewDeviceAuthorizationWasRequested();
   });
 
-  it('should send one global pause after the first pointage', () => {
-    givenAnEnrolledPupitre(referentielFixture);
-
+  it('should replay a pause and its resumption taken offline as finishes then starts, without any pause or resumption', () => {
+    givenAnEnrolledPupitre(referentielActifFixture);
+    givenTheNetworkIsDown();
     whenDesignatingOperator049();
-    whenStartingElement('piece-1');
-    whenPausingAllWork();
 
-    thenPauseWasSentOnceWithoutPointagePerElement();
-    thenNoNewDeviceAuthorizationWasRequested();
+    whenPausingAllWork();
+    whenResumingAllWork();
+    whenTheNetworkReturns();
+
+    thenThePauseAndItsResumptionWereReplayedInOrder();
   });
 
   it('should stop every personal activity before leaving the operator day', () => {
@@ -125,24 +125,24 @@ describe('Pupitre workshop journey', () => {
   });
 
   it('should show a pause optimistically while the server response is pending', () => {
-    givenAnEnrolledPupitre(referentielOperateurPresentFixture);
+    givenAnEnrolledPupitre(referentielActifPresentFixture);
     whenDesignatingOperator049();
-    givenPausingWillBeRefused();
+    givenSuspendingWillBeRefused();
 
-    whenPausingOptimistically();
+    whenPausingAllWork();
 
-    thenPresenceIsOptimisticallyInPause();
+    thenTheOperatorIsOptimisticallyOnPause();
   });
 
-  it('should restore the server presence and show its refusal after an optimistic pause is refused', () => {
-    givenAnEnrolledPupitre(referentielOperateurPresentFixture);
+  it('should reopen the suspended activity and show its refusal after an optimistic pause is refused', () => {
+    givenAnEnrolledPupitre({ ...referentielActifPresentFixture, suivis: referentielActifPresentFixture.suivis.slice(0, 1) });
     whenDesignatingOperator049();
-    const refusal = givenPausingWillBeRefused();
+    const refusal = givenSuspendingWillBeRefused();
 
-    whenPausingOptimistically();
+    whenPausingAllWork();
     whenServerAnswers(refusal);
 
-    thenPresenceRefusalReconciles('PAUSE', 'Pause refusée par le serveur');
+    thenThePauseRefusalReconciles('PAUSE', 'Pause refusée par le serveur');
   });
 
   it('should close workstation choice on finish without sending work', () => {
@@ -211,17 +211,36 @@ describe('Pupitre workshop journey', () => {
 
   const observeWorkshopWrites = (): void => {
     cy.intercept('POST', '/api/atelier/journees', request => {
-      observeRequest(request, 'ARRIVEE');
-      request.reply({ statusCode: 200, body: {} });
+      replyWhenOnline(request, 'ARRIVEE');
     });
     cy.intercept('POST', '/api/atelier/journees/pointages', request => {
-      observeRequest(request, String((request.body as { type?: unknown }).type));
-      request.reply({ statusCode: 200, body: {} });
+      replyWhenOnline(request, String((request.body as { type?: unknown }).type));
     }).as('presence');
     cy.intercept('POST', '/api/atelier/suivis/*/pointages', request => {
-      observeRequest(request, String((request.body as { type?: unknown }).type));
-      request.reply({ statusCode: 200, body: {} });
+      replyWhenOnline(request, String((request.body as { type?: unknown }).type));
     }).as('pointage');
+  };
+
+  const replyWhenOnline = (request: CyHttpMessages.IncomingHttpRequest, type: string): void => {
+    if (!online) {
+      request.reply({ forceNetworkError: true });
+      return;
+    }
+    observeRequest(request, type);
+    request.reply({ statusCode: 200, body: {} });
+  };
+
+  const givenTheNetworkIsDown = (): void => {
+    cy.then(() => {
+      online = false;
+    });
+  };
+
+  const whenTheNetworkReturns = (): void => {
+    cy.then(() => {
+      online = true;
+    });
+    cy.window().then(window => window.dispatchEvent(new Event('online')));
   };
 
   const observeRequest = (request: CyHttpMessages.IncomingHttpRequest, type: string): void => {
@@ -267,24 +286,23 @@ describe('Pupitre workshop journey', () => {
   };
 
   const whenPausingAllWork = (): void => {
-    cy.get(dataSelector('pause')).click();
-    cy.wait('@presence');
+    cy.get(dataSelector('pause')).should('not.be.disabled').click();
   };
 
-  const givenPausingWillBeRefused = (): ReturnType<typeof interceptForever> => {
+  const whenResumingAllWork = (): void => {
+    cy.get(dataSelector('resume')).should('not.be.disabled').click();
+  };
+
+  const givenSuspendingWillBeRefused = (): ReturnType<typeof interceptForever> => {
     pendingResponse = interceptForever(
-      { method: 'POST', url: '/api/atelier/journees/pointages' },
+      { method: 'POST', url: '/api/atelier/suivis/piece-active-1/pointages' },
       {
         statusCode: 409,
-        body: { type: 'urn:glm:erreur:atelier:transition-de-presence-interdite', message: 'Pause refusée par le serveur' },
+        body: { type: 'urn:glm:erreur:atelier:transition-d-atelier-interdite', message: 'Pause refusée par le serveur' },
       },
-      'refusedPresence',
+      'refusedSuspension',
     );
     return pendingResponse;
-  };
-
-  const whenPausingOptimistically = (): void => {
-    cy.get(dataSelector('pause')).click();
   };
 
   const whenStoppingAllWork = (): void => {
@@ -316,9 +334,16 @@ describe('Pupitre workshop journey', () => {
     });
   };
 
-  const thenPauseWasSentOnceWithoutPointagePerElement = (): void => {
+  const thenThePauseAndItsResumptionWereReplayedInOrder = (): void => {
     cy.wrap(requetes).should(requests => {
-      expect(requests.map(({ type }) => type)).to.deep.equal(['ARRIVEE', 'REPRISE', 'DEBUT', 'PAUSE']);
+      expect(requests.map(({ type }) => type)).to.deep.equal(['FIN', 'FIN', 'ARRIVEE', 'DEBUT', 'DEBUT']);
+      expect(requests.map(({ route }) => new URL(route).pathname)).to.deep.equal([
+        '/api/atelier/suivis/piece-active-1/pointages',
+        '/api/atelier/suivis/piece-active-2/pointages',
+        '/api/atelier/journees',
+        '/api/atelier/suivis/piece-active-1/pointages',
+        '/api/atelier/suivis/piece-active-2/pointages',
+      ]);
     });
   };
 
@@ -352,15 +377,17 @@ describe('Pupitre workshop journey', () => {
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
   };
 
-  const thenPresenceIsOptimisticallyInPause = (): void => {
+  const thenTheOperatorIsOptimisticallyOnPause = (): void => {
     cy.get(dataSelector('header-presence')).should('contain.text', 'En pause');
     cy.get(dataSelector('pause')).should('be.disabled');
+    cy.get(dataSelector('resume')).should('not.be.disabled');
   };
 
-  const thenPresenceRefusalReconciles = (context: string, message: string): void => {
-    cy.wait('@refusedPresence');
+  const thenThePauseRefusalReconciles = (context: string, message: string): void => {
+    cy.wait('@refusedSuspension');
     cy.get(dataSelector('header-presence')).should('contain.text', 'Présent');
     cy.get(dataSelector('pause')).should('not.be.disabled');
+    cy.get(dataSelector('resume')).should('be.disabled');
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
   };
 

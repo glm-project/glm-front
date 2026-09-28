@@ -1,16 +1,32 @@
 import { EtatDePresence } from '../../journal-du-pupitre/JournalDuPupitre';
 import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
 
-const AUTORISATIONS: Record<EtatDePresence, Record<IntentionGlobaleDAtelier, boolean>> = {
-  ABSENT: { PAUSE: true, REPRENDRE: true, TOUT_ARRETER: true },
-  PRESENT: { PAUSE: true, REPRENDRE: false, TOUT_ARRETER: true },
-  EN_PAUSE: { PAUSE: false, REPRENDRE: true, TOUT_ARRETER: true },
+export type SituationDeLOperateur = EtatDePresence | 'EN_PAUSE';
+
+interface ConstatDePresence {
+  readonly etat: EtatDePresence;
+  readonly activiteEnCours: boolean;
+  readonly pauseEnCours: boolean;
+}
+
+const AUTORISATIONS: Record<IntentionGlobaleDAtelier, (constat: ConstatDePresence) => boolean> = {
+  PAUSE: constat => constat.activiteEnCours,
+  REPRENDRE: constat => constat.pauseEnCours,
+  TOUT_ARRETER: () => true,
 };
 
 export class PresenceDeLOperateur {
-  constructor(readonly etat: EtatDePresence) {}
+  constructor(private readonly constat: ConstatDePresence) {}
+
+  get situation(): SituationDeLOperateur {
+    return this.isShownOnPause() ? 'EN_PAUSE' : this.constat.etat;
+  }
 
   permet(intention: IntentionGlobaleDAtelier): boolean {
-    return AUTORISATIONS[this.etat][intention];
+    return AUTORISATIONS[intention](this.constat);
+  }
+
+  private isShownOnPause(): boolean {
+    return this.constat.pauseEnCours && this.constat.etat === 'PRESENT';
   }
 }

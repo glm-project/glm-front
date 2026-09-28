@@ -1,5 +1,5 @@
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
-import { EtatDePresence } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { SituationDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { LIBELLES_ENTETE_PUPITRE } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Component, input, OnDestroy, output } from '@angular/core';
 
@@ -21,7 +21,7 @@ export class PupitreHeader implements OnDestroy {
   readonly heading = input.required<string>();
   readonly connected = input.required<boolean>();
   readonly operateur = input<IdentiteOperateurDesigne>();
-  readonly presence = input.required<EtatDePresence>();
+  readonly presence = input.required<SituationDeLOperateur>();
   readonly message = input<MessageDAtelierVisible>();
   readonly finRequested = output();
   readonly reinitialisationRequested = output();

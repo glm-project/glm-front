@@ -216,9 +216,8 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
-    await whenPausingGlobally();
 
-    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'PRESENCE', 'POINTAGE', 'PRESENCE']);
+    await thenNatureOrderIs(['ARRIVEE', 'PRESENCE', 'POINTAGE', 'PRESENCE', 'POINTAGE']);
     thenActivityIs('NON_CONFORMITE');
     await thenQueueHasUniqueStableIdentities();
   });
@@ -299,7 +298,7 @@ describe('AtelierCoordinator', () => {
     thenGlobalGesturesAreAvailable(true);
   });
 
-  it('should refuse a prepared workstation choice and explicit presence while a global acceptance is in flight', async () => {
+  it('should refuse a prepared workstation choice and another global command while a global acceptance is in flight', async () => {
     await givenAMultiWorkstationOpenWindow();
     const choice = whenPressingPrimaryTarget();
     const releaseCapture = givenDelayedCapture();
@@ -336,7 +335,7 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should publish global rejection and recovery through its completion and public signals', async () => {
-    await givenAnOpenWindow();
+    await givenTwoActiveWorkstations();
     givenLocalWriteFailsOnce();
 
     const pausing = whenPausingGlobally();
@@ -344,22 +343,22 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([pausing]);
     const failedPresentation = readWindowPresentation();
     const availabilityAfterFailure = designation.gestesDisponibles();
-    const resuming = whenResumingGlobally();
-    const availabilityDuringResume = designation.gestesDisponibles();
-    await resuming;
+    const retrying = whenPausingGlobally();
+    const availabilityDuringRetry = designation.gestesDisponibles();
+    await retrying;
 
     expect(availabilityDuringPause).toBe(false);
     await thenFails(pausing, 'disque plein');
     expect(failedPresentation.echecLocal).toBe(true);
     expect(availabilityAfterFailure).toBe(true);
-    expect(availabilityDuringResume).toBe(false);
+    expect(availabilityDuringRetry).toBe(false);
     thenGlobalRecordingRecovered();
     thenGlobalGesturesAreAvailable(true);
-    thenAcceptedBatchesAre([['ARRIVEE', 'REPRISE']]);
+    thenAcceptedBatchesAre([['FIN:piece-tour:tour', 'FIN:piece-fraiseuse:fraiseuse']]);
   });
 
-  it('should publish a local presence failure', async () => {
-    await givenAnOpenWindow();
+  it('should publish a local failure of a pause', async () => {
+    await givenTwoActiveWorkstations();
     givenLocalWriteFailsOnce();
     const pausing = whenPausingGlobally();
     await Promise.allSettled([pausing]);
@@ -368,8 +367,8 @@ describe('AtelierCoordinator', () => {
     thenGlobalRecordingFailed();
   });
 
-  it('should clear the local presence failure after a successful retry', async () => {
-    await givenAnOpenWindow();
+  it('should clear the local failure of a pause after a successful retry', async () => {
+    await givenTwoActiveWorkstations();
     givenLocalWriteFailsOnce();
     const pausing = whenPausingGlobally();
     await Promise.allSettled([pausing]);
@@ -548,11 +547,12 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should absorb only an existing arrival and an implicitly resumed presence', async () => {
-    await givenResumedWorkOffline();
+    await givenWorkStoppedOffline();
     givenAuthorizedAccess();
     givenServerFailures(
       refusalFixture('journee-de-travail-deja-ouverte'),
       refusalFixture('transition-de-presence-interdite'),
+      undefined,
       undefined,
       refusalFixture('transition-de-presence-interdite'),
     );
@@ -563,51 +563,15 @@ describe('AtelierCoordinator', () => {
     await thenRefusalIs('transition-de-presence-interdite');
   });
 
-  it('should absorb an explicit resumption refusal after restart when its correlated arrival opened the day', async () => {
-    await givenAnOpenWindow();
-    await pupitre.executeGlobale('REPRENDRE');
-    await whenSynchronizing();
-    givenAuthorizedAccess();
-    givenServerFailures(undefined, new Error('reseau absent'));
-
-    await whenSynchronizing();
-
-    pupitre = buildPupitre();
-    await whenRestoring();
-    givenServerFailures(refusalFixture('transition-de-presence-interdite'));
-
-    await whenSynchronizing();
-
-    await thenPendingIs(0);
-    await thenDiagnosticsCountIs(0);
-  });
-
-  it('should retain pending resumption when arrival finds an already open day', async () => {
-    await givenAnOpenWindow();
-    await pupitre.executeGlobale('REPRENDRE');
+  it('should retain pending gestures when arrival finds an already open day', async () => {
+    await givenWorkStartedOffline();
     await whenSynchronizing();
     givenAuthorizedAccess();
     givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
     await whenSynchronizing();
 
     await thenArrivalOpenedDay(false);
-    await thenPendingIs(1);
-  });
-
-  it('should retain the explicit resumption refusal after restart', async () => {
-    await givenAnOpenWindow();
-    await pupitre.executeGlobale('REPRENDRE');
-    await whenSynchronizing();
-    givenAuthorizedAccess();
-    givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
-    await whenSynchronizing();
-    pupitre = buildPupitre();
-    await whenRestoring();
-    givenServerFailures(refusalFixture('transition-de-presence-interdite'));
-    await whenSynchronizing();
-
-    await thenPendingIs(0);
-    await thenRefusalIs('transition-de-presence-interdite');
+    await thenPendingIs(2);
   });
 
   it('should reread before retrying a concurrent gesture with its original body', async () => {
@@ -788,7 +752,7 @@ describe('AtelierCoordinator', () => {
 
     const openings = await whenOpeningBothOperators();
 
-    await whenPausingGlobally();
+    await whenStoppingEverything();
     givenAuthorizedAccess();
     await whenSynchronizing();
 
@@ -899,7 +863,7 @@ describe('AtelierCoordinator', () => {
   it('should push a gesture accepted while the reference is being refreshed without waiting for the next minute', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
-    givenPauseIsAppendedDuringReferenceRefresh();
+    givenStopIsAppendedDuringReferenceRefresh();
 
     await whenSynchronizing();
     await whenClosing();
@@ -1169,7 +1133,6 @@ describe('AtelierCoordinator', () => {
     await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
   };
   const whenPausingGlobally = (): Promise<void> => pupitre.executeGlobale('PAUSE');
-  const whenResumingGlobally = (): Promise<void> => pupitre.executeGlobale('REPRENDRE');
   const whenStoppingEverything = (): Promise<void> => pupitre.executeGlobale('TOUT_ARRETER');
   const whenSynchronizing = (): Promise<void> => pupitre.synchronize();
   const whenSynchronizingConcurrently = async (): Promise<void> => {
@@ -1229,9 +1192,9 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
     await whenStarting();
   };
-  const givenResumedWorkOffline = async (): Promise<void> => {
+  const givenWorkStoppedOffline = async (): Promise<void> => {
     await givenWorkStartedOffline();
-    await pupitre.executeGlobale('REPRENDRE');
+    await whenStoppingEverything();
   };
   const givenRestoredPupitre = async (): Promise<void> => {
     await whenRestoring();
@@ -1304,10 +1267,10 @@ describe('AtelierCoordinator', () => {
   const givenEmptyCompanySelected = (): void => {
     authentication.tenant = 'entreprise-vide';
   };
-  const givenPauseIsAppendedDuringReferenceRefresh = (): void => {
+  const givenStopIsAppendedDuringReferenceRefresh = (): void => {
     serveur.afterReference = () => {
       serveur.afterReference = undefined;
-      void pupitre.executeGlobale('PAUSE');
+      void pupitre.executeGlobale('TOUT_ARRETER');
     };
   };
   const thenQueueHas = async (count: number): Promise<void> => {
@@ -1408,7 +1371,7 @@ describe('AtelierCoordinator', () => {
   };
   const thenPresenceBelongsTo = (operateurId: string): void => {
     expect(serveur.journal.filter(geste => geste.nature === 'PRESENCE')).toEqual([
-      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'PAUSE', implicite: false }),
+      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'DEPART', implicite: false }),
     ]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {

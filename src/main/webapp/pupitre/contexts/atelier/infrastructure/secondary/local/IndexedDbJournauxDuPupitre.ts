@@ -1,10 +1,12 @@
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
+  EtatDePresence,
   EvenementDuJournal,
   EvenementsDuJournal,
   GesteDAtelier,
   JournalDuPupitre,
+  OperateurDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
@@ -20,7 +22,12 @@ interface EvenementAccepteStocke {
   readonly refus?: never;
 }
 type EvenementStocke = Exclude<EvenementDuJournal, { readonly etat: 'ACCEPTE' }> | EvenementAccepteStocke;
-type JournalDuPupitreStocke = Omit<JournalDuPupitre, 'evenements'> & { readonly evenements: readonly EvenementStocke[] };
+type OperateurStocke = Omit<OperateurDuPupitre, 'etat'> & { readonly etat: EtatDePresence | 'EN_PAUSE' };
+type ReferentielStocke = Omit<ReferentielDuPupitre, 'operateurs'> & { readonly operateurs: readonly OperateurStocke[] };
+type JournalDuPupitreStocke = Omit<JournalDuPupitre, 'evenements' | 'referentiel'> & {
+  readonly evenements: readonly EvenementStocke[];
+  readonly referentiel?: ReferentielStocke;
+};
 
 const restoreEvenement = (evenement: EvenementStocke): EvenementDuJournal => {
   if (evenement.etat !== 'ACCEPTE') return evenement;
@@ -29,9 +36,20 @@ const restoreEvenement = (evenement: EvenementStocke): EvenementDuJournal => {
     : { geste: evenement.geste, etat: 'ACCEPTE' };
 };
 
-const restoreJournal = (journal: JournalDuPupitreStocke): JournalDuPupitre => ({
+const restoreOperateur = (operateur: OperateurStocke): OperateurDuPupitre => ({
+  ...operateur,
+  etat: operateur.etat === 'EN_PAUSE' ? 'PRESENT' : operateur.etat,
+});
+
+const restoreReferentiel = (referentiel: ReferentielStocke): ReferentielDuPupitre => ({
+  ...referentiel,
+  operateurs: referentiel.operateurs.map(restoreOperateur),
+});
+
+const restoreJournal = ({ referentiel, ...journal }: JournalDuPupitreStocke): JournalDuPupitre => ({
   ...journal,
   evenements: journal.evenements.map(restoreEvenement),
+  ...(referentiel === undefined ? {} : { referentiel: restoreReferentiel(referentiel) }),
 });
 
 const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
