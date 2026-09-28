@@ -6,6 +6,7 @@
 
 - `Amends 0031: the grid becomes four state lanes, ordered alphabetically within each lane, the screen calls an open working visit « venue ouverte », and an activity without a workstation shows « Sans poste » instead of omitting the workstation.`
 - `Complements 0040: green means at work, brown warn the pause, red danger the absence, and yellow nc a non-conformity laid over an activity.`
+- `Amended by 0046: three lanes, Au travail · Sans affectation · Absents, and no brown warn; the presence state is PRESENT or ABSENT, an operator on pause is present without activity and appears in Sans affectation, no activity or NC is shown suspended, and a card shows « arrivée », never « pause depuis ».`
 
 ## Context
 

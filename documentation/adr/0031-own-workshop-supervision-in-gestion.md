@@ -15,9 +15,10 @@ Intermediate source ports and mixed per-source adapter wiring are replaced by th
 The domain still interprets presence, activities and anomalies. A primary resource displays acquisition
 failures and domain refusals as errors, without retaining the previous grid.
 
-Amended by [0041](0041-sort-workshop-supervision-into-state-lanes.md): the grid becomes four state lanes, ordered
-alphabetically within each lane, the screen calls an open working visit « venue ouverte », and an activity without
-a workstation shows « Sans poste » instead of omitting the workstation label.
+Amended by [0041](0041-sort-workshop-supervision-into-state-lanes.md): the grid becomes state lanes — three since
+[0046](0046-stop-showing-the-pause-in-workshop-supervision.md) removed « En pause » — ordered alphabetically
+within each lane, the screen calls an open working visit « venue ouverte », and an activity without a
+workstation shows « Sans poste » instead of omitting the workstation label.
 
 ## Context
 
