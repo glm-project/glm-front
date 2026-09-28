@@ -79,7 +79,7 @@ const bobFixture = operateurFixture('bob', 'Durand', 'Bob');
 const chloeFixture = operateurFixture('chloe', 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
   operateurs: [aliceFixture, bobFixture, chloeFixture],
-  journees: [JourneeDeTravail.open(aliceFixture.id, 'PRESENT'), JourneeDeTravail.open(bobFixture.id, 'EN_PAUSE')],
+  journees: [JourneeDeTravail.open(aliceFixture.id), JourneeDeTravail.open(bobFixture.id)],
   activites: [],
 };
 
@@ -106,14 +106,14 @@ const atelierFixture: DonneesDeSupervision = {
     aubertFixture,
   ],
   journees: [
-    JourneeDeTravail.open(aubertFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(6, 58))]),
-    JourneeDeTravail.open(dumasFixture.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(6, 45), instantFixture(9, 0))]),
-    JourneeDeTravail.open(lefevreFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(8, 55))]),
-    JourneeDeTravail.open(marchandFixture.id, 'PRESENT', [new FenetreDePresence(veilleFixture(6, 4))]),
+    JourneeDeTravail.open(aubertFixture.id, [new FenetreDePresence(instantFixture(6, 58))]),
+    JourneeDeTravail.open(dumasFixture.id, [new FenetreDePresence(instantFixture(6, 45))]),
+    JourneeDeTravail.open(lefevreFixture.id, [new FenetreDePresence(instantFixture(8, 55))]),
+    JourneeDeTravail.open(marchandFixture.id, [new FenetreDePresence(veilleFixture(6, 4))]),
     JourneeDeTravail.closed(perrinFixture.id, [new FenetreDePresence(instantFixture(6, 30), instantFixture(9, 20))]),
-    JourneeDeTravail.open(rouxFixture.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(6, 40), instantFixture(9, 45))]),
-    JourneeDeTravail.open(schmittFixture.id, 'EN_PAUSE'),
-    JourneeDeTravail.open(vidalFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(9, 48))]),
+    JourneeDeTravail.open(rouxFixture.id, [new FenetreDePresence(instantFixture(6, 40))]),
+    JourneeDeTravail.open(schmittFixture.id),
+    JourneeDeTravail.open(vidalFixture.id, [new FenetreDePresence(instantFixture(9, 48))]),
   ],
   activites: [
     activiteFixture(aubertFixture, {
@@ -128,12 +128,6 @@ const atelierFixture: DonneesDeSupervision = {
       objet: mouleFixture('1015'),
       poste: posteFixture('Fraiseuse 1', 'Fraisage'),
       debut: instantFixture(7, 5),
-    }),
-    activiteFixture(dumasFixture, {
-      id: 'act-dumas',
-      objet: ofFixture('3002', 'OF-2026-000040'),
-      poste: posteFixture('Scie 1', 'Sciage'),
-      debut: instantFixture(7, 10),
     }),
     activiteFixture(marchandFixture, {
       id: 'act-marchand',
@@ -163,51 +157,11 @@ const absentsActifsFixture = (nombre: number): DonneesDeSupervision => {
   };
 };
 
-const nonConformitesFixture = ({
-  auTravail,
-  enPause,
-}: {
-  readonly auTravail: readonly OperateurDeclare[];
-  readonly enPause: readonly OperateurDeclare[];
-}): DonneesDeSupervision => ({
-  operateurs: [...auTravail, ...enPause],
-  journees: [
-    ...auTravail.map(operateur => JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(instantFixture(7))])),
-    ...enPause.map(operateur =>
-      JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
-    ),
-  ],
-  activites: [...auTravail, ...enPause].map(operateur =>
-    activiteFixture(operateur, {
-      id: `act-${operateur.id.value}`,
-      objet: mouleFixture('1015'),
-      categorie: 'NON_CONFORMITE',
-      debut: instantFixture(8),
-    }),
-  ),
-});
-
-const nonConformitesSuspenduesFixture = (operateurs: readonly OperateurDeclare[]): DonneesDeSupervision => ({
-  operateurs,
-  journees: operateurs.map(operateur =>
-    JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [new FenetreDePresence(instantFixture(7), instantFixture(9))]),
-  ),
-  activites: operateurs.map(operateur =>
-    activiteFixture(operateur, {
-      id: `act-${operateur.id.value}`,
-      objet: mouleFixture('1015'),
-      categorie: 'NON_CONFORMITE',
-      debut: instantFixture(8),
-    }),
-  ),
-});
-
 interface ActiviteAffichee {
   readonly element: string | undefined;
   readonly poste: string | undefined;
   readonly debut: string | undefined;
   readonly nc: string | undefined;
-  readonly suspendue: string | undefined;
 }
 
 describe('Supervision atelier component', () => {
@@ -384,9 +338,7 @@ describe('Supervision atelier component', () => {
     await givenAcquisitionInProgress();
     const donneesAtThreshold = {
       ...donneesFixture,
-      journees: [
-        JourneeDeTravail.open(aliceFixture.id, 'PRESENT', [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 18, 0).toISOString()))]),
-      ],
+      journees: [JourneeDeTravail.open(aliceFixture.id, [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 18, 0).toISOString()))])],
       activites: [activiteFixture(aliceFixture, { id: 'act-1', objet: mouleFixture('1015'), debut: instantFixture(8, 12) })],
     };
     await whenDonneesArrive(donneesAtThreshold);
@@ -491,8 +443,7 @@ describe('Supervision atelier component', () => {
 
     thenLanesAre([
       { couloir: 'au-travail', nombre: '3', operateurs: ['Aubert Lucas', 'Marchand Kevin', 'Vidal Hugo'] },
-      { couloir: 'sans-affectation', nombre: '1', operateurs: ['Lefèvre Sophie'] },
-      { couloir: 'en-pause', nombre: '3', operateurs: ['Dumas Julien', 'Roux Nathalie', 'Schmitt Yanis'] },
+      { couloir: 'sans-affectation', nombre: '4', operateurs: ['Dumas Julien', 'Lefèvre Sophie', 'Roux Nathalie', 'Schmitt Yanis'] },
       { couloir: 'absents', nombre: '2', operateurs: ['Fabre Lucie', 'Perrin Loïc'] },
     ]);
   });
@@ -532,7 +483,7 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive({
       operateurs: [aubertFixture],
-      journees: [JourneeDeTravail.open(aubertFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(6, 58))])],
+      journees: [JourneeDeTravail.open(aubertFixture.id, [new FenetreDePresence(instantFixture(6, 58))])],
       activites: [
         activiteFixture(aubertFixture, {
           id: 'act-hors-of',
@@ -548,19 +499,15 @@ describe('Supervision atelier component', () => {
     ]);
   });
 
-  it('should say that an unassigned or paused operator has no activity in progress, and nothing for an absent one', async () => {
+  it('should say that an unassigned operator has no activity in progress, and nothing for an absent one', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
-    expect([idleNoticeOf('op-lefevre'), idleNoticeOf('op-roux'), idleNoticeOf('op-fabre')]).toEqual([
-      'Aucune activité en cours',
-      'Aucune activité en cours',
-      undefined,
-    ]);
+    expect([idleNoticeOf('op-lefevre'), idleNoticeOf('op-fabre')]).toEqual(['Aucune activité en cours', undefined]);
   });
 
-  it('should list the trades of an unassigned or paused operator without activity, never those of an absent one', async () => {
+  it('should list the trades of an unassigned operator, never those of an absent one', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
@@ -581,27 +528,16 @@ describe('Supervision atelier component', () => {
     expect(activitiesOf('op-aubert').map(({ nc }) => nc)).toEqual([undefined, 'NC']);
   });
 
-  it('should mark the activities of a paused operator as suspended', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive(atelierFixture);
-
-    expect(activitiesOf('op-dumas').map(({ suspendue }) => suspendue)).toEqual(['suspendue']);
-    expect(activitiesOf('op-aubert').map(({ suspendue }) => suspendue)).toEqual([undefined, undefined]);
-  });
-
   it('should show an absent operator’s activities, NC included, without naming them in the NC signal', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
-    expect(activitiesOf('op-perrin')).toEqual([
-      { element: 'OF 3006', poste: 'Tour 1 · Tournage', debut: 'depuis 07:00', nc: 'NC', suspendue: undefined },
-    ]);
+    expect(activitiesOf('op-perrin')).toEqual([{ element: 'OF 3006', poste: 'Tour 1 · Tournage', debut: 'depuis 07:00', nc: 'NC' }]);
     expect(signal('supervision-signal-nc')).toBe('1 en NC : Aubert Lucas');
   });
 
-  it('should show the arrival and pause start times, with the date when they fall on another day than the evaluation instant', async () => {
+  it('should show the arrival time, with the date when it falls on another day than the evaluation instant', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
@@ -610,7 +546,7 @@ describe('Supervision atelier component', () => {
       'arrivée 06:58',
       'arrivée le 12/09 à 06:04',
       'arrivée 08:55',
-      'pause depuis 09:00',
+      'arrivée 06:45',
       undefined,
       undefined,
     ]);
@@ -623,7 +559,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive(atelierFixture);
 
     expect(anomaliesIn('au-travail')).toEqual({ 'op-marchand': ['Aucun départ pointé depuis plus de 16 h'] });
-    expect(anomaliesIn('en-pause')).toEqual({ 'op-schmitt': ['Venue ouverte sans heure d’arrivée'] });
+    expect(anomaliesIn('sans-affectation')).toEqual({ 'op-schmitt': ['Venue ouverte sans heure d’arrivée'] });
     expect(anomaliesIn('absents')).toEqual({ 'op-perrin': ['Activité d’un opérateur absent'] });
   });
 
@@ -656,31 +592,12 @@ describe('Supervision atelier component', () => {
     expect([signal('supervision-signal-nc'), signal('supervision-signal-a-verifier')]).toEqual(['0 en NC', '7 à vérifier']);
   });
 
-  it.each([
-    { operateurs: [dumasFixture], attendu: '1 en NC : Dumas Julien (suspendue)' },
-    { operateurs: [dumasFixture, rouxFixture], attendu: '2 en NC : Dumas Julien, Roux Nathalie (suspendues)' },
-  ])('should say when every counted nonconformity is suspended: $attendu', async ({ operateurs, attendu }) => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive(nonConformitesSuspenduesFixture(operateurs));
-
-    expect(signal('supervision-signal-nc')).toBe(attendu);
-  });
-
-  it('should not call the nonconformities suspended while one of them is being worked on', async () => {
-    await givenAcquisitionInProgress();
-
-    await whenDonneesArrive(nonConformitesFixture({ auTravail: [aubertFixture], enPause: [dumasFixture] }));
-
-    expect(signal('supervision-signal-nc')).toBe('2 en NC : Aubert Lucas, Dumas Julien');
-  });
-
-  it('should count present operators, paused and absent ones excluded', async () => {
+  it('should count present operators, absent ones excluded', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive(atelierFixture);
 
-    expect([signal('supervision-presents'), signal('supervision-presents-compact')]).toEqual(['Présents 4', '4 présents']);
+    expect([signal('supervision-presents'), signal('supervision-presents-compact')]).toEqual(['Présents 7', '7 présents']);
   });
 
   it('should speak of a single operator and a single present one in the singular', async () => {
@@ -688,7 +605,7 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive({
       operateurs: [lefevreFixture],
-      journees: [JourneeDeTravail.open(lefevreFixture.id, 'PRESENT', [new FenetreDePresence(instantFixture(8, 55))])],
+      journees: [JourneeDeTravail.open(lefevreFixture.id, [new FenetreDePresence(instantFixture(8, 55))])],
       activites: [],
     });
 
@@ -780,8 +697,7 @@ describe('Supervision atelier component', () => {
 
     thenLanesAre([
       { couloir: 'au-travail', nombre: '0', operateurs: [] },
-      { couloir: 'sans-affectation', nombre: '1', operateurs: ['Martin Alice'] },
-      { couloir: 'en-pause', nombre: '1', operateurs: ['Durand Bob'] },
+      { couloir: 'sans-affectation', nombre: '2', operateurs: ['Durand Bob', 'Martin Alice'] },
       { couloir: 'absents', nombre: '1', operateurs: ['Bernard Chloé'] },
     ]);
   });
@@ -886,7 +802,6 @@ describe('Supervision atelier component', () => {
       poste: textIn(activite, 'supervision-activite-poste'),
       debut: textIn(activite, 'supervision-activite-debut'),
       nc: textIn(activite, 'supervision-marque-nc'),
-      suspendue: textIn(activite, 'supervision-suspendue'),
     }));
 
   const hourOf = (id: string): string | undefined => textIn(card(id), 'supervision-heure');

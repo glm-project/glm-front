@@ -77,9 +77,6 @@
 .carte--au-travail {
   --lisere: var(--color-ok);
 }
-.carte--en-pause {
-  --lisere: var(--color-warn);
-}
 .carte--absents {
   --lisere: var(--color-danger);
   box-shadow: inset 3px 0 0 var(--lisere);

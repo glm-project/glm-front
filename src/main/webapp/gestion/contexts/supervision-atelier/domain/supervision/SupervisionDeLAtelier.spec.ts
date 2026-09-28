@@ -10,7 +10,7 @@ import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { IdentifiantPoste } from '../poste/IdentifiantPoste';
 import { PosteDeSupervision } from '../poste/PosteDeSupervision';
 import { FenetreDePresence } from '../presence/FenetreDePresence';
-import { EtatSession, JourneeDeTravail } from '../presence/JourneeDeTravail';
+import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
 import { CouloirDeSupervision } from './CouloirDeSupervision';
 import { OperateurSupervise } from './OperateurSupervise';
@@ -21,7 +21,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should retain a working visit opening when its source windows are cleared', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetres = [new FenetreDePresence(new Instant('2026-09-13T05:00:00Z'))];
-    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', fenetres);
+    const journee = JourneeDeTravail.open(operateur.id, fenetres);
 
     fenetres.length = 0;
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T22:00:00Z'));
@@ -52,7 +52,7 @@ describe('SupervisionDeLAtelier', () => {
   });
   it('should detect a long working visit regardless of the order of its presence windows', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
-    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [
+    const journee = JourneeDeTravail.open(operateur.id, [
       new FenetreDePresence(new Instant('2026-09-13T12:00:00Z')),
       new FenetreDePresence(new Instant('2026-09-13T05:00:00Z')),
     ]);
@@ -66,7 +66,7 @@ describe('SupervisionDeLAtelier', () => {
   });
   it('should expose the opening instant of the supervised working visit', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
-    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
+    const journee = JourneeDeTravail.open(operateur.id, [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T09:00:00Z'));
 
@@ -91,7 +91,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should determine operator as present when an open working visit is present', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
-    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
+    const journee = JourneeDeTravail.open(operateur.id, [fenetre]);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T09:00:00Z'));
 
@@ -115,24 +115,12 @@ describe('SupervisionDeLAtelier', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const journeeFermee = JourneeDeTravail.closed(operateur.id);
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
-    const journeeOuverte = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
+    const journeeOuverte = JourneeDeTravail.open(operateur.id, [fenetre]);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journeeFermee, journeeOuverte], [], new Instant('2026-09-13T09:00:00Z'));
 
     expect(exploitableFixture(resultat).operateurs).toMatchObject([
       { operateur: operateur, presence: 'PRESENT', activites: [], anomalies: [] },
-    ]);
-  });
-
-  it('should determine operator as on pause when an open working visit is on pause', () => {
-    const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
-    const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
-    const journee = JourneeDeTravail.open(operateur.id, 'EN_PAUSE', [fenetre]);
-
-    const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant('2026-09-13T09:00:00Z'));
-
-    expect(exploitableFixture(resultat).operateurs).toMatchObject([
-      { operateur: operateur, presence: 'EN_PAUSE', activites: [], anomalies: [] },
     ]);
   });
 
@@ -144,9 +132,9 @@ describe('SupervisionDeLAtelier', () => {
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'));
 
     const journees = [
-      JourneeDeTravail.open(martin.id, 'PRESENT', [fenetre]),
-      JourneeDeTravail.open(dupont.id, 'EN_PAUSE', [fenetre]),
-      JourneeDeTravail.open(bernardAlexandre.id, 'PRESENT', [fenetre]),
+      JourneeDeTravail.open(martin.id, [fenetre]),
+      JourneeDeTravail.open(dupont.id, [fenetre]),
+      JourneeDeTravail.open(bernardAlexandre.id, [fenetre]),
     ];
 
     const resultat = SupervisionDeLAtelier.determine(
@@ -159,7 +147,7 @@ describe('SupervisionDeLAtelier', () => {
     expect(exploitableFixture(resultat).operateurs).toMatchObject([
       { operateur: bernardAlexandre, presence: 'PRESENT', activites: [], anomalies: [] },
       { operateur: bernardClaude, presence: 'ABSENT', activites: [], anomalies: [] },
-      { operateur: dupont, presence: 'EN_PAUSE', activites: [], anomalies: [] },
+      { operateur: dupont, presence: 'PRESENT', activites: [], anomalies: [] },
       { operateur: martin, presence: 'PRESENT', activites: [], anomalies: [] },
     ]);
   });
@@ -167,7 +155,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should determine operator as present for an open working visit crossing midnight without calendar filtering', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-night'), nom: 'Nuit', prenom: 'Marc' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-12T22:00:00Z'));
-    const journeeDeNuit = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
+    const journeeDeNuit = JourneeDeTravail.open(operateur.id, [fenetre]);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journeeDeNuit], [], new Instant('2026-09-13T09:00:00Z'));
 
@@ -179,7 +167,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should determine operator as present for an old open working visit without calendar filtering', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-old'), nom: 'Ancien', prenom: 'Paul' });
     const fenetreAncienne = new FenetreDePresence(new Instant('2026-09-08T07:00:00Z'));
-    const journeeAncienne = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetreAncienne]);
+    const journeeAncienne = JourneeDeTravail.open(operateur.id, [fenetreAncienne]);
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journeeAncienne], [], new Instant('2026-09-13T09:00:00Z'));
 
@@ -198,20 +186,16 @@ describe('SupervisionDeLAtelier', () => {
     const initialResultat = SupervisionDeLAtelier.determine(
       [charles, alain, bernard],
       [
-        JourneeDeTravail.open(alain.id, 'PRESENT', [fenetre]),
-        JourneeDeTravail.open(bernard.id, 'PRESENT', [fenetre]),
-        JourneeDeTravail.open(charles.id, 'PRESENT', [fenetre]),
+        JourneeDeTravail.open(alain.id, [fenetre]),
+        JourneeDeTravail.open(bernard.id, [fenetre]),
+        JourneeDeTravail.open(charles.id, [fenetre]),
       ],
       [],
       new Instant('2026-09-13T09:00:00Z'),
     );
     const updatedResultat = SupervisionDeLAtelier.determine(
       [charles, alain, bernard],
-      [
-        JourneeDeTravail.open(charles.id, 'PRESENT', [fenetre]),
-        JourneeDeTravail.open(bernard.id, 'EN_PAUSE', [fenetre]),
-        JourneeDeTravail.closed(alain.id),
-      ],
+      [JourneeDeTravail.open(charles.id, [fenetre]), JourneeDeTravail.open(bernard.id, [fenetre]), JourneeDeTravail.closed(alain.id)],
       [],
       new Instant('2026-09-13T09:00:00Z'),
     );
@@ -261,7 +245,7 @@ describe('SupervisionDeLAtelier', () => {
       poste: posteFixture('Poste-3'),
     });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T07:30:00Z'));
-    const journees = [JourneeDeTravail.open(dupont.id, 'PRESENT', [fenetre]), JourneeDeTravail.open(martin.id, 'PRESENT', [fenetre])];
+    const journees = [JourneeDeTravail.open(dupont.id, [fenetre]), JourneeDeTravail.open(martin.id, [fenetre])];
 
     const resultat = SupervisionDeLAtelier.determine(
       [dupont, martin],
@@ -282,7 +266,7 @@ describe('SupervisionDeLAtelier', () => {
 
     const supervision = supervisionFixture(
       [enNonConformite, auTravail],
-      [journeeOuverteFixture(enNonConformite, 'PRESENT'), journeeOuverteFixture(auTravail, 'PRESENT')],
+      [journeeOuverteFixture(enNonConformite), journeeOuverteFixture(auTravail)],
       [activiteFixture(enNonConformite, 'NON_CONFORMITE'), activiteFixture(auTravail, 'TRAVAIL')],
     );
 
@@ -322,7 +306,7 @@ describe('SupervisionDeLAtelier', () => {
 
   it('should detect anomaly for open working visit without presence windows while preserving presence', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
-    const journeeSansFenetres = JourneeDeTravail.open(operateur.id, 'PRESENT');
+    const journeeSansFenetres = JourneeDeTravail.open(operateur.id);
 
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-1'),
@@ -344,7 +328,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should detect a visit exceeding 16 hours by one millisecond while preserving presence and activities', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T06:00:00Z'));
-    const journeeLongue = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
+    const journeeLongue = JourneeDeTravail.open(operateur.id, [fenetre]);
     const maintenant = '2026-09-13T22:00:00.001Z';
 
     const activite = new ActiviteDeSupervision({
@@ -366,7 +350,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should not detect anomaly when open working visit duration is exactly 16 hours', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetre = new FenetreDePresence(new Instant('2026-09-13T06:00:00.000Z'));
-    const journee = JourneeDeTravail.open(operateur.id, 'PRESENT', [fenetre]);
+    const journee = JourneeDeTravail.open(operateur.id, [fenetre]);
     const exactementSeizeHeures = '2026-09-13T22:00:00.000Z';
 
     const resultat = SupervisionDeLAtelier.determine([operateur], [journee], [], new Instant(exactementSeizeHeures));
@@ -410,7 +394,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should place a present operator with an ongoing activity in the working lane', () => {
     const operateur = operateurFixture('op-1');
 
-    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur, 'PRESENT')], [activiteFixture(operateur)]);
+    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur)], [activiteFixture(operateur)]);
 
     expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
   });
@@ -418,11 +402,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should place a present operator whose only activity is nonconforming in the working lane', () => {
     const operateur = operateurFixture('op-1');
 
-    const supervision = supervisionFixture(
-      [operateur],
-      [journeeOuverteFixture(operateur, 'PRESENT')],
-      [activiteFixture(operateur, 'NON_CONFORMITE')],
-    );
+    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur)], [activiteFixture(operateur, 'NON_CONFORMITE')]);
 
     expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
   });
@@ -430,21 +410,9 @@ describe('SupervisionDeLAtelier', () => {
   it('should place a present operator without activity in the unassigned lane', () => {
     const operateur = operateurFixture('op-1');
 
-    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur, 'PRESENT')], []);
+    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur)], []);
 
     expect(couloirDe(supervision, operateur)).toBe('SANS_AFFECTATION');
-  });
-
-  it.each([0, 1])('should place a paused operator in the paused lane whether or not activities remain open (%i)', nombreDActivites => {
-    const operateur = operateurFixture('op-1');
-
-    const supervision = supervisionFixture(
-      [operateur],
-      [journeeOuverteFixture(operateur, 'EN_PAUSE')],
-      activitesFixture(operateur, nombreDActivites),
-    );
-
-    expect(couloirDe(supervision, operateur)).toBe('EN_PAUSE');
   });
 
   it('should place an absent operator in the absent lane even with an open activity and its anomaly', () => {
@@ -456,15 +424,14 @@ describe('SupervisionDeLAtelier', () => {
     expect(supervision.operateurs[0]?.anomalies).toEqual(['ACTIVITE_D_UN_ABSENT']);
   });
 
-  it('should always return the four lanes in fixed order, empty ones included', () => {
+  it('should always return the three lanes in fixed order, empty ones included', () => {
     const operateur = operateurFixture('op-1');
 
-    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur, 'EN_PAUSE')], []);
+    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur)], []);
 
     expect(supervision.couloirs().map(couloir => [couloir.couloir, couloir.operateurs.length])).toEqual([
       ['AU_TRAVAIL', 0],
-      ['SANS_AFFECTATION', 0],
-      ['EN_PAUSE', 1],
+      ['SANS_AFFECTATION', 1],
       ['ABSENT', 0],
     ]);
   });
@@ -477,57 +444,29 @@ describe('SupervisionDeLAtelier', () => {
 
     const supervision = supervisionFixture(
       [martin, bernardClaude, dupont, bernardAlexandre],
-      [journeeOuverteFixture(martin, 'PRESENT'), journeeOuverteFixture(bernardAlexandre, 'PRESENT')],
+      [journeeOuverteFixture(martin), journeeOuverteFixture(bernardAlexandre)],
       [activiteFixture(martin), activiteFixture(bernardAlexandre)],
     );
 
-    expect(supervision.couloirs().map(couloir => couloir.operateurs.map(supervise => supervise.operateur.id.value))).toEqual([
+    expect([operateursDuCouloir(supervision, 'AU_TRAVAIL'), operateursDuCouloir(supervision, 'ABSENT')]).toEqual([
       ['op-4', 'op-3'],
-      [],
-      [],
       ['op-2', 'op-1'],
     ]);
   });
 
-  it('should list present or paused operators with a nonconforming activity, never absent ones', () => {
+  it('should list present operators with a nonconforming activity, never absent ones', () => {
     const present = operateurFixture('op-present', 'Aubert');
-    const enPause = operateurFixture('op-pause', 'Benali');
     const absent = operateurFixture('op-absent', 'Chevalier');
     const conforme = operateurFixture('op-conforme', 'Dumas');
 
     const supervision = supervisionFixture(
-      [present, enPause, absent, conforme],
-      [journeeOuverteFixture(present, 'PRESENT'), journeeOuverteFixture(enPause, 'EN_PAUSE'), journeeOuverteFixture(conforme, 'PRESENT')],
-      [
-        activiteFixture(present, 'NON_CONFORMITE'),
-        activiteFixture(enPause, 'NON_CONFORMITE'),
-        activiteFixture(absent, 'NON_CONFORMITE'),
-        activiteFixture(conforme, 'TRAVAIL'),
-      ],
+      [present, absent, conforme],
+      [journeeOuverteFixture(present), journeeOuverteFixture(conforme)],
+      [activiteFixture(present, 'NON_CONFORMITE'), activiteFixture(absent, 'NON_CONFORMITE'), activiteFixture(conforme, 'TRAVAIL')],
     );
 
-    expect(supervision.operateursEnNonConformite().map(supervise => supervise.operateur.id.value)).toEqual(['op-present', 'op-pause']);
+    expect(supervision.operateursEnNonConformite().map(supervise => supervise.operateur.id.value)).toEqual(['op-present']);
   });
-
-  it.each([
-    { cas: 'every operator in NC is on pause', sessions: ['EN_PAUSE', 'EN_PAUSE'], categorie: 'NON_CONFORMITE', attendu: true },
-    { cas: 'one operator in NC is working', sessions: ['EN_PAUSE', 'PRESENT'], categorie: 'NON_CONFORMITE', attendu: false },
-    { cas: 'nobody is in NC', sessions: ['EN_PAUSE', 'EN_PAUSE'], categorie: 'TRAVAIL', attendu: false },
-  ] as const)(
-    'should call the nonconformities suspended only when $cas',
-    ({ sessions: [sessionPremier, sessionSecond], categorie, attendu }) => {
-      const premier = operateurFixture('op-a', 'Aubert');
-      const second = operateurFixture('op-b', 'Benali');
-
-      const supervision = supervisionFixture(
-        [premier, second],
-        [journeeOuverteFixture(premier, sessionPremier), journeeOuverteFixture(second, sessionSecond)],
-        [activiteFixture(premier, categorie), activiteFixture(second, categorie)],
-      );
-
-      expect(supervision.areNonConformitesSuspendues()).toBe(attendu);
-    },
-  );
 
   it('should list operators carrying an anomaly', () => {
     const sansFenetres = operateurFixture('op-sans-fenetres', 'Aubert');
@@ -536,7 +475,7 @@ describe('SupervisionDeLAtelier', () => {
 
     const supervision = supervisionFixture(
       [sansFenetres, absentActif, calme],
-      [JourneeDeTravail.open(sansFenetres.id, 'PRESENT'), journeeOuverteFixture(calme, 'PRESENT')],
+      [JourneeDeTravail.open(sansFenetres.id), journeeOuverteFixture(calme)],
       [activiteFixture(absentActif)],
     );
 
@@ -546,19 +485,14 @@ describe('SupervisionDeLAtelier', () => {
     ]);
   });
 
-  it('should count present operators, excluding paused and absent ones', () => {
+  it('should count every operator whose visit is open as present, absent ones excluded', () => {
     const auTravail = operateurFixture('op-travail', 'Aubert');
     const sansAffectation = operateurFixture('op-sans-affectation', 'Benali');
-    const enPause = operateurFixture('op-pause', 'Chevalier');
     const absent = operateurFixture('op-absent', 'Dumas');
 
     const supervision = supervisionFixture(
-      [auTravail, sansAffectation, enPause, absent],
-      [
-        journeeOuverteFixture(auTravail, 'PRESENT'),
-        journeeOuverteFixture(sansAffectation, 'PRESENT'),
-        journeeOuverteFixture(enPause, 'EN_PAUSE'),
-      ],
+      [auTravail, sansAffectation, absent],
+      [journeeOuverteFixture(auTravail), journeeOuverteFixture(sansAffectation)],
       [activiteFixture(auTravail)],
     );
 
@@ -573,44 +507,6 @@ describe('SupervisionDeLAtelier', () => {
     expect(exploitableFixture(resultat).instantDEvaluation).toBe(maintenant);
   });
 
-  it('should expose the start of the ongoing pause, and nothing for a visit without windows', () => {
-    const enPause = operateurFixture('op-pause', 'Aubert');
-    const sansFenetres = operateurFixture('op-sans-fenetres', 'Benali');
-    const finDeLaFenetre = new Instant('2026-09-13T08:50:00Z');
-
-    const supervision = supervisionFixture(
-      [enPause, sansFenetres],
-      [
-        JourneeDeTravail.open(enPause.id, 'EN_PAUSE', [
-          new FenetreDePresence(new Instant('2026-09-13T06:00:00Z'), new Instant('2026-09-13T07:00:00Z')),
-          new FenetreDePresence(new Instant('2026-09-13T07:30:00Z'), finDeLaFenetre),
-        ]),
-        JourneeDeTravail.open(sansFenetres.id, 'EN_PAUSE'),
-      ],
-      [],
-    );
-
-    expect(supervision.operateurs.map(supervise => supervise.debutDeLaPauseEnCours())).toEqual([finDeLaFenetre, undefined]);
-  });
-
-  it('should suspend the activities of a paused operator, never those of a present one', () => {
-    const enPauseActif = operateurFixture('op-pause-actif', 'Aubert');
-    const enPauseInactif = operateurFixture('op-pause-inactif', 'Benali');
-    const presentActif = operateurFixture('op-present-actif', 'Chevalier');
-
-    const supervision = supervisionFixture(
-      [enPauseActif, enPauseInactif, presentActif],
-      [
-        journeeOuverteFixture(enPauseActif, 'EN_PAUSE'),
-        journeeOuverteFixture(enPauseInactif, 'EN_PAUSE'),
-        journeeOuverteFixture(presentActif, 'PRESENT'),
-      ],
-      [activiteFixture(enPauseActif), activiteFixture(presentActif)],
-    );
-
-    expect(supervision.operateurs.map(supervise => supervise.hasActivitesSuspendues())).toEqual([true, false, false]);
-  });
-
   it('should order activities by workstation label with unassigned workstations last, then by start', () => {
     const operateur = operateurFixture('op-1');
     const activite = (id: string, poste: string | undefined, debut: string): ActiviteDeSupervision =>
@@ -618,7 +514,7 @@ describe('SupervisionDeLAtelier', () => {
 
     const supervision = supervisionFixture(
       [operateur],
-      [journeeOuverteFixture(operateur, 'PRESENT')],
+      [journeeOuverteFixture(operateur)],
       [
         activite('sans-poste-tot', undefined, '06:50'),
         activite('tour-10', 'Tour 10', '07:10'),
@@ -651,7 +547,7 @@ describe('SupervisionDeLAtelier', () => {
       debut: new Instant('2026-09-13T08:30:00Z'),
     });
 
-    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur, 'PRESENT')], [horsOf]);
+    const supervision = supervisionFixture([operateur], [journeeOuverteFixture(operateur)], [horsOf]);
 
     expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
   });
@@ -681,8 +577,8 @@ const MOULE_1015 = new ElementTravaille({ type: 'PRODUIT', nom: 'PRD-2026-000001
 const operateurFixture = (id: string, nom = 'Dupont', prenom = 'Jean'): OperateurDeclare =>
   new OperateurDeclare({ id: new IdentifiantOperateur(id), nom, prenom });
 
-const journeeOuverteFixture = (operateur: OperateurDeclare, session: EtatSession): JourneeDeTravail =>
-  JourneeDeTravail.open(operateur.id, session, [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
+const journeeOuverteFixture = (operateur: OperateurDeclare): JourneeDeTravail =>
+  JourneeDeTravail.open(operateur.id, [new FenetreDePresence(new Instant('2026-09-13T08:00:00Z'))]);
 
 const activiteFixture = (operateur: OperateurDeclare, categorie: ValeurCategorieActivite = 'TRAVAIL'): ActiviteDeSupervision =>
   new ActiviteDeSupervision({
@@ -707,15 +603,21 @@ const activiteSurPosteFixture = (
     ...(poste === undefined ? {} : { poste: posteFixture(poste) }),
   });
 
-const activitesFixture = (operateur: OperateurDeclare, nombre: number): ActiviteDeSupervision[] =>
-  Array.from({ length: nombre }, () => activiteFixture(operateur));
-
 function supervisionFixture(
   operateurs: readonly OperateurDeclare[],
   journees: readonly JourneeDeTravail[],
   activites: readonly ActiviteDeSupervision[],
 ): SupervisionDeLAtelier {
   return exploitableFixture(SupervisionDeLAtelier.determine(operateurs, journees, activites, MAINTENANT));
+}
+
+function operateursDuCouloir(supervision: SupervisionDeLAtelier, couloir: CouloirDeSupervision): readonly string[] {
+  return (
+    supervision
+      .couloirs()
+      .find(couloirSupervise => couloirSupervise.couloir === couloir)
+      ?.operateurs.map(supervise => supervise.operateur.id.value) ?? []
+  );
 }
 
 function couloirDe(supervision: SupervisionDeLAtelier, operateur: OperateurDeclare): CouloirDeSupervision | undefined {
