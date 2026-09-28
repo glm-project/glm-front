@@ -1,3 +1,4 @@
+import { LongPress } from '@/pupitre/shared/design-system/infrastructure/primary/long-press/long-press';
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, input, output, signal } from '@angular/core';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
@@ -5,6 +6,8 @@ import { CibleDePointage } from '../../../../domain/designation/fenetre-operateu
 import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { LIBELLES_POINTAGE } from '../LibellesAtelier';
+
+const CONFIRMATION_PRESS_MS = 1_500;
 
 interface AttenteDePoste {
   intention: IntentionDePointage;
@@ -16,7 +19,7 @@ interface AttenteDePoste {
   host: { 'data-selector': 'pointage', class: 'flex min-h-0 flex-1 flex-col' },
   templateUrl: './pointage.html',
   styleUrl: './pointage.css',
-  imports: [NgTemplateOutlet],
+  imports: [LongPress, NgTemplateOutlet],
 })
 export class Pointage {
   readonly vue = input.required<VueDePointage>();
@@ -30,8 +33,10 @@ export class Pointage {
   readonly attente = signal<AttenteDePoste | undefined>(undefined);
   readonly choosing = signal(false);
   readonly labels = LIBELLES_POINTAGE;
+  protected readonly confirmationPressMs = CONFIRMATION_PRESS_MS;
 
   press(element: ElementDePointage, cible: CibleDePointage): void {
+    if (this.busy().has(element.id)) return;
     const intention: IntentionDePointage = { suiviId: element.id, cible };
     const execution = this.commander().execute(intention);
     if (execution.kind === 'INDISPONIBLE') return;
@@ -43,6 +48,7 @@ export class Pointage {
   }
 
   choose(attente: AttenteDePoste, posteId: string): void {
+    if (this.choosing()) return;
     this.choosing.set(true);
     const completion = Promise.resolve().then(() => attente.execution.choose(posteId));
     void this.capture(attente.intention.suiviId, completion).finally(() => {

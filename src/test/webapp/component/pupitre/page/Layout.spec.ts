@@ -1,4 +1,5 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { longPressFixture } from '../../../utils/LongPressFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 describe('Pupitre layout in a browser', () => {
@@ -57,7 +58,7 @@ const whenDesignatingJean = (): void => {
 };
 
 const whenOpeningWorkstationChoice = (): void => {
-  cy.get(dataSelector('tile-of-1')).find(dataSelector('primary-target')).click();
+  longPressFixture(cy.get(dataSelector('tile-of-1')).find(dataSelector('primary-target')));
   cy.get(dataSelector('workstation-dialog')).should('be.visible');
 };
 

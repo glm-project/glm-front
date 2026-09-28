@@ -42,6 +42,30 @@
     color-mix(in srgb, var(--color-nc) 12%, var(--color-surface));
 }
 
+.hold-target {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.hold-target::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.hold-target.long-press--holding::before {
+  transform: scaleX(1);
+  transition: transform var(--long-press-duration) linear;
+}
+
 .dialog-backdrop {
   position: absolute;
   inset: 0;

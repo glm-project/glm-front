@@ -15,9 +15,10 @@ atomic gesture batches, reference activation and push outcomes.
 schema change stays local to that adapter.
 
 Each tenant has an independent journal. Reenrolment selects another journal without deleting or pushing the
-former tenant's pending work. Immediate gestures receive their UUID and business timestamp at the operator
-action, before asynchronous capture begins. A deferred global intention receives one UUID root and its business
-timestamp at the press; once the updated window decides its batch, every gesture UUID is derived deterministically
+former tenant's pending work. Immediate gestures receive their UUID and business timestamp when the screen
+declares the intention, before asynchronous capture begins; on the pointage, that is the deadline of the sustained
+press, not its start. A deferred global intention receives one UUID root and its business timestamp at that same
+declaration; once the updated window decides its batch, every gesture UUID is derived deterministically
 from that root before the atomic append. Waiting never introduces new identity randomness or a new occurrence
 time.
 
@@ -156,9 +157,11 @@ availability, then switches views on the same URL, and calls `finish()` when it 
 the root-scoped `CurrentOperateurLifecycle` is not the page-exit hook. The pointage view's “J'ai fini” action also calls
 `finish()`.
 
-Every screen press, including blank chrome, goes through `registerPress()` before a business command: a
-`false` result consumes the entire press, including its subsequent click, because the deadline had already
-elapsed. Ignore repeated physical keydown events before calling this guard. Closing the designation must
+Every screen press, including blank chrome, goes through `registerPress()` when it starts, before a business
+command: a `false` result consumes the entire press, because the deadline had already elapsed. For an immediate
+control that means its subsequent click; for a pointage gesture target it means the sustained press, since closing
+the view destroys the target and its timer before the press can reach its deadline. The command boundary checks the
+window again when the intention is declared. Ignore repeated physical keydown events before calling this guard. Closing the designation must
 also dismiss the pointage popup. The keypad already handles its own pointer and physical keyboard events;
 its parent only needs to route presses outside it. These composition and pointage responsibilities belong
 to #75 and #76.
@@ -196,7 +199,7 @@ available: it closes the visible window immediately while already initiated work
 
 The window owns that exclusion through its retained `IntentionGlobaleInitiee`; the application reports local
 completion or failure to release it. This Value Object prepares the deferred command with deterministic
-gesture identities and the time fixed at the press. `IdentiteDeFenetre` identifies one opening across immutable
+gesture identities and the time fixed when the intention was declared. `IdentiteDeFenetre` identifies one opening across immutable
 versions, so queued work and a prepared workstation choice can resolve the latest version of that same window.
 The designation remains the sole owner of the window during capture, reconciliation and closure. Its visible
 projection disappears on closure while the retained model lets previously initiated captures finish.

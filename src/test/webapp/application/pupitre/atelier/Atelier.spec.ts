@@ -2,6 +2,7 @@ import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
 import { interceptForever } from '../../../utils/Interceptor';
+import { controlledTimeFixture, longPressFixture } from '../../../utils/LongPressFixture';
 import { clearPupitreStorageFixture, givenEnrolledPupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
@@ -257,9 +258,7 @@ describe('Pupitre workshop journey', () => {
   };
 
   const whenStartingElement = (elementId: string): void => {
-    cy.get(dataSelector(`tile-${elementId}`))
-      .find(dataSelector('primary-target'))
-      .click();
+    longPressFixture(cy.get(dataSelector(`tile-${elementId}`)).find(dataSelector('primary-target')));
     cy.wait('@pointage');
   };
 
@@ -276,9 +275,7 @@ describe('Pupitre workshop journey', () => {
   };
 
   const whenStartingElementOptimistically = (elementId: string): void => {
-    cy.get(dataSelector(`tile-${elementId}`))
-      .find(dataSelector('primary-target'))
-      .click();
+    longPressFixture(cy.get(dataSelector(`tile-${elementId}`)).find(dataSelector('primary-target')));
   };
 
   const whenServerAnswers = (response: ReturnType<typeof interceptForever>): void => {
@@ -286,11 +283,11 @@ describe('Pupitre workshop journey', () => {
   };
 
   const whenPausingAllWork = (): void => {
-    cy.get(dataSelector('pause')).should('not.be.disabled').click();
+    longPressFixture(cy.get(dataSelector('pause')).should('not.be.disabled'));
   };
 
   const whenResumingAllWork = (): void => {
-    cy.get(dataSelector('resume')).should('not.be.disabled').click();
+    longPressFixture(cy.get(dataSelector('resume')).should('not.be.disabled'));
   };
 
   const givenSuspendingWillBeRefused = (): ReturnType<typeof interceptForever> => {
@@ -306,14 +303,12 @@ describe('Pupitre workshop journey', () => {
   };
 
   const whenStoppingAllWork = (): void => {
-    cy.get(dataSelector('stop-all')).click();
+    longPressFixture(cy.get(dataSelector('stop-all')));
     cy.wait('@presence');
   };
 
   const whenOpeningWorkstationChoice = (elementId: string): void => {
-    cy.get(dataSelector(`tile-${elementId}`))
-      .find(dataSelector('primary-target'))
-      .click();
+    longPressFixture(cy.get(dataSelector(`tile-${elementId}`)).find(dataSelector('primary-target')), controlledTimeFixture);
     cy.tick(0);
     cy.get(dataSelector('workstation-dialog')).should('be.visible');
   };
