@@ -14,6 +14,12 @@ describe('Supervision lanes readability', () => {
     });
   });
 
+  it('should show exactly the lanes « Au travail », « Sans affectation » and « Absents », in this order', () => {
+    whenOpeningSupervision();
+
+    thenThePlateauHoldsTheThreeLanesInOrder();
+  });
+
   it('should share the plateau width between the three lanes on a wide screen', () => {
     givenViewport(1440);
 
@@ -108,6 +114,21 @@ const thenLanesStayWithinTheirWidth = (): void => {
   cy.screenshot('supervision-couloirs', { capture: 'fullPage' });
 };
 
+const thenThePlateauHoldsTheThreeLanesInOrder = (): void => {
+  cy.get(dataSelector('supervision-plateau'))
+    .children()
+    .should(couloirs => {
+      expect(couloirs.toArray().map(couloir => [couloir.dataset['selector'], accessibleNameOf(couloir)])).to.deep.equal([
+        ['supervision-couloir-au-travail', 'Au travail'],
+        ['supervision-couloir-sans-affectation', 'Sans affectation'],
+        ['supervision-couloir-absents', 'Absents'],
+      ]);
+    });
+};
+
+const accessibleNameOf = (element: HTMLElement): string =>
+  normalise(element.ownerDocument.getElementById(element.getAttribute('aria-labelledby') ?? '')?.textContent ?? null);
+
 const thenTheLanesFillThePlateau = (): void => {
   cy.get(dataSelector('supervision-plateau')).then(plateau => {
     cy.get(dataSelector('supervision-couloir-absents')).should(couloir => {
@@ -132,7 +153,6 @@ const rightEdgeOf = (element: JQuery): number => requiredFixture(element[0], 'me
 
 const thenLaneColoursFollowTheClientCode = (): void => {
   cy.get(dataSelector('supervision-couloir-au-travail')).should('have.css', 'border-top-color', 'rgb(22, 101, 52)');
-  cy.get(dataSelector('supervision-couloir-en-pause')).should('not.exist');
   cy.get(dataSelector('supervision-couloir-absents')).should('have.css', 'border-top-color', 'rgb(185, 28, 28)');
   cy.get(dataSelector('supervision-marque-nc'))
     .first()
@@ -169,14 +189,19 @@ const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
     .and('have.css', 'color', 'rgb(15, 24, 36)');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-activite-debut')), 'depuis le 23/09 à 14:20');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Aucun départ pointé depuis plus de 16 h');
-  thenTextIs(cardOf('op-dumas').find(dataSelector('supervision-heure')), 'arrivée 06:45');
-  cy.get(dataSelector('supervision-suspendue')).should('not.exist');
+  thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien arrivée 06:45 Aucune activité en cours Métiers : Sciage, Tournage');
   cardOf('op-schmitt').find(dataSelector('supervision-heure')).should('not.exist');
   thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-anomalie')), 'Venue ouverte sans heure d’arrivée');
   thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Hors OF');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
   thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-anomalie')), 'Activité d’un opérateur absent');
+};
+
+const thenVisibleTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {
+  element.should(noeud => {
+    expect(normalise(requiredFixture(noeud[0], 'observed element').innerText)).to.equal(attendu);
+  });
 };
 
 const thenTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {
