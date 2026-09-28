@@ -261,7 +261,7 @@ describe('FenetreOperateur', () => {
     thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
   });
 
-  it('should only depart when stopping all during a pause, which ends the pause', () => {
+  it('should finish no activity and depart when stopping all during a pause, which ends the pause', () => {
     const paused = givenAnAcceptedPause(
       givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
     );
