@@ -1,5 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { touchFixture } from '../../../utils/TouchscreenFixture';
+import { CONFIRMATION_PRESS_FIXTURE_MS, controlledTimeFixture, longPressFixture } from '../../../utils/LongPressFixture';
+import { holdTouchFixture, releaseTouchFixture } from '../../../utils/TouchscreenFixture';
 
 describe('Pupitre common page in a browser', () => {
   let controlledClock: { setSystemTime: (now: number) => void } | undefined;
@@ -80,7 +81,7 @@ describe('Pupitre common page in a browser', () => {
     whenDesignatingJeanWithControlledTime();
 
     whenSleepingPastTheDeadline();
-    whenPressingImmediately('stop-all');
+    whenHoldingImmediately('stop-all');
 
     thenOnlyTheKeypadIsVisible();
   });
@@ -165,7 +166,7 @@ describe('Pupitre common page in a browser', () => {
   };
 
   const whenOpeningAWorkstationChoice = (): void => {
-    whenPressingTile('of-1', 'primary-target');
+    whenHoldingTile('of-1', 'primary-target');
     cy.tick(0);
   };
 
@@ -191,28 +192,21 @@ describe('Pupitre common page in a browser', () => {
   };
 
   const whenStoppingEverything = (): void => {
-    cy.get(dataSelector('stop-all')).click();
+    longPressFixture(cy.get(dataSelector('stop-all')));
   };
 
   const whenFinishing = (): void => {
     cy.get(dataSelector('finish')).click();
   };
 
-  const whenPressingTile = (tile: string, target: string): void => {
-    cy.get(dataSelector(`tile-${tile}`))
-      .find(dataSelector(target))
-      .then(pressed => dispatchPress(pressed));
+  const whenHoldingTile = (tile: string, target: string): void => {
+    longPressFixture(cy.get(dataSelector(`tile-${tile}`)).find(dataSelector(target)), controlledTimeFixture);
   };
 
-  const whenPressingImmediately = (selector: string): void => {
-    touchFixture(dataSelector(selector));
-  };
-
-  const dispatchPress = (pressed: JQuery<HTMLElement>): void => {
-    const target = pressed[0];
-    if (target === undefined) throw new Error('Missing pressed element.');
-    target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
-    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  const whenHoldingImmediately = (selector: string): void => {
+    holdTouchFixture(dataSelector(selector));
+    cy.tick(CONFIRMATION_PRESS_FIXTURE_MS);
+    releaseTouchFixture();
   };
 
   const thenTheHeaderStandsAboveTheEnrolmentScreen = (): void => {

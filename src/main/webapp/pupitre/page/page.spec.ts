@@ -172,10 +172,10 @@ describe('Pupitre page', () => {
   it('should route tile and global intentions after guarding their page press', () => {
     givenPointage();
 
-    whenPressing('primary-target');
-    whenPressing('pause');
-    whenPressing('resume');
-    whenPressing('stop-all');
+    whenHolding('primary-target');
+    whenHolding('pause');
+    whenHolding('resume');
+    whenHolding('stop-all');
     whenPressing('finish');
 
     expect(pupitre.registerPress).toHaveBeenCalledTimes(5);
@@ -210,10 +210,10 @@ describe('Pupitre page', () => {
     givenPointage();
     givenTheNextPagePressIsRefused();
 
-    whenPressing('pause');
-    whenPressing('resume');
+    whenPressing('finish');
+    whenPressing('finish');
 
-    expect(pupitre.globales).toEqual(['REPRENDRE']);
+    expect(pupitre.finish).toHaveBeenCalledOnce();
   });
 
   it('should display the requested workstation choice', () => {
@@ -223,7 +223,7 @@ describe('Pupitre page', () => {
       postes: [{ id: 'tour', libelle: 'Tour' }],
       choose: () => Promise.resolve(),
     });
-    whenPressing('primary-target');
+    whenHolding('primary-target');
 
     thenVisible('workstation-dialog', true);
   });
@@ -235,7 +235,7 @@ describe('Pupitre page', () => {
       postes: [{ id: 'tour', libelle: 'Tour' }],
       choose: () => Promise.resolve(),
     });
-    whenPressing('primary-target');
+    whenHolding('primary-target');
     whenPointageCloses();
 
     thenVisible('workstation-dialog', false);
@@ -340,6 +340,13 @@ describe('Pupitre page', () => {
     const pressed = element(selector);
     pressed.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
     pressed.click();
+    fixture.detectChanges();
+  };
+  const whenHolding = (selector: string): void => {
+    const held = element(selector);
+    held.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    vi.advanceTimersByTime(1_500);
+    held.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
   };
   const whenTheAdministrationGestureIsHeld = (): void => {

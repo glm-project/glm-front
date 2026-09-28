@@ -9,10 +9,8 @@
       type="button"
       class="heading-target truncate text-section"
       data-selector="header-heading"
-      (pointerdown)="holdTheLogo()"
-      (pointerup)="releaseTheLogo()"
-      (pointerleave)="releaseTheLogo()"
-      (pointercancel)="releaseTheLogo()"
+      [glmLongPress]="administrationPressMs"
+      (longPressed)="reinitialisationRequested.emit()"
     >
       {{ heading() }}
     </button>

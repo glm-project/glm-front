@@ -64,6 +64,16 @@ the card that carries a table and its paginator, the table scroller, the segment
 type tag, the row actions and the back link. Its classes are prefixed `gestion-` so they never meet a
 component's local class. A screen keeps only its own column widths and specific drawings.
 
+## The pupitre confirms a gesture with a sustained press
+
+`pupitre/shared/design-system/infrastructure/primary/long-press/long-press.ts` owns the `glmLongPress` primitive.
+It emits `longPressed` once its host has been held for the duration the consumer binds
+(`[glmLongPress]="durationMs"`). Releasing, a pointer cancelled by a scroll, or a host that is `:disabled` at the
+press or at the deadline emits nothing, and the context menu a touch long press opens is prevented. The host always
+carries the `--long-press-duration` variable and carries the `long-press--holding` class only while held; the
+consuming component draws the fill, as the pointage does with `.hold-target::before`, because the pupitre stylesheet holds a single
+rule. See [ADR 0044](adr/0044-confirm-pupitre-gestures-with-a-sustained-press.md).
+
 ## Only rendering code depends on the design system
 
 The design system is a shared kernel that depends on no business context. Only primary adapters render and

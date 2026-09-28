@@ -1,4 +1,5 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { longPressFixture } from '../../../utils/LongPressFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 describe('Pupitre layout in a browser', () => {
@@ -7,8 +8,16 @@ describe('Pupitre layout in a browser', () => {
 
     whenDesignatingJean();
 
-    thenBothTargetsFitTheirTile();
+    thenBothTargetsFitTheirTile(['moule-1', 'of-1']);
     thenCaptureTheScreen('tablet-pointage');
+  });
+
+  it('should keep mold targets inside their tile on a narrow screen', () => {
+    givenThePupitre(390, 844);
+
+    whenDesignatingJean();
+
+    thenBothTargetsFitTheirTile(['moule-1', 'of-1']);
   });
 
   it('should keep the keypad controls within a short landscape screen', () => {
@@ -49,24 +58,26 @@ const whenDesignatingJean = (): void => {
 };
 
 const whenOpeningWorkstationChoice = (): void => {
-  cy.get(dataSelector('tile-of-1')).find(dataSelector('primary-target')).click();
+  longPressFixture(cy.get(dataSelector('tile-of-1')).find(dataSelector('primary-target')));
   cy.get(dataSelector('workstation-dialog')).should('be.visible');
 };
 
-const thenBothTargetsFitTheirTile = (): void => {
-  cy.get(dataSelector('tile-of-1')).should(tiles => {
-    const tile = requiredFixture(tiles[0], 'tile');
-    const bounds = tile.getBoundingClientRect();
-    for (const selector of ['primary-target', 'secondary-target']) {
-      const target = requiredFixture(tile.querySelector<HTMLElement>(dataSelector(selector)), selector);
-      const targetBounds = target.getBoundingClientRect();
-      expect(targetBounds.left, `${selector} left edge`).to.be.at.least(bounds.left);
-      expect(targetBounds.right, `${selector} right edge`).to.be.at.most(bounds.right);
-      expect(targetBounds.width, `${selector} touch width`).to.be.at.least(44);
-      expect(targetBounds.height, `${selector} touch height`).to.be.at.least(44);
-      expect(target.scrollWidth, `${selector} full label`).to.be.at.most(target.clientWidth);
-    }
-  });
+const thenBothTargetsFitTheirTile = (tileIds: readonly string[]): void => {
+  for (const tileId of tileIds) {
+    cy.get(dataSelector(`tile-${tileId}`)).should(tiles => {
+      const tile = requiredFixture(tiles[0], tileId);
+      const bounds = tile.getBoundingClientRect();
+      for (const selector of ['primary-target', 'secondary-target']) {
+        const target = requiredFixture(tile.querySelector<HTMLElement>(dataSelector(selector)), selector);
+        const targetBounds = target.getBoundingClientRect();
+        expect(targetBounds.left, `${tileId} ${selector} left edge`).to.be.at.least(bounds.left);
+        expect(targetBounds.right, `${tileId} ${selector} right edge`).to.be.at.most(bounds.right);
+        expect(targetBounds.width, `${tileId} ${selector} touch width`).to.be.at.least(44);
+        expect(targetBounds.height, `${tileId} ${selector} touch height`).to.be.at.least(52);
+        expect(target.scrollWidth, `${tileId} ${selector} full label`).to.be.at.most(target.clientWidth);
+      }
+    });
+  }
 };
 
 const thenControlsFitTheScreen = (selectors: readonly string[]): void => {
