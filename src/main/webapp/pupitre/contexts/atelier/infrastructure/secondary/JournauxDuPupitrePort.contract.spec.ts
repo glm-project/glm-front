@@ -259,7 +259,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   };
   const givenAnAcceptedArrivalAndAPendingDeparture = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [arriveeJeanFixture, departJeanFixture]);
-    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: arriveeJeanFixture, etat: 'ACCEPTE', journeeOuverte: true });
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: arriveeJeanFixture, etat: 'ACCEPTE' });
   };
   const givenAnAcceptedPointageForTheOperator = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [pointageFixture]);
@@ -372,12 +372,12 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('should restore a legacy accepted arrival without inventing that it opened the day', async () => {
+  it('should restore an accepted arrival stored with the day outcome of an earlier version, without that outcome', async () => {
     await givenALegacyAcceptedArrival();
 
     const state = await whenReadingCompany('entreprise-a');
 
-    thenEventsAre(state, [{ geste: arriveeFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
+    thenEventsAre(state, [{ geste: arriveeFixture, etat: 'ACCEPTE' }]);
   });
 
   it('should read an operator stored on pause as present, the pause living on the pupitre', async () => {
@@ -407,7 +407,7 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
   });
 
   const givenALegacyAcceptedArrival = async (): Promise<void> => {
-    const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const }] };
+    const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const, journeeOuverte: true }] };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
   };
   const givenAReferenceStoredWithAnOperatorOnPause = async (): Promise<void> => {

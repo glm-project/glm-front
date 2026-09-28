@@ -29,12 +29,8 @@ type JournalDuPupitreStocke = Omit<JournalDuPupitre, 'evenements' | 'referentiel
   readonly referentiel?: ReferentielStocke;
 };
 
-const restoreEvenement = (evenement: EvenementStocke): EvenementDuJournal => {
-  if (evenement.etat !== 'ACCEPTE') return evenement;
-  return evenement.geste.nature === 'ARRIVEE'
-    ? { geste: evenement.geste, etat: 'ACCEPTE', journeeOuverte: evenement.journeeOuverte ?? false }
-    : { geste: evenement.geste, etat: 'ACCEPTE' };
-};
+const restoreEvenement = (evenement: EvenementStocke): EvenementDuJournal =>
+  evenement.etat === 'ACCEPTE' ? { geste: evenement.geste, etat: 'ACCEPTE' } : evenement;
 
 const restoreOperateur = (operateur: OperateurStocke): OperateurDuPupitre => ({
   ...operateur,

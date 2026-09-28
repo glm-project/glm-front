@@ -273,8 +273,7 @@ const withSuivis = (referentiel: ReferentielDuPupitre, suivis: readonly SuiviDuP
   ...referentiel,
   suivis,
 });
-const accepted = (...gestes: readonly GesteDAtelier[]): EvenementDuJournal[] =>
-  gestes.map(geste => (geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte: false } : { geste, etat: 'ACCEPTE' }));
+const accepted = (...gestes: readonly GesteDAtelier[]): EvenementDuJournal[] => gestes.map(geste => ({ geste, etat: 'ACCEPTE' }));
 const refused = (...gestes: readonly GesteDAtelier[]): EvenementDuJournal[] =>
   gestes.map(geste => ({ geste, etat: 'REFUSE', refus: { code: 'refus', message: 'Refusé.' } }));
 const debutFixture = (suiviId: string): GesteDePointage => ({

@@ -569,7 +569,7 @@ describe('AtelierCoordinator', () => {
     givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
     await whenSynchronizing();
 
-    await thenArrivalOpenedDay(false);
+    await thenArrivalIsAccepted();
     await thenPendingIs(1);
   });
 
@@ -1294,9 +1294,9 @@ describe('AtelierCoordinator', () => {
   const thenPointageIsUnavailable = (execution: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(execution).toEqual({ kind: 'INDISPONIBLE' });
   };
-  const thenArrivalOpenedDay = async (expected: boolean): Promise<void> => {
+  const thenArrivalIsAccepted = async (): Promise<void> => {
     const arrival = (await journal.read(Entreprise.of('entreprise-a'))).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
-    expect(arrival).toMatchObject({ etat: 'ACCEPTE', journeeOuverte: expected });
+    expect(arrival).toMatchObject({ etat: 'ACCEPTE' });
   };
   const thenSemanticCaptureFails = async (execution: ReturnType<AtelierCoordinator['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');

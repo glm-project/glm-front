@@ -26,8 +26,7 @@ const requiredFixture = <T>(value: T | null | undefined, description: string): T
   return value;
 };
 
-const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] =>
-  geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte: false } : { geste, etat: 'ACCEPTE' };
+const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] => ({ geste, etat: 'ACCEPTE' });
 
 const travailAuTourFixture: ActiviteDuPupitre = {
   operateurId: 'jean',
@@ -897,7 +896,7 @@ describe('FenetreOperateur', () => {
       connecte: true,
       evenements: [
         { geste, etat: 'EN_ATTENTE' },
-        { geste, etat: 'ACCEPTE', journeeOuverte: true },
+        { geste, etat: 'ACCEPTE' },
         { geste, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
       ],
     };

@@ -132,17 +132,6 @@ describe('JournalDuPupitreProjection', () => {
     expectTypeOf(acceptedWithAResidualRefusal).not.toExtend<EvenementDuJournal>();
   });
 
-  it('should prevent arrival causality from being carried by incompatible gestures and outcomes', () => {
-    const pointageWithDayOutcome = { geste: debutGesteFixture, etat: 'ACCEPTE' as const, journeeOuverte: true };
-    const arrivalWithoutDayOutcome = {
-      geste: { ...debutGesteFixture, nature: 'ARRIVEE' as const },
-      etat: 'ACCEPTE' as const,
-    };
-
-    expectTypeOf(pointageWithDayOutcome).not.toExtend<EvenementDuJournal>();
-    expectTypeOf(arrivalWithoutDayOutcome).not.toExtend<EvenementDuJournal>();
-  });
-
   it('should expose no referential before the first complete download', () => {
     const state = givenNoDownloadedReference();
 

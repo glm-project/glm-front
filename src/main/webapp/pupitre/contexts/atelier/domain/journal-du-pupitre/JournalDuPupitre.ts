@@ -81,21 +81,11 @@ export interface EvenementEnAttente {
   readonly refus?: never;
 }
 
-export interface ArriveeAcceptee {
-  readonly geste: GesteDArrivee;
+export interface EvenementAccepte {
+  readonly geste: GesteDAtelier;
   readonly etat: 'ACCEPTE';
-  readonly journeeOuverte: boolean;
   readonly refus?: never;
 }
-
-export interface AutreGesteAccepte {
-  readonly geste: GesteDePresence | GesteDePointage;
-  readonly etat: 'ACCEPTE';
-  readonly journeeOuverte?: never;
-  readonly refus?: never;
-}
-
-export type EvenementAccepte = ArriveeAcceptee | AutreGesteAccepte;
 
 export interface EvenementRefuse {
   readonly geste: GesteDAtelier;
@@ -111,16 +101,10 @@ export interface JournalDuPupitre {
 
 export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], connecte: true };
 
-const isArriveeAcceptee = (evenement: EvenementAccepte): evenement is ArriveeAcceptee => evenement.geste.nature === 'ARRIVEE';
-
 const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal => {
   const geste = { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
-  if (evenement.etat === 'ACCEPTE') {
-    return isArriveeAcceptee(evenement)
-      ? { geste: { ...evenement.geste }, etat: 'ACCEPTE', journeeOuverte: evenement.journeeOuverte }
-      : { geste: { ...evenement.geste }, etat: 'ACCEPTE' };
-  }
+  if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
   return { geste, etat: 'EN_ATTENTE' };
 };
 
@@ -184,8 +168,7 @@ export class EvenementsDuJournal {
   }
 }
 
-export const acceptPublication = (geste: GesteDAtelier, journeeOuverte: boolean): EvenementAccepte =>
-  geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte } : { geste, etat: 'ACCEPTE' };
+export const acceptPublication = (geste: GesteDAtelier): EvenementAccepte => ({ geste, etat: 'ACCEPTE' });
 
 export const refusePublication = (geste: GesteDAtelier, refus: EvenementRefuse['refus']): EvenementRefuse => ({
   geste,
