@@ -7,7 +7,7 @@ import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-ope
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { LIBELLES_POINTAGE } from '../LibellesAtelier';
 
-const CONFIRMATION_PRESS_MS = 1_500;
+const CONFIRMATION_PRESS_MS = 1_000;
 
 interface AttenteDePoste {
   intention: IntentionDePointage;

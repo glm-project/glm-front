@@ -181,7 +181,7 @@ describe('Pointage screen in a browser', () => {
   };
   const thenTheTargetFillsOverTheConfirmationDelay = (fill: Cypress.Chainable<FillFixture>): void => {
     fill.then(observed => {
-      expect(observed.duration, 'fill duration').to.equal(1_500);
+      expect(observed.duration, 'fill duration').to.equal(1_000);
       expect(observed.progress, 'fill progress halfway').to.be.greaterThan(0).and.lessThan(1);
     });
   };

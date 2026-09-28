@@ -1,6 +1,6 @@
 import { requiredFixture } from './RequiredFixture';
 
-export const CONFIRMATION_PRESS_FIXTURE_MS = 1_500;
+export const CONFIRMATION_PRESS_FIXTURE_MS = 1_000;
 
 type ElapseFixture = (milliseconds: number) => void;
 

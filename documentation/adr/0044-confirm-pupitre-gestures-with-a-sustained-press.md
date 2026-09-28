@@ -4,6 +4,8 @@
 
 `Accepted`
 
+The hold was first set to 1.5 s and has been shortened to 1 s; the rest of the decision is unchanged.
+
 ## Context
 
 On the pupitre's pointage screen a single tap on a tile target, a global command or a workstation choice declared a
@@ -20,7 +22,7 @@ sustained press was a known gesture on this console.
 
 ## Considered options
 
-- Hold the target for 1.5 s, with a fill that shows the progress, before declaring the gesture — **kept**.
+- Hold the target for 1 s, with a fill that shows the progress, before declaring the gesture — **kept**.
 - Keep the tap — rejected: it is the source of the accidental gestures.
 - Double tap — rejected: two quick taps are as easy to make by accident as one, and nothing shows that the first
   one counted.
@@ -31,7 +33,7 @@ sustained press was a known gesture on this console.
 ## Decision
 
 Every gesture target of the pointage screen — the two targets of each tile, PAUSE, REPRENDRE, TOUT ARRÊTER and each
-workstation choice — declares its intention only after it has been held for 1.5 s. Releasing it or cancelling the
+workstation choice — declares its intention only after it has been held for 1 s. Releasing it or cancelling the
 pointer by scrolling before the deadline declares nothing, and neither does a target that is unavailable when the
 hold begins or when it reaches its deadline. The gesture receives its identity and its time at the deadline. Two
 holds that reach their deadline together declare at most one intention per tile and one workstation choice: the
@@ -54,7 +56,7 @@ and its targets refuse text selection and the touch callout.
 
 ### Negative
 
-- Each gesture takes 1.5 s longer, which an operator declaring many gestures in a row will feel.
+- Each gesture takes 1 s longer, which an operator declaring many gestures in a row will feel.
 - The gesture targets no longer answer a click: neither a physical keyboard nor an assistive technology that
   activates by click can declare a gesture. Nothing in the workshop needs them today; supporting them would reopen
   this decision.
@@ -63,5 +65,5 @@ and its targets refuse text selection and the touch callout.
   target briefly disabled in between still completes its hold, and a target made unavailable by other means than
   `disabled` would too.
 - A target keeps its position while its meaning may change during the hold: if a server refusal reconciles the tile
-  within those 1.5 s, the held ARRÊTER becomes DÉMARRER and the deadline declares the new meaning. The window was
+  within that second, the held ARRÊTER becomes DÉMARRER and the deadline declares the new meaning. The window was
   about a tenth of a second with a tap.

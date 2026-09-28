@@ -109,7 +109,7 @@ something stays, with a status that says what died.
   `afterRenderEffect()` refused in every script, presentation adapters included
 
 - [0044 — Confirm pupitre gestures with a sustained press](0044-confirm-pupitre-gestures-with-a-sustained-press.md) —
-  a 1.5 s hold with a visible fill before any pointage gesture, « Annuler » and « J'ai fini » kept immediate
+  a 1 s hold with a visible fill before any pointage gesture, « Annuler » and « J'ai fini » kept immediate
 
 - [0045 — Keep the pause on the pupitre](0045-keep-the-pause-on-the-pupitre.md) — PAUSE ends each known activity by
   a finish marked with its suspension, REPRENDRE restarts them, and the server never hears of a pause
