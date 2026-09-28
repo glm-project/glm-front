@@ -6,10 +6,10 @@ describe('Pointage screen in a browser', () => {
     cy.viewport(1920, 1080);
   });
 
-  it('should keep the nominal workshop visible without scrolling and preserve the two tactile targets', () => {
+  it('should present molds two per row and preserve the two tactile targets', () => {
     givenThePointageScreen();
 
-    thenTheWholeNominalGridFits();
+    thenMoldsArePresentedTwoPerRow();
     thenEachTileHasTwoPermanentTouchTargets();
     thenTheCompleteScreenChromeIsVisible();
   });
@@ -57,8 +57,8 @@ describe('Pointage screen in a browser', () => {
     whenChoosingWorkstation(workstation);
     cy.get(dataSelector(`tile-${id}`)).should('contain.text', 'ARRÊTER');
   };
-  const givenTheTilePosition = (id: string): Cypress.Chainable<DOMRect> =>
-    cy.get(dataSelector(`tile-${id}`)).then(tile => requiredFixture(tile[0], 'tile').getBoundingClientRect());
+  const givenTheTilePosition = (id: string): Cypress.Chainable<GridPositionFixture> =>
+    cy.get(dataSelector(`tile-${id}`)).then(tile => positionInGrid(requiredFixture(tile[0], 'tile')));
   const whenPressingTileTarget = (id: string, target: string): void => {
     cy.get(dataSelector(`tile-${id}`))
       .find(dataSelector(target))
@@ -67,19 +67,27 @@ describe('Pointage screen in a browser', () => {
   const whenChoosingWorkstation = (id: string): void => {
     cy.get(dataSelector(`workstation-${id}`)).click();
   };
-  const thenTheWholeNominalGridFits = (): void => {
-    cy.get(dataSelector('pointage-grid')).should(grid => {
-      const element = requiredFixture(grid[0], 'pointage grid');
-      expect(element.scrollHeight).to.be.at.most(element.clientHeight);
+  const thenMoldsArePresentedTwoPerRow = (): void => {
+    cy.get(dataSelector('moules-zone')).should(zones => {
+      const zone = requiredFixture(zones[0], 'molds zone');
+      const first = tileBounds(zone, 'moule-1');
+      const second = tileBounds(zone, 'moule-2');
+      const third = tileBounds(zone, 'moule-3');
+      expect(second.top, 'second mold on the first row').to.equal(first.top);
+      expect(second.left, 'second mold beside the first').to.be.greaterThan(first.right);
+      expect(third.top, 'third mold on the next row').to.be.at.least(first.bottom);
+      expect(third.left, 'third mold under the first').to.equal(first.left);
     });
   };
   const thenEachTileHasTwoPermanentTouchTargets = (): void => {
-    cy.get(dataSelector('tile-of-1'))
-      .find('button')
-      .should('have.length', 2)
-      .each(button => {
-        expect(requiredFixture(button[0], 'tile target').getBoundingClientRect().height).to.be.at.least(44);
-      });
+    for (const id of ['moule-1', 'of-1']) {
+      cy.get(dataSelector(`tile-${id}`))
+        .find('button')
+        .should('have.length', 2)
+        .each(button => {
+          expect(requiredFixture(button[0], 'tile target').getBoundingClientRect().height).to.be.at.least(52);
+        });
+    }
   };
   const thenTheCompleteScreenChromeIsVisible = (): void => {
     cy.get(dataSelector('header-operator')).should('contain.text', 'Dupont Jean');
@@ -96,12 +104,12 @@ describe('Pointage screen in a browser', () => {
     cy.get(dataSelector('workstation-tour')).should('be.visible');
     cy.get(dataSelector('workstation-fraiseuse')).should('be.visible');
   };
-  const thenTheTileIsActiveAt = (id: string, original: Cypress.Chainable<DOMRect>): void => {
+  const thenTheTileIsActiveAt = (id: string, original: Cypress.Chainable<GridPositionFixture>): void => {
     original.then(before => {
       cy.get(dataSelector(`tile-${id}`)).should(tile => {
-        const after = requiredFixture(tile[0], 'tile').getBoundingClientRect();
-        expect(after.x).to.equal(before.x);
-        expect(after.y).to.equal(before.y);
+        const after = positionInGrid(requiredFixture(tile[0], 'tile'));
+        expect(after.x).to.be.closeTo(before.x, 1);
+        expect(after.y).to.be.closeTo(before.y, 1);
         expect(tile.text()).to.contain('ARRÊTER');
       });
     });
@@ -119,4 +127,17 @@ describe('Pointage screen in a browser', () => {
     });
     cy.get(dataSelector('tile-of-72')).should('exist');
   };
+  const tileBounds = (zone: HTMLElement, id: string): DOMRect =>
+    requiredFixture(zone.querySelector<HTMLElement>(dataSelector(`tile-${id}`)), id).getBoundingClientRect();
+  const positionInGrid = (tile: HTMLElement): GridPositionFixture => {
+    const grid = requiredFixture(tile.closest<HTMLElement>(dataSelector('pointage-grid')), 'pointage grid');
+    const tileBox = tile.getBoundingClientRect();
+    const gridBox = grid.getBoundingClientRect();
+    return { x: tileBox.x - gridBox.x + grid.scrollLeft, y: tileBox.y - gridBox.y + grid.scrollTop };
+  };
 });
+
+interface GridPositionFixture {
+  readonly x: number;
+  readonly y: number;
+}
