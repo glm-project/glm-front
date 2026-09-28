@@ -6,7 +6,7 @@ import { PosteReleveId } from '../../../domain/element/PosteReleveId';
 import { PointageDElement } from '../../../domain/releve/PointageDElement';
 import { TypeDePointageDElement } from '../../../domain/releve/TypeDePointage';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AxeDuJour, minutesDeDebut, minutesDeFin } from './AxeDuJour';
+import { minutesDeDebut, minutesDeFin } from './AxeDuJour';
 import { JourSurSonAxe } from './JourSurSonAxe';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
@@ -21,12 +21,13 @@ export interface BarreDActivite {
   readonly presumee: boolean;
 }
 
-export type TypeDeMarque = 'debut' | 'nc' | 'fin';
+export type TypeDeMarque = 'debut' | 'nc' | 'fin' | 'clos';
 
 export interface MarqueDePointage {
   readonly type: TypeDeMarque;
   readonly gauche: number;
   readonly titre: string;
+  readonly choisie: boolean;
 }
 
 export interface CelluleDeLigne {
@@ -86,18 +87,39 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
   };
 };
 
-const marqueDe = (axe: AxeDuJour, pointage: PointageDElement): MarqueDePointage => ({
+const marqueDe = ({ axe, pointageChoisi }: JourSurSonAxe, pointage: PointageDElement): MarqueDePointage => ({
   type: MARQUES[pointage.type],
   gauche: axe.pourcentDe(minutesDeDebut(pointage.instant)),
-  titre: LIBELLES.pointageDElement(pointage.type, pointage.instant),
+  titre: LIBELLES.pointage(pointage.type, pointage.instant),
+  choisie: pointage === pointageChoisi,
 });
 
-const marquesDe = (element: ElementDuReleve, { jour, axe, ouvert }: JourSurSonAxe, retient: Selection): readonly MarqueDePointage[] =>
-  ouvert
-    ? jour
-        .pointagesDe(element.id)
-        .filter(pointage => retient(pointage.cible.poste))
-        .map(pointage => marqueDe(axe, pointage))
+const marquesDeCloture = (
+  element: ElementDuReleve,
+  { jour, axe, pointageChoisi }: JourSurSonAxe,
+  retient: Selection,
+): readonly MarqueDePointage[] =>
+  jour.pointagesDePresence().flatMap(depart =>
+    jour
+      .effetDe(depart)
+      .clotures.filter(cible => cible.element.value === element.id.value && retient(cible.poste))
+      .map(() => ({
+        type: 'clos' as const,
+        gauche: axe.pourcentDe(minutesDeDebut(depart.instant)),
+        titre: LIBELLES.clotureParLeDepart(depart.instant),
+        choisie: depart === pointageChoisi,
+      })),
+  );
+
+const marquesDe = (element: ElementDuReleve, jourSurAxe: JourSurSonAxe, retient: Selection): readonly MarqueDePointage[] =>
+  jourSurAxe.ouvert
+    ? [
+        ...jourSurAxe.jour
+          .pointagesDe(element.id)
+          .filter(pointage => retient(pointage.cible.poste))
+          .map(pointage => marqueDe(jourSurAxe, pointage)),
+        ...marquesDeCloture(element, jourSurAxe, retient),
+      ]
     : [];
 
 const cellulesDe = (element: ElementDuReleve, jours: readonly JourSurSonAxe[], retient: Selection): readonly CelluleDeLigne[] =>

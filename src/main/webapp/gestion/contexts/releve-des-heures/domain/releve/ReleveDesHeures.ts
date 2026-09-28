@@ -65,6 +65,10 @@ export class ReleveDesHeures {
     this.operationnelPresume = fiche.operationnelPresume;
   }
 
+  elementDe(cible: CibleDePointage): ElementDuReleve {
+    return elementDe(cible, this.elements);
+  }
+
   travailleEnParallele(element: ElementDuReleve): boolean {
     const intervalles = this.jours.flatMap(jour => jour.intervallesDe(element.id));
     return intervalles.some((intervalle, rang) => intervalles.slice(rang + 1).some(autre => intervalle.chevauche(autre)));

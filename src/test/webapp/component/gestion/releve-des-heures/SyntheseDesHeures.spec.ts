@@ -409,8 +409,17 @@ describe('Weekly hours report in gestion', () => {
     givenAWeekOfDayShifts();
     whenVisitingAt(`${SEMAINE_DE_JOUR}&jour=2026-09-21`, 1024);
 
-    thenTheOpenDayShowsMarkersAndLines({ marques: 5, traits: 4 });
+    thenTheOpenDayShowsMarkersAndLines({ marques: 6, traits: 4 });
     thenTheFriseDoesNotScroll('synthese-des-heures-1024-jour-ouvert');
+  });
+
+  it('should list the clockings of the open day and situate the chosen one across the frise', () => {
+    givenAWeekOfDayShifts();
+    whenVisitingAt(`${SEMAINE_DE_JOUR}&jour=2026-09-21`, 1024);
+    whenChoosingTheClocking(3);
+
+    thenTheJournalListsAndTheGuideCrossesTheFrise({ entrees: 9, reperes: 1 });
+    thenTheFriseDoesNotScroll('synthese-des-heures-1024-pointage-choisi');
   });
 
   it('should draw a working day abandoned without departure as presumed, beside its operational zero', () => {
@@ -578,6 +587,10 @@ describe('Weekly hours report in gestion', () => {
     whenVisitingAt(adresse, 1280);
   };
 
+  const whenChoosingTheClocking = (rang: number): void => {
+    cy.get(dataSelector('synthese-journal-entree')).eq(rang).click();
+  };
+
   const whenFocusingTheWeekSelector = (): void => {
     cy.get(dataSelector('synthese-semaine')).focus();
   };
@@ -699,6 +712,12 @@ describe('Weekly hours report in gestion', () => {
   const thenTheOpenDayShowsMarkersAndLines = (attendu: { marques: number; traits: number }): void => {
     cy.get(dataSelector('synthese-marque')).should('have.length', attendu.marques).and('be.visible');
     cy.get(dataSelector('synthese-trait-presence')).should('have.length', attendu.traits);
+  };
+
+  const thenTheJournalListsAndTheGuideCrossesTheFrise = (attendu: { entrees: number; reperes: number }): void => {
+    cy.get(dataSelector('synthese-journal-entree')).should('have.length', attendu.entrees);
+    cy.get(dataSelector('synthese-journal-entree')).filter('[aria-pressed="true"]').should('have.length', 1);
+    cy.get(dataSelector('synthese-repere-selection')).should('have.length', attendu.reperes);
   };
 
   const thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne = (ouvert: number, vide: number): void => {

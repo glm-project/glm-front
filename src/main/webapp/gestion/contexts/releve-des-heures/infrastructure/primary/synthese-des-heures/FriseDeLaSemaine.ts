@@ -5,6 +5,7 @@ import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
 import { AncrageDuRepere, AxeDuJour, minutesDeDebut, minutesDeFin, seLePoursuit } from './AxeDuJour';
 import { JourSurSonAxe, jourSurSonAxe } from './JourSurSonAxe';
+import { JournalDuJour, journalDuJour } from './JournalDuJour';
 import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
@@ -44,9 +45,11 @@ export interface TraitDePresence {
 export interface CalqueDeFrise {
   readonly colonne: number;
   readonly traits: readonly TraitDePresence[];
+  readonly repere: TraitDePresence | undefined;
 }
 
 export interface FriseDeLaSemaine {
+  readonly journal: JournalDuJour | undefined;
   readonly colonnes: string;
   readonly calque: CalqueDeFrise | undefined;
   readonly jours: readonly JourDeFrise[];
@@ -99,6 +102,14 @@ const largeurDuJour = ({ jour, ouvert }: JourSurSonAxe): string => {
 const colonnesDe = (jours: readonly JourSurSonAxe[]): string =>
   ['var(--largeur-etiquette)', ...jours.map(largeurDuJour), 'var(--largeur-total)'].join(' ');
 
+const repereDe = ({ axe, pointageChoisi }: JourSurSonAxe): TraitDePresence | undefined =>
+  pointageChoisi === undefined
+    ? undefined
+    : {
+        gauche: axe.pourcentDe(minutesDeDebut(pointageChoisi.instant)),
+        titre: LIBELLES.pointage(pointageChoisi.type, pointageChoisi.instant),
+      };
+
 const calqueDe = (jours: readonly JourSurSonAxe[]): CalqueDeFrise | undefined => {
   const rang = jours.findIndex(jour => jour.ouvert);
   const ouvert = jours[rang];
@@ -108,18 +119,30 @@ const calqueDe = (jours: readonly JourSurSonAxe[]): CalqueDeFrise | undefined =>
         colonne: rang + PREMIERE_COLONNE_DE_JOUR,
         traits: ouvert.jour.pointagesDePresence().map(pointage => ({
           gauche: ouvert.axe.pourcentDe(minutesDeDebut(pointage.instant)),
-          titre: LIBELLES.pointageDePresence(pointage.type, pointage.instant),
+          titre: LIBELLES.pointage(pointage.type, pointage.instant),
         })),
+        repere: repereDe(ouvert),
       };
+};
+
+const journalDuJourOuvert = (
+  releve: ReleveDesHeures,
+  jours: readonly JourSurSonAxe[],
+  selection: number | undefined,
+): JournalDuJour | undefined => {
+  const ouvert = jours.find(jour => jour.ouvert);
+  return ouvert === undefined ? undefined : journalDuJour(releve, ouvert.jour, selection);
 };
 
 export const friseDeLaSemaine = (
   releve: ReleveDesHeures,
   aujourdhui: JourCalendaire,
   ouvert: JourCalendaire | undefined,
+  selection: number | undefined,
 ): FriseDeLaSemaine => {
-  const jours = releve.jours.map(jour => jourSurSonAxe(jour, ouvert));
+  const jours = releve.jours.map(jour => jourSurSonAxe(jour, ouvert, selection));
   return {
+    journal: journalDuJourOuvert(releve, jours, selection),
     colonnes: colonnesDe(jours),
     calque: calqueDe(jours),
     jours: jours.map(jour => jourDeFrise(jour, aujourdhui)),

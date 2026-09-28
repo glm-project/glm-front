@@ -1,6 +1,6 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, resource, Signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -96,6 +96,11 @@ export class SyntheseDesHeures {
     loader: ({ params }) => this.port.synthese(params),
   });
 
+  private readonly pointageChoisi = linkedSignal<Consultation | undefined, number | undefined>({
+    source: this.consultation,
+    computation: () => undefined,
+  });
+
   protected readonly etat: Signal<EtatVueSynthese> = computed(() => {
     const consultation = this.consultation();
     return consultation === undefined ? { kind: 'ADRESSE_INVALIDE' } : this.etatDeLaLecture(consultation);
@@ -128,6 +133,10 @@ export class SyntheseDesHeures {
     void this.naviguerVers(new SemaineISO(courante.annee, Number(valeur)));
   }
 
+  protected choisir(rang: number): void {
+    this.pointageChoisi.update(choisi => (choisi === rang ? undefined : rang));
+  }
+
   protected reload(): void {
     this.releve.reload();
   }
@@ -148,6 +157,7 @@ export class SyntheseDesHeures {
       return { kind: 'OPERATEUR_INTROUVABLE' };
     }
     const ouvert = jourOuvert(consultation.jour, consultation.semaine, releve, this.aujourdhui);
-    return { kind: 'SUCCES', semaine: consultation.semaine, releve, frise: friseDeLaSemaine(releve, this.aujourdhui, ouvert) };
+    const frise = friseDeLaSemaine(releve, this.aujourdhui, ouvert, this.pointageChoisi());
+    return { kind: 'SUCCES', semaine: consultation.semaine, releve, frise };
   }
 }

@@ -331,6 +331,15 @@
   background: color-mix(in srgb, var(--color-ink-muted) 70%, transparent);
 }
 
+.repere-selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  margin-left: -1px;
+  border-left: 2px dashed var(--color-accent);
+}
+
 .marque {
   position: absolute;
   top: 50%;
@@ -342,12 +351,25 @@
   background: var(--color-ink);
 }
 
+.marque.choisie {
+  z-index: 1;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-accent);
+}
+
 .marque.debut {
   border-radius: 50%;
 }
 
 .marque.fin {
   border-radius: 2px;
+}
+
+.marque.clos {
+  border: 2px solid var(--color-ink-muted);
+  border-radius: 2px;
+  background: var(--color-surface);
 }
 
 .marque.nc {
@@ -435,6 +457,12 @@
   border-radius: 2px;
 }
 
+.marque-legende.clos {
+  border: 2px solid var(--color-ink-muted);
+  border-radius: 2px;
+  background: var(--color-surface);
+}
+
 .marque-legende.nc {
   width: 0.625rem;
   height: 0.625rem;
@@ -455,4 +483,118 @@
   height: 18px;
   border-radius: 2px;
   background: var(--color-ink-muted);
+}
+
+.journal {
+  margin-top: 1rem;
+}
+
+.journal h2 {
+  margin: 0;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.entrees {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entrees li + li {
+  border-top: 1px solid var(--color-sunken);
+}
+
+.entrees button {
+  display: grid;
+  grid-template-columns: 4rem 11rem minmax(9rem, 1.2fr) minmax(8rem, 1fr) minmax(10rem, 2fr);
+  align-items: center;
+  gap: 0.875rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--spacing-touch);
+  padding: 0.375rem 1.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entrees button > * {
+  min-width: 0;
+}
+
+.entrees button:hover {
+  background: color-mix(in srgb, var(--color-sunken) 45%, var(--color-surface));
+}
+
+.entrees button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.entrees button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.entrees .heure {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.entrees .pointage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.entrees .objet {
+  font-weight: 600;
+}
+
+.entrees .poste,
+.entrees .effet {
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+}
+
+.glyphe {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--color-ink);
+}
+
+.glyphe.debut {
+  border-radius: 50%;
+}
+
+.glyphe.fin {
+  border-radius: 2px;
+}
+
+.glyphe.nc {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--color-ink);
+  background: var(--color-nc);
+  transform: rotate(45deg);
+}
+
+.glyphe.arrivee,
+.glyphe.depart {
+  width: 3px;
+  height: 1rem;
+  border-radius: 1px;
+}
+
+.vide {
+  margin: 0;
+  padding: 1.5rem 1.25rem;
+  color: var(--color-ink-muted);
 }

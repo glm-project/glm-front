@@ -4,7 +4,7 @@ import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { TypeDElement } from '../../domain/element/TypeDElement';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
-import { TypeDePointageDElement, TypeDePointageDePresence } from '../../domain/releve/TypeDePointage';
+import { TypeDePointage } from '../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 
@@ -24,9 +24,19 @@ const MINUTES_PAR_HEURE = 60;
 
 const TYPES_D_ELEMENT: Record<TypeDElement, string> = { PRODUIT: 'Moule', ORDRE_DE_FABRICATION: 'OF' };
 
-const POINTAGES_DE_PRESENCE: Record<TypeDePointageDePresence, string> = { ARRIVEE: 'Arrivée', DEPART: 'Départ' };
+const LISTE = new Intl.ListFormat('fr-FR', { style: 'long', type: 'conjunction' });
 
-const POINTAGES_D_ELEMENT: Record<TypeDePointageDElement, string> = { DEBUT: 'Début', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' };
+const JOUR_COMPLET = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+
+const nomDeLElement = (element: ElementDuReleve): string => `${TYPES_D_ELEMENT[element.type]} ${element.numero()}`;
+
+const POINTAGES: Record<TypeDePointage, string> = {
+  ARRIVEE: 'Arrivée',
+  DEPART: 'Départ',
+  DEBUT: 'Début',
+  NON_CONFORMITE: 'Non-conformité',
+  FIN: 'Fin',
+};
 
 const CATEGORIES_D_ACTIVITE: Record<CategorieDActivite, string> = { TRAVAIL: 'travail', NON_CONFORMITE: 'non-conformité' };
 
@@ -96,6 +106,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     debut: 'Début pointé',
     nonConformitePointee: 'Non-conformité pointée',
     fin: 'Fin pointée',
+    clos: 'Clos par le départ',
     presenceTrait: 'Arrivée, départ',
   },
 
@@ -115,9 +126,15 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   nonConformite: (duree: DureeTravaillee): string => `NC ${formatDuree(duree)}`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
   typeDElement: (type: TypeDElement): string => TYPES_D_ELEMENT[type],
-  pointageDePresence: (type: TypeDePointageDePresence, instant: InstantDeReleve): string =>
-    `${POINTAGES_DE_PRESENCE[type]} ${heure(instant)}`,
-  pointageDElement: (type: TypeDePointageDElement, instant: InstantDeReleve): string => `${POINTAGES_D_ELEMENT[type]} ${heure(instant)}`,
+  presence: PRESENCE,
+  nomDElement: nomDeLElement,
+  heure,
+  libelleDePointage: (type: TypeDePointage): string => POINTAGES[type],
+  pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${POINTAGES[type]} ${heure(instant)}`,
+  titreDuJournal: (jour: JourCalendaire, nombre: number): string => `Pointages du ${JOUR_COMPLET.format(dateDe(jour))} · ${nombre}`,
+  clotureParLeDepart: (instant: InstantDeReleve): string => `Clos par le départ ${heure(instant)}`,
+  sansPointageCeJour: 'Aucun pointage ce jour',
+  effetDeCloture: (noms: readonly string[]): string => (noms.length === 0 ? '' : `clôt ${LISTE.format(noms)}, sans fin pointée`),
   postes: (postes: readonly PosteDeLElement[]): string => postes.map(posteEtNature).join(', '),
   repere: (minutes: number): string => `${Math.floor(minutes / MINUTES_PAR_HEURE)} h`,
 
@@ -131,10 +148,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
   },
   enonceDActivite: ({ element, jour, categorie, debut, fin, presumee }: FormeDActivite): string => {
-    const enonce = `${TYPES_D_ELEMENT[element.type]} ${element.numero()}, ${JOUR_LONG.format(dateDe(jour))}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
+    const enonce = `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
     return presumee ? `${enonce}, ${PRESUME}` : enonce;
   },
   enonceDActiviteEnCours: ({ element, jour, categorie, debut }: FormeDActiviteEnCours): string =>
-    `${TYPES_D_ELEMENT[element.type]} ${element.numero()}, ${JOUR_LONG.format(dateDe(jour))}, depuis ${heure(debut)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
+    `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, depuis ${heure(debut)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
   enonceDePlageEnCours: (debut: InstantDeReleve): string => `${PRESENCE} depuis ${heure(debut)}, ${EN_COURS}`,
 } as const;

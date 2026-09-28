@@ -2,8 +2,10 @@ import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { IntervalleDActivite } from '../element/IntervalleDActivite';
 import { JourCalendaire } from '../semaine/JourCalendaire';
+import { EffetDePointage } from './EffetDePointage';
+import { InstantDeReleve } from './InstantDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
-import { PointageDElement } from './PointageDElement';
+import { CibleDePointage, PointageDElement } from './PointageDElement';
 import { PointageDePresence } from './PointageDePresence';
 import { PointageDeReleve } from './PointageDeReleve';
 
@@ -15,6 +17,12 @@ export interface FicheDuJour {
   readonly pointages: readonly PointageDeReleve[];
   readonly plages: readonly PlageDeReleve[];
 }
+
+const estUnDepart = (pointage: PointageDeReleve): pointage is PointageDePresence =>
+  pointage instanceof PointageDePresence && pointage.type === 'DEPART';
+
+const memeCible = (une: CibleDePointage, autre: CibleDePointage): boolean =>
+  une.element.value === autre.element.value && une.poste?.value === autre.poste?.value;
 
 export class JourDeReleve {
   readonly jour: JourCalendaire;
@@ -53,8 +61,23 @@ export class JourDeReleve {
     return this.pointagesDElement().filter(pointage => pointage.cible.element.value === element.value);
   }
 
+  effetDe(pointage: PointageDeReleve): EffetDePointage {
+    if (!estUnDepart(pointage)) {
+      return { clotures: [] };
+    }
+    const finies = this.intervalles.filter(intervalle => intervalle.fin?.estLeMeme(pointage.instant) === true);
+    const sansFinPointee = finies.filter(cible => !this.uneFinPointeeTermine(cible, pointage.instant));
+    return { clotures: sansFinPointee.filter((cible, rang) => sansFinPointee.findIndex(autre => memeCible(autre, cible)) === rang) };
+  }
+
   intervallesDe(element: ElementReleveId): readonly IntervalleDActivite[] {
     return this.intervalles.filter(intervalle => intervalle.element.value === element.value);
+  }
+
+  private uneFinPointeeTermine(cible: CibleDePointage, instant: InstantDeReleve): boolean {
+    return this.pointagesDElement().some(
+      pointage => pointage.type === 'FIN' && pointage.instant.estLeMeme(instant) && memeCible(pointage.cible, cible),
+    );
   }
 
   vientDeLaVeille(plage: PlageDeReleve): boolean {

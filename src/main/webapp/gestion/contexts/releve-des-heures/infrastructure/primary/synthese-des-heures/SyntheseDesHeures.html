@@ -91,6 +91,13 @@
           <div class="colonne-du-calque" [style.grid-column]="calque.colonne">
             @for (trait of calque.traits; track $index) {
             <span class="trait" [style.left.%]="trait.gauche" [title]="trait.titre" data-selector="synthese-trait-presence"></span>
+            } @if (calque.repere; as repere) {
+            <span
+              class="repere-selection"
+              [style.left.%]="repere.gauche"
+              [title]="repere.titre"
+              data-selector="synthese-repere-selection"
+            ></span>
             }
           </div>
         </div>
@@ -226,10 +233,11 @@
           } @for (marque of cellule.marques; track $index) {
           <span
             [class]="'marque ' + marque.type"
+            [class.choisie]="marque.choisie"
             [style.left.%]="marque.gauche"
             [title]="marque.titre"
             aria-hidden="true"
-            data-selector="synthese-marque"
+            [attr.data-selector]="marque.choisie ? 'synthese-marque-selectionnee' : 'synthese-marque'"
           ></span>
           }
         </ng-template>
@@ -253,11 +261,40 @@
           <i class="marque-legende nc" aria-hidden="true"></i>{{ libelles.legende.nonConformitePointee }}
         </li>
         <li data-selector="synthese-legende"><i class="marque-legende fin" aria-hidden="true"></i>{{ libelles.legende.fin }}</li>
+        <li data-selector="synthese-legende"><i class="marque-legende clos" aria-hidden="true"></i>{{ libelles.legende.clos }}</li>
         <li data-selector="synthese-legende">
           <i class="pastille pastille-trait" aria-hidden="true"></i>{{ libelles.legende.presenceTrait }}
         </li>
       </ul>
     </div>
   </div>
-  } }
+  @if (vue.frise.journal; as journal) {
+  <section class="gestion-carte journal" aria-labelledby="synthese-journal-titre">
+    <h2 id="synthese-journal-titre" class="text-section" data-selector="synthese-journal-titre">{{ journal.titre }}</h2>
+    @if (journal.entrees.length > 0) {
+    <ol class="entrees">
+      @for (entree of journal.entrees; track entree.rang) {
+      <li>
+        <button
+          type="button"
+          [attr.aria-pressed]="entree.selectionne"
+          (click)="choisir(entree.rang)"
+          data-selector="synthese-journal-entree"
+        >
+          <span class="heure" data-selector="synthese-journal-heure">{{ entree.heure }}</span>
+          <span class="pointage" data-selector="synthese-journal-pointage"
+            ><i [class]="'glyphe ' + entree.glyphe" aria-hidden="true"></i>{{ entree.libelle }}</span
+          >
+          <span class="objet" data-selector="synthese-journal-objet">{{ entree.objet }}</span>
+          <span class="poste" data-selector="synthese-journal-poste">{{ entree.poste }}</span>
+          <span class="effet" data-selector="synthese-journal-effet">{{ entree.effet }}</span>
+        </button>
+      </li>
+      }
+    </ol>
+    } @else {
+    <p class="vide" data-selector="synthese-journal-vide">{{ libelles.sansPointageCeJour }}</p>
+    }
+  </section>
+  } } }
 </main>

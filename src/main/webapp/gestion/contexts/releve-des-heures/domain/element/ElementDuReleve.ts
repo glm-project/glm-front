@@ -41,10 +41,10 @@ export class ElementDuReleve {
   }
 
   porte(poste: PosteReleveId): boolean {
-    return this.posteDe(poste) !== undefined;
+    return this.postes.some(candidat => candidat.id.value === poste.value);
   }
 
-  posteDe(poste: PosteReleveId): PosteDeLElement | undefined {
-    return this.postes.find(candidat => candidat.id.value === poste.value);
+  libelleDuPoste(poste: PosteReleveId): string {
+    return [...new Set(this.postes.filter(candidat => candidat.id.value === poste.value).map(candidat => candidat.libelle))].join(', ');
   }
 }
