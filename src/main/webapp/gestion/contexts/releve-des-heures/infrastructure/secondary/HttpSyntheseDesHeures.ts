@@ -14,7 +14,7 @@ import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
-import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
+import { PointageDePresence } from '../../domain/releve/PointageDePresence';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
@@ -52,8 +52,8 @@ type RestPointageDePresence = RestPointage & { readonly type: 'ARRIVEE' | 'DEPAR
 const estDePresence = (pointage: RestPointage): pointage is RestPointageDePresence =>
   pointage.type !== 'DEBUT' && pointage.type !== 'NON_CONFORMITE' && pointage.type !== 'FIN';
 
-const toPointage = (pointage: RestPointageDePresence): PointageDeReleve =>
-  new PointageDeReleve(pointage.type, new InstantDeReleve(pointage.dateDeSurvenue));
+const toPointage = (pointage: RestPointageDePresence): PointageDePresence =>
+  new PointageDePresence(pointage.type, new InstantDeReleve(pointage.dateDeSurvenue));
 
 const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
   new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature);

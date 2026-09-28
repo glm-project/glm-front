@@ -3,14 +3,14 @@ import { JourCalendaire } from '../semaine/JourCalendaire';
 import { InstantDeReleve } from './InstantDeReleve';
 import { FicheDuJour, JourDeReleve } from './JourDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
-import { PointageDeReleve } from './PointageDeReleve';
+import { PointageDePresence } from './PointageDePresence';
 import { TypeDePointage } from './TypeDePointage';
 
 const instantFixture = (heure: number, minute: number): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14, heure, minute).toISOString());
 
-const pointageFixture = (type: TypeDePointage, heure: number, minute: number): PointageDeReleve =>
-  new PointageDeReleve(type, instantFixture(heure, minute));
+const pointageFixture = (type: TypeDePointage, heure: number, minute: number): PointageDePresence =>
+  new PointageDePresence(type, instantFixture(heure, minute));
 
 const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({
   jour: new JourCalendaire('2026-09-14'),
@@ -64,7 +64,7 @@ describe('JourDeReleve', () => {
   it('should not take an interval opened by an arrival in the first minute after midnight for one coming from the day before', () => {
     const arrivee = new InstantDeReleve(new Date(2026, 8, 14, 0, 0, 40).toISOString());
     const plage = new PlageDeReleve(arrivee, instantFixture(8, 0), false);
-    const jour = new JourDeReleve(ficheFixture({ pointages: [new PointageDeReleve('ARRIVEE', arrivee)], plages: [plage] }));
+    const jour = new JourDeReleve(ficheFixture({ pointages: [new PointageDePresence('ARRIVEE', arrivee)], plages: [plage] }));
 
     expect(jour.vientDeLaVeille(plage)).toBe(false);
   });

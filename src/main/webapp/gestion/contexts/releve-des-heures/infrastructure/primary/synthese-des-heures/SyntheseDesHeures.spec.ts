@@ -16,7 +16,7 @@ import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
-import { PointageDeReleve } from '../../../domain/releve/PointageDeReleve';
+import { PointageDePresence } from '../../../domain/releve/PointageDePresence';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
 import { TypeDePointage } from '../../../domain/releve/TypeDePointage';
@@ -88,7 +88,7 @@ const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): Jo
           presumee: intervalle.presumee ?? false,
         }),
     ),
-    pointages: (fiche.pointages ?? []).map(([type, heure]) => new PointageDeReleve(type, instantFixture(rang, heure))),
+    pointages: (fiche.pointages ?? []).map(([type, heure]) => new PointageDePresence(type, instantFixture(rang, heure))),
     plages: (fiche.plages ?? []).map(
       ([debut, fin, presumee]) =>
         new PlageDeReleve(instantFixture(rang, debut), fin === undefined ? undefined : instantFixture(rang, fin), presumee ?? false),

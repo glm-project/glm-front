@@ -18,7 +18,7 @@ import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
 import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
 import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
-import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
+import { PointageDePresence } from '../../domain/releve/PointageDePresence';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
@@ -259,7 +259,7 @@ const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
           operationnelPointe: new DureeTravaillee(jour.operationnelle),
           operationnelPresume: new DureeTravaillee(jour.operationnellePresumee),
           intervalles: (jour.activites ?? []).map(toIntervalle),
-          pointages: jour.pointages.map(pointage => new PointageDeReleve(pointage.type, new InstantDeReleve(pointage.instant))),
+          pointages: jour.pointages.map(pointage => new PointageDePresence(pointage.type, new InstantDeReleve(pointage.instant))),
           plages: jour.plages.map(toPlage),
         }),
     ),
