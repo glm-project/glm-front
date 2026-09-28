@@ -105,14 +105,16 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - **IntervalleDActivite** : Value Object d'un intervalle lu dans la feuille de temps — son élément, son poste et sa
   nature facultatifs, sa catégorie, son début, sa fin facultative et `presumee`. Refusé présumé sans fin, ou
   finissant avant de commencer.
-- **PointageDeReleve** : union discriminée d'un pointage. Le pointage de présence porte son type et son instant ;
-  le pointage d'élément y ajoute l'élément et le poste facultatif. Pas de champ `never`.
+- **PointageDeReleve** : union discriminée d'un pointage, `PointageDePresence` ou `PointageDElement`. Le premier
+  porte son type et son instant ; le second y ajoute sa cible, l'élément et le poste facultatif. Pas de champ `never`.
 - **PlageDeReleve** : Value Object d'une plage lue dans la feuille de temps — son début, sa fin facultative et
   `presumee`. Refusée présumée sans fin, ou finissant avant de commencer ; une fin égale au début est acceptée.
 - **TypeDePointage** : union des cinq types du journal.
 - **EffetDePointage** : ce qu'un pointage de présence change, dont les éléments qu'un départ clôt.
-- **JourOuvert** : traduit `?jour=`, la semaine, le relevé et aujourd'hui en un jour ouvert, aucun jour, ou une
-  adresse refusée.
+- **JourDemande** : traduit ce que porte `?jour=`, avant toute requête, en un jour de la semaine nommé, aucun jour
+  nommé, ou une adresse refusée.
+- **JourOuvert** : choisit le jour à ouvrir, une fois le relevé lu : le jour nommé, sinon aujourd'hui sur la semaine
+  en cours, sinon le premier jour qui porte un pointage, sinon aucun.
 - **InstantDeReleve** : Value Object d'un instant reçu du back, refusé s'il n'est pas un instant absolu. Les
   instants se comparent entre eux, jamais par leurs libellés.
 - **IdentiteOperateur** : Value Object du nom et du prénom que le rapport a résolus au référentiel.
@@ -236,13 +238,14 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   repère vertical à son instant dans la frise et entoure son marqueur, pour voir ce qui tournait à ce moment-là.
   Le journal est la seule commande de sélection : les marqueurs de la frise sont décoratifs (`aria-hidden`),
   trop denses pour des cibles de 44 px.
-- **Les traits d'arrivée et de départ traversent toute la hauteur de la frise du jour ouvert**, fins, en `ink-muted`,
+- **Les traits d'arrivée et de départ traversent la frise du jour ouvert, sous les en-têtes**, fins, en `ink-muted`,
   plus discrets que le repère de sélection. Le □ porte la clôture d'un élément par un départ sans fin pointée.
   Marqueurs, traits et repères sont dessinés en pourcentage de l'axe du jour, pour que la largeur des colonnes reste
   l'affaire du CSS ; les marqueurs sont des formes CSS, sans icône.
 - **L'axe d'un jour est ancré sur les heures de jour, de 6 h à 22 h**, pour que deux semaines se comparent
   et que l'étendue ne change pas sous les yeux du lecteur. Il s'ouvre sur le **jour entier** dès qu'une
-  borne dessinée — plage, intervalle ou marqueur isolé — tombe en dehors, ou touche minuit : une équipe de nuit
+  borne dessinée — plage, intervalle ou pointage, ces derniers dessinés dans le jour ouvert seulement — tombe en dehors,
+  ou touche minuit : une équipe de nuit
   resterait invisible sur une fenêtre figée, et personne ne verrait qu'il manque quelque chose. Le back coupe à
   minuit : une fin datée du lendemain à 00:00 ferme le jour et vaut 1 440 minutes. Un axe déduit des pointages a
   été essayé puis écarté : il rendait deux semaines incomparables et sortait des heures de jour dès que
