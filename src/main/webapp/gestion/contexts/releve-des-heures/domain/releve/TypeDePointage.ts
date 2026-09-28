@@ -1,1 +1,1 @@
-export type TypeDePointage = 'ARRIVEE' | 'PAUSE' | 'REPRISE' | 'DEPART';
+export type TypeDePointage = 'ARRIVEE' | 'DEPART';

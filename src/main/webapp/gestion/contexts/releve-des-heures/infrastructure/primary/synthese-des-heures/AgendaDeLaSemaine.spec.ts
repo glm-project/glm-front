@@ -34,8 +34,8 @@ const journeeOrdinaireFixture = (): JourDeReleve =>
   jourFixture({
     pointages: [
       pointageFixture('ARRIVEE', [8, 0]),
-      pointageFixture('PAUSE', [12, 0]),
-      pointageFixture('REPRISE', [13, 0]),
+      pointageFixture('DEPART', [12, 0]),
+      pointageFixture('ARRIVEE', [13, 0]),
       pointageFixture('DEPART', [17, 0]),
     ],
     plages: [plageFixture([8, 0], [12, 0]), plageFixture([13, 0], [17, 0])],
@@ -55,9 +55,7 @@ const projeterDessin = (dessin: Dessin): string => {
     case 'PLAGE_EN_COURS':
       return `en cours ${String(arrondi(dessin.haut))}, puce ${dessin.puce.placement} ${String(arrondi(dessin.puce.haut))}`;
     case 'PAUSE':
-      return `pause ${String(arrondi(dessin.haut))}+${String(arrondi(dessin.hauteur))}${dessin.etiquetee ? ' étiquetée' : ''}${dessin.depuisLaVeille ? ' depuis la veille' : ''}`;
-    case 'PAUSE_SANS_REPRISE':
-      return `sans reprise ${String(arrondi(dessin.haut))}${dessin.enCours ? ' en cours' : ''}, puce ${dessin.puce.placement} ${String(arrondi(dessin.puce.haut))}`;
+      return `pause ${String(arrondi(dessin.haut))}+${String(arrondi(dessin.hauteur))}${dessin.etiquetee ? ' étiquetée' : ''}`;
   }
 };
 
@@ -87,20 +85,7 @@ describe('AgendaDeLaSemaine', () => {
       ['an interval still in progress since before the daytime hours', jourFixture({ plages: [plageFixture([5, 0], undefined)] })],
       ['an interval coming from the day before', jourFixture({ plages: [plageFixture([0, 0], [7, 0])] })],
       ['an interval going on the day after', jourFixture({ plages: [plageFixture([20, 0], [24, 0])] })],
-      [
-        'a break coming from the day before',
-        jourFixture({
-          pointages: [pointageFixture('REPRISE', [6, 10]), pointageFixture('DEPART', [9, 0])],
-          plages: [plageFixture([6, 10], [9, 0])],
-        }),
-      ],
-      [
-        'a break ending at a departure after the daytime hours, its interval within them',
-        jourFixture({
-          pointages: [pointageFixture('ARRIVEE', [14, 0]), pointageFixture('PAUSE', [21, 30]), pointageFixture('DEPART', [22, 30])],
-          plages: [plageFixture([14, 0], [21, 30])],
-        }),
-      ],
+      ['a break coming from the day before', jourFixture({ pointages: [pointageFixture('DEPART', [9, 0])] })],
     ])('should open onto the whole day, twenty pixels an hour, for %s', (_cas, jour) => {
       const agenda = new AgendaDeLaSemaine([jour]);
 
@@ -164,7 +149,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should place an interval at its start, as tall as it lasts', () => {
       const jour = jourFixture({ plages: [plageFixture([8, 0], [12, 0])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne).map(projeterPlage)).toEqual(['longue 56+112']);
     });
@@ -177,7 +162,7 @@ describe('AgendaDeLaSemaine', () => {
     ])('should class an interval of %i minutes on the whole day as %s', (minutes, classe) => {
       const jour = surLeJourEntier([plageFixture([12, 0], [12 + Math.floor(minutes / 60), minutes % 60])]);
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne)[1]?.classe).toBe(classe);
     });
@@ -185,7 +170,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should draw a short interval at its real height', () => {
       const jour = jourFixture({ plages: [plageFixture([15, 10], [15, 25])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne).map(projeterPlage)).toEqual(['courte 256.67+7']);
     });
@@ -193,7 +178,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should draw an interval of zero duration three pixels tall', () => {
       const jour = jourFixture({ plages: [plageFixture([15, 10], [15, 10])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne).map(projeterPlage)).toEqual(['courte 256.67+3']);
     });
@@ -201,7 +186,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should draw an interval going on the day after down to the end of the day, and say it goes on', () => {
       const jour = jourFixture({ pointages: [pointageFixture('ARRIVEE', [20, 0])], plages: [plageFixture([20, 0], [24, 0])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne).map(dessin => [projeterPlage(dessin), dessin.depuisLaVeille, dessin.seLePoursuit])).toEqual([
         ['longue 400+80', false, true],
@@ -215,7 +200,7 @@ describe('AgendaDeLaSemaine', () => {
         plages: [new PlageDeReleve(arrivee, instantFixture([8, 0]), false)],
       });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne).map(dessin => dessin.depuisLaVeille)).toEqual([false]);
     });
@@ -223,7 +208,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should say that an interval starting at midnight comes from the day before', () => {
       const jour = jourFixture({ plages: [plageFixture([0, 0], [7, 5])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(plagesDessinees(colonne).map(dessin => [dessin.depuisLaVeille, dessin.seLePoursuit])).toEqual([[true, false]]);
     });
@@ -233,7 +218,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should name a short interval by a note placed under it', () => {
       const jour = jourFixture({ plages: [plageFixture([8, 0], [12, 0]), plageFixture([15, 10], [15, 20])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(projeterNotes(colonne)).toEqual(['dessous 267.33 (1)']);
     });
@@ -241,7 +226,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should share one note between short intervals close to one another', () => {
       const jour = jourFixture({ plages: [plageFixture([15, 10], [15, 10]), plageFixture([15, 20], [15, 30])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(projeterNotes(colonne)).toEqual(['dessous 272 (2)']);
     });
@@ -249,7 +234,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should give short intervals far from one another a note each', () => {
       const jour = jourFixture({ plages: [plageFixture([15, 10], [15, 20]), plageFixture([17, 10], [17, 20])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(projeterNotes(colonne)).toEqual(['dessous 267.33 (1)', 'dessous 323.33 (1)']);
     });
@@ -257,7 +242,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should place the note above a short interval when below it would run into the next block', () => {
       const jour = jourFixture({ plages: [plageFixture([11, 50], [12, 0]), plageFixture([12, 10], [16, 0])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(projeterNotes(colonne)).toEqual(['dessus 133.33 (1)']);
     });
@@ -265,7 +250,7 @@ describe('AgendaDeLaSemaine', () => {
     it('should place the note above a short interval when below it would leave the grid', () => {
       const jour = jourFixture({ plages: [plageFixture([8, 0], [12, 0]), plageFixture([21, 40], [21, 50])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(projeterNotes(colonne)).toEqual(['dessus 408.67 (1)']);
     });
@@ -273,69 +258,33 @@ describe('AgendaDeLaSemaine', () => {
     it('should keep the note below a short interval when above it would leave the grid too', () => {
       const jour = jourFixture({ plages: [plageFixture([6, 0], [6, 10]), plageFixture([6, 20], [10, 0])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(projeterNotes(colonne)).toEqual(['dessous 10.67 (1)']);
     });
   });
 
   describe('breaks and marks', () => {
-    it('should draw the breaks between the intervals of a day, in the order of the hours', () => {
-      const jour = journeeOrdinaireFixture();
+    it('should draw a break coming from the day before from midnight to the departure no interval ends', () => {
+      const jour = jourFixture({ pointages: [pointageFixture('DEPART', [2, 0])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['plage 56', 'pause 168+28 étiquetée', 'plage 196']);
+      expect(colonne.dessins.map(projeterDessin)).toEqual(['pause 0+40 étiquetée']);
     });
 
     it('should leave unlabelled a break too short for its label', () => {
-      const jour = jourFixture({
-        pointages: [pointageFixture('ARRIVEE', [8, 0]), pointageFixture('PAUSE', [10, 0]), pointageFixture('REPRISE', [10, 15])],
-        plages: [plageFixture([8, 0], [10, 0]), plageFixture([10, 15], [12, 0])],
-      });
+      const jour = jourFixture({ pointages: [pointageFixture('DEPART', [0, 30])] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
-      expect(colonne.dessins.map(projeterDessin)).toContain('pause 112+7');
-    });
-
-    it('should draw a break coming from the day before from midnight', () => {
-      const jour = jourFixture({
-        pointages: [pointageFixture('REPRISE', [0, 30]), pointageFixture('DEPART', [7, 0])],
-        plages: [plageFixture([0, 30], [7, 0])],
-      });
-
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
-
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['pause 0+10 depuis la veille', 'plage 10']);
-    });
-
-    it('should mark a break without resumption on a past day at its start, without height, its one-line chip above the end of the grid', () => {
-      const jour = jourFixture({
-        pointages: [pointageFixture('ARRIVEE', [18, 58]), pointageFixture('PAUSE', [23, 40])],
-        plages: [plageFixture([18, 58], [23, 40])],
-      });
-
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
-
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['plage 379.33', 'sans reprise 473.33, puce dessus 443.33']);
-    });
-
-    it('should mark a break without resumption today as still in progress, its chip two lines tall above the end of the grid', () => {
-      const jour = jourFixture({
-        pointages: [pointageFixture('ARRIVEE', [14, 0]), pointageFixture('PAUSE', [21, 30])],
-        plages: [plageFixture([14, 0], [21, 30])],
-      });
-
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, true);
-
-      expect(colonne.dessins.map(projeterDessin)).toEqual(['plage 224', 'sans reprise 434 en cours, puce dessus 388']);
+      expect(colonne.dessins.map(projeterDessin)).toEqual(['pause 0+10']);
     });
 
     it('should mark an interval still in progress at its start, without height, its chip under the mark', () => {
       const jour = jourFixture({ pointages: [pointageFixture('ARRIVEE', [8, 3])], plages: [plageFixture([8, 3], undefined)] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(colonne.dessins.map(projeterDessin)).toEqual(['en cours 57.4, puce dessous 63.4']);
     });
@@ -343,25 +292,9 @@ describe('AgendaDeLaSemaine', () => {
     it('should place the chip of an interval in progress above its mark near the end of the grid', () => {
       const jour = jourFixture({ pointages: [pointageFixture('ARRIVEE', [21, 45])], plages: [plageFixture([21, 45], undefined)] });
 
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
+      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour);
 
       expect(colonne.dessins.map(projeterDessin)).toEqual(['en cours 441, puce dessus 395']);
-    });
-
-    it('should place the note of a short interval above it when the break that follows would hide it', () => {
-      const jour = jourFixture({
-        pointages: [
-          pointageFixture('ARRIVEE', [15, 10]),
-          pointageFixture('PAUSE', [15, 20]),
-          pointageFixture('REPRISE', [16, 30]),
-          pointageFixture('DEPART', [17, 30]),
-        ],
-        plages: [plageFixture([15, 10], [15, 20]), plageFixture([16, 30], [17, 30])],
-      });
-
-      const colonne = new AgendaDeLaSemaine([jour]).colonne(jour, false);
-
-      expect(projeterNotes(colonne)).toEqual(['dessus 226.67 (1)']);
     });
   });
 });

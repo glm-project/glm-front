@@ -22,7 +22,6 @@ import { HttpSyntheseDesHeures } from './HttpSyntheseDesHeures';
 
 type RestSynthese = components['schemas']['RestSyntheseDesHeures'];
 type RestJour = components['schemas']['RestJourDeSynthese'];
-type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
 type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
 type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
 type RestPlage = components['schemas']['RestPlage'];
@@ -36,7 +35,7 @@ const SEMAINE = new SemaineISO(2026, 38);
 const DEMANDE = new DemandeDeReleve(new OperateurReleveId(OPERATEUR), SEMAINE);
 
 interface PointageFixture {
-  readonly type: 'ARRIVEE' | 'PAUSE' | 'REPRISE' | 'DEPART';
+  readonly type: 'ARRIVEE' | 'DEPART';
   readonly instant: string;
 }
 
@@ -131,7 +130,7 @@ const toRestJour = (jour: JourFixture, rang: number): RestJour => ({
   dureePresumee: jour.presumee,
   dureeOperationnelle: 'PT0S',
   dureeOperationnellePresumee: 'PT0S',
-  pointages: jour.pointages.map(pointage => ({ type: pointage.type as RestPointage['type'], dateDeSurvenue: pointage.instant })),
+  pointages: jour.pointages.map(pointage => ({ type: pointage.type, dateDeSurvenue: pointage.instant })),
 });
 
 const toRestPlage = (plage: PlageFixture): RestPlage => ({ ...plage });

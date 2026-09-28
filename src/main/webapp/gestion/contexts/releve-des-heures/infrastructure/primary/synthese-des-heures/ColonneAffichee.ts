@@ -6,7 +6,6 @@ import {
   ClasseDeHauteur,
   Dessin,
   DessinDePause,
-  DessinDePauseSansReprise,
   DessinDePlage,
   DessinDePlageEnCours,
   NoteDePlagesCourtes,
@@ -35,13 +34,11 @@ export interface NoteAffichee {
 export interface PauseAffichee {
   readonly haut: number;
   readonly hauteur: number;
-  readonly depuisLaVeille: boolean;
   readonly etiquetee: boolean;
   readonly titre: string;
 }
 
 export interface MarqueAffichee {
-  readonly nature: 'plage' | 'pause';
   readonly haut: number;
   readonly puce: number;
   readonly lignes: readonly string[];
@@ -70,9 +67,7 @@ const enonceDe = (dessin: Dessin): string => {
     case 'PLAGE_EN_COURS':
       return LIBELLES.enonceDePlageEnCours(dessin.debut);
     case 'PAUSE':
-      return LIBELLES.enonceDePause(dessin.debut, dessin.fin);
-    case 'PAUSE_SANS_REPRISE':
-      return LIBELLES.enonceDePauseSansReprise(dessin.debut, dessin.enCours);
+      return LIBELLES.enonceDePause(dessin.fin);
   }
 };
 
@@ -98,38 +93,23 @@ const toNote = (note: NoteDePlagesCourtes): NoteAffichee => ({ haut: note.haut, 
 const toPause = (dessin: DessinDePause): PauseAffichee => ({
   haut: dessin.haut,
   hauteur: dessin.hauteur,
-  depuisLaVeille: dessin.depuisLaVeille,
   etiquetee: dessin.etiquetee,
   titre: enonceDe(dessin),
 });
 
 const toMarqueDePlage = (dessin: DessinDePlageEnCours, jour: JourDeReleve): MarqueAffichee => ({
-  nature: 'plage',
   haut: dessin.haut,
   puce: dessin.puce.haut,
   lignes: [LIBELLES.puceEnCours(jour.typeDuPointageA(dessin.debut), dessin.debut), LIBELLES.enCours],
   titre: enonceDe(dessin),
 });
 
-const toMarqueDePause = (dessin: DessinDePauseSansReprise): MarqueAffichee => ({
-  nature: 'pause',
-  haut: dessin.haut,
-  puce: dessin.puce.haut,
-  lignes: dessin.enCours ? [LIBELLES.pucePause(dessin.debut), LIBELLES.enCours] : [LIBELLES.pucePause(dessin.debut)],
-  titre: enonceDe(dessin),
-});
-
 const toMarques = (dessins: readonly Dessin[], jour: JourDeReleve): readonly MarqueAffichee[] =>
-  dessins.flatMap(dessin => {
-    if (dessin.kind === 'PLAGE_EN_COURS') {
-      return [toMarqueDePlage(dessin, jour)];
-    }
-    return dessin.kind === 'PAUSE_SANS_REPRISE' ? [toMarqueDePause(dessin)] : [];
-  });
+  dessins.flatMap(dessin => (dessin.kind === 'PLAGE_EN_COURS' ? [toMarqueDePlage(dessin, jour)] : []));
 
 export const toColonneAffichee = (agenda: AgendaDeLaSemaine, jour: JourDeReleve, aujourdhui: JourCalendaire): ColonneAffichee => {
   const estAujourdhui = jour.jour.estLeMeme(aujourdhui);
-  const { dessins, notes } = agenda.colonne(jour, estAujourdhui);
+  const { dessins, notes } = agenda.colonne(jour);
   return {
     cle: jour.jour.value,
     jour: LIBELLES.jour(jour.jour),

@@ -8,7 +8,7 @@ import {
 } from '../../../utils/gestion/releve-des-heures/SyntheseDesHeuresApiFixture';
 
 type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
-type TypeDePointage = RestPointage['type'] | 'PAUSE' | 'REPRISE';
+type TypeDePointage = RestPointage['type'];
 type Heure = readonly [number, number];
 
 const HORLOGE = new Date(2026, 8, 26, 10, 30).getTime();
@@ -58,10 +58,7 @@ const semaineFixture = ({ semaine, lundi, totalPointe, totalPresume, jours }: Se
       dureePresumee: jour.presume ?? 'PT0S',
       dureeOperationnelle: 'PT0S',
       dureeOperationnellePresumee: 'PT0S',
-      pointages: (jour.pointages ?? []).map(([type, heure]) => ({
-        type: type as RestPointage['type'],
-        dateDeSurvenue: instantFixture(lundi, rang, heure),
-      })),
+      pointages: (jour.pointages ?? []).map(([type, heure]) => ({ type, dateDeSurvenue: instantFixture(lundi, rang, heure) })),
     })),
   },
   feuille: {
@@ -84,8 +81,8 @@ const samediEnCoursFixture: JourDeMaquette = {
   pointe: 'PT1H58M',
   pointages: [
     ['ARRIVEE', [8, 2]],
-    ['PAUSE', [10, 0]],
-    ['REPRISE', [10, 20]],
+    ['DEPART', [10, 0]],
+    ['ARRIVEE', [10, 20]],
   ],
   plages: [
     [
@@ -93,20 +90,6 @@ const samediEnCoursFixture: JourDeMaquette = {
       [10, 0],
     ],
     [[10, 20], undefined],
-  ],
-};
-
-const samediEnPauseFixture: JourDeMaquette = {
-  pointe: 'PT1H58M',
-  pointages: [
-    ['ARRIVEE', [8, 2]],
-    ['PAUSE', [10, 0]],
-  ],
-  plages: [
-    [
-      [8, 2],
-      [10, 0],
-    ],
   ],
 };
 
@@ -121,8 +104,8 @@ const semaineDeJourFixture = (samedi: JourDeMaquette): SemaineSemee =>
         pointe: 'PT8H31M',
         pointages: [
           ['ARRIVEE', [7, 2]],
-          ['PAUSE', [12, 0]],
-          ['REPRISE', [12, 45]],
+          ['DEPART', [12, 0]],
+          ['ARRIVEE', [12, 45]],
           ['DEPART', [16, 18]],
         ],
         plages: [
@@ -141,10 +124,10 @@ const semaineDeJourFixture = (samedi: JourDeMaquette): SemaineSemee =>
         pointe: 'PT7H50M',
         pointages: [
           ['ARRIVEE', [6, 55]],
-          ['PAUSE', [10, 0]],
-          ['REPRISE', [10, 15]],
-          ['PAUSE', [12, 30]],
-          ['REPRISE', [13, 10]],
+          ['DEPART', [10, 0]],
+          ['ARRIVEE', [10, 15]],
+          ['DEPART', [12, 30]],
+          ['ARRIVEE', [13, 10]],
           ['DEPART', [15, 40]],
         ],
         plages: [
@@ -214,32 +197,29 @@ const semaineDeNuitFixture = (): SemaineSemee =>
       {
         pointe: 'PT11H27M',
         pointages: [
-          ['REPRISE', [0, 20]],
           ['DEPART', [7, 5]],
           ['ARRIVEE', [18, 58]],
-          ['PAUSE', [23, 40]],
         ],
         plages: [
           [
-            [0, 20],
+            [0, 0],
             [7, 5],
           ],
           [
             [18, 58],
-            [23, 40],
+            [24, 0],
           ],
         ],
       },
       {
         pointe: 'PT11H37M',
         pointages: [
-          ['REPRISE', [0, 22]],
           ['DEPART', [7, 0]],
           ['ARRIVEE', [19, 1]],
         ],
         plages: [
           [
-            [0, 22],
+            [0, 0],
             [7, 0],
           ],
           [
@@ -250,18 +230,10 @@ const semaineDeNuitFixture = (): SemaineSemee =>
       },
       {
         pointe: 'PT11H19M',
-        pointages: [
-          ['PAUSE', [2, 10]],
-          ['REPRISE', [2, 40]],
-          ['DEPART', [7, 4]],
-        ],
+        pointages: [['DEPART', [7, 4]]],
         plages: [
           [
             [0, 0],
-            [2, 10],
-          ],
-          [
-            [2, 40],
             [7, 4],
           ],
         ],
@@ -280,11 +252,11 @@ describe('Weekly hours report in gestion', () => {
     api = new SyntheseDesHeuresApiFixture();
   });
 
-  it('should draw an ordinary day as two blocks of presence and the break between them', () => {
+  it('should draw a day of two visits as two blocks of presence', () => {
     givenAWeekOfDayShifts(samediEnCoursFixture);
     whenVisiting(SEMAINE_DE_JOUR);
 
-    thenTheColumnShows(0, { plages: 2, pauses: ['Pause'] });
+    thenTheColumnShows(0, { plages: 2, pauses: [] });
   });
 
   it('should draw a working day abandoned without departure as presumed, beside its clocked zero', () => {
@@ -315,14 +287,7 @@ describe('Weekly hours report in gestion', () => {
     whenVisiting(SEMAINE_DE_JOUR);
 
     thenTheHeaderReads(5, { jour: 'sam. 26', aujourdhui: 'Aujourd’hui', duree: '1 h 58' });
-    thenTheChipReads(5, 'synthese-plage-ouverte', ['Reprise 10:20', 'en cours']);
-  });
-
-  it('should mark a break taken today and not yet resumed as in progress', () => {
-    givenAWeekOfDayShifts(samediEnPauseFixture);
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheChipReads(5, 'synthese-pause-sans-reprise', ['Pause 10:00', 'en cours']);
+    thenTheChipReads(5, 'synthese-plage-ouverte', ['Arrivée 10:20', 'en cours']);
   });
 
   it('should display an empty Sunday as without clocking', () => {
@@ -345,9 +310,7 @@ describe('Weekly hours report in gestion', () => {
     whenVisiting(SEMAINE_DE_NUIT);
 
     thenTheAxisRuns('00:00', '00:00');
-    thenTheColumnStartsInABreakFromTheDayBefore(0, 'Pause depuis la veille jusqu’à 00:20');
-    thenTheChipReads(0, 'synthese-pause-sans-reprise', ['Pause 23:40']);
-    thenTheColumnStartsInABreakFromTheDayBefore(1, 'Pause depuis la veille jusqu’à 00:22');
+    thenTheContinuationsRead(0, 'se poursuit');
     thenTheContinuationsRead(1, 'se poursuit');
     thenTheContinuationsRead(2, 'depuis la veille');
   });
@@ -516,10 +479,6 @@ describe('Weekly hours report in gestion', () => {
   const thenTheAxisRuns = (premier: string, dernier: string): void => {
     cy.get(dataSelector('synthese-repere')).first().should('have.text', premier).and('be.visible');
     cy.get(dataSelector('synthese-repere')).last().should('have.text', dernier).and('be.visible');
-  };
-
-  const thenTheColumnStartsInABreakFromTheDayBefore = (rang: number, titre: string): void => {
-    colonne(rang).find(dataSelector('synthese-pause')).first().should('have.attr', 'title', titre).and('have.css', 'top', '0px');
   };
 
   const thenTheContinuationsRead = (rang: number, texte: string): void => {

@@ -78,8 +78,8 @@ const jourTravailleFixture: JourFixture = {
   pointee: 'PT7H30M',
   pointages: [
     ['ARRIVEE', [8, 2]],
-    ['PAUSE', [12, 0]],
-    ['REPRISE', [13, 0]],
+    ['DEPART', [12, 0]],
+    ['ARRIVEE', [13, 0]],
     ['DEPART', [17, 32]],
   ],
   plages: [
@@ -197,14 +197,14 @@ describe('Synthese des heures component', () => {
     expect(jourMarqueAujourdhui()).toBe('jeu. 17');
   });
 
-  it('should state the presence and the breaks of a day in the order of the hours, then its clockings', async () => {
+  it('should state the presence of a day in the order of the hours, then its clockings', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
     await whenEcranAffiche();
 
     expect([textes('synthese-enonce'), textes('synthese-pointage')]).toEqual([
-      ['Présence 08:02 – 12:00', 'Pause 12:00 – 13:00', 'Présence 13:00 – 17:32'],
-      ['Arrivée 08:02', 'Pause 12:00', 'Reprise 13:00', 'Départ 17:32'],
+      ['Présence 08:02 – 12:00', 'Présence 13:00 – 17:32'],
+      ['Arrivée 08:02', 'Départ 12:00', 'Arrivée 13:00', 'Départ 17:32'],
     ]);
   });
 
@@ -276,12 +276,12 @@ describe('Synthese des heures component', () => {
     ]);
   });
 
-  it('should draw the breaks between the clockings, labelled when tall enough', async () => {
-    givenSemaineSemee(new SemaineISO(2026, 38));
+  it('should draw the break coming from the day before, labelled when tall enough', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 1: { pointages: [['DEPART', [10, 0]]] } }));
 
     await whenEcranAffiche();
 
-    expect([titres('synthese-pause'), textes('synthese-pause')]).toEqual([['Pause 12:00 – 13:00'], ['Pause']]);
+    expect([titres('synthese-pause'), textes('synthese-pause')]).toEqual([['Pause depuis la veille jusqu’à 10:00'], ['Pause']]);
   });
 
   it('should name short intervals close to one another in one shared note', async () => {
@@ -319,8 +319,8 @@ describe('Synthese des heures component', () => {
         3: {
           pointages: [
             ['ARRIVEE', [8, 2]],
-            ['PAUSE', [10, 0]],
-            ['REPRISE', [10, 20]],
+            ['DEPART', [10, 0]],
+            ['ARRIVEE', [10, 20]],
           ],
           plages: [
             [
@@ -336,7 +336,7 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([lignes('synthese-plage-ouverte'), titres('synthese-plage-ouverte')]).toEqual([
-      ['Reprise 10:20', 'en cours'],
+      ['Arrivée 10:20', 'en cours'],
       ['Présence depuis 10:20, en cours'],
     ]);
   });
@@ -347,91 +347,6 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect(lignes('synthese-plage-ouverte')).toEqual(['Présence 06:00', 'en cours']);
-  });
-
-  it('should mark a break taken today and not yet resumed as in progress', async () => {
-    givenReleve(
-      releveFixture(SEMAINE_EN_COURS, {
-        3: {
-          pointages: [
-            ['ARRIVEE', [8, 2]],
-            ['PAUSE', [10, 0]],
-          ],
-          plages: [
-            [
-              [8, 2],
-              [10, 0],
-            ],
-          ],
-        },
-      }),
-    );
-
-    await whenEcranAffiche();
-
-    expect([lignes('synthese-pause-sans-reprise'), titres('synthese-pause-sans-reprise')]).toEqual([
-      ['Pause 10:00', 'en cours'],
-      ['Pause depuis 10:00, en cours'],
-    ]);
-  });
-
-  it('should carry a night shift from one day to the next, its break across midnight marked on both sides', async () => {
-    givenReleve(
-      releveFixture(SEMAINE_EN_COURS, {
-        0: {
-          pointages: [
-            ['ARRIVEE', [18, 58]],
-            ['PAUSE', [23, 40]],
-          ],
-          plages: [
-            [
-              [18, 58],
-              [23, 40],
-            ],
-          ],
-        },
-        1: {
-          pointages: [
-            ['REPRISE', [0, 22]],
-            ['DEPART', [7, 5]],
-            ['ARRIVEE', [19, 0]],
-          ],
-          plages: [
-            [
-              [0, 22],
-              [7, 5],
-            ],
-            [
-              [19, 0],
-              [24, 0],
-            ],
-          ],
-        },
-        2: {
-          pointages: [['DEPART', [7, 0]]],
-          plages: [
-            [
-              [0, 0],
-              [7, 0],
-            ],
-          ],
-        },
-      }),
-    );
-
-    await whenEcranAffiche();
-
-    expect([lignes('synthese-pause-sans-reprise'), textes('synthese-enonce')]).toEqual([
-      ['Pause 23:40'],
-      [
-        'Présence 18:58 – 23:40',
-        'Pause depuis 23:40, sans reprise ce jour',
-        'Pause depuis la veille jusqu’à 00:22',
-        'Présence 00:22 – 07:05',
-        'Présence depuis 19:00, se poursuit le lendemain',
-        'Présence depuis la veille jusqu’à 07:00',
-      ],
-    ]);
   });
 
   it('should write the continuation of a night shift in place of midnight', async () => {

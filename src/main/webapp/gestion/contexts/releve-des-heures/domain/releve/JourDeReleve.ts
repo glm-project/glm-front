@@ -28,7 +28,7 @@ export class JourDeReleve {
     this.dureePresumee = fiche.dureePresumee;
     this.pointages = [...fiche.pointages];
     this.plages = [...fiche.plages];
-    this.#pauses = [...this.pauseDepuisLaVeille(), ...this.pausesEntrePointages()];
+    this.#pauses = this.pauseDepuisLaVeille();
   }
 
   estVide(): boolean {
@@ -52,17 +52,11 @@ export class JourDeReleve {
     if (premier === undefined) {
       return [];
     }
-    return this.commenceEnPause(premier) ? [new PauseDeReleve(undefined, premier.instant)] : [];
-  }
-
-  private pausesEntrePointages(): readonly PauseDeReleve[] {
-    return this.pointages.flatMap((pointage, rang) =>
-      pointage.type === 'PAUSE' ? [new PauseDeReleve(pointage.instant, this.pointages[rang + 1]?.instant)] : [],
-    );
+    return this.commenceEnPause(premier) ? [new PauseDeReleve(premier.instant)] : [];
   }
 
   private commenceEnPause(premier: PointageDeReleve): boolean {
-    return premier.type === 'REPRISE' || (premier.type === 'DEPART' && !this.unePlageFinitA(premier));
+    return premier.type === 'DEPART' && !this.unePlageFinitA(premier);
   }
 
   private unePlageFinitA(pointage: PointageDeReleve): boolean {

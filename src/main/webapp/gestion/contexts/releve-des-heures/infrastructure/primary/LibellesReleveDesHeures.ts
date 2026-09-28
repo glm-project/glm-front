@@ -6,8 +6,6 @@ import { SemaineISO } from '../../domain/semaine/SemaineISO';
 
 const TYPES: Record<TypeDePointage, string> = {
   ARRIVEE: 'Arrivée',
-  PAUSE: 'Pause',
-  REPRISE: 'Reprise',
   DEPART: 'Départ',
 };
 
@@ -88,7 +86,6 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   bornes: (debut: string, fin: string): string => `${debut} – ${fin}`,
   puceEnCours: (type: TypeDePointage | undefined, debut: InstantDeReleve): string =>
     `${type === undefined ? PRESENCE : TYPES[type]} ${heure(debut)}`,
-  pucePause: (debut: InstantDeReleve): string => `${PAUSE} ${heure(debut)}`,
 
   enonceDePlage: ({ presumee, debut, fin, depuisLaVeille, seLePoursuit }: FormeDePlage): string => {
     const nature = natureDe(presumee);
@@ -100,8 +97,5 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
   },
   enonceDePlageEnCours: (debut: InstantDeReleve): string => `${PRESENCE} depuis ${heure(debut)}, ${EN_COURS}`,
-  enonceDePause: (debut: InstantDeReleve | undefined, fin: InstantDeReleve): string =>
-    debut === undefined ? `${PAUSE} ${DEPUIS_LA_VEILLE} jusqu’à ${heure(fin)}` : `${PAUSE} ${heure(debut)} – ${heure(fin)}`,
-  enonceDePauseSansReprise: (debut: InstantDeReleve, enCours: boolean): string =>
-    `${PAUSE} depuis ${heure(debut)}, ${enCours ? EN_COURS : 'sans reprise ce jour'}`,
+  enonceDePause: (fin: InstantDeReleve): string => `${PAUSE} ${DEPUIS_LA_VEILLE} jusqu’à ${heure(fin)}`,
 } as const;

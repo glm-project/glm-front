@@ -40,20 +40,10 @@ export interface DessinDePlageEnCours {
 
 export interface DessinDePause {
   readonly kind: 'PAUSE';
-  readonly debut: InstantDeReleve | undefined;
   readonly fin: InstantDeReleve;
   readonly haut: number;
   readonly hauteur: number;
-  readonly depuisLaVeille: boolean;
   readonly etiquetee: boolean;
-}
-
-export interface DessinDePauseSansReprise {
-  readonly kind: 'PAUSE_SANS_REPRISE';
-  readonly debut: InstantDeReleve;
-  readonly haut: number;
-  readonly enCours: boolean;
-  readonly puce: PositionDEtiquette;
 }
 
 export interface PositionDEtiquette {
@@ -67,7 +57,7 @@ export interface NoteDePlagesCourtes {
   readonly placement: Placement;
 }
 
-export type Dessin = DessinDePlage | DessinDePlageEnCours | DessinDePause | DessinDePauseSansReprise;
+export type Dessin = DessinDePlage | DessinDePlageEnCours | DessinDePause;
 
 export interface ColonneDessinee {
   readonly dessins: readonly Dessin[];
@@ -88,7 +78,6 @@ const MARGE_DE_L_ETIQUETTE = 8;
 const HAUTEUR_DE_LIGNE = 16;
 const HAUTEUR_DE_L_ETIQUETTE_DE_PAUSE = 16;
 const LIGNES_D_UNE_PUCE_EN_COURS = 2;
-const LIGNES_D_UNE_PUCE_SANS_REPRISE = 1;
 
 interface Fenetre {
   readonly debut: number;
@@ -107,13 +96,10 @@ const debutDe = (plage: PlageDeReleve): number => minutesDe(plage.debut.value);
 const minutesDeFin = (debut: InstantDeReleve, fin: InstantDeReleve): number =>
   fin.value.toDateString() === debut.value.toDateString() ? minutesDe(fin.value) : MINUTES_PAR_JOUR;
 
-const debutDeLaPause = (pause: PauseDeReleve): number => (pause.debut === undefined ? 0 : minutesDe(pause.debut.value));
-
 const bornesDeLaPlage = (plage: PlageDeReleve): readonly number[] =>
   plage.fin === undefined ? [debutDe(plage)] : [debutDe(plage), minutesDeFin(plage.debut, plage.fin)];
 
-const bornesDeLaPause = (pause: PauseDeReleve): readonly number[] =>
-  pause.fin === undefined ? [debutDeLaPause(pause)] : [debutDeLaPause(pause), minutesDe(pause.fin.value)];
+const bornesDeLaPause = (pause: PauseDeReleve): readonly number[] => [JOUR_ENTIER.debut, minutesDe(pause.fin.value)];
 
 const bornesDu = (jour: JourDeReleve): readonly number[] => [
   ...jour.plages.flatMap(bornesDeLaPlage),
@@ -192,14 +178,10 @@ export class AgendaDeLaSemaine {
     });
   }
 
-  colonne(jour: JourDeReleve, estAujourdhui: boolean): ColonneDessinee {
-    const pauses = jour.pauses();
+  colonne(jour: JourDeReleve): ColonneDessinee {
     const plages = jour.plages.flatMap(plage => this.dessineLaPlage(plage, jour.vientDeLaVeille(plage)));
-    const encombrants = [...plages, ...pauses.flatMap(pause => this.dessineLaPause(pause))];
-    const reperes = [
-      ...jour.plages.flatMap(plage => this.marqueLaPlageEnCours(plage, encombrants)),
-      ...pauses.flatMap(pause => this.marqueLaPauseSansReprise(pause, estAujourdhui, encombrants)),
-    ];
+    const encombrants = [...plages, ...jour.pauses().map(pause => this.dessineLaPause(pause))];
+    const reperes = jour.plages.flatMap(plage => this.marqueLaPlageEnCours(plage, encombrants));
     const dessins = [...encombrants, ...reperes].sort((un, autre) => un.haut - autre.haut);
     return { dessins, notes: this.notesDe(plages, encombrants) };
   }
@@ -227,23 +209,10 @@ export class AgendaDeLaSemaine {
     ];
   }
 
-  private dessineLaPause(pause: PauseDeReleve): readonly DessinDePause[] {
-    if (pause.fin === undefined) {
-      return [];
-    }
-    const haut = this.hautDe(debutDeLaPause(pause));
+  private dessineLaPause(pause: PauseDeReleve): DessinDePause {
+    const haut = this.hautDe(JOUR_ENTIER.debut);
     const hauteur = this.hautDe(minutesDe(pause.fin.value)) - haut;
-    return [
-      {
-        kind: 'PAUSE',
-        debut: pause.debut,
-        fin: pause.fin,
-        haut,
-        hauteur,
-        depuisLaVeille: pause.debut === undefined,
-        etiquetee: hauteur >= HAUTEUR_DE_L_ETIQUETTE_DE_PAUSE,
-      },
-    ];
+    return { kind: 'PAUSE', fin: pause.fin, haut, hauteur, etiquetee: hauteur >= HAUTEUR_DE_L_ETIQUETTE_DE_PAUSE };
   }
 
   private marqueLaPlageEnCours(plage: PlageDeReleve, obstacles: readonly Encombrement[]): readonly DessinDePlageEnCours[] {
@@ -257,27 +226,6 @@ export class AgendaDeLaSemaine {
         debut: plage.debut,
         haut,
         puce: this.placeUneEtiquette({ haut, hauteur: 0 }, LIGNES_D_UNE_PUCE_EN_COURS, obstacles),
-      },
-    ];
-  }
-
-  private marqueLaPauseSansReprise(
-    pause: PauseDeReleve,
-    enCours: boolean,
-    obstacles: readonly Encombrement[],
-  ): readonly DessinDePauseSansReprise[] {
-    if (!pause.estSansReprise()) {
-      return [];
-    }
-    const haut = this.hautDe(minutesDe(pause.debut.value));
-    const lignes = enCours ? LIGNES_D_UNE_PUCE_EN_COURS : LIGNES_D_UNE_PUCE_SANS_REPRISE;
-    return [
-      {
-        kind: 'PAUSE_SANS_REPRISE',
-        debut: pause.debut,
-        haut,
-        enCours,
-        puce: this.placeUneEtiquette({ haut, hauteur: 0 }, lignes, obstacles),
       },
     ];
   }

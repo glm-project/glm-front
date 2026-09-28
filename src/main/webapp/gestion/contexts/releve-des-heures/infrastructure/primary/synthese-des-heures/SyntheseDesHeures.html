@@ -129,7 +129,6 @@
                 @for (pause of colonne.pauses; track $index) {
                 <div
                   class="pause"
-                  [class.depuis-la-veille]="pause.depuisLaVeille"
                   [style.top.px]="pause.haut"
                   [style.height.px]="pause.hauteur"
                   [title]="pause.titre"
@@ -172,14 +171,8 @@
                   }
                 </div>
                 } @for (marque of colonne.marques; track $index) {
-                <div class="trait" [class.sans-reprise]="marque.nature === 'pause'" [style.top.px]="marque.haut"></div>
-                <div
-                  class="puce"
-                  [class.sans-reprise]="marque.nature === 'pause'"
-                  [style.top.px]="marque.puce"
-                  [title]="marque.titre"
-                  [attr.data-selector]="marque.nature === 'pause' ? 'synthese-pause-sans-reprise' : 'synthese-plage-ouverte'"
-                >
+                <div class="trait" [style.top.px]="marque.haut"></div>
+                <div class="puce" [style.top.px]="marque.puce" [title]="marque.titre" data-selector="synthese-plage-ouverte">
                   @for (ligne of marque.lignes; track $index) {
                   <span>{{ ligne }}</span>
                   }
