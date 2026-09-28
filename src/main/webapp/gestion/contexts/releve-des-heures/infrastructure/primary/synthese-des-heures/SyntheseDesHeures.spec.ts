@@ -1257,6 +1257,31 @@ describe('Synthese des heures component', () => {
     expect(marquesChoisies()).toEqual(['Fin 14:00']);
   });
 
+  it.each([
+    ['an isolated clocking of an element', { pointagesDElement: [{ type: 'FIN', heure: [5, 30] }] }, 22.92],
+    ['a departure no interval or presence surrounds', { pointages: [['DEPART', [22, 45]]] }, 94.79],
+  ] as const)('should open the axis of the open day onto the whole day for %s outside the daytime hours', async (_cas, jour, gauche) => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: jour }, {}, [elementFixture()]));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([reperesDuJour(0)[0], reperesDuJour(0).at(-1), gauches('synthese-marque').concat(gauches('synthese-trait-presence'))]).toEqual([
+      '0 h',
+      '24 h',
+      [gauche],
+    ]);
+  });
+
+  it('should keep the daytime axis of a closed day whose clocking, not drawn, lies outside the daytime hours', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { pointagesDElement: [{ type: 'FIN', heure: [5, 30] }] } }, {}, [elementFixture()]));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-15' });
+
+    await whenEcranAffiche();
+
+    expect(reperesDuJour(0)).toEqual(['8 h', '20 h']);
+  });
+
   it('should mark the column of today', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 
