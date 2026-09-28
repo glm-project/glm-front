@@ -2,10 +2,10 @@ import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
+import { JournalDuJour, journalDuJour } from '../journal-du-jour/JournalDuJour';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
 import { AncrageDuRepere, AxeDuJour, minutesDeDebut, minutesDeFin, seLePoursuit } from './AxeDuJour';
 import { JourSurSonAxe, jourSurSonAxe } from './JourSurSonAxe';
-import { JournalDuJour, journalDuJour } from './JournalDuJour';
 import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;

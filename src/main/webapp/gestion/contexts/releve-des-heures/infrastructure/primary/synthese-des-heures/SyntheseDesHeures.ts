@@ -12,6 +12,7 @@ import { jourDemande } from '../../../domain/semaine/JourDemande';
 import { semaineDemandee } from '../../../domain/semaine/SemaineDemandee';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { jourCourant } from '../jourCourant';
+import { Journal } from '../journal-du-jour/Journal';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
 import { FriseDeLaSemaine, friseDeLaSemaine } from './FriseDeLaSemaine';
 
@@ -46,7 +47,7 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
   host: { 'data-selector': 'synthese-page' },
   templateUrl: './SyntheseDesHeures.html',
   styleUrl: './SyntheseDesHeures.css',
-  imports: [Icon, MatButtonModule, NgTemplateOutlet, RouterLink],
+  imports: [Icon, Journal, MatButtonModule, NgTemplateOutlet, RouterLink],
 })
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;
