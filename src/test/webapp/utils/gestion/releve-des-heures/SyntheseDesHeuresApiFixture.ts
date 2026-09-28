@@ -28,6 +28,8 @@ const joursDeSynthese = (annee: number, semaine: number): RestJour[] =>
     jour,
     duree: rang === 0 ? 'PT7H30M' : 'PT0S',
     dureePresumee: 'PT0S',
+    dureeOperationnelle: 'PT0S',
+    dureeOperationnellePresumee: 'PT0S',
     pointages:
       rang === 0
         ? [
@@ -41,6 +43,7 @@ const joursDeFeuille = (annee: number, semaine: number): RestJourDeFeuille[] =>
   datesDe(annee, semaine).map((jour, rang) => ({
     jour,
     presence: rang === 0 ? [{ debut: `${jour}T06:02:00Z`, fin: `${jour}T15:32:00Z`, presumee: false }] : [],
+    activites: [],
   }));
 
 export interface SemaineSemee {
@@ -76,7 +79,7 @@ export class SyntheseDesHeuresApiFixture {
     }).as('feuilleRead');
   }
 
-  private reponse(annee: string, semaine: string): { statusCode?: number; body: RestSynthese | { type: string } } {
+  private reponse(annee: string, semaine: string): { statusCode?: number; body: RestSynthese | { type?: string } } {
     if (this.failRead) {
       return { statusCode: 500, body: {} };
     }
@@ -99,8 +102,11 @@ export const syntheseFixture = (annee: number, semaine: number): RestSynthese =>
   semaine,
   dureeTotale: 'PT7H30M',
   dureePresumeeTotale: 'PT0S',
+  dureeOperationnelleTotale: 'PT0S',
+  dureeOperationnellePresumeeTotale: 'PT0S',
   operateur: OPERATEUR,
   jours: joursDeSynthese(annee, semaine),
+  elements: [],
 });
 
 export const feuilleFixture = (annee: number, semaine: number): RestFeuille => ({

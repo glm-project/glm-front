@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ApiError, findApiErrorIn } from './findApiErrorIn';
 
 const URN = 'urn:glm:erreur:atelier:transition-d-atelier-interdite';
-const MESSAGE = 'une REPRISE suppose une PAUSE en cours';
+const MESSAGE = 'un DEPART suppose une ARRIVEE';
 const TITRE = "transition d'atelier interdite";
 
 describe('findApiErrorIn', () => {

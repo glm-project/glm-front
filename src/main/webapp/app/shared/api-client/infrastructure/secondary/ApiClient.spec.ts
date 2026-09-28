@@ -96,13 +96,13 @@ describe('ApiClient', () => {
   });
 
   it('should send the body the caller gave to write', async () => {
-    const ecriture = whenPausingWork();
+    const ecriture = whenLeavingWork();
 
     const requete = await whenTheServerAnswers({});
 
     await whenTheRequestCompletes(ecriture);
 
-    thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' });
+    thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEPART' });
   });
 
   it('should update the requested workstation and return the server answer', async () => {
@@ -158,7 +158,7 @@ describe('ApiClient', () => {
   const whenStartingAStalledRequest = (operation: 'read' | 'write' | 'update' | 'delete'): Promise<unknown> => {
     const requests = {
       read: whenReadingOperators,
-      write: whenPausingWork,
+      write: whenLeavingWork,
       update: whenUpdatingAWorkstation,
       delete: whenDeletingAWorkstation,
     };
@@ -187,8 +187,8 @@ describe('ApiClient', () => {
       body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
     });
 
-  const whenPausingWork = (): Promise<unknown> =>
-    api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'PAUSE' } });
+  const whenLeavingWork = (): Promise<unknown> =>
+    api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEPART' } });
 
   const whenUpdatingAWorkstation = (): Promise<unknown> =>
     api.update('/api/postes-de-travail/{id}', { pathParams: { id: POSTE_ID }, body: MODIFICATION_POSTE });

@@ -7,7 +7,8 @@ import {
   syntheseFixture,
 } from '../../../utils/gestion/releve-des-heures/SyntheseDesHeuresApiFixture';
 
-type TypeDePointage = components['schemas']['RestPointageDeSyntheseDesHeures']['type'];
+type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
+type TypeDePointage = RestPointage['type'] | 'PAUSE' | 'REPRISE';
 type Heure = readonly [number, number];
 
 const HORLOGE = new Date(2026, 8, 26, 10, 30).getTime();
@@ -47,12 +48,20 @@ const semaineFixture = ({ semaine, lundi, totalPointe, totalPresume, jours }: Se
     semaine,
     dureeTotale: totalPointe,
     dureePresumeeTotale: totalPresume,
+    dureeOperationnelleTotale: 'PT0S',
+    dureeOperationnellePresumeeTotale: 'PT0S',
+    elements: [],
     operateur: { id: 'op-1', nom: 'Auve', prenom: 'Jean-Yves' },
     jours: jours.map((jour, rang) => ({
       jour: dateFixture(lundi, rang),
       duree: jour.pointe ?? 'PT0S',
       dureePresumee: jour.presume ?? 'PT0S',
-      pointages: (jour.pointages ?? []).map(([type, heure]) => ({ type, dateDeSurvenue: instantFixture(lundi, rang, heure) })),
+      dureeOperationnelle: 'PT0S',
+      dureeOperationnellePresumee: 'PT0S',
+      pointages: (jour.pointages ?? []).map(([type, heure]) => ({
+        type: type as RestPointage['type'],
+        dateDeSurvenue: instantFixture(lundi, rang, heure),
+      })),
     })),
   },
   feuille: {
@@ -66,6 +75,7 @@ const semaineFixture = ({ semaine, lundi, totalPointe, totalPresume, jours }: Se
         ...(fin === undefined ? {} : { fin: instantFixture(lundi, rang, fin) }),
         presumee: presumee ?? false,
       })),
+      activites: [],
     })),
   },
 });

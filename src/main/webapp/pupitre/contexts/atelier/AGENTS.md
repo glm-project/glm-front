@@ -89,7 +89,7 @@ Les libellés métier du pupitre vivent dans un module unique de ce contexte et 
 
 Le résultat du chargement initial est distinct de la connexion observée. `TypeScriptChargementDeLAtelier` expose la disponibilité du référentiel de l'entreprise courante; l'adaptateur secondaire d'`enrolement` traduit l'achèvement de la synchronisation en `CHARGE` ou `ECHEC`. Cette issue ne modifie pas l'indicateur de connexion, que seuls les résultats de publication établissent.
 
-Tant que le back et le vidage des pupitres ne sont pas passés, un opérateur `EN_PAUSE` peut encore arriver du serveur ou d'un référentiel stocké : `HttpAtelierExchange` et `IndexedDbJournauxDuPupitre` le lisent présent. Voir l'[ADR 0045](../../../../../../documentation/adr/0045-keep-the-pause-on-the-pupitre.md).
+Le back ne rend plus `EN_PAUSE` (glm-back#62). Tant que le vidage des pupitres n'est pas passé, un opérateur `EN_PAUSE` peut encore venir d'un référentiel stocké : `IndexedDbJournauxDuPupitre` le lit présent. Voir l'[ADR 0045](../../../../../../documentation/adr/0045-keep-the-pause-on-the-pupitre.md).
 
 Lire [Offline pupitre](../../../../../../documentation/offline-pupitre.md) avant de changer la désignation, le journal, le rejeu ou le runtime, et les [ADR pertinents](../../../../../../documentation/adr/README.md) avant de rouvrir une décision. Les échanges futurs avec un autre contexte de `pupitre` passent par un port et un adaptateur TypeScript, sans import direct de son domaine.
 
