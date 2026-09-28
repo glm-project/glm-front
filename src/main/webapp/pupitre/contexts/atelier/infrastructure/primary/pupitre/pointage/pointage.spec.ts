@@ -5,7 +5,6 @@ import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../..
 import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
-import { EtatDePresence } from '../../../../domain/journal-du-pupitre/JournalDuPupitre';
 import { Pointage } from './pointage';
 
 const pointageFixture: VueDePointage = {
@@ -38,7 +37,7 @@ describe('Pointage screen', () => {
     };
     fixture.componentRef.setInput('vue', pointageFixture);
     fixture.componentRef.setInput('commander', commander);
-    fixture.componentRef.setInput('presence', new PresenceDeLOperateur('ABSENT'));
+    fixture.componentRef.setInput('presence', presenceFixture({ activiteEnCours: true, pauseEnCours: true }));
     fixture.componentInstance.pauseRequested.subscribe(() => emitted.push('pause'));
     fixture.componentInstance.repriseRequested.subscribe(() => emitted.push('reprendre'));
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
@@ -161,25 +160,19 @@ describe('Pointage screen', () => {
     thenEveryWorkstationChoiceIsDisabled();
   });
 
-  it.each<[EtatDePresence, string, boolean]>([
-    ['ABSENT', 'pause', false],
-    ['ABSENT', 'resume', false],
-    ['ABSENT', 'stop-all', false],
-    ['PRESENT', 'pause', false],
-    ['PRESENT', 'resume', true],
-    ['PRESENT', 'stop-all', false],
-    ['EN_PAUSE', 'pause', true],
-    ['EN_PAUSE', 'resume', false],
-    ['EN_PAUSE', 'stop-all', false],
-  ])('should disable the %s command exactly when presence %s forbids it (%s)', async (etat, selector, expectedDisabled) => {
-    givenPresence(etat);
+  it.each<[string, ConstatDePresenceFixture, readonly boolean[]]>([
+    ['nothing to suspend nor to reopen', { activiteEnCours: false, pauseEnCours: false }, [true, true, false]],
+    ['a personal activity to suspend', { activiteEnCours: true, pauseEnCours: false }, [false, true, false]],
+    ['a pause in progress to reopen', { activiteEnCours: false, pauseEnCours: true }, [true, false, false]],
+  ])('should disable PAUSE, REPRENDRE and TOUT ARRÊTER for an operator with %s', async (_name, constat, expectedDisabled) => {
+    givenPresence(constat);
     await whenRendering();
 
-    thenCommandDisabledStateIs(selector, expectedDisabled);
+    thenGlobalCommandsDisabledStatesAre(expectedDisabled);
   });
 
   it('should emit no gesture when a command illegal for the current presence is pressed', async () => {
-    givenPresence('PRESENT');
+    givenPresence({ activiteEnCours: true, pauseEnCours: false });
     await whenRendering();
 
     whenPressingGlobalCommand('resume');
@@ -204,8 +197,8 @@ describe('Pointage screen', () => {
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
   };
-  const givenPresence = (etat: EtatDePresence): void => {
-    fixture.componentRef.setInput('presence', new PresenceDeLOperateur(etat));
+  const givenPresence = (constat: ConstatDePresenceFixture): void => {
+    fixture.componentRef.setInput('presence', presenceFixture(constat));
   };
   const givenTheNextPointageIsUnavailable = (): void => {
     nextExecution = { kind: 'INDISPONIBLE' };
@@ -299,8 +292,8 @@ describe('Pointage screen', () => {
   const thenNoGlobalIntentionIsExposed = (): void => {
     expect(emitted).toEqual([]);
   };
-  const thenCommandDisabledStateIs = (selector: string, expected: boolean): void => {
-    expect(button(selector).disabled).toBe(expected);
+  const thenGlobalCommandsDisabledStatesAre = (expected: readonly boolean[]): void => {
+    expect(['pause', 'resume', 'stop-all'].map(selector => button(selector).disabled)).toEqual(expected);
   };
   const targetsFor = (elementId: string): HTMLButtonElement[] => {
     const tile = requiredElement(root().querySelector(dataSelector(`tile-${elementId}`)), 'tile');
@@ -312,6 +305,14 @@ describe('Pointage screen', () => {
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const root = (): HTMLElement => fixture.nativeElement as HTMLElement;
 });
+
+interface ConstatDePresenceFixture {
+  readonly activiteEnCours: boolean;
+  readonly pauseEnCours: boolean;
+}
+
+const presenceFixture = (constat: ConstatDePresenceFixture): PresenceDeLOperateur =>
+  new PresenceDeLOperateur({ etat: 'PRESENT', ...constat });
 
 const requiredElement = <T>(element: T | null, description: string): T => {
   if (element === null) throw new Error(`Missing ${description} fixture.`);

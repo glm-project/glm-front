@@ -7,7 +7,6 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   GesteDAtelier,
-  GesteDePresence,
   JournalDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
@@ -71,13 +70,13 @@ describe('GestesRecordingQueue', () => {
     }).get(GestesRecordingQueue);
   });
 
-  it('should capture pause presence when global intention is pause', async () => {
+  it('should capture the suspension of each personal activity when the global intention is a pause', async () => {
     const fenetre = givenAnOpenOperatorWindow();
 
     await whenCapturingGlobalIntention(fenetre, 'PAUSE', '11111111-2222-3333-4444-0000000a');
 
     const gestures = await whenReadingRecordedGestures('entreprise-a');
-    thenPresenceTypeIs(gestures, 'PAUSE');
+    thenGesturesAreSuspensionsOf(gestures, '11111111-2222-3333-4444-0000000a');
   });
 
   it('should retain the initiated root identity among the distinct IDs accepted for a global stop', async () => {
@@ -181,10 +180,10 @@ describe('GestesRecordingQueue', () => {
     return state.evenements.map(e => e.geste);
   };
 
-  const thenPresenceTypeIs = (gestures: readonly GesteDAtelier[], expectedPresenceType: 'PAUSE' | 'REPRISE'): void => {
-    const presence = gestures.find(g => g.nature === 'PRESENCE');
-    expect(presence).toBeDefined();
-    expect((presence as GesteDePresence).type).toBe(expectedPresenceType);
+  const thenGesturesAreSuspensionsOf = (gestures: readonly GesteDAtelier[], pause: string): void => {
+    expect(gestures).toEqual([
+      expect.objectContaining({ nature: 'POINTAGE', suiviId: 'moule-1015', type: 'FIN', suspension: { pause, reouverture: 'DEBUT' } }),
+    ]);
   };
 
   const thenRecordedGesturesRetainRootIdentity = (gestures: readonly GesteDAtelier[], rootIdentity: string): void => {

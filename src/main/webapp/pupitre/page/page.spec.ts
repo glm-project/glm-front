@@ -50,7 +50,7 @@ class AtelierCoordinatorFixture {
   readonly refusAtelier = signal<ReturnType<CurrentOperateurLifecycle['refusAtelier']>>(undefined);
   readonly pointage = signal<VueDePointage | undefined>(undefined);
   readonly gestesDisponibles = signal(true);
-  readonly presence = signal(new PresenceDeLOperateur('ABSENT'));
+  readonly presence = signal(new PresenceDeLOperateur({ etat: 'PRESENT', activiteEnCours: true, pauseEnCours: true }));
   readonly code = signal('');
   readonly unknownCode = signal(false);
   readonly canValidate = signal(true);
@@ -193,13 +193,17 @@ describe('Pupitre page', () => {
     expect((element('resume') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('should relay the operator presence to the header', () => {
+  it.each<['ABSENT' | 'PRESENT', string]>([
+    ['PRESENT', 'En pause'],
+    ['ABSENT', 'Pas encore arrivé'],
+  ])('should show a %s operator whose pause is in progress as "%s" while offering REPRENDRE', (etat, libelle) => {
     givenPointage();
 
-    givenPresence('EN_PAUSE');
+    givenPresence(etat, { pauseEnCours: true });
     whenRenderingThePage();
 
-    thenHeaderPresenceIs('En pause');
+    thenHeaderPresenceIs(libelle);
+    expect((element('resume') as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('should consume the click following a refused page press and accept the next complete press', () => {
@@ -312,8 +316,8 @@ describe('Pupitre page', () => {
     pupitre.publishReference();
     fixture.detectChanges();
   };
-  const givenPresence = (etat: 'ABSENT' | 'PRESENT' | 'EN_PAUSE'): void => {
-    pupitre.presence.set(new PresenceDeLOperateur(etat));
+  const givenPresence = (etat: 'ABSENT' | 'PRESENT', { pauseEnCours } = { pauseEnCours: false }): void => {
+    pupitre.presence.set(new PresenceDeLOperateur({ etat, activiteEnCours: true, pauseEnCours }));
   };
   const givenTheNextPagePressIsRefused = (): void => {
     pupitre.registerPress.mockReturnValueOnce(false);

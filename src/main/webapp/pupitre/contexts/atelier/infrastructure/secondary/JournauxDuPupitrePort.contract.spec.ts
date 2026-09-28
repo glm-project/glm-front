@@ -27,7 +27,7 @@ const refreshedReferenceFixture: ReferentielDuPupitre = {
   ],
 };
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
-const repriseFixture: GesteDAtelier = { ...arriveeFixture, id: 'reprise', nature: 'PRESENCE', type: 'REPRISE', implicite: true };
+const departFixture: GesteDAtelier = { ...arriveeFixture, id: 'depart', nature: 'PRESENCE', type: 'DEPART' };
 const pointageFixture: GesteDAtelier = { ...arriveeFixture, id: 'pointage', nature: 'POINTAGE', type: 'DEBUT', suiviId: 'piece' };
 const pointageEnAttenteFixture: GesteDAtelier = {
   ...arriveeFixture,
@@ -42,6 +42,16 @@ const pointageAutreSuiviFixture: GesteDAtelier = {
   nature: 'POINTAGE',
   type: 'DEBUT',
   suiviId: 'autre-piece',
+};
+
+const suspensionFixture: GesteDAtelier = {
+  ...arriveeFixture,
+  id: 'fin-pause',
+  nature: 'POINTAGE',
+  type: 'FIN',
+  suiviId: 'piece',
+  posteId: 'tour',
+  suspension: { pause: 'pause-de-midi', reouverture: 'NON_CONFORMITE' },
 };
 
 const operateurJeanFixture: OperateurDuPupitre = {
@@ -66,7 +76,6 @@ const departJeanFixture: GesteDAtelier = {
   id: 'depart-jean',
   nature: 'PRESENCE',
   type: 'DEPART',
-  implicite: false,
 };
 const operateurMarieFixture: OperateurDuPupitre = {
   id: 'marie',
@@ -85,7 +94,6 @@ const departMarieFixture: GesteDAtelier = {
   id: 'depart-marie',
   nature: 'PRESENCE',
   type: 'DEPART',
-  implicite: false,
   operateurId: 'marie',
 };
 
@@ -142,6 +150,18 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     await thenCompanyStateIs('entreprise-b', EMPTY_JOURNAL_DU_PUPITRE);
   });
 
+  it('should keep the pause a finish belongs to across acceptance and a later read', async () => {
+    await givenACompanyReference();
+
+    await whenAppendingAndAcceptingASuspension();
+
+    await thenCompanyStateIs('entreprise-a', {
+      referentiel: referenceFixture,
+      connecte: true,
+      evenements: [{ geste: suspensionFixture, etat: 'ACCEPTE' }],
+    });
+  });
+
   it('should preserve a concurrent append and a refusal while recording a push outcome', async () => {
     const refus = await givenADisconnectedQueue();
 
@@ -149,7 +169,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
 
     await thenCompanyStateIs('entreprise-a', {
       connecte: true,
-      evenements: [refus, { geste: repriseFixture, etat: 'EN_ATTENTE' }, { geste: pointageFixture, etat: 'EN_ATTENTE' }],
+      evenements: [refus, { geste: departFixture, etat: 'EN_ATTENTE' }, { geste: pointageFixture, etat: 'EN_ATTENTE' }],
     });
   });
 
@@ -171,7 +191,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
         { geste: pointageFixture, etat: 'ACCEPTE' },
         { geste: pointageEnAttenteFixture, etat: 'EN_ATTENTE' },
         { geste: pointageAutreSuiviFixture, etat: 'ACCEPTE' },
-        { geste: repriseFixture, etat: 'ACCEPTE' },
+        { geste: departFixture, etat: 'ACCEPTE' },
       ],
     });
   });
@@ -239,7 +259,7 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   };
   const givenAnAcceptedArrivalAndAPendingDeparture = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [arriveeJeanFixture, departJeanFixture]);
-    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: arriveeJeanFixture, etat: 'ACCEPTE', journeeOuverte: true });
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: arriveeJeanFixture, etat: 'ACCEPTE' });
   };
   const givenAnAcceptedPointageForTheOperator = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [pointageFixture]);
@@ -256,10 +276,10 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
   const completeOpeningFixture = (): JournalDuPupitre => ({
     referentiel: referenceFixture,
     connecte: true,
-    evenements: [arriveeFixture, repriseFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
+    evenements: [arriveeFixture, pointageFixture].map(geste => ({ geste, etat: 'EN_ATTENTE' })),
   });
   const givenADisconnectedQueue = async (): Promise<EvenementDuJournal> => {
-    await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, repriseFixture]);
+    await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, departFixture]);
     await journal.markDisconnected(Entreprise.of('entreprise-a'));
     return { geste: arriveeFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
   };
@@ -268,11 +288,11 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
       pointageFixture,
       pointageEnAttenteFixture,
       pointageAutreSuiviFixture,
-      repriseFixture,
+      departFixture,
     ]);
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageFixture, etat: 'ACCEPTE' });
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageAutreSuiviFixture, etat: 'ACCEPTE' });
-    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: repriseFixture, etat: 'ACCEPTE' });
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: departFixture, etat: 'ACCEPTE' });
   };
 
   const whenCompletingConcurrentOperations = async (
@@ -286,8 +306,12 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     return beforeRelease;
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
+  const whenAppendingAndAcceptingASuspension = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [suspensionFixture]);
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: suspensionFixture, etat: 'ACCEPTE' });
+  };
   const whenAppendingTheCompleteOpening = (): Promise<void> =>
-    journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, repriseFixture, pointageFixture]);
+    journal.append(Entreprise.of('entreprise-a'), [arriveeFixture, pointageFixture]);
   const whenAppendingArrival = (): Promise<void> => journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
   const whenSavingAFreshReference = (): Promise<JournalDuPupitre> =>
     journal.saveReferentiel(Entreprise.of('entreprise-a'), refreshedReferenceFixture);
@@ -348,12 +372,20 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('should restore a legacy accepted arrival without inventing that it opened the day', async () => {
+  it('should restore an accepted arrival stored with the day outcome of an earlier version, without that outcome', async () => {
     await givenALegacyAcceptedArrival();
 
     const state = await whenReadingCompany('entreprise-a');
 
-    thenEventsAre(state, [{ geste: arriveeFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
+    thenEventsAre(state, [{ geste: arriveeFixture, etat: 'ACCEPTE' }]);
+  });
+
+  it('should read an operator stored on pause as present, the pause living on the pupitre', async () => {
+    await givenAReferenceStoredWithAnOperatorOnPause();
+
+    const state = await whenReadingCompany('entreprise-a');
+
+    expect(state.referentiel?.operateurs.map(operateur => operateur.etat)).toEqual(['PRESENT']);
   });
 
   it('should acquire the storage synchronisation lock when synchronizing', async () => {
@@ -375,8 +407,16 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
   });
 
   const givenALegacyAcceptedArrival = async (): Promise<void> => {
-    const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const }] };
+    const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const, journeeOuverte: true }] };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
+  };
+  const givenAReferenceStoredWithAnOperatorOnPause = async (): Promise<void> => {
+    const stored = {
+      connecte: true,
+      evenements: [],
+      referentiel: { operateurs: [{ ...operateurJeanFixture, etat: 'EN_PAUSE' }], suivis: [] },
+    };
+    await storage.update('atelier:entreprise-a', stored, () => stored);
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
   const whenHoldingStorageLock = (

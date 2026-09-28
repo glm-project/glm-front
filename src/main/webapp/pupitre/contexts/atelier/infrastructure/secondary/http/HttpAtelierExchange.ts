@@ -3,6 +3,7 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import {
+  EtatDePresence,
   GesteDAtelier,
   OperateurDuPupitre,
   ReferentielDuPupitre,
@@ -22,11 +23,13 @@ type RestSuiviDuPupitre = components['schemas']['RestSuiviDuPupitre'];
 
 const toPosteHabilite = (poste: RestPosteDuPupitre): OperateurDuPupitre['postes'][number] => ({ id: poste.id, libelle: poste.libelle });
 
+const toEtatDePresence = (etat: RestOperateurDuPupitre['etat']): EtatDePresence => (etat === 'EN_PAUSE' ? 'PRESENT' : etat);
+
 const toOperateurWithoutMatricule = (operateur: RestOperateurDuPupitre): OperateurDuPupitre => ({
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
-  etat: operateur.etat,
+  etat: toEtatDePresence(operateur.etat),
   postes: operateur.postes.map(toPosteHabilite),
   evenements: [],
 });

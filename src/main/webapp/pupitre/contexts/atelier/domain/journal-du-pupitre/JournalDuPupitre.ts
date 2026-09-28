@@ -1,8 +1,8 @@
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
-export type TypeDePresence = 'PAUSE' | 'REPRISE' | 'DEPART';
-export type EtatDePresence = 'ABSENT' | 'PRESENT' | 'EN_PAUSE';
+export type TypeDePresence = 'DEPART';
+export type EtatDePresence = 'ABSENT' | 'PRESENT';
 
 export interface OperateurDuPupitre {
   readonly id: string;
@@ -46,15 +46,18 @@ export interface GesteDArrivee extends IdentiteDuGeste {
   readonly operateurId: string;
 }
 
-interface PresenceCommune extends IdentiteDuGeste {
+export interface GesteDePresence extends IdentiteDuGeste {
   readonly nature: 'PRESENCE';
   readonly operateurId: string;
+  readonly type: TypeDePresence;
 }
 
-export type GesteDePresence =
-  | (PresenceCommune & { readonly type: TypeDePresence; readonly implicite: false; readonly assuranceArriveeId?: never })
-  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: false; readonly assuranceArriveeId: string })
-  | (PresenceCommune & { readonly type: 'REPRISE'; readonly implicite: true; readonly assuranceArriveeId?: never });
+export type TypeDOuverture = Exclude<TypeDePointage, 'FIN'>;
+
+export interface Suspension {
+  readonly pause: string;
+  readonly reouverture: TypeDOuverture;
+}
 
 export interface GesteDePointage extends IdentiteDuGeste {
   readonly nature: 'POINTAGE';
@@ -62,7 +65,11 @@ export interface GesteDePointage extends IdentiteDuGeste {
   readonly suiviId: string;
   readonly type: TypeDePointage;
   readonly posteId?: string;
+  readonly suspension?: Suspension;
 }
+
+export const toReouverture = (activite: ActiviteDuPupitre): TypeDOuverture =>
+  activite.categorie === 'NON_CONFORMITE' ? 'NON_CONFORMITE' : 'DEBUT';
 
 export type GesteDAtelier = GesteDArrivee | GesteDePresence | GesteDePointage;
 
@@ -74,21 +81,11 @@ export interface EvenementEnAttente {
   readonly refus?: never;
 }
 
-export interface ArriveeAcceptee {
-  readonly geste: GesteDArrivee;
+export interface EvenementAccepte {
+  readonly geste: GesteDAtelier;
   readonly etat: 'ACCEPTE';
-  readonly journeeOuverte: boolean;
   readonly refus?: never;
 }
-
-export interface AutreGesteAccepte {
-  readonly geste: GesteDePresence | GesteDePointage;
-  readonly etat: 'ACCEPTE';
-  readonly journeeOuverte?: never;
-  readonly refus?: never;
-}
-
-export type EvenementAccepte = ArriveeAcceptee | AutreGesteAccepte;
 
 export interface EvenementRefuse {
   readonly geste: GesteDAtelier;
@@ -104,16 +101,13 @@ export interface JournalDuPupitre {
 
 export const EMPTY_JOURNAL_DU_PUPITRE: JournalDuPupitre = { evenements: [], connecte: true };
 
-const isArriveeAcceptee = (evenement: EvenementAccepte): evenement is ArriveeAcceptee => evenement.geste.nature === 'ARRIVEE';
-
 const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal => {
-  const geste = { ...evenement.geste };
+  const geste =
+    evenement.geste.nature === 'POINTAGE' && evenement.geste.suspension !== undefined
+      ? { ...evenement.geste, suspension: { ...evenement.geste.suspension } }
+      : { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
-  if (evenement.etat === 'ACCEPTE') {
-    return isArriveeAcceptee(evenement)
-      ? { geste: { ...evenement.geste }, etat: 'ACCEPTE', journeeOuverte: evenement.journeeOuverte }
-      : { geste: { ...evenement.geste }, etat: 'ACCEPTE' };
-  }
+  if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
   return { geste, etat: 'EN_ATTENTE' };
 };
 
@@ -149,12 +143,6 @@ const isAcceptedPointageOf = (evenement: EvenementDuJournal, suiviId: string): b
 const isAcceptedPresenceOf = (evenement: EvenementDuJournal, operateurId: string): boolean =>
   evenement.etat === 'ACCEPTE' && evenement.geste.nature !== 'POINTAGE' && evenement.geste.operateurId === operateurId;
 
-const opensTheDay = (evenement: EvenementDuJournal, arriveeId: string, operateurId: string): boolean =>
-  evenement.geste.id === arriveeId
-  && evenement.geste.operateurId === operateurId
-  && 'journeeOuverte' in evenement
-  && evenement.journeeOuverte;
-
 export class EvenementsDuJournal {
   private readonly evenements: readonly EvenementDuJournal[];
 
@@ -170,10 +158,6 @@ export class EvenementsDuJournal {
     return this.evenements.some(evenement => evenement.geste.id === gesteId);
   }
 
-  hasOpenedDay(arriveeId: string, operateurId: string): boolean {
-    return this.evenements.some(evenement => opensTheDay(evenement, arriveeId, operateurId));
-  }
-
   latestRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {
     return [...this.evenements].reverse().find(isRefusalAmong(gesteIds));
   }
@@ -187,8 +171,7 @@ export class EvenementsDuJournal {
   }
 }
 
-export const acceptPublication = (geste: GesteDAtelier, journeeOuverte: boolean): EvenementAccepte =>
-  geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte } : { geste, etat: 'ACCEPTE' };
+export const acceptPublication = (geste: GesteDAtelier): EvenementAccepte => ({ geste, etat: 'ACCEPTE' });
 
 export const refusePublication = (geste: GesteDAtelier, refus: EvenementRefuse['refus']): EvenementRefuse => ({
   geste,

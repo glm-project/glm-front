@@ -1,7 +1,7 @@
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, snapshotDuJournal } from './JournalDuPupitre';
 
 describe('JournalDuPupitre', () => {
-  it('should copy non-arrival accepted events without journeeOuverte attribute', () => {
+  it('should copy accepted events', () => {
     const pointage: GesteDePointage = {
       id: 'pt-1',
       dateDeSurvenue: '2026-09-05T08:00:00Z',
@@ -19,7 +19,6 @@ describe('JournalDuPupitre', () => {
     const event = snapshot.evenements[0];
 
     expect(event).toEqual({ geste: pointage, etat: 'ACCEPTE' });
-    expect(event !== undefined && 'journeeOuverte' in event).toBe(false);
   });
 
   it('should preserve and clone suivi events in journal referential', () => {
@@ -76,7 +75,6 @@ describe('JournalDuPupitre', () => {
         {
           geste: { id: 'arr-1', dateDeSurvenue: '2026-09-05T08:00:00Z', nature: 'ARRIVEE', operateurId: 'jean' },
           etat: 'ACCEPTE',
-          journeeOuverte: true,
         },
         {
           geste: { id: 'ref-1', dateDeSurvenue: '2026-09-05T08:00:00Z', nature: 'ARRIVEE', operateurId: 'jean' },

@@ -1,12 +1,14 @@
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
+  ActiviteDuPupitre,
   EMPTY_JOURNAL_DU_PUPITRE,
   EtatDePresence,
   GesteDAtelier,
   GesteDePointage,
   IdentiteDuGeste,
   JournalDuPupitre,
+  Suspension,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
 import { Matricule } from '../Matricule';
@@ -14,7 +16,7 @@ import { NumeroDElement } from '../NumeroDElement';
 import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
 import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
-import { PresenceDeLOperateur } from './PresenceDeLOperateur';
+import { PresenceDeLOperateur, SituationDeLOperateur } from './PresenceDeLOperateur';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -25,8 +27,16 @@ const requiredFixture = <T>(value: T | null | undefined, description: string): T
   return value;
 };
 
-const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] =>
-  geste.nature === 'ARRIVEE' ? { geste, etat: 'ACCEPTE', journeeOuverte: false } : { geste, etat: 'ACCEPTE' };
+const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] => ({ geste, etat: 'ACCEPTE' });
+
+const travailAuTourFixture: ActiviteDuPupitre = {
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T06:00:00Z',
+  posteId: 'tour',
+};
+
+const nonConformiteFixture: ActiviteDuPupitre = { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' };
 
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -149,48 +159,27 @@ describe('FenetreOperateur', () => {
     const firstGestures = whenAcceptingPointage(first);
     const secondGestures = whenCapturingPointage(second);
 
-    thenGesturesAre(firstGestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    thenGesturesAre(secondGestures, ['PRESENCE', 'POINTAGE']);
+    thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(secondGestures, ['POINTAGE']);
     thenIdentitiesWerePreparedBeforeExecution([...firstGestures, ...secondGestures], preparedIdentities);
     thenOpeningSharesBusinessTime(firstGestures);
   });
 
   it('should keep requiring arrival until a business command has been committed', () => {
     const first = givenAPreparedPointage();
+    const committed = givenAPreparedPointage();
     const retry = givenAPreparedPointage();
 
-    whenCapturingPointage(first);
-    const presence = whenAcceptingAnExplicitPause();
+    const firstGestures = whenCapturingPointage(first);
+    const committedGestures = whenAcceptingPointage(committed);
     const retriedGestures = whenCapturingPointage(retry);
 
-    thenGesturesAre(retriedGestures, ['PRESENCE', 'POINTAGE']);
-    thenAcceptedPresenceIsVisible(presence);
+    thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(committedGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(retriedGestures, ['POINTAGE']);
   });
 
-  it('should assure arrival before the first explicit pause', () => {
-    const pause = fenetre.preparePresence('PAUSE', identifyFixture);
-
-    const gestes = pause.capture();
-
-    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE']);
-    expect(gestes[1]).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false });
-  });
-
-  it('should correlate the first explicit resumption with its arrival assurance', () => {
-    const reprise = fenetre.preparePresence('REPRISE', identifyFixture);
-
-    const gestes = fenetre.capture(reprise);
-
-    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE']);
-    expect(gestes[1]).toMatchObject({
-      nature: 'PRESENCE',
-      type: 'REPRISE',
-      implicite: false,
-      assuranceArriveeId: gestes[0]?.id,
-    });
-  });
-
-  it('should assure arrival without an implicit resumption before a first finish', () => {
+  it('should assure arrival before a first finish', () => {
     const fin = whenDeciding('moule-1015', 'PRINCIPALE');
 
     const gestes = captureGestures(fin);
@@ -199,7 +188,7 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should not resume implicitly when moving work to non conformity', () => {
+  it('should assure arrival before moving work to non conformity', () => {
     const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
 
     const gestes = captureGestures(nonConformite);
@@ -208,23 +197,13 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(nonConformite, ['NON_CONFORMITE']);
   });
 
-  it('should resume implicitly when moving non conformity back to work', () => {
+  it('should move non conformity back to work after assuring arrival', () => {
     const travail = whenDeciding('of-204', 'SECONDAIRE');
 
     const gestes = captureGestures(travail);
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE', 'POINTAGE', 'POINTAGE']);
+    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE']);
     thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
-  });
-
-  it('should resume implicitly when opening an activity after an accepted pause', () => {
-    whenAcceptingAnExplicitPause();
-
-    const ouverture = whenDeciding('of-1015', 'PRINCIPALE');
-    const gestes = captureGestures(ouverture);
-
-    thenGesturesAre(gestes, ['PRESENCE', 'POINTAGE']);
-    expect(gestes[0]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
   });
 
   it('should finish every personal activity with its workstation before departure when stopping all', () => {
@@ -243,18 +222,80 @@ describe('FenetreOperateur', () => {
       { suiviId: 'of-204', type: 'FIN', posteId: 'tour' },
       { suiviId: 'of-204', type: 'FIN', posteId: undefined },
     ]);
-    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART', implicite: false });
+    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(new Set(gestes.map(geste => geste.dateDeSurvenue))).toEqual(new Set(['2026-09-05T08:00:00.000Z']));
   });
 
+  it('should suspend each personal activity by a finish on its workstation marked with the pause and its reopening, without arrival nor presence', () => {
+    const working = givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] });
+
+    const gestes = working.preparePause(identifyFixture, 'pause-de-midi').capture();
+
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
+    thenPointagesAre(gestes, [
+      { suiviId: 'moule-1015', type: 'FIN', posteId: 'tour', suspension: { pause: 'pause-de-midi', reouverture: 'DEBUT' } },
+      { suiviId: 'of-204', type: 'FIN', posteId: undefined, suspension: { pause: 'pause-de-midi', reouverture: 'NON_CONFORMITE' } },
+    ]);
+  });
+
+  it('should reopen every suspended activity on its workstation and in its category after assuring arrival', () => {
+    const paused = givenAnAcceptedPause(
+      givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
+    );
+
+    const gestes = paused.capture(paused.prepareReprise(identifyFixture));
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE']);
+    thenPointagesAre(gestes, [
+      { suiviId: 'moule-1015', type: 'DEBUT', posteId: 'tour', suspension: undefined },
+      { suiviId: 'of-204', type: 'NON_CONFORMITE', posteId: undefined, suspension: undefined },
+    ]);
+  });
+
+  it('should reopen the original activities after a caller changes suspensions in a journal snapshot', () => {
+    const paused = givenAnAcceptedPause(
+      givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
+    );
+    const snapshot = paused.snapshot();
+
+    whenChangingSnapshotSuspension(snapshot, 0, { pause: 'another-pause' });
+    whenChangingSnapshotSuspension(snapshot, 1, { reouverture: 'DEBUT' });
+    const gestes = paused.capture(paused.prepareReprise(identifyFixture));
+
+    thenPointagesAre(gestes, [
+      { suiviId: 'moule-1015', type: 'DEBUT', posteId: 'tour', suspension: undefined },
+      { suiviId: 'of-204', type: 'NON_CONFORMITE', posteId: undefined, suspension: undefined },
+    ]);
+  });
+
+  it('should reopen a pause without repeating an arrival already assured in the window', () => {
+    const working = givenAnAcceptedDecision(givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture] }), 'of-1015', 'PRINCIPALE');
+    const paused = givenAnAcceptedPause(working);
+
+    const gestes = paused.capture(paused.prepareReprise(identifyFixture));
+
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
+  });
+
+  it('should finish no activity and depart when stopping all during a pause, which ends the pause', () => {
+    const paused = givenAnAcceptedPause(
+      givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
+    );
+
+    const gestes = paused.capture(paused.prepareToutArreter(identifyFixture));
+    const stopped = paused.afterAccept(gestes);
+
+    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE']);
+    thenPresencePermits(whenReadingThePresence(stopped), 'REPRENDRE', false);
+  });
+
   it('should not repeat arrival before stopping all after a first accepted command', () => {
-    const premiereCommande = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
-    fenetre = fenetre.afterAccept(premiereCommande);
+    fenetre = givenAnAcceptedDecision(fenetre, 'of-1015', 'PRINCIPALE');
 
     const toutArreter = fenetre.capture(fenetre.prepareToutArreter(identifyFixture));
 
-    thenGesturesAre(toutArreter, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+    thenGesturesAre(toutArreter, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
   });
 
   it('should assure arrival then depart when stopping all without a visible activity', () => {
@@ -266,12 +307,12 @@ describe('FenetreOperateur', () => {
     expect(toutArreter.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
   });
 
-  it('should assure arrival when starting an activity after stopping all in the same operator window', () => {
+  it('should assure arrival again when starting an activity after stopping all in the same operator window', () => {
     const stoppedWindow = givenAnAcceptedStopWithoutActivities();
 
     const gestes = whenStartingAnActivityIn(stoppedWindow);
 
-    thenArrivalPrecedesResumptionAndStart(gestes);
+    thenArrivalPrecedesStart(gestes);
   });
 
   it('should expose a refused finish from the current global stop batch as TOUT ARRÊTER', () => {
@@ -303,7 +344,7 @@ describe('FenetreOperateur', () => {
       'finish gesture',
     );
     const depart = requiredFixture(
-      acceptance.gestes.find(geste => geste.nature === 'PRESENCE' && geste.type === 'DEPART'),
+      acceptance.gestes.find(geste => geste.nature === 'PRESENCE'),
       'departure gesture',
     );
     fenetre = acceptance.applyTo(fenetre);
@@ -323,24 +364,24 @@ describe('FenetreOperateur', () => {
   });
 
   it.each([
-    { presence: 'PAUSE' as const, intention: 'PAUSE' as const },
-    { presence: 'REPRISE' as const, intention: 'REPRENDRE' as const },
-  ])('should expose a refused $presence with its originating global command', ({ presence, intention }) => {
-    const acceptance = fenetre.prepareAcceptance(fenetre.preparePresence(presence, identifyFixture));
-    const geste = requiredFixture(
-      acceptance.gestes.find(candidate => candidate.nature === 'PRESENCE'),
-      'presence gesture',
+    { intention: 'PAUSE' as const, prepare: (window: FenetreOperateur) => window.preparePause(identifyFixture, 'pause-de-midi') },
+    { intention: 'REPRENDRE' as const, prepare: (window: FenetreOperateur) => window.prepareReprise(identifyFixture) },
+  ])('should expose a refused pointage of $intention with its originating global command', ({ intention, prepare }) => {
+    const window = givenAWindowReadyFor(intention);
+    const acceptance = window.prepareAcceptance(prepare(window));
+    const pointage = requiredFixture(
+      acceptance.gestes.find(candidate => candidate.nature === 'POINTAGE'),
+      'pointage of the global command',
     );
-    fenetre = acceptance.applyTo(fenetre);
 
-    whenReconciling({
-      ...structuredClone(vueFixture),
-      evenements: [{ geste, etat: 'REFUSE', refus: { code: 'presence-interdite', message: 'La présence est refusée.' } }],
+    const reconciled = acceptance.applyTo(window).afterReconciling(Entreprise.of('entreprise-a'), {
+      ...window.snapshot(),
+      evenements: [{ geste: pointage, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: 'Le pointage est refusé.' } }],
     });
 
-    expect(fenetre.refusal()).toEqual({
+    expect(reconciled.refusal()).toEqual({
       contexte: { kind: 'COMMANDE_GLOBALE', intention },
-      message: 'La présence est refusée.',
+      message: 'Le pointage est refusé.',
     });
   });
 
@@ -376,17 +417,6 @@ describe('FenetreOperateur', () => {
     });
 
     expect(fenetre.refusal()).toBeUndefined();
-  });
-
-  it('should not repeat arrival after the first business command was accepted', () => {
-    const premiereCommande = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
-    fenetre = fenetre.afterAccept(premiereCommande);
-
-    const commandeSuivante = fenetre.capture(fenetre.preparePresence('REPRISE', identifyFixture));
-
-    thenGesturesAre(commandeSuivante, ['PRESENCE']);
-    expect(commandeSuivante[0]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: false });
-    expect(commandeSuivante[0]).not.toHaveProperty('assuranceArriveeId');
   });
 
   it('should turn every personal activity off from the primary target and normalize only necessary secondary transitions', () => {
@@ -652,14 +682,13 @@ describe('FenetreOperateur', () => {
     expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
   });
 
-  it('should capture arrival, implicit resumption and pointage when confirming a workstation choice', () => {
+  it('should capture arrival and pointage when confirming a workstation choice', () => {
     const multiposte = givenAMultiWorkstationWindow();
 
     const gestures = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse').capture();
 
-    thenGesturesAre(gestures, ['ARRIVEE', 'PRESENCE', 'POINTAGE']);
-    expect(gestures[1]).toMatchObject({ nature: 'PRESENCE', type: 'REPRISE', implicite: true });
-    expect(gestures[2]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
+    thenGesturesAre(gestures, ['ARRIVEE', 'POINTAGE']);
+    expect(gestures[1]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
   });
 
   it('should expose no refusal after a workstation choice until one is reconciled', () => {
@@ -703,39 +732,51 @@ describe('FenetreOperateur', () => {
 
   it.each([
     { etat: 'ABSENT' as const, intention: 'PAUSE' as const, permet: true },
-    { etat: 'ABSENT' as const, intention: 'REPRENDRE' as const, permet: true },
+    { etat: 'ABSENT' as const, intention: 'REPRENDRE' as const, permet: false },
     { etat: 'ABSENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
     { etat: 'PRESENT' as const, intention: 'PAUSE' as const, permet: true },
     { etat: 'PRESENT' as const, intention: 'REPRENDRE' as const, permet: false },
     { etat: 'PRESENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
-    { etat: 'EN_PAUSE' as const, intention: 'PAUSE' as const, permet: false },
-    { etat: 'EN_PAUSE' as const, intention: 'REPRENDRE' as const, permet: true },
-    { etat: 'EN_PAUSE' as const, intention: 'TOUT_ARRETER' as const, permet: true },
   ])('should $permet $intention when the designated operator is $etat', ({ etat, intention, permet }) => {
     const window = givenAWindowWithOperatorState(etat);
 
     const presence = whenReadingThePresence(window);
 
-    thenPresenceStateIs(presence, etat);
+    thenSituationIs(presence, etat);
     thenPresencePermits(presence, intention, permet);
   });
 
-  it('should offer every global command while the arrival assurance has not yet opened the day', () => {
-    const window = givenAWindowWithOperatorState('ABSENT');
+  it('should grey PAUSE for a present operator without any personal activity', () => {
+    const idle = givenAWindowOf('PRESENT', {});
 
-    const presence = whenReadingThePresence(window);
+    const presence = whenReadingThePresence(idle);
 
-    (['PAUSE', 'REPRENDRE', 'TOUT_ARRETER'] as const).forEach(intention => {
-      thenPresencePermits(presence, intention, true);
-    });
+    thenPresencePermits(presence, 'PAUSE', false);
   });
 
-  it('should reflect a locally captured pause in the exposed presence', () => {
-    whenAcceptingAnExplicitPause();
+  it('should offer REPRENDRE once a pause is taken', () => {
+    const paused = givenAnAcceptedPause(givenAWindowOf('PRESENT', { 'moule-1015': [travailAuTourFixture] }));
 
-    const presence = whenReadingThePresence(fenetre);
+    const presence = whenReadingThePresence(paused);
 
-    thenPresenceStateIs(presence, 'EN_PAUSE');
+    thenPresencePermits(presence, 'REPRENDRE', true);
+  });
+
+  it('should show a present operator whose pause is in progress as on pause', () => {
+    const paused = givenAnAcceptedPause(givenAWindowOf('PRESENT', { 'moule-1015': [travailAuTourFixture] }));
+
+    const presence = whenReadingThePresence(paused);
+
+    thenSituationIs(presence, 'EN_PAUSE');
+  });
+
+  it('should keep showing an absent operator whose pause is in progress as absent while offering REPRENDRE', () => {
+    const paused = givenAnAcceptedPause(givenAWindowOf('ABSENT', { 'moule-1015': [travailAuTourFixture] }));
+
+    const presence = whenReadingThePresence(paused);
+
+    thenSituationIs(presence, 'ABSENT');
+    thenPresencePermits(presence, 'REPRENDRE', true);
   });
 
   it('should reflect a refreshed referential in the exposed presence', () => {
@@ -743,7 +784,7 @@ describe('FenetreOperateur', () => {
 
     const presence = whenReadingThePresence(fenetre);
 
-    thenPresenceStateIs(presence, 'PRESENT');
+    thenSituationIs(presence, 'PRESENT');
   });
 
   it('should read an absent presence when the designated operator no longer appears in the projected referential', () => {
@@ -751,7 +792,7 @@ describe('FenetreOperateur', () => {
 
     const presence = whenReadingThePresence(fenetre);
 
-    thenPresenceStateIs(presence, 'ABSENT');
+    thenSituationIs(presence, 'ABSENT');
   });
 
   const givenAJournalWithOperatorState = (etat: EtatDePresence): JournalDuPupitre => {
@@ -766,8 +807,8 @@ describe('FenetreOperateur', () => {
     return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [] } };
   };
   const whenReadingThePresence = (window: FenetreOperateur): PresenceDeLOperateur => window.presence();
-  const thenPresenceStateIs = (presence: PresenceDeLOperateur, etat: EtatDePresence): void => {
-    expect(presence.etat).toBe(etat);
+  const thenSituationIs = (presence: PresenceDeLOperateur, situation: SituationDeLOperateur): void => {
+    expect(presence.situation).toBe(situation);
   };
   const thenPresencePermits = (presence: PresenceDeLOperateur, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
     expect(presence.permet(intention)).toBe(permet);
@@ -795,6 +836,33 @@ describe('FenetreOperateur', () => {
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(identity),
     );
+  const givenAWindowOf = (
+    etat: EtatDePresence,
+    activitesParSuivi: Readonly<Record<string, readonly ActiviteDuPupitre[]>>,
+  ): FenetreOperateur => {
+    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
+    return givenAWindowOpenedOn({
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: referentiel.operateurs.map(operateur => ({ ...operateur, etat })),
+        suivis: referentiel.suivis.map(suivi => ({ ...suivi, activites: activitesParSuivi[suivi.id] ?? [] })),
+      },
+    });
+  };
+  const givenAnAcceptedDecision = (window: FenetreOperateur, suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): FenetreOperateur => {
+    const decision = window.afterDeciding(suiviId, cible, identifyFixture);
+    return decision.fenetre.prepareAcceptance(gesturesOf(decision.decision)).applyTo(decision.fenetre);
+  };
+  const givenAWindowReadyFor = (intention: 'PAUSE' | 'REPRENDRE'): FenetreOperateur => {
+    const working = givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture] });
+    return intention === 'PAUSE' ? working : givenAnAcceptedPause(working);
+  };
+  const givenAnAcceptedPause = (window: FenetreOperateur): FenetreOperateur => {
+    const pause = window.prepareAcceptance(window.preparePause(identifyFixture, 'pause-de-midi'));
+    return pause.applyTo(window);
+  };
+  const givenAWindowWithActivities = (activitesParSuivi: Readonly<Record<string, readonly ActiviteDuPupitre[]>>): FenetreOperateur =>
+    givenAWindowOf('ABSENT', activitesParSuivi);
   const givenAnAcceptedStopWithoutActivities = (): FenetreOperateur => {
     const inactiveJournalFixture: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -811,8 +879,8 @@ describe('FenetreOperateur', () => {
     const start = window.afterDeciding('of-1', 'PRINCIPALE', identifyFixture);
     return start.fenetre.prepareAcceptance(gesturesOf(start.decision)).gestes;
   };
-  const thenArrivalPrecedesResumptionAndStart = (gestes: readonly GesteDAtelier[]): void => {
-    expect(gestes).toMatchObject([{ nature: 'ARRIVEE' }, { nature: 'PRESENCE', type: 'REPRISE' }, { nature: 'POINTAGE', type: 'DEBUT' }]);
+  const thenArrivalPrecedesStart = (gestes: readonly GesteDAtelier[]): void => {
+    expect(gestes).toMatchObject([{ nature: 'ARRIVEE' }, { nature: 'POINTAGE', type: 'DEBUT' }]);
   };
   const givenAPreparedPointage = (): (() => readonly GesteDAtelier[]) => {
     const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture);
@@ -845,7 +913,7 @@ describe('FenetreOperateur', () => {
       connecte: true,
       evenements: [
         { geste, etat: 'EN_ATTENTE' },
-        { geste, etat: 'ACCEPTE', journeeOuverte: true },
+        { geste, etat: 'ACCEPTE' },
         { geste, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
       ],
     };
@@ -855,6 +923,11 @@ describe('FenetreOperateur', () => {
     if (refusal === undefined) throw new Error('Missing refused event fixture.');
     Object.assign(refusal.geste, { id: 'changed' });
     Object.assign(refusal.refus, { message: 'changed' });
+  };
+  const whenChangingSnapshotSuspension = (snapshot: JournalDuPupitre, index: number, change: Partial<Suspension>): void => {
+    const geste = requiredFixture(snapshot.evenements[index], 'suspended gesture').geste;
+    if (geste.nature !== 'POINTAGE') throw new Error('Missing suspended pointage fixture.');
+    Object.assign(requiredFixture(geste.suspension, 'suspension'), change);
   };
   const whenReadingPointage = (window: FenetreOperateur): ReturnType<FenetreOperateur['pointage']> => window.pointage();
   const givenAMultiWorkstationWindow = (): FenetreOperateur => {
@@ -985,11 +1058,6 @@ describe('FenetreOperateur', () => {
     fenetre = fenetre.afterAccept(gestes);
     return gestes;
   };
-  const whenAcceptingAnExplicitPause = (): readonly GesteDAtelier[] => {
-    const presence = fenetre.capture(fenetre.preparePresence('PAUSE', identifyFixture));
-    fenetre = fenetre.afterAccept(presence);
-    return presence;
-  };
   const thenOperatorIsJean = (id: string): void => {
     expect(id).toBe('jean');
   };
@@ -1069,9 +1137,18 @@ describe('FenetreOperateur', () => {
     expect(gestes.map(geste => geste.nature)).toEqual(natures);
     expect(gestes.every(geste => geste.operateurId === 'jean')).toBe(true);
   };
+  const thenPointagesAre = (gestes: readonly GesteDAtelier[], expected: readonly unknown[]): void => {
+    expect(
+      gestes
+        .filter(geste => geste.nature === 'POINTAGE')
+        .map(({ suiviId, type, posteId, suspension }) => ({ suiviId, type, posteId, suspension })),
+    ).toEqual(expected);
+  };
   const thenOpeningSharesBusinessTime = (gestes: readonly GesteDAtelier[]): void => {
-    const lastGesture = requiredFixture(gestes[2], 'last gesture');
-    expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(Array<string | undefined>(3).fill(identities.get(lastGesture.id)));
+    const lastGesture = requiredFixture(gestes.at(-1), 'last gesture');
+    expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(
+      Array<string | undefined>(gestes.length).fill(identities.get(lastGesture.id)),
+    );
   };
   const thenIdentitiesWerePreparedBeforeExecution = (gestes: readonly GesteDAtelier[], preparedIdentities: Map<string, string>): void => {
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
@@ -1079,10 +1156,6 @@ describe('FenetreOperateur', () => {
     expect(
       gestes.filter(geste => geste.nature === 'POINTAGE').every(geste => geste.dateDeSurvenue === preparedIdentities.get(geste.id)),
     ).toBe(true);
-  };
-  const thenAcceptedPresenceIsVisible = (gestes: readonly GesteDAtelier[]): void => {
-    expect(fenetre.snapshot().evenements).toEqual(gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
-    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'PAUSE', implicite: false, operateurId: 'jean' });
   };
 });
 

@@ -335,23 +335,23 @@ describe('PupitreSynchronization', () => {
     thenExistingReferentialPreserved();
   });
 
-  it('should record an arrival as accepted with journeeOuverte false when already opened', async () => {
+  it('should record an arrival absorbed on an already open day as accepted', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
     givenArrivalAlreadyOpened();
 
     await whenSynchronizing();
 
-    thenEventAcceptedWithoutOpeningDay();
+    thenEventAccepted();
   });
 
-  it('should record an arrival as accepted with journeeOuverte true when first opened', async () => {
+  it('should record an arrival opening the day as accepted', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
 
     await whenSynchronizing();
 
-    thenEventAcceptedWithOpeningDay();
+    thenEventAccepted();
   });
 
   it('should reread and retry once when server reports concurrent modification', async () => {
@@ -363,7 +363,7 @@ describe('PupitreSynchronization', () => {
 
     thenServerReceived(gesteFixture);
     thenServerReread(gesteFixture);
-    thenEventAcceptedWithOpeningDay();
+    thenEventAccepted();
   });
 
   it('should absorb duplicate arrival during concurrent retry', async () => {
@@ -373,7 +373,7 @@ describe('PupitreSynchronization', () => {
 
     await whenSynchronizing();
 
-    thenEventAcceptedWithoutOpeningDay();
+    thenEventAccepted();
     thenServerReread(gesteFixture);
   });
 
@@ -659,11 +659,8 @@ describe('PupitreSynchronization', () => {
   const thenAnErrorWasReported = (): void => {
     expect(errorHandler.errors).toContainEqual(new Error('publisher failed'));
   };
-  const thenEventAcceptedWithoutOpeningDay = (): void => {
-    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: false }]);
-  };
-  const thenEventAcceptedWithOpeningDay = (): void => {
-    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: true }]);
+  const thenEventAccepted = (): void => {
+    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE' }]);
   };
   const thenEventRefused = (code: string, message: string): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'REFUSE', refus: { code, message } }]);

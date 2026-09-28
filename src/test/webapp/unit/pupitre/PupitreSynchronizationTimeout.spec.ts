@@ -154,7 +154,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   };
   const thenGestureIsAccepted = async (): Promise<void> => {
     const state = await journal.read(entrepriseFixture);
-    expect(state.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', journeeOuverte: true }]);
+    expect(state.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE' }]);
     expect(state.connecte).toBe(true);
   };
 });

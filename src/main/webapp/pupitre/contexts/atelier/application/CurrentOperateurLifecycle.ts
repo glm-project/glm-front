@@ -36,7 +36,11 @@ export class CurrentOperateurLifecycle {
   readonly pointage = computed(() => this.designation().visibleWindow()?.pointage());
   readonly refusAtelier = computed(() => this.designation().visibleWindow()?.refusal());
   readonly gestesDisponibles = computed(() => this.designation().window()?.allowsGestures() ?? true);
-  readonly presence = computed(() => this.designation().visibleWindow()?.presence() ?? new PresenceDeLOperateur('ABSENT'));
+  readonly presence = computed(
+    () =>
+      this.designation().visibleWindow()?.presence()
+      ?? new PresenceDeLOperateur({ etat: 'ABSENT', activiteEnCours: false, pauseEnCours: false }),
+  );
 
   registerPress(): boolean {
     const press = this.designation().afterPress(Date.now());

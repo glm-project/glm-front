@@ -80,7 +80,7 @@ describe('Pupitre common page in a browser', () => {
     whenDesignatingJeanWithControlledTime();
 
     whenSleepingPastTheDeadline();
-    whenPressingImmediately('pause');
+    whenPressingImmediately('stop-all');
 
     thenOnlyTheKeypadIsVisible();
   });
@@ -105,7 +105,7 @@ describe('Pupitre common page in a browser', () => {
   it('should disable workshop gestures but keep finish available during acceptance', () => {
     givenThePageWithDelayedAcceptance();
     whenDesignatingJean();
-    whenPressingPause();
+    whenStoppingEverything();
 
     thenWorkshopGesturesAreUnavailable();
     thenFinishIsAvailable();
@@ -114,7 +114,7 @@ describe('Pupitre common page in a browser', () => {
   it('should allow finishing while global acceptance is pending', () => {
     givenThePageWithDelayedAcceptance();
     whenDesignatingJean();
-    whenPressingPause();
+    whenStoppingEverything();
     whenFinishing();
 
     thenTheKeypadIsVisible();
@@ -190,8 +190,8 @@ describe('Pupitre common page in a browser', () => {
     cy.tick(duration);
   };
 
-  const whenPressingPause = (): void => {
-    cy.get(dataSelector('pause')).click();
+  const whenStoppingEverything = (): void => {
+    cy.get(dataSelector('stop-all')).click();
   };
 
   const whenFinishing = (): void => {

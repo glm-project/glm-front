@@ -108,6 +108,9 @@ something stays, with a status that says what died.
 - [0043 — Forbid Angular effects everywhere](0043-forbid-angular-effects-everywhere.md) — `effect()` and
   `afterRenderEffect()` refused in every script, presentation adapters included
 
+- [0045 — Keep the pause on the pupitre](0045-keep-the-pause-on-the-pupitre.md) — PAUSE ends each known activity by
+  a finish marked with its suspension, REPRENDRE restarts them, and the server never hears of a pause
+
 - [0046 — Stop showing the pause in workshop supervision](0046-stop-showing-the-pause-in-workshop-supervision.md) —
   three lanes, an operator on pause read as present without assignment, no suspended activity or NC, and `warn`
   left to the pupitre's pause commands

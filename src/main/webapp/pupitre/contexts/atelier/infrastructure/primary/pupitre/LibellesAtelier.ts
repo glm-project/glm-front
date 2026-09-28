@@ -1,7 +1,8 @@
 import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
+import { SituationDeLOperateur } from '../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
-import { EtatDePresence, TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
+import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 
 const formatDuree = (dureeMs: number): string => {
   const minutes = Math.floor(dureeMs / 60_000);
@@ -20,7 +21,7 @@ const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
   TOUT_ARRETER: 'TOUT ARRÊTER',
 };
 
-const PRESENCES: Record<EtatDePresence, string> = {
+const PRESENCES: Record<SituationDeLOperateur, string> = {
   ABSENT: 'Pas encore arrivé',
   PRESENT: 'Présent',
   EN_PAUSE: 'En pause',

@@ -23,9 +23,9 @@ time.
 
 ## Domain owners decide the gesture
 
-`FenetreOperateur` resolves the operator, checks workstation qualifications, prepares implicit arrival and
-resumption, and maintains the frozen view of one operator window. Only a successfully committed capture
-advances that view.
+`FenetreOperateur` resolves the operator, checks workstation qualifications, prepares the implicit arrival, turns
+PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the whole journal, whether a pause is in progress and what it reopens. Only a
+successfully committed capture advances that view.
 
 `GesteReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
 motifs, never transport URNs.
@@ -168,14 +168,26 @@ callback has already reset the keypad, the next press starts a fresh code. This 
 OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay threshold is needed.
 
 The first business command in an operator window assures arrival before its requested gestures, including
-`PAUSE`, `REPRISE` and `TOUT ARRÊTER`. A `REPRISE` made redundant because that assurance has just opened the
-day is the one explicit-presence refusal absorbed contextually. Implicit resumption belongs only to an
-intention that opens or resumes an activity; it never precedes a `FIN` or an explicit presence command.
+`REPRENDRE` and `TOUT ARRÊTER`, but not `PAUSE`, which only closes: opening the day of an absent operator who
+forgot activities would open a day bound to be abandoned. No resumption precedes any gesture: the pupitre sends
+no presence gesture but the departure.
 
 `TOUT ARRÊTER` is one atomically accepted local batch: every known personal `FIN`, followed by `DEPART`.
 A local storage failure retains none of that batch. Once accepted, normal FIFO replay records known business
 refusals and continues with the remaining gestures, so the durable evidence preserves both the requested
 order and each server outcome.
+
+`PAUSE` is one atomically accepted local batch too: one `FIN` per known personal activity, on its workstation,
+each carrying its suspension — the pause, identified by the root identity of the initiated global intention, and
+the `DEBUT` or `NON_CONFORMITE` that will reopen it. The pause lives in the journal and nowhere else: the HTTP
+adapter builds its bodies field by field, so the suspension never reaches the server, which only receives
+finishes. `REPRENDRE` assures the arrival, then restarts each activity that `PauseEnCours` still reopens. A pause
+ends at `REPRENDRE`, at any later gesture of the operator appended to this journal whatever its outcome, and as soon
+as the projected reference shows an activity of the operator other than one whose suspension was refused; it
+never expires. A global command decided on a window with nothing left to do records no gesture, not even the
+arrival. Until the back and the reset of the pupitres ship, an operator still reported `EN_PAUSE`, by the server or
+by a stored reference, is read as present by the HTTP and IndexedDB adapters; [ADR
+0045](adr/0045-keep-the-pause-on-the-pupitre.md) records the decision.
 
 A global command pressed while captures are already in flight is retained and decided from the updated
 window after those captures settle locally. From that intention until local acceptance, tiles and global
@@ -194,7 +206,7 @@ complete reference is active, and the workshop views afterwards. That switch rea
 projected state, never the reference alone: an administration reset returns the pupitre to enrolment even
 though its last reference is still on disk. The header's own reset gesture opens a confirmation the page
 owns. The same chrome identifies a
-rejected pointage by its element number and a rejected presence by the originating `PAUSE`, `REPRENDRE` or
-`TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local
+rejected pointage by its element number and a rejected gesture of a global command by the originating `PAUSE`,
+`REPRENDRE` or `TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local
 acceptance failure instead shows “Action non enregistrée — recommencez” until the next durable local success
 or window closure.

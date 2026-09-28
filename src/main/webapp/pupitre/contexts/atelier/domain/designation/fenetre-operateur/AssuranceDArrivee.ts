@@ -14,12 +14,7 @@ export class AssuranceDArrivee {
   }
 
   private containsDepart(gestes: readonly GesteDAtelier[]): boolean {
-    return gestes.some(geste => this.isDepart(geste));
-  }
-
-  private isDepart(geste: GesteDAtelier): boolean {
-    if (geste.nature !== 'PRESENCE') return false;
-    return geste.type === 'DEPART';
+    return gestes.some(geste => geste.nature === 'PRESENCE');
   }
 
   private containsArrivee(gestes: readonly GesteDAtelier[]): boolean {
