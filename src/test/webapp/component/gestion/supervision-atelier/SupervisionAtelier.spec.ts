@@ -28,12 +28,12 @@ describe('Supervision lanes readability', () => {
     thenTheLanesFillThePlateau();
   });
 
-  it('should stretch the « Présents » brace over the lanes of present operators on a wide screen', () => {
+  it('should place the « Présents » label over the lanes of present operators on a wide screen', () => {
     givenViewport(1440);
 
     whenOpeningSupervision();
 
-    thenThePresentsBraceSpansTheirLanes();
+    thenThePresentsLabelSpansTheirLanes();
   });
 
   it('should colour each lane by its state and mark a nonconformity in yellow with ink text', () => {
@@ -117,17 +117,13 @@ const thenLanesStayWithinTheirWidth = (): void => {
 const thenThePlateauHoldsTheThreeLanesInOrder = (): void => {
   cy.get(dataSelector('supervision-plateau'))
     .children()
-    .should(couloirs => {
-      expect(couloirs.toArray().map(couloir => [couloir.dataset['selector'], accessibleNameOf(couloir)])).to.deep.equal([
-        ['supervision-couloir-au-travail', 'Au travail'],
-        ['supervision-couloir-sans-affectation', 'Sans affectation'],
-        ['supervision-couloir-absents', 'Absents'],
-      ]);
+    .should('have.length', 3)
+    .find('h2')
+    .should('be.visible')
+    .should(titres => {
+      expect(titres.toArray().map(titre => normalise(titre.innerText))).to.deep.equal(['Au travail', 'Sans affectation', 'Absents']);
     });
 };
-
-const accessibleNameOf = (element: HTMLElement): string =>
-  normalise(element.ownerDocument.getElementById(element.getAttribute('aria-labelledby') ?? '')?.textContent ?? null);
 
 const thenTheLanesFillThePlateau = (): void => {
   cy.get(dataSelector('supervision-plateau')).then(plateau => {
@@ -137,7 +133,7 @@ const thenTheLanesFillThePlateau = (): void => {
   });
 };
 
-const thenThePresentsBraceSpansTheirLanes = (): void => {
+const thenThePresentsLabelSpansTheirLanes = (): void => {
   cy.get(dataSelector('supervision-couloir-au-travail')).then(auTravail => {
     cy.get(dataSelector('supervision-couloir-sans-affectation')).then(sansAffectation => {
       cy.get(dataSelector('supervision-presents')).should(accolade => {
