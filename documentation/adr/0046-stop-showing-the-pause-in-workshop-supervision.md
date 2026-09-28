@@ -4,15 +4,16 @@
 
 `Accepted`
 
-- `Amends 0041: three lanes, Au travail · Sans affectation · Absents; the presence state is PRESENT or ABSENT, an operator on pause is present without activity and appears in Sans affectation, no activity or NC is shown suspended, and a card shows « arrivée », never « pause depuis ».`
+- `Amends 0041: three lanes, Au travail · Sans affectation · Absents; the presence state is PRESENT or ABSENT, the pause itself leaves presence unchanged, an operator with an open visit appears in Sans affectation when no activity remains open, no activity or NC is shown suspended, and a present card shows « arrivée », never « pause depuis ».`
 - `Amends 0040: warn no longer paints a supervision lane; it stays the colour of the pupitre's PAUSE and REPRENDRE commands.`
 
 ## Context
 
 On 28/09/2026 the pause left the server. The back no longer knows `PAUSE`, `REPRISE` or `EN_PAUSE`. At the
-pupitre, PAUSE ends each ongoing activity of the operator with a `FIN` and remembers them; REPRENDRE reopens
-them. The pause does not touch presence: an operator on pause stays present, and the pause lives only in the
-journal of the pupitre that took it.
+pupitre, PAUSE ends each ongoing activity known to that pupitre with a `FIN` and remembers them; REPRENDRE reopens
+them. The pause itself does not touch presence: an open visit remains open, and the pause lives only in the
+journal of the pupitre that took it. A departure elsewhere or an abandoned visit can still make the operator
+absent while that local pause remains active.
 
 [ADR 0041](0041-sort-workshop-supervision-into-state-lanes.md) drew four lanes from the `EN_PAUSE` presence
 state the back exposed: « En pause » between « Sans affectation » and « Absents », the activities of an
@@ -22,13 +23,15 @@ operator on pause kept open and marked « suspendue », a « pause depuis » ins
 pause.
 
 Once the server has no pause, the data the supervision will read — open working visits and ongoing
-activities — cannot tell an operator on pause from a present operator without activity. Only the InMemory
-demonstration feeds the screen today, so the screen can change before the back does.
+activities — cannot tell a paused operator without reported activity from one waiting for a task. An activity
+opened on another pupitre since the last refresh can remain open during the pause; an unpublished `FIN` can
+also leave an activity open in the server's view. Only the InMemory demonstration feeds the screen today, so
+the screen can change before the back does.
 
 ## Considered options
 
-- Remove the lane, the suspended activities and the suspended non-conformities; an operator on pause appears
-  in « Sans affectation » — **kept**.
+- Remove the lane, the suspended activities and the suspended non-conformities; an operator on pause with no
+  reported ongoing activity appears in « Sans affectation » — **kept**.
 - Keep an « En pause » lane fed by the pupitre's pause — rejected: the pause never leaves the pupitre that
   took it, so gestion has nothing to read it from.
 - Infer a pause from a present operator whose activities all ended at the same instant — rejected: the screen
@@ -43,9 +46,10 @@ Show three fixed lanes, in this order: **Au travail · Sans affectation · Absen
 values: `PRESENT` when the operator has an open working visit, `ABSENT` otherwise. A working visit is open or
 closed and carries no state of its own.
 
-An operator on pause is present and has no ongoing activity: they appear in « Sans affectation », with their
-arrival and their trades, like any unassigned operator. The supervision does not tell them apart and counts
-them among the « Présents ».
+The pause leaves an open visit open, so the operator counts among the « Présents » while that visit remains
+open. When no ongoing activity is reported, they appear in « Sans affectation », with their arrival and trades,
+like any unassigned operator. An activity that remains open, including one started on another pupitre, places
+them in « Au travail »; the supervision cannot identify the pause in either lane.
 
 Mark no activity « suspendue », never add « (suspendue) » to the NC signal, and show « arrivée » on the card of
 every present operator. An operator is in NC when their visit is open and at least one activity is
@@ -68,10 +72,10 @@ activity his pause closed, and no working visit keeps a lunch gap between two wi
 
 ### Negative
 
-- The supervisor can no longer tell who is on break from who waits for a task: both read « Sans affectation »,
-  and lunch now fills that lane.
-- An operator on pause drops out of the NC signal, because their pause ended the NC activity; they come back
-  when REPRENDRE reopens it as a non-conformity.
+- The supervisor can no longer tell who is on break from who waits for a task when both have an open visit and
+  no ongoing activity: both read « Sans affectation », and lunch now fills that lane.
+- A paused operator drops out of the NC signal when all their NC activities' `FIN` events reach the server. An
+  NC activity that remains open, including one on another pupitre, stays in the signal until it ends.
 - The « depuis » of each activity restarts at REPRENDRE, which opens the activity again.
 - This reverses part of the layout the client retained on 25/09/2026, which had an « En pause » lane. Showing
   breaks again needs a source that gestion can read first.

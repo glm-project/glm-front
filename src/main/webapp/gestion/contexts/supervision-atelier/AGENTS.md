@@ -10,7 +10,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Journée de travail** : une venue sur l'atelier, bornée par une arrivée et un départ, qui peut traverser minuit ; ce n'est pas un jour calendaire. À l'écran, une journée de travail se dit _venue_ : « journée » y évoquerait un jour calendaire, et « présence » désigne déjà l'état de l'opérateur.
 
-**Présence de l'opérateur** : état instantané d'un opérateur déclaré (`PRESENT` ou `ABSENT`). `PRESENT` est caractérisé par une journée ouverte, `ABSENT` par l'absence de journée ouverte. La pause est un geste du pupitre que le serveur ignore : elle ne change pas la présence, un opérateur en pause est `PRESENT`.
+**Présence de l'opérateur** : état instantané d'un opérateur déclaré (`PRESENT` ou `ABSENT`). `PRESENT` est caractérisé par une journée ouverte, `ABSENT` par l'absence de journée ouverte. La pause est un geste du pupitre que le serveur ignore : elle ne change pas elle-même la présence. Un opérateur en pause reste `PRESENT` tant que sa journée est ouverte.
 
 **Couloir de supervision** : place d'un opérateur déclaré sur l'écran, dérivée de sa présence et de ses activités, parmi trois couloirs dans un ordre fixe : `AU_TRAVAIL`, `SANS_AFFECTATION`, `ABSENT`. `ABSENT` → Absents, même avec une activité ouverte ou une anomalie ; `PRESENT` sans activité → Sans affectation ; `PRESENT` avec au moins une activité → Au travail. La valeur est l'état au singulier ; le pluriel « Absents » n'existe que dans le libellé.
 
@@ -34,7 +34,7 @@ Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel
 
 **Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`, les valeurs du contrat de l'API ; `NON_CONFORMITE` fait d'une activité une activité NC.
 
-**Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`. Un opérateur en pause y figure, sa pause ayant arrêté ses activités : la supervision ne le distingue pas d'un opérateur qui attend une tâche.
+**Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`. La supervision ne reconnaît pas la pause : un opérateur en pause dont la journée reste ouverte y figure si aucune activité en cours ne lui est remontée. Une activité restée ouverte, par exemple sur un autre pupitre, le place dans `AU_TRAVAIL`.
 
 **Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ a arrêté son temps.
 
