@@ -82,7 +82,7 @@ describe('FriseDeLaSemaine', () => {
     it('should mark a presence still in progress at the place where it began, rather than invent its end', () => {
       const releve = releveFixture(SEMAINE_EN_COURS, { 3: { plages: [[[10, 20], undefined]] } });
 
-      expect(presences(releve, 3)).toEqual([['ouverte', 27.08, undefined]]);
+      expect(presences(releve, 3)).toEqual([['en-cours', 27.08, undefined]]);
     });
 
     it('should tell a presumed presence from a clocked one', () => {

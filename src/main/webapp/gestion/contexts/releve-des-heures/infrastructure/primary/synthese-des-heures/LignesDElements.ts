@@ -11,7 +11,7 @@ import { JourSurSonAxe } from './JourSurSonAxe';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
-export type StyleDeBarreDActivite = 'travail' | 'nc' | 'ouverte';
+export type StyleDeBarreDActivite = 'travail' | 'nc' | 'en-cours';
 
 export interface BarreDActivite {
   readonly style: StyleDeBarreDActivite;
@@ -69,7 +69,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
       categorie: intervalle.categorie,
       debut: intervalle.debut,
     });
-    return { style: 'ouverte', gauche, largeur: undefined, enonce, presumee: false };
+    return { style: 'en-cours', gauche, largeur: undefined, enonce, presumee: false };
   }
   const fin = intervalle.finOuDebut();
   const enonce = LIBELLES.enonceDActivite({

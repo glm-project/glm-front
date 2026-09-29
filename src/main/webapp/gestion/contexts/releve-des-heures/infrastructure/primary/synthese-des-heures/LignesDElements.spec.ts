@@ -78,7 +78,7 @@ describe('LignesDElements', () => {
     it('should mark the work still in progress at the place where it began, without any extent', () => {
       const releve = releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut: [10, 20] }] } }, {}, [elementFixture()]);
 
-      expect(barres(ligneDe(releve).cellules[0])).toEqual([['ouverte', 27.08, undefined]]);
+      expect(barres(ligneDe(releve).cellules[0])).toEqual([['en-cours', 27.08, undefined]]);
     });
 
     it('should tell a presumed work from a clocked one', () => {

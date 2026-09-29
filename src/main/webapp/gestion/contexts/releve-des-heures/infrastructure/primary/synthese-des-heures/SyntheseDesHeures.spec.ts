@@ -279,7 +279,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textesDe(presencesDe('ouverte')), presencesDe('plage').length]).toEqual([['Présence depuis 10:20, en cours'], 1]);
+    expect([textesDe(presencesDe('en-cours')), presencesDe('plage').length]).toEqual([['Présence depuis 10:20, en cours'], 1]);
   });
 
   it('should give each element of the week its row, named by its type, its number, its label and its workstations', async () => {
@@ -462,7 +462,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textesDe(barresDe('ouverte')), barresDe('travail').length]).toEqual([
+    expect([textesDe(barresDe('en-cours')), barresDe('travail').length]).toEqual([
       ['Moule 1015, lundi 14, depuis 10:20, travail, en cours'],
       0,
     ]);
@@ -672,7 +672,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-sous-ligne-poste'), barresDe('ouverte').length]).toEqual([['DMU 50', 'Mazak QT-200'], 2]);
+    expect([textes('synthese-sous-ligne-poste'), barresDe('en-cours').length]).toEqual([['DMU 50', 'Mazak QT-200'], 2]);
   });
 
   it('should put the work of a split element that has no workstation on a row of its own, said to have none', async () => {

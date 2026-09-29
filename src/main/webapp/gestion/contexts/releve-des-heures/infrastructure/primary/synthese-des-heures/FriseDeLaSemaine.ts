@@ -10,7 +10,7 @@ import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
-export type StyleDeBarreDePresence = 'plage' | 'presumee' | 'ouverte';
+export type StyleDeBarreDePresence = 'plage' | 'presumee' | 'en-cours';
 
 export interface BarreDeFrise {
   readonly style: StyleDeBarreDePresence;
@@ -64,7 +64,7 @@ export interface FriseDeLaSemaine {
 const barreDePresence = (jour: JourDeReleve, axe: AxeDuJour, plage: PlageDeReleve): BarreDeFrise => {
   const gauche = axe.pourcentDe(minutesDeDebut(plage.debut));
   if (plage.estEnCours()) {
-    return { style: 'ouverte', gauche, largeur: undefined, enonce: LIBELLES.enonceDePlageEnCours(plage.debut) };
+    return { style: 'en-cours', gauche, largeur: undefined, enonce: LIBELLES.enonceDePlageEnCours(plage.debut) };
   }
   const fin = plage.finOuDebut();
   const enonce = LIBELLES.enonceDePlage({

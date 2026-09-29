@@ -254,7 +254,7 @@
   background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
 }
 
-.barre.ouverte {
+.barre.en-cours {
   top: 0.625rem;
   width: 3px;
   height: 1.5rem;
@@ -297,7 +297,7 @@
   background: var(--color-accent);
 }
 
-.element .barre.ouverte {
+.element .barre.en-cours {
   top: 0.875rem;
   height: 2.75rem;
 }

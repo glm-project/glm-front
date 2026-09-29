@@ -678,7 +678,7 @@ describe('Weekly hours report in gestion', () => {
   const thenThePresenceInProgressOfTheDayReads = (rang: number, enonce: string): void => {
     presenceDuJour(rang)
       .find(dataSelector('synthese-presence'))
-      .filter('[data-style="ouverte"]')
+      .filter('[data-style="en-cours"]')
       .should('have.text', enonce)
       .and('be.visible');
   };
