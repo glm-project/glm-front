@@ -95,6 +95,29 @@ humain dépend de la séquence en conflit ; le front restitue cette information 
 La fin automatique à 13 h ne tranche pas un conflit : elle reste une règle de borne par défaut pour
 les activités interprétables, distincte d'une contradiction entre pointages.
 
+**Cas tranchés au lancement de la mise en œuvre** (A, B : activités d'un même couple opérateur/poste) :
+
+- Un geste qui vise une activité déjà terminée par une fin réelle met la séquence en conflit : une seconde
+  `FIN(A)`, ou une transition depuis A après sa fin.
+- À heure métier égale, les gestes se rangent fin, puis transition, puis ouverture ; « remplacée » signifie
+  remplacée strictement avant le geste. La date d'enregistrement ne départage jamais.
+- Un geste qui vise une ouverture annulée, ou l'annulation d'une ouverture visée, est accepté et met la
+  séquence en conflit. Une régularisation, une correction ou une annulation du gestionnaire qui laisse une
+  contradiction est acceptée et restituée en conflit, pour permettre une résolution en plusieurs actes.
+- Le pouvoir de dépasser l'échéance vaut pour une fin et pour une transition régularisées. Une clôture du
+  suivi postérieure à l'échéance ne prolonge pas l'activité.
+- Une transition de même catégorie (`DEBUT` visant un travail, `NON_CONFORMITE` visant une NC) est conservée
+  en conflit plutôt que refusée : le pupitre n'est jamais bloqué par ce refus.
+- Un geste qui vise une activité introuvable dans ce suivi, ou d'un autre couple opérateur/poste, est refusé
+  définitivement.
+- Une fin visant A remplacée par B met A et B à résoudre ; B n'est plus actionnable au pupitre, où seule une
+  nouvelle ouverture reste possible.
+- L'état d'un suivi se calcule sur ses seules activités interprétables ; le conflit est exposé à part.
+- Une `FIN` survenue avant la clôture du suivi mais reçue après elle est enregistrée et appliquée à son
+  heure métier ; la clôture reste acquise.
+- Une transition qui vise une activité échue alors qu'une autre activité est en cours sur la même clé met
+  la séquence en conflit : A 08 h échue à 21 h, relance B 22 h, NC(A) 23 h.
+
 Les corrections et annulations recalculent les durées, les coûts, les anomalies et l'état courant.
 À 22 h, corriger un début de 08 h à 12 h déplace son échéance de 21 h à 01 h : l'activité redevient
 en cours, perd son anomalie et sort des durées et coûts comptabilisés.
