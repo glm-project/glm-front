@@ -37,6 +37,25 @@
   color: var(--color-ink);
 }
 
+.gestion-table .mat-mdc-header-cell,
+.gestion-table .mat-mdc-cell {
+  padding-block: 0.75rem;
+}
+
+.gestion-table .mat-mdc-header-cell:first-child,
+.gestion-table .mat-mdc-cell:first-child {
+  padding-inline-start: 1.5rem;
+}
+
+.gestion-table .mat-mdc-header-cell:last-child,
+.gestion-table .mat-mdc-cell:last-child {
+  padding-inline-end: 1rem;
+}
+
+.gestion-table .mat-mdc-cell.mat-column-actions {
+  padding-block: 0.25rem;
+}
+
 .gestion-table .mat-mdc-row {
   transition: background-color 150ms ease-out;
 }

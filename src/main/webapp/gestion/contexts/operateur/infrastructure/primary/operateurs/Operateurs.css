@@ -4,18 +4,6 @@
 table {
   min-width: 60rem;
 }
-.mat-mdc-header-cell,
-.mat-mdc-cell {
-  padding-block: 0.75rem;
-}
-.mat-mdc-header-cell:first-child,
-.mat-mdc-cell:first-child {
-  padding-inline-start: 1.5rem;
-}
-.mat-mdc-header-cell:last-child,
-.mat-mdc-cell:last-child {
-  padding-inline-end: 1rem;
-}
 .mat-column-identite {
   min-width: 12rem;
 }
@@ -34,9 +22,6 @@ table {
   text-align: end;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-.mat-mdc-cell.mat-column-actions {
-  padding-block: 0.375rem;
 }
 .mat-column-actions {
   width: 13rem;
