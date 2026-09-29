@@ -7,6 +7,18 @@ describe('Material bridge', () => {
 
     thenThePrimaryActionWearsTheAccent(colours);
   });
+
+  it('should set dialog titles at the section level', () => {
+    const section = whenOpeningADialog();
+
+    thenTheDialogTitleWearsTheSectionLevel(section);
+  });
+
+  it('should size Material buttons at the touch target', () => {
+    const touch = whenMeasuringTheTouchTarget();
+
+    thenTheButtonsReachTheTouchTarget(touch);
+  });
 });
 
 interface ColoursFixture {
@@ -23,6 +35,39 @@ const whenVisitingTheWorkshop = (): Cypress.Chainable<ColoursFixture> => {
   }));
 };
 
+interface SectionLevelFixture {
+  readonly size: string;
+  readonly weight: string;
+}
+
+const whenOpeningADialog = (): Cypress.Chainable<SectionLevelFixture> => {
+  new AtelierApiFixture().install();
+  cy.visit('/atelier');
+  cy.get(dataSelector('atelier-new')).should('be.enabled').click();
+  return cy.window().then(window => {
+    const probe = window.document.createElement('span');
+    probe.className = 'text-section';
+    window.document.body.appendChild(probe);
+    const { fontSize, fontWeight } = window.getComputedStyle(probe);
+    probe.remove();
+    return { size: fontSize, weight: fontWeight };
+  });
+};
+
+const whenMeasuringTheTouchTarget = (): Cypress.Chainable<string> => {
+  new AtelierApiFixture().install();
+  cy.visit('/atelier');
+  return cy.window().then(window => {
+    const probe = window.document.createElement('span');
+    probe.style.display = 'block';
+    probe.style.height = 'var(--spacing-touch)';
+    window.document.body.appendChild(probe);
+    const { height } = window.getComputedStyle(probe);
+    probe.remove();
+    return height;
+  });
+};
+
 const givenTheBrowsersValueOf = (window: Window, token: string): string => {
   const probe = window.document.createElement('span');
   probe.style.color = `var(${token})`;
@@ -35,5 +80,18 @@ const givenTheBrowsersValueOf = (window: Window, token: string): string => {
 const thenThePrimaryActionWearsTheAccent = (colours: Cypress.Chainable<ColoursFixture>): void => {
   colours.then(({ accent, onAccent }) => {
     cy.get(dataSelector('atelier-new')).should('have.css', 'background-color', accent).and('have.css', 'color', onAccent);
+  });
+};
+
+const thenTheDialogTitleWearsTheSectionLevel = (section: Cypress.Chainable<SectionLevelFixture>): void => {
+  section.then(({ size, weight }) => {
+    cy.get('.mat-mdc-dialog-title').should('have.css', 'font-size', size).and('have.css', 'font-weight', weight);
+  });
+};
+
+const thenTheButtonsReachTheTouchTarget = (touch: Cypress.Chainable<string>): void => {
+  touch.then(height => {
+    cy.get(dataSelector('atelier-new')).should('have.css', 'height', height);
+    cy.get('.mat-mdc-paginator-navigation-next').should('have.css', 'height', height);
   });
 };

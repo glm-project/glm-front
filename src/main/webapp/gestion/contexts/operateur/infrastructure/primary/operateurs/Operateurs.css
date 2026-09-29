@@ -4,15 +4,22 @@
 table {
   min-width: 60rem;
 }
-.mat-column-identite,
+.mat-column-identite {
+  min-width: 12rem;
+}
 .mat-column-matricule {
   white-space: nowrap;
 }
-.mat-column-natures,
+.mat-column-natures {
+  overflow-wrap: break-word;
+}
 .mat-column-postes {
+  min-width: 13rem;
   overflow-wrap: break-word;
 }
 .mat-column-tauxHoraire {
+  padding-inline-end: 1.5rem;
+  text-align: end;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }

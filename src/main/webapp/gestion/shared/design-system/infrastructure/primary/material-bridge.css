@@ -35,11 +35,22 @@
   --mat-button-text-container-shape: var(--radius-control);
   --mat-button-tonal-container-shape: var(--radius-control);
 
+  --mat-button-filled-container-height: var(--spacing-touch);
+  --mat-button-outlined-container-height: var(--spacing-touch);
+  --mat-button-protected-container-height: var(--spacing-touch);
+  --mat-button-text-container-height: var(--spacing-touch);
+  --mat-button-tonal-container-height: var(--spacing-touch);
+  --mat-icon-button-state-layer-size: var(--spacing-touch);
+
   --mat-sys-headline-small-size: var(--text-title);
   --mat-sys-headline-small-line-height: var(--text-title--line-height);
 
   --mat-sys-title-large-size: var(--text-section);
   --mat-sys-title-large-line-height: var(--text-section--line-height);
+
+  --mat-dialog-subhead-size: var(--text-section);
+  --mat-dialog-subhead-line-height: var(--text-section--line-height);
+  --mat-dialog-subhead-weight: var(--text-section--font-weight);
 
   --mat-sys-title-medium-size: var(--text-body);
   --mat-sys-title-medium-line-height: var(--text-body--line-height);
