@@ -183,7 +183,7 @@ describe('Synthese des heures component', () => {
     ]).toEqual(['Présence', '7 h 30', 'Présumé, à confirmer : 5 h 20', '57 h 30']);
   });
 
-  it('should place a presence on the axis of its day, from its arrival to its departure', async () => {
+  it('should draw a presence in the column of its day, from its arrival to its departure', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {
         0: {
@@ -203,7 +203,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(positions('synthese-presence-plage')).toEqual([[12.5, 25]]);
+    expect(presencesParJour()).toEqual([1, 0, 0, 0, 0, 0, 0]);
   });
 
   it('should state each presence of a day from its arrival to its departure', async () => {
@@ -257,50 +257,6 @@ describe('Synthese des heures component', () => {
     ]);
   });
 
-  it('should open the axis of a day onto the whole day when a presence touches midnight', async () => {
-    givenReleve(
-      releveFixture(SEMAINE_EN_COURS, {
-        0: {
-          pointages: [['ARRIVEE', [19, 0]]],
-          plages: [
-            [
-              [19, 0],
-              [24, 0],
-            ],
-          ],
-        },
-        1: {
-          pointages: [['DEPART', [7, 0]]],
-          plages: [
-            [
-              [0, 0],
-              [7, 0],
-            ],
-          ],
-        },
-      }),
-    );
-
-    await whenEcranAffiche();
-
-    expect(positions('synthese-presence-plage')).toEqual([
-      [79.17, 20.83],
-      [0, 29.17],
-    ]);
-  });
-
-  it.each([
-    ['starts before the daytime hours', [5, 30], [13, 0], [22.92, 31.25]],
-    ['ends after the daytime hours', [14, 0], [22, 30], [58.33, 35.42]],
-    ['runs exactly over the daytime hours', [6, 0], [22, 0], [0, 100]],
-  ] as const)('should scale a day on %s according to the hours it draws', async (_cas, debut, fin, attendu) => {
-    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { plages: [[debut, fin]] } }));
-
-    await whenEcranAffiche();
-
-    expect(positions('synthese-presence-plage')).toEqual([attendu]);
-  });
-
   it('should mark a presence still in progress at the place where it began, rather than invent its end', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {
@@ -323,11 +279,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-presence-ouverte'), gauches('synthese-presence-ouverte'), nombreDe('synthese-presence-plage')]).toEqual([
-      ['Présence depuis 10:20, en cours'],
-      [27.08],
-      1,
-    ]);
+    expect([textes('synthese-presence-ouverte'), nombreDe('synthese-presence-plage')]).toEqual([['Présence depuis 10:20, en cours'], 1]);
   });
 
   it('should give each element of the week its row, named by its type, its number, its label and its workstations', async () => {
@@ -408,12 +360,12 @@ describe('Synthese des heures component', () => {
     expect(textes('synthese-element-presume')).toEqual(['+ 1 h 30 présumées']);
   });
 
-  it('should draw the work of an element on its row, in the column of its day, on the axis of that day', async () => {
+  it('should draw the work of an element on its row, in the column of its day', async () => {
     givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut: [8, 0], fin: [12, 0] }] } }, {}, [elementFixture()]));
 
     await whenEcranAffiche();
 
-    expect(positions('synthese-barre-travail')).toEqual([[12.5, 25]]);
+    expect(barresParJour()).toEqual([1, 0, 0, 0, 0, 0, 0]);
   });
 
   it('should draw a non-conformity apart from the work it follows, at its own place', async () => {
@@ -435,7 +387,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([positions('synthese-barre-travail'), positions('synthese-barre-nc')]).toEqual([[[12.5, 25]], [[37.5, 12.5]]]);
+    expect([nombreDe('synthese-barre-travail'), nombreDe('synthese-barre-nc')]).toEqual([1, 1]);
   });
 
   it('should state each bar by its element, its day, its hours and whether it is work or non-conformity', async () => {
@@ -470,14 +422,18 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    ['starts before the daytime hours', [5, 30], [7, 0], [22.92, 6.25]],
-    ['goes on past midnight', [21, 0], [24, 0], [87.5, 12.5]],
-  ] as const)('should open the axis of a day onto the whole day when the work of an element %s', async (_cas, debut, fin, attendu) => {
-    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut, fin }] } }, {}, [elementFixture()]));
+    ['starts before the daytime hours', [5, 30], [7, 0]],
+    ['goes on past midnight', [21, 0], [24, 0]],
+  ] as const)('should open the axis of a day onto the whole day when the work of an element %s', async (_cas, debut, fin) => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut, fin }], pointagesDElement: [{ type: 'DEBUT', heure: [8, 0] }] } }, {}, [
+        elementFixture(),
+      ]),
+    );
 
     await whenEcranAffiche();
 
-    expect(positions('synthese-barre-travail')).toEqual([attendu]);
+    expect(reperesDuJour(0)).toEqual(['0 h', '24 h']);
   });
 
   it('should state a bar stopped without any clocked end, and mark nothing at its end', async () => {
@@ -499,16 +455,15 @@ describe('Synthese des heures component', () => {
     ]);
   });
 
-  it('should mark the work still in progress at the place where it began, and state it as in progress', async () => {
+  it('should mark the work still in progress, and state it as in progress', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, { 0: { intervalles: [{ debut: [10, 20] }] } }, {}, [elementFixture({ reference: '1015' })]),
     );
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-barre-ouverte'), gauches('synthese-barre-ouverte'), nombreDe('synthese-barre-travail')]).toEqual([
+    expect([textes('synthese-barre-ouverte'), nombreDe('synthese-barre-travail')]).toEqual([
       ['Moule 1015, lundi 14, depuis 10:20, travail, en cours'],
-      [27.08],
       0,
     ]);
   });
@@ -555,11 +510,11 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-sous-ligne-poste'), positions('synthese-barre-travail'), textes('synthese-element-total')]).toEqual([
+    expect([textes('synthese-sous-ligne-poste'), barresParSousLigne(), textes('synthese-element-total')]).toEqual([
       ['DMU 50', 'Mazak QT-200'],
       [
-        [12.5, 25],
-        [25, 25],
+        [1, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0],
       ],
       ['8 h 00'],
     ]);
@@ -591,13 +546,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([nombreDe('synthese-sous-ligne'), positions('synthese-barre-travail')]).toEqual([
-      0,
-      [
-        [12.5, 25],
-        [37.5, 12.5],
-      ],
-    ]);
+    expect([nombreDe('synthese-sous-ligne'), nombreDe('synthese-barre-travail')]).toEqual([0, 2]);
   });
 
   it.each([
@@ -917,29 +866,6 @@ describe('Synthese des heures component', () => {
     expect(marquesDuJourOuvert()).toEqual(['Début 08:00', 'Non-conformité 12:00', 'Fin 14:00']);
   });
 
-  it('should place a marker on the axis of the open day at the instant of its clocking', async () => {
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: {
-            pointagesDElement: [
-              { type: 'DEBUT', heure: [8, 0] },
-              { type: 'FIN', heure: [14, 0] },
-            ],
-          },
-        },
-        {},
-        [elementFixture()],
-      ),
-    );
-    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
-
-    await whenEcranAffiche();
-
-    expect(gauches('synthese-marque')).toEqual([12.5, 50]);
-  });
-
   it('should keep a marker for a clocking that no bar surrounds, since the row of its element has to show it', async () => {
     givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { pointagesDElement: [{ type: 'FIN', heure: [17, 45] }] } }, {}, [elementFixture()]));
     routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
@@ -1043,10 +969,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([gauches('synthese-trait-presence'), titres('synthese-trait-presence')]).toEqual([
-      [12.5, 62.5],
-      ['Arrivée 08:00', 'Départ 16:00'],
-    ]);
+    expect(titres('synthese-trait-presence')).toEqual(['Arrivée 08:00', 'Départ 16:00']);
   });
 
   it.each([
@@ -1244,7 +1167,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([marquesDuJourOuvert(), gauches('synthese-marque')]).toEqual([['Clos par le départ 16:00'], [62.5]]);
+    expect(marquesDuJourOuvert()).toEqual(['Clos par le départ 16:00']);
   });
 
   it('should situate a chosen clocking of the journal by a guide at its instant, across the frise', async () => {
@@ -1263,11 +1186,7 @@ describe('Synthese des heures component', () => {
 
     await whenEntreeDuJournalChoisie(1);
 
-    expect([entreesPressees(), gauches('synthese-repere-selection'), titres('synthese-repere-selection')]).toEqual([
-      ['16:00'],
-      [62.5],
-      ['Départ 16:00'],
-    ]);
+    expect([entreesPressees(), titres('synthese-repere-selection')]).toEqual([['16:00'], ['Départ 16:00']]);
   });
 
   it('should let go of a clocking chosen again, guide included', async () => {
@@ -1339,19 +1258,15 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    ['an isolated clocking of an element', { pointagesDElement: [{ type: 'FIN', heure: [5, 30] }] }, 22.92],
-    ['a departure no interval or presence surrounds', { pointages: [['DEPART', [22, 45]]] }, 94.79],
-  ] as const)('should open the axis of the open day onto the whole day for %s outside the daytime hours', async (_cas, jour, gauche) => {
+    ['an isolated clocking of an element', { pointagesDElement: [{ type: 'FIN', heure: [5, 30] }] }],
+    ['a departure no interval or presence surrounds', { pointages: [['DEPART', [22, 45]]] }],
+  ] as const)('should open the axis of the open day onto the whole day for %s outside the daytime hours', async (_cas, jour) => {
     givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: jour }, {}, [elementFixture()]));
     routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
 
     await whenEcranAffiche();
 
-    expect([reperesDuJour(0)[0], reperesDuJour(0).at(-1), gauches('synthese-marque').concat(gauches('synthese-trait-presence'))]).toEqual([
-      '0 h',
-      '24 h',
-      [gauche],
-    ]);
+    expect([reperesDuJour(0)[0], reperesDuJour(0).at(-1)]).toEqual(['0 h', '24 h']);
   });
 
   it('should keep the daytime axis of a closed day whose clocking, not drawn, lies outside the daytime hours', async () => {
@@ -1721,13 +1636,15 @@ describe('Synthese des heures component', () => {
   const titres = (selector: string): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => element.getAttribute('title') ?? '');
 
-  const arrondi = (pourcentage: string): number => Math.round(Number.parseFloat(pourcentage) * 100) / 100;
+  const presencesParJour = (): number[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-presence-jour'))].map(
+      cellule => cellule.querySelectorAll('[data-selector^="synthese-presence-"]').length,
+    );
 
-  const positions = (selector: string): number[][] =>
-    [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => [
-      arrondi(element.style.left),
-      arrondi(element.style.width),
-    ]);
+  const barresParJour = (): number[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-element-jour'))].map(
+      cellule => cellule.querySelectorAll('[data-selector^="synthese-barre-"]').length,
+    );
 
   const joursOuverts = (): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-jour-lien'))]
@@ -1775,9 +1692,6 @@ describe('Synthese des heures component', () => {
         cellule => cellule.querySelectorAll(`${dataSelector('synthese-barre-travail')}, ${dataSelector('synthese-barre-nc')}`).length,
       ),
     );
-
-  const gauches = (selector: string): number[] =>
-    [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => arrondi(element.style.left));
 
   const valeurChoisie = (selector: string): string => selectRequis(selector).value;
 

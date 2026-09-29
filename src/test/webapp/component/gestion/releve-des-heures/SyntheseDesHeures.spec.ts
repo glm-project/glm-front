@@ -491,6 +491,20 @@ describe('Weekly hours report in gestion', () => {
     thenTheMarksOfTheDayStayInsideIt(0);
   });
 
+  it('should keep the work of an element inside the column of its day', () => {
+    givenAWeekOfDayShifts();
+    whenVisiting(SEMAINE_DE_JOUR);
+
+    thenTheWorkOfTheElementStaysInsideItsDay(0, 0);
+  });
+
+  it('should keep the markers of the open day inside its column', () => {
+    givenAWeekOfDayShifts();
+    whenVisitingAt(`${SEMAINE_DE_JOUR}&jour=2026-09-21`, 1280);
+
+    thenTheMarkersOfTheOpenDayStayInsideItsColumn(0);
+  });
+
   it('should mention no presumed time for a week that has none', () => {
     givenAWeekOfNightShifts();
     whenVisiting(SEMAINE_DE_NUIT);
@@ -738,6 +752,33 @@ describe('Weekly hours report in gestion', () => {
         expect(reperes.length).to.be.greaterThan(0);
         expect(Math.min(...reperes.map(repere => repere.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
         expect(Math.max(...reperes.map(repere => repere.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
+      });
+  };
+
+  const thenTheWorkOfTheElementStaysInsideItsDay = (ligne: number, jour: number): void => {
+    cy.get(dataSelector('synthese-element-ligne'))
+      .eq(ligne)
+      .find(dataSelector('synthese-element-jour'))
+      .eq(jour)
+      .should($cellule => {
+        const colonne = $cellule[0]?.getBoundingClientRect();
+        const barres = [...$cellule.find(dataSelector('synthese-barre-travail'))].map(barre => barre.getBoundingClientRect());
+        expect(barres.length).to.be.greaterThan(0);
+        expect(Math.min(...barres.map(barre => barre.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
+        expect(Math.max(...barres.map(barre => barre.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
+        expect(Math.min(...barres.map(barre => barre.width))).to.be.greaterThan(0);
+      });
+  };
+
+  const thenTheMarkersOfTheOpenDayStayInsideItsColumn = (jour: number): void => {
+    cy.get(dataSelector('synthese-jour-cell'))
+      .eq(jour)
+      .should($entete => {
+        const colonne = $entete[0]?.getBoundingClientRect();
+        const marques = [...Cypress.$(dataSelector('synthese-marque'))].map(marque => marque.getBoundingClientRect());
+        expect(marques.length).to.be.greaterThan(0);
+        expect(Math.min(...marques.map(marque => marque.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
+        expect(Math.max(...marques.map(marque => marque.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
       });
   };
 
