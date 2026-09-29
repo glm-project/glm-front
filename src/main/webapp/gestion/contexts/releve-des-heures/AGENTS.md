@@ -96,15 +96,19 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   se déplacer d'un nombre de jours, nommer son jour de la semaine et se reconnaître aujourd'hui.
 - **DureeTravaillee** : Value Object d'une durée ISO-8601, exprimée en heures et minutes. `estNulle()` la juge à la
   minute près, comme elle s'affiche.
-- **JourDeReleve** : Value Object d'un jour du relevé — sa date, sa durée opérationnelle pointée et présumée, sa
-  présence pointée et présumée, ses pointages, ses plages et ses intervalles. `estVide()` : ni pointage, ni plage,
-  ni intervalle. `effetDe(pointage)` dit ce qu'un pointage de présence change ; `vientDeLaVeille()` reconnaît une
-  plage qu'aucun pointage du jour n'a ouverte.
+- **JourDeReleve** : Value Object d'un jour du relevé — sa date, sa durée opérationnelle pointée et présumée, ses
+  pointages, ses plages et ses intervalles. `estVide()` : ni pointage, ni plage ; un intervalle naît toujours d'un
+  pointage d'élément du même jour, il n'est pas un troisième critère. `effetDe(pointage)` dit ce qu'un pointage de
+  présence change ; `vientDeLaVeille()` reconnaît une plage qu'aucun pointage de présence du jour n'a ouverte ;
+  `estArreteSansFinPointee()` reconnaît un intervalle que ni son élément ni la présence n'ont terminé par un
+  pointage.
 - **ElementDuReleve** : Value Object d'un élément de la semaine — identifiant, type, nom, référence et description
   facultatives, couples poste et nature, durée, durée de non-conformité et durée présumée de la semaine.
+  `libelleDuPoste()` nomme un poste que l'élément porte, `porte()` dit s'il le porte.
 - **IntervalleDActivite** : Value Object d'un intervalle lu dans la feuille de temps — son élément, son poste et sa
   nature facultatifs, sa catégorie, son début, sa fin facultative et `presumee`. Refusé présumé sans fin, ou
-  finissant avant de commencer.
+  finissant avant de commencer. Sans fin, il se prolonge jusqu'à nouvel ordre : `chevauche()` le tient pour
+  chevauchant tout intervalle qui finit après son début.
 - **PointageDeReleve** : union discriminée d'un pointage, `PointageDePresence` ou `PointageDElement`. Le premier
   porte son type et son instant ; le second y ajoute sa cible, l'élément et le poste facultatif. Pas de champ `never`.
 - **PlageDeReleve** : Value Object d'une plage lue dans la feuille de temps — son début, sa fin facultative et
@@ -116,10 +120,13 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - **JourOuvert** : choisit le jour à ouvrir, une fois le relevé lu : le jour nommé, sinon aujourd'hui sur la semaine
   en cours, sinon le premier jour qui porte un pointage, sinon aucun.
 - **InstantDeReleve** : Value Object d'un instant reçu du back, refusé s'il n'est pas un instant absolu. Les
-  instants se comparent entre eux, jamais par leurs libellés.
+  instants se comparent entre eux, jamais par leurs libellés ; il dit aussi s'il tombe un autre jour qu'un autre
+  instant, dans le fuseau du navigateur.
 - **IdentiteOperateur** : Value Object du nom et du prénom que le rapport a résolus au référentiel.
 - **OperateurReleveId** : Value Object de l'identifiant de l'opérateur, opaque à ce contexte.
 - **SemaineDemandee** : traduit ce que porte l'URL, plus le jour courant, en une semaine connue ou refusée.
+- **DemandeDeReleve** : l'opérateur et la semaine qu'on lit. Deux demandes de même opérateur et de même semaine sont
+  la même : ouvrir un autre jour de la semaine ne relit pas le relevé.
 - **SyntheseDesHeuresPort** : port secondaire de lecture du relevé, composé des deux rapports du back.
 
 ## Responsabilités et invariants
@@ -163,12 +170,15 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   minuit, aux bornes de la semaine, à une fin présumée et à la clôture du suivi par le gestionnaire. C'est ce qui
   permet de dire qu'un départ clôt tel élément, en rapprochant des instants. Une fin sans pointage à cet instant
   n'a **aucun marqueur** : l'énoncé et l'infobulle de la barre disent « arrêté sans fin pointée », car le front
-  ne connaît pas la cause et ne dit pas « clôture ».
+  ne connaît pas la cause et ne dit pas « clôture ». Un intervalle est ainsi dit quand il est fini, non présumé,
+  qu'il finit le jour où il a commencé et que ni un pointage de son élément ni un pointage de présence n'est à sa
+  fin ; un intervalle coupé à minuit, présumé ou en cours ne l'est pas.
 - **Un départ clôt les éléments qu'aucune fin pointée ne termine à cet instant** : « clôt Moule 1022, sans fin
   pointée ». Un départ qu'aucune plage ne termine — la journée abandonnée de la règle D13 du back (glm-back #61) :
   sa plage se ferme à sa fin présumée, et son départ, qui compte parmi « ses faits au-delà », n'en ferme aucune —
-  reste un simple pointage de départ : il ne clôt aucun élément et ne dessine rien. Seul un pointage de présence
-  a un effet ; relance et retour de non-conformité sont des règles de rejeu du back.
+  reste un simple pointage de départ : il ne clôt aucun élément et ne dessine rien. Seul un départ a un effet :
+  une arrivée, un début, une non-conformité et une fin n'en ont aucun, même à l'instant où un intervalle finit ;
+  relance et retour de non-conformité sont des règles de rejeu du back.
 - **Une plage ou un intervalle sans fin est en cours, il se marque et ne s'étire pas.** C'est l'état normal d'une
   journée sous l'amplitude maximale, jamais une anomalie. Dessiner une barre jusqu'à maintenant inventerait du
   temps, et le domaine n'a d'ailleurs pas le droit de lire l'horloge. Le back ne coupe pas une plage ouverte à
@@ -180,11 +190,13 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   dessinent bout à bout, sans coupure ; la hachure de non-conformité et le marqueur du jour ouvert montrent la
   jonction. Chaque intervalle garde son énoncé.
 - **Un élément travaillé depuis deux postes à la fois** se dédouble en sous-lignes par poste, seulement quand deux
-  de ses intervalles se chevauchent ; le dédoublement vaut alors pour toute la semaine, chaque intervalle se
+  de ses intervalles se chevauchent, un intervalle en cours chevauchant tout intervalle qui finit après son début ;
+  le dédoublement vaut alors pour toute la semaine, chaque intervalle se
   dessinant sur la sous-ligne de son poste, un intervalle sans poste sur une sous-ligne « Sans poste ». Le total
   reste unique, sur la ligne de l'élément : le back ne rend aucune durée par poste et le front n'additionne rien.
-- **Un élément sans aucune barre a sa ligne**, total « 0 h », avec ses marqueurs isolés dans le jour ouvert : le
-  masquer ferait citer au journal un élément absent de la frise.
+- **Un élément sans aucune barre a sa ligne**, total « 0 h 00 », avec ses marqueurs isolés dans le jour ouvert : le
+  masquer ferait citer au journal un élément absent de la frise. Un pointage d'élément sans poste sur un élément
+  dédoublé va, avec ses barres éventuelles, sur la sous-ligne « Sans poste ».
 - **Limite acceptée : l'instant de lecture décide de l'abandon.** Les deux rapports sont lus à des instants
   différents et peuvent se contredire — une plage ou un intervalle présumé d'un côté, un présumé nul de l'autre.
   Aucun instantané cohérent n'est cherché entre eux.
@@ -200,6 +212,14 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
 - `operateur` possède le référentiel des personnes. **Ce contexte ne l'importe pas** : il déclare son propre
   identifiant et reçoit du rapport lui-même le nom et le prénom à afficher. Le lien entre les deux écrans est
   un `routerLink` vers `/operateurs/<id>/heures`, jamais un import.
+- `element-de-fabrication` possède les moules et les OF, `poste` les postes de travail. **Ce contexte n'importe ni
+  l'un ni l'autre** : il déclare `ElementReleveId` et `PosteReleveId`, opaques, et reçoit du rapport le nom, la
+  référence, la description de l'élément et le libellé de chaque poste. Un élément du relevé est ce que la
+  semaine en a pointé, pas une fiche du référentiel.
+- Le contrat généré du back déclare **obligatoires** les champs ajoutés pour le temps opérationnel
+  (`dureeOperationnelle*`, `elements`, `activites`, `dureePresumee` d'un élément) et **facultatifs** les anciens
+  (`duree`, `jour`, `presence`, `element` d'un pointage…) : l'adaptateur garde le `required(...)` de ces derniers et
+  refuse la lecture quand l'un manque, plutôt que d'inventer une valeur.
 - Le back découpe ces relevés en deux bounded contexts, `feuilledetemps` et `syntheseheures`, parce qu'ils
   rejouent chacun leur propre lecture. Ce front n'en fait qu'un : le vocabulaire est un, l'acteur est un, et
   dupliquer `SemaineISO` et `DureeTravaillee` dans deux contextes qui ne peuvent pas s'importer ferait payer au
