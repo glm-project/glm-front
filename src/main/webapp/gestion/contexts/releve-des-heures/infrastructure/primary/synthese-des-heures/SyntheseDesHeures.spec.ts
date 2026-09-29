@@ -1339,23 +1339,51 @@ describe('Synthese des heures component', () => {
     expect([presencesDe('plage').length, textes('synthese-operationnel-jour')[0]]).toEqual([1, '0 h 00']);
   });
 
-  it('should explain each mark of the frise in its legend', async () => {
-    givenSemaineSemee(new SemaineISO(2026, 38));
+  it('should explain in its legend every kind of bar, marker and line the frise draws, and nothing else', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            journal: [
+              ['ARRIVEE', [8, 0]],
+              { type: 'DEBUT', heure: [8, 0], poste: 'poste-0' },
+              { type: 'NON_CONFORMITE', heure: [12, 0], poste: 'poste-0' },
+              { type: 'FIN', heure: [14, 0], poste: 'poste-0' },
+              ['DEPART', [16, 0]],
+            ],
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-0', categorie: 'NON_CONFORMITE', debut: [12, 0], fin: [14, 0] },
+              { element: 'element-2', debut: [9, 0], fin: [16, 0] },
+            ],
+            plages: [
+              [
+                [8, 0],
+                [16, 0],
+              ],
+            ],
+          },
+          1: {
+            pointages: [['ARRIVEE', [10, 20]]],
+            intervalles: [{ debut: [10, 20], fin: [15, 40], presumee: true }],
+            plages: [[[10, 20], [15, 40], true]],
+          },
+          2: {
+            pointages: [['ARRIVEE', [8, 0]]],
+            intervalles: [{ debut: [8, 0] }],
+            plages: [[[8, 0], undefined]],
+          },
+        },
+        {},
+        [elementFixture({ postes: [['DMU 50', 'Fraisage']] }), elementFixture({ id: 'element-2' })],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-legende')).toEqual([
-      'Travail',
-      'Non-conformité',
-      'Présence',
-      'Présumé (à confirmer)',
-      'En cours',
-      'Début pointé',
-      'Non-conformité pointée',
-      'Fin pointée',
-      'Clos par le départ',
-      'Arrivée, départ',
-    ]);
+    expect(legendesDessinees()).toEqual(legendesExpliquees());
   });
 
   it('should display the loading status until the report arrives', () => {
@@ -1659,6 +1687,38 @@ describe('Synthese des heures component', () => {
 
   const titres = (selector: string): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => element.getAttribute('title') ?? '');
+
+  const LEGENDE_D_UNE_PRESENCE: Record<string, string> = { plage: 'presence', presumee: 'presume', 'en-cours': 'en-cours' };
+
+  const LEGENDE_D_UN_MARQUEUR: Record<string, string> = {
+    debut: 'debut',
+    nc: 'non-conformite-pointee',
+    fin: 'fin',
+    clos: 'clos',
+  };
+
+  const LEGENDE_D_UNE_BARRE: Record<string, string> = { travail: 'travail', nc: 'non-conformite', 'en-cours': 'en-cours' };
+
+  const legendesDessinees = (): string[] =>
+    [
+      ...new Set([
+        ...[...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-presence'))].map(
+          presence => LEGENDE_D_UNE_PRESENCE[presence.dataset['style'] ?? ''] ?? '',
+        ),
+        ...[...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-barre'))].map(barre =>
+          barre.dataset['presumee'] === 'true' ? 'presume' : (LEGENDE_D_UNE_BARRE[barre.dataset['style'] ?? ''] ?? ''),
+        ),
+        ...[...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-marque'))].map(
+          marque => LEGENDE_D_UN_MARQUEUR[marque.dataset['type'] ?? ''] ?? '',
+        ),
+        ...(present('synthese-trait-presence') ? ['trait'] : []),
+      ]),
+    ].sort((un, autre) => un.localeCompare(autre));
+
+  const legendesExpliquees = (): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-legende'))]
+      .map(entree => entree.dataset['legende'] ?? '')
+      .sort((un, autre) => un.localeCompare(autre));
 
   const presencesDe = (style: string): HTMLElement[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-presence'))].filter(presence => presence.dataset['style'] === style);
