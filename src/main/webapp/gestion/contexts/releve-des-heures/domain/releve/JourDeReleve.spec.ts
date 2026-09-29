@@ -88,6 +88,14 @@ describe('JourDeReleve', () => {
     expect(jour.vientDeLaVeille(plage)).toBe(true);
   });
 
+  it('should tell a presence cut at midnight by the server as coming from the day before, an element being clocked at that very instant', () => {
+    const plage = new PlageDeReleve(instantFixture(0, 0), instantFixture(7, 5), false);
+    const debutPointe = pointageDElementFixture('DEBUT', 'carter', 0, 0, 'dmu');
+    const jour = new JourDeReleve(ficheFixture({ pointages: [debutPointe, pointageFixture('DEPART', 7, 5)], plages: [plage] }));
+
+    expect(jour.vientDeLaVeille(plage)).toBe(true);
+  });
+
   it('should not take an interval opened by an arrival in the first minute after midnight for one coming from the day before', () => {
     const arrivee = new InstantDeReleve(new Date(2026, 8, 14, 0, 0, 40).toISOString());
     const plage = new PlageDeReleve(arrivee, instantFixture(8, 0), false);

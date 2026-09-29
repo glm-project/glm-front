@@ -82,6 +82,6 @@ export class JourDeReleve {
   }
 
   vientDeLaVeille(plage: PlageDeReleve): boolean {
-    return !this.pointages.some(pointage => pointage.instant.estLeMeme(plage.debut));
+    return !this.pointagesDePresence().some(pointage => pointage.instant.estLeMeme(plage.debut));
   }
 }
