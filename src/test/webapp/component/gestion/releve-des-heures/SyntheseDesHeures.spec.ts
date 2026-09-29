@@ -546,6 +546,15 @@ describe('Weekly hours report in gestion', () => {
     cy.viewport(largeur, 900);
     cy.clock(HORLOGE, ['Date']);
     cy.visit(adresse);
+    givenClassicScrollbars();
+  };
+
+  const givenClassicScrollbars = (): void => {
+    cy.document().then(document => {
+      const style = document.createElement('style');
+      style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
+      document.head.append(style);
+    });
   };
 
   const whenVisiting = (adresse: string): void => {

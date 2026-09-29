@@ -27,14 +27,14 @@
 }
 
 .frise {
-  --largeur-etiquette: 208px;
-  --largeur-total: 152px;
+  --largeur-etiquette: 200px;
+  --largeur-total: 144px;
   --largeur-ouverte: minmax(280px, 4fr);
   --largeur-fermee: minmax(0, 1fr);
   --largeur-vide: minmax(0, 0.7fr);
   --colonnes: var(--largeur-etiquette) repeat(7, var(--largeur-fermee)) var(--largeur-total);
   position: relative;
-  min-width: calc(var(--largeur-etiquette) + var(--largeur-total) + 280px + 6 * 52px);
+  min-width: calc(var(--largeur-etiquette) + var(--largeur-total) + 280px + 6 * 50px);
 }
 
 .ligne {
