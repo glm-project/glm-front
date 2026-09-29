@@ -117,3 +117,8 @@ something stays, with a status that says what died.
 - [0046 — Stop showing the pause in workshop supervision](0046-stop-showing-the-pause-in-workshop-supervision.md) —
   three lanes, an operator on pause read as present without assignment, no suspended activity or NC, and `warn`
   left to the pupitre's pause commands
+
+- [0047 — Comptabiliser les activités terminées et signaler leurs fins automatiques](0047-count-only-finished-activities.md) —
+  décisions acceptées, à implémenter : fin automatique corrigible et immédiatement comptabilisée,
+  activités en cours exclues du coût et du diviseur, durée indicative conservée au pupitre,
+  séquences en conflit à résoudre par le gestionnaire et totaux concernés incomplets

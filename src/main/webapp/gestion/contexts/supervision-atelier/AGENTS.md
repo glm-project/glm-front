@@ -2,6 +2,16 @@
 
 Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel les opérateurs déclarés, leur présence et leurs activités pour les couloirs de supervision.
 
+## Décision acceptée à implémenter
+
+L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) fixe le périmètre
+de la refonte : adapter le modèle et les démonstrations de supervision au temps opérationnel seul,
+en conservant l'adapter InMemory. Le branchement HTTP réel relève d'un chantier distinct ; les alertes
+réelles de fin automatique de ce lot sont exposées dans le relevé et le coût de revient.
+Les démonstrations représentent aussi les séquences « En conflit » de l'ADR 0047, distinctes des fins
+automatiques ; cet état concerne des activités et ne constitue pas un état de présence de l'opérateur.
+Les sections suivantes décrivent encore le modèle existant.
+
 ## Langage
 
 **Supervision de l'atelier** : interprétation en temps réel des opérateurs déclarés, de la présence et des activités en cours pour les couloirs de supervision.

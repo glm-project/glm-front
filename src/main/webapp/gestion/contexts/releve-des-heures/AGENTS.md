@@ -16,6 +16,38 @@ contexte, la route `/operateurs/:operateur/heures`, le composant `SyntheseDesHeu
 partagé reste valide. Dans le code et les tests, le **relevé** désigne ce que l'écran compose, la **synthèse** la
 seule route des durées.
 
+## Décisions acceptées à implémenter
+
+L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) fixe la cible
+de comptabilisation ; les sections suivantes décrivent encore le modèle existant.
+
+**Fin automatique** : fin par défaut à début + 13 heures écoulées, corrigible par le gestionnaire,
+y compris au-delà de 13 h. L'activité terminée automatiquement est immédiatement comptabilisée.
+Le relevé signale l'anomalie reçue du back ; une activité en cours ne produit aucune durée comptabilisée.
+Chaque transition travail/NC termine une activité comptabilisable et en ouvre une autre avec sa propre échéance.
+Une fin survenue au plus tard à l'échéance remplace la fin automatique même si elle est reçue plus tard.
+Une fin pointée après l'échéance conserve la borne automatique jusqu'à correction explicite.
+
+**Anomalie active** : alerte liée à une fin automatique non encore remplacée par une fin réelle recevable.
+La fin automatique et son anomalie sont calculées par le back, sans événement de clôture persisté.
+Après régularisation, le relevé retire l'alerte par recalcul ; l'historique conserve uniquement les
+pointages et corrections, sans journal des anomalies.
+
+Les anomalies réelles sont signalées dans ce rapport ; leur correction relève des commandes back.
+L'écran de correction et de résolution des conflits Gestion est réservé à une autre MR ;
+ce chantier adapte les commandes de correction et de résolution par API.
+
+**Instant d'évaluation du relevé** : instant commun aux lectures de synthèse et de feuille, transmis
+par l'adapter du port unique pour que la règle des 13 h donne la même décision dans les deux réponses.
+Il ne constitue pas une garantie transactionnelle face aux écritures concurrentes.
+Une correction peut faire redevenir une activité en cours et retirer sa durée du total et son anomalie.
+
+**Séquence en conflit** : pointages contradictoires conservés par le back, à trancher par le gestionnaire
+selon l'ADR 0047. Le relevé rend l'état « En conflit », les durées concernées « À résoudre » et les
+totaux concernés incomplets, selon le contrat back. Une durée à résoudre ne s'affiche pas comme zéro.
+Le relevé reste lecteur : la résolution passe par une correction ou annulation explicite des faits,
+puis une nouvelle lecture ; la fin automatique ne résout pas la contradiction.
+
 ## Langage
 
 **Relevé** : ce que l'écran rend d'une personne sur une semaine, composé de la synthèse des heures et de la feuille
