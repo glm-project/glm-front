@@ -1172,9 +1172,13 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    ['a clocked end finishes it at the same instant', { pointagesDElement: [{ type: 'FIN', heure: [16, 0], poste: 'poste-0' }] }],
-    ['no interval ends at the departure, the day being abandoned', { intervalles: [{ poste: 'poste-0', debut: [8, 0], fin: [15, 0] }] }],
-  ] as const)('should not say that a departure closes an element when %s', async (_cas, jour) => {
+    ['a clocked end finishes it at the same instant', { pointagesDElement: [{ type: 'FIN', heure: [16, 0], poste: 'poste-0' }] }, ['', '']],
+    [
+      'no interval ends at the departure, the day being abandoned',
+      { intervalles: [{ poste: 'poste-0', debut: [8, 0], fin: [15, 0] }] },
+      [''],
+    ],
+  ] as const)('should not say that a departure closes an element when %s', async (_cas, jour, effets) => {
     givenReleve(
       releveFixture(
         SEMAINE_EN_COURS,
@@ -1193,7 +1197,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-journal-effet').filter(effet => effet !== '')).toEqual([]);
+    expect(entreesDuJournal().map(entree => entree[4])).toEqual(effets);
   });
 
   it('should mark on the row of an element the departure that closed it without any clocked end', async () => {
@@ -1252,10 +1256,22 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
     await whenEntreeDuJournalChoisie(0);
 
-    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-15' });
-    await componentFixture.whenStable();
+    await whenAnotherDayIsOpened('2026-09-15');
 
     expect([entreesPressees(), nombreDe('synthese-repere-selection')]).toEqual([[], 0]);
+  });
+
+  it('should choose no clocking when another week is opened', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { pointages: [['ARRIVEE', [8, 0]]] } }));
+    const precedente = new SemaineISO(2026, 37);
+    givenReleveDe(precedente, releveFixture(precedente, { 0: { pointages: [['ARRIVEE', [9, 0]]] } }));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+    await whenEcranAffiche();
+    await whenEntreeDuJournalChoisie(0);
+
+    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '37', jour: '2026-09-07' });
+
+    expect([entreesDuJournal(), entreesPressees()]).toEqual([[['09:00', 'Arrivée', 'Présence', '', '']], []]);
   });
 
   it('should choose no clocking at the opening of a day', async () => {
@@ -1599,6 +1615,13 @@ describe('Synthese des heures component', () => {
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-journal-entree'))][rang]?.click();
     await componentFixture.whenStable();
   };
+
+  const whenAnotherWeekIsOpened = async (adresse: { annee: string; semaine: string; jour: string }): Promise<void> => {
+    routeFixture.demandeBrute(adresse);
+    await componentFixture.whenStable();
+  };
+
+  const whenAnotherDayIsOpened = (jour: string): Promise<void> => whenAnotherWeekIsOpened({ annee: '2026', semaine: '38', jour });
 
   const whenSemaineChoisie = async (numero: string): Promise<void> => {
     const select = selectRequis('synthese-semaine');
