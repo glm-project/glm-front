@@ -988,8 +988,8 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([cibleDuLien('synthese-jour-lien', 0), cibleDuLien('synthese-jour-lien', 6)]).toEqual([
-      '/?annee=2026&semaine=38&jour=2026-09-14',
-      '/?annee=2026&semaine=38&jour=2026-09-20',
+      { annee: '2026', semaine: '38', jour: '2026-09-14' },
+      { annee: '2026', semaine: '38', jour: '2026-09-20' },
     ]);
   });
 
@@ -1033,8 +1033,8 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([cibleDuLien('synthese-semaine-precedente', 0), cibleDuLien('synthese-semaine-suivante', 0)]).toEqual([
-      '/?annee=2026&semaine=19',
-      '/?annee=2026&semaine=21',
+      { annee: '2026', semaine: '19' },
+      { annee: '2026', semaine: '21' },
     ]);
   });
 
@@ -1850,8 +1850,10 @@ describe('Synthese des heures component', () => {
       .filter(lien => lien.getAttribute('aria-current') === 'true')
       .map(lien => normalise(lien.querySelector(dataSelector('synthese-jour'))?.textContent ?? ''));
 
-  const cibleDuLien = (selector: string, rang: number): string =>
-    [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))][rang]?.getAttribute('href') ?? '';
+  const cibleDuLien = (selector: string, rang: number): Record<string, string> => {
+    const href = [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))][rang]?.getAttribute('href') ?? '';
+    return Object.fromEntries(new URL(href, 'http://glm.test').searchParams);
+  };
 
   const entreesPressees = (): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-journal-entree'))]

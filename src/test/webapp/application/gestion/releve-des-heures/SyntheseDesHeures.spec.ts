@@ -108,6 +108,22 @@ describe('Weekly hours report of an operator', () => {
     thenTheOpenDayIs('jeu. 17');
   });
 
+  it('should leave the day out of the address when moving to the previous week', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDayOfTheWeek(2026, 38, '2026-09-15');
+    whenAskingForThePreviousWeek();
+
+    thenTheAddressNamesNoDay();
+  });
+
+  it('should leave the day out of the address when moving to the next week', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDayOfTheWeek(2026, 37, '2026-09-08');
+    whenAskingForTheNextWeek();
+
+    thenTheAddressNamesNoDay();
+  });
+
   it('should refuse a day the week does not carry, without asking the server', () => {
     givenReferentialAndReports();
     whenVisitingTheDay('2026-09-21');
@@ -139,6 +155,12 @@ describe('Weekly hours report of an operator', () => {
     cy.visit(`/operateurs/op-1/heures?annee=2026&semaine=38&jour=${jour}`);
   };
 
+  const whenVisitingTheDayOfTheWeek = (annee: number, semaine: number, jour: string): void => {
+    cy.viewport(1280, 900);
+    cy.clock(HORLOGE, ['Date']);
+    cy.visit(`/operateurs/op-1/heures?annee=${String(annee)}&semaine=${String(semaine)}&jour=${jour}`);
+  };
+
   const whenOpeningTheDay = (rang: number): void => {
     cy.get(dataSelector('synthese-jour-lien')).eq(rang).click();
   };
@@ -155,6 +177,11 @@ describe('Weekly hours report of an operator', () => {
   const whenAskingForThePreviousWeek = (): void => {
     cy.get(dataSelector('synthese-semaine-precedente')).click();
     cy.get(dataSelector('synthese-semaine-libelle')).should('contain.text', 'Semaine 37');
+  };
+
+  const whenAskingForTheNextWeek = (): void => {
+    cy.get(dataSelector('synthese-semaine-suivante')).click();
+    cy.get(dataSelector('synthese-semaine-libelle')).should('contain.text', 'Semaine 38');
   };
 
   const whenGoingBack = (): void => {
