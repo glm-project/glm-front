@@ -993,6 +993,40 @@ describe('Synthese des heures component', () => {
     expect(marquesParSousLigne()).toEqual([1, 2]);
   });
 
+  it('should keep on a row said to have no workstation the marker of a clocking that names none when the element is split', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-1', debut: [10, 0], fin: [14, 0] },
+            ],
+            pointagesDElement: [{ type: 'NON_CONFORMITE', heure: [11, 0] }],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-sous-ligne-poste'), marquesParSousLigne()]).toEqual([
+      ['DMU 50', 'Mazak QT-200', 'Sans poste'],
+      [0, 0, 1],
+    ]);
+  });
+
   it('should draw a line across the open day at each arrival and each departure, and none in the other days', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {

@@ -137,10 +137,12 @@ const sousLigneDuPoste = (element: ElementDuReleve, jours: readonly JourSurSonAx
   cellules: cellulesDe(element, jours, cible => cible?.value === poste.id.value),
 });
 
-const sousLigneSansPoste = (element: ElementDuReleve, jours: readonly JourSurSonAxe[]): readonly SousLigneDeFrise[] =>
-  jours.some(jour => jour.jour.intervallesDe(element.id).some(intervalle => intervalle.poste === undefined))
-    ? [{ cle: 'sans-poste', poste: LIBELLES.sansPoste, cellules: cellulesDe(element, jours, cible => cible === undefined) }]
+const sousLigneSansPoste = (element: ElementDuReleve, jours: readonly JourSurSonAxe[]): readonly SousLigneDeFrise[] => {
+  const cellules = cellulesDe(element, jours, cible => cible === undefined);
+  return cellules.some(cellule => cellule.barres.length + cellule.marques.length > 0)
+    ? [{ cle: 'sans-poste', poste: LIBELLES.sansPoste, cellules }]
     : [];
+};
 
 const postesDistincts = (element: ElementDuReleve): readonly PosteDeLElement[] =>
   element.postes.filter((poste, rang) => element.postes.findIndex(autre => autre.id.value === poste.id.value) === rang);
