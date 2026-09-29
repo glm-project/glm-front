@@ -67,7 +67,8 @@ export class JourDeReleve {
     }
     const finies = this.intervalles.filter(intervalle => intervalle.fin?.estLeMeme(pointage.instant) === true);
     const sansFinPointee = finies.filter(cible => !this.uneFinPointeeTermine(cible, pointage.instant));
-    return { clotures: sansFinPointee.filter((cible, rang) => sansFinPointee.findIndex(autre => memeCible(autre, cible)) === rang) };
+    const distinctes = sansFinPointee.filter((cible, rang) => sansFinPointee.findIndex(autre => memeCible(autre, cible)) === rang);
+    return { clotures: distinctes.map(({ element, poste }) => ({ element, poste })) };
   }
 
   intervallesDe(element: ElementReleveId): readonly IntervalleDActivite[] {
