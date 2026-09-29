@@ -166,7 +166,7 @@ export default typescript.config(
     },
   },
   {
-    ignores: ['target/', '.angular/', '.stryker-tmp/', '.wrangler/', 'src/main/webapp/app/generated/schema.d.ts'],
+    ignores: ['target/', '.angular/', '.stryker-tmp/', '.wrangler/', '.claude/', 'src/main/webapp/app/generated/schema.d.ts'],
   },
   {
     linterOptions: {
