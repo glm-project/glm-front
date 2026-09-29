@@ -110,10 +110,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     presenceTrait: 'Arrivée, départ',
   },
 
-  chargement: 'Chargement de la synthèse…',
-  echec: 'Impossible de charger la synthèse des heures. Vérifiez la connexion puis réessayez.',
+  chargement: 'Chargement du temps opérationnel…',
+  echec: 'Impossible de charger le temps opérationnel de la semaine. Vérifiez la connexion puis réessayez.',
   reessayer: 'Réessayer',
-  operateurIntrouvable: 'Cet opérateur n’existe plus au référentiel : sa synthèse ne peut pas être établie.',
+  operateurIntrouvable: 'Cet opérateur n’existe plus au référentiel : son temps opérationnel ne peut pas être établi.',
   adresseInvalide:
     'Cette adresse ne désigne pas une semaine ou un jour que le calendrier porte. Revenez au référentiel pour repartir de la semaine en cours.',
 

@@ -1333,7 +1333,7 @@ describe('Synthese des heures component', () => {
 
     whenEcranMonte();
 
-    expect(texte('synthese-loading')).toBe('Chargement de la synthèse…');
+    expect(texte('synthese-loading')).toBe('Chargement du temps opérationnel…');
   });
 
   it('should name the week of a report spanning two years', async () => {
@@ -1503,7 +1503,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(texte('synthese-error')).toContain('Impossible de charger la synthèse des heures.');
+    expect(texte('synthese-error')).toContain('Impossible de charger le temps opérationnel de la semaine.');
   });
 
   it('should read the report again when the retry is used', async () => {
