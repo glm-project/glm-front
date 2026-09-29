@@ -521,6 +521,14 @@ describe('Synthese des heures component', () => {
     expect(textes('synthese-element-total')).toEqual(['15 h 30', '2 h 05']);
   });
 
+  it('should keep the row of an element that no bar draws, its total at zero', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}, {}, [elementFixture({ reference: '1015' })]));
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-element-numero'), textes('synthese-element-total')]).toEqual([['1015'], ['0 h 00']]);
+  });
+
   it('should tell the non-conformity time of an element beside its total, and nothing for an element without any', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {}, {}, [
@@ -1024,6 +1032,15 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([nombreDe('synthese-marque'), nombreDe('synthese-barre-travail')]).toEqual([1, 0]);
+  });
+
+  it('should list in the journal a clocking that no bar surrounds, under the name of its element', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { pointagesDElement: [{ type: 'FIN', heure: [17, 45] }] } }, {}, [elementFixture()]));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect(entreesDuJournal()).toEqual([['17:45', 'Fin', 'Moule PRD-2026-000015', '', '']]);
   });
 
   it('should put the marker of a clocking on the row of the workstation it names when the element is split', async () => {
