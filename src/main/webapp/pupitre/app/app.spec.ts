@@ -6,6 +6,7 @@ import { PresenceDeLOperateur } from '@/pupitre/contexts/atelier/domain/designat
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
+import { PupitreVersionUpdater } from '@/pupitre/PupitreVersionUpdater';
 import { signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -26,6 +27,14 @@ class PupitreRuntimeFixture {
     }
     this.started = true;
     return Promise.resolve();
+  }
+}
+
+class PupitreVersionUpdaterFixture {
+  started = false;
+
+  start(): void {
+    this.started = true;
   }
 }
 
@@ -71,15 +80,18 @@ describe('Pupitre shell', () => {
   let errorHandler: ErrorHandlerFixture;
   let fixture: ComponentFixture<App>;
   let runtime: PupitreRuntimeFixture;
+  let versionUpdater: PupitreVersionUpdaterFixture;
 
   beforeEach(async () => {
     errorHandler = new ErrorHandlerFixture();
     runtime = new PupitreRuntimeFixture();
+    versionUpdater = new PupitreVersionUpdaterFixture();
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
+        { provide: PupitreVersionUpdater, useValue: versionUpdater },
         { provide: AtelierCoordinator, useClass: AtelierCoordinatorPageFixture },
         { provide: CurrentOperateurLifecycle, useExisting: AtelierCoordinator },
         { provide: EtatHorsLigneDuPupitre, useExisting: AtelierCoordinator },
@@ -100,6 +112,12 @@ describe('Pupitre shell', () => {
     await whenBootingTheShell();
 
     thenThePupitreRuntimeIsStarted();
+  });
+
+  it('should start version checks as the pupitre shell boots', async () => {
+    await whenBootingTheShell();
+
+    thenTheVersionUpdaterIsStarted();
   });
 
   it('should route the common pupitre page at its root URL', async () => {
@@ -152,5 +170,8 @@ describe('Pupitre shell', () => {
   };
   const thenThePupitreRuntimeIsStarted = (): void => {
     expect(runtime.started).toBe(true);
+  };
+  const thenTheVersionUpdaterIsStarted = (): void => {
+    expect(versionUpdater.started).toBe(true);
   };
 });

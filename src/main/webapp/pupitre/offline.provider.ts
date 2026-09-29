@@ -12,6 +12,7 @@ import { HttpAtelierExchange } from '@/pupitre/contexts/atelier/infrastructure/s
 import { IndexedDbJournauxDuPupitre } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/IndexedDbJournauxDuPupitre';
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
+import { PupitreVersionUpdater } from '@/pupitre/PupitreVersionUpdater';
 import { Provider } from '@angular/core';
 
 export const offlineProvider: Provider[] = [
@@ -25,5 +26,6 @@ export const offlineProvider: Provider[] = [
   { provide: JournauxDuPupitrePort, useClass: IndexedDbJournauxDuPupitre },
   { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
   PupitreRuntime,
+  PupitreVersionUpdater,
   { provide: AtelierExchangePort, useClass: HttpAtelierExchange },
 ];
