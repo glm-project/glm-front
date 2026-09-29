@@ -2,6 +2,36 @@
 
 Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'atelier, maintient leur journal hors ligne et pilote la désignation temporaire de l'opérateur.
 
+## Décision de comptabilisation acceptée
+
+L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) distingue
+la comptabilisation à implémenter côté back de l'indication conservée au pupitre.
+
+**Durée écoulée indicative** : durée affichée pour une activité en cours, figée à l'ouverture de la
+fenêtre opérateur selon les règles existantes ci-dessous. Elle aide l'opérateur à lire son activité ;
+elle ne constitue pas une durée comptabilisée dans les rapports.
+
+Pour la règle de fin automatique à implémenter, chaque transition travail/NC ouvre une activité distincte
+avec une nouvelle échéance de 13 h. Le serveur remplace une fin automatique par un `FIN` survenu au plus tard
+à l'échéance même s'il est reçu après. Un `FIN` survenu après l'échéance conserve la borne automatique
+jusqu'à correction explicite du gestionnaire. Le pupitre calcule aussi l'expiration localement,
+y compris hors ligne, sans créer de `FIN`. L'activité expirée cesse d'être active et ne peut plus être
+mise en pause ; un nouveau début reste possible. Le gel de la durée indicative ne gèle pas cet état.
+
+**Activité visée** : activité identifiée par son pointage ouvrant. Le référentiel et les gestes de fin
+ou de changement de catégorie portent cette cible. Rejeu et nouvelle tentative conservent la cible
+initiale, y compris après rafraîchissement du référentiel. Une contradiction avec une activité déjà
+remplacée relève d'une séquence en conflit ; le geste ne s'applique jamais à sa remplaçante.
+
+**Intention d'activité** : une ouverture crée une activité, y compris en NC et lors d'une reprise
+après pause ; une transition remplace une activité précisément ciblée ; une fin termine une activité
+précisément ciblée. Le contrat distingue ces intentions même lorsqu'elles partagent le type `DEBUT`
+ou `NON_CONFORMITE`. Une transition périmée ne devient jamais une ouverture implicite.
+
+**Séquence en conflit** : contradiction entre pointages conservés par le back et à résoudre par le
+gestionnaire selon l'ADR 0047. Le résultat de publication doit distinguer cette conservation d'un refus
+d'enregistrement. Le pupitre restitue le conflit connu sans réaffecter de cible ni choisir la correction.
+
 ## Langage
 
 **Matricule** : code saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.

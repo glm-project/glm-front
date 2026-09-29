@@ -7,6 +7,35 @@ gestionnaire consulte sur un élément de fabrication : ce que sa fabrication a 
 Il est **purement lecteur**. Aucun acte, aucune écriture, aucun refus métier à traduire en geste : un
 rapport se demande et s'affiche.
 
+## Décisions acceptées à implémenter
+
+L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) fixe la cible
+de calcul ; les sections suivantes décrivent encore le modèle existant.
+
+**Activité valorisable** : activité terminée, y compris automatiquement, dont le back calcule le coût.
+Une activité en cours est entièrement exclue du calcul, y compris du diviseur humain des postes.
+Le rapport signale les anomalies de fin automatique reçues du back et peut préciser cette exclusion.
+Quand une activité se termine, son entrée dans le diviseur peut réduire le coût d'une autre activité
+déjà terminée lors de la lecture suivante. Le front affiche ce recalcul sans effectuer sa propre somme.
+Chaque transition travail/NC rend l'activité précédente valorisable et ouvre une nouvelle activité.
+Après remplacement de la fin automatique par une fin réelle recevable, le rapport retire l'alerte
+active par recalcul. La fin automatique et l'anomalie sont dérivées par le back ; seuls les pointages
+et corrections sont conservés dans l'historique.
+
+Les anomalies réelles sont signalées dans ce rapport ; leur correction relève des commandes back.
+L'écran de correction et de résolution des conflits Gestion est réservé à une autre MR ;
+ce chantier adapte les commandes de correction et de résolution par API.
+
+Une correction peut faire redevenir une activité en cours : elle sort alors du coût et du diviseur
+humain au recalcul du back, et son anomalie disparaît. Le rapport restitue ce nouvel état.
+
+**Coût à résoudre** : valeur affectée par une séquence de pointages en conflit au sens de l'ADR 0047.
+Le back expose les valeurs à résoudre et la complétude des totaux, y compris lorsque le conflit affecte
+le partage humain d'autres activités. Le rapport affiche « En conflit », les valeurs « À résoudre » et
+les totaux concernés incomplets ; il ne remplace pas une valeur à résoudre par zéro et ne choisit pas
+une interprétation des pointages. Le gestionnaire tranche par correction ou annulation, puis le back
+recalcule le rapport. Une fin automatique ne suffit pas à résoudre un conflit.
+
 ## Langage
 
 **Coût de revient** : ce que la fabrication d'un élément a coûté. Le mot est celui du back et celui du
