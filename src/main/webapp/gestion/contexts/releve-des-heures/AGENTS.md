@@ -29,7 +29,8 @@ présence.
 
 **Élément** : un moule (`PRODUIT` dans le code du back) ou un OF (`ORDRE_DE_FABRICATION`) sur lequel une personne
 pointe. L'écran affiche « Moule » ou « OF ». Son **numéro** est sa référence, sinon son nom ; sa description est
-le libellé qu'on lui donne. On dit « élément », jamais « produit ».
+le libellé qu'on lui donne — le mot du rapport, que `element-de-fabrication` appelle « libellé » : ce contexte garde
+celui qu'il reçoit. On dit « élément », jamais « produit ».
 
 **Intervalle d'activité** : mot du back. Un temps pointé par une personne sur un élément, éventuellement depuis un
 poste et pour une nature, de catégorie `TRAVAIL` ou `NON_CONFORMITE`. Sans fin, il est en cours. Il est

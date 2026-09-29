@@ -1197,7 +1197,7 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    ['2026-09-14', 'hour by hour on the daytime axis', ['6 h', '8 h', '10 h', '12 h', '14 h', '16 h', '18 h', '20 h', '22 h']],
+    ['2026-09-14', 'every two hours on the daytime axis', ['6 h', '8 h', '10 h', '12 h', '14 h', '16 h', '18 h', '20 h', '22 h']],
     ['2026-09-15', 'every third hour on the whole day', ['0 h', '3 h', '6 h', '9 h', '12 h', '15 h', '18 h', '21 h', '24 h']],
   ])('should mark the open day %s %s', async (jour, _cas, attendu) => {
     givenReleve(
