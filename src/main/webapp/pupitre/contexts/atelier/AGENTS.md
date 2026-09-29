@@ -24,13 +24,19 @@ initiale, y compris après rafraîchissement du référentiel. Une contradiction
 remplacée relève d'une séquence en conflit ; le geste ne s'applique jamais à sa remplaçante.
 
 **Intention d'activité** : une ouverture crée une activité, y compris en NC et lors d'une reprise
-après pause ; une transition remplace une activité précisément ciblée ; une fin termine une activité
-précisément ciblée. Le contrat distingue ces intentions même lorsqu'elles partagent le type `DEBUT`
-ou `NON_CONFORMITE`. Une transition périmée ne devient jamais une ouverture implicite.
+après pause ; une transition cible précisément l'activité dont elle ouvre la suivante ; une fin
+termine une activité précisément ciblée. Le contrat distingue ces intentions même lorsqu'elles
+partagent le type `DEBUT`
+ou `NON_CONFORMITE`. Une cible déjà remplacée ne transforme jamais la transition en ouverture
+implicite. Une transition visant une cible seulement échue conserve cette cible et ouvre l'activité
+suivante à l'heure du geste, sans prolonger l'activité échue.
 
 **Séquence en conflit** : contradiction entre pointages conservés par le back et à résoudre par le
 gestionnaire selon l'ADR 0047. Le résultat de publication doit distinguer cette conservation d'un refus
 d'enregistrement. Le pupitre restitue le conflit connu sans réaffecter de cible ni choisir la correction.
+Sur toute séquence en conflit, il ne déduit aucune activité courante et ne permet qu'une nouvelle
+ouverture. Aucune fin ni transition ne cible une activité en conflit : `PAUSE` et `TOUT ARRÊTER`
+n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une reprise.
 
 ## Langage
 

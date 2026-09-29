@@ -70,16 +70,26 @@ avec les faits enregistrés relève de la séquence en conflit définie ci-desso
 le refus automatique envisagé lors du premier cadrage pour ce cas.
 
 **Ouverture, transition et fin** : une ouverture crée une nouvelle activité, y compris en NC ou après
-une pause. Une transition désigne obligatoirement l'activité qu'elle remplace ; une fin désigne celle
-qu'elle termine. Les types `DEBUT` et `NON_CONFORMITE` ne suffisent pas à distinguer ouverture et
-transition : le contrat porte cette intention explicitement. Une transition dont la cible est périmée
-ne devient jamais implicitement une ouverture.
+une pause. Une transition désigne obligatoirement l'activité ciblée dont elle ouvre la suivante ;
+une fin désigne celle qu'elle termine. Les types `DEBUT` et `NON_CONFORMITE` ne suffisent pas à
+distinguer ouverture et transition : le contrat porte cette intention explicitement. Une cible
+remplacée par un fait antérieur ne transforme jamais la transition en ouverture implicite ; les
+pointages contradictoires restent en conflit.
+
+Une cible seulement échue ne rend pas sa transition contradictoire à elle seule. Travail A commencé
+à 08 h et échu à 21 h, puis `NC(A)` à 23 h : A garde sa fin automatique et son anomalie, la NC
+s'ouvre à 23 h, et aucune activité ne couvre 21 h à 23 h. La transition conserve sa cible ; si une
+correction repousse l'échéance de A après 23 h, le recalcul termine A à l'heure de la transition.
 
 **Séquence en conflit** : ensemble d'activités dont les pointages se contredisent et nécessitent une
 décision du gestionnaire. Le domaine `atelier` du back possède cette décision ; les projections en
 restituent les conséquences. Les pointages contradictoires sont conservés avec leur cible initiale.
 Le résultat doit être le même quel que soit leur ordre de réception, y compris lorsqu'un pointage
 déjà accepté devient contradictoire après insertion d'un geste antérieur.
+
+Sur toute séquence en conflit, le pupitre ne déduit aucune activité courante et ne permet qu'une
+nouvelle ouverture. Aucune fin ni transition ne cible une activité en conflit. `PAUSE` et
+`TOUT ARRÊTER` n'émettent pas de `FIN` pour elle ; `PAUSE` ne la mémorise pas pour une reprise.
 
 Exemple : début du travail A à 08 h, transition A vers NC B à 12 h et `FIN(A)` à 17 h.
 Que la transition ou la fin soit reçue en premier, la séquence est « En conflit » ; le système ne
@@ -110,8 +120,7 @@ les activités interprétables, distincte d'une contradiction entre pointages.
   en conflit plutôt que refusée : le pupitre n'est jamais bloqué par ce refus.
 - Un geste qui vise une activité introuvable dans ce suivi, ou d'un autre couple opérateur/poste, est refusé
   définitivement.
-- Une fin visant A remplacée par B met A et B à résoudre ; B n'est plus actionnable au pupitre, où seule une
-  nouvelle ouverture reste possible.
+- Une fin visant A remplacée par B met A et B à résoudre.
 - L'état d'un suivi se calcule sur ses seules activités interprétables ; le conflit est exposé à part.
 - Une `FIN` survenue avant la clôture du suivi mais reçue après elle est enregistrée et appliquée à son
   heure métier ; la clôture reste acquise.
