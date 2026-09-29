@@ -46,7 +46,7 @@ const sortDesHeuresDeJour = (minutes: number): boolean => minutes < HEURES_DE_JO
 
 const minutesDe = (instant: InstantDeReleve): number => instant.value.getHours() * MINUTES_PAR_HEURE + instant.value.getMinutes();
 
-const finitUnAutreJour = (debut: InstantDeReleve, fin: InstantDeReleve): boolean => fin.value.toDateString() !== debut.value.toDateString();
+const finitUnAutreJour = (debut: InstantDeReleve, fin: InstantDeReleve): boolean => fin.estUnAutreJourQue(debut);
 
 export const seLePoursuit = finitUnAutreJour;
 
