@@ -48,8 +48,6 @@
 }
 
 .entete {
-  position: relative;
-  z-index: 1;
   background: var(--color-canvas);
   color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
@@ -78,6 +76,10 @@
   padding: 0.625rem var(--marge);
   color: inherit;
   text-decoration: none;
+}
+
+.lien-jour > * {
+  position: relative;
 }
 
 .lien-jour:hover {

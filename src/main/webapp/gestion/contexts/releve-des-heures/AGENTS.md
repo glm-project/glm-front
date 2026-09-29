@@ -259,8 +259,10 @@ porte, **refusée** sinon. Absente, elle vaut la semaine en cours.
   repère vertical à son instant dans la frise et entoure son marqueur, pour voir ce qui tournait à ce moment-là.
   Le journal est la seule commande de sélection : les marqueurs de la frise sont décoratifs (`aria-hidden`),
   trop denses pour des cibles de 44 px.
-- **Les traits d'arrivée et de départ traversent la frise du jour ouvert, sous les en-têtes**, fins, en `ink-muted`,
-  plus discrets que le repère de sélection. Le □ porte la clôture d'un élément par un départ sans fin pointée.
+- **Les traits d'arrivée et de départ traversent toute la hauteur de la frise du jour ouvert, en-têtes compris**, fins,
+  en `ink-muted`, plus discrets que le repère de sélection. Dans l'en-tête ils passent derrière le nom du jour et les
+  repères d'heure, dont le texte reste lisible : le fond de l'en-tête est sous le calque, son texte au-dessus. Le □ porte
+  la clôture d'un élément par un départ sans fin pointée.
   Marqueurs, traits et repères sont dessinés en pourcentage de l'axe du jour, pour que la largeur des colonnes reste
   l'affaire du CSS ; les marqueurs sont des formes CSS, sans icône.
 - **L'axe d'un jour est ancré sur les heures de jour, de 6 h à 22 h**, pour que deux semaines se comparent
