@@ -26,7 +26,8 @@ The fifteen `--mat-sys-*-font` families point at `--font-sans`: the prebuilt the
 documents never load, and Material text fell back to the browser serif. Composite typography shorthands stay
 unbridged; no gestion component reads them. The extra-large corner (dialogs) points at `--radius-surface`,
 and the button container shapes at `--radius-control`, so a Material button and a hand-made control share
-one silhouette.
+one silhouette. Button container heights and the icon-button state layer point at `--spacing-touch`, the
+height of the hand-made field beside them.
 
 ## M3 attributes are not M2 palette switches
 
@@ -39,7 +40,7 @@ Tailwind preflight resets heading elements to inherit. Give headings an explicit
 ## Verify intent and computed result
 
 `DesignTokensTest` checks that every bridge declaration references a declared project token.
-`MaterialBridge.spec.ts` opens gestion and compares computed Material colours and the dialog title with the
-project roles. Run both after changing the theme, bridge or a shared token used by Material.
+`MaterialBridge.spec.ts` opens gestion and compares computed Material colours, the dialog title and button heights
+with the project roles. Run both after changing the theme, bridge or a shared token used by Material.
 
 Use [`icons.md`](icons.md) for glyphs inside Material controls. Do not reintroduce the Material Icons font.

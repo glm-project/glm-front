@@ -13,6 +13,12 @@ describe('Material bridge', () => {
 
     thenTheDialogTitleWearsTheSectionLevel(section);
   });
+
+  it('should size Material buttons at the touch target', () => {
+    const touch = whenMeasuringTheTouchTarget();
+
+    thenTheButtonsReachTheTouchTarget(touch);
+  });
 });
 
 interface ColoursFixture {
@@ -48,6 +54,20 @@ const whenOpeningADialog = (): Cypress.Chainable<SectionLevelFixture> => {
   });
 };
 
+const whenMeasuringTheTouchTarget = (): Cypress.Chainable<string> => {
+  new AtelierApiFixture().install();
+  cy.visit('/atelier');
+  return cy.window().then(window => {
+    const probe = window.document.createElement('span');
+    probe.style.display = 'block';
+    probe.style.height = 'var(--spacing-touch)';
+    window.document.body.appendChild(probe);
+    const { height } = window.getComputedStyle(probe);
+    probe.remove();
+    return height;
+  });
+};
+
 const givenTheBrowsersValueOf = (window: Window, token: string): string => {
   const probe = window.document.createElement('span');
   probe.style.color = `var(${token})`;
@@ -66,5 +86,12 @@ const thenThePrimaryActionWearsTheAccent = (colours: Cypress.Chainable<ColoursFi
 const thenTheDialogTitleWearsTheSectionLevel = (section: Cypress.Chainable<SectionLevelFixture>): void => {
   section.then(({ size, weight }) => {
     cy.get('.mat-mdc-dialog-title').should('have.css', 'font-size', size).and('have.css', 'font-weight', weight);
+  });
+};
+
+const thenTheButtonsReachTheTouchTarget = (touch: Cypress.Chainable<string>): void => {
+  touch.then(height => {
+    cy.get(dataSelector('atelier-new')).should('have.css', 'height', height);
+    cy.get('.mat-mdc-paginator-navigation-next').should('have.css', 'height', height);
   });
 };
