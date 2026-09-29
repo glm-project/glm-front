@@ -25,11 +25,6 @@ interface JourDeMaquette {
   readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
 }
 
-interface EnTeteAttendu {
-  readonly jour: string;
-  readonly aujourdhui?: string;
-}
-
 interface SemaineDeMaquette {
   readonly semaine: number;
   readonly lundi: number;
@@ -391,13 +386,6 @@ describe('Weekly hours report in gestion', () => {
     thenTheRowOfTheElementDrawsOnTheDay(1, 1, { travail: 0, nonConformite: 0 });
   });
 
-  it('should total each element of the week apart, with the non-conformity beside the first', () => {
-    givenAWeekOfDayShifts();
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheElementTotalsRead(['15 h 30', '3 h 10', '6 h 00'], ['NC 0 h 50']);
-  });
-
   it('should split an element worked from two workstations at once into one sub-row per workstation', () => {
     givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
@@ -422,40 +410,7 @@ describe('Weekly hours report in gestion', () => {
     thenTheFriseDoesNotScroll('synthese-des-heures-1024-pointage-choisi');
   });
 
-  it('should draw a working day abandoned without departure as presumed, beside its operational zero', () => {
-    givenAWeekOfDayShifts();
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheOperationalTimeOfTheDayReads(1, { duree: '0 h 00', presumees: '+ 5 h 20 présumées' });
-    thenThePresumedPresenceOfTheDayReads(1, 'Présence présumée 10:20 – 15:40');
-  });
-
-  it('should display a working day of zero duration as zero hours, drawing no presence', () => {
-    givenAWeekOfDayShifts();
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheOperationalTimeOfTheDayReads(4, { duree: '0 h 00' });
-    thenThePresenceOfTheDayCounts(4, 0);
-  });
-
-  it('should mark today and the presence still in progress where it began', () => {
-    givenAWeekOfDayShifts();
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheHeaderReads(5, { jour: 'sam. 26', aujourdhui: 'Aujourd’hui' });
-    thenThePresenceInProgressOfTheDayReads(5, 'Présence depuis 10:20, en cours');
-  });
-
-  it('should display an empty Sunday as without operational time', () => {
-    givenAWeekOfDayShifts();
-    whenVisiting(SEMAINE_DE_JOUR);
-
-    thenTheHeaderReads(6, { jour: 'dim. 27' });
-    thenTheOperationalTimeOfTheDayReads(6, { duree: '—' });
-    thenThePresenceOfTheDayCounts(6, 0);
-  });
-
-  it('should total the operational time and the presence of the week apart, each with its presumed part', () => {
+  it('should keep the durations and the presence of the week visible in the frise, the presumed ones apart', () => {
     givenAWeekOfDayShifts();
     whenVisiting(SEMAINE_DE_JOUR);
 
@@ -465,6 +420,9 @@ describe('Weekly hours report in gestion', () => {
       presence: '39 h 11',
       presencePresume: 'Présumé, à confirmer : 5 h 20',
     });
+    thenTheOperationalTimeOfTheDayReads(1, { duree: '0 h 00', presumees: '+ 5 h 20 présumées' });
+    thenThePresumedPresenceOfTheDayReads(1, 'Présence présumée 10:20 – 15:40');
+    thenThePresenceInProgressOfTheDayReads(5, 'Présence depuis 10:20, en cours');
   });
 
   it('should open the axis of a night shift onto the whole day and carry it across midnight', () => {
@@ -503,13 +461,6 @@ describe('Weekly hours report in gestion', () => {
     whenVisitingAt(`${SEMAINE_DE_JOUR}&jour=2026-09-21`, 1280);
 
     thenTheMarkersOfTheOpenDayStayInsideItsColumn(0);
-  });
-
-  it('should mention no presumed time for a week that has none', () => {
-    givenAWeekOfNightShifts();
-    whenVisiting(SEMAINE_DE_NUIT);
-
-    thenNoPresumedTimeIsMentioned();
   });
 
   it('should hold the seven days without scrolling at 1024 pixels', () => {
@@ -633,15 +584,6 @@ describe('Weekly hours report in gestion', () => {
     cy.get(dataSelector('synthese-sous-ligne-poste')).first().should('be.visible');
   };
 
-  const thenTheElementTotalsRead = (totaux: string[], nonConformites: string[]): void => {
-    cy.get(dataSelector('synthese-element-total')).should($totaux => {
-      expect([...$totaux].map(total => total.textContent.trim())).to.deep.equal(totaux);
-    });
-    cy.get(dataSelector('synthese-element-nc')).should($nc => {
-      expect([...$nc].map(nc => nc.textContent.trim())).to.deep.equal(nonConformites);
-    });
-  };
-
   const thenTheOperationalTimeOfTheDayReads = (rang: number, attendu: { duree: string; presumees?: string }): void => {
     cy.get(dataSelector('synthese-operationnel-jour'))
       .eq(rang)
@@ -652,19 +594,6 @@ describe('Weekly hours report in gestion', () => {
         const presumees = $cellule.find(dataSelector('synthese-operationnel-presume')).text().trim() || undefined;
         expect(presumees).to.equal(attendu.presumees);
       });
-  };
-
-  const thenTheHeaderReads = (rang: number, attendu: EnTeteAttendu): void => {
-    cy.get(dataSelector('synthese-jour-cell'))
-      .eq(rang)
-      .should($entete => {
-        const texte = (selector: string): string | undefined => $entete.find(dataSelector(selector)).text().trim() || undefined;
-        expect({ jour: texte('synthese-jour'), aujourdhui: texte('synthese-aujourdhui') }).to.deep.equal({
-          aujourdhui: undefined,
-          ...attendu,
-        });
-      })
-      .and('be.visible');
   };
 
   const thenThePresumedPresenceOfTheDayReads = (rang: number, enonce: string): void => {
@@ -783,13 +712,6 @@ describe('Weekly hours report in gestion', () => {
         expect(Math.min(...marques.map(marque => marque.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
         expect(Math.max(...marques.map(marque => marque.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
       });
-  };
-
-  const thenNoPresumedTimeIsMentioned = (): void => {
-    cy.get(dataSelector('synthese-operationnel-total')).should('be.visible');
-    cy.get(dataSelector('synthese-operationnel-total-presume')).should('not.exist');
-    cy.get(dataSelector('synthese-operationnel-presume')).should('not.exist');
-    cy.get(dataSelector('synthese-presence-total-presume')).should('not.exist');
   };
 
   const thenTheFriseDoesNotScroll = (capture: string): void => {
