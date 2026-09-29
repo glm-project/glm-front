@@ -1275,6 +1275,15 @@ describe('Synthese des heures component', () => {
     expect(entreesDuJournal().map(entree => entree[1])).toEqual(['Arrivée', 'Départ']);
   });
 
+  it('should list a departure alone in the journal, closing no element', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, { 0: { pointages: [['DEPART', [16, 0]]] } }, {}, [elementFixture()]));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([entreesDuJournal(), nombreDe('synthese-marque')]).toEqual([[['16:00', 'Départ', 'Présence', '', '']], 0]);
+  });
+
   it('should leave the workstation of a clocking empty when the clocking names none', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, { 0: { pointagesDElement: [{ type: 'DEBUT', heure: [7, 5] }] } }, {}, [
