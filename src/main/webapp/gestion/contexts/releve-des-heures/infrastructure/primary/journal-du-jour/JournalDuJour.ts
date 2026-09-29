@@ -33,13 +33,16 @@ const GLYPHES: Record<TypeDePointage, GlypheDePointage> = {
   FIN: 'fin',
 };
 
-const sansDoublon = (noms: readonly string[]): readonly string[] => noms.filter((nom, rang) => noms.indexOf(nom) === rang);
-
 const effetDe = (releve: ReleveDesHeures, jour: JourDeReleve, pointage: PointageDeReleve): string =>
-  LIBELLES.effetDeCloture(sansDoublon(jour.effetDe(pointage).clotures.map(cible => LIBELLES.nomDElement(releve.elementDe(cible)))));
+  LIBELLES.effetDeCloture(
+    jour
+      .effetDe(pointage)
+      .elementsClos()
+      .map(id => LIBELLES.nomDElement(releve.elementDe(id))),
+  );
 
 const posteDe = (releve: ReleveDesHeures, pointage: PointageDElement): string | undefined =>
-  releve.elementDe(pointage.cible).libelleDuPoste(pointage.cible.poste);
+  releve.elementDe(pointage.cible.element).libelleDuPoste(pointage.cible.poste);
 
 const entreeDeJournal = (
   releve: ReleveDesHeures,
@@ -56,7 +59,12 @@ const entreeDeJournal = (
     selectionne: rang === selection,
   };
   if (pointage instanceof PointageDElement) {
-    return { ...commun, objet: LIBELLES.nomDElement(releve.elementDe(pointage.cible)), poste: posteDe(releve, pointage), effet: '' };
+    return {
+      ...commun,
+      objet: LIBELLES.nomDElement(releve.elementDe(pointage.cible.element)),
+      poste: posteDe(releve, pointage),
+      effet: '',
+    };
   }
   return { ...commun, objet: LIBELLES.presence, poste: undefined, effet: effetDe(releve, jour, pointage) };
 };

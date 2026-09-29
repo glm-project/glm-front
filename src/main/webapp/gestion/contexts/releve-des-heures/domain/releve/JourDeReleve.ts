@@ -61,13 +61,13 @@ export class JourDeReleve {
 
   effetDe(pointage: PointageDeReleve): EffetDePointage {
     if (!estUnDepart(pointage)) {
-      return { clotures: [] };
+      return new EffetDePointage([]);
     }
     const cibles = this.intervalles
       .filter(intervalle => intervalle.fin?.estLeMeme(pointage.instant) === true)
       .map(intervalle => intervalle.cible())
       .filter(cible => !this.uneFinPointeeTermine(cible, pointage.instant));
-    return { clotures: cibles.filter((cible, rang) => cibles.findIndex(autre => autre.estLaMeme(cible)) === rang) };
+    return new EffetDePointage(cibles.filter((cible, rang) => cibles.findIndex(autre => autre.estLaMeme(cible)) === rang));
   }
 
   estArreteSansFinPointee(intervalle: IntervalleDActivite): boolean {

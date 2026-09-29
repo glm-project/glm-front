@@ -1,5 +1,6 @@
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementDuReleve } from '../element/ElementDuReleve';
+import { ElementReleveId } from '../element/ElementReleveId';
 import { SemaineISO } from '../semaine/SemaineISO';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
@@ -16,8 +17,8 @@ const couvreLaSemaine = (semaine: SemaineISO, jours: readonly JourDeReleve[]): b
   return memesJours(attendus, jours);
 };
 
-const elementDe = (cible: CibleDePointage, elements: readonly ElementDuReleve[]): ElementDuReleve => {
-  const element = elements.find(candidat => candidat.id.estLeMeme(cible.element));
+const elementDe = (id: ElementReleveId, elements: readonly ElementDuReleve[]): ElementDuReleve => {
+  const element = elements.find(candidat => candidat.id.estLeMeme(id));
   if (element === undefined) {
     throw new Error('Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.');
   }
@@ -65,8 +66,8 @@ export class ReleveDesHeures {
     this.operationnelPresume = fiche.operationnelPresume;
   }
 
-  elementDe(cible: CibleDePointage): ElementDuReleve {
-    return elementDe(cible, this.elements);
+  elementDe(id: ElementReleveId): ElementDuReleve {
+    return elementDe(id, this.elements);
   }
 
   travailleEnParallele(element: ElementDuReleve): boolean {
@@ -80,7 +81,7 @@ export class ReleveDesHeures {
       ...jour.pointagesDElement().map(pointage => pointage.cible),
     ]);
     for (const cible of cibles) {
-      verifieLePoste(cible, elementDe(cible, elements));
+      verifieLePoste(cible, elementDe(cible.element, elements));
     }
   }
 

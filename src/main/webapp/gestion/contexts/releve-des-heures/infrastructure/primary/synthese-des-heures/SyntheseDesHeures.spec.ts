@@ -1154,6 +1154,30 @@ describe('Synthese des heures component', () => {
     expect(entreesDuJournal().map(entree => entree[4])).toEqual(effets);
   });
 
+  it('should say a departure closes each of two elements that bear the same name, without folding them into one', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            pointages: [['DEPART', [16, 0]]],
+            intervalles: [
+              { element: 'element-1', debut: [8, 0], fin: [16, 0] },
+              { element: 'element-2', debut: [9, 0], fin: [16, 0] },
+            ],
+          },
+        },
+        {},
+        [elementFixture({ id: 'element-1', reference: '1015' }), elementFixture({ id: 'element-2', reference: '1015' })],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect(entreesDuJournal().map(entree => entree[4])).toEqual(['clôt Moule 1015 et Moule 1015, sans fin pointée']);
+  });
+
   it('should mark on the row of an element the departure that closed it without any clocked end', async () => {
     givenReleve(
       releveFixture(
