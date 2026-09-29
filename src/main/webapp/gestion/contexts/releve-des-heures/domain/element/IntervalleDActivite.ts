@@ -1,3 +1,4 @@
+import { CibleDePointage } from '../releve/CibleDePointage';
 import { InstantDeReleve } from '../releve/InstantDeReleve';
 import { CategorieDActivite } from './CategorieDActivite';
 import { ElementReleveId } from './ElementReleveId';
@@ -40,6 +41,10 @@ export class IntervalleDActivite {
     this.debut = fiche.debut;
     this.fin = fiche.fin;
     this.presumee = fiche.presumee;
+  }
+
+  cible(): CibleDePointage {
+    return new CibleDePointage(this.element, this.poste);
   }
 
   estEnCours(): boolean {

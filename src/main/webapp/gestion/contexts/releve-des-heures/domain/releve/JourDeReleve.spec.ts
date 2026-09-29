@@ -3,6 +3,7 @@ import { ElementReleveId } from '../element/ElementReleveId';
 import { FicheDIntervalle, IntervalleDActivite } from '../element/IntervalleDActivite';
 import { PosteReleveId } from '../element/PosteReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
+import { CibleDePointage } from './CibleDePointage';
 import { InstantDeReleve } from './InstantDeReleve';
 import { FicheDuJour, JourDeReleve } from './JourDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
@@ -34,7 +35,7 @@ const pointageDElementFixture = (
   minute: number,
   poste: string,
 ): PointageDElement =>
-  new PointageDElement(type, instantFixture(heure, minute), { element: new ElementReleveId(element), poste: new PosteReleveId(poste) });
+  new PointageDElement(type, instantFixture(heure, minute), new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)));
 
 const intervalleAvecFixture = (fiche: Partial<FicheDIntervalle>): IntervalleDActivite =>
   new IntervalleDActivite({

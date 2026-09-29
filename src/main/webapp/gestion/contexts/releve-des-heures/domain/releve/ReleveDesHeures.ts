@@ -1,9 +1,9 @@
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementDuReleve } from '../element/ElementDuReleve';
 import { SemaineISO } from '../semaine/SemaineISO';
+import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { JourDeReleve } from './JourDeReleve';
-import { CibleDePointage } from './PointageDElement';
 
 const memesJours = (attendus: readonly { readonly value: string }[], jours: readonly JourDeReleve[]): boolean =>
   attendus.every((attendu, rang) => jours[rang]?.jour.value === attendu.value);
@@ -17,7 +17,7 @@ const couvreLaSemaine = (semaine: SemaineISO, jours: readonly JourDeReleve[]): b
 };
 
 const elementDe = (cible: CibleDePointage, elements: readonly ElementDuReleve[]): ElementDuReleve => {
-  const element = elements.find(candidat => candidat.id.value === cible.element.value);
+  const element = elements.find(candidat => candidat.id.estLeMeme(cible.element));
   if (element === undefined) {
     throw new Error('Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.');
   }
@@ -75,7 +75,10 @@ export class ReleveDesHeures {
   }
 
   private static verifieLesReferences(elements: readonly ElementDuReleve[], jours: readonly JourDeReleve[]): void {
-    const cibles = jours.flatMap(jour => [...jour.intervalles, ...jour.pointagesDElement().map(pointage => pointage.cible)]);
+    const cibles = jours.flatMap(jour => [
+      ...jour.intervalles.map(intervalle => intervalle.cible()),
+      ...jour.pointagesDElement().map(pointage => pointage.cible),
+    ]);
     for (const cible of cibles) {
       verifieLePoste(cible, elementDe(cible, elements));
     }

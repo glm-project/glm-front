@@ -105,7 +105,7 @@ const marquesDeCloture = (
   jour.pointagesDePresence().flatMap(depart =>
     jour
       .effetDe(depart)
-      .clotures.filter(cible => cible.element.value === element.id.value && retient(cible.poste))
+      .clotures.filter(cible => cible.element.estLeMeme(element.id) && retient(cible.poste))
       .map(() => ({
         type: 'clos' as const,
         gauche: axe.pourcentDe(minutesDeDebut(depart.instant)),
@@ -137,7 +137,7 @@ const cellulesDe = (element: ElementDuReleve, jours: readonly JourSurSonAxe[], r
 const sousLigneDuPoste = (element: ElementDuReleve, jours: readonly JourSurSonAxe[], poste: PosteDeLElement): SousLigneDeFrise => ({
   cle: poste.id.value,
   poste: poste.libelle,
-  cellules: cellulesDe(element, jours, cible => cible?.value === poste.id.value),
+  cellules: cellulesDe(element, jours, cible => cible !== undefined && poste.id.estLeMeme(cible)),
 });
 
 const sousLigneSansPoste = (element: ElementDuReleve, jours: readonly JourSurSonAxe[]): readonly SousLigneDeFrise[] => {

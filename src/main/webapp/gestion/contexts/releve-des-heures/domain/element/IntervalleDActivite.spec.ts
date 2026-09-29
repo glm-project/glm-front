@@ -1,6 +1,7 @@
 import { InstantDeReleve } from '../releve/InstantDeReleve';
 import { ElementReleveId } from './ElementReleveId';
 import { FicheDIntervalle, IntervalleDActivite } from './IntervalleDActivite';
+import { PosteReleveId } from './PosteReleveId';
 
 const instantFixture = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
 
@@ -54,6 +55,18 @@ describe('IntervalleDActivite', () => {
     const intervalle = new IntervalleDActivite(ficheFixture({ debut: instantFixture('08:20'), fin: undefined }));
 
     expect(intervalle.finOuDebut().value.toISOString()).toBe('2026-09-14T08:20:00.000Z');
+  });
+
+  it('should name its element and its workstation as its target', () => {
+    const intervalle = new IntervalleDActivite(ficheFixture({ element: new ElementReleveId('carter'), poste: new PosteReleveId('dmu') }));
+
+    expect([intervalle.cible().element.value, intervalle.cible().poste?.value]).toEqual(['carter', 'dmu']);
+  });
+
+  it('should name no workstation as its target when it has none', () => {
+    const intervalle = new IntervalleDActivite(ficheFixture({ poste: undefined }));
+
+    expect(intervalle.cible().poste).toBeUndefined();
   });
 
   describe('overlap', () => {

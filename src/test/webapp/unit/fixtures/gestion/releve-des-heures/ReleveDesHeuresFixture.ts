@@ -6,6 +6,7 @@ import { IntervalleDActivite } from '@/gestion/contexts/releve-des-heures/domain
 import { PosteDeLElement } from '@/gestion/contexts/releve-des-heures/domain/element/PosteDeLElement';
 import { PosteReleveId } from '@/gestion/contexts/releve-des-heures/domain/element/PosteReleveId';
 import { TypeDElement } from '@/gestion/contexts/releve-des-heures/domain/element/TypeDElement';
+import { CibleDePointage } from '@/gestion/contexts/releve-des-heures/domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '@/gestion/contexts/releve-des-heures/domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/InstantDeReleve';
 import { JourDeReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/JourDeReleve';
@@ -56,10 +57,14 @@ export interface JourFixture {
 
 export const pointageFixture = (rang: number, pointage: PointageDePresenceFixture | PointageDElementFixture): PointageDeReleve => {
   if ('type' in pointage) {
-    return new PointageDElement(pointage.type, instantFixture(rang, pointage.heure), {
-      element: new ElementReleveId(pointage.element ?? 'element-1'),
-      poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
-    });
+    return new PointageDElement(
+      pointage.type,
+      instantFixture(rang, pointage.heure),
+      new CibleDePointage(
+        new ElementReleveId(pointage.element ?? 'element-1'),
+        pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
+      ),
+    );
   }
   const [type, heure] = pointage;
   return new PointageDePresence(type, instantFixture(rang, heure));

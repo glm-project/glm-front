@@ -6,6 +6,7 @@ import { PosteDeLElement } from '../element/PosteDeLElement';
 import { PosteReleveId } from '../element/PosteReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
+import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
@@ -66,7 +67,7 @@ const intervalleFixture = (element: string, poste: string, debut: string, fin: s
   });
 
 const pointageDElementFixture = (element: string, poste: string): PointageDElement =>
-  new PointageDElement('DEBUT', instantDe('08:00'), { element: new ElementReleveId(element), poste: new PosteReleveId(poste) });
+  new PointageDElement('DEBUT', instantDe('08:00'), new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)));
 
 const releveDes = (lundi: {
   readonly intervalles?: readonly IntervalleDActivite[];
@@ -222,7 +223,7 @@ describe('ReleveDesHeures', () => {
     it('should accept a report whose clocking names no workstation', () => {
       expect(() =>
         releveDes({
-          pointages: [new PointageDElement('DEBUT', instantDe('08:00'), { element: new ElementReleveId('carter'), poste: undefined })],
+          pointages: [new PointageDElement('DEBUT', instantDe('08:00'), new CibleDePointage(new ElementReleveId('carter'), undefined))],
         }),
       ).not.toThrow();
     });

@@ -10,11 +10,12 @@ import { ElementReleveId } from '../../domain/element/ElementReleveId';
 import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { PosteReleveId } from '../../domain/element/PosteReleveId';
+import { CibleDePointage } from '../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
-import { CibleDePointage, PointageDElement } from '../../domain/releve/PointageDElement';
+import { PointageDElement } from '../../domain/releve/PointageDElement';
 import { PointageDePresence } from '../../domain/releve/PointageDePresence';
 import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
@@ -49,10 +50,11 @@ interface SemaineRendue {
   readonly semaine?: number;
 }
 
-const toCible = (pointage: RestPointage): CibleDePointage => ({
-  element: new ElementReleveId(required(pointage.element, 'pointage.element')),
-  poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
-});
+const toCible = (pointage: RestPointage): CibleDePointage =>
+  new CibleDePointage(
+    new ElementReleveId(required(pointage.element, 'pointage.element')),
+    pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
+  );
 
 const toPointage = (pointage: RestPointage): PointageDeReleve => {
   const instant = new InstantDeReleve(pointage.dateDeSurvenue);

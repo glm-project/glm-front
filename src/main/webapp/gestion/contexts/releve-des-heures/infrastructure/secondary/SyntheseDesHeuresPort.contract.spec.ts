@@ -13,6 +13,7 @@ import { ElementReleveId } from '../../domain/element/ElementReleveId';
 import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { PosteReleveId } from '../../domain/element/PosteReleveId';
+import { CibleDePointage } from '../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
@@ -149,7 +150,7 @@ const toPointage = (pointage: PointageFixture): PointageDeReleve => {
   const instant = new InstantDeReleve(pointage.instant);
   if ('element' in pointage) {
     const poste = pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste);
-    return new PointageDElement(pointage.type, instant, { element: new ElementReleveId(pointage.element), poste });
+    return new PointageDElement(pointage.type, instant, new CibleDePointage(new ElementReleveId(pointage.element), poste));
   }
   return new PointageDePresence(pointage.type, instant);
 };
