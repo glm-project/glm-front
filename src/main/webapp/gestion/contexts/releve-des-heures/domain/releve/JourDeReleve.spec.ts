@@ -71,7 +71,7 @@ describe('JourDeReleve', () => {
     expect(jour.pointages).toHaveLength(1);
   });
 
-  it('should report a day carrying neither clocking nor interval as empty', () => {
+  it('should report a day carrying neither clocking nor presence as empty', () => {
     const jour = new JourDeReleve(ficheFixture({}));
 
     expect(jour.estVide()).toBe(true);

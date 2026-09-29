@@ -79,6 +79,7 @@ const natureDe = (presumee: boolean): string => (presumee ? `${PRESENCE} présum
 export const LIBELLES_RELEVE_DES_HEURES = {
   titre: 'Temps opérationnel',
   retour: 'Opérateurs',
+  semaineConsultee: 'Semaine consultée',
   retourAria: 'Revenir au référentiel des opérateurs',
   sousTitre: 'Une ligne par moule ou OF pointé dans la semaine.',
   sansPoste: 'Sans poste',
