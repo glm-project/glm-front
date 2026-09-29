@@ -18,6 +18,7 @@ import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 import { PointageDElement } from '../../../domain/releve/PointageDElement';
 import { PointageDePresence } from '../../../domain/releve/PointageDePresence';
+import { PointageDeReleve } from '../../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
 import { TypeDePointageDElement, TypeDePointageDePresence } from '../../../domain/releve/TypeDePointage';
@@ -84,14 +85,28 @@ interface PointageDElementFixture {
   readonly poste?: string;
 }
 
+type PointageDePresenceFixture = readonly [TypeDePointageDePresence, Heure];
+
 interface JourFixture {
   readonly intervalles?: readonly IntervalleFixture[];
   readonly pointagesDElement?: readonly PointageDElementFixture[];
   readonly operationnelle?: string;
   readonly operationnellePresumee?: string;
-  readonly pointages?: readonly (readonly [TypeDePointageDePresence, Heure])[];
+  readonly pointages?: readonly PointageDePresenceFixture[];
+  readonly journal?: readonly (PointageDePresenceFixture | PointageDElementFixture)[];
   readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
 }
+
+const pointageFixture = (rang: number, pointage: PointageDePresenceFixture | PointageDElementFixture): PointageDeReleve => {
+  if ('type' in pointage) {
+    return new PointageDElement(pointage.type, instantFixture(rang, pointage.heure), {
+      element: new ElementReleveId(pointage.element ?? 'element-1'),
+      poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
+    });
+  }
+  const [type, heure] = pointage;
+  return new PointageDePresence(type, instantFixture(rang, heure));
+};
 
 const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): JourDeReleve =>
   new JourDeReleve({
@@ -110,16 +125,9 @@ const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): Jo
           presumee: intervalle.presumee ?? false,
         }),
     ),
-    pointages: [
-      ...(fiche.pointages ?? []).map(([type, heure]) => new PointageDePresence(type, instantFixture(rang, heure))),
-      ...(fiche.pointagesDElement ?? []).map(
-        pointage =>
-          new PointageDElement(pointage.type, instantFixture(rang, pointage.heure), {
-            element: new ElementReleveId(pointage.element ?? 'element-1'),
-            poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
-          }),
-      ),
-    ].sort((un, autre) => un.instant.value.getTime() - autre.instant.value.getTime()),
+    pointages: (fiche.journal ?? [...(fiche.pointages ?? []), ...(fiche.pointagesDElement ?? [])]).map(pointage =>
+      pointageFixture(rang, pointage),
+    ),
     plages: (fiche.plages ?? []).map(
       ([debut, fin, presumee]) =>
         new PlageDeReleve(instantFixture(rang, debut), fin === undefined ? undefined : instantFixture(rang, fin), presumee ?? false),
@@ -1225,13 +1233,11 @@ describe('Synthese des heures component', () => {
         SEMAINE_EN_COURS,
         {
           0: {
-            pointages: [
+            journal: [
               ['ARRIVEE', [7, 0]],
+              { type: 'DEBUT', heure: [7, 0], poste: 'poste-0' },
+              { type: 'FIN', heure: [16, 0], poste: 'poste-0' },
               ['DEPART', [16, 0]],
-            ],
-            pointagesDElement: [
-              { type: 'DEBUT', heure: [7, 5], poste: 'poste-0' },
-              { type: 'FIN', heure: [12, 0], poste: 'poste-0' },
             ],
           },
         },
@@ -1245,10 +1251,28 @@ describe('Synthese des heures component', () => {
 
     expect(entreesDuJournal()).toEqual([
       ['07:00', 'Arrivée', 'Présence', '', ''],
-      ['07:05', 'Début', 'Moule 1015', 'DMU 50', ''],
-      ['12:00', 'Fin', 'Moule 1015', 'DMU 50', ''],
+      ['07:00', 'Début', 'Moule 1015', 'DMU 50', ''],
+      ['16:00', 'Fin', 'Moule 1015', 'DMU 50', ''],
       ['16:00', 'Départ', 'Présence', '', ''],
     ]);
+  });
+
+  it('should keep the order the server gave the clockings in, without sorting them by hour', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          journal: [
+            ['ARRIVEE', [9, 0]],
+            ['DEPART', [8, 0]],
+          ],
+        },
+      }),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect(entreesDuJournal().map(entree => entree[1])).toEqual(['Arrivée', 'Départ']);
   });
 
   it('should leave the workstation of a clocking empty when the clocking names none', async () => {
@@ -1319,7 +1343,13 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    ['a clocked end finishes it at the same instant', { pointagesDElement: [{ type: 'FIN', heure: [16, 0], poste: 'poste-0' }] }, ['', '']],
+    [
+      'a clocked end finishes it at the same instant',
+      {
+        journal: [{ type: 'FIN', heure: [16, 0], poste: 'poste-0' }, ['DEPART', [16, 0]]],
+      },
+      ['', ''],
+    ],
     [
       'no interval ends at the departure, the day being abandoned',
       { intervalles: [{ poste: 'poste-0', debut: [8, 0], fin: [15, 0] }] },

@@ -420,6 +420,23 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     });
   });
 
+  it('should return the clockings of a day in the order the server gave them, even out of hours order', async () => {
+    givenSemaine([
+      {
+        ...jourTravailleFixture,
+        pointages: [
+          { type: 'DEPART', instant: '2026-09-14T15:32:00Z' },
+          { type: 'ARRIVEE', instant: '2026-09-14T06:02:00Z' },
+        ],
+      },
+      ...semaineFixture().slice(1),
+    ]);
+
+    const releve = await port.synthese(DEMANDE);
+
+    expect(releve?.jours.map(projeterJour)[0]?.pointages).toEqual(['DEPART 2026-09-14T15:32:00.000Z', 'ARRIVEE 2026-09-14T06:02:00.000Z']);
+  });
+
   it('should return the elements of the week in the server order, with their type, number, label and workstations', async () => {
     givenSemaine(semaineFixture());
 
