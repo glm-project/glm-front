@@ -36,6 +36,26 @@ describe('IntervalleDActivite', () => {
     expect(() => new IntervalleDActivite(ficheFixture({ debut: instantFixture('08:20'), fin: instantFixture('08:20') }))).not.toThrow();
   });
 
+  it('should be in progress without an end', () => {
+    expect(new IntervalleDActivite(ficheFixture({ fin: undefined })).estEnCours()).toBe(true);
+  });
+
+  it('should not be in progress with an end', () => {
+    expect(new IntervalleDActivite(ficheFixture({ fin: instantFixture('09:00') })).estEnCours()).toBe(false);
+  });
+
+  it('should stop at its end', () => {
+    const intervalle = new IntervalleDActivite(ficheFixture({ debut: instantFixture('08:20'), fin: instantFixture('09:00') }));
+
+    expect(intervalle.finOuDebut().value.toISOString()).toBe('2026-09-14T09:00:00.000Z');
+  });
+
+  it('should stop where it began while in progress', () => {
+    const intervalle = new IntervalleDActivite(ficheFixture({ debut: instantFixture('08:20'), fin: undefined }));
+
+    expect(intervalle.finOuDebut().value.toISOString()).toBe('2026-09-14T08:20:00.000Z');
+  });
+
   describe('overlap', () => {
     type Bornes = readonly [string, string | undefined];
 

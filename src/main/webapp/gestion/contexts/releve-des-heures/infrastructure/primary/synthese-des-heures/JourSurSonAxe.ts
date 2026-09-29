@@ -11,12 +11,18 @@ export interface JourSurSonAxe {
   readonly pointageChoisi: PointageDeReleve | undefined;
 }
 
-const bornesDe = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): readonly number[] =>
-  fin === undefined ? [minutesDeDebut(debut)] : [minutesDeDebut(debut), minutesDeFin(debut, fin)];
+interface Borne {
+  readonly debut: InstantDeReleve;
+  estEnCours(): boolean;
+  finOuDebut(): InstantDeReleve;
+}
+
+const bornesDe = (borne: Borne): readonly number[] =>
+  borne.estEnCours() ? [minutesDeDebut(borne.debut)] : [minutesDeDebut(borne.debut), minutesDeFin(borne.debut, borne.finOuDebut())];
 
 const bornesDuJour = (jour: JourDeReleve, ouvert: boolean): readonly number[] => [
-  ...jour.plages.flatMap(plage => bornesDe(plage.debut, plage.fin)),
-  ...jour.intervalles.flatMap(intervalle => bornesDe(intervalle.debut, intervalle.fin)),
+  ...jour.plages.flatMap(bornesDe),
+  ...jour.intervalles.flatMap(bornesDe),
   ...(ouvert ? jour.pointages.map(pointage => minutesDeDebut(pointage.instant)) : []),
 ];
 

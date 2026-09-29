@@ -19,4 +19,24 @@ describe('PlageDeReleve', () => {
 
     expect(plage.fin?.value.toISOString()).toBe('2026-09-14T08:20:00.000Z');
   });
+
+  it('should be in progress without an end', () => {
+    expect(new PlageDeReleve(instantFixture('08:20'), undefined, false).estEnCours()).toBe(true);
+  });
+
+  it('should not be in progress with an end', () => {
+    expect(new PlageDeReleve(instantFixture('08:20'), instantFixture('09:00'), false).estEnCours()).toBe(false);
+  });
+
+  it('should stop at its end', () => {
+    const plage = new PlageDeReleve(instantFixture('08:20'), instantFixture('09:00'), false);
+
+    expect(plage.finOuDebut().value.toISOString()).toBe('2026-09-14T09:00:00.000Z');
+  });
+
+  it('should stop where it began while in progress', () => {
+    const plage = new PlageDeReleve(instantFixture('08:20'), undefined, false);
+
+    expect(plage.finOuDebut().value.toISOString()).toBe('2026-09-14T08:20:00.000Z');
+  });
 });

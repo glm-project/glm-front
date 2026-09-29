@@ -62,7 +62,7 @@ const MARQUES: Record<TypeDePointageDElement, TypeDeMarque> = { DEBUT: 'debut', 
 
 const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, intervalle: IntervalleDActivite): BarreDActivite => {
   const gauche = axe.pourcentDe(minutesDeDebut(intervalle.debut));
-  if (intervalle.fin === undefined) {
+  if (intervalle.estEnCours()) {
     const enonce = LIBELLES.enonceDActiviteEnCours({
       element,
       jour: jour.jour,
@@ -71,19 +71,20 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
     });
     return { style: 'ouverte', gauche, largeur: undefined, enonce, presumee: false };
   }
+  const fin = intervalle.finOuDebut();
   const enonce = LIBELLES.enonceDActivite({
     element,
     jour: jour.jour,
     categorie: intervalle.categorie,
     debut: intervalle.debut,
-    fin: intervalle.fin,
+    fin,
     presumee: intervalle.presumee,
     arreteSansFinPointee: jour.estArreteSansFinPointee(intervalle),
   });
   return {
     style: STYLES_D_ACTIVITE[intervalle.categorie],
     gauche,
-    largeur: axe.pourcentDe(minutesDeFin(intervalle.debut, intervalle.fin)) - gauche,
+    largeur: axe.pourcentDe(minutesDeFin(intervalle.debut, fin)) - gauche,
     enonce,
     presumee: intervalle.presumee,
   };

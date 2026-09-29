@@ -17,4 +17,12 @@ export class PlageDeReleve {
       throw new Error('La plage reçue du serveur finit avant de commencer.');
     }
   }
+
+  estEnCours(): boolean {
+    return this.fin === undefined;
+  }
+
+  finOuDebut(): InstantDeReleve {
+    return this.fin ?? this.debut;
+  }
 }

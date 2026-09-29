@@ -63,18 +63,19 @@ export interface FriseDeLaSemaine {
 
 const barreDePresence = (jour: JourDeReleve, axe: AxeDuJour, plage: PlageDeReleve): BarreDeFrise => {
   const gauche = axe.pourcentDe(minutesDeDebut(plage.debut));
-  if (plage.fin === undefined) {
+  if (plage.estEnCours()) {
     return { style: 'ouverte', gauche, largeur: undefined, enonce: LIBELLES.enonceDePlageEnCours(plage.debut) };
   }
+  const fin = plage.finOuDebut();
   const enonce = LIBELLES.enonceDePlage({
     presumee: plage.presumee,
     debut: plage.debut,
-    fin: plage.fin,
+    fin,
     depuisLaVeille: jour.vientDeLaVeille(plage),
-    seLePoursuit: seLePoursuit(plage.debut, plage.fin),
+    seLePoursuit: seLePoursuit(plage.debut, fin),
   });
   const style = plage.presumee ? 'presumee' : 'plage';
-  return { style, gauche, largeur: axe.pourcentDe(minutesDeFin(plage.debut, plage.fin)) - gauche, enonce };
+  return { style, gauche, largeur: axe.pourcentDe(minutesDeFin(plage.debut, fin)) - gauche, enonce };
 };
 
 const reperesDuJour = (jour: JourDeReleve, axe: AxeDuJour, ouvert: boolean): readonly RepereDeFrise[] =>
