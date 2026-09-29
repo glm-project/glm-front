@@ -7,6 +7,10 @@ export class DemandeDeReleve {
     readonly operateur: OperateurReleveId,
     readonly semaine: SemaineISO,
   ) {}
+
+  estLaMeme(autre: DemandeDeReleve | undefined): boolean {
+    return autre !== undefined && this.operateur.value === autre.operateur.value && this.semaine.estLaMeme(autre.semaine);
+  }
 }
 
 export abstract class SyntheseDesHeuresPort {

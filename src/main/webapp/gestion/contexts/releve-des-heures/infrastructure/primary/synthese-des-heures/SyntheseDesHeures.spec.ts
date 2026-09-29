@@ -1332,6 +1332,16 @@ describe('Synthese des heures component', () => {
     expect(reperesDuJour(0)).toEqual(['8 h', '20 h']);
   });
 
+  it('should not read the report again when another day of the same week is opened', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 38));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+    await whenEcranAffiche();
+
+    await whenAnotherDayIsOpened('2026-09-15');
+
+    expect(portFixture.demandes).toHaveLength(1);
+  });
+
   it('should mark the column of today', async () => {
     givenSemaineSemee(new SemaineISO(2026, 38));
 

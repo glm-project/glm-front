@@ -92,8 +92,10 @@ export class SyntheseDesHeures {
     return { demande: new DemandeDeReleve(new OperateurReleveId(operateur), semaine), semaine, jour };
   });
 
+  private readonly demande = computed(() => this.consultation()?.demande, { equal: (une, autre) => une?.estLaMeme(autre) === true });
+
   private readonly releve = resource({
-    params: () => this.consultation()?.demande,
+    params: this.demande,
     loader: ({ params }) => this.port.synthese(params),
   });
 
