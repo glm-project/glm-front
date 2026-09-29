@@ -9,6 +9,7 @@ import { SemaineISO } from '../semaine/SemaineISO';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
+import { PointageDElement } from './PointageDElement';
 import { FicheDuReleve, ReleveDesHeures } from './ReleveDesHeures';
 
 const SEMAINE = new SemaineISO(2026, 38);
@@ -34,6 +35,56 @@ const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   operationnelPointe: new DureeTravaillee('PT57H30M'),
   operationnelPresume: new DureeTravaillee('PT0S'),
 });
+
+const instantDe = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
+
+const elementFixture = (id: string): ElementDuReleve =>
+  new ElementDuReleve({
+    id: new ElementReleveId(id),
+    type: 'PRODUIT',
+    nom: id,
+    reference: undefined,
+    description: undefined,
+    duree: new DureeTravaillee('PT0S'),
+    dureeNonConformite: new DureeTravaillee('PT0S'),
+    dureePresumee: new DureeTravaillee('PT0S'),
+    postes: [
+      new PosteDeLElement(new PosteReleveId('dmu'), 'DMU 50', 'Fraisage'),
+      new PosteDeLElement(new PosteReleveId('mazak'), 'Mazak QT-200', 'Tournage'),
+    ],
+  });
+
+const intervalleFixture = (element: string, poste: string, debut: string, fin: string | undefined): IntervalleDActivite =>
+  new IntervalleDActivite({
+    element: new ElementReleveId(element),
+    poste: new PosteReleveId(poste),
+    nature: undefined,
+    categorie: 'TRAVAIL',
+    debut: instantDe(debut),
+    fin: fin === undefined ? undefined : instantDe(fin),
+    presumee: false,
+  });
+
+const pointageDElementFixture = (element: string, poste: string): PointageDElement =>
+  new PointageDElement('DEBUT', instantDe('08:00'), { element: new ElementReleveId(element), poste: new PosteReleveId(poste) });
+
+const releveDes = (lundi: {
+  readonly intervalles?: readonly IntervalleDActivite[];
+  readonly pointages?: readonly PointageDElement[];
+}): ReleveDesHeures => {
+  const jourAvecFaits = new JourDeReleve({
+    jour: new JourCalendaire('2026-09-14'),
+    operationnelPointe: new DureeTravaillee('PT0S'),
+    operationnelPresume: new DureeTravaillee('PT0S'),
+    intervalles: lundi.intervalles ?? [],
+    pointages: lundi.pointages ?? [],
+    plages: [],
+  });
+  return new ReleveDesHeures(SEMAINE, {
+    ...ficheFixture([jourAvecFaits, ...semaineCompleteFixture().slice(1)]),
+    elements: [elementFixture('carter'), elementFixture('bride')],
+  });
+};
 
 describe('ReleveDesHeures', () => {
   it('should carry the seven days the week covers', () => {
@@ -116,84 +167,64 @@ describe('ReleveDesHeures', () => {
 
     expect(releve.jours).toHaveLength(7);
   });
-
   describe('element worked from two workstations at once', () => {
-    const elementFixture = (id: string): ElementDuReleve =>
-      new ElementDuReleve({
-        id: new ElementReleveId(id),
-        type: 'PRODUIT',
-        nom: id,
-        reference: undefined,
-        description: undefined,
-        duree: new DureeTravaillee('PT0S'),
-        dureeNonConformite: new DureeTravaillee('PT0S'),
-        dureePresumee: new DureeTravaillee('PT0S'),
-        postes: [
-          new PosteDeLElement(new PosteReleveId('dmu'), 'DMU 50', 'Fraisage'),
-          new PosteDeLElement(new PosteReleveId('mazak'), 'Mazak QT-200', 'Tournage'),
-        ],
-      });
-
-    const intervalleFixture = (element: string, poste: string, debut: string, fin: string | undefined): IntervalleDActivite =>
-      new IntervalleDActivite({
-        element: new ElementReleveId(element),
-        poste: new PosteReleveId(poste),
-        nature: undefined,
-        categorie: 'TRAVAIL',
-        debut: new InstantDeReleve(`2026-09-14T${debut}:00Z`),
-        fin: fin === undefined ? undefined : new InstantDeReleve(`2026-09-14T${fin}:00Z`),
-        presumee: false,
-      });
-
-    const releveDes = (intervalles: readonly IntervalleDActivite[]): ReleveDesHeures => {
-      const jourAvecIntervalles = new JourDeReleve({
-        jour: new JourCalendaire('2026-09-14'),
-        operationnelPointe: new DureeTravaillee('PT0S'),
-        operationnelPresume: new DureeTravaillee('PT0S'),
-        intervalles,
-        pointages: [],
-        plages: [],
-      });
-      return new ReleveDesHeures(SEMAINE, {
-        ...ficheFixture([jourAvecIntervalles, ...semaineCompleteFixture().slice(1)]),
-        elements: [elementFixture('carter'), elementFixture('bride')],
-      });
-    };
-
     it('should tell an element two of whose intervals overlap on two workstations', () => {
-      const releve = releveDes([
-        intervalleFixture('carter', 'dmu', '08:00', '12:00'),
-        intervalleFixture('carter', 'mazak', '10:00', '14:00'),
-      ]);
+      const releve = releveDes({
+        intervalles: [intervalleFixture('carter', 'dmu', '08:00', '12:00'), intervalleFixture('carter', 'mazak', '10:00', '14:00')],
+      });
 
       expect(releve.travailleEnParallele(elementFixture('carter'))).toBe(true);
     });
 
     it('should not tell an element worked from two workstations one after the other', () => {
-      const releve = releveDes([
-        intervalleFixture('carter', 'dmu', '08:00', '12:00'),
-        intervalleFixture('carter', 'mazak', '12:00', '14:00'),
-      ]);
+      const releve = releveDes({
+        intervalles: [intervalleFixture('carter', 'dmu', '08:00', '12:00'), intervalleFixture('carter', 'mazak', '12:00', '14:00')],
+      });
 
       expect(releve.travailleEnParallele(elementFixture('carter'))).toBe(false);
     });
 
     it('should not tell an element because another element is worked at the same time', () => {
-      const releve = releveDes([
-        intervalleFixture('carter', 'dmu', '08:00', '12:00'),
-        intervalleFixture('bride', 'mazak', '10:00', '14:00'),
-      ]);
+      const releve = releveDes({
+        intervalles: [intervalleFixture('carter', 'dmu', '08:00', '12:00'), intervalleFixture('bride', 'mazak', '10:00', '14:00')],
+      });
 
       expect(releve.travailleEnParallele(elementFixture('carter'))).toBe(false);
     });
 
     it('should tell an element worked from two workstations that are both still in progress', () => {
-      const releve = releveDes([
-        intervalleFixture('carter', 'dmu', '08:00', undefined),
-        intervalleFixture('carter', 'mazak', '10:00', undefined),
-      ]);
+      const releve = releveDes({
+        intervalles: [intervalleFixture('carter', 'dmu', '08:00', undefined), intervalleFixture('carter', 'mazak', '10:00', undefined)],
+      });
 
       expect(releve.travailleEnParallele(elementFixture('carter'))).toBe(true);
+    });
+  });
+
+  describe('references to elements and workstations', () => {
+    const ELEMENT_ABSENT = 'Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.';
+    const POSTE_NON_PORTE = 'Le relevé reçu du serveur désigne un poste que son élément ne porte pas.';
+
+    it.each([
+      ['an interval', { intervalles: [intervalleFixture('fantome', 'dmu', '08:00', '12:00')] }],
+      ['a clocking', { pointages: [pointageDElementFixture('fantome', 'dmu')] }],
+    ] as const)('should refuse a report whose %s names an element it does not carry', (_cas, jour) => {
+      expect(() => releveDes(jour)).toThrow(ELEMENT_ABSENT);
+    });
+
+    it.each([
+      ['an interval', { intervalles: [intervalleFixture('carter', 'inconnu', '08:00', '12:00')] }],
+      ['a clocking', { pointages: [pointageDElementFixture('carter', 'inconnu')] }],
+    ] as const)('should refuse a report whose %s names a workstation its element does not carry', (_cas, jour) => {
+      expect(() => releveDes(jour)).toThrow(POSTE_NON_PORTE);
+    });
+
+    it('should accept a report whose clocking names no workstation', () => {
+      expect(() =>
+        releveDes({
+          pointages: [new PointageDElement('DEBUT', instantDe('08:00'), { element: new ElementReleveId('carter'), poste: undefined })],
+        }),
+      ).not.toThrow();
     });
   });
 });
