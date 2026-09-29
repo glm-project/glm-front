@@ -141,6 +141,7 @@ interface ElementFixture {
   readonly postes?: readonly (readonly [string, string | undefined])[];
   readonly duree?: string;
   readonly dureeNonConformite?: string;
+  readonly dureePresumee?: string;
 }
 
 const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
@@ -152,6 +153,7 @@ const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
     description: fiche.description,
     duree: new DureeTravaillee(fiche.duree ?? 'PT0S'),
     dureeNonConformite: new DureeTravaillee(fiche.dureeNonConformite ?? 'PT0S'),
+    dureePresumee: new DureeTravaillee(fiche.dureePresumee ?? 'PT0S'),
     postes: (fiche.postes ?? []).map(
       ([libelle, nature], rang) => new PosteDeLElement(new PosteReleveId(`poste-${String(rang)}`), libelle, nature),
     ),
@@ -530,6 +532,19 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect(textes('synthese-element-nc')).toEqual(['NC 0 h 50']);
+  });
+
+  it('should tell the presumed time of an element beside its total, and nothing for an element without any', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {}, {}, [
+        elementFixture({ duree: 'PT15H30M', dureePresumee: 'PT1H30M' }),
+        elementFixture({ id: 'element-2', duree: 'PT2H' }),
+      ]),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textes('synthese-element-presume')).toEqual(['+ 1 h 30 présumées']);
   });
 
   it('should draw the work of an element on its row, in the column of its day, on the axis of that day', async () => {

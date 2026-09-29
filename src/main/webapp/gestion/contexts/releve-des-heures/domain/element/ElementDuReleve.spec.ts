@@ -16,6 +16,7 @@ const elementFixture = (postes: readonly PosteDeLElement[]): ElementDuReleve =>
     description: undefined,
     duree: new DureeTravaillee('PT0S'),
     dureeNonConformite: new DureeTravaillee('PT0S'),
+    dureePresumee: new DureeTravaillee('PT0S'),
     postes,
   });
 

@@ -51,6 +51,7 @@ export interface LigneDeFrise {
   readonly postes: string;
   readonly total: string;
   readonly nonConformite: string | undefined;
+  readonly presume: string | undefined;
 }
 
 type Selection = (poste: PosteReleveId | undefined) => boolean;
@@ -163,4 +164,5 @@ export const ligneDeFrise = (element: ElementDuReleve, jours: readonly JourSurSo
   postes: LIBELLES.postes(element.postes),
   total: LIBELLES.duree(element.duree),
   nonConformite: element.dureeNonConformite.estNulle() ? undefined : LIBELLES.nonConformite(element.dureeNonConformite),
+  presume: element.dureePresumee.estNulle() ? undefined : LIBELLES.presumees(element.dureePresumee),
 });

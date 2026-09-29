@@ -203,6 +203,8 @@
             <span class="duree" data-selector="synthese-element-total">{{ ligne.total }}</span>
             @if (ligne.nonConformite; as nonConformite) {
             <span class="text-body-sm text-ink-muted" data-selector="synthese-element-nc">{{ nonConformite }}</span>
+            } @if (ligne.presume; as presume) {
+            <span class="presumees text-body-sm" data-selector="synthese-element-presume">{{ presume }}</span>
             }
           </span>
         </div>

@@ -79,6 +79,7 @@ const toElement = (element: RestElement): ElementDuReleve =>
     description: element.description,
     duree: new DureeTravaillee(element.duree),
     dureeNonConformite: new DureeTravaillee(element.dureeNonConformite),
+    dureePresumee: new DureeTravaillee(element.dureePresumee),
     postes: element.postes.map(toPoste),
   });
 

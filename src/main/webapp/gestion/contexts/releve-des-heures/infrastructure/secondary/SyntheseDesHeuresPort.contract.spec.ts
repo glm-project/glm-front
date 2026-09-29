@@ -120,7 +120,7 @@ const elementsDeLaSemaineFixture: readonly RestElement[] = [
     description: 'Carter de pompe',
     duree: 'PT15H30M',
     dureeNonConformite: 'PT50M',
-    dureePresumee: 'PT0S',
+    dureePresumee: 'PT45M',
     postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }, { poste: { id: 'poste-2', libelle: 'Mazak QT-200' } }],
   },
   {
@@ -163,6 +163,7 @@ const toElement = (element: RestElement): ElementDuReleve =>
     description: element.description,
     duree: new DureeTravaillee(element.duree),
     dureeNonConformite: new DureeTravaillee(element.dureeNonConformite),
+    dureePresumee: new DureeTravaillee(element.dureePresumee),
     postes: element.postes.map(({ poste, nature }) => new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature)),
   });
 
@@ -447,14 +448,16 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     ]);
   });
 
-  it('should return the week total of each element as the server counted it, its non-conformity time apart', async () => {
+  it('should return the week total of each element as the server counted it, its non-conformity and presumed time apart', async () => {
     givenSemaine(semaineFixture());
 
     const releve = await port.synthese(DEMANDE);
 
-    expect(releve?.elements.map(element => [element.duree.minutes, element.dureeNonConformite.minutes])).toEqual([
-      [930, 50],
-      [120, 0],
+    expect(
+      releve?.elements.map(element => [element.duree.minutes, element.dureeNonConformite.minutes, element.dureePresumee.minutes]),
+    ).toEqual([
+      [930, 50, 45],
+      [120, 0, 0],
     ]);
   });
 

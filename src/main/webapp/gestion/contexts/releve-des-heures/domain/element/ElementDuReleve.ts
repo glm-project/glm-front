@@ -12,6 +12,7 @@ export interface FicheDElement {
   readonly description: string | undefined;
   readonly duree: DureeTravaillee;
   readonly dureeNonConformite: DureeTravaillee;
+  readonly dureePresumee: DureeTravaillee;
   readonly postes: readonly PosteDeLElement[];
 }
 
@@ -21,6 +22,7 @@ export class ElementDuReleve {
   readonly description: string | undefined;
   readonly duree: DureeTravaillee;
   readonly dureeNonConformite: DureeTravaillee;
+  readonly dureePresumee: DureeTravaillee;
   readonly postes: readonly PosteDeLElement[];
   private readonly nom: string;
   private readonly reference: string | undefined;
@@ -33,6 +35,7 @@ export class ElementDuReleve {
     this.description = fiche.description;
     this.duree = fiche.duree;
     this.dureeNonConformite = fiche.dureeNonConformite;
+    this.dureePresumee = fiche.dureePresumee;
     this.postes = [...fiche.postes];
   }
 
