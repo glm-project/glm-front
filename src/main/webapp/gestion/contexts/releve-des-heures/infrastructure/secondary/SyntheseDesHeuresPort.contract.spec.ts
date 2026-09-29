@@ -273,7 +273,7 @@ const toRestSynthese = (jours: readonly JourFixture[]): RestSynthese => ({
   dureeTotale: 'PT7H30M',
   dureePresumeeTotale: 'PT5H20M',
   dureeOperationnelleTotale: 'PT57H30M',
-  dureeOperationnellePresumeeTotale: 'PT1H30M',
+  dureeOperationnellePresumeeTotale: 'PT2H',
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   jours: jours.map(toRestJour),
   elements: [...elementsDeLaSemaineFixture],
@@ -296,7 +296,7 @@ const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
     presencePointee: new DureeTravaillee('PT7H30M'),
     presencePresumee: new DureeTravaillee('PT5H20M'),
     operationnelPointe: new DureeTravaillee('PT57H30M'),
-    operationnelPresume: new DureeTravaillee('PT1H30M'),
+    operationnelPresume: new DureeTravaillee('PT2H'),
     jours: jours.map(
       (jour, rang) =>
         new JourDeReleve({
@@ -523,12 +523,12 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     expect(releve?.jours.map(jour => jour.operationnelPresume.minutes)).toEqual([0, 90, 0, 0, 0, 0, 0]);
   });
 
-  it('should return the presumed operational time of the week as the server counted it', async () => {
+  it('should return the presumed operational time of the week as the server counted it, not the sum of its days', async () => {
     givenSemaine(semaineFixture());
 
     const releve = await port.synthese(DEMANDE);
 
-    expect(releve?.operationnelPresume.minutes).toBe(90);
+    expect(releve?.operationnelPresume.minutes).toBe(120);
   });
 
   it('should return the presumed interval of an abandoned working day', async () => {
