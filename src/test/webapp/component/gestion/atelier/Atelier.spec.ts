@@ -34,6 +34,14 @@ describe('Workshop interactions and rendering', () => {
     thenEngagementIsDismissed(api);
   });
 
+  it('should open the engagement dialog on the dialog itself rather than on the candidates table', () => {
+    givenWorkshop(0, 2);
+    whenVisitingWorkshop();
+    whenOpeningEngagement();
+
+    thenFocusRestsOnTheDialog();
+  });
+
   it('should dismiss the closure dialog with Escape without closing the element', () => {
     const api = givenWorkshop(1, 0);
     whenVisitingWorkshop();
@@ -158,6 +166,9 @@ const thenReadFailureIsVisible = (): void => {
 const thenEngagementIsDismissed = (api: AtelierApiFixture): void => {
   cy.get(dataSelector('atelier-engagement-introduction')).should('not.exist');
   cy.wrap(api.engagements).should('be.empty');
+};
+const thenFocusRestsOnTheDialog = (): void => {
+  cy.focused().should('have.attr', 'role', 'dialog');
 };
 const thenClosureIsDismissed = (api: AtelierApiFixture): void => {
   cy.get(dataSelector('atelier-cloture-confirm')).should('not.exist');

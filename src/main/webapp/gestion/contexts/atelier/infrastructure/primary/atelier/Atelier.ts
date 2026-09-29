@@ -153,6 +153,7 @@ export class Atelier implements OnInit {
     const dialogRef = this.dialogs.open<MiseALAtelierDialog, MiseALAtelierDialogData, boolean>(MiseALAtelierDialog, {
       data,
       viewContainerRef: this.viewContainerRef,
+      autoFocus: 'dialog',
       width: '44rem',
       maxWidth: 'calc(100vw - 2rem)',
     });
