@@ -71,6 +71,16 @@ export class JourDeReleve {
     return { clotures: distinctes.map(({ element, poste }) => ({ element, poste })) };
   }
 
+  estArreteSansFinPointee(intervalle: IntervalleDActivite): boolean {
+    const fin = intervalle.fin;
+    return (
+      fin !== undefined
+      && !intervalle.presumee
+      && !fin.estUnAutreJourQue(intervalle.debut)
+      && ![...this.pointagesDePresence(), ...this.pointagesDe(intervalle.element)].some(pointage => pointage.instant.estLeMeme(fin))
+    );
+  }
+
   intervallesDe(element: ElementReleveId): readonly IntervalleDActivite[] {
     return this.intervalles.filter(intervalle => intervalle.element.value === element.value);
   }

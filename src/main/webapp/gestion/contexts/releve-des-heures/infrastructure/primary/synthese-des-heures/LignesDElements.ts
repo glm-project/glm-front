@@ -77,6 +77,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
     debut: intervalle.debut,
     fin: intervalle.fin,
     presumee: intervalle.presumee,
+    arreteSansFinPointee: jour.estArreteSansFinPointee(intervalle),
   });
   return {
     style: STYLES_D_ACTIVITE[intervalle.categorie],

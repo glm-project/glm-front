@@ -572,6 +572,11 @@ describe('Synthese des heures component', () => {
               { debut: [8, 0], fin: [12, 0] },
               { categorie: 'NON_CONFORMITE', debut: [12, 0], fin: [14, 0] },
             ],
+            pointagesDElement: [
+              { type: 'DEBUT', heure: [8, 0] },
+              { type: 'NON_CONFORMITE', heure: [12, 0] },
+              { type: 'FIN', heure: [14, 0] },
+            ],
           },
         },
         {},
@@ -597,6 +602,25 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect(positions('synthese-barre-travail')).toEqual([attendu]);
+  });
+
+  it('should state a bar stopped without any clocked end, and mark nothing at its end', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        { 0: { intervalles: [{ debut: [8, 0], fin: [10, 0] }], pointagesDElement: [{ type: 'DEBUT', heure: [8, 0] }] } },
+        {},
+        [elementFixture({ reference: '1015' })],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-barre-travail'), marquesDuJourOuvert()]).toEqual([
+      ['Moule 1015, lundi 14, 08:00 à 10:00, travail, arrêté sans fin pointée'],
+      ['Début 08:00'],
+    ]);
   });
 
   it('should mark the work still in progress at the place where it began, and state it as in progress', async () => {

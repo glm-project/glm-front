@@ -1,6 +1,6 @@
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementReleveId } from '../element/ElementReleveId';
-import { IntervalleDActivite } from '../element/IntervalleDActivite';
+import { FicheDIntervalle, IntervalleDActivite } from '../element/IntervalleDActivite';
 import { PosteReleveId } from '../element/PosteReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { InstantDeReleve } from './InstantDeReleve';
@@ -35,6 +35,18 @@ const pointageDElementFixture = (
   poste: string,
 ): PointageDElement =>
   new PointageDElement(type, instantFixture(heure, minute), { element: new ElementReleveId(element), poste: new PosteReleveId(poste) });
+
+const intervalleAvecFixture = (fiche: Partial<FicheDIntervalle>): IntervalleDActivite =>
+  new IntervalleDActivite({
+    element: new ElementReleveId('carter'),
+    poste: new PosteReleveId('dmu'),
+    nature: undefined,
+    categorie: 'TRAVAIL',
+    debut: instantFixture(8, 0),
+    fin: instantFixture(10, 0),
+    presumee: false,
+    ...fiche,
+  });
 
 const finPointeeFixture = (element: string, heure: number, minute: number, poste: string): PointageDElement =>
   pointageDElementFixture('FIN', element, heure, minute, poste);
@@ -118,6 +130,61 @@ describe('JourDeReleve', () => {
     const jour = new JourDeReleve(ficheFixture({ intervalles: [carter, bride] }));
 
     expect(jour.intervallesDe(new ElementReleveId('carter'))).toEqual([carter]);
+  });
+
+  describe('interval stopped without a clocked end', () => {
+    const arrete = (jour: JourDeReleve, intervalle: IntervalleDActivite): boolean => jour.estArreteSansFinPointee(intervalle);
+
+    it('should tell an interval that ends at an instant no clocking of the day sits at', () => {
+      const intervalle = intervalleAvecFixture({});
+      const jour = new JourDeReleve(ficheFixture({ intervalles: [intervalle], pointages: [pointageFixture('ARRIVEE', 8, 0)] }));
+
+      expect(arrete(jour, intervalle)).toBe(true);
+    });
+
+    it.each([
+      ['a clocked end of its element', pointageDElementFixture('FIN', 'carter', 10, 0, 'dmu')],
+      ['a clocked non-conformity of its element', pointageDElementFixture('NON_CONFORMITE', 'carter', 10, 0, 'dmu')],
+      ['a departure', pointageFixture('DEPART', 10, 0)],
+    ] as const)('should not tell an interval that ends at %s', (_cas, pointage) => {
+      const intervalle = intervalleAvecFixture({});
+      const jour = new JourDeReleve(ficheFixture({ intervalles: [intervalle], pointages: [pointage] }));
+
+      expect(arrete(jour, intervalle)).toBe(false);
+    });
+
+    it('should tell an interval that ends at the instant of another element’s clocking', () => {
+      const intervalle = intervalleAvecFixture({});
+      const jour = new JourDeReleve(
+        ficheFixture({ intervalles: [intervalle], pointages: [pointageDElementFixture('FIN', 'bride', 10, 0, 'dmu')] }),
+      );
+
+      expect(arrete(jour, intervalle)).toBe(true);
+    });
+
+    it('should not tell an interval still in progress', () => {
+      const intervalle = intervalleAvecFixture({ fin: undefined });
+      const jour = new JourDeReleve(ficheFixture({ intervalles: [intervalle] }));
+
+      expect(arrete(jour, intervalle)).toBe(false);
+    });
+
+    it('should not tell a presumed interval, which is stated as presumed', () => {
+      const intervalle = intervalleAvecFixture({ presumee: true });
+      const jour = new JourDeReleve(ficheFixture({ intervalles: [intervalle] }));
+
+      expect(arrete(jour, intervalle)).toBe(false);
+    });
+
+    it('should not tell an interval cut at midnight, which goes on the next day', () => {
+      const intervalle = intervalleAvecFixture({
+        debut: instantFixture(22, 0),
+        fin: new InstantDeReleve(new Date(2026, 8, 15, 0, 0).toISOString()),
+      });
+      const jour = new JourDeReleve(ficheFixture({ intervalles: [intervalle] }));
+
+      expect(arrete(jour, intervalle)).toBe(false);
+    });
   });
 
   describe('effect of a clocking', () => {

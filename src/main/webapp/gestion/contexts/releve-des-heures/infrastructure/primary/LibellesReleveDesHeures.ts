@@ -46,6 +46,7 @@ const posteEtNature = (poste: PosteDeLElement): string =>
 const PRESENCE = 'Présence';
 const PRESUME = 'présumé';
 const EN_COURS = 'en cours';
+const ARRETE_SANS_FIN_POINTEE = 'arrêté sans fin pointée';
 const DEPUIS_LA_VEILLE = 'depuis la veille';
 
 export interface FormeDActivite {
@@ -55,6 +56,7 @@ export interface FormeDActivite {
   readonly debut: InstantDeReleve;
   readonly fin: InstantDeReleve;
   readonly presumee: boolean;
+  readonly arreteSansFinPointee: boolean;
 }
 
 export interface FormeDActiviteEnCours {
@@ -147,9 +149,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     }
     return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
   },
-  enonceDActivite: ({ element, jour, categorie, debut, fin, presumee }: FormeDActivite): string => {
+  enonceDActivite: ({ element, jour, categorie, debut, fin, presumee, arreteSansFinPointee }: FormeDActivite): string => {
     const enonce = `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
-    return presumee ? `${enonce}, ${PRESUME}` : enonce;
+    const precisions = [...(presumee ? [PRESUME] : []), ...(arreteSansFinPointee ? [ARRETE_SANS_FIN_POINTEE] : [])];
+    return [enonce, ...precisions].join(', ');
   },
   enonceDActiviteEnCours: ({ element, jour, categorie, debut }: FormeDActiviteEnCours): string =>
     `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, depuis ${heure(debut)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
