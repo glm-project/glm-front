@@ -257,6 +257,27 @@ describe('Synthese des heures component', () => {
     ]);
   });
 
+  it('should state a presumed presence going on past midnight as presumed, going on, and its continuation as presumed too', async () => {
+    givenReleve(
+      releveFixture(SEMAINE_EN_COURS, {
+        0: {
+          pointages: [['ARRIVEE', [19, 0]]],
+          plages: [[[19, 0], [24, 0], true]],
+        },
+        1: {
+          plages: [[[0, 0], [7, 0], true]],
+        },
+      }),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textesDe(presencesDe('presumee'))).toEqual([
+      'Présence présumée depuis 19:00, se poursuit le lendemain',
+      'Présence présumée depuis la veille jusqu’à 07:00',
+    ]);
+  });
+
   it('should mark a presence still in progress at the place where it began, rather than invent its end', async () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {
