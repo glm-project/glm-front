@@ -46,6 +46,18 @@ describe('ElementDuReleve', () => {
     expect(elementFixture([dmu]).libelleDuPoste(new PosteReleveId('mazak'))).toBeUndefined();
   });
 
+  it('should hand back each workstation it carries once, whatever the natures it carries it for', () => {
+    const element = elementFixture([dmu, posteFixture('dmu', 'DMU 50', 'Perçage'), mazak]);
+
+    expect(element.postesDistincts().map(poste => poste.libelle)).toEqual(['DMU 50', 'Mazak QT-200']);
+  });
+
+  it('should keep the natures of the first couple of a workstation it carries several times', () => {
+    const element = elementFixture([dmu, posteFixture('dmu', 'DMU 50', 'Perçage')]);
+
+    expect(element.postesDistincts().map(poste => poste.nature)).toEqual(['Fraisage']);
+  });
+
   it('should name no workstation when none is asked for', () => {
     expect(elementFixture([dmu]).libelleDuPoste(undefined)).toBeUndefined();
   });

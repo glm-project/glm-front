@@ -147,11 +147,8 @@ const sousLigneSansPoste = (element: ElementDuReleve, jours: readonly JourSurSon
     : [];
 };
 
-const postesDistincts = (element: ElementDuReleve): readonly PosteDeLElement[] =>
-  element.postes.filter((poste, rang) => element.postes.findIndex(autre => autre.id.value === poste.id.value) === rang);
-
 const sousLignesDe = (element: ElementDuReleve, jours: readonly JourSurSonAxe[]): readonly SousLigneDeFrise[] => [
-  ...postesDistincts(element).map(poste => sousLigneDuPoste(element, jours, poste)),
+  ...element.postesDistincts().map(poste => sousLigneDuPoste(element, jours, poste)),
   ...sousLigneSansPoste(element, jours),
 ];
 

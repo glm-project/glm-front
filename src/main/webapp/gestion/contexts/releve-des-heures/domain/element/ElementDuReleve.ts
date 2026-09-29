@@ -43,6 +43,10 @@ export class ElementDuReleve {
     return this.reference ?? this.nom;
   }
 
+  postesDistincts(): readonly PosteDeLElement[] {
+    return this.postes.filter((poste, rang) => this.postes.findIndex(autre => autre.id.estLeMeme(poste.id)) === rang);
+  }
+
   porte(poste: PosteReleveId): boolean {
     return this.postes.some(candidat => candidat.id.value === poste.value);
   }
