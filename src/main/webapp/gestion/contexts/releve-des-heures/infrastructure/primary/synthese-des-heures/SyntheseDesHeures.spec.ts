@@ -138,7 +138,7 @@ interface ElementFixture {
   readonly nom?: string;
   readonly reference?: string;
   readonly description?: string;
-  readonly postes?: readonly (readonly [string, string | undefined])[];
+  readonly postes?: readonly (readonly [string, string | undefined, string?])[];
   readonly duree?: string;
   readonly dureeNonConformite?: string;
   readonly dureePresumee?: string;
@@ -155,7 +155,7 @@ const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
     dureeNonConformite: new DureeTravaillee(fiche.dureeNonConformite ?? 'PT0S'),
     dureePresumee: new DureeTravaillee(fiche.dureePresumee ?? 'PT0S'),
     postes: (fiche.postes ?? []).map(
-      ([libelle, nature], rang) => new PosteDeLElement(new PosteReleveId(`poste-${String(rang)}`), libelle, nature),
+      ([libelle, nature, id], rang) => new PosteDeLElement(new PosteReleveId(id ?? `poste-${String(rang)}`), libelle, nature),
     ),
   });
 
@@ -781,6 +781,68 @@ describe('Synthese des heures component', () => {
       expect(textes('synthese-sous-ligne-poste')).toEqual(['DMU 50', 'Mazak QT-200']);
     },
   );
+
+  it('should give a workstation one sub-row when the element carries it for several natures', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [12, 0] },
+              { poste: 'poste-2', debut: [10, 0], fin: [14, 0] },
+            ],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['DMU 50', 'Perçage', 'poste-0'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect(textes('synthese-sous-ligne-poste')).toEqual(['DMU 50', 'Mazak QT-200']);
+  });
+
+  it('should mark the closure of an element on the row of each workstation the departure stopped, and say it once in the journal', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            pointages: [['DEPART', [16, 0]]],
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0], fin: [16, 0] },
+              { poste: 'poste-1', debut: [10, 0], fin: [16, 0] },
+            ],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            reference: '1015',
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    await whenEcranAffiche();
+
+    expect([marquesParSousLigne(), entreesDuJournal().map(entree => entree[4])]).toEqual([[1, 1], ['clôt Moule 1015, sans fin pointée']]);
+  });
 
   it('should split the row of an element worked from two workstations at once that are both still in progress', async () => {
     givenReleve(
