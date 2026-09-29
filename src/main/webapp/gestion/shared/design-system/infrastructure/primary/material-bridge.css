@@ -41,6 +41,10 @@
   --mat-sys-title-large-size: var(--text-section);
   --mat-sys-title-large-line-height: var(--text-section--line-height);
 
+  --mat-dialog-subhead-size: var(--text-section);
+  --mat-dialog-subhead-line-height: var(--text-section--line-height);
+  --mat-dialog-subhead-weight: var(--text-section--font-weight);
+
   --mat-sys-title-medium-size: var(--text-body);
   --mat-sys-title-medium-line-height: var(--text-body--line-height);
 

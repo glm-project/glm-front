@@ -7,6 +7,12 @@ describe('Material bridge', () => {
 
     thenThePrimaryActionWearsTheAccent(colours);
   });
+
+  it('should set dialog titles at the section level', () => {
+    const section = whenOpeningADialog();
+
+    thenTheDialogTitleWearsTheSectionLevel(section);
+  });
 });
 
 interface ColoursFixture {
@@ -23,6 +29,25 @@ const whenVisitingTheWorkshop = (): Cypress.Chainable<ColoursFixture> => {
   }));
 };
 
+interface SectionLevelFixture {
+  readonly size: string;
+  readonly weight: string;
+}
+
+const whenOpeningADialog = (): Cypress.Chainable<SectionLevelFixture> => {
+  new AtelierApiFixture().install();
+  cy.visit('/atelier');
+  cy.get(dataSelector('atelier-new')).should('be.enabled').click();
+  return cy.window().then(window => {
+    const probe = window.document.createElement('span');
+    probe.className = 'text-section';
+    window.document.body.appendChild(probe);
+    const { fontSize, fontWeight } = window.getComputedStyle(probe);
+    probe.remove();
+    return { size: fontSize, weight: fontWeight };
+  });
+};
+
 const givenTheBrowsersValueOf = (window: Window, token: string): string => {
   const probe = window.document.createElement('span');
   probe.style.color = `var(${token})`;
@@ -35,5 +60,11 @@ const givenTheBrowsersValueOf = (window: Window, token: string): string => {
 const thenThePrimaryActionWearsTheAccent = (colours: Cypress.Chainable<ColoursFixture>): void => {
   colours.then(({ accent, onAccent }) => {
     cy.get(dataSelector('atelier-new')).should('have.css', 'background-color', accent).and('have.css', 'color', onAccent);
+  });
+};
+
+const thenTheDialogTitleWearsTheSectionLevel = (section: Cypress.Chainable<SectionLevelFixture>): void => {
+  section.then(({ size, weight }) => {
+    cy.get('.mat-mdc-dialog-title').should('have.css', 'font-size', size).and('have.css', 'font-weight', weight);
   });
 };
