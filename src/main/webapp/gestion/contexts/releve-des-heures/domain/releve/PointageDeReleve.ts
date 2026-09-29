@@ -1,9 +1,4 @@
-import { InstantDeReleve } from './InstantDeReleve';
-import { TypeDePointage } from './TypeDePointage';
+import { PointageDElement } from './PointageDElement';
+import { PointageDePresence } from './PointageDePresence';
 
-export class PointageDeReleve {
-  constructor(
-    readonly type: TypeDePointage,
-    readonly instant: InstantDeReleve,
-  ) {}
-}
+export type PointageDeReleve = PointageDePresence | PointageDElement;

@@ -1,17 +1,20 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { Component, computed, inject, resource, Signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, computed, inject, linkedSignal, resource, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { JourAOuvrir, jourOuvert } from '../../../domain/releve/JourOuvert';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
+import { jourDemande } from '../../../domain/semaine/JourDemande';
 import { semaineDemandee } from '../../../domain/semaine/SemaineDemandee';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { jourCourant } from '../jourCourant';
+import { Journal } from '../journal-du-jour/Journal';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AgendaDeLaSemaine } from './AgendaDeLaSemaine';
-import { ColonneAffichee, toColonneAffichee } from './ColonneAffichee';
+import { FriseDeLaSemaine, friseDeLaSemaine } from './FriseDeLaSemaine';
 
 const ANNEES_OFFERTES = 6;
 
@@ -22,10 +25,16 @@ export type EtatVueSynthese =
   | { readonly kind: 'OPERATEUR_INTROUVABLE' }
   | {
       readonly kind: 'SUCCES';
+      readonly semaine: SemaineISO;
       readonly releve: ReleveDesHeures;
-      readonly agenda: AgendaDeLaSemaine;
-      readonly colonnes: readonly ColonneAffichee[];
+      readonly frise: FriseDeLaSemaine;
     };
+
+interface Consultation {
+  readonly demande: DemandeDeReleve;
+  readonly semaine: SemaineISO;
+  readonly jour: JourAOuvrir;
+}
 
 const semaineOfferte = (semaine: SemaineISO | undefined, courante: SemaineISO): SemaineISO | undefined =>
   semaine !== undefined && !semaine.estApres(courante) ? semaine : undefined;
@@ -38,7 +47,7 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
   host: { 'data-selector': 'synthese-page' },
   templateUrl: './SyntheseDesHeures.html',
   styleUrl: './SyntheseDesHeures.css',
-  imports: [Icon, MatButtonModule, RouterLink],
+  imports: [Icon, Journal, MatButtonModule, NgTemplateOutlet, RouterLink],
 })
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;
@@ -67,7 +76,7 @@ export class SyntheseDesHeures {
     return demandee.estConnue ? demandee.semaine : undefined;
   });
 
-  private readonly demande = computed<DemandeDeReleve | undefined>(() => {
+  private readonly consultation = computed<Consultation | undefined>(() => {
     const semaine = this.semaine();
     const operateur = this.operateur();
     if (semaine === undefined) {
@@ -76,19 +85,28 @@ export class SyntheseDesHeures {
     if (operateur === null) {
       return undefined;
     }
-    return new DemandeDeReleve(new OperateurReleveId(operateur), semaine);
+    const jour = jourDemande(this.parametres().get('jour') ?? undefined, semaine);
+    if (jour.kind === 'REFUSE') {
+      return undefined;
+    }
+    return { demande: new DemandeDeReleve(new OperateurReleveId(operateur), semaine), semaine, jour };
   });
 
+  private readonly demande = computed(() => this.consultation()?.demande, { equal: (une, autre) => une?.estLaMeme(autre) === true });
+
   private readonly releve = resource({
-    params: () => this.demande(),
+    params: this.demande,
     loader: ({ params }) => this.port.synthese(params),
   });
 
+  private readonly pointageChoisi = linkedSignal<Consultation | undefined, number | undefined>({
+    source: this.consultation,
+    computation: () => undefined,
+  });
+
   protected readonly etat: Signal<EtatVueSynthese> = computed(() => {
-    if (this.demande() === undefined) {
-      return { kind: 'ADRESSE_INVALIDE' };
-    }
-    return this.etatDeLaLecture();
+    const consultation = this.consultation();
+    return consultation === undefined ? { kind: 'ADRESSE_INVALIDE' } : this.etatDeLaLecture(consultation);
   });
 
   protected readonly annees = computed(() => Array.from({ length: ANNEES_OFFERTES }, (_, rang) => this.semaineCourante.annee - rang));
@@ -104,6 +122,10 @@ export class SyntheseDesHeures {
     return { annee: semaine.annee, semaine: semaine.numero };
   }
 
+  protected parametresDuJour(semaine: SemaineISO, jour: string): Record<string, number | string> {
+    return { ...this.parametresDe(semaine), jour };
+  }
+
   protected choisirAnnee(valeur: string, courante: SemaineISO): void {
     const annee = Number(valeur);
     const numero = Math.min(courante.numero, derniereSemaineDe(annee, this.semaineCourante));
@@ -114,6 +136,10 @@ export class SyntheseDesHeures {
     void this.naviguerVers(new SemaineISO(courante.annee, Number(valeur)));
   }
 
+  protected choisir(rang: number): void {
+    this.pointageChoisi.update(choisi => (choisi === rang ? undefined : rang));
+  }
+
   protected reload(): void {
     this.releve.reload();
   }
@@ -122,7 +148,7 @@ export class SyntheseDesHeures {
     return this.router.navigate([], { relativeTo: this.route, queryParams: this.parametresDe(semaine) });
   }
 
-  private etatDeLaLecture(): EtatVueSynthese {
+  private etatDeLaLecture(consultation: Consultation): EtatVueSynthese {
     if (this.releve.isLoading()) {
       return { kind: 'CHARGEMENT' };
     }
@@ -133,8 +159,8 @@ export class SyntheseDesHeures {
     if (releve === undefined) {
       return { kind: 'OPERATEUR_INTROUVABLE' };
     }
-    const agenda = new AgendaDeLaSemaine(releve.jours);
-    const colonnes = releve.jours.map(jour => toColonneAffichee(agenda, jour, this.aujourdhui));
-    return { kind: 'SUCCES', releve, agenda, colonnes };
+    const ouvert = jourOuvert(consultation.jour, consultation.semaine, releve, this.aujourdhui);
+    const frise = friseDeLaSemaine(releve, this.aujourdhui, ouvert, this.pointageChoisi());
+    return { kind: 'SUCCES', semaine: consultation.semaine, releve, frise };
   }
 }

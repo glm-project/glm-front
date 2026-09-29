@@ -35,4 +35,8 @@ export class InstantDeReleve {
   estLeMeme(autre: InstantDeReleve): boolean {
     return this.value.getTime() === autre.value.getTime();
   }
+
+  estUnAutreJourQue(autre: InstantDeReleve): boolean {
+    return this.value.toDateString() !== autre.value.toDateString();
+  }
 }

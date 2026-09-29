@@ -1,18 +1,16 @@
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
+import { CategorieDActivite } from '../../domain/element/CategorieDActivite';
+import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
+import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
+import { TypeDElement } from '../../domain/element/TypeDElement';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { TypeDePointage } from '../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 
-const TYPES: Record<TypeDePointage, string> = {
-  ARRIVEE: 'Arrivée',
-  PAUSE: 'Pause',
-  REPRISE: 'Reprise',
-  DEPART: 'Départ',
-};
-
 const PLAGE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+const JOUR_LONG = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
 
 const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -22,11 +20,51 @@ const formatDuree = (duree: DureeTravaillee): string => `${duree.heures} h ${Str
 
 const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
 
+const MINUTES_PAR_HEURE = 60;
+
+const TYPES_D_ELEMENT: Record<TypeDElement, string> = { PRODUIT: 'Moule', ORDRE_DE_FABRICATION: 'OF' };
+
+const LISTE = new Intl.ListFormat('fr-FR', { style: 'long', type: 'conjunction' });
+
+const JOUR_COMPLET = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+
+const nomDeLElement = (element: ElementDuReleve): string => `${TYPES_D_ELEMENT[element.type]} ${element.numero()}`;
+
+const POINTAGES: Record<TypeDePointage, string> = {
+  ARRIVEE: 'Arrivée',
+  DEPART: 'Départ',
+  DEBUT: 'Début',
+  NON_CONFORMITE: 'Non-conformité',
+  FIN: 'Fin',
+};
+
+const CATEGORIES_D_ACTIVITE: Record<CategorieDActivite, string> = { TRAVAIL: 'travail', NON_CONFORMITE: 'non-conformité' };
+
+const posteEtNature = (poste: PosteDeLElement): string =>
+  poste.nature === undefined ? poste.libelle : `${poste.libelle} · ${poste.nature}`;
+
 const PRESENCE = 'Présence';
-const PAUSE = 'Pause';
+const PRESUME = 'présumé';
 const EN_COURS = 'en cours';
+const ARRETE_SANS_FIN_POINTEE = 'arrêté sans fin pointée';
 const DEPUIS_LA_VEILLE = 'depuis la veille';
-const SE_POURSUIT = 'se poursuit';
+
+export interface FormeDActivite {
+  readonly element: ElementDuReleve;
+  readonly jour: JourCalendaire;
+  readonly categorie: CategorieDActivite;
+  readonly debut: InstantDeReleve;
+  readonly fin: InstantDeReleve;
+  readonly presumee: boolean;
+  readonly arreteSansFinPointee: boolean;
+}
+
+export interface FormeDActiviteEnCours {
+  readonly element: ElementDuReleve;
+  readonly jour: JourCalendaire;
+  readonly categorie: CategorieDActivite;
+  readonly debut: InstantDeReleve;
+}
 
 export interface FormeDePlage {
   readonly presumee: boolean;
@@ -39,10 +77,17 @@ export interface FormeDePlage {
 const natureDe = (presumee: boolean): string => (presumee ? `${PRESENCE} présumée` : PRESENCE);
 
 export const LIBELLES_RELEVE_DES_HEURES = {
-  titre: 'Synthèse des heures',
+  titre: 'Temps opérationnel',
   retour: 'Opérateurs',
+  semaineConsultee: 'Semaine consultée',
   retourAria: 'Revenir au référentiel des opérateurs',
-  sousTitre: 'Le temps travaillé de la semaine, jour par jour, pauses déduites.',
+  sousTitre: 'Une ligne par moule ou OF pointé dans la semaine.',
+  sansPoste: 'Sans poste',
+  operationnel: 'Temps opérationnel',
+  operationnelPrecision: 'pointé sur les moules et OF',
+  presenceLigne: 'Présence',
+  colonneElement: 'Élément',
+  colonneSemaine: 'Semaine',
 
   anneeLabel: 'Année',
   semaineLabel: 'Semaine',
@@ -50,45 +95,51 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaineSuivanteAria: 'Semaine suivante',
   optionSemaine: (numero: number): string => `Semaine ${numero}`,
 
-  tableau: 'Heures travaillées de la semaine, jour par jour',
-  defilement: 'Agenda des heures, défilement horizontal disponible',
+  tableau: 'Temps opérationnel de la semaine, jour par jour',
+  defilement: 'Frise de la semaine, défilement horizontal disponible',
 
-  sansPointage: 'Aucun pointage',
   sansValeur: '—',
   aujourdhui: 'Aujourd’hui',
-  enCours: EN_COURS,
-  pause: PAUSE,
-  pointages: 'Pointages',
-  legende: { pointe: 'Pointé', presume: 'Présumé (à confirmer)', pause: PAUSE, enCours: 'En cours' },
+  legende: {
+    travail: 'Travail',
+    nonConformite: 'Non-conformité',
+    presence: 'Présence',
+    presume: 'Présumé (à confirmer)',
+    enCours: 'En cours',
+    debut: 'Début pointé',
+    nonConformitePointee: 'Non-conformité pointée',
+    fin: 'Fin pointée',
+    clos: 'Clos par le départ',
+    presenceTrait: 'Arrivée, départ',
+  },
 
-  chargement: 'Chargement de la synthèse…',
-  echec: 'Impossible de charger la synthèse des heures. Vérifiez la connexion puis réessayez.',
+  chargement: 'Chargement du temps opérationnel…',
+  echec: 'Impossible de charger le temps opérationnel de la semaine. Vérifiez la connexion puis réessayez.',
   reessayer: 'Réessayer',
-  operateurIntrouvable: 'Cet opérateur n’existe plus au référentiel : sa synthèse ne peut pas être établie.',
+  operateurIntrouvable: 'Cet opérateur n’existe plus au référentiel : son temps opérationnel ne peut pas être établi.',
   adresseInvalide:
-    'Cette adresse ne désigne pas une semaine que le calendrier porte. Revenez au référentiel pour repartir de la semaine en cours.',
+    'Cette adresse ne désigne pas une semaine ou un jour que le calendrier porte. Revenez au référentiel pour repartir de la semaine en cours.',
 
   semaine: (semaine: SemaineISO): string =>
     `Semaine ${semaine.numero} · ${PLAGE.formatRange(dateDe(semaine.lundi()), dateDe(semaine.dimanche()))}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
-  pointe: (duree: DureeTravaillee): string => `Pointé : ${formatDuree(duree)}`,
   presume: (duree: DureeTravaillee): string => `Présumé, à confirmer : ${formatDuree(duree)}`,
   duree: formatDuree,
   presumees: (duree: DureeTravaillee): string => `+ ${formatDuree(duree)} présumées`,
+  nonConformite: (duree: DureeTravaillee): string => `NC ${formatDuree(duree)}`,
   jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
-  pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${TYPES[type]} ${heure(instant)}`,
-
-  debutDeBloc: (debut: InstantDeReleve, depuisLaVeille: boolean): string => (depuisLaVeille ? DEPUIS_LA_VEILLE : heure(debut)),
-  finDeBloc: (fin: InstantDeReleve, seLePoursuit: boolean, presumee: boolean): string => {
-    if (seLePoursuit) {
-      return SE_POURSUIT;
-    }
-    return presumee ? `${heure(fin)} présumée` : heure(fin);
-  },
-  bornes: (debut: string, fin: string): string => `${debut} – ${fin}`,
-  puceEnCours: (type: TypeDePointage | undefined, debut: InstantDeReleve): string =>
-    `${type === undefined ? PRESENCE : TYPES[type]} ${heure(debut)}`,
-  pucePause: (debut: InstantDeReleve): string => `${PAUSE} ${heure(debut)}`,
+  typeDElement: (type: TypeDElement): string => TYPES_D_ELEMENT[type],
+  presence: PRESENCE,
+  nomDElement: nomDeLElement,
+  heure,
+  libelleDePointage: (type: TypeDePointage): string => POINTAGES[type],
+  pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${POINTAGES[type]} ${heure(instant)}`,
+  titreDuJournal: (jour: JourCalendaire, nombre: number): string => `Pointages du ${JOUR_COMPLET.format(dateDe(jour))} · ${nombre}`,
+  clotureParLeDepart: (instant: InstantDeReleve): string => `Clos par le départ ${heure(instant)}`,
+  sansPointageCeJour: 'Aucun pointage ce jour',
+  effetDeCloture: (noms: readonly string[]): string => (noms.length === 0 ? '' : `clôt ${LISTE.format(noms)}, sans fin pointée`),
+  postes: (postes: readonly PosteDeLElement[]): string => postes.map(posteEtNature).join(', '),
+  repere: (minutes: number): string => `${Math.floor(minutes / MINUTES_PAR_HEURE)} h`,
 
   enonceDePlage: ({ presumee, debut, fin, depuisLaVeille, seLePoursuit }: FormeDePlage): string => {
     const nature = natureDe(presumee);
@@ -99,9 +150,12 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     }
     return seLePoursuit ? `${nature} depuis ${heure(debut)}, se poursuit le lendemain` : `${nature} ${heure(debut)} – ${heure(fin)}`;
   },
+  enonceDActivite: ({ element, jour, categorie, debut, fin, presumee, arreteSansFinPointee }: FormeDActivite): string => {
+    const enonce = `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
+    const precisions = [...(presumee ? [PRESUME] : []), ...(arreteSansFinPointee ? [ARRETE_SANS_FIN_POINTEE] : [])];
+    return [enonce, ...precisions].join(', ');
+  },
+  enonceDActiviteEnCours: ({ element, jour, categorie, debut }: FormeDActiviteEnCours): string =>
+    `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, depuis ${heure(debut)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
   enonceDePlageEnCours: (debut: InstantDeReleve): string => `${PRESENCE} depuis ${heure(debut)}, ${EN_COURS}`,
-  enonceDePause: (debut: InstantDeReleve | undefined, fin: InstantDeReleve): string =>
-    debut === undefined ? `${PAUSE} ${DEPUIS_LA_VEILLE} jusqu’à ${heure(fin)}` : `${PAUSE} ${heure(debut)} – ${heure(fin)}`,
-  enonceDePauseSansReprise: (debut: InstantDeReleve, enCours: boolean): string =>
-    `${PAUSE} depuis ${heure(debut)}, ${enCours ? EN_COURS : 'sans reprise ce jour'}`,
 } as const;

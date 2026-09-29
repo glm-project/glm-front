@@ -21,6 +21,21 @@ describe('Weekly hours report of an operator', () => {
     thenTheWeekInProgressIsDisplayed();
   });
 
+  it('should name the link of an operator after their operational time', () => {
+    givenReferentialAndReports();
+    whenVisitingOperateurs();
+
+    thenTheLinkToTheOperationalTimeIsNamedAfterTheOperator();
+  });
+
+  it('should reach the operational time of an operator under its title, with their name', () => {
+    givenReferentialAndReports();
+    whenVisitingOperateurs();
+    whenOpeningTheHoursOfTheFirstOperateur();
+
+    thenTheOperationalTimeIsTitledWithTheOperator();
+  });
+
   it('should read the week in progress when the address names none', () => {
     givenReferentialAndReports();
     whenVisitingOperateurs();
@@ -68,6 +83,54 @@ describe('Weekly hours report of an operator', () => {
     thenTheAddressIsRefusedWithoutAnyRead();
   });
 
+  it('should open today on the week in progress without rewriting the address', () => {
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+
+    thenTheOpenDayIs('jeu. 17');
+    thenTheAddressNamesNoDay();
+  });
+
+  it('should put the day opened by its header in the address', () => {
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+    whenOpeningTheDay(1);
+
+    thenTheAddressNamesTheDay('2026-09-15');
+  });
+
+  it('should open the previous day again when the browser goes back', () => {
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+    whenOpeningTheDay(1);
+    whenGoingBackFromTheOpenedDay('mar. 15');
+
+    thenTheOpenDayIs('jeu. 17');
+  });
+
+  it('should leave the day out of the address when moving to the previous week', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDayOfTheWeek(2026, 38, '2026-09-15');
+    whenAskingForThePreviousWeek();
+
+    thenTheAddressNamesNoDay();
+  });
+
+  it('should leave the day out of the address when moving to the next week', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDayOfTheWeek(2026, 37, '2026-09-08');
+    whenAskingForTheNextWeek();
+
+    thenTheAddressNamesNoDay();
+  });
+
+  it('should refuse a day the week does not carry, without asking the server', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDay('2026-09-21');
+
+    thenTheAddressIsRefusedWithoutAnyRead();
+  });
+
   const givenReferentialAndReports = (): void => {
     operateurs.install();
     synthese.install();
@@ -86,6 +149,27 @@ describe('Weekly hours report of an operator', () => {
     cy.visit(`/operateurs/op-1/heures?annee=${String(annee)}&semaine=${String(semaine)}`);
   };
 
+  const whenVisitingTheDay = (jour: string): void => {
+    cy.viewport(1280, 900);
+    cy.clock(HORLOGE, ['Date']);
+    cy.visit(`/operateurs/op-1/heures?annee=2026&semaine=38&jour=${jour}`);
+  };
+
+  const whenVisitingTheDayOfTheWeek = (annee: number, semaine: number, jour: string): void => {
+    cy.viewport(1280, 900);
+    cy.clock(HORLOGE, ['Date']);
+    cy.visit(`/operateurs/op-1/heures?annee=${String(annee)}&semaine=${String(semaine)}&jour=${jour}`);
+  };
+
+  const whenOpeningTheDay = (rang: number): void => {
+    cy.get(dataSelector('synthese-jour-lien')).eq(rang).click();
+  };
+
+  const whenGoingBackFromTheOpenedDay = (jour: string): void => {
+    thenTheOpenDayIs(jour);
+    cy.go('back');
+  };
+
   const whenOpeningTheHoursOfTheFirstOperateur = (): void => {
     cy.get(dataSelector('operateur-heures')).first().click();
   };
@@ -93,6 +177,11 @@ describe('Weekly hours report of an operator', () => {
   const whenAskingForThePreviousWeek = (): void => {
     cy.get(dataSelector('synthese-semaine-precedente')).click();
     cy.get(dataSelector('synthese-semaine-libelle')).should('contain.text', 'Semaine 37');
+  };
+
+  const whenAskingForTheNextWeek = (): void => {
+    cy.get(dataSelector('synthese-semaine-suivante')).click();
+    cy.get(dataSelector('synthese-semaine-libelle')).should('contain.text', 'Semaine 38');
   };
 
   const whenGoingBack = (): void => {
@@ -105,6 +194,31 @@ describe('Weekly hours report of an operator', () => {
 
   const whenChoosingTheWeek = (semaine: string): void => {
     cy.get(dataSelector('synthese-semaine')).select(`Semaine ${semaine}`);
+  };
+
+  const thenTheLinkToTheOperationalTimeIsNamedAfterTheOperator = (): void => {
+    cy.get(dataSelector('operateur-heures'))
+      .first()
+      .should('have.attr', 'aria-label', 'Voir le temps opérationnel de Prenom 1 Nom 01')
+      .and('contain.text', 'Temps opérationnel');
+  };
+
+  const thenTheOperationalTimeIsTitledWithTheOperator = (): void => {
+    cy.get(dataSelector('synthese-titre')).should('have.text', 'Temps opérationnel');
+    cy.get(dataSelector('synthese-identite')).should('contain.text', 'Jean DUPONT');
+  };
+
+  const thenTheOpenDayIs = (jour: string): void => {
+    cy.get(dataSelector('synthese-jour-lien')).filter('[aria-current="true"]').should('have.length', 1).and('contain.text', jour);
+  };
+
+  const thenTheAddressNamesNoDay = (): void => {
+    cy.get(dataSelector('synthese-jour-cell')).should('have.length', 7);
+    cy.location('search').should('not.contain', 'jour=');
+  };
+
+  const thenTheAddressNamesTheDay = (jour: string): void => {
+    cy.location('search').should('contain', `jour=${jour}`);
   };
 
   const thenTheWeekInProgressIsDisplayed = (): void => {

@@ -1,71 +1,96 @@
 import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { ElementReleveId } from '../element/ElementReleveId';
+import { IntervalleDActivite } from '../element/IntervalleDActivite';
 import { JourCalendaire } from '../semaine/JourCalendaire';
+import { CibleDePointage } from './CibleDePointage';
+import { EffetDePointage } from './EffetDePointage';
 import { InstantDeReleve } from './InstantDeReleve';
-import { PauseDeReleve } from './PauseDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
+import { PointageDElement } from './PointageDElement';
+import { PointageDePresence } from './PointageDePresence';
 import { PointageDeReleve } from './PointageDeReleve';
-import { TypeDePointage } from './TypeDePointage';
 
 export interface FicheDuJour {
   readonly jour: JourCalendaire;
-  readonly dureePointee: DureeTravaillee;
-  readonly dureePresumee: DureeTravaillee;
+  readonly operationnelPointe: DureeTravaillee;
+  readonly operationnelPresume: DureeTravaillee;
+  readonly intervalles: readonly IntervalleDActivite[];
   readonly pointages: readonly PointageDeReleve[];
   readonly plages: readonly PlageDeReleve[];
 }
 
+const estUnDepart = (pointage: PointageDeReleve): pointage is PointageDePresence =>
+  pointage instanceof PointageDePresence && pointage.type === 'DEPART';
+
 export class JourDeReleve {
   readonly jour: JourCalendaire;
-  readonly dureePointee: DureeTravaillee;
-  readonly dureePresumee: DureeTravaillee;
+  readonly operationnelPointe: DureeTravaillee;
+  readonly operationnelPresume: DureeTravaillee;
+  readonly intervalles: readonly IntervalleDActivite[];
   readonly pointages: readonly PointageDeReleve[];
   readonly plages: readonly PlageDeReleve[];
-  readonly #pauses: readonly PauseDeReleve[];
 
   constructor(fiche: FicheDuJour) {
     this.jour = fiche.jour;
-    this.dureePointee = fiche.dureePointee;
-    this.dureePresumee = fiche.dureePresumee;
+    this.operationnelPointe = fiche.operationnelPointe;
+    this.operationnelPresume = fiche.operationnelPresume;
+    this.intervalles = [...fiche.intervalles];
     this.pointages = [...fiche.pointages];
     this.plages = [...fiche.plages];
-    this.#pauses = [...this.pauseDepuisLaVeille(), ...this.pausesEntrePointages()];
+  }
+
+  aDesPointages(): boolean {
+    return this.pointages.length > 0;
   }
 
   estVide(): boolean {
     return this.pointages.length === 0 && this.plages.length === 0;
   }
 
-  pauses(): readonly PauseDeReleve[] {
-    return this.#pauses;
+  pointagesDePresence(): readonly PointageDePresence[] {
+    return this.pointages.filter(pointage => pointage instanceof PointageDePresence);
   }
 
-  vientDeLaVeille(plage: PlageDeReleve): boolean {
-    return this.typeDuPointageA(plage.debut) === undefined;
+  pointagesDElement(): readonly PointageDElement[] {
+    return this.pointages.filter(pointage => pointage instanceof PointageDElement);
   }
 
-  typeDuPointageA(instant: InstantDeReleve): TypeDePointage | undefined {
-    return this.pointages.find(pointage => pointage.instant.estLeMeme(instant))?.type;
+  pointagesDe(element: ElementReleveId): readonly PointageDElement[] {
+    return this.pointagesDElement().filter(pointage => pointage.cible.element.estLeMeme(element));
   }
 
-  private pauseDepuisLaVeille(): readonly PauseDeReleve[] {
-    const premier = this.pointages[0];
-    if (premier === undefined) {
-      return [];
+  effetDe(pointage: PointageDeReleve): EffetDePointage {
+    if (!estUnDepart(pointage)) {
+      return new EffetDePointage([]);
     }
-    return this.commenceEnPause(premier) ? [new PauseDeReleve(undefined, premier.instant)] : [];
+    const cibles = this.intervalles
+      .filter(intervalle => intervalle.fin?.estLeMeme(pointage.instant) === true)
+      .map(intervalle => intervalle.cible())
+      .filter(cible => !this.uneFinPointeeTermine(cible, pointage.instant));
+    return new EffetDePointage(cibles.filter((cible, rang) => cibles.findIndex(autre => autre.estLaMeme(cible)) === rang));
   }
 
-  private pausesEntrePointages(): readonly PauseDeReleve[] {
-    return this.pointages.flatMap((pointage, rang) =>
-      pointage.type === 'PAUSE' ? [new PauseDeReleve(pointage.instant, this.pointages[rang + 1]?.instant)] : [],
+  estArreteSansFinPointee(intervalle: IntervalleDActivite): boolean {
+    const fin = intervalle.fin;
+    return (
+      fin !== undefined
+      && !intervalle.presumee
+      && !fin.estUnAutreJourQue(intervalle.debut)
+      && ![...this.pointagesDePresence(), ...this.pointagesDe(intervalle.element)].some(pointage => pointage.instant.estLeMeme(fin))
     );
   }
 
-  private commenceEnPause(premier: PointageDeReleve): boolean {
-    return premier.type === 'REPRISE' || (premier.type === 'DEPART' && !this.unePlageFinitA(premier));
+  intervallesDe(element: ElementReleveId): readonly IntervalleDActivite[] {
+    return this.intervalles.filter(intervalle => intervalle.element.estLeMeme(element));
   }
 
-  private unePlageFinitA(pointage: PointageDeReleve): boolean {
-    return this.plages.some(plage => plage.fin?.estLeMeme(pointage.instant) === true);
+  private uneFinPointeeTermine(cible: CibleDePointage, instant: InstantDeReleve): boolean {
+    return this.pointagesDElement().some(
+      pointage => pointage.type === 'FIN' && pointage.instant.estLeMeme(instant) && pointage.cible.estLaMeme(cible),
+    );
+  }
+
+  vientDeLaVeille(plage: PlageDeReleve): boolean {
+    return !this.pointagesDePresence().some(pointage => pointage.instant.estLeMeme(plage.debut));
   }
 }

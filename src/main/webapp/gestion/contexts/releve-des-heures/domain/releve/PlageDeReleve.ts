@@ -18,7 +18,11 @@ export class PlageDeReleve {
     }
   }
 
-  estOuverte(): boolean {
+  estEnCours(): boolean {
     return this.fin === undefined;
+  }
+
+  finOuDebut(): InstantDeReleve {
+    return this.fin ?? this.debut;
   }
 }

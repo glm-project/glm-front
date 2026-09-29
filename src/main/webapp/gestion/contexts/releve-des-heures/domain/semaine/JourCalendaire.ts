@@ -25,6 +25,10 @@ export class JourCalendaire {
     return new Date(millisecondes).toISOString().slice(0, 10) === value ? millisecondes / MILLISECONDES_PAR_JOUR : undefined;
   }
 
+  static lire(value: string): JourCalendaire | undefined {
+    return JourCalendaire.epoqueDe(value) === undefined ? undefined : new JourCalendaire(value);
+  }
+
   static depuisEpoque(jourEpoque: number): JourCalendaire {
     return new JourCalendaire(new Date(jourEpoque * MILLISECONDES_PAR_JOUR).toISOString().slice(0, 10));
   }
