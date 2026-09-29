@@ -15,7 +15,7 @@ export interface EntreeDeJournal {
   readonly libelle: string;
   readonly glyphe: GlypheDePointage;
   readonly objet: string;
-  readonly poste: string;
+  readonly poste: string | undefined;
   readonly effet: string;
   readonly selectionne: boolean;
 }
@@ -38,10 +38,8 @@ const sansDoublon = (noms: readonly string[]): readonly string[] => noms.filter(
 const effetDe = (releve: ReleveDesHeures, jour: JourDeReleve, pointage: PointageDeReleve): string =>
   LIBELLES.effetDeCloture(sansDoublon(jour.effetDe(pointage).clotures.map(cible => LIBELLES.nomDElement(releve.elementDe(cible)))));
 
-const posteDe = (releve: ReleveDesHeures, pointage: PointageDElement): string => {
-  const poste = pointage.cible.poste;
-  return poste === undefined ? '' : releve.elementDe(pointage.cible).libelleDuPoste(poste);
-};
+const posteDe = (releve: ReleveDesHeures, pointage: PointageDElement): string | undefined =>
+  releve.elementDe(pointage.cible).libelleDuPoste(pointage.cible.poste);
 
 const entreeDeJournal = (
   releve: ReleveDesHeures,
@@ -60,7 +58,7 @@ const entreeDeJournal = (
   if (pointage instanceof PointageDElement) {
     return { ...commun, objet: LIBELLES.nomDElement(releve.elementDe(pointage.cible)), poste: posteDe(releve, pointage), effet: '' };
   }
-  return { ...commun, objet: LIBELLES.presence, poste: '', effet: effetDe(releve, jour, pointage) };
+  return { ...commun, objet: LIBELLES.presence, poste: undefined, effet: effetDe(releve, jour, pointage) };
 };
 
 export const journalDuJour = (releve: ReleveDesHeures, jour: JourDeReleve, selection: number | undefined): JournalDuJour => ({

@@ -44,7 +44,7 @@ export class ElementDuReleve {
     return this.postes.some(candidat => candidat.id.value === poste.value);
   }
 
-  libelleDuPoste(poste: PosteReleveId): string {
-    return [...new Set(this.postes.filter(candidat => candidat.id.value === poste.value).map(candidat => candidat.libelle))].join(', ');
+  libelleDuPoste(poste: PosteReleveId | undefined): string | undefined {
+    return this.postes.find(candidat => candidat.id.value === poste?.value)?.libelle;
   }
 }
