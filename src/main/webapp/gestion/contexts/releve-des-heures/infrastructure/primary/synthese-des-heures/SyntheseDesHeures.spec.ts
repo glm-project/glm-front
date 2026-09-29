@@ -716,7 +716,7 @@ describe('Synthese des heures component', () => {
       ],
     ],
   ] as const)(
-    'should not split the row of an element for an interval still in progress listed %s a closed one, which has no extent yet',
+    'should split the row of an element for an interval still in progress that started within a closed one, listed %s it',
     async (_cas, intervalles) => {
       givenReleve(
         releveFixture(SEMAINE_EN_COURS, { 0: { intervalles } }, {}, [
@@ -731,9 +731,38 @@ describe('Synthese des heures component', () => {
 
       await whenEcranAffiche();
 
-      expect(nombreDe('synthese-sous-ligne')).toBe(0);
+      expect(textes('synthese-sous-ligne-poste')).toEqual(['DMU 50', 'Mazak QT-200']);
     },
   );
+
+  it('should split the row of an element worked from two workstations at once that are both still in progress', async () => {
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            intervalles: [
+              { poste: 'poste-0', debut: [8, 0] },
+              { poste: 'poste-1', debut: [10, 0] },
+            ],
+          },
+        },
+        {},
+        [
+          elementFixture({
+            postes: [
+              ['DMU 50', 'Fraisage'],
+              ['Mazak QT-200', 'Tournage'],
+            ],
+          }),
+        ],
+      ),
+    );
+
+    await whenEcranAffiche();
+
+    expect([textes('synthese-sous-ligne-poste'), nombreDe('synthese-barre-ouverte')]).toEqual([['DMU 50', 'Mazak QT-200'], 2]);
+  });
 
   it('should put the work of a split element that has no workstation on a row of its own, said to have none', async () => {
     givenReleve(

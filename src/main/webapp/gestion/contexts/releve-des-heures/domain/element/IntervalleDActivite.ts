@@ -5,6 +5,8 @@ import { PosteReleveId } from './PosteReleveId';
 
 const estPresumeSansFin = (fiche: FicheDIntervalle): boolean => fiche.presumee && fiche.fin === undefined;
 
+const commenceAvant = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): boolean => fin === undefined || debut.estAvant(fin);
+
 const finitAvantDeCommencer = (fiche: FicheDIntervalle): boolean => fiche.fin?.estAvant(fiche.debut) === true;
 
 export interface FicheDIntervalle {
@@ -43,12 +45,6 @@ export class IntervalleDActivite {
   }
 
   chevauche(autre: IntervalleDActivite): boolean {
-    if (this.fin === undefined) {
-      return false;
-    }
-    if (autre.fin === undefined) {
-      return false;
-    }
-    return this.debut.estAvant(autre.fin) && autre.debut.estAvant(this.fin);
+    return commenceAvant(this.debut, autre.fin) && commenceAvant(autre.debut, this.fin);
   }
 }
