@@ -1,33 +1,21 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
+import {
+  elementFixture,
+  jourAbandonneFixture,
+  jourTravailleFixture,
+  OPERATEUR,
+  releveFixture,
+  SEMAINE_EN_COURS,
+} from '@test/unit/fixtures/gestion/releve-des-heures/ReleveDesHeuresFixture';
 import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des-heures/SyntheseDesHeuresFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
-import { CategorieDActivite } from '../../../domain/element/CategorieDActivite';
-import { ElementDuReleve } from '../../../domain/element/ElementDuReleve';
-import { ElementReleveId } from '../../../domain/element/ElementReleveId';
-import { IntervalleDActivite } from '../../../domain/element/IntervalleDActivite';
-import { PosteDeLElement } from '../../../domain/element/PosteDeLElement';
-import { PosteReleveId } from '../../../domain/element/PosteReleveId';
-import { TypeDElement } from '../../../domain/element/TypeDElement';
-import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
-import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
-import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
-import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
-import { PointageDElement } from '../../../domain/releve/PointageDElement';
-import { PointageDePresence } from '../../../domain/releve/PointageDePresence';
-import { PointageDeReleve } from '../../../domain/releve/PointageDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
-import { TypeDePointageDElement, TypeDePointageDePresence } from '../../../domain/releve/TypeDePointage';
-import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { SyntheseDesHeures } from './SyntheseDesHeures';
-
-const OPERATEUR = 'op-1';
-const SEMAINE_EN_COURS = new SemaineISO(2026, 38);
 
 class RouteFixture {
   readonly paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ operateur: OPERATEUR }));
@@ -63,149 +51,6 @@ class RouterFixture {
     return Promise.resolve(true);
   }
 }
-
-type Heure = readonly [number, number];
-
-const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
-  new InstantDeReleve(new Date(2026, 8, 14 + rang, heure, minute).toISOString());
-
-interface IntervalleFixture {
-  readonly element?: string;
-  readonly poste?: string;
-  readonly categorie?: CategorieDActivite;
-  readonly debut: Heure;
-  readonly fin?: Heure;
-  readonly presumee?: boolean;
-}
-
-interface PointageDElementFixture {
-  readonly type: TypeDePointageDElement;
-  readonly heure: Heure;
-  readonly element?: string;
-  readonly poste?: string;
-}
-
-type PointageDePresenceFixture = readonly [TypeDePointageDePresence, Heure];
-
-interface JourFixture {
-  readonly intervalles?: readonly IntervalleFixture[];
-  readonly pointagesDElement?: readonly PointageDElementFixture[];
-  readonly operationnelle?: string;
-  readonly operationnellePresumee?: string;
-  readonly pointages?: readonly PointageDePresenceFixture[];
-  readonly journal?: readonly (PointageDePresenceFixture | PointageDElementFixture)[];
-  readonly plages?: readonly (readonly [Heure, Heure | undefined, boolean?])[];
-}
-
-const pointageFixture = (rang: number, pointage: PointageDePresenceFixture | PointageDElementFixture): PointageDeReleve => {
-  if ('type' in pointage) {
-    return new PointageDElement(pointage.type, instantFixture(rang, pointage.heure), {
-      element: new ElementReleveId(pointage.element ?? 'element-1'),
-      poste: pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
-    });
-  }
-  const [type, heure] = pointage;
-  return new PointageDePresence(type, instantFixture(rang, heure));
-};
-
-const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): JourDeReleve =>
-  new JourDeReleve({
-    jour,
-    operationnelPointe: new DureeTravaillee(fiche.operationnelle ?? 'PT0S'),
-    operationnelPresume: new DureeTravaillee(fiche.operationnellePresumee ?? 'PT0S'),
-    intervalles: (fiche.intervalles ?? []).map(
-      intervalle =>
-        new IntervalleDActivite({
-          element: new ElementReleveId(intervalle.element ?? 'element-1'),
-          poste: intervalle.poste === undefined ? undefined : new PosteReleveId(intervalle.poste),
-          nature: undefined,
-          categorie: intervalle.categorie ?? 'TRAVAIL',
-          debut: instantFixture(rang, intervalle.debut),
-          fin: intervalle.fin === undefined ? undefined : instantFixture(rang, intervalle.fin),
-          presumee: intervalle.presumee ?? false,
-        }),
-    ),
-    pointages: (fiche.journal ?? [...(fiche.pointages ?? []), ...(fiche.pointagesDElement ?? [])]).map(pointage =>
-      pointageFixture(rang, pointage),
-    ),
-    plages: (fiche.plages ?? []).map(
-      ([debut, fin, presumee]) =>
-        new PlageDeReleve(instantFixture(rang, debut), fin === undefined ? undefined : instantFixture(rang, fin), presumee ?? false),
-    ),
-  });
-
-interface TotauxFixture {
-  readonly presencePresumee?: string;
-  readonly operationnelle?: string;
-  readonly operationnellePresumee?: string;
-}
-
-interface ElementFixture {
-  readonly id?: string;
-  readonly type?: TypeDElement;
-  readonly nom?: string;
-  readonly reference?: string;
-  readonly description?: string;
-  readonly postes?: readonly (readonly [string, string | undefined, string?])[];
-  readonly duree?: string;
-  readonly dureeNonConformite?: string;
-  readonly dureePresumee?: string;
-}
-
-const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
-  new ElementDuReleve({
-    id: new ElementReleveId(fiche.id ?? 'element-1'),
-    type: fiche.type ?? 'PRODUIT',
-    nom: fiche.nom ?? 'PRD-2026-000015',
-    reference: fiche.reference,
-    description: fiche.description,
-    duree: new DureeTravaillee(fiche.duree ?? 'PT0S'),
-    dureeNonConformite: new DureeTravaillee(fiche.dureeNonConformite ?? 'PT0S'),
-    dureePresumee: new DureeTravaillee(fiche.dureePresumee ?? 'PT0S'),
-    postes: (fiche.postes ?? []).map(
-      ([libelle, nature, id], rang) => new PosteDeLElement(new PosteReleveId(id ?? `poste-${String(rang)}`), libelle, nature),
-    ),
-  });
-
-const releveFixture = (
-  semaine: SemaineISO,
-  jours: Readonly<Record<number, JourFixture>>,
-  totaux: TotauxFixture = {},
-  elements: readonly ElementDuReleve[] = [],
-): ReleveDesHeures =>
-  new ReleveDesHeures(semaine, {
-    elements,
-    operateur: new IdentiteOperateur('Dupont', 'Jean'),
-    presencePointee: new DureeTravaillee('PT7H30M'),
-    presencePresumee: new DureeTravaillee(totaux.presencePresumee ?? 'PT0S'),
-    operationnelPointe: new DureeTravaillee(totaux.operationnelle ?? 'PT0S'),
-    operationnelPresume: new DureeTravaillee(totaux.operationnellePresumee ?? 'PT0S'),
-    jours: semaine.jours().map((jour, rang) => jourFixture(jour, rang, jours[rang] ?? {})),
-  });
-
-const jourTravailleFixture: JourFixture = {
-  pointages: [
-    ['ARRIVEE', [8, 2]],
-    ['DEPART', [12, 0]],
-    ['ARRIVEE', [13, 0]],
-    ['DEPART', [17, 32]],
-  ],
-  plages: [
-    [
-      [8, 2],
-      [12, 0],
-    ],
-    [
-      [13, 0],
-      [17, 32],
-    ],
-  ],
-};
-
-const jourAbandonneFixture: JourFixture = {
-  pointages: [['ARRIVEE', [10, 20]]],
-  plages: [[[10, 20], [15, 40], true]],
-};
 
 describe('Synthese des heures component', () => {
   let componentFixture: ComponentFixture<SyntheseDesHeures>;
