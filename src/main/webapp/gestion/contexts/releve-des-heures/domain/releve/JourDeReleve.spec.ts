@@ -8,7 +8,7 @@ import { FicheDuJour, JourDeReleve } from './JourDeReleve';
 import { PlageDeReleve } from './PlageDeReleve';
 import { PointageDElement } from './PointageDElement';
 import { PointageDePresence } from './PointageDePresence';
-import { TypeDePointageDePresence } from './TypeDePointage';
+import { TypeDePointageDElement, TypeDePointageDePresence } from './TypeDePointage';
 
 const instantFixture = (heure: number, minute: number): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14, heure, minute).toISOString());
@@ -27,8 +27,17 @@ const intervalleFixture = (element: string, debut: [number, number], fin: [numbe
     presumee: false,
   });
 
+const pointageDElementFixture = (
+  type: TypeDePointageDElement,
+  element: string,
+  heure: number,
+  minute: number,
+  poste: string,
+): PointageDElement =>
+  new PointageDElement(type, instantFixture(heure, minute), { element: new ElementReleveId(element), poste: new PosteReleveId(poste) });
+
 const finPointeeFixture = (element: string, heure: number, minute: number, poste: string): PointageDElement =>
-  new PointageDElement('FIN', instantFixture(heure, minute), { element: new ElementReleveId(element), poste: new PosteReleveId(poste) });
+  pointageDElementFixture('FIN', element, heure, minute, poste);
 
 const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({
   jour: new JourCalendaire('2026-09-14'),
@@ -87,6 +96,22 @@ describe('JourDeReleve', () => {
     expect(jour.vientDeLaVeille(plage)).toBe(false);
   });
 
+  it('should hand back the clockings of an element apart from those of the other elements', () => {
+    const carter = pointageDElementFixture('DEBUT', 'carter', 8, 0, 'dmu');
+    const bride = pointageDElementFixture('DEBUT', 'bride', 9, 0, 'dmu');
+    const jour = new JourDeReleve(ficheFixture({ pointages: [carter, bride] }));
+
+    expect(jour.pointagesDe(new ElementReleveId('carter'))).toEqual([carter]);
+  });
+
+  it('should hand back the intervals of an element apart from those of the other elements', () => {
+    const carter = intervalleFixture('carter', [8, 0], [12, 0]);
+    const bride = intervalleFixture('bride', [9, 0], [11, 0]);
+    const jour = new JourDeReleve(ficheFixture({ intervalles: [carter, bride] }));
+
+    expect(jour.intervallesDe(new ElementReleveId('carter'))).toEqual([carter]);
+  });
+
   describe('effect of a clocking', () => {
     const depart = pointageFixture('DEPART', 16, 0);
 
@@ -129,14 +154,82 @@ describe('JourDeReleve', () => {
       expect(clotures(jour, depart)).toEqual(['carter/dmu', 'carter/mazak']);
     });
 
-    it('should give an arrival and the clockings of an element no effect', () => {
-      const arrivee = pointageFixture('ARRIVEE', 8, 0);
-      const fin = finPointeeFixture('carter', 16, 0, 'dmu');
+    it('should give an arrival no effect, even at the instant an interval ends', () => {
+      const arrivee = pointageFixture('ARRIVEE', 16, 0);
       const jour = new JourDeReleve(
-        ficheFixture({ pointages: [arrivee, fin], intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')] }),
+        ficheFixture({ pointages: [arrivee], intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')] }),
       );
 
-      expect([clotures(jour, arrivee), clotures(jour, fin)]).toEqual([[], []]);
+      expect(clotures(jour, arrivee)).toEqual([]);
+    });
+
+    it('should give a non-conformity clocking no effect, even at the instant an interval ends', () => {
+      const nonConformite = pointageDElementFixture('NON_CONFORMITE', 'carter', 16, 0, 'dmu');
+      const jour = new JourDeReleve(
+        ficheFixture({ pointages: [nonConformite], intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')] }),
+      );
+
+      expect(clotures(jour, nonConformite)).toEqual([]);
+    });
+
+    it('should still close the element at a departure when only a non-conformity is clocked at that instant', () => {
+      const nonConformite = pointageDElementFixture('NON_CONFORMITE', 'carter', 16, 0, 'dmu');
+      const jour = new JourDeReleve(
+        ficheFixture({ pointages: [nonConformite, depart], intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')] }),
+      );
+
+      expect(clotures(jour, depart)).toEqual(['carter/dmu']);
+    });
+
+    it('should still close the element at a departure when the end clocked at that instant is another element’s', () => {
+      const jour = new JourDeReleve(
+        ficheFixture({
+          pointages: [finPointeeFixture('bride', 16, 0, 'dmu'), depart],
+          intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')],
+        }),
+      );
+
+      expect(clotures(jour, depart)).toEqual(['carter/dmu']);
+    });
+
+    it('should still close the element at a departure when the end clocked at that instant is from another workstation', () => {
+      const jour = new JourDeReleve(
+        ficheFixture({
+          pointages: [finPointeeFixture('carter', 16, 0, 'mazak'), depart],
+          intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')],
+        }),
+      );
+
+      expect(clotures(jour, depart)).toEqual(['carter/dmu']);
+    });
+
+    it('should still close the element at a departure when its end was clocked at another instant', () => {
+      const jour = new JourDeReleve(
+        ficheFixture({
+          pointages: [finPointeeFixture('carter', 15, 0, 'dmu'), depart],
+          intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')],
+        }),
+      );
+
+      expect(clotures(jour, depart)).toEqual(['carter/dmu']);
+    });
+
+    it('should close a workstation of an element once when several of its intervals end at the departure', () => {
+      const jour = new JourDeReleve(
+        ficheFixture({
+          pointages: [depart],
+          intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu'), intervalleFixture('carter', [12, 0], [16, 0], 'dmu')],
+        }),
+      );
+
+      expect(clotures(jour, depart)).toEqual(['carter/dmu']);
+    });
+
+    it('should give a clocked end no effect', () => {
+      const fin = finPointeeFixture('carter', 16, 0, 'dmu');
+      const jour = new JourDeReleve(ficheFixture({ pointages: [fin], intervalles: [intervalleFixture('carter', [8, 0], [16, 0], 'dmu')] }));
+
+      expect(clotures(jour, fin)).toEqual([]);
     });
   });
 });
