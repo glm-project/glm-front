@@ -243,6 +243,7 @@
             [title]="marque.titre"
             aria-hidden="true"
             data-selector="synthese-marque"
+            [attr.data-type]="marque.type"
             [attr.data-choisie]="marque.choisie"
           ></span>
           }
@@ -251,22 +252,32 @@
     </div>
     <div class="pied">
       <ul class="legende">
-        <li data-selector="synthese-legende"><i class="pastille pastille-travail" aria-hidden="true"></i>{{ libelles.legende.travail }}</li>
-        <li data-selector="synthese-legende">
+        <li data-selector="synthese-legende" data-legende="travail">
+          <i class="pastille pastille-travail" aria-hidden="true"></i>{{ libelles.legende.travail }}
+        </li>
+        <li data-selector="synthese-legende" data-legende="non-conformite">
           <i class="pastille pastille-nc" aria-hidden="true"></i>{{ libelles.legende.nonConformite }}
         </li>
-        <li data-selector="synthese-legende">
+        <li data-selector="synthese-legende" data-legende="presence">
           <i class="pastille pastille-presence" aria-hidden="true"></i>{{ libelles.legende.presence }}
         </li>
-        <li data-selector="synthese-legende"><i class="pastille pastille-presume" aria-hidden="true"></i>{{ libelles.legende.presume }}</li>
-        <li data-selector="synthese-legende">
+        <li data-selector="synthese-legende" data-legende="presume">
+          <i class="pastille pastille-presume" aria-hidden="true"></i>{{ libelles.legende.presume }}
+        </li>
+        <li data-selector="synthese-legende" data-legende="en-cours">
           <i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}
         </li>
-        <li data-selector="synthese-legende"><i class="forme debut" aria-hidden="true"></i>{{ libelles.legende.debut }}</li>
-        <li data-selector="synthese-legende"><i class="forme nc" aria-hidden="true"></i>{{ libelles.legende.nonConformitePointee }}</li>
-        <li data-selector="synthese-legende"><i class="forme fin" aria-hidden="true"></i>{{ libelles.legende.fin }}</li>
-        <li data-selector="synthese-legende"><i class="forme clos" aria-hidden="true"></i>{{ libelles.legende.clos }}</li>
-        <li data-selector="synthese-legende">
+        <li data-selector="synthese-legende" data-legende="debut">
+          <i class="forme debut" aria-hidden="true"></i>{{ libelles.legende.debut }}
+        </li>
+        <li data-selector="synthese-legende" data-legende="non-conformite-pointee">
+          <i class="forme nc" aria-hidden="true"></i>{{ libelles.legende.nonConformitePointee }}
+        </li>
+        <li data-selector="synthese-legende" data-legende="fin"><i class="forme fin" aria-hidden="true"></i>{{ libelles.legende.fin }}</li>
+        <li data-selector="synthese-legende" data-legende="clos">
+          <i class="forme clos" aria-hidden="true"></i>{{ libelles.legende.clos }}
+        </li>
+        <li data-selector="synthese-legende" data-legende="trait">
           <i class="pastille pastille-trait" aria-hidden="true"></i>{{ libelles.legende.presenceTrait }}
         </li>
       </ul>
