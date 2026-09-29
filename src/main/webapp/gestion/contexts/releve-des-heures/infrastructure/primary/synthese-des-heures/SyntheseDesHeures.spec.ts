@@ -211,7 +211,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-presence-plage'), titres('synthese-presence-plage')]).toEqual([
+    expect([textesDe(presencesDe('plage')), titresDe(presencesDe('plage'))]).toEqual([
       ['Présence 08:02 – 12:00', 'Présence 13:00 – 17:32'],
       ['Présence 08:02 – 12:00', 'Présence 13:00 – 17:32'],
     ]);
@@ -222,7 +222,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([nombreDe('synthese-presence-plage'), textes('synthese-presence-presumee')]).toEqual([0, ['Présence présumée 10:20 – 15:40']]);
+    expect([presencesDe('plage').length, textesDe(presencesDe('presumee'))]).toEqual([0, ['Présence présumée 10:20 – 15:40']]);
   });
 
   it('should state a presence going on past midnight as going on, and its continuation as coming from the day before', async () => {
@@ -251,7 +251,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-presence-plage')).toEqual([
+    expect(textesDe(presencesDe('plage'))).toEqual([
       'Présence depuis 19:00, se poursuit le lendemain',
       'Présence depuis la veille jusqu’à 07:00',
     ]);
@@ -279,7 +279,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-presence-ouverte'), nombreDe('synthese-presence-plage')]).toEqual([['Présence depuis 10:20, en cours'], 1]);
+    expect([textesDe(presencesDe('ouverte')), presencesDe('plage').length]).toEqual([['Présence depuis 10:20, en cours'], 1]);
   });
 
   it('should give each element of the week its row, named by its type, its number, its label and its workstations', async () => {
@@ -387,7 +387,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([nombreDe('synthese-barre-travail'), nombreDe('synthese-barre-nc')]).toEqual([1, 1]);
+    expect([barresDe('travail').length, barresDe('nc').length]).toEqual([1, 1]);
   });
 
   it('should state each bar by its element, its day, its hours and whether it is work or non-conformity', async () => {
@@ -414,7 +414,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-barre-travail'), titres('synthese-barre-travail'), textes('synthese-barre-nc')]).toEqual([
+    expect([textesDe(barresDe('travail')), titresDe(barresDe('travail')), textesDe(barresDe('nc'))]).toEqual([
       ['Moule 1015, lundi 14, 08:00 à 12:00, travail'],
       ['Moule 1015, lundi 14, 08:00 à 12:00, travail'],
       ['Moule 1015, lundi 14, 12:00 à 14:00, non-conformité'],
@@ -449,7 +449,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-barre-travail'), marquesDuJourOuvert()]).toEqual([
+    expect([textesDe(barresDe('travail')), marquesDuJourOuvert()]).toEqual([
       ['Moule 1015, lundi 14, 08:00 à 10:00, travail, arrêté sans fin pointée'],
       ['Début 08:00'],
     ]);
@@ -462,7 +462,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-barre-ouverte'), nombreDe('synthese-barre-travail')]).toEqual([
+    expect([textesDe(barresDe('ouverte')), barresDe('travail').length]).toEqual([
       ['Moule 1015, lundi 14, depuis 10:20, travail, en cours'],
       0,
     ]);
@@ -477,7 +477,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-barre-presumee'), nombreDe('synthese-barre-travail')]).toEqual([
+    expect([textesDe(barresDe('travail', true)), barresDe('travail').length]).toEqual([
       ['Moule 1015, mardi 15, 10:20 à 15:40, travail, présumé'],
       0,
     ]);
@@ -546,7 +546,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([nombreDe('synthese-sous-ligne'), nombreDe('synthese-barre-travail')]).toEqual([0, 2]);
+    expect([nombreDe('synthese-sous-ligne'), barresDe('travail').length]).toEqual([0, 2]);
   });
 
   it.each([
@@ -672,7 +672,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-sous-ligne-poste'), nombreDe('synthese-barre-ouverte')]).toEqual([['DMU 50', 'Mazak QT-200'], 2]);
+    expect([textes('synthese-sous-ligne-poste'), barresDe('ouverte').length]).toEqual([['DMU 50', 'Mazak QT-200'], 2]);
   });
 
   it('should put the work of a split element that has no workstation on a row of its own, said to have none', async () => {
@@ -872,7 +872,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([nombreDe('synthese-marque'), nombreDe('synthese-barre-travail')]).toEqual([1, 0]);
+    expect([nombreDe('synthese-marque'), barresDe('travail').length]).toEqual([1, 0]);
   });
 
   it('should list in the journal a clocking that no bar surrounds, under the name of its element', async () => {
@@ -1312,7 +1312,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([nombreDe('synthese-presence-plage'), textes('synthese-operationnel-jour')[0]]).toEqual([1, '0 h 00']);
+    expect([presencesDe('plage').length, textes('synthese-operationnel-jour')[0]]).toEqual([1, '0 h 00']);
   });
 
   it('should explain each mark of the frise in its legend', async () => {
@@ -1636,14 +1636,26 @@ describe('Synthese des heures component', () => {
   const titres = (selector: string): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector(selector))].map(element => element.getAttribute('title') ?? '');
 
+  const presencesDe = (style: string): HTMLElement[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-presence'))].filter(presence => presence.dataset['style'] === style);
+
+  const barresDe = (style: string, presumee = false): HTMLElement[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-barre'))].filter(
+      barre => barre.dataset['style'] === style && (barre.dataset['presumee'] === 'true') === presumee,
+    );
+
+  const textesDe = (elements: readonly HTMLElement[]): string[] => elements.map(element => normalise(element.textContent));
+
+  const titresDe = (elements: readonly HTMLElement[]): string[] => elements.map(element => element.getAttribute('title') ?? '');
+
   const presencesParJour = (): number[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-presence-jour'))].map(
-      cellule => cellule.querySelectorAll('[data-selector^="synthese-presence-"]').length,
+      cellule => cellule.querySelectorAll(dataSelector('synthese-presence')).length,
     );
 
   const barresParJour = (): number[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-element-jour'))].map(
-      cellule => cellule.querySelectorAll('[data-selector^="synthese-barre-"]').length,
+      cellule => cellule.querySelectorAll(dataSelector('synthese-barre')).length,
     );
 
   const joursOuverts = (): string[] =>
@@ -1669,9 +1681,9 @@ describe('Synthese des heures component', () => {
     );
 
   const marquesChoisies = (): string[] =>
-    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-marque-selectionnee'))].map(
-      marque => marque.getAttribute('title') ?? '',
-    );
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-marque'))]
+      .filter(marque => marque.dataset['choisie'] === 'true')
+      .map(marque => marque.getAttribute('title') ?? '');
 
   const marquesDuJourOuvert = (): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-marque'))].map(marque => marque.getAttribute('title') ?? '');
@@ -1689,7 +1701,7 @@ describe('Synthese des heures component', () => {
   const barresParSousLigne = (): number[][] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-sous-ligne'))].map(sousLigne =>
       [...sousLigne.querySelectorAll<HTMLElement>(dataSelector('synthese-sous-ligne-jour'))].map(
-        cellule => cellule.querySelectorAll(`${dataSelector('synthese-barre-travail')}, ${dataSelector('synthese-barre-nc')}`).length,
+        cellule => cellule.querySelectorAll(dataSelector('synthese-barre')).length,
       ),
     );
 

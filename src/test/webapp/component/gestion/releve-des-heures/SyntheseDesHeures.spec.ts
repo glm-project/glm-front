@@ -612,10 +612,7 @@ describe('Weekly hours report in gestion', () => {
   const presenceDuJour = (rang: number): Cypress.Chainable<JQuery> => cy.get(dataSelector('synthese-presence-jour')).eq(rang);
 
   const thenThePresenceOfTheDayCounts = (rang: number, nombre: number): void => {
-    cy.get(dataSelector('synthese-presence-jour'))
-      .eq(rang)
-      .find(`${dataSelector('synthese-presence-plage')}, ${dataSelector('synthese-presence-presumee')}`)
-      .should('have.length', nombre);
+    cy.get(dataSelector('synthese-presence-jour')).eq(rang).find(dataSelector('synthese-presence')).should('have.length', nombre);
   };
 
   const thenTheRowOfTheElementDrawsOnTheDay = (ligne: number, jour: number, attendu: { travail: number; nonConformite: number }): void => {
@@ -623,14 +620,10 @@ describe('Weekly hours report in gestion', () => {
       .eq(ligne)
       .find(dataSelector('synthese-element-jour'))
       .eq(jour)
-      .find(dataSelector('synthese-barre-travail'))
-      .should('have.length', attendu.travail);
-    cy.get(dataSelector('synthese-element-ligne'))
-      .eq(ligne)
-      .find(dataSelector('synthese-element-jour'))
-      .eq(jour)
-      .find(dataSelector('synthese-barre-nc'))
-      .should('have.length', attendu.nonConformite);
+      .should($cellule => {
+        const barres = (style: string): number => $cellule.find(dataSelector('synthese-barre')).filter(`[data-style="${style}"]`).length;
+        expect({ travail: barres('travail'), nonConformite: barres('nc') }).to.deep.equal(attendu);
+      });
   };
 
   const thenTheSubRowsRead = (postes: string[]): void => {
@@ -675,20 +668,28 @@ describe('Weekly hours report in gestion', () => {
   };
 
   const thenThePresumedPresenceOfTheDayReads = (rang: number, enonce: string): void => {
-    presenceDuJour(rang).find(dataSelector('synthese-presence-presumee')).should('have.text', enonce).and('be.visible');
+    presenceDuJour(rang)
+      .find(dataSelector('synthese-presence'))
+      .filter('[data-style="presumee"]')
+      .should('have.text', enonce)
+      .and('be.visible');
   };
 
   const thenThePresenceInProgressOfTheDayReads = (rang: number, enonce: string): void => {
-    presenceDuJour(rang).find(dataSelector('synthese-presence-ouverte')).should('have.text', enonce).and('be.visible');
+    presenceDuJour(rang)
+      .find(dataSelector('synthese-presence'))
+      .filter('[data-style="ouverte"]')
+      .should('have.text', enonce)
+      .and('be.visible');
   };
 
   const thenThePresenceOfTheDayStates = (rang: number, enonce: string): void => {
-    presenceDuJour(rang).find(dataSelector('synthese-presence-plage')).should('contain.text', enonce);
+    presenceDuJour(rang).find(dataSelector('synthese-presence')).should('contain.text', enonce);
   };
 
   const thenThePresenceOfTheDayReachesTheEndOfItsDay = (rang: number): void => {
     presenceDuJour(rang)
-      .find(dataSelector('synthese-presence-plage'))
+      .find(dataSelector('synthese-presence'))
       .last()
       .should($barre => {
         const cellule = $barre.closest(dataSelector('synthese-presence-jour'))[0];
@@ -762,7 +763,9 @@ describe('Weekly hours report in gestion', () => {
       .eq(jour)
       .should($cellule => {
         const colonne = $cellule[0]?.getBoundingClientRect();
-        const barres = [...$cellule.find(dataSelector('synthese-barre-travail'))].map(barre => barre.getBoundingClientRect());
+        const barres = [...$cellule.find(dataSelector('synthese-barre')).filter('[data-style="travail"]')].map(barre =>
+          barre.getBoundingClientRect(),
+        );
         expect(barres.length).to.be.greaterThan(0);
         expect(Math.min(...barres.map(barre => barre.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
         expect(Math.max(...barres.map(barre => barre.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);

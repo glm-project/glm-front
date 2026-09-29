@@ -171,7 +171,8 @@
               [style.left.%]="barre.gauche"
               [style.width.%]="barre.largeur"
               [title]="barre.enonce"
-              [attr.data-selector]="'synthese-presence-' + barre.style"
+              data-selector="synthese-presence"
+              [attr.data-style]="barre.style"
               ><span class="sr-only">{{ barre.enonce }}</span></span
             >
             }
@@ -229,7 +230,9 @@
             [style.left.%]="barre.gauche"
             [style.width.%]="barre.largeur"
             [title]="barre.enonce"
-            [attr.data-selector]="barre.presumee ? 'synthese-barre-presumee' : 'synthese-barre-' + barre.style"
+            data-selector="synthese-barre"
+            [attr.data-style]="barre.style"
+            [attr.data-presumee]="barre.presumee"
             ><span class="sr-only">{{ barre.enonce }}</span></span
           >
           } @for (marque of cellule.marques; track $index) {
@@ -239,7 +242,8 @@
             [style.left.%]="marque.gauche"
             [title]="marque.titre"
             aria-hidden="true"
-            [attr.data-selector]="marque.choisie ? 'synthese-marque-selectionnee' : 'synthese-marque'"
+            data-selector="synthese-marque"
+            [attr.data-choisie]="marque.choisie"
           ></span>
           }
         </ng-template>
