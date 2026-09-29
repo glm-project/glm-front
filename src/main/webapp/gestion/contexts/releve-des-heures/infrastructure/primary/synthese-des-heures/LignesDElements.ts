@@ -11,10 +11,10 @@ import { JourSurSonAxe } from './JourSurSonAxe';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
-export type NatureDActivite = 'travail' | 'nc' | 'ouverte';
+export type StyleDeBarreDActivite = 'travail' | 'nc' | 'ouverte';
 
 export interface BarreDActivite {
-  readonly nature: NatureDActivite;
+  readonly style: StyleDeBarreDActivite;
   readonly gauche: number;
   readonly largeur: number | undefined;
   readonly enonce: string;
@@ -55,7 +55,7 @@ export interface LigneDeFrise {
 
 type Selection = (poste: PosteReleveId | undefined) => boolean;
 
-const NATURES_D_ACTIVITE: Record<CategorieDActivite, NatureDActivite> = { TRAVAIL: 'travail', NON_CONFORMITE: 'nc' };
+const STYLES_D_ACTIVITE: Record<CategorieDActivite, StyleDeBarreDActivite> = { TRAVAIL: 'travail', NON_CONFORMITE: 'nc' };
 
 const MARQUES: Record<TypeDePointageDElement, TypeDeMarque> = { DEBUT: 'debut', NON_CONFORMITE: 'nc', FIN: 'fin' };
 
@@ -68,7 +68,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
       categorie: intervalle.categorie,
       debut: intervalle.debut,
     });
-    return { nature: 'ouverte', gauche, largeur: undefined, enonce, presumee: false };
+    return { style: 'ouverte', gauche, largeur: undefined, enonce, presumee: false };
   }
   const enonce = LIBELLES.enonceDActivite({
     element,
@@ -79,7 +79,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
     presumee: intervalle.presumee,
   });
   return {
-    nature: NATURES_D_ACTIVITE[intervalle.categorie],
+    style: STYLES_D_ACTIVITE[intervalle.categorie],
     gauche,
     largeur: axe.pourcentDe(minutesDeFin(intervalle.debut, intervalle.fin)) - gauche,
     enonce,

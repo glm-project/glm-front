@@ -144,7 +144,7 @@
           </span>
           @for (jour of vue.frise.jours; track jour.cle) {
           <span class="cellule" role="cell" [class.ouvert]="jour.ouvert">
-            <span class="duree" [class.sans-valeur]="jour.operationnel === libelles.sansValeur" data-selector="synthese-operationnel-jour"
+            <span class="duree" [class.sans-valeur]="jour.sansOperationnel" data-selector="synthese-operationnel-jour"
               >{{ jour.operationnel }}</span
             >
             @if (jour.operationnelPresume; as presume) {
@@ -167,11 +167,11 @@
           <span class="cellule" role="cell" data-selector="synthese-presence-jour">
             @for (barre of jour.presence; track $index) {
             <span
-              [class]="'barre ' + barre.nature"
+              [class]="'barre ' + barre.style"
               [style.left.%]="barre.gauche"
               [style.width.%]="barre.largeur"
               [title]="barre.enonce"
-              [attr.data-selector]="'synthese-presence-' + barre.nature"
+              [attr.data-selector]="'synthese-presence-' + barre.style"
               ><span class="sr-only">{{ barre.enonce }}</span></span
             >
             }
@@ -222,12 +222,12 @@
         <ng-template #barres let-cellule>
           @for (barre of cellule.barres; track $index) {
           <span
-            [class]="'barre ' + barre.nature"
+            [class]="'barre ' + barre.style"
             [class.presumee]="barre.presumee"
             [style.left.%]="barre.gauche"
             [style.width.%]="barre.largeur"
             [title]="barre.enonce"
-            [attr.data-selector]="barre.presumee ? 'synthese-barre-presumee' : 'synthese-barre-' + barre.nature"
+            [attr.data-selector]="barre.presumee ? 'synthese-barre-presumee' : 'synthese-barre-' + barre.style"
             ><span class="sr-only">{{ barre.enonce }}</span></span
           >
           } @for (marque of cellule.marques; track $index) {

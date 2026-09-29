@@ -10,10 +10,10 @@ import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
-export type NatureDeBarre = 'plage' | 'presumee' | 'ouverte';
+export type StyleDeBarreDePresence = 'plage' | 'presumee' | 'ouverte';
 
 export interface BarreDeFrise {
-  readonly nature: NatureDeBarre;
+  readonly style: StyleDeBarreDePresence;
   readonly gauche: number;
   readonly largeur: number | undefined;
   readonly enonce: string;
@@ -34,6 +34,7 @@ export interface JourDeFrise {
   readonly ouvert: boolean;
   readonly presence: readonly BarreDeFrise[];
   readonly operationnel: string;
+  readonly sansOperationnel: boolean;
   readonly operationnelPresume: string | undefined;
 }
 
@@ -63,7 +64,7 @@ export interface FriseDeLaSemaine {
 const barreDePresence = (jour: JourDeReleve, axe: AxeDuJour, plage: PlageDeReleve): BarreDeFrise => {
   const gauche = axe.pourcentDe(minutesDeDebut(plage.debut));
   if (plage.fin === undefined) {
-    return { nature: 'ouverte', gauche, largeur: undefined, enonce: LIBELLES.enonceDePlageEnCours(plage.debut) };
+    return { style: 'ouverte', gauche, largeur: undefined, enonce: LIBELLES.enonceDePlageEnCours(plage.debut) };
   }
   const enonce = LIBELLES.enonceDePlage({
     presumee: plage.presumee,
@@ -72,8 +73,8 @@ const barreDePresence = (jour: JourDeReleve, axe: AxeDuJour, plage: PlageDeRelev
     depuisLaVeille: jour.vientDeLaVeille(plage),
     seLePoursuit: seLePoursuit(plage.debut, plage.fin),
   });
-  const nature = plage.presumee ? 'presumee' : 'plage';
-  return { nature, gauche, largeur: axe.pourcentDe(minutesDeFin(plage.debut, plage.fin)) - gauche, enonce };
+  const style = plage.presumee ? 'presumee' : 'plage';
+  return { style, gauche, largeur: axe.pourcentDe(minutesDeFin(plage.debut, plage.fin)) - gauche, enonce };
 };
 
 const reperesDuJour = (jour: JourDeReleve, axe: AxeDuJour, ouvert: boolean): readonly RepereDeFrise[] =>
@@ -87,6 +88,7 @@ const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalen
   ouvert,
   presence: jour.plages.map(plage => barreDePresence(jour, axe, plage)),
   operationnel: jour.estVide() ? LIBELLES.sansValeur : LIBELLES.duree(jour.operationnelPointe),
+  sansOperationnel: jour.estVide(),
   operationnelPresume: jour.operationnelPresume.estNulle() ? undefined : LIBELLES.presumees(jour.operationnelPresume),
 });
 
