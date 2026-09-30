@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — décisions métier confirmées le 29 septembre 2026, mise en œuvre à venir.
+Accepted — décisions métier confirmées le 29 septembre 2026, consommateurs pupitre et lecteurs Gestion
+du relevé et du coût mis en œuvre sur les contrats publiés.
 Ce document fixe la comptabilisation, les transitions et le traitement des fins reçues tardivement.
 La fin automatique est dérivée, avec conservation des seuls pointages et corrections.
 Le ciblage des gestes, le recalcul après correction et l'instant commun du relevé sont confirmés.
@@ -162,7 +163,12 @@ Le relevé Gestion applique désormais cette lecture : son port unique acquiert 
 instant d'évaluation commun et vérifie leurs échos comme instants. Les portions calendaires gardent leur
 origine et leur état explicite ; les totaux incomplets n'exposent aucun chiffre. La frise et le journal
 opérationnels signalent les fins automatiques et les séquences en conflit, sans commande de résolution.
-Le coût reste le lot de migration suivant sur son contrat publié dédié.
+Le coût Gestion consomme maintenant le contrat publié final : chaque catégorie de temps et de montant
+restitue sa complétude indépendante, sans valeur si elle est incomplète. Les périodes sans fin certaine
+gardent cette absence ; les activités en cours sont signalées comme entièrement exclues. Les fins
+automatiques restent repérables sur les lignes et explicables dans leurs détails. Toutes les séquences
+responsables, y compris celles d’autres éléments ou sans activité à résoudre, sont visibles sans lecture
+supplémentaire ni commande de résolution.
 
 ## Consequences
 

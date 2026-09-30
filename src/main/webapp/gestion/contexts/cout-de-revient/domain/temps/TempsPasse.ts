@@ -1,13 +1,13 @@
-import { DureePassee } from './DureePassee';
+import { TotalDeTemps } from './TotalDeTemps';
 
 export class TempsPasse {
   constructor(
-    readonly travail: DureePassee,
-    readonly nonConformite: DureePassee,
-    readonly total: DureePassee,
+    readonly travail: TotalDeTemps,
+    readonly nonConformite: TotalDeTemps,
+    readonly total: TotalDeTemps,
   ) {}
 
   porteUneNonConformite(): boolean {
-    return !this.nonConformite.estNulle();
+    return !this.nonConformite.estNul();
   }
 }

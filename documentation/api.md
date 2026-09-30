@@ -80,6 +80,12 @@ than ISO spellings. A 400 refusal or an inconsistent echo rejects the reading an
 technical evaluation stays outside the view URL. Received complete/incomplete totals and interpreted activity
 states are translated into context values; the adapter does not reconstruct them from raw clockings.
 
+The cost reading also keeps one domain port for the element. Its server evaluation, excluded current-activity
+count, automatic periods and every responsible conflict are translated directly, including other elements.
+Each duration and amount total carries its own completeness: incomplete totals have no value, while a complete
+total missing its optional wire value rejects the read. Periods without a reliable finish keep that absence.
+The adapter preserves the received totals, rounding and category independence.
+
 ## Translate refusals by stable code
 
 `findApiErrorIn` reads the `urn:glm:erreur:<context>:<code>` and message from a `ProblemDetail`. Branch on
