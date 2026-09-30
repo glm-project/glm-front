@@ -209,7 +209,7 @@ describe('Operational time report in gestion', () => {
     givenAWeek(semaineDeNuitFixture());
     whenVisiting(ADRESSE);
 
-    thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne(0, 6);
+    thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne(0, 1, [2, 3, 4, 5, 6]);
   });
 
   it('should offer a retry after a read failure', () => {
@@ -347,12 +347,17 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-semaine')).focus();
   };
 
-  const thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne = (ouvert: number, vide: number): void => {
+  const thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne = (
+    ouvert: number,
+    fermeOccupe: number,
+    vides: readonly number[],
+  ): void => {
     cy.get(dataSelector('synthese-jour-cell')).should($entetes => {
       const largeurs = [...$entetes].map(entete => entete.getBoundingClientRect().width);
-      const autres = largeurs.filter((_largeur, rang) => rang !== ouvert && rang !== vide);
-      expect(largeurs[ouvert]).to.be.greaterThan(Math.max(...autres));
-      expect(largeurs[vide]).to.be.lessThan(Math.min(...autres));
+      const fermees = largeurs.filter((_largeur, rang) => rang !== ouvert);
+      const largeursVides = vides.map(rang => requiredFixture(largeurs[rang]));
+      expect(requiredFixture(largeurs[ouvert])).to.be.greaterThan(Math.max(...fermees));
+      expect(Math.max(...largeursVides)).to.be.lessThan(requiredFixture(largeurs[fermeOccupe]));
     });
   };
 
@@ -432,7 +437,11 @@ describe('Operational time report in gestion', () => {
 
   const thenSplitReceivedConcurrentWorkIntoOneSubRowPerWorkstation = (): void => {
     cy.get(dataSelector('synthese-sous-ligne-poste')).should($postes => {
-      expect([...$postes].map(poste => poste.textContent.trim())).to.deep.equal(['DMU 50', 'Charmilles FO 350']);
+      expect([...$postes].map(poste => poste.textContent.trim())).to.deep.equal(['DMU 50', 'Charmilles FO 350', 'Sans poste']);
+    });
+    cy.get(dataSelector('synthese-sous-ligne')).should($lignes => {
+      expect([...$lignes].map(ligne => ligne.querySelectorAll(dataSelector('synthese-barre')).length)).to.deep.equal([1, 1, 0]);
+      expect([...$lignes].map(ligne => ligne.querySelectorAll(dataSelector('synthese-marque')).length)).to.deep.equal([0, 0, 2]);
     });
     cy.get(dataSelector('synthese-operationnel-total')).should('have.text', '2 h 00');
   };
