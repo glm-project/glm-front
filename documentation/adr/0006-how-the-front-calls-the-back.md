@@ -3,18 +3,12 @@
 ## Status
 
 Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): concurrent writes reread the affected
-aggregate before an identical retry. The paged offline reference that record added is gone since issue 165:
-the pupitre reads `GET /api/pupitre/referentiel`, one unpaged server snapshot, so the bounded-read rules below
-now govern the online list ports only. The original account below records the earlier implementation. The publication amendment below replaces rejected business promises
-only for `AtelierExchangePort.send`; durable local acceptance remains separate.
-Complemented by [ADR 0034](0034-proxy-the-api-at-the-edge.md): the routes still serve as URLs as they
-are, and a Cloudflare Pages Function answers `/api/**` for the deployed pupitre.
-Amended by [ADR 0037](0037-require-production-consumers.md): the unused `Page.isComplete()` helper is removed;
-pages still expose their elements and the server total.
-Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
-[ADR 0047](0047-count-only-finished-activities.md): the current pupitre captures activity-only intentions
-with stable targets, retains accepted conflict diagnostics and local pause memory, and has no attendance
-assurance or refusal absorption. The account below records the earlier implementation.
+aggregate before an identical retry, and the offline reference is one unpaged response. The bounded-read
+rules govern online list ports. [ADR 0034](0034-proxy-the-api-at-the-edge.md) adds same-origin API relay;
+[ADR 0037](0037-require-production-consumers.md) removes unused `Page.isComplete()` while preserving the
+server total. This account is revised under [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
+[ADR 0047](0047-count-only-finished-activities.md): stable targeted activity intentions and durable local
+pause memory. The publication amendment below keeps local acceptance separate from server outcomes.
 
 ## Context
 
@@ -26,19 +20,19 @@ code published by the back. None of them had been executed: before this record, 
 Executing them surfaced facts the decision could not have:
 
 - **The generated types lie about errors.** An error `@ApiResponse` carries no `content`, so springdoc falls
-  back on the operation's return type: `POST /api/atelier/journees` declares its 409 as a
-  `RestJourneeDeTravail`. No generator can type the error path.
-- **The generated types lie about what is present.** `openapi.json` marks `required` on almost no response
-  schema — `RestSuiviDAtelier`, `RestActiviteEnCours` and every `RestPage*` carry none at all, so `id`, `etat`
-  and `totalElementsCount` all read as optional. Request bodies, by contrast, are correctly marked.
-  [Issue 61](https://github.com/glm-project/glm-front/issues/61) is the back-side fix.
+  back on the operation's return type: `POST /api/atelier/suivis/{id}/pointages` can describe its 409 using the
+  operation's successful `RestSuiviDAtelier` response. No generator can type the error path.
+- **Required flags govern what the adapter can trust.** The initial contract left most response fields
+  optional, requiring guards before domain construction. [Issue 61](https://github.com/glm-project/glm-front/issues/61)
+  corrected that boundary: guaranteed fields are now read directly; a genuinely optional value required
+  by the domain still receives an explicit guard. Request bodies express their own required fields.
 - **A page is capped at 100 and `size=200` answers 500**, not 400: the cap is an `AssertionException` no advice
   maps.
 - **`GET /api/atelier/suivis` sorts by engagement date descending** and embeds each element's complete journal —
   around 30 kB apiece, so 3 MB for a hundred. `GET /api/operateurs` sorts by name then first name.
   [Issue 62](https://github.com/glm-project/glm-front/issues/62) is the projection that would lift this.
-- **Two compositions of calls are business gestures, not routes**: clocking in means opening the working day if
-  it is not open, and resuming presence if it is paused. Each swallows one 409 — and only its own.
+- **Local acceptance and server publication are separate outcomes**: committing a gesture confirms its
+  durable capture; only the later exchange says whether the server accepted or refused it.
 
 ## Considered options
 
@@ -69,11 +63,11 @@ one artefact a business domain imports — and the wire-side `buildPageFrom`. `a
 `ApiClient`, `required` and `findApiErrorIn`.
 
 **One read is one request of `size=100`, never a loop**, and `Page` says what it carries: `totalCount` comes
-from the server's own `totalElementsCount`, and `isComplete()` tells a caller whether anything was left behind.
+from the server's own `totalElementsCount`, and the returned elements let a caller identify truncation against that total.
 
-**Guard, at the adapter, the fields the domain requires.** `required(value, 'suivi.id')` throws rather than
-let an `undefined` the business does not have reach a domain class. Nothing guards a request body: those are
-typed honestly.
+**Read guaranteed response fields directly and guard a genuinely optional value the domain needs.**
+A complete duration total missing its optional wire value rejects the read rather than constructing a
+domain value from `undefined`. Required request fields are already enforced by the generated body type.
 
 **Assign the wire enums straight to the domain unions**, which repeat the same literals. No `Record` keyed by
 the generated union: structural typing already fails the compilation when the back adds a value.
@@ -84,16 +78,13 @@ refusal class through a table in its `infrastructure/secondary`. A 400 from Bean
 the pupitre an invalid body comes from us, and it crosses as a technical failure. 401, 403 and network failures
 never reach an adapter — they belong to each application's interceptor.
 
-**A refusal comes back as a rejected promise**, carrying its code and its message. `Promise<void>` means
-_accepted_ — by the server today, by the queue of issue 53 tomorrow.
+**Ordinary business refusals reject with their code and message.** Workshop publication instead returns
+its explicit server `Result`, as specified by the publication amendment. Durable local acceptance describes
+only the committed journal mutation.
 
-**Where absorbing a refusal is right, it is a property of the operation, never of the route or of the status.**
-`sAssurerQueLOperateurEstArrive` swallows `journee-de-travail-deja-ouverte` and nothing else;
-`sAssurerQueLOperateurEstPresent` swallows `transition-de-presence-interdite` and nothing else. The same 409 on
-`pointerLaPresence` is a refusal the operator must see.
-
-**Replay `saisie-concurrente` once, immediately, then let the refusal through.** Replaying is re-issuing the
-identical `POST`: the body is entirely known to the client, there is nothing to re-read.
+**Replay `saisie-concurrente` once after rereading the affected workshop item.** Repeat the original body,
+UUID, occurrence time, intention and target. Preserve a second refusal; unexpected technical failure leaves
+the gesture pending. A 200/201 carrying conflicts remains accepted and retains its diagnostics before refresh.
 
 This record also names two revisions of issue 6:
 
@@ -135,8 +126,8 @@ freeze. The single concurrent retry belongs to `GesteReplayPolicy`.
 
 ### Negative
 
-- **A read is truncated at 100 and the caller has no way to ask for more.** `isComplete()` says it; nothing
-  yet shows it. For `GET /api/atelier/suivis`, sorted by engagement date descending, the elements lost are the
+- **A list read is truncated at 100 and the caller has no way to ask for more.** The server total exposes
+  that bound alongside the returned elements. For `GET /api/atelier/suivis`, sorted by engagement date descending, the elements lost are the
   oldest ones still open. Issue 62 is the lever; until it lands the bound is real for the online views. The
   pupitre escaped it with its own unpaged route.
 - **A hundred `RestSuiviDAtelier` carry a hundred complete journals**, around 3 MB, none of it excludable. The

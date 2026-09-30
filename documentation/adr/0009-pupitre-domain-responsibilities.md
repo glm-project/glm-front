@@ -5,11 +5,10 @@
 Accepted. Refines the ownership in [ADR 0007](0007-durable-offline-pupitre.md); complements the method
 extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented by
 [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md), which generalizes the same ownership rule
-to every context and brings interaction and lifecycle rules into the domain. Amended by
-Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
-[ADR 0047](0047-count-only-finished-activities.md): the current pupitre captures activity-only intentions
-with stable targets, retains accepted conflict diagnostics and local pause memory, and has no attendance
-assurance or refusal absorption. The account below records the earlier implementation.
+to every context and brings interaction and lifecycle rules into the domain. Revised under
+[ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and [ADR 0047](0047-count-only-finished-activities.md):
+activity intentions retain precise targets, accepted conflicts retain diagnostics, and pause/resumption
+memory has its own local domain owner.
 
 ## Context
 
@@ -28,21 +27,23 @@ contextual refusal exceptions independently. Tests reaching into document keys o
 
 ## Decision
 
-`FenetreOperateur` resolves the local operator, checks workstation qualifications, prepares implicit arrival
-and resumption, and maintains the window's frozen view. Gesture identities are supplied at the operator's
-actual action. The prepared capture chooses its arrival only when it executes in the capture queue; only
-successful durable acceptance advances the window. This preserves the first-pointage race and disk-failure
-semantics without giving the domain an asynchronous storage dependency.
+`FenetreOperateur` resolves the local operator, checks workstation qualifications, prepares targeted
+activity intentions and maintains the window's frozen view. Gesture identity and business time are supplied
+at the action. A deferred global intention prepares its batch when the capture queue reaches the updated
+window, preserving its original root identity and time. Only successful durable acceptance advances the
+window, without giving the domain an asynchronous storage dependency. `PauseEnCours` alone owns local
+suspension and resumption eligibility; TOUT ARRÊTER invalidates that memory in its atomic journal mutation.
 
-`GesteReplayPolicy` owns the contextual exceptions and the single concurrency retry. The HTTP exchange adapter and
+`GesteReplayPolicy` owns the single concurrency retry. The HTTP exchange adapter and
 offline synchronization use its decisions. A transport remains responsible for translating HTTP failures;
 the HTTP adapter supplies an optional normalized workshop refusal motif alongside the original diagnostic
 code. The replay policy compares only this domain motif and never constructs or parses transport URNs;
 an unknown offline business URN is retained verbatim and cannot accidentally match another context's code.
 
-`AtelierCoordinator` coordinates capture and publication. `PupitreSynchronization` coordinates authenticated
+`AtelierCoordinator` coordinates gesture commands and durable capture. `PupitreSynchronization` coordinates authenticated
 exchanges, FIFO processing, aggregate rereads and reference refreshes. Their callbacks publish snapshots;
-only the capture coordinator decides when a snapshot becomes visible to the operator.
+`CurrentOperateurLifecycle` owns the current designation and reconciles the window;
+`GestesRecordingQueue` is shared by capture and closure.
 
 `JournauxDuPupitrePort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
 `IndexedDbJournauxDuPupitre` owns the document layout and delegates durable transactions and locks to
@@ -56,7 +57,7 @@ not create an independent lock that would let a credential commit overlap an out
 - The window and replay rules can be exercised with explicit time and no storage, network or Angular, because
   they no longer live inside the coordinator that owns those dependencies.
 - The HTTP exchange and offline synchronization can no longer drift apart on refusals: both ask
-  `GesteReplayPolicy`, which owns the contextual exceptions and the single concurrency retry.
+  `GesteReplayPolicy`, which owns the single concurrency retry.
 - The policy compares a normalized domain motif and never constructs or parses a transport URN, so an unknown
   offline business URN is retained verbatim and cannot accidentally match another context's code.
 - A document-schema change is confined to the local adapter and the durable-state fixture; the application

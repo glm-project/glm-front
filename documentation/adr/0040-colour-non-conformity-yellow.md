@@ -1,29 +1,21 @@
-# 0040 — Colour non-conformity yellow and absence red
+# 0040 — Colour non-conformity yellow
 
 ## Status
 
-`Accepted`
-
-- `Complemented by 0041: the supervision lanes apply this code, green at work, brown warn the pause, red danger the absence, and yellow nc laid over an activity.`
-- `Amended by 0046: the supervision no longer shows the pause, so warn paints none of its lanes; warn keeps the pause only as the colour of the pupitre's PAUSE and REPRENDRE commands.`
-
-Amended by [0047](0047-count-only-finished-activities.md): supervision keeps green for Au travail and the existing neutral tokens for Sans activité. Danger paints no supervision lane; yellow NC remains an overlay on interpretable current activities. The earlier absence colour applies only to the former model.
+Accepted. Complemented by [0041](0041-sort-workshop-supervision-into-state-lanes.md) and amended by
+[0047](0047-count-only-finished-activities.md): green marks Au travail, existing neutral tokens mark Sans
+activité, and yellow NC remains an overlay on interpretable current activities. `danger` serves errors,
+refusals and destructive actions; `warn` serves the pupitre's PAUSE and REPRENDRE commands.
 
 ## Context
 
-On 25/09/2026 the client fixed the colour code of the workshop: green for an operator at work, orange for a
-pause, red for an absent operator and yellow for a non-conformity (NC). The design system's orange is the
-brown `warn` role (`#854d0e`), which the client accepted as its orange.
+On 25/09/2026 the client fixed yellow for non-conformity. The existing red `nc` role (`#b91c1c`) also painted
+errors, refusals and destructive actions in both fronts, so its name no longer expressed one meaning.
+The client's orange for pause is the accepted brown `warn` role (`#854d0e`), now confined to the pupitre's
+pause commands. The lane colours follow ADR 0047 rather than adding another NC or error role.
 
-[#7](https://github.com/glm-project/glm-front/issues/7) had made the red `nc` role (`#b91c1c`) the
-non-conformity colour common to both fronts: the pupitre's NC tile, marker and toggle, the NC durations of
-the coût de revient. [#12](https://github.com/glm-project/glm-front/issues/12) then borrowed that same red
-for the Absent state of the supervision. Meanwhile every error message, refusal and destructive action of
-both fronts was written in `text-nc` or `bg-nc`, so the name `nc` had come to mean "red" rather than
-"non-conformity".
-
-Yellow cannot take the place of red as it stands. `#eab308` reaches 1.9:1 on `surface`: as text or as the
-only mark of a state, it is unreadable.
+Yellow cannot replace red directly: `#eab308` reaches only 1.9:1 on `surface`, making foreground text and a
+colour-only state unreadable.
 
 ## Considered options
 
@@ -35,8 +27,8 @@ only mark of a state, it is unreadable.
 
 ## Decision
 
-Keep `danger` (`#b91c1c`) for errors, refusals, destructive actions and, in supervision, the Absent state.
-Keep `warn` for the pause.
+Keep `danger` (`#b91c1c`) for errors, refusals and destructive actions.
+Keep `warn` for the pupitre's PAUSE and REPRENDRE commands; it paints no supervision lane.
 
 Declare `--color-nc: #eab308` for the non-conformity. It paints backgrounds, borders and hatching, **never
 the foreground**. Text placed on `nc` is `ink`, at 9.3:1. `local/no-token-bypass` refuses `text-nc`,

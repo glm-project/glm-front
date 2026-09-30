@@ -84,10 +84,10 @@ retry once; retain a second refusal. Never generate a new UUID or occurrence tim
 
 Only a completed publication allows synchronization to refresh the complete operator and workshop reference.
 Known business refusals do not prevent completion; a technical interruption preserves the previous reference
-without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, whose single
-repeatable-read server transaction is what makes operators and workshop elements one instant. Its `genereLe`
-version is ignored: freshness here is pushed, not dated. Activating that post-write
-snapshot records accepted pointage identifiers in the local reference so their optimistic effects are no
+without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, which returns both collections in one response. The backend uses READ COMMITTED; its successive queries
+can observe concurrent commits and do not establish a shared transactional snapshot. Its `genereLe` version
+is ignored: freshness here is pushed, not dated. Activating that post-write
+reference records accepted pointage identifiers in the local reference so their optimistic effects are no
 longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
 complete cache and its optimistic effects.
 
@@ -176,9 +176,8 @@ The guard consumes a press that discovers an overdue deadline that has not yet b
 callback has already reset the keypad, the next press starts a fresh code. This rule also applies after
 OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay threshold is needed.
 
-The first action contains only its captured activity gesture. The pupitre has no arrival, departure,
-operator attendance projection or day reread. Its chrome identifies the designated operator and a local
-pause when one is in progress.
+The first action contains only its captured activity gesture. Its chrome identifies the designated operator
+and a local pause when one is in progress. Aggregate rereads concern only the affected workshop item.
 
 `TOUT ARRÊTER` is one atomic local mutation: N targeted FIN gestures and durable invalidation of this
 operator's resumption memory, including N=0. It retains the current journal, audit history and pending
@@ -203,7 +202,7 @@ is persisted with the gesture so a failed refresh preserves its diagnosis. Canon
 accepted identifiers and replaces the reference diagnostics without applying the optimistic effect twice.
 
 The activity journal uses `atelier-activites-v1:<tenant>`. The old `atelier:` documents are discarded by
-prefix through `LocalStoragePort`, without reading or migrating their attendance format. No credential,
+prefix through `LocalStoragePort`, without reading or migrating them. No credential,
 enrolment, common database or new company journal is removed. This format reset is independent of TOUT
 ARRÊTER, which retains the current journal. [ADR 0045](adr/0045-keep-the-pause-on-the-pupitre.md) owns local
 pause memory and [ADR 0047](adr/0047-count-only-finished-activities.md) owns precise targeting and expiry.

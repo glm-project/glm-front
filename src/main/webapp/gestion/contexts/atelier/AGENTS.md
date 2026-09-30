@@ -4,7 +4,8 @@ Ce contexte appartient exclusivement à `gestion`. Il porte les deux actes du ba
 fabrication : le **mettre à l'atelier**, puis le **clôturer** quand il est terminé. C'est cet acte, et non la
 création de l'élément, qui le fait apparaître sur l'écran des opérateurs.
 
-Il ignore tout du pointage : les événements, les temps et la présence ne sont pas de ce contexte.
+Il possède l'engagement, la clôture et la réouverture des éléments. Les faits d'activité et leurs rapports
+ont leurs propres contextes ; leurs valeurs sont acquises par leurs ports.
 
 ## Langage
 

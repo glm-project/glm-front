@@ -5,7 +5,7 @@
 Accepted following the review of [PR 138](https://github.com/glm-project/glm-front/pull/138).
 
 Amends [0031](0031-own-workshop-supervision-in-gestion.md): the supervision application consumes one data
-read port; its secondary adapter makes the operator, working-visit and activity calls directly, without
+read port; its secondary adapter makes the operator and activity calls directly, without
 intermediate source ports. The InMemory configuration also implements only this port.
 Complements [0013](0013-keep-business-decisions-in-rich-domain-models.md): business interpretation remains
 in the domain while acquisition details stay behind the read port.
@@ -44,14 +44,14 @@ error without logging it again. Use resource's reload and destruction lifecycle 
 loading coordinator or a separate resource factory.
 
 MR3 provides `InMemoryDonneesDeSupervision` and a first component showing acquisition state and collection
-counts. The component deliberately does not interpret presence, activities or business validity. Those rules
+counts. The component deliberately does not interpret activities or business validity. Those rules
 remain in the domain and will be invoked when implementing the supervision grid. Test acquisition through
 the component's rendered HTML and refresh button; keep domain rules and the secondary contract in their own
 suites. A Promise port does not imply that resource cancellation aborts the underlying HTTP requests.
 
 Implement HTTP acquisition later in one adapter with direct `ApiClient` calls and private mapping methods.
 That adapter will own the mounted operator cache and drain engaged requests before completing a read.
-The generated backend contract must first support the required open-working-visit query. The HTTP
+The generated backend contract must support every required complete activity and conflict source. The HTTP
 implementation and its request ordering, pagination and cache tests belong together; no source ports are
 introduced to anticipate it.
 

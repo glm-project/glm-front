@@ -16,6 +16,8 @@ par le seul `SyntheseDesHeuresPort`. Son secondaire compose en parallèle la syn
 feuille de temps pour le même opérateur, la même semaine et **un seul instant d'évaluation**, pris au
 début de l'acquisition technique. Comparer chaque écho à cet instant comme instant absolu ; deux graphies
 ISO équivalentes sont acceptées. Ce paramètre technique reste hors de l'URL de la vue.
+L'évaluation commune garantit la même décision d'expiration ; une écriture entre les lectures peut encore
+modifier les faits reçus, sans instantané historique ni transaction commune.
 
 La synthèse porte les totaux, les éléments, les pointages bruts et les séquences en conflit. La feuille
 porte les portions calendaires des activités et leur origine interprétée. Garder les types générés dans
@@ -31,8 +33,9 @@ rejette la lecture et est signalé une seule fois. Le composant conserve l'annul
   rendue par chaque source, la correspondance des jours et les références élément/poste des faits.
   La feuille peut rendre ses jours dans un ordre différent ; leur date possède le rapprochement.
 - **Total de durée** : complet avec une `DureeTravaillee`, zéro compris, ou incomplet sans valeur numérique.
-  Les chiffres et les complétudes viennent du serveur ; aucune somme des jours, éléments ou portions ne
-  refait le total. Travail et NC gardent leur complétude indépendante.
+  Le cumul opérationnel compte chaque élément : deux éléments terminés en parallèle pendant une heure
+  donnent deux heures. Les chiffres et les complétudes viennent du serveur ; aucune somme des jours,
+  éléments ou portions ne refait le total. Travail et NC gardent leur complétude indépendante.
 - **Portion d'activité** : début et éventuelle fin de ce qui appartient au jour rendu. Une portion ne
   remplace pas l'activité d'origine. Refuser une portion finissant avant son début ; zéro est accepté.
 - **Activité d'origine** : `ActiviteReleveId`, début d'origine et état explicite. `TERMINEE` et
@@ -75,7 +78,6 @@ Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien de
 - Un élément sans barre garde sa ligne et ses marqueurs isolés du jour ouvert. Les marqueurs représentent
   seulement les pointages bruts reçus. Le journal en est l'unique commande de sélection ; les marqueurs
   décoratifs restent `aria-hidden` et le repère de sélection traverse la frise.
-- Présence, présumé et effets de départ n'appartiennent plus au relevé opérationnel.
 - Tous les mots affichés appartiennent à `LibellesReleveDesHeures`. Les énoncés des portions restent accessibles
   et les états lisibles sans couleur seule. Les cibles conservent au moins 44 px.
 
@@ -96,6 +98,10 @@ ouvre le jour entier. Une fin à minuit du lendemain ferme la portion à 1 440 m
 fin. Les pointages participent à l'axe uniquement lorsqu'ils sont dessinés dans le jour ouvert.
 Les repères restent à l'intérieur de leur colonne : deux pour le jour fermé, un toutes les deux heures pour
 le jour ouvert de jour, toutes les trois heures sur le jour entier. Un jour vide fermé n'en porte aucun.
+
+Le serveur découpe dans son calendrier : une activité terminée 20–08 h donne 4 h puis 8 h ; dimanche
+22–lundi 03 h donne 2 h puis 3 h, dans les deux semaines ISO. Minuit répartit les portions et ne produit
+aucun geste ni fin métier.
 
 La frise tient à 1024 px et défile horizontalement en dessous. Le jour ouvert est le plus large, les jours
 vides fermés les plus étroits ; les noms longs se tronquent par CSS. L'heure des faits et de l'origine

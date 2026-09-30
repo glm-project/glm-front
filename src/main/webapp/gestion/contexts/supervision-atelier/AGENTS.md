@@ -58,6 +58,10 @@ une activité, y compris dans une séquence en conflit, n'a pas d'opérateur ide
 - Chaque opérateur déclaré figure exactement une fois. Les deux couloirs existent toujours, dans l'ordre
   Au travail puis Sans activité, même vides. Les opérateurs sont triés par nom, prénom et identifiant.
 - Les activités terminées ou à résoudre ne déterminent pas le couloir et ne comptent pas dans le signal NC.
+- La pause et sa mémoire appartiennent au seul pupitre qui l'a prise. Des fins simultanées ne prouvent
+  aucune pause ; une activité ouverte ailleurs ou une fin encore à publier conserve son état reçu.
+  La supervision n'invente aucun état suspendu ni couloir sans source. Chaque reprise crée un nouvel
+  instant de début pour l'activité rendue.
 - Les séquences en conflit restent visibles et à vérifier après l'échéance ; la borne automatique ne les tranche pas.
 - Les métiers sont affichés quand aucune activité interprétable n'est en cours.
 - La supervision affiche des instants, jamais une durée comptabilisée.

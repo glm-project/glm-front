@@ -3,7 +3,9 @@
 ## Status
 
 Accepted — décisions métier confirmées le 29 septembre 2026, consommateurs pupitre et lecteurs Gestion
-du relevé et du coût mis en œuvre sur les contrats publiés.
+du relevé et du coût mis en œuvre ; le front épingle le backend final publié après retrait et alignement
+documentaire. Les validations de publication portent sur leurs commits exacts ; ce statut ne remplace
+aucun résultat de CI ni contrôle visuel.
 Ce document fixe la comptabilisation, les transitions et le traitement des fins reçues tardivement.
 La fin automatique est dérivée, avec conservation des seuls pointages et corrections.
 Le ciblage des gestes, le recalcul après correction et l'instant commun du relevé sont confirmés.
@@ -128,6 +130,25 @@ les activités interprétables, distincte d'une contradiction entre pointages.
 - Une transition qui vise une activité échue alors qu'une autre activité est en cours sur la même clé met
   la séquence en conflit : A 08 h échue à 21 h, relance B 22 h, NC(A) 23 h.
 
+**Précisions confirmées sur corrections et lectures** :
+
+- Déplacer une ouverture vers un autre couple opérateur/poste est refusé (409) tant qu'un geste actif vise
+  cette activité depuis l'ancienne clé. Annuler ou corriger ce geste d'abord ; cette garde est l'exception
+  explicite à l'acceptation d'une correction laissant une contradiction.
+- Une activité à résoudre figure sur chaque jour de sa plage possible, du début à sa fin au plus tard,
+  bornée par l'évaluation. Les totaux concernés de ces jours sont incomplets. Une séquence en conflit
+  sans activité à résoudre reste exposée tout en laissant ces totaux complets.
+- L'incertitude du partage humain couvre toute la plage possible de l'activité à résoudre, sans noyau
+  commun calculé entre interprétations possibles. La machine d'une activité terminée reste chiffrée.
+- Travail, NC, machine et main-d'œuvre gardent chacun leur complétude. Un total incomplet porte seulement
+  cette information, sans zéro ni somme partielle. Le coût liste toutes les séquences responsables,
+  y compris sur un autre élément.
+- Un instant passé est accepté ; un instant jusqu'à l'heure serveur plus deux minutes incluses l'est
+  aussi. Au-delà, la lecture est refusée (400). Ce paramètre gouverne l'expiration des faits connus et
+  ne transforme pas les rapports en lectures historiques.
+- Un `FIN` pointé après l'échéance reste un fait du journal ; il n'est pas étiqueté « sans effet ».
+  L'anomalie de fin automatique décrit déjà la borne retenue.
+
 Les corrections et annulations recalculent les durées, les coûts, les anomalies et l'état courant.
 À 22 h, corriger un début de 08 h à 12 h déplace son échéance de 21 h à 01 h : l'activité redevient
 en cours, perd son anomalie et sort des durées et coûts comptabilisés.
@@ -151,7 +172,7 @@ de l'inactivité de désignation. Les captures déjà initiées gardent leur heu
 
 Les réponses de publication 200/201 en conflit restent acceptées et leurs diagnostics sont journalisés
 avant le rafraîchissement canonique. Le stockage atelier neuf conserve identités, intentions, cibles et
-marqueurs ; il retire les anciennes données de présence sans toucher à l'enrôlement. TOUT ARRÊTER conserve
+marqueurs ; il utilise une clé atelier versionnée et conserve les documents d'enrôlement et de credentials. TOUT ARRÊTER conserve
 l'historique et les pending et efface la reprise dans la même mutation que ses N FIN ciblés, N=0 inclus.
 
 Les alertes réelles de ce chantier concernent le relevé et le coût. La supervision adapte son modèle
