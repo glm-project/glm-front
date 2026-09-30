@@ -155,7 +155,14 @@ marqueurs ; il retire les anciennes données de présence sans toucher à l'enr�
 l'historique et les pending et efface la reprise dans la même mutation que ses N FIN ciblés, N=0 inclus.
 
 Les alertes réelles de ce chantier concernent le relevé et le coût. La supervision adapte son modèle
-et ses démonstrations InMemory ; son branchement HTTP réel reste un chantier distinct. Les commandes
+et ses démonstrations InMemory ; son branchement HTTP réel reste un chantier distinct.
+Elle classe chaque opérateur déclaré exactement une fois, dans « Au travail » si au moins une activité
+interprétable est en cours, sinon « Sans activité ». Ces deux couloirs restent visibles même vides,
+dans cet ordre, avec leurs opérateurs triés alphabétiquement. La NC reste une surcouche d'activité.
+Les séquences en conflit sont rendues séparément, y compris sans activité à résoudre ; elles ne produisent
+aucune activité courante interprétée. Les activités indépendantes du même opérateur restent visibles.
+La démonstration dérive la fin automatique à début + 13 heures écoulées, borne inclusive, depuis l'instant
+d'évaluation et sans pointage fabriqué. Une activité sans opérateur identifiable rend la lecture inexploitable. Les commandes
 back de correction et de résolution sont adaptées et testées. Le propriétaire confirme que l'écran
 de correction et de résolution des conflits Gestion relève d'une autre MR.
 

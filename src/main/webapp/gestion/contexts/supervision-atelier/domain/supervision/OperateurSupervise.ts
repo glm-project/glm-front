@@ -1,29 +1,30 @@
 import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
-import { Instant } from '../instant/Instant';
+import { SequenceEnConflit } from '../activite/SequenceEnConflit';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
-import { EtatDePresence } from '../presence/EtatDePresence';
-import { AnomalieDeSupervision } from './AnomalieDeSupervision';
 import { CouloirDeSupervision } from './CouloirDeSupervision';
 
 export interface SituationOperateur {
   readonly activites: readonly ActiviteDeSupervision[];
-  readonly anomalies: readonly AnomalieDeSupervision[];
-  readonly heureDOuverture?: Instant | undefined;
+  readonly termineesAutomatiquement: readonly ActiviteDeSupervision[];
+  readonly sequencesEnConflit: readonly SequenceEnConflit[];
 }
 
 export class OperateurSupervise {
+  readonly sequencesEnConflit: readonly SequenceEnConflit[];
   readonly activites: readonly ActiviteDeSupervision[];
-  readonly anomalies: readonly AnomalieDeSupervision[];
-  readonly heureDOuverture: Instant | undefined;
+  readonly activitesTermineesAutomatiquement: readonly ActiviteDeSupervision[];
 
   constructor(
     readonly operateur: OperateurDeclare,
-    readonly presence: EtatDePresence,
     situation: SituationOperateur,
   ) {
     this.activites = [...situation.activites].sort((left, right) => left.compare(right));
-    this.anomalies = [...situation.anomalies];
-    this.heureDOuverture = situation.heureDOuverture;
+    this.activitesTermineesAutomatiquement = [...situation.termineesAutomatiquement].sort((left, right) => left.compare(right));
+    this.sequencesEnConflit = [...situation.sequencesEnConflit];
+  }
+
+  isAVerifier(): boolean {
+    return this.activitesTermineesAutomatiquement.length > 0 || this.sequencesEnConflit.length > 0;
   }
 
   compareAlphabetically(other: OperateurSupervise): number {
@@ -31,17 +32,10 @@ export class OperateurSupervise {
   }
 
   couloir(): CouloirDeSupervision {
-    if (this.presence !== 'PRESENT') {
-      return this.presence;
-    }
-    return this.activites.length > 0 ? 'AU_TRAVAIL' : 'SANS_AFFECTATION';
+    return this.activites.length > 0 ? 'AU_TRAVAIL' : 'SANS_ACTIVITE';
   }
 
   isEnNonConformite(): boolean {
-    return this.hasJourneeOuverte() && this.activites.some(activite => activite.categorie.isNc());
-  }
-
-  private hasJourneeOuverte(): boolean {
-    return this.presence !== 'ABSENT';
+    return this.activites.some(activite => activite.categorie.isNc());
   }
 }

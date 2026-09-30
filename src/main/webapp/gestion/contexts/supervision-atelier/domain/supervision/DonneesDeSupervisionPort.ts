@@ -1,10 +1,10 @@
 import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
+import { SequenceEnConflit } from '../activite/SequenceEnConflit';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
-import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 
 export interface DonneesDeSupervision {
   readonly operateurs: readonly OperateurDeclare[];
-  readonly journees: readonly JourneeDeTravail[];
+  readonly sequencesEnConflit: readonly SequenceEnConflit[];
   readonly activites: readonly ActiviteDeSupervision[];
 }
 

@@ -20,6 +20,8 @@ Amended by [0041](0041-sort-workshop-supervision-into-state-lanes.md): the grid 
 within each lane, the screen calls an open working visit « venue ouverte », and an activity without a
 workstation shows « Sans poste » instead of omitting the workstation label.
 
+Amended by [0047](0047-count-only-finished-activities.md): supervision now interprets declared operators, interpretable current activities and conflicting sequences. It shows two lanes, Au travail then Sans activité, determined solely by current activities. Automatic ends are derived at start + 13 elapsed hours, inclusively. The single InMemory adapter remains wired; real HTTP integration is a separate project. The earlier working-visit rules below are superseded.
+
 ## Context
 
 The real-time grid combines declared operators, working visits and ongoing activities. Gestion's

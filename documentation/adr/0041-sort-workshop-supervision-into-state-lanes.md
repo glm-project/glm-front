@@ -8,6 +8,8 @@
 - `Complements 0040: green means at work, brown warn the pause, red danger the absence, and yellow nc a non-conformity laid over an activity.`
 - `Amended by 0046: three lanes, Au travail · Sans affectation · Absents, and no brown warn; the presence state is PRESENT or ABSENT, the pause itself leaves presence unchanged, an operator with an open visit appears in Sans affectation when no activity remains open, no activity or NC is shown suspended, and a present card shows « arrivée », never « pause depuis ».`
 
+Amended by [0047](0047-count-only-finished-activities.md): two fixed lanes, Au travail then Sans activité, classify each operator by interpretable current activities. NC remains an activity overlay. Conflicting sequences stay visible separately and yield no interpreted current activity; independent activities still render. Opening instants and the Présents brace are removed. Alphabetical order, optional workstation labels and the existing visual tokens remain. These rules replace the earlier lane classification below.
+
 ## Context
 
 The client drew the page it wants on paper: « Temps réel — vue d'ensemble des opérateurs », with the columns

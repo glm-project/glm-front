@@ -5,7 +5,7 @@ import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSuper
 import { DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { OperateurSupervise } from '../../../domain/supervision/OperateurSupervise';
 import { SupervisionDeLAtelier } from '../../../domain/supervision/SupervisionDeLAtelier';
-import { LIBELLES_SUPERVISION, MomentAffiche } from './LibellesSupervision';
+import { LIBELLES_SUPERVISION } from './LibellesSupervision';
 import { SupervisionRefreshCycle } from './SupervisionRefreshCycle';
 
 export type EtatVueSupervision =
@@ -18,8 +18,7 @@ export interface SignalAffiche {
 
 const SLUGS: Record<CouloirDeSupervision, string> = {
   AU_TRAVAIL: 'au-travail',
-  SANS_AFFECTATION: 'sans-affectation',
-  ABSENT: 'absents',
+  SANS_ACTIVITE: 'sans-activite',
 };
 
 const CHARGEMENT: EtatVueSupervision = { kind: 'CHARGEMENT' };
@@ -28,9 +27,6 @@ const pendantLaLecture = (precedent: EtatVueSupervision | undefined): EtatVueSup
   precedent?.kind === 'SUCCES' ? precedent : CHARGEMENT;
 
 const nomComplet = (supervise: OperateurSupervise): string => `${supervise.operateur.nom} ${supervise.operateur.prenom}`;
-
-const momentOf = (prefixe: string, instant: Instant | undefined, reference: Instant): MomentAffiche | undefined =>
-  instant === undefined ? undefined : LIBELLES_SUPERVISION.moment(prefixe, instant, reference);
 
 @Component({
   selector: 'glm-supervision-atelier',
@@ -57,7 +53,7 @@ export class SupervisionAtelier {
     }
     const raw = this.donnees.value();
     const maintenant = new Instant(new Date().toISOString());
-    const resultat = SupervisionDeLAtelier.determine(raw.operateurs, raw.journees, raw.activites, maintenant);
+    const resultat = SupervisionDeLAtelier.determine(raw, maintenant);
     if (!resultat.estExploitable) {
       return { kind: 'ERREUR' };
     }
@@ -72,15 +68,5 @@ export class SupervisionAtelier {
   protected signalAVerifier(supervision: SupervisionDeLAtelier): SignalAffiche {
     const aVerifier = supervision.operateursAVerifier();
     return { nombre: aVerifier.length, texte: this.libelles.signal(this.libelles.aVerifier, aVerifier.map(nomComplet)) };
-  }
-
-  protected momentDeLaCarte(supervise: OperateurSupervise, reference: Instant): MomentAffiche | undefined {
-    switch (supervise.couloir()) {
-      case 'AU_TRAVAIL':
-      case 'SANS_AFFECTATION':
-        return momentOf(this.libelles.arrivee, supervise.heureDOuverture, reference);
-      case 'ABSENT':
-        return undefined;
-    }
   }
 }

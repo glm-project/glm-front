@@ -7,6 +7,8 @@
 - `Amends 0041: three lanes, Au travail · Sans affectation · Absents; the presence state is PRESENT or ABSENT, the pause itself leaves presence unchanged, an operator with an open visit appears in Sans affectation when no activity remains open, no activity or NC is shown suspended, and a present card shows « arrivée », never « pause depuis ».`
 - `Amends 0040: warn no longer paints a supervision lane; it stays the colour of the pupitre's PAUSE and REPRENDRE commands.`
 
+The lane classification below is superseded by [0047](0047-count-only-finished-activities.md): Au travail and Sans activité depend solely on interpretable current activities. The supervision still observes no pause state. Arrival labels and the Présents brace are removed, and conflicting sequences stay visible without producing current activities. InMemory remains the only adapter.
+
 ## Context
 
 On 28/09/2026 the pause left the server. The back no longer knows `PAUSE`, `REPRISE` or `EN_PAUSE`. At the

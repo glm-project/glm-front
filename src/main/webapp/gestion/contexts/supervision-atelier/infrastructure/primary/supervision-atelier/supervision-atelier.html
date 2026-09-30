@@ -30,13 +30,9 @@
   </p>
   } @case ('SUCCES') { @let supervision = vue.supervision; @if (supervision.operateurs.length === 0) {
   <p class="gestion-carte py-16 text-center text-body text-ink-muted" data-selector="supervision-empty">{{ libelles.vide }}</p>
-  } @else { @let presents = supervision.countPresents(); @let nc = signalNc(supervision); @let aVerifier = signalAVerifier(supervision);
+  } @let nc = signalNc(supervision); @let aVerifier = signalAVerifier(supervision);
 
   <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
-    <p class="lg:hidden" [class.text-ink-muted]="presents === 0" data-selector="supervision-presents-compact">
-      <strong class="font-semibold tabular-nums">{{ presents }}</strong> {{ libelles.nombreDePresents(presents) }}
-    </p>
-    <span class="text-ink-muted lg:hidden" aria-hidden="true">·</span>
     <p class="flex items-center gap-2" [class.text-ink-muted]="nc.nombre === 0">
       <span class="rounded px-1.5 text-label" [class.bg-nc]="nc.nombre > 0" [class.bg-sunken]="nc.nombre === 0" aria-hidden="true"
         >{{ libelles.nc }}</span
@@ -52,20 +48,13 @@
     </p>
   </div>
 
-  <div class="hidden gap-3 lg:grid lg:grid-cols-3">
-    <p class="accolade col-span-2" data-selector="supervision-presents">
-      <span class="accolade-libelle">{{ libelles.presents }} <span class="tabular-nums">{{ presents }}</span></span>
-    </p>
-  </div>
-
-  <div class="grid gap-3 lg:grid-cols-3" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
+  <div class="grid gap-3 lg:grid-cols-2" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
     @for (couloir of supervision.couloirs(); track couloir.couloir) { @let slug = slugs[couloir.couloir]; @let libelleCouloir =
     libelles.couloirs[couloir.couloir];
     <section
       class="flex min-w-0 flex-col rounded-surface border-t-4 bg-sunken px-1.5 pb-1.5"
       [class.border-t-ok]="couloir.couloir === 'AU_TRAVAIL'"
-      [class.border-t-border-strong]="couloir.couloir === 'SANS_AFFECTATION'"
-      [class.border-t-danger]="couloir.couloir === 'ABSENT'"
+      [class.border-t-border-strong]="couloir.couloir === 'SANS_ACTIVITE'"
       [attr.aria-labelledby]="'couloir-' + slug + '-titre'"
       [attr.data-selector]="'supervision-couloir-' + slug"
     >
@@ -74,13 +63,13 @@
           <span class="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
             @switch (couloir.couloir) { @case ('AU_TRAVAIL') {
             <span class="size-2 rounded-full bg-ok"></span>
-            } @case ('SANS_AFFECTATION') {
+            } @case ('SANS_ACTIVITE') {
             <glm-icon name="circleDashed" class="text-sans-affectation" />
-            } @case ('ABSENT') {
-            <span class="size-3 rounded-xs bg-danger"></span>
             } }
           </span>
-          <h2 [id]="'couloir-' + slug + '-titre'" class="text-body-sm font-semibold">{{ libelleCouloir.titre }}</h2>
+          <h2 data-selector="supervision-couloir-titre" [id]="'couloir-' + slug + '-titre'" class="text-body-sm font-semibold">
+            {{ libelleCouloir.titre }}
+          </h2>
           <span
             class="ml-auto text-title tabular-nums"
             [class.text-ink-muted]="couloir.operateurs.length === 0"
@@ -95,16 +84,11 @@
       <p class="py-6 text-center text-body-sm text-ink-muted">{{ libelles.personne }}</p>
       }
       <ul role="list" class="flex flex-col gap-2">
-        @for (supervise of couloir.operateurs; track supervise.operateur.id.value) { @let id = supervise.operateur.id.value; @let absent =
-        couloir.couloir === 'ABSENT';
+        @for (supervise of couloir.operateurs; track supervise.operateur.id.value) { @let id = supervise.operateur.id.value;
         <li class="min-w-0">
           <article
-            class="carte flex min-w-0 flex-col gap-1.5 rounded-surface border p-2.5"
+            class="carte flex min-w-0 flex-col gap-1.5 rounded-surface border border-border bg-surface p-2.5"
             [class]="'carte--' + slug"
-            [class.border-border]="!absent"
-            [class.bg-surface]="!absent"
-            [class.border-border-strong]="absent"
-            [class.text-ink-muted]="absent"
             [attr.aria-labelledby]="'carte-' + id"
             data-selector="supervision-carte"
             [attr.data-operateur-id]="id"
@@ -115,19 +99,6 @@
                   ><span class="font-semibold">{{ supervise.operateur.nom }}</span> {{ supervise.operateur.prenom }}</span
                 >
               </h3>
-              @if (momentDeLaCarte(supervise, supervision.instantDEvaluation); as moment) {
-              <time
-                class="whitespace-nowrap text-ink-muted tabular-nums"
-                [attr.datetime]="moment.instant.value"
-                data-selector="supervision-heure"
-                >{{ moment.avant }}@if (moment.jour) {<span
-                  class="font-semibold"
-                  [class.text-ink]="!absent"
-                  data-selector="supervision-jour"
-                  >{{ moment.jour }}</span
-                >}{{ moment.apres }}</time
-              >
-              }
             </div>
 
             @if (supervise.activites.length > 0) {
@@ -160,10 +131,7 @@
                     class="ml-auto whitespace-nowrap text-body-sm text-ink-muted tabular-nums"
                     [attr.datetime]="depuis.instant.value"
                     data-selector="supervision-activite-debut"
-                    >{{ depuis.avant }}@if (depuis.jour) {<span
-                      class="font-semibold"
-                      [class.text-ink]="!absent"
-                      data-selector="supervision-jour"
+                    >{{ depuis.avant }}@if (depuis.jour) {<span class="font-semibold" data-selector="supervision-jour"
                       >{{ depuis.jour }}</span
                     >}{{ depuis.apres }}</time
                   >
@@ -182,10 +150,10 @@
               </li>
               }
             </ul>
-            } @else if (couloir.couloir !== 'ABSENT') { @let metiers = supervise.operateur.metiers;
+            } @else { @let metiers = supervise.operateur.metiers;
             <div class="flex flex-col gap-0.5 text-body-sm">
               <p class="flex items-center gap-1.5 text-ink-muted" data-selector="supervision-aucune-activite">
-                @if (couloir.couloir === 'SANS_AFFECTATION') {
+                @if (couloir.couloir === 'SANS_ACTIVITE') {
                 <glm-icon name="circleDashed" class="icone text-sans-affectation" aria-hidden="true" />
                 } {{ libelles.aucuneActivite }}
               </p>
@@ -197,23 +165,36 @@
               </p>
               }
             </div>
-            } @for (anomalie of supervise.anomalies; track anomalie) {
+            } @for (sequence of supervise.sequencesEnConflit; track sequence.id.value) {
+            <div class="bandeau -mx-2.5 mt-0.5 bg-sunken px-2.5 py-2 text-body-sm text-ink" data-selector="supervision-sequence-en-conflit">
+              <p class="flex items-start gap-1.5 font-semibold">
+                <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.sequenceEnConflit }} · {{
+                sequence.poste?.libelle ?? libelles.sansPoste }}
+              </p>
+              <ul role="list" class="mt-1 flex flex-col gap-0.5">
+                @for (activite of sequence.activites; track activite.id.value) {
+                <li data-selector="supervision-conflit-activite">{{ libelles.objet(activite.objet) }} · {{ libelles.aResoudre }}</li>
+                }
+              </ul>
+            </div>
+            } @for (activite of supervise.activitesTermineesAutomatiquement; track activite.id.value) {
             <p
               class="bandeau -mx-2.5 mt-0.5 flex items-start gap-1.5 bg-sunken px-2.5 py-2 text-body-sm font-semibold text-ink"
               data-selector="supervision-anomalie"
             >
-              <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.anomalies[anomalie] }}
+              <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.termineeAutomatiquement }} ·
+              @let fin = libelles.moment(libelles.fin, activite.echeance, supervision.instantDEvaluation);<time
+                [attr.datetime]="fin.instant.value"
+                >{{ fin.avant }}{{ fin.jour }}{{ fin.apres }}</time
+              >
             </p>
             }
           </article>
         </li>
         }
       </ul>
-      @if (couloir.couloir === 'ABSENT') {
-      <p class="mx-1.5 mt-3 text-body-sm text-ink-muted">{{ libelles.noteAbsents }}</p>
-      }
     </section>
     }
   </div>
-  } } }
+  } }
 </main>

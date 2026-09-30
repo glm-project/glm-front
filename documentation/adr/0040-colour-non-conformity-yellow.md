@@ -7,6 +7,8 @@
 - `Complemented by 0041: the supervision lanes apply this code, green at work, brown warn the pause, red danger the absence, and yellow nc laid over an activity.`
 - `Amended by 0046: the supervision no longer shows the pause, so warn paints none of its lanes; warn keeps the pause only as the colour of the pupitre's PAUSE and REPRENDRE commands.`
 
+Amended by [0047](0047-count-only-finished-activities.md): supervision keeps green for Au travail and the existing neutral tokens for Sans activité. Danger paints no supervision lane; yellow NC remains an overlay on interpretable current activities. The earlier absence colour applies only to the former model.
+
 ## Context
 
 On 25/09/2026 the client fixed the colour code of the workshop: green for an operator at work, orange for a
