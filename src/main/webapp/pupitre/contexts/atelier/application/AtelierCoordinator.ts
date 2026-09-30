@@ -48,7 +48,7 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
     const instant = Date.now();
     const current = this.designation.requireWindow(instant);
     const initiee = new IntentionGlobaleInitiee(intention, identityAt(instant));
-    const fenetre = current.afterIntendingGlobal(initiee);
+    const fenetre = current.afterEvaluatingActivities(instant).afterIntendingGlobal(initiee);
     this.designation.acceptDecision(fenetre);
     return this.capture(fenetre, { kind: 'GLOBALE', commande: initiee }).finally(() => {
       this.designation.completeGlobal(fenetre.identity());

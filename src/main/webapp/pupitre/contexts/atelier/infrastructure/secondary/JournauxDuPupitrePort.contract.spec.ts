@@ -386,6 +386,52 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
     expect(window.commandesGlobales().permet('REPRENDRE')).toBe(true);
   });
 
+  it('should retain both active targets and the whole pause history after a two-finish stop transaction aborts and the adapter restarts', async () => {
+    const before = await givenAStoredPause([
+      {
+        ouverture: 'a',
+        operateurId: 'jean',
+        categorie: 'TRAVAIL',
+        depuis: '2026-09-05T08:00:00Z',
+        echeance: '2026-09-05T21:00:00Z',
+      },
+      {
+        ouverture: 'b',
+        posteId: 'fraiseuse',
+        operateurId: 'jean',
+        categorie: 'NON_CONFORMITE',
+        depuis: '2026-09-05T08:30:00Z',
+        echeance: '2026-09-05T21:30:00Z',
+      },
+    ]);
+    const window = windowOf(before);
+    const stop = window.prepareAcceptance(
+      new IntentionGlobaleInitiee('TOUT_ARRETER', { id: 'arret', dateDeSurvenue: '2026-09-05T12:00:00Z' }).prepare(window),
+    );
+    givenTheBrowserAbortsWrites();
+
+    const failed = whenAppendingStop(stop);
+    await whenStopWriteSettles(failed);
+    const after = await whenRestartingJournal();
+    const restoredWindow = windowOf(after);
+    const retry = restoredWindow.prepareAcceptance(
+      new IntentionGlobaleInitiee('TOUT_ARRETER', { id: 'arret-reessaye', dateDeSurvenue: '2026-09-05T12:00:00Z' }).prepare(restoredWindow),
+    );
+
+    await expect(failed).rejects.toThrow('Transaction locale interrompue');
+    expect(after).toEqual(before);
+    expect(stop.gestes).toMatchObject([
+      { intention: 'FIN', cible: 'a', type: 'FIN' },
+      { intention: 'FIN', cible: 'b', type: 'FIN', posteId: 'fraiseuse' },
+    ]);
+    expect(retry.gestes).toMatchObject([
+      { intention: 'FIN', cible: 'a', type: 'FIN' },
+      { intention: 'FIN', cible: 'b', type: 'FIN', posteId: 'fraiseuse' },
+    ]);
+    expect(restoredWindow.pointage().moules[0]?.isActive()).toBe(true);
+    expect(restoredWindow.commandesGlobales().permet('PAUSE')).toBe(true);
+  });
+
   const givenOtherCompanyAndDeviceDocuments = async (): Promise<void> => {
     await storage.update('atelier:entreprise-b', { ancien: true }, value => value);
     await storage.update('device-enrolment', 'secret-device', value => value);

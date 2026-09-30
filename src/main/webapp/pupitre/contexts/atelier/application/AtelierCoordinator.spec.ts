@@ -256,6 +256,60 @@ describe('AtelierCoordinator', () => {
     await thenQueueHasUniqueStableIdentities();
   });
 
+  it('should retain two simultaneous tile captures in acquisition order and stop only the activity they leave open', async () => {
+    await givenTwoActiveWorkstations();
+    givenSequentialGestureIdentities();
+    const storage = givenDelayedLocalWrite();
+
+    const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
+    await whenCaptureHasReachedStorage(storage);
+    whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
+    const transitioning = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
+    whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
+    const stopping = whenStoppingEverything();
+    const beforeRelease = await readQueuedGestures();
+    whenBusinessTimeBecomes('2026-09-05T08:00:03Z');
+    await whenReleasingLocalWrite(storage, finishing, transitioning, stopping);
+    const gestures = await readQueuedGestures();
+
+    expect(beforeRelease).toEqual([]);
+    expect(gestures).toEqual([
+      {
+        nature: 'POINTAGE',
+        id: identityRootFixture,
+        dateDeSurvenue: '2026-09-05T08:00:00.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-tour',
+        posteId: 'tour',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: 'activite-fixture-34',
+      },
+      {
+        nature: 'POINTAGE',
+        id: futureIdentityRootFixture,
+        dateDeSurvenue: '2026-09-05T08:00:01.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        intention: 'TRANSITION',
+        type: 'NON_CONFORMITE',
+        cible: 'activite-fixture-35',
+      },
+      {
+        nature: 'POINTAGE',
+        id: '33333333-3333-4333-8333-333333333333',
+        dateDeSurvenue: '2026-09-05T08:00:02.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: futureIdentityRootFixture,
+      },
+    ]);
+  });
+
   it('should append every targeted personal finish as one global stop batch', async () => {
     await givenTwoActiveWorkstations();
 
@@ -484,6 +538,35 @@ describe('AtelierCoordinator', () => {
     await whenChoosingWorkstation(choice, 'fraiseuse');
 
     await thenPointageUsesWorkstation('fraiseuse');
+  });
+
+  it('should fix the complete opening at the final workstation choice before delayed durable acceptance', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    givenSequentialGestureIdentities();
+    const storage = givenDelayedLocalWrite();
+
+    const choice = whenPressingPrimaryTarget();
+    const beforeChoice = await readQueuedGestures();
+    whenBusinessTimeBecomes('2026-09-05T08:00:10Z');
+    const choosing = whenChoosingWorkstation(choice, 'fraiseuse');
+    await whenCaptureHasReachedStorage(storage);
+    whenBusinessTimeBecomes('2026-09-05T08:00:20Z');
+    await whenReleasingLocalWrite(storage, choosing);
+    const gestures = await readQueuedGestures();
+
+    expect(beforeChoice).toEqual([]);
+    expect(gestures).toEqual([
+      {
+        nature: 'POINTAGE',
+        id: identityRootFixture,
+        dateDeSurvenue: '2026-09-05T08:00:10.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece',
+        posteId: 'fraiseuse',
+        intention: 'OUVERTURE',
+        type: 'DEBUT',
+      },
+    ]);
   });
 
   it('should reject a workstation choice after its operator window was replaced', async () => {
@@ -892,6 +975,51 @@ describe('AtelierCoordinator', () => {
     await thenPointageKeepsItsOriginalOperatorAndTime();
   });
 
+  it('should retain a finish initiated before its exact deadline through delayed storage and pause only the remaining activity', async () => {
+    whenBusinessTimeBecomes('2026-09-05T19:59:59.999Z');
+    await givenTwoActiveWorkstations();
+    givenSequentialGestureIdentities();
+    const storage = givenDelayedLocalWrite();
+
+    const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
+    await whenCaptureHasReachedStorage(storage);
+    whenBusinessTimeBecomes('2026-09-05T20:00:00Z');
+    const pausing = whenPausingGlobally();
+    const atDeadline = designation.pointage();
+    whenBusinessTimeBecomes('2026-09-05T20:00:01Z');
+    await whenReleasingLocalWrite(storage, finishing, pausing);
+    const gestures = await readQueuedGestures();
+
+    expect(atDeadline?.moules.find(element => element.id === 'piece-tour')?.isActive()).toBe(false);
+    expect(atDeadline?.moules.find(element => element.id === 'piece-fraiseuse')?.isActive()).toBe(true);
+    expect(atDeadline?.moules.find(element => element.id === 'piece-fraiseuse')?.dureeMs()).toBe(44_999_999);
+    expect(gestures).toEqual([
+      {
+        nature: 'POINTAGE',
+        id: identityRootFixture,
+        dateDeSurvenue: '2026-09-05T19:59:59.999Z',
+        operateurId: 'jean',
+        suiviId: 'piece-tour',
+        posteId: 'tour',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: 'activite-fixture-34',
+      },
+      {
+        nature: 'POINTAGE',
+        id: futureIdentityRootFixture,
+        dateDeSurvenue: '2026-09-05T20:00:00.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: 'activite-fixture-35',
+        suspension: { pause: futureIdentityRootFixture, reouverture: 'DEBUT' },
+      },
+    ]);
+  });
+
   it('should retain a successful append without restoring an old operator presentation after the tenant changes during storage I/O', async () => {
     await givenAnOpenWindow();
     const append = journal.delayNextAppend();
@@ -1046,6 +1174,22 @@ describe('AtelierCoordinator', () => {
   };
   const givenChangingGlobalIdentitySource = (): MockInstance =>
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(identityRootFixture).mockReturnValue(futureIdentityRootFixture);
+  const givenSequentialGestureIdentities = (): void => {
+    vi.spyOn(crypto, 'randomUUID')
+      .mockReturnValueOnce(identityRootFixture)
+      .mockReturnValueOnce(futureIdentityRootFixture)
+      .mockReturnValueOnce('33333333-3333-4333-8333-333333333333');
+  };
+  const givenDelayedLocalWrite = (): ReturnType<ApplicationJournalFixture['delayNextAppend']> => journal.delayNextAppend();
+  const whenCaptureHasReachedStorage = (storage: ReturnType<ApplicationJournalFixture['delayNextAppend']>): Promise<void> =>
+    storage.started;
+  const whenReleasingLocalWrite = async (
+    storage: ReturnType<ApplicationJournalFixture['delayNextAppend']>,
+    ...captures: Promise<void>[]
+  ): Promise<void> => {
+    storage.release();
+    await Promise.all(captures);
+  };
   const givenDelayedCapture = (): (() => void) => {
     let release: (() => void) | undefined;
     authentication.pendingSynchronization = new Promise(resolve => {
@@ -1117,6 +1261,8 @@ describe('AtelierCoordinator', () => {
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
     Promise.allSettled([designation.openWindow(matriculeFixture('049')), designation.openWindow(matriculeFixture('050'))]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
+  const whenPointingAt = (suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): Promise<void> =>
+    completionOf(pupitre.execute({ suiviId, cible }));
   const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
     pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
   const whenChoosingWorkstation = async (execution: ReturnType<AtelierCoordinator['execute']>, posteId: string): Promise<void> => {
