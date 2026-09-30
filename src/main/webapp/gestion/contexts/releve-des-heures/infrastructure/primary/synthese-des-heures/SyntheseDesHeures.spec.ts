@@ -115,7 +115,7 @@ describe('Synthese des heures component', () => {
     expect(marquesDuJourOuvert()).toEqual([]);
   });
 
-  it('should keep two concurrent one-hour activities and the received two-hour total', async () => {
+  it('should keep two concurrently worked elements with their received one-hour totals and two-hour weekly total', async () => {
     givenReleve(
       releveFixture(
         SEMAINE_EN_COURS,
@@ -123,27 +123,42 @@ describe('Synthese des heures component', () => {
           0: {
             operationnelle: 'PT2H',
             intervalles: [
-              { poste: 'poste-0', debut: [8, 0], fin: [9, 0] },
-              { poste: 'poste-1', debut: [8, 0], fin: [9, 0] },
+              {
+                element: 'element-1',
+                debut: [8, 0],
+                fin: [9, 0],
+                activite: {
+                  id: new ActiviteReleveId('a'),
+                  debut: instantFixture(0, [8, 0]),
+                  fin: instantFixture(0, [9, 0]),
+                  etat: 'TERMINEE',
+                },
+              },
+              {
+                element: 'element-2',
+                debut: [8, 0],
+                fin: [9, 0],
+                activite: {
+                  id: new ActiviteReleveId('b'),
+                  debut: instantFixture(0, [8, 0]),
+                  fin: instantFixture(0, [9, 0]),
+                  etat: 'TERMINEE',
+                },
+              },
             ],
           },
         },
         { operationnelle: 'PT2H' },
         [
-          elementFixture({
-            duree: 'PT2H',
-            postes: [
-              ['DMU 50', undefined],
-              ['Mazak', undefined],
-            ],
-          }),
+          elementFixture({ id: 'element-1', reference: '1015', duree: 'PT1H' }),
+          elementFixture({ id: 'element-2', reference: '2015', duree: 'PT1H' }),
         ],
       ),
     );
 
     await whenEcranAffiche();
 
-    expect([textes('synthese-sous-ligne-poste'), texte('synthese-operationnel-total')]).toEqual([['DMU 50', 'Mazak'], '2 h 00']);
+    expect([textes('synthese-element-total'), texte('synthese-operationnel-total')]).toEqual([['1 h 00', '1 h 00'], '2 h 00']);
     expect(barresDe('travail')).toHaveLength(2);
   });
 
@@ -1503,6 +1518,77 @@ describe('Synthese des heures component', () => {
     expect(textes('synthese-conflit-fait')).toEqual(['Début 08:00 · Ouverture · a']);
   });
 
+  it('should replace the conflict and incomplete total with the corrected report received on a new reading', async () => {
+    const conflit = new SequenceEnConflit(
+      new CibleDePointage(new ElementReleveId('element-1'), undefined),
+      [new ActiviteReleveId('a')],
+      [new PointageReleveId('a')],
+    );
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            operationnelle: false,
+            intervalles: [
+              {
+                debut: [8, 0],
+                activite: {
+                  id: new ActiviteReleveId('a'),
+                  debut: instantFixture(0, [8, 0]),
+                  etat: 'A_RESOUDRE',
+                  finAuPlusTard: undefined,
+                },
+              },
+            ],
+            pointagesDElement: [{ id: 'a', type: 'DEBUT', heure: [8, 0] }],
+          },
+        },
+        { operationnelle: false },
+        [elementFixture({ duree: false })],
+        [conflit],
+      ),
+    );
+    givenSemaineSemee(new SemaineISO(2026, 37));
+
+    await whenEcranAffiche();
+    const avant = [texte('synthese-operationnel-total'), present('synthese-conflits-titre')];
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        {
+          0: {
+            operationnelle: 'PT2H',
+            intervalles: [
+              {
+                debut: [8, 0],
+                fin: [10, 0],
+                activite: {
+                  id: new ActiviteReleveId('a'),
+                  debut: instantFixture(0, [8, 0]),
+                  fin: instantFixture(0, [10, 0]),
+                  etat: 'TERMINEE',
+                },
+              },
+            ],
+          },
+        },
+        { operationnelle: 'PT2H' },
+        [elementFixture({ duree: 'PT2H' })],
+      ),
+    );
+    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '37', jour: '2026-09-08' });
+    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+
+    expect([avant, texte('synthese-operationnel-total'), present('synthese-conflits-titre'), textes('synthese-activite-etat')]).toEqual([
+      ['Incomplet', true],
+      '2 h 00',
+      false,
+      [],
+    ]);
+    expect(portFixture.demandes.map(demande => demande.semaine.numero)).toEqual([38, 37, 38]);
+  });
+
   const givenReadingInFlight = (releve: ReleveDesHeures): (() => void) => {
     let reprise = (): void => undefined;
     portFixture.lectureDifferee = new Promise(resolve => {
@@ -1514,8 +1600,12 @@ describe('Synthese des heures component', () => {
   };
 
   const whenReadingStarts = async (): Promise<void> => {
+    const entree = new Promise<void>(resolve => {
+      portFixture.lectureEntree = resolve;
+    });
     whenEcranMonte();
-    await new Promise(resolve => setTimeout(resolve));
+    await entree;
+    portFixture.lectureEntree = undefined;
   };
 
   const whenAnotherWeekReplacesThePendingReading = async (): Promise<void> => {
