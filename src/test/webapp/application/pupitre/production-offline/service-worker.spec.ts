@@ -296,7 +296,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     expect(state.pushes).to.deep.equal([
       {
         authorization: `Bearer ${tokenFixture}`,
-        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1' },
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
       },
     ]);
   });

@@ -186,6 +186,7 @@ describe('Pupitre workshop journey', () => {
   };
 
   const givenAControlledClock = (): void => {
+    cy.clock().invoke('restore');
     cy.clock(Date.UTC(2026, 8, 6, 12));
   };
 
