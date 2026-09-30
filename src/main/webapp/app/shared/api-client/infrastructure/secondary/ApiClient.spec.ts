@@ -6,6 +6,8 @@ import { ApiClient } from './ApiClient';
 
 const SUIVI_ID = 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e';
 const OPERATEUR_ID = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d';
+const POINTAGE_ID = '932c0c0b-a676-408d-8f82-e9b56ad7791c';
+const ACTIVITE_ID = 'a0260511-0516-4bea-943a-d3c8f641a4dc';
 const PLEINE_PAGE = 100;
 const POSTE_ID = 'poste/avec espace';
 const MODIFICATION_POSTE = {
@@ -97,13 +99,13 @@ describe('ApiClient', () => {
   });
 
   it('should send the body the caller gave to write', async () => {
-    const ecriture = whenLeavingWork();
+    const ecriture = whenFinishingActivity();
 
     const requete = await whenTheServerAnswers({});
 
     await whenTheRequestCompletes(ecriture);
 
-    thenItSent(requete, { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEPART' });
+    thenItSent(requete, { id: POINTAGE_ID, operateur: OPERATEUR_ID, intention: 'FIN', type: 'FIN', cible: ACTIVITE_ID });
   });
 
   it('should update the requested workstation and return the server answer', async () => {
@@ -159,7 +161,7 @@ describe('ApiClient', () => {
   const whenStartingAStalledRequest = (operation: 'read' | 'write' | 'update' | 'delete'): Promise<unknown> => {
     const requests = {
       read: whenReadingOperators,
-      write: whenLeavingWork,
+      write: whenFinishingActivity,
       update: whenUpdatingAWorkstation,
       delete: whenDeletingAWorkstation,
     };
@@ -188,8 +190,11 @@ describe('ApiClient', () => {
       body: { id: 'evenement', operateur: OPERATEUR_ID, intention: 'OUVERTURE', type: 'DEBUT' },
     });
 
-  const whenLeavingWork = (): Promise<unknown> =>
-    api.write('/api/atelier/journees/pointages', { body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEPART' } });
+  const whenFinishingActivity = (): Promise<unknown> =>
+    api.write('/api/atelier/suivis/{id}/pointages', {
+      pathParams: { id: SUIVI_ID },
+      body: { id: POINTAGE_ID, operateur: OPERATEUR_ID, intention: 'FIN', type: 'FIN', cible: ACTIVITE_ID },
+    });
 
   const whenUpdatingAWorkstation = (): Promise<unknown> =>
     api.update('/api/postes-de-travail/{id}', { pathParams: { id: POSTE_ID }, body: MODIFICATION_POSTE });
