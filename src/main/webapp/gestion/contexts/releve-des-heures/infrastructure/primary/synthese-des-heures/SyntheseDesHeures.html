@@ -89,9 +89,7 @@
         @if (vue.frise.calque; as calque) {
         <div class="calque" aria-hidden="true">
           <div class="colonne-du-calque" [style.grid-column]="calque.colonne">
-            @for (trait of calque.traits; track $index) {
-            <span class="trait" [style.left.%]="trait.gauche" [title]="trait.titre" data-selector="synthese-trait-presence"></span>
-            } @if (calque.repere; as repere) {
+            @if (calque.repere; as repere) {
             <span
               class="repere-selection"
               [style.left.%]="repere.gauche"
@@ -147,42 +145,10 @@
             <span class="duree" [class.sans-valeur]="jour.sansOperationnel" data-selector="synthese-operationnel-jour"
               >{{ jour.operationnel }}</span
             >
-            @if (jour.operationnelPresume; as presume) {
-            <span class="presumees text-body-sm" data-selector="synthese-operationnel-presume">{{ presume }}</span>
-            }
           </span>
           }
           <span class="total" role="cell">
             <span class="duree" data-selector="synthese-operationnel-total">{{ vue.frise.operationnelTotal }}</span>
-            @if (vue.frise.operationnelTotalPresume; as presume) {
-            <span class="presumees text-body-sm" data-selector="synthese-operationnel-total-presume">{{ presume }}</span>
-            }
-          </span>
-        </div>
-        <div class="ligne presence" role="row">
-          <span class="etiquette text-body-sm text-ink-muted" role="rowheader" data-selector="synthese-presence-libelle"
-            >{{ libelles.presenceLigne }}</span
-          >
-          @for (jour of vue.frise.jours; track jour.cle) {
-          <span class="cellule" role="cell" data-selector="synthese-presence-jour">
-            @for (barre of jour.presence; track $index) {
-            <span
-              [class]="'barre ' + barre.style"
-              [style.left.%]="barre.gauche"
-              [style.width.%]="barre.largeur"
-              [title]="barre.enonce"
-              data-selector="synthese-presence"
-              [attr.data-style]="barre.style"
-              ><span class="sr-only">{{ barre.enonce }}</span></span
-            >
-            }
-          </span>
-          }
-          <span class="total text-body-sm" role="cell">
-            <span class="duree" data-selector="synthese-presence-total">{{ vue.frise.presenceTotal }}</span>
-            @if (vue.frise.presenceTotalPresume; as presume) {
-            <span class="presumees" data-selector="synthese-presence-total-presume">{{ presume }}</span>
-            }
           </span>
         </div>
         @for (ligne of vue.frise.lignes; track ligne.cle) {
@@ -204,8 +170,6 @@
             <span class="duree" data-selector="synthese-element-total">{{ ligne.total }}</span>
             @if (ligne.nonConformite; as nonConformite) {
             <span class="text-body-sm text-ink-muted" data-selector="synthese-element-nc">{{ nonConformite }}</span>
-            } @if (ligne.presume; as presume) {
-            <span class="presumees text-body-sm" data-selector="synthese-element-presume">{{ presume }}</span>
             }
           </span>
         </div>
@@ -226,16 +190,18 @@
           @for (barre of cellule.barres; track $index) {
           <span
             [class]="'barre ' + barre.style"
-            [class.presumee]="barre.presumee"
+            [class.automatique]="barre.automatique"
             [style.left.%]="barre.gauche"
             [style.width.%]="barre.largeur"
             [title]="barre.enonce"
             data-selector="synthese-barre"
             [attr.data-style]="barre.style"
-            [attr.data-presumee]="barre.presumee"
+            [attr.data-automatique]="barre.automatique"
             ><span class="sr-only">{{ barre.enonce }}</span></span
           >
-          } @for (marque of cellule.marques; track $index) {
+          @if (barre.etat; as etat) {
+          <span class="etat-activite" data-selector="synthese-activite-etat">{{ etat }}</span>
+          } } @for (marque of cellule.marques; track $index) {
           <span
             [class]="'forme marque ' + marque.type"
             [class.choisie]="marque.choisie"
@@ -258,12 +224,7 @@
         <li data-selector="synthese-legende" data-legende="non-conformite">
           <i class="pastille pastille-nc" aria-hidden="true"></i>{{ libelles.legende.nonConformite }}
         </li>
-        <li data-selector="synthese-legende" data-legende="presence">
-          <i class="pastille pastille-presence" aria-hidden="true"></i>{{ libelles.legende.presence }}
-        </li>
-        <li data-selector="synthese-legende" data-legende="presume">
-          <i class="pastille pastille-presume" aria-hidden="true"></i>{{ libelles.legende.presume }}
-        </li>
+
         <li data-selector="synthese-legende" data-legende="en-cours">
           <i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}
         </li>
@@ -274,16 +235,29 @@
           <i class="forme nc" aria-hidden="true"></i>{{ libelles.legende.nonConformitePointee }}
         </li>
         <li data-selector="synthese-legende" data-legende="fin"><i class="forme fin" aria-hidden="true"></i>{{ libelles.legende.fin }}</li>
-        <li data-selector="synthese-legende" data-legende="clos">
-          <i class="forme clos" aria-hidden="true"></i>{{ libelles.legende.clos }}
-        </li>
-        <li data-selector="synthese-legende" data-legende="trait">
-          <i class="pastille pastille-trait" aria-hidden="true"></i>{{ libelles.legende.presenceTrait }}
-        </li>
       </ul>
     </div>
   </div>
-  @if (vue.frise.journal; as journal) {
+  @if (vue.frise.conflits.length > 0) {
+  <section class="mt-6" aria-labelledby="conflits-heading" data-selector="synthese-conflits">
+    <h2 id="conflits-heading" class="text-section" data-selector="synthese-conflits-titre">{{ libelles.conflits }}</h2>
+    <ul class="mt-3 space-y-4">
+      @for (conflit of vue.frise.conflits; track $index) {
+      <li class="border-b border-border pb-4">
+        <h3 class="text-body font-semibold" data-selector="synthese-conflit-element">{{ conflit.element }}</h3>
+        @if (conflit.activites; as activites) {
+        <p class="mt-1 text-body-sm text-ink-muted" data-selector="synthese-conflit-activites">{{ activites }}</p>
+        }
+        <ul class="mt-2 space-y-1 text-body-sm">
+          @for (fait of conflit.faits; track $index) {
+          <li class="break-words" data-selector="synthese-conflit-fait">{{ fait }}</li>
+          }
+        </ul>
+      </li>
+      }
+    </ul>
+  </section>
+  } @if (vue.frise.journal; as journal) {
   <glm-journal [journal]="journal" (choisi)="choisir($event)" />
   } } }
 </main>

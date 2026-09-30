@@ -158,6 +158,12 @@ et ses démonstrations InMemory ; son branchement HTTP réel reste un chantier d
 back de correction et de résolution sont adaptées et testées. Le propriétaire confirme que l'écran
 de correction et de résolution des conflits Gestion relève d'une autre MR.
 
+Le relevé Gestion applique désormais cette lecture : son port unique acquiert les deux rapports avec un
+instant d'évaluation commun et vérifie leurs échos comme instants. Les portions calendaires gardent leur
+origine et leur état explicite ; les totaux incomplets n'exposent aucun chiffre. La frise et le journal
+opérationnels signalent les fins automatiques et les séquences en conflit, sans commande de résolution.
+Le coût reste le lot de migration suivant sur son contrat publié dédié.
+
 ## Consequences
 
 ### Positive

@@ -1,4 +1,4 @@
-import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { TotalDeDuree } from '../duree/TotalDeDuree';
 import { ElementReleveId } from './ElementReleveId';
 import { PosteDeLElement } from './PosteDeLElement';
 import { PosteReleveId } from './PosteReleveId';
@@ -10,9 +10,8 @@ export interface FicheDElement {
   readonly nom: string;
   readonly reference: string | undefined;
   readonly description: string | undefined;
-  readonly duree: DureeTravaillee;
-  readonly dureeNonConformite: DureeTravaillee;
-  readonly dureePresumee: DureeTravaillee;
+  readonly duree: TotalDeDuree;
+  readonly dureeNonConformite: TotalDeDuree;
   readonly postes: readonly PosteDeLElement[];
 }
 
@@ -20,9 +19,8 @@ export class ElementDuReleve {
   readonly id: ElementReleveId;
   readonly type: TypeDElement;
   readonly description: string | undefined;
-  readonly duree: DureeTravaillee;
-  readonly dureeNonConformite: DureeTravaillee;
-  readonly dureePresumee: DureeTravaillee;
+  readonly duree: TotalDeDuree;
+  readonly dureeNonConformite: TotalDeDuree;
   readonly postes: readonly PosteDeLElement[];
   private readonly nom: string;
   private readonly reference: string | undefined;
@@ -35,7 +33,6 @@ export class ElementDuReleve {
     this.description = fiche.description;
     this.duree = fiche.duree;
     this.dureeNonConformite = fiche.dureeNonConformite;
-    this.dureePresumee = fiche.dureePresumee;
     this.postes = [...fiche.postes];
   }
 

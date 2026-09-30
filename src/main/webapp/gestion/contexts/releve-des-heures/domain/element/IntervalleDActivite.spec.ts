@@ -1,7 +1,14 @@
+import { ActiviteReleveId } from '../releve/ActiviteReleveId';
 import { InstantDeReleve } from '../releve/InstantDeReleve';
+import { ActiviteDuReleve } from './ActiviteDuReleve';
 import { ElementReleveId } from './ElementReleveId';
 import { FicheDIntervalle, IntervalleDActivite } from './IntervalleDActivite';
 import { PosteReleveId } from './PosteReleveId';
+
+const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
+  fin === undefined
+    ? { id: new ActiviteReleveId('a'), debut, etat: 'EN_COURS' }
+    : { id: new ActiviteReleveId('a'), debut, fin, etat: 'TERMINEE' };
 
 const instantFixture = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
 
@@ -12,15 +19,27 @@ const ficheFixture = (fiche: Partial<FicheDIntervalle>): FicheDIntervalle => ({
   categorie: 'TRAVAIL',
   debut: instantFixture('08:20'),
   fin: instantFixture('09:00'),
-  presumee: false,
   ...fiche,
+  activite:
+    fiche.activite
+    ?? activiteFixture(fiche.debut ?? instantFixture('08:20'), Object.hasOwn(fiche, 'fin') ? fiche.fin : instantFixture('09:00')),
 });
 
 describe('IntervalleDActivite', () => {
-  it('should refuse a presumed interval without an end', () => {
-    expect(() => new IntervalleDActivite(ficheFixture({ fin: undefined, presumee: true }))).toThrow(
-      'L’intervalle reçu du serveur est présumé sans fin.',
+  it('should keep an unresolved activity distinct from one still in progress', () => {
+    const intervalle = new IntervalleDActivite(
+      ficheFixture({
+        fin: undefined,
+        activite: {
+          id: new ActiviteReleveId('ouverture-a'),
+          debut: instantFixture('08:20'),
+          etat: 'A_RESOUDRE',
+          finAuPlusTard: instantFixture('17:00'),
+        },
+      }),
     );
+
+    expect(intervalle.estEnCours()).toBe(false);
   });
 
   it('should refuse an interval ending before it starts', () => {

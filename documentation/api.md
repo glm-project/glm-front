@@ -74,6 +74,12 @@ elements together, unpaged, from one repeatable-read server transaction. It take
 parameter, and its `genereLe` version is deliberately ignored. [`offline-pupitre.md`](offline-pupitre.md)
 owns that workflow.
 
+For the Gestion operational report, the single read port composes synthesis and time sheet with one
+`evaluation` sampled when acquisition starts. Both responses must echo that instant; compare instants rather
+than ISO spellings. A 400 refusal or an inconsistent echo rejects the reading and is reported once. The
+technical evaluation stays outside the view URL. Received complete/incomplete totals and interpreted activity
+states are translated into context values; the adapter does not reconstruct them from raw clockings.
+
 ## Translate refusals by stable code
 
 `findApiErrorIn` reads the `urn:glm:erreur:<context>:<code>` and message from a `ProblemDetail`. Branch on

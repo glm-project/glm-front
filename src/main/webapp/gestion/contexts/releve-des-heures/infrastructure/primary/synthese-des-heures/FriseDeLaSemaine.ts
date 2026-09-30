@@ -1,23 +1,14 @@
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
-import { PlageDeReleve } from '../../../domain/releve/PlageDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
+import { SequenceEnConflit } from '../../../domain/releve/SequenceEnConflit';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { JournalDuJour, journalDuJour } from '../journal-du-jour/JournalDuJour';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AncrageDuRepere, AxeDuJour, minutesDeDebut, minutesDeFin, seLePoursuit } from './AxeDuJour';
+import { AncrageDuRepere, AxeDuJour, minutesDeDebut } from './AxeDuJour';
 import { JourSurSonAxe, jourSurSonAxe } from './JourSurSonAxe';
 import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
-
-export type StyleDeBarreDePresence = 'plage' | 'presumee' | 'en-cours';
-
-export interface BarreDeFrise {
-  readonly style: StyleDeBarreDePresence;
-  readonly gauche: number;
-  readonly largeur: number | undefined;
-  readonly enonce: string;
-}
 
 export interface RepereDeFrise {
   readonly minutes: number;
@@ -32,54 +23,40 @@ export interface JourDeFrise {
   readonly libelle: string;
   readonly aujourdhui: boolean;
   readonly ouvert: boolean;
-  readonly presence: readonly BarreDeFrise[];
   readonly operationnel: string;
   readonly sansOperationnel: boolean;
-  readonly operationnelPresume: string | undefined;
 }
 
-export interface TraitDePresence {
+export interface GuideDePointage {
   readonly gauche: number;
   readonly titre: string;
 }
 
 export interface CalqueDeFrise {
   readonly colonne: number;
-  readonly traits: readonly TraitDePresence[];
-  readonly repere: TraitDePresence | undefined;
+  readonly repere: GuideDePointage | undefined;
+}
+
+export interface ConflitDeFrise {
+  readonly element: string;
+  readonly activites: string | undefined;
+  readonly faits: readonly string[];
 }
 
 export interface FriseDeLaSemaine {
+  readonly conflits: readonly ConflitDeFrise[];
   readonly journal: JournalDuJour | undefined;
   readonly colonnes: string;
   readonly calque: CalqueDeFrise | undefined;
   readonly jours: readonly JourDeFrise[];
   readonly lignes: readonly LigneDeFrise[];
   readonly operationnelTotal: string;
-  readonly operationnelTotalPresume: string | undefined;
-  readonly presenceTotal: string;
-  readonly presenceTotalPresume: string | undefined;
 }
-
-const barreDePresence = (jour: JourDeReleve, axe: AxeDuJour, plage: PlageDeReleve): BarreDeFrise => {
-  const gauche = axe.pourcentDe(minutesDeDebut(plage.debut));
-  if (plage.estEnCours()) {
-    return { style: 'en-cours', gauche, largeur: undefined, enonce: LIBELLES.enonceDePlageEnCours(plage.debut) };
-  }
-  const fin = plage.finOuDebut();
-  const enonce = LIBELLES.enonceDePlage({
-    presumee: plage.presumee,
-    debut: plage.debut,
-    fin,
-    depuisLaVeille: jour.vientDeLaVeille(plage),
-    seLePoursuit: seLePoursuit(plage.debut, fin),
-  });
-  const style = plage.presumee ? 'presumee' : 'plage';
-  return { style, gauche, largeur: axe.pourcentDe(minutesDeFin(plage.debut, fin)) - gauche, enonce };
-};
 
 const reperesDuJour = (jour: JourDeReleve, axe: AxeDuJour, ouvert: boolean): readonly RepereDeFrise[] =>
   jour.estVide() && !ouvert ? [] : axe.reperes(ouvert).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) }));
+
+const sansOperationnel = (jour: JourDeReleve): boolean => jour.estVide() && jour.operationnelTotal.snapshot().complete;
 
 const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalendaire): JourDeFrise => ({
   cle: jour.jour.value,
@@ -87,10 +64,8 @@ const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalen
   libelle: LIBELLES.jour(jour.jour),
   aujourdhui: jour.jour.estLeMeme(aujourdhui),
   ouvert,
-  presence: jour.plages.map(plage => barreDePresence(jour, axe, plage)),
-  operationnel: jour.estVide() ? LIBELLES.sansValeur : LIBELLES.duree(jour.operationnelPointe),
-  sansOperationnel: jour.estVide(),
-  operationnelPresume: jour.operationnelPresume.estNulle() ? undefined : LIBELLES.presumees(jour.operationnelPresume),
+  operationnel: sansOperationnel(jour) ? LIBELLES.sansValeur : LIBELLES.duree(jour.operationnelTotal),
+  sansOperationnel: sansOperationnel(jour),
 });
 
 const PREMIERE_COLONNE_DE_JOUR = 2;
@@ -105,7 +80,7 @@ const largeurDuJour = ({ jour, ouvert }: JourSurSonAxe): string => {
 const colonnesDe = (jours: readonly JourSurSonAxe[]): string =>
   ['var(--largeur-etiquette)', ...jours.map(largeurDuJour), 'var(--largeur-total)'].join(' ');
 
-const repereDe = ({ axe, pointageChoisi }: JourSurSonAxe): TraitDePresence | undefined =>
+const repereDe = ({ axe, pointageChoisi }: JourSurSonAxe): GuideDePointage | undefined =>
   pointageChoisi === undefined
     ? undefined
     : {
@@ -120,10 +95,6 @@ const calqueDe = (jours: readonly JourSurSonAxe[]): CalqueDeFrise | undefined =>
     ? undefined
     : {
         colonne: rang + PREMIERE_COLONNE_DE_JOUR,
-        traits: ouvert.jour.pointagesDePresence().map(pointage => ({
-          gauche: ouvert.axe.pourcentDe(minutesDeDebut(pointage.instant)),
-          titre: LIBELLES.pointage(pointage.type, pointage.instant),
-        })),
         repere: repereDe(ouvert),
       };
 };
@@ -137,6 +108,20 @@ const journalDuJourOuvert = (
   return ouvert === undefined ? undefined : journalDuJour(releve, ouvert.jour, selection);
 };
 
+const conflitDeFrise = (releve: ReleveDesHeures, conflit: SequenceEnConflit): ConflitDeFrise => {
+  const element = releve.elementDe(conflit.cible.element);
+  const poste = element.libelleDuPoste(conflit.cible.poste);
+  const pointages = releve.jours.flatMap(jour => jour.pointages);
+  return {
+    element: poste === undefined ? LIBELLES.nomDElement(element) : `${LIBELLES.nomDElement(element)} · ${poste}`,
+    activites: conflit.activites.length === 0 ? undefined : LIBELLES.activitesConcernees(conflit.activites.map(id => id.value)),
+    faits: conflit.pointages.map(id => {
+      const pointage = pointages.find(fait => fait.id.value === id.value);
+      return pointage === undefined ? LIBELLES.pointageConcerne(id.value) : LIBELLES.faitConcerne(pointage);
+    }),
+  };
+};
+
 export const friseDeLaSemaine = (
   releve: ReleveDesHeures,
   aujourdhui: JourCalendaire,
@@ -145,14 +130,12 @@ export const friseDeLaSemaine = (
 ): FriseDeLaSemaine => {
   const jours = releve.jours.map(jour => jourSurSonAxe(jour, ouvert, selection));
   return {
+    conflits: releve.conflits.map(conflit => conflitDeFrise(releve, conflit)),
     journal: journalDuJourOuvert(releve, jours, selection),
     colonnes: colonnesDe(jours),
     calque: calqueDe(jours),
     jours: jours.map(jour => jourDeFrise(jour, aujourdhui)),
     lignes: releve.elements.map(element => ligneDeFrise(element, jours, releve.travailleEnParallele(element))),
-    operationnelTotal: LIBELLES.duree(releve.operationnelPointe),
-    operationnelTotalPresume: releve.operationnelPresume.estNulle() ? undefined : LIBELLES.presume(releve.operationnelPresume),
-    presenceTotal: LIBELLES.duree(releve.presencePointee),
-    presenceTotalPresume: releve.presencePresumee.estNulle() ? undefined : LIBELLES.presume(releve.presencePresumee),
+    operationnelTotal: LIBELLES.duree(releve.operationnelTotal),
   };
 };

@@ -1,13 +1,33 @@
+import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
+import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { ElementDuReleve } from '../element/ElementDuReleve';
+import { ElementReleveId } from '../element/ElementReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
+import { ActiviteReleveId } from './ActiviteReleveId';
+import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
 import { JourAOuvrir, jourOuvert } from './JourOuvert';
-import { PlageDeReleve } from './PlageDeReleve';
-import { PointageDePresence } from './PointageDePresence';
+import { IntentionDePointage, PointageDElement } from './PointageDElement';
 import { ReleveDesHeures } from './ReleveDesHeures';
+
+const intentionFixture = (type: string): IntentionDePointage =>
+  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } : { type: 'OUVERTURE' };
+
+const elementFixture = (): ElementDuReleve =>
+  new ElementDuReleve({
+    id: new ElementReleveId('element-1'),
+    type: 'PRODUIT',
+    nom: 'Moule',
+    reference: undefined,
+    description: undefined,
+    duree: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    dureeNonConformite: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    postes: [],
+  });
 
 const SEMAINE_PASSEE = new SemaineISO(2026, 37);
 const SEMAINE_EN_COURS = new SemaineISO(2026, 38);
@@ -18,23 +38,30 @@ const jourFixture = (jour: JourCalendaire, fiche: { pointe?: boolean; couvert?: 
   const instant = new InstantDeReleve(`${jour.value}T08:00:00Z`);
   return new JourDeReleve({
     jour,
-    operationnelPointe: new DureeTravaillee('PT0S'),
-    operationnelPresume: new DureeTravaillee('PT0S'),
+    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     intervalles: [],
-    pointages: fiche.pointe === true ? [new PointageDePresence('ARRIVEE', instant)] : [],
-    plages: fiche.couvert === true ? [new PlageDeReleve(instant, new InstantDeReleve(`${jour.value}T09:00:00Z`), false)] : [],
+    pointages:
+      fiche.pointe === true
+        ? [
+            new PointageDElement({
+              id: new PointageReleveId('pointage-fixture'),
+              type: 'DEBUT',
+              instant: instant,
+              cible: new CibleDePointage(new ElementReleveId('element-1'), undefined),
+              intention: intentionFixture('DEBUT'),
+            }),
+          ]
+        : [],
   });
 };
 
 const releveFixture = (semaine: SemaineISO, jours: Readonly<Record<number, { pointe?: boolean; couvert?: boolean }>>): ReleveDesHeures =>
   new ReleveDesHeures(semaine, {
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
-    elements: [],
-    presencePointee: new DureeTravaillee('PT0S'),
-    presencePresumee: new DureeTravaillee('PT0S'),
-    operationnelPointe: new DureeTravaillee('PT0S'),
-    operationnelPresume: new DureeTravaillee('PT0S'),
+    elements: [elementFixture()],
+    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     jours: semaine.jours().map((jour, rang) => jourFixture(jour, jours[rang] ?? {})),
+    conflits: [],
   });
 
 describe('jourOuvert', () => {
@@ -60,13 +87,5 @@ describe('jourOuvert', () => {
     const jour = jourOuvert(ABSENT, SEMAINE_PASSEE, releve, AUJOURDHUI);
 
     expect(jour?.value).toBe('2026-09-08');
-  });
-
-  it('should open no day of a past week that carries no clocking, a presence alone being none', () => {
-    const releve = releveFixture(SEMAINE_PASSEE, { 2: { couvert: true } });
-
-    const jour = jourOuvert(ABSENT, SEMAINE_PASSEE, releve, AUJOURDHUI);
-
-    expect(jour).toBeUndefined();
   });
 });

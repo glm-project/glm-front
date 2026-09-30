@@ -131,6 +131,28 @@ describe('Weekly hours report of an operator', () => {
     thenTheAddressIsRefusedWithoutAnyRead();
   });
 
+  it('should reuse the same acquired reports when selecting a clocking, changing only the day and going back', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDay('2026-09-14');
+    whenChoosingTheClocking(0);
+    whenOpeningTheDay(1);
+    whenGoingBackFromTheOpenedDay('mar. 15');
+
+    thenTheOpenDayIs('lun. 14');
+    thenOnlyOneEvaluationWasAcquired();
+    thenReuseTheSameAcquiredReportsWhenSelectingAClockingChangingOnlyTheDayAndGoingBack();
+  });
+
+  it('should acquire a fresh report when retrying a technical failure', () => {
+    synthese.failRead = true;
+    givenReferentialAndReports();
+    whenVisitingTheWeek(2026, 38);
+    whenRetryingAfterTheSourceRecovers();
+
+    thenTheWeekInProgressIsDisplayed();
+    thenAcquireAFreshReportWhenRetryingATechnicalFailure();
+  });
+
   const givenReferentialAndReports = (): void => {
     operateurs.install();
     synthese.install();
@@ -159,6 +181,17 @@ describe('Weekly hours report of an operator', () => {
     cy.viewport(1280, 900);
     cy.clock(HORLOGE, ['Date']);
     cy.visit(`/operateurs/op-1/heures?annee=${String(annee)}&semaine=${String(semaine)}&jour=${jour}`);
+  };
+
+  const whenChoosingTheClocking = (rang: number): void => {
+    cy.get(dataSelector('synthese-journal-entree')).eq(rang).click();
+  };
+
+  const whenRetryingAfterTheSourceRecovers = (): void => {
+    cy.get(dataSelector('synthese-error')).then(() => {
+      synthese.failRead = false;
+    });
+    cy.get(dataSelector('synthese-retry')).click();
   };
 
   const whenOpeningTheDay = (rang: number): void => {
@@ -231,8 +264,28 @@ describe('Weekly hours report of an operator', () => {
     cy.wrap(synthese.lectures).should('deep.include', { annee, semaine });
   };
 
+  const thenOnlyOneEvaluationWasAcquired = (): void => {
+    cy.wrap(synthese.evaluations).should(evaluations => {
+      expect(evaluations).to.have.length(2);
+      expect(evaluations.map(lecture => lecture.source).sort((a, b) => a.localeCompare(b))).to.deep.equal(['FEUILLE', 'SYNTHESE']);
+      expect(evaluations.map(lecture => lecture.evaluation)).to.deep.equal([
+        new Date(HORLOGE).toISOString(),
+        new Date(HORLOGE).toISOString(),
+      ]);
+    });
+  };
+
   const thenTheAddressIsRefusedWithoutAnyRead = (): void => {
     cy.get(dataSelector('synthese-adresse-invalide')).should('be.visible');
     cy.wrap(synthese.lectures).should('be.empty');
+  };
+
+  const thenReuseTheSameAcquiredReportsWhenSelectingAClockingChangingOnlyTheDayAndGoingBack = (): void => {
+    cy.get(dataSelector('synthese-journal-entree')).filter('[aria-pressed="true"]').should('have.length', 0);
+    cy.location('search').should('not.contain', 'evaluation=');
+  };
+
+  const thenAcquireAFreshReportWhenRetryingATechnicalFailure = (): void => {
+    cy.wrap(synthese.lectures).should('have.length', 2);
   };
 });
