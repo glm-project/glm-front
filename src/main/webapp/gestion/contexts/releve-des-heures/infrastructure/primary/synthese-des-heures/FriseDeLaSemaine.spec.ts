@@ -53,7 +53,7 @@ describe('FriseDeLaSemaine', () => {
 
     it.each([
       ['an isolated clocking of an element', { pointagesDElement: [{ type: 'FIN', heure: [5, 30] }] }],
-      ['a departure no interval or presence surrounds', { pointagesDElement: [{ type: 'FIN', heure: [22, 45] }] }],
+      ['an isolated finish late in the day', { pointagesDElement: [{ type: 'FIN', heure: [22, 45] }] }],
     ] as const)('should open the axis of the open day onto the whole day for %s outside the daytime hours', (_cas, jour) => {
       const releve = releveFixture(SEMAINE_EN_COURS, { 0: jour }, {}, [elementFixture()]);
       const reperes = frise(releve, LUNDI).jours[0]?.reperes ?? [];

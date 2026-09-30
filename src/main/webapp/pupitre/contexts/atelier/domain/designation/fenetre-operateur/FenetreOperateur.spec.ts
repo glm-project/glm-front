@@ -970,33 +970,33 @@ describe('FenetreOperateur', () => {
   it('should disable PAUSE without a personal activity', () => {
     const idle = givenAWindowOf({});
 
-    const presence = whenReadingGlobalCommands(idle);
+    const commandes = whenReadingGlobalCommands(idle);
 
-    thenGlobalCommandIsPermitted(presence, 'PAUSE', false);
+    thenGlobalCommandIsPermitted(commandes, 'PAUSE', false);
   });
 
   it('should offer REPRENDRE once a pause is taken', () => {
     const paused = givenAnAcceptedPause(givenAWindowOf({ 'moule-1015': [travailAuTourFixture] }));
 
-    const presence = whenReadingGlobalCommands(paused);
+    const commandes = whenReadingGlobalCommands(paused);
 
-    thenGlobalCommandIsPermitted(presence, 'REPRENDRE', true);
+    thenGlobalCommandIsPermitted(commandes, 'REPRENDRE', true);
   });
 
   it('should show the local pause in progress', () => {
     const paused = givenAnAcceptedPause(givenAWindowOf({ 'moule-1015': [travailAuTourFixture] }));
 
-    const presence = whenReadingGlobalCommands(paused);
+    const commandes = whenReadingGlobalCommands(paused);
 
-    thenSituationIs(presence, true);
+    thenSituationIs(commandes, true);
   });
 
   const whenReadingGlobalCommands = (window: FenetreOperateur): CommandesGlobales => window.commandesGlobales();
   const thenSituationIs = (commandes: CommandesGlobales, enPause: boolean): void => {
     expect(commandes.enPause()).toBe(enPause);
   };
-  const thenGlobalCommandIsPermitted = (presence: CommandesGlobales, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
-    expect(presence.permet(intention)).toBe(permet);
+  const thenGlobalCommandIsPermitted = (commandes: CommandesGlobales, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
+    expect(commandes.permet(intention)).toBe(permet);
   };
 
   const identifyFixture = (): IdentiteDuGeste => {

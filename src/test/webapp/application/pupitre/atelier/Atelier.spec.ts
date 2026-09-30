@@ -105,7 +105,7 @@ describe('Pupitre workshop journey', () => {
 
     whenStoppingAllWork();
 
-    thenEveryFinishWasSentBeforeDeparture();
+    thenEveryPersonalActivityWasFinished();
   });
 
   it('should show a pointage optimistically while the server response is pending', () => {
@@ -361,7 +361,7 @@ describe('Pupitre workshop journey', () => {
     cy.get('@deviceAuthorization.all').should('have.length', 1);
   };
 
-  const thenEveryFinishWasSentBeforeDeparture = (): void => {
+  const thenEveryPersonalActivityWasFinished = (): void => {
     cy.wrap(requetes).should(requests => {
       expect(requests.map(({ type }) => type)).to.deep.equal(['FIN', 'FIN']);
       expect(requests.map(({ route }) => new URL(route).pathname)).to.deep.equal([

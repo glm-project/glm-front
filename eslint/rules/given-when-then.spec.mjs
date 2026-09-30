@@ -11,7 +11,7 @@ ruleTester.run('given-when-then', givenWhenThen, {
       code: `const thenOpeningIsRefused = () => expect(() => whenOpening()).toThrow('Already open'); it('should refuse a duplicate opening', () => thenOpeningIsRefused());`,
     },
     {
-      code: `const thenPresenceIsVisible = () => expect(tile.querySelector('[data-selector=presence]').textContent).toBe('Présent'); it('should show presence', () => { thenPresenceIsVisible(); });`,
+      code: `const thenActivityIsVisible = () => expect(tile.querySelector('[data-selector=activity]').textContent).toBe('Au travail'); it('should show activity', () => { thenActivityIsVisible(); });`,
     },
     {
       code: `function whenFocusing() { button.focus(); } const givenThePage = () => cy.visit('/'); it('should focus', () => { givenThePage(); whenFocusing(); thenItIsFocused(); });`,
@@ -85,7 +85,7 @@ ruleTester.run('given-when-then', givenWhenThen, {
   ],
   invalid: [
     {
-      code: `it('should hide computed DOM access', () => { expect(element['textContent']).toBe('Présent'); });`,
+      code: `it('should hide computed DOM access', () => { expect(element['textContent']).toBe('Au travail'); });`,
       errors: [{ messageId: 'technicalDetail' }],
     },
     ...[
@@ -141,7 +141,7 @@ ruleTester.run('given-when-then', givenWhenThen, {
       errors: [{ messageId: 'technicalDetail' }],
     },
     {
-      code: `it('should hide DOM queries', () => { expect(tileFor('alice').querySelector('[data-selector=presence]').textContent).toBe('Présent'); });`,
+      code: `it('should hide DOM queries', () => { expect(tileFor('alice').querySelector('[data-selector=activity]').textContent).toBe('Au travail'); });`,
       errors: [{ messageId: 'technicalDetail' }],
     },
     {
