@@ -1,4 +1,4 @@
-import { OperateurDuPupitre, TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
+import { OperateurDuPupitre, TypeDOuverture } from '../../journal-du-pupitre/JournalDuPupitre';
 import { Matricule } from '../Matricule';
 import { DecisionDOuverture, HabilitationsDePoste } from './HabilitationsDePoste';
 
@@ -22,7 +22,7 @@ export class OperateurDesigne {
     return this.identite;
   }
 
-  decideOuverture(type: TypeDePointage): DecisionDOuverture {
+  decideOuverture(type: TypeDOuverture): DecisionDOuverture {
     return this.habilitations.decideOuverture(type);
   }
 

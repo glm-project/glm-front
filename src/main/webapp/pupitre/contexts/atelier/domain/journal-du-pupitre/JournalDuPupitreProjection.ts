@@ -1,27 +1,59 @@
 import {
   ActiviteDuPupitre,
-  EtatDePresence,
+  ConflitDuPupitre,
+  EvenementAccepte,
   EvenementDuJournal,
-  GesteDArrivee,
   GesteDePointage,
-  GesteDePresence,
   JournalDuPupitre,
-  OperateurDuPupitre,
   ReferentielDuPupitre,
   SuiviDuPupitre,
-  TypeDePresence,
 } from './JournalDuPupitre';
 
+const matchesPair = (activite: ActiviteDuPupitre, geste: GesteDePointage): boolean =>
+  activite.operateurId === geste.operateurId && activite.posteId === geste.posteId;
+
+const conflictWithReplacement = (
+  suivi: SuiviDuPupitre,
+  geste: Exclude<GesteDePointage, { readonly intention: 'OUVERTURE' }>,
+): SuiviDuPupitre => {
+  const remplacantes = suivi.activites.filter(
+    activite => matchesPair(activite, geste) && Date.parse(activite.depuis) < Date.parse(geste.dateDeSurvenue),
+  );
+  if (remplacantes.length === 0) return suivi;
+  const activites = suivi.activites.filter(activite => !remplacantes.includes(activite));
+  return {
+    ...suivi,
+    activites,
+    etat: etatFor(activites.length),
+    conflits: [
+      ...suivi.conflits,
+      {
+        operateurId: geste.operateurId,
+        ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
+        activites: [geste.cible, ...remplacantes.map(activite => activite.ouverture)],
+        pointages: [geste.id],
+      },
+    ],
+  };
+};
+
 const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
-  const activites = suivi.activites.filter(activite => activite.operateurId !== geste.operateurId || activite.posteId !== geste.posteId);
+  if (geste.intention !== 'OUVERTURE') {
+    const cible = suivi.activites.find(activite => activite.ouverture === geste.cible);
+    if (cible === undefined) return conflictWithReplacement(suivi, geste);
+  }
+  const activites = suivi.activites.filter(activite =>
+    geste.intention === 'OUVERTURE' ? !matchesPair(activite, geste) : activite.ouverture !== geste.cible,
+  );
   if (geste.type !== 'FIN') {
-    const activite: ActiviteDuPupitre = {
+    activites.push({
+      ouverture: geste.id,
+      echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
       operateurId: geste.operateurId,
       categorie: categorieFor(geste),
       depuis: geste.dateDeSurvenue,
       ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
-    };
-    activites.push(activite);
+    });
   }
   return { ...suivi, activites, etat: etatFor(activites.length) };
 };
@@ -46,50 +78,32 @@ const isAlreadyProjectedOrUnrelated = (suivi: SuiviDuPupitre, geste: GesteDePoin
 const applyToMatching = <T>(items: readonly T[], matches: (item: T) => boolean, transform: (item: T) => T): T[] =>
   items.map(item => (matches(item) ? transform(item) : item));
 
-const projectPointage = (suivis: readonly SuiviDuPupitre[], geste: GesteDePointage): SuiviDuPupitre[] =>
+const hasConflictDiagnostics = (
+  evenement: EvenementDuJournal,
+): evenement is EvenementAccepte & { readonly conflits: readonly ConflitDuPupitre[] } =>
+  evenement.etat === 'ACCEPTE' && evenement.conflits !== undefined;
+
+const applyPublication = (suivi: SuiviDuPupitre, evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>): SuiviDuPupitre => {
+  const projected = applyPointage(suivi, evenement.geste);
+  if (!hasConflictDiagnostics(evenement)) return projected;
+  const conflits = evenement.conflits;
+  const activites = projected.activites.filter(activite => !conflits.some(conflit => conflit.activites.includes(activite.ouverture)));
+  return { ...projected, conflits, activites, etat: etatFor(activites.length) };
+};
+
+const projectPointage = (
+  suivis: readonly SuiviDuPupitre[],
+  evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>,
+): SuiviDuPupitre[] =>
   applyToMatching(
     suivis,
-    suivi => !isAlreadyProjectedOrUnrelated(suivi, geste),
-    suivi => applyPointage(suivi, geste),
-  );
-
-type CleDeTransition = 'ARRIVEE' | TypeDePresence;
-
-const TRANSITIONS_DE_PRESENCE: Record<EtatDePresence, Partial<Record<CleDeTransition, EtatDePresence>>> = {
-  ABSENT: { ARRIVEE: 'PRESENT' },
-  PRESENT: { DEPART: 'ABSENT' },
-};
-
-const cleDeTransitionFor = (geste: GesteDArrivee | GesteDePresence): CleDeTransition =>
-  geste.nature === 'ARRIVEE' ? 'ARRIVEE' : geste.type;
-
-const isAlreadyProjectedOrUnrelatedPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | GesteDePresence): boolean =>
-  operateur.id !== geste.operateurId || operateur.evenements.includes(geste.id);
-
-const applyPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | GesteDePresence): OperateurDuPupitre => {
-  const etatSuivant = TRANSITIONS_DE_PRESENCE[operateur.etat][cleDeTransitionFor(geste)];
-  return etatSuivant === undefined ? operateur : { ...operateur, etat: etatSuivant };
-};
-
-const projectPresence = (operateurs: readonly OperateurDuPupitre[], geste: GesteDArrivee | GesteDePresence): OperateurDuPupitre[] =>
-  applyToMatching(
-    operateurs,
-    operateur => !isAlreadyProjectedOrUnrelatedPresence(operateur, geste),
-    operateur => applyPresence(operateur, geste),
+    suivi => !isAlreadyProjectedOrUnrelated(suivi, evenement.geste),
+    suivi => applyPublication(suivi, evenement),
   );
 
 const applyEvenement = (referentiel: ReferentielDuPupitre, evenement: EvenementDuJournal): ReferentielDuPupitre => {
-  if (evenement.etat === 'REFUSE') {
-    return referentiel;
-  }
-  const geste = evenement.geste;
-  switch (geste.nature) {
-    case 'POINTAGE':
-      return { ...referentiel, suivis: projectPointage(referentiel.suivis, geste) };
-    case 'ARRIVEE':
-    case 'PRESENCE':
-      return { ...referentiel, operateurs: projectPresence(referentiel.operateurs, geste) };
-  }
+  if (evenement.etat === 'REFUSE') return referentiel;
+  return { ...referentiel, suivis: projectPointage(referentiel.suivis, evenement) };
 };
 
 export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupitre | undefined => {

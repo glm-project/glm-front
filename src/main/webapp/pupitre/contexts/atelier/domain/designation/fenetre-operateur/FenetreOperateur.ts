@@ -1,16 +1,15 @@
 import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
   ActiviteDuPupitre,
+  afterLocalCapture,
   EvenementsDuJournal,
-  GesteDAtelier,
   GesteDePointage,
-  GesteDePresence,
   IdentiteDuGeste,
   JournalDuPupitre,
   snapshotDuJournal,
   SuiviDuPupitre,
   toReouverture,
-  TypeDePointage,
+  TypeDOuverture,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
 import { ContextesParGeste } from '../ContextesParGeste';
@@ -20,7 +19,7 @@ import { Matricule } from '../Matricule';
 import { MatriculeInconnu } from '../MatriculeInconnu';
 import { NumeroDElement } from '../NumeroDElement';
 import { ActivitesPersonnelles } from './ActivitesPersonnelles';
-import { AssuranceDArrivee } from './AssuranceDArrivee';
+import { CommandesGlobales } from './CommandesGlobales';
 import { RefusDAtelier } from './ContexteDeGesteDAtelier';
 import {
   AcceptationDeGestes,
@@ -32,12 +31,11 @@ import {
 } from './DecisionDePointage';
 import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
-import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
 
 const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
-  posteId === undefined ? { type: reouverture } : { type: reouverture, posteId };
+  posteId === undefined ? { intention: 'OUVERTURE', type: reouverture } : { intention: 'OUVERTURE', type: reouverture, posteId };
 
 interface ActivitePersonnelleConnue {
   readonly suiviId: string;
@@ -48,9 +46,9 @@ interface EtatDeFenetreOperateur {
   readonly entreprise: Entreprise;
   readonly vue: JournalDuPupitre;
   readonly instantDOuverture: number;
+  readonly instantDEvaluation: number;
   readonly identity: IdentiteDeFenetre;
   readonly globale: IntentionGlobaleInitiee | undefined;
-  readonly assuranceArrivee: AssuranceDArrivee;
   readonly contextesParGeste: ContextesParGeste;
   readonly intention: number;
   readonly refusVisible: RefusDAtelier | undefined;
@@ -76,14 +74,23 @@ export class FenetreOperateur {
       entreprise,
       vue,
       instantDOuverture,
+      instantDEvaluation: instantDOuverture,
       identity,
       globale: undefined,
-      assuranceArrivee: new AssuranceDArrivee(),
       contextesParGeste: ContextesParGeste.empty(),
       intention: 0,
       refusVisible: undefined,
       operateurDesigne: new OperateurDesigne(operateur, code),
     });
+  }
+
+  afterEvaluatingActivities(instant: number): FenetreOperateur {
+    return this.with({ instantDEvaluation: instant });
+  }
+
+  prochaineEcheance(): number | undefined {
+    const echeances = this.activitesPersonnellesConnues().map(({ activite }) => Date.parse(activite.echeance));
+    return echeances.length === 0 ? undefined : Math.min(...echeances);
   }
 
   hasIdentity(other: FenetreOperateur): boolean {
@@ -104,10 +111,8 @@ export class FenetreOperateur {
   snapshot(): JournalDuPupitre {
     return snapshotDuJournal(this.etat.vue);
   }
-  presence(): PresenceDeLOperateur {
-    const operateur = projectReferentiel(this.etat.vue)?.operateurs.find(candidat => this.etat.operateurDesigne.owns(candidat.id));
-    return new PresenceDeLOperateur({
-      etat: operateur?.etat ?? 'ABSENT',
+  commandesGlobales(): CommandesGlobales {
+    return new CommandesGlobales({
       activiteEnCours: this.activitesPersonnellesConnues().length > 0,
       pauseEnCours: this.pauseEnCours() !== undefined,
     });
@@ -119,13 +124,24 @@ export class FenetreOperateur {
     }));
     const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
     return {
+      conflits: this.conflitsPersonnels(),
       moules: sorted.filter(({ type }) => type === 'PRODUIT').map(({ element }) => element),
       ordresDeFabrication: sorted.filter(({ type }) => type === 'ORDRE_DE_FABRICATION').map(({ element }) => element),
     };
   }
 
-  afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste): DecisionResult {
-    const fenetre = this.afterIntendingGesture();
+  private conflitsPersonnels(): VueDePointage['conflits'] {
+    return (projectReferentiel(this.etat.vue)?.suivis ?? [])
+      .filter(suivi => suivi.conflits.some(conflit => this.conflitConcerneOperateur(conflit.operateurId)))
+      .map(suivi => ({ id: suivi.id, numero: NumeroDElement.from(suivi) }));
+  }
+
+  private conflitConcerneOperateur(operateurId: string | undefined): boolean {
+    return operateurId === undefined || this.etat.operateurDesigne.owns(operateurId);
+  }
+
+  afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste, instant: number): DecisionResult {
+    const fenetre = this.afterEvaluatingActivities(instant).afterIntendingGesture();
     const suivi = fenetre.requireSuivi(suiviId);
     const activities = fenetre.activitesFor(suivi).decide(cible);
     const numero = NumeroDElement.from(suivi);
@@ -135,19 +151,26 @@ export class FenetreOperateur {
         : fenetre.ouverture(suiviId, numero, cible, identify);
     return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }
-  afterChoosingPoste(suiviId: string, cible: CibleDePointage, posteId: string, identify: () => IdentiteDuGeste): GestesDecisionResult {
-    this.requireAvailableGestures();
-    const suivi = this.requireSuivi(suiviId);
-    if (this.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
-    this.etat.operateurDesigne.assertPoste(posteId);
-    const decision = this.gestes(
+  afterChoosingPoste(
+    suiviId: string,
+    cible: CibleDePointage,
+    posteId: string,
+    identify: () => IdentiteDuGeste,
+    instant: number,
+  ): GestesDecisionResult {
+    const fenetre = this.afterEvaluatingActivities(instant);
+    fenetre.requireAvailableGestures();
+    const suivi = fenetre.requireSuivi(suiviId);
+    if (fenetre.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
+    fenetre.etat.operateurDesigne.assertPoste(posteId);
+    const decision = fenetre.gestes(
       suiviId,
       NumeroDElement.from(suivi),
-      { premiere: { type: this.openingTypeFor(cible), posteId }, suivantes: [] },
+      { premiere: { intention: 'OUVERTURE', type: fenetre.openingTypeFor(cible), posteId }, suivantes: [] },
       identify,
     );
     return {
-      fenetre: this.with({ refusVisible: undefined, contextesParGeste: decision.contextesParGeste }),
+      fenetre: fenetre.with({ refusVisible: undefined, contextesParGeste: decision.contextesParGeste }),
       decision,
     };
   }
@@ -172,21 +195,19 @@ export class FenetreOperateur {
     const gestes = this.capture(decision);
     return {
       gestes,
+      ...(decision.repriseAEffacer === undefined ? {} : { repriseAEffacer: decision.repriseAEffacer }),
       applyTo: fenetre => fenetre.afterLocalAcceptance(gestes, decision),
     };
   }
-  afterAccept(gestes: readonly GesteDAtelier[]): FenetreOperateur {
+  afterAccept(gestes: readonly GesteDePointage[], repriseAEffacer?: string): FenetreOperateur {
     const journal = new EvenementsDuJournal(this.etat.vue.evenements);
     return this.with({
-      assuranceArrivee: this.etat.assuranceArrivee.afterAccept(gestes),
       contextesParGeste: this.etat.contextesParGeste,
-      vue: {
-        ...this.etat.vue,
-        evenements: [
-          ...this.etat.vue.evenements,
-          ...gestes.filter(geste => !journal.records(geste.id)).map(geste => ({ geste, etat: 'EN_ATTENTE' as const })),
-        ],
-      },
+      vue: afterLocalCapture(
+        this.etat.vue,
+        gestes.filter(geste => !journal.records(geste.id)),
+        repriseAEffacer,
+      ),
     });
   }
   refusal(): RefusDAtelier | undefined {
@@ -201,8 +222,8 @@ export class FenetreOperateur {
   journalScope(): Entreprise {
     return this.etat.entreprise;
   }
-  capture(decision: LotDeGestesDAtelier): readonly GesteDAtelier[] {
-    return decision.capture(this.etat.assuranceArrivee.isAssuree());
+  capture(decision: LotDeGestesDAtelier): readonly GesteDePointage[] {
+    return decision.capture();
   }
   preparePause(identify: () => IdentiteDuGeste, pause: string): LotDeGestesDAtelier {
     const fins = this.activitesPersonnellesConnues().map(({ suiviId, activite }) => ({
@@ -221,35 +242,20 @@ export class FenetreOperateur {
       this.toPointage(activite.suiviId, toTransition(activite), identify()),
     );
     if (reouvertures.length === 0) return this.sansGeste();
-    const arrivee: GesteDAtelier = { ...identify(), operateurId: this.etat.operateurDesigne.id(), nature: 'ARRIVEE' };
     return {
       kind: 'GESTES',
-      capture: assured => [...(assured ? [] : [arrivee]), ...reouvertures],
-      contextesParGeste: ContextesParGeste.forGestes([arrivee, ...reouvertures], { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' }),
+      capture: () => reouvertures,
+      contextesParGeste: ContextesParGeste.forGestes(reouvertures, { kind: 'COMMANDE_GLOBALE', intention: 'REPRENDRE' }),
       intention: this.etat.intention,
     };
   }
   prepareToutArreter(identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
-    const depart: GesteDePresence = {
-      ...identify(),
-      operateurId: this.etat.operateurDesigne.id(),
-      nature: 'PRESENCE' as const,
-      type: 'DEPART' as const,
-    };
-    const pointages = this.finsPersonnelles(() => ({ ...identify(), dateDeSurvenue: depart.dateDeSurvenue }));
-    const arrivee: GesteDAtelier = {
-      ...identify(),
-      dateDeSurvenue: depart.dateDeSurvenue,
-      operateurId: this.etat.operateurDesigne.id(),
-      nature: 'ARRIVEE',
-    };
+    const pointages = this.finsPersonnelles(identify);
     return {
       kind: 'GESTES',
-      capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages, depart],
-      contextesParGeste: ContextesParGeste.forGestes([arrivee, ...pointages, depart], {
-        kind: 'COMMANDE_GLOBALE',
-        intention: 'TOUT_ARRETER',
-      }),
+      capture: () => pointages,
+      contextesParGeste: ContextesParGeste.forGestes(pointages, { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' }),
+      repriseAEffacer: this.operateur.id,
       intention: this.etat.intention,
     };
   }
@@ -260,8 +266,8 @@ export class FenetreOperateur {
 
   private activitesPersonnellesConnues(): readonly ActivitePersonnelleConnue[] {
     return (projectReferentiel(this.etat.vue)?.suivis ?? []).flatMap(suivi =>
-      suivi.activites
-        .filter(activite => this.etat.operateurDesigne.owns(activite.operateurId))
+      this.activitesFor(suivi)
+        .connues()
         .map(activite => ({ suiviId: suivi.id, activite })),
     );
   }
@@ -269,7 +275,9 @@ export class FenetreOperateur {
   private finDe(suiviId: string, activite: ActiviteDuPupitre, identite: IdentiteDuGeste): GesteDePointage {
     return this.toPointage(
       suiviId,
-      activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId },
+      activite.posteId === undefined
+        ? { intention: 'FIN', type: 'FIN', cible: activite.ouverture }
+        : { intention: 'FIN', type: 'FIN', cible: activite.ouverture, posteId: activite.posteId },
       identite,
     );
   }
@@ -279,12 +287,12 @@ export class FenetreOperateur {
   }
 
   private pauseEnCours(): PauseEnCours | undefined {
-    return PauseEnCours.of(this.etat.vue, this.etat.operateurDesigne.id());
+    return PauseEnCours.of(this.etat.vue, this.etat.operateurDesigne.id(), this.etat.instantDEvaluation);
   }
 
-  private afterLocalAcceptance(gestes: readonly GesteDAtelier[], decision: LotDeGestesDAtelier): FenetreOperateur {
+  private afterLocalAcceptance(gestes: readonly GesteDePointage[], decision: LotDeGestesDAtelier): FenetreOperateur {
     const contextesParGeste = decision.intention === this.etat.intention ? decision.contextesParGeste : this.etat.contextesParGeste;
-    return this.with({ contextesParGeste }).afterAccept(gestes);
+    return this.with({ contextesParGeste }).afterAccept(gestes, decision.repriseAEffacer);
   }
 
   private contextesOf(decision: DecisionDePointage): ContextesParGeste {
@@ -305,15 +313,9 @@ export class FenetreOperateur {
   ): LotDeGestesDAtelier {
     const first = this.toPointage(suiviId, transitions.premiere, identify());
     const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
-    const arrivee: GesteDAtelier = {
-      ...identify(),
-      dateDeSurvenue: first.dateDeSurvenue,
-      operateurId: this.etat.operateurDesigne.id(),
-      nature: 'ARRIVEE',
-    };
     return {
       kind: 'GESTES',
-      capture: (assured = false) => [...(assured ? [] : [arrivee]), ...pointages],
+      capture: () => pointages,
       contextesParGeste: ContextesParGeste.forGestes(pointages, { kind: 'ELEMENT', numero }),
       intention: this.etat.intention,
     };
@@ -327,14 +329,17 @@ export class FenetreOperateur {
     return suivi;
   }
   private activitesFor(suivi: SuiviDuPupitre): ActivitesPersonnelles {
-    return new ActivitesPersonnelles(suivi, this.etat.operateurDesigne, this.etat.instantDOuverture);
+    return new ActivitesPersonnelles(suivi, this.etat.operateurDesigne, {
+      ouverture: this.etat.instantDOuverture,
+      evaluation: this.etat.instantDEvaluation,
+    });
   }
-  private openingTypeFor(cible: CibleDePointage): TypeDePointage {
+  private openingTypeFor(cible: CibleDePointage): TypeDOuverture {
     return cible === 'PRINCIPALE' ? 'DEBUT' : 'NON_CONFORMITE';
   }
   private with(
     change: Partial<
-      Pick<EtatDeFenetreOperateur, 'vue' | 'assuranceArrivee' | 'contextesParGeste' | 'intention' | 'refusVisible' | 'globale'>
+      Pick<EtatDeFenetreOperateur, 'vue' | 'contextesParGeste' | 'intention' | 'refusVisible' | 'globale' | 'instantDEvaluation'>
     >,
   ): FenetreOperateur {
     return new FenetreOperateur({ ...this.etat, ...change });

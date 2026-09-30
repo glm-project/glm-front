@@ -10,11 +10,11 @@ application coordinator into domain owners. Complemented by
 [ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md), which gives the enrolment its screen.
 The paged reference read below no longer holds: issue 165 replaced it with one unpaged
 `GET /api/pupitre/referentiel`, whose single repeatable-read server transaction supplies the instantaneous
-version that offset pagination could not prove. Amended by
-[ADR 0045](0045-keep-the-pause-on-the-pupitre.md): the first activity of a window commits the arrival assurance and
-the activity, without any resumption, and replay absorbs only an existing arrival; presence is no longer the only
-operator-level gesture, since PAUSE is fanned out into one finish per known personal activity and REPRENDRE into one
-restart per activity it suspended. Everything else recorded here stands.
+version that offset pagination could not prove.
+Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
+[ADR 0047](0047-count-only-finished-activities.md): the current pupitre captures activity-only intentions
+with stable targets, retains accepted conflict diagnostics and local pause memory, and has no attendance
+assurance or refusal absorption. The account below records the earlier implementation.
 
 ## Context
 

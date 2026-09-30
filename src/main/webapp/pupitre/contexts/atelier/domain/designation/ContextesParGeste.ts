@@ -1,4 +1,4 @@
-import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
+import { GesteDePointage } from '../journal-du-pupitre/JournalDuPupitre';
 import { ContexteDeGesteDAtelier } from './fenetre-operateur/ContexteDeGesteDAtelier';
 
 export class ContextesParGeste {
@@ -8,7 +8,7 @@ export class ContextesParGeste {
     return new ContextesParGeste(new Map());
   }
 
-  static forGestes(gestes: readonly GesteDAtelier[], contexte: ContexteDeGesteDAtelier): ContextesParGeste {
+  static forGestes(gestes: readonly GesteDePointage[], contexte: ContexteDeGesteDAtelier): ContextesParGeste {
     return new ContextesParGeste(new Map(gestes.map(geste => [geste.id, contexte])));
   }
 

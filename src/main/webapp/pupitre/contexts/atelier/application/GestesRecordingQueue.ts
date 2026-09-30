@@ -46,7 +46,7 @@ export class GestesRecordingQueue {
     fenetreInitiale.assertEntreprise(Entreprise.from(this.authentication.currentTenant()));
     const fenetre = fenetreCourante();
     const acceptance = fenetre.prepareAcceptance(this.prepare(fenetre, capture));
-    await this.journal.append(fenetreInitiale.journalScope(), acceptance.gestes);
+    await this.journal.append(fenetreInitiale.journalScope(), acceptance.gestes, acceptance.repriseAEffacer);
     return { applyTo: acceptance.applyTo };
   }
 

@@ -85,17 +85,23 @@ stays a technical failure: expanding the domain union is a deliberate change, an
 loudly rather than take the wrong business branch.
 
 Workshop publication is the exception: `AtelierExchangePort.send` resolves a readonly
-`Result<void, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
+`Result<PublicationAcceptee, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
 its original code and message, including codes without a known replay motif, as required by ADR 0007 and
 ADR 0009. Unexpected technical failures still reject; synchronization reports them through `ErrorHandlerPort`
 and preserves pending work while marking disconnection. This result describes the server exchange, not local
 durable acceptance. Its minimal type and constructors stay in the atelier synchronization domain; see the
 [publication amendment in ADR 0006](adr/0006-how-the-front-calls-the-back.md#publication-amendment).
 
-Absorption belongs to a business operation. Arrival assurance may absorb an already-open day, and nothing else
-is absorbed: the same HTTP status on an explicit operator gesture remains visible.
+A 200 or 201 publication remains accepted when its response contains conflicts. `PublicationAcceptee`
+retains those diagnostics, including unresolved optional operator or workstation references. Persist them
+with the accepted gesture before refreshing the reference. Stable missing or inconsistent target refusals
+remain final; no arrival is absorbed.
 
-`GesteReplayPolicy` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
+Pointage bodies carry the captured `intention`: an opening has no target, a transition and a finish carry
+`cible`, the original stable opening identity. The adapter sends these fields directly and never infers
+intent from category or workstation. Concurrency rereads only the affected workshop item.
+
+`GesteReplayPolicy` owns the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.
 

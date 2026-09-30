@@ -3,7 +3,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
-import { GesteDAtelier } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { GesteDePointage } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { HttpAtelierExchange } from '@/pupitre/contexts/atelier/infrastructure/secondary/http/HttpAtelierExchange';
@@ -17,11 +17,14 @@ import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/Jo
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
-const gesteFixture: GesteDAtelier = {
+const gesteFixture: GesteDePointage = {
   id: 'arrivee-originale',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
-  nature: 'ARRIVEE',
+  nature: 'POINTAGE',
+  suiviId: 'piece',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
 };
 
 class TimeoutSessionFixture extends DeviceSessionPort {
@@ -134,14 +137,31 @@ describe('Pupitre synchronization over stalled HTTP', () => {
     await vi.advanceTimersByTimeAsync(30_000);
   };
   const whenServerAccepts = (request: TestRequest): void => {
-    request.flush({});
+    request.flush({
+      conflits: [],
+      activitesEnCours: [],
+      journal: [],
+      id: 'piece',
+      nom: 'OF-1',
+      type: 'PRODUIT',
+      etat: 'EN_ATTENTE',
+      element: 'element',
+      engageLe: '2026-09-05T07:00:00Z',
+      engagePar: 'gestionnaire',
+    });
   };
   const thenTheRequestWasCancelled = (request: TestRequest): void => {
     expect(request.cancelled).toBe(true);
   };
   const readPendingReferenceRequests = (): TestRequest[] => http.match(request => request.url === '/api/pupitre/referentiel');
   const thenTheGestureKeepsItsOriginalIdentity = (request: TestRequest): void => {
-    expect(request.request.body).toEqual({ id: 'arrivee-originale', dateDeSurvenue: '2026-09-05T08:00:00Z', operateur: 'jean' });
+    expect(request.request.body).toEqual({
+      id: 'arrivee-originale',
+      dateDeSurvenue: '2026-09-05T08:00:00Z',
+      operateur: 'jean',
+      intention: 'OUVERTURE',
+      type: 'DEBUT',
+    });
   };
   const whenReferenceRefreshCompletes = async (): Promise<void> => {
     await requestArrived.promise;

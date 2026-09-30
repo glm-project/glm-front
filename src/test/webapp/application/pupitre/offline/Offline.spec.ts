@@ -5,7 +5,7 @@ const entrepriseFixture = 'entreprise-a';
 const dateFixture = '2026-09-05T00:00:00Z';
 const idFixture = '59ef737b-c3dd-47f8-8e63-4d5526a17df3';
 const operateurFixture = '65f4ed5c-e9ba-41c6-9de9-735ef26ed559';
-const bodyFixture = { id: idFixture, dateDeSurvenue: dateFixture, operateur: operateurFixture };
+const bodyFixture = { id: idFixture, dateDeSurvenue: dateFixture, operateur: operateurFixture, intention: 'OUVERTURE', type: 'DEBUT' };
 
 describe('Pupitre offline restart', () => {
   let online: boolean;
@@ -34,9 +34,23 @@ describe('Pupitre offline restart', () => {
     cy.intercept('GET', '/api/pupitre/referentiel', {
       body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [] },
     }).as('reference');
-    cy.intercept('POST', '/api/atelier/journees', request => {
+    cy.intercept('POST', '/api/atelier/suivis/piece/pointages', request => {
       if (online) {
-        request.reply({ statusCode: 200, body: {} });
+        request.reply({
+          statusCode: 200,
+          body: {
+            id: 'piece',
+            nom: 'OF-1',
+            type: 'PRODUIT',
+            element: 'element',
+            engageLe: dateFixture,
+            engagePar: 'gestionnaire',
+            etat: 'EN_ATTENTE',
+            activitesEnCours: [],
+            conflits: [],
+            journal: [],
+          },
+        });
       } else {
         request.reply({ forceNetworkError: true });
       }

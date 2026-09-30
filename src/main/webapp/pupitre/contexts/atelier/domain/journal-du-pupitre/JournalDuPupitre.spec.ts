@@ -1,8 +1,41 @@
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, snapshotDuJournal } from './JournalDuPupitre';
 
 describe('JournalDuPupitre', () => {
+  it('should copy the stopped pauses and accepted conflict diagnostics independently', () => {
+    const journal: JournalDuPupitre = {
+      connecte: true,
+      pausesArretees: ['pause'],
+      evenements: [
+        {
+          etat: 'ACCEPTE',
+          conflits: [{ activites: ['ouverture'], pointages: ['contradiction'] }],
+          geste: {
+            id: 'contradiction',
+            dateDeSurvenue: '2026-09-05T09:00:00Z',
+            operateurId: 'jean',
+            suiviId: 'piece',
+            nature: 'POINTAGE',
+            intention: 'FIN',
+            type: 'FIN',
+            cible: 'ouverture',
+          },
+        },
+      ],
+    };
+
+    const copy = snapshotDuJournal(journal);
+
+    expect(copy).toEqual(journal);
+    expect(copy.pausesArretees).not.toBe(journal.pausesArretees);
+    expect(copy.evenements[0]).not.toBe(journal.evenements[0]);
+    const event = copy.evenements[0];
+    expect(event?.etat).toBe('ACCEPTE');
+    expect(event).toMatchObject({ conflits: [{ activites: ['ouverture'], pointages: ['contradiction'] }] });
+  });
+
   it('should copy accepted events', () => {
     const pointage: GesteDePointage = {
+      intention: 'OUVERTURE',
       id: 'pt-1',
       dateDeSurvenue: '2026-09-05T08:00:00Z',
       nature: 'POINTAGE',
@@ -25,9 +58,10 @@ describe('JournalDuPupitre', () => {
     const journal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
         suivis: [
           {
+            conflits: [],
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
@@ -55,29 +89,52 @@ describe('JournalDuPupitre', () => {
             nom: 'Dupont',
             prenom: 'Jean',
             matricule: '049',
-            etat: 'ABSENT',
             postes: [{ id: 'p1', libelle: 'Poste 1' }],
-            evenements: ['arr-1'],
           },
         ],
         suivis: [
           {
+            conflits: [],
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
             type: 'ORDRE_DE_FABRICATION',
-            activites: [{ categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', operateurId: 'jean' }],
+            activites: [
+              {
+                ouverture: 'activite-fixture-4',
+                echeance: '2026-09-05T21:00:00.000Z',
+                categorie: 'TRAVAIL',
+                depuis: '2026-09-05T08:00:00Z',
+                operateurId: 'jean',
+              },
+            ],
             evenements: ['EVT-1'],
           },
         ],
       },
       evenements: [
         {
-          geste: { id: 'arr-1', dateDeSurvenue: '2026-09-05T08:00:00Z', nature: 'ARRIVEE', operateurId: 'jean' },
+          geste: {
+            id: 'arr-1',
+            dateDeSurvenue: '2026-09-05T08:00:00Z',
+            nature: 'POINTAGE',
+            intention: 'OUVERTURE',
+            type: 'DEBUT',
+            suiviId: 'suivi-1',
+            operateurId: 'jean',
+          },
           etat: 'ACCEPTE',
         },
         {
-          geste: { id: 'ref-1', dateDeSurvenue: '2026-09-05T08:00:00Z', nature: 'ARRIVEE', operateurId: 'jean' },
+          geste: {
+            id: 'ref-1',
+            dateDeSurvenue: '2026-09-05T08:00:00Z',
+            nature: 'POINTAGE',
+            intention: 'OUVERTURE',
+            type: 'DEBUT',
+            suiviId: 'suivi-1',
+            operateurId: 'jean',
+          },
           etat: 'REFUSE',
           refus: { code: 'err', message: 'Refus' },
         },
@@ -89,7 +146,6 @@ describe('JournalDuPupitre', () => {
     expect(snapshot).toEqual(journal);
     expect(snapshot).not.toBe(journal);
     expect(snapshot.referentiel?.operateurs[0]?.postes).not.toBe(journal.referentiel?.operateurs[0]?.postes);
-    expect(snapshot.referentiel?.operateurs[0]?.evenements).not.toBe(journal.referentiel?.operateurs[0]?.evenements);
     expect(snapshot.referentiel?.suivis[0]?.activites).not.toBe(journal.referentiel?.suivis[0]?.activites);
   });
 });

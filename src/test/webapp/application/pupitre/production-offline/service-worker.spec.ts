@@ -1,4 +1,4 @@
-import type { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import type { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
@@ -8,25 +8,19 @@ const entrepriseFixture = 'entreprise-a';
 const dateFixture = '2026-09-05T08:00:00Z';
 const idFixture = '59ef737b-c3dd-47f8-8e63-4d5526a17df3';
 const tokenFixture = `fixture.${btoa(JSON.stringify({ tenant: entrepriseFixture })).replaceAll('=', '')}.signature`;
-const gestureFixture: GesteDAtelier = {
-  nature: 'ARRIVEE',
+const gestureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
   id: idFixture,
   dateDeSurvenue: dateFixture,
   operateurId: 'operator-1',
+  suiviId: 'workshop-item-1',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
 };
 const acceptedGestureFixture = { geste: gestureFixture, etat: 'ACCEPTE' } as const;
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
-  suivis: [
-    {
-      id: 'workshop-item-1',
-      nom: 'OF-1',
-      etat: 'EN_ATTENTE',
-      type: 'PRODUIT',
-      activites: [],
-      evenements: [],
-    },
-  ],
+  operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+  suivis: [{ conflits: [], id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT', activites: [], evenements: [] }],
 };
 const serviceWorkerSessions: string[] = [];
 let documentBeforeUpdate: Document | undefined;

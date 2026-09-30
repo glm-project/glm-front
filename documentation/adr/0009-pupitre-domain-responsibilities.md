@@ -6,9 +6,10 @@ Accepted. Refines the ownership in [ADR 0007](0007-durable-offline-pupitre.md); 
 extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented by
 [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md), which generalizes the same ownership rule
 to every context and brings interaction and lifecycle rules into the domain. Amended by
-[ADR 0045](0045-keep-the-pause-on-the-pupitre.md): `FenetreOperateur` prepares the implicit arrival and turns PAUSE
-and REPRENDRE into finishes and restarts, with `PauseEnCours` deciding what a pause reopens; it no longer prepares
-any resumption. The ownership split recorded here stands.
+Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
+[ADR 0047](0047-count-only-finished-activities.md): the current pupitre captures activity-only intentions
+with stable targets, retains accepted conflict diagnostics and local pause memory, and has no attendance
+assurance or refusal absorption. The account below records the earlier implementation.
 
 ## Context
 

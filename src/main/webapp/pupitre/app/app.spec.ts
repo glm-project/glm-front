@@ -2,7 +2,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
-import { PresenceDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
+import { CommandesGlobales } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/CommandesGlobales';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
@@ -45,7 +45,7 @@ class AtelierCoordinatorPageFixture {
   readonly refusAtelier = signal(undefined);
   readonly pointage = signal(undefined);
   readonly gestesDisponibles = signal(true);
-  readonly presence = signal(new PresenceDeLOperateur({ etat: 'ABSENT', activiteEnCours: false, pauseEnCours: false }));
+  readonly commandesGlobales = signal(new CommandesGlobales({ activiteEnCours: false, pauseEnCours: false }));
 
   referentiel(): undefined {
     return undefined;

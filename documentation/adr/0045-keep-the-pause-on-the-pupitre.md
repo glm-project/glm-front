@@ -4,9 +4,10 @@
 
 `Accepted`
 
-- `Amends 0006: clocking in no longer resumes a paused presence; the only composed gesture left is the arrival assurance, which still swallows journee-de-travail-deja-ouverte and nothing else.`
-- `Amends 0007: the first batch of a window commits the arrival assurance and its gestures, never a resumption, and replay absorbs only the arrival already open; PAUSE is fanned out into one finish per known personal activity, and REPRENDRE into one restart per activity it suspended.`
-- `Amends 0009: FenetreOperateur prepares the implicit arrival and turns PAUSE and REPRENDRE into finishes and restarts; it no longer prepares any resumption.`
+Amended by [ADR 0047](0047-count-only-finished-activities.md): the activity-only pupitre has no arrival,
+departure or attendance compatibility. PAUSE closes only interpretable, unexpired activities by stable
+target; REPRENDRE opens new activities. TOUT ARRÊTER atomically invalidates local resumption memory even
+without a finish.
 
 ## Context
 
@@ -25,7 +26,7 @@ record moves that open question to the pupitre, it does not settle it.
 ## Considered options
 
 - Mark each finish of a pause with the pause and the pointage that will reopen it, in the journal — **kept**: the
-  finishes and the pause are appended in one atomic batch, survive restarts like every gesture, need no new port
+  finishes and the pause are appended in one atomic batch, survive restarts like every gesture, need no separate pause port
   or storage key, and never reach the server because the HTTP adapter builds its bodies field by field.
 - Keep the pause as a presence event on the server — rejected: the back is dropping it, and it kept the activities
   running through the pause.
@@ -36,8 +37,8 @@ record moves that open question to the pupitre, it does not settle it.
 
 ## Decision
 
-PAUSE ends, in one atomic batch, every personal activity the pupitre knows for the designated operator: one
-`FIN` per activity, on its workstation, carrying a **suspension** — the pause, identified by the root identity of
+PAUSE ends, in one atomic batch, every interpretable nonexpired personal activity the pupitre knows for the designated operator: one
+targeted `FIN` per activity, on its workstation, carrying a **suspension** — the pause, identified by the root identity of
 the initiated global intention, and the pointage that will reopen the activity (`DEBUT`, or `NON_CONFORMITE` for
 an activity in non-conformity). PAUSE assures no arrival and sends no presence gesture. The suspension never
 leaves the pupitre.
@@ -46,19 +47,19 @@ leaves the pupitre.
 reopens. The pause of an operator is the one of their last suspension; it ends at REPRENDRE, at any later gesture
 of that operator appended to this journal whatever its fate at publication, and as soon as the projected
 reference shows an activity of that operator other than one whose suspension was refused. It reopens the
-activities whose suspension was not refused, whose element is still in the projected reference, whose workstation
+activities whose suspension was neither refused nor conserved in conflict, whose element is still in the projected reference, whose workstation
 is still held and which are not open again on the same element and workstation. No clock is compared across
 devices and a pause never expires.
 
-REPRENDRE assures the arrival like a tile, then sends one `DEBUT` or `NON_CONFORMITE` per activity to reopen, on its
-workstation. PAUSE is offered only while the operator has a personal activity, REPRENDRE only while a pause is in
-progress, TOUT ARRÊTER always. The chrome shows « En pause » only while a pause is in progress and the projected
-presence is present; otherwise it shows the presence as before. A global command decided on a window where there
-is nothing left to do records no gesture at all, not even the arrival. The pupitre sends no `REPRISE` any more,
-not even before an opening pointage.
+REPRENDRE sends one opening DEBUT or NON_CONFORMITE per activity to reopen, with a new UUID and no
+former target. PAUSE is offered while an interpretable personal activity remains, REPRENDRE while a local
+pause remains, TOUT ARRÊTER always. The chrome shows the operator identity and « En pause » when appropriate.
 
-Until the back and the reset of the pupitres have shipped, `EN_PAUSE` may still arrive from the server or from a
-stored reference; the HTTP adapter and the IndexedDB adapter both read it as present.
+TOUT ARRÊTER appends N targeted finishes and clears durable resumption memory in one journal mutation,
+including N=0. It retains history and pending gestures. No local or server gesture is fabricated to express
+that invalidation. A failed transaction leaves both effects unapplied; restart cannot restore a cleared
+pause. The new company-scoped activity journal format discards obsolete attendance documents without
+migration and preserves device enrolment and credentials.
 
 ## Consequences
 
@@ -73,10 +74,8 @@ stored reference; the HTTP adapter and the IndexedDB adapter both read it as pre
 
 - Correcting a wrong pause time takes one correction per activity, a finish and a start, instead of one.
 - A pause closes only what this pupitre's reference knows: an activity opened on another pupitre since the last
-  refresh keeps running through the pause. TOUT ARRÊTER remains the end-of-day gesture.
+  refresh keeps running through the pause. TOUT ARRÊTER clears the local resumption memory.
 - A pause is resumed only on the pupitre that took it; the operator restarts their tiles elsewhere.
 - A tile's duration restarts at REPRENDRE, and the rates of an activity are copied again at the restart.
 - Every pause adds two events per activity to the element journals.
-- The presence record counts the pause, and supervision can no longer tell a pausing operator from a present one
-  without assignment.
 - Whether a global PAUSE button is wanted at all is still to be confirmed by the client.

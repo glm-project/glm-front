@@ -1,4 +1,4 @@
-import { SuiviDuPupitre, TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
+import { ActiviteDuPupitre, SuiviDuPupitre, TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
 import { CibleDePointage } from './DecisionDePointage';
 import { OperateurDesigne } from './OperateurDesigne';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
@@ -16,14 +16,28 @@ type DecisionDesActivites = { readonly kind: 'INACTIF' } | { readonly kind: 'ACT
 
 export class ActivitesPersonnelles {
   private readonly etat: EtatDesActivites;
+  private readonly activites: readonly ActiviteDuPupitre[];
 
   constructor(
     suivi: SuiviDuPupitre,
     operateur: OperateurDesigne,
-    private readonly instantDOuverture: number,
+    private readonly instants: { readonly ouverture: number; readonly evaluation: number },
   ) {
-    const [premiere, ...suivantes] = suivi.activites.filter(activite => operateur.owns(activite.operateurId));
+    this.activites = suivi.activites.filter(activite => this.isActionnable(activite, suivi, operateur));
+    const [premiere, ...suivantes] = this.activites;
     this.etat = premiere === undefined ? { kind: 'INACTIF' } : { kind: 'ACTIF', premiere, suivantes };
+  }
+
+  connues(): readonly ActiviteDuPupitre[] {
+    return this.activites;
+  }
+
+  private isActionnable(activite: ActiviteDuPupitre, suivi: SuiviDuPupitre, operateur: OperateurDesigne): boolean {
+    return (
+      operateur.owns(activite.operateurId)
+      && this.instants.evaluation < Date.parse(activite.echeance)
+      && !suivi.conflits.some(conflit => conflit.activites.includes(activite.ouverture))
+    );
   }
 
   snapshot(): ActiviteDePointage | undefined {
@@ -32,7 +46,7 @@ export class ActivitesPersonnelles {
     const since = Math.min(...activites.map(activite => Date.parse(activite.depuis)));
     return {
       categorie: this.hasNonConformity(activites) ? 'NON_CONFORMITE' : 'TRAVAIL',
-      dureeMs: Math.max(0, this.instantDOuverture - since),
+      dureeMs: Math.max(0, this.instants.ouverture - since),
     };
   }
 
@@ -45,10 +59,10 @@ export class ActivitesPersonnelles {
       return {
         kind: 'ACTIF',
         transitions: {
-          premiere: this.transition('DEBUT', premiereNonConforme.posteId),
+          premiere: this.transition('DEBUT', premiereNonConforme),
           suivantes: activites
             .filter(activite => activite !== premiereNonConforme && activite.categorie === 'NON_CONFORMITE')
-            .map(activite => this.transition('DEBUT', activite.posteId)),
+            .map(activite => this.transition('DEBUT', activite)),
         },
       };
     }
@@ -57,8 +71,8 @@ export class ActivitesPersonnelles {
 
   private transitionAll(type: TypeDePointage, etat: Extract<EtatDesActivites, { readonly kind: 'ACTIF' }>): LotDeTransitions {
     return {
-      premiere: this.transition(type, etat.premiere.posteId),
-      suivantes: etat.suivantes.map(activite => this.transition(type, activite.posteId)),
+      premiere: this.transition(type, etat.premiere),
+      suivantes: etat.suivantes.map(activite => this.transition(type, activite)),
     };
   }
 
@@ -66,8 +80,9 @@ export class ActivitesPersonnelles {
     return activites.some(activite => activite.categorie === 'NON_CONFORMITE');
   }
 
-  private transition(type: TypeDePointage, posteId: string | undefined): TransitionDePointage {
-    if (posteId === undefined) return { type };
-    return { type, posteId };
+  private transition(type: TypeDePointage, activite: ActiviteDuPupitre): TransitionDePointage {
+    const cible = activite.ouverture;
+    const poste = activite.posteId === undefined ? {} : { posteId: activite.posteId };
+    return type === 'FIN' ? { ...poste, intention: 'FIN', type, cible } : { ...poste, intention: 'TRANSITION', type, cible };
   }
 }

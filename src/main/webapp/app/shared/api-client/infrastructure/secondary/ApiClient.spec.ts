@@ -30,6 +30,7 @@ const UNE_PAGE_DE_SUIVIS = {
 } satisfies components['schemas']['PageRestSuiviDAtelierEnGrille'];
 
 const UN_SUIVI = {
+  conflits: [],
   activitesEnCours: [],
   element: 'element',
   engageLe: '2026-09-05T08:00:00Z',
@@ -184,7 +185,7 @@ describe('ApiClient', () => {
   const whenStartingWork = (): Promise<unknown> =>
     api.write('/api/atelier/suivis/{id}/pointages', {
       pathParams: { id: SUIVI_ID },
-      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
+      body: { id: 'evenement', operateur: OPERATEUR_ID, intention: 'OUVERTURE', type: 'DEBUT' },
     });
 
   const whenLeavingWork = (): Promise<unknown> =>

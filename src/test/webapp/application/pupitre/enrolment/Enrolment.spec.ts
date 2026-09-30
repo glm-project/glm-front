@@ -15,9 +15,7 @@ const OPERATEUR = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  etat: 'ABSENT',
   postes: [],
-  evenements: [],
 } as const;
 
 let authorizationsBeforeTheRecovery = 0;

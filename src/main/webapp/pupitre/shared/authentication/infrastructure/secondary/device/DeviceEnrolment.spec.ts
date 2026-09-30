@@ -39,6 +39,10 @@ const afterMicrotasks = (): Promise<void> =>
   });
 
 class StorageFixture extends LocalStoragePort {
+  override discardDocumentsWithPrefix(): Promise<void> {
+    return Promise.resolve();
+  }
+
   readonly writeArrived = new SignalFixture();
   value: unknown;
   failRead = false;
@@ -1201,6 +1205,10 @@ describe('Device enrolment lifecycle, through DeviceEnrolmentPort', () => {
 });
 
 class LockingStorageFixture extends LocalStoragePort {
+  override discardDocumentsWithPrefix(): Promise<void> {
+    return Promise.resolve();
+  }
+
   private readonly locks = new BrowserLocksFixture();
 
   override read<T>(): Promise<T | undefined> {

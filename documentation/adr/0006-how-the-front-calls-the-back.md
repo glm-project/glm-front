@@ -11,10 +11,10 @@ Complemented by [ADR 0034](0034-proxy-the-api-at-the-edge.md): the routes still 
 are, and a Cloudflare Pages Function answers `/api/**` for the deployed pupitre.
 Amended by [ADR 0037](0037-require-production-consumers.md): the unused `Page.isComplete()` helper is removed;
 pages still expose their elements and the server total.
-Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md): clocking in no longer resumes a paused presence, the
-pause having left the server; the only composed gesture left is the arrival assurance, which still swallows
-`journee-de-travail-deja-ouverte` and nothing else. The typed client, the adapter translation and the refusal rules
-below stand.
+Amended by [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
+[ADR 0047](0047-count-only-finished-activities.md): the current pupitre captures activity-only intentions
+with stable targets, retains accepted conflict diagnostics and local pause memory, and has no attendance
+assurance or refusal absorption. The account below records the earlier implementation.
 
 ## Context
 
@@ -111,8 +111,8 @@ ground under the unbounded queue of issue 53; the day it falls, that is the tick
 ### Publication amendment
 
 The durable journal now separates local acceptance from the actual server exchange. Therefore
-`AtelierExchangePort.send` returns `Promise<Result<void, RefusDePublication>>`: success confirms the server
-answered, and a recognized business refusal is a typed value carrying its original code, message and motif.
+`AtelierExchangePort.send` returns `Promise<Result<PublicationAcceptee, RefusDePublication>>`: success confirms the server
+answered and retains its conflict diagnostics, and a recognized business refusal is a typed value carrying its original code, message and motif.
 As required by ADR 0007 and ADR 0009, structured business refusals without a known replay motif remain
 durable refusals. Unexpected technical failures still reject the promise; synchronization reports them
 through `ErrorHandlerPort`, marks disconnection and leaves pending work for a later attempt.
@@ -120,7 +120,7 @@ through `ErrorHandlerPort`, marks disconnection and leaves pending work for a la
 The structural readonly `Result<T, E>` and its `ok` / `err` constructors belong to
 `pupitre/contexts/atelier/domain/synchronisation`, their nearest common owner. No package, shared kernel,
 combinator or asynchronous wrapper is introduced. Immutability is a TypeScript contract, not a deep runtime
-freeze. Replay and absorption continue to belong to `GesteReplayPolicy`.
+freeze. The single concurrent retry belongs to `GesteReplayPolicy`.
 
 ### Positive
 

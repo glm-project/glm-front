@@ -144,7 +144,14 @@ Le pupitre conserve une durée écoulée indicative, figée à l'ouverture de la
 Cette indication n'est pas une durée comptabilisée. Le rapport de coût peut préciser que les
 activités en cours sont exclues de son calcul. Le pupitre calcule localement l'expiration à 13 h,
 y compris hors ligne, sans fabriquer de `FIN`. Une activité expirée cesse d'être active et ne peut
-plus être mise en pause ; un nouveau début reste possible.
+plus être mise en pause ; un nouveau début reste possible. Le socle pupitre applique maintenant cette
+règle avec l'échéance serveur et l'instant explicite de décision. Son timer d'actionnabilité est distinct
+de l'inactivité de désignation. Les captures déjà initiées gardent leur heure et cible.
+
+Les réponses de publication 200/201 en conflit restent acceptées et leurs diagnostics sont journalisés
+avant le rafraîchissement canonique. Le stockage atelier neuf conserve identités, intentions, cibles et
+marqueurs ; il retire les anciennes données de présence sans toucher à l'enrôlement. TOUT ARRÊTER conserve
+l'historique et les pending et efface la reprise dans la même mutation que ses N FIN ciblés, N=0 inclus.
 
 Les alertes réelles de ce chantier concernent le relevé et le coût. La supervision adapte son modèle
 et ses démonstrations InMemory ; son branchement HTTP réel reste un chantier distinct. Les commandes

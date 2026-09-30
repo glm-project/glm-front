@@ -1,4 +1,4 @@
-import { GesteDAtelier } from '../../journal-du-pupitre/JournalDuPupitre';
+import { GesteDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
 import { ContextesParGeste } from '../ContextesParGeste';
 import { NumeroDElement } from '../NumeroDElement';
 import { FenetreOperateur } from './FenetreOperateur';
@@ -8,13 +8,15 @@ export type CibleDePointage = 'PRINCIPALE' | 'SECONDAIRE';
 
 export interface LotDeGestesDAtelier {
   readonly kind: 'GESTES';
-  readonly capture: (arriveeAssuree?: boolean) => readonly GesteDAtelier[];
+  readonly capture: () => readonly GesteDePointage[];
   readonly contextesParGeste: ContextesParGeste;
   readonly intention: number;
+  readonly repriseAEffacer?: string;
 }
 
 export interface AcceptationDeGestes {
-  readonly gestes: readonly GesteDAtelier[];
+  readonly gestes: readonly GesteDePointage[];
+  readonly repriseAEffacer?: string;
   readonly applyTo: (fenetre: FenetreOperateur) => FenetreOperateur;
 }
 
