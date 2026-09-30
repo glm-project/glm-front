@@ -334,6 +334,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
         },
         {
           ouverture: 'b',
+          posteId: 'fraiseuse',
           operateurId: 'jean',
           categorie: 'NON_CONFORMITE' as const,
           depuis: '2026-09-05T08:30:00Z',
@@ -359,6 +360,9 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       const restoredWindow = windowOf(after);
       expect(stop.gestes).toHaveLength(count);
       expect(stop.gestes.map(geste => geste.intention)).toEqual(Array<string>(count).fill('FIN'));
+      expect(stop.gestes.map(geste => (geste.intention === 'OUVERTURE' ? undefined : geste.cible))).toEqual(
+        activites.map(activite => activite.ouverture),
+      );
       expect(after.evenements.slice(0, before.evenements.length)).toEqual(before.evenements);
       expect(after.evenements.slice(before.evenements.length)).toEqual(stop.gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
       expect(after.pausesArretees).toEqual(['pause-de-midi']);

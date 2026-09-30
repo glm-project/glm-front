@@ -1,6 +1,34 @@
-import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, snapshotDuJournal } from './JournalDuPupitre';
+import { afterLocalCapture, EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, snapshotDuJournal } from './JournalDuPupitre';
 
 describe('JournalDuPupitre', () => {
+  it('should stop only the designated operator resumption while retaining every prior journal event', () => {
+    const suspended = (operateurId: string): GesteDePointage => ({
+      nature: 'POINTAGE',
+      intention: 'FIN',
+      type: 'FIN',
+      cible: 'ouverture-' + operateurId,
+      id: 'fin-' + operateurId,
+      operateurId,
+      suiviId: 'piece',
+      dateDeSurvenue: '2026-09-05T12:00:00Z',
+      suspension: { pause: 'pause-' + operateurId, reouverture: 'DEBUT' },
+    });
+    const journal: JournalDuPupitre = {
+      connecte: true,
+      pausesArretees: ['pause-ancienne'],
+      evenements: [
+        { geste: suspended('jean'), etat: 'EN_ATTENTE' },
+        { geste: suspended('marie'), etat: 'ACCEPTE' },
+      ],
+    };
+
+    const stopped = afterLocalCapture(journal, [], 'jean');
+
+    expect(stopped.pausesArretees).toEqual(['pause-ancienne', 'pause-jean']);
+    expect(stopped.evenements).toEqual(journal.evenements);
+    expect(journal.pausesArretees).toEqual(['pause-ancienne']);
+  });
+
   it('should copy the stopped pauses and accepted conflict diagnostics independently', () => {
     const journal: JournalDuPupitre = {
       connecte: true,

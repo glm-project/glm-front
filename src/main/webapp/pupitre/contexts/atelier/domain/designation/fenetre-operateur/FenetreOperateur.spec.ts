@@ -146,6 +146,51 @@ describe('FenetreOperateur', () => {
     identities = new Map<string, string>();
   });
 
+  it('should schedule the earliest eligible personal deadline and no deadline once every activity expires', () => {
+    const deadlines = [
+      fenetre.prochaineEcheance(),
+      fenetre.afterEvaluatingActivities(Date.parse('2026-09-05T19:00:00Z')).prochaineEcheance(),
+      fenetre.afterEvaluatingActivities(Date.parse('2026-09-05T22:30:00Z')).prochaineEcheance(),
+    ];
+
+    expect(deadlines).toEqual([Date.parse('2026-09-05T19:00:00Z'), Date.parse('2026-09-05T21:30:00Z'), undefined]);
+  });
+
+  it('should keep another operator conflict separate from the designated operator and unresolved conflicts', () => {
+    const reference = requiredFixture(vueFixture.referentiel, 'reference');
+    const owners = ['jean', 'marie', undefined];
+    const window = givenAWindowOpenedOn({
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        ...reference,
+        suivis: reference.suivis.map((suivi, index) => ({
+          ...suivi,
+          activites: [],
+          conflits: [
+            {
+              ...(owners[index] === undefined ? {} : { operateurId: owners[index] }),
+              activites: [],
+              pointages: ['conflit-' + suivi.id],
+            },
+          ],
+        })),
+      },
+    });
+
+    const pointage = window.pointage();
+
+    expect(pointage.conflits.map(conflit => conflit.id)).toEqual(['moule-1015', 'of-1015']);
+  });
+
+  it('should request no resumption invalidation when accepting an ordinary opening', () => {
+    const decision = whenDeciding('of-1015', 'PRINCIPALE');
+
+    const accepted = fenetre.prepareAcceptance(gesturesOf(decision));
+
+    expect(accepted).not.toHaveProperty('repriseAEffacer');
+    expect(accepted.gestes).toMatchObject([{ intention: 'OUVERTURE', suiviId: 'of-1015' }]);
+  });
+
   it('should capture only one activity opening for the first operator action', () => {
     const decision = whenDeciding('of-1015', 'PRINCIPALE');
 

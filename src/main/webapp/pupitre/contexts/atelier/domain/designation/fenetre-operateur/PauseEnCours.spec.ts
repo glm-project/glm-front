@@ -265,6 +265,7 @@ describe('PauseEnCours', () => {
         evenements: [suspension.id],
         conflits: [{ operateurId: 'jean', activites: [], pointages: [suspension.id] }],
       },
+      suiviFixture('of-205', []),
     ]);
     const journal = givenJournal(referentiel, accepted(suspension));
 

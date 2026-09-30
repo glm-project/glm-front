@@ -57,6 +57,22 @@ describe('JournalDuPupitreProjection', () => {
                   ouverture: 'b',
                   echeance: '2026-09-05T23:00:00Z',
                 },
+                {
+                  operateurId: 'marie',
+                  categorie: 'TRAVAIL',
+                  ouverture: 'autre-operateur',
+                  depuis: '2026-09-05T10:00:00Z',
+                  echeance: '2026-09-05T23:00:00Z',
+                  ...(posteId === undefined ? {} : { posteId }),
+                },
+                {
+                  operateurId: 'jean',
+                  categorie: 'NON_CONFORMITE',
+                  ouverture: 'autre-poste',
+                  posteId: 'fraiseuse',
+                  depuis: '2026-09-05T10:00:00Z',
+                  echeance: '2026-09-05T23:00:00Z',
+                },
               ],
             },
           ],
@@ -79,12 +95,84 @@ describe('JournalDuPupitreProjection', () => {
 
       const projection = whenProjecting(state);
 
-      expect(projection?.suivis[0]?.conflits).toEqual([
+      expect(projection?.suivis[0]?.conflits).toStrictEqual([
         { operateurId: 'jean', ...(posteId === undefined ? {} : { posteId }), activites: ['a', 'b'], pointages: ['fin-a'] },
       ]);
-      expect(projection?.suivis[0]?.activites).toEqual([]);
+      expect(projection?.suivis[0]?.activites.map(activite => activite.ouverture)).toEqual(['autre-operateur', 'autre-poste']);
+      expect(projection?.suivis[0]?.etat).toBe('EN_COURS');
     },
   );
+
+  it.each(['2026-09-05T11:00:00Z', '2026-09-05T11:01:00Z'])(
+    'should not interpret an opening at %s as replacing a target strictly before FIN at 11:00',
+    depuis => {
+      const replacement = {
+        operateurId: 'jean',
+        categorie: 'TRAVAIL' as const,
+        ouverture: 'b',
+        depuis,
+        echeance: '2026-09-06T00:00:00Z',
+        posteId: 'tour',
+      };
+      const state: JournalDuPupitre = {
+        ...givenEvents([
+          {
+            etat: 'EN_ATTENTE',
+            geste: {
+              ...debutGesteFixture,
+              id: 'fin-a',
+              intention: 'FIN',
+              type: 'FIN',
+              cible: 'a',
+              posteId: 'tour',
+              dateDeSurvenue: '2026-09-05T11:00:00Z',
+            },
+          },
+        ]),
+        referentiel: {
+          ...referenceFixture,
+          suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [replacement] }],
+        },
+      };
+
+      const projected = whenProjecting(state);
+
+      expect(projected?.suivis[0]?.activites).toEqual([replacement]);
+      expect(projected?.suivis[0]?.conflits).toEqual([]);
+    },
+  );
+
+  it('should retain unrelated current activities when an accepted publication diagnoses only some of them', () => {
+    const activity = (ouverture: string, operateurId: string) => ({
+      operateurId,
+      ouverture,
+      categorie: 'TRAVAIL' as const,
+      depuis: '2026-09-05T08:00:00Z',
+      echeance: '2026-09-05T21:00:00Z',
+    });
+    const preserved = activity('c', 'lea');
+    const conflits = [
+      { activites: ['b'], pointages: ['fin-a'] },
+      { activites: ['ailleurs'], pointages: ['autre-pointage'] },
+    ];
+    const state: JournalDuPupitre = {
+      ...givenEvents([
+        { etat: 'ACCEPTE', conflits, geste: { ...debutGesteFixture, id: 'fin-a', intention: 'FIN', type: 'FIN', cible: 'a' } },
+      ]),
+      referentiel: {
+        ...referenceFixture,
+        suivis: [
+          { ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [activity('a', 'jean'), activity('b', 'marie'), preserved] },
+        ],
+      },
+    };
+
+    const projected = whenProjecting(state);
+
+    expect(projected?.suivis[0]?.activites).toEqual([preserved]);
+    expect(projected?.suivis[0]?.conflits).toEqual(conflits);
+    expect(projected?.suivis[0]?.etat).toBe('EN_COURS');
+  });
 
   it('should retain the accepted publication conflict before a canonical refresh and suppress its optimistic activity', () => {
     const conflit = { activites: ['debut'], pointages: ['debut'] };
