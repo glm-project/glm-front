@@ -4,6 +4,7 @@ import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { EtatDePresence } from '../presence/EtatDePresence';
 import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
+import { ConflitDeSupervision } from './ConflitDeSupervision';
 import { COULOIRS_DE_SUPERVISION, CouloirDeSupervision } from './CouloirDeSupervision';
 import { OperateurSupervise } from './OperateurSupervise';
 import { ResultatSupervision, resultatSupervisionExploitable, resultatSupervisionInexploitable } from './ResultatSupervision';
@@ -45,11 +46,15 @@ const superviseOperateur = (
   journees: readonly JourneeDeTravail[],
   activites: readonly ActiviteDeSupervision[],
   maintenant: Instant,
+  conflits: readonly ConflitDeSupervision[],
 ): OperateurSupervise => {
   const journeeOuverte = journees.find(journee => journee.isOpenFor(operateur.id));
   const presence: EtatDePresence = journeeOuverte === undefined ? 'ABSENT' : 'PRESENT';
   const activitesOperateur = activites.filter(activite => activite.isFor(operateur.id));
   const anomalies = detectAnomalies(journeeOuverte, presence, activitesOperateur, maintenant);
+  if (conflits.some(conflit => conflit.isFor(operateur.id))) {
+    anomalies.push('SEQUENCE_EN_CONFLIT');
+  }
 
   return new OperateurSupervise(operateur, presence, {
     activites: activitesOperateur,
@@ -93,14 +98,19 @@ export class SupervisionDeLAtelier {
     journees: readonly JourneeDeTravail[],
     activites: readonly ActiviteDeSupervision[],
     maintenant: Instant,
+    conflits: readonly ConflitDeSupervision[] = [],
   ): ResultatSupervision {
     const hasActiviteSansOperateurIdentifiable = activites.some(activite => !activite.hasOperateurIdentifiable(operateursDeclares));
     if (hasActiviteSansOperateurIdentifiable) {
       return resultatSupervisionInexploitable('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
     }
 
+    if (conflits.some(conflit => !conflit.hasOperateurIdentifiable(operateursDeclares))) {
+      return resultatSupervisionInexploitable('CONFLIT_SANS_OPERATEUR_IDENTIFIABLE');
+    }
+
     const operateurs = operateursDeclares
-      .map(operateur => superviseOperateur(operateur, journees, activites, maintenant))
+      .map(operateur => superviseOperateur(operateur, journees, activites, maintenant, conflits))
       .sort((left, right) => left.compareAlphabetically(right));
 
     return resultatSupervisionExploitable(new SupervisionDeLAtelier(operateurs, maintenant));

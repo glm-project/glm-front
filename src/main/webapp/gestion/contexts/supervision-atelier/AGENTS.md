@@ -2,15 +2,12 @@
 
 Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel les opérateurs déclarés, leur présence et leurs activités pour les couloirs de supervision.
 
-## Décision acceptée à implémenter
+## Lecture et interprétation
 
-L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) fixe le périmètre
-de la refonte : adapter le modèle et les démonstrations de supervision au temps opérationnel seul,
-en conservant l'adapter InMemory. Le branchement HTTP réel relève d'un chantier distinct ; les alertes
-réelles de fin automatique de ce lot sont exposées dans le relevé et le coût de revient.
-Les démonstrations représentent aussi les séquences « En conflit » de l'ADR 0047, distinctes des fins
-automatiques ; cet état concerne des activités et ne constitue pas un état de présence de l'opérateur.
-Les sections suivantes décrivent encore le modèle existant.
+Le backend interprète les pointages, les échéances et les conflits selon l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md).
+La supervision présente les activités qu'il déclare courantes et signale les séquences en conflit séparément.
+Une séquence sans activité reste un conflit ; elle ne change ni la présence ni le couloir.
+Les alertes de fin automatique et la correction des conflits restent hors de cet écran.
 
 ## Langage
 
@@ -46,15 +43,15 @@ Les sections suivantes décrivent encore le modèle existant.
 
 **Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`. La supervision ne reconnaît pas la pause : un opérateur en pause dont la journée reste ouverte y figure si aucune activité en cours ne lui est remontée. Une activité restée ouverte, par exemple sur un autre pupitre, le place dans `AU_TRAVAIL`.
 
-**Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ a arrêté son temps.
+**Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ change sa présence, sans terminer lui-même ses activités.
 
 **Opérateur à vérifier** : opérateur qui porte au moins une anomalie de supervision.
 
 > « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail est désormais modélisé comme « Hors OF ». La présence sans affectation n'en est pas, et toujours aucun type, champ ni sélecteur ne s'appelle GLM.
 
-**Anomalie de supervision** : signalement d'incohérence constaté lors de l'évaluation de la supervision (`JOURNEE_OUVERTE_PLUS_DE_16_HEURES`, `JOURNEE_OUVERTE_SANS_FENETRES`, `ACTIVITE_D_UN_ABSENT`).
+**Anomalie de supervision** : signalement d'incohérence constaté lors de l'évaluation de la supervision (`JOURNEE_OUVERTE_PLUS_DE_16_HEURES`, `JOURNEE_OUVERTE_SANS_FENETRES`, `ACTIVITE_D_UN_ABSENT`, `SEQUENCE_EN_CONFLIT`).
 
-**Résultat de supervision** : évaluation de la supervision, exploitable avec la liste ordonnée des opérateurs supervisés, ou inexploitable (notamment en présence d'une `ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE`).
+**Résultat de supervision** : évaluation de la supervision, exploitable avec la liste ordonnée des opérateurs supervisés, ou inexploitable (en présence d’une `ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE` ou d’un `CONFLIT_SANS_OPERATEUR_IDENTIFIABLE`).
 
 ## Responsabilités et invariants
 
@@ -71,12 +68,14 @@ Les sections suivantes décrivent encore le modèle existant.
 - L'ouverture est le plus ancien début de fenêtre, indépendamment de l'ordre reçu. La supervision expose cet instant ou son absence.
 - La détection d'une anomalie préserve l'état de présence, le couloir et les activités de l'opérateur supervisé.
 - Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
-- Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
+- Une activité ou une séquence en conflit sans opérateur déclaré identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
 - Pendant une relecture (toutes les 30 s ou « Actualiser »), les couloirs affichés restent visibles et se réévaluent à la fin de la lecture, même quand elle rend le même objet — l'InMemory rend toujours le sien, et l'évaluation suit donc le statut de la lecture, jamais sa valeur ; l'écran de chargement ne s'affiche que tant qu'aucun couloir n'est affiché, au premier chargement ou lors d'un nouvel essai après une erreur, et une erreur remplace toujours les couloirs.
 - La supervision est immuable.
 - Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
-- Seul l'adaptateur InMemory existe ; il porte en dur le jeu de démonstration, y compris en production, jusqu'à ce que l'API expose les journées ouvertes.
+- L’adaptateur HTTP compose opérateurs, venues ouvertes sans borne calendaire, suivis en cours ou en conflit, et postes. Il vérifie toutes les pages avant de fournir les données ; une lecture partielle échoue et ne produit aucune absence.
+- Les référentiels sont relus à chaque acquisition. Seule une acquisition en cours peut être partagée entre appels de la même vue et de la même entreprise ; une erreur ne réutilise jamais d’anciennes données. InMemory reste réservé aux démonstrations et aux tests.
+- Les activités sont interprétées à l’instant `evaluation` de chaque lecture serveur des suivis. La vue évalue ses anomalies de présence au terme de l’acquisition ; ces lectures distinctes ne garantissent pas un instantané transactionnel. Une échéance retire une activité à la prochaine acquisition, sans minuterie métier locale.
 
 ## Règles locales
 

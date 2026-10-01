@@ -57,7 +57,7 @@ export class SupervisionAtelier {
     }
     const raw = this.donnees.value();
     const maintenant = new Instant(new Date().toISOString());
-    const resultat = SupervisionDeLAtelier.determine(raw.operateurs, raw.journees, raw.activites, maintenant);
+    const resultat = SupervisionDeLAtelier.determine(raw.operateurs, raw.journees, raw.activites, maintenant, raw.conflits);
     if (!resultat.estExploitable) {
       return { kind: 'ERREUR' };
     }

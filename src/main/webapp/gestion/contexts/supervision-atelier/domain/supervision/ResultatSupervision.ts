@@ -1,6 +1,6 @@
 import { SupervisionDeLAtelier } from './SupervisionDeLAtelier';
 
-export type MotifSupervisionInexploitable = 'ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE';
+export type MotifSupervisionInexploitable = 'ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE' | 'CONFLIT_SANS_OPERATEUR_IDENTIFIABLE';
 
 export type ResultatSupervision =
   | {

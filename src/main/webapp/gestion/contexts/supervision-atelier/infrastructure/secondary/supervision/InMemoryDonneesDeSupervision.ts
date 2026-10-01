@@ -13,6 +13,7 @@ import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
 import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
+import { ConflitDeSupervision } from '../../../domain/supervision/ConflitDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 
 const TRAVAIL = new CategorieActivite('TRAVAIL');
@@ -26,7 +27,6 @@ const ordreDeFabrication = (reference: string, nom: string): ElementTravaille =>
 const MOULE_1015 = moule('1015', 'PRD-2026-000001');
 const MOULE_1016 = moule('1016', 'PRD-2026-000002');
 const MOULE_1017 = moule('1017', 'PRD-2026-000003');
-const OF_3001 = ordreDeFabrication('3001', 'OF-2026-000039');
 const OF_3004 = ordreDeFabrication('3004', 'OF-2026-000042');
 const OF_3005 = ordreDeFabrication('3005', 'OF-2026-000043');
 const OF_3006 = ordreDeFabrication('3006', 'OF-2026-000044');
@@ -75,7 +75,6 @@ const ACTIVITES: readonly ActiviteDeDemonstration[] = [
   { operateur: 'op-benali', objet: MOULE_1016, poste: ERODEUSE_G, categorie: TRAVAIL, minutes: 90 },
   { operateur: 'op-chevalier', objet: new HorsOf(), poste: TOUR_3, categorie: TRAVAIL, minutes: 65 },
   { operateur: 'op-garnier', objet: MOULE_1017, poste: FRAISEUSE_2, categorie: NON_CONFORMITE, minutes: 23 },
-  { operateur: 'op-marchand', objet: OF_3001, poste: FRAISEUSE_2, categorie: TRAVAIL, minutes: 1130 },
   { operateur: 'op-morel', objet: OF_3005, poste: FIL_1, categorie: TRAVAIL, minutes: 150 },
   { operateur: 'op-morel', objet: MOULE_1015, poste: FIL_2, categorie: NON_CONFORMITE, minutes: 50 },
   { operateur: 'op-perrin', objet: OF_3006, poste: TOUR_1, categorie: TRAVAIL, minutes: 170 },
@@ -91,6 +90,7 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
       ([id, nom, prenom, metiers]) =>
         new OperateurDeclare({ id: operateur(id), nom, prenom, metiers: metiers.map(metier => new NatureDeTravail(metier)) }),
     ),
+    conflits: [new ConflitDeSupervision(operateur('op-dumas'))],
     journees: [
       JourneeDeTravail.open(operateur('op-aubert'), [fenetre(132)]),
       JourneeDeTravail.open(operateur('op-benali'), [fenetre(128)]),

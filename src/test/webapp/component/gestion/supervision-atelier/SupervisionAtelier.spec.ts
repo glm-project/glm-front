@@ -1,5 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
+import { givenWorkshopSupervision } from '../../../utils/SupervisionApiFixture';
 
 const DEMONSTRATION = new Date(2026, 8, 24, 9, 10);
 
@@ -42,10 +43,10 @@ describe('Supervision lanes readability', () => {
     thenLaneColoursFollowTheClientCode();
   });
 
-  it('should show the demonstration workshop as the plan describes it', () => {
+  it('should show the acquired workshop as the plan describes it', () => {
     whenOpeningSupervision();
 
-    thenTheLanesHoldTheDemonstrationOperators();
+    thenTheLanesHoldTheAcquiredOperators();
     thenTheCardsTellTheirTimesActivitiesAndAnomalies();
   });
 
@@ -72,6 +73,7 @@ const givenViewport = (width: number): void => {
 };
 
 const whenOpeningSupervision = (): void => {
+  givenWorkshopSupervision();
   cy.clock(DEMONSTRATION.getTime(), ['Date']);
   cy.visit('/');
   cy.get(dataSelector('supervision-plateau')).should('be.visible');
@@ -82,6 +84,7 @@ const whenFocusingRefresh = (): void => {
 };
 
 const whenOpeningSupervisionWithPollingClock = (): void => {
+  givenWorkshopSupervision();
   cy.clock(DEMONSTRATION.getTime(), ['Date', 'setInterval', 'clearInterval']);
   cy.visit('/');
   cy.get(dataSelector('supervision-refresh')).should('not.be.disabled');
@@ -158,13 +161,13 @@ const thenLaneColoursFollowTheClientCode = (): void => {
   cardOf('op-perrin').find(dataSelector('supervision-activite')).should('have.css', 'opacity', '1');
 };
 
-const thenTheLanesHoldTheDemonstrationOperators = (): void => {
+const thenTheLanesHoldTheAcquiredOperators = (): void => {
   [
     {
       couloir: 'au-travail',
-      operateurs: ['Aubert Lucas', 'Benali Samir', 'Chevalier Mathis', 'Garnier Thomas', 'Marchand Kevin', 'Morel Inès', 'Vidal Hugo'],
+      operateurs: ['Aubert Lucas', 'Benali Samir', 'Chevalier Mathis', 'Garnier Thomas', 'Morel Inès', 'Vidal Hugo'],
     },
-    { couloir: 'sans-affectation', operateurs: ['Dumas Julien', 'Lefèvre Sophie', 'Roux Nathalie', 'Schmitt Yanis'] },
+    { couloir: 'sans-affectation', operateurs: ['Dumas Julien', 'Lefèvre Sophie', 'Marchand Kevin', 'Roux Nathalie', 'Schmitt Yanis'] },
     { couloir: 'absents', operateurs: ['Fabre Lucie', 'Perrin Loïc'] },
   ].forEach(({ couloir, operateurs }) => {
     cy.get(dataSelector(`supervision-couloir-${couloir}`))
@@ -183,12 +186,15 @@ const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
     .should('have.text', 'le 23/09')
     .and('have.css', 'font-weight', '600')
     .and('have.css', 'color', 'rgb(15, 24, 36)');
-  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-activite-debut')), 'depuis le 23/09 à 14:20');
+  cardOf('op-marchand').find(dataSelector('supervision-activite')).should('not.exist');
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Aucun départ pointé depuis plus de 16 h');
-  thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien arrivée 06:45 Aucune activité en cours Métiers : Sciage, Tournage');
+  thenVisibleTextIs(
+    cardOf('op-dumas'),
+    'Dumas Julien arrivée 06:45 Aucune activité en cours Métiers : Sciage, Tournage Pointages en conflit',
+  );
   cardOf('op-schmitt').find(dataSelector('supervision-heure')).should('not.exist');
   thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-anomalie')), 'Venue ouverte sans heure d’arrivée');
-  thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Hors OF');
+  thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Moule Travail interne');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
   thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-anomalie')), 'Activité d’un opérateur absent');
@@ -215,8 +221,8 @@ const thenRefreshShowsItsFocusRing = (): void => {
 };
 
 const thenOnlyTheNewReadChangesTheAnomalies = (): void => {
-  cy.get('@anomaliesBeforeDeadline').should('equal', 3);
-  cy.get(dataSelector('supervision-anomalie')).should('have.length', 8);
+  cy.get('@anomaliesBeforeDeadline').should('equal', 4);
+  cy.get(dataSelector('supervision-anomalie')).should('have.length', 9);
   cy.get(dataSelector('supervision-activite-debut'))
     .first()
     .should(debut => {

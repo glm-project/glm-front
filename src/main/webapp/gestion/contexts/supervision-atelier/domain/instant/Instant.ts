@@ -15,7 +15,7 @@ export class Instant {
 
   private static isAbsolute(value: string, milliseconds: number): boolean {
     const localDateTime = value.slice(0, 19);
-    const isoRepresentation = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})/.exec(value)?.[0];
+    const isoRepresentation = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})/.exec(value)?.[0];
     return (
       isoRepresentation === value
       && Number.isFinite(milliseconds)

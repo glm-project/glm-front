@@ -9,10 +9,7 @@ import { releveDesHeuresProvider } from './releve-des-heures.provider';
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () =>
-      import('./contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier').then(
-        m => m.SupervisionAtelier,
-      ),
+    loadComponent: () => import('./supervision/supervision').then(m => m.Supervision),
   },
   {
     path: 'atelier',

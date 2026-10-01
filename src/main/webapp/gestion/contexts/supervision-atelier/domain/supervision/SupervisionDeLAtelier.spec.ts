@@ -12,12 +12,60 @@ import { PosteDeSupervision } from '../poste/PosteDeSupervision';
 import { FenetreDePresence } from '../presence/FenetreDePresence';
 import { JourneeDeTravail } from '../presence/JourneeDeTravail';
 import { AnomalieDeSupervision } from './AnomalieDeSupervision';
+import { ConflitDeSupervision } from './ConflitDeSupervision';
 import { CouloirDeSupervision } from './CouloirDeSupervision';
 import { OperateurSupervise } from './OperateurSupervise';
 import { MotifSupervisionInexploitable, ResultatSupervision } from './ResultatSupervision';
 import { SupervisionDeLAtelier } from './SupervisionDeLAtelier';
 
 describe('SupervisionDeLAtelier', () => {
+  it('should preserve an independent current NC activity while flagging its operator only once for multiple conflicts', () => {
+    const operateur = operateurFixture('op-1');
+    const autre = operateurFixture('op-2');
+    const activite = activiteFixture(operateur, 'NON_CONFORMITE');
+    const conflits = [new ConflitDeSupervision(operateur.id), new ConflitDeSupervision(operateur.id)];
+
+    const resultat = SupervisionDeLAtelier.determine(
+      [operateur, autre],
+      [journeeOuverteFixture(operateur)],
+      [activite],
+      MAINTENANT,
+      conflits,
+    );
+
+    const supervision = exploitableFixture(resultat);
+    expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
+    expect(supervision.operateursAVerifier().map(supervise => supervise.operateur.id.value)).toEqual(['op-1']);
+    expect(supervision.operateursEnNonConformite().map(supervise => supervise.operateur.id.value)).toEqual(['op-1']);
+    expect(supervision.operateurs[0]?.anomalies).toEqual(['SEQUENCE_EN_CONFLIT']);
+    expect(supervision.operateurs[0]?.activites).toEqual([activite]);
+  });
+
+  it.each([undefined, new IdentifiantOperateur('unknown')])(
+    'should reject a conflict whose operator cannot be identified (%s)',
+    operateurId => {
+      const operateur = operateurFixture('op-1');
+      const conflit = new ConflitDeSupervision(operateurId);
+
+      const resultat = SupervisionDeLAtelier.determine([operateur], [], [], MAINTENANT, [conflit]);
+
+      expect(inexploitableFixture(resultat)).toBe('CONFLIT_SANS_OPERATEUR_IDENTIFIABLE');
+    },
+  );
+
+  it('should flag a conflict without an activity while retaining the unassigned lane', () => {
+    const operateur = operateurFixture('op-1');
+    const conflit = new ConflitDeSupervision(operateur.id);
+
+    const resultat = SupervisionDeLAtelier.determine([operateur], [journeeOuverteFixture(operateur)], [], MAINTENANT, [conflit]);
+
+    const supervision = exploitableFixture(resultat);
+    expect(couloirDe(supervision, operateur)).toBe('SANS_AFFECTATION');
+    expect(supervision.operateursAVerifier().map(supervise => supervise.operateur.id.value)).toEqual(['op-1']);
+    expect(supervision.operateurs[0]?.anomalies).toEqual(['SEQUENCE_EN_CONFLIT']);
+    expect(supervision.operateursEnNonConformite()).toEqual([]);
+  });
+
   it('should retain a working visit opening when its source windows are cleared', () => {
     const operateur = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const fenetres = [new FenetreDePresence(new Instant('2026-09-13T05:00:00Z'))];

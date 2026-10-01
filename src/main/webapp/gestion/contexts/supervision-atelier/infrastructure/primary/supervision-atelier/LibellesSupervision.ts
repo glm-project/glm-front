@@ -23,6 +23,7 @@ const COULOIRS: Record<CouloirDeSupervision, LibellesCouloir> = {
 };
 
 const ANOMALIES: Record<AnomalieDeSupervision, string> = {
+  SEQUENCE_EN_CONFLIT: 'Pointages en conflit',
   ACTIVITE_D_UN_ABSENT: 'Activité d’un opérateur absent',
   JOURNEE_OUVERTE_SANS_FENETRES: 'Venue ouverte sans heure d’arrivée',
   JOURNEE_OUVERTE_PLUS_DE_16_HEURES: 'Aucun départ pointé depuis plus de 16\u00a0h',

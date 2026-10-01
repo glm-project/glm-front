@@ -7,10 +7,10 @@ import { MoulesEtOf } from './contexts/element-de-fabrication/infrastructure/pri
 import { Operateurs } from './contexts/operateur/infrastructure/primary/operateurs/Operateurs';
 import { PostesDeTravail } from './contexts/poste/infrastructure/primary/postes-de-travail/PostesDeTravail';
 import { SyntheseDesHeures } from './contexts/releve-des-heures/infrastructure/primary/synthese-des-heures/SyntheseDesHeures';
-import { SupervisionAtelier } from './contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier';
+import { Supervision } from './supervision/supervision';
 
 const ECRANS: [string, unknown][] = [
-  ['', SupervisionAtelier],
+  ['', Supervision],
   ['atelier', Atelier],
   ['moules-et-of', MoulesEtOf],
   ['postes-de-travail', PostesDeTravail],

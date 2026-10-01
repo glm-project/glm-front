@@ -18,6 +18,7 @@ import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
 import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
+import { ConflitDeSupervision } from '../../../domain/supervision/ConflitDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { SupervisionAtelier } from './supervision-atelier';
 
@@ -79,6 +80,7 @@ const bobFixture = operateurFixture('bob', 'Durand', 'Bob');
 const chloeFixture = operateurFixture('chloe', 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
   operateurs: [aliceFixture, bobFixture, chloeFixture],
+  conflits: [],
   journees: [JourneeDeTravail.open(aliceFixture.id), JourneeDeTravail.open(bobFixture.id)],
   activites: [],
 };
@@ -105,6 +107,7 @@ const atelierFixture: DonneesDeSupervision = {
     dumasFixture,
     aubertFixture,
   ],
+  conflits: [],
   journees: [
     JourneeDeTravail.open(aubertFixture.id, [new FenetreDePresence(instantFixture(6, 58))]),
     JourneeDeTravail.open(dumasFixture.id, [new FenetreDePresence(instantFixture(6, 45))]),
@@ -150,6 +153,7 @@ const absentsActifsFixture = (nombre: number): DonneesDeSupervision => {
   const operateurs = Array.from({ length: nombre }, (_, index) => operateurFixture(`op-${index}`, `Absent ${index}`, 'Actif'));
   return {
     operateurs,
+    conflits: [],
     journees: [],
     activites: operateurs.map(operateur =>
       activiteFixture(operateur, { id: `act-${operateur.id.value}`, objet: ofFixture('3001', 'OF-2026-000039'), debut: instantFixture(7) }),
@@ -183,7 +187,7 @@ describe('Supervision atelier component', () => {
   });
 
   afterEach(async () => {
-    sourceFixture.response.resolve({ operateurs: [], journees: [], activites: [] });
+    sourceFixture.response.resolve({ operateurs: [], conflits: [], journees: [], activites: [] });
     await componentFixture.whenStable();
     componentFixture.destroy();
     vi.restoreAllMocks();
@@ -198,7 +202,7 @@ describe('Supervision atelier component', () => {
     const beforeDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     await whenTimePasses(1);
     const atDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
-    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], conflits: [], journees: [], activites: [] });
 
     expect(beforeDeadline).toEqual({ cards: 3, reading: false });
     expect(atDeadline).toEqual({ cards: 3, reading: true });
@@ -222,7 +226,7 @@ describe('Supervision atelier component', () => {
     const beforeNextDeadline = displayedOperatorCount();
     await whenTimePasses(1);
     const atNextDeadline = isReadingAgain();
-    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], conflits: [], journees: [], activites: [] });
 
     expect(whileHidden).toBe(3);
     expect(onReturn).toBe(true);
@@ -241,7 +245,7 @@ describe('Supervision atelier component', () => {
     await whenTimePasses(60_000);
     const readsBeforeRelease = sourceFixture.reads;
     sourceFixture.prepare();
-    obsoleteResponse.resolve({ operateurs: [], journees: [], activites: [] });
+    obsoleteResponse.resolve({ operateurs: [], conflits: [], journees: [], activites: [] });
     await whenSupervisionOpened();
     const obsoleteResultWasWithheld = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     const readsAfterRelease = sourceFixture.reads;
@@ -281,7 +285,7 @@ describe('Supervision atelier component', () => {
     whenSupervisionRemounted();
     await whenSupervisionOpened();
     await whenDonneesArrive();
-    obsoleteResponse.resolve({ operateurs: [], journees: [], activites: [] });
+    obsoleteResponse.resolve({ operateurs: [], conflits: [], journees: [], activites: [] });
     await obsoleteResponse.promise;
     await whenViewSettles();
 
@@ -310,7 +314,7 @@ describe('Supervision atelier component', () => {
     whenRefreshClicked();
     const readsWhilePending = sourceFixture.reads;
     const manualRefreshDisabled = isRefreshDisabled();
-    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], conflits: [], journees: [], activites: [] });
 
     expect(readsWhilePending).toBe(2);
     expect(sourceFixture.reads).toBe(2);
@@ -338,6 +342,7 @@ describe('Supervision atelier component', () => {
     await givenAcquisitionInProgress();
     const donneesAtThreshold = {
       ...donneesFixture,
+      conflits: [],
       journees: [JourneeDeTravail.open(aliceFixture.id, [new FenetreDePresence(new Instant(new Date(2026, 8, 12, 18, 0).toISOString()))])],
       activites: [activiteFixture(aliceFixture, { id: 'act-1', objet: mouleFixture('1015'), debut: instantFixture(8, 12) })],
     };
@@ -369,7 +374,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive();
     sourceFixture.prepare();
     await whenTimePasses(30_000);
-    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], conflits: [], journees: [], activites: [] });
 
     expect(timersAfterClosing).toBe(0);
     expect(readsAfterClosing).toBe(1);
@@ -483,6 +488,7 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive({
       operateurs: [aubertFixture],
+      conflits: [],
       journees: [JourneeDeTravail.open(aubertFixture.id, [new FenetreDePresence(instantFixture(6, 58))])],
       activites: [
         activiteFixture(aubertFixture, {
@@ -553,6 +559,19 @@ describe('Supervision atelier component', () => {
     expect(activitiesOf('op-marchand').map(({ debut }) => debut)).toEqual(['depuis le 12/09 à 14:20']);
   });
 
+  it('should flag an unassigned operator whose conflict contains no activity', async () => {
+    await givenAcquisitionInProgress();
+    const donnees = { ...atelierFixture, conflits: [new ConflitDeSupervision(dumasFixture.id)] };
+
+    await whenDonneesArrive(donnees);
+
+    expect(anomaliesIn('sans-affectation')).toEqual({
+      'op-dumas': ['Pointages en conflit'],
+      'op-schmitt': ['Venue ouverte sans heure d’arrivée'],
+    });
+    expect(signal('supervision-signal-a-verifier')).toBe('4 à vérifier : Dumas Julien, Marchand Kevin, Perrin Loïc, Schmitt Yanis');
+  });
+
   it('should show an anomaly band without moving the operator out of the lane', async () => {
     await givenAcquisitionInProgress();
 
@@ -605,6 +624,7 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive({
       operateurs: [lefevreFixture],
+      conflits: [],
       journees: [JourneeDeTravail.open(lefevreFixture.id, [new FenetreDePresence(instantFixture(8, 55))])],
       activites: [],
     });
@@ -628,7 +648,7 @@ describe('Supervision atelier component', () => {
   it('should display an empty state when there are no declared operators', async () => {
     await givenAcquisitionInProgress();
 
-    await whenDonneesArrive({ operateurs: [], journees: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], conflits: [], journees: [], activites: [] });
 
     thenEmptyStateIsDisplayed();
   });
@@ -638,6 +658,7 @@ describe('Supervision atelier component', () => {
 
     await whenDonneesArrive({
       operateurs: [aliceFixture],
+      conflits: [],
       journees: [],
       activites: [
         new ActiviteDeSupervision({
@@ -675,6 +696,7 @@ describe('Supervision atelier component', () => {
     await refresh();
     await whenDonneesArrive({
       operateurs: [aliceFixture],
+      conflits: [],
       journees: [],
       activites: [
         new ActiviteDeSupervision({

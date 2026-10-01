@@ -31,6 +31,7 @@ const UNE_PAGE_DE_SUIVIS = {
 
 const UN_SUIVI = {
   activitesEnCours: [],
+  conflits: [],
   element: 'element',
   engageLe: '2026-09-05T08:00:00Z',
   engagePar: 'gestionnaire',
@@ -184,7 +185,7 @@ describe('ApiClient', () => {
   const whenStartingWork = (): Promise<unknown> =>
     api.write('/api/atelier/suivis/{id}/pointages', {
       pathParams: { id: SUIVI_ID },
-      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
+      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT', intention: 'OUVERTURE' },
     });
 
   const whenLeavingWork = (): Promise<unknown> =>
