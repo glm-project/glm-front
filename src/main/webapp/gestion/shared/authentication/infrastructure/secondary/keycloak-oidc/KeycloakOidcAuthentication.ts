@@ -29,6 +29,11 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
     return this.keycloak.token;
   }
 
+  override currentTenant(): string | undefined {
+    const tenant: unknown = this.keycloak.tokenParsed?.['tenant'];
+    return typeof tenant === 'string' ? tenant : undefined;
+  }
+
   override logout(): void {
     this.keycloak.logout().catch((failure: unknown) => {
       this.errorHandler.handleError(failure);

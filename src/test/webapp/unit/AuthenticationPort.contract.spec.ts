@@ -22,6 +22,8 @@ type LogoutOutcome = 'ends' | 'fails';
 
 interface KeycloakSession {
   opensSession?: boolean;
+  tenant?: unknown;
+  renewedTenant?: unknown;
   refresh?: RefreshOutcome;
   laterRefresh?: RefreshOutcome;
   logout?: LogoutOutcome;
@@ -34,14 +36,18 @@ const keycloakSessionFixture = ({
   refresh = 'keeps',
   laterRefresh = refresh,
   logout = 'ends',
+  tenant,
+  renewedTenant = tenant,
 }: KeycloakSession = {}): Keycloak => {
   let token: string | undefined;
+  let sessionTenant = tenant;
   let refreshedAtBoot = false;
 
   const refreshOutcomes: Record<RefreshOutcome, () => Promise<boolean>> = {
     renews: () =>
       afterARoundTrip(() => {
         token = RENEWED_KEYCLOAK_TOKEN;
+        sessionTenant = renewedTenant;
         return Promise.resolve(true);
       }),
     keeps: () => afterARoundTrip(() => Promise.resolve(false)),
@@ -68,6 +74,10 @@ const keycloakSessionFixture = ({
       token = undefined;
       return logoutOutcomes[logout]();
     },
+  });
+  Object.defineProperty(keycloak, 'tokenParsed', {
+    get: () => (token === undefined ? undefined : { tenant: sessionTenant }),
+    configurable: true,
   });
   Object.defineProperty(keycloak, 'token', {
     get: () => token,
@@ -412,6 +422,46 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     Object.defineProperty(window, 'location', { value: originalLocation, configurable: true });
   });
 
+  it('should expose the company from the authenticated token', async () => {
+    const authentication = givenKeycloakNamesTheCompany('atelier-a');
+
+    await whenAuthenticating(authentication);
+
+    thenCompanyIs(authentication, 'atelier-a');
+  });
+
+  it.each([undefined, 42, { id: 'atelier-a' }])('should expose no company when the tenant claim is not a string: %s', async tenant => {
+    const authentication = givenKeycloakNamesTheCompany(tenant);
+
+    await whenAuthenticating(authentication);
+
+    thenCompanyIs(authentication, undefined);
+  });
+
+  it('should expose no company before authentication', () => {
+    const authentication = givenKeycloakNamesTheCompany('atelier-a');
+
+    thenCompanyIs(authentication, undefined);
+  });
+
+  it('should expose no company after logout', async () => {
+    const authentication = givenKeycloakNamesTheCompany('atelier-a');
+    await whenAuthenticating(authentication);
+
+    whenEndingTheSession(authentication);
+
+    thenCompanyIs(authentication, undefined);
+  });
+
+  it.each(['atelier-a', 'atelier-b'])('should read the current company after token renewal: %s', async renewedTenant => {
+    const authentication = givenKeycloakRenewsTheCompany(renewedTenant);
+    await whenAuthenticating(authentication);
+
+    await whenSynchronizingTheSession(authentication);
+
+    thenCompanyIs(authentication, renewedTenant);
+  });
+
   it('should reload the window when Keycloak opens no session', async () => {
     const authentication = givenKeycloakOpensNoSession();
 
@@ -465,6 +515,12 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     thenTheLogoutFailureWasReported();
   });
 
+  const givenKeycloakNamesTheCompany = (tenant: unknown): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ tenant }), errorHandler);
+  const givenKeycloakRenewsTheCompany = (renewedTenant: string): AuthenticationPort =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ tenant: 'atelier-a', renewedTenant, laterRefresh: 'renews' }), errorHandler);
+  const thenCompanyIs = (authentication: AuthenticationPort, tenant: string | undefined): void =>
+    expect(authentication.currentTenant()).toEqual(tenant);
   const givenKeycloakNeedsRenewalAfterBoot = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'renews' }), errorHandler);
   const givenKeycloakCannotRefreshTheSessionAfterBoot = (): AuthenticationPort =>

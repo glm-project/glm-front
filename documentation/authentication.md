@@ -7,7 +7,9 @@ The common technical contract is at `app/shared/authentication/`. `gestion` owns
 ## The port exposes session capabilities, not an SDK
 
 `AuthenticationPort` is an abstract class so Angular can inject it at runtime. It exposes authentication,
-the current bearer token and tenant, session synchronization, and logout. Keep Keycloak, HTTP,
+the current bearer token and tenant, session synchronization, and logout. The gestion adapter reads the
+`tenant` string claim from Keycloak's current parsed token, including after renewal; a token change within
+the same company preserves that company identity. Keep Keycloak, HTTP,
 RxJS and browser-storage types outside its signature.
 
 A missing token or tenant is a normal state. Callers branch on the optional value; they do not manufacture a
