@@ -23,17 +23,12 @@ import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/
 import { HttpDonneesDeSupervision } from './HttpDonneesDeSupervision';
 import { InMemoryDonneesDeSupervision } from './InMemoryDonneesDeSupervision';
 
-describe.each([
-  {
-    name: 'InMemory',
-    create: (): DonneesDeSupervisionPort => new InMemoryDonneesDeSupervision(),
-  },
-])('$name supervision data read contract', ({ create }) => {
+describe('InMemory demonstration beyond the shared contract', () => {
   afterEach(() => vi.useRealTimers());
 
   it('should retain the evaluation of each complete acquisition', async () => {
     givenEvaluationAt('2026-09-13T10:00:00Z');
-    const port = create();
+    const port = new InMemoryDonneesDeSupervision();
 
     const premiere = await port.read();
     const suivante = await whenReadAt(port, '2026-09-13T10:00:30Z');
@@ -43,7 +38,7 @@ describe.each([
   });
 
   it('should read conflicting sequences separately from interpretable activities', async () => {
-    const port = create();
+    const port = new InMemoryDonneesDeSupervision();
 
     const donnees = await port.read();
 
@@ -52,7 +47,7 @@ describe.each([
   });
 
   it('should represent personal work by its fabrication order in the demonstration', async () => {
-    const port = create();
+    const port = new InMemoryDonneesDeSupervision();
 
     const donnees = await port.read();
 
@@ -70,7 +65,7 @@ describe.each([
   });
 
   it('should read supervision data in which every activity belongs to a declared operator', async () => {
-    const port = create();
+    const port = new InMemoryDonneesDeSupervision();
 
     const donnees = await port.read();
 
