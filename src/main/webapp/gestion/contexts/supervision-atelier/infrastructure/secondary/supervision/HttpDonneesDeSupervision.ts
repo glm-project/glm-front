@@ -1,5 +1,10 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { inject, Injectable } from '@angular/core';
+import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
+import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
+import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -23,7 +28,21 @@ export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
             metiers: operateur.metiers.map(metier => new NatureDeTravail(metier)),
           }),
       ),
-      activites: [],
+      activites: response.activites.map(
+        activite =>
+          new ActiviteDeSupervision({
+            id: new IdentifiantActivite(activite.id),
+            operateurId: new IdentifiantOperateur(activite.operateurId),
+            objet: new ElementTravaille({
+              type: activite.element.type,
+              nom: activite.element.nom,
+              ...(activite.element.reference === undefined ? {} : { reference: new ReferenceDElement(activite.element.reference) }),
+            }),
+            categorie: new CategorieActivite(activite.categorie),
+            debut: new Instant(activite.debut),
+            echeance: new Instant(activite.echeance),
+          }),
+      ),
       sequencesEnConflit: [],
     };
   }

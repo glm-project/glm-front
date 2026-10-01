@@ -6,6 +6,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
+import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
+import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -108,6 +113,32 @@ const oneOperatorFixture: SceneFixture = {
   response: { ...emptyFixture.response, operateurs: [{ id: 'op-serin', nom: 'Sérin', prenom: 'Maya', metiers: ['Rectification'] }] },
 };
 
+const activityFixture = new ActiviteDeSupervision({
+  id: new IdentifiantActivite('opening-of'),
+  operateurId: operateurFixture.id,
+  objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042', reference: new ReferenceDElement('3004') }),
+  categorie: new CategorieActivite('TRAVAIL'),
+  debut: new Instant('2026-09-13T08:30:00Z'),
+  echeance: new Instant('2026-09-13T21:30:00Z'),
+});
+const fabricationOrderFixture: SceneFixture = {
+  donnees: { ...oneOperatorFixture.donnees, activites: [activityFixture] },
+  response: {
+    ...oneOperatorFixture.response,
+    activites: [
+      {
+        id: 'opening-of',
+        operateurId: 'op-serin',
+        element: { id: 'of-42', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042', reference: '3004' },
+        categorie: 'TRAVAIL',
+        debut: '2026-09-13T08:30:00Z',
+        echeance: '2026-09-13T21:30:00Z',
+        etat: 'EN_COURS',
+      },
+    ],
+  },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -160,5 +191,14 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(oneOperatorFixture.donnees);
+  });
+
+  it('should retain a fabrication-order activity, its opening identity and deadline without fabricating a workstation', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(fabricationOrderFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(fabricationOrderFixture.donnees);
   });
 });
