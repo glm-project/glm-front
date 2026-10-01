@@ -143,6 +143,6 @@ export class InMemoryDonneesDeSupervision extends DonneesDeSupervisionPort {
   private readonly donnees = buildDemonstration(Date.now());
 
   read(): Promise<DonneesDeSupervision> {
-    return Promise.resolve(this.donnees);
+    return Promise.resolve({ ...this.donnees, evaluation: new Instant(new Date().toISOString()) });
   }
 }
