@@ -406,16 +406,19 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     expect(state.referentiel?.operateurs.map(operateur => operateur.etat)).toEqual(['PRESENT']);
   });
 
-  it('should invalidate an old activity cache while preserving its pending evidence', async () => {
-    const legacy = await givenStoredHistoricalPointage();
+  it.each([{}, { ouverture: 'ouverture-connue' }])(
+    'should invalidate an incomplete activity cache %j while preserving its pending evidence',
+    async metadata => {
+      const legacy = await givenStoredHistoricalPointage(true, metadata);
 
-    const state = await whenReadingCompany('entreprise-a');
-    const persisted = await whenReadingPersistedJournal();
+      const state = await whenReadingCompany('entreprise-a');
+      const persisted = await whenReadingPersistedJournal();
 
-    expect(state.referentiel).toBeUndefined();
-    expect(state.evenements).toEqual(legacy.evenements);
-    expect(persisted).toEqual(legacy);
-  });
+      expect(state.referentiel).toBeUndefined();
+      expect(state.evenements).toEqual(legacy.evenements);
+      expect(persisted).toEqual(legacy);
+    },
+  );
 
   it('should keep a fresh cache unavailable while a historical pointage still needs explicit recovery', async () => {
     const legacy = await givenStoredHistoricalPointage(false);
@@ -444,7 +447,10 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     thenChronologyIs(chronology, ['lock-entered', 'lock-released', 'journal-run']);
   });
 
-  const givenStoredHistoricalPointage = async (withLegacyActivities = true) => {
+  const givenStoredHistoricalPointage = async (
+    withLegacyActivities = true,
+    metadata: { readonly ouverture?: string; readonly echeance?: string } = {},
+  ) => {
     const legacy = {
       connecte: true,
       evenements: [{ geste: pointageHistoriqueFixture, etat: 'EN_ATTENTE' }],
@@ -457,7 +463,9 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
             etat: 'EN_COURS',
             type: 'PRODUIT',
             evenements: [],
-            activites: withLegacyActivities ? [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' }] : [],
+            activites: withLegacyActivities
+              ? [{ ...metadata, operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' }]
+              : [],
           },
         ],
       },

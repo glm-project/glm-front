@@ -61,6 +61,92 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it.each(['2026-09-05T10:00:00Z', '2026-09-05T21:00:00Z'])(
+    'should expose no current activity when a queued transition targets an activity already finished locally at %s',
+    dateDeSurvenue => {
+      const fin: GesteDePointage = { ...debutGesteFixture, id: 'fin', type: 'FIN', intention: 'FIN', cible: 'debut', dateDeSurvenue };
+      const transition: GesteDePointage = {
+        ...debutGesteFixture,
+        id: 'nc',
+        type: 'NON_CONFORMITE',
+        intention: 'TRANSITION',
+        cible: 'debut',
+        dateDeSurvenue: '2026-09-05T22:00:00Z',
+      };
+      const state = givenEvents([debutFixture, { geste: fin, etat: 'EN_ATTENTE' }, { geste: transition, etat: 'EN_ATTENTE' }]);
+
+      const projection = projectReferentiel(state, Date.parse('2026-09-05T22:01:00Z'));
+
+      thenStateIs(projection, 'INTERROMPU', 0);
+    },
+  );
+
+  it('should open a transition after an ineffective late finish of its expired target', () => {
+    const fin: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'fin-tardive',
+      type: 'FIN',
+      intention: 'FIN',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T22:00:00Z',
+    };
+    const transition: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc-tardive',
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T23:00:00Z',
+    };
+    const state = givenEvents([debutFixture, { geste: fin, etat: 'EN_ATTENTE' }, { geste: transition, etat: 'EN_ATTENTE' }]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T23:01:00Z'));
+
+    expect(projection?.suivis[0]?.activites).toMatchObject([
+      { ouverture: 'nc-tardive', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T23:00:00Z', echeance: '2026-09-06T12:00:00.000Z' },
+    ]);
+  });
+
+  it('should keep a conflicted replacement unavailable to another queued transition', () => {
+    const nc: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc',
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T10:00:00Z',
+    };
+    const fin: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'fin',
+      type: 'FIN',
+      intention: 'FIN',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T11:00:00Z',
+    };
+    const reprise: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'reprise',
+      type: 'DEBUT',
+      intention: 'TRANSITION',
+      cible: 'nc',
+      dateDeSurvenue: '2026-09-05T12:00:00Z',
+    };
+    const state = givenEvents([debutFixture, ...[nc, fin, reprise].map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T12:01:00Z'));
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
+  it('should preserve a waiting element when a time evaluation has no activity to expire', () => {
+    const state = givenEvents([]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T21:00:00Z'));
+
+    thenStateIs(projection, 'EN_ATTENTE', 0);
+  });
+
   it('should never infer an opening from a historical pointage whose intention is missing', () => {
     const historique: GesteDePointage = {
       nature: 'POINTAGE',

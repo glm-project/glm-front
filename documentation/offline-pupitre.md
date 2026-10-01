@@ -116,8 +116,10 @@ The reference contains only current, interpretable activities and supplies their
 optimistic local opening or transition. Expiration removes the activity from tiles and global finish batches;
 it writes no automatic `FIN`. The indicative duration remains frozen at window opening, while the nearest
 activity deadline participates in the designation scheduler. Command decisions use their initiation time,
-including deferred global commands. A local transition targeting an opening already replaced in the cached
-reference exposes no current activity for that operator and workstation until reconciliation.
+including deferred global commands. A local transition targeting an unknown, consumed or conflicted opening exposes no current activity
+for that operator and workstation until reconciliation. The fold retains the locally known opening deadlines:
+a finish occurring after its deadline does not consume the expired target, so a later transition from that
+expired target can still open a new activity.
 
 Before deploying this contract change, empty pending queues with the preceding application version, or
 recover and regularize their evidence explicitly. A historical pointage without an intention cannot safely

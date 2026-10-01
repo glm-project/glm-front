@@ -21,6 +21,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
 import { FraicheurDuReferentiel } from './FraicheurDuReferentiel';
@@ -162,6 +163,17 @@ describe('Designation du pupitre', () => {
     await whenTimePasses(10_000);
 
     expect(designation.pointage()?.moules.map(element => element.isActive())).toEqual([false]);
+    expect(designation.operateur()?.id).toBe('jean');
+  });
+
+  it('should expire the earliest activity first when the reference lists a later deadline first', async () => {
+    await givenTwoActivitiesWithDifferentDeadlines();
+    whenEntering('049');
+    await whenValidating();
+
+    await whenTimePasses(10_000);
+
+    expect(designation.pointage()?.moules.map(element => element.isActive())).toEqual([true, false]);
     expect(designation.operateur()?.id).toBe('jean');
   });
 
@@ -646,6 +658,20 @@ describe('Designation du pupitre', () => {
             },
           ],
         },
+      ],
+    });
+  };
+  const givenTwoActivitiesWithDifferentDeadlines = async (): Promise<void> => {
+    await givenAnActivityExpiringInTenSeconds('2026-09-05T21:00:20Z');
+    const cached = await journal.read(Entreprise.of('atelier'));
+    const reference = requiredFixture(cached.referentiel, 'referentiel');
+    const later = requiredFixture(reference.suivis[0], 'suivi');
+    const activity = requiredFixture(later.activites[0], 'activity');
+    await journal.saveReferentiel(Entreprise.of('atelier'), {
+      ...reference,
+      suivis: [
+        later,
+        { ...later, id: 'piece-2', nom: 'OF-2', activites: [{ ...activity, ouverture: 'seconde', echeance: '2026-09-05T21:00:00Z' }] },
       ],
     });
   };
