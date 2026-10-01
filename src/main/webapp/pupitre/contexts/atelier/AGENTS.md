@@ -40,7 +40,7 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 
 ## Langage
 
-**Identifiant** : code saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.
+**Identifiant** : code de 1 à 6 chiffres saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier ; le pavé ignore un septième chiffre. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.
 
 **Désignation opérateur** : choix de l'opérateur au nom duquel les prochains gestes sont déclarés, depuis la saisie et la validation de l'identifiant jusqu'à la fin de la désignation. Employer ce terme plutôt que connexion, authentification ou login opérateur.
 

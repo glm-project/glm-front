@@ -220,10 +220,11 @@ describe('FormulaireOperateur', () => {
     expect(refuse.estValide()).toBe(false);
   });
 
-  it('should report an oversized payroll number', () => {
-    const formulaire = formulaireValideFixture().avecIdentifiant('a'.repeat(51));
+  it.each(['1234567', '12A'])('should report an identifier that is not one to six digits: %s', identifiant => {
+    const formulaire = formulaireValideFixture().avecIdentifiant(identifiant);
 
-    expect(formulaire.erreurIdentifiant()).toBe("L'identifiant est limité à 50 caractères.");
+    expect(formulaire.erreurIdentifiant()).toBe("L'identifiant contient de 1 à 6 chiffres.");
+    expect(formulaire.estValide()).toBe(false);
   });
 
   it.each(['0', '-1', 'abc'])('should report an hourly rate that is not strictly positive: %s', taux => {

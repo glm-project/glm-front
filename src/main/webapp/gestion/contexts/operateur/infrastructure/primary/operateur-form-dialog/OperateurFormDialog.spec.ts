@@ -100,6 +100,16 @@ describe('OperateurFormDialog', () => {
     expect(closed).toEqual([true]);
   });
 
+  it.each([
+    ['a1b2', '12'],
+    ['1234567', '123456'],
+  ])('should keep only the first six digits typed in the identifier: %s', async (frappe, identifiant) => {
+    await whenOpening();
+    await whenEntering('operateur-identifiant', frappe);
+
+    expect(input('operateur-identifiant').value).toBe(identifiant);
+  });
+
   it('should prefill and revise an existing operator, dropping its blank optional entries', async () => {
     await whenOpening(jeanFixture);
     const initialIdentifiant = input('operateur-identifiant').value;

@@ -1,8 +1,7 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { requiredFixture } from '../../../utils/RequiredFixture';
 import { holdTouchFixture, releaseTouchFixture, touchFixture } from '../../../utils/TouchscreenFixture';
 
-const longCodeFixture = '0123456789'.repeat(5);
+const longCodeFixture = '0123456789';
 
 describe('Designation keypad in a browser', () => {
   let heldTouchFixture = false;
@@ -51,20 +50,11 @@ describe('Designation keypad in a browser', () => {
     thenJeanIsDesignated();
   });
 
-  it('should follow the last digits of a long code on one line', () => {
+  it('should stop a long code at its sixth digit', () => {
     givenTheKeypad();
     whenTyping(longCodeFixture);
 
-    thenCodeIs(longCodeFixture);
-    thenLastDigitsAreVisibleOnOneLine();
-  });
-
-  it('should let the operator scroll back to the beginning of a long code', () => {
-    givenTheKeypad();
-    whenTyping(longCodeFixture);
-    whenScrollingToTheBeginning();
-
-    thenFirstDigitsAreVisible();
+    thenCodeIs('012345');
   });
 
   it('should enter one digit when a touchscreen press is held', () => {
@@ -221,22 +211,6 @@ describe('Designation keypad in a browser', () => {
   const whenTyping = (code: string): void => {
     cy.get(dataSelector('code')).focus();
     cy.get(dataSelector('code')).type(code, { delay: 0 });
-  };
-  const whenScrollingToTheBeginning = (): void => {
-    cy.get(dataSelector('code')).scrollTo('left');
-  };
-  const thenLastDigitsAreVisibleOnOneLine = (): void => {
-    cy.get(dataSelector('code')).should(display => {
-      const element = requiredFixture(display[0], 'code display');
-      expect(element.scrollWidth).to.be.greaterThan(element.clientWidth);
-      expect(element.scrollLeft + element.clientWidth).to.be.closeTo(element.scrollWidth, 1);
-      expect(element.scrollHeight).to.equal(element.clientHeight);
-    });
-  };
-  const thenFirstDigitsAreVisible = (): void => {
-    cy.get(dataSelector('code')).should(display => {
-      expect(requiredFixture(display[0], 'code display').scrollLeft).to.equal(0);
-    });
   };
 
   const givenTheKeypad = (): void => {

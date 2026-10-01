@@ -108,6 +108,12 @@ describe('DesignationOperateur', () => {
     thenCodeIs('');
   });
 
+  it('should ignore a digit beyond the sixth', () => {
+    whenEntering('1234567', 0);
+
+    thenCodeIs('123456');
+  });
+
   it('should ignore a digit when an operator is already designated', () => {
     givenDesignatedOperator();
 

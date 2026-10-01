@@ -1,4 +1,5 @@
 const UN_CHIFFRE = /^\d$/;
+const LONGUEUR_MAX = 6;
 
 export class Identifiant {
   private constructor(private readonly valeur: string) {}
@@ -12,6 +13,7 @@ export class Identifiant {
   }
 
   afterDigit(digit: string): Identifiant {
+    if (this.valeur.length >= LONGUEUR_MAX) return this;
     return new Identifiant(`${this.valeur}${digit}`);
   }
 

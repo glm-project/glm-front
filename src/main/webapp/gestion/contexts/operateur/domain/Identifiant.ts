@@ -1,3 +1,6 @@
+const CHIFFRES = /^\d{1,6}$/;
+const LONGUEUR_MAX = 6;
+
 export class Identifiant {
   readonly value: string;
 
@@ -10,7 +13,10 @@ export class Identifiant {
   }
 
   static erreur(value: string): string | undefined {
-    const longueur = value.trim().length;
-    return longueur === 0 || longueur > 50 ? "L'identifiant est limité à 50 caractères." : undefined;
+    return CHIFFRES.test(value.trim()) ? undefined : "L'identifiant contient de 1 à 6 chiffres.";
+  }
+
+  static saisie(frappe: string): string {
+    return frappe.replace(/\D/g, '').slice(0, LONGUEUR_MAX);
   }
 }

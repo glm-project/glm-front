@@ -8,7 +8,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 **Identité** : le couple nom et prénom. C'est elle qui distingue deux opérateurs, chacun obligatoire et ne dépassant pas 100 caractères.
 
-**Identifiant** : identifiant que l'entreprise donne elle-même à ses collaborateurs. Facultatif, car toutes les entreprises n'en attribuent pas ; unique dès qu'il est renseigné et limité à 50 caractères. Ce n'est ni un secret ni un moyen de connexion.
+**Identifiant** : code de 1 à 6 chiffres que l'entreprise donne elle-même à ses collaborateurs, et qu'ils tapent au pupitre. Une chaîne, pas un nombre : `007` reste distinct de `7`. Facultatif, car toutes les entreprises n'en attribuent pas ; unique dès qu'il est renseigné. Ce n'est ni un secret ni un moyen de connexion.
 
 **Taux horaire** : taux appliqué au temps pointé par l'opérateur, destiné au coût de revient. Facultatif, et strictement positif lorsqu'il est renseigné.
 
@@ -22,10 +22,10 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 ## Modèle de domaine
 
-- **Operateur** : agrégat racine représentant un opérateur déclaré, portant son identifiant immuable, son identité, son identifiant et son taux horaire éventuels, ses postes habilités et ses métiers déduits.
+- **Operateur** : agrégat racine représentant un opérateur déclaré, portant son `OperateurId` immuable, son identité, son identifiant et son taux horaire éventuels, ses postes habilités et ses métiers déduits.
 - **OperateurId** : Value Object représentant l'identifiant unique et immuable d'un opérateur.
 - **NomOperateur**, **PrenomOperateur** : Value Objects garantissant un texte non vide et borné à 100 caractères.
-- **Identifiant** : Value Object garantissant un texte non vide et borné à 50 caractères. Son caractère facultatif est porté par l'absence de valeur, pas par le Value Object.
+- **Identifiant** : Value Object garantissant 1 à 6 chiffres. `Identifiant.saisie` ne garde d'une frappe que ses six premiers chiffres, ce qui limite le champ du formulaire aux chiffres. Son caractère facultatif est porté par l'absence de valeur, pas par le Value Object.
 - **TauxHoraire** : Value Object représentant une valeur monétaire horaire strictement positive.
 - **PosteHabilitableId** : Value Object représentant l'identifiant d'un poste de travail, déclaré par ce contexte.
 - **PosteHabilitable** : Value Object décrivant un poste par son identifiant, son libellé et sa nature, avec correspondance à une recherche et comparaison par libellé.
