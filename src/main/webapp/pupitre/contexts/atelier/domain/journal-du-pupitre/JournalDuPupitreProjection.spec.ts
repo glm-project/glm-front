@@ -61,6 +61,80 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it('should keep another operator target usable after a conflict on a separate workstation key', () => {
+    const other: GesteDePointage = {
+      ...debutGesteFixture,
+      operateurId: 'marie',
+      id: 'autre',
+      dateDeSurvenue: '2026-09-05T22:00:00Z',
+    };
+    const reopening: GesteDePointage = { ...debutGesteFixture, id: 'relance', dateDeSurvenue: '2026-09-05T22:00:00Z' };
+    const conflict: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc-tardive',
+      intention: 'TRANSITION',
+      type: 'NON_CONFORMITE',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T23:00:00Z',
+    };
+    const otherTransition: GesteDePointage = {
+      ...conflict,
+      operateurId: 'marie',
+      id: 'nc-autre',
+      cible: 'autre',
+      dateDeSurvenue: '2026-09-05T23:10:00Z',
+    };
+    const state = givenEvents([
+      debutFixture,
+      { geste: other, etat: 'EN_ATTENTE' },
+      { geste: reopening, etat: 'EN_ATTENTE' },
+      { geste: conflict, etat: 'EN_ATTENTE' },
+      { geste: otherTransition, etat: 'EN_ATTENTE' },
+    ]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T23:11:00Z'));
+
+    expect(projection?.suivis[0]?.activites).toEqual([
+      {
+        ouverture: 'nc-autre',
+        operateurId: 'marie',
+        categorie: 'NON_CONFORMITE',
+        depuis: '2026-09-05T23:10:00Z',
+        echeance: '2026-09-06T12:10:00.000Z',
+      },
+    ]);
+  });
+
+  it('should keep a transitioned target consumed after its replacement has finished', () => {
+    const nc: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc',
+      intention: 'TRANSITION',
+      type: 'NON_CONFORMITE',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T09:00:00Z',
+    };
+    const fin: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'fin-nc',
+      intention: 'FIN',
+      type: 'FIN',
+      cible: 'nc',
+      dateDeSurvenue: '2026-09-05T10:00:00Z',
+    };
+    const transition: GesteDePointage = { ...nc, id: 'nc-sur-ancienne-cible', dateDeSurvenue: '2026-09-05T11:00:00Z' };
+    const state = givenEvents([
+      debutFixture,
+      { geste: nc, etat: 'EN_ATTENTE' },
+      { geste: fin, etat: 'EN_ATTENTE' },
+      { geste: transition, etat: 'EN_ATTENTE' },
+    ]);
+
+    const projection = whenProjecting(state);
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
   it('should preserve another operator while a transition to an expired target conflicts with its later reopening', () => {
     const other: GesteDePointage = {
       ...debutGesteFixture,
