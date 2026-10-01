@@ -30,13 +30,21 @@ const requiredFixture = <T>(value: T | null | undefined, description: string): T
 const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] => ({ geste, etat: 'ACCEPTE' });
 
 const travailAuTourFixture: ActiviteDuPupitre = {
+  ouverture: 'ouverture-jean-tour-2026-09-05T06:00:00Z',
+  echeance: '2026-09-05T19:00:00.000Z',
   operateurId: 'jean',
   categorie: 'TRAVAIL',
   depuis: '2026-09-05T06:00:00Z',
   posteId: 'tour',
 };
 
-const nonConformiteFixture: ActiviteDuPupitre = { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' };
+const nonConformiteFixture: ActiviteDuPupitre = {
+  ouverture: 'ouverture-jean-sans-poste-2026-09-05T08:30:00Z',
+  echeance: '2026-09-05T21:30:00.000Z',
+  operateurId: 'jean',
+  categorie: 'NON_CONFORMITE',
+  depuis: '2026-09-05T08:30:00Z',
+};
 
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -60,8 +68,21 @@ const vueFixture: JournalDuPupitre = {
         etat: 'EN_COURS',
         type: 'PRODUIT',
         activites: [
-          { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T06:00:00Z', posteId: 'tour' },
-          { operateurId: 'marc', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T05:00:00Z' },
+          {
+            ouverture: 'ouverture-jean-tour-2026-09-05T06:00:00Z',
+            echeance: '2026-09-05T19:00:00.000Z',
+            operateurId: 'jean',
+            categorie: 'TRAVAIL',
+            depuis: '2026-09-05T06:00:00Z',
+            posteId: 'tour',
+          },
+          {
+            ouverture: 'ouverture-marc-sans-poste-2026-09-05T05:00:00Z',
+            echeance: '2026-09-05T18:00:00.000Z',
+            operateurId: 'marc',
+            categorie: 'NON_CONFORMITE',
+            depuis: '2026-09-05T05:00:00Z',
+          },
         ],
         evenements: [],
       },
@@ -72,9 +93,28 @@ const vueFixture: JournalDuPupitre = {
         etat: 'EN_COURS',
         type: 'ORDRE_DE_FABRICATION',
         activites: [
-          { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' },
-          { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T09:30:00Z', posteId: 'tour' },
-          { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:45:00Z' },
+          {
+            ouverture: 'ouverture-jean-sans-poste-2026-09-05T08:30:00Z',
+            echeance: '2026-09-05T21:30:00.000Z',
+            operateurId: 'jean',
+            categorie: 'NON_CONFORMITE',
+            depuis: '2026-09-05T08:30:00Z',
+          },
+          {
+            ouverture: 'ouverture-jean-tour-2026-09-05T09:30:00Z',
+            echeance: '2026-09-05T22:30:00.000Z',
+            operateurId: 'jean',
+            categorie: 'TRAVAIL',
+            depuis: '2026-09-05T09:30:00Z',
+            posteId: 'tour',
+          },
+          {
+            ouverture: 'ouverture-jean-sans-poste-2026-09-05T08:45:00Z',
+            echeance: '2026-09-05T21:45:00.000Z',
+            operateurId: 'jean',
+            categorie: 'NON_CONFORMITE',
+            depuis: '2026-09-05T08:45:00Z',
+          },
         ],
         evenements: [],
       },
@@ -177,6 +217,73 @@ describe('FenetreOperateur', () => {
     thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
     thenGesturesAre(committedGestures, ['ARRIVEE', 'POINTAGE']);
     thenGesturesAre(retriedGestures, ['POINTAGE']);
+  });
+
+  it('should open new work when the targeted activity expires while the window is open', () => {
+    const instant = Date.parse('2026-09-05T19:00:00Z');
+
+    const decision = gesturesOf(fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture, instant).decision);
+
+    expect(decision.capture().filter(geste => geste.nature === 'POINTAGE')).toMatchObject([
+      { type: 'DEBUT', intention: 'OUVERTURE', posteId: 'tour' },
+    ]);
+  });
+
+  it('should skip expired activities when a global pause is initiated after their deadline', () => {
+    const intention = new IntentionGlobaleInitiee('PAUSE', {
+      id: '11111111-2222-3333-4444-0000000a',
+      dateDeSurvenue: '2026-09-06T00:00:00Z',
+    });
+
+    const pause = intention.prepare(fenetre);
+
+    expect(pause.capture()).toEqual([]);
+  });
+
+  it('should exclude expired activities from pause without recording an automatic finish', () => {
+    const expired = FenetreOperateur.open(
+      Entreprise.of('entreprise-a'),
+      vueFixture,
+      matriculeFixture('049'),
+      Date.parse('2026-09-06T00:00:00Z'),
+      new IdentiteDeFenetre(2),
+    );
+
+    const pause = expired.preparePause(identifyFixture, 'pause-expiree');
+
+    expect(pause.capture()).toEqual([]);
+  });
+
+  it('should target the original opening when finishing an activity', () => {
+    const journal: JournalDuPupitre = {
+      ...vueFixture,
+      referentiel: {
+        operateurs: vueFixture.referentiel?.operateurs ?? [],
+        suivis: [
+          {
+            id: 'piece',
+            nom: 'OF-1',
+            etat: 'EN_COURS',
+            type: 'PRODUIT',
+            evenements: [],
+            activites: [{ ...travailAuTourFixture, ouverture: 'ouverture-travail', echeance: '2026-09-05T19:00:00Z' }],
+          },
+        ],
+      },
+    };
+    const active = FenetreOperateur.open(
+      Entreprise.of('entreprise-a'),
+      journal,
+      matriculeFixture('049'),
+      Date.parse('2026-09-05T09:00:00Z'),
+      new IdentiteDeFenetre(2),
+    );
+
+    const decision = gesturesOf(active.afterDeciding('piece', 'PRINCIPALE', identifyFixture).decision);
+
+    expect(decision.capture().filter(geste => geste.nature === 'POINTAGE')).toMatchObject([
+      { type: 'FIN', intention: 'FIN', cible: 'ouverture-travail', posteId: 'tour' },
+    ]);
   });
 
   it('should assure arrival before a first finish', () => {
@@ -588,7 +695,15 @@ describe('FenetreOperateur', () => {
             nom: 'OF-NC',
             etat: 'EN_COURS',
             type: 'ORDRE_DE_FABRICATION',
-            activites: [{ operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' }],
+            activites: [
+              {
+                ouverture: 'ouverture-jean-sans-poste-2026-09-05T08:30:00Z',
+                echeance: '2026-09-05T21:30:00.000Z',
+                operateurId: 'jean',
+                categorie: 'NON_CONFORMITE',
+                depuis: '2026-09-05T08:30:00Z',
+              },
+            ],
             evenements: [],
           },
         ],
@@ -627,9 +742,30 @@ describe('FenetreOperateur', () => {
             etat: 'EN_COURS',
             type: 'ORDRE_DE_FABRICATION',
             activites: [
-              { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z', posteId: 'poste-1' },
-              { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:15:00Z', posteId: 'poste-2' },
-              { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z', posteId: 'poste-3' },
+              {
+                ouverture: 'ouverture-jean-poste-1-2026-09-05T08:00:00Z',
+                echeance: '2026-09-05T21:00:00.000Z',
+                operateurId: 'jean',
+                categorie: 'NON_CONFORMITE',
+                depuis: '2026-09-05T08:00:00Z',
+                posteId: 'poste-1',
+              },
+              {
+                ouverture: 'ouverture-jean-poste-2-2026-09-05T08:15:00Z',
+                echeance: '2026-09-05T21:15:00.000Z',
+                operateurId: 'jean',
+                categorie: 'TRAVAIL',
+                depuis: '2026-09-05T08:15:00Z',
+                posteId: 'poste-2',
+              },
+              {
+                ouverture: 'ouverture-jean-poste-3-2026-09-05T08:30:00Z',
+                echeance: '2026-09-05T21:30:00.000Z',
+                operateurId: 'jean',
+                categorie: 'NON_CONFORMITE',
+                depuis: '2026-09-05T08:30:00Z',
+                posteId: 'poste-3',
+              },
             ],
             evenements: [],
           },
@@ -720,6 +856,8 @@ describe('FenetreOperateur', () => {
       dateDeSurvenue: '2026-09-05T08:00:00Z',
       suiviId: 'moule-1015',
       type: 'FIN',
+      intention: 'FIN',
+      cible: 'ouverture-jean-tour-2026-09-05T06:00:00Z',
       nature: 'POINTAGE',
       operateurId: 'jean',
     };
@@ -1023,7 +1161,19 @@ describe('FenetreOperateur', () => {
         referentiel: {
           ...referentiel,
           suivis: [
-            { ...suivi, activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T10:00:00Z', posteId: 'tour' }] },
+            {
+              ...suivi,
+              activites: [
+                {
+                  ouverture: 'ouverture-jean-tour-2026-09-05T10:00:00Z',
+                  echeance: '2026-09-05T23:00:00.000Z',
+                  operateurId: 'jean',
+                  categorie: 'TRAVAIL',
+                  depuis: '2026-09-05T10:00:00Z',
+                  posteId: 'tour',
+                },
+              ],
+            },
           ],
         },
       },

@@ -33,8 +33,25 @@ const journalFixture = (suivis: readonly SuiviDuPupitre[]): JournalDuPupitre => 
   },
 });
 const atelierAuTravailFixture = journalFixture([
-  suiviFixture('of-204', [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', posteId: 'tour' }]),
-  suiviFixture('of-205', [{ operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T09:00:00Z' }]),
+  suiviFixture('of-204', [
+    {
+      ouverture: 'ouverture-jean-tour-2026-09-05T08:00:00Z',
+      echeance: '2026-09-05T21:00:00.000Z',
+      operateurId: 'jean',
+      categorie: 'TRAVAIL',
+      depuis: '2026-09-05T08:00:00Z',
+      posteId: 'tour',
+    },
+  ]),
+  suiviFixture('of-205', [
+    {
+      ouverture: 'ouverture-jean-sans-poste-2026-09-05T09:00:00Z',
+      echeance: '2026-09-05T22:00:00.000Z',
+      operateurId: 'jean',
+      categorie: 'NON_CONFORMITE',
+      depuis: '2026-09-05T09:00:00Z',
+    },
+  ]),
 ]);
 const atelierAuReposFixture = journalFixture([suiviFixture('of-204', [])]);
 

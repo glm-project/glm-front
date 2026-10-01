@@ -1,4 +1,4 @@
-import { TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
+import { TypeDOuverture } from '../../journal-du-pupitre/JournalDuPupitre';
 import { TransitionDePointage } from './TransitionDePointage';
 
 export interface PosteAChoisir {
@@ -17,10 +17,13 @@ export class HabilitationsDePoste {
     return new HabilitationsDePoste(source.map(({ id, libelle }) => ({ id, libelle })));
   }
 
-  decideOuverture(type: TypeDePointage): DecisionDOuverture {
+  decideOuverture(type: TypeDOuverture): DecisionDOuverture {
     if (this.postes.length > 1) return { kind: 'CHOIX_POSTE_REQUIS', postes: this.postes };
     const posteId = this.postes[0]?.id;
-    return { kind: 'TRANSITION', transition: posteId === undefined ? { type } : { type, posteId } };
+    return {
+      kind: 'TRANSITION',
+      transition: posteId === undefined ? { type, intention: 'OUVERTURE' } : { type, intention: 'OUVERTURE', posteId },
+    };
   }
 
   require(posteId: string): void {

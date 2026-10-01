@@ -45,8 +45,21 @@ const suiviAvecReferenceFixture = {
   nom: 'PR-2026-000002',
   reference: 'M-1187',
   activites: [
-    { operateur: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', poste: 'tour' },
-    { operateur: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
+    {
+      ouverture: 'travail-original',
+      echeance: '2026-09-05T21:00:00Z',
+      operateur: 'jean',
+      categorie: 'TRAVAIL',
+      depuis: '2026-09-05T08:00:00Z',
+      poste: 'tour',
+    },
+    {
+      ouverture: 'nc-originale',
+      echeance: '2026-09-05T21:00:00Z',
+      operateur: 'jean',
+      categorie: 'NON_CONFORMITE',
+      depuis: '2026-09-05T08:00:00Z',
+    },
   ],
 } satisfies RestSuiviDuPupitre;
 const referentielFixture = {
@@ -56,6 +69,8 @@ const referentielFixture = {
 } satisfies RestReferentielDuPupitre;
 const suiviDetailleFixture = {
   activitesEnCours: [],
+  conflits: [],
+  evaluation: '2026-10-01T08:00:00Z',
   element: 'element',
   engageLe: '2026-09-05T07:30:00Z',
   engagePar: 'gestionnaire',
@@ -115,10 +130,24 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'DEPART' });
     const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
 
-    const pointage = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT', posteId: 'tour' });
+    const pointage = whenSending({
+      ...arriveeFixture,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      type: 'DEBUT',
+      intention: 'OUVERTURE',
+      posteId: 'tour',
+    });
     const pointageRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
 
-    const pointageSansPoste = whenSending({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
+    const pointageSansPoste = whenSending({
+      ...arriveeFixture,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      type: 'FIN',
+      intention: 'FIN',
+      cible: 'ouverture',
+    });
     const pointageSansPosteRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
 
     await thenWriteSucceededWith(arrivee, arriveeRequest, {
@@ -137,6 +166,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'DEBUT',
+      intention: 'OUVERTURE',
       poste: 'tour',
     });
     await thenWriteSucceededWith(pointageSansPoste, pointageSansPosteRequest, {
@@ -144,7 +174,59 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'FIN',
+      intention: 'FIN',
+      cible: 'ouverture',
     });
+  });
+
+  it('should publish an explicit opening without targeting an earlier activity', async () => {
+    const ouverture = whenSending({
+      ...arriveeFixture,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      type: 'NON_CONFORMITE',
+      intention: 'OUVERTURE',
+    });
+
+    const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+
+    await thenWriteSucceededWith(ouverture, request, {
+      id: 'geste',
+      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      operateur: 'jean',
+      type: 'NON_CONFORMITE',
+      intention: 'OUVERTURE',
+    });
+  });
+
+  it('should retain the targeted opening when publishing a category transition', async () => {
+    const transition = whenSending({
+      ...arriveeFixture,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      cible: 'ouverture-originale',
+    });
+
+    const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+
+    await thenWriteSucceededWith(transition, request, {
+      id: 'geste',
+      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      operateur: 'jean',
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      cible: 'ouverture-originale',
+    });
+  });
+
+  it('should retain a historical pointage as a technical recovery failure without publishing an invented intention', async () => {
+    const historique: GesteDAtelier = { ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT' };
+
+    const publication = whenSending(historique);
+
+    await thenItFailed(publication, 'Pointage historique sans intention : récupération explicite requise.');
   });
 
   it('should never send the pause a finish belongs to, the pause living on the pupitre', async () => {
@@ -153,6 +235,8 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       nature: 'POINTAGE',
       suiviId: 'piece',
       type: 'FIN',
+      intention: 'FIN',
+      cible: 'ouverture',
       posteId: 'tour',
       suspension: { pause: 'pause-de-midi', reouverture: 'DEBUT' },
     });
@@ -163,6 +247,8 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       dateDeSurvenue: arriveeFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'FIN',
+      intention: 'FIN',
+      cible: 'ouverture',
       poste: 'tour',
     });
   });
@@ -205,7 +291,14 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   });
 
   it('should reread the workshop element before replaying pointage', async () => {
-    const pointage = whenRereading({ ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'FIN' });
+    const pointage = whenRereading({
+      ...arriveeFixture,
+      nature: 'POINTAGE',
+      suiviId: 'piece',
+      type: 'FIN',
+      intention: 'FIN',
+      cible: 'ouverture',
+    });
     const workshopElementRequest = await whenServerReturnsWorkshopElement();
 
     thenItRequestedTheWorkshopElement(workshopElementRequest);
@@ -286,8 +379,21 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       etat: 'EN_ATTENTE',
       type: 'PRODUIT',
       activites: [
-        { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', posteId: 'tour' },
-        { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z' },
+        {
+          ouverture: 'travail-original',
+          echeance: '2026-09-05T21:00:00Z',
+          operateurId: 'jean',
+          categorie: 'TRAVAIL',
+          depuis: '2026-09-05T08:00:00Z',
+          posteId: 'tour',
+        },
+        {
+          ouverture: 'nc-originale',
+          echeance: '2026-09-05T21:00:00Z',
+          operateurId: 'jean',
+          categorie: 'NON_CONFORMITE',
+          depuis: '2026-09-05T08:00:00Z',
+        },
       ],
       evenements: [],
     });

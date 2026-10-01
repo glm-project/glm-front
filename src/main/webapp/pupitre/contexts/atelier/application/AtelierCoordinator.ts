@@ -28,8 +28,9 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
 
   execute(intention: IntentionDePointage): ExecutionDePointage {
     if (!this.designation.gestesDisponibles()) return { kind: 'INDISPONIBLE' };
-    const fenetre = this.designation.requireWindow();
-    const result = fenetre.afterDeciding(intention.suiviId, intention.cible, identity);
+    const instant = Date.now();
+    const fenetre = this.designation.requireWindow(instant);
+    const result = fenetre.afterDeciding(intention.suiviId, intention.cible, () => identityAt(instant), instant);
     this.designation.acceptDecision(result.fenetre);
     const decision = result.decision;
     if (decision.kind === 'CHOIX_POSTE_REQUIS') {

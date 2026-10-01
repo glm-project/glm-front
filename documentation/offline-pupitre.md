@@ -103,6 +103,30 @@ changing that connectivity. The last outcome distinguishes a token missing its t
 failure. A reference is available there only when the active journal view belongs to the currently selected
 company.
 
+## Causal pointages and old journals
+
+Every new pointage records its intention at capture: `OUVERTURE` has no target; `TRANSITION` and `FIN`
+retain the original opening identity supplied by the reference or created by a locally accepted opening.
+The durable journal and every retry preserve that intention and target along with the gesture UUID and
+business timestamp. A resumption opens a new activity in the suspended category; it never reuses the
+suspended activity as a target.
+
+The reference contains only current, interpretable activities and supplies their stable `ouverture` and
+`echeance`. The pupitre also expires these locally, including offline, and assigns thirteen hours to an
+optimistic local opening or transition. Expiration removes the activity from tiles and global finish batches;
+it writes no automatic `FIN`. The indicative duration remains frozen at window opening, while the nearest
+activity deadline participates in the designation scheduler. Command decisions use their initiation time,
+including deferred global commands. A local transition targeting an opening already replaced in the cached
+reference exposes no current activity for that operator and workstation until reconciliation.
+
+Before deploying this contract change, empty pending queues with the preceding application version, or
+recover and regularize their evidence explicitly. A historical pointage without an intention cannot safely
+be classified or targeted. Its publication fails technically without an HTTP request and leaves it pending;
+there is no automatic purge or inferred target. Restoration retains its complete journal and makes its
+reference unavailable while such work remains pending. An old activity cache without opening identities or
+deadlines is also unavailable, but a company with no pending historical pointage can activate a newly loaded
+reference while retaining accepted and refused audit entries.
+
 ## Runtime lifecycle is explicit
 
 `PupitreRuntime` starts the enrolment and owns the online listener and the refresh timer. It installs both

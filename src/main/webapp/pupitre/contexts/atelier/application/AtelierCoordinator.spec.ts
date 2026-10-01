@@ -1165,6 +1165,7 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
   };
   const givenTwoActiveWorkstations = async (): Promise<void> => {
+    givenBusinessTime();
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
     const suivi = requiredFixture(referenceFixture.suivis[0], 'workshop element');
     await givenCachedReference({
@@ -1175,13 +1176,31 @@ describe('AtelierCoordinator', () => {
           ...suivi,
           id: 'piece-tour',
           nom: 'OF-tour',
-          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:00:00Z', posteId: 'tour' }],
+          activites: [
+            {
+              ouverture: 'ouverture-jean-tour-2026-09-05T07:00:00Z',
+              echeance: '2026-09-05T20:00:00.000Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T07:00:00Z',
+              posteId: 'tour',
+            },
+          ],
         },
         {
           ...suivi,
           id: 'piece-fraiseuse',
           nom: 'OF-fraiseuse',
-          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:30:00Z', posteId: 'fraiseuse' }],
+          activites: [
+            {
+              ouverture: 'ouverture-jean-fraiseuse-2026-09-05T07:30:00Z',
+              echeance: '2026-09-05T20:30:00.000Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T07:30:00Z',
+              posteId: 'fraiseuse',
+            },
+          ],
         },
       ],
     });

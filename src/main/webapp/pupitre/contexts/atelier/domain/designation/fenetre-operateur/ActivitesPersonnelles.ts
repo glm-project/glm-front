@@ -45,10 +45,10 @@ export class ActivitesPersonnelles {
       return {
         kind: 'ACTIF',
         transitions: {
-          premiere: this.transition('DEBUT', premiereNonConforme.posteId),
+          premiere: this.transition('DEBUT', premiereNonConforme),
           suivantes: activites
             .filter(activite => activite !== premiereNonConforme && activite.categorie === 'NON_CONFORMITE')
-            .map(activite => this.transition('DEBUT', activite.posteId)),
+            .map(activite => this.transition('DEBUT', activite)),
         },
       };
     }
@@ -57,8 +57,8 @@ export class ActivitesPersonnelles {
 
   private transitionAll(type: TypeDePointage, etat: Extract<EtatDesActivites, { readonly kind: 'ACTIF' }>): LotDeTransitions {
     return {
-      premiere: this.transition(type, etat.premiere.posteId),
-      suivantes: etat.suivantes.map(activite => this.transition(type, activite.posteId)),
+      premiere: this.transition(type, etat.premiere),
+      suivantes: etat.suivantes.map(activite => this.transition(type, activite)),
     };
   }
 
@@ -66,8 +66,9 @@ export class ActivitesPersonnelles {
     return activites.some(activite => activite.categorie === 'NON_CONFORMITE');
   }
 
-  private transition(type: TypeDePointage, posteId: string | undefined): TransitionDePointage {
-    if (posteId === undefined) return { type };
-    return { type, posteId };
+  private transition(type: TypeDePointage, activite: SuiviDuPupitre['activites'][number]): TransitionDePointage {
+    if (activite.ouverture === undefined) throw new Error('Activité historique sans ouverture.');
+    const ciblage = { cible: activite.ouverture, ...(activite.posteId === undefined ? {} : { posteId: activite.posteId }) };
+    return type === 'FIN' ? { ...ciblage, type, intention: 'FIN' } : { ...ciblage, type, intention: 'TRANSITION' };
   }
 }

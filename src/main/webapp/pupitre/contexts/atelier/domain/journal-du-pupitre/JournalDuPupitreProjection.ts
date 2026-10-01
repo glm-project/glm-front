@@ -7,15 +7,19 @@ import {
   GesteDePresence,
   JournalDuPupitre,
   OperateurDuPupitre,
+  PointageCausal,
   ReferentielDuPupitre,
   SuiviDuPupitre,
   TypeDePresence,
 } from './JournalDuPupitre';
 
 const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
+  if (geste.intention === undefined) return suivi;
   const activites = suivi.activites.filter(activite => activite.operateurId !== geste.operateurId || activite.posteId !== geste.posteId);
-  if (geste.type !== 'FIN') {
+  if (opensProjectedActivity(suivi, geste)) {
     const activite: ActiviteDuPupitre = {
+      ouverture: geste.id,
+      echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
       operateurId: geste.operateurId,
       categorie: categorieFor(geste),
       depuis: geste.dateDeSurvenue,
@@ -25,6 +29,15 @@ const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPu
   }
   return { ...suivi, activites, etat: etatFor(activites.length) };
 };
+
+const targetsReplacedActivity = (suivi: SuiviDuPupitre, geste: PointageCausal): boolean =>
+  geste.intention !== 'OUVERTURE'
+  && suivi.activites.some(
+    activite => activite.operateurId === geste.operateurId && activite.posteId === geste.posteId && activite.ouverture !== geste.cible,
+  );
+
+const opensProjectedActivity = (suivi: SuiviDuPupitre, geste: PointageCausal): boolean =>
+  geste.type !== 'FIN' && !targetsReplacedActivity(suivi, geste);
 
 const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
   if (geste.type === 'NON_CONFORMITE') {
@@ -92,9 +105,17 @@ const applyEvenement = (referentiel: ReferentielDuPupitre, evenement: EvenementD
   }
 };
 
-export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupitre | undefined => {
+export const projectReferentiel = (pupitre: JournalDuPupitre, instant?: number): ReferentielDuPupitre | undefined => {
   if (pupitre.referentiel === undefined) {
     return undefined;
   }
-  return pupitre.evenements.reduce(applyEvenement, pupitre.referentiel);
+  const referentiel = pupitre.evenements.reduce(applyEvenement, pupitre.referentiel);
+  if (instant === undefined) return referentiel;
+  return {
+    ...referentiel,
+    suivis: referentiel.suivis.map(suivi => {
+      const activites = suivi.activites.filter(activite => activite.echeance === undefined || Date.parse(activite.echeance) > instant);
+      return { ...suivi, activites, etat: activites.length === suivi.activites.length ? suivi.etat : etatFor(activites.length) };
+    }),
+  };
 };

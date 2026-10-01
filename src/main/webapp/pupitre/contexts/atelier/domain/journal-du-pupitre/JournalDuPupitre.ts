@@ -15,6 +15,8 @@ export interface OperateurDuPupitre {
 }
 
 export interface ActiviteDuPupitre {
+  readonly ouverture?: string;
+  readonly echeance?: string;
   readonly operateurId: string;
   readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
   readonly depuis: string;
@@ -59,14 +61,22 @@ export interface Suspension {
   readonly reouverture: TypeDOuverture;
 }
 
-export interface GesteDePointage extends IdentiteDuGeste {
+interface PointageIdentifie extends IdentiteDuGeste {
   readonly nature: 'POINTAGE';
   readonly operateurId: string;
   readonly suiviId: string;
-  readonly type: TypeDePointage;
   readonly posteId?: string;
   readonly suspension?: Suspension;
 }
+
+export type IntentionDePointage =
+  | { readonly intention: 'OUVERTURE'; readonly type: TypeDOuverture }
+  | { readonly intention: 'TRANSITION'; readonly type: TypeDOuverture; readonly cible: string }
+  | { readonly intention: 'FIN'; readonly type: 'FIN'; readonly cible: string };
+
+export type PointageCausal = PointageIdentifie & IntentionDePointage;
+export type PointageHistorique = PointageIdentifie & { readonly intention?: undefined; readonly type: TypeDePointage };
+export type GesteDePointage = PointageCausal | PointageHistorique;
 
 export const toReouverture = (activite: ActiviteDuPupitre): TypeDOuverture =>
   activite.categorie === 'NON_CONFORMITE' ? 'NON_CONFORMITE' : 'DEBUT';

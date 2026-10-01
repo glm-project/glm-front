@@ -5,6 +5,7 @@ import {
   GesteDArrivee,
   GesteDePointage,
   GesteDePresence,
+  IntentionDePointage,
   JournalDuPupitre,
   OperateurDuPupitre,
   ReferentielDuPupitre,
@@ -45,6 +46,7 @@ const debutGesteFixture: GesteDePointage = {
   operateurId: 'jean',
   suiviId: 'piece',
   type: 'DEBUT',
+  intention: 'OUVERTURE',
   id: 'debut',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
 };
@@ -59,6 +61,78 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it('should never infer an opening from a historical pointage whose intention is missing', () => {
+    const historique: GesteDePointage = {
+      nature: 'POINTAGE',
+      operateurId: 'jean',
+      suiviId: 'piece',
+      type: 'DEBUT',
+      id: 'ancien',
+      dateDeSurvenue: '2026-09-05T08:00:00Z',
+    };
+    const state = givenEvents([{ geste: historique, etat: 'EN_ATTENTE' }]);
+
+    const projection = whenProjecting(state);
+
+    thenStateIs(projection, 'EN_ATTENTE', 0);
+    expect(state.evenements).toEqual([{ geste: historique, etat: 'EN_ATTENTE' }]);
+  });
+
+  it('should report an interrupted element exactly when its last activity expires locally', () => {
+    const state = givenEvents([debutFixture]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T21:00:00Z'));
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
+  it('should expose no current activity when an offline transition targets an opening replaced by another', () => {
+    const state: JournalDuPupitre = {
+      connecte: false,
+      referentiel: {
+        ...referenceFixture,
+        suivis: [
+          {
+            id: 'piece',
+            nom: 'OF-1',
+            type: 'PRODUIT',
+            etat: 'EN_COURS',
+            evenements: [],
+            activites: [
+              {
+                operateurId: 'jean',
+                categorie: 'TRAVAIL',
+                depuis: '2026-09-05T10:00:00Z',
+                ouverture: 'remplacante',
+                echeance: '2026-09-05T23:00:00Z',
+              },
+            ],
+          },
+        ],
+      },
+      evenements: [
+        {
+          etat: 'EN_ATTENTE',
+          geste: {
+            nature: 'POINTAGE',
+            id: 'transition',
+            suiviId: 'piece',
+            operateurId: 'jean',
+            dateDeSurvenue: '2026-09-05T11:00:00Z',
+            type: 'NON_CONFORMITE',
+            intention: 'TRANSITION',
+            cible: 'originale',
+          },
+        },
+      ],
+    };
+
+    const projection = whenProjecting(state);
+
+    expect(projection?.suivis[0]?.activites).toEqual([]);
+    expect(state.evenements[0]?.geste).toMatchObject({ intention: 'TRANSITION', cible: 'originale' });
+  });
+
   it('should reconstruct an offline activity and its original starting time', () => {
     const state = givenEvents([debutFixture]);
 
@@ -71,7 +145,7 @@ describe('JournalDuPupitreProjection', () => {
   it('should change category on non conformity and stop on finish', () => {
     const nonConformite = givenPointage('NON_CONFORMITE');
     const afterCategoryChange = givenEvents([debutFixture, nonConformite]);
-    const afterFinish = givenEvents([debutFixture, nonConformite, givenPointage('FIN')]);
+    const afterFinish = givenEvents([debutFixture, nonConformite, givenPointage('FIN', 'non-conformite')]);
 
     const projection = whenProjecting(afterCategoryChange);
     const finished = whenProjecting(afterFinish);
@@ -273,15 +347,26 @@ describe('JournalDuPupitreProjection', () => {
       debutFixture,
     ],
   });
-  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
+  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE', cible = 'debut'): EvenementDuJournal => ({
     ...debutFixture,
-    geste: { ...debutGesteFixture, id: crypto.randomUUID(), type },
+    geste:
+      type === 'FIN'
+        ? { ...debutGesteFixture, id: 'fin', type, intention: 'FIN', cible }
+        : { ...debutGesteFixture, id: 'non-conformite', type, intention: 'TRANSITION', cible },
   });
+  const givenIntentionForWorkstation = (
+    type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE',
+    posteId: string | undefined,
+  ): IntentionDePointage & { readonly id: string } => {
+    if (type === 'DEBUT') return { id: `debut-${posteId}`, type, intention: 'OUVERTURE' };
+    return type === 'FIN'
+      ? { id: `fin-${posteId}`, type, intention: 'FIN', cible: `debut-${posteId}` }
+      : { id: `nc-${posteId}`, type, intention: 'TRANSITION', cible: `debut-${posteId}` };
+  };
   const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
     const geste: GesteDePointage = {
       ...debutGesteFixture,
-      id: crypto.randomUUID(),
-      type,
+      ...givenIntentionForWorkstation(type, posteId),
       ...(posteId === undefined ? {} : { posteId }),
     };
     return { ...debutFixture, geste };

@@ -10,6 +10,8 @@ import {
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
 
 const travailAuTourFixture: ActiviteDuPupitre = {
+  ouverture: 'ouverture-jean-tour-2026-09-05T08:00:00Z',
+  echeance: '2026-09-05T21:00:00.000Z',
   operateurId: 'jean',
   categorie: 'TRAVAIL',
   depuis: '2026-09-05T08:00:00Z',
@@ -40,18 +42,30 @@ const referentielFixture: ReferentielDuPupitre = {
   ],
   suivis: [suiviFixture('of-204', [travailAuTourFixture])],
 };
-const suspensionFixture = (suiviId: string, extra: Partial<GesteDePointage>, pause = 'pause-de-midi'): GesteDePointage => ({
+const suspensionFixture = (
+  suiviId: string,
+  extra: Partial<Pick<GesteDePointage, 'id' | 'operateurId' | 'dateDeSurvenue' | 'posteId' | 'suspension' | 'suiviId'>>,
+  pause = 'pause-de-midi',
+): GesteDePointage => ({
   id: `fin-${suiviId}-${pause}`,
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   nature: 'POINTAGE',
   operateurId: 'jean',
   suiviId,
   type: 'FIN',
+  intention: 'FIN',
+  cible: 'ouverture',
   suspension: { pause, reouverture: 'DEBUT' },
   ...extra,
 });
 
-const nonConformiteFixture: ActiviteDuPupitre = { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T09:00:00Z' };
+const nonConformiteFixture: ActiviteDuPupitre = {
+  ouverture: 'ouverture-jean-sans-poste-2026-09-05T09:00:00Z',
+  echeance: '2026-09-05T22:00:00.000Z',
+  operateurId: 'jean',
+  categorie: 'NON_CONFORMITE',
+  depuis: '2026-09-05T09:00:00Z',
+};
 const pauseDeMidiFixture: readonly GesteDePointage[] = [
   suspensionFixture('of-204', { posteId: 'tour' }),
   suspensionFixture('of-205', { suspension: { pause: 'pause-de-midi', reouverture: 'NON_CONFORMITE' } }),
@@ -283,6 +297,7 @@ const debutFixture = (suiviId: string): GesteDePointage => ({
   operateurId: 'jean',
   suiviId,
   type: 'DEBUT',
+  intention: 'OUVERTURE',
 });
 const requiredFixture = <T>(value: T | undefined): T => {
   if (value === undefined) throw new Error('Missing pause fixture.');

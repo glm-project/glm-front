@@ -119,6 +119,7 @@ export class CurrentOperateurLifecycle {
   acceptDecision(fenetre: FenetreOperateur): void {
     this.designation.update(current => current.afterReplacingWindow(fenetre));
     this.etatHorsLigne.publish(fenetre.snapshot());
+    this.scheduleExpiration();
   }
 
   acceptCapture(identity: IdentiteDeFenetre, acceptance: Pick<AcceptationDeGestes, 'applyTo'>): boolean {

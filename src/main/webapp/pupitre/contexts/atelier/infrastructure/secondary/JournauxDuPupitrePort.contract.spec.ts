@@ -28,12 +28,27 @@ const refreshedReferenceFixture: ReferentielDuPupitre = {
 };
 const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
 const departFixture: GesteDAtelier = { ...arriveeFixture, id: 'depart', nature: 'PRESENCE', type: 'DEPART' };
-const pointageFixture: GesteDAtelier = { ...arriveeFixture, id: 'pointage', nature: 'POINTAGE', type: 'DEBUT', suiviId: 'piece' };
+const pointageFixture: GesteDAtelier = {
+  ...arriveeFixture,
+  id: 'pointage',
+  nature: 'POINTAGE',
+  type: 'DEBUT',
+  intention: 'OUVERTURE',
+  suiviId: 'piece',
+};
+const pointageHistoriqueFixture: GesteDAtelier = {
+  ...arriveeFixture,
+  id: 'historique',
+  nature: 'POINTAGE',
+  type: 'DEBUT',
+  suiviId: 'piece',
+};
 const pointageEnAttenteFixture: GesteDAtelier = {
   ...arriveeFixture,
   id: 'pointage-attente',
   nature: 'POINTAGE',
   type: 'DEBUT',
+  intention: 'OUVERTURE',
   suiviId: 'piece',
 };
 const pointageAutreSuiviFixture: GesteDAtelier = {
@@ -41,6 +56,7 @@ const pointageAutreSuiviFixture: GesteDAtelier = {
   id: 'pointage-autre',
   nature: 'POINTAGE',
   type: 'DEBUT',
+  intention: 'OUVERTURE',
   suiviId: 'autre-piece',
 };
 
@@ -49,6 +65,8 @@ const suspensionFixture: GesteDAtelier = {
   id: 'fin-pause',
   nature: 'POINTAGE',
   type: 'FIN',
+  intention: 'FIN',
+  cible: 'ouverture',
   suiviId: 'piece',
   posteId: 'tour',
   suspension: { pause: 'pause-de-midi', reouverture: 'NON_CONFORMITE' },
@@ -388,6 +406,26 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     expect(state.referentiel?.operateurs.map(operateur => operateur.etat)).toEqual(['PRESENT']);
   });
 
+  it('should invalidate an old activity cache while preserving its pending evidence', async () => {
+    const legacy = await givenStoredHistoricalPointage();
+
+    const state = await whenReadingCompany('entreprise-a');
+    const persisted = await whenReadingPersistedJournal();
+
+    expect(state.referentiel).toBeUndefined();
+    expect(state.evenements).toEqual(legacy.evenements);
+    expect(persisted).toEqual(legacy);
+  });
+
+  it('should keep a fresh cache unavailable while a historical pointage still needs explicit recovery', async () => {
+    const legacy = await givenStoredHistoricalPointage(false);
+
+    const state = await whenReadingCompany('entreprise-a');
+
+    expect(state.referentiel).toBeUndefined();
+    expect(state.evenements).toEqual(legacy.evenements);
+  });
+
   it('should acquire the storage synchronisation lock when synchronizing', async () => {
     const { entered, release, chronology } = givenSynchronizationSignals();
 
@@ -406,6 +444,28 @@ describe('IndexedDbJournauxDuPupitre compatibility', () => {
     thenChronologyIs(chronology, ['lock-entered', 'lock-released', 'journal-run']);
   });
 
+  const givenStoredHistoricalPointage = async (withLegacyActivities = true) => {
+    const legacy = {
+      connecte: true,
+      evenements: [{ geste: pointageHistoriqueFixture, etat: 'EN_ATTENTE' }],
+      referentiel: {
+        operateurs: [operateurJeanFixture],
+        suivis: [
+          {
+            id: 'piece',
+            nom: 'OF-1',
+            etat: 'EN_COURS',
+            type: 'PRODUIT',
+            evenements: [],
+            activites: withLegacyActivities ? [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' }] : [],
+          },
+        ],
+      },
+    };
+    await storage.update('atelier:entreprise-a', legacy, () => legacy);
+    return legacy;
+  };
+  const whenReadingPersistedJournal = () => storage.read('atelier:entreprise-a');
   const givenALegacyAcceptedArrival = async (): Promise<void> => {
     const legacy = { connecte: true, evenements: [{ geste: arriveeFixture, etat: 'ACCEPTE' as const, journeeOuverte: true }] };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);

@@ -42,10 +42,21 @@ const restoreReferentiel = (referentiel: ReferentielStocke): ReferentielDuPupitr
   operateurs: referentiel.operateurs.map(restoreOperateur),
 });
 
+const hasCausalActivities = (referentiel: ReferentielStocke | undefined): referentiel is ReferentielStocke =>
+  referentiel !== undefined
+  && referentiel.suivis.every(suivi =>
+    suivi.activites.every(activite => activite.ouverture !== undefined && activite.echeance !== undefined),
+  );
+
+const needsHistoricalRecovery = (evenements: readonly EvenementStocke[]): boolean =>
+  evenements.some(({ geste, etat }) => etat === 'EN_ATTENTE' && geste.nature === 'POINTAGE' && geste.intention === undefined);
+
 const restoreJournal = ({ referentiel, ...journal }: JournalDuPupitreStocke): JournalDuPupitre => ({
   ...journal,
   evenements: journal.evenements.map(restoreEvenement),
-  ...(referentiel === undefined ? {} : { referentiel: restoreReferentiel(referentiel) }),
+  ...(hasCausalActivities(referentiel) && !needsHistoricalRecovery(journal.evenements)
+    ? { referentiel: restoreReferentiel(referentiel) }
+    : {}),
 });
 
 const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({

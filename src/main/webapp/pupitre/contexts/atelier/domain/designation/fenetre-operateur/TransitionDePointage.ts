@@ -1,9 +1,6 @@
-import { TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
+import { IntentionDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
 
-export interface TransitionDePointage {
-  readonly type: TypeDePointage;
-  readonly posteId?: string;
-}
+export type TransitionDePointage = IntentionDePointage & { readonly posteId?: string };
 
 export interface LotDeTransitions {
   readonly premiere: TransitionDePointage;

@@ -66,7 +66,15 @@ describe('JournalDuPupitre', () => {
             nom: 'OF-1',
             etat: 'EN_COURS',
             type: 'ORDRE_DE_FABRICATION',
-            activites: [{ categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', operateurId: 'jean' }],
+            activites: [
+              {
+                ouverture: 'ouverture-jean-sans-poste-2026-09-05T08:00:00Z',
+                echeance: '2026-09-05T21:00:00.000Z',
+                categorie: 'TRAVAIL',
+                depuis: '2026-09-05T08:00:00Z',
+                operateurId: 'jean',
+              },
+            ],
             evenements: ['EVT-1'],
           },
         ],

@@ -75,8 +75,8 @@ const reopenableIn =
 export class PauseEnCours {
   private constructor(private readonly activites: readonly ActiviteSuspendue[]) {}
 
-  static of(journal: JournalDuPupitre, operateurId: string): PauseEnCours | undefined {
-    const referentiel = projectReferentiel(journal);
+  static of(journal: JournalDuPupitre, operateurId: string, instant?: number): PauseEnCours | undefined {
+    const referentiel = projectReferentiel(journal, instant);
     if (referentiel === undefined) return undefined;
     const suspensions = suspensionsOfTheLastPause(journal.evenements, operateurId);
     const ouvertes = openActivitiesOf(referentiel, operateurId);

@@ -38,8 +38,21 @@ const toOperateur = (operateur: RestOperateurDuPupitre): OperateurDuPupitre =>
 
 const toActivite = (activite: RestActiviteDuPupitre): SuiviDuPupitre['activites'][number] =>
   activite.poste === undefined
-    ? { operateurId: activite.operateur, categorie: activite.categorie, depuis: activite.depuis }
-    : { operateurId: activite.operateur, categorie: activite.categorie, depuis: activite.depuis, posteId: activite.poste };
+    ? {
+        ouverture: activite.ouverture,
+        echeance: activite.echeance,
+        operateurId: activite.operateur,
+        categorie: activite.categorie,
+        depuis: activite.depuis,
+      }
+    : {
+        ouverture: activite.ouverture,
+        echeance: activite.echeance,
+        operateurId: activite.operateur,
+        categorie: activite.categorie,
+        depuis: activite.depuis,
+        posteId: activite.poste,
+      };
 
 const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => ({
   id: suivi.id,
@@ -99,9 +112,10 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     if (geste.nature === 'PRESENCE') {
       return this.api.write('/api/atelier/journees/pointages', { body: { ...body, type: geste.type } });
     }
+    if (geste.intention === undefined) throw new Error('Pointage historique sans intention : récupération explicite requise.');
     const request = {
       pathParams: { id: geste.suiviId },
-      body: { ...body, type: geste.type },
+      body: { ...body, type: geste.type, intention: geste.intention, ...(geste.intention === 'OUVERTURE' ? {} : { cible: geste.cible }) },
     };
     if (geste.posteId === undefined) {
       return this.api.write('/api/atelier/suivis/{id}/pointages', request);

@@ -140,6 +140,31 @@ describe('Designation du pupitre', () => {
     vi.useRealTimers();
   });
 
+  it('should stop displaying an expired activity while leaving the operator window open and the journal unchanged', async () => {
+    await givenAnActivityExpiringInTenSeconds();
+    whenEntering('049');
+    await whenValidating();
+
+    await whenTimePasses(10_000);
+    const retained = await journal.read(Entreprise.of('atelier'));
+
+    expect(designation.pointage()?.moules.map(element => element.isActive())).toEqual([false]);
+    expect(designation.operateur()?.id).toBe('jean');
+    expect(retained.evenements).toEqual([]);
+  });
+
+  it('should reschedule expiry when a refreshed reference shortens the current activity', async () => {
+    await givenAnActivityExpiringInTenSeconds('2026-09-05T21:00:20Z');
+    whenEntering('049');
+    await whenValidating();
+
+    await whenTheServerShortensTheActivity();
+    await whenTimePasses(10_000);
+
+    expect(designation.pointage()?.moules.map(element => element.isActive())).toEqual([false]);
+    expect(designation.operateur()?.id).toBe('jean');
+  });
+
   it('should preserve leading zeros before validation', () => {
     whenEntering('049');
 
@@ -599,6 +624,36 @@ describe('Designation du pupitre', () => {
   const whenFinishing = async (): Promise<void> => {
     const pending = designation.finish();
     return pending;
+  };
+  const givenAnActivityExpiringInTenSeconds = async (echeance = '2026-09-05T21:00:00Z'): Promise<void> => {
+    vi.setSystemTime(new Date('2026-09-05T20:59:50Z'));
+    await journal.saveReferentiel(Entreprise.of('atelier'), {
+      ...referentielFixture,
+      suivis: [
+        {
+          id: 'piece',
+          nom: 'OF-1',
+          type: 'PRODUIT',
+          etat: 'EN_COURS',
+          evenements: [],
+          activites: [
+            {
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T08:00:00Z',
+              ouverture: 'ouverture',
+              echeance,
+            },
+          ],
+        },
+      ],
+    });
+  };
+  const whenTheServerShortensTheActivity = async (): Promise<void> => {
+    await givenAnActivityExpiringInTenSeconds();
+    const cached = await journal.read(Entreprise.of('atelier'));
+    serveur.reference = cached.referentiel ?? referentielFixture;
+    await designation.refreshReferentiel();
   };
   const whenTimePasses = async (duration: number): Promise<void> => {
     await vi.advanceTimersByTimeAsync(duration);

@@ -30,7 +30,13 @@ const referentielFixture: ReferentielDuPupitre = {
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
 };
 const operateurPresentFixture = { ...operateurFixture, etat: 'PRESENT' } as const;
-const activiteFixture = { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' } as const;
+const activiteFixture = {
+  ouverture: 'ouverture-jean-sans-poste-2026-09-05T08:00:00Z',
+  echeance: '2026-09-05T21:00:00.000Z',
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T08:00:00Z',
+} as const;
 const referentielActifFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [
@@ -170,6 +176,7 @@ describe('Pupitre workshop journey', () => {
   });
 
   const givenAnEnrolledPupitre = (referentiel: ReferentielDuPupitre, withClock = false): void => {
+    if (!withClock) cy.clock(Date.UTC(2026, 8, 5, 12), ['Date']);
     givenAuthorizationAndWorkshopEdges(referentiel);
     cy.visit('/');
     cy.wait('@deviceAuthorization');
@@ -199,6 +206,8 @@ describe('Pupitre workshop journey', () => {
           type: suivi.type,
           ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
           activites: suivi.activites.map(activite => ({
+            ouverture: activite.ouverture,
+            echeance: activite.echeance,
             operateur: activite.operateurId,
             categorie: activite.categorie,
             depuis: activite.depuis,

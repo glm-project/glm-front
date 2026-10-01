@@ -37,7 +37,16 @@ const vueFixture: JournalDuPupitre = {
         reference: '1015',
         etat: 'EN_COURS',
         type: 'PRODUIT',
-        activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T06:00:00Z', posteId: 'tour' }],
+        activites: [
+          {
+            ouverture: 'ouverture-jean-tour-2026-09-05T06:00:00Z',
+            echeance: '2026-09-05T19:00:00.000Z',
+            operateurId: 'jean',
+            categorie: 'TRAVAIL',
+            depuis: '2026-09-05T06:00:00Z',
+            posteId: 'tour',
+          },
+        ],
         evenements: [],
       },
     ],

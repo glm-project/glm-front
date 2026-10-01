@@ -78,13 +78,16 @@ export class DesignationOperateur {
       unknownCode: this.etat.inconnu,
       operateur: this.operateur(),
       canValidate: !this.etat.saisie.isEmpty() && this.canEdit() && this.etat.resolution === undefined && !this.etat.closing,
-      deadline: this.etat.deadline,
+      deadline: this.nextExpiration(),
     };
   }
 
   afterPress(now: number): PressResult {
     if (this.hasExpired(now)) return { designation: this.afterFinish(), accepted: false };
-    return { designation: this.with({ deadline: now + DESIGNATION_INACTIVITY_MS }), accepted: true };
+    return {
+      designation: this.with({ deadline: now + DESIGNATION_INACTIVITY_MS, fenetre: this.etat.fenetre?.afterEvaluatingAt(now) }),
+      accepted: true,
+    };
   }
 
   afterDigit(digit: string, now: number): DesignationOperateur {
@@ -124,7 +127,7 @@ export class DesignationOperateur {
   }
 
   afterExpiration(now: number): DesignationOperateur {
-    return this.hasExpired(now) ? this.afterFinish() : this;
+    return this.hasExpired(now) ? this.afterFinish() : this.with({ fenetre: this.etat.fenetre?.afterEvaluatingAt(now) });
   }
 
   afterFinish(): DesignationOperateur {
@@ -181,6 +184,12 @@ export class DesignationOperateur {
 
   visibleWindow(): FenetreOperateur | undefined {
     return this.etat.designated ? this.etat.fenetre : undefined;
+  }
+
+  private nextExpiration(): number | undefined {
+    const activityDeadline = this.visibleWindow()?.nextExpiration();
+    if (activityDeadline === undefined) return this.etat.deadline;
+    return Math.min(activityDeadline, this.etat.deadline ?? activityDeadline);
   }
 
   private requireClosedWindow(): void {

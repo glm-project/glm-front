@@ -304,6 +304,7 @@ describe('DesignationOperateur', () => {
       ...identityFixture(),
       suiviId: 'piece',
       type: 'DEBUT',
+      intention: 'OUVERTURE',
       operateurId: 'jean',
       nature: 'POINTAGE',
     });

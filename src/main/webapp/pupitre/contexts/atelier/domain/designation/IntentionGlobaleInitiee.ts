@@ -18,13 +18,14 @@ export class IntentionGlobaleInitiee {
 
   prepare(fenetre: FenetreOperateur): LotDeGestesDAtelier {
     const identify = this.identities();
+    const active = fenetre.afterEvaluatingAt(Date.parse(this.origine.identite().dateDeSurvenue));
     switch (this.commande) {
       case 'PAUSE':
-        return fenetre.preparePause(identify, this.racine);
+        return active.preparePause(identify, this.racine);
       case 'REPRENDRE':
-        return fenetre.prepareReprise(identify);
+        return active.prepareReprise(identify);
       case 'TOUT_ARRETER':
-        return fenetre.prepareToutArreter(identify);
+        return active.prepareToutArreter(identify);
     }
   }
 
