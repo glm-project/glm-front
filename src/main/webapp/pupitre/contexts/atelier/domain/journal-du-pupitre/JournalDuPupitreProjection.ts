@@ -59,12 +59,6 @@ const predatesTargetOpening = (cible: ActiviteDuPupitre, geste: PointageCausal):
 const repeatsTargetCategory = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
   geste.intention === 'TRANSITION' && cible.categorie === categorieFor(geste);
 
-const consumesTarget = (suivi: SuiviEnProjection, geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>): boolean => {
-  if (geste.intention === 'TRANSITION') return true;
-  const cible = targetedActivity(suivi, geste);
-  return cible !== undefined && Date.parse(geste.dateDeSurvenue) <= Date.parse(cible.echeance);
-};
-
 const newlyOpenedActivities = (geste: PointageCausal, conflit: boolean): readonly ActiviteDuPupitre[] => {
   if (cannotOpenActivity(geste, conflit)) return [];
   return [
@@ -86,7 +80,7 @@ const conflictingActivities = (suivi: SuiviEnProjection, geste: PointageCausal, 
 const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): ReadonlySet<string> => {
   if (geste.intention === 'OUVERTURE') return suivi.ciblesConsommees;
   const cibles = new Set(suivi.ciblesConsommees);
-  if (consumesTarget(suivi, geste)) cibles.add(geste.cible);
+  cibles.add(geste.cible);
   for (const activite of conflictingActivities(suivi, geste, conflit)) cibles.add(activite.ouverture);
   return cibles;
 };
