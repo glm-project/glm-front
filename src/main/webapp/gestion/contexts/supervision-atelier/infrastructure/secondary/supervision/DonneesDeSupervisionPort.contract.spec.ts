@@ -437,6 +437,16 @@ describe('HTTP supervision beyond the shared contract', () => {
     vi.useRealTimers();
   });
 
+  it('should retain the microsecond server evaluation returned by the real workshop projection', async () => {
+    const reading = harnessFixture.port.read();
+
+    whenEvaluationArrives('2026-10-01T22:59:48.907555Z');
+    const donnees = await reading;
+
+    expect(donnees.evaluation.value).toBe('2026-10-01T22:59:48.907555Z');
+    expect(harnessFixture.errors.errors).toEqual([]);
+  });
+
   it('should reject an unavailable acquisition and report the technical failure once', async () => {
     const reading = harnessFixture.port.read();
 
@@ -490,6 +500,10 @@ describe('HTTP supervision beyond the shared contract', () => {
 
   const whenInvalidEvaluationArrives = (): void => {
     harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...emptyFixture.response, evaluation: '2026-09-13T10:00:00' });
+  };
+
+  const whenEvaluationArrives = (evaluation: string): void => {
+    harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...emptyFixture.response, evaluation });
   };
 
   const whenAutomaticEndWithoutFinishArrives = (): void => {
