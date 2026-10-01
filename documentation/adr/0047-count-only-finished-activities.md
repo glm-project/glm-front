@@ -175,8 +175,8 @@ avant le rafraîchissement canonique. Le stockage atelier neuf conserve identit�
 marqueurs ; il utilise une clé atelier versionnée et conserve les documents d'enrôlement et de credentials. TOUT ARRÊTER conserve
 l'historique et les pending et efface la reprise dans la même mutation que ses N FIN ciblés, N=0 inclus.
 
-Les alertes réelles de ce chantier concernent le relevé et le coût. La supervision adapte son modèle
-et ses démonstrations InMemory ; son branchement HTTP réel reste un chantier distinct.
+La supervision lit également les alertes réelles dans la projection complète du backend. Elle conserve
+l'évaluation, l'échéance et la fin retenue reçues ; aucun journal brut n'est réinterprété côté front.
 Elle classe chaque opérateur déclaré exactement une fois, dans « Au travail » si au moins une activité
 interprétable est en cours, sinon « Sans activité ». Ces deux couloirs restent visibles même vides,
 dans cet ordre, avec leurs opérateurs triés alphabétiquement. La NC reste une surcouche d'activité.
@@ -210,7 +210,7 @@ supplémentaire ni commande de résolution.
 ### Negative
 
 - L'utilisateur peut consulter les anomalies mais doit encore passer par l'API pour les corriger.
-- La supervision conserve ses données de démonstration, y compris en production.
+- Une panne de lecture de supervision remplace les cartes par une erreur jusqu'à une acquisition réussie.
 - Le pupitre doit appliquer la règle d'expiration localement malgré un référentiel périmé.
 
 - L'historique ne prouve pas qu'une anomalie a été calculée ou affichée à une date passée.
