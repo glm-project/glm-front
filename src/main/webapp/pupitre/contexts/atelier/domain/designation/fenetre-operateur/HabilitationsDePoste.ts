@@ -22,7 +22,7 @@ export class HabilitationsDePoste {
     const posteId = this.postes[0]?.id;
     return {
       kind: 'TRANSITION',
-      transition: posteId === undefined ? { type, intention: 'OUVERTURE' } : { type, intention: 'OUVERTURE', posteId },
+      transition: { type, intention: 'OUVERTURE', posteId },
     };
   }
 

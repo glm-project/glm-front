@@ -36,8 +36,11 @@ import { PresenceDeLOperateur } from './PresenceDeLOperateur';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
 
-const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
-  posteId === undefined ? { type: reouverture, intention: 'OUVERTURE' } : { type: reouverture, intention: 'OUVERTURE', posteId };
+const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage => ({
+  type: reouverture,
+  intention: 'OUVERTURE',
+  posteId,
+});
 
 interface ActivitePersonnelleConnue {
   readonly suiviId: string;

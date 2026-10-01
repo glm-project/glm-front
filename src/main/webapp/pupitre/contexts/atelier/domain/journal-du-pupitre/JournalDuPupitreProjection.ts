@@ -16,7 +16,7 @@ import {
 interface SuiviEnProjection {
   readonly suivi: SuiviDuPupitre;
   readonly ouverturesConnues: readonly ActiviteDuPupitre[];
-  readonly ciblesConsommees: readonly string[];
+  readonly ciblesConsommees: ReadonlySet<string>;
 }
 type ReferentielEnProjection = Omit<ReferentielDuPupitre, 'suivis'> & { readonly suivis: readonly SuiviEnProjection[] };
 
@@ -41,7 +41,7 @@ const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCau
     cible === undefined
     || predatesTargetOpening(cible, geste)
     || repeatsTargetCategory(cible, geste)
-    || suivi.ciblesConsommees.includes(geste.cible)
+    || suivi.ciblesConsommees.has(geste.cible)
     || suivi.suivi.activites.some(activite => occupiesSamePlace(activite, geste) && activite.ouverture !== geste.cible)
   );
 };
@@ -52,8 +52,7 @@ const predatesTargetOpening = (cible: ActiviteDuPupitre, geste: PointageCausal):
 const repeatsTargetCategory = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
   geste.intention === 'TRANSITION' && cible.categorie === categorieFor(geste);
 
-const consumesTarget = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
-  if (geste.intention === 'OUVERTURE') return false;
+const consumesTarget = (suivi: SuiviEnProjection, geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>): boolean => {
   if (geste.intention === 'TRANSITION') return true;
   const cible = targetedActivity(suivi, geste);
   return cible !== undefined && Date.parse(geste.dateDeSurvenue) <= Date.parse(cible.echeance);
@@ -74,12 +73,15 @@ const newlyOpenedActivities = (geste: PointageCausal, conflit: boolean): readonl
 };
 const cannotOpenActivity = (geste: PointageCausal, conflit: boolean): boolean => geste.type === 'FIN' || conflit;
 
-const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): readonly string[] => {
-  const cible = geste.intention === 'OUVERTURE' ? [] : [geste.cible];
-  const remplacees = conflit
-    ? suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste)).map(activite => activite.ouverture)
-    : [];
-  return [...suivi.ciblesConsommees, ...(consumesTarget(suivi, geste) ? cible : []), ...remplacees];
+const conflictingActivities = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): readonly ActiviteDuPupitre[] =>
+  conflit ? suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste)) : [];
+
+const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): ReadonlySet<string> => {
+  if (geste.intention === 'OUVERTURE') return suivi.ciblesConsommees;
+  const cibles = new Set(suivi.ciblesConsommees);
+  if (consumesTarget(suivi, geste)) cibles.add(geste.cible);
+  for (const activite of conflictingActivities(suivi, geste, conflit)) cibles.add(activite.ouverture);
+  return cibles;
 };
 
 const applyPointage = (suivi: SuiviEnProjection, geste: GesteDePointage): SuiviEnProjection => {
@@ -168,7 +170,7 @@ export const projectReferentiel = (pupitre: JournalDuPupitre, instant?: number):
   }
   const initial: ReferentielEnProjection = {
     ...pupitre.referentiel,
-    suivis: pupitre.referentiel.suivis.map(suivi => ({ suivi, ouverturesConnues: suivi.activites, ciblesConsommees: [] })),
+    suivis: pupitre.referentiel.suivis.map(suivi => ({ suivi, ouverturesConnues: suivi.activites, ciblesConsommees: new Set<string>() })),
   };
   const projection = pupitre.evenements.reduce(applyEvenement, initial);
   const referentiel: ReferentielDuPupitre = {
