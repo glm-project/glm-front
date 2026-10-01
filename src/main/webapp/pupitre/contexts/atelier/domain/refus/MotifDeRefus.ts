@@ -2,13 +2,12 @@ export const CODES_DE_REFUS_D_ATELIER = [
   'suivi-d-atelier-introuvable',
   'operateur-introuvable',
   'poste-de-travail-introuvable',
-  'aucune-journee-de-travail-en-cours',
   'operateur-non-habilite',
   'suivi-d-atelier-cloture',
   'transition-d-atelier-interdite',
-  'transition-de-presence-interdite',
-  'journee-de-travail-deja-ouverte',
   'saisie-concurrente',
+  'activite-visee-introuvable',
+  'activite-visee-incoherente',
 ] as const;
 
 export type CodeDeRefusDAtelier = (typeof CODES_DE_REFUS_D_ATELIER)[number];

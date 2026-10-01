@@ -26,6 +26,7 @@ export class ElementDePointage {
 }
 
 export interface VueDePointage {
+  readonly conflits: readonly { readonly id: string; readonly numero: NumeroDElement }[];
   readonly moules: readonly ElementDePointage[];
   readonly ordresDeFabrication: readonly ElementDePointage[];
 }

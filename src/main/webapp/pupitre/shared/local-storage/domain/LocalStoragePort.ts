@@ -3,5 +3,7 @@ export abstract class LocalStoragePort {
 
   abstract update<T>(cle: string, initial: T, change: (value: T) => T): Promise<T>;
 
+  abstract discardDocumentsWithPrefix(prefix: string): Promise<void>;
+
   abstract lock<T>(cle: string, action: () => Promise<T>): Promise<T>;
 }

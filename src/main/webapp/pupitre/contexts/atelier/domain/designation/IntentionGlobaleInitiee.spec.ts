@@ -1,5 +1,5 @@
 import { Entreprise } from '../journal-du-pupitre/Entreprise';
-import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, JournalDuPupitre, SuiviDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
+import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, SuiviDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { IntentionGlobaleDAtelier } from './fenetre-operateur/ContexteDeGesteDAtelier';
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
@@ -8,6 +8,7 @@ import { Matricule } from './Matricule';
 
 const racineFixture = { id: '11111111-2222-4333-8444-55550000000a', dateDeSurvenue: '2026-09-05T12:00:00.000Z' };
 const suiviFixture = (id: string, activites: SuiviDuPupitre['activites']): SuiviDuPupitre => ({
+  conflits: [],
   id,
   nom: id,
   etat: activites.length === 0 ? 'EN_ATTENTE' : 'EN_COURS',
@@ -24,17 +25,32 @@ const journalFixture = (suivis: readonly SuiviDuPupitre[]): JournalDuPupitre => 
         nom: 'Dupont',
         prenom: 'Jean',
         matricule: '049',
-        etat: 'PRESENT',
         postes: [{ id: 'tour', libelle: 'Tour' }],
-        evenements: [],
       },
     ],
     suivis,
   },
 });
 const atelierAuTravailFixture = journalFixture([
-  suiviFixture('of-204', [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z', posteId: 'tour' }]),
-  suiviFixture('of-205', [{ operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T09:00:00Z' }]),
+  suiviFixture('of-204', [
+    {
+      ouverture: 'activite-fixture-8',
+      echeance: '2026-09-05T21:00:00.000Z',
+      operateurId: 'jean',
+      categorie: 'TRAVAIL',
+      depuis: '2026-09-05T08:00:00Z',
+      posteId: 'tour',
+    },
+  ]),
+  suiviFixture('of-205', [
+    {
+      ouverture: 'activite-fixture-9',
+      echeance: '2026-09-05T22:00:00.000Z',
+      operateurId: 'jean',
+      categorie: 'NON_CONFORMITE',
+      depuis: '2026-09-05T09:00:00Z',
+    },
+  ]),
 ]);
 const atelierAuReposFixture = journalFixture([suiviFixture('of-204', [])]);
 
@@ -66,12 +82,12 @@ describe('IntentionGlobaleInitiee', () => {
       Date.parse(racineFixture.dateDeSurvenue),
       new IdentiteDeFenetre(1),
     );
-  const whenPreparing = (intention: IntentionGlobaleDAtelier, fenetre: FenetreOperateur): readonly GesteDAtelier[] =>
+  const whenPreparing = (intention: IntentionGlobaleDAtelier, fenetre: FenetreOperateur): readonly GesteDePointage[] =>
     fenetre.capture(new IntentionGlobaleInitiee(intention, racineFixture).prepare(fenetre));
-  const thenEverySuspensionBelongsToThePause = (gestes: readonly GesteDAtelier[], pause: string): void => {
-    expect(gestes.map(geste => (geste.nature === 'POINTAGE' ? geste.suspension?.pause : geste.nature))).toEqual([pause, pause]);
+  const thenEverySuspensionBelongsToThePause = (gestes: readonly GesteDePointage[], pause: string): void => {
+    expect(gestes.map(geste => geste.suspension?.pause)).toEqual([pause, pause]);
   };
-  const thenNoGestureIsRecorded = (gestes: readonly GesteDAtelier[]): void => {
+  const thenNoGestureIsRecorded = (gestes: readonly GesteDePointage[]): void => {
     expect(gestes).toEqual([]);
   };
 });

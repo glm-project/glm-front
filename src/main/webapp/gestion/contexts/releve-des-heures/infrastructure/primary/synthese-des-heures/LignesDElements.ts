@@ -4,24 +4,25 @@ import { IntervalleDActivite } from '../../../domain/element/IntervalleDActivite
 import { PosteDeLElement } from '../../../domain/element/PosteDeLElement';
 import { PosteReleveId } from '../../../domain/element/PosteReleveId';
 import { PointageDElement } from '../../../domain/releve/PointageDElement';
-import { TypeDePointageDElement } from '../../../domain/releve/TypeDePointage';
+import { TypeDePointage } from '../../../domain/releve/TypeDePointage';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
 import { minutesDeDebut, minutesDeFin } from './AxeDuJour';
 import { JourSurSonAxe } from './JourSurSonAxe';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
-export type StyleDeBarreDActivite = 'travail' | 'nc' | 'en-cours';
+export type StyleDeBarreDActivite = 'travail' | 'nc' | 'en-cours' | 'a-resoudre';
 
 export interface BarreDActivite {
   readonly style: StyleDeBarreDActivite;
   readonly gauche: number;
   readonly largeur: number | undefined;
   readonly enonce: string;
-  readonly presumee: boolean;
+  readonly automatique: boolean;
+  readonly etat: string | undefined;
 }
 
-export type TypeDeMarque = 'debut' | 'nc' | 'fin' | 'clos';
+export type TypeDeMarque = 'debut' | 'nc' | 'fin';
 
 export interface MarqueDePointage {
   readonly type: TypeDeMarque;
@@ -51,25 +52,46 @@ export interface LigneDeFrise {
   readonly postes: string;
   readonly total: string;
   readonly nonConformite: string | undefined;
-  readonly presume: string | undefined;
 }
 
 type Selection = (poste: PosteReleveId | undefined) => boolean;
 
 const STYLES_D_ACTIVITE: Record<CategorieDActivite, StyleDeBarreDActivite> = { TRAVAIL: 'travail', NON_CONFORMITE: 'nc' };
 
-const MARQUES: Record<TypeDePointageDElement, TypeDeMarque> = { DEBUT: 'debut', NON_CONFORMITE: 'nc', FIN: 'fin' };
+const MARQUES: Record<TypeDePointage, TypeDeMarque> = { DEBUT: 'debut', NON_CONFORMITE: 'nc', FIN: 'fin' };
 
 const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, intervalle: IntervalleDActivite): BarreDActivite => {
   const gauche = axe.pourcentDe(minutesDeDebut(intervalle.debut));
+  if (intervalle.activite.etat === 'A_RESOUDRE') {
+    return {
+      style: 'a-resoudre',
+      gauche,
+      largeur: undefined,
+      automatique: false,
+      etat: LIBELLES.legende.aResoudre,
+      enonce: LIBELLES.enonceDActiviteAResoudre({
+        element,
+        jour: jour.jour,
+        categorie: intervalle.categorie,
+        debut: intervalle.activite.debut,
+      }),
+    };
+  }
   if (intervalle.estEnCours()) {
     const enonce = LIBELLES.enonceDActiviteEnCours({
       element,
       jour: jour.jour,
       categorie: intervalle.categorie,
-      debut: intervalle.debut,
+      debut: intervalle.activite.debut,
     });
-    return { style: 'en-cours', gauche, largeur: undefined, enonce, presumee: false };
+    return {
+      style: 'en-cours',
+      gauche,
+      largeur: undefined,
+      enonce,
+      automatique: false,
+      etat: LIBELLES.activiteEnCours(intervalle.activite.debut, jour.jour),
+    };
   }
   const fin = intervalle.finOuDebut();
   const enonce = LIBELLES.enonceDActivite({
@@ -78,15 +100,15 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
     categorie: intervalle.categorie,
     debut: intervalle.debut,
     fin,
-    presumee: intervalle.presumee,
-    arreteSansFinPointee: jour.estArreteSansFinPointee(intervalle),
   });
+  const etat = intervalle.activite.etat === 'TERMINEE_AUTOMATIQUEMENT' ? LIBELLES.finAutomatique(intervalle.activite.fin) : undefined;
   return {
     style: STYLES_D_ACTIVITE[intervalle.categorie],
     gauche,
     largeur: axe.pourcentDe(minutesDeFin(intervalle.debut, fin)) - gauche,
-    enonce,
-    presumee: intervalle.presumee,
+    enonce: etat === undefined ? enonce : `${enonce}, ${etat}`,
+    automatique: etat !== undefined,
+    etat,
   };
 };
 
@@ -97,23 +119,6 @@ const marqueDe = ({ axe, pointageChoisi }: JourSurSonAxe, pointage: PointageDEle
   choisie: pointage === pointageChoisi,
 });
 
-const marquesDeCloture = (
-  element: ElementDuReleve,
-  { jour, axe, pointageChoisi }: JourSurSonAxe,
-  retient: Selection,
-): readonly MarqueDePointage[] =>
-  jour.pointagesDePresence().flatMap(depart =>
-    jour
-      .effetDe(depart)
-      .clotures.filter(cible => cible.element.estLeMeme(element.id) && retient(cible.poste))
-      .map(() => ({
-        type: 'clos' as const,
-        gauche: axe.pourcentDe(minutesDeDebut(depart.instant)),
-        titre: LIBELLES.clotureParLeDepart(depart.instant),
-        choisie: depart === pointageChoisi,
-      })),
-  );
-
 const marquesDe = (element: ElementDuReleve, jourSurAxe: JourSurSonAxe, retient: Selection): readonly MarqueDePointage[] =>
   jourSurAxe.ouvert
     ? [
@@ -121,7 +126,6 @@ const marquesDe = (element: ElementDuReleve, jourSurAxe: JourSurSonAxe, retient:
           .pointagesDe(element.id)
           .filter(pointage => retient(pointage.cible.poste))
           .map(pointage => marqueDe(jourSurAxe, pointage)),
-        ...marquesDeCloture(element, jourSurAxe, retient),
       ]
     : [];
 
@@ -161,6 +165,5 @@ export const ligneDeFrise = (element: ElementDuReleve, jours: readonly JourSurSo
   libelle: element.description ?? '',
   postes: LIBELLES.postes(element.postes),
   total: LIBELLES.duree(element.duree),
-  nonConformite: element.dureeNonConformite.estNulle() ? undefined : LIBELLES.nonConformite(element.dureeNonConformite),
-  presume: element.dureePresumee.estNulle() ? undefined : LIBELLES.presumees(element.dureePresumee),
+  nonConformite: element.dureeNonConformite.estNul() ? undefined : LIBELLES.nonConformite(element.dureeNonConformite),
 });

@@ -6,16 +6,16 @@ import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
   EvenementsDuJournal,
-  GesteDAtelier,
+  GesteDePointage,
   JournalDuPupitre,
   refusePublication,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { BilanDePublication } from '@/pupitre/contexts/atelier/domain/synchronisation/BilanDePublication';
-import { decideReplay, operationFor } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
-import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
+import { decideReplay } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
+import { err, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { inject, Injectable } from '@angular/core';
 
@@ -126,7 +126,7 @@ export class PupitreSynchronization {
         await this.authentication.synchronizeSession();
         return this.push(entreprise, evenement.geste);
       });
-      return result.ok ? acceptPublication(evenement.geste) : refusePublication(evenement.geste, result.error);
+      return result.ok ? acceptPublication(evenement.geste, result.value.conflits) : refusePublication(evenement.geste, result.error);
     } catch (failure: unknown) {
       this.errorHandler.handleError(failure);
       await this.markDisconnected(entreprise, publish);
@@ -146,31 +146,30 @@ export class PupitreSynchronization {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: Entreprise, geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
+  private async push(entreprise: Entreprise, geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
     this.requireExchange(entreprise);
     const result = await this.serveur.send(geste);
     if (result.ok) {
-      return ok(undefined);
+      return result;
     }
-    if (decideReplay(operationFor(geste), result.error) === 'RELIRE_ET_REJOUER') {
+    if (decideReplay(result.error) === 'RELIRE_ET_REJOUER') {
       return this.retryAfterConcurrence(entreprise, geste);
     }
-    return this.absorbOrRefuse(geste, result.error);
+    return err(result.error);
   }
 
-  private async retryAfterConcurrence(entreprise: Entreprise, geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
+  private async retryAfterConcurrence(
+    entreprise: Entreprise,
+    geste: GesteDePointage,
+  ): Promise<Result<PublicationAcceptee, RefusDePublication>> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);
     const result = await this.serveur.send(geste);
     if (result.ok) {
-      return ok(undefined);
+      return result;
     }
-    return this.absorbOrRefuse(geste, result.error);
-  }
-
-  private absorbOrRefuse(geste: GesteDAtelier, refusal: RefusDePublication): Result<void, RefusDePublication> {
-    return decideReplay(operationFor(geste), refusal, 'REJEU') === 'ACCEPTER' ? ok(undefined) : err(refusal);
+    return err(result.error);
   }
 
   private requireExchange(entreprise: Entreprise): void {

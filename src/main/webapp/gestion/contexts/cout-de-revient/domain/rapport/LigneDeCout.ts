@@ -9,6 +9,7 @@ export interface FicheDeLigne {
   readonly temps: TempsPasse;
   readonly cout: Cout;
   readonly nonConformites: readonly PeriodeDeTravail[];
+  readonly finsAutomatiques: readonly PeriodeDeTravail[];
 }
 
 export class LigneDeCout {
@@ -17,6 +18,7 @@ export class LigneDeCout {
   readonly temps: TempsPasse;
   readonly cout: Cout;
   readonly nonConformites: readonly PeriodeDeTravail[];
+  readonly finsAutomatiques: readonly PeriodeDeTravail[];
 
   constructor(fiche: FicheDeLigne) {
     this.nature = fiche.nature;
@@ -24,6 +26,7 @@ export class LigneDeCout {
     this.temps = fiche.temps;
     this.cout = fiche.cout;
     this.nonConformites = [...fiche.nonConformites];
+    this.finsAutomatiques = [...fiche.finsAutomatiques];
   }
 
   estSansPoste(): boolean {

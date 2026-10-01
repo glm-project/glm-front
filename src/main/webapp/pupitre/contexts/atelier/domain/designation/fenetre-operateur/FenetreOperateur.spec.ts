@@ -3,8 +3,6 @@ import { Entreprise } from '../../journal-du-pupitre/Entreprise';
 import {
   ActiviteDuPupitre,
   EMPTY_JOURNAL_DU_PUPITRE,
-  EtatDePresence,
-  GesteDAtelier,
   GesteDePointage,
   IdentiteDuGeste,
   JournalDuPupitre,
@@ -13,10 +11,10 @@ import {
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
 import { Matricule } from '../Matricule';
 import { NumeroDElement } from '../NumeroDElement';
+import { CommandesGlobales } from './CommandesGlobales';
 import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
 import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
-import { PresenceDeLOperateur, SituationDeLOperateur } from './PresenceDeLOperateur';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -27,16 +25,24 @@ const requiredFixture = <T>(value: T | null | undefined, description: string): T
   return value;
 };
 
-const acceptedFixture = (geste: GesteDAtelier): JournalDuPupitre['evenements'][number] => ({ geste, etat: 'ACCEPTE' });
+const acceptedFixture = (geste: GesteDePointage): JournalDuPupitre['evenements'][number] => ({ geste, etat: 'ACCEPTE' });
 
 const travailAuTourFixture: ActiviteDuPupitre = {
+  ouverture: 'activite-fixture-14',
+  echeance: '2026-09-05T19:00:00.000Z',
   operateurId: 'jean',
   categorie: 'TRAVAIL',
   depuis: '2026-09-05T06:00:00Z',
   posteId: 'tour',
 };
 
-const nonConformiteFixture: ActiviteDuPupitre = { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' };
+const nonConformiteFixture: ActiviteDuPupitre = {
+  ouverture: 'activite-fixture-15',
+  echeance: '2026-09-05T21:30:00.000Z',
+  operateurId: 'jean',
+  categorie: 'NON_CONFORMITE',
+  depuis: '2026-09-05T08:30:00Z',
+};
 
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -47,38 +53,71 @@ const vueFixture: JournalDuPupitre = {
         nom: 'Dupont',
         prenom: 'Jean',
         matricule: '049',
-        etat: 'ABSENT',
         postes: [{ id: 'tour', libelle: 'Tour' }],
-        evenements: [],
       },
     ],
     suivis: [
       {
+        conflits: [],
         id: 'moule-1015',
         nom: 'PR-2026-000015',
         reference: '1015',
         etat: 'EN_COURS',
         type: 'PRODUIT',
         activites: [
-          { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T06:00:00Z', posteId: 'tour' },
-          { operateurId: 'marc', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T05:00:00Z' },
+          {
+            ouverture: 'activite-fixture-16',
+            echeance: '2026-09-05T19:00:00.000Z',
+            operateurId: 'jean',
+            categorie: 'TRAVAIL',
+            depuis: '2026-09-05T06:00:00Z',
+            posteId: 'tour',
+          },
+          {
+            ouverture: 'activite-fixture-17',
+            echeance: '2026-09-05T18:00:00.000Z',
+            operateurId: 'marc',
+            categorie: 'NON_CONFORMITE',
+            depuis: '2026-09-05T05:00:00Z',
+          },
         ],
         evenements: [],
       },
       {
+        conflits: [],
         id: 'of-204',
         nom: 'OF-2026-000204',
         reference: '204',
         etat: 'EN_COURS',
         type: 'ORDRE_DE_FABRICATION',
         activites: [
-          { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' },
-          { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T09:30:00Z', posteId: 'tour' },
-          { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:45:00Z' },
+          {
+            ouverture: 'activite-fixture-18',
+            echeance: '2026-09-05T21:30:00.000Z',
+            operateurId: 'jean',
+            categorie: 'NON_CONFORMITE',
+            depuis: '2026-09-05T08:30:00Z',
+          },
+          {
+            ouverture: 'activite-fixture-19',
+            echeance: '2026-09-05T22:30:00.000Z',
+            operateurId: 'jean',
+            categorie: 'TRAVAIL',
+            depuis: '2026-09-05T09:30:00Z',
+            posteId: 'tour',
+          },
+          {
+            ouverture: 'activite-fixture-20',
+            echeance: '2026-09-05T21:45:00.000Z',
+            operateurId: 'jean',
+            categorie: 'NON_CONFORMITE',
+            depuis: '2026-09-05T08:45:00Z',
+          },
         ],
         evenements: [],
       },
       {
+        conflits: [],
         id: 'of-1015',
         nom: 'OF-2026-000042',
         etat: 'EN_ATTENTE',
@@ -107,6 +146,210 @@ describe('FenetreOperateur', () => {
     identities = new Map<string, string>();
   });
 
+  it('should schedule the earliest eligible personal deadline and no deadline once every activity expires', () => {
+    const deadlines = [
+      fenetre.prochaineEcheance(),
+      fenetre.afterEvaluatingActivities(Date.parse('2026-09-05T19:00:00Z')).prochaineEcheance(),
+      fenetre.afterEvaluatingActivities(Date.parse('2026-09-05T22:30:00Z')).prochaineEcheance(),
+    ];
+
+    expect(deadlines).toEqual([Date.parse('2026-09-05T19:00:00Z'), Date.parse('2026-09-05T21:30:00Z'), undefined]);
+  });
+
+  it('should keep another operator conflict separate from the designated operator and unresolved conflicts', () => {
+    const reference = requiredFixture(vueFixture.referentiel, 'reference');
+    const owners = ['jean', 'marie', undefined];
+    const window = givenAWindowOpenedOn({
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        ...reference,
+        suivis: reference.suivis.map((suivi, index) => ({
+          ...suivi,
+          activites: [],
+          conflits: [
+            {
+              ...(owners[index] === undefined ? {} : { operateurId: owners[index] }),
+              activites: [],
+              pointages: ['conflit-' + suivi.id],
+            },
+          ],
+        })),
+      },
+    });
+
+    const pointage = window.pointage();
+
+    expect(pointage.conflits.map(conflit => conflit.id)).toEqual(['moule-1015', 'of-1015']);
+  });
+
+  it('should request no resumption invalidation when accepting an ordinary opening', () => {
+    const decision = whenDeciding('of-1015', 'PRINCIPALE');
+
+    const accepted = fenetre.prepareAcceptance(gesturesOf(decision));
+
+    expect(accepted).not.toHaveProperty('repriseAEffacer');
+    expect(accepted.gestes).toMatchObject([{ intention: 'OUVERTURE', suiviId: 'of-1015' }]);
+  });
+
+  it('should capture only one activity opening for the first operator action', () => {
+    const decision = whenDeciding('of-1015', 'PRINCIPALE');
+
+    const gestes = captureGestures(decision);
+
+    expect(gestes).toHaveLength(1);
+    expect(gestes[0]).toMatchObject({ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT' });
+  });
+
+  it('should finish the stable original opening of the displayed activity', () => {
+    const corrected = { ...travailAuTourFixture, ouverture: 'original-opening' };
+    const window = givenAWindowWithActivities({ 'moule-1015': [corrected] });
+
+    const decision = whenDecidingWith(window, 'moule-1015', 'PRINCIPALE');
+
+    expect(captureGestures(decision)).toMatchObject([{ intention: 'FIN', type: 'FIN', cible: 'original-opening' }]);
+  });
+
+  it('should decide a new opening at the inclusive thirteen-hour deadline even before any timer callback', () => {
+    const window = givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture] });
+    const instant = Date.parse('2026-09-05T19:00:00Z');
+    const identite = { id: 'nouvelle-ouverture', dateDeSurvenue: '2026-09-05T19:00:00Z' };
+
+    const result = window.afterDeciding('moule-1015', 'PRINCIPALE', () => identite, instant);
+
+    expect(captureGestures(result.decision)).toEqual([
+      {
+        ...identite,
+        nature: 'POINTAGE',
+        operateurId: 'jean',
+        suiviId: 'moule-1015',
+        posteId: 'tour',
+        type: 'DEBUT',
+        intention: 'OUVERTURE',
+      },
+    ]);
+  });
+
+  it('should retain the frozen duration while reevaluating an activity before its deadline', () => {
+    const window = givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture] });
+
+    const reevaluated = window.afterEvaluatingActivities(Date.parse('2026-09-05T18:59:59.999Z'));
+
+    expect(
+      reevaluated
+        .pointage()
+        .moules.find(element => element.id === 'moule-1015')
+        ?.dureeMs(),
+    ).toBe(3 * 60 * 60 * 1000);
+    expect(reevaluated.prochaineEcheance()).toBe(Date.parse('2026-09-05T19:00:00Z'));
+  });
+
+  it('should keep the target and occurrence of a finish initiated before expiry when it is accepted afterwards', () => {
+    const window = givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture] });
+    const instant = Date.parse('2026-09-05T18:59:59.999Z');
+    const identite = { id: 'fin-avant-echeance', dateDeSurvenue: new Date(instant).toISOString() };
+    const prepared = window.afterDeciding('moule-1015', 'PRINCIPALE', () => identite, instant);
+
+    const captured = prepared.fenetre.afterEvaluatingActivities(instant + 1_000).prepareAcceptance(gesturesOf(prepared.decision));
+
+    expect(captured.gestes).toEqual([
+      {
+        ...identite,
+        nature: 'POINTAGE',
+        operateurId: 'jean',
+        suiviId: 'moule-1015',
+        posteId: 'tour',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: travailAuTourFixture.ouverture,
+      },
+    ]);
+  });
+
+  it('should pause only known interpretable nonexpired activities while retaining conflict diagnostics', () => {
+    const journal = structuredClone(vueFixture);
+    const reference = requiredFixture(journal.referentiel, 'reference');
+    const first = requiredFixture(reference.suivis[0], 'first item');
+    const window = givenAWindowOpenedOn({
+      ...journal,
+      referentiel: {
+        ...reference,
+        suivis: [
+          {
+            ...first,
+            activites: [
+              travailAuTourFixture,
+              { ...travailAuTourFixture, ouverture: 'encore-active', posteId: 'fraiseuse', echeance: '2026-09-05T22:00:00Z' },
+              { ...travailAuTourFixture, ouverture: 'contradictoire', echeance: '2026-09-05T22:00:00Z' },
+            ],
+            conflits: [{ operateurId: 'jean', activites: ['contradictoire'], pointages: ['contradiction'] }],
+          },
+        ],
+      },
+    });
+    const intention = new IntentionGlobaleInitiee('PAUSE', {
+      id: '11111111-2222-4333-8444-55550000000a',
+      dateDeSurvenue: '2026-09-05T19:00:00Z',
+    });
+
+    const gestes = intention.prepare(window).capture();
+
+    expect(gestes).toMatchObject([{ intention: 'FIN', cible: 'encore-active', posteId: 'fraiseuse' }]);
+    expect(gestes).toHaveLength(1);
+    expect(window.pointage().conflits.map(conflit => conflit.numero.toString())).toEqual([first.reference ?? first.nom]);
+  });
+
+  it('should allow only a new opening for an activity in conflict while keeping another workstation actionable', () => {
+    const reference = requiredFixture(vueFixture.referentiel, 'reference');
+    const suivi = requiredFixture(
+      reference.suivis.find(item => item.id === 'moule-1015'),
+      'item',
+    );
+    const window = givenAWindowOpenedOn({
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        ...reference,
+        suivis: [
+          {
+            ...suivi,
+            activites: [travailAuTourFixture],
+            conflits: [{ operateurId: 'jean', activites: [travailAuTourFixture.ouverture], pointages: ['contradiction'] }],
+          },
+        ],
+      },
+    });
+
+    const decision = window.afterDeciding(suivi.id, 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+
+    expect(captureGestures(decision.decision)).toMatchObject([{ intention: 'OUVERTURE', type: 'NON_CONFORMITE' }]);
+    expect(window.pointage().conflits).toHaveLength(1);
+  });
+
+  it('should expose a conflict without an activity or a workstation and omit another operator conflict', () => {
+    const reference = requiredFixture(vueFixture.referentiel, 'reference');
+    const suivi = requiredFixture(reference.suivis[0], 'item');
+    const window = givenAWindowOpenedOn({
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        ...reference,
+        suivis: [
+          {
+            ...suivi,
+            activites: [],
+            conflits: [
+              { activites: [], pointages: ['inconnu'] },
+              { operateurId: 'marie', activites: [], pointages: ['autre'] },
+            ],
+          },
+        ],
+      },
+    });
+
+    const pointage = window.pointage();
+
+    expect(pointage.conflits).toEqual([{ id: suivi.id, numero: NumeroDElement.from(suivi) }]);
+    expect(pointage.moules[0]?.isActive()).toBe(false);
+  });
+
   it('should resolve the operator from the company referential', () => {
     const operateur = whenResolvingTheOperator();
 
@@ -121,8 +364,10 @@ describe('FenetreOperateur', () => {
 
     const pending = fenetre.afterIntendingGlobal(globale);
 
-    expect(() => pending.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture)).toThrow('Une commande globale est en cours.');
-    expect(() => pending.afterChoosingPoste('of-1015', 'PRINCIPALE', 'tour', identifyFixture)).toThrow(
+    expect(() => pending.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'))).toThrow(
+      'Une commande globale est en cours.',
+    );
+    expect(() => pending.afterChoosingPoste('of-1015', 'PRINCIPALE', 'tour', identifyFixture, Date.parse('2026-09-05T09:00:00Z'))).toThrow(
       'Une commande globale est en cours.',
     );
     expect(() => pending.afterIntendingGesture()).toThrow('Une commande globale est en cours.');
@@ -150,7 +395,7 @@ describe('FenetreOperateur', () => {
     thenWorkstationIsRefused(refusal);
   });
 
-  it('should decide the implicit arrival when executing each capture while retaining identities from the operator action', () => {
+  it('should retain activity identities fixed at the operator action while capture waits', () => {
     const first = givenAPreparedPointage();
     const second = givenAPreparedPointage();
     const preparedIdentities = givenTheRecordedIdentities();
@@ -159,70 +404,54 @@ describe('FenetreOperateur', () => {
     const firstGestures = whenAcceptingPointage(first);
     const secondGestures = whenCapturingPointage(second);
 
-    thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(firstGestures, ['POINTAGE']);
     thenGesturesAre(secondGestures, ['POINTAGE']);
     thenIdentitiesWerePreparedBeforeExecution([...firstGestures, ...secondGestures], preparedIdentities);
     thenOpeningSharesBusinessTime(firstGestures);
   });
 
-  it('should keep requiring arrival until a business command has been committed', () => {
-    const first = givenAPreparedPointage();
-    const committed = givenAPreparedPointage();
-    const retry = givenAPreparedPointage();
-
-    const firstGestures = whenCapturingPointage(first);
-    const committedGestures = whenAcceptingPointage(committed);
-    const retriedGestures = whenCapturingPointage(retry);
-
-    thenGesturesAre(firstGestures, ['ARRIVEE', 'POINTAGE']);
-    thenGesturesAre(committedGestures, ['ARRIVEE', 'POINTAGE']);
-    thenGesturesAre(retriedGestures, ['POINTAGE']);
-  });
-
-  it('should assure arrival before a first finish', () => {
+  it('should capture a first targeted finish', () => {
     const fin = whenDeciding('moule-1015', 'PRINCIPALE');
 
     const gestes = captureGestures(fin);
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(gestes, ['POINTAGE']);
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should assure arrival before moving work to non conformity', () => {
+  it('should transition work to non conformity', () => {
     const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
 
     const gestes = captureGestures(nonConformite);
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE']);
+    thenGesturesAre(gestes, ['POINTAGE']);
     thenPointageTypesAre(nonConformite, ['NON_CONFORMITE']);
   });
 
-  it('should move non conformity back to work after assuring arrival', () => {
+  it('should transition non conformity back to work', () => {
     const travail = whenDeciding('of-204', 'SECONDAIRE');
 
     const gestes = captureGestures(travail);
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE']);
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
     thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
   });
 
-  it('should finish every personal activity with its workstation before departure when stopping all', () => {
-    const toutArreter = fenetre.prepareToutArreter(identifyFixture);
+  it('should finish every personal activity on its workstation when stopping all', () => {
+    const toutArreter = new IntentionGlobaleInitiee('TOUT_ARRETER', {
+      id: '11111111-2222-4333-8444-55550000000a',
+      dateDeSurvenue: '2026-09-05T08:00:00.000Z',
+    }).prepare(fenetre);
 
     const gestes = toutArreter.capture();
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
-    expect(
-      gestes
-        .filter(geste => geste.nature === 'POINTAGE')
-        .map(geste => ({ suiviId: geste.suiviId, type: geste.type, posteId: geste.posteId })),
-    ).toEqual([
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
+    expect(gestes.map(geste => ({ suiviId: geste.suiviId, type: geste.type, posteId: geste.posteId }))).toEqual([
       { suiviId: 'moule-1015', type: 'FIN', posteId: 'tour' },
       { suiviId: 'of-204', type: 'FIN', posteId: undefined },
       { suiviId: 'of-204', type: 'FIN', posteId: 'tour' },
       { suiviId: 'of-204', type: 'FIN', posteId: undefined },
     ]);
-    expect(gestes.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(new Set(gestes.map(geste => geste.dateDeSurvenue))).toEqual(new Set(['2026-09-05T08:00:00.000Z']));
   });
@@ -239,14 +468,14 @@ describe('FenetreOperateur', () => {
     ]);
   });
 
-  it('should reopen every suspended activity on its workstation and in its category after assuring arrival', () => {
+  it('should reopen every suspended activity on its workstation and in its category', () => {
     const paused = givenAnAcceptedPause(
       givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
     );
 
     const gestes = paused.capture(paused.prepareReprise(identifyFixture));
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'POINTAGE', 'POINTAGE']);
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
     thenPointagesAre(gestes, [
       { suiviId: 'moule-1015', type: 'DEBUT', posteId: 'tour', suspension: undefined },
       { suiviId: 'of-204', type: 'NON_CONFORMITE', posteId: undefined, suspension: undefined },
@@ -269,7 +498,7 @@ describe('FenetreOperateur', () => {
     ]);
   });
 
-  it('should reopen a pause without repeating an arrival already assured in the window', () => {
+  it('should reopen a pause after another activity was accepted in the window', () => {
     const working = givenAnAcceptedDecision(givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture] }), 'of-1015', 'PRINCIPALE');
     const paused = givenAnAcceptedPause(working);
 
@@ -278,41 +507,41 @@ describe('FenetreOperateur', () => {
     thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
   });
 
-  it('should finish no activity and depart when stopping all during a pause, which ends the pause', () => {
+  it('should clear the resumption without a finish when stopping all during a pause', () => {
     const paused = givenAnAcceptedPause(
       givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture], 'of-204': [nonConformiteFixture] }),
     );
 
-    const gestes = paused.capture(paused.prepareToutArreter(identifyFixture));
-    const stopped = paused.afterAccept(gestes);
+    const acceptation = paused.prepareAcceptance(paused.prepareToutArreter(identifyFixture));
+    const stopped = acceptation.applyTo(paused);
+    const gestes = acceptation.gestes;
 
-    thenGesturesAre(gestes, ['ARRIVEE', 'PRESENCE']);
-    thenPresencePermits(whenReadingThePresence(stopped), 'REPRENDRE', false);
+    thenGesturesAre(gestes, []);
+    thenGlobalCommandIsPermitted(whenReadingGlobalCommands(stopped), 'REPRENDRE', false);
   });
 
-  it('should not repeat arrival before stopping all after a first accepted command', () => {
+  it('should stop every activity after another accepted command', () => {
     fenetre = givenAnAcceptedDecision(fenetre, 'of-1015', 'PRINCIPALE');
 
     const toutArreter = fenetre.capture(fenetre.prepareToutArreter(identifyFixture));
 
-    thenGesturesAre(toutArreter, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'PRESENCE']);
+    thenGesturesAre(toutArreter, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
   });
 
-  it('should assure arrival then depart when stopping all without a visible activity', () => {
+  it('should record no activity gesture when stopping all without an activity', () => {
     fenetre = fenetre.afterReconciling(Entreprise.of('entreprise-a'), EMPTY_JOURNAL_DU_PUPITRE);
 
     const toutArreter = fenetre.prepareToutArreter(identifyFixture).capture();
 
-    thenGesturesAre(toutArreter, ['ARRIVEE', 'PRESENCE']);
-    expect(toutArreter.at(-1)).toMatchObject({ nature: 'PRESENCE', type: 'DEPART' });
+    thenGesturesAre(toutArreter, []);
   });
 
-  it('should assure arrival again when starting an activity after stopping all in the same operator window', () => {
+  it('should open an activity after stopping all in the same operator window', () => {
     const stoppedWindow = givenAnAcceptedStopWithoutActivities();
 
     const gestes = whenStartingAnActivityIn(stoppedWindow);
 
-    thenArrivalPrecedesStart(gestes);
+    thenTheFirstGestureIsAnOpening(gestes);
   });
 
   it('should expose a refused finish from the current global stop batch as TOUT ARRÊTER', () => {
@@ -321,7 +550,7 @@ describe('FenetreOperateur', () => {
     const gestes = acceptance.gestes;
     fenetre = acceptance.applyTo(fenetre);
     const fin = requiredFixture(
-      gestes.find(geste => geste.nature === 'POINTAGE' && geste.type === 'FIN'),
+      gestes.find(geste => geste.type === 'FIN'),
       'finish gesture',
     );
 
@@ -336,43 +565,13 @@ describe('FenetreOperateur', () => {
     });
   });
 
-  it('should expose only a refused departure when it is the latest refusal from the current global stop batch', () => {
-    const decision = fenetre.prepareToutArreter(identifyFixture);
-    const acceptance = fenetre.prepareAcceptance(decision);
-    const fin = requiredFixture(
-      acceptance.gestes.find(geste => geste.nature === 'POINTAGE' && geste.type === 'FIN'),
-      'finish gesture',
-    );
-    const depart = requiredFixture(
-      acceptance.gestes.find(geste => geste.nature === 'PRESENCE'),
-      'departure gesture',
-    );
-    fenetre = acceptance.applyTo(fenetre);
-
-    whenReconciling({
-      ...structuredClone(vueFixture),
-      evenements: [
-        { geste: fin, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } },
-        { geste: depart, etat: 'REFUSE', refus: { code: 'presence-interdite', message: 'Le départ est refusé.' } },
-      ],
-    });
-
-    expect(fenetre.refusal()).toEqual({
-      contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
-      message: 'Le départ est refusé.',
-    });
-  });
-
   it.each([
     { intention: 'PAUSE' as const, prepare: (window: FenetreOperateur) => window.preparePause(identifyFixture, 'pause-de-midi') },
     { intention: 'REPRENDRE' as const, prepare: (window: FenetreOperateur) => window.prepareReprise(identifyFixture) },
   ])('should expose a refused pointage of $intention with its originating global command', ({ intention, prepare }) => {
     const window = givenAWindowReadyFor(intention);
     const acceptance = window.prepareAcceptance(prepare(window));
-    const pointage = requiredFixture(
-      acceptance.gestes.find(candidate => candidate.nature === 'POINTAGE'),
-      'pointage of the global command',
-    );
+    const pointage = requiredFixture(acceptance.gestes[0], 'pointage of the global command');
 
     const reconciled = acceptance.applyTo(window).afterReconciling(Entreprise.of('entreprise-a'), {
       ...window.snapshot(),
@@ -387,7 +586,7 @@ describe('FenetreOperateur', () => {
 
   it('should keep a refusal born in an earlier operator window silent', () => {
     const previousGesture = requiredFixture(
-      pointagesOf(fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture).decision)[0],
+      pointagesOf(fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z')).decision)[0],
       'previous pointage',
     );
     const journalWithPreviousRefusal: JournalDuPupitre = {
@@ -402,14 +601,11 @@ describe('FenetreOperateur', () => {
   });
 
   it('should not restore an earlier batch context when its local acceptance completes after a newer intent', () => {
-    const earlier = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture);
+    const earlier = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     const acceptance = earlier.fenetre.prepareAcceptance(gesturesOf(earlier.decision));
     const newerIntent = earlier.fenetre.afterIntendingGesture();
     const acceptedAfterNewerIntent = acceptance.applyTo(newerIntent);
-    const refusedGesture = requiredFixture(
-      acceptance.gestes.find(geste => geste.nature === 'POINTAGE'),
-      'earlier pointage',
-    );
+    const refusedGesture = requiredFixture(acceptance.gestes[0], 'earlier pointage');
 
     fenetre = acceptedAfterNewerIntent.afterReconciling(Entreprise.of('entreprise-a'), {
       ...structuredClone(vueFixture),
@@ -475,7 +671,7 @@ describe('FenetreOperateur', () => {
 
   it('should preserve an earlier window while recognizing a refusal reconciled before durable acceptance', () => {
     const previous = fenetre;
-    const transition = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture);
+    const transition = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     const refused = givenTheDecisionWasRefused(gesturesOf(transition.decision).capture());
 
     const reconciled = transition.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
@@ -581,14 +777,23 @@ describe('FenetreOperateur', () => {
     const onlyNcJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
         suivis: [
           {
+            conflits: [],
             id: 'of-nc',
             nom: 'OF-NC',
             etat: 'EN_COURS',
             type: 'ORDRE_DE_FABRICATION',
-            activites: [{ operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z' }],
+            activites: [
+              {
+                ouverture: 'activite-fixture-22',
+                echeance: '2026-09-05T21:30:00.000Z',
+                operateurId: 'jean',
+                categorie: 'NON_CONFORMITE',
+                depuis: '2026-09-05T08:30:00Z',
+              },
+            ],
             evenements: [],
           },
         ],
@@ -611,25 +816,45 @@ describe('FenetreOperateur', () => {
             nom: 'Dupont',
             prenom: 'Jean',
             matricule: '049',
-            etat: 'ABSENT',
             postes: [
               { id: 'poste-1', libelle: 'Poste 1' },
               { id: 'poste-2', libelle: 'Poste 2' },
               { id: 'poste-3', libelle: 'Poste 3' },
             ],
-            evenements: [],
           },
         ],
         suivis: [
           {
+            conflits: [],
             id: 'of-multi-nc',
             nom: 'OF-MULTI',
             etat: 'EN_COURS',
             type: 'ORDRE_DE_FABRICATION',
             activites: [
-              { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:00:00Z', posteId: 'poste-1' },
-              { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:15:00Z', posteId: 'poste-2' },
-              { operateurId: 'jean', categorie: 'NON_CONFORMITE', depuis: '2026-09-05T08:30:00Z', posteId: 'poste-3' },
+              {
+                ouverture: 'activite-fixture-23',
+                echeance: '2026-09-05T21:00:00.000Z',
+                operateurId: 'jean',
+                categorie: 'NON_CONFORMITE',
+                depuis: '2026-09-05T08:00:00Z',
+                posteId: 'poste-1',
+              },
+              {
+                ouverture: 'activite-fixture-24',
+                echeance: '2026-09-05T21:15:00.000Z',
+                operateurId: 'jean',
+                categorie: 'TRAVAIL',
+                depuis: '2026-09-05T08:15:00Z',
+                posteId: 'poste-2',
+              },
+              {
+                ouverture: 'activite-fixture-25',
+                echeance: '2026-09-05T21:30:00.000Z',
+                operateurId: 'jean',
+                categorie: 'NON_CONFORMITE',
+                depuis: '2026-09-05T08:30:00Z',
+                posteId: 'poste-3',
+              },
             ],
             evenements: [],
           },
@@ -648,11 +873,11 @@ describe('FenetreOperateur', () => {
     const unsortedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
         suivis: [
-          { id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-          { id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { conflits: [], id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
         ],
       },
     };
@@ -667,11 +892,29 @@ describe('FenetreOperateur', () => {
     const referencedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
         suivis: [
-          { id: 'of-1', nom: 'OF-1', reference: 'M-30', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-          { id: 'of-3', nom: 'OF-3', reference: 'M-4', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          {
+            conflits: [],
+            id: 'of-1',
+            nom: 'OF-1',
+            reference: 'M-30',
+            etat: 'EN_ATTENTE',
+            type: 'ORDRE_DE_FABRICATION',
+            activites: [],
+            evenements: [],
+          },
+          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          {
+            conflits: [],
+            id: 'of-3',
+            nom: 'OF-3',
+            reference: 'M-4',
+            etat: 'EN_ATTENTE',
+            type: 'ORDRE_DE_FABRICATION',
+            activites: [],
+            evenements: [],
+          },
         ],
       },
     };
@@ -682,18 +925,18 @@ describe('FenetreOperateur', () => {
     expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
   });
 
-  it('should capture arrival and pointage when confirming a workstation choice', () => {
+  it('should capture an opening when confirming a workstation choice', () => {
     const multiposte = givenAMultiWorkstationWindow();
 
     const gestures = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse').capture();
 
-    thenGesturesAre(gestures, ['ARRIVEE', 'POINTAGE']);
-    expect(gestures[1]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
+    thenGesturesAre(gestures, ['POINTAGE']);
+    expect(gestures[0]).toMatchObject({ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
   });
 
   it('should expose no refusal after a workstation choice until one is reconciled', () => {
     const multiposte = givenAMultiWorkstationWindow();
-    const choice = multiposte.afterChoosingPoste('of-1015', 'PRINCIPALE', 'fraiseuse', identifyFixture);
+    const choice = multiposte.afterChoosingPoste('of-1015', 'PRINCIPALE', 'fraiseuse', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
 
     const reconciled = choice.fenetre.afterReconciling(
       Entreprise.of('entreprise-a'),
@@ -714,104 +957,46 @@ describe('FenetreOperateur', () => {
     expect([first.intention, second.intention]).toEqual([1, 2]);
   });
 
-  it('should still assure arrival after accepting gestures that do not include one', () => {
-    const pointageOnly: GesteDAtelier = {
-      id: 'pt-1',
-      dateDeSurvenue: '2026-09-05T08:00:00Z',
-      suiviId: 'moule-1015',
-      type: 'FIN',
-      nature: 'POINTAGE',
-      operateurId: 'jean',
-    };
-    fenetre = fenetre.afterAccept([pointageOnly]);
-
-    const captured = captureGestures(whenDeciding('of-204', 'PRINCIPALE'));
-
-    thenGesturesAre(captured, ['ARRIVEE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
-  });
-
   it.each([
-    { etat: 'ABSENT' as const, intention: 'PAUSE' as const, permet: true },
-    { etat: 'ABSENT' as const, intention: 'REPRENDRE' as const, permet: false },
-    { etat: 'ABSENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
-    { etat: 'PRESENT' as const, intention: 'PAUSE' as const, permet: true },
-    { etat: 'PRESENT' as const, intention: 'REPRENDRE' as const, permet: false },
-    { etat: 'PRESENT' as const, intention: 'TOUT_ARRETER' as const, permet: true },
-  ])('should $permet $intention when the designated operator is $etat', ({ etat, intention, permet }) => {
-    const window = givenAWindowWithOperatorState(etat);
+    { intention: 'PAUSE' as const, permet: true },
+    { intention: 'REPRENDRE' as const, permet: false },
+    { intention: 'TOUT_ARRETER' as const, permet: true },
+  ])('should offer $intention according to known personal activities', ({ intention, permet }) => {
+    const commandes = whenReadingGlobalCommands(fenetre);
 
-    const presence = whenReadingThePresence(window);
-
-    thenSituationIs(presence, etat);
-    thenPresencePermits(presence, intention, permet);
+    thenGlobalCommandIsPermitted(commandes, intention, permet);
   });
 
-  it('should grey PAUSE for a present operator without any personal activity', () => {
-    const idle = givenAWindowOf('PRESENT', {});
+  it('should disable PAUSE without a personal activity', () => {
+    const idle = givenAWindowOf({});
 
-    const presence = whenReadingThePresence(idle);
+    const commandes = whenReadingGlobalCommands(idle);
 
-    thenPresencePermits(presence, 'PAUSE', false);
+    thenGlobalCommandIsPermitted(commandes, 'PAUSE', false);
   });
 
   it('should offer REPRENDRE once a pause is taken', () => {
-    const paused = givenAnAcceptedPause(givenAWindowOf('PRESENT', { 'moule-1015': [travailAuTourFixture] }));
+    const paused = givenAnAcceptedPause(givenAWindowOf({ 'moule-1015': [travailAuTourFixture] }));
 
-    const presence = whenReadingThePresence(paused);
+    const commandes = whenReadingGlobalCommands(paused);
 
-    thenPresencePermits(presence, 'REPRENDRE', true);
+    thenGlobalCommandIsPermitted(commandes, 'REPRENDRE', true);
   });
 
-  it('should show a present operator whose pause is in progress as on pause', () => {
-    const paused = givenAnAcceptedPause(givenAWindowOf('PRESENT', { 'moule-1015': [travailAuTourFixture] }));
+  it('should show the local pause in progress', () => {
+    const paused = givenAnAcceptedPause(givenAWindowOf({ 'moule-1015': [travailAuTourFixture] }));
 
-    const presence = whenReadingThePresence(paused);
+    const commandes = whenReadingGlobalCommands(paused);
 
-    thenSituationIs(presence, 'EN_PAUSE');
+    thenSituationIs(commandes, true);
   });
 
-  it('should keep showing an absent operator whose pause is in progress as absent while offering REPRENDRE', () => {
-    const paused = givenAnAcceptedPause(givenAWindowOf('ABSENT', { 'moule-1015': [travailAuTourFixture] }));
-
-    const presence = whenReadingThePresence(paused);
-
-    thenSituationIs(presence, 'ABSENT');
-    thenPresencePermits(presence, 'REPRENDRE', true);
-  });
-
-  it('should reflect a refreshed referential in the exposed presence', () => {
-    whenReconciling(givenAJournalWithOperatorState('PRESENT'));
-
-    const presence = whenReadingThePresence(fenetre);
-
-    thenSituationIs(presence, 'PRESENT');
-  });
-
-  it('should read an absent presence when the designated operator no longer appears in the projected referential', () => {
-    whenReconciling(givenAJournalWithoutTheDesignatedOperator());
-
-    const presence = whenReadingThePresence(fenetre);
-
-    thenSituationIs(presence, 'ABSENT');
-  });
-
-  const givenAJournalWithOperatorState = (etat: EtatDePresence): JournalDuPupitre => {
-    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
-    const operateur = requiredFixture(referentiel.operateurs[0], 'operator');
-    return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [{ ...operateur, etat }] } };
+  const whenReadingGlobalCommands = (window: FenetreOperateur): CommandesGlobales => window.commandesGlobales();
+  const thenSituationIs = (commandes: CommandesGlobales, enPause: boolean): void => {
+    expect(commandes.enPause()).toBe(enPause);
   };
-  const givenAWindowWithOperatorState = (etat: EtatDePresence): FenetreOperateur =>
-    givenAWindowOpenedOn(givenAJournalWithOperatorState(etat));
-  const givenAJournalWithoutTheDesignatedOperator = (): JournalDuPupitre => {
-    const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
-    return { ...structuredClone(vueFixture), referentiel: { ...referentiel, operateurs: [] } };
-  };
-  const whenReadingThePresence = (window: FenetreOperateur): PresenceDeLOperateur => window.presence();
-  const thenSituationIs = (presence: PresenceDeLOperateur, situation: SituationDeLOperateur): void => {
-    expect(presence.situation).toBe(situation);
-  };
-  const thenPresencePermits = (presence: PresenceDeLOperateur, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
-    expect(presence.permet(intention)).toBe(permet);
+  const thenGlobalCommandIsPermitted = (commandes: CommandesGlobales, intention: IntentionGlobaleDAtelier, permet: boolean): void => {
+    expect(commandes.permet(intention)).toBe(permet);
   };
 
   const identifyFixture = (): IdentiteDuGeste => {
@@ -824,10 +1009,7 @@ describe('FenetreOperateur', () => {
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     return decision;
   };
-  const pointagesOf = (decision: DecisionDePointage): readonly GesteDePointage[] =>
-    gesturesOf(decision)
-      .capture()
-      .filter(geste => geste.nature === 'POINTAGE');
+  const pointagesOf = (decision: DecisionDePointage): readonly GesteDePointage[] => gesturesOf(decision).capture();
   const givenAWindowOpenedOn = (journal: JournalDuPupitre, identity = 1): FenetreOperateur =>
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
@@ -836,21 +1018,18 @@ describe('FenetreOperateur', () => {
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(identity),
     );
-  const givenAWindowOf = (
-    etat: EtatDePresence,
-    activitesParSuivi: Readonly<Record<string, readonly ActiviteDuPupitre[]>>,
-  ): FenetreOperateur => {
+  const givenAWindowOf = (activitesParSuivi: Readonly<Record<string, readonly ActiviteDuPupitre[]>>): FenetreOperateur => {
     const referentiel = requiredFixture(vueFixture.referentiel, 'referential');
     return givenAWindowOpenedOn({
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: referentiel.operateurs.map(operateur => ({ ...operateur, etat })),
+        operateurs: referentiel.operateurs,
         suivis: referentiel.suivis.map(suivi => ({ ...suivi, activites: activitesParSuivi[suivi.id] ?? [] })),
       },
     });
   };
   const givenAnAcceptedDecision = (window: FenetreOperateur, suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): FenetreOperateur => {
-    const decision = window.afterDeciding(suiviId, cible, identifyFixture);
+    const decision = window.afterDeciding(suiviId, cible, identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     return decision.fenetre.prepareAcceptance(gesturesOf(decision.decision)).applyTo(decision.fenetre);
   };
   const givenAWindowReadyFor = (intention: 'PAUSE' | 'REPRENDRE'): FenetreOperateur => {
@@ -862,28 +1041,30 @@ describe('FenetreOperateur', () => {
     return pause.applyTo(window);
   };
   const givenAWindowWithActivities = (activitesParSuivi: Readonly<Record<string, readonly ActiviteDuPupitre[]>>): FenetreOperateur =>
-    givenAWindowOf('ABSENT', activitesParSuivi);
+    givenAWindowOf(activitesParSuivi);
   const givenAnAcceptedStopWithoutActivities = (): FenetreOperateur => {
     const inactiveJournalFixture: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
-        suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        suivis: [
+          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+        ],
       },
     };
     const initialWindow = givenAWindowOpenedOn(inactiveJournalFixture);
     const stop = initialWindow.prepareAcceptance(initialWindow.prepareToutArreter(identifyFixture));
     return stop.applyTo(initialWindow);
   };
-  const whenStartingAnActivityIn = (window: FenetreOperateur): readonly GesteDAtelier[] => {
-    const start = window.afterDeciding('of-1', 'PRINCIPALE', identifyFixture);
+  const whenStartingAnActivityIn = (window: FenetreOperateur): readonly GesteDePointage[] => {
+    const start = window.afterDeciding('of-1', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     return start.fenetre.prepareAcceptance(gesturesOf(start.decision)).gestes;
   };
-  const thenArrivalPrecedesStart = (gestes: readonly GesteDAtelier[]): void => {
-    expect(gestes).toMatchObject([{ nature: 'ARRIVEE' }, { nature: 'POINTAGE', type: 'DEBUT' }]);
+  const thenTheFirstGestureIsAnOpening = (gestes: readonly GesteDePointage[]): void => {
+    expect(gestes).toMatchObject([{ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT' }]);
   };
-  const givenAPreparedPointage = (): (() => readonly GesteDAtelier[]) => {
-    const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture);
+  const givenAPreparedPointage = (): (() => readonly GesteDePointage[]) => {
+    const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     fenetre = result.fenetre;
     const decision = gesturesOf(result.decision);
     return () => fenetre.capture(decision);
@@ -908,7 +1089,15 @@ describe('FenetreOperateur', () => {
     Object.assign(requiredFixture(snapshot.referentiel, 'referential').operateurs, { length: 0 });
   };
   const givenAJournalWithEveryEventState = (): JournalDuPupitre => {
-    const geste = { nature: 'ARRIVEE' as const, operateurId: 'jean', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z' };
+    const geste = {
+      nature: 'POINTAGE' as const,
+      intention: 'OUVERTURE' as const,
+      type: 'DEBUT' as const,
+      suiviId: 'piece',
+      operateurId: 'jean',
+      id: 'debut',
+      dateDeSurvenue: '2026-09-05T08:00:00Z',
+    };
     return {
       connecte: true,
       evenements: [
@@ -926,7 +1115,6 @@ describe('FenetreOperateur', () => {
   };
   const whenChangingSnapshotSuspension = (snapshot: JournalDuPupitre, index: number, change: Partial<Suspension>): void => {
     const geste = requiredFixture(snapshot.evenements[index], 'suspended gesture').geste;
-    if (geste.nature !== 'POINTAGE') throw new Error('Missing suspended pointage fixture.');
     Object.assign(requiredFixture(geste.suspension, 'suspension'), change);
   };
   const whenReadingPointage = (window: FenetreOperateur): ReturnType<FenetreOperateur['pointage']> => window.pointage();
@@ -959,25 +1147,25 @@ describe('FenetreOperateur', () => {
     );
   };
   const whenDeciding = (suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): DecisionDePointage => {
-    const result = fenetre.afterDeciding(suiviId, cible, identifyFixture);
+    const result = fenetre.afterDeciding(suiviId, cible, identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     fenetre = result.fenetre;
     return result.decision;
   };
   const whenDecidingWith = (owner: FenetreOperateur, suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): DecisionDePointage =>
-    owner.afterDeciding(suiviId, cible, identifyFixture).decision;
+    owner.afterDeciding(suiviId, cible, identifyFixture, Date.parse('2026-09-05T09:00:00Z')).decision;
   const whenChoosingWith = (
     owner: FenetreOperateur,
     suiviId: string,
     cible: 'PRINCIPALE' | 'SECONDAIRE',
     posteId: string,
-  ): LotDeGestesDAtelier => owner.afterChoosingPoste(suiviId, cible, posteId, identifyFixture).decision;
-  const givenAcceptedDecision = (decision: DecisionDePointage): readonly GesteDAtelier[] => {
+  ): LotDeGestesDAtelier => owner.afterChoosingPoste(suiviId, cible, posteId, identifyFixture, Date.parse('2026-09-05T09:00:00Z')).decision;
+  const givenAcceptedDecision = (decision: DecisionDePointage): readonly GesteDePointage[] => {
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     const gestures = decision.capture();
     fenetre = fenetre.afterAccept(gestures);
     return gestures;
   };
-  const givenTheDecisionWasRefused = (gestures: readonly GesteDAtelier[]): JournalDuPupitre => ({
+  const givenTheDecisionWasRefused = (gestures: readonly GesteDePointage[]): JournalDuPupitre => ({
     ...structuredClone(vueFixture),
     evenements: gestures.map(geste => ({
       geste,
@@ -985,7 +1173,10 @@ describe('FenetreOperateur', () => {
       refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." },
     })),
   });
-  const givenTheDecisionWasRefusedAfterTheElementDisappeared = (gestures: readonly GesteDAtelier[], suiviId: string): JournalDuPupitre => {
+  const givenTheDecisionWasRefusedAfterTheElementDisappeared = (
+    gestures: readonly GesteDePointage[],
+    suiviId: string,
+  ): JournalDuPupitre => {
     const refused = givenTheDecisionWasRefused(gestures);
     const referentiel = requiredFixture(refused.referentiel, 'referential');
     return { ...refused, referentiel: { ...referentiel, suivis: referentiel.suivis.filter(suivi => suivi.id !== suiviId) } };
@@ -998,14 +1189,14 @@ describe('FenetreOperateur', () => {
   };
   const whenDecidingUnknownElement = (): unknown => {
     try {
-      return fenetre.afterDeciding('inconnu', 'PRINCIPALE', identifyFixture);
+      return fenetre.afterDeciding('inconnu', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     } catch (failure: unknown) {
       return failure;
     }
   };
   const whenChoosingActiveElement = (): unknown => {
     try {
-      return fenetre.afterChoosingPoste('moule-1015', 'PRINCIPALE', 'tour', identifyFixture);
+      return fenetre.afterChoosingPoste('moule-1015', 'PRINCIPALE', 'tour', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     } catch (failure: unknown) {
       return failure;
     }
@@ -1023,7 +1214,19 @@ describe('FenetreOperateur', () => {
         referentiel: {
           ...referentiel,
           suivis: [
-            { ...suivi, activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T10:00:00Z', posteId: 'tour' }] },
+            {
+              ...suivi,
+              activites: [
+                {
+                  ouverture: 'activite-fixture-29',
+                  echeance: '2026-09-05T23:00:00.000Z',
+                  operateurId: 'jean',
+                  categorie: 'TRAVAIL',
+                  depuis: '2026-09-05T10:00:00Z',
+                  posteId: 'tour',
+                },
+              ],
+            },
           ],
         },
       },
@@ -1047,13 +1250,19 @@ describe('FenetreOperateur', () => {
   };
   const whenPointingAtAnUnauthorizedWorkstation = (): unknown => {
     try {
-      return givenAMultiWorkstationWindow().afterChoosingPoste('of-1015', 'PRINCIPALE', 'interdit', identifyFixture);
+      return givenAMultiWorkstationWindow().afterChoosingPoste(
+        'of-1015',
+        'PRINCIPALE',
+        'interdit',
+        identifyFixture,
+        Date.parse('2026-09-05T09:00:00Z'),
+      );
     } catch (failure: unknown) {
       return failure;
     }
   };
-  const whenCapturingPointage = (capture: () => readonly GesteDAtelier[]): readonly GesteDAtelier[] => capture();
-  const whenAcceptingPointage = (capture: () => readonly GesteDAtelier[]): readonly GesteDAtelier[] => {
+  const whenCapturingPointage = (capture: () => readonly GesteDePointage[]): readonly GesteDePointage[] => capture();
+  const whenAcceptingPointage = (capture: () => readonly GesteDePointage[]): readonly GesteDePointage[] => {
     const gestes = capture();
     fenetre = fenetre.afterAccept(gestes);
     return gestes;
@@ -1079,7 +1288,7 @@ describe('FenetreOperateur', () => {
   const thenPointageTypesAre = (decision: DecisionDePointage, types: string[]): void => {
     expect(pointagesOf(decision).map(geste => geste.type)).toEqual(types);
   };
-  const captureGestures = (decision: DecisionDePointage): readonly GesteDAtelier[] => fenetre.capture(gesturesOf(decision));
+  const captureGestures = (decision: DecisionDePointage): readonly GesteDePointage[] => fenetre.capture(gesturesOf(decision));
   const thenPointagesKeepTheirWorkstations = (decision: DecisionDePointage, postes: (string | undefined)[]): void => {
     expect(pointagesOf(decision).map(geste => geste.posteId)).toEqual(postes);
   };
@@ -1123,7 +1332,7 @@ describe('FenetreOperateur', () => {
     expect(pointage.moules[0]?.dureeMs()).toBe(0);
   };
   const thenPointageViewIsEmpty = (): void => {
-    expect(fenetre.pointage()).toEqual({ moules: [], ordresDeFabrication: [] });
+    expect(fenetre.pointage()).toEqual({ conflits: [], moules: [], ordresDeFabrication: [] });
   };
   const thenWindowIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);
@@ -1133,29 +1342,23 @@ describe('FenetreOperateur', () => {
     expect(refusal).toBeInstanceOf(Error);
     expect(refusal).toHaveProperty('message', expect.stringContaining('habilitations'));
   };
-  const thenGesturesAre = (gestes: readonly GesteDAtelier[], natures: string[]): void => {
+  const thenGesturesAre = (gestes: readonly GesteDePointage[], natures: string[]): void => {
     expect(gestes.map(geste => geste.nature)).toEqual(natures);
     expect(gestes.every(geste => geste.operateurId === 'jean')).toBe(true);
   };
-  const thenPointagesAre = (gestes: readonly GesteDAtelier[], expected: readonly unknown[]): void => {
-    expect(
-      gestes
-        .filter(geste => geste.nature === 'POINTAGE')
-        .map(({ suiviId, type, posteId, suspension }) => ({ suiviId, type, posteId, suspension })),
-    ).toEqual(expected);
+  const thenPointagesAre = (gestes: readonly GesteDePointage[], expected: readonly unknown[]): void => {
+    expect(gestes.map(({ suiviId, type, posteId, suspension }) => ({ suiviId, type, posteId, suspension }))).toEqual(expected);
   };
-  const thenOpeningSharesBusinessTime = (gestes: readonly GesteDAtelier[]): void => {
+  const thenOpeningSharesBusinessTime = (gestes: readonly GesteDePointage[]): void => {
     const lastGesture = requiredFixture(gestes.at(-1), 'last gesture');
     expect(gestes.map(geste => geste.dateDeSurvenue)).toEqual(
       Array<string | undefined>(gestes.length).fill(identities.get(lastGesture.id)),
     );
   };
-  const thenIdentitiesWerePreparedBeforeExecution = (gestes: readonly GesteDAtelier[], preparedIdentities: Map<string, string>): void => {
+  const thenIdentitiesWerePreparedBeforeExecution = (gestes: readonly GesteDePointage[], preparedIdentities: Map<string, string>): void => {
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(gestes.every(geste => preparedIdentities.has(geste.id))).toBe(true);
-    expect(
-      gestes.filter(geste => geste.nature === 'POINTAGE').every(geste => geste.dateDeSurvenue === preparedIdentities.get(geste.id)),
-    ).toBe(true);
+    expect(gestes.every(geste => geste.dateDeSurvenue === preparedIdentities.get(geste.id))).toBe(true);
   };
 });
 

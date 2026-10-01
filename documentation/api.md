@@ -70,9 +70,22 @@ Online list ports make one request with `PAGE_SIZE` and return `Page<T>`.
 A bounded read is acceptable only when the bound is visible in the result.
 
 The offline pupitre reference is different: `GET /api/pupitre/referentiel` returns operators and workshop
-elements together, unpaged, from one repeatable-read server transaction. It takes no page, size or state
-parameter, and its `genereLe` version is deliberately ignored. [`offline-pupitre.md`](offline-pupitre.md)
+elements together, unpaged, in one response. The backend uses READ COMMITTED: successive queries may observe
+concurrent commits, so this response does not establish a shared transactional snapshot. It takes no page,
+size or state parameter, and its `genereLe` version is deliberately ignored. [`offline-pupitre.md`](offline-pupitre.md)
 owns that workflow.
+
+For the Gestion operational report, the single read port composes synthesis and time sheet with one
+`evaluation` sampled when acquisition starts. Both responses must echo that instant; compare instants rather
+than ISO spellings. A 400 refusal or an inconsistent echo rejects the reading and is reported once. The
+technical evaluation stays outside the view URL. Received complete/incomplete totals and interpreted activity
+states are translated into context values; the adapter does not reconstruct them from raw clockings.
+
+The cost reading also keeps one domain port for the element. Its server evaluation, excluded current-activity
+count, automatic periods and every responsible conflict are translated directly, including other elements.
+Each duration and amount total carries its own completeness: incomplete totals have no value, while a complete
+total missing its optional wire value rejects the read. Periods without a reliable finish keep that absence.
+The adapter preserves the received totals, rounding and category independence.
 
 ## Translate refusals by stable code
 
@@ -85,17 +98,23 @@ stays a technical failure: expanding the domain union is a deliberate change, an
 loudly rather than take the wrong business branch.
 
 Workshop publication is the exception: `AtelierExchangePort.send` resolves a readonly
-`Result<void, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
+`Result<PublicationAcceptee, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
 its original code and message, including codes without a known replay motif, as required by ADR 0007 and
 ADR 0009. Unexpected technical failures still reject; synchronization reports them through `ErrorHandlerPort`
 and preserves pending work while marking disconnection. This result describes the server exchange, not local
 durable acceptance. Its minimal type and constructors stay in the atelier synchronization domain; see the
 [publication amendment in ADR 0006](adr/0006-how-the-front-calls-the-back.md#publication-amendment).
 
-Absorption belongs to a business operation. Arrival assurance may absorb an already-open day, and nothing else
-is absorbed: the same HTTP status on an explicit operator gesture remains visible.
+A 200 or 201 publication remains accepted when its response contains conflicts. `PublicationAcceptee`
+retains those diagnostics, including unresolved optional operator or workstation references. Persist them
+with the accepted gesture before refreshing the reference. Stable missing or inconsistent target refusals
+remain final.
 
-`GesteReplayPolicy` owns the contextual exceptions and the single `saisie-concurrente` retry. The transport
+Pointage bodies carry the captured `intention`: an opening has no target, a transition and a finish carry
+`cible`, the original stable opening identity. The adapter sends these fields directly and never infers
+intent from category or workstation. Concurrency rereads only the affected workshop item.
+
+`GesteReplayPolicy` owns the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.
 

@@ -1,9 +1,10 @@
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
+  afterLocalCapture,
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
   EvenementsDuJournal,
-  GesteDAtelier,
+  GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
@@ -45,14 +46,6 @@ const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: Ev
   })),
 });
 
-const includeAcceptedPresences = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
-  ...referentiel,
-  operateurs: referentiel.operateurs.map(operateur => ({
-    ...operateur,
-    evenements: [...new Set([...operateur.evenements, ...journal.acceptedPresenceIds(operateur.id)])],
-  })),
-});
-
 export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly entreprises = new Map<string, JournalDuPupitre>();
 
@@ -71,20 +64,17 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     this.afterRead = undefined;
     return state;
   }
-  override async append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
+  override async append(entreprise: Entreprise, gestes: readonly GesteDePointage[], repriseAEffacer?: string): Promise<void> {
     const barrier = this.nextAppendBarrier;
     this.nextAppendBarrier = undefined;
     barrier?.signalStarted();
     await barrier?.wait();
-    await this.update(entreprise, state => ({
-      ...state,
-      evenements: [...state.evenements, ...gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' as const }))],
-    }));
+    await this.update(entreprise, state => afterLocalCapture(state, gestes, repriseAEffacer));
   }
   override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => {
       const journal = new EvenementsDuJournal(state.evenements);
-      return { ...state, referentiel: includeAcceptedPresences(includeAcceptedPointages(referentiel, journal), journal) };
+      return { ...state, referentiel: includeAcceptedPointages(referentiel, journal) };
     });
   }
   override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {

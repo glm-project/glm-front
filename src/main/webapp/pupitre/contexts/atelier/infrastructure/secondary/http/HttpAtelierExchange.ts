@@ -3,13 +3,14 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import {
-  GesteDAtelier,
+  ConflitDuPupitre,
+  GesteDePointage,
   OperateurDuPupitre,
   ReferentielDuPupitre,
   SuiviDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { inject, Injectable } from '@angular/core';
 
@@ -26,9 +27,7 @@ const toOperateurWithoutMatricule = (operateur: RestOperateurDuPupitre): Operate
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
-  etat: operateur.etat,
   postes: operateur.postes.map(toPosteHabilite),
-  evenements: [],
 });
 
 const toOperateur = (operateur: RestOperateurDuPupitre): OperateurDuPupitre =>
@@ -36,10 +35,21 @@ const toOperateur = (operateur: RestOperateurDuPupitre): OperateurDuPupitre =>
     ? toOperateurWithoutMatricule(operateur)
     : { ...toOperateurWithoutMatricule(operateur), matricule: operateur.matricule };
 
-const toActivite = (activite: RestActiviteDuPupitre): SuiviDuPupitre['activites'][number] =>
-  activite.poste === undefined
-    ? { operateurId: activite.operateur, categorie: activite.categorie, depuis: activite.depuis }
-    : { operateurId: activite.operateur, categorie: activite.categorie, depuis: activite.depuis, posteId: activite.poste };
+const toActivite = (activite: RestActiviteDuPupitre): SuiviDuPupitre['activites'][number] => ({
+  operateurId: activite.operateur,
+  categorie: activite.categorie,
+  depuis: activite.depuis,
+  ouverture: activite.ouverture,
+  echeance: activite.echeance,
+  ...(activite.poste === undefined ? {} : { posteId: activite.poste }),
+});
+
+const toConflit = (conflit: components['schemas']['RestConflitDuPupitre']): SuiviDuPupitre['conflits'][number] => ({
+  operateurId: conflit.operateur,
+  activites: conflit.activites,
+  pointages: conflit.pointages,
+  ...(conflit.poste === undefined ? {} : { posteId: conflit.poste }),
+});
 
 const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => ({
   id: suivi.id,
@@ -48,10 +58,18 @@ const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => (
   type: suivi.type,
   evenements: [],
   activites: suivi.activites.map(toActivite),
+  conflits: suivi.conflits.map(toConflit),
 });
 
 const toSuivi = (suivi: RestSuiviDuPupitre): SuiviDuPupitre =>
   suivi.reference === undefined ? toSuiviWithoutReference(suivi) : { ...toSuiviWithoutReference(suivi), reference: suivi.reference };
+
+const toDiagnostic = (conflit: components['schemas']['RestSequenceEnConflit']): ConflitDuPupitre => ({
+  activites: conflit.activites,
+  pointages: conflit.pointages,
+  ...(conflit.operateur === undefined ? {} : { operateurId: conflit.operateur.id }),
+  ...(conflit.poste === undefined ? {} : { posteId: conflit.poste.id }),
+});
 
 @Injectable()
 export class HttpAtelierExchange extends AtelierExchangePort {
@@ -64,10 +82,10 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     return { operateurs: referentiel.operateurs.map(toOperateur), suivis: referentiel.suivis.map(toSuivi) };
   }
 
-  override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
     try {
-      await this.write(geste);
-      return ok(undefined);
+      const publication = await this.write(geste);
+      return ok({ conflits: publication.conflits.map(toDiagnostic) });
     } catch (failure: unknown) {
       const refusal = findApiErrorIn(failure);
       if (refusal !== undefined) {
@@ -77,12 +95,8 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     }
   }
 
-  override async reread(geste: GesteDAtelier): Promise<void> {
-    if (geste.nature === 'POINTAGE') {
-      await this.api.read('/api/atelier/suivis/{id}', { pathParams: { id: geste.suiviId } });
-      return;
-    }
-    await this.api.read('/api/atelier/journees', { queryParams: { operateur: geste.operateurId, size: 100 } });
+  override async reread(geste: GesteDePointage): Promise<void> {
+    await this.api.read('/api/atelier/suivis/{id}', { pathParams: { id: geste.suiviId } });
   }
 
   private requireAuthorization(): void {
@@ -91,17 +105,11 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     }
   }
 
-  private write(geste: GesteDAtelier): Promise<unknown> {
+  private write(geste: GesteDePointage): Promise<components['schemas']['RestSuiviDAtelier']> {
     const body = { id: geste.id, dateDeSurvenue: geste.dateDeSurvenue, operateur: geste.operateurId };
-    if (geste.nature === 'ARRIVEE') {
-      return this.api.write('/api/atelier/journees', { body });
-    }
-    if (geste.nature === 'PRESENCE') {
-      return this.api.write('/api/atelier/journees/pointages', { body: { ...body, type: geste.type } });
-    }
     const request = {
       pathParams: { id: geste.suiviId },
-      body: { ...body, type: geste.type },
+      body: { ...body, type: geste.type, intention: geste.intention, ...(geste.intention === 'OUVERTURE' ? {} : { cible: geste.cible }) },
     };
     if (geste.posteId === undefined) {
       return this.api.write('/api/atelier/suivis/{id}/pointages', request);

@@ -1,29 +1,24 @@
-import { GesteDAtelier } from '../journal-du-pupitre/JournalDuPupitre';
 import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
 import { RefusDAtelier } from '../refus/RefusDAtelier';
 import { RefusDePublication } from '../refus/RefusDePublication';
-import { decideReplay, OperationDAtelier, operationFor, ReplayDecision } from './GesteReplayPolicy';
+import { decideReplay, ReplayDecision } from './GesteReplayPolicy';
 
 const refusFixtures = [
   ['online', (code: CodeDeRefusDAtelier) => new RefusDAtelier(code, 'cause')],
   ['offline', (code: CodeDeRefusDAtelier) => new RefusDePublication('diagnostic externe', 'cause', MotifDeRefus.from(code))],
 ] as const;
 
-const scenarios: [OperationDAtelier, CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', ReplayDecision][] = [
-  ['ARRIVEE_ASSUREE', 'journee-de-travail-deja-ouverte', 'INITIALE', 'ACCEPTER'],
-  ['ARRIVEE_ASSUREE', 'journee-de-travail-deja-ouverte', 'REJEU', 'ACCEPTER'],
-  ['ARRIVEE_ASSUREE', 'transition-de-presence-interdite', 'INITIALE', 'PROPAGER'],
-  ['GESTE_EXPLICITE', 'transition-de-presence-interdite', 'INITIALE', 'PROPAGER'],
-  ['GESTE_EXPLICITE', 'suivi-d-atelier-cloture', 'INITIALE', 'PROPAGER'],
-  ['GESTE_EXPLICITE', 'saisie-concurrente', 'INITIALE', 'RELIRE_ET_REJOUER'],
-  ['GESTE_EXPLICITE', 'saisie-concurrente', 'REJEU', 'PROPAGER'],
+const scenarios: [CodeDeRefusDAtelier, 'INITIALE' | 'REJEU', ReplayDecision][] = [
+  ['suivi-d-atelier-cloture', 'INITIALE', 'PROPAGER'],
+  ['saisie-concurrente', 'INITIALE', 'RELIRE_ET_REJOUER'],
+  ['saisie-concurrente', 'REJEU', 'PROPAGER'],
 ];
 
 describe.each(refusFixtures)('GesteReplayPolicy for %s refusals', (_name, refusalFixture) => {
-  it.each(scenarios)('should decide %s facing %s after retry=%s as %s', (operation, code, tentative, expected) => {
+  it.each(scenarios)('should decide facing %s after retry=%s as %s', (code, tentative, expected) => {
     const refus = givenARefusal(refusalFixture, code);
 
-    const decision = whenDecidingReplay(operation, refus, tentative);
+    const decision = whenDecidingReplay(refus, tentative);
 
     thenDecisionIs(decision, expected);
   });
@@ -31,7 +26,7 @@ describe.each(refusFixtures)('GesteReplayPolicy for %s refusals', (_name, refusa
   it('should reread and replay a concurrent initial attempt by default', () => {
     const refus = givenARefusal(refusalFixture, 'saisie-concurrente');
 
-    const decision = whenDecidingReplay('GESTE_EXPLICITE', refus);
+    const decision = whenDecidingReplay(refus);
 
     thenDecisionIs(decision, 'RELIRE_ET_REJOUER');
   });
@@ -43,19 +38,9 @@ describe('GesteReplayPolicy', () => {
     new RefusDePublication('refus autre contexte', 'autre contexte'),
     new RefusDePublication('refus inconnu', 'nouvelle cause'),
   ])('should propagate failures that have no contextual exception (%s)', failure => {
-    const decision = whenDecidingReplay('ARRIVEE_ASSUREE', failure);
+    const decision = whenDecidingReplay(failure);
 
     thenDecisionIs(decision, 'PROPAGER');
-  });
-
-  it.each<[GesteDAtelier, OperationDAtelier]>([
-    [{ nature: 'ARRIVEE', id: '1', dateDeSurvenue: 'date', operateurId: 'jean' }, 'ARRIVEE_ASSUREE'],
-    [{ nature: 'PRESENCE', id: '2', dateDeSurvenue: 'date', operateurId: 'jean', type: 'DEPART' }, 'GESTE_EXPLICITE'],
-    [{ nature: 'POINTAGE', id: '4', dateDeSurvenue: 'date', operateurId: 'jean', suiviId: 'piece', type: 'DEBUT' }, 'GESTE_EXPLICITE'],
-  ])('should identify the intent of gesture %j', (geste, expected) => {
-    const operation = whenIdentifyingTheGesture(geste);
-
-    thenOperationIs(operation, expected);
   });
 });
 
@@ -64,18 +49,8 @@ const givenARefusal = (
   code: CodeDeRefusDAtelier,
 ): RefusDAtelier | RefusDePublication => refusalFixture(code);
 
-const whenDecidingReplay = (operation: OperationDAtelier, failure: unknown, attempt?: 'INITIALE' | 'REJEU'): ReplayDecision => {
-  if (attempt === undefined) {
-    return decideReplay(operation, failure);
-  }
-  return decideReplay(operation, failure, attempt);
-};
-
-const whenIdentifyingTheGesture = (geste: GesteDAtelier): OperationDAtelier => operationFor(geste);
+const whenDecidingReplay = (failure: unknown, attempt?: 'INITIALE' | 'REJEU'): ReplayDecision => decideReplay(failure, attempt);
 
 const thenDecisionIs = (decision: ReplayDecision, expected: ReplayDecision): void => {
   expect(decision).toBe(expected);
-};
-const thenOperationIs = (operation: OperationDAtelier, expected: OperationDAtelier): void => {
-  expect(operation).toBe(expected);
 };

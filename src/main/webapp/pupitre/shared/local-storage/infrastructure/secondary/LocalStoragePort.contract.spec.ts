@@ -144,6 +144,35 @@ describe.each(adapters)('LocalStoragePort contract, honoured by %s', (_adapter, 
     thenItHasACause(error);
   });
 
+  it('should report an aborted discard and preserve the committed document after restart', async () => {
+    await whenRecording('atelier:entreprise-a', ['ancien']);
+    givenTheBrowserAbortsDiscard();
+
+    const failed = whenDiscardingOldWorkshopDocuments();
+    await whenDiscardFailureSettles(failed);
+    const restarted = whenRestartingTheBrowserService();
+
+    const error = await thenItFails(failed, 'Transaction locale interrompue');
+    thenItHasACause(error);
+    await thenItContains(restarted, 'atelier:entreprise-a', ['ancien']);
+  });
+  const givenTheBrowserAbortsDiscard = (): void => {
+    const openCursor: unknown = Object.getOwnPropertyDescriptor(IDBObjectStore.prototype, 'openCursor')?.value;
+    if (typeof openCursor !== 'function') throw new Error('IndexedDB cursor is unavailable');
+    vi.spyOn(IDBObjectStore.prototype, 'openCursor').mockImplementation(function (this: IDBObjectStore) {
+      const request: unknown = Reflect.apply(openCursor, this, []);
+      if (!(request instanceof IDBRequest)) throw new Error('IndexedDB cursor returned no request');
+      const typedRequest = request as IDBRequest<IDBCursorWithValue | null>;
+      queueMicrotask(() => typedRequest.transaction?.abort());
+      return typedRequest;
+    });
+  };
+  const whenDiscardingOldWorkshopDocuments = (): Promise<void> => stockage.discardDocumentsWithPrefix('atelier:');
+  const whenDiscardFailureSettles = async (failed: Promise<void>): Promise<void> => {
+    await Promise.allSettled([failed]);
+    vi.restoreAllMocks();
+  };
+
   it('should refuse to read a database created by a newer version of the application', async () => {
     await givenANewerDatabase();
 

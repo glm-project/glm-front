@@ -8,13 +8,12 @@ pagination and retry assumptions in [ADR 0006](0006-how-the-front-calls-the-back
 [ADR 0009](0009-pupitre-domain-responsibilities.md), which moves the window and replay rules out of the
 application coordinator into domain owners. Complemented by
 [ADR 0026](0026-enrol-pupitre-screen-and-keycloak-delegation.md), which gives the enrolment its screen.
-The paged reference read below no longer holds: issue 165 replaced it with one unpaged
-`GET /api/pupitre/referentiel`, whose single repeatable-read server transaction supplies the instantaneous
-version that offset pagination could not prove. Amended by
-[ADR 0045](0045-keep-the-pause-on-the-pupitre.md): the first activity of a window commits the arrival assurance and
-the activity, without any resumption, and replay absorbs only an existing arrival; presence is no longer the only
-operator-level gesture, since PAUSE is fanned out into one finish per known personal activity and REPRENDRE into one
-restart per activity it suspended. Everything else recorded here stands.
+Issue 165 replaced paged reference acquisition with one unpaged `GET /api/pupitre/referentiel` response.
+The backend uses READ COMMITTED; successive queries can observe concurrent commits. This response is
+complete acquisition, without a shared transactional snapshot. Revised under
+[ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and [ADR 0047](0047-count-only-finished-activities.md):
+activity intentions retain stable targets, accepted conflicts retain diagnostics, and pause memory remains
+local and atomic.
 
 ## Context
 
@@ -46,22 +45,22 @@ Storage failures reject explicitly. A separate Web Lock serializes synchronizati
 appends remain available during a network request. Another lock coordinates device credential commits with
 outgoing gestures; the authentication port rereads the selected durable session before an exchange.
 
-`atelier/application/AtelierCoordinator` drives the queue and operator windows. Each company has its own
-`atelier:<tenant>` document containing the complete last reference, original gestures, outcomes and the last
-push state. Reenrolment selects a different document. The former document remains intact and its pending
-queue is suspended. Gestures carry their UUID and timestamp before asynchronous work starts. The first
-activity of a window commits arrival assurance, implicit resumption and the activity together, in that order.
+`AtelierCoordinator` coordinates capture; `PupitreSynchronization` coordinates exchange. Each company has
+its own `atelier-activites-v1:<tenant>` document containing the complete last reference, original gestures,
+outcomes, pause markers and the last push state. Reenrolment selects a different document. The former document remains intact and its pending
+queue is suspended. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. Targeted finishes and transitions keep their original
+activity identity. A deferred global batch is decided from the updated window with deterministic identities
+and its initiation timestamp; an atomic stop invalidates resumption memory even for an empty batch.
 An unsuccessful local commit confirms nothing and changes no optimistic view.
 
-The queue is FIFO. An identical retry carries the same body. Only an existing arrival on arrival assurance
-and a forbidden presence transition on implicit resumption are absorbed. A concurrent entry triggers a reread
+The queue is FIFO. An identical retry carries the same body. A concurrent entry triggers a reread of the affected workshop item
 then one identical retry; a further business refusal is retained with its cause, and following gestures continue.
 Every other published business code likewise becomes a durable refusal with its cause. Following gestures continue,
 even for the same operator. Unknown technical failures remain pending and stop that push. No record has an
 application size limit, expiry, rotation or purge; acknowledged events are retained too.
 
 `HttpAtelierExchange` reads operators and workshop elements together, unpaged and unfiltered by operator, in
-one `GET /api/pupitre/referentiel` the server answers from a single repeatable-read transaction. It emits no
+one `GET /api/pupitre/referentiel` response under READ COMMITTED. It emits no
 request at all without a credential, and ignores the response's `genereLe` version. A failed refresh preserves
 the previous complete cache indefinitely. Refresh is attempted on the triggers listed in
 [Offline pupitre](../offline-pupitre.md); all of them run in the background except the enrolment screen's
@@ -69,12 +68,18 @@ retry. The online event is only a trigger; it never sets the connectivity
 indicator. Only push outcomes do that. A received business refusal confirms connectivity while retaining the
 refusal separately.
 
-The reference and accepted/refused outcomes activate between operator windows. Within a window, only its
-own committed gestures change the optimistic view. The projection starts from server activities and overlays
-local activity events not already present in the server journal. This avoids both losing an accepted activity
-before its next snapshot and applying one twice after a crash. A refused event loses its optimistic effect
-when the window closes. The reference contains pupitre read models, not imports from the operator domain.
-Presence remains an operator-level gesture; it is never fanned out into per-element writes.
+`CurrentOperateurLifecycle` reconciles the current immutable window from its company's journal without
+changing its designated operator or frozen observation time. Optimistic effects apply only to local activity
+events not already represented by accepted server identities. This prevents losing an accepted activity
+before refresh and applying it twice after restart. Refusal reconciliation removes its optimistic effect.
+A failed refresh retains the complete previous reference and accepted conflict diagnostics. Reference data
+remain pupitre read models, without imports from another context's domain.
+
+PAUSE commits eligible targeted finishes and their suspension in one durable batch; REPRENDRE opens new
+activities on still eligible elements and workstations. The pause belongs to the recording pupitre. TOUT
+ARRÊTER commits N finishes and clears that operator's resumption memory atomically, N=0 included, while
+retaining history and pending work. The activity format discards obsolete `atelier:` documents without
+reading or migrating them; credentials and enrolment remain independent.
 
 The device adapter persists the refresh credential, access-token expiry and company in the same IndexedDB
 store. It restores them at startup, serializes renewal across tabs and commits rotation before exposing the
@@ -109,9 +114,9 @@ inaccessible to injected same-origin code; this is the explicit trade required b
 - Each company document grows with its event history, with no size limit, expiry, rotation or purge.
   Transactions copy that document today; an event-indexed store is the next change if measured growth makes
   this costly, and it must preserve the same atomic contract.
-- The reference read trusts the server for its own consistency. Its repeatable-read transaction is what makes
-  operators and workshop elements one instant, and the front has no way to verify that claim; a failed refresh
-  always keeps the previous complete reference.
+- The reference read trusts server identifiers and semantics. Under READ COMMITTED, concurrent commits can
+  become visible between its queries; a single response does not make both collections one historical instant.
+  A failed refresh always keeps the previous complete reference.
 - Persisting the refresh credential puts a bearer token where injected same-origin code can read it. That is
   the explicit price of unattended restart, and no browser storage removes it.
 - Manual refusal replay/correction, service-screen diagnostics and back-office supervision remain out of scope.

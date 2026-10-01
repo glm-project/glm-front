@@ -3,6 +3,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { ActiviteExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/ActiviteExpirationSchedulerPort';
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
@@ -10,8 +11,11 @@ import {
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementDuJournal,
+  GesteDePointage,
   JournalDuPupitre,
   OperateurDuPupitre,
+  ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
@@ -31,9 +35,7 @@ const operateurFixture: OperateurDuPupitre = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  etat: 'ABSENT',
   postes: [],
-  evenements: [],
 };
 const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
 
@@ -42,9 +44,7 @@ const operateurAjouteFixture: OperateurDuPupitre = {
   nom: 'Martin',
   prenom: 'Lea',
   matricule: '050',
-  etat: 'ABSENT',
   postes: [],
-  evenements: [],
 };
 const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050' };
 
@@ -55,7 +55,28 @@ const referenceFixture: JournalDuPupitre = {
   referentiel: referentielFixture,
 };
 
-class DesignationJournalFixture extends JournauxDuPupitreFixture {
+class DesignationJournalFixture extends JournauxDuPupitrePort {
+  private readonly stored = new JournauxDuPupitreFixture();
+
+  override append(entreprise: Entreprise, gestes: readonly GesteDePointage[], repriseAEffacer?: string): Promise<void> {
+    return this.stored.append(entreprise, gestes, repriseAEffacer);
+  }
+  override saveReferentiel(entreprise: Entreprise, reference: ReferentielDuPupitre): Promise<JournalDuPupitre> {
+    return this.stored.saveReferentiel(entreprise, reference);
+  }
+  override saveResult(entreprise: Entreprise, result: EvenementDuJournal): Promise<JournalDuPupitre> {
+    return this.stored.saveResult(entreprise, result);
+  }
+  override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
+    return this.stored.markDisconnected(entreprise);
+  }
+  override synchronize<T>(action: () => Promise<T>): Promise<T> {
+    return this.stored.synchronize(action);
+  }
+  synchronizationsSettled(): Promise<void> {
+    return this.stored.synchronizationsSettled();
+  }
+
   answer: Promise<JournalDuPupitre> | undefined;
   readStarted: Promise<void> = Promise.resolve();
   private notifyRead: () => void = () => undefined;
@@ -70,19 +91,22 @@ class DesignationJournalFixture extends JournauxDuPupitreFixture {
     const answer = this.answer;
     this.answer = undefined;
     if (answer !== undefined) return answer;
-    return super.read(entreprise);
+    return this.stored.read(entreprise);
   }
 }
 
 class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedulerPort {
+  lastScheduled: DesignationExpiration | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   override schedule(deadline: number | undefined, expiration: DesignationExpiration): void {
     clearTimeout(this.timer);
-    if (deadline !== undefined)
+    if (deadline !== undefined) {
+      this.lastScheduled = expiration;
       this.timer = setTimeout(() => {
         expiration.expire();
       }, deadline - Date.now());
+    }
   }
 }
 
@@ -111,6 +135,7 @@ describe('Designation du pupitre', () => {
         { provide: JournauxDuPupitrePort, useValue: journal },
         { provide: AtelierExchangePort, useValue: serveur },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
+        { provide: ActiviteExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
         { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
         {
           provide: AuthenticationPort,
@@ -139,6 +164,78 @@ describe('Designation du pupitre', () => {
     TestBed.resetTestingModule();
     vi.useRealTimers();
   });
+
+  it('should expire an activity without closing the current designation or recording a finish', async () => {
+    await givenAnActivityExpiringSoon();
+    whenEntering('049');
+    await whenValidating();
+
+    await whenTimePasses(10_000);
+
+    thenOperatorIsDesignated();
+    expect(designation.pointage()?.moules[0]?.isActive()).toBe(false);
+    expect((await journal.read(Entreprise.of('atelier'))).evenements).toEqual([]);
+  });
+
+  it('should keep a valid window when a press supplies no explicit technical time', async () => {
+    whenEntering('049');
+    await whenValidating();
+
+    const pressed = whenAccessingThePressedWindow();
+
+    expect(pressed.operateur.id).toBe('jean');
+    thenOperatorIsDesignated();
+  });
+
+  it('should ignore a queued activity expiration callback after the operator window is closed', async () => {
+    await givenAnActivityExpiringSoon();
+    whenEntering('049');
+    await whenValidating();
+    const expiration = givenScheduledActivityExpiration();
+
+    await whenFinishingAndReceivingQueuedExpiration(expiration);
+
+    thenNoOperatorIsDesignated();
+    expect((await journal.read(Entreprise.of('atelier'))).evenements).toEqual([]);
+  });
+  const givenAnActivityExpiringSoon = async (): Promise<void> => {
+    const now = Date.now();
+    const reference = {
+      ...referentielFixture,
+      suivis: [
+        {
+          id: 'piece',
+          nom: 'Piece',
+          type: 'PRODUIT' as const,
+          etat: 'EN_COURS' as const,
+          evenements: [],
+          conflits: [],
+          activites: [
+            {
+              operateurId: 'jean',
+              categorie: 'TRAVAIL' as const,
+              ouverture: 'ouverture-originale',
+              depuis: new Date(now - 13 * 60 * 60 * 1000 + 10_000).toISOString(),
+              echeance: new Date(now + 10_000).toISOString(),
+            },
+          ],
+        },
+      ],
+    };
+    await journal.saveReferentiel(Entreprise.of('atelier'), reference);
+    serveur.reference = reference;
+  };
+  const givenScheduledActivityExpiration = (): DesignationExpiration => {
+    const scheduler = TestBed.inject(ActiviteExpirationSchedulerPort);
+    if (!(scheduler instanceof DesignationExpirationSchedulerFixture)) throw new Error('Missing activity scheduler fixture.');
+    if (scheduler.lastScheduled === undefined) throw new Error('Missing scheduled activity expiration fixture.');
+    return scheduler.lastScheduled;
+  };
+  const whenAccessingThePressedWindow = () => designation.requireWindow();
+  const whenFinishingAndReceivingQueuedExpiration = async (expiration: DesignationExpiration): Promise<void> => {
+    await designation.finish();
+    expiration.expire();
+  };
 
   it('should preserve leading zeros before validation', () => {
     whenEntering('049');

@@ -4,7 +4,7 @@ Structural decisions taken on this repository, with the options weighed and the 
 [`template.md`](template.md) to start one; number it with the next free 4-digit prefix followed by a
 kebab-case title (`0002-something-decided.md`). If two branches take the same number, the later MR
 renumbers at merge time. Numbers are never reused: 0016 was skipped, 0018 and 0020 were removed once 0024
-carried everything they said, and renumbering the rest would move a few dozen cross-references to save
+carried everything they said, and 0046 was removed once 0041, 0045 and the supervision owner carried its reasons, and renumbering the rest would move a few dozen cross-references to save
 nothing. A number that answers nothing here has its account in `git log`.
 
 **A record's own `## Status` is the living one.** Most records are reached from a topic document or a
@@ -29,7 +29,7 @@ something stays, with a status that says what died.
 - [0006 — Call the back through a typed client](0006-how-the-front-calls-the-back.md) — a typed client and
   adapter translation, bounded online reads and aggregate rereads added later
 - [0007 — Persist the pupitre before acknowledging a gesture](0007-durable-offline-pupitre.md) — IndexedDB,
-  company partitions, a durable FIFO, one unpaged reference snapshot activated between operator windows
+  company partitions, a durable FIFO, one unpaged complete reference and atomic local activity/resumption journal
 - [0008 — Extract methods to expose intent](0008-extract-methods-to-expose-intent.md) — named cohesive steps
   when long methods, nested logic or callbacks obscure the workflow
 - [0009 — Give operator windows and replay rules a domain owner](0009-pupitre-domain-responsibilities.md) —
@@ -73,7 +73,7 @@ something stays, with a status that says what died.
 - [0030 — Shape scenarios at lint](0030-shape-scenarios-at-lint.md) — branchless scenarios everywhere and, on
   domain specs, nothing acting after the first assertion
 - [0031 — Own workshop supervision in Gestion](0031-own-workshop-supervision-in-gestion.md) — dedicated
-  `supervision-atelier` context in Gestion to interpret workshop presence, activities and anomalies
+  `supervision-atelier` context in Gestion to interpret declared operators, current activities and conflicts
 - [0032 — Limit constructor parameters](0032-limit-constructor-parameters.md) — at most three constructor
   parameters, with named immutable construction contracts for additional data
 - [0033 — Compose view data in secondary adapters](0033-compose-view-data-in-secondary-adapters.md) — one
@@ -95,12 +95,12 @@ something stays, with a status that says what died.
 - [0039 — Load each gestion screen on demand](0039-load-gestion-screens-on-demand.md) — `loadComponent` on
   every gestion route, one chunk per screen, and budgets set from the measured initial bundle
 
-- [0040 — Colour non-conformity yellow and absence red](0040-colour-non-conformity-yellow.md) — `nc` renamed
-  `danger` for errors and absence, a new yellow `nc` never used as a foreground colour
+- [0040 — Colour non-conformity yellow](0040-colour-non-conformity-yellow.md) — `nc` renamed
+  `danger` for errors, refusals and destructive actions, a new yellow `nc` never used as a foreground colour
 
-- [0041 — Sort workshop supervision into state lanes](0041-sort-workshop-supervision-into-state-lanes.md) — four
-  derived lanes in a fixed order, alphabetical within each, the NC laid over the activity and no duration shown;
-  0046 removed the « En pause » lane
+- [0041 — Sort workshop supervision into state lanes](0041-sort-workshop-supervision-into-state-lanes.md) — two
+  activity-derived lanes in a fixed order, alphabetical within each, NC over interpretable activity and no duration;
+  local pause ownership and missing-source reasons preserved
 
 - [0042 — Forbid comments in code](0042-forbid-comments-in-code.md) — no comment or directive in scripts,
   templates and stylesheets, CSS parsed by `@eslint/css`, and no inline configuration that could silence a rule
@@ -114,11 +114,7 @@ something stays, with a status that says what died.
 - [0045 — Keep the pause on the pupitre](0045-keep-the-pause-on-the-pupitre.md) — PAUSE ends each known activity by
   a finish marked with its suspension, REPRENDRE restarts them, and the server never hears of a pause
 
-- [0046 — Stop showing the pause in workshop supervision](0046-stop-showing-the-pause-in-workshop-supervision.md) —
-  three lanes, an operator on pause read as present without assignment, no suspended activity or NC, and `warn`
-  left to the pupitre's pause commands
-
 - [0047 — Comptabiliser les activités terminées et signaler leurs fins automatiques](0047-count-only-finished-activities.md) —
-  décisions acceptées, à implémenter : fin automatique corrigible et immédiatement comptabilisée,
+  décisions appliquées aux consommateurs et au contrat final épinglé : fin automatique corrigible et immédiatement comptabilisée,
   activités en cours exclues du coût et du diviseur, durée indicative conservée au pupitre,
   séquences en conflit à résoudre par le gestionnaire et totaux concernés incomplets

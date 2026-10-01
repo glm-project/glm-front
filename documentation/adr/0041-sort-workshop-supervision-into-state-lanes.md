@@ -2,95 +2,79 @@
 
 ## Status
 
-`Accepted`
-
-- `Amends 0031: the grid becomes four state lanes, ordered alphabetically within each lane, the screen calls an open working visit « venue ouverte », and an activity without a workstation shows « Sans poste » instead of omitting the workstation.`
-- `Complements 0040: green means at work, brown warn the pause, red danger the absence, and yellow nc a non-conformity laid over an activity.`
-- `Amended by 0046: three lanes, Au travail · Sans affectation · Absents, and no brown warn; the presence state is PRESENT or ABSENT, the pause itself leaves presence unchanged, an operator with an open visit appears in Sans affectation when no activity remains open, no activity or NC is shown suspended, and a present card shows « arrivée », never « pause depuis ».`
+Accepted. Amends [0031](0031-own-workshop-supervision-in-gestion.md) and complements
+[0040](0040-colour-non-conformity-yellow.md). Revised under
+[0047](0047-count-only-finished-activities.md): two fixed lanes classify every declared operator from
+interpretable current activities. The positioning, alphabetical order, optional workstation labels,
+NC overlay and duration-free reading remain. Local pause ownership is carried by
+[0045](0045-keep-the-pause-on-the-pupitre.md).
 
 ## Context
 
-The client drew the page it wants on paper: « Temps réel — vue d'ensemble des opérateurs », with the columns
-Opérateur · Process · Tâche en cours · Temps passé (struck out) · NC (a coloured box). It does not want a
-spreadsheet interface.
+The client drew « Temps réel — vue d'ensemble des opérateurs » with Opérateur, Process, Tâche en cours
+and NC, striking out Temps passé. Five forms were considered: timeline, list, tiles, state lanes and
+exception queue; the client retained lanes on 25/09/2026. The dated timeline delivered by
+[PR #143](https://github.com/glm-project/glm-front/pull/143) with filters and a foldable log answered a
+different question. The revised activity model makes the immediate question who has interpretable work.
 
-[#12](https://github.com/glm-project/glm-front/issues/12) had planned one tile per declared operator, in a
-fixed alphabetical place, coloured by presence. [PR #143](https://github.com/glm-project/glm-front/pull/143)
-then delivered a timeline from 06:00 to 22:00, with filters, a search field and a foldable log per operator,
-without a written decision. Neither answers the question the client asks at a glance: who is working, who is
-waiting for a task, who is on break and who is missing.
-
-Five forms were drawn: the timeline, a list, tiles, state lanes and an exception queue. The client retained the
-state lanes on 25/09/2026.
+A pause lives only in the journal of the pupitre that took it. Gestion has no source for that local state.
+Finishes at the same instant do not establish a pause: an operator may simply finish their only task.
+An activity opened elsewhere after the last refresh, or whose finish is still unpublished, can still
+appear ongoing in the data being read. The view preserves that evidence.
 
 ## Considered options
 
-- Four state lanes, alphabetical within each lane — **kept**: the state is read by position before any
-  colour, and every operator appears once.
-- Keep the timeline — rejected: it answers "since when" with durations the client struck out, and its width
-  forces horizontal scrolling.
-- Tiles in a fixed alphabetical place — rejected: a fixed place spreads the states across the screen, so
-  counting who is missing means reading every tile.
-- A plain list — rejected: the spreadsheet the client does not want.
-- An exception queue — rejected: it hides the operators without an exception, whom the client wants to see.
+- Fixed state lanes, alphabetical within each — **kept**: state reads by position before colour and each
+  operator appears once. ADR 0047 limits classification to the two states supported by activities.
+- Keep the timeline — rejected: it answers since when with durations the client struck out, and its width
+  requires horizontal scrolling.
+- Tiles at a fixed alphabetical position — rejected: state is spread across the screen.
+- A plain list — rejected: it produces the spreadsheet the client declined.
+- An exception queue — rejected: it hides operators without an exception.
+- Show a pause lane from pupitre memory — rejected: that memory has no Gestion source.
+- Infer a pause from simultaneous finishes — rejected: it guesses an operator state from activity history.
+- Keep an empty pause lane awaiting a source — rejected: an empty lane falsely suggests nobody is on break.
 
 ## Decision
 
-Show four fixed lanes, in this order: **Au travail · Sans affectation · En pause · Absents**. Every declared
-operator appears in exactly one lane:
+Show **Au travail · Sans activité**, always in that order and visible even when empty. Each declared
+operator appears exactly once: at least one interpretable current activity means Au travail; otherwise
+Sans activité. Sort by name, first name and identifier within each lane. The operator has no fixed place.
 
-- ABSENT → Absents, even with an open activity or an anomaly;
-- EN_PAUSE → En pause;
-- PRESENT without any activity → Sans affectation;
-- PRESENT with at least one activity → Au travail.
+NC is hatching and a text mark laid over an interpretable current activity, never a lane. Conflicting
+sequences render separately, including those without an activity to resolve. They yield no interpreted
+current activity and no NC signal; independent activities of the same operator still render. Automatic
+finishes and conflicts remain visible in the card's verification signal without changing the lane.
 
-"Au travail" is a derived lane, never a fourth presence state. Order operators alphabetically (name, first
-name, identifier) within each lane; the fixed place per person no longer exists. The lanes are a pure state:
-no working hours, so an arrival passing through "Sans affectation" is normal, and lunch is read in "En pause".
+An explicit nonbillable activity stays Au travail and says « Hors OF ». Nothing is named GLM. Neither
+pupitre nor API currently declares this work, and a missing element never becomes Hors OF by inference.
+Show free-text workstation nature as « Métier », exactly as received, and « Sans poste » when no workstation
+is supplied. Show the operator's trades when no interpretable activity is current. Keep one card per person
+when several operators work on the same machine.
 
-Lay the non-conformity over the activity (hatching and an « NC » mark), never as a lane. An operator is in NC
-when their visit is open (PRESENT or EN_PAUSE) and at least one activity is nonconforming. An absent
-operator's activities stay visible on their card, dimmed, but never count in the NC signal: their departure
-stopped their time.
+Show instants, never a computed duration. REPRENDRE opens a fresh activity, so its displayed beginning
+restarts. No activity or NC is shown suspended. Showing breaks would first require a source Gestion can
+read. `warn` remains the pupitre's pause-command colour and paints no supervision lane, edge or icon.
 
-Work that no manufacturing order bills stays in "Au travail", marked « Hors OF » in place of the mould or order.
-Nothing is called « GLM ». Neither the pupitre nor the API declares such work yet: an activity whose element is
-missing is never turned into « Hors OF », which would fabricate the very indication 0031 forbids.
-
-Show the trade as « Métier »: it is the nature of the activity's workstation, free text shown as typed. An
-activity without a workstation says « Sans poste » rather than omitting the line. An operator without any
-activity, unassigned or on pause, lists their trades instead; an absent operator shows none. Show nothing more
-when two people work on the same machine: the page stays one card per person.
-
-Show no duration anywhere, only instants: « arrivée », « pause depuis », « depuis » on each task. Remove the
-filters, the search field and the log. Show each anomaly as a band on the card, without changing the lane, and
-count the operators carrying one in a « à vérifier » signal.
-
-On screen, call a working visit a « venue »: « journée » would suggest a calendar day, and « présence »
-already names the PRESENT, EN_PAUSE or ABSENT state. « Venue ouverte sans heure d'arrivée » replaces the
-label « Journée ouverte sans heure d'ouverture » that 0031 prescribed. The code keeps `JourneeDeTravail`.
-
-Keep the demonstration dataset hard-coded in the InMemory adapter, the only one wired, in production too, and
-show no « démonstration » notice: the HTTP adapter waits for the API to expose open working visits.
-
-Remove the timeline. The dated history that
-[glm-back#32](https://github.com/glm-project/glm-back/issues/32) asks for does not belong on this screen.
+Keep the InMemory demonstrations as the only wired adapter, including production, with no demonstration
+notice. Real HTTP integration is a separate project. The dated history requested by
+[glm-back#32](https://github.com/glm-project/glm-back/issues/32) has another owner.
 
 ## Consequences
 
 ### Positive
 
-- The four states are read by position and counted at a glance, without scrolling horizontally.
-- A non-conformity cannot hide a presence state, and an absence cannot hide an activity left open.
-- The screen displays no computed duration, so it cannot contradict the pupitre or the report.
+- The two states read by position at a glance without horizontal scrolling.
+- NC and conflicts remain visible without replacing the activity classification.
+- No computed duration can contradict the pupitre or the reports.
+- The view exposes only states supported by its source.
 
 ### Negative
 
-- A person changes lane from one read to the next and no longer has a fixed place.
-- "Where is X" means reading four lists, or Ctrl+F; a « Trouver » field is postponed.
-- The "Au travail" lane grows long beyond about 40 operators, and no compact mode exists.
-- The screen says « venue » where the API, the pupitre and the code say « journée ».
-- [#23](https://github.com/glm-project/glm-front/issues/23) and the colour table of #12 are reversed: green
-  now means at work rather than present, and "Au travail", which #23 declined to distinguish, becomes a
-  derived lane.
-- The tests of the timeline and of the filters are deleted with them.
+- An operator changes lanes between reads and loses a fixed location.
+- Finding a person requires reading both lists or Ctrl+F; a search control is postponed.
+- Au travail grows long beyond about 40 operators; no compact mode exists.
+- The supervisor cannot distinguish a local pause from another reason for having no current activity.
+- An NC remains signalled while its interpretable activity remains ongoing in the source, including when
+  its finish is still unpublished or another pupitre opened it. A conflicting activity contributes none.
+- The timeline, filter and suspended-activity scenarios left with their removed UI responsibilities.

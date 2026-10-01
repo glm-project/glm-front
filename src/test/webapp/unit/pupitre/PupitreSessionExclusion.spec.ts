@@ -2,10 +2,10 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
-import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
@@ -21,11 +21,14 @@ import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { Observable, Subject } from 'rxjs';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
-const gesteFixture: GesteDAtelier = {
+const gesteFixture: GesteDePointage = {
   id: 'arrivee-1',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
-  nature: 'ARRIVEE',
+  nature: 'POINTAGE',
+  suiviId: 'piece',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
 };
 
 const jwtWithTenant = (tenant: string, tag: string): string =>
@@ -35,6 +38,13 @@ const originalToken = jwtWithTenant('entreprise-a', 'original');
 const renewedToken = jwtWithTenant('entreprise-a', 'renewed');
 
 class StorageFixture extends LocalStoragePort {
+  override discardDocumentsWithPrefix(prefix: string): Promise<void> {
+    for (const key of this.documents.keys()) {
+      if (key.startsWith(prefix)) this.documents.delete(key);
+    }
+    return Promise.resolve();
+  }
+
   private readonly documents = new Map<string, unknown>();
   private readonly locks = new BrowserLocksFixture();
 
@@ -126,7 +136,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
     return barrier;
   }
 
-  override async send(): Promise<Result<void, RefusDePublication>> {
+  override async send(): Promise<Result<PublicationAcceptee, RefusDePublication>> {
     this.tokenDuringReplay = this.authentication().currentToken();
     const barrier = this.nextSend;
     this.nextSend = undefined;
@@ -134,10 +144,10 @@ class AtelierExchangeFixture extends AtelierExchangePort {
       this.chronology.push('replay-started');
       await barrier.hold();
       this.chronology.push('replay-finished');
-      return ok(undefined);
+      return ok({ conflits: [] });
     }
     this.chronology.push('replay');
-    return ok(undefined);
+    return ok({ conflits: [] });
   }
 
   override reread(): Promise<void> {

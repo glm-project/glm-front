@@ -34,7 +34,8 @@ with a forwarding method that adds no meaning.
 
 Preserve behavior during extraction, including the time identifiers are created, evaluation of queued
 callbacks, ordering of awaited operations, lock and transaction scope, and error propagation. In PR #69,
-gesture identity belongs to the user action while the arrival decision belongs to queue execution; session
+gesture identity belongs to the user action while a deferred global batch is decided from the updated
+operator window at queue execution; session
 renewal must still inspect persisted credentials under the enrolment lock.
 
 Use the existing behavioral tests before and after extraction. Keep behavioral changes separate, following

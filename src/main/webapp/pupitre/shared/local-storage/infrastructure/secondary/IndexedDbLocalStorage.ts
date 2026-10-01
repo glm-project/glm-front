@@ -49,6 +49,32 @@ export class IndexedDbLocalStorage extends LocalStoragePort {
     });
   }
 
+  override async discardDocumentsWithPrefix(prefix: string): Promise<void> {
+    const database = await this.open();
+    return new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(DOCUMENTS, 'readwrite', { durability: 'strict' });
+      const request = transaction.objectStore(DOCUMENTS).openCursor();
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onabort = () => {
+        database.close();
+        reject(new Error('Transaction locale interrompue', { cause: transaction.error }));
+      };
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (cursor === null) return;
+        if (this.keyHasPrefix(cursor.key, prefix)) cursor.delete();
+        cursor.continue();
+      };
+    });
+  }
+
+  private keyHasPrefix(key: IDBValidKey, prefix: string): boolean {
+    return typeof key === 'string' && key.startsWith(prefix);
+  }
+
   override async lock<T>(cle: string, action: () => Promise<T>): Promise<T> {
     return await navigator.locks.request(`${DATABASE}:${cle}`, action);
   }

@@ -3,16 +3,16 @@ import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
+import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
 import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
-import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
-import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 
 const TRAVAIL = new CategorieActivite('TRAVAIL');
@@ -78,33 +78,52 @@ const ACTIVITES: readonly ActiviteDeDemonstration[] = [
   { operateur: 'op-marchand', objet: OF_3001, poste: FRAISEUSE_2, categorie: TRAVAIL, minutes: 1130 },
   { operateur: 'op-morel', objet: OF_3005, poste: FIL_1, categorie: TRAVAIL, minutes: 150 },
   { operateur: 'op-morel', objet: MOULE_1015, poste: FIL_2, categorie: NON_CONFORMITE, minutes: 50 },
-  { operateur: 'op-perrin', objet: OF_3006, poste: TOUR_1, categorie: TRAVAIL, minutes: 170 },
   { operateur: 'op-vidal', objet: OF_SANS_REFERENCE, categorie: TRAVAIL, minutes: 8 },
 ];
 
 const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision => {
   const instantBefore = (minutes: number): Instant => new Instant(new Date(instantDemonstration - minutes * 60_000).toISOString());
-  const fenetre = (debut: number): FenetreDePresence => new FenetreDePresence(instantBefore(debut));
   const operateur = (id: string): IdentifiantOperateur => new IdentifiantOperateur(id);
   return {
+    sequencesEnConflit: [
+      new SequenceEnConflit({
+        id: new IdentifiantSequence('sequence-perrin'),
+        operateurId: operateur('op-perrin'),
+        poste: TOUR_1,
+        activites: [
+          new ActiviteDeSupervision({
+            id: new IdentifiantActivite('act-perrin-a-resoudre'),
+            operateurId: operateur('op-perrin'),
+            objet: OF_3006,
+            categorie: TRAVAIL,
+            debut: instantBefore(170),
+            etat: 'A_RESOUDRE',
+            poste: TOUR_1,
+          }),
+        ],
+      }),
+      new SequenceEnConflit({
+        id: new IdentifiantSequence('sequence-morel'),
+        operateurId: operateur('op-morel'),
+        poste: ERODEUSE_F,
+        activites: [
+          new ActiviteDeSupervision({
+            id: new IdentifiantActivite('act-morel-a-resoudre'),
+            operateurId: operateur('op-morel'),
+            objet: new HorsOf(),
+            categorie: NON_CONFORMITE,
+            debut: instantBefore(840),
+            etat: 'A_RESOUDRE',
+            poste: ERODEUSE_F,
+          }),
+        ],
+      }),
+      new SequenceEnConflit({ id: new IdentifiantSequence('sequence-schmitt'), operateurId: operateur('op-schmitt'), activites: [] }),
+    ],
     operateurs: OPERATEURS.map(
       ([id, nom, prenom, metiers]) =>
         new OperateurDeclare({ id: operateur(id), nom, prenom, metiers: metiers.map(metier => new NatureDeTravail(metier)) }),
     ),
-    journees: [
-      JourneeDeTravail.open(operateur('op-aubert'), [fenetre(132)]),
-      JourneeDeTravail.open(operateur('op-benali'), [fenetre(128)]),
-      JourneeDeTravail.open(operateur('op-chevalier'), [fenetre(82)]),
-      JourneeDeTravail.open(operateur('op-dumas'), [fenetre(145)]),
-      JourneeDeTravail.open(operateur('op-garnier'), [fenetre(99)]),
-      JourneeDeTravail.open(operateur('op-lefevre'), [fenetre(75)]),
-      JourneeDeTravail.open(operateur('op-marchand'), [fenetre(1626)]),
-      JourneeDeTravail.open(operateur('op-morel'), [fenetre(159)]),
-      JourneeDeTravail.closed(operateur('op-perrin'), [fenetre(180)]),
-      JourneeDeTravail.open(operateur('op-roux'), [fenetre(130)]),
-      JourneeDeTravail.open(operateur('op-schmitt')),
-      JourneeDeTravail.open(operateur('op-vidal'), [fenetre(12)]),
-    ],
     activites: ACTIVITES.map(
       (activite, index) =>
         new ActiviteDeSupervision({
@@ -113,6 +132,7 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
           objet: activite.objet,
           categorie: activite.categorie,
           debut: instantBefore(activite.minutes),
+          etat: 'EN_COURS',
           ...(activite.poste === undefined ? {} : { poste: activite.poste }),
         }),
     ),

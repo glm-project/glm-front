@@ -2,23 +2,23 @@
 
 Ce contexte appartient exclusivement à `pupitre`. Il capture les gestes de l'atelier, maintient leur journal hors ligne et pilote la désignation temporaire de l'opérateur.
 
-## Décision de comptabilisation acceptée
+## Comptabilisation opérationnelle
 
 L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) distingue
-la comptabilisation à implémenter côté back de l'indication conservée au pupitre.
+la comptabilisation des rapports de l'indication conservée au pupitre.
 
 **Durée écoulée indicative** : durée affichée pour une activité en cours, figée à l'ouverture de la
 fenêtre opérateur selon les règles existantes ci-dessous. Elle aide l'opérateur à lire son activité ;
 elle ne constitue pas une durée comptabilisée dans les rapports.
 
-Pour la règle de fin automatique à implémenter, chaque transition travail/NC ouvre une activité distincte
+Selon la règle de fin automatique, chaque transition travail/NC ouvre une activité distincte
 avec une nouvelle échéance de 13 h. Le serveur remplace une fin automatique par un `FIN` survenu au plus tard
 à l'échéance même s'il est reçu après. Un `FIN` survenu après l'échéance conserve la borne automatique
 jusqu'à correction explicite du gestionnaire. Le pupitre calcule aussi l'expiration localement,
 y compris hors ligne, sans créer de `FIN`. L'activité expirée cesse d'être active et ne peut plus être
 mise en pause ; un nouveau début reste possible. Le gel de la durée indicative ne gèle pas cet état.
 
-**Activité visée** : activité identifiée par son pointage ouvrant. Le référentiel et les gestes de fin
+**Activité visée** : activité identifiée par son pointage ouvrant original, identité stable conservée après correction. Le référentiel et les gestes de fin
 ou de changement de catégorie portent cette cible. Rejeu et nouvelle tentative conservent la cible
 initiale, y compris après rafraîchissement du référentiel. Une contradiction avec une activité déjà
 remplacée relève d'une séquence en conflit ; le geste ne s'applique jamais à sa remplaçante.
@@ -32,9 +32,9 @@ implicite. Une transition visant une cible seulement échue conserve cette cible
 suivante à l'heure du geste, sans prolonger l'activité échue.
 
 **Séquence en conflit** : contradiction entre pointages conservés par le back et à résoudre par le
-gestionnaire selon l'ADR 0047. Le résultat de publication doit distinguer cette conservation d'un refus
+gestionnaire selon l'ADR 0047. Le résultat de publication distingue cette conservation d'un refus
 d'enregistrement. Le pupitre restitue le conflit connu sans réaffecter de cible ni choisir la correction.
-Sur toute séquence en conflit, il ne déduit aucune activité courante et ne permet qu'une nouvelle
+Le diagnostic reste durable si le rafraîchissement échoue. Sur toute séquence en conflit, il ne déduit aucune activité courante et ne permet qu'une nouvelle
 ouverture. Aucune fin ni transition ne cible une activité en conflit : `PAUSE` et `TOUT ARRÊTER`
 n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une reprise.
 
@@ -52,15 +52,11 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 
 **Vue de pointage** : projection personnelle prête à rendre des éléments de l'atelier, regroupés et ordonnés avec leur numéro résolu, l'activité de l'opérateur désigné, sa catégorie et sa durée figée. Elle ne porte ni libellé d'écran ni choix de style.
 
-**État de présence** : position de l'opérateur dans sa journée de travail — absent ou présent. Le serveur l'établit, le journal local le fait avancer par les gestes non encore publiés. Il ne se confond pas avec l'état d'atelier d'un élément, ni avec la connexion observée du pupitre. « En pause » n'est pas un état de présence : la pause ne change pas la présence.
-
-**Pause** : arrêt, par la commande PAUSE, de toutes les activités personnelles que le pupitre connaît pour l'opérateur désigné, retenu pour être rouvert. Elle est identifiée par l'identité racine de l'intention globale initiée qui l'a prise. Le serveur n'en sait rien : il ne reçoit que des fins. Éviter : pause de présence, état en pause.
+**Pause** : arrêt, par la commande PAUSE, de toutes les activités personnelles que le pupitre connaît pour l'opérateur désigné, retenu pour être rouvert. Elle est identifiée par l'identité racine de l'intention globale initiée qui l'a prise. Le serveur n'en sait rien : il ne reçoit que des fins.
 
 **Activité suspendue** : activité arrêtée par une pause, avec son élément, son poste et le pointage qui la rouvrira — `DEBUT`, ou `NON_CONFORMITE` pour une activité en non-conformité. La fin qui l'arrête porte sa **suspension** : la pause et ce pointage de réouverture. Éviter : activité en pause.
 
 **Pause en cours** : la dernière pause d'un opérateur dans le journal de ce pupitre, tant qu'elle n'a pas pris fin et qu'une activité suspendue reste à rouvrir. `PauseEnCours` la lit sur le journal entier, événements et référentiel projeté.
-
-**Situation de l'opérateur** : ce que le chrome annonce de l'opérateur désigné — absent, présent, ou en pause lorsqu'une pause est en cours et que son état de présence est présent. C'est un affichage, pas un état que le serveur connaît.
 
 **Numéro d'élément** : référence attribuée par l'entreprise lorsqu'elle existe, sinon nom généré de l'élément. C'est l'identifiant visible et la clé du tri naturel sur la vue de pointage.
 
@@ -70,7 +66,7 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 
 **Entreprise** : portée d'un journal du pupitre et de tous les gestes qu'il contient. Deux journaux d'entreprises différentes restent indépendants.
 
-> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. La présence sans affectation n'en est pas, et aucun type, champ ni sélecteur ne s'appelle GLM.
+> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. Une activité manquante n'en constitue aucune preuve, et aucun type, champ ni sélecteur ne s'appelle GLM.
 
 ## Responsabilités et invariants
 
@@ -80,28 +76,28 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 - Une tuile représente toujours un élément et agrège toutes les activités que l'opérateur désigné y a ouvertes sur différents postes. Elle est en non-conformité dès qu'une de ces activités l'est, sa durée part de la plus ancienne activité encore ouverte et ses actions visent tout l'agrégat.
 - La cible principale d'une tuile active termine toutes ses activités personnelles. Sa cible secondaire remet en travail les seules activités en non-conformité dès qu'il en existe une; sinon elle place en non-conformité toutes les activités en travail. Une action n'émet jamais une transition déjà atteinte.
 - L'adaptateur primaire annonce la cible tactile pressée et, lorsque le domaine le demande, le poste choisi. La fenêtre opérateur traduit cette intention en types de pointage et en lot de gestes; le composant ne construit pas d'événement d'atelier.
-- La première commande métier d'une fenêtre assure l'arrivée avant les gestes demandés, y compris pour REPRENDRE et TOUT ARRÊTER. PAUSE ne l'assure pas : elle ne fait que fermer, et assurer l'arrivée d'un opérateur absent qui a oublié des activités ouvrirait une journée vouée à l'abandon.
-- Aucune reprise ne précède un geste : le seul geste de présence que le pupitre envoie est le départ. Le rejeu n'absorbe qu'une arrivée déjà ouverte.
 - Lorsqu'une ouverture exige de choisir parmi plusieurs postes habilités, la fenêtre opérateur retourne explicitement ce besoin. La pop-up ne conserve qu'une attente éphémère, et le domaine revalide la fenêtre et le poste au choix final; fermer ou laisser expirer cette attente ne produit aucun geste.
 - Un pointage sans choix de poste reçoit son identifiant et son heure à la déclaration de son intention, soit à l'échéance de l'appui maintenu sur sa cible. Avec une pop-up multiposte, ils naissent au choix final du poste; ouvrir puis abandonner la pop-up ne crée aucune identité de geste.
 - Une fenêtre ouverte réconcilie chaque nouvelle version du journal de son entreprise sans changer l'opérateur désigné ni son instant d'observation. La projection optimiste disparaît ainsi dès qu'un geste de cette fenêtre est refusé.
-- La fenêtre expose l'état de présence **vivant** de l'opérateur désigné : il se relit du référentiel projeté à chaque réconciliation, contrairement à l'instant d'ouverture que les durées figent. Un opérateur absent du référentiel projeté est lu absent; il n'existe pas d'état inconnu.
-- `PresenceDeLOperateur` décide des commandes globales offertes : PAUSE seulement si l'opérateur a au moins une activité personnelle connue, REPRENDRE seulement si une pause est en cours, même lorsque l'opérateur est lu absent (journée abandonnée, départ ailleurs), TOUT ARRÊTER toujours. Elle donne aussi la situation affichée : « En pause » seulement si une pause est en cours et que l'état projeté est présent.
-- La projection replie les gestes de présence locaux non refusés sur l'état de l'opérateur, en suivant l'automate du serveur; une transition illégale laisse l'état inchangé. Un geste déjà reflété par le référentiel n'est plus rejoué — le journal n'est jamais purgé, et sans ce marqueur le départ de la veille écraserait l'état du jour.
 - La fenêtre expose au plus le dernier refus d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
 - Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
 - Un geste conserve l'opérateur, l'identifiant et l'heure fixés à son initiation.
-- « Tout arrêter » forme un unique lot local atomique et ordonné : toutes les fins des activités personnelles connues, puis le départ. Un échec d'acceptation locale n'en conserve aucune partie; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
-- PAUSE forme de même un unique lot atomique de fins, sans le départ : une fin par activité personnelle connue, sur son poste, portant sa suspension. La suspension ne quitte jamais le pupitre. Une pause ne ferme que ce que le référentiel du pupitre connaît; une activité ouverte ailleurs depuis le dernier rafraîchissement court pendant la pause.
-- `PauseEnCours` est le seul propriétaire de la fin d'une pause et de ce qu'elle rouvre. La pause d'un opérateur est celle de sa dernière suspension; elle prend fin à REPRENDRE, à tout autre geste de cet opérateur ajouté au journal de ce pupitre, quel que soit son sort à la publication, et dès que le référentiel projeté montre une activité de l'opérateur autre qu'une activité dont la suspension a été refusée. Aucune horloge n'est comparée entre appareils et une pause n'expire jamais.
+- « Tout arrêter » forme un unique lot local atomique et ordonné de fins ciblées avec l'invalidation durable de la reprise. Un échec d'acceptation locale n'en conserve aucune partie ; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
+- PAUSE forme de même un unique lot atomique de fins : une fin par activité personnelle connue, sur son poste, portant sa suspension. La suspension ne quitte jamais le pupitre. Une pause ne ferme que ce que le référentiel du pupitre connaît; une activité ouverte ailleurs depuis le dernier rafraîchissement court pendant la pause.
+- `PauseEnCours` est le seul propriétaire de la fin d'une pause et de ce qu'elle rouvre. La pause d'un opérateur est celle de sa dernière suspension; elle prend fin à REPRENDRE, à tout autre geste de cet opérateur ajouté au journal de ce pupitre, quel que soit son sort à la publication, et dès que le référentiel projeté montre une activité de l'opérateur autre qu'une activité dont la suspension a été refusée. Une pause n'expire jamais ; seules les activités interprétables non expirées font obstacle à sa reprise.
 - REPRENDRE rouvre, sur le même poste et par le pointage retenu, chaque activité suspendue dont la suspension n'a pas été refusée, dont l'élément est encore au référentiel projeté, dont le poste est encore habilité et qui n'est pas déjà ouverte au même élément et au même poste — un `NON_CONFORMITE` sur une activité en cours la basculerait en non-conformité. La reprise n'a lieu que sur le pupitre qui a pris la pause.
-- Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. PAUSE ou REPRENDRE décidée sur une fenêtre où il n'y a plus rien à suspendre ou à rouvrir n'enregistre aucun geste, pas même l'arrivée. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
-- Un échec de la lecture du référentiel ne remplace jamais le dernier référentiel complet. Cette lecture est un appel unique et non paginé dont le serveur garantit lui-même l'instantanéité et l'unicité des identifiants; le pupitre ignore la version qu'elle porte et ne revérifie ni l'une ni l'autre.
+- Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. PAUSE ou REPRENDRE décidée sur une fenêtre où il n'y a plus rien à suspendre ou à rouvrir n'enregistre aucun geste, aucun pointage. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
+- Un échec de la lecture du référentiel ne remplace jamais le dernier référentiel complet. Cette lecture est un appel unique et non paginé avec des identifiants uniques. Le backend utilise READ COMMITTED : ses requêtes successives peuvent observer des commits concurrents. Le pupitre ignore la version reçue ; l'acquisition complète ne garantit aucun instantané transactionnel commun.
 - Un référentiel n'est disponible pour l'enrôlement que si la vue active appartient à l'entreprise actuellement sélectionnée.
 - Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
 - La fraîcheur du référentiel se pousse en arrière-plan, par une synchronisation complète qui publie d'abord les gestes en attente, et ne se place jamais sur le chemin d'un geste.
 - Un même matricule inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
+
+- `CommandesGlobales` offre PAUSE lorsqu'une activité personnelle interprétable non expirée reste connue, REPRENDRE lorsqu'une pause locale reste à rouvrir, TOUT ARRÊTER toujours. Le chrome montre l'identité désignée et l'éventuelle pause locale.
+- Les commandes reçoivent explicitement leur instant d'évaluation. À l'échéance serveur inclusive, une activité devient non actionnable ; la durée indicative garde l'instant d'ouverture de la fenêtre. `ActiviteExpirationSchedulerPort` possède un timer distinct de l'inactivité et réévalue sans fermer la désignation ni créer de FIN.
+- TOUT ARRÊTER accepte N FIN ciblés et l'invalidation durable des pauses de cet opérateur dans une seule mutation, même pour N=0. Un échec n'avance ni journal ni fenêtre. L'historique et les pending sont conservés.
+- Le format atelier neuf possède sa clé versionnée par entreprise. L'adapter retire seulement les anciens documents `atelier:` via le port technique commun, sans les lire ni les migrer. Credentials et enrôlement gardent leurs documents.
 
 ## Règles locales
 
@@ -127,10 +123,4 @@ Les libellés métier du pupitre vivent dans un module unique de ce contexte et 
 
 Le résultat du chargement initial est distinct de la connexion observée. `TypeScriptChargementDeLAtelier` expose la disponibilité du référentiel de l'entreprise courante; l'adaptateur secondaire d'`enrolement` traduit l'achèvement de la synchronisation en `CHARGE` ou `ECHEC`. Cette issue ne modifie pas l'indicateur de connexion, que seuls les résultats de publication établissent.
 
-Le back ne rend plus `EN_PAUSE` (glm-back#62). Tant que le vidage des pupitres n'est pas passé, un opérateur `EN_PAUSE` peut encore venir d'un référentiel stocké : `IndexedDbJournauxDuPupitre` le lit présent. Voir l'[ADR 0045](../../../../../../documentation/adr/0045-keep-the-pause-on-the-pupitre.md).
-
 Lire [Offline pupitre](../../../../../../documentation/offline-pupitre.md) avant de changer la désignation, le journal, le rejeu ou le runtime, et les [ADR pertinents](../../../../../../documentation/adr/README.md) avant de rouvrir une décision. Les échanges futurs avec un autre contexte de `pupitre` passent par un port et un adaptateur TypeScript, sans import direct de son domaine.
-
-## Points ouverts
-
-- Le bouton global PAUSE n'a jamais été validé de première main par le client : le mécanisme « pause, arrêt, reprise » qu'il décrit est acquis, le bouton qui le déclenche pour toutes les activités à la fois reste à confirmer.

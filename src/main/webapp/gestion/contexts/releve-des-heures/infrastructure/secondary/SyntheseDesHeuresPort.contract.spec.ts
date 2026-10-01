@@ -5,336 +5,139 @@ import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, p
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { elementFixture, releveFixture } from '@test/unit/fixtures/gestion/releve-des-heures/ReleveDesHeuresFixture';
 import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des-heures/SyntheseDesHeuresFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
-import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
-import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
+import { vi } from 'vitest';
 import { ElementReleveId } from '../../domain/element/ElementReleveId';
-import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
-import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
-import { PosteReleveId } from '../../domain/element/PosteReleveId';
+import { ActiviteReleveId } from '../../domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '../../domain/releve/CibleDePointage';
-import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
-import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
-import { JourDeReleve } from '../../domain/releve/JourDeReleve';
 import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
-import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
-import { PointageDElement } from '../../domain/releve/PointageDElement';
-import { PointageDePresence } from '../../domain/releve/PointageDePresence';
-import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
+import { PointageReleveId } from '../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
+import { SequenceEnConflit } from '../../domain/releve/SequenceEnConflit';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
-import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 import { HttpSyntheseDesHeures } from './HttpSyntheseDesHeures';
 
 type RestSynthese = components['schemas']['RestSyntheseDesHeures'];
-type RestJour = components['schemas']['RestJourDeSynthese'];
 type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
-type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
-type RestElement = components['schemas']['RestElementDeLaSynthese'];
 type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
-type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
-type RestPlage = components['schemas']['RestPlage'];
-
 const ROUTE_SYNTHESE = '/api/syntheses-des-heures';
 const ROUTE_FEUILLE = '/api/feuilles-de-temps';
 const OPERATEUR = 'op-1';
-const SYNTHESE_INTROUVABLE = 'urn:glm:erreur:synthese-des-heures:operateur-introuvable';
-const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvable';
 const SEMAINE = new SemaineISO(2026, 38);
 const DEMANDE = new DemandeDeReleve(new OperateurReleveId(OPERATEUR), SEMAINE);
+const SYNTHESE_INTROUVABLE = 'urn:glm:erreur:synthese-des-heures:operateur-introuvable';
+const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvable';
+const EVALUATION = '2026-09-14T18:00:00Z';
 
-interface PointageDePresenceFixture {
-  readonly type: 'ARRIVEE' | 'DEPART';
-  readonly instant: string;
-}
-
-interface PointageDElementFixture {
-  readonly type: 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
-  readonly instant: string;
-  readonly element: string;
-  readonly poste?: string;
-}
-
-type PointageFixture = PointageDePresenceFixture | PointageDElementFixture;
-
-interface PlageFixture {
-  readonly debut: string;
-  readonly fin?: string;
-  readonly presumee: boolean;
-}
-
-interface JourFixture {
-  readonly operationnelle: string;
-  readonly operationnellePresumee: string;
-  readonly pointages: readonly PointageFixture[];
-  readonly plages: readonly PlageFixture[];
-  readonly activites?: readonly RestActivite[];
-}
-
-const jourTravailleFixture: JourFixture = {
-  operationnelle: 'PT5H10M',
-  operationnellePresumee: 'PT0S',
-  pointages: [
-    { type: 'ARRIVEE', instant: '2026-09-14T06:02:00Z' },
-    { type: 'DEBUT', instant: '2026-09-14T06:10:00Z', element: 'element-1', poste: 'poste-1' },
-    { type: 'NON_CONFORMITE', instant: '2026-09-14T10:00:00Z', element: 'element-1' },
-    { type: 'FIN', instant: '2026-09-14T10:30:00Z', element: 'element-1' },
-    { type: 'DEPART', instant: '2026-09-14T15:32:00Z' },
-  ],
-  plages: [{ debut: '2026-09-14T06:02:00Z', fin: '2026-09-14T15:32:00Z', presumee: false }],
-  activites: [
+const syntheseFixture = (): RestSynthese => ({
+  annee: 2026,
+  semaine: 38,
+  operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
+  evaluation: EVALUATION,
+  dureeOperationnelleTotale: { complete: true, valeur: 'PT57H30M' },
+  conflits: [],
+  elements: [
     {
-      element: 'element-1',
-      poste: 'poste-1',
-      nature: 'Fraisage',
-      categorie: 'TRAVAIL',
-      debut: '2026-09-14T06:10:00Z',
-      fin: '2026-09-14T10:00:00Z',
-      presumee: false,
+      id: 'element-1',
+      type: 'PRODUIT',
+      nom: 'Moule',
+      reference: '1015',
+      description: 'Carter',
+      duree: { complete: true, valeur: 'PT15H30M' },
+      dureeNonConformite: { complete: true, valeur: 'PT50M' },
+      postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }],
     },
-    { element: 'element-1', categorie: 'NON_CONFORMITE', debut: '2026-09-14T10:00:00Z', fin: '2026-09-14T10:30:00Z', presumee: false },
   ],
-};
-
-const jourAbandonneFixture: JourFixture = {
-  operationnelle: 'PT0S',
-  operationnellePresumee: 'PT1H30M',
-  pointages: [{ type: 'ARRIVEE', instant: '2026-09-15T08:20:00Z' }],
-  plages: [{ debut: '2026-09-15T08:20:00Z', fin: '2026-09-15T13:40:00Z', presumee: true }],
-};
-
-const jourEnCoursFixture: JourFixture = {
-  operationnelle: 'PT0S',
-  operationnellePresumee: 'PT0S',
-  pointages: [{ type: 'ARRIVEE', instant: '2026-09-16T06:00:00Z' }],
-  plages: [{ debut: '2026-09-16T06:00:00Z', presumee: false }],
-};
-
-const elementsDeLaSemaineFixture: readonly RestElement[] = [
-  {
-    id: 'element-1',
-    type: 'PRODUIT',
-    nom: 'PRD-2026-000015',
-    reference: '1015',
-    description: 'Carter de pompe',
-    duree: 'PT15H30M',
-    dureeNonConformite: 'PT50M',
-    dureePresumee: 'PT45M',
-    postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }, { poste: { id: 'poste-2', libelle: 'Mazak QT-200' } }],
-  },
-  {
-    id: 'element-2',
-    type: 'ORDRE_DE_FABRICATION',
-    nom: 'OF-2026-000057',
-    duree: 'PT2H',
-    dureeNonConformite: 'PT0S',
-    dureePresumee: 'PT0S',
-    postes: [],
-  },
-];
-
-const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
-  new IntervalleDActivite({
-    element: new ElementReleveId(activite.element),
-    poste: activite.poste === undefined ? undefined : new PosteReleveId(activite.poste),
-    nature: activite.nature,
-    categorie: activite.categorie,
-    debut: new InstantDeReleve(activite.debut),
-    fin: activite.fin === undefined ? undefined : new InstantDeReleve(activite.fin),
-    presumee: activite.presumee,
-  });
-
-const toPointage = (pointage: PointageFixture): PointageDeReleve => {
-  const instant = new InstantDeReleve(pointage.instant);
-  if ('element' in pointage) {
-    const poste = pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste);
-    return new PointageDElement(pointage.type, instant, new CibleDePointage(new ElementReleveId(pointage.element), poste));
-  }
-  return new PointageDePresence(pointage.type, instant);
-};
-
-const toElement = (element: RestElement): ElementDuReleve =>
-  new ElementDuReleve({
-    id: new ElementReleveId(element.id),
-    type: element.type,
-    nom: element.nom,
-    reference: element.reference,
-    description: element.description,
-    duree: new DureeTravaillee(element.duree),
-    dureeNonConformite: new DureeTravaillee(element.dureeNonConformite),
-    dureePresumee: new DureeTravaillee(element.dureePresumee),
-    postes: element.postes.map(({ poste, nature }) => new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature)),
-  });
-
-const jourVideFixture: JourFixture = {
-  operationnelle: 'PT0S',
-  operationnellePresumee: 'PT0S',
-  pointages: [],
-  plages: [],
-};
-
-const semaineFixture = (): readonly JourFixture[] => [
-  jourTravailleFixture,
-  jourAbandonneFixture,
-  jourEnCoursFixture,
-  jourVideFixture,
-  jourVideFixture,
-  jourVideFixture,
-  jourVideFixture,
-];
-
-interface ProjectionPlage {
-  readonly debut: string;
-  readonly fin: string | undefined;
-  readonly presumee: boolean;
-}
-
-interface ProjectionJour {
-  readonly jour: string;
-  readonly pointages: readonly string[];
-  readonly plages: readonly ProjectionPlage[];
-}
-
-const projeterPlage = (plage: PlageDeReleve): ProjectionPlage => ({
-  debut: plage.debut.value.toISOString(),
-  fin: plage.fin?.value.toISOString(),
-  presumee: plage.presumee,
+  jours: SEMAINE.jours().map((jour, rang) => ({
+    jour: jour.value,
+    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT2H' : 'PT0S' },
+    pointages:
+      rang === 0
+        ? [
+            {
+              id: 'debut-a',
+              type: 'DEBUT',
+              intention: 'OUVERTURE',
+              dateDeSurvenue: '2026-09-14T08:00:00Z',
+              element: 'element-1',
+              poste: 'poste-1',
+            },
+          ]
+        : [],
+  })),
 });
 
-const projeterPointage = (pointage: PointageDeReleve): string => {
-  const instant = `${pointage.type} ${pointage.instant.value.toISOString()}`;
-  if (pointage instanceof PointageDElement) {
-    return `${instant} ${pointage.cible.element.value}/${pointage.cible.poste?.value ?? '-'}`;
-  }
-  return instant;
-};
-
-const projeterJour = (jour: JourDeReleve): ProjectionJour => ({
-  jour: jour.jour.value,
-  pointages: jour.pointages.map(projeterPointage),
-  plages: jour.plages.map(projeterPlage),
+const activiteTermineeFixture = (): RestActivite => ({
+  element: 'element-1',
+  poste: 'poste-1',
+  nature: 'Fraisage',
+  categorie: 'TRAVAIL',
+  debut: '2026-09-14T08:00:00Z',
+  fin: '2026-09-14T10:00:00Z',
+  activite: { id: 'debut-a', debut: '2026-09-14T08:00:00Z', fin: '2026-09-14T10:00:00Z', etat: 'TERMINEE' },
 });
 
-const jourDeLaSemaine = (rang: number): string => {
-  const jour = SEMAINE.jours()[rang];
-  if (jour === undefined) {
-    throw new Error(`La semaine ne porte pas de jour de rang ${String(rang)}`);
-  }
-  return jour.value;
-};
-
-const toRestPointage = (pointage: PointageFixture): RestPointage => {
-  if ('element' in pointage) {
-    return {
-      type: pointage.type,
-      dateDeSurvenue: pointage.instant,
-      element: pointage.element,
-      ...(pointage.poste === undefined ? {} : { poste: pointage.poste }),
-    };
-  }
-  return { type: pointage.type, dateDeSurvenue: pointage.instant };
-};
-
-const toRestJour = (jour: JourFixture, rang: number): RestJour => ({
-  jour: jourDeLaSemaine(rang),
-  dureeOperationnelle: jour.operationnelle,
-  dureeOperationnellePresumee: jour.operationnellePresumee,
-  pointages: jour.pointages.map(toRestPointage),
-});
-
-const toRestPlage = (plage: PlageFixture): RestPlage => ({ ...plage });
-
-const toRestJourDeFeuille = (jour: JourFixture, rang: number): RestJourDeFeuille => ({
-  jour: jourDeLaSemaine(rang),
-  presence: jour.plages.map(toRestPlage),
-  activites: [...(jour.activites ?? [])],
-});
-
-const sansChamp = <T extends object>(document: T, champ: keyof T & string): T =>
-  Object.fromEntries(Object.entries(document).filter(([cle]) => cle !== champ)) as T;
-
-const premierDe = <T>(elements: readonly T[] | undefined): T => {
-  const element = elements?.[0];
-  if (element === undefined) {
-    throw new Error('Le document de scénario ne porte aucun élément');
-  }
-  return element;
-};
-
-const avecPremierRetouche = <T>(elements: readonly T[] | undefined, retouche: (premier: T) => T): T[] => [
-  retouche(premierDe(elements)),
-  ...(elements ?? []).slice(1),
-];
-
-const toRestSynthese = (jours: readonly JourFixture[]): RestSynthese => ({
-  annee: SEMAINE.annee,
-  semaine: SEMAINE.numero,
-  dureeTotale: 'PT7H30M',
-  dureePresumeeTotale: 'PT5H20M',
-  dureeOperationnelleTotale: 'PT57H30M',
-  dureeOperationnellePresumeeTotale: 'PT2H',
+const feuilleFixture = (): RestFeuille => ({
+  annee: 2026,
+  semaine: 38,
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
-  jours: jours.map(toRestJour),
-  elements: [...elementsDeLaSemaineFixture],
+  evaluation: EVALUATION,
+  jours: SEMAINE.jours().map((jour, rang) => ({ jour: jour.value, activites: rang === 0 ? [activiteTermineeFixture()] : [] })),
 });
 
-const toRestFeuille = (jours: readonly JourFixture[]): RestFeuille => ({
-  annee: SEMAINE.annee,
-  semaine: SEMAINE.numero,
-  operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
-  jours: jours.map(toRestJourDeFeuille),
-});
-
-const toPlage = (plage: PlageFixture): PlageDeReleve =>
-  new PlageDeReleve(new InstantDeReleve(plage.debut), plage.fin === undefined ? undefined : new InstantDeReleve(plage.fin), plage.presumee);
-
-const toDomain = (jours: readonly JourFixture[]): ReleveDesHeures =>
-  new ReleveDesHeures(SEMAINE, {
-    operateur: new IdentiteOperateur('Dupont', 'Jean'),
-    elements: elementsDeLaSemaineFixture.map(toElement),
-    presencePointee: new DureeTravaillee('PT7H30M'),
-    presencePresumee: new DureeTravaillee('PT5H20M'),
-    operationnelPointe: new DureeTravaillee('PT57H30M'),
-    operationnelPresume: new DureeTravaillee('PT2H'),
-    jours: jours.map(
-      (jour, rang) =>
-        new JourDeReleve({
-          jour: new JourCalendaire(jourDeLaSemaine(rang)),
-          operationnelPointe: new DureeTravaillee(jour.operationnelle),
-          operationnelPresume: new DureeTravaillee(jour.operationnellePresumee),
-          intervalles: (jour.activites ?? []).map(toIntervalle),
-          pointages: jour.pointages.map(toPointage),
-          plages: jour.plages.map(toPlage),
-        }),
-    ),
-  });
+const domaineFixture = (): ReleveDesHeures =>
+  releveFixture(
+    SEMAINE,
+    {
+      0: {
+        operationnelle: 'PT2H',
+        pointagesDElement: [{ id: 'debut-a', type: 'DEBUT', heure: [8, 0], poste: 'poste-1' }],
+        intervalles: [{ debut: [8, 0], fin: [10, 0], poste: 'poste-1' }],
+      },
+    },
+    { operationnelle: 'PT57H30M' },
+    [
+      elementFixture({
+        reference: '1015',
+        description: 'Carter',
+        duree: 'PT15H30M',
+        dureeNonConformite: 'PT50M',
+        postes: [['DMU 50', 'Fraisage', 'poste-1']],
+      }),
+    ],
+  );
 
 class ReleveHttpBackendFixture implements HttpBackend {
-  jours: readonly JourFixture[] = [];
   operateurInconnu = false;
+  synthese = syntheseFixture();
+  feuille = feuilleFixture();
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
-    return defer(() => this.answer(request.url.startsWith(ROUTE_FEUILLE))).pipe(
+    return defer(() => this.answer(request)).pipe(
       switchMap(answer => (answer instanceof HttpErrorResponse ? throwError(() => answer) : of(answer))),
     );
   }
 
-  private async answer(feuille: boolean): Promise<HttpResponse<unknown> | HttpErrorResponse> {
+  private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
+    const feuille = request.url.startsWith(ROUTE_FEUILLE);
     if (this.operateurInconnu) {
-      const type = feuille ? FEUILLE_INTROUVABLE : SYNTHESE_INTROUVABLE;
-      return new HttpErrorResponse({ status: 404, statusText: 'Not Found', error: { type } });
+      return new HttpErrorResponse({ status: 404, error: { type: feuille ? FEUILLE_INTROUVABLE : SYNTHESE_INTROUVABLE } });
     }
-    return new HttpResponse({ status: 200, body: feuille ? toRestFeuille(this.jours) : toRestSynthese(this.jours) });
+    return new HttpResponse({
+      status: 200,
+      body: { ...(feuille ? this.feuille : this.synthese), evaluation: request.params.get('evaluation') },
+    });
   }
 }
 
 interface SyntheseHarness {
   readonly port: SyntheseDesHeuresPort;
-  seed(jours: readonly JourFixture[]): void;
   seedOperateurInconnu(): void;
+  seed(releve: ReleveDesHeures, synthese: RestSynthese, feuille: RestFeuille): void;
 }
 
 const createHttpHarness = (): SyntheseHarness => {
@@ -351,8 +154,9 @@ const createHttpHarness = (): SyntheseHarness => {
   });
   return {
     port: TestBed.inject(HttpSyntheseDesHeures),
-    seed: (jours: readonly JourFixture[]) => {
-      backend.jours = [...jours];
+    seed: (_releve, synthese, feuille) => {
+      backend.synthese = synthese;
+      backend.feuille = feuille;
     },
     seedOperateurInconnu: () => {
       backend.operateurInconnu = true;
@@ -362,10 +166,11 @@ const createHttpHarness = (): SyntheseHarness => {
 
 const createFixtureHarness = (): SyntheseHarness => {
   const fixture = new SyntheseDesHeuresFixture();
+  fixture.releves.set(`${OPERATEUR}|2026|38`, domaineFixture());
   return {
     port: fixture,
-    seed: (jours: readonly JourFixture[]) => {
-      fixture.releves.set(`${OPERATEUR}|2026|38`, toDomain(jours));
+    seed: releve => {
+      fixture.releves.set(`${OPERATEUR}|2026|38`, releve);
     },
     seedOperateurInconnu: () => {
       fixture.operateursInconnus.add(OPERATEUR);
@@ -373,24 +178,19 @@ const createFixtureHarness = (): SyntheseHarness => {
   };
 };
 
-const adapters: [string, () => SyntheseHarness][] = [
+const adapters: readonly (readonly [string, () => SyntheseHarness])[] = [
   ['HttpSyntheseDesHeures', createHttpHarness],
   ['SyntheseDesHeuresFixture', createFixtureHarness],
 ];
 
 describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adapter, createHarness) => {
   let harness: SyntheseHarness;
-  let port: SyntheseDesHeuresPort;
-
   beforeEach(() => {
     harness = createHarness();
-    port = harness.port;
   });
 
-  it('should return the seven days of the requested week in calendar order', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
+  it('should return the seven days of the week in calendar order and the resolved operator', async () => {
+    const releve = await harness.port.synthese(DEMANDE);
 
     expect(releve?.jours.map(jour => jour.jour.value)).toEqual([
       '2026-09-14',
@@ -401,201 +201,151 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
       '2026-09-19',
       '2026-09-20',
     ]);
-  });
-
-  it('should return the clockings, presence and element ones mixed, and the presence of a worked day', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours.map(projeterJour)[0]).toEqual({
-      jour: '2026-09-14',
-      pointages: [
-        'ARRIVEE 2026-09-14T06:02:00.000Z',
-        'DEBUT 2026-09-14T06:10:00.000Z element-1/poste-1',
-        'NON_CONFORMITE 2026-09-14T10:00:00.000Z element-1/-',
-        'FIN 2026-09-14T10:30:00.000Z element-1/-',
-        'DEPART 2026-09-14T15:32:00.000Z',
-      ],
-      plages: [{ debut: '2026-09-14T06:02:00.000Z', fin: '2026-09-14T15:32:00.000Z', presumee: false }],
-    });
-  });
-
-  it('should return the clockings of a day in the order the server gave them, even out of hours order', async () => {
-    givenSemaine([
-      {
-        ...jourTravailleFixture,
-        pointages: [
-          { type: 'DEPART', instant: '2026-09-14T15:32:00Z' },
-          { type: 'ARRIVEE', instant: '2026-09-14T06:02:00Z' },
-        ],
-      },
-      ...semaineFixture().slice(1),
-    ]);
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours.map(projeterJour)[0]?.pointages).toEqual(['DEPART 2026-09-14T15:32:00.000Z', 'ARRIVEE 2026-09-14T06:02:00.000Z']);
-  });
-
-  it('should return the elements of the week in the server order, with their type, number, label and workstations', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(
-      releve?.elements.map(element => ({
-        id: element.id.value,
-        type: element.type,
-        numero: element.numero(),
-        description: element.description,
-        postes: element.postes.map(poste => [poste.id.value, poste.libelle, poste.nature]),
-      })),
-    ).toEqual([
-      {
-        id: 'element-1',
-        type: 'PRODUIT',
-        numero: '1015',
-        description: 'Carter de pompe',
-        postes: [
-          ['poste-1', 'DMU 50', 'Fraisage'],
-          ['poste-2', 'Mazak QT-200', undefined],
-        ],
-      },
-      { id: 'element-2', type: 'ORDRE_DE_FABRICATION', numero: 'OF-2026-000057', description: undefined, postes: [] },
-    ]);
-  });
-
-  it('should return the week total of each element as the server counted it, its non-conformity and presumed time apart', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(
-      releve?.elements.map(element => [element.duree.minutes, element.dureeNonConformite.minutes, element.dureePresumee.minutes]),
-    ).toEqual([
-      [930, 50, 45],
-      [120, 0, 0],
-    ]);
-  });
-
-  it('should return the activity intervals of each day, with their element, workstation, nature and category', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(
-      releve?.jours[0]?.intervalles.map(intervalle => [
-        intervalle.element.value,
-        intervalle.poste?.value,
-        intervalle.nature,
-        intervalle.categorie,
-        intervalle.debut.value.toISOString(),
-        intervalle.fin?.value.toISOString(),
-        intervalle.presumee,
-      ]),
-    ).toEqual([
-      ['element-1', 'poste-1', 'Fraisage', 'TRAVAIL', '2026-09-14T06:10:00.000Z', '2026-09-14T10:00:00.000Z', false],
-      ['element-1', undefined, undefined, 'NON_CONFORMITE', '2026-09-14T10:00:00.000Z', '2026-09-14T10:30:00.000Z', false],
-    ]);
-  });
-
-  it('should return the operational time of each day as the server counted it', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours.map(jour => jour.operationnelPointe.minutes)).toEqual([310, 0, 0, 0, 0, 0, 0]);
-  });
-
-  it('should return the operational time of the week as the server counted it, not the sum of its days', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.operationnelPointe.minutes).toBe(3450);
-  });
-
-  it('should return the presumed operational time of each day as the server counted it', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours.map(jour => jour.operationnelPresume.minutes)).toEqual([0, 90, 0, 0, 0, 0, 0]);
-  });
-
-  it('should return the presumed operational time of the week as the server counted it, not the sum of its days', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.operationnelPresume.minutes).toBe(120);
-  });
-
-  it('should return the presumed interval of an abandoned working day', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours.map(projeterJour)[1]).toMatchObject({
-      plages: [{ debut: '2026-09-15T08:20:00.000Z', fin: '2026-09-15T13:40:00.000Z', presumee: true }],
-    });
-  });
-
-  it('should return the interval of a working day still in progress without an end', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours.map(projeterJour)[2]?.plages).toEqual([{ debut: '2026-09-16T06:00:00.000Z', fin: undefined, presumee: false }]);
-  });
-
-  it('should return a day carrying neither clocking nor interval as an empty day', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect(releve?.jours[3]?.estVide()).toBe(true);
-  });
-
-  it('should return the clocked and presumed week totals the server computed', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
-    expect([releve?.presencePointee.minutes, releve?.presencePresumee.minutes]).toEqual([450, 320]);
-  });
-
-  it('should return the operator the report resolved', async () => {
-    givenSemaine(semaineFixture());
-
-    const releve = await port.synthese(DEMANDE);
-
     expect(releve?.operateur).toMatchObject({ nom: 'Dupont', prenom: 'Jean' });
   });
 
-  it('should answer nothing for an operator the referential does not know', async () => {
-    givenOperateurInconnu();
+  it('should transport the week total without adding the day totals', async () => {
+    const releve = await harness.port.synthese(DEMANDE);
 
-    const releve = await port.synthese(DEMANDE);
+    expect(releve?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 3450 } });
+    expect(releve?.jours[0]?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 120 } });
+  });
+
+  it('should transport element totals and their independent nonconformity', async () => {
+    const releve = await harness.port.synthese(DEMANDE);
+
+    expect(releve?.elements[0]?.duree.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 930 } });
+    expect(releve?.elements[0]?.dureeNonConformite.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 50 } });
+    expect(releve?.elements[0]?.numero()).toBe('1015');
+    expect(releve?.elements[0]?.postes[0]?.libelle).toBe('DMU 50');
+  });
+
+  it('should retain clocking identity and explicit intention in the journal', async () => {
+    const releve = await harness.port.synthese(DEMANDE);
+
+    expect(releve?.jours[0]?.pointages[0]).toMatchObject({ id: { value: 'debut-a' }, type: 'DEBUT', intention: { type: 'OUVERTURE' } });
+    expect(releve?.jours[1]?.estVide()).toBe(true);
+  });
+
+  it('should keep incomplete totals without a numerical value and leave complete NC independent', async () => {
+    const synthese = syntheseFixture();
+    harness.seed(
+      releveFixture(SEMAINE, { 0: { operationnelle: false } }, { operationnelle: false }, [
+        elementFixture({ duree: false, dureeNonConformite: 'PT1H' }),
+      ]),
+      {
+        ...synthese,
+        dureeOperationnelleTotale: { complete: false, valeur: 'PT99H' },
+        elements: [
+          {
+            ...requiredFixture(synthese.elements[0]),
+            duree: { complete: false, valeur: 'PT99H' },
+            dureeNonConformite: { complete: true, valeur: 'PT1H' },
+          },
+        ],
+        jours: requiredFixture(synthese.jours).map((jour, rang) =>
+          rang === 0 ? { ...jour, dureeOperationnelle: { complete: false } } : jour,
+        ),
+      },
+      feuilleFixture(),
+    );
+
+    const releve = await harness.port.synthese(DEMANDE);
+
+    expect(releve?.operationnelTotal.snapshot()).toEqual({ complete: false });
+    expect(releve?.jours[0]?.operationnelTotal.snapshot()).toEqual({ complete: false });
+    expect(releve?.elements[0]?.duree.snapshot()).toEqual({ complete: false });
+    expect(releve?.elements[0]?.dureeNonConformite.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 60 } });
+  });
+
+  it('should keep a target activity identity distinct from the clocking element and preserve the received journal order', async () => {
+    const synthese = syntheseFixture();
+    const pointages: components['schemas']['RestPointageDeSyntheseDesHeures'][] = [
+      { id: 'fin-a', type: 'FIN', intention: 'FIN', cible: 'a', element: 'element-1', dateDeSurvenue: '2026-09-14T17:00:00Z' },
+      {
+        id: 'nc-b',
+        type: 'NON_CONFORMITE',
+        intention: 'TRANSITION',
+        cible: 'a',
+        element: 'element-1',
+        dateDeSurvenue: '2026-09-14T12:00:00Z',
+      },
+    ];
+    harness.seed(
+      releveFixture(SEMAINE, {
+        0: {
+          pointagesDElement: [
+            { id: 'fin-a', type: 'FIN', heure: [17, 0], intention: { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } },
+            {
+              id: 'nc-b',
+              type: 'NON_CONFORMITE',
+              heure: [12, 0],
+              intention: { type: 'TRANSITION', activiteVisee: new ActiviteReleveId('a') },
+            },
+          ],
+        },
+      }),
+      { ...synthese, jours: requiredFixture(synthese.jours).map((jour, rang) => (rang === 0 ? { ...jour, pointages } : jour)) },
+      feuilleFixture(),
+    );
+
+    const releve = await harness.port.synthese(DEMANDE);
+
+    expect(
+      releve?.jours[0]?.pointages.map(pointage => [pointage.id.value, pointage.type, pointage.cible.element.value, pointage.intention]),
+    ).toEqual([
+      ['fin-a', 'FIN', 'element-1', { type: 'FIN', activiteVisee: new ActiviteReleveId('a') }],
+      ['nc-b', 'NON_CONFORMITE', 'element-1', { type: 'TRANSITION', activiteVisee: new ActiviteReleveId('a') }],
+    ]);
+  });
+
+  it('should keep a received conflict without unresolved activities and without changing a complete total', async () => {
+    const synthese = syntheseFixture();
+    const conflit = new SequenceEnConflit(
+      new CibleDePointage(new ElementReleveId('element-1'), undefined),
+      [],
+      [new PointageReleveId('fin-annulee')],
+    );
+    harness.seed(
+      releveFixture(SEMAINE, {}, { operationnelle: 'PT2H' }, [elementFixture()], [conflit]),
+      {
+        ...synthese,
+        dureeOperationnelleTotale: { complete: true, valeur: 'PT2H' },
+        conflits: [{ element: 'element-1', activites: [], pointages: ['fin-annulee'] }],
+      },
+      feuilleFixture(),
+    );
+
+    const releve = await harness.port.synthese(DEMANDE);
+
+    expect(releve?.conflits[0]).toMatchObject({
+      cible: { element: { value: 'element-1' } },
+      activites: [],
+      pointages: [{ value: 'fin-annulee' }],
+    });
+    expect(releve?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 120 } });
+  });
+
+  it('should answer nothing for an unknown operator', async () => {
+    harness.seedOperateurInconnu();
+
+    const releve = await harness.port.synthese(DEMANDE);
 
     expect(releve).toBeUndefined();
   });
-
-  const givenSemaine = (jours: readonly JourFixture[]): void => {
-    harness.seed(jours);
-  };
-
-  const givenOperateurInconnu = (): void => {
-    harness.seedOperateurInconnu();
-  };
 });
+
+const requiredFixture = <T>(value: T | undefined): T => {
+  if (value === undefined) {
+    throw new Error('Required scenario fixture is missing');
+  }
+  return value;
+};
 
 describe('Beyond the contract: HttpSyntheseDesHeures', () => {
   let port: SyntheseDesHeuresPort;
   let server: HttpTestingController;
   let errorHandler: ErrorHandlerFixture;
-
   beforeEach(() => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -611,221 +361,77 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     server = TestBed.inject(HttpTestingController);
     errorHandler = TestBed.inject(ErrorHandlerPort) as ErrorHandlerFixture;
   });
-
   afterEach(() => {
     server.verify();
+    vi.useRealTimers();
   });
 
-  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])('should ask %s for the requested operator, year and week', async route => {
+  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])('should ask %s for the requested operator and ISO week', async route => {
     const result = port.synthese(DEMANDE);
-    const requests = await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), toRestFeuille(semaineFixture()));
+    const requests = whenBothRoutesAnswer(syntheseFixture(), feuilleFixture());
 
     await result;
-    const parametres = requests.get(route)?.request.params;
-    expect([parametres?.get('annee'), parametres?.get('semaine')]).toEqual(['2026', '38']);
+
+    expect([requests.get(route)?.request.params.get('annee'), requests.get(route)?.request.params.get('semaine')]).toEqual(['2026', '38']);
   });
 
-  it.each([
-    [
-      'an element the synthesis does not list',
-      { element: 'carter' },
-      'Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.',
-    ],
-    [
-      'a workstation its element does not carry',
-      { element: 'element-2', poste: 'poste-1' },
-      'Le relevé reçu du serveur désigne un poste que son élément ne porte pas.',
-    ],
-  ])('should reject a clocking on %s, and report it once', async (_cas, cible, message) => {
-    const synthese = toRestSynthese(semaineFixture());
-    const pointageDElement = { type: 'DEBUT' as const, dateDeSurvenue: '2026-09-14T06:05:00Z', ...cible };
+  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])('should reject an evaluation echo of %s belonging to another acquisition', async route => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(
-      {
-        ...synthese,
-        jours: avecPremierRetouche(synthese.jours, jour => ({ ...jour, pointages: [...(jour.pointages ?? []), pointageDElement] })),
-      },
-      toRestFeuille(semaineFixture()),
-    );
+    whenRouteAnswers(route, documentDe(route), '2000-01-01T00:00:00Z');
+    whenRouteAnswers(autreRoute(route), documentDe(autreRoute(route)));
 
-    expect(await result).toEqual(new Error(message));
+    expect(await result).toBeInstanceOf(Error);
     expect(errorHandler.errors).toHaveLength(1);
   });
 
-  it('should give each day of the report the presence the time sheet carries for the same date', async () => {
-    const feuille = toRestFeuille(semaineFixture());
+  it('should start both reads with one evaluation even when their answers cross the deadline', async () => {
+    givenEvaluationAt('2026-09-14T12:59:59.999Z');
     const result = port.synthese(DEMANDE);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), { ...feuille, jours: [...(feuille.jours ?? [])].reverse() });
+    const synthese = requeteDe(ROUTE_SYNTHESE);
+    const feuille = requeteDe(ROUTE_FEUILLE);
+    whenClockAdvancesTo('2026-09-14T13:00:00.001Z');
+    whenRequestAnswers(synthese, syntheseFixture());
+    whenRequestAnswers(feuille, feuilleFixture());
+    await result;
 
-    const releve = await result;
-    expect(releve?.jours.map(jour => jour.plages.length)).toEqual([1, 1, 1, 0, 0, 0, 0]);
-  });
-
-  it.each([
-    ['a day of another week', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), { jour: '2026-09-21', presence: [], activites: [] }]],
-    ['fewer days than the report', (jours: RestJourDeFeuille[]) => jours.slice(0, 6)],
-    ['a day twice in place of another', (jours: RestJourDeFeuille[]) => [...jours.slice(0, 6), premierDe(jours)]],
-    ['the seven days and one of them twice', (jours: RestJourDeFeuille[]) => [...jours, premierDe(jours)]],
-  ])('should reject a time sheet carrying %s', async (_cas, retouche) => {
-    const feuille = toRestFeuille(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), { ...feuille, jours: retouche(feuille.jours ?? []) });
-
-    expect(await result).toEqual(new Error('La feuille de temps reçue du serveur ne porte pas les jours de la synthèse.'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it.each<keyof RestSynthese>(['annee', 'semaine', 'dureeTotale', 'dureePresumeeTotale', 'operateur', 'jours'])(
-    'should reject a server answer missing synthese.%s',
-    async champ => {
-      const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-      await whenBothRoutesAnswer(sansChamp(toRestSynthese(semaineFixture()), champ), toRestFeuille(semaineFixture()));
-
-      expect(await result).toEqual(new Error(`synthese.${champ} manque dans la réponse du serveur`));
-    },
-  );
-
-  it.each<keyof RestJour>(['jour', 'pointages'])('should reject a server answer missing jour.%s', async champ => {
-    const synthese = toRestSynthese(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(
-      { ...synthese, jours: avecPremierRetouche(synthese.jours, jour => sansChamp(jour, champ)) },
-      toRestFeuille(semaineFixture()),
-    );
-
-    expect(await result).toEqual(new Error(`jour.${champ} manque dans la réponse du serveur`));
-  });
-
-  it.each<keyof RestFeuille>(['annee', 'semaine', 'jours'])('should reject a server answer missing feuille.%s', async champ => {
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), sansChamp(toRestFeuille(semaineFixture()), champ));
-
-    expect(await result).toEqual(new Error(`feuille.${champ} manque dans la réponse du serveur`));
-  });
-
-  it.each<keyof RestJourDeFeuille>(['jour', 'presence'])('should reject a server answer missing jourDeLaFeuille.%s', async champ => {
-    const feuille = toRestFeuille(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), {
-      ...feuille,
-      jours: avecPremierRetouche(feuille.jours, jour => sansChamp(jour, champ)),
-    });
-
-    expect(await result).toEqual(new Error(`jourDeLaFeuille.${champ} manque dans la réponse du serveur`));
-  });
-
-  it('should reject a server answer missing plage.debut', async () => {
-    const feuille = toRestFeuille(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), {
-      ...feuille,
-      jours: avecPremierRetouche(feuille.jours, jour => ({ ...jour, presence: [sansChamp(premierDe(jour.presence), 'debut')] })),
-    });
-
-    expect(await result).toEqual(new Error('plage.debut manque dans la réponse du serveur'));
-  });
-
-  it('should reject an activity of an element the synthesis does not list, and report it once', async () => {
-    const feuille = toRestFeuille(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), {
-      ...feuille,
-      jours: avecPremierRetouche(feuille.jours, jour => ({
-        ...jour,
-        activites: [
-          { element: 'element-inconnu', categorie: 'TRAVAIL', debut: '2026-09-14T08:00:00Z', fin: '2026-09-14T09:00:00Z', presumee: false },
-        ],
-      })),
-    });
-
-    expect(await result).toEqual(new Error('Le relevé reçu du serveur désigne un élément que sa synthèse ne porte pas.'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should reject an activity on a workstation its element does not carry, and report it once', async () => {
-    const feuille = toRestFeuille(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), {
-      ...feuille,
-      jours: avecPremierRetouche(feuille.jours, jour => ({
-        ...jour,
-        activites: [
-          {
-            element: 'element-2',
-            poste: 'poste-1',
-            categorie: 'TRAVAIL',
-            debut: '2026-09-14T08:00:00Z',
-            fin: '2026-09-14T09:00:00Z',
-            presumee: false,
-          },
-        ],
-      })),
-    });
-
-    expect(await result).toEqual(new Error('Le relevé reçu du serveur désigne un poste que son élément ne porte pas.'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should reject a synthesis the server answered for another week', async () => {
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer({ ...toRestSynthese(semaineFixture()), semaine: 37 }, toRestFeuille(semaineFixture()));
-
-    expect(await result).toEqual(new Error('La semaine reçue du serveur n’est pas celle demandée.'));
-  });
-
-  it('should reject a time sheet the server answered for another week', async () => {
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), { ...toRestFeuille(semaineFixture()), semaine: 37 });
-
-    expect(await result).toEqual(new Error('La semaine reçue du serveur n’est pas celle demandée.'));
-  });
-
-  it('should reject a week that does not carry seven days', async () => {
-    const synthese = toRestSynthese(semaineFixture());
-    const feuille = toRestFeuille(semaineFixture());
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(
-      { ...synthese, jours: synthese.jours?.slice(0, 6) ?? [] },
-      { ...feuille, jours: feuille.jours?.slice(0, 6) ?? [] },
-    );
-
-    expect(await result).toEqual(new Error('Le relevé reçu du serveur ne couvre pas les sept jours de la semaine demandée.'));
-  });
-
-  it('should reject a duration the synthesis carries that cannot be read', async () => {
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer({ ...toRestSynthese(semaineFixture()), dureePresumeeTotale: 'P1D' }, toRestFeuille(semaineFixture()));
-
-    expect(await result).toEqual(new Error('La durée « P1D » reçue du serveur n’est pas une durée de travail.'));
-  });
-
-  it('should reject a presumed interval the time sheet leaves without an end', async () => {
-    const feuille = toRestFeuille([
-      { ...jourVideFixture, plages: [{ debut: '2026-09-14T08:20:00Z', presumee: true }] },
-      ...semaineFixture().slice(1),
+    expect([synthese.request.params.get('evaluation'), feuille.request.params.get('evaluation')]).toEqual([
+      '2026-09-14T12:59:59.999Z',
+      '2026-09-14T12:59:59.999Z',
     ]);
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenBothRoutesAnswer(toRestSynthese(semaineFixture()), feuille);
-
-    expect(await result).toEqual(new Error('La plage reçue du serveur est présumée sans fin.'));
   });
 
-  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])(
-    'should report a technical failure of %s once through the error handler and reject',
-    async route => {
-      const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-      await whenRouteFails(route, 500, {});
-      await whenRouteAnswers(autreRoute(route), documentDe(autreRoute(route)));
+  it('should accept an echo with another ISO spelling of the same instant', async () => {
+    givenEvaluationAt('2026-09-14T11:00:00Z');
+    const result = port.synthese(DEMANDE);
+    whenRouteAnswers(ROUTE_SYNTHESE, syntheseFixture(), '2026-09-14T13:00:00+02:00');
+    whenRouteAnswers(ROUTE_FEUILLE, feuilleFixture(), '2026-09-14T11:00:00.000Z');
 
-      expect(await result).toBeInstanceOf(HttpErrorResponse);
-      expect(errorHandler.errors).toHaveLength(1);
-    },
-  );
+    expect(await result).toBeInstanceOf(ReleveDesHeures);
+    expect(errorHandler.errors).toEqual([]);
+  });
 
-  it('should report a failure of both routes only once', async () => {
+  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])('should reject a 400 evaluation refusal of %s once', async route => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenRouteFails(ROUTE_FEUILLE, 500, {});
-    await whenRouteFails(ROUTE_SYNTHESE, 503, {});
+    whenRouteFails(route, 400, {});
+    whenRouteAnswers(autreRoute(route), documentDe(autreRoute(route)));
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])('should report a technical failure of %s once', async route => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenRouteFails(route, 500, {});
+    whenRouteAnswers(autreRoute(route), documentDe(autreRoute(route)));
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should report a failure of both sources only once', async () => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenRouteFails(ROUTE_FEUILLE, 500, {});
+    whenRouteFails(ROUTE_SYNTHESE, 503, {});
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);
@@ -833,8 +439,8 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
 
   it('should keep a 404 without a known code a technical failure', async () => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    await whenRouteFails(ROUTE_SYNTHESE, 404, {});
-    await whenRouteAnswers(ROUTE_FEUILLE, toRestFeuille(semaineFixture()));
+    whenRouteFails(ROUTE_SYNTHESE, 404, {});
+    whenRouteAnswers(ROUTE_FEUILLE, feuilleFixture());
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);
@@ -843,50 +449,245 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
   it.each([
     [ROUTE_SYNTHESE, SYNTHESE_INTROUVABLE],
     [ROUTE_FEUILLE, FEUILLE_INTROUVABLE],
-  ])('should answer nothing, and report nothing, for an operator %s does not know', async (route, urn) => {
+  ])('should keep the unknown operator of %s ahead of a source failure', async (route, urn) => {
     const result = port.synthese(DEMANDE);
-    await whenRouteAnswers(autreRoute(route), documentDe(autreRoute(route)));
-    await whenRouteFails(route, 404, { type: urn });
+    whenRouteFails(autreRoute(route), 500, {});
+    whenRouteFails(route, 404, { type: urn });
 
     expect(await result).toBeUndefined();
     expect(errorHandler.errors).toEqual([]);
   });
 
   it.each([
-    [ROUTE_SYNTHESE, SYNTHESE_INTROUVABLE],
-    [ROUTE_FEUILLE, FEUILLE_INTROUVABLE],
-  ])('should answer nothing, and report nothing, for an operator %s does not know while the other route fails', async (route, urn) => {
-    const result = port.synthese(DEMANDE);
-    await whenRouteFails(autreRoute(route), 500, {});
-    await whenRouteFails(route, 404, { type: urn });
+    ['TERMINEE_AUTOMATIQUEMENT', '2026-09-14T11:00:00Z', undefined, 'PT11H', 660],
+    ['EN_COURS', undefined, undefined, 'PT0S', 0],
+    ['A_RESOUDRE', undefined, '2026-09-15T17:00:00Z', undefined, undefined],
+    ['A_RESOUDRE', undefined, undefined, undefined, undefined],
+  ] as const)(
+    'should translate the origin state %s and its effective or possible end without manufacturing one',
+    async (etat, fin, finAuPlusTard, duree, minutes) => {
+      const source = { ...sansChamp(activiteTermineeFixture(), 'poste'), debut: '2026-09-14T00:00:00Z' };
+      const feuille = feuilleFixture();
+      const synthese = syntheseFixture();
+      const result = port.synthese(DEMANDE);
+      whenBothRoutesAnswer(
+        { ...synthese, dureeOperationnelleTotale: duree === undefined ? { complete: false } : { complete: true, valeur: duree } },
+        {
+          ...feuille,
+          jours: requiredFixture(feuille.jours).map((jour, rang) =>
+            rang === 0
+              ? {
+                  ...jour,
+                  activites: [
+                    {
+                      ...withoutEnd(source),
+                      ...(fin === undefined ? {} : { fin }),
+                      activite: {
+                        id: 'origine-hors-journal',
+                        debut: '2026-09-13T22:00:00Z',
+                        etat,
+                        ...(fin === undefined ? {} : { fin }),
+                        ...(finAuPlusTard === undefined ? {} : { finAuPlusTard }),
+                      },
+                    },
+                  ],
+                }
+              : jour,
+          ),
+        },
+      );
 
-    expect(await result).toBeUndefined();
-    expect(errorHandler.errors).toEqual([]);
+      const releve = await result;
+
+      expect(releve?.jours[0]?.intervalles[0]?.activite).toMatchObject({
+        id: { value: 'origine-hors-journal' },
+        debut: { value: new Date('2026-09-13T22:00:00Z') },
+        etat,
+      });
+      expect(releve?.jours[0]?.intervalles[0]?.poste).toBeUndefined();
+      expect(releve?.jours[0]?.intervalles[0]?.fin?.value.toISOString()).toBe(fin === undefined ? undefined : '2026-09-14T11:00:00.000Z');
+      expect(releve?.operationnelTotal.snapshot()).toMatchObject(
+        duree === undefined ? { complete: false } : { complete: true, valeur: { minutes } },
+      );
+    },
+  );
+
+  it('should attach time sheet portions by date even when its days are returned in reverse order', async () => {
+    const feuille = feuilleFixture();
+    const result = port.synthese(DEMANDE);
+    whenBothRoutesAnswer(syntheseFixture(), { ...feuille, jours: [...requiredFixture(feuille.jours)].reverse() });
+
+    expect((await result)?.jours.map(jour => jour.intervalles.length)).toEqual([1, 0, 0, 0, 0, 0, 0]);
   });
 
-  const autreRoute = (route: string): string => (route === ROUTE_SYNTHESE ? ROUTE_FEUILLE : ROUTE_SYNTHESE);
+  it.each(['another day', 'fewer days', 'duplicate day', 'extra duplicate day'])(
+    'should reject a time sheet carrying %s once',
+    async cas => {
+      const feuille = feuilleFixture();
+      const jours = requiredFixture(feuille.jours);
+      const retouche = joursRetouches(cas, jours);
+      const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+      whenBothRoutesAnswer(syntheseFixture(), { ...feuille, jours: retouche });
 
-  const documentDe = (route: string): RestSynthese | RestFeuille =>
-    route === ROUTE_SYNTHESE ? toRestSynthese(semaineFixture()) : toRestFeuille(semaineFixture());
+      expect(await result).toEqual(new Error('La feuille de temps reçue du serveur ne porte pas les jours de la synthèse.'));
+      expect(errorHandler.errors).toHaveLength(1);
+    },
+  );
 
-  const requeteDe = async (route: string): Promise<TestRequest> => {
-    await new Promise(resolve => setTimeout(resolve));
-    return server.expectOne(candidate => candidate.method === 'GET' && candidate.url === `${route}/${OPERATEUR}`);
+  it.each([ROUTE_SYNTHESE, ROUTE_FEUILLE])('should reject another week returned by %s once', async route => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenRouteAnswers(route, { ...documentDe(route), semaine: 37 });
+    whenRouteAnswers(autreRoute(route), documentDe(autreRoute(route)));
+
+    expect(await result).toEqual(new Error('La semaine reçue du serveur n’est pas celle demandée.'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject an unreadable complete duration once', async () => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { complete: true, valeur: 'P1D' } }, feuilleFixture());
+
+    expect(await result).toEqual(new Error('La durée « P1D » reçue du serveur n’est pas une durée de travail.'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each(['annee', 'semaine', 'operateur', 'jours'] as const)('should reject a reading missing synthese.%s', async champ => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer(sansChamp(syntheseFixture(), champ), feuilleFixture());
+
+    expect(await result).toEqual(new Error(`synthese.${champ} manque dans la réponse du serveur`));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each(['annee', 'semaine', 'jours'] as const)('should reject a reading missing feuille.%s', async champ => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer(syntheseFixture(), sansChamp(feuilleFixture(), champ));
+
+    expect(await result).toEqual(new Error(`feuille.${champ} manque dans la réponse du serveur`));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each(['jour', 'pointages'] as const)('should reject a reading missing jour.%s', async champ => {
+    const synthese = syntheseFixture();
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer(
+      { ...synthese, jours: requiredFixture(synthese.jours).map((jour, rang) => (rang === 0 ? sansChamp(jour, champ) : jour)) },
+      feuilleFixture(),
+    );
+
+    expect(await result).toEqual(new Error(`jour.${champ} manque dans la réponse du serveur`));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject a time sheet missing a day identity', async () => {
+    const feuille = feuilleFixture();
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer(syntheseFixture(), {
+      ...feuille,
+      jours: requiredFixture(feuille.jours).map((jour, rang) => (rang === 0 ? sansChamp(jour, 'jour') : jour)),
+    });
+
+    expect(await result).toEqual(new Error('jourDeLaFeuille.jour manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each(['TERMINEE', 'TERMINEE_AUTOMATIQUEMENT'] as const)('should reject a closed origin %s without its effective end', async etat => {
+    const feuille = feuilleFixture();
+    const source = activiteTermineeFixture();
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer(syntheseFixture(), {
+      ...feuille,
+      jours: requiredFixture(feuille.jours).map((jour, rang) =>
+        rang === 0 ? { ...jour, activites: [{ ...source, activite: { id: 'a', debut: source.debut, etat } }] } : jour,
+      ),
+    });
+
+    expect(await result).toEqual(new Error('activite.fin manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject a complete total missing its value', async () => {
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { complete: true } }, feuilleFixture());
+
+    expect(await result).toEqual(new Error('duree.valeur manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject a targeted clocking missing its target activity', async () => {
+    const synthese = syntheseFixture();
+    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
+    whenBothRoutesAnswer(
+      {
+        ...synthese,
+        jours: requiredFixture(synthese.jours).map((jour, rang) =>
+          rang === 0
+            ? { ...jour, pointages: [{ ...requiredFixture(requiredFixture(jour.pointages)[0]), type: 'FIN', intention: 'FIN' }] }
+            : jour,
+        ),
+      },
+      feuilleFixture(),
+    );
+
+    expect(await result).toEqual(new Error('pointage.cible manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should translate the element and workstation of a conflict independently of its activity references', async () => {
+    const result = port.synthese(DEMANDE);
+    whenBothRoutesAnswer(
+      { ...syntheseFixture(), conflits: [{ element: 'element-1', poste: 'poste-1', activites: ['a', 'b'], pointages: ['fin-a'] }] },
+      feuilleFixture(),
+    );
+
+    expect((await result)?.conflits[0]).toMatchObject({
+      cible: { element: { value: 'element-1' }, poste: { value: 'poste-1' } },
+      activites: [{ value: 'a' }, { value: 'b' }],
+      pointages: [{ value: 'fin-a' }],
+    });
+  });
+
+  const givenEvaluationAt = (instant: string): void => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(instant));
   };
-
-  const whenRouteAnswers = async (route: string, body: RestSynthese | RestFeuille): Promise<TestRequest> => {
-    const request = await requeteDe(route);
-    request.flush(body);
+  const whenClockAdvancesTo = (instant: string): void => {
+    vi.setSystemTime(new Date(instant));
+  };
+  const joursRetouches = (cas: string, jours: NonNullable<RestFeuille['jours']>): NonNullable<RestFeuille['jours']> => {
+    switch (cas) {
+      case 'another day':
+        return [...jours.slice(0, 6), { jour: '2026-09-21', activites: [] }];
+      case 'fewer days':
+        return jours.slice(0, 6);
+      case 'duplicate day':
+        return [...jours.slice(0, 6), requiredFixture(jours[0])];
+      default:
+        return [...jours, requiredFixture(jours[0])];
+    }
+  };
+  const sansChamp = <T extends object>(objet: T, champ: keyof T): T => {
+    const copie = { ...objet };
+    Reflect.deleteProperty(copie, champ);
+    return copie;
+  };
+  const withoutEnd = (source: RestActivite): RestActivite => sansChamp(source, 'fin');
+  const autreRoute = (route: string): string => (route === ROUTE_SYNTHESE ? ROUTE_FEUILLE : ROUTE_SYNTHESE);
+  const documentDe = (route: string): RestSynthese | RestFeuille => (route === ROUTE_SYNTHESE ? syntheseFixture() : feuilleFixture());
+  const requeteDe = (route: string): TestRequest =>
+    server.expectOne(candidate => candidate.method === 'GET' && candidate.url === `${route}/${OPERATEUR}`);
+  const whenRequestAnswers = (request: TestRequest, body: RestSynthese | RestFeuille, evaluation?: string): TestRequest => {
+    request.flush({ ...body, evaluation: evaluation ?? request.request.params.get('evaluation') });
     return request;
   };
-
-  const whenBothRoutesAnswer = async (synthese: RestSynthese, feuille: RestFeuille): Promise<ReadonlyMap<string, TestRequest>> =>
+  const whenRouteAnswers = (route: string, body: RestSynthese | RestFeuille, evaluation?: string): TestRequest =>
+    whenRequestAnswers(requeteDe(route), body, evaluation);
+  const whenBothRoutesAnswer = (synthese: RestSynthese, feuille: RestFeuille): ReadonlyMap<string, TestRequest> =>
     new Map([
-      [ROUTE_SYNTHESE, await whenRouteAnswers(ROUTE_SYNTHESE, synthese)],
-      [ROUTE_FEUILLE, await whenRouteAnswers(ROUTE_FEUILLE, feuille)],
+      [ROUTE_SYNTHESE, whenRouteAnswers(ROUTE_SYNTHESE, synthese)],
+      [ROUTE_FEUILLE, whenRouteAnswers(ROUTE_FEUILLE, feuille)],
     ]);
-
-  const whenRouteFails = async (route: string, status: number, error: object): Promise<void> => {
-    (await requeteDe(route)).flush(error, { status, statusText: 'Failure' });
+  const whenRouteFails = (route: string, status: number, error: object): void => {
+    requeteDe(route).flush(error, { status, statusText: 'Failure' });
   };
 });

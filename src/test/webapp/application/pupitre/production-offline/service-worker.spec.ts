@@ -1,4 +1,4 @@
-import type { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import type { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
@@ -8,22 +8,60 @@ const entrepriseFixture = 'entreprise-a';
 const dateFixture = '2026-09-05T08:00:00Z';
 const idFixture = '59ef737b-c3dd-47f8-8e63-4d5526a17df3';
 const tokenFixture = `fixture.${btoa(JSON.stringify({ tenant: entrepriseFixture })).replaceAll('=', '')}.signature`;
-const gestureFixture: GesteDAtelier = {
-  nature: 'ARRIVEE',
+const gestureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
   id: idFixture,
   dateDeSurvenue: dateFixture,
   operateurId: 'operator-1',
+  suiviId: 'workshop-item-1',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
+};
+const finishFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  id: '0d7f0d54-8a08-47ae-9100-595efce2a8d7',
+  dateDeSurvenue: '2026-09-05T08:15:00Z',
+  operateurId: 'operator-1',
+  suiviId: 'workshop-item-1',
+  intention: 'FIN',
+  type: 'FIN',
+  cible: idFixture,
 };
 const acceptedGestureFixture = { geste: gestureFixture, etat: 'ACCEPTE' } as const;
+const acceptedFinishFixture = { geste: finishFixture, etat: 'ACCEPTE' } as const;
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+  operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+  suivis: [{ conflits: [], id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT', activites: [], evenements: [] }],
+};
+const otherCompanyFixture = 'entreprise-b';
+const otherCompanyGestureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  id: '52c141dc-25f6-4dc2-bb29-99658c628b31',
+  dateDeSurvenue: '2026-09-05T10:00:00Z',
+  operateurId: 'other-company-operator',
+  suiviId: 'other-company-item',
+  intention: 'TRANSITION',
+  type: 'NON_CONFORMITE',
+  cible: '09d88f99-1094-4a13-b1ea-bd206ee388fa',
+};
+const otherCompanyReferenceFixture: ReferentielDuPupitre = {
+  operateurs: [{ id: 'other-company-operator', nom: 'Martin', prenom: 'Marie', matricule: '049', postes: [] }],
   suivis: [
     {
-      id: 'workshop-item-1',
-      nom: 'OF-1',
-      etat: 'EN_ATTENTE',
+      id: 'other-company-item',
+      nom: 'OF-B',
+      etat: 'EN_COURS',
       type: 'PRODUIT',
-      activites: [],
+      activites: [
+        {
+          operateurId: 'other-company-operator',
+          ouverture: '09d88f99-1094-4a13-b1ea-bd206ee388fa',
+          categorie: 'TRAVAIL',
+          depuis: '2026-09-05T09:00:00Z',
+          echeance: '2026-09-05T22:00:00Z',
+        },
+      ],
+      conflits: [],
       evenements: [],
     },
   ],
@@ -81,7 +119,7 @@ describe('Production pupitre offline restart', () => {
     whenRestoringTheBrowserNetwork();
   });
 
-  it('should boot offline and publish one durable gesture with its original identity after several restarts', () => {
+  it('should preserve targeted gestures for two companies through offline restarts and publish only the selected company FIFO', () => {
     whenBootingTheProductionPupitre();
     whenReadingOnlinePupitre('initial', 1);
     whenWaitingForServiceWorkerActivation();
@@ -107,6 +145,7 @@ describe('Production pupitre offline restart', () => {
     whenRestartingTheProductionPupitre();
     whenReadingOnlinePupitre('final-restart', 4);
     whenReadingJournal('final-journal');
+    whenReadingOtherCompanyJournal('final-other-company-journal');
 
     thenOnlinePupitreWasObserved('initial', 1);
     thenTheWorkerActivatedAndControlledTheOnlineRestart();
@@ -186,6 +225,8 @@ const whenOpeningTheJournalFixture = (): void => appendFrame('journal-fixture', 
 
 const whenPreparingDurableStateThroughTheJournalPort = (): void => {
   readProductionFixture().then(fixture => fixture.prepare(entrepriseFixture, referenceFixture, gestureFixture));
+  readProductionFixture().then(fixture => fixture.prepare(entrepriseFixture, referenceFixture, finishFixture));
+  readProductionFixture().then(fixture => fixture.prepare(otherCompanyFixture, otherCompanyReferenceFixture, otherCompanyGestureFixture));
 };
 
 const whenCuttingTheBrowserNetwork = (): void => {
@@ -234,12 +275,18 @@ const whenReadingOfflinePupitre = (alias: string): void => {
     }))
     .as(`${alias}-view`, { type: 'static' });
   whenReadingJournal(`${alias}-journal`);
+  whenReadingOtherCompanyJournal(`${alias}-other-company-journal`);
   readServerState().as(`${alias}-server`, { type: 'static' });
 };
 
 const whenReadingJournal = (alias: string): void => {
   readProductionFixture()
     .then(fixture => fixture.read(entrepriseFixture))
+    .as(alias, { type: 'static' });
+};
+const whenReadingOtherCompanyJournal = (alias: string): void => {
+  readProductionFixture()
+    .then(fixture => fixture.read(otherCompanyFixture))
     .as(alias, { type: 'static' });
 };
 
@@ -292,7 +339,11 @@ const thenOfflineRestartPreservedPendingWork = (alias: string): void => {
   cy.get(`@${alias}-journal`).its('referentiel').should('deep.equal', referenceFixture);
   cy.get(`@${alias}-journal`)
     .its('evenements')
-    .should('deep.equal', [{ geste: gestureFixture, etat: 'EN_ATTENTE' }]);
+    .should('deep.equal', [
+      { geste: gestureFixture, etat: 'EN_ATTENTE' },
+      { geste: finishFixture, etat: 'EN_ATTENTE' },
+    ]);
+  thenOtherCompanyJournalWasPreserved(`${alias}-other-company-journal`);
   cy.get(`@${alias}-server`).its('pushes').should('have.length', 0);
 };
 
@@ -302,17 +353,44 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     expect(state.pushes).to.deep.equal([
       {
         authorization: `Bearer ${tokenFixture}`,
-        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1' },
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
       },
     ]);
   });
-  cy.get('@accepted-journal').its('evenements').should('deep.equal', [acceptedGestureFixture]);
+  cy.get('@accepted-journal').its('evenements').should('deep.equal', [acceptedGestureFixture, acceptedFinishFixture]);
+  cy.get('@accepted-server')
+    .its('pushes')
+    .should('deep.equal', [
+      {
+        authorization: `Bearer ${tokenFixture}`,
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
+      },
+      {
+        authorization: `Bearer ${tokenFixture}`,
+        body: {
+          id: '0d7f0d54-8a08-47ae-9100-595efce2a8d7',
+          dateDeSurvenue: '2026-09-05T08:15:00Z',
+          operateur: 'operator-1',
+          type: 'FIN',
+          intention: 'FIN',
+          cible: '59ef737b-c3dd-47f8-8e63-4d5526a17df3',
+        },
+      },
+    ]);
   cy.get('@accepted-server').its('referenceRequests').should('be.at.least', 3);
 };
 
 const thenTheAcceptedGestureSurvivedTheFinalRestart = (): void => {
-  cy.get('@final-journal').its('evenements').should('deep.equal', [acceptedGestureFixture]);
-  cy.get('@final-restart-server').its('pushes').should('have.length', 1);
+  cy.get('@final-journal').its('evenements').should('deep.equal', [acceptedGestureFixture, acceptedFinishFixture]);
+  cy.get('@final-restart-server').its('pushes').should('have.length', 2);
+  thenOtherCompanyJournalWasPreserved('final-other-company-journal');
+};
+const thenOtherCompanyJournalWasPreserved = (alias: string): void => {
+  cy.get(`@${alias}`).should('deep.equal', {
+    referentiel: otherCompanyReferenceFixture,
+    evenements: [{ geste: otherCompanyGestureFixture, etat: 'EN_ATTENTE' }],
+    connecte: true,
+  });
 };
 
 const appendFrame = (selector: string, source: string): void => {

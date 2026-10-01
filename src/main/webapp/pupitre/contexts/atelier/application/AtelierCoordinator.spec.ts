@@ -1,18 +1,21 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
+import { ActiviteExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/ActiviteExpirationSchedulerPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
-  GesteDAtelier,
+  EvenementDuJournal,
+  GesteDePointage,
+  JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
@@ -36,14 +39,20 @@ const referenceFixture: ReferentielDuPupitre = {
       nom: 'Dupont',
       prenom: 'Jean',
       matricule: '049',
-      etat: 'ABSENT',
       postes: [{ id: 'tour', libelle: 'Tour' }],
-      evenements: [],
     },
   ],
-  suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
-const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const ouvertureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  id: 'arrivee',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
+  operateurId: 'jean',
+  suiviId: 'piece',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
+};
 const identityRootFixture = '11111111-1111-4111-8111-111111111111';
 const futureIdentityRootFixture = '22222222-2222-4222-8222-222222222222';
 const refusalFixture = (code: string): RefusDePublication =>
@@ -121,18 +130,42 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
   }
 }
 
-class ApplicationJournalFixture extends JournauxDuPupitreFixture {
+class ApplicationJournalFixture extends JournauxDuPupitrePort {
+  private readonly stored = new JournauxDuPupitreFixture();
+  override saveReferentiel(entreprise: Entreprise, reference: ReferentielDuPupitre): Promise<JournalDuPupitre> {
+    return this.stored.saveReferentiel(entreprise, reference);
+  }
+  override saveResult(entreprise: Entreprise, result: EvenementDuJournal): Promise<JournalDuPupitre> {
+    return this.stored.saveResult(entreprise, result);
+  }
+  override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
+    return this.stored.markDisconnected(entreprise);
+  }
+  override synchronize<T>(action: () => Promise<T>): Promise<T> {
+    return this.stored.synchronize(action);
+  }
+  synchronizationsSettled(): Promise<void> {
+    return this.stored.synchronizationsSettled();
+  }
+
+  override read(entreprise: Entreprise): Promise<JournalDuPupitre> {
+    return this.stored.read(entreprise);
+  }
+  delayNextAppend(): ReturnType<JournauxDuPupitreFixture['delayNextAppend']> {
+    return this.stored.delayNextAppend();
+  }
+  set failWrite(value: boolean) {
+    this.stored.failWrite = value;
+  }
+  set afterRead(value: (() => void) | undefined) {
+    this.stored.afterRead = value;
+  }
+
   readonly acceptedBatches: string[][] = [];
 
-  override async append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
-    await super.append(entreprise, gestes);
-    this.acceptedBatches.push(
-      gestes.map(geste => {
-        if (geste.nature === 'ARRIVEE') return 'ARRIVEE';
-        if (geste.nature === 'PRESENCE') return geste.type;
-        return `${geste.type}:${geste.suiviId}:${geste.posteId ?? 'SANS_POSTE'}`;
-      }),
-    );
+  override async append(entreprise: Entreprise, gestes: readonly GesteDePointage[], repriseAEffacer?: string): Promise<void> {
+    await this.stored.append(entreprise, gestes, repriseAEffacer);
+    this.acceptedBatches.push(gestes.map(geste => `${geste.type}:${geste.suiviId}:${geste.posteId ?? 'SANS_POSTE'}`));
   }
 }
 
@@ -140,7 +173,7 @@ class ServerFixture extends AtelierExchangePort {
   reference = structuredClone(referenceFixture);
   failures: (Error | undefined)[] = [];
   cacheFailure: Error | undefined;
-  readonly journal: GesteDAtelier[] = [];
+  readonly journal: GesteDePointage[] = [];
   readonly chronology: string[] = [];
   beforeSend: (() => void) | undefined;
   afterReread: (() => void) | undefined;
@@ -154,7 +187,7 @@ class ServerFixture extends AtelierExchangePort {
     }
     return this.reference;
   }
-  override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
     await roundTrip();
     this.chronology.push(geste.id);
     this.beforeSend?.();
@@ -167,7 +200,7 @@ class ServerFixture extends AtelierExchangePort {
       throw failure;
     }
     this.journal.push(structuredClone(geste));
-    return ok(undefined);
+    return ok({ conflits: [] });
   }
   override async reread(): Promise<void> {
     await roundTrip();
@@ -187,6 +220,7 @@ describe('AtelierCoordinator', () => {
   let errorHandler: ErrorHandlerFixture;
 
   beforeEach(async () => {
+    givenBusinessTime();
     errorHandler = new ErrorHandlerFixture();
     scheduler = new DesignationExpirationSchedulerFixture();
     journal = new ApplicationJournalFixture();
@@ -209,25 +243,79 @@ describe('AtelierCoordinator', () => {
     await whenOpening();
 
     thenActivityIs('TRAVAIL');
-    await thenQueueHas(2);
+    await thenQueueHas(1);
   });
 
-  it('should commit arrival once before the opening activities', async () => {
+  it('should commit only the activity gestures in local business order', async () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
 
-    await thenNatureOrderIs(['ARRIVEE', 'POINTAGE', 'POINTAGE']);
+    await thenNatureOrderIs(['POINTAGE', 'POINTAGE']);
     thenActivityIs('NON_CONFORMITE');
     await thenQueueHasUniqueStableIdentities();
   });
 
-  it('should append every personal finish before departure as one global stop batch', async () => {
+  it('should retain two simultaneous tile captures in acquisition order and stop only the activity they leave open', async () => {
+    await givenTwoActiveWorkstations();
+    givenSequentialGestureIdentities();
+    const storage = givenDelayedLocalWrite();
+
+    const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
+    await whenCaptureHasReachedStorage(storage);
+    whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
+    const transitioning = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
+    whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
+    const stopping = whenStoppingEverything();
+    const beforeRelease = await readQueuedGestures();
+    whenBusinessTimeBecomes('2026-09-05T08:00:03Z');
+    await whenReleasingLocalWrite(storage, finishing, transitioning, stopping);
+    const gestures = await readQueuedGestures();
+
+    expect(beforeRelease).toEqual([]);
+    expect(gestures).toEqual([
+      {
+        nature: 'POINTAGE',
+        id: identityRootFixture,
+        dateDeSurvenue: '2026-09-05T08:00:00.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-tour',
+        posteId: 'tour',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: 'activite-fixture-34',
+      },
+      {
+        nature: 'POINTAGE',
+        id: futureIdentityRootFixture,
+        dateDeSurvenue: '2026-09-05T08:00:01.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        intention: 'TRANSITION',
+        type: 'NON_CONFORMITE',
+        cible: 'activite-fixture-35',
+      },
+      {
+        nature: 'POINTAGE',
+        id: '33333333-3333-4333-8333-333333333333',
+        dateDeSurvenue: '2026-09-05T08:00:02.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: futureIdentityRootFixture,
+      },
+    ]);
+  });
+
+  it('should append every targeted personal finish as one global stop batch', async () => {
     await givenTwoActiveWorkstations();
 
     await whenStoppingEverything();
 
-    thenAcceptedBatchesAre([['ARRIVEE', 'FIN:piece-tour:tour', 'FIN:piece-fraiseuse:fraiseuse', 'DEPART']]);
+    thenAcceptedBatchesAre([['FIN:piece-tour:tour', 'FIN:piece-fraiseuse:fraiseuse']]);
   });
 
   it('should keep every activity unchanged and expose the local error when the global batch cannot be appended', async () => {
@@ -252,10 +340,7 @@ describe('AtelierCoordinator', () => {
     await Promise.all([pointage, stopping]);
 
     thenNoActivity();
-    thenAcceptedBatchesAre([
-      ['ARRIVEE', 'DEBUT:piece:tour'],
-      ['FIN:piece:tour', 'DEPART'],
-    ]);
+    thenAcceptedBatchesAre([['DEBUT:piece:tour'], ['FIN:piece:tour']]);
   });
 
   it('should anchor distinct global identities and business time at initiation and replay them unchanged', async () => {
@@ -294,7 +379,7 @@ describe('AtelierCoordinator', () => {
     await Promise.all([stopping, pausing]);
 
     thenPointageIsUnavailable(pointage);
-    thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
+    thenAcceptedBatchesAre([[]]);
     thenGlobalGesturesAreAvailable(true);
   });
 
@@ -309,7 +394,7 @@ describe('AtelierCoordinator', () => {
     whenReleasingCapture(releaseCapture);
     await Promise.all([stopping, choosing, pausing]);
 
-    thenAcceptedBatchesAre([['ARRIVEE', 'DEPART']]);
+    thenAcceptedBatchesAre([[]]);
   });
 
   it('should hide a finished window immediately while a global gesture waits for an earlier capture', async () => {
@@ -328,10 +413,7 @@ describe('AtelierCoordinator', () => {
     expect(gesturesBeforeClosing).toBe(false);
     thenNoWindowPresentationRemains(closingPresentation);
     thenGlobalGesturesAreAvailable(true);
-    thenAcceptedBatchesAre([
-      ['ARRIVEE', 'DEBUT:piece:tour'],
-      ['FIN:piece:tour', 'DEPART'],
-    ]);
+    thenAcceptedBatchesAre([['DEBUT:piece:tour'], ['FIN:piece:tour']]);
   });
 
   it('should publish global rejection and recovery through its completion and public signals', async () => {
@@ -394,7 +476,7 @@ describe('AtelierCoordinator', () => {
   it('should clear the current refusal as soon as a new business intent starts', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
-    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(refusalFixture('suivi-d-atelier-cloture'));
     await whenStarting();
     await whenSynchronizing();
     const releaseCapture = givenDelayedCapture();
@@ -426,7 +508,7 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([failedStart]);
     await whenStarting();
 
-    await thenQueueHas(2);
+    await thenQueueHas(1);
   });
 
   it('should keep the semantic tile unchanged and expose a persistent message until the next durable acceptance', async () => {
@@ -458,6 +540,35 @@ describe('AtelierCoordinator', () => {
     await thenPointageUsesWorkstation('fraiseuse');
   });
 
+  it('should fix the complete opening at the final workstation choice before delayed durable acceptance', async () => {
+    await givenAMultiWorkstationOpenWindow();
+    givenSequentialGestureIdentities();
+    const storage = givenDelayedLocalWrite();
+
+    const choice = whenPressingPrimaryTarget();
+    const beforeChoice = await readQueuedGestures();
+    whenBusinessTimeBecomes('2026-09-05T08:00:10Z');
+    const choosing = whenChoosingWorkstation(choice, 'fraiseuse');
+    await whenCaptureHasReachedStorage(storage);
+    whenBusinessTimeBecomes('2026-09-05T08:00:20Z');
+    await whenReleasingLocalWrite(storage, choosing);
+    const gestures = await readQueuedGestures();
+
+    expect(beforeChoice).toEqual([]);
+    expect(gestures).toEqual([
+      {
+        nature: 'POINTAGE',
+        id: identityRootFixture,
+        dateDeSurvenue: '2026-09-05T08:00:10.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece',
+        posteId: 'fraiseuse',
+        intention: 'OUVERTURE',
+        type: 'DEBUT',
+      },
+    ]);
+  });
+
   it('should reject a workstation choice after its operator window was replaced', async () => {
     await givenAMultiWorkstationOpenWindow();
     const choice = whenPressingPrimaryTarget();
@@ -480,7 +591,7 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should retain a failed push', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenServerFailures(new Error('reseau absent'));
     await whenSynchronizing();
@@ -490,18 +601,18 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should replay the same gesture after reconnection', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenServerFailures(new Error('reseau absent'));
     await whenSynchronizing();
     await whenSynchronizing();
 
     thenConnectedIs(true);
-    thenJournalIs([arriveeFixture]);
+    thenJournalIs([ouvertureFixture]);
   });
 
   it('should retain a server acceptance when local acknowledgement fails', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenAcknowledgementFailsOnce();
     const failedSynchronization = whenSynchronizing();
@@ -512,21 +623,21 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should replay a server acceptance after local acknowledgement failure', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenAcknowledgementFailsOnce();
     const failedSynchronization = whenSynchronizing();
     await Promise.allSettled([failedSynchronization]);
     await whenSynchronizing();
 
-    thenJournalIs([arriveeFixture, arriveeFixture]);
+    thenJournalIs([ouvertureFixture, ouvertureFixture]);
     await thenPendingIs(0);
   });
 
   it('should remove activity rejected by the server', async () => {
     await givenWorkStartedOffline();
     givenAuthorizedAccess();
-    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
 
     thenNoActivity();
@@ -535,7 +646,7 @@ describe('AtelierCoordinator', () => {
   it('should retain a final refusal while processing subsequent gestures', async () => {
     await givenWorkStartedOffline();
     givenAuthorizedAccess();
-    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
     await whenStoppingEverything();
     await whenSynchronizing();
@@ -546,46 +657,19 @@ describe('AtelierCoordinator', () => {
     await thenRefusalIs('suivi-d-atelier-cloture');
   });
 
-  it('should absorb only an existing arrival', async () => {
-    await givenWorkStoppedOffline();
-    givenAuthorizedAccess();
-    givenServerFailures(
-      refusalFixture('journee-de-travail-deja-ouverte'),
-      undefined,
-      undefined,
-      refusalFixture('transition-de-presence-interdite'),
-    );
-
-    await whenSynchronizing();
-
-    await thenPendingIs(0);
-    await thenRefusalIs('transition-de-presence-interdite');
-  });
-
-  it('should retain pending gestures when arrival finds an already open day', async () => {
-    await givenWorkStartedOffline();
-    await whenSynchronizing();
-    givenAuthorizedAccess();
-    givenServerFailures(refusalFixture('journee-de-travail-deja-ouverte'), new Error('reseau absent'));
-    await whenSynchronizing();
-
-    await thenArrivalIsAccepted();
-    await thenPendingIs(1);
-  });
-
   it('should reread before retrying a concurrent gesture with its original body', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenServerFailures(refusalFixture('saisie-concurrente'));
 
     await whenSynchronizing();
 
     thenChronologyIs(['arrivee', 'relecture', 'arrivee']);
-    thenJournalIs([arriveeFixture]);
+    thenJournalIs([ouvertureFixture]);
   });
 
   it('should preserve a repeated race as a final diagnostic after rereading and retrying', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('saisie-concurrente'));
 
@@ -596,10 +680,10 @@ describe('AtelierCoordinator', () => {
     await thenRefusalIs('saisie-concurrente');
   });
 
-  it('should apply the contextual allowlist to the response after a reread as well', async () => {
-    await givenPendingArrival();
+  it('should preserve a stable target refusal after one concurrent retry', async () => {
+    await givenPendingOpening();
     givenAuthorizedAccess();
-    givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('journee-de-travail-deja-ouverte'));
+    givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('activite-visee-introuvable'));
 
     await whenSynchronizing();
 
@@ -652,7 +736,7 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([failedStart]);
     await whenSynchronizing();
 
-    await thenOldCompanyPendingIs(2);
+    await thenOldCompanyPendingIs(1);
     thenJournalIs([]);
   });
 
@@ -683,7 +767,7 @@ describe('AtelierCoordinator', () => {
     const failedStop = whenStarting();
     await Promise.allSettled([failedStop]);
     givenAuthorizedAccess();
-    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
 
     thenTheWindowPresentationIsPopulated();
@@ -695,7 +779,7 @@ describe('AtelierCoordinator', () => {
     const failedStop = whenStarting();
     await Promise.allSettled([failedStop]);
     givenAuthorizedAccess();
-    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(refusalFixture('suivi-d-atelier-cloture'));
     await whenSynchronizing();
     givenReenrolledForAnotherCompany();
     await whenRestoring();
@@ -713,7 +797,7 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should stop a replay when authorization changes during the reread', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenServerFailures(refusalFixture('saisie-concurrente'));
     givenCompanyChangesDuringReread();
@@ -725,7 +809,7 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should finish acknowledging the old company response without sending its next event under another token', async () => {
-    await givenPendingArrival();
+    await givenPendingOpening();
     givenAuthorizedAccess();
     givenCompanyChangesDuringSend();
 
@@ -742,7 +826,7 @@ describe('AtelierCoordinator', () => {
     await whenSynchronizingConcurrently();
     await whenClosing();
 
-    await thenQueueHas(3);
+    await thenQueueHas(2);
     await thenPendingIs(0);
   });
 
@@ -751,12 +835,12 @@ describe('AtelierCoordinator', () => {
 
     const openings = await whenOpeningBothOperators();
 
-    await whenStoppingEverything();
+    await whenStarting();
     givenAuthorizedAccess();
     await whenSynchronizing();
 
     const acceptedOperator = thenOnlyOneWindowIsAccepted(openings);
-    thenPresenceBelongsTo(acceptedOperator);
+    thenOpeningBelongsTo(acceptedOperator);
   });
 
   it('should reject an unknown operator code', async () => {
@@ -856,18 +940,18 @@ describe('AtelierCoordinator', () => {
     await Promise.allSettled([failedSynchronization]);
     await whenRestarting();
 
-    await thenQueueHas(2);
+    await thenQueueHas(1);
   });
 
   it('should push a gesture accepted while the reference is being refreshed without waiting for the next minute', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
-    givenStopIsAppendedDuringReferenceRefresh();
+    givenOpeningIsAppendedDuringReferenceRefresh();
 
     await whenSynchronizing();
     await whenClosing();
 
-    await thenQueueHas(2);
+    await thenQueueHas(1);
     await thenPendingIs(0);
   });
 
@@ -887,8 +971,53 @@ describe('AtelierCoordinator', () => {
 
     expect(closureFailure).toBeInstanceOf(Error);
     expect(closureFailure).toHaveProperty('message', 'Aucune fenetre operateur ouverte.');
-    await thenQueueHas(2);
+    await thenQueueHas(1);
     await thenPointageKeepsItsOriginalOperatorAndTime();
+  });
+
+  it('should retain a finish initiated before its exact deadline through delayed storage and pause only the remaining activity', async () => {
+    whenBusinessTimeBecomes('2026-09-05T19:59:59.999Z');
+    await givenTwoActiveWorkstations();
+    givenSequentialGestureIdentities();
+    const storage = givenDelayedLocalWrite();
+
+    const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
+    await whenCaptureHasReachedStorage(storage);
+    whenBusinessTimeBecomes('2026-09-05T20:00:00Z');
+    const pausing = whenPausingGlobally();
+    const atDeadline = designation.pointage();
+    whenBusinessTimeBecomes('2026-09-05T20:00:01Z');
+    await whenReleasingLocalWrite(storage, finishing, pausing);
+    const gestures = await readQueuedGestures();
+
+    expect(atDeadline?.moules.find(element => element.id === 'piece-tour')?.isActive()).toBe(false);
+    expect(atDeadline?.moules.find(element => element.id === 'piece-fraiseuse')?.isActive()).toBe(true);
+    expect(atDeadline?.moules.find(element => element.id === 'piece-fraiseuse')?.dureeMs()).toBe(44_999_999);
+    expect(gestures).toEqual([
+      {
+        nature: 'POINTAGE',
+        id: identityRootFixture,
+        dateDeSurvenue: '2026-09-05T19:59:59.999Z',
+        operateurId: 'jean',
+        suiviId: 'piece-tour',
+        posteId: 'tour',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: 'activite-fixture-34',
+      },
+      {
+        nature: 'POINTAGE',
+        id: futureIdentityRootFixture,
+        dateDeSurvenue: '2026-09-05T20:00:00.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        intention: 'FIN',
+        type: 'FIN',
+        cible: 'activite-fixture-35',
+        suspension: { pause: futureIdentityRootFixture, reouverture: 'DEBUT' },
+      },
+    ]);
   });
 
   it('should retain a successful append without restoring an old operator presentation after the tenant changes during storage I/O', async () => {
@@ -902,7 +1031,7 @@ describe('AtelierCoordinator', () => {
     append.release();
     await pointage;
 
-    await thenOldCompanyPendingIs(2);
+    await thenOldCompanyPendingIs(1);
     thenNoWindowPresentationRemains();
     expect(pupitre.echecCaptureLocale()).toBe(false);
     expect(designation.refusAtelier()).toBeUndefined();
@@ -1045,6 +1174,22 @@ describe('AtelierCoordinator', () => {
   };
   const givenChangingGlobalIdentitySource = (): MockInstance =>
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(identityRootFixture).mockReturnValue(futureIdentityRootFixture);
+  const givenSequentialGestureIdentities = (): void => {
+    vi.spyOn(crypto, 'randomUUID')
+      .mockReturnValueOnce(identityRootFixture)
+      .mockReturnValueOnce(futureIdentityRootFixture)
+      .mockReturnValueOnce('33333333-3333-4333-8333-333333333333');
+  };
+  const givenDelayedLocalWrite = (): ReturnType<ApplicationJournalFixture['delayNextAppend']> => journal.delayNextAppend();
+  const whenCaptureHasReachedStorage = (storage: ReturnType<ApplicationJournalFixture['delayNextAppend']>): Promise<void> =>
+    storage.started;
+  const whenReleasingLocalWrite = async (
+    storage: ReturnType<ApplicationJournalFixture['delayNextAppend']>,
+    ...captures: Promise<void>[]
+  ): Promise<void> => {
+    storage.release();
+    await Promise.all(captures);
+  };
   const givenDelayedCapture = (): (() => void) => {
     let release: (() => void) | undefined;
     authentication.pendingSynchronization = new Promise(resolve => {
@@ -1097,6 +1242,7 @@ describe('AtelierCoordinator', () => {
         { provide: AtelierExchangePort, useValue: serveur },
         { provide: AuthenticationPort, useValue: authentication },
         { provide: DesignationExpirationSchedulerPort, useValue: scheduler },
+        { provide: ActiviteExpirationSchedulerPort, useValue: { schedule: () => undefined } },
         { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
@@ -1115,6 +1261,8 @@ describe('AtelierCoordinator', () => {
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
     Promise.allSettled([designation.openWindow(matriculeFixture('049')), designation.openWindow(matriculeFixture('050'))]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
+  const whenPointingAt = (suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): Promise<void> =>
+    completionOf(pupitre.execute({ suiviId, cible }));
   const whenPressingPrimaryTarget = (): ReturnType<AtelierCoordinator['execute']> =>
     pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' });
   const whenChoosingWorkstation = async (execution: ReturnType<AtelierCoordinator['execute']>, posteId: string): Promise<void> => {
@@ -1175,13 +1323,33 @@ describe('AtelierCoordinator', () => {
           ...suivi,
           id: 'piece-tour',
           nom: 'OF-tour',
-          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:00:00Z', posteId: 'tour' }],
+          activites: [
+            {
+              ouverture: 'activite-fixture-34',
+              echeance: '2026-09-05T20:00:00.000Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T07:00:00Z',
+              posteId: 'tour',
+            },
+          ],
+          conflits: [],
         },
         {
           ...suivi,
           id: 'piece-fraiseuse',
           nom: 'OF-fraiseuse',
-          activites: [{ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T07:30:00Z', posteId: 'fraiseuse' }],
+          activites: [
+            {
+              ouverture: 'activite-fixture-35',
+              echeance: '2026-09-05T20:30:00.000Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T07:30:00Z',
+              posteId: 'fraiseuse',
+            },
+          ],
+          conflits: [],
         },
       ],
     });
@@ -1191,15 +1359,12 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
     await whenStarting();
   };
-  const givenWorkStoppedOffline = async (): Promise<void> => {
-    await givenWorkStartedOffline();
-    await whenStoppingEverything();
-  };
+
   const givenRestoredPupitre = async (): Promise<void> => {
     await whenRestoring();
   };
-  const givenPendingArrival = async (): Promise<void> => {
-    await journal.append(Entreprise.of('entreprise-a'), [arriveeFixture]);
+  const givenPendingOpening = async (): Promise<void> => {
+    await journal.append(Entreprise.of('entreprise-a'), [ouvertureFixture]);
   };
   const givenAuthorizedAccess = (): void => {
     authentication.token = 'autorise';
@@ -1249,10 +1414,7 @@ describe('AtelierCoordinator', () => {
   const givenTwoOperators = async (): Promise<void> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), {
       ...referenceFixture,
-      operateurs: [
-        ...referenceFixture.operateurs,
-        { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', etat: 'ABSENT', postes: [], evenements: [] },
-      ],
+      operateurs: [...referenceFixture.operateurs, { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', postes: [] }],
     });
   };
   const givenNoCompanySelected = (): void => {
@@ -1266,10 +1428,10 @@ describe('AtelierCoordinator', () => {
   const givenEmptyCompanySelected = (): void => {
     authentication.tenant = 'entreprise-vide';
   };
-  const givenStopIsAppendedDuringReferenceRefresh = (): void => {
+  const givenOpeningIsAppendedDuringReferenceRefresh = (): void => {
     serveur.afterReference = () => {
       serveur.afterReference = undefined;
-      void pupitre.executeGlobale('TOUT_ARRETER');
+      void whenStarting();
     };
   };
   const thenQueueHas = async (count: number): Promise<void> => {
@@ -1294,10 +1456,7 @@ describe('AtelierCoordinator', () => {
   const thenPointageIsUnavailable = (execution: ReturnType<AtelierCoordinator['execute']>): void => {
     expect(execution).toEqual({ kind: 'INDISPONIBLE' });
   };
-  const thenArrivalIsAccepted = async (): Promise<void> => {
-    const arrival = (await journal.read(Entreprise.of('entreprise-a'))).evenements.find(evenement => evenement.geste.nature === 'ARRIVEE');
-    expect(arrival).toMatchObject({ etat: 'ACCEPTE' });
-  };
+
   const thenSemanticCaptureFails = async (execution: ReturnType<AtelierCoordinator['execute']>): Promise<void> => {
     if (execution.kind !== 'CAPTURE') throw new Error('Expected capture fixture.');
     await expect(execution.completion).rejects.toThrow('disque plein');
@@ -1319,9 +1478,7 @@ describe('AtelierCoordinator', () => {
     await thenQueueHas(0);
   };
   const thenPointageUsesWorkstation = async (posteId: string): Promise<void> => {
-    const pointage = (await journal.read(Entreprise.of('entreprise-a'))).evenements.find(
-      evenement => evenement.geste.nature === 'POINTAGE',
-    );
+    const pointage = (await journal.read(Entreprise.of('entreprise-a'))).evenements[0];
     expect(pointage?.geste).toMatchObject({ nature: 'POINTAGE', posteId });
   };
   const thenPendingIs = (count: number): Promise<void> => thenOldCompanyPendingIs(count);
@@ -1341,19 +1498,19 @@ describe('AtelierCoordinator', () => {
   const thenQueueHasUniqueStableIdentities = async (): Promise<void> => {
     const gestes = (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(event => event.geste);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
-    const arrivee = requiredFixture(gestes[0], 'queued arrival');
-    const premierPointage = requiredFixture(gestes[1], 'first queued pointage');
-    expect(arrivee.dateDeSurvenue).toBe(premierPointage.dateDeSurvenue);
+    const premiere = requiredFixture(gestes[0], 'first activity gesture');
+    const seconde = requiredFixture(gestes[1], 'second activity gesture');
+    expect(premiere.dateDeSurvenue).toBe(seconde.dateDeSurvenue);
   };
-  const readQueuedGestures = async (): Promise<readonly GesteDAtelier[]> =>
+  const readQueuedGestures = async (): Promise<readonly GesteDePointage[]> =>
     (await journal.read(Entreprise.of('entreprise-a'))).evenements.map(evenement => evenement.geste);
-  const thenGesturesHaveDistinctIdentitiesAt = (gestes: readonly GesteDAtelier[], instant: string): void => {
+  const thenGesturesHaveDistinctIdentitiesAt = (gestes: readonly GesteDePointage[], instant: string): void => {
     const identities = gestes.map(geste => geste.id);
-    expect(gestes).toHaveLength(4);
+    expect(gestes).toHaveLength(2);
     expect(new Set(identities).size).toBe(gestes.length);
     expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
   };
-  const thenReplayedGesturesAre = (gestures: readonly GesteDAtelier[]): void => {
+  const thenReplayedGesturesAre = (gestures: readonly GesteDePointage[]): void => {
     expect(serveur.journal).toEqual(gestures);
   };
   const thenGlobalIdentityWasSampledOnlyAtInitiation = (identitySourceFixture: MockInstance): void => {
@@ -1366,10 +1523,8 @@ describe('AtelierCoordinator', () => {
     expect(refused).toHaveLength(1);
     return requiredFixture(accepted[0], 'accepted opening').value.id;
   };
-  const thenPresenceBelongsTo = (operateurId: string): void => {
-    expect(serveur.journal.filter(geste => geste.nature === 'PRESENCE')).toEqual([
-      expect.objectContaining({ nature: 'PRESENCE', operateurId, type: 'DEPART' }),
-    ]);
+  const thenOpeningBelongsTo = (operateurId: string): void => {
+    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'POINTAGE', operateurId, intention: 'OUVERTURE', type: 'DEBUT' })]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
     await Promise.all([thenFails(opening, 'deja ouverte'), thenFails(pointage, 'habilitations')]);
@@ -1380,7 +1535,7 @@ describe('AtelierCoordinator', () => {
   const thenConnectedIs = (connected: boolean): void => {
     expect(etatHorsLigne.connected()).toBe(connected);
   };
-  const thenJournalIs = (gestes: GesteDAtelier[]): void => {
+  const thenJournalIs = (gestes: GesteDePointage[]): void => {
     expect(serveur.journal).toEqual(gestes);
   };
   const thenChronologyIs = (events: string[]): void => {
@@ -1444,7 +1599,7 @@ describe('AtelierCoordinator', () => {
   };
   const givenServerRefusalOnStart = async (posteId: string): Promise<void> => {
     givenAuthorizedAccess();
-    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerFailures(refusalFixture('suivi-d-atelier-cloture'));
     await whenStartingOn(posteId);
     await whenSynchronizing();
   };

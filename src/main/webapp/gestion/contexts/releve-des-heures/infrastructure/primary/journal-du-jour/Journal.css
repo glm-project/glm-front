@@ -21,7 +21,7 @@
 
 .entrees button {
   display: grid;
-  grid-template-columns: 4rem 11rem minmax(9rem, 1.2fr) minmax(8rem, 1fr) minmax(10rem, 2fr);
+  grid-template-columns: 4rem 11rem minmax(9rem, 1.2fr) minmax(8rem, 1fr);
   align-items: center;
   gap: 0.875rem;
   box-sizing: border-box;
@@ -69,8 +69,7 @@
   font-weight: 600;
 }
 
-.entrees .poste,
-.entrees .effet {
+.entrees .poste {
   color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
 }
@@ -97,13 +96,6 @@
   border: 2px solid var(--color-ink);
   background: var(--color-nc);
   transform: rotate(45deg);
-}
-
-.glyphe.arrivee,
-.glyphe.depart {
-  width: 3px;
-  height: 1rem;
-  border-radius: 1px;
 }
 
 .vide {

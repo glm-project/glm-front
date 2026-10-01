@@ -14,26 +14,18 @@ describe('Supervision lanes readability', () => {
     });
   });
 
-  it('should show exactly the lanes « Au travail », « Sans affectation » and « Absents », in this order', () => {
+  it('should show exactly the lanes « Au travail » and « Sans activité », in this order', () => {
     whenOpeningSupervision();
 
-    thenThePlateauHoldsTheThreeLanesInOrder();
+    thenThePlateauHoldsTheTwoLanesInOrder();
   });
 
-  it('should share the plateau width between the three lanes on a wide screen', () => {
+  it('should share the plateau width between the two lanes on a wide screen', () => {
     givenViewport(1440);
 
     whenOpeningSupervision();
 
     thenTheLanesFillThePlateau();
-  });
-
-  it('should place the « Présents » label over the lanes of present operators on a wide screen', () => {
-    givenViewport(1440);
-
-    whenOpeningSupervision();
-
-    thenThePresentsLabelSpansTheirLanes();
   });
 
   it('should colour each lane by its state and mark a nonconformity in yellow with ink text', () => {
@@ -88,7 +80,7 @@ const whenOpeningSupervisionWithPollingClock = (): void => {
 };
 
 const whenReachingTheNextAnomalyThreshold = (): void => {
-  cy.clock().then(clock => clock.setSystemTime(new Date(2026, 8, 24, 23, 20).getTime()));
+  cy.clock().then(clock => clock.setSystemTime(new Date(2026, 8, 24, 20, 5).getTime()));
 };
 
 const whenCapturingBeforePollingDeadline = (): void => {
@@ -114,58 +106,46 @@ const thenLanesStayWithinTheirWidth = (): void => {
   cy.screenshot('supervision-couloirs', { capture: 'fullPage' });
 };
 
-const thenThePlateauHoldsTheThreeLanesInOrder = (): void => {
+const thenThePlateauHoldsTheTwoLanesInOrder = (): void => {
   cy.get(dataSelector('supervision-plateau'))
     .children()
-    .should('have.length', 3)
-    .find('h2')
+    .should('have.length', 2)
+    .find(dataSelector('supervision-couloir-titre'))
     .should('be.visible')
     .should(titres => {
-      expect(titres.toArray().map(titre => normalise(titre.innerText))).to.deep.equal(['Au travail', 'Sans affectation', 'Absents']);
+      expect(titres.toArray().map(titre => normalise(titre.innerText))).to.deep.equal(['Au travail', 'Sans activité']);
     });
 };
 
 const thenTheLanesFillThePlateau = (): void => {
   cy.get(dataSelector('supervision-plateau')).then(plateau => {
-    cy.get(dataSelector('supervision-couloir-absents')).should(couloir => {
+    cy.get(dataSelector('supervision-couloir-sans-activite')).should(couloir => {
       expect(rightEdgeOf(couloir)).to.be.closeTo(rightEdgeOf(plateau), 1);
     });
   });
 };
 
-const thenThePresentsLabelSpansTheirLanes = (): void => {
-  cy.get(dataSelector('supervision-couloir-au-travail')).then(auTravail => {
-    cy.get(dataSelector('supervision-couloir-sans-affectation')).then(sansAffectation => {
-      cy.get(dataSelector('supervision-presents')).should(accolade => {
-        expect([leftEdgeOf(accolade), rightEdgeOf(accolade)]).to.deep.equal([leftEdgeOf(auTravail), rightEdgeOf(sansAffectation)]);
-      });
-    });
-  });
-};
-
-const leftEdgeOf = (element: JQuery): number => requiredFixture(element[0], 'measured element').getBoundingClientRect().left;
-
 const rightEdgeOf = (element: JQuery): number => requiredFixture(element[0], 'measured element').getBoundingClientRect().right;
 
 const thenLaneColoursFollowTheClientCode = (): void => {
   cy.get(dataSelector('supervision-couloir-au-travail')).should('have.css', 'border-top-color', 'rgb(22, 101, 52)');
-  cy.get(dataSelector('supervision-couloir-absents')).should('have.css', 'border-top-color', 'rgb(185, 28, 28)');
+  cy.get(dataSelector('supervision-couloir-sans-activite')).should('have.css', 'border-top-color', 'rgb(169, 182, 196)');
   cy.get(dataSelector('supervision-marque-nc'))
     .first()
     .should('have.css', 'background-color', 'rgb(234, 179, 8)')
     .and('have.css', 'color', 'rgb(15, 24, 36)');
-  cardOf('op-perrin').should('have.css', 'color', 'rgb(74, 90, 107)').and('have.css', 'opacity', '1');
-  cardOf('op-perrin').find(dataSelector('supervision-activite')).should('have.css', 'opacity', '1');
 };
 
 const thenTheLanesHoldTheDemonstrationOperators = (): void => {
   [
     {
       couloir: 'au-travail',
-      operateurs: ['Aubert Lucas', 'Benali Samir', 'Chevalier Mathis', 'Garnier Thomas', 'Marchand Kevin', 'Morel Inès', 'Vidal Hugo'],
+      operateurs: ['Aubert Lucas', 'Benali Samir', 'Chevalier Mathis', 'Garnier Thomas', 'Morel Inès', 'Vidal Hugo'],
     },
-    { couloir: 'sans-affectation', operateurs: ['Dumas Julien', 'Lefèvre Sophie', 'Roux Nathalie', 'Schmitt Yanis'] },
-    { couloir: 'absents', operateurs: ['Fabre Lucie', 'Perrin Loïc'] },
+    {
+      couloir: 'sans-activite',
+      operateurs: ['Dumas Julien', 'Fabre Lucie', 'Lefèvre Sophie', 'Marchand Kevin', 'Perrin Loïc', 'Roux Nathalie', 'Schmitt Yanis'],
+    },
   ].forEach(({ couloir, operateurs }) => {
     cy.get(dataSelector(`supervision-couloir-${couloir}`))
       .find(dataSelector('supervision-operateur-nom'))
@@ -176,22 +156,18 @@ const thenTheLanesHoldTheDemonstrationOperators = (): void => {
 };
 
 const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
-  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-heure')), 'arrivée le 23/09 à 06:04');
-  cardOf('op-marchand')
-    .find(dataSelector('supervision-heure'))
-    .find(dataSelector('supervision-jour'))
-    .should('have.text', 'le 23/09')
-    .and('have.css', 'font-weight', '600')
-    .and('have.css', 'color', 'rgb(15, 24, 36)');
-  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-activite-debut')), 'depuis le 23/09 à 14:20');
-  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Aucun départ pointé depuis plus de 16 h');
-  thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien arrivée 06:45 Aucune activité en cours Métiers : Sciage, Tournage');
-  cardOf('op-schmitt').find(dataSelector('supervision-heure')).should('not.exist');
-  thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-anomalie')), 'Venue ouverte sans heure d’arrivée');
+  thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Activité terminée automatiquement · fin 03:20');
+  cardOf('op-marchand').find(dataSelector('supervision-activite')).should('not.exist');
+  thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien Aucune activité en cours Métiers : Sciage, Tournage');
+  thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-sequence-en-conflit')), 'Séquence en conflit · Sans poste');
   thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Hors OF');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
-  thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-anomalie')), 'Activité d’un opérateur absent');
+  cardOf('op-perrin').find(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit · Tour 1');
+  thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-conflit-activite')), 'OF 3006 · À résoudre');
+  cardOf('op-morel').find(dataSelector('supervision-activite')).should('have.length', 2);
+  cardOf('op-morel').find(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit · Erodeuse F');
+  thenTextIs(cardOf('op-morel').find(dataSelector('supervision-conflit-activite')), 'Hors OF · À résoudre');
 };
 
 const thenVisibleTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {
@@ -215,12 +191,12 @@ const thenRefreshShowsItsFocusRing = (): void => {
 };
 
 const thenOnlyTheNewReadChangesTheAnomalies = (): void => {
-  cy.get('@anomaliesBeforeDeadline').should('equal', 3);
-  cy.get(dataSelector('supervision-anomalie')).should('have.length', 8);
+  cy.get('@anomaliesBeforeDeadline').should('equal', 1);
+  cy.get(dataSelector('supervision-anomalie')).should('have.length', 3);
   cy.get(dataSelector('supervision-activite-debut'))
     .first()
     .should(debut => {
-      expect(debut.text().replace(/\s+/g, ' ').trim()).to.equal('depuis 07:05');
+      expect(debut.text().replace(/\s+/g, ' ').trim()).to.equal('depuis 08:40');
     });
   cy.get(dataSelector('supervision-carte')).should('have.length', 13);
 };

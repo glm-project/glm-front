@@ -26,15 +26,12 @@ const datesDe = (annee: number, semaine: number): string[] => {
 const joursDeSynthese = (annee: number, semaine: number): RestJour[] =>
   datesDe(annee, semaine).map((jour, rang) => ({
     jour,
-    duree: rang === 0 ? 'PT7H30M' : 'PT0S',
-    dureePresumee: 'PT0S',
-    dureeOperationnelle: 'PT0S',
-    dureeOperationnellePresumee: 'PT0S',
+    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT2H' : 'PT0S' },
     pointages:
       rang === 0
         ? [
-            { type: 'ARRIVEE' as const, dateDeSurvenue: `${jour}T06:02:00Z` },
-            { type: 'DEPART' as const, dateDeSurvenue: `${jour}T15:32:00Z` },
+            { id: 'debut-1', type: 'DEBUT', intention: 'OUVERTURE', dateDeSurvenue: `${jour}T08:00:00Z`, element: 'element-1' },
+            { id: 'fin-1', type: 'FIN', intention: 'FIN', cible: 'debut-1', dateDeSurvenue: `${jour}T10:00:00Z`, element: 'element-1' },
           ]
         : [],
   }));
@@ -42,8 +39,18 @@ const joursDeSynthese = (annee: number, semaine: number): RestJour[] =>
 const joursDeFeuille = (annee: number, semaine: number): RestJourDeFeuille[] =>
   datesDe(annee, semaine).map((jour, rang) => ({
     jour,
-    presence: rang === 0 ? [{ debut: `${jour}T06:02:00Z`, fin: `${jour}T15:32:00Z`, presumee: false }] : [],
-    activites: [],
+    activites:
+      rang === 0
+        ? [
+            {
+              element: 'element-1',
+              categorie: 'TRAVAIL',
+              debut: `${jour}T08:00:00Z`,
+              fin: `${jour}T10:00:00Z`,
+              activite: { id: 'debut-1', debut: `${jour}T08:00:00Z`, fin: `${jour}T10:00:00Z`, etat: 'TERMINEE' },
+            },
+          ]
+        : [],
   }));
 
 export interface SemaineSemee {
@@ -56,6 +63,8 @@ const cleDe = (annee: number, semaine: number): string => `${String(annee)}|${St
 export class SyntheseDesHeuresApiFixture {
   failRead = false;
   operateurInconnu = false;
+  readonly evaluations: { source: 'SYNTHESE' | 'FEUILLE'; evaluation: string }[] = [];
+  private attente: Promise<void> | undefined;
   readonly lectures: { annee: string; semaine: string }[] = [];
   private readonly semaines = new Map<string, SemaineSemee>();
 
@@ -63,53 +72,90 @@ export class SyntheseDesHeuresApiFixture {
     this.semaines.set(cleDe(Number(semaine.synthese.annee), Number(semaine.synthese.semaine)), semaine);
   }
 
+  suspendSynthese(): () => void {
+    let reprendre = (): void => {};
+    this.attente = new Promise(resolve => {
+      reprendre = resolve;
+    });
+    return () => {
+      reprendre();
+      this.attente = undefined;
+    };
+  }
+
   install(): void {
     cy.intercept({ method: 'GET', pathname: SYNTHESE }, request => {
       const annee = String(request.query['annee']);
       const semaine = String(request.query['semaine']);
       this.lectures.push({ annee, semaine });
-      request.reply(this.reponse(annee, semaine));
+      const evaluation = String(request.query['evaluation']);
+      this.evaluations.push({ source: 'SYNTHESE', evaluation });
+      const reponse = this.reponse(annee, semaine, evaluation);
+      if (this.attente !== undefined) {
+        return this.attente.then(() => request.reply(reponse));
+      }
+      return request.reply(reponse);
     }).as('syntheseRead');
     this.installFeuille();
   }
 
   installFeuille(): void {
     cy.intercept({ method: 'GET', pathname: FEUILLE }, request => {
-      request.reply(this.reponseDeFeuille(Number(request.query['annee']), Number(request.query['semaine'])));
+      const evaluation = String(request.query['evaluation']);
+      this.evaluations.push({ source: 'FEUILLE', evaluation });
+      request.reply(this.reponseDeFeuille(Number(request.query['annee']), Number(request.query['semaine']), evaluation));
     }).as('feuilleRead');
   }
 
-  private reponse(annee: string, semaine: string): { statusCode?: number; body: RestSynthese | { type?: string } } {
+  private reponse(annee: string, semaine: string, evaluation: string): { statusCode?: number; body: RestSynthese | { type?: string } } {
     if (this.failRead) {
       return { statusCode: 500, body: {} };
     }
     if (this.operateurInconnu) {
       return { statusCode: 404, body: { type: SYNTHESE_INTROUVABLE } };
     }
-    return { body: this.semaines.get(cleDe(Number(annee), Number(semaine)))?.synthese ?? syntheseFixture(Number(annee), Number(semaine)) };
+    return {
+      body: {
+        ...(this.semaines.get(cleDe(Number(annee), Number(semaine)))?.synthese ?? syntheseFixture(Number(annee), Number(semaine))),
+        evaluation,
+      },
+    };
   }
 
-  private reponseDeFeuille(annee: number, semaine: number): { statusCode?: number; body: RestFeuille | { type: string } } {
+  private reponseDeFeuille(
+    annee: number,
+    semaine: number,
+    evaluation: string,
+  ): { statusCode?: number; body: RestFeuille | { type: string } } {
     if (this.operateurInconnu) {
       return { statusCode: 404, body: { type: FEUILLE_INTROUVABLE } };
     }
-    return { body: this.semaines.get(cleDe(annee, semaine))?.feuille ?? feuilleFixture(annee, semaine) };
+    return { body: { ...(this.semaines.get(cleDe(annee, semaine))?.feuille ?? feuilleFixture(annee, semaine)), evaluation } };
   }
 }
 
 export const syntheseFixture = (annee: number, semaine: number): RestSynthese => ({
   annee,
   semaine,
-  dureeTotale: 'PT7H30M',
-  dureePresumeeTotale: 'PT0S',
-  dureeOperationnelleTotale: 'PT0S',
-  dureeOperationnellePresumeeTotale: 'PT0S',
+  dureeOperationnelleTotale: { complete: true, valeur: 'PT2H' },
+  conflits: [],
+  evaluation: '2026-09-26T10:30:00Z',
   operateur: OPERATEUR,
   jours: joursDeSynthese(annee, semaine),
-  elements: [],
+  elements: [
+    {
+      id: 'element-1',
+      type: 'PRODUIT',
+      nom: 'Moule 1015',
+      duree: { complete: true, valeur: 'PT2H' },
+      dureeNonConformite: { complete: true, valeur: 'PT0S' },
+      postes: [],
+    },
+  ],
 });
 
 export const feuilleFixture = (annee: number, semaine: number): RestFeuille => ({
+  evaluation: '2026-09-26T10:30:00Z',
   annee,
   semaine,
   operateur: OPERATEUR,

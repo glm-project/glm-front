@@ -1,14 +1,10 @@
 import {
-  EtatDePresence,
   EvenementAccepte,
   EvenementDuJournal,
-  GesteDArrivee,
   GesteDePointage,
-  GesteDePresence,
   JournalDuPupitre,
   OperateurDuPupitre,
   ReferentielDuPupitre,
-  TypeDePresence,
 } from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
@@ -25,22 +21,14 @@ const operateurJeanFixture: OperateurDuPupitre = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  etat: 'ABSENT',
   postes: [],
-  evenements: [],
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [operateurJeanFixture],
-  suivis: [{ id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
-const arriveeGesteFixture: GesteDArrivee = {
-  nature: 'ARRIVEE',
-  operateurId: 'jean',
-  id: 'arrivee',
-  dateDeSurvenue: '2026-09-05T08:00:00Z',
-};
-const arriveeFixture: EvenementDuJournal = { geste: arriveeGesteFixture, etat: 'EN_ATTENTE' };
 const debutGesteFixture: GesteDePointage = {
+  intention: 'OUVERTURE',
   nature: 'POINTAGE',
   operateurId: 'jean',
   suiviId: 'piece',
@@ -49,16 +37,182 @@ const debutGesteFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
 };
 const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
-const operateurMarieFixture: OperateurDuPupitre = {
-  id: 'marie',
-  nom: 'Martin',
-  prenom: 'Marie',
-  etat: 'ABSENT',
-  postes: [],
-  evenements: [],
-};
-
 describe('JournalDuPupitreProjection', () => {
+  it.each([undefined, 'tour'])(
+    'should expose the stale target and replacement at workstation %s without applying FIN to the replacement',
+    posteId => {
+      const state: JournalDuPupitre = {
+        ...givenEvents([]),
+        referentiel: {
+          ...referenceFixture,
+          suivis: [
+            {
+              ...requiredFixture(referenceFixture.suivis[0], 'element'),
+              activites: [
+                {
+                  operateurId: 'jean',
+                  categorie: 'TRAVAIL',
+                  depuis: '2026-09-05T10:00:00Z',
+                  ...(posteId === undefined ? {} : { posteId }),
+                  ouverture: 'b',
+                  echeance: '2026-09-05T23:00:00Z',
+                },
+                {
+                  operateurId: 'marie',
+                  categorie: 'TRAVAIL',
+                  ouverture: 'autre-operateur',
+                  depuis: '2026-09-05T10:00:00Z',
+                  echeance: '2026-09-05T23:00:00Z',
+                  ...(posteId === undefined ? {} : { posteId }),
+                },
+                {
+                  operateurId: 'jean',
+                  categorie: 'NON_CONFORMITE',
+                  ouverture: 'autre-poste',
+                  posteId: 'fraiseuse',
+                  depuis: '2026-09-05T10:00:00Z',
+                  echeance: '2026-09-05T23:00:00Z',
+                },
+              ],
+            },
+          ],
+        },
+        evenements: [
+          {
+            etat: 'EN_ATTENTE',
+            geste: {
+              ...debutGesteFixture,
+              ...(posteId === undefined ? {} : { posteId }),
+              id: 'fin-a',
+              intention: 'FIN',
+              type: 'FIN',
+              cible: 'a',
+              dateDeSurvenue: '2026-09-05T11:00:00Z',
+            },
+          },
+        ],
+      };
+
+      const projection = whenProjecting(state);
+
+      expect(projection?.suivis[0]?.conflits).toStrictEqual([
+        { operateurId: 'jean', ...(posteId === undefined ? {} : { posteId }), activites: ['a', 'b'], pointages: ['fin-a'] },
+      ]);
+      expect(projection?.suivis[0]?.activites.map(activite => activite.ouverture)).toEqual(['autre-operateur', 'autre-poste']);
+      expect(projection?.suivis[0]?.etat).toBe('EN_COURS');
+    },
+  );
+
+  it.each(['2026-09-05T11:00:00Z', '2026-09-05T11:01:00Z'])(
+    'should not interpret an opening at %s as replacing a target strictly before FIN at 11:00',
+    depuis => {
+      const replacement = {
+        operateurId: 'jean',
+        categorie: 'TRAVAIL' as const,
+        ouverture: 'b',
+        depuis,
+        echeance: '2026-09-06T00:00:00Z',
+        posteId: 'tour',
+      };
+      const state: JournalDuPupitre = {
+        ...givenEvents([
+          {
+            etat: 'EN_ATTENTE',
+            geste: {
+              ...debutGesteFixture,
+              id: 'fin-a',
+              intention: 'FIN',
+              type: 'FIN',
+              cible: 'a',
+              posteId: 'tour',
+              dateDeSurvenue: '2026-09-05T11:00:00Z',
+            },
+          },
+        ]),
+        referentiel: {
+          ...referenceFixture,
+          suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [replacement] }],
+        },
+      };
+
+      const projected = whenProjecting(state);
+
+      expect(projected?.suivis[0]?.activites).toEqual([replacement]);
+      expect(projected?.suivis[0]?.conflits).toEqual([]);
+    },
+  );
+
+  it('should retain unrelated current activities when an accepted publication diagnoses only some of them', () => {
+    const activity = (ouverture: string, operateurId: string) => ({
+      operateurId,
+      ouverture,
+      categorie: 'TRAVAIL' as const,
+      depuis: '2026-09-05T08:00:00Z',
+      echeance: '2026-09-05T21:00:00Z',
+    });
+    const preserved = activity('c', 'lea');
+    const conflits = [
+      { activites: ['b'], pointages: ['fin-a'] },
+      { activites: ['ailleurs'], pointages: ['autre-pointage'] },
+    ];
+    const state: JournalDuPupitre = {
+      ...givenEvents([
+        { etat: 'ACCEPTE', conflits, geste: { ...debutGesteFixture, id: 'fin-a', intention: 'FIN', type: 'FIN', cible: 'a' } },
+      ]),
+      referentiel: {
+        ...referenceFixture,
+        suivis: [
+          { ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [activity('a', 'jean'), activity('b', 'marie'), preserved] },
+        ],
+      },
+    };
+
+    const projected = whenProjecting(state);
+
+    expect(projected?.suivis[0]?.activites).toEqual([preserved]);
+    expect(projected?.suivis[0]?.conflits).toEqual(conflits);
+    expect(projected?.suivis[0]?.etat).toBe('EN_COURS');
+  });
+
+  it('should retain the accepted publication conflict before a canonical refresh and suppress its optimistic activity', () => {
+    const conflit = { activites: ['debut'], pointages: ['debut'] };
+    const state = givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE', conflits: [conflit] }]);
+
+    const projection = whenProjecting(state);
+
+    expect(projection?.suivis[0]?.conflits).toEqual([conflit]);
+    expect(projection?.suivis[0]?.activites).toEqual([]);
+  });
+
+  it('should ignore an old accepted conflict once the canonical reference contains its gesture', () => {
+    const state = {
+      ...givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE', conflits: [{ activites: ['debut'], pointages: ['debut'] }] }]),
+      referentiel: {
+        ...referenceFixture,
+        suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), evenements: ['debut'], conflits: [] }],
+      },
+    };
+
+    const projected = whenProjecting(state);
+
+    expect(projected?.suivis[0]?.conflits).toEqual([]);
+    expect(projected?.suivis[0]?.activites).toEqual([]);
+  });
+
+  it('should never turn an unknown targeted transition into a new opening', () => {
+    const state = givenEvents([
+      {
+        etat: 'EN_ATTENTE',
+        geste: { ...debutGesteFixture, id: 'transition', intention: 'TRANSITION', type: 'NON_CONFORMITE', cible: 'inconnue' },
+      },
+    ]);
+
+    const projected = whenProjecting(state);
+
+    expect(projected?.suivis[0]?.activites).toEqual([]);
+    expect(projected?.suivis[0]?.conflits).toEqual([]);
+  });
+
   it('should reconstruct an offline activity and its original starting time', () => {
     const state = givenEvents([debutFixture]);
 
@@ -82,7 +236,11 @@ describe('JournalDuPupitreProjection', () => {
 
   it('should keep other operators active when one finishes', () => {
     const other = givenAnotherOperatorAtWork();
-    const state = givenEvents([debutFixture, other, givenPointage('FIN')]);
+    const state = givenEvents([
+      debutFixture,
+      other,
+      { ...givenPointage('FIN'), geste: { ...debutGesteFixture, id: 'fin', intention: 'FIN', type: 'FIN', cible: 'debut' } },
+    ]);
 
     const projection = whenProjecting(state);
 
@@ -140,122 +298,12 @@ describe('JournalDuPupitreProjection', () => {
     thenReferenceIsMissing(projection);
   });
 
-  it('should make an absent operator present after a local arrival', () => {
-    const state = givenPresenceEvents('ABSENT', [arriveeFixture]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'PRESENT');
-  });
-
-  it('should make a present operator absent after a local departure', () => {
-    const state = givenPresenceEvents('PRESENT', [givenPresence('DEPART')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'ABSENT');
-  });
-
-  it('should leave the state unchanged on an illegal transition', () => {
-    const state = givenPresenceEvents('ABSENT', [givenPresence('DEPART')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'ABSENT');
-  });
-
-  it('should ignore a refused presence gesture', () => {
-    const state = givenPresenceEvents('PRESENT', [givenRefusedPresence('DEPART')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'PRESENT');
-  });
-
-  it('should not move an operator targeted by another operator’s gesture', () => {
-    const state = givenPresenceEvents('PRESENT', [givenPresence('DEPART', 'marie')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'PRESENT');
-  });
-
-  it('should apply an arrival only to the targeted operator when another operator is also absent', () => {
-    const state = givenPresenceEventsForTwoOperators('ABSENT', 'ABSENT', [givenArrivee('marie')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'marie', 'PRESENT');
-    thenOperatorStateIs(projection, 'jean', 'ABSENT');
-  });
-
-  it('should leave an operator’s current state alone when an old departure is already reflected by the referential', () => {
-    const state = givenPresenceEventsAlreadyReflected('PRESENT', ['ancien-depart'], [givenAcceptedPresence('DEPART', 'ancien-depart')]);
-
-    const projection = whenProjecting(state);
-
-    thenOperatorStateIs(projection, 'jean', 'PRESENT');
-  });
-
   const givenEvents = (evenements: EvenementDuJournal[]): JournalDuPupitre => ({
     referentiel: referenceFixture,
     evenements,
     connecte: true,
   });
   const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
-  const givenPresenceEvents = (etat: EtatDePresence, evenements: EvenementDuJournal[]): JournalDuPupitre => ({
-    referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat }] },
-    evenements,
-    connecte: true,
-  });
-  const givenPresenceEventsForTwoOperators = (
-    etatJean: EtatDePresence,
-    etatMarie: EtatDePresence,
-    evenements: EvenementDuJournal[],
-  ): JournalDuPupitre => ({
-    referentiel: {
-      ...referenceFixture,
-      operateurs: [
-        { ...operateurJeanFixture, etat: etatJean },
-        { ...operateurMarieFixture, etat: etatMarie },
-      ],
-    },
-    evenements,
-    connecte: true,
-  });
-  const givenArrivee = (operateurId: string): EvenementDuJournal => ({
-    geste: { ...arriveeGesteFixture, operateurId },
-    etat: 'EN_ATTENTE',
-  });
-  const givenPresenceEventsAlreadyReflected = (
-    etat: EtatDePresence,
-    evenementsDejaReflechis: readonly string[],
-    evenements: EvenementDuJournal[],
-  ): JournalDuPupitre => ({
-    referentiel: { ...referenceFixture, operateurs: [{ ...operateurJeanFixture, etat, evenements: evenementsDejaReflechis }] },
-    evenements,
-    connecte: true,
-  });
-  const givenAcceptedPresence = (type: TypeDePresence, id: string): EvenementDuJournal => ({
-    geste: { ...gestePresence(type, 'jean'), id },
-    etat: 'ACCEPTE',
-  });
-  const gestePresence = (type: TypeDePresence, operateurId: string): GesteDePresence => ({
-    nature: 'PRESENCE',
-    operateurId,
-    type,
-    id: crypto.randomUUID(),
-    dateDeSurvenue: '2026-09-05T09:00:00Z',
-  });
-  const givenPresence = (type: TypeDePresence, operateurId = 'jean'): EvenementDuJournal => ({
-    geste: gestePresence(type, operateurId),
-    etat: 'EN_ATTENTE',
-  });
-  const givenRefusedPresence = (type: TypeDePresence, operateurId = 'jean'): EvenementDuJournal => ({
-    geste: gestePresence(type, operateurId),
-    etat: 'REFUSE',
-    refus: { code: 'refuse', message: 'refuse' },
-  });
   const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
     geste: { ...debutGesteFixture, id: 'debut-marie', operateurId: 'marie' },
@@ -268,23 +316,28 @@ describe('JournalDuPupitreProjection', () => {
     connecte: true,
     evenements: [
       { geste: { ...debutGesteFixture, id: 'refuse' }, etat: 'REFUSE', refus: { code: 'refuse', message: 'refuse' } },
-      { ...debutFixture, geste: { ...debutGesteFixture, id: 'arrivee', nature: 'ARRIVEE' } },
       { ...debutFixture, geste: { ...debutGesteFixture, id: 'autre-suivi', suiviId: 'absent' } },
       debutFixture,
     ],
   });
   const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
-    ...debutFixture,
-    geste: { ...debutGesteFixture, id: crypto.randomUUID(), type },
+    etat: 'EN_ATTENTE',
+    geste:
+      type === 'FIN'
+        ? { ...debutGesteFixture, id: 'fin', intention: 'FIN', type, cible: 'nc' }
+        : { ...debutGesteFixture, id: 'nc', intention: 'TRANSITION', type, cible: 'debut' },
   });
   const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
-    const geste: GesteDePointage = {
-      ...debutGesteFixture,
-      id: crypto.randomUUID(),
-      type,
-      ...(posteId === undefined ? {} : { posteId }),
-    };
-    return { ...debutFixture, geste };
+    const poste = posteId === undefined ? {} : { posteId };
+    const identite = { ...debutGesteFixture, ...poste, id: `${type}-${posteId ?? 'sans-poste'}` };
+    const cible = `DEBUT-${posteId ?? 'sans-poste'}`;
+    const geste = pointageAt(identite, type, cible);
+    return { etat: 'EN_ATTENTE', geste };
+  };
+  const pointageAt = (identite: typeof debutGesteFixture, type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', cible: string): GesteDePointage => {
+    if (type === 'DEBUT') return identite;
+    if (type === 'FIN') return { ...identite, intention: 'FIN', type, cible };
+    return { ...identite, intention: 'TRANSITION', type, cible };
   };
   const whenProjecting = (state: JournalDuPupitre): ReferentielDuPupitre | undefined => projectReferentiel(state);
   const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {
@@ -295,7 +348,12 @@ describe('JournalDuPupitreProjection', () => {
         suivi.activites.find(candidate => candidate.posteId === posteId),
         'activity at expected workstation',
       );
-      expect(activite).toMatchObject({ operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' });
+      expect(activite).toMatchObject({
+        echeance: '2026-09-05T21:00:00.000Z',
+        operateurId: 'jean',
+        categorie: 'TRAVAIL',
+        depuis: '2026-09-05T08:00:00Z',
+      });
     }
   };
   const thenWorkstationsHaveIndependentCategories = (
@@ -332,12 +390,5 @@ describe('JournalDuPupitreProjection', () => {
   };
   const thenReferenceIsMissing = (projection: unknown): void => {
     expect(projection).toBeUndefined();
-  };
-  const thenOperatorStateIs = (projection: ReferentielDuPupitre | undefined, operateurId: string, etat: EtatDePresence): void => {
-    const operateur = requiredFixture(
-      projection?.operateurs.find(candidate => candidate.id === operateurId),
-      'projected operator',
-    );
-    expect(operateur.etat).toBe(etat);
   };
 });

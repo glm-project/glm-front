@@ -11,11 +11,10 @@ const operateurFixture = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  etat: 'ABSENT',
   postes: [],
-  evenements: [],
 } as const;
 const elementFixture = {
+  conflits: [],
   id: 'piece-1',
   nom: '204',
   etat: 'EN_ATTENTE',
@@ -29,16 +28,20 @@ const referentielFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
 };
-const operateurPresentFixture = { ...operateurFixture, etat: 'PRESENT' } as const;
-const activiteFixture = { operateurId: 'jean', categorie: 'TRAVAIL', depuis: '2026-09-05T08:00:00Z' } as const;
+const activiteFixture = {
+  ouverture: 'activite-fixture-7',
+  echeance: '2026-09-05T21:00:00.000Z',
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T08:00:00Z',
+} as const;
 const referentielActifFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [
-    { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture] },
-    { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture] },
+    { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
+    { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
   ],
 };
-const referentielActifPresentFixture: ReferentielDuPupitre = { ...referentielActifFixture, operateurs: [operateurPresentFixture] };
 const operateurMultiPosteFixture = {
   ...operateurFixture,
   postes: [
@@ -63,6 +66,7 @@ describe('Pupitre workshop journey', () => {
   let online: boolean;
 
   beforeEach(() => {
+    cy.clock(Date.UTC(2026, 8, 5, 12), ['Date']);
     requetes = [];
     pendingResponse = undefined;
     online = true;
@@ -95,13 +99,13 @@ describe('Pupitre workshop journey', () => {
     thenThePauseAndItsResumptionWereReplayedInOrder();
   });
 
-  it('should stop every personal activity before leaving the operator day', () => {
+  it('should stop every personal activity by its targeted finish', () => {
     givenAnEnrolledPupitre(referentielActifFixture);
     whenDesignatingOperator049();
 
     whenStoppingAllWork();
 
-    thenEveryFinishWasSentBeforeDeparture();
+    thenEveryPersonalActivityWasFinished();
   });
 
   it('should show a pointage optimistically while the server response is pending', () => {
@@ -126,7 +130,7 @@ describe('Pupitre workshop journey', () => {
   });
 
   it('should show a pause optimistically while the server response is pending', () => {
-    givenAnEnrolledPupitre(referentielActifPresentFixture);
+    givenAnEnrolledPupitre(referentielActifFixture);
     whenDesignatingOperator049();
     givenSuspendingWillBeRefused();
 
@@ -136,7 +140,7 @@ describe('Pupitre workshop journey', () => {
   });
 
   it('should reopen the suspended activity and show its refusal after an optimistic pause is refused', () => {
-    givenAnEnrolledPupitre({ ...referentielActifPresentFixture, suivis: referentielActifPresentFixture.suivis.slice(0, 1) });
+    givenAnEnrolledPupitre({ ...referentielActifFixture, suivis: referentielActifFixture.suivis.slice(0, 1) });
     whenDesignatingOperator049();
     const refusal = givenSuspendingWillBeRefused();
 
@@ -182,6 +186,7 @@ describe('Pupitre workshop journey', () => {
   };
 
   const givenAControlledClock = (): void => {
+    cy.clock().invoke('restore');
     cy.clock(Date.UTC(2026, 8, 6, 12));
   };
 
@@ -202,8 +207,11 @@ describe('Pupitre workshop journey', () => {
             operateur: activite.operateurId,
             categorie: activite.categorie,
             depuis: activite.depuis,
+            ouverture: activite.ouverture,
+            echeance: activite.echeance,
             ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
           })),
+          conflits: [],
         })),
       },
     }).as('workshop');
@@ -211,12 +219,6 @@ describe('Pupitre workshop journey', () => {
   };
 
   const observeWorkshopWrites = (): void => {
-    cy.intercept('POST', '/api/atelier/journees', request => {
-      replyWhenOnline(request, 'ARRIVEE');
-    });
-    cy.intercept('POST', '/api/atelier/journees/pointages', request => {
-      replyWhenOnline(request, String((request.body as { type?: unknown }).type));
-    }).as('presence');
     cy.intercept('POST', '/api/atelier/suivis/*/pointages', request => {
       replyWhenOnline(request, String((request.body as { type?: unknown }).type));
     }).as('pointage');
@@ -228,7 +230,21 @@ describe('Pupitre workshop journey', () => {
       return;
     }
     observeRequest(request, type);
-    request.reply({ statusCode: 200, body: {} });
+    request.reply({
+      statusCode: 200,
+      body: {
+        id: new URL(request.url).pathname.split('/')[4],
+        nom: 'OF-1',
+        type: 'ORDRE_DE_FABRICATION',
+        element: 'element',
+        engageLe: '2026-09-05T07:00:00Z',
+        engagePar: 'gestionnaire',
+        etat: 'EN_ATTENTE',
+        activitesEnCours: [],
+        conflits: [],
+        journal: [],
+      },
+    });
   };
 
   const givenTheNetworkIsDown = (): void => {
@@ -304,7 +320,7 @@ describe('Pupitre workshop journey', () => {
 
   const whenStoppingAllWork = (): void => {
     longPressFixture(cy.get(dataSelector('stop-all')));
-    cy.wait('@presence');
+    cy.wait('@pointage');
   };
 
   const whenOpeningWorkstationChoice = (elementId: string): void => {
@@ -324,18 +340,17 @@ describe('Pupitre workshop journey', () => {
 
   const thenTheFirstGestureWasSentInBusinessOrder = (): void => {
     cy.wrap(requetes).should(requests => {
-      expect(requests.map(({ type }) => type)).to.deep.equal(['ARRIVEE', 'DEBUT']);
+      expect(requests.map(({ type }) => type)).to.deep.equal(['DEBUT']);
       expect(requests.every(({ authorization }) => authorization === `Bearer ${pupitreTokenFixture(entrepriseFixture)}`)).to.equal(true);
     });
   };
 
   const thenThePauseAndItsResumptionWereReplayedInOrder = (): void => {
     cy.wrap(requetes).should(requests => {
-      expect(requests.map(({ type }) => type)).to.deep.equal(['FIN', 'FIN', 'ARRIVEE', 'DEBUT', 'DEBUT']);
+      expect(requests.map(({ type }) => type)).to.deep.equal(['FIN', 'FIN', 'DEBUT', 'DEBUT']);
       expect(requests.map(({ route }) => new URL(route).pathname)).to.deep.equal([
         '/api/atelier/suivis/piece-active-1/pointages',
         '/api/atelier/suivis/piece-active-2/pointages',
-        '/api/atelier/journees',
         '/api/atelier/suivis/piece-active-1/pointages',
         '/api/atelier/suivis/piece-active-2/pointages',
       ]);
@@ -346,14 +361,12 @@ describe('Pupitre workshop journey', () => {
     cy.get('@deviceAuthorization.all').should('have.length', 1);
   };
 
-  const thenEveryFinishWasSentBeforeDeparture = (): void => {
+  const thenEveryPersonalActivityWasFinished = (): void => {
     cy.wrap(requetes).should(requests => {
-      expect(requests.map(({ type }) => type)).to.deep.equal(['ARRIVEE', 'FIN', 'FIN', 'DEPART']);
+      expect(requests.map(({ type }) => type)).to.deep.equal(['FIN', 'FIN']);
       expect(requests.map(({ route }) => new URL(route).pathname)).to.deep.equal([
-        '/api/atelier/journees',
         '/api/atelier/suivis/piece-active-1/pointages',
         '/api/atelier/suivis/piece-active-2/pointages',
-        '/api/atelier/journees/pointages',
       ]);
     });
   };
@@ -373,14 +386,14 @@ describe('Pupitre workshop journey', () => {
   };
 
   const thenTheOperatorIsOptimisticallyOnPause = (): void => {
-    cy.get(dataSelector('header-presence')).should('contain.text', 'En pause');
+    cy.get(dataSelector('header-pause')).should('contain.text', 'En pause');
     cy.get(dataSelector('pause')).should('be.disabled');
     cy.get(dataSelector('resume')).should('not.be.disabled');
   };
 
   const thenThePauseRefusalReconciles = (context: string, message: string): void => {
     cy.wait('@refusedSuspension');
-    cy.get(dataSelector('header-presence')).should('contain.text', 'Présent');
+    cy.get(dataSelector('header-pause')).should('not.exist');
     cy.get(dataSelector('pause')).should('not.be.disabled');
     cy.get(dataSelector('resume')).should('be.disabled');
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);

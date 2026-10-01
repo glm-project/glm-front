@@ -11,6 +11,8 @@ import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
+import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
+import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../domain/rapport/CoutDeRevientPort';
 import { LigneDeCout } from '../../domain/rapport/LigneDeCout';
@@ -19,6 +21,7 @@ import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../../domain/temps/PeriodeDeTravail';
 import { TempsPasse } from '../../domain/temps/TempsPasse';
+import { TotalDeTemps } from '../../domain/temps/TotalDeTemps';
 import { HttpCoutDeRevient } from './HttpCoutDeRevient';
 
 type RestRapport = components['schemas']['RestCoutDeRevient'];
@@ -77,35 +80,73 @@ const PERIODE = { debut: '2026-05-11T09:00:00Z', fin: '2026-05-11T11:00:00Z' };
 const TOTAL = { travail: 'PT2H', nonConformite: 'PT30M', total: 'PT2H30M' };
 const COUT_TOTAL = { machine: 90, mainDOeuvre: 40, total: 130 };
 
+const completFixture = <T>(valeur: T): { complete: true; valeur: T } => ({ complete: true, valeur });
+
 const toRestLigne = (ligne: LigneFixture): RestLigne => ({
   ...(ligne.nature === undefined ? {} : { nature: ligne.nature }),
   periode: PERIODE,
-  temps: { travail: ligne.travail, nonConformite: ligne.nonConformite, total: ligne.travail },
+  temps: {
+    travail: completFixture(ligne.travail),
+    nonConformite: completFixture(ligne.nonConformite),
+    total: completFixture(ligne.travail),
+  },
+  finsAutomatiques: [],
   nonConformites: ligne.reprises.map(([debut, fin]) => ({ debut, fin })),
-  cout: { machine: ligne.machine, mainDOeuvre: ligne.mainDOeuvre, total: ligne.machine + ligne.mainDOeuvre },
+  cout: {
+    machine: completFixture(ligne.machine),
+    mainDOeuvre: completFixture(ligne.mainDOeuvre),
+    total: completFixture(ligne.machine + ligne.mainDOeuvre),
+  },
 });
 
 const toRest = (lignes: readonly LigneFixture[]): RestRapport => ({
   element: { id: ELEMENT, nom: 'OF-2026-000001', type: 'ORDRE_DE_FABRICATION' },
   lignes: lignes.map(toRestLigne),
-  temps: TOTAL,
-  cout: COUT_TOTAL,
+  temps: { travail: completFixture(TOTAL.travail), nonConformite: completFixture(TOTAL.nonConformite), total: completFixture(TOTAL.total) },
+  cout: {
+    machine: completFixture(COUT_TOTAL.machine),
+    mainDOeuvre: completFixture(COUT_TOTAL.mainDOeuvre),
+    total: completFixture(COUT_TOTAL.total),
+  },
+  evaluation: '2026-05-11T12:00:00Z',
+  activitesEnCours: 0,
+  conflits: [],
 });
 
 const toDomainLigne = (ligne: LigneFixture): LigneDeCout =>
   new LigneDeCout({
     nature: ligne.nature === undefined ? undefined : new NatureDOperation(ligne.nature),
     periode: new PeriodeDeTravail(new InstantDeTravail(PERIODE.debut), new InstantDeTravail(PERIODE.fin)),
-    temps: new TempsPasse(new DureePassee(ligne.travail), new DureePassee(ligne.nonConformite), new DureePassee(ligne.travail)),
-    cout: new Cout(new Montant(ligne.machine), new Montant(ligne.mainDOeuvre), new Montant(ligne.machine + ligne.mainDOeuvre)),
+    temps: new TempsPasse(
+      TotalDeTemps.complet(new DureePassee(ligne.travail)),
+      TotalDeTemps.complet(new DureePassee(ligne.nonConformite)),
+      TotalDeTemps.complet(new DureePassee(ligne.travail)),
+    ),
+    cout: new Cout(
+      TotalDeMontant.complet(new Montant(ligne.machine)),
+      TotalDeMontant.complet(new Montant(ligne.mainDOeuvre)),
+      TotalDeMontant.complet(new Montant(ligne.machine + ligne.mainDOeuvre)),
+    ),
+    finsAutomatiques: [],
     nonConformites: ligne.reprises.map(([debut, fin]) => new PeriodeDeTravail(new InstantDeTravail(debut), new InstantDeTravail(fin))),
   });
 
 const toDomain = (lignes: readonly LigneFixture[]): CoutDeRevient =>
   new CoutDeRevient(new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION'), {
     lignes: lignes.map(toDomainLigne),
-    temps: new TempsPasse(new DureePassee(TOTAL.travail), new DureePassee(TOTAL.nonConformite), new DureePassee(TOTAL.total)),
-    cout: new Cout(new Montant(COUT_TOTAL.machine), new Montant(COUT_TOTAL.mainDOeuvre), new Montant(COUT_TOTAL.total)),
+    evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
+    activitesEnCours: new ActivitesEnCoursExclues(0),
+    conflits: [],
+    temps: new TempsPasse(
+      TotalDeTemps.complet(new DureePassee(TOTAL.travail)),
+      TotalDeTemps.complet(new DureePassee(TOTAL.nonConformite)),
+      TotalDeTemps.complet(new DureePassee(TOTAL.total)),
+    ),
+    cout: new Cout(
+      TotalDeMontant.complet(new Montant(COUT_TOTAL.machine)),
+      TotalDeMontant.complet(new Montant(COUT_TOTAL.mainDOeuvre)),
+      TotalDeMontant.complet(new Montant(COUT_TOTAL.total)),
+    ),
   });
 
 const sansChampDuRapport = (rapport: RestRapport, champ: keyof RestRapport): RestRapport =>
@@ -124,10 +165,10 @@ const premiereLigneDe = (rapport: RestRapport): RestLigne => {
 
 const projeterLigne = (ligne: LigneDeCout): Record<string, unknown> => ({
   nature: ligne.nature?.value,
-  travail: ligne.temps.travail.minutes,
-  nonConformite: ligne.temps.nonConformite.minutes,
-  machine: ligne.cout.machine.euros,
-  mainDOeuvre: ligne.cout.mainDOeuvre.euros,
+  travail: ligne.temps.travail.snapshot(),
+  nonConformite: ligne.temps.nonConformite.snapshot(),
+  machine: ligne.cout.machine.snapshot(),
+  mainDOeuvre: ligne.cout.mainDOeuvre.snapshot(),
 });
 
 class CoutDeRevientHttpBackendFixture implements HttpBackend {
@@ -223,7 +264,13 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
     const rapport = await port.rapport(DEMANDE);
 
     expect(rapport?.lignes.map(projeterLigne)).toEqual([
-      { nature: 'Fraisage', travail: 120, nonConformite: 0, machine: 90, mainDOeuvre: 40 },
+      {
+        nature: 'Fraisage',
+        travail: { complete: true, valeur: new DureePassee('PT2H') },
+        nonConformite: { complete: true, valeur: new DureePassee('PT0S') },
+        machine: { complete: true, valeur: new Montant(90) },
+        mainDOeuvre: { complete: true, valeur: new Montant(40) },
+      },
     ]);
   });
 
@@ -256,7 +303,10 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
 
     const rapport = await port.rapport(DEMANDE);
 
-    expect([rapport?.temps.total.minutes, rapport?.cout.total.euros]).toEqual([150, 130]);
+    expect([rapport?.temps.total.snapshot(), rapport?.cout.total.snapshot()]).toEqual([
+      { complete: true, valeur: new DureePassee('PT2H30M') },
+      { complete: true, valeur: new Montant(130) },
+    ]);
   });
 
   it('should return an element nobody has clocked on yet as carrying no work', async () => {
@@ -309,6 +359,127 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     server.verify();
   });
 
+  it('should retain certain machine and work totals beside unresolved labour and non conformity', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      temps: { travail: completFixture('PT5H'), nonConformite: { complete: false }, total: { complete: false } },
+      cout: { machine: completFixture(300), mainDOeuvre: { complete: false }, total: { complete: false } },
+    });
+    const rapport = await result;
+
+    expect(rapport?.temps.travail.snapshot()).toEqual({ complete: true, valeur: new DureePassee('PT5H') });
+    expect(rapport?.temps.nonConformite.snapshot()).toEqual({ complete: false });
+    expect(rapport?.temps.total.snapshot()).toEqual({ complete: false });
+    expect(rapport?.cout.machine.snapshot()).toEqual({ complete: true, valeur: new Montant(300) });
+    expect(rapport?.cout.mainDOeuvre.snapshot()).toEqual({ complete: false });
+    expect(rapport?.cout.total.snapshot()).toEqual({ complete: false });
+  });
+
+  it('should retain a period without a reliable finish instead of closing it at evaluation', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      lignes: [{ ...toRestLigne(fraisageFixture), periode: { debut: PERIODE.debut } }],
+    });
+    const rapport = await result;
+
+    expect(rapport?.lignes[0]?.periode.fin).toBeUndefined();
+    expect(rapport?.lignes[0]?.periode.debut.value.toISOString()).toBe('2026-05-11T09:00:00.000Z');
+  });
+
+  it('should reject a complete duration without a value and report the failure once', async () => {
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers({ ...toRest([fraisageFixture]), temps: { travail: { complete: true } } });
+
+    expect(await result).toEqual(new Error('rapport.temps.travail.valeur manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject a complete amount without a value instead of substituting zero', async () => {
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers({ ...toRest([fraisageFixture]), cout: { machine: { complete: true } } });
+
+    expect(await result).toEqual(new Error('rapport.cout.machine.valeur manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should keep every responsible sequence even when it belongs to another element', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      evaluation: '2026-05-11T21:00:00Z',
+      activitesEnCours: 2,
+      conflits: [
+        {
+          element: ELEMENT,
+          operateur: 'operateur-1',
+          poste: 'poste-1',
+          activites: ['activite-a', 'activite-b'],
+          pointages: ['pointage-1', 'pointage-2'],
+        },
+        { element: 'autre-element', operateur: 'operateur-2', activites: [], pointages: ['pointage-3'] },
+      ],
+    });
+    const rapport = await result;
+
+    expect(rapport?.evaluation.value.toISOString()).toBe('2026-05-11T21:00:00.000Z');
+    expect(rapport?.activitesEnCours.nombre).toBe(2);
+    expect(rapport?.conflits).toEqual([
+      {
+        element: new ElementChiffreId(ELEMENT),
+        operateur: 'operateur-1',
+        poste: 'poste-1',
+        activites: ['activite-a', 'activite-b'],
+        pointages: ['pointage-1', 'pointage-2'],
+      },
+      {
+        element: new ElementChiffreId('autre-element'),
+        operateur: 'operateur-2',
+        poste: undefined,
+        activites: [],
+        pointages: ['pointage-3'],
+      },
+    ]);
+  });
+
+  it('should return automatic periods and their valued totals directly from the report', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      temps: { travail: completFixture('PT13H'), nonConformite: completFixture('PT0S'), total: completFixture('PT13H') },
+      cout: { machine: completFixture(585), mainDOeuvre: completFixture(260), total: completFixture(845) },
+      lignes: [{ ...toRestLigne(fraisageFixture), finsAutomatiques: [{ debut: '2026-05-11T08:00:00Z', fin: '2026-05-11T21:00:00Z' }] }],
+    });
+    const rapport = await result;
+
+    expect(rapport?.temps.total.snapshot()).toEqual({ complete: true, valeur: new DureePassee('PT13H') });
+    expect(rapport?.cout.total.snapshot()).toEqual({ complete: true, valeur: new Montant(845) });
+    expect(rapport?.lignes[0]?.finsAutomatiques).toEqual([
+      new PeriodeDeTravail(new InstantDeTravail('2026-05-11T08:00:00Z'), new InstantDeTravail('2026-05-11T21:00:00Z')),
+    ]);
+  });
+
+  it('should display a received recalculation from forty to thirty euros without dividing current activities', async () => {
+    const premier = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      cout: { machine: completFixture(0), mainDOeuvre: completFixture(40), total: completFixture(40) },
+    });
+    const avant = await premier;
+    const suivant = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      cout: { machine: completFixture(0), mainDOeuvre: completFixture(30), total: completFixture(30) },
+    });
+    const apres = await suivant;
+
+    expect([avant?.cout.mainDOeuvre.snapshot(), apres?.cout.mainDOeuvre.snapshot()]).toEqual([
+      { complete: true, valeur: new Montant(40) },
+      { complete: true, valeur: new Montant(30) },
+    ]);
+  });
+
   it('should ask the server for the element, never for its workshop follow-up', async () => {
     const result = port.rapport(DEMANDE);
     const request = await whenServerAnswers(toRest([fraisageFixture]));
@@ -317,14 +488,17 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(request.request.url).toBe(`${ROUTE}/${ELEMENT}`);
   });
 
-  it.each<keyof RestRapport>(['element', 'lignes', 'temps', 'cout'])('should reject a server answer missing rapport.%s', async champ => {
-    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
-    await whenServerAnswers(sansChampDuRapport(toRest([fraisageFixture]), champ));
+  it.each<keyof RestRapport>(['element', 'lignes', 'temps', 'cout', 'conflits'])(
+    'should reject a server answer missing rapport.%s',
+    async champ => {
+      const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+      await whenServerAnswers(sansChampDuRapport(toRest([fraisageFixture]), champ));
 
-    expect(await result).toEqual(new Error(`rapport.${champ} manque dans la réponse du serveur`));
-  });
+      expect(await result).toEqual(new Error(`rapport.${champ} manque dans la réponse du serveur`));
+    },
+  );
 
-  it.each<keyof RestLigne>(['periode', 'temps', 'cout', 'nonConformites'])(
+  it.each<keyof RestLigne>(['periode', 'temps', 'cout', 'nonConformites', 'finsAutomatiques'])(
     'should reject a server answer missing ligne.%s',
     async champ => {
       const rapport = toRest([fraisageFixture]);
@@ -351,14 +525,20 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
 
   it('should reject a duration the report cannot read', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
-    await whenServerAnswers({ ...toRest([fraisageFixture]), temps: { ...TOTAL, total: 'P1D' } });
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      temps: { total: completFixture('P1D'), travail: completFixture(TOTAL.travail), nonConformite: completFixture(TOTAL.nonConformite) },
+    });
 
     expect(await result).toEqual(new Error('La durée « P1D » reçue du serveur n’est pas un temps passé.'));
   });
 
   it('should reject an amount the report cannot read', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
-    await whenServerAnswers({ ...toRest([fraisageFixture]), cout: { ...COUT_TOTAL, total: -1 } });
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      cout: { total: completFixture(-1), machine: completFixture(COUT_TOTAL.machine), mainDOeuvre: completFixture(COUT_TOTAL.mainDOeuvre) },
+    });
 
     expect(await result).toEqual(new Error('Le montant « -1 » reçu du serveur n’est pas un montant en euros.'));
   });

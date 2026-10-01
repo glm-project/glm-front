@@ -1,87 +1,85 @@
 # Supervision de l'atelier
 
-Ce contexte appartient exclusivement à `gestion`. Il interprète en temps réel les opérateurs déclarés, leur présence et leurs activités pour les couloirs de supervision.
-
-## Décision acceptée à implémenter
-
-L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) fixe le périmètre
-de la refonte : adapter le modèle et les démonstrations de supervision au temps opérationnel seul,
-en conservant l'adapter InMemory. Le branchement HTTP réel relève d'un chantier distinct ; les alertes
-réelles de fin automatique de ce lot sont exposées dans le relevé et le coût de revient.
-Les démonstrations représentent aussi les séquences « En conflit » de l'ADR 0047, distinctes des fins
-automatiques ; cet état concerne des activités et ne constitue pas un état de présence de l'opérateur.
-Les sections suivantes décrivent encore le modèle existant.
+Ce contexte appartient exclusivement à `gestion`. Il classe les opérateurs déclarés selon leurs activités
+interprétables en cours. L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md)
+fixe le temps opérationnel et les séquences en conflit. La supervision conserve son adapter InMemory ;
+le branchement HTTP réel relève d'un chantier distinct.
 
 ## Langage
 
-**Supervision de l'atelier** : interprétation en temps réel des opérateurs déclarés, de la présence et des activités en cours pour les couloirs de supervision.
+**Opérateur déclaré** : opérateur référencé pour la supervision, identifié et ordonné alphabétiquement.
+Il porte ses métiers, les natures de travail pour lesquelles il est habilité ; la liste peut être vide.
 
-**Opérateur déclaré** : opérateur référencé pour la supervision de l'atelier, identifié et ordonné alphabétiquement. Il porte ses métiers, les natures de travail pour lesquelles il est habilité ; la liste peut être vide.
+**Couloir de supervision** : classement dérivé des seules activités interprétables en cours.
+`AU_TRAVAIL` signifie au moins une telle activité ; `SANS_ACTIVITE` signifie aucune.
+Les libellés sont « Au travail » et « Sans activité ».
 
-**Journée de travail** : une venue sur l'atelier, bornée par une arrivée et un départ, qui peut traverser minuit ; ce n'est pas un jour calendaire. À l'écran, une journée de travail se dit _venue_ : « journée » y évoquerait un jour calendaire, et « présence » désigne déjà l'état de l'opérateur.
+**Activité de supervision** : activité rattachée à un opérateur, portant un objet, une catégorie, un début,
+un état et facultativement un poste. Les états sont `EN_COURS`, `TERMINEE`, `TERMINEE_AUTOMATIQUEMENT` et
+`A_RESOUDRE`. Une activité NC ou Hors OF en cours place aussi l'opérateur Au travail.
 
-**Présence de l'opérateur** : état instantané d'un opérateur déclaré (`PRESENT` ou `ABSENT`). `PRESENT` est caractérisé par une journée ouverte, `ABSENT` par l'absence de journée ouverte. La pause est un geste du pupitre que le serveur ignore : elle ne change pas elle-même la présence. Un opérateur en pause reste `PRESENT` tant que sa journée est ouverte.
+**Fin automatique** : état dérivé à début + 13 heures écoulées, borne inclusive. La démonstration calcule
+cette échéance depuis le début et l'instant d'évaluation, sans produire de pointage. Une activité ainsi
+terminée quitte les activités courantes et porte un signalement sur la carte de l'opérateur.
 
-**Couloir de supervision** : place d'un opérateur déclaré sur l'écran, dérivée de sa présence et de ses activités, parmi trois couloirs dans un ordre fixe : `AU_TRAVAIL`, `SANS_AFFECTATION`, `ABSENT`. `ABSENT` → Absents, même avec une activité ouverte ou une anomalie ; `PRESENT` sans activité → Sans affectation ; `PRESENT` avec au moins une activité → Au travail. La valeur est l'état au singulier ; le pluriel « Absents » n'existe que dans le libellé.
+**Séquence en conflit** : séquence identifiée dont les activités nécessitent une décision du gestionnaire.
+Le port la fournit séparément des activités interprétables, y compris quand elle ne porte aucune activité
+à résoudre. La supervision la rend sans en déduire une activité courante. Les activités interprétables
+indépendantes du même opérateur restent rendues.
 
-**Au travail** : couloir d'un opérateur présent qui a au moins une activité en cours, quelle qu'elle soit : NC ou hors OF comprises. C'est un couloir dérivé, jamais un état de présence, et il ne se confond pas avec la catégorie d'activité `TRAVAIL`.
+**Poste de supervision** : poste d'une activité, avec son identifiant, son libellé et facultativement sa
+nature de travail. Les activités s'ordonnent par libellé de poste, celles sans poste en dernier, puis par
+début et identifiant. L'écran dit « Sans poste » quand il manque.
 
-**Fenêtre de présence** : période de présence d'un opérateur au sein d'une journée de travail, dont la supervision ne retient que le début.
+**Nature de travail** : texte libre non vide, affiché tel que saisi et nommé « Métier » à l'écran.
+Elle représente la nature d'un poste et les métiers d'un opérateur.
 
-**Activité de supervision** : activité en cours rattachée à un opérateur, portant sur un objet de l'activité, dotée d'une catégorie (ex: `NON_CONFORMITE`), d'un instant de début et facultativement d'un poste.
+**Objet de l'activité** : élément travaillé ou Hors OF explicite.
 
-**Poste de supervision** : poste de travail d'une activité, avec son identifiant, son libellé et facultativement sa nature de travail. Les activités d'un opérateur s'ordonnent par libellé de poste, celles sans poste en dernier, puis par début.
+**Élément travaillé** : moule (`PRODUIT`) ou OF (`ORDRE_DE_FABRICATION`), avec son nom et sa référence
+facultative. Sans référence, l'écran le désigne par son nom ; aucune référence n'est fabriquée.
 
-**Nature de travail** : texte libre non vide, affiché tel que saisi et nommé « Métier » à l'écran ; c'est la nature d'un poste et les métiers d'un opérateur.
+**Hors OF** : travail non facturable sans élément travaillé, déclaré explicitement. Une activité dont
+l'élément manque ne devient jamais implicitement Hors OF.
 
-**Objet de l'activité** : ce sur quoi porte une activité : un élément travaillé, ou Hors OF.
+**Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une
+activité, son échéance et l'évaluation utilisent cette valeur, normalisée en UTC.
 
-**Élément travaillé** : moule (`PRODUIT`) ou OF (`ORDRE_DE_FABRICATION`) sur lequel l'opérateur travaille, avec son nom et sa référence facultative. Sans référence, l'écran le désigne par son nom ; aucune référence n'est fabriquée.
+**Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`. La NC est une surcouche de l'activité courante,
+jamais un couloir. Une activité à résoudre ne contribue pas au signal NC interprété.
 
-**Hors OF** : activité sans élément travaillé, pour le travail non facturable. Elle compte comme du travail : son opérateur est Au travail. Ni le pupitre ni l'API ne déclarent encore ce travail ; une activité dont l'élément manque n'est jamais convertie en Hors OF.
+**Opérateur à vérifier** : opérateur portant une fin automatique ou une séquence en conflit.
 
-**Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une activité, l'ouverture d'une journée et l'évaluation de la supervision sont des usages de cette même valeur ; sa représentation publique est normalisée en UTC.
-
-**Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`, les valeurs du contrat de l'API ; `NON_CONFORMITE` fait d'une activité une activité NC.
-
-**Sans affectation** : état opérationnel d'un opérateur présent qui n'a aucune activité en cours ; c'est le couloir `SANS_AFFECTATION`. La supervision ne reconnaît pas la pause : un opérateur en pause dont la journée reste ouverte y figure si aucune activité en cours ne lui est remontée. Une activité restée ouverte, par exemple sur un autre pupitre, le place dans `AU_TRAVAIL`.
-
-**Opérateur en non-conformité** : opérateur dont la venue est ouverte (`PRESENT`) et qui a au moins une activité NC. Un absent n'en est jamais un, même avec une activité NC restée ouverte : son départ a arrêté son temps.
-
-**Opérateur à vérifier** : opérateur qui porte au moins une anomalie de supervision.
-
-> « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail est désormais modélisé comme « Hors OF ». La présence sans affectation n'en est pas, et toujours aucun type, champ ni sélecteur ne s'appelle GLM.
-
-**Anomalie de supervision** : signalement d'incohérence constaté lors de l'évaluation de la supervision (`JOURNEE_OUVERTE_PLUS_DE_16_HEURES`, `JOURNEE_OUVERTE_SANS_FENETRES`, `ACTIVITE_D_UN_ABSENT`).
-
-**Résultat de supervision** : évaluation de la supervision, exploitable avec la liste ordonnée des opérateurs supervisés, ou inexploitable (notamment en présence d'une `ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE`).
+**Résultat de supervision** : évaluation exploitable avec les opérateurs ordonnés, ou inexploitable si
+une activité, y compris dans une séquence en conflit, n'a pas d'opérateur identifiable.
 
 ## Responsabilités et invariants
 
-- La présence d'un opérateur déclaré est déterminée exclusivement par sa journée de travail : présent si une journée est ouverte, absent en l'absence de journée ouverte.
-- Une journée de travail est une venue indépendante du calendrier : les venues traversant minuit et les anciennes journées restées ouvertes sont prises en compte sans filtre calendaire.
-- Chaque opérateur déclaré apparaît dans exactement un couloir de supervision. Les trois couloirs existent toujours, dans l'ordre fixe, même vides ; l'ordre des opérateurs est alphabétique (nom, prénom, identifiant) à l'intérieur de chaque couloir.
-- La NC est une surcouche de l'activité, jamais un couloir.
-- Le nombre de présents et les listes d'opérateurs en NC et à vérifier sont évalués par l'agrégat SupervisionDeLAtelier.
-- Les activités en cours sont associées aux opérateurs déclarés correspondants ; un opérateur peut avoir 0 à N activités.
-- « Sans affectation » est un état dérivé : un opérateur est sans affectation si et seulement s'il est présent et n'a aucune activité en cours.
-- L'absence de poste ou l'absence d'heure d'ouverture est représentée sans valeur fabriquée (`undefined`).
-- Le temps affichable reste un instant absolu, jamais une durée calculée par le domaine.
-- L'instant d'évaluation est obligatoire. Les instants invalides ou dépourvus de fuseau sont refusés à la construction.
-- L'ouverture est le plus ancien début de fenêtre, indépendamment de l'ordre reçu. La supervision expose cet instant ou son absence.
-- La détection d'une anomalie préserve l'état de présence, le couloir et les activités de l'opérateur supervisé.
-- Le seuil de dépassement d'ouverture de journée (strictement supérieur à 16 heures) est calculé par rapport à l'instant d'évaluation fourni.
-- Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur sans conserver les couloirs précédents.
-- Pendant une relecture (toutes les 30 s ou « Actualiser »), les couloirs affichés restent visibles et se réévaluent à la fin de la lecture, même quand elle rend le même objet — l'InMemory rend toujours le sien, et l'évaluation suit donc le statut de la lecture, jamais sa valeur ; l'écran de chargement ne s'affiche que tant qu'aucun couloir n'est affiché, au premier chargement ou lors d'un nouvel essai après une erreur, et une erreur remplace toujours les couloirs.
-- La supervision est immuable.
-- Les collections reçues par les modèles sont copiées à la construction ; modifier le tableau source ne change pas une valeur déjà construite.
-- Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
-- Seul l'adaptateur InMemory existe ; il porte en dur le jeu de démonstration, y compris en production, jusqu'à ce que l'API expose les journées ouvertes.
+- Chaque opérateur déclaré figure exactement une fois. Les deux couloirs existent toujours, dans l'ordre
+  Au travail puis Sans activité, même vides. Les opérateurs sont triés par nom, prénom et identifiant.
+- Les activités terminées ou à résoudre ne déterminent pas le couloir et ne comptent pas dans le signal NC.
+- La pause et sa mémoire appartiennent au seul pupitre qui l'a prise. Des fins simultanées ne prouvent
+  aucune pause ; une activité ouverte ailleurs ou une fin encore à publier conserve son état reçu.
+  La supervision n'invente aucun état suspendu ni couloir sans source. Chaque reprise crée un nouvel
+  instant de début pour l'activité rendue.
+- Les séquences en conflit restent visibles et à vérifier après l'échéance ; la borne automatique ne les tranche pas.
+- Les métiers sont affichés quand aucune activité interprétable n'est en cours.
+- La supervision affiche des instants, jamais une durée comptabilisée.
+- L'instant d'évaluation est obligatoire ; les instants invalides ou dépourvus de fuseau sont refusés.
+- Les modèles sont immuables et copient les collections reçues à la construction.
+- Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur
+  qui remplace les couloirs précédents.
+- Pendant la relecture toutes les 30 s ou par « Actualiser », les couloirs restent visibles. La vue est
+  réévaluée à la fin de chaque lecture même quand le port rend le même objet. Le chargement n'occupe
+  l'écran que lorsqu'aucune vue exploitable n'est affichée ; une erreur remplace toujours la vue.
+- Ce contexte acquiert la vue par un seul port et ne partage aucun modèle métier avec `pupitre`.
+- Seul l'adapter InMemory est branché, y compris en production. Il fournit les démonstrations d'activité,
+  de fin automatique et de conflit ; les rapports réels de ce chantier sont le relevé et le coût.
 
 ## Règles locales
 
-Pour l'acquisition des données de la vue, appliquer la [règle de composition des lectures](../../../../../../documentation/architecture.md#acquire-a-view-through-one-read-port-by-default).
-
-Consulter l'[ADR 0031](../../../../../../documentation/adr/0031-own-workshop-supervision-in-gestion.md) pour les arbitrages d'architecture et la séparation des responsabilités.
-
-Consulter l'[ADR 0041](../../../../../../documentation/adr/0041-sort-workshop-supervision-into-state-lanes.md) pour la forme en couloirs d'état et les règles d'affichage retenues avec le client, l'[ADR 0046](../../../../../../documentation/adr/0046-stop-showing-the-pause-in-workshop-supervision.md) pour le retrait de la pause, et l'[ADR 0040](../../../../../../documentation/adr/0040-colour-non-conformity-yellow.md) pour les couleurs.
+Appliquer la [composition des lectures](../../../../../../documentation/architecture.md#acquire-a-view-through-one-read-port-by-default).
+L'[ADR 0031](../../../../../../documentation/adr/0031-own-workshop-supervision-in-gestion.md) possède la
+séparation des responsabilités, l'[ADR 0041](../../../../../../documentation/adr/0041-sort-workshop-supervision-into-state-lanes.md)
+la forme en couloirs et l'[ADR 0040](../../../../../../documentation/adr/0040-colour-non-conformity-yellow.md)
+la couleur de la NC. Leur classement est amendé par l'ADR 0047.

@@ -1,5 +1,5 @@
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
-import { AxeDuJour, minutesDeDebut, minutesDeFin, seLePoursuit } from './AxeDuJour';
+import { AxeDuJour, minutesDeDebut, minutesDeFin } from './AxeDuJour';
 
 const instantLocal = (jour: number, heure: number, minute: number): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, jour, heure, minute).toISOString());
@@ -93,14 +93,6 @@ describe('AxeDuJour', () => {
 
     it('should end at the end of the day an instant of the day after ends, the day being cut at midnight', () => {
       expect(minutesDeFin(instantLocal(14, 19, 0), instantLocal(15, 0, 0))).toBe(24 * 60);
-    });
-
-    it('should go on the next day when it ends on another day', () => {
-      expect(seLePoursuit(instantLocal(14, 19, 0), instantLocal(15, 0, 0))).toBe(true);
-    });
-
-    it('should not go on the next day when it ends on the same day', () => {
-      expect(seLePoursuit(instantLocal(14, 8, 0), instantLocal(14, 12, 0))).toBe(false);
     });
   });
 });

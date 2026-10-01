@@ -41,7 +41,7 @@ const persistPupitreFixture = (window: Cypress.AUTWindow, fixture: StoredPupitre
           referentiel: fixture.referentiel,
           evenements: fixture.evenements,
         },
-        `atelier:${fixture.entreprise}`,
+        `atelier-activites-v1:${fixture.entreprise}`,
       );
       transaction.oncomplete = () => {
         database.close();
@@ -67,7 +67,10 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
             id: fixture.geste.id,
             dateDeSurvenue: fixture.geste.dateDeSurvenue,
             operateurId: fixture.geste.operateurId,
-            nature: 'ARRIVEE',
+            nature: 'POINTAGE',
+            suiviId: 'piece',
+            intention: 'OUVERTURE',
+            type: 'DEBUT',
           },
         },
       ],

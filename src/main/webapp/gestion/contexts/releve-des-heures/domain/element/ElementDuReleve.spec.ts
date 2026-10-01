@@ -1,3 +1,4 @@
+import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementDuReleve } from './ElementDuReleve';
 import { ElementReleveId } from './ElementReleveId';
@@ -14,9 +15,8 @@ const elementFixture = (postes: readonly PosteDeLElement[]): ElementDuReleve =>
     nom: 'PRD-2026-000015',
     reference: undefined,
     description: undefined,
-    duree: new DureeTravaillee('PT0S'),
-    dureeNonConformite: new DureeTravaillee('PT0S'),
-    dureePresumee: new DureeTravaillee('PT0S'),
+    duree: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    dureeNonConformite: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     postes,
   });
 

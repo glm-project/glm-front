@@ -3,6 +3,7 @@ import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { PosteDeSupervision } from '../poste/PosteDeSupervision';
 import { CategorieActivite } from './CategorieActivite';
+import { EtatActiviteDeSupervision } from './EtatActiviteDeSupervision';
 import { IdentifiantActivite } from './IdentifiantActivite';
 import { ObjetDeLActivite } from './ObjetDeLActivite';
 
@@ -13,6 +14,8 @@ const comparePostes = (poste: PosteDeSupervision | undefined, autre: PosteDeSupe
     ? rangDuPoste(poste) - rangDuPoste(autre)
     : poste.libelle.localeCompare(autre.libelle, 'fr', { numeric: true });
 
+const DUREE_AVANT_FIN_AUTOMATIQUE_MS = 13 * 60 * 60 * 1000;
+
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
@@ -20,6 +23,7 @@ export interface DescriptionActivite {
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
   readonly poste?: PosteDeSupervision;
+  readonly etat?: EtatActiviteDeSupervision;
 }
 
 export class ActiviteDeSupervision {
@@ -29,14 +33,33 @@ export class ActiviteDeSupervision {
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
   readonly poste: PosteDeSupervision | undefined;
+  readonly echeance: Instant;
+  private readonly etat: EtatActiviteDeSupervision;
 
   constructor(description: DescriptionActivite) {
+    this.etat = description.etat ?? 'EN_COURS';
     this.id = description.id;
     this.operateurId = description.operateurId;
     this.objet = description.objet;
     this.categorie = description.categorie;
     this.debut = description.debut;
     this.poste = description.poste;
+    this.echeance = new Instant(new Date(Date.parse(this.debut.value) + DUREE_AVANT_FIN_AUTOMATIQUE_MS).toISOString());
+  }
+
+  isEnCours(maintenant: Instant): boolean {
+    return this.etatAt(maintenant) === 'EN_COURS';
+  }
+
+  isTermineeAutomatiquement(maintenant: Instant): boolean {
+    return this.etatAt(maintenant) === 'TERMINEE_AUTOMATIQUEMENT';
+  }
+
+  private etatAt(maintenant: Instant): EtatActiviteDeSupervision {
+    if (this.etat !== 'EN_COURS') {
+      return this.etat;
+    }
+    return maintenant.compare(this.echeance) < 0 ? 'EN_COURS' : 'TERMINEE_AUTOMATIQUEMENT';
   }
 
   compare(other: ActiviteDeSupervision): number {

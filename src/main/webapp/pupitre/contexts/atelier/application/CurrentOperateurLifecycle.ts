@@ -1,11 +1,12 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { ActiviteExpirationSchedulerPort } from '../domain/designation/ActiviteExpirationSchedulerPort';
 import { DesignationExpirationSchedulerPort } from '../domain/designation/DesignationExpirationSchedulerPort';
 import { DesignationOperateur, DesignationResolution, isFenetreIdentifiedBy } from '../domain/designation/DesignationOperateur';
+import { CommandesGlobales } from '../domain/designation/fenetre-operateur/CommandesGlobales';
 import { AcceptationDeGestes } from '../domain/designation/fenetre-operateur/DecisionDePointage';
 import { FenetreOperateur } from '../domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteOperateurDesigne } from '../domain/designation/fenetre-operateur/OperateurDesigne';
-import { PresenceDeLOperateur } from '../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
 import { Matricule } from '../domain/designation/Matricule';
 import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';
@@ -20,6 +21,7 @@ export class CurrentOperateurLifecycle {
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly acceptationLocale = inject(GestesRecordingQueue);
+  private readonly activiteExpirationScheduler = inject(ActiviteExpirationSchedulerPort);
   private readonly expirationScheduler = inject(DesignationExpirationSchedulerPort);
   private readonly fraicheur = inject(FraicheurDuReferentiel);
   private readonly designation = signal(DesignationOperateur.empty());
@@ -36,10 +38,8 @@ export class CurrentOperateurLifecycle {
   readonly pointage = computed(() => this.designation().visibleWindow()?.pointage());
   readonly refusAtelier = computed(() => this.designation().visibleWindow()?.refusal());
   readonly gestesDisponibles = computed(() => this.designation().window()?.allowsGestures() ?? true);
-  readonly presence = computed(
-    () =>
-      this.designation().visibleWindow()?.presence()
-      ?? new PresenceDeLOperateur({ etat: 'ABSENT', activiteEnCours: false, pauseEnCours: false }),
+  readonly commandesGlobales = computed(
+    () => this.designation().visibleWindow()?.commandesGlobales() ?? new CommandesGlobales({ activiteEnCours: false, pauseEnCours: false }),
   );
 
   registerPress(): boolean {
@@ -119,6 +119,7 @@ export class CurrentOperateurLifecycle {
   acceptDecision(fenetre: FenetreOperateur): void {
     this.designation.update(current => current.afterReplacingWindow(fenetre));
     this.etatHorsLigne.publish(fenetre.snapshot());
+    this.scheduleActivityExpiration();
   }
 
   acceptCapture(identity: IdentiteDeFenetre, acceptance: Pick<AcceptationDeGestes, 'applyTo'>): boolean {
@@ -175,7 +176,17 @@ export class CurrentOperateurLifecycle {
     this.errorHandler.observe(this.settle());
   }
 
+  private scheduleActivityExpiration(): void {
+    this.activiteExpirationScheduler.schedule(this.designation().visibleWindow()?.prochaineEcheance(), {
+      expire: () => {
+        const fenetre = this.designation().window();
+        if (fenetre !== undefined) this.acceptDecision(fenetre.afterEvaluatingActivities(Date.now()));
+      },
+    });
+  }
+
   private scheduleExpiration(): void {
+    this.scheduleActivityExpiration();
     this.expirationScheduler.schedule(this.state().deadline, {
       expire: () => {
         this.errorHandler.observe(this.expire());

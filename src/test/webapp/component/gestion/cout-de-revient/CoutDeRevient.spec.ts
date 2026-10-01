@@ -1,6 +1,13 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { interceptForever } from '../../../utils/Interceptor';
-import { CoutDeRevientApiFixture, coutDeRevientFixture } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
+import {
+  CoutDeRevientApiFixture,
+  coutDeRevientFixture,
+  rapportAutomatiqueFixture,
+  rapportConflitSansActiviteFixture,
+  rapportEnCoursFixture,
+  rapportIncompletFixture,
+} from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 
 const RAPPORT = '/couts-de-revient/element-1';
 
@@ -9,6 +16,58 @@ describe('Cost of manufacture in gestion', () => {
 
   beforeEach(() => {
     api = new CoutDeRevientApiFixture();
+  });
+
+  it('should keep certain cells readable and incomplete cells without figures including dated details', () => {
+    givenIncompleteReport();
+    whenVisitingTheReport();
+    whenOpeningTheDetailOfTheFirstRow();
+
+    thenIndependentCompletenessIsVisible();
+  });
+
+  it('should show every responsible conflict including a sequence on another element', () => {
+    givenIncompleteReport();
+    whenVisitingTheReport();
+
+    thenEveryResponsibleSequenceIsVisible();
+  });
+
+  it('should show automatic finishes before expanding a row and explain their counted periods', () => {
+    givenAutomaticReport();
+    whenVisitingTheReport();
+
+    thenAutomaticFinishIsVisibleBeforeDetail();
+  });
+
+  it('should explain automatic periods in the expanded detail', () => {
+    givenAutomaticReport();
+    whenVisitingTheReport();
+    whenOpeningTheDetailOfTheFirstRow();
+
+    thenAutomaticFinishIsExplained();
+  });
+
+  it('should explain excluded current activities while retaining complete zero totals', () => {
+    givenCurrentReport();
+    whenVisitingTheReport();
+
+    thenCurrentActivityExclusionIsVisible();
+  });
+
+  it('should keep a conflict with no unresolved activity visible beside complete totals', () => {
+    givenConflictWithoutActivity();
+    whenVisitingTheReport();
+
+    thenTheConflictKeepsCompleteTotals();
+  });
+
+  it('should remove an automatic alert when a new server report no longer carries it', () => {
+    givenAutomaticReport();
+    whenVisitingTheReport();
+    whenReloadingTheRegularisedReport();
+
+    thenTheRegularisedReportIsVisible();
   });
 
   it('should display the total cost and one row per operation nature on a desktop viewport', () => {
@@ -69,6 +128,26 @@ describe('Cost of manufacture in gestion', () => {
     thenTheDetailToggleHasFocus();
   });
 
+  const givenIncompleteReport = (): void => {
+    api.rapport = rapportIncompletFixture();
+    api.install();
+  };
+
+  const givenAutomaticReport = (): void => {
+    api.rapport = rapportAutomatiqueFixture();
+    api.install();
+  };
+
+  const givenCurrentReport = (): void => {
+    api.rapport = rapportEnCoursFixture();
+    api.install();
+  };
+
+  const givenConflictWithoutActivity = (): void => {
+    api.rapport = rapportConflitSansActiviteFixture();
+    api.install();
+  };
+
   const givenReport = (): void => {
     api.install();
   };
@@ -91,6 +170,14 @@ describe('Cost of manufacture in gestion', () => {
     api.install();
   };
 
+  const whenReloadingTheRegularisedReport = (): void => {
+    cy.get(dataSelector('cout-fin-automatique-marque')).should('be.visible');
+    cy.then(() => {
+      api.rapport = coutDeRevientFixture();
+    });
+    cy.reload();
+  };
+
   const whenVisitingTheReport = (): void => {
     cy.viewport(1280, 900);
     cy.visit(RAPPORT);
@@ -107,6 +194,55 @@ describe('Cost of manufacture in gestion', () => {
 
   const whenFocusingTheFirstDetailToggle = (): void => {
     cy.get(dataSelector('cout-detail-toggle')).first().focus();
+  };
+
+  const thenIndependentCompletenessIsVisible = (): void => {
+    cy.get(dataSelector('cout-travail-cell')).should('contain.text', '5 h 00');
+    cy.get(dataSelector('cout-machine-cell')).should('contain.text', '300,00');
+    cy.get(dataSelector('cout-main-d-oeuvre-cell')).should('contain.text', 'Incomplet');
+    cy.get(dataSelector('cout-total')).should('contain.text', 'Incomplet');
+    cy.get(dataSelector('cout-repartition')).should('contain.text', 'Main d’œuvre Incomplet');
+    cy.get(dataSelector('cout-sans-non-conformite')).should('contain.text', 'À résoudre');
+    cy.get(dataSelector('cout-periode')).should('contain.text', 'Fin à résoudre');
+  };
+
+  const thenEveryResponsibleSequenceIsVisible = (): void => {
+    cy.get(dataSelector('cout-conflit')).should('have.length', 2);
+    cy.get(dataSelector('cout-conflit-element')).last().should('have.text', 'autre-element');
+    cy.get(dataSelector('cout-conflit-pointage')).should('have.length', 3);
+  };
+
+  const thenAutomaticFinishIsVisibleBeforeDetail = (): void => {
+    cy.get(dataSelector('cout-fin-automatique-marque')).should('be.visible');
+    cy.get(dataSelector('cout-detail')).should('not.exist');
+    cy.get(dataSelector('cout-temps-total')).should('contain.text', '13 h 00');
+  };
+
+  const thenAutomaticFinishIsExplained = (): void => {
+    cy.get(dataSelector('cout-fin-automatique-marque')).should('be.visible');
+    cy.get(dataSelector('cout-temps-total')).should('contain.text', '13 h 00');
+    cy.get(dataSelector('cout-total')).should('contain.text', '845,00');
+    cy.get(dataSelector('cout-fins-automatiques-detail')).should('contain.text', 'anomalie active');
+    cy.get(dataSelector('cout-fin-automatique-periode')).should('contain.text', '11 mai 2026');
+  };
+
+  const thenCurrentActivityExclusionIsVisible = (): void => {
+    cy.get(dataSelector('cout-activites-exclues')).should('contain.text', '2 activités en cours exclues');
+    cy.get(dataSelector('cout-temps-total')).should('contain.text', '0 h 00');
+    cy.get(dataSelector('cout-total')).should('contain.text', '0,00');
+    cy.get(dataSelector('cout-sans-travail')).should('not.exist');
+  };
+
+  const thenTheConflictKeepsCompleteTotals = (): void => {
+    cy.get(dataSelector('cout-conflit-pointage')).should('have.text', 'pointage-a');
+    cy.get(dataSelector('cout-conflits')).should('contain.text', 'Aucune activité dans cette séquence');
+    cy.get(dataSelector('cout-total')).should('contain.text', '0,00');
+    cy.get(dataSelector('cout-sans-travail')).should('not.exist');
+  };
+
+  const thenTheRegularisedReportIsVisible = (): void => {
+    cy.get(dataSelector('cout-fin-automatique-marque')).should('not.exist');
+    cy.get(dataSelector('cout-total')).should('contain.text', '295,00');
   };
 
   const thenTheReportIsDisplayed = (): void => {

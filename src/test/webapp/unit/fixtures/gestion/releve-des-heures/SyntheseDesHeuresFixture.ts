@@ -12,9 +12,11 @@ export class SyntheseDesHeuresFixture extends SyntheseDesHeuresPort {
   operateursInconnus = new Set<string>();
   lectureFailure: Error | undefined;
   lectureDifferee: Promise<ReleveDesHeures | undefined> | undefined;
+  lectureEntree: (() => void) | undefined;
 
   override synthese(demande: DemandeDeReleve): Promise<ReleveDesHeures | undefined> {
     this.demandes.push(demande);
+    this.lectureEntree?.();
     if (this.lectureFailure !== undefined) {
       return Promise.reject(this.lectureFailure);
     }

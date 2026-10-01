@@ -1,62 +1,8 @@
-import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
 import { Instant } from '../instant/Instant';
-import { OperateurDeclare } from '../operateur/OperateurDeclare';
-import { EtatDePresence } from '../presence/EtatDePresence';
-import { JourneeDeTravail } from '../presence/JourneeDeTravail';
-import { AnomalieDeSupervision } from './AnomalieDeSupervision';
 import { COULOIRS_DE_SUPERVISION, CouloirDeSupervision } from './CouloirDeSupervision';
+import { DonneesDeSupervision } from './DonneesDeSupervisionPort';
 import { OperateurSupervise } from './OperateurSupervise';
 import { ResultatSupervision, resultatSupervisionExploitable, resultatSupervisionInexploitable } from './ResultatSupervision';
-
-export const SEUIL_DUREE_JOURNEE_OUVERTE_MAXIMALE_MS = 16 * 60 * 60 * 1000;
-
-const isActiviteDUnAbsent = (presence: EtatDePresence, activites: readonly ActiviteDeSupervision[]): boolean =>
-  presence === 'ABSENT' && activites.length > 0;
-
-const detectAnomaliesJournee = (journeeOuverte: JourneeDeTravail | undefined, maintenant: Instant): AnomalieDeSupervision[] => {
-  if (!journeeOuverte) {
-    return [];
-  }
-  const debut = journeeOuverte.openingInstant();
-  if (debut === undefined) {
-    return ['JOURNEE_OUVERTE_SANS_FENETRES'];
-  }
-  if (maintenant.compare(debut) > SEUIL_DUREE_JOURNEE_OUVERTE_MAXIMALE_MS) {
-    return ['JOURNEE_OUVERTE_PLUS_DE_16_HEURES'];
-  }
-  return [];
-};
-
-const detectAnomalies = (
-  journeeOuverte: JourneeDeTravail | undefined,
-  presence: EtatDePresence,
-  activitesOperateur: readonly ActiviteDeSupervision[],
-  maintenant: Instant,
-): AnomalieDeSupervision[] => {
-  const anomalies = detectAnomaliesJournee(journeeOuverte, maintenant);
-  if (isActiviteDUnAbsent(presence, activitesOperateur)) {
-    anomalies.push('ACTIVITE_D_UN_ABSENT');
-  }
-  return anomalies;
-};
-
-const superviseOperateur = (
-  operateur: OperateurDeclare,
-  journees: readonly JourneeDeTravail[],
-  activites: readonly ActiviteDeSupervision[],
-  maintenant: Instant,
-): OperateurSupervise => {
-  const journeeOuverte = journees.find(journee => journee.isOpenFor(operateur.id));
-  const presence: EtatDePresence = journeeOuverte === undefined ? 'ABSENT' : 'PRESENT';
-  const activitesOperateur = activites.filter(activite => activite.isFor(operateur.id));
-  const anomalies = detectAnomalies(journeeOuverte, presence, activitesOperateur, maintenant);
-
-  return new OperateurSupervise(operateur, presence, {
-    activites: activitesOperateur,
-    anomalies,
-    heureDOuverture: journeeOuverte?.openingInstant(),
-  });
-};
 
 export interface CouloirSupervise {
   readonly couloir: CouloirDeSupervision;
@@ -81,26 +27,28 @@ export class SupervisionDeLAtelier {
   }
 
   operateursAVerifier(): readonly OperateurSupervise[] {
-    return this.operateurs.filter(supervise => supervise.anomalies.length > 0);
+    return this.operateurs.filter(supervise => supervise.isAVerifier());
   }
 
-  countPresents(): number {
-    return this.operateurs.filter(supervise => supervise.presence === 'PRESENT').length;
-  }
-
-  static determine(
-    operateursDeclares: readonly OperateurDeclare[],
-    journees: readonly JourneeDeTravail[],
-    activites: readonly ActiviteDeSupervision[],
-    maintenant: Instant,
-  ): ResultatSupervision {
-    const hasActiviteSansOperateurIdentifiable = activites.some(activite => !activite.hasOperateurIdentifiable(operateursDeclares));
-    if (hasActiviteSansOperateurIdentifiable) {
+  static determine(donnees: DonneesDeSupervision, maintenant: Instant): ResultatSupervision {
+    const hasActiviteSansOperateurIdentifiable = donnees.activites.some(activite => !activite.hasOperateurIdentifiable(donnees.operateurs));
+    const hasSequenceSansOperateurIdentifiable = donnees.sequencesEnConflit.some(
+      sequence => !sequence.hasOperateurIdentifiable(donnees.operateurs),
+    );
+    const hasDonneesSansOperateurIdentifiable = hasActiviteSansOperateurIdentifiable || hasSequenceSansOperateurIdentifiable;
+    if (hasDonneesSansOperateurIdentifiable) {
       return resultatSupervisionInexploitable('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
     }
 
-    const operateurs = operateursDeclares
-      .map(operateur => superviseOperateur(operateur, journees, activites, maintenant))
+    const operateurs = donnees.operateurs
+      .map(operateur => {
+        const activites = donnees.activites.filter(activite => activite.isFor(operateur.id));
+        return new OperateurSupervise(operateur, {
+          activites: activites.filter(activite => activite.isEnCours(maintenant)),
+          termineesAutomatiquement: activites.filter(activite => activite.isTermineeAutomatiquement(maintenant)),
+          sequencesEnConflit: donnees.sequencesEnConflit.filter(sequence => sequence.isFor(operateur.id)),
+        });
+      })
       .sort((left, right) => left.compareAlphabetically(right));
 
     return resultatSupervisionExploitable(new SupervisionDeLAtelier(operateurs, maintenant));
