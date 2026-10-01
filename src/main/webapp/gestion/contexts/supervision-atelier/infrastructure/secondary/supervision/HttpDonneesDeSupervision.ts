@@ -1,3 +1,4 @@
+import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { inject, Injectable } from '@angular/core';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
@@ -13,6 +14,44 @@ import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 
+type RestOperateur = components['schemas']['RestOperateurDeSupervision'];
+type RestElement = components['schemas']['RestElementDeSupervision'];
+type RestPoste = components['schemas']['RestPosteDeSupervision'];
+type RestActivite = components['schemas']['RestActiviteDeSupervision'];
+
+const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
+  new OperateurDeclare({
+    id: new IdentifiantOperateur(operateur.id),
+    nom: operateur.nom,
+    prenom: operateur.prenom,
+    metiers: operateur.metiers.map(metier => new NatureDeTravail(metier)),
+  });
+
+const toElement = (element: RestElement): ElementTravaille =>
+  new ElementTravaille({
+    type: element.type,
+    nom: element.nom,
+    ...(element.reference === undefined ? {} : { reference: new ReferenceDElement(element.reference) }),
+  });
+
+const toPoste = (poste: RestPoste): PosteDeSupervision =>
+  new PosteDeSupervision({
+    id: new IdentifiantPoste(poste.id),
+    libelle: poste.libelle,
+    ...(poste.nature === undefined ? {} : { nature: new NatureDeTravail(poste.nature) }),
+  });
+
+const toActivite = (activite: RestActivite): ActiviteDeSupervision =>
+  new ActiviteDeSupervision({
+    id: new IdentifiantActivite(activite.id),
+    operateurId: new IdentifiantOperateur(activite.operateurId),
+    objet: toElement(activite.element),
+    categorie: new CategorieActivite(activite.categorie),
+    debut: new Instant(activite.debut),
+    echeance: new Instant(activite.echeance),
+    ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
+  });
+
 @Injectable()
 export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
   private readonly api = inject(ApiClient);
@@ -21,39 +60,8 @@ export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
     const response = await this.api.read('/api/atelier/supervision', {});
     return {
       evaluation: new Instant(response.evaluation),
-      operateurs: response.operateurs.map(
-        operateur =>
-          new OperateurDeclare({
-            id: new IdentifiantOperateur(operateur.id),
-            nom: operateur.nom,
-            prenom: operateur.prenom,
-            metiers: operateur.metiers.map(metier => new NatureDeTravail(metier)),
-          }),
-      ),
-      activites: response.activites.map(
-        activite =>
-          new ActiviteDeSupervision({
-            id: new IdentifiantActivite(activite.id),
-            operateurId: new IdentifiantOperateur(activite.operateurId),
-            objet: new ElementTravaille({
-              type: activite.element.type,
-              nom: activite.element.nom,
-              ...(activite.element.reference === undefined ? {} : { reference: new ReferenceDElement(activite.element.reference) }),
-            }),
-            categorie: new CategorieActivite(activite.categorie),
-            debut: new Instant(activite.debut),
-            echeance: new Instant(activite.echeance),
-            ...(activite.poste === undefined
-              ? {}
-              : {
-                  poste: new PosteDeSupervision({
-                    id: new IdentifiantPoste(activite.poste.id),
-                    libelle: activite.poste.libelle,
-                    ...(activite.poste.nature === undefined ? {} : { nature: new NatureDeTravail(activite.poste.nature) }),
-                  }),
-                }),
-          }),
-      ),
+      operateurs: response.operateurs.map(toOperateur),
+      activites: response.activites.map(toActivite),
       sequencesEnConflit: [],
     };
   }
