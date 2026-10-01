@@ -34,6 +34,13 @@ const targetsAnotherPlace = (suivi: SuiviEnProjection, geste: PointageCausal): b
   return cible !== undefined && !occupiesSamePlace(cible, geste);
 };
 
+const isIneffectiveLateFinish = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
+  if (geste.intention !== 'FIN') return false;
+  if (suivi.ciblesConsommees.has(geste.cible)) return false;
+  const cible = targetedActivity(suivi, geste);
+  return cible !== undefined && Date.parse(geste.dateDeSurvenue) > Date.parse(cible.echeance);
+};
+
 const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
   if (geste.intention === 'OUVERTURE') return false;
   const cible = targetedActivity(suivi, geste);
@@ -87,6 +94,7 @@ const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, confli
 const applyPointage = (suivi: SuiviEnProjection, geste: GesteDePointage): SuiviEnProjection => {
   if (geste.intention === undefined) return suivi;
   if (targetsAnotherPlace(suivi, geste)) return suivi;
+  if (isIneffectiveLateFinish(suivi, geste)) return suivi;
   const conflit = targetsUnavailableActivity(suivi, geste);
   const nouvelles = newlyOpenedActivities(geste, conflit);
   const activites = [...suivi.suivi.activites.filter(activite => !occupiesSamePlace(activite, geste)), ...nouvelles];

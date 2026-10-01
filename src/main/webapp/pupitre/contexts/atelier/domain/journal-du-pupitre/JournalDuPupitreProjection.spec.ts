@@ -61,6 +61,54 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it('should retain a conflict when a late finish follows a real finish of the same target', () => {
+    const firstFinish: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'fin-reelle',
+      type: 'FIN',
+      intention: 'FIN',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T10:00:00Z',
+    };
+    const reopening: GesteDePointage = { ...debutGesteFixture, id: 'relance', dateDeSurvenue: '2026-09-05T22:00:00Z' };
+    const lateFinish: GesteDePointage = { ...firstFinish, id: 'fin-tardive', dateDeSurvenue: '2026-09-05T23:00:00Z' };
+    const state = givenEvents([
+      debutFixture,
+      { geste: firstFinish, etat: 'EN_ATTENTE' },
+      { geste: reopening, etat: 'EN_ATTENTE' },
+      { geste: lateFinish, etat: 'EN_ATTENTE' },
+    ]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T23:01:00Z'));
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
+  it('should preserve a later reopening when a finish only targets an expired activity', () => {
+    const reopening: GesteDePointage = { ...debutGesteFixture, id: 'relance', dateDeSurvenue: '2026-09-05T22:00:00Z' };
+    const finish: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'fin-tardive',
+      type: 'FIN',
+      intention: 'FIN',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T23:00:00Z',
+    };
+    const state = givenEvents([debutFixture, { geste: reopening, etat: 'EN_ATTENTE' }, { geste: finish, etat: 'EN_ATTENTE' }]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T23:01:00Z'));
+
+    expect(projection?.suivis[0]?.activites).toEqual([
+      {
+        ouverture: 'relance',
+        operateurId: 'jean',
+        categorie: 'TRAVAIL',
+        depuis: '2026-09-05T22:00:00Z',
+        echeance: '2026-09-06T11:00:00.000Z',
+      },
+    ]);
+  });
+
   it('should keep another operator target usable after a conflict on a separate workstation key', () => {
     const other: GesteDePointage = {
       ...debutGesteFixture,
