@@ -4,8 +4,8 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
 import { FenetreOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/FenetreOperateur';
+import { Identifiant } from '@/pupitre/contexts/atelier/domain/designation/Identifiant';
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
-import { Matricule } from '@/pupitre/contexts/atelier/domain/designation/Matricule';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   GesteDePointage,
@@ -71,7 +71,7 @@ const finBodyFixture = {
   cible: 'ouverture-a',
 };
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
   suivis: [
     {
       id: 'piece',
@@ -141,7 +141,7 @@ const independentReferenceFixture: ReferentielDuPupitre = {
 };
 const resolvedReferenceFixture = {
   genereLe: '2026-09-05T18:00:00Z',
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
   suivis: [
     {
       id: 'piece',
@@ -445,7 +445,7 @@ describe('Durable pupitre HTTP exchange', () => {
   };
   const companyReferenceFixture = (company: string): ReferentielDuPupitre => ({
     operateurs: [
-      { id: 'jean', nom: company, prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] },
+      { id: 'jean', nom: company, prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] },
       { id: 'marie', nom: company, prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },
     ],
     suivis: [
@@ -541,7 +541,7 @@ describe('Durable pupitre HTTP exchange', () => {
     FenetreOperateur.open(
       entreprise,
       state,
-      Matricule.empty().afterDigit('0').afterDigit('4').afterDigit('9'),
+      Identifiant.empty().afterDigit('0').afterDigit('4').afterDigit('9'),
       Date.parse('2026-09-05T18:00:00Z'),
       new IdentiteDeFenetre(1),
     );

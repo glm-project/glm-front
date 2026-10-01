@@ -89,7 +89,7 @@ export class OperateursFixture extends OperateursPort {
     return new Operateur(id, {
       nom: commande.nom,
       prenom: commande.prenom,
-      matricule: commande.matricule,
+      identifiant: commande.identifiant,
       tauxHoraire: commande.tauxHoraire,
       postes,
       natures: naturesDe(postes),

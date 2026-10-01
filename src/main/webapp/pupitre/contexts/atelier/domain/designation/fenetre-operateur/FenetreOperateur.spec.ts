@@ -8,8 +8,8 @@ import {
   JournalDuPupitre,
   Suspension,
 } from '../../journal-du-pupitre/JournalDuPupitre';
+import { Identifiant } from '../Identifiant';
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
-import { Matricule } from '../Matricule';
 import { NumeroDElement } from '../NumeroDElement';
 import { CommandesGlobales } from './CommandesGlobales';
 import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
@@ -52,7 +52,7 @@ const vueFixture: JournalDuPupitre = {
         id: 'jean',
         nom: 'Dupont',
         prenom: 'Jean',
-        matricule: '049',
+        identifiant: '049',
         postes: [{ id: 'tour', libelle: 'Tour' }],
       },
     ],
@@ -138,7 +138,7 @@ describe('FenetreOperateur', () => {
     fenetre = FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -692,8 +692,8 @@ describe('FenetreOperateur', () => {
 
     const chosen = whenChoosingWith(reconciled, 'of-1015', 'PRINCIPALE', 'fraiseuse');
 
-    expect(opened.operateur).toMatchObject({ id: 'jean', matricule: '049' });
-    expect(reconciled.operateur).toMatchObject({ id: 'jean', matricule: '049' });
+    expect(opened.operateur).toMatchObject({ id: 'jean', identifiant: '049' });
+    expect(reconciled.operateur).toMatchObject({ id: 'jean', identifiant: '049' });
     thenPointagesKeepTheirWorkstations(chosen, ['fraiseuse']);
   });
 
@@ -777,7 +777,7 @@ describe('FenetreOperateur', () => {
     const onlyNcJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
             conflits: [],
@@ -815,7 +815,7 @@ describe('FenetreOperateur', () => {
             id: 'jean',
             nom: 'Dupont',
             prenom: 'Jean',
-            matricule: '049',
+            identifiant: '049',
             postes: [
               { id: 'poste-1', libelle: 'Poste 1' },
               { id: 'poste-2', libelle: 'Poste 2' },
@@ -873,7 +873,7 @@ describe('FenetreOperateur', () => {
     const unsortedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           { conflits: [], id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
           { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
@@ -892,7 +892,7 @@ describe('FenetreOperateur', () => {
     const referencedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
             conflits: [],
@@ -1014,7 +1014,7 @@ describe('FenetreOperateur', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       journal,
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(identity),
     );
@@ -1046,7 +1046,7 @@ describe('FenetreOperateur', () => {
     const inactiveJournalFixture: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
         ],
@@ -1077,7 +1077,7 @@ describe('FenetreOperateur', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     ).operateur;
@@ -1130,7 +1130,7 @@ describe('FenetreOperateur', () => {
           operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
         },
       },
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(2),
     );
@@ -1141,7 +1141,7 @@ describe('FenetreOperateur', () => {
     return FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       { ...vueFixture, referentiel: { ...referentiel, operateurs: [{ ...operateur, postes: [] }] } },
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(3),
     );
@@ -1230,7 +1230,7 @@ describe('FenetreOperateur', () => {
           ],
         },
       },
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(4),
     );
@@ -1240,7 +1240,7 @@ describe('FenetreOperateur', () => {
       return FenetreOperateur.open(
         Entreprise.of('entreprise-a'),
         vue,
-        matriculeFixture('inconnu'),
+        identifiantFixture('inconnu'),
         Date.parse('2026-09-05T09:00:00Z'),
         new IdentiteDeFenetre(5),
       );
@@ -1336,7 +1336,7 @@ describe('FenetreOperateur', () => {
   };
   const thenWindowIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);
-    expect(refusal).toHaveProperty('message', expect.stringContaining('Matricule absent'));
+    expect(refusal).toHaveProperty('message', expect.stringContaining('Identifiant absent'));
   };
   const thenWorkstationIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);
@@ -1362,5 +1362,5 @@ describe('FenetreOperateur', () => {
   };
 });
 
-const matriculeFixture = (saisie: string): Matricule =>
-  Array.from(saisie).reduce((matricule, caractere) => matricule.afterDigit(caractere), Matricule.empty());
+const identifiantFixture = (saisie: string): Identifiant =>
+  Array.from(saisie).reduce((identifiant, caractere) => identifiant.afterDigit(caractere), Identifiant.empty());

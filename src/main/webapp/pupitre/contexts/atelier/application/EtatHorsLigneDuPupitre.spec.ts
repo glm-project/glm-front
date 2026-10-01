@@ -98,7 +98,7 @@ describe('EtatHorsLigneDuPupitre', () => {
     const state: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'op1', matricule: '123', nom: 'Durand', prenom: 'Paul', postes: [] }],
+        operateurs: [{ id: 'op1', identifiant: '123', nom: 'Durand', prenom: 'Paul', postes: [] }],
         suivis: [],
       },
     };

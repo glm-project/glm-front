@@ -21,10 +21,10 @@ const operateurFixture = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  matricule: '049',
+  identifiant: '049',
   postes: [],
 } satisfies RestOperateurDuPupitre;
-const operateurSansMatriculeFixture = {
+const operateurSansIdentifiantFixture = {
   id: 'marie',
   nom: 'Martin',
   prenom: 'Marie',
@@ -67,7 +67,7 @@ const suiviAvecReferenceFixture = {
 } satisfies RestSuiviDuPupitre;
 const referentielFixture = {
   genereLe: '2026-09-05T08:05:00Z',
-  operateurs: [operateurFixture, operateurSansMatriculeFixture],
+  operateurs: [operateurFixture, operateurSansIdentifiantFixture],
   suivis: [suiviSansReferenceFixture, suiviAvecReferenceFixture],
 } satisfies RestReferentielDuPupitre;
 const suiviDetailleFixture = {
@@ -311,7 +311,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
     expect(reference.operateurs).toEqual([
-      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] },
+      { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] },
       { id: 'marie', nom: 'Martin', prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },
     ]);
     expect(reference.suivis[0]).toEqual({

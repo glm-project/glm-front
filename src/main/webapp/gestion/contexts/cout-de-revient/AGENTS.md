@@ -145,7 +145,7 @@ pour laquelle ils sont affichés séparément.
   lire.
 - **Ni la référence ni le libellé de l'élément ne sont affichés.** `RestElement` ne porte que `id`, `nom`
   et `type`. Aller chercher la référence demanderait une seconde lecture du référentiel pour une donnée
-  facultative : à rouvrir si le besoin se confirme, pas avant. Même arbitrage que le matricule dans
+  facultative : à rouvrir si le besoin se confirme, pas avant. Même arbitrage que l'identifiant dans
   `releve-des-heures`.
 - **Le coût n'est pas séparé entre bon travail et non-conformité, et l'écran ne l'invente pas.** Seul le
   temps l'est. Le déduire au prorata du temps supposerait un tarif constant sur toute la ligne, ce que le

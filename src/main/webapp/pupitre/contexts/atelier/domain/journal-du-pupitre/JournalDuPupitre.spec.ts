@@ -86,7 +86,7 @@ describe('JournalDuPupitre', () => {
     const journal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
-        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
             conflits: [],
@@ -116,7 +116,7 @@ describe('JournalDuPupitre', () => {
             id: 'jean',
             nom: 'Dupont',
             prenom: 'Jean',
-            matricule: '049',
+            identifiant: '049',
             postes: [{ id: 'p1', libelle: 'Poste 1' }],
           },
         ],

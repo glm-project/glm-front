@@ -6,7 +6,7 @@ export interface OperateurDuPupitre {
   readonly id: string;
   readonly nom: string;
   readonly prenom: string;
-  readonly matricule?: string;
+  readonly identifiant?: string;
   readonly postes: readonly { readonly id: string; readonly libelle: string }[];
 }
 

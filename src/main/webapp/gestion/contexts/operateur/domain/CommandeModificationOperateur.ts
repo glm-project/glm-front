@@ -1,4 +1,4 @@
-import { Matricule } from './Matricule';
+import { Identifiant } from './Identifiant';
 import { NomOperateur } from './NomOperateur';
 import { OperateurId } from './OperateurId';
 import { PosteHabilitableId } from './PosteHabilitableId';
@@ -10,7 +10,7 @@ export interface CommandeModificationOperateur {
   readonly id: OperateurId;
   readonly nom: NomOperateur;
   readonly prenom: PrenomOperateur;
-  readonly matricule: Matricule | undefined;
+  readonly identifiant: Identifiant | undefined;
   readonly tauxHoraire: TauxHoraire | undefined;
   readonly postes: readonly PosteHabilitableId[];
 }

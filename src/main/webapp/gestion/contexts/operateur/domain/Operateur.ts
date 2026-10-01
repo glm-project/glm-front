@@ -1,4 +1,4 @@
-import { Matricule } from './Matricule';
+import { Identifiant } from './Identifiant';
 import { NomOperateur } from './NomOperateur';
 import { OperateurId } from './OperateurId';
 import { PosteHabilitable } from './PosteHabilitable';
@@ -8,7 +8,7 @@ import { TauxHoraire } from './TauxHoraire';
 export interface ConfigurationOperateur {
   readonly nom: NomOperateur;
   readonly prenom: PrenomOperateur;
-  readonly matricule: Matricule | undefined;
+  readonly identifiant: Identifiant | undefined;
   readonly tauxHoraire: TauxHoraire | undefined;
   readonly postes: readonly PosteHabilitable[];
   readonly natures: readonly string[];
@@ -17,7 +17,7 @@ export interface ConfigurationOperateur {
 export class Operateur {
   readonly nom: NomOperateur;
   readonly prenom: PrenomOperateur;
-  readonly matricule: Matricule | undefined;
+  readonly identifiant: Identifiant | undefined;
   readonly tauxHoraire: TauxHoraire | undefined;
   readonly postes: readonly PosteHabilitable[];
   readonly natures: readonly string[];
@@ -28,7 +28,7 @@ export class Operateur {
   ) {
     this.nom = configuration.nom;
     this.prenom = configuration.prenom;
-    this.matricule = configuration.matricule;
+    this.identifiant = configuration.identifiant;
     this.tauxHoraire = configuration.tauxHoraire;
     this.postes = configuration.postes;
     this.natures = configuration.natures;

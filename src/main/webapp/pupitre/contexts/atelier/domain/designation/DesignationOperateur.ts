@@ -2,8 +2,8 @@ import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
 import { IdentiteOperateurDesigne } from './fenetre-operateur/OperateurDesigne';
+import { Identifiant } from './Identifiant';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
-import { Matricule } from './Matricule';
 
 export const DESIGNATION_INACTIVITY_MS = 30_000;
 
@@ -12,7 +12,7 @@ export const isFenetreIdentifiedBy = (fenetre: FenetreOperateur | undefined, ide
 
 export interface DesignationResolution {
   readonly generation: number;
-  readonly code: Matricule;
+  readonly code: Identifiant;
 }
 
 export interface DesignationState {
@@ -44,7 +44,7 @@ export interface OpeningWindowResult {
 }
 
 interface EtatDeDesignation {
-  readonly saisie: Matricule;
+  readonly saisie: Identifiant;
   readonly inconnu: boolean;
   readonly designated: boolean;
   readonly resolution: DesignationResolution | undefined;
@@ -60,7 +60,7 @@ export class DesignationOperateur {
 
   static empty(): DesignationOperateur {
     return new DesignationOperateur({
-      saisie: Matricule.empty(),
+      saisie: Identifiant.empty(),
       inconnu: false,
       designated: false,
       resolution: undefined,
@@ -88,7 +88,7 @@ export class DesignationOperateur {
   }
 
   afterDigit(digit: string, now: number): DesignationOperateur {
-    if (!Matricule.accepts(digit)) return this;
+    if (!Identifiant.accepts(digit)) return this;
     const press = this.afterPress(now);
     if (this.isEditingRefused(press)) return press.designation;
     return press.designation.with({ saisie: press.designation.etat.saisie.afterDigit(digit), inconnu: false });
@@ -110,13 +110,13 @@ export class DesignationOperateur {
   afterCompletingResolution(resolution: DesignationResolution, now: number): CompletionResult {
     const expired = this.afterExpiration(now);
     if (resolution.generation !== expired.etat.generation) return { designation: expired, accepted: false };
-    return { designation: expired.with({ designated: true, saisie: Matricule.empty(), inconnu: false }), accepted: true };
+    return { designation: expired.with({ designated: true, saisie: Identifiant.empty(), inconnu: false }), accepted: true };
   }
 
   afterFailingResolution(resolution: DesignationResolution, now: number): DesignationOperateur {
     const expired = this.afterExpiration(now);
     if (resolution.generation !== expired.etat.generation) return expired;
-    return expired.with({ saisie: Matricule.empty(), inconnu: true });
+    return expired.with({ saisie: Identifiant.empty(), inconnu: true });
   }
 
   afterEndingResolution(): DesignationOperateur {
@@ -133,7 +133,7 @@ export class DesignationOperateur {
       generation: this.etat.generation + 1,
       closing: this.etat.closing || this.etat.designated,
       designated: false,
-      saisie: Matricule.empty(),
+      saisie: Identifiant.empty(),
       inconnu: false,
     });
   }
@@ -142,7 +142,7 @@ export class DesignationOperateur {
     return this.etat.closing;
   }
 
-  afterOpeningWindow(entreprise: Entreprise, vue: JournalDuPupitre, code: Matricule, now: number): OpeningWindowResult {
+  afterOpeningWindow(entreprise: Entreprise, vue: JournalDuPupitre, code: Identifiant, now: number): OpeningWindowResult {
     this.requireClosedWindow();
     const fenetre = FenetreOperateur.open(entreprise, vue, code, now, this.etat.windowId);
     const designation =

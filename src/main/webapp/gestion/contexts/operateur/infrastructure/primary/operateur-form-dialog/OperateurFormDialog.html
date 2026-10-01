@@ -51,21 +51,23 @@
         </p>
       </div>
       <div>
-        <label for="operateur-matricule" class="field-label">Matricule <span class="text-ink-muted">(facultatif)</span></label>
+        <label for="operateur-identifiant" class="field-label">Identifiant <span class="text-ink-muted">(facultatif)</span></label>
         <input
-          #matricule
-          id="operateur-matricule"
-          name="matricule"
+          #identifiant
+          id="operateur-identifiant"
+          name="identifiant"
           class="field-input"
           autocomplete="off"
-          [value]="formulaire().saisie.matricule"
-          (input)="changeMatricule(matricule.value)"
-          [attr.aria-invalid]="soumis() && formulaire().erreurMatricule() !== undefined"
-          aria-describedby="operateur-matricule-error"
-          data-selector="operateur-matricule"
+          inputmode="numeric"
+          maxlength="6"
+          [value]="formulaire().saisie.identifiant"
+          (input)="changeIdentifiant(identifiant)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurIdentifiant() !== undefined"
+          aria-describedby="operateur-identifiant-error"
+          data-selector="operateur-identifiant"
         />
-        <p id="operateur-matricule-error" class="field-error" aria-live="polite" data-selector="operateur-matricule-error">
-          {{ soumis() ? formulaire().erreurMatricule() : '' }}
+        <p id="operateur-identifiant-error" class="field-error" aria-live="polite" data-selector="operateur-identifiant-error">
+          {{ soumis() ? formulaire().erreurIdentifiant() : '' }}
         </p>
       </div>
       <div>

@@ -38,7 +38,7 @@ const targetedFinishFixture: GesteDePointage = {
   cible: 'ouverture-originale',
 };
 const referenceFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
   suivis: [
     {
       id: 'piece',

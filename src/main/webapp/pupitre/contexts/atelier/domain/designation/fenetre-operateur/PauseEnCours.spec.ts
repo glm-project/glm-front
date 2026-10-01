@@ -31,7 +31,7 @@ const referentielFixture: ReferentielDuPupitre = {
       id: 'jean',
       nom: 'Dupont',
       prenom: 'Jean',
-      matricule: '049',
+      identifiant: '049',
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },

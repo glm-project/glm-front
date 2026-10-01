@@ -55,7 +55,7 @@ rejette la lecture et est signalé une seule fois. Le composant conserve l'annul
 
 Ce contexte n'importe aucun contexte de `pupitre`, `operateur`, `poste` ou `element-de-fabrication`.
 Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien depuis les opérateurs est un
-`routerLink`. Le matricule n'est pas porté par ces rapports et n'est pas recherché au référentiel.
+`routerLink`. L'identifiant n'est pas porté par ces rapports et n'est pas recherché au référentiel.
 
 ## Restitution
 

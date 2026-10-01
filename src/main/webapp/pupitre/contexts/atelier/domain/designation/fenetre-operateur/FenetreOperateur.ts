@@ -13,10 +13,10 @@ import {
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
 import { ContextesParGeste } from '../ContextesParGeste';
+import { Identifiant } from '../Identifiant';
+import { IdentifiantInconnu } from '../IdentifiantInconnu';
 import { IdentiteDeFenetre } from '../IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
-import { Matricule } from '../Matricule';
-import { MatriculeInconnu } from '../MatriculeInconnu';
 import { NumeroDElement } from '../NumeroDElement';
 import { ActivitesPersonnelles } from './ActivitesPersonnelles';
 import { CommandesGlobales } from './CommandesGlobales';
@@ -64,12 +64,12 @@ export class FenetreOperateur {
   static open(
     entreprise: Entreprise,
     vue: JournalDuPupitre,
-    code: Matricule,
+    code: Identifiant,
     instantDOuverture: number,
     identity: IdentiteDeFenetre,
   ): FenetreOperateur {
-    const operateur = vue.referentiel?.operateurs.find(candidat => code.identifies(candidat.matricule));
-    if (operateur === undefined) throw new MatriculeInconnu();
+    const operateur = vue.referentiel?.operateurs.find(candidat => code.identifies(candidat.identifiant));
+    if (operateur === undefined) throw new IdentifiantInconnu();
     return new FenetreOperateur({
       entreprise,
       vue,

@@ -9,7 +9,7 @@ import { OperateursFixture } from '@test/unit/fixtures/gestion/operateur/Operate
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
-import { Matricule } from '../../../domain/Matricule';
+import { Identifiant } from '../../../domain/Identifiant';
 import { NomOperateur } from '../../../domain/NomOperateur';
 import { Operateur } from '../../../domain/Operateur';
 import { OperateurAyantPointe } from '../../../domain/OperateurAyantPointe';
@@ -30,7 +30,7 @@ class DialogHostFixture {}
 const jeanFixture = new Operateur(new OperateurId('jean'), {
   nom: new NomOperateur('Dupont'),
   prenom: new PrenomOperateur('Jean'),
-  matricule: new Matricule('049'),
+  identifiant: new Identifiant('049'),
   tauxHoraire: new TauxHoraire(22),
   postes: [],
   natures: [],

@@ -35,10 +35,10 @@ import { setTimeout as roundTrip } from 'node:timers';
 import { PupitrePage } from './page';
 
 const referentielFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [],
 };
-const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
+const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' };
 const pointageFixture: VueDePointage = {
   conflits: [],
   moules: [],
@@ -445,7 +445,7 @@ describe('Pupitre page with its designation keypad', () => {
     givenTheReadyKeypad();
     whenTheResetConfirmationIsOpen();
 
-    await whenTypingAValidMatriculeOnThePhysicalKeyboard();
+    await whenTypingAValidIdentifiantOnThePhysicalKeyboard();
 
     thenNoOperatorIsDesignated();
     thenDesignationCommandsAreUnavailable();
@@ -486,7 +486,7 @@ describe('Pupitre page with its designation keypad', () => {
     whenTheResetConfirmationIsOpen();
 
     whenCancellingTheReset();
-    await whenTypingAValidMatriculeOnThePhysicalKeyboard();
+    await whenTypingAValidIdentifiantOnThePhysicalKeyboard();
 
     thenTheOperatorIsDesignated();
   });
@@ -506,7 +506,7 @@ describe('Pupitre page with its designation keypad', () => {
     thenVisible('reinitialisation');
   };
 
-  const whenTypingAValidMatriculeOnThePhysicalKeyboard = async (): Promise<void> => {
+  const whenTypingAValidIdentifiantOnThePhysicalKeyboard = async (): Promise<void> => {
     whenStartingAValidDesignationOnThePhysicalKeyboard();
     await whenRenderingSettles();
   };

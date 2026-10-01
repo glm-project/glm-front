@@ -9,9 +9,9 @@ import { OperateursFixture } from '@test/unit/fixtures/gestion/operateur/Operate
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
+import { Identifiant } from '../../../domain/Identifiant';
+import { IdentifiantDejaUtilise } from '../../../domain/IdentifiantDejaUtilise';
 import { IdentiteDejaUtilisee } from '../../../domain/IdentiteDejaUtilisee';
-import { Matricule } from '../../../domain/Matricule';
-import { MatriculeDejaUtilise } from '../../../domain/MatriculeDejaUtilise';
 import { NomOperateur } from '../../../domain/NomOperateur';
 import { Operateur } from '../../../domain/Operateur';
 import { OperateurId } from '../../../domain/OperateurId';
@@ -33,7 +33,7 @@ const scieFixture = new PosteHabilitable(new PosteHabilitableId('scie-1'), { lib
 const jeanFixture = new Operateur(new OperateurId('jean'), {
   nom: new NomOperateur('Dupont'),
   prenom: new PrenomOperateur('Jean'),
-  matricule: new Matricule('049'),
+  identifiant: new Identifiant('049'),
   tauxHoraire: new TauxHoraire(22),
   postes: [tourFixture],
   natures: ['tournage'],
@@ -82,7 +82,7 @@ describe('OperateurFormDialog', () => {
   it('should declare an operator from the entered values and close after success', async () => {
     await whenOpening();
     await whenFillingIdentity();
-    await whenEntering('operateur-matricule', '049');
+    await whenEntering('operateur-identifiant', '049');
     await whenEntering('operateur-taux', '22,5');
     await whenSubmitting();
     await whenClosed();
@@ -92,7 +92,7 @@ describe('OperateurFormDialog', () => {
         type: 'CREATION',
         nom: new NomOperateur('Dupont'),
         prenom: new PrenomOperateur('Jean'),
-        matricule: new Matricule('049'),
+        identifiant: new Identifiant('049'),
         tauxHoraire: new TauxHoraire(22.5),
         postes: [],
       },
@@ -100,23 +100,33 @@ describe('OperateurFormDialog', () => {
     expect(closed).toEqual([true]);
   });
 
+  it.each([
+    ['a1b2', '12'],
+    ['1234567', '123456'],
+  ])('should keep only the first six digits typed in the identifier: %s', async (frappe, identifiant) => {
+    await whenOpening();
+    await whenEntering('operateur-identifiant', frappe);
+
+    expect(input('operateur-identifiant').value).toBe(identifiant);
+  });
+
   it('should prefill and revise an existing operator, dropping its blank optional entries', async () => {
     await whenOpening(jeanFixture);
-    const initialMatricule = input('operateur-matricule').value;
+    const initialIdentifiant = input('operateur-identifiant').value;
     await whenEntering('operateur-nom', 'Durand');
-    await whenEntering('operateur-matricule', '');
+    await whenEntering('operateur-identifiant', '');
     await whenEntering('operateur-taux', '');
     await whenSubmitting();
     await whenClosed();
 
-    expect(initialMatricule).toBe('049');
+    expect(initialIdentifiant).toBe('049');
     expect(port.enregistrements).toEqual([
       {
         type: 'MODIFICATION',
         id: jeanFixture.id,
         nom: new NomOperateur('Durand'),
         prenom: new PrenomOperateur('Jean'),
-        matricule: undefined,
+        identifiant: undefined,
         tauxHoraire: undefined,
         postes: [tourFixture.id],
       },
@@ -195,10 +205,10 @@ describe('OperateurFormDialog', () => {
     givenDuplicatePayrollNumberIsRefused();
     await whenOpening();
     await whenFillingIdentity();
-    await whenEntering('operateur-matricule', '049');
+    await whenEntering('operateur-identifiant', '049');
     await whenSubmitting();
 
-    expect(text('operateur-matricule-error')).toContain('Un autre opérateur porte déjà ce matricule.');
+    expect(text('operateur-identifiant-error')).toContain('Un autre opérateur porte déjà cet identifiant.');
     expect(closed).toEqual([]);
   });
 
@@ -251,7 +261,7 @@ describe('OperateurFormDialog', () => {
     port.creation = err(new IdentiteDejaUtilisee());
   };
   const givenDuplicatePayrollNumberIsRefused = (): void => {
-    port.creation = err(new MatriculeDejaUtilise());
+    port.creation = err(new IdentifiantDejaUtilise());
   };
   const givenOperateurIsMissing = (): void => {
     port.modification = err(new OperateurIntrouvable());

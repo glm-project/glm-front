@@ -7,9 +7,9 @@ import { CommandesGlobales } from '../domain/designation/fenetre-operateur/Comma
 import { AcceptationDeGestes } from '../domain/designation/fenetre-operateur/DecisionDePointage';
 import { FenetreOperateur } from '../domain/designation/fenetre-operateur/FenetreOperateur';
 import { IdentiteOperateurDesigne } from '../domain/designation/fenetre-operateur/OperateurDesigne';
+import { Identifiant } from '../domain/designation/Identifiant';
+import { IdentifiantInconnu } from '../domain/designation/IdentifiantInconnu';
 import { IdentiteDeFenetre } from '../domain/designation/IdentiteDeFenetre';
-import { Matricule } from '../domain/designation/Matricule';
-import { MatriculeInconnu } from '../domain/designation/MatriculeInconnu';
 import { Entreprise } from '../domain/journal-du-pupitre/Entreprise';
 import { JournalDuPupitre } from '../domain/journal-du-pupitre/JournalDuPupitre';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
@@ -79,7 +79,7 @@ export class CurrentOperateurLifecycle {
     }
   }
 
-  async openWindow(code: Matricule): Promise<IdentiteOperateurDesigne> {
+  async openWindow(code: Identifiant): Promise<IdentiteOperateurDesigne> {
     const { entreprise, state } = await this.etatHorsLigne.openingSource();
     const opening = this.designation().afterOpeningWindow(entreprise, state, code, Date.now());
     this.designation.set(opening.designation);
@@ -152,7 +152,7 @@ export class CurrentOperateurLifecycle {
 
   private failResolution(resolution: DesignationResolution, failure: unknown): void {
     const now = Date.now();
-    if (failure instanceof MatriculeInconnu) {
+    if (failure instanceof IdentifiantInconnu) {
       this.designation.update(current => current.afterFailingResolution(resolution, now));
       this.fraicheur.pushForUnknown(resolution.code, this.applyReferentiel);
       return;

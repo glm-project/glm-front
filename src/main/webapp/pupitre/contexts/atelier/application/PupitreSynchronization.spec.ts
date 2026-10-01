@@ -522,7 +522,7 @@ describe('PupitreSynchronization', () => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       tenant = 'entreprise-b';
       return {
-        operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
+        operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
       };
     };
@@ -531,7 +531,7 @@ describe('PupitreSynchronization', () => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       token = 'autre-token';
       return {
-        operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
+        operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
       };
     };
@@ -578,7 +578,7 @@ describe('PupitreSynchronization', () => {
   };
   const givenANewReferentialAvailableOnServer = (): void => {
     server.onReferentiel = (): ReferentielDuPupitre => ({
-      operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
+      operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
       suivis: [],
     });
   };
