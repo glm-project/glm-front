@@ -231,6 +231,77 @@ const emptyConflictFixture: SceneFixture = {
   response: { ...fabricationOrderFixture.response, sequencesEnConflit: [{ id: 'sequence-empty', operateurId: 'op-serin', activites: [] }] },
 };
 
+const conflictFixture: SceneFixture = {
+  donnees: {
+    ...fabricationOrderFixture.donnees,
+    sequencesEnConflit: [
+      new SequenceEnConflit({
+        id: new IdentifiantSequence('sequence-described'),
+        operateurId: operateurFixture.id,
+        poste: new PosteDeSupervision({
+          id: new IdentifiantPoste('poste-erodeuse'),
+          libelle: 'Érodeuse 2',
+          nature: new NatureDeTravail('Érosion'),
+        }),
+        activites: [
+          new ActiviteDeSupervision({
+            id: new IdentifiantActivite('opening-conflict-perso'),
+            operateurId: operateurFixture.id,
+            objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+            categorie: new CategorieActivite('NON_CONFORMITE'),
+            debut: new Instant('2026-09-12T08:00:00Z'),
+            echeance: new Instant('2026-09-12T21:00:00Z'),
+            etat: 'A_RESOUDRE',
+          }),
+          new ActiviteDeSupervision({
+            id: new IdentifiantActivite('opening-conflict-mould'),
+            operateurId: operateurFixture.id,
+            objet: new ElementTravaille({ type: 'PRODUIT', nom: 'PRD-2026-000015', reference: new ReferenceDElement('1015') }),
+            categorie: new CategorieActivite('TRAVAIL'),
+            debut: new Instant('2026-09-12T09:00:00Z'),
+            echeance: new Instant('2026-09-12T22:00:00Z'),
+            etat: 'A_RESOUDRE',
+            poste: new PosteDeSupervision({
+              id: new IdentifiantPoste('poste-erodeuse'),
+              libelle: 'Érodeuse 2',
+              nature: new NatureDeTravail('Érosion'),
+            }),
+          }),
+        ],
+      }),
+    ],
+  },
+  response: {
+    ...fabricationOrderFixture.response,
+    sequencesEnConflit: [
+      {
+        id: 'sequence-described',
+        operateurId: 'op-serin',
+        poste: { id: 'poste-erodeuse', libelle: 'Érodeuse 2', nature: 'Érosion' },
+        activites: [
+          {
+            id: 'opening-conflict-perso',
+            operateurId: 'op-serin',
+            element: { id: 'of-perso', type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' },
+            categorie: 'NON_CONFORMITE',
+            debut: '2026-09-12T08:00:00Z',
+            echeance: '2026-09-12T21:00:00Z',
+          },
+          {
+            id: 'opening-conflict-mould',
+            operateurId: 'op-serin',
+            element: { id: 'moule-1015', type: 'PRODUIT', nom: 'PRD-2026-000015', reference: '1015' },
+            categorie: 'TRAVAIL',
+            debut: '2026-09-12T09:00:00Z',
+            echeance: '2026-09-12T22:00:00Z',
+            poste: { id: 'poste-erodeuse', libelle: 'Érodeuse 2', nature: 'Érosion' },
+          },
+        ],
+      },
+    ],
+  },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -319,5 +390,14 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(emptyConflictFixture.donnees);
+  });
+
+  it('should retain every conflicting activity and its own element separately from interpretable work after expiration', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(conflictFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(conflictFixture.donnees);
   });
 });

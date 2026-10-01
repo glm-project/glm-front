@@ -76,7 +76,8 @@ export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
           new SequenceEnConflit({
             id: new IdentifiantSequence(sequence.id),
             operateurId: new IdentifiantOperateur(sequence.operateurId),
-            activites: [],
+            activites: sequence.activites.map(activite => new ActiviteDeSupervision({ ...toDescription(activite), etat: 'A_RESOUDRE' })),
+            ...(sequence.poste === undefined ? {} : { poste: toPoste(sequence.poste) }),
           }),
       ),
     };
