@@ -1,24 +1,9 @@
-import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
-import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
-import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
-import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
-import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
-import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
-import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
-import { Instant } from '../../../domain/instant/Instant';
-import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
-import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
-import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
-import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
-import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
-import { FenetreDePresence } from '../../../domain/presence/FenetreDePresence';
-import { JourneeDeTravail } from '../../../domain/presence/JourneeDeTravail';
-import { ConflitDeSupervision } from '../../../domain/supervision/ConflitDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
+import { toDonneesDeSupervision } from './toDonneesDeSupervision';
 
 interface AcquisitionPage<T> {
   readonly content: readonly T[];
@@ -26,50 +11,6 @@ interface AcquisitionPage<T> {
   readonly pageSize: number;
   readonly totalElementsCount: number;
 }
-
-const toPoste = (
-  poste: components['schemas']['RestPosteDAtelier'],
-  postes: readonly components['schemas']['RestPosteDeTravail'][],
-): PosteDeSupervision => {
-  const reference = postes.find(candidat => candidat.id === poste.id);
-  return new PosteDeSupervision({
-    id: new IdentifiantPoste(poste.id),
-    libelle: poste.libelle,
-    ...(reference === undefined ? {} : { nature: new NatureDeTravail(reference.nature) }),
-  });
-};
-
-const toOperateur = (operateur: components['schemas']['RestOperateur']): OperateurDeclare =>
-  new OperateurDeclare({
-    id: new IdentifiantOperateur(operateur.id),
-    nom: operateur.nom,
-    prenom: operateur.prenom,
-    metiers: operateur.natures.map(nature => new NatureDeTravail(nature)),
-  });
-
-const toJournee = (journee: components['schemas']['RestJourneeDeTravail']): JourneeDeTravail =>
-  JourneeDeTravail.open(
-    new IdentifiantOperateur(required(journee.operateur, 'journee.operateur').id),
-    journee.fenetres.map(fenetre => new FenetreDePresence(new Instant(fenetre.debut))),
-  );
-
-const toActivite = (
-  activite: components['schemas']['RestActiviteEnCours'],
-  suivi: components['schemas']['RestSuiviDAtelierEnGrille'],
-  postes: readonly components['schemas']['RestPosteDeTravail'][],
-): ActiviteDeSupervision =>
-  new ActiviteDeSupervision({
-    id: new IdentifiantActivite(activite.ouverture),
-    operateurId: activite.operateur === undefined ? undefined : new IdentifiantOperateur(activite.operateur.id),
-    categorie: new CategorieActivite(activite.categorie),
-    debut: new Instant(activite.depuis),
-    objet: new ElementTravaille({
-      type: suivi.type,
-      nom: suivi.nom,
-      ...(suivi.reference === undefined ? {} : { reference: new ReferenceDElement(suivi.reference) }),
-    }),
-    ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste, postes) }),
-  });
 
 const valueFrom = <T>(result: PromiseSettledResult<T>): T => {
   if (result.status === 'rejected') {
@@ -118,17 +59,12 @@ export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
       ]);
       this.assertTenant(tenant);
       const postesDeTravail = valueFrom(postes);
-      return {
-        operateurs: valueFrom(operateurs).map(toOperateur),
-        journees: valueFrom(journees).map(toJournee),
-        activites: valueFrom(suivis).flatMap(suivi => suivi.activitesEnCours.map(activite => toActivite(activite, suivi, postesDeTravail))),
-        conflits: valueFrom(suivis).flatMap(suivi =>
-          suivi.conflits.map(
-            conflit =>
-              new ConflitDeSupervision(conflit.operateur === undefined ? undefined : new IdentifiantOperateur(conflit.operateur.id)),
-          ),
-        ),
-      };
+      return toDonneesDeSupervision({
+        operateurs: valueFrom(operateurs),
+        journees: valueFrom(journees),
+        suivis: valueFrom(suivis),
+        postes: postesDeTravail,
+      });
     } catch (error) {
       this.errors.handleError(error);
       throw error;
