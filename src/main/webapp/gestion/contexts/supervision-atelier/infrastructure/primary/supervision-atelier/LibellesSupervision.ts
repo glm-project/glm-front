@@ -53,7 +53,6 @@ export const LIBELLES_SUPERVISION = {
   aVerifier: 'à vérifier',
   nc: 'NC',
   types: TYPES,
-  horsOf: 'Hors OF',
   sansPoste: 'Sans poste',
   metier: 'Métier\u00a0:',
   metiers: 'Métiers\u00a0:',
@@ -63,8 +62,7 @@ export const LIBELLES_SUPERVISION = {
   termineeAutomatiquement: 'Activité terminée automatiquement',
   sequenceEnConflit: 'Séquence en conflit',
   aResoudre: 'À résoudre',
-  objet: (objet: ObjetDeLActivite): string =>
-    objet.kind === 'HORS_OF' ? 'Hors OF' : `${TYPES[objet.type]} ${objet.reference?.value ?? objet.nom}`,
+  objet: (objet: ObjetDeLActivite): string => `${TYPES[objet.type]} ${objet.reference?.value ?? objet.nom}`,
   fraicheur: (total: number, instant: Instant): string =>
     `${total} ${pluriel(total, 'opérateur', 'opérateurs')} · d’après les pointages reçus jusqu’à ${heure(instant)} · actualisé toutes les 30 s`,
   listeDesMetiers: (metiers: readonly NatureDeTravail[]): string => metiers.map(metier => metier.value).join(', '),

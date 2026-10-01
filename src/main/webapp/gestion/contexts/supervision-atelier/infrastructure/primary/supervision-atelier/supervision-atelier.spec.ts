@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
-import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
@@ -421,7 +420,11 @@ describe('Supervision atelier component', () => {
       id: new IdentifiantSequence('conflict-without-poste'),
       operateurId: aliceFixture.id,
       activites: [
-        activiteFixture(aliceFixture, { id: 'conflict-hors-of', objet: new HorsOf(), debut: instantFixture(8) }),
+        activiteFixture(aliceFixture, {
+          id: 'conflict-perso',
+          objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+          debut: instantFixture(8),
+        }),
         activiteFixture(aliceFixture, {
           id: 'conflict-without-reference',
           objet: ofSansReferenceFixture('OF-2026-000048'),
@@ -433,7 +436,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive({ operateurs: [aliceFixture], activites: [], sequencesEnConflit: [sequence] });
 
     expect(signal('supervision-sequence-en-conflit')).toContain('Séquence en conflit · Sans poste');
-    expect(elements('supervision-conflit-activite').map(texte)).toEqual(['Hors OF · À résoudre', 'OF OF-2026-000048 · À résoudre']);
+    expect(elements('supervision-conflit-activite').map(texte)).toEqual(['OF OF Perso · À résoudre', 'OF OF-2026-000048 · À résoudre']);
     thenLanesAre([
       { couloir: 'au-travail', nombre: '0', operateurs: [] },
       { couloir: 'sans-activite', nombre: '1', operateurs: ['Martin Alice'] },
@@ -595,7 +598,7 @@ describe('Supervision atelier component', () => {
     ]);
   });
 
-  it('should label non-billable work « Hors OF » without any reference', async () => {
+  it('should display personal fabrication orders by their name without a reference', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
@@ -604,8 +607,8 @@ describe('Supervision atelier component', () => {
 
       activites: [
         activiteFixture(aubertFixture, {
-          id: 'act-hors-of',
-          objet: new HorsOf(),
+          id: 'act-perso',
+          objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
           poste: posteFixture('Tour 3', 'Tournage'),
           debut: instantFixture(7, 45),
         }),
@@ -613,7 +616,7 @@ describe('Supervision atelier component', () => {
     });
 
     expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
-      { element: 'Hors OF', poste: 'Tour 3 · Tournage', debut: 'depuis 07:45' },
+      { element: 'OF OF Perso', poste: 'Tour 3 · Tournage', debut: 'depuis 07:45' },
     ]);
   });
 

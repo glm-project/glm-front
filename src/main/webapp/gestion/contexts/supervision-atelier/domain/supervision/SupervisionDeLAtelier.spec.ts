@@ -1,7 +1,6 @@
 import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
 import { CategorieActivite, ValeurCategorieActivite } from '../activite/CategorieActivite';
 import { ElementTravaille } from '../activite/ElementTravaille';
-import { HorsOf } from '../activite/HorsOf';
 import { IdentifiantActivite } from '../activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../activite/IdentifiantSequence';
 import { ReferenceDElement } from '../activite/ReferenceDElement';
@@ -431,17 +430,17 @@ describe('SupervisionDeLAtelier', () => {
     ]);
   });
 
-  it('should count a non-billable activity as work', () => {
+  it('should count work on a personal fabrication order as work', () => {
     const operateur = operateurFixture('op-1');
-    const horsOf = new ActiviteDeSupervision({
-      id: new IdentifiantActivite('act-hors-of'),
+    const ofPerso = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('act-perso'),
       operateurId: operateur.id,
-      objet: new HorsOf(),
+      objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:30:00Z'),
     });
 
-    const supervision = supervisionFixture([operateur], [horsOf]);
+    const supervision = supervisionFixture([operateur], [ofPerso]);
 
     expect(couloirDe(supervision, operateur)).toBe('AU_TRAVAIL');
   });
