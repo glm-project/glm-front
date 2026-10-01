@@ -13,7 +13,8 @@ import {
   TypeDePresence,
 } from './JournalDuPupitre';
 
-interface SuiviEnProjection extends SuiviDuPupitre {
+interface SuiviEnProjection {
+  readonly suivi: SuiviDuPupitre;
   readonly ouverturesConnues: readonly ActiviteDuPupitre[];
   readonly ciblesConsommees: readonly string[];
 }
@@ -33,21 +34,23 @@ const targetsAnotherPlace = (suivi: SuiviEnProjection, geste: PointageCausal): b
   return cible !== undefined && !occupiesSamePlace(cible, geste);
 };
 
-const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCausal): boolean =>
-  geste.intention !== 'OUVERTURE'
-  && (targetedActivity(suivi, geste) === undefined
-    || predatesTargetOpening(suivi, geste)
-    || repeatsTargetCategory(suivi, geste)
-    || suivi.ciblesConsommees.includes(geste.cible)
-    || suivi.activites.some(activite => occupiesSamePlace(activite, geste) && activite.ouverture !== geste.cible));
-
-const predatesTargetOpening = (suivi: SuiviEnProjection, geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>): boolean => {
+const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
+  if (geste.intention === 'OUVERTURE') return false;
   const cible = targetedActivity(suivi, geste);
-  return cible !== undefined && Date.parse(geste.dateDeSurvenue) < Date.parse(cible.depuis);
+  return (
+    cible === undefined
+    || predatesTargetOpening(cible, geste)
+    || repeatsTargetCategory(cible, geste)
+    || suivi.ciblesConsommees.includes(geste.cible)
+    || suivi.suivi.activites.some(activite => occupiesSamePlace(activite, geste) && activite.ouverture !== geste.cible)
+  );
 };
 
-const repeatsTargetCategory = (suivi: SuiviEnProjection, geste: PointageCausal): boolean =>
-  geste.intention === 'TRANSITION' && targetedActivity(suivi, geste)?.categorie === categorieFor(geste);
+const predatesTargetOpening = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
+  Date.parse(geste.dateDeSurvenue) < Date.parse(cible.depuis);
+
+const repeatsTargetCategory = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
+  geste.intention === 'TRANSITION' && cible.categorie === categorieFor(geste);
 
 const consumesTarget = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
   if (geste.intention === 'OUVERTURE') return false;
@@ -74,7 +77,7 @@ const cannotOpenActivity = (geste: PointageCausal, conflit: boolean): boolean =>
 const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): readonly string[] => {
   const cible = geste.intention === 'OUVERTURE' ? [] : [geste.cible];
   const remplacees = conflit
-    ? suivi.activites.filter(activite => occupiesSamePlace(activite, geste)).map(activite => activite.ouverture)
+    ? suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste)).map(activite => activite.ouverture)
     : [];
   return [...suivi.ciblesConsommees, ...(consumesTarget(suivi, geste) ? cible : []), ...remplacees];
 };
@@ -84,11 +87,10 @@ const applyPointage = (suivi: SuiviEnProjection, geste: GesteDePointage): SuiviE
   if (targetsAnotherPlace(suivi, geste)) return suivi;
   const conflit = targetsUnavailableActivity(suivi, geste);
   const nouvelles = newlyOpenedActivities(geste, conflit);
-  const activites = [...suivi.activites.filter(activite => !occupiesSamePlace(activite, geste)), ...nouvelles];
+  const activites = [...suivi.suivi.activites.filter(activite => !occupiesSamePlace(activite, geste)), ...nouvelles];
   return {
     ...suivi,
-    activites,
-    etat: etatFor(activites.length),
+    suivi: { ...suivi.suivi, activites, etat: etatFor(activites.length) },
     ouverturesConnues: [...suivi.ouverturesConnues, ...nouvelles],
     ciblesConsommees: consumedTargets(suivi, geste, conflit),
   };
@@ -117,7 +119,7 @@ const applyToMatching = <T>(items: readonly T[], matches: (item: T) => boolean, 
 const projectPointage = (suivis: readonly SuiviEnProjection[], geste: GesteDePointage): SuiviEnProjection[] =>
   applyToMatching(
     suivis,
-    suivi => !isAlreadyProjectedOrUnrelated(suivi, geste),
+    suivi => !isAlreadyProjectedOrUnrelated(suivi.suivi, geste),
     suivi => applyPointage(suivi, geste),
   );
 
@@ -166,20 +168,12 @@ export const projectReferentiel = (pupitre: JournalDuPupitre, instant?: number):
   }
   const initial: ReferentielEnProjection = {
     ...pupitre.referentiel,
-    suivis: pupitre.referentiel.suivis.map(suivi => ({ ...suivi, ouverturesConnues: suivi.activites, ciblesConsommees: [] })),
+    suivis: pupitre.referentiel.suivis.map(suivi => ({ suivi, ouverturesConnues: suivi.activites, ciblesConsommees: [] })),
   };
   const projection = pupitre.evenements.reduce(applyEvenement, initial);
   const referentiel: ReferentielDuPupitre = {
     ...projection,
-    suivis: projection.suivis.map(suivi => ({
-      id: suivi.id,
-      nom: suivi.nom,
-      etat: suivi.etat,
-      type: suivi.type,
-      activites: suivi.activites,
-      evenements: suivi.evenements,
-      ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
-    })),
+    suivis: projection.suivis.map(({ suivi }) => suivi),
   };
   if (instant === undefined) return referentiel;
   return {
