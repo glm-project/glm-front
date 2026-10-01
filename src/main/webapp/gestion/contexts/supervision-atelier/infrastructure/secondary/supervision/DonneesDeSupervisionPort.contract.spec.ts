@@ -1,6 +1,14 @@
+import { components } from '@/app/generated/schema';
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Instant } from '../../../domain/instant/Instant';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
+import { HttpDonneesDeSupervision } from './HttpDonneesDeSupervision';
 import { InMemoryDonneesDeSupervision } from './InMemoryDonneesDeSupervision';
 
 describe.each([
@@ -69,19 +77,65 @@ const whenReadAt = (port: DonneesDeSupervisionPort, instant: string) => {
 };
 
 const EVALUATION = new Instant('2026-09-13T10:00:00Z');
-const emptyFixture: DonneesDeSupervision = { evaluation: EVALUATION, operateurs: [], activites: [], sequencesEnConflit: [] };
+type RestSupervision = components['schemas']['RestSupervisionDAtelier'];
+
+interface SceneFixture {
+  readonly donnees: DonneesDeSupervision;
+  readonly response: RestSupervision;
+}
+
+interface ReadHarness {
+  readonly port: DonneesDeSupervisionPort;
+  answer(): void;
+}
+
+const emptyFixture: SceneFixture = {
+  donnees: { evaluation: EVALUATION, operateurs: [], activites: [], sequencesEnConflit: [] },
+  response: { evaluation: EVALUATION.value, operateurs: [], activites: [], sequencesEnConflit: [] },
+};
+
+const givenInMemory = (scene: SceneFixture): ReadHarness => ({
+  port: new InMemoryDonneesDeSupervision(scene.donnees),
+  answer: () => undefined,
+});
+
+const givenHttp = (scene: SceneFixture): ReadHarness => {
+  TestBed.configureTestingModule({
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      ApiClient,
+      HttpDonneesDeSupervision,
+      { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+    ],
+  });
+  const http = TestBed.inject(HttpTestingController);
+  return {
+    port: TestBed.inject(HttpDonneesDeSupervision),
+    answer: () => {
+      http.expectOne({ method: 'GET', url: '/api/atelier/supervision' }).flush(scene.response);
+    },
+  };
+};
+
+const whenRead = async (harness: ReadHarness): Promise<DonneesDeSupervision> => {
+  const reading = harness.port.read();
+  harness.answer();
+  return reading;
+};
 
 describe.each([
-  { name: 'InMemory', given: (donnees: DonneesDeSupervision): DonneesDeSupervisionPort => new InMemoryDonneesDeSupervision(donnees) },
+  { name: 'InMemory', given: givenInMemory },
+  { name: 'HTTP', given: givenHttp },
 ])('$name complete supervision acquisition', ({ given }) => {
   afterEach(() => vi.useRealTimers());
 
   it('should read a complete empty workshop without fabricating operators or activities', async () => {
     givenEvaluationAt(EVALUATION.value);
-    const port = given(emptyFixture);
+    const harness = given(emptyFixture);
 
-    const donnees = await port.read();
+    const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(emptyFixture);
+    expect(donnees).toEqual(emptyFixture.donnees);
   });
 });
