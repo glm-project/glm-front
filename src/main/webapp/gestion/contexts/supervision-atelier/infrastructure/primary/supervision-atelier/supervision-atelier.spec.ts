@@ -78,6 +78,7 @@ const aliceFixture = operateurFixture('alice', 'Martin', 'Alice');
 const bobFixture = operateurFixture('bob', 'Durand', 'Bob');
 const chloeFixture = operateurFixture('chloe', 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
+  evaluation: instantFixture(10),
   sequencesEnConflit: [],
   operateurs: [aliceFixture, bobFixture, chloeFixture],
 
@@ -95,6 +96,7 @@ const schmittFixture = operateurFixture('op-schmitt', 'Schmitt', 'Yanis');
 const vidalFixture = operateurFixture('op-vidal', 'Vidal', 'Hugo');
 
 const atelierFixture: DonneesDeSupervision = {
+  evaluation: instantFixture(10),
   sequencesEnConflit: [],
   operateurs: [
     vidalFixture,
@@ -142,6 +144,7 @@ const atelierFixture: DonneesDeSupervision = {
 const operateursNcFixture = (nombre: number): DonneesDeSupervision => {
   const operateurs = Array.from({ length: nombre }, (_, index) => operateurFixture(`op-${index}`, `Opérateur ${index}`, 'Actif'));
   return {
+    evaluation: instantFixture(10),
     sequencesEnConflit: [],
     operateurs,
 
@@ -182,7 +185,7 @@ describe('Supervision atelier component', () => {
   });
 
   afterEach(async () => {
-    sourceFixture.response.resolve({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    sourceFixture.response.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
     await componentFixture.whenStable();
     componentFixture.destroy();
     vi.restoreAllMocks();
@@ -240,7 +243,7 @@ describe('Supervision atelier component', () => {
     await whenTimePasses(60_000);
     const readsBeforeRelease = sourceFixture.reads;
     sourceFixture.prepare();
-    obsoleteResponse.resolve({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    obsoleteResponse.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
     await whenSupervisionOpened();
     const obsoleteResultWasWithheld = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     const readsAfterRelease = sourceFixture.reads;
@@ -280,7 +283,7 @@ describe('Supervision atelier component', () => {
     whenSupervisionRemounted();
     await whenSupervisionOpened();
     await whenDonneesArrive();
-    obsoleteResponse.resolve({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    obsoleteResponse.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
     await obsoleteResponse.promise;
     await whenViewSettles();
 
@@ -812,8 +815,10 @@ describe('Supervision atelier component', () => {
     await sourceFixture.arrival.promise;
   };
 
-  const whenDonneesArrive = async (donnees: DonneesDeSupervision = donneesFixture): Promise<void> => {
-    sourceFixture.response.resolve(donnees);
+  const whenDonneesArrive = async (
+    donnees: Omit<DonneesDeSupervision, 'evaluation'> & Partial<Pick<DonneesDeSupervision, 'evaluation'>> = donneesFixture,
+  ): Promise<void> => {
+    sourceFixture.response.resolve({ evaluation: new Instant(new Date().toISOString()), ...donnees });
     await componentFixture.whenStable();
   };
 

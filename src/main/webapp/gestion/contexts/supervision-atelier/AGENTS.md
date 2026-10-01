@@ -70,7 +70,8 @@ une activité, y compris dans une séquence en conflit, n'a pas d'opérateur ide
 - Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur
   qui remplace les couloirs précédents.
 - Pendant la relecture toutes les 30 s ou par « Actualiser », les couloirs restent visibles. La vue est
-  réévaluée à la fin de chaque lecture même quand le port rend le même objet. Le chargement n'occupe
+  réévaluée à chaque acquisition avec son `evaluation` obligatoire, sans extrapoler depuis l'horloge du navigateur.
+  La fraîcheur affichée utilise ce même instant. Le chargement n'occupe
   l'écran que lorsqu'aucune vue exploitable n'est affichée ; une erreur remplace toujours la vue.
 - Ce contexte acquiert la vue par un seul port et ne partage aucun modèle métier avec `pupitre`.
 - Seul l'adapter InMemory est branché, y compris en production. Il fournit les démonstrations d'activité,

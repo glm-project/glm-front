@@ -85,6 +85,7 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
   const instantBefore = (minutes: number): Instant => new Instant(new Date(instantDemonstration - minutes * 60_000).toISOString());
   const operateur = (id: string): IdentifiantOperateur => new IdentifiantOperateur(id);
   return {
+    evaluation: new Instant(new Date(instantDemonstration).toISOString()),
     sequencesEnConflit: [
       new SequenceEnConflit({
         id: new IdentifiantSequence('sequence-perrin'),

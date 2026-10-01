@@ -33,10 +33,12 @@ describe('SupervisionDeLAtelier', () => {
       activites: [activite],
     });
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { operateurs: [operateur], activites: [], sequencesEnConflit: [sequence] },
-      MAINTENANT,
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: MAINTENANT,
+      operateurs: [operateur],
+      activites: [],
+      sequencesEnConflit: [sequence],
+    });
 
     expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
   });
@@ -47,10 +49,12 @@ describe('SupervisionDeLAtelier', () => {
     const sequence = new SequenceEnConflit({ id: new IdentifiantSequence('sequence-1'), operateurId: operateur.id, activites: [activite] });
 
     const supervision = exploitableFixture(
-      SupervisionDeLAtelier.determine(
-        { operateurs: [operateur], activites: [], sequencesEnConflit: [sequence] },
-        new Instant('2026-09-14T09:00:00Z'),
-      ),
+      SupervisionDeLAtelier.determine({
+        evaluation: new Instant('2026-09-14T09:00:00Z'),
+        operateurs: [operateur],
+        activites: [],
+        sequencesEnConflit: [sequence],
+      }),
     );
 
     expect(couloirDe(supervision, operateur)).toBe('SANS_ACTIVITE');
@@ -70,10 +74,12 @@ describe('SupervisionDeLAtelier', () => {
     });
 
     const supervision = exploitableFixture(
-      SupervisionDeLAtelier.determine(
-        { operateurs: [autreOperateur, proprietaire], activites: [], sequencesEnConflit: [sequence] },
-        MAINTENANT,
-      ),
+      SupervisionDeLAtelier.determine({
+        evaluation: MAINTENANT,
+        operateurs: [autreOperateur, proprietaire],
+        activites: [],
+        sequencesEnConflit: [sequence],
+      }),
     );
 
     expect(supervision.operateurs).toMatchObject([
@@ -95,7 +101,7 @@ describe('SupervisionDeLAtelier', () => {
     });
 
     const supervision = exploitableFixture(
-      SupervisionDeLAtelier.determine({ sequencesEnConflit: [], operateurs: [operateur], activites: [activite] }, MAINTENANT),
+      SupervisionDeLAtelier.determine({ evaluation: MAINTENANT, sequencesEnConflit: [], operateurs: [operateur], activites: [activite] }),
     );
 
     expect(couloirDe(supervision, operateur)).toBe('SANS_ACTIVITE');
@@ -107,10 +113,12 @@ describe('SupervisionDeLAtelier', () => {
     const operateur = operateurFixture('op-expired');
     const activite = activiteFixture(operateur);
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [operateur], activites: [activite] },
-      new Instant('2026-09-13T21:30:00Z'),
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T21:30:00Z'),
+      sequencesEnConflit: [],
+      operateurs: [operateur],
+      activites: [activite],
+    });
 
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('SANS_ACTIVITE');
   });
@@ -164,10 +172,12 @@ describe('SupervisionDeLAtelier', () => {
   });
 
   it('should produce an empty supervision when no operators are declared', () => {
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [], activites: [] },
-      new Instant('2026-09-13T09:00:00Z'),
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T09:00:00Z'),
+      sequencesEnConflit: [],
+      operateurs: [],
+      activites: [],
+    });
 
     expect(exploitableFixture(resultat).operateurs).toEqual([]);
   });
@@ -178,10 +188,12 @@ describe('SupervisionDeLAtelier', () => {
     const dupont = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const bernardAlexandre = new OperateurDeclare({ id: new IdentifiantOperateur('op-4'), nom: 'Bernard', prenom: 'Alexandre' });
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [martin, bernardClaude, dupont, bernardAlexandre], activites: [] },
-      MAINTENANT,
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: MAINTENANT,
+      sequencesEnConflit: [],
+      operateurs: [martin, bernardClaude, dupont, bernardAlexandre],
+      activites: [],
+    });
 
     expect(exploitableFixture(resultat).operateurs).toMatchObject([
       { operateur: bernardAlexandre, activites: [] },
@@ -195,10 +207,12 @@ describe('SupervisionDeLAtelier', () => {
     const premierHomonyme = new OperateurDeclare({ id: new IdentifiantOperateur('op-1'), nom: 'Dupont', prenom: 'Jean' });
     const secondHomonyme = new OperateurDeclare({ id: new IdentifiantOperateur('op-2'), nom: 'Dupont', prenom: 'Jean' });
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [secondHomonyme, premierHomonyme], activites: [] },
-      new Instant('2026-09-13T09:00:00Z'),
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T09:00:00Z'),
+      sequencesEnConflit: [],
+      operateurs: [secondHomonyme, premierHomonyme],
+      activites: [],
+    });
 
     expect(exploitableFixture(resultat).operateurs).toMatchObject([
       { operateur: premierHomonyme, activites: [] },
@@ -234,10 +248,12 @@ describe('SupervisionDeLAtelier', () => {
       poste: posteFixture('Poste-3'),
     });
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [dupont, martin], activites: [premiereActivite, secondeActivite, activiteMartin] },
-      MAINTENANT,
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: MAINTENANT,
+      sequencesEnConflit: [],
+      operateurs: [dupont, martin],
+      activites: [premiereActivite, secondeActivite, activiteMartin],
+    });
 
     expect(exploitableFixture(resultat).operateurs).toMatchObject([
       { operateur: dupont, activites: [premiereActivite, secondeActivite] },
@@ -280,10 +296,12 @@ describe('SupervisionDeLAtelier', () => {
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [operateur], activites: [activiteSansOperateur] },
-      new Instant('2026-09-13T09:00:00Z'),
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T09:00:00Z'),
+      sequencesEnConflit: [],
+      operateurs: [operateur],
+      activites: [activiteSansOperateur],
+    });
 
     expect(resultat.estExploitable).toBe(false);
     expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
@@ -300,10 +318,12 @@ describe('SupervisionDeLAtelier', () => {
       debut: new Instant('2026-09-13T08:00:00Z'),
     });
 
-    const resultat = SupervisionDeLAtelier.determine(
-      { sequencesEnConflit: [], operateurs: [operateur], activites: [activiteInconnue] },
-      new Instant('2026-09-13T09:00:00Z'),
-    );
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T09:00:00Z'),
+      sequencesEnConflit: [],
+      operateurs: [operateur],
+      activites: [activiteInconnue],
+    });
 
     expect(resultat.estExploitable).toBe(false);
     expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
@@ -356,7 +376,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should expose the evaluation instant it was determined at', () => {
     const maintenant = new Instant('2026-09-24T07:10:00Z');
 
-    const resultat = SupervisionDeLAtelier.determine({ sequencesEnConflit: [], operateurs: [], activites: [] }, maintenant);
+    const resultat = SupervisionDeLAtelier.determine({ evaluation: maintenant, sequencesEnConflit: [], operateurs: [], activites: [] });
 
     expect(exploitableFixture(resultat).instantDEvaluation).toBe(maintenant);
   });
@@ -454,7 +474,7 @@ const activiteSurPosteFixture = (
   });
 
 function supervisionFixture(operateurs: readonly OperateurDeclare[], activites: readonly ActiviteDeSupervision[]): SupervisionDeLAtelier {
-  return exploitableFixture(SupervisionDeLAtelier.determine({ sequencesEnConflit: [], operateurs, activites }, MAINTENANT));
+  return exploitableFixture(SupervisionDeLAtelier.determine({ evaluation: MAINTENANT, sequencesEnConflit: [], operateurs, activites }));
 }
 
 function operateursDuCouloir(supervision: SupervisionDeLAtelier, couloir: CouloirDeSupervision): readonly string[] {

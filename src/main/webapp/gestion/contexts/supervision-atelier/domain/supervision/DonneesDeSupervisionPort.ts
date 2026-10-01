@@ -4,7 +4,7 @@ import { Instant } from '../instant/Instant';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
 
 export interface DonneesDeSupervision {
-  readonly evaluation?: Instant;
+  readonly evaluation: Instant;
   readonly operateurs: readonly OperateurDeclare[];
   readonly sequencesEnConflit: readonly SequenceEnConflit[];
   readonly activites: readonly ActiviteDeSupervision[];
