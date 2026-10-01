@@ -472,6 +472,27 @@ describe('HTTP supervision beyond the shared contract', () => {
     expect(harnessFixture.errors.errors).toEqual([failure]);
   });
 
+  it('should reject an acquisition still pending at the thirty-second network deadline and report it once', async () => {
+    givenNetworkClock();
+    const reading = harnessFixture.port.read();
+
+    const failure = await whenNetworkDeadlineIsReached(reading);
+
+    expect(failure).toMatchObject({ name: 'TimeoutError' });
+    expect(harnessFixture.errors.errors).toEqual([failure]);
+  });
+
+  const givenNetworkClock = (): void => {
+    vi.useFakeTimers();
+  };
+
+  const whenNetworkDeadlineIsReached = async (reading: Promise<DonneesDeSupervision>): Promise<unknown> => {
+    const failure = reading.catch((error: unknown) => error);
+    harnessFixture.http.expectOne('/api/atelier/supervision');
+    await vi.advanceTimersByTimeAsync(30_000);
+    return failure;
+  };
+
   const whenInvalidEvaluationArrives = (): void => {
     harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...emptyFixture.response, evaluation: '2026-09-13T10:00:00' });
   };
