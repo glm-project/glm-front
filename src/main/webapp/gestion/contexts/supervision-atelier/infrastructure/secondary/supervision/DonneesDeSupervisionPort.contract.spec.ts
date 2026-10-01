@@ -14,7 +14,9 @@ import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
+import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { HttpDonneesDeSupervision } from './HttpDonneesDeSupervision';
 import { InMemoryDonneesDeSupervision } from './InMemoryDonneesDeSupervision';
@@ -139,6 +141,45 @@ const fabricationOrderFixture: SceneFixture = {
   },
 };
 
+const otherOperatorFixture = new OperateurDeclare({ id: new IdentifiantOperateur('op-legrand'), nom: 'Legrand', prenom: 'Noé' });
+const mouldActivityFixture = new ActiviteDeSupervision({
+  id: new IdentifiantActivite('opening-mould'),
+  operateurId: otherOperatorFixture.id,
+  objet: new ElementTravaille({ type: 'PRODUIT', nom: 'Moule personnel' }),
+  categorie: new CategorieActivite('NON_CONFORMITE'),
+  debut: new Instant('2026-09-13T09:15:00Z'),
+  echeance: new Instant('2026-09-13T22:15:00Z'),
+  poste: new PosteDeSupervision({
+    id: new IdentifiantPoste('poste-fraiseuse'),
+    libelle: 'Fraiseuse 2',
+    nature: new NatureDeTravail('Fraisage'),
+  }),
+});
+const mouldFixture: SceneFixture = {
+  donnees: {
+    ...fabricationOrderFixture.donnees,
+    operateurs: [operateurFixture, otherOperatorFixture],
+    activites: [activityFixture, mouldActivityFixture],
+  },
+  response: {
+    ...fabricationOrderFixture.response,
+    operateurs: [...fabricationOrderFixture.response.operateurs, { id: 'op-legrand', nom: 'Legrand', prenom: 'Noé', metiers: [] }],
+    activites: [
+      ...fabricationOrderFixture.response.activites,
+      {
+        id: 'opening-mould',
+        operateurId: 'op-legrand',
+        element: { id: 'moule-personnel', type: 'PRODUIT', nom: 'Moule personnel' },
+        categorie: 'NON_CONFORMITE',
+        debut: '2026-09-13T09:15:00Z',
+        echeance: '2026-09-13T22:15:00Z',
+        etat: 'EN_COURS',
+        poste: { id: 'poste-fraiseuse', libelle: 'Fraiseuse 2', nature: 'Fraisage' },
+      },
+    ],
+  },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -200,5 +241,14 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(fabricationOrderFixture.donnees);
+  });
+
+  it('should retain a nonconforming mould activity and workstation trade without inventing an element reference', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(mouldFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(mouldFixture.donnees);
   });
 });

@@ -8,7 +8,9 @@ import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
+import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 
 @Injectable()
@@ -41,6 +43,15 @@ export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
             categorie: new CategorieActivite(activite.categorie),
             debut: new Instant(activite.debut),
             echeance: new Instant(activite.echeance),
+            ...(activite.poste === undefined
+              ? {}
+              : {
+                  poste: new PosteDeSupervision({
+                    id: new IdentifiantPoste(activite.poste.id),
+                    libelle: activite.poste.libelle,
+                    ...(activite.poste.nature === undefined ? {} : { nature: new NatureDeTravail(activite.poste.nature) }),
+                  }),
+                }),
           }),
       ),
       sequencesEnConflit: [],
