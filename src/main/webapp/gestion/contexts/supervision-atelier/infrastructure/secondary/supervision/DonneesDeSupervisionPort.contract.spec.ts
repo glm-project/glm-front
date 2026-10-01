@@ -10,7 +10,9 @@ import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSuperv
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
+import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -215,6 +217,20 @@ const automaticEndFixture: SceneFixture = {
   },
 };
 
+const emptyConflictFixture: SceneFixture = {
+  donnees: {
+    ...fabricationOrderFixture.donnees,
+    sequencesEnConflit: [
+      new SequenceEnConflit({
+        id: new IdentifiantSequence('sequence-empty'),
+        operateurId: operateurFixture.id,
+        activites: [],
+      }),
+    ],
+  },
+  response: { ...fabricationOrderFixture.response, sequencesEnConflit: [{ id: 'sequence-empty', operateurId: 'op-serin', activites: [] }] },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -294,5 +310,14 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(automaticEndFixture.donnees);
+  });
+
+  it('should retain an empty conflicting sequence independently of current interpretable work', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(emptyConflictFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(emptyConflictFixture.donnees);
   });
 });
