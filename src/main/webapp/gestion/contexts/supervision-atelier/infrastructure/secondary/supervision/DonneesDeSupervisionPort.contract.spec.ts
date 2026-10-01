@@ -302,6 +302,15 @@ const conflictFixture: SceneFixture = {
   },
 };
 
+const unresolvedActivityFixture: SceneFixture = {
+  donnees: { ...fabricationOrderFixture.donnees, operateurs: [] },
+  response: { ...fabricationOrderFixture.response, operateurs: [] },
+};
+const unresolvedSequenceFixture: SceneFixture = {
+  donnees: { ...emptyConflictFixture.donnees, operateurs: [], activites: [] },
+  response: { ...emptyConflictFixture.response, operateurs: [], activites: [] },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -399,5 +408,17 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(conflictFixture.donnees);
+  });
+
+  it.each([
+    { name: 'activity', scene: unresolvedActivityFixture },
+    { name: 'conflicting sequence', scene: unresolvedSequenceFixture },
+  ])('should acquire a complete $name without a declared operator for the domain to decide exploitability', async ({ scene }) => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(scene);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(scene.donnees);
   });
 });
