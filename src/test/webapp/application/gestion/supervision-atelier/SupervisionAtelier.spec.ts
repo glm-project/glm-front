@@ -90,6 +90,14 @@ describe('Supervision atelier in back office', () => {
 
     thenTheCorrectedWorkshopHasNoWarnings();
   });
+
+  it('should display a loading error without demonstration cards when the initial workshop read fails', () => {
+    givenAnUnavailableWorkshop();
+
+    whenVisitingTheRoot();
+
+    thenTheWorkshopLoadingErrorIsDisplayed();
+  });
 });
 
 const givenConnectedWorkshop = (): void => {
@@ -102,6 +110,19 @@ const givenAnIdleConnectedWorkshop = (): void => {
 
 const givenAWorkshopWithWarnings = (): void => {
   apiFixture.replace(workshopWithWarningsFixture);
+};
+
+const givenAnUnavailableWorkshop = (): void => {
+  apiFixture.fail();
+};
+
+const thenTheWorkshopLoadingErrorIsDisplayed = (): void => {
+  cy.get(dataSelector('supervision-error'))
+    .should('be.visible')
+    .and('contain.text', 'Impossible de charger les données de supervision. Réessayez avec « Actualiser ».');
+  cy.get(dataSelector('supervision-carte')).should('not.exist');
+  cy.get(dataSelector('supervision-derniere-lecture')).should('not.exist');
+  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled');
 };
 
 const whenRefreshingAfterBackendCorrection = (): void => {
