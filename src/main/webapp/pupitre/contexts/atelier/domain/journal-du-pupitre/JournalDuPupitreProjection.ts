@@ -77,9 +77,17 @@ const cannotOpenActivity = (geste: PointageCausal, conflit: boolean): boolean =>
 const conflictingActivities = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): readonly ActiviteDuPupitre[] =>
   conflit ? suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste)) : [];
 
+const replacesActiveTarget = (activite: ActiviteDuPupitre, geste: PointageCausal): boolean =>
+  occupiesSamePlace(activite, geste) && Date.parse(geste.dateDeSurvenue) <= Date.parse(activite.echeance);
+
 const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): ReadonlySet<string> => {
-  if (geste.intention === 'OUVERTURE') return suivi.ciblesConsommees;
   const cibles = new Set(suivi.ciblesConsommees);
+  if (geste.intention === 'OUVERTURE') {
+    for (const activite of suivi.suivi.activites) {
+      if (replacesActiveTarget(activite, geste)) cibles.add(activite.ouverture);
+    }
+    return cibles;
+  }
   cibles.add(geste.cible);
   for (const activite of conflictingActivities(suivi, geste, conflit)) cibles.add(activite.ouverture);
   return cibles;

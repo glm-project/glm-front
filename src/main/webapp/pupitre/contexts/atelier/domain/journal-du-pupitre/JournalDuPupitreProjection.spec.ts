@@ -61,6 +61,26 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it.each(['2026-09-05T12:00:00Z', '2026-09-05T21:00:00Z'])(
+    'should retain a conflict when a late finish targets an activity replaced before or at expiry: %s',
+    dateDeSurvenue => {
+      const reopening: GesteDePointage = { ...debutGesteFixture, id: 'remplacement', dateDeSurvenue };
+      const finish: GesteDePointage = {
+        ...debutGesteFixture,
+        id: 'fin-tardive',
+        type: 'FIN',
+        intention: 'FIN',
+        cible: 'debut',
+        dateDeSurvenue: '2026-09-05T23:00:00Z',
+      };
+      const state = givenEvents([debutFixture, { geste: reopening, etat: 'EN_ATTENTE' }, { geste: finish, etat: 'EN_ATTENTE' }]);
+
+      const projection = projectReferentiel(state, Date.parse('2026-09-05T23:01:00Z'));
+
+      thenStateIs(projection, 'INTERROMPU', 0);
+    },
+  );
+
   it('should retain a conflict when a late finish follows a real finish of the same target', () => {
     const firstFinish: GesteDePointage = {
       ...debutGesteFixture,
