@@ -20,6 +20,15 @@ describe('DesignationOperateur', () => {
     designation = DesignationOperateur.empty();
   });
 
+  it('should schedule the full inactivity period after a new press', () => {
+    const instant = 1_000;
+
+    const press = designation.afterPress(instant);
+
+    expect(press.accepted).toBe(true);
+    expect(press.designation.snapshot().deadline).toBe(31_000);
+  });
+
   it('should require a selected entreprise to reconcile even before an operator is designated', () => {
     expect(designation.canReconcileWith(undefined)).toBe(false);
   });
