@@ -41,13 +41,15 @@ const isIneffectiveLateFinish = (suivi: SuiviEnProjection, geste: PointageCausal
   return cible !== undefined && Date.parse(geste.dateDeSurvenue) > Date.parse(cible.echeance);
 };
 
-const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
-  if (geste.intention === 'OUVERTURE') return false;
+const targetsUnavailableActivity = (
+  suivi: SuiviEnProjection,
+  geste: Extract<PointageCausal, { readonly intention: 'TRANSITION' }>,
+): boolean => {
   const cible = targetedActivity(suivi, geste);
   return (
     cible === undefined
     || predatesTargetOpening(cible, geste)
-    || repeatsTargetCategory(cible, geste)
+    || cible.categorie === categorieFor(geste)
     || suivi.ciblesConsommees.has(geste.cible)
     || suivi.suivi.activites.some(activite => occupiesSamePlace(activite, geste) && activite.ouverture !== geste.cible)
   );
@@ -56,11 +58,12 @@ const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCau
 const predatesTargetOpening = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
   Date.parse(geste.dateDeSurvenue) < Date.parse(cible.depuis);
 
-const repeatsTargetCategory = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
-  geste.intention === 'TRANSITION' && cible.categorie === categorieFor(geste);
+const isUnavailableTransition = (suivi: SuiviEnProjection, geste: Exclude<PointageCausal, { readonly intention: 'FIN' }>): boolean =>
+  geste.intention === 'TRANSITION' && targetsUnavailableActivity(suivi, geste);
 
-const newlyOpenedActivities = (geste: PointageCausal, conflit: boolean): readonly ActiviteDuPupitre[] => {
-  if (cannotOpenActivity(geste, conflit)) return [];
+const newlyOpenedActivities = (suivi: SuiviEnProjection, geste: PointageCausal): readonly ActiviteDuPupitre[] => {
+  if (geste.intention === 'FIN') return [];
+  if (isUnavailableTransition(suivi, geste)) return [];
   return [
     {
       ouverture: geste.id,
@@ -72,15 +75,13 @@ const newlyOpenedActivities = (geste: PointageCausal, conflit: boolean): readonl
     },
   ];
 };
-const cannotOpenActivity = (geste: PointageCausal, conflit: boolean): boolean => geste.type === 'FIN' || conflit;
-
-const conflictingActivities = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): readonly ActiviteDuPupitre[] =>
-  conflit ? suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste)) : [];
+const activitiesAtTheSamePlace = (suivi: SuiviEnProjection, geste: PointageCausal): readonly ActiviteDuPupitre[] =>
+  suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste));
 
 const replacesActiveTarget = (activite: ActiviteDuPupitre, geste: PointageCausal): boolean =>
   occupiesSamePlace(activite, geste) && Date.parse(geste.dateDeSurvenue) <= Date.parse(activite.echeance);
 
-const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, conflit: boolean): ReadonlySet<string> => {
+const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal): ReadonlySet<string> => {
   const cibles = new Set(suivi.ciblesConsommees);
   if (geste.intention === 'OUVERTURE') {
     for (const activite of suivi.suivi.activites) {
@@ -89,7 +90,7 @@ const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, confli
     return cibles;
   }
   cibles.add(geste.cible);
-  for (const activite of conflictingActivities(suivi, geste, conflit)) cibles.add(activite.ouverture);
+  for (const activite of activitiesAtTheSamePlace(suivi, geste)) cibles.add(activite.ouverture);
   return cibles;
 };
 
@@ -97,18 +98,17 @@ const applyPointage = (suivi: SuiviEnProjection, geste: GesteDePointage): SuiviE
   if (geste.intention === undefined) return suivi;
   if (targetsAnotherPlace(suivi, geste)) return suivi;
   if (isIneffectiveLateFinish(suivi, geste)) return suivi;
-  const conflit = targetsUnavailableActivity(suivi, geste);
-  const nouvelles = newlyOpenedActivities(geste, conflit);
+  const nouvelles = newlyOpenedActivities(suivi, geste);
   const activites = [...suivi.suivi.activites.filter(activite => !occupiesSamePlace(activite, geste)), ...nouvelles];
   return {
     ...suivi,
     suivi: { ...suivi.suivi, activites, etat: etatFor(activites.length) },
     ouverturesConnues: [...suivi.ouverturesConnues, ...nouvelles],
-    ciblesConsommees: consumedTargets(suivi, geste, conflit),
+    ciblesConsommees: consumedTargets(suivi, geste),
   };
 };
 
-const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
+const categorieFor = (geste: Exclude<PointageCausal, { readonly intention: 'FIN' }>): 'TRAVAIL' | 'NON_CONFORMITE' => {
   if (geste.type === 'NON_CONFORMITE') {
     return 'NON_CONFORMITE';
   }
