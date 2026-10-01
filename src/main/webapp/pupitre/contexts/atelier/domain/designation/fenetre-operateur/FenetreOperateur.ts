@@ -290,7 +290,7 @@ export class FenetreOperateur {
         type: 'FIN',
         intention: 'FIN',
         cible: activite.ouverture,
-        ...(activite.posteId === undefined ? {} : { posteId: activite.posteId }),
+        posteId: activite.posteId,
       },
       identite,
     );

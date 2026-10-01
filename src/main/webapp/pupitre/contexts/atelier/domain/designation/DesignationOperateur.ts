@@ -187,9 +187,9 @@ export class DesignationOperateur {
   }
 
   private nextExpiration(): number | undefined {
-    const activityDeadline = this.visibleWindow()?.nextExpiration();
-    if (activityDeadline === undefined) return this.etat.deadline;
-    return Math.min(activityDeadline, this.etat.deadline ?? activityDeadline);
+    const deadline = this.etat.deadline;
+    if (deadline === undefined) return undefined;
+    return Math.min(this.visibleWindow()?.nextExpiration() ?? deadline, deadline);
   }
 
   private requireClosedWindow(): void {

@@ -67,7 +67,7 @@ export class ActivitesPersonnelles {
   }
 
   private transition(type: TypeDePointage, activite: SuiviDuPupitre['activites'][number]): TransitionDePointage {
-    const ciblage = { cible: activite.ouverture, ...(activite.posteId === undefined ? {} : { posteId: activite.posteId }) };
+    const ciblage = { cible: activite.ouverture, posteId: activite.posteId };
     return type === 'FIN' ? { ...ciblage, type, intention: 'FIN' } : { ...ciblage, type, intention: 'TRANSITION' };
   }
 }

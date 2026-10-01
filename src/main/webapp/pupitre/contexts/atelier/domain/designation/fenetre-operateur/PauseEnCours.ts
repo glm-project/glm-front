@@ -17,7 +17,7 @@ export interface ActiviteSuspendue {
 
 interface Emplacement {
   readonly suiviId: string;
-  readonly posteId?: string;
+  readonly posteId?: string | undefined;
 }
 
 type GesteSuspendu = GesteDePointage & { readonly suspension: Suspension };

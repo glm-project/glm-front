@@ -65,7 +65,7 @@ interface PointageIdentifie extends IdentiteDuGeste {
   readonly nature: 'POINTAGE';
   readonly operateurId: string;
   readonly suiviId: string;
-  readonly posteId?: string;
+  readonly posteId?: string | undefined;
   readonly suspension?: Suspension;
 }
 
