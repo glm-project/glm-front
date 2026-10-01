@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { ActiviteDeSupervision, DescriptionActivite } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
@@ -64,22 +65,28 @@ const toActivite = (activite: RestActivite): ActiviteDeSupervision =>
 @Injectable()
 export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
   private readonly api = inject(ApiClient);
+  private readonly errors = inject(ErrorHandlerPort);
 
   override async read(): Promise<DonneesDeSupervision> {
-    const response = await this.api.read('/api/atelier/supervision', {});
-    return {
-      evaluation: new Instant(response.evaluation),
-      operateurs: response.operateurs.map(toOperateur),
-      activites: response.activites.map(toActivite),
-      sequencesEnConflit: response.sequencesEnConflit.map(
-        sequence =>
-          new SequenceEnConflit({
-            id: new IdentifiantSequence(sequence.id),
-            operateurId: new IdentifiantOperateur(sequence.operateurId),
-            activites: sequence.activites.map(activite => new ActiviteDeSupervision({ ...toDescription(activite), etat: 'A_RESOUDRE' })),
-            ...(sequence.poste === undefined ? {} : { poste: toPoste(sequence.poste) }),
-          }),
-      ),
-    };
+    try {
+      const response = await this.api.read('/api/atelier/supervision', {});
+      return {
+        evaluation: new Instant(response.evaluation),
+        operateurs: response.operateurs.map(toOperateur),
+        activites: response.activites.map(toActivite),
+        sequencesEnConflit: response.sequencesEnConflit.map(
+          sequence =>
+            new SequenceEnConflit({
+              id: new IdentifiantSequence(sequence.id),
+              operateurId: new IdentifiantOperateur(sequence.operateurId),
+              activites: sequence.activites.map(activite => new ActiviteDeSupervision({ ...toDescription(activite), etat: 'A_RESOUDRE' })),
+              ...(sequence.poste === undefined ? {} : { poste: toPoste(sequence.poste) }),
+            }),
+        ),
+      };
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
   }
 }

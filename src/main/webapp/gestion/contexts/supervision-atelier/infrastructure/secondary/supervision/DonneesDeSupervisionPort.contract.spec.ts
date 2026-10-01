@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
@@ -99,6 +99,11 @@ interface SceneFixture {
 interface ReadHarness {
   readonly port: DonneesDeSupervisionPort;
   answer(): void;
+}
+
+interface HttpReadHarness extends ReadHarness {
+  readonly http: HttpTestingController;
+  readonly errors: ErrorHandlerFixture;
 }
 
 const emptyFixture: SceneFixture = {
@@ -316,19 +321,22 @@ const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   answer: () => undefined,
 });
 
-const givenHttp = (scene: SceneFixture): ReadHarness => {
+const givenHttp = (scene: SceneFixture): HttpReadHarness => {
+  const errors = new ErrorHandlerFixture();
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
       ApiClient,
       HttpDonneesDeSupervision,
-      { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      { provide: ErrorHandlerPort, useValue: errors },
     ],
   });
   const http = TestBed.inject(HttpTestingController);
   return {
     port: TestBed.inject(HttpDonneesDeSupervision),
+    http,
+    errors,
     answer: () => {
       http.expectOne({ method: 'GET', url: '/api/atelier/supervision' }).flush(scene.response);
     },
@@ -421,4 +429,30 @@ describe.each([
 
     expect(donnees).toEqual(scene.donnees);
   });
+});
+
+describe('HTTP supervision beyond the shared contract', () => {
+  let harnessFixture: HttpReadHarness;
+
+  beforeEach(() => {
+    harnessFixture = givenHttp(emptyFixture);
+  });
+  afterEach(() => {
+    harnessFixture.http.verify();
+    vi.useRealTimers();
+  });
+
+  it('should reject an unavailable acquisition and report the technical failure once', async () => {
+    const reading = harnessFixture.port.read();
+
+    whenBackendUnavailable();
+    const failure = await reading.catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ status: 503 });
+    expect(harnessFixture.errors.errors).toEqual([failure]);
+  });
+
+  const whenBackendUnavailable = (): void => {
+    harnessFixture.http.expectOne('/api/atelier/supervision').flush(null, { status: 503, statusText: 'Service Unavailable' });
+  };
 });
