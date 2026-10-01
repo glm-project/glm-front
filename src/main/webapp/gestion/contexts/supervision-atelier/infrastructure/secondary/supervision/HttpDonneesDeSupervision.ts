@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { inject, Injectable } from '@angular/core';
-import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
+import { ActiviteDeSupervision, DescriptionActivite } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
@@ -20,6 +20,7 @@ type RestOperateur = components['schemas']['RestOperateurDeSupervision'];
 type RestElement = components['schemas']['RestElementDeSupervision'];
 type RestPoste = components['schemas']['RestPosteDeSupervision'];
 type RestActivite = components['schemas']['RestActiviteDeSupervision'];
+type RestDescription = components['schemas']['RestDescriptionDActiviteDeSupervision'];
 
 const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
   new OperateurDeclare({
@@ -43,17 +44,21 @@ const toPoste = (poste: RestPoste): PosteDeSupervision =>
     ...(poste.nature === undefined ? {} : { nature: new NatureDeTravail(poste.nature) }),
   });
 
+const toDescription = (activite: RestDescription): DescriptionActivite => ({
+  id: new IdentifiantActivite(activite.id),
+  operateurId: new IdentifiantOperateur(activite.operateurId),
+  objet: toElement(activite.element),
+  categorie: new CategorieActivite(activite.categorie),
+  debut: new Instant(activite.debut),
+  echeance: new Instant(activite.echeance),
+  ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
+});
+
 const toActivite = (activite: RestActivite): ActiviteDeSupervision =>
   new ActiviteDeSupervision({
-    id: new IdentifiantActivite(activite.id),
-    operateurId: new IdentifiantOperateur(activite.operateurId),
-    objet: toElement(activite.element),
-    categorie: new CategorieActivite(activite.categorie),
-    debut: new Instant(activite.debut),
-    echeance: new Instant(activite.echeance),
+    ...toDescription(activite),
     etat: activite.etat,
     ...(activite.finRetenue === undefined ? {} : { finRetenue: new Instant(activite.finRetenue) }),
-    ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
   });
 
 @Injectable()
