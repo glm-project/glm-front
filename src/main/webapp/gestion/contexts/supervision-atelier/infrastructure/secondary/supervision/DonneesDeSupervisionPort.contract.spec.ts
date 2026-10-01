@@ -452,6 +452,25 @@ describe('HTTP supervision beyond the shared contract', () => {
     expect(harnessFixture.errors.errors).toEqual([failure]);
   });
 
+  it('should reject an automatic end without its retained finish instead of fabricating the deadline as the finish', async () => {
+    const reading = harnessFixture.port.read();
+
+    whenAutomaticEndWithoutFinishArrives();
+    const failure = await reading.catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(harnessFixture.errors.errors).toEqual([failure]);
+  });
+
+  const whenAutomaticEndWithoutFinishArrives = (): void => {
+    const activites = automaticEndFixture.response.activites.map(activite => {
+      const incomplete = { ...activite };
+      delete incomplete.finRetenue;
+      return incomplete;
+    });
+    harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...automaticEndFixture.response, activites });
+  };
+
   const whenBackendUnavailable = (): void => {
     harnessFixture.http.expectOne('/api/atelier/supervision').flush(null, { status: 503, statusText: 'Service Unavailable' });
   };

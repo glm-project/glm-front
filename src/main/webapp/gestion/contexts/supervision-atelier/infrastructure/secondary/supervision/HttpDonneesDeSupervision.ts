@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { ActiviteDeSupervision, DescriptionActivite } from '../../../domain/activite/ActiviteDeSupervision';
@@ -55,12 +56,15 @@ const toDescription = (activite: RestDescription): DescriptionActivite => ({
   ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
 });
 
-const toActivite = (activite: RestActivite): ActiviteDeSupervision =>
-  new ActiviteDeSupervision({
+const toActivite = (activite: RestActivite): ActiviteDeSupervision => {
+  const finRetenue =
+    activite.etat === 'TERMINEE_AUTOMATIQUEMENT' ? required(activite.finRetenue, 'activite.finRetenue') : activite.finRetenue;
+  return new ActiviteDeSupervision({
     ...toDescription(activite),
     etat: activite.etat,
-    ...(activite.finRetenue === undefined ? {} : { finRetenue: new Instant(activite.finRetenue) }),
+    ...(finRetenue === undefined ? {} : { finRetenue: new Instant(finRetenue) }),
   });
+};
 
 @Injectable()
 export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
