@@ -696,6 +696,16 @@ describe('Supervision atelier component', () => {
     );
   });
 
+  it('should preserve the acquired evaluation when the browser clock is ahead', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ ...atelierFixture, evaluation: instantFixture(9, 57) });
+
+    expect(signal('supervision-derniere-lecture')).toBe(
+      '9 opérateurs · d’après les pointages reçus jusqu’à 09:57 · actualisé toutes les 30 s',
+    );
+  });
+
   it('should display an empty state when there are no declared operators', async () => {
     await givenAcquisitionInProgress();
 

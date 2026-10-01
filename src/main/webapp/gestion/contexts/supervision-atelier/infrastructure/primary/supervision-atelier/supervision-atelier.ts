@@ -52,7 +52,7 @@ export class SupervisionAtelier {
       return { kind: 'ERREUR' };
     }
     const raw = this.donnees.value();
-    const maintenant = new Instant(new Date().toISOString());
+    const maintenant = raw.evaluation ?? new Instant(new Date().toISOString());
     const resultat = SupervisionDeLAtelier.determine(raw, maintenant);
     if (!resultat.estExploitable) {
       return { kind: 'ERREUR' };
