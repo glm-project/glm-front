@@ -137,6 +137,7 @@ const whenCorrectingPayrollNumber = (matricule: string): void => {
 };
 const whenEditingFirstOperateur = (): void => {
   cy.get(dataSelector('operateur-edit')).first().click();
+  cy.get(dataSelector('operateur-nom')).should('be.focused');
 };
 const whenSavingRevision = (): void => {
   cy.get(dataSelector('operateur-save')).click();
