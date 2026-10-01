@@ -1,12 +1,39 @@
+import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 let apiFixture: SupervisionApiFixture;
 
+type RestSupervision = components['schemas']['RestSupervisionDAtelier'];
+const connectedWorkshopFixture: RestSupervision = {
+  evaluation: new Date(2026, 8, 24, 9, 57).toISOString(),
+  operateurs: [{ id: 'op-connected-serin', nom: 'Sérin', prenom: 'Maya', metiers: ['Rectification'] }],
+  activites: [
+    {
+      id: 'opening-connected-of',
+      operateurId: 'op-connected-serin',
+      element: { id: 'connected-of', type: 'ORDRE_DE_FABRICATION', nom: 'OF connecté', reference: 'AT-42' },
+      categorie: 'TRAVAIL',
+      debut: new Date(2026, 8, 23, 21).toISOString(),
+      echeance: new Date(2026, 8, 24, 10).toISOString(),
+      etat: 'EN_COURS',
+    },
+  ],
+  sequencesEnConflit: [],
+};
+
 describe('Supervision atelier in back office', () => {
   beforeEach(() => {
     apiFixture = new SupervisionApiFixture();
     apiFixture.intercept();
+  });
+
+  it('should display the connected workshop on the root path using the server evaluation before the browser deadline', () => {
+    givenConnectedWorkshop();
+
+    whenVisitingAtTheActivityDeadline();
+
+    thenTheConnectedOperatorIsWorking();
   });
   it('should display the two supervision lanes on the root path', () => {
     whenVisitingTheRoot();
@@ -21,6 +48,23 @@ describe('Supervision atelier in back office', () => {
     thenTheActivityAndAnomaliesRemainVisible();
   });
 });
+
+const givenConnectedWorkshop = (): void => {
+  apiFixture.replace(connectedWorkshopFixture);
+};
+
+const whenVisitingAtTheActivityDeadline = (): void => {
+  cy.viewport(1440, 900);
+  cy.clock(new Date(2026, 8, 24, 10).getTime(), ['Date']);
+  cy.visit('/');
+};
+
+const thenTheConnectedOperatorIsWorking = (): void => {
+  cy.get(dataSelector('supervision-couloir-au-travail')).find(dataSelector('supervision-operateur-nom')).should('have.text', 'Sérin Maya');
+  cy.get(dataSelector('supervision-carte')).should('have.length', 1);
+  cy.get(dataSelector('supervision-activite-element')).should('contain.text', 'AT-42');
+  cy.get(dataSelector('supervision-derniere-lecture')).should('contain.text', '09:57');
+};
 
 const whenVisitingTheRoot = (): void => {
   cy.viewport(1440, 900);
