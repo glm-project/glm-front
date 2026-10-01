@@ -57,6 +57,34 @@ describe('SupervisionDeLAtelier', () => {
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
   });
 
+  it.each([{ evaluation: '2026-09-13T21:00:00.123456790Z' }, { evaluation: '2026-09-13T21:00:00.123456791Z' }])(
+    'should finish current work at the acquired nanosecond deadline expressed with a different offset at $evaluation',
+    ({ evaluation }) => {
+      const operateur = operateurFixture('op-nanosecond-finished');
+      const activite = new ActiviteDeSupervision({
+        id: new IdentifiantActivite('nanosecond-finished'),
+        operateurId: operateur.id,
+        objet: MOULE_1015,
+        categorie: new CategorieActivite('TRAVAIL'),
+        debut: new Instant('2026-09-13T08:00:00.123456790Z'),
+        echeance: new Instant('2026-09-13T23:00:00.123456790+02:00'),
+      });
+
+      const resultat = SupervisionDeLAtelier.determine({
+        evaluation: new Instant(evaluation),
+        operateurs: [operateur],
+        activites: [activite],
+        sequencesEnConflit: [],
+      });
+
+      const supervision = exploitableFixture(resultat);
+      expect(couloirDe(supervision, operateur)).toBe('SANS_ACTIVITE');
+      expect(supervision.operateurs[0]?.activitesTermineesAutomatiquement.map(terminee => terminee.finRetenue.value)).toEqual([
+        '2026-09-13T21:00:00.123456790Z',
+      ]);
+    },
+  );
+
   it('should classify current work until the acquired deadline', () => {
     const operateur = operateurFixture('op-server-deadline');
     const activite = new ActiviteDeSupervision({
