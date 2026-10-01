@@ -40,7 +40,7 @@ export const LIBELLES_POINTAGE = {
 } as const;
 
 export const LIBELLES_ENTETE_PUPITRE = {
-  code: (matricule: string): string => `Code ${matricule}`,
+  code: (identifiant: string): string => `Code ${identifiant}`,
   pause: 'En pause',
   enLigne: 'En ligne',
   horsLigne: 'Hors ligne',

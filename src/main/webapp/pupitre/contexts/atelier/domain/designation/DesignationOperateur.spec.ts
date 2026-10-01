@@ -3,12 +3,12 @@ import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
-import { Matricule } from './Matricule';
+import { Identifiant } from './Identifiant';
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
-    operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [] }],
+    operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
     suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
   },
 };
@@ -91,7 +91,7 @@ describe('DesignationOperateur', () => {
   it('should leave a designation unchanged when another operator window tries to replace it', () => {
     givenDesignatedOperator();
     const before = designation;
-    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, matriculeFixture('049'), 1, new IdentiteDeFenetre(1));
+    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, identifiantFixture('049'), 1, new IdentiteDeFenetre(1));
 
     designation = designation.afterReplacingWindow(other);
 
@@ -249,7 +249,7 @@ describe('DesignationOperateur', () => {
     designation = designation.afterErasing(now);
   };
   const whenOpeningAWindow = (): FenetreOperateur => {
-    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, matriculeFixture('049'), 1);
+    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, identifiantFixture('049'), 1);
     designation = opening.designation;
     return opening.fenetre;
   };
@@ -311,5 +311,5 @@ describe('DesignationOperateur', () => {
   };
 });
 
-const matriculeFixture = (saisie: string): Matricule =>
-  Array.from(saisie).reduce((matricule, caractere) => matricule.afterDigit(caractere), Matricule.empty());
+const identifiantFixture = (saisie: string): Identifiant =>
+  Array.from(saisie).reduce((identifiant, caractere) => identifiant.afterDigit(caractere), Identifiant.empty());

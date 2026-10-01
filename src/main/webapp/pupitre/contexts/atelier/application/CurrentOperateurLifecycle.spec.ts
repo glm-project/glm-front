@@ -34,19 +34,19 @@ const operateurFixture: OperateurDuPupitre = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  matricule: '049',
+  identifiant: '049',
   postes: [],
 };
-const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
+const identiteOperateurFixture = { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' };
 
 const operateurAjouteFixture: OperateurDuPupitre = {
   id: 'lea',
   nom: 'Martin',
   prenom: 'Lea',
-  matricule: '050',
+  identifiant: '050',
   postes: [],
 };
-const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', matricule: '050' };
+const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', identifiant: '050' };
 
 const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
 

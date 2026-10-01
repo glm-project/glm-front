@@ -20,8 +20,8 @@ import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisati
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { matriculeFixture } from '@test/unit/fixtures/pupitre/atelier/MatriculeFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { MockInstance, vi } from 'vitest';
@@ -38,7 +38,7 @@ const referenceFixture: ReferentielDuPupitre = {
       id: 'jean',
       nom: 'Dupont',
       prenom: 'Jean',
-      matricule: '049',
+      identifiant: '049',
       postes: [{ id: 'tour', libelle: 'Tour' }],
     },
   ],
@@ -693,21 +693,21 @@ describe('AtelierCoordinator', () => {
   it('should retain designation while refreshing the referential', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
-    givenRefreshedMatricule('050');
+    givenRefreshedIdentifiant('050');
     await whenSynchronizing();
 
-    thenMatriculeIs('050');
-    thenDesignatedMatriculeIs('049');
+    thenIdentifiantIs('050');
+    thenDesignatedIdentifiantIs('049');
   });
 
   it('should retain the refreshed referential after closing designation', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
-    givenRefreshedMatricule('050');
+    givenRefreshedIdentifiant('050');
     await whenSynchronizing();
     await whenClosing();
 
-    thenMatriculeIs('050');
+    thenIdentifiantIs('050');
   });
 
   it('should retain the last complete cache through failed refreshes without a time limit', async () => {
@@ -716,7 +716,7 @@ describe('AtelierCoordinator', () => {
 
     await whenSynchronizing();
 
-    thenMatriculeIs('049');
+    thenIdentifiantIs('049');
     thenConnectedIs(true);
   });
 
@@ -746,10 +746,10 @@ describe('AtelierCoordinator', () => {
     const failedStart = whenStarting();
     await Promise.allSettled([failedStart]);
     await whenSynchronizing();
-    const unknownOpening = whenOpeningMatricule('inconnu');
+    const unknownOpening = whenOpeningIdentifiant('inconnu');
     await Promise.allSettled([unknownOpening]);
 
-    await thenFails(unknownOpening, 'Matricule absent');
+    await thenFails(unknownOpening, 'Identifiant absent');
   });
 
   it('should report a local failure before changing company', async () => {
@@ -844,14 +844,14 @@ describe('AtelierCoordinator', () => {
   });
 
   it('should reject an unknown operator code', async () => {
-    const unknownOpening = whenOpeningMatricule('inconnu');
+    const unknownOpening = whenOpeningIdentifiant('inconnu');
     await Promise.allSettled([unknownOpening]);
 
-    await thenFails(unknownOpening, 'Matricule absent');
+    await thenFails(unknownOpening, 'Identifiant absent');
   });
 
   it('should reject overlapping windows and unauthorized workstations', async () => {
-    const unknownOpening = whenOpeningMatricule('inconnu');
+    const unknownOpening = whenOpeningIdentifiant('inconnu');
     await Promise.allSettled([unknownOpening]);
     await givenAMultiWorkstationOpenWindow();
     const overlappingOpening = whenOpening();
@@ -864,7 +864,7 @@ describe('AtelierCoordinator', () => {
   it('should expose the restored company reference', async () => {
     await givenRestoredPupitre();
 
-    thenMatriculeIs('049');
+    thenIdentifiantIs('049');
   });
 
   it('should clear the reference when durable company selection disappears', async () => {
@@ -916,7 +916,7 @@ describe('AtelierCoordinator', () => {
     const opening = whenOpening();
     await Promise.allSettled([opening]);
 
-    await thenFails(opening, 'Matricule absent');
+    await thenFails(opening, 'Identifiant absent');
     await thenDiagnosticsCountIs(0);
   });
 
@@ -1112,7 +1112,7 @@ describe('AtelierCoordinator', () => {
     await whenOpening();
 
     thenPointageIsDefined();
-    thenDesignatedMatriculeIs('049');
+    thenDesignatedIdentifiantIs('049');
   });
 
   it('should display the existing workstation refusal', async () => {
@@ -1256,10 +1256,10 @@ describe('AtelierCoordinator', () => {
     pupitre = buildPupitre();
     await whenRestoring();
   };
-  const whenOpening = (): Promise<unknown> => designation.openWindow(matriculeFixture('049'));
-  const whenOpeningMatricule = (matricule: string): Promise<unknown> => designation.openWindow(matriculeFixture(matricule));
+  const whenOpening = (): Promise<unknown> => designation.openWindow(identifiantFixture('049'));
+  const whenOpeningIdentifiant = (identifiant: string): Promise<unknown> => designation.openWindow(identifiantFixture(identifiant));
   const whenOpeningBothOperators = (): Promise<PromiseSettledResult<IdentiteOperateurDesigne>[]> =>
-    Promise.allSettled([designation.openWindow(matriculeFixture('049')), designation.openWindow(matriculeFixture('050'))]);
+    Promise.allSettled([designation.openWindow(identifiantFixture('049')), designation.openWindow(identifiantFixture('050'))]);
   const whenStarting = (): Promise<void> => completionOf(pupitre.execute({ suiviId: 'piece', cible: 'PRINCIPALE' }));
   const whenPointingAt = (suiviId: string, cible: 'PRINCIPALE' | 'SECONDAIRE'): Promise<void> =>
     completionOf(pupitre.execute({ suiviId, cible }));
@@ -1302,7 +1302,7 @@ describe('AtelierCoordinator', () => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), structuredClone(reference));
   };
   const givenAnOpenWindow = async (): Promise<void> => {
-    await designation.openWindow(matriculeFixture('049'));
+    await designation.openWindow(identifiantFixture('049'));
   };
   const givenAMultiWorkstationOpenWindow = async (): Promise<void> => {
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
@@ -1380,9 +1380,9 @@ describe('AtelierCoordinator', () => {
       journal.failWrite = true;
     };
   };
-  const givenRefreshedMatricule = (matricule: string): void => {
+  const givenRefreshedIdentifiant = (identifiant: string): void => {
     const operateur = requiredFixture(serveur.reference.operateurs[0], 'server operator');
-    serveur.reference = { ...serveur.reference, operateurs: [{ ...operateur, matricule }] };
+    serveur.reference = { ...serveur.reference, operateurs: [{ ...operateur, identifiant }] };
   };
   const givenReferenceRefreshFails = (): void => {
     serveur.cacheFailure = new Error('page manquante');
@@ -1414,7 +1414,7 @@ describe('AtelierCoordinator', () => {
   const givenTwoOperators = async (): Promise<void> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), {
       ...referenceFixture,
-      operateurs: [...referenceFixture.operateurs, { id: 'marie', nom: 'Martin', prenom: 'Marie', matricule: '050', postes: [] }],
+      operateurs: [...referenceFixture.operateurs, { id: 'marie', nom: 'Martin', prenom: 'Marie', identifiant: '050', postes: [] }],
     });
   };
   const givenNoCompanySelected = (): void => {
@@ -1552,11 +1552,11 @@ describe('AtelierCoordinator', () => {
   const thenDiagnosticsCountIs = async (count: number): Promise<void> => {
     expect((await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'REFUSE')).toHaveLength(count);
   };
-  const thenMatriculeIs = (code: string): void => {
-    expect(requiredFixture(etatHorsLigne.referentiel()?.operateurs[0], 'projected operator').matricule).toBe(code);
+  const thenIdentifiantIs = (code: string): void => {
+    expect(requiredFixture(etatHorsLigne.referentiel()?.operateurs[0], 'projected operator').identifiant).toBe(code);
   };
-  const thenDesignatedMatriculeIs = (code: string): void => {
-    expect(designation.operateur()?.matricule).toBe(code);
+  const thenDesignatedIdentifiantIs = (code: string): void => {
+    expect(designation.operateur()?.identifiant).toBe(code);
   };
   const thenNoCompanyBData = async (): Promise<void> => {
     expect(await journal.read(Entreprise.of('entreprise-b'))).toEqual(EMPTY_JOURNAL_DU_PUPITRE);

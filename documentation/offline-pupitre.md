@@ -70,7 +70,7 @@ An operator added to the reference is therefore missing from the cache for a whi
 nothing about it. Online, the runtime interval closes that gap on its own, and the unknown-code trigger
 usually closes it sooner: the operator types their code again and it works.
 
-That last trigger fires once per code. Retyping a matricule that the freshly pushed reference still does not
+That last trigger fires once per code. Retyping an identifiant that the freshly pushed reference still does not
 know reads nothing new, and a mistyped code on a keypad repeats easily, so `FraicheurDuReferentiel` holds it
 back rather than reading the whole reference again. Any successful designation releases the hold.
 
@@ -117,7 +117,7 @@ separate boundary.
 
 The production pupitre checks for a new application version every five minutes while it is visible and
 online, when the network returns and when the PWA becomes visible again. Once the service worker has downloaded
-a complete version, the pupitre reloads automatically after the current matricule entry or operator window
+a complete version, the pupitre reloads automatically after the current identifiant entry or operator window
 ends and local gesture captures finish. These checks do not run when the service worker is disabled in
 development.
 
@@ -142,7 +142,7 @@ the requested callback. The page calls `CurrentOperateurLifecycle.finish()` when
 pointage does not destroy the coordinator or close the designation. `Designation` translates touch and keyboard
 events and renders the application snapshot, without owning its lifetime.
 
-Only a matricule absent from the local reference produces the unknown-code state. A technical failure during
+Only an identifiant absent from the local reference produces the unknown-code state. A technical failure during
 resolution goes to `ErrorHandlerPort` and preserves the entered code for another explicit validation, provided
 the designation has not expired or been closed. A late failure never restores an expired code or overwrites
 new input. It does not trigger the unknown-code reference refresh.

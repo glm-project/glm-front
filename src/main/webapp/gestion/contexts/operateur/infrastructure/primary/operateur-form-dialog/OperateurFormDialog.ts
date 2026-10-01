@@ -57,8 +57,8 @@ export class OperateurFormDialog implements OnInit {
     this.formulaire.update(formulaire => formulaire.avecPrenom(prenom));
   }
 
-  protected changeMatricule(matricule: string): void {
-    this.formulaire.update(formulaire => formulaire.avecMatricule(matricule));
+  protected changeIdentifiant(identifiant: string): void {
+    this.formulaire.update(formulaire => formulaire.avecIdentifiant(identifiant));
   }
 
   protected changeTauxHoraire(tauxHoraire: string): void {

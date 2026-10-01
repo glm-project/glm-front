@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { Matricule } from '../../../domain/Matricule';
+import { Identifiant } from '../../../domain/Identifiant';
 import { Operateur } from '../../../domain/Operateur';
 import { OperateursPort } from '../../../domain/OperateursPort';
 import { PosteHabilitable } from '../../../domain/PosteHabilitable';
@@ -61,7 +61,7 @@ export class Operateurs implements OnInit {
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
-  protected readonly colonnes = ['identite', 'matricule', 'natures', 'postes', 'tauxHoraire', 'actions'];
+  protected readonly colonnes = ['identite', 'identifiant', 'natures', 'postes', 'tauxHoraire', 'actions'];
 
   ngOnInit(): void {
     this.reload();
@@ -144,8 +144,8 @@ export class Operateurs implements OnInit {
     return this.etat().operateurs.length === 1 && this.etat().page > 0;
   }
 
-  protected formatMatricule(matricule: Matricule | undefined): string {
-    return matricule?.value ?? 'Non renseigné';
+  protected formatIdentifiant(identifiant: Identifiant | undefined): string {
+    return identifiant?.value ?? 'Non renseigné';
   }
 
   protected formatTaux(taux: TauxHoraire | undefined): string {

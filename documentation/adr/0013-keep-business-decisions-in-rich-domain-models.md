@@ -53,7 +53,7 @@ has not run. Supply time explicitly. Keep one authoritative lifecycle state, wit
 its results. State whether a temporal condition applies at initiation or completion of an asynchronous
 operation; that distinction is a business decision rather than an incidental consequence of an `await`.
 
-In the pupitre's `atelier` context, `DesignationOperateur` owns the cycle from matricule entry to expiry
+In the pupitre's `atelier` context, `DesignationOperateur` owns the cycle from identifiant entry to expiry
 and owns the active `FenetreOperateur`. The latter retains qualifications, gesture preparation and its
 frozen view. `AtelierCoordinator` coordinates resolution and durable capture. Expiration blocks new gestures;
 a gesture initiated while valid retains its operator and occurrence time while its capture completes,

@@ -23,7 +23,7 @@ type RestSuiviDuPupitre = components['schemas']['RestSuiviDuPupitre'];
 
 const toPosteHabilite = (poste: RestPosteDuPupitre): OperateurDuPupitre['postes'][number] => ({ id: poste.id, libelle: poste.libelle });
 
-const toOperateurWithoutMatricule = (operateur: RestOperateurDuPupitre): OperateurDuPupitre => ({
+const toOperateurWithoutIdentifiant = (operateur: RestOperateurDuPupitre): OperateurDuPupitre => ({
   id: operateur.id,
   nom: operateur.nom,
   prenom: operateur.prenom,
@@ -31,9 +31,9 @@ const toOperateurWithoutMatricule = (operateur: RestOperateurDuPupitre): Operate
 });
 
 const toOperateur = (operateur: RestOperateurDuPupitre): OperateurDuPupitre =>
-  operateur.matricule === undefined
-    ? toOperateurWithoutMatricule(operateur)
-    : { ...toOperateurWithoutMatricule(operateur), matricule: operateur.matricule };
+  operateur.identifiant === undefined
+    ? toOperateurWithoutIdentifiant(operateur)
+    : { ...toOperateurWithoutIdentifiant(operateur), identifiant: operateur.identifiant };
 
 const toActivite = (activite: RestActiviteDuPupitre): SuiviDuPupitre['activites'][number] => ({
   operateurId: activite.operateur,

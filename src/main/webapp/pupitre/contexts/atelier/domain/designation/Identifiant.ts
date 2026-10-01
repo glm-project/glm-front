@@ -1,22 +1,22 @@
 const UN_CHIFFRE = /^\d$/;
 
-export class Matricule {
+export class Identifiant {
   private constructor(private readonly valeur: string) {}
 
-  static empty(): Matricule {
-    return new Matricule('');
+  static empty(): Identifiant {
+    return new Identifiant('');
   }
 
   static accepts(caractere: string): boolean {
     return UN_CHIFFRE.test(caractere);
   }
 
-  afterDigit(digit: string): Matricule {
-    return new Matricule(`${this.valeur}${digit}`);
+  afterDigit(digit: string): Identifiant {
+    return new Identifiant(`${this.valeur}${digit}`);
   }
 
-  afterErasing(): Matricule {
-    return new Matricule(this.valeur.slice(0, -1));
+  afterErasing(): Identifiant {
+    return new Identifiant(this.valeur.slice(0, -1));
   }
 
   isEmpty(): boolean {
@@ -27,7 +27,7 @@ export class Matricule {
     return this.valeur === candidat;
   }
 
-  equals(other: Matricule | undefined): boolean {
+  equals(other: Identifiant | undefined): boolean {
     return this.valeur === other?.valeur;
   }
 

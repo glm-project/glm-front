@@ -161,7 +161,7 @@ describe('Pupitre header', () => {
     fixture.componentRef.setInput('connected', false);
   };
   const givenADesignatedOperator = (): void => {
-    fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
+    fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' });
     fixture.componentRef.setInput('enPause', false);
   };
   const givenAPause = (etat: boolean): void => {

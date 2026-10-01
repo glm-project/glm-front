@@ -2,7 +2,7 @@ import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { CommandeCreationOperateur } from './CommandeCreationOperateur';
 import { CommandeModificationOperateur } from './CommandeModificationOperateur';
 import { ErreursFormulaireOperateur } from './ErreursFormulaireOperateur';
-import { Matricule } from './Matricule';
+import { Identifiant } from './Identifiant';
 import { NomOperateur } from './NomOperateur';
 import { Operateur } from './Operateur';
 import { OperateurId } from './OperateurId';
@@ -15,14 +15,14 @@ import { TauxHoraire } from './TauxHoraire';
 interface SaisieOperateur {
   readonly nom: string;
   readonly prenom: string;
-  readonly matricule: string;
+  readonly identifiant: string;
   readonly tauxHoraire: string;
   readonly postes: readonly PosteHabilitable[];
 }
 
 export type CommandeOperateur = CommandeCreationOperateur | CommandeModificationOperateur;
 
-const SAISIE_VIERGE: SaisieOperateur = { nom: '', prenom: '', matricule: '', tauxHoraire: '', postes: [] };
+const SAISIE_VIERGE: SaisieOperateur = { nom: '', prenom: '', identifiant: '', tauxHoraire: '', postes: [] };
 
 export class FormulaireOperateur {
   private constructor(
@@ -40,7 +40,7 @@ export class FormulaireOperateur {
       {
         nom: operateur.nom.value,
         prenom: operateur.prenom.value,
-        matricule: operateur.matricule?.value ?? '',
+        identifiant: operateur.identifiant?.value ?? '',
         tauxHoraire: operateur.tauxHoraire?.value.toString() ?? '',
         postes: operateur.postes,
       },
@@ -58,14 +58,14 @@ export class FormulaireOperateur {
     }
     const nom = new NomOperateur(this.saisie.nom);
     const prenom = new PrenomOperateur(this.saisie.prenom);
-    const matricule = this.matriculeEstRenseigne() ? new Matricule(this.saisie.matricule) : undefined;
+    const identifiant = this.identifiantEstRenseigne() ? new Identifiant(this.saisie.identifiant) : undefined;
     const tauxHoraire = this.tauxEstRenseigne() ? new TauxHoraire(this.tauxNumerique()) : undefined;
     const postes = this.saisie.postes.map(poste => poste.id);
 
     if (this.id === undefined) {
-      return ok({ type: 'CREATION', nom, prenom, matricule, tauxHoraire, postes });
+      return ok({ type: 'CREATION', nom, prenom, identifiant, tauxHoraire, postes });
     }
-    return ok({ type: 'MODIFICATION', id: this.id, nom, prenom, matricule, tauxHoraire, postes });
+    return ok({ type: 'MODIFICATION', id: this.id, nom, prenom, identifiant, tauxHoraire, postes });
   }
 
   avecNom(nom: string): FormulaireOperateur {
@@ -84,11 +84,11 @@ export class FormulaireOperateur {
     );
   }
 
-  avecMatricule(matricule: string): FormulaireOperateur {
+  avecIdentifiant(identifiant: string): FormulaireOperateur {
     return new FormulaireOperateur(
-      { ...this.saisie, matricule },
+      { ...this.saisie, identifiant },
       this.id,
-      this.refusApresChangement(matricule !== this.saisie.matricule, 'matricule-deja-utilise'),
+      this.refusApresChangement(identifiant !== this.saisie.identifiant, 'identifiant-deja-utilise'),
     );
   }
 
@@ -125,11 +125,11 @@ export class FormulaireOperateur {
     return PrenomOperateur.erreur(this.saisie.prenom);
   }
 
-  erreurMatricule(): string | undefined {
-    if (this.refus?.code === 'matricule-deja-utilise') {
+  erreurIdentifiant(): string | undefined {
+    if (this.refus?.code === 'identifiant-deja-utilise') {
       return this.refus.message;
     }
-    return this.matriculeEstRenseigne() ? Matricule.erreur(this.saisie.matricule) : undefined;
+    return this.identifiantEstRenseigne() ? Identifiant.erreur(this.saisie.identifiant) : undefined;
   }
 
   erreurTauxHoraire(): string | undefined {
@@ -159,14 +159,14 @@ export class FormulaireOperateur {
     return {
       nom: this.erreurNom(),
       prenom: this.erreurPrenom(),
-      matricule: this.erreurMatricule(),
+      identifiant: this.erreurIdentifiant(),
       tauxHoraire: this.erreurTauxHoraire(),
       enregistrement: this.erreurEnregistrement(),
     };
   }
 
-  private matriculeEstRenseigne(): boolean {
-    return this.saisie.matricule.trim() !== '';
+  private identifiantEstRenseigne(): boolean {
+    return this.saisie.identifiant.trim() !== '';
   }
 
   private tauxEstRenseigne(): boolean {

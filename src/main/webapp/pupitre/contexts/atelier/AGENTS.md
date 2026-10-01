@@ -40,9 +40,9 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 
 ## Langage
 
-**Matricule** : code saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.
+**Identifiant** : code saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.
 
-**Désignation opérateur** : choix de l'opérateur au nom duquel les prochains gestes sont déclarés, depuis la saisie et la validation du matricule jusqu'à la fin de la désignation. Employer ce terme plutôt que connexion, authentification ou login opérateur.
+**Désignation opérateur** : choix de l'opérateur au nom duquel les prochains gestes sont déclarés, depuis la saisie et la validation de l'identifiant jusqu'à la fin de la désignation. Employer ce terme plutôt que connexion, authentification ou login opérateur.
 
 **Fenêtre opérateur** : période temporaire pendant laquelle un opérateur reste désigné pour enchaîner des gestes. Elle possède la vue métier personnelle du pointage et en fige les durées à son ouverture. Elle se termine après inactivité ou par l'action « J'ai fini »; ce n'est pas une session de connexion.
 
@@ -92,7 +92,7 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 - Un référentiel n'est disponible pour l'enrôlement que si la vue active appartient à l'entreprise actuellement sélectionnée.
 - Le pupitre écrit des identifiants et n'affiche que des libellés; un libellé périmé ne corrompt aucune donnée.
 - La fraîcheur du référentiel se pousse en arrière-plan, par une synchronisation complète qui publie d'abord les gestes en attente, et ne se place jamais sur le chemin d'un geste.
-- Un même matricule inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
+- Un même identifiant inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
 
 - `CommandesGlobales` offre PAUSE lorsqu'une activité personnelle interprétable non expirée reste connue, REPRENDRE lorsqu'une pause locale reste à rouvrir, TOUT ARRÊTER toujours. Le chrome montre l'identité désignée et l'éventuelle pause locale.
 - Les commandes reçoivent explicitement leur instant d'évaluation. À l'échéance serveur inclusive, une activité devient non actionnable ; la durée indicative garde l'instant d'ouverture de la fenêtre. `ActiviteExpirationSchedulerPort` possède un timer distinct de l'inactivité et réévalue sans fermer la désignation ni créer de FIN.
@@ -119,7 +119,7 @@ Tant que l'appareil n'est pas enrôlé et que son premier référentiel complet 
 
 Les libellés métier du pupitre vivent dans un module unique de ce contexte et sont indexés par ses types de domaine. Ne pas partager ce vocabulaire avec `gestion` ni l'adosser aux types générés de l'API.
 
-`AuthenticationPort` appartient au shared kernel et continue de répondre un `tenant` en chaîne : un shared kernel ne peut pas nommer `Entreprise`. `EtatHorsLigneDuPupitre` et `PupitreSynchronization` traduisent à cette couture; ne pas remonter le type dans le port, `HexagonalArchTest` le refuse. `PupitreSynchronization` consomme également `DeviceSessionPort.withSession` pour garantir l'exclusion mutuelle entre le rejeu des gestes et le renouvellement réseau des jetons de l'appareil. Le matricule du pupitre ne traverse pas non plus vers `gestion`, qui possède le sien.
+`AuthenticationPort` appartient au shared kernel et continue de répondre un `tenant` en chaîne : un shared kernel ne peut pas nommer `Entreprise`. `EtatHorsLigneDuPupitre` et `PupitreSynchronization` traduisent à cette couture; ne pas remonter le type dans le port, `HexagonalArchTest` le refuse. `PupitreSynchronization` consomme également `DeviceSessionPort.withSession` pour garantir l'exclusion mutuelle entre le rejeu des gestes et le renouvellement réseau des jetons de l'appareil. L'identifiant du pupitre ne traverse pas non plus vers `gestion`, qui possède le sien.
 
 Le résultat du chargement initial est distinct de la connexion observée. `TypeScriptChargementDeLAtelier` expose la disponibilité du référentiel de l'entreprise courante; l'adaptateur secondaire d'`enrolement` traduit l'achèvement de la synchronisation en `CHARGE` ou `ECHEC`. Cette issue ne modifie pas l'indicateur de connexion, que seuls les résultats de publication établissent.
 

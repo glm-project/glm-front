@@ -2,9 +2,9 @@ import { Entreprise } from '../journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, SuiviDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { IntentionGlobaleDAtelier } from './fenetre-operateur/ContexteDeGesteDAtelier';
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
+import { Identifiant } from './Identifiant';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
-import { Matricule } from './Matricule';
 
 const racineFixture = { id: '11111111-2222-4333-8444-55550000000a', dateDeSurvenue: '2026-09-05T12:00:00.000Z' };
 const suiviFixture = (id: string, activites: SuiviDuPupitre['activites']): SuiviDuPupitre => ({
@@ -24,7 +24,7 @@ const journalFixture = (suivis: readonly SuiviDuPupitre[]): JournalDuPupitre => 
         id: 'jean',
         nom: 'Dupont',
         prenom: 'Jean',
-        matricule: '049',
+        identifiant: '049',
         postes: [{ id: 'tour', libelle: 'Tour' }],
       },
     ],
@@ -78,7 +78,7 @@ describe('IntentionGlobaleInitiee', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(journal),
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse(racineFixture.dateDeSurvenue),
       new IdentiteDeFenetre(1),
     );
@@ -92,5 +92,5 @@ describe('IntentionGlobaleInitiee', () => {
   };
 });
 
-const matriculeFixture = (saisie: string): Matricule =>
-  Array.from(saisie).reduce((matricule, caractere) => matricule.afterDigit(caractere), Matricule.empty());
+const identifiantFixture = (saisie: string): Identifiant =>
+  Array.from(saisie).reduce((identifiant, caractere) => identifiant.afterDigit(caractere), Identifiant.empty());

@@ -10,7 +10,7 @@ const operateurFixture = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  matricule: '049',
+  identifiant: '049',
   postes: [],
 } as const;
 const elementFixture = {

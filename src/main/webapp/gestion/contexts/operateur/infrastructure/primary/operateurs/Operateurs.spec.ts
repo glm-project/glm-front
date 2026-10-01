@@ -10,7 +10,7 @@ import { OperateursFixture } from '@test/unit/fixtures/gestion/operateur/Operate
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
-import { Matricule } from '../../../domain/Matricule';
+import { Identifiant } from '../../../domain/Identifiant';
 import { NomOperateur } from '../../../domain/NomOperateur';
 import { Operateur } from '../../../domain/Operateur';
 import { OperateurId } from '../../../domain/OperateurId';
@@ -27,7 +27,7 @@ const scieFixture = new PosteHabilitable(new PosteHabilitableId('scie-1'), { lib
 const jeanFixture = new Operateur(new OperateurId('jean'), {
   nom: new NomOperateur('Dupont'),
   prenom: new PrenomOperateur('Jean'),
-  matricule: new Matricule('049'),
+  identifiant: new Identifiant('049'),
   tauxHoraire: new TauxHoraire(22),
   postes: [tourFixture],
   natures: ['tournage'],
@@ -35,7 +35,7 @@ const jeanFixture = new Operateur(new OperateurId('jean'), {
 const leaFixture = new Operateur(new OperateurId('lea'), {
   nom: new NomOperateur('Martin'),
   prenom: new PrenomOperateur('Léa'),
-  matricule: undefined,
+  identifiant: undefined,
   tauxHoraire: undefined,
   postes: [],
   natures: [],
@@ -83,7 +83,7 @@ describe('Operateurs page', () => {
     await whenOpening();
 
     expect(texts('operateur-row')).toEqual([expect.stringContaining('Dupont'), expect.stringContaining('Martin')]);
-    expect(texts('operateur-matricule-cell')).toEqual(['049', 'Non renseigné']);
+    expect(texts('operateur-identifiant-cell')).toEqual(['049', 'Non renseigné']);
     expect(texts('operateur-natures-cell')).toEqual(['tournage', 'Aucun']);
     expect(texts('operateur-postes-cell')).toEqual(['Tour 1', 'Aucune habilitation']);
     expect(texts('operateur-taux-cell')).toEqual([expect.stringContaining('22,00'), 'Non renseigné']);
@@ -142,7 +142,7 @@ describe('Operateurs page', () => {
       new Operateur(jeanFixture.id, {
         nom: new NomOperateur('Durand'),
         prenom: jeanFixture.prenom,
-        matricule: jeanFixture.matricule,
+        identifiant: jeanFixture.identifiant,
         tauxHoraire: jeanFixture.tauxHoraire,
         postes: jeanFixture.postes,
         natures: jeanFixture.natures,
@@ -257,7 +257,7 @@ describe('Operateurs page', () => {
         new Operateur(new OperateurId(String(index)), {
           nom: new NomOperateur('Nom ' + String(index + 1)),
           prenom: new PrenomOperateur('Prenom ' + String(index + 1)),
-          matricule: undefined,
+          identifiant: undefined,
           tauxHoraire: undefined,
           postes: [],
           natures: [],

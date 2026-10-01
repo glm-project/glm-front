@@ -11,8 +11,8 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
+import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { matriculeFixture } from '@test/unit/fixtures/pupitre/atelier/MatriculeFixture';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
@@ -24,7 +24,7 @@ const vueFixture: JournalDuPupitre = {
         id: 'jean',
         nom: 'Dupont',
         prenom: 'Jean',
-        matricule: '049',
+        identifiant: '049',
         postes: [{ id: 'tour', libelle: 'Tour' }],
       },
     ],
@@ -170,7 +170,7 @@ describe('GestesRecordingQueue', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );

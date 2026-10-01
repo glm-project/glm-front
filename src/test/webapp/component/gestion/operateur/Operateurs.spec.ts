@@ -137,9 +137,9 @@ const givenOperateurNamed = (nom: string, prenom: string): void => {
   const api = givenReferential();
   api.operateurs.push({ id: 'autre', nom, prenom, postes: [], natures: [] });
 };
-const givenOperateurUsingPayrollNumber = (matricule: string): void => {
+const givenOperateurUsingPayrollNumber = (identifiant: string): void => {
   const api = givenReferential();
-  api.operateurs.push({ id: 'autre', nom: 'Martin', prenom: 'Léa', matricule, postes: [], natures: [] });
+  api.operateurs.push({ id: 'autre', nom: 'Martin', prenom: 'Léa', identifiant, postes: [], natures: [] });
 };
 const givenProtectedOperateur = (code: string): void => {
   givenReferential(1).deletionRefusalCode = code;
@@ -174,11 +174,11 @@ const whenReplacing = (selector: string, value: string): void => {
   cy.get(dataSelector(selector)).clear();
   if (value !== '') cy.get(dataSelector(selector)).type(value);
 };
-const whenDeclaring = (nom: string, prenom: string, matricule: string): void => {
+const whenDeclaring = (nom: string, prenom: string, identifiant: string): void => {
   whenOpeningCreation();
   whenReplacing('operateur-nom', nom);
   whenReplacing('operateur-prenom', prenom);
-  whenReplacing('operateur-matricule', matricule);
+  whenReplacing('operateur-identifiant', identifiant);
   whenSaving();
 };
 const whenSaving = (): void => {
@@ -222,7 +222,7 @@ const whenConfirmingDeletion = (): void => {
 const thenDeclarationStartsEmpty = (api: OperateursApiFixture): void => {
   cy.get(dataSelector('operateur-nom')).should('have.value', '');
   cy.get(dataSelector('operateur-prenom')).should('have.value', '');
-  cy.get(dataSelector('operateur-matricule')).should('have.value', '');
+  cy.get(dataSelector('operateur-identifiant')).should('have.value', '');
   cy.get(dataSelector('operateur-taux')).should('have.value', '');
   cy.get(dataSelector('operateur-nom-error')).invoke('text').should('match', /^\s*$/);
   cy.wrap(api.writes).should('be.empty');
@@ -247,7 +247,7 @@ const thenDuplicateIdentityIsVisible = (): void => {
   cy.screenshot('operateurs-duplicate-identity', { capture: 'viewport' });
 };
 const thenDuplicatePayrollNumberIsVisible = (): void => {
-  cy.get(dataSelector('operateur-matricule-error')).should('contain.text', 'Un autre opérateur porte déjà ce matricule.');
+  cy.get(dataSelector('operateur-identifiant-error')).should('contain.text', 'Un autre opérateur porte déjà cet identifiant.');
   cy.get(dataSelector('operateur-form')).should('be.visible');
 };
 const thenValidationIsVisible = (api: OperateursApiFixture): void => {

@@ -9,9 +9,9 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { OperateursFixture } from '@test/unit/fixtures/gestion/operateur/OperateursFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
+import { Identifiant } from '../../domain/Identifiant';
+import { IdentifiantDejaUtilise } from '../../domain/IdentifiantDejaUtilise';
 import { IdentiteDejaUtilisee } from '../../domain/IdentiteDejaUtilisee';
-import { Matricule } from '../../domain/Matricule';
-import { MatriculeDejaUtilise } from '../../domain/MatriculeDejaUtilise';
 import { NomOperateur } from '../../domain/NomOperateur';
 import { Operateur } from '../../domain/Operateur';
 import { OperateurAyantPointe } from '../../domain/OperateurAyantPointe';
@@ -35,7 +35,7 @@ interface CorpsOperateur {
   nom: string;
   prenom: string;
   postes?: string[];
-  matricule?: string;
+  identifiant?: string;
   tauxHoraire?: number;
 }
 
@@ -49,7 +49,7 @@ const jeanFixture: RestOperateur = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  matricule: '049',
+  identifiant: '049',
   tauxHoraire: 22,
   postes: [tourFixture],
   natures: ['tournage'],
@@ -147,7 +147,7 @@ class OperateursHttpBackendFixture implements HttpBackend {
       prenom: body.prenom,
       postes,
       natures: naturesDe(postes),
-      ...(body.matricule === undefined ? {} : { matricule: body.matricule }),
+      ...(body.identifiant === undefined ? {} : { identifiant: body.identifiant }),
       ...(body.tauxHoraire === undefined ? {} : { tauxHoraire: body.tauxHoraire }),
     };
   }
@@ -193,7 +193,7 @@ const createFixtureHarness = (): OperateursHarness => {
           new Operateur(new OperateurId(operateur.id), {
             nom: new NomOperateur(operateur.nom),
             prenom: new PrenomOperateur(operateur.prenom),
-            matricule: operateur.matricule === undefined ? undefined : new Matricule(operateur.matricule),
+            identifiant: operateur.identifiant === undefined ? undefined : new Identifiant(operateur.identifiant),
             tauxHoraire: operateur.tauxHoraire === undefined ? undefined : new TauxHoraire(operateur.tauxHoraire),
             postes: operateur.postes.map(toDomainPoste),
             natures: operateur.natures,
@@ -223,7 +223,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
     const page = await whenQueryingPage(0, 10);
 
     thenPageMatches(page, 2, [
-      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', tauxHoraire: 22, postes: ['Tour 1'], natures: ['tournage'] },
+      { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', tauxHoraire: 22, postes: ['Tour 1'], natures: ['tournage'] },
       { id: 'lea', nom: 'Martin', prenom: 'Léa', postes: [], natures: [] },
     ]);
   });
@@ -263,11 +263,11 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
   it('should declare an operator with its optional entries and derive its trades', async () => {
     givenReferential([], [tourFixture, scieFixture]);
 
-    const resultat = await whenDeclaring('Dupont', 'Jean', { matricule: '049', tauxHoraire: 22, postes: ['tour-1', 'scie-1'] });
+    const resultat = await whenDeclaring('Dupont', 'Jean', { identifiant: '049', tauxHoraire: 22, postes: ['tour-1', 'scie-1'] });
 
     thenCommandSucceeded(resultat);
     await thenOperateurExists('Dupont', {
-      matricule: '049',
+      identifiant: '049',
       tauxHoraire: 22,
       postes: ['Scie 1', 'Tour 1'],
       natures: ['sciage', 'tournage'],
@@ -368,7 +368,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
     const page = await port.operateurs(new RequeteOperateurs(0, 20));
     const matching = page.elements.find(operateur => operateur.nom.value === nom);
     expect(matching).toBeDefined();
-    expect(matching?.matricule?.value).toBe(attendu.matricule);
+    expect(matching?.identifiant?.value).toBe(attendu.identifiant);
     expect(matching?.tauxHoraire?.value).toBe(attendu.tauxHoraire);
     expect(matching?.postes.map(poste => poste.libelle)).toEqual(attendu.postes);
     expect(matching?.natures).toEqual(attendu.natures);
@@ -381,7 +381,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
 });
 
 interface OptionsOperateur {
-  readonly matricule?: string;
+  readonly identifiant?: string;
   readonly tauxHoraire?: number;
   readonly postes?: readonly string[];
 }
@@ -390,7 +390,7 @@ interface ProjectionOperateur {
   readonly id: string;
   readonly nom: string;
   readonly prenom: string;
-  readonly matricule?: string;
+  readonly identifiant?: string;
   readonly tauxHoraire?: number;
   readonly postes: readonly string[];
   readonly natures: readonly string[];
@@ -399,7 +399,7 @@ interface ProjectionOperateur {
 const attributs = (nom: string, prenom: string, options: OptionsOperateur) => ({
   nom: new NomOperateur(nom),
   prenom: new PrenomOperateur(prenom),
-  matricule: options.matricule === undefined ? undefined : new Matricule(options.matricule),
+  identifiant: options.identifiant === undefined ? undefined : new Identifiant(options.identifiant),
   tauxHoraire: options.tauxHoraire === undefined ? undefined : new TauxHoraire(options.tauxHoraire),
   postes: (options.postes ?? []).map(id => new PosteHabilitableId(id)),
 });
@@ -408,7 +408,7 @@ const projeter = (operateur: Operateur): ProjectionOperateur => ({
   id: operateur.id.value,
   nom: operateur.nom.value,
   prenom: operateur.prenom.value,
-  ...(operateur.matricule === undefined ? {} : { matricule: operateur.matricule.value }),
+  ...(operateur.identifiant === undefined ? {} : { identifiant: operateur.identifiant.value }),
   ...(operateur.tauxHoraire === undefined ? {} : { tauxHoraire: operateur.tauxHoraire.value }),
   postes: operateur.postes.map(poste => poste.libelle),
   natures: operateur.natures,
@@ -479,7 +479,7 @@ describe('Beyond the contract: HttpOperateurs', () => {
 
   it.each([
     ['creer', '/api/operateurs', 409, 'identite-deja-utilisee', new IdentiteDejaUtilisee()],
-    ['creer', '/api/operateurs', 409, 'matricule-deja-utilise', new MatriculeDejaUtilise()],
+    ['creer', '/api/operateurs', 409, 'identifiant-deja-utilise', new IdentifiantDejaUtilise()],
     ['creer', '/api/operateurs', 404, 'poste-de-travail-introuvable', new PosteHabilitableIntrouvable()],
     ['modifier', '/api/operateurs/jean', 409, 'identite-deja-utilisee', new IdentiteDejaUtilisee()],
     ['modifier', '/api/operateurs/jean', 404, 'operateur-introuvable', new OperateurIntrouvable()],

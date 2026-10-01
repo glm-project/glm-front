@@ -16,9 +16,9 @@ import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory, IDBObjectStore, IDBRequest } from 'fake-indexeddb';
 import { FenetreOperateur } from '../../domain/designation/fenetre-operateur/FenetreOperateur';
+import { Identifiant } from '../../domain/designation/Identifiant';
 import { IdentiteDeFenetre } from '../../domain/designation/IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from '../../domain/designation/IntentionGlobaleInitiee';
-import { Matricule } from '../../domain/designation/Matricule';
 import { IndexedDbJournauxDuPupitre } from './local/IndexedDbJournauxDuPupitre';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
@@ -465,13 +465,13 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       state,
-      Matricule.empty().afterDigit('0').afterDigit('4').afterDigit('9'),
+      Identifiant.empty().afterDigit('0').afterDigit('4').afterDigit('9'),
       Date.parse('2026-09-05T12:00:00Z'),
       new IdentiteDeFenetre(1),
     );
   const givenAStoredPause = async (activites: ReferentielDuPupitre['suivis'][number]['activites']): Promise<JournalDuPupitre> => {
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), {
-      operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
+      operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
       suivis: [
         {
           id: 'piece',
