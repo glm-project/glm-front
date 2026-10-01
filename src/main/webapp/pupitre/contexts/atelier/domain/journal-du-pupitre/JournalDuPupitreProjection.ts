@@ -22,8 +22,10 @@ type ReferentielEnProjection = Omit<ReferentielDuPupitre, 'suivis'> & { readonly
 const occupiesSamePlace = (activite: ActiviteDuPupitre, geste: PointageCausal): boolean =>
   activite.operateurId === geste.operateurId && activite.posteId === geste.posteId;
 
-const targetedActivity = (suivi: SuiviEnProjection, geste: PointageCausal): ActiviteDuPupitre | undefined =>
-  geste.intention === 'OUVERTURE' ? undefined : suivi.ouverturesConnues.find(activite => activite.ouverture === geste.cible);
+const targetedActivity = (
+  suivi: SuiviEnProjection,
+  geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>,
+): ActiviteDuPupitre | undefined => suivi.ouverturesConnues.find(activite => activite.ouverture === geste.cible);
 
 const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCausal): boolean =>
   geste.intention !== 'OUVERTURE'
