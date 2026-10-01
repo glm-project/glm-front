@@ -20,6 +20,8 @@ credential or reach into an adapter.
 `gestion/auth.provider.ts` builds `keycloak-js` from the front environment and binds
 `KeycloakOidcAuthentication`. Its Cypress build replaces that provider file with the in-memory adapter.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
+The gestion shell mounts its routed content only after authentication completes, so a first API acquisition
+cannot ask Keycloak to renew a session that has not opened yet.
 
 `pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,
 the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort` and
