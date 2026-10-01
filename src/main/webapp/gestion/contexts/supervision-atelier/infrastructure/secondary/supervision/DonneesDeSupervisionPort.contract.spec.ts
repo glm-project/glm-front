@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
+import { Instant } from '../../../domain/instant/Instant';
+import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { InMemoryDonneesDeSupervision } from './InMemoryDonneesDeSupervision';
 
 describe.each([
@@ -66,3 +67,21 @@ const whenReadAt = (port: DonneesDeSupervisionPort, instant: string) => {
   vi.setSystemTime(new Date(instant));
   return port.read();
 };
+
+const EVALUATION = new Instant('2026-09-13T10:00:00Z');
+const emptyFixture: DonneesDeSupervision = { evaluation: EVALUATION, operateurs: [], activites: [], sequencesEnConflit: [] };
+
+describe.each([
+  { name: 'InMemory', given: (donnees: DonneesDeSupervision): DonneesDeSupervisionPort => new InMemoryDonneesDeSupervision(donnees) },
+])('$name complete supervision acquisition', ({ given }) => {
+  afterEach(() => vi.useRealTimers());
+
+  it('should read a complete empty workshop without fabricating operators or activities', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const port = given(emptyFixture);
+
+    const donnees = await port.read();
+
+    expect(donnees).toEqual(emptyFixture);
+  });
+});

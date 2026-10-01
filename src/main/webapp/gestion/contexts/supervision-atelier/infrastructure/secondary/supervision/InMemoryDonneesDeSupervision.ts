@@ -141,7 +141,12 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
 };
 
 export class InMemoryDonneesDeSupervision extends DonneesDeSupervisionPort {
-  private readonly donnees = buildDemonstration(Date.now());
+  private readonly donnees: DonneesDeSupervision;
+
+  constructor(donnees = buildDemonstration(Date.now())) {
+    super();
+    this.donnees = donnees;
+  }
 
   read(): Promise<DonneesDeSupervision> {
     return Promise.resolve({ ...this.donnees, evaluation: new Instant(new Date().toISOString()) });
