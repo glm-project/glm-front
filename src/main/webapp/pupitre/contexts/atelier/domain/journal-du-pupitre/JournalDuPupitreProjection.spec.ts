@@ -61,6 +61,29 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it('should keep an expired target unavailable after its transition conflicts with a later reopening', () => {
+    const reopening: GesteDePointage = { ...debutGesteFixture, id: 'relance', dateDeSurvenue: '2026-09-05T22:00:00Z' };
+    const conflict: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc-en-conflit',
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T23:00:00Z',
+    };
+    const repeated: GesteDePointage = { ...conflict, id: 'autre-nc', dateDeSurvenue: '2026-09-05T23:10:00Z' };
+    const state = givenEvents([
+      debutFixture,
+      { geste: reopening, etat: 'EN_ATTENTE' },
+      { geste: conflict, etat: 'EN_ATTENTE' },
+      { geste: repeated, etat: 'EN_ATTENTE' },
+    ]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T23:11:00Z'));
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
   it.each(['2026-09-05T12:00:00Z', '2026-09-05T21:00:00Z'])(
     'should retain a conflict when a late finish targets an activity replaced before or at expiry: %s',
     dateDeSurvenue => {
