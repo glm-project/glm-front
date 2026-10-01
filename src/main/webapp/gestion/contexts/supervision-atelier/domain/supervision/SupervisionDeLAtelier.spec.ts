@@ -17,6 +17,27 @@ import { MotifSupervisionInexploitable, ResultatSupervision } from './ResultatSu
 import { SupervisionDeLAtelier } from './SupervisionDeLAtelier';
 
 describe('SupervisionDeLAtelier', () => {
+  it('should classify current work until the acquired deadline', () => {
+    const operateur = operateurFixture('op-server-deadline');
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('server-deadline'),
+      operateurId: operateur.id,
+      objet: MOULE_1015,
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: new Instant('2026-09-13T22:00:00Z'),
+    });
+
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T21:30:00Z'),
+      operateurs: [operateur],
+      activites: [activite],
+      sequencesEnConflit: [],
+    });
+
+    expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
+  });
+
   it('should reject a conflicting activity whose operator cannot be identified', () => {
     const operateur = operateurFixture('op-conflict');
     const activite = new ActiviteDeSupervision({
