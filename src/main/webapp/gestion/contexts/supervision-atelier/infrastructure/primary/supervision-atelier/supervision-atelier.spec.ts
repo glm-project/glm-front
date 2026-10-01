@@ -440,6 +440,24 @@ describe('Supervision atelier component', () => {
     ]);
   });
 
+  it('should display the retained automatic end instead of the received deadline', async () => {
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('retained-automatic-end'),
+      operateurId: aliceFixture.id,
+      objet: ofFixture('3001'),
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: veilleFixture(21),
+      echeance: instantFixture(10),
+      etat: 'TERMINEE_AUTOMATIQUEMENT',
+      finRetenue: instantFixture(8, 45),
+    });
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite], sequencesEnConflit: [] });
+
+    expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 08:45');
+  });
+
   it('should order several automatic-end warnings by workstation while preserving their end instants', async () => {
     await givenAcquisitionInProgress();
     const dernier = activiteFixture(aliceFixture, {

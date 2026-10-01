@@ -183,7 +183,7 @@
               data-selector="supervision-anomalie"
             >
               <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.termineeAutomatiquement }} ·
-              @let fin = libelles.moment(libelles.fin, activite.echeance, supervision.instantDEvaluation);<time
+              @let fin = libelles.moment(libelles.fin, activite.finRetenue, supervision.instantDEvaluation);<time
                 [attr.datetime]="fin.instant.value"
                 >{{ fin.avant }}{{ fin.jour }}{{ fin.apres }}</time
               >

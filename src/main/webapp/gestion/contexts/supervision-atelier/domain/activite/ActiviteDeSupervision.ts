@@ -23,6 +23,7 @@ export interface DescriptionActivite {
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
   readonly echeance?: Instant;
+  readonly finRetenue?: Instant;
   readonly poste?: PosteDeSupervision;
   readonly etat?: EtatActiviteDeSupervision;
 }
@@ -35,6 +36,7 @@ export class ActiviteDeSupervision {
   readonly debut: Instant;
   readonly poste: PosteDeSupervision | undefined;
   readonly echeance: Instant;
+  readonly finRetenue: Instant;
   private readonly etat: EtatActiviteDeSupervision;
 
   constructor(description: DescriptionActivite) {
@@ -47,6 +49,7 @@ export class ActiviteDeSupervision {
     this.poste = description.poste;
     this.echeance =
       description.echeance ?? new Instant(new Date(Date.parse(this.debut.value) + DUREE_AVANT_FIN_AUTOMATIQUE_MS).toISOString());
+    this.finRetenue = description.finRetenue ?? this.echeance;
   }
 
   isEnCours(maintenant: Instant): boolean {
