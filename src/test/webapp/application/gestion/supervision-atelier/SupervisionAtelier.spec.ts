@@ -30,6 +30,23 @@ const renamedConnectedWorkshopFixture: RestSupervision = {
   operateurs: [{ id: 'op-connected-serin', nom: 'Vallot', prenom: 'Maya', metiers: ['Fraisage', 'Tournage'] }],
 };
 
+const workshopWithWarningsFixture: RestSupervision = {
+  ...idleConnectedWorkshopFixture,
+  activites: [
+    {
+      id: 'opening-to-correct',
+      operateurId: 'op-connected-serin',
+      element: { id: 'of-to-correct', type: 'ORDRE_DE_FABRICATION', nom: 'OF à corriger' },
+      categorie: 'TRAVAIL',
+      debut: new Date(2026, 8, 23, 8).toISOString(),
+      echeance: new Date(2026, 8, 23, 21).toISOString(),
+      etat: 'TERMINEE_AUTOMATIQUEMENT',
+      finRetenue: new Date(2026, 8, 23, 21).toISOString(),
+    },
+  ],
+  sequencesEnConflit: [{ id: 'sequence-to-correct', operateurId: 'op-connected-serin', activites: [] }],
+};
+
 describe('Supervision atelier in back office', () => {
   beforeEach(() => {
     apiFixture = new SupervisionApiFixture();
@@ -64,6 +81,15 @@ describe('Supervision atelier in back office', () => {
 
     thenTheUpdatedNameAndTradesAreDisplayed();
   });
+
+  it('should replace the automatic finish and conflict warnings after a backend correction', () => {
+    givenAWorkshopWithWarnings();
+
+    whenVisitingTheRoot();
+    whenRefreshingAfterBackendCorrection();
+
+    thenTheCorrectedWorkshopHasNoWarnings();
+  });
 });
 
 const givenConnectedWorkshop = (): void => {
@@ -72,6 +98,29 @@ const givenConnectedWorkshop = (): void => {
 
 const givenAnIdleConnectedWorkshop = (): void => {
   apiFixture.replace(idleConnectedWorkshopFixture);
+};
+
+const givenAWorkshopWithWarnings = (): void => {
+  apiFixture.replace(workshopWithWarningsFixture);
+};
+
+const whenRefreshingAfterBackendCorrection = (): void => {
+  cy.wait('@supervisionRead');
+  cy.get(dataSelector('supervision-anomalie')).invoke('text').as('automaticWarningBeforeCorrection', { type: 'static' });
+  cy.get(dataSelector('supervision-sequence-en-conflit')).invoke('text').as('conflictBeforeCorrection', { type: 'static' });
+  cy.then(() => apiFixture.replace(idleConnectedWorkshopFixture));
+  whenRefreshingTheWorkshop();
+};
+
+const thenTheCorrectedWorkshopHasNoWarnings = (): void => {
+  cy.get('@automaticWarningBeforeCorrection').should('contain', 'Activité terminée automatiquement');
+  cy.get('@conflictBeforeCorrection').should('contain', 'Séquence en conflit');
+  cy.get(dataSelector('supervision-anomalie')).should('not.exist');
+  cy.get(dataSelector('supervision-sequence-en-conflit')).should('not.exist');
+  cy.get(dataSelector('supervision-signal-a-verifier')).should('have.text', '0 à vérifier');
+  cy.get(dataSelector('supervision-couloir-sans-activite'))
+    .find(dataSelector('supervision-operateur-nom'))
+    .should('have.text', 'Sérin Maya');
 };
 
 const whenRefreshingAfterReferentialChanges = (): void => {
