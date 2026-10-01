@@ -61,6 +61,100 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it.each([
+    { operateurId: 'marie', posteId: 'tour' },
+    { operateurId: 'jean', posteId: 'fraiseuse' },
+  ])('should preserve both activities when a queued transition targets another operator or workstation: %j', emplacement => {
+    const activityA = {
+      ouverture: 'A',
+      operateurId: 'jean',
+      posteId: 'tour',
+      categorie: 'TRAVAIL' as const,
+      depuis: '2026-09-05T08:00:00Z',
+      echeance: '2026-09-05T21:00:00Z',
+    };
+    const activityB = { ...activityA, ...emplacement, ouverture: 'B' };
+    const transition: GesteDePointage = {
+      ...debutGesteFixture,
+      ...emplacement,
+      id: 'mauvaise-cible',
+      intention: 'TRANSITION',
+      type: 'NON_CONFORMITE',
+      cible: 'A',
+      dateDeSurvenue: '2026-09-05T10:00:00Z',
+    };
+    const state: JournalDuPupitre = {
+      connecte: false,
+      referentiel: {
+        ...referenceFixture,
+        suivis: [
+          {
+            ...requiredFixture(referenceFixture.suivis[0], 'suivi'),
+            etat: 'EN_COURS',
+            activites: [activityA, activityB],
+          },
+        ],
+      },
+      evenements: [{ geste: transition, etat: 'EN_ATTENTE' }],
+    };
+
+    const projection = whenProjecting(state);
+
+    expect(projection?.suivis[0]?.activites).toEqual([activityA, activityB]);
+  });
+
+  it('should expose no current activity when a queued transition predates its corrected target opening', () => {
+    const activity = {
+      ouverture: 'debut',
+      operateurId: 'jean',
+      categorie: 'TRAVAIL' as const,
+      depuis: '2026-09-05T08:00:00Z',
+      echeance: '2026-09-05T21:00:00Z',
+    };
+    const transition: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc-avant-debut',
+      intention: 'TRANSITION',
+      type: 'NON_CONFORMITE',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T07:00:00Z',
+    };
+    const state: JournalDuPupitre = {
+      connecte: false,
+      referentiel: {
+        ...referenceFixture,
+        suivis: [
+          {
+            ...requiredFixture(referenceFixture.suivis[0], 'suivi'),
+            etat: 'EN_COURS',
+            activites: [activity],
+          },
+        ],
+      },
+      evenements: [{ geste: transition, etat: 'EN_ATTENTE' }],
+    };
+
+    const projection = whenProjecting(state);
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
+  it('should expose no current activity when a queued transition repeats its target category', () => {
+    const transition: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'travail-sur-travail',
+      intention: 'TRANSITION',
+      type: 'DEBUT',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T09:00:00Z',
+    };
+    const state = givenEvents([debutFixture, { geste: transition, etat: 'EN_ATTENTE' }]);
+
+    const projection = whenProjecting(state);
+
+    thenStateIs(projection, 'INTERROMPU', 0);
+  });
+
   it.each(['2026-09-05T10:00:00Z', '2026-09-05T21:00:00Z'])(
     'should expose no current activity when a queued transition targets an activity already finished locally at %s',
     dateDeSurvenue => {

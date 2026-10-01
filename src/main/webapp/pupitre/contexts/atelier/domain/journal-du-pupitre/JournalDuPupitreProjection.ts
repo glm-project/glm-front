@@ -27,11 +27,27 @@ const targetedActivity = (
   geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>,
 ): ActiviteDuPupitre | undefined => suivi.ouverturesConnues.find(activite => activite.ouverture === geste.cible);
 
+const targetsAnotherPlace = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
+  if (geste.intention === 'OUVERTURE') return false;
+  const cible = targetedActivity(suivi, geste);
+  return cible !== undefined && !occupiesSamePlace(cible, geste);
+};
+
 const targetsUnavailableActivity = (suivi: SuiviEnProjection, geste: PointageCausal): boolean =>
   geste.intention !== 'OUVERTURE'
   && (targetedActivity(suivi, geste) === undefined
+    || predatesTargetOpening(suivi, geste)
+    || repeatsTargetCategory(suivi, geste)
     || suivi.ciblesConsommees.includes(geste.cible)
     || suivi.activites.some(activite => occupiesSamePlace(activite, geste) && activite.ouverture !== geste.cible));
+
+const predatesTargetOpening = (suivi: SuiviEnProjection, geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>): boolean => {
+  const cible = targetedActivity(suivi, geste);
+  return cible !== undefined && Date.parse(geste.dateDeSurvenue) < Date.parse(cible.depuis);
+};
+
+const repeatsTargetCategory = (suivi: SuiviEnProjection, geste: PointageCausal): boolean =>
+  geste.intention === 'TRANSITION' && targetedActivity(suivi, geste)?.categorie === categorieFor(geste);
 
 const consumesTarget = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
   if (geste.intention === 'OUVERTURE') return false;
@@ -65,6 +81,7 @@ const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal, confli
 
 const applyPointage = (suivi: SuiviEnProjection, geste: GesteDePointage): SuiviEnProjection => {
   if (geste.intention === undefined) return suivi;
+  if (targetsAnotherPlace(suivi, geste)) return suivi;
   const conflit = targetsUnavailableActivity(suivi, geste);
   const nouvelles = newlyOpenedActivities(geste, conflit);
   const activites = [...suivi.activites.filter(activite => !occupiesSamePlace(activite, geste)), ...nouvelles];
