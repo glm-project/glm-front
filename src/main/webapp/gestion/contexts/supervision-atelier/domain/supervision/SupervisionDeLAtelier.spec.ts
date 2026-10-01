@@ -16,6 +16,27 @@ import { MotifSupervisionInexploitable, ResultatSupervision } from './ResultatSu
 import { SupervisionDeLAtelier } from './SupervisionDeLAtelier';
 
 describe('SupervisionDeLAtelier', () => {
+  it('should keep current work one nanosecond before the acquired deadline within the same millisecond', () => {
+    const operateur = operateurFixture('op-nanosecond');
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('nanosecond-deadline'),
+      operateurId: operateur.id,
+      objet: MOULE_1015,
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: new Instant('2026-09-13T08:00:00.123456790Z'),
+      echeance: new Instant('2026-09-13T21:00:00.123456790Z'),
+    });
+
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T21:00:00.123456789Z'),
+      operateurs: [operateur],
+      activites: [activite],
+      sequencesEnConflit: [],
+    });
+
+    expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
+  });
+
   it('should classify current work until the acquired deadline', () => {
     const operateur = operateurFixture('op-server-deadline');
     const activite = new ActiviteDeSupervision({
