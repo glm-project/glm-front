@@ -7,6 +7,9 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Instant } from '../../../domain/instant/Instant';
+import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
+import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { HttpDonneesDeSupervision } from './HttpDonneesDeSupervision';
 import { InMemoryDonneesDeSupervision } from './InMemoryDonneesDeSupervision';
@@ -94,6 +97,17 @@ const emptyFixture: SceneFixture = {
   response: { evaluation: EVALUATION.value, operateurs: [], activites: [], sequencesEnConflit: [] },
 };
 
+const operateurFixture = new OperateurDeclare({
+  id: new IdentifiantOperateur('op-serin'),
+  nom: 'Sérin',
+  prenom: 'Maya',
+  metiers: [new NatureDeTravail('Rectification')],
+});
+const oneOperatorFixture: SceneFixture = {
+  donnees: { ...emptyFixture.donnees, operateurs: [operateurFixture] },
+  response: { ...emptyFixture.response, operateurs: [{ id: 'op-serin', nom: 'Sérin', prenom: 'Maya', metiers: ['Rectification'] }] },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -137,5 +151,14 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(emptyFixture.donnees);
+  });
+
+  it('should retain a declared operator and trades even without any activity', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(oneOperatorFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(oneOperatorFixture.donnees);
   });
 });
