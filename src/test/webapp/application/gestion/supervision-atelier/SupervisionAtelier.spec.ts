@@ -1,6 +1,13 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
+
+let apiFixture: SupervisionApiFixture;
 
 describe('Supervision atelier in back office', () => {
+  beforeEach(() => {
+    apiFixture = new SupervisionApiFixture();
+    apiFixture.intercept();
+  });
   it('should display the two supervision lanes on the root path', () => {
     whenVisitingTheRoot();
 

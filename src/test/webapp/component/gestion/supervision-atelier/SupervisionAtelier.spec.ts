@@ -1,9 +1,16 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { SupervisionApiFixture, updatedSupervisionFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 const DEMONSTRATION = new Date(2026, 8, 24, 9, 10);
 
+let apiFixture: SupervisionApiFixture;
+
 describe('Supervision lanes readability', () => {
+  beforeEach(() => {
+    apiFixture = new SupervisionApiFixture();
+    apiFixture.intercept();
+  });
   [390, 768, 1024, 1440].forEach(width => {
     it(`should keep lanes readable without horizontal overflow at ${width}px`, () => {
       givenViewport(width);
@@ -34,7 +41,7 @@ describe('Supervision lanes readability', () => {
     thenLaneColoursFollowTheClientCode();
   });
 
-  it('should show the demonstration workshop as the plan describes it', () => {
+  it('should show the acquired workshop as the plan describes it', () => {
     whenOpeningSupervision();
 
     thenTheLanesHoldTheDemonstrationOperators();
@@ -80,7 +87,10 @@ const whenOpeningSupervisionWithPollingClock = (): void => {
 };
 
 const whenReachingTheNextAnomalyThreshold = (): void => {
-  cy.clock().then(clock => clock.setSystemTime(new Date(2026, 8, 24, 20, 5).getTime()));
+  cy.clock().then(clock => {
+    clock.setSystemTime(new Date(2026, 8, 24, 20, 5).getTime());
+    apiFixture.replace(updatedSupervisionFixture());
+  });
 };
 
 const whenCapturingBeforePollingDeadline = (): void => {
