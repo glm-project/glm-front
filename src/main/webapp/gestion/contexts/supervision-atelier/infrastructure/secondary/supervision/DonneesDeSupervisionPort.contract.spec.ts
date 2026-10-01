@@ -344,6 +344,39 @@ const whenRead = async (harness: ReadHarness): Promise<DonneesDeSupervision> => 
   return reading;
 };
 
+const posteObservationFixture = (poste: PosteDeSupervision | undefined) =>
+  poste === undefined ? undefined : { id: poste.id.value, libelle: poste.libelle, nature: poste.nature?.value };
+
+const activityObservationFixture = (activite: ActiviteDeSupervision, evaluation: Instant) => ({
+  id: activite.id.value,
+  operateurId: activite.operateurId?.value,
+  objet: { type: activite.objet.type, nom: activite.objet.nom, reference: activite.objet.reference?.value },
+  categorie: activite.categorie.value,
+  debut: activite.debut.value,
+  echeance: activite.echeance.value,
+  finRetenue: activite.finRetenue.value,
+  poste: posteObservationFixture(activite.poste),
+  enCours: activite.isEnCours(evaluation),
+  termineeAutomatiquement: activite.isTermineeAutomatiquement(evaluation),
+});
+
+const supervisionObservationFixture = (donnees: DonneesDeSupervision) => ({
+  evaluation: donnees.evaluation.value,
+  operateurs: donnees.operateurs.map(operateur => ({
+    id: operateur.id.value,
+    nom: operateur.nom,
+    prenom: operateur.prenom,
+    metiers: operateur.metiers.map(metier => metier.value),
+  })),
+  activites: donnees.activites.map(activite => activityObservationFixture(activite, donnees.evaluation)),
+  sequencesEnConflit: donnees.sequencesEnConflit.map(sequence => ({
+    id: sequence.id.value,
+    operateurId: sequence.operateurId?.value,
+    poste: posteObservationFixture(sequence.poste),
+    activites: sequence.activites.map(activite => activityObservationFixture(activite, donnees.evaluation)),
+  })),
+});
+
 describe.each([
   { name: 'InMemory', given: givenInMemory },
   { name: 'HTTP', given: givenHttp },
@@ -356,7 +389,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(emptyFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(emptyFixture.donnees));
   });
 
   it('should retain a declared operator and trades even without any activity', async () => {
@@ -365,7 +398,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(oneOperatorFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(oneOperatorFixture.donnees));
   });
 
   it('should retain a fabrication-order activity, its opening identity and deadline without fabricating a workstation', async () => {
@@ -374,7 +407,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(fabricationOrderFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(fabricationOrderFixture.donnees));
   });
 
   it('should retain a nonconforming mould activity and workstation trade without inventing an element reference', async () => {
@@ -383,7 +416,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(mouldFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(mouldFixture.donnees));
   });
 
   it('should retain a personal-order automatic end and its retained finish on a workstation without a trade', async () => {
@@ -392,7 +425,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(automaticEndFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(automaticEndFixture.donnees));
   });
 
   it('should retain an empty conflicting sequence independently of current interpretable work', async () => {
@@ -401,7 +434,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(emptyConflictFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(emptyConflictFixture.donnees));
   });
 
   it('should retain every conflicting activity and its own element separately from interpretable work after expiration', async () => {
@@ -410,7 +443,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(conflictFixture.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(conflictFixture.donnees));
   });
 
   it.each([
@@ -422,7 +455,7 @@ describe.each([
 
     const donnees = await whenRead(harness);
 
-    expect(donnees).toEqual(scene.donnees);
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(scene.donnees));
   });
 });
 
