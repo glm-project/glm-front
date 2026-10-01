@@ -22,6 +22,14 @@ const connectedWorkshopFixture: RestSupervision = {
   sequencesEnConflit: [],
 };
 
+const idleConnectedWorkshopFixture: RestSupervision = { ...connectedWorkshopFixture, activites: [] };
+
+const renamedConnectedWorkshopFixture: RestSupervision = {
+  ...idleConnectedWorkshopFixture,
+  evaluation: new Date(2026, 8, 24, 9, 58).toISOString(),
+  operateurs: [{ id: 'op-connected-serin', nom: 'Vallot', prenom: 'Maya', metiers: ['Fraisage', 'Tournage'] }],
+};
+
 describe('Supervision atelier in back office', () => {
   beforeEach(() => {
     apiFixture = new SupervisionApiFixture();
@@ -47,10 +55,36 @@ describe('Supervision atelier in back office', () => {
 
     thenTheActivityAndAnomaliesRemainVisible();
   });
+
+  it('should replace the operator name and trades from the workshop referential after refreshing', () => {
+    givenAnIdleConnectedWorkshop();
+
+    whenVisitingTheRoot();
+    whenRefreshingAfterReferentialChanges();
+
+    thenTheUpdatedNameAndTradesAreDisplayed();
+  });
 });
 
 const givenConnectedWorkshop = (): void => {
   apiFixture.replace(connectedWorkshopFixture);
+};
+
+const givenAnIdleConnectedWorkshop = (): void => {
+  apiFixture.replace(idleConnectedWorkshopFixture);
+};
+
+const whenRefreshingAfterReferentialChanges = (): void => {
+  cy.wait('@supervisionRead');
+  cy.then(() => apiFixture.replace(renamedConnectedWorkshopFixture));
+  whenRefreshingTheWorkshop();
+};
+
+const thenTheUpdatedNameAndTradesAreDisplayed = (): void => {
+  cy.get(dataSelector('supervision-carte')).should('have.length', 1).and('have.attr', 'data-operateur-id', 'op-connected-serin');
+  cy.get(dataSelector('supervision-operateur-nom')).should('have.text', 'Vallot Maya');
+  cy.get(dataSelector('supervision-metiers')).should('have.text', 'Métiers : Fraisage, Tournage');
+  cy.get(dataSelector('supervision-derniere-lecture')).should('contain.text', '09:58');
 };
 
 const whenVisitingAtTheActivityDeadline = (): void => {
