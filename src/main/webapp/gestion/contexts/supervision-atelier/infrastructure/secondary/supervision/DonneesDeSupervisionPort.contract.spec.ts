@@ -180,6 +180,41 @@ const mouldFixture: SceneFixture = {
   },
 };
 
+const automaticEndFixture: SceneFixture = {
+  donnees: {
+    ...oneOperatorFixture.donnees,
+    activites: [
+      new ActiviteDeSupervision({
+        id: new IdentifiantActivite('automatic-end'),
+        operateurId: operateurFixture.id,
+        objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+        categorie: new CategorieActivite('TRAVAIL'),
+        debut: new Instant('2026-09-12T08:00:00Z'),
+        echeance: new Instant('2026-09-12T21:00:00Z'),
+        etat: 'TERMINEE_AUTOMATIQUEMENT',
+        finRetenue: new Instant('2026-09-12T20:45:00Z'),
+        poste: new PosteDeSupervision({ id: new IdentifiantPoste('poste-tour'), libelle: 'Tour 3' }),
+      }),
+    ],
+  },
+  response: {
+    ...oneOperatorFixture.response,
+    activites: [
+      {
+        id: 'automatic-end',
+        operateurId: 'op-serin',
+        element: { id: 'of-perso', type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' },
+        categorie: 'TRAVAIL',
+        debut: '2026-09-12T08:00:00Z',
+        echeance: '2026-09-12T21:00:00Z',
+        etat: 'TERMINEE_AUTOMATIQUEMENT',
+        finRetenue: '2026-09-12T20:45:00Z',
+        poste: { id: 'poste-tour', libelle: 'Tour 3' },
+      },
+    ],
+  },
+};
+
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -250,5 +285,14 @@ describe.each([
     const donnees = await whenRead(harness);
 
     expect(donnees).toEqual(mouldFixture.donnees);
+  });
+
+  it('should retain a personal-order automatic end and its retained finish on a workstation without a trade', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(automaticEndFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees).toEqual(automaticEndFixture.donnees);
   });
 });

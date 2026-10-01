@@ -49,6 +49,8 @@ const toActivite = (activite: RestActivite): ActiviteDeSupervision =>
     categorie: new CategorieActivite(activite.categorie),
     debut: new Instant(activite.debut),
     echeance: new Instant(activite.echeance),
+    etat: activite.etat,
+    ...(activite.finRetenue === undefined ? {} : { finRetenue: new Instant(activite.finRetenue) }),
     ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
   });
 
