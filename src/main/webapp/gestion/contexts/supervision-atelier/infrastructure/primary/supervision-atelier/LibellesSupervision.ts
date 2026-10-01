@@ -1,4 +1,4 @@
-import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { TypeDElement } from '../../../domain/activite/TypeDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
@@ -62,7 +62,7 @@ export const LIBELLES_SUPERVISION = {
   termineeAutomatiquement: 'Activité terminée automatiquement',
   sequenceEnConflit: 'Séquence en conflit',
   aResoudre: 'À résoudre',
-  objet: (objet: ObjetDeLActivite): string => `${TYPES[objet.type]} ${objet.reference?.value ?? objet.nom}`,
+  objet: (objet: ElementTravaille): string => `${TYPES[objet.type]} ${objet.reference?.value ?? objet.nom}`,
   fraicheur: (total: number, instant: Instant): string =>
     `${total} ${pluriel(total, 'opérateur', 'opérateurs')} · d’après les pointages reçus jusqu’à ${heure(instant)} · actualisé toutes les 30 s`,
   listeDesMetiers: (metiers: readonly NatureDeTravail[]): string => metiers.map(metier => metier.value).join(', '),

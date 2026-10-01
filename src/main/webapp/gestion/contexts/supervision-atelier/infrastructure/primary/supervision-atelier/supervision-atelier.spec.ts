@@ -8,7 +8,6 @@ import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/acti
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
-import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
@@ -54,7 +53,7 @@ const ofSansReferenceFixture = (nom: string): ElementTravaille => new ElementTra
 
 interface ActiviteFixture {
   readonly id: string;
-  readonly objet: ObjetDeLActivite;
+  readonly objet: ElementTravaille;
   readonly debut: Instant;
   readonly poste?: PosteDeSupervision;
   readonly categorie?: ValeurCategorieActivite;

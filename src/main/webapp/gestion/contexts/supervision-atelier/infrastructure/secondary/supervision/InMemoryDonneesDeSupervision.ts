@@ -3,7 +3,6 @@ import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
-import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
@@ -46,7 +45,7 @@ const FIL_2 = poste('poste-fil-2', 'Fil 2', 'Découpe à fil');
 
 interface ActiviteDeDemonstration {
   readonly operateur: string;
-  readonly objet: ObjetDeLActivite;
+  readonly objet: ElementTravaille;
   readonly poste?: PosteDeSupervision;
   readonly categorie: CategorieActivite;
   readonly minutes: number;
