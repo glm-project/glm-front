@@ -98,6 +98,15 @@ describe('Supervision atelier in back office', () => {
 
     thenTheWorkshopLoadingErrorIsDisplayed();
   });
+
+  it('should replace cards with an error and recover from a later workshop read', () => {
+    givenConnectedWorkshop();
+
+    whenVisitingTheRoot();
+    whenRereadingAnUnavailableWorkshopAndRecovering();
+
+    thenTheErrorWasDisplayedAndFreshCardsAreVisible();
+  });
 });
 
 const givenConnectedWorkshop = (): void => {
@@ -123,6 +132,29 @@ const thenTheWorkshopLoadingErrorIsDisplayed = (): void => {
   cy.get(dataSelector('supervision-carte')).should('not.exist');
   cy.get(dataSelector('supervision-derniere-lecture')).should('not.exist');
   cy.get(dataSelector('supervision-refresh')).should('not.be.disabled');
+};
+
+const whenRereadingAnUnavailableWorkshopAndRecovering = (): void => {
+  cy.wait('@supervisionRead');
+  cy.get(dataSelector('supervision-operateur-nom')).invoke('text').as('operatorBeforeFailure', { type: 'static' });
+  cy.then(() => apiFixture.fail());
+  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled').click();
+  cy.wait('@supervisionRead');
+  cy.get(dataSelector('supervision-error')).should('be.visible').invoke('text').as('readError', { type: 'static' });
+  cy.get(dataSelector('supervision-atelier'))
+    .then(atelier => atelier.find(dataSelector('supervision-carte')).length)
+    .as('cardsDuringFailure', { type: 'static' });
+  cy.then(() => apiFixture.replace(renamedConnectedWorkshopFixture));
+  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled').click();
+};
+
+const thenTheErrorWasDisplayedAndFreshCardsAreVisible = (): void => {
+  cy.get('@operatorBeforeFailure').should('eq', 'Sérin Maya');
+  cy.get('@readError').should('contain', 'Impossible de charger les données de supervision.');
+  cy.get('@cardsDuringFailure').should('eq', 0);
+  thenTheUpdatedNameAndTradesAreDisplayed();
+  cy.get(dataSelector('supervision-error')).should('not.exist');
+  cy.get(dataSelector('supervision-activite')).should('not.exist');
 };
 
 const whenRefreshingAfterBackendCorrection = (): void => {
