@@ -1,5 +1,6 @@
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
+  ActiviteDuPupitre,
   EMPTY_JOURNAL_DU_PUPITRE,
   EtatDePresence,
   EvenementDuJournal,
@@ -8,6 +9,7 @@ import {
   JournalDuPupitre,
   OperateurDuPupitre,
   ReferentielDuPupitre,
+  SuiviDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
@@ -23,7 +25,10 @@ interface EvenementAccepteStocke {
 }
 type EvenementStocke = Exclude<EvenementDuJournal, { readonly etat: 'ACCEPTE' }> | EvenementAccepteStocke;
 type OperateurStocke = Omit<OperateurDuPupitre, 'etat'> & { readonly etat: EtatDePresence | 'EN_PAUSE' };
-type ReferentielStocke = Omit<ReferentielDuPupitre, 'operateurs'> & { readonly operateurs: readonly OperateurStocke[] };
+type ActiviteStockee = Omit<ActiviteDuPupitre, 'ouverture' | 'echeance'> & Partial<Pick<ActiviteDuPupitre, 'ouverture' | 'echeance'>>;
+type SuiviStocke = Omit<SuiviDuPupitre, 'activites'> & { readonly activites: readonly ActiviteStockee[] };
+type ReferentielCausalStocke = Omit<ReferentielDuPupitre, 'operateurs'> & { readonly operateurs: readonly OperateurStocke[] };
+type ReferentielStocke = Omit<ReferentielCausalStocke, 'suivis'> & { readonly suivis: readonly SuiviStocke[] };
 type JournalDuPupitreStocke = Omit<JournalDuPupitre, 'evenements' | 'referentiel'> & {
   readonly evenements: readonly EvenementStocke[];
   readonly referentiel?: ReferentielStocke;
@@ -37,12 +42,12 @@ const restoreOperateur = (operateur: OperateurStocke): OperateurDuPupitre => ({
   etat: operateur.etat === 'EN_PAUSE' ? 'PRESENT' : operateur.etat,
 });
 
-const restoreReferentiel = (referentiel: ReferentielStocke): ReferentielDuPupitre => ({
+const restoreReferentiel = (referentiel: ReferentielCausalStocke): ReferentielDuPupitre => ({
   ...referentiel,
   operateurs: referentiel.operateurs.map(restoreOperateur),
 });
 
-const hasCausalActivities = (referentiel: ReferentielStocke | undefined): referentiel is ReferentielStocke =>
+const hasCausalActivities = (referentiel: ReferentielStocke | undefined): referentiel is ReferentielCausalStocke =>
   referentiel !== undefined
   && referentiel.suivis.every(suivi =>
     suivi.activites.every(activite => activite.ouverture !== undefined && activite.echeance !== undefined),

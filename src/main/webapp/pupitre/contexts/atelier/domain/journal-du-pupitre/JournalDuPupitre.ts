@@ -15,8 +15,8 @@ export interface OperateurDuPupitre {
 }
 
 export interface ActiviteDuPupitre {
-  readonly ouverture?: string;
-  readonly echeance?: string;
+  readonly ouverture: string;
+  readonly echeance: string;
   readonly operateurId: string;
   readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
   readonly depuis: string;

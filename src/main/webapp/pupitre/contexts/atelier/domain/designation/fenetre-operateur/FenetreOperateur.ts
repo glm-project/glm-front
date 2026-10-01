@@ -102,7 +102,7 @@ export class FenetreOperateur {
   }
   nextExpiration(): number | undefined {
     return this.activitesPersonnellesConnues()
-      .flatMap(({ activite }) => (activite.echeance === undefined ? [] : [Date.parse(activite.echeance)]))
+      .map(({ activite }) => Date.parse(activite.echeance))
       .sort((left, right) => left - right)[0];
   }
   afterEvaluatingAt(instant: number): FenetreOperateur {
@@ -284,7 +284,6 @@ export class FenetreOperateur {
   }
 
   private finDe(suiviId: string, activite: ActiviteDuPupitre, identite: IdentiteDuGeste): GesteDePointage {
-    if (activite.ouverture === undefined) throw new Error('Activité historique sans ouverture.');
     return this.toPointage(
       suiviId,
       {

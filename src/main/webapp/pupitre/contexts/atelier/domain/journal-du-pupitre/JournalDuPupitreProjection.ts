@@ -114,7 +114,7 @@ export const projectReferentiel = (pupitre: JournalDuPupitre, instant?: number):
   return {
     ...referentiel,
     suivis: referentiel.suivis.map(suivi => {
-      const activites = suivi.activites.filter(activite => activite.echeance === undefined || Date.parse(activite.echeance) > instant);
+      const activites = suivi.activites.filter(activite => Date.parse(activite.echeance) > instant);
       return { ...suivi, activites, etat: activites.length === suivi.activites.length ? suivi.etat : etatFor(activites.length) };
     }),
   };
