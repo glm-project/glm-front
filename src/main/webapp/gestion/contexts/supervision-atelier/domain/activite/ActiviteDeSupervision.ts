@@ -47,8 +47,7 @@ export class ActiviteDeSupervision {
     this.categorie = description.categorie;
     this.debut = description.debut;
     this.poste = description.poste;
-    this.echeance =
-      description.echeance ?? new Instant(new Date(Date.parse(this.debut.value) + DUREE_AVANT_FIN_AUTOMATIQUE_MS).toISOString());
+    this.echeance = description.echeance ?? this.debut.afterElapsedMilliseconds(DUREE_AVANT_FIN_AUTOMATIQUE_MS);
     this.finRetenue = description.finRetenue ?? this.echeance;
   }
 

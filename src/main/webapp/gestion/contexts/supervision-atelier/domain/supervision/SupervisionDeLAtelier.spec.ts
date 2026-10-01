@@ -37,6 +37,26 @@ describe('SupervisionDeLAtelier', () => {
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
   });
 
+  it('should preserve the opening nanoseconds when deriving the demonstration deadline after thirteen elapsed hours', () => {
+    const operateur = operateurFixture('op-demo-nanosecond');
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('demo-nanosecond-deadline'),
+      operateurId: operateur.id,
+      objet: MOULE_1015,
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: new Instant('2026-09-13T08:00:00.123456790Z'),
+    });
+
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('2026-09-13T21:00:00.123456789Z'),
+      operateurs: [operateur],
+      activites: [activite],
+      sequencesEnConflit: [],
+    });
+
+    expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
+  });
+
   it('should classify current work until the acquired deadline', () => {
     const operateur = operateurFixture('op-server-deadline');
     const activite = new ActiviteDeSupervision({
