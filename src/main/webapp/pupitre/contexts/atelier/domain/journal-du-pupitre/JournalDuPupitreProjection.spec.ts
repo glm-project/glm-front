@@ -61,6 +61,42 @@ const operateurMarieFixture: OperateurDuPupitre = {
 };
 
 describe('JournalDuPupitreProjection', () => {
+  it('should preserve another operator while a transition to an expired target conflicts with its later reopening', () => {
+    const other: GesteDePointage = {
+      ...debutGesteFixture,
+      operateurId: 'marie',
+      id: 'autre',
+      dateDeSurvenue: '2026-09-05T22:00:00Z',
+    };
+    const reopening: GesteDePointage = { ...debutGesteFixture, id: 'relance', dateDeSurvenue: '2026-09-05T22:00:00Z' };
+    const transition: GesteDePointage = {
+      ...debutGesteFixture,
+      id: 'nc-tardive',
+      intention: 'TRANSITION',
+      type: 'NON_CONFORMITE',
+      cible: 'debut',
+      dateDeSurvenue: '2026-09-05T23:00:00Z',
+    };
+    const state = givenEvents([
+      debutFixture,
+      { geste: other, etat: 'EN_ATTENTE' },
+      { geste: reopening, etat: 'EN_ATTENTE' },
+      { geste: transition, etat: 'EN_ATTENTE' },
+    ]);
+
+    const projection = projectReferentiel(state, Date.parse('2026-09-05T23:01:00Z'));
+
+    expect(projection?.suivis[0]?.activites).toEqual([
+      {
+        ouverture: 'autre',
+        operateurId: 'marie',
+        categorie: 'TRAVAIL',
+        depuis: '2026-09-05T22:00:00Z',
+        echeance: '2026-09-06T11:00:00.000Z',
+      },
+    ]);
+  });
+
   it.each([
     { operateurId: 'marie', posteId: 'tour' },
     { operateurId: 'jean', posteId: 'fraiseuse' },
