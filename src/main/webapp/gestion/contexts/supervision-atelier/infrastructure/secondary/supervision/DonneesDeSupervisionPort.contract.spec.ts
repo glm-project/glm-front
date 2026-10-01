@@ -462,6 +462,20 @@ describe('HTTP supervision beyond the shared contract', () => {
     expect(harnessFixture.errors.errors).toEqual([failure]);
   });
 
+  it('should reject and report an invalid server evaluation without using the browser clock', async () => {
+    const reading = harnessFixture.port.read();
+
+    whenInvalidEvaluationArrives();
+    const failure = await reading.catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(harnessFixture.errors.errors).toEqual([failure]);
+  });
+
+  const whenInvalidEvaluationArrives = (): void => {
+    harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...emptyFixture.response, evaluation: '2026-09-13T10:00:00' });
+  };
+
   const whenAutomaticEndWithoutFinishArrives = (): void => {
     const activites = automaticEndFixture.response.activites.map(activite => {
       const incomplete = { ...activite };
