@@ -44,6 +44,12 @@ critical vulnerability and `2` when the registry or report is unavailable, so an
 look like a clean result. Exceptions require a narrow package or Gitleaks rule, a reason and an expiry date;
 there are no active exceptions.
 
+The Angular build tool pins a vulnerable Piscina release. A scoped npm override pins its Piscina dependency to
+the corrected 5.3.2 release for
+[GHSA-67c8-pqhq-4rmx](https://github.com/piscinajs/piscina/security/advisories/GHSA-67c8-pqhq-4rmx).
+Remove that override when the Angular 21 build tool itself pins a corrected release. It changes the installed
+dependency rather than suppressing the advisory; the audit policy still rejects every high or critical finding.
+
 The `security-and-workflows` CI job runs on pull requests, pushes to `main` and the weekly schedule. The other
 jobs in its workflow skip that scheduled event. Its report, history-scan result and duration are uploaded
 together. The initial repository-history scan found no secret.

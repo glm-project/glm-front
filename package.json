@@ -96,6 +96,11 @@
     "watch:types:unit": "npm run types:unit -- --watch",
     "watch:types:utils": "npm run types:utils -- --watch"
   },
+  "overrides": {
+    "@angular/build": {
+      "piscina": "5.3.2"
+    }
+  },
   "dependencies": {
     "@angular/animations": "21.2.24",
     "@angular/cdk": "21.2.14",
