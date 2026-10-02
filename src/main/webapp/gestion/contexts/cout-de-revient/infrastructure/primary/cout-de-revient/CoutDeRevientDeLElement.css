@@ -193,6 +193,57 @@
   color: var(--color-warn);
 }
 
+.bandeau-anomalies {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--color-warn);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-body-sm);
+}
+
+.pastille {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-size: var(--text-label);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pastille[data-anomalie='FIN_AUTOMATIQUE'] {
+  background: var(--color-danger);
+  color: var(--color-on-accent);
+}
+
+.pastille[data-anomalie='A_RESOUDRE'] {
+  background: var(--color-warn);
+  color: var(--color-on-accent);
+}
+
+.pastille[data-anomalie='PARTAGE_INCONNU'] {
+  border: 1px solid var(--color-warn);
+  color: var(--color-warn);
+}
+
+.pointages-table th .pastille {
+  display: block;
+  width: fit-content;
+  margin-top: 0.25rem;
+}
+
+.pointages-table tbody tr.pointage-en-anomalie {
+  box-shadow: inset 3px 0 0 var(--color-warn);
+}
+
+.pointages-table tbody tr.explication td {
+  padding-top: 0;
+  color: var(--color-warn);
+}
+
+.pointages-table tbody tr.explication[data-anomalie='FIN_AUTOMATIQUE'] td {
+  color: var(--color-danger);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .detail glm-icon {
     transition: none;

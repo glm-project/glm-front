@@ -167,7 +167,7 @@ describe('Cost of manufacture of an element at the workshop', () => {
     cy.location('pathname').should('eq', '/couts-de-revient/element-1');
     cy.get(dataSelector('cout-total')).should('contain.text', 'Incomplet');
     cy.get(dataSelector('cout-machine-cell')).should('contain.text', '300,00');
-    cy.get(dataSelector('cout-conflit')).should('have.length', 2);
+    cy.get(dataSelector('cout-bandeau-anomalies')).should('be.visible');
   };
 
   const thenTheReportIsDisplayed = (): void => {

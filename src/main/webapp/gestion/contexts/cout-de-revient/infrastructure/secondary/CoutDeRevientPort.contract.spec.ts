@@ -16,6 +16,7 @@ import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { ElementCite } from '../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
+import { PointageEnConflit } from '../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -24,7 +25,6 @@ import { LigneDeCout } from '../../domain/rapport/LigneDeCout';
 import { NatureDOperation } from '../../domain/rapport/NatureDOperation';
 import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
-import { PeriodeDeTravail } from '../../domain/temps/PeriodeDeTravail';
 import { TempsPasse } from '../../domain/temps/TempsPasse';
 import { TotalDeTemps } from '../../domain/temps/TotalDeTemps';
 import { HttpCoutDeRevient } from './HttpCoutDeRevient';
@@ -123,7 +123,6 @@ const toDomainLigne = (ligne: LigneFixture): LigneDeCout =>
       TotalDeMontant.complet(new Montant(ligne.mainDOeuvre)),
       TotalDeMontant.complet(new Montant(ligne.machine + ligne.mainDOeuvre)),
     ),
-    finsAutomatiques: [],
     pointages: [],
   });
 
@@ -132,7 +131,6 @@ const toDomain = (lignes: readonly LigneFixture[]): CoutDeRevient =>
     lignes: lignes.map(toDomainLigne),
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(0),
-    conflits: [],
     temps: new TempsPasse(
       TotalDeTemps.complet(new DureePassee(TOTAL.travail)),
       TotalDeTemps.complet(new DureePassee(TOTAL.nonConformite)),
@@ -380,43 +378,13 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(errorHandler.errors).toHaveLength(1);
   });
 
-  it('should keep every responsible sequence even when it belongs to another element', async () => {
+  it('should return the evaluation instant and the number of excluded current activities', async () => {
     const result = port.rapport(DEMANDE);
-    await whenServerAnswers({
-      ...toRest([fraisageFixture]),
-      evaluation: '2026-05-11T21:00:00Z',
-      activitesEnCours: 2,
-      conflits: [
-        {
-          element: ELEMENT,
-          operateur: 'operateur-1',
-          poste: 'poste-1',
-          activites: ['activite-a', 'activite-b'],
-          pointages: ['pointage-1', 'pointage-2'],
-        },
-        { element: 'autre-element', operateur: 'operateur-2', activites: [], pointages: ['pointage-3'] },
-      ],
-    });
+    await whenServerAnswers({ ...toRest([fraisageFixture]), evaluation: '2026-05-11T21:00:00Z', activitesEnCours: 2 });
     const rapport = await result;
 
     expect(rapport?.evaluation.value.toISOString()).toBe('2026-05-11T21:00:00.000Z');
     expect(rapport?.activitesEnCours.nombre).toBe(2);
-    expect(rapport?.conflits).toEqual([
-      {
-        element: new ElementChiffreId(ELEMENT),
-        operateur: 'operateur-1',
-        poste: 'poste-1',
-        activites: ['activite-a', 'activite-b'],
-        pointages: ['pointage-1', 'pointage-2'],
-      },
-      {
-        element: new ElementChiffreId('autre-element'),
-        operateur: 'operateur-2',
-        poste: undefined,
-        activites: [],
-        pointages: ['pointage-3'],
-      },
-    ]);
   });
 
   it('should return every clocking of a line with its frozen rates, its cost and its shares', async () => {
@@ -463,6 +431,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     });
     const pointage = (await result)?.lignes[0]?.pointages[0];
 
+    expect([pointage?.anomalies, pointage?.finAuPlusTard, pointage?.contradictoires]).toEqual([[], undefined, []]);
     expect(pointage?.operateur).toEqual(new OperateurCite('operateur-1', 'Julien', 'Martin'));
     expect(pointage?.poste).toEqual(new PosteCite('poste-dmg', 'DMG DMU 50'));
     expect([pointage?.categorie, pointage?.coutHoraire, pointage?.tauxHoraire]).toEqual(['TRAVAIL', new Montant(48), new Montant(35)]);
@@ -487,7 +456,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     ]);
   });
 
-  it('should return a clocking without finish, work station, rates nor amounts as the server left it', async () => {
+  it('should return a clocking to resolve without finish, work station, rates nor amounts, with its contradictory clockings', async () => {
     const result = port.rapport(DEMANDE);
     await whenServerAnswers({
       ...toRest([fraisageFixture]),
@@ -523,6 +492,12 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     ]);
     expect(pointage?.operateur.estNomme()).toBe(false);
     expect(pointage?.duree.snapshot()).toEqual({ complete: false });
+    expect(pointage?.anomalies).toEqual(['A_RESOUDRE']);
+    expect(pointage?.finAuPlusTard?.value.toISOString()).toBe('2026-09-17T11:40:00.000Z');
+    expect(pointage?.contradictoires).toEqual([
+      new PointageEnConflit('fait-1', 'DEBUT', new InstantDeTravail('2026-09-17T08:00:00Z')),
+      new PointageEnConflit('fait-2', 'DEBUT', new InstantDeTravail('2026-09-17T09:10:00Z')),
+    ]);
   });
 
   it('should keep a share whose divisor is unknown, with the clockings that block it', async () => {
@@ -566,23 +541,6 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     ]);
   });
 
-  it('should return automatic periods and their valued totals directly from the report', async () => {
-    const result = port.rapport(DEMANDE);
-    await whenServerAnswers({
-      ...toRest([fraisageFixture]),
-      temps: { travail: completFixture('PT13H'), nonConformite: completFixture('PT0S'), total: completFixture('PT13H') },
-      cout: { machine: completFixture(585), mainDOeuvre: completFixture(260), total: completFixture(845) },
-      lignes: [{ ...toRestLigne(fraisageFixture), finsAutomatiques: [{ debut: '2026-05-11T08:00:00Z', fin: '2026-05-11T21:00:00Z' }] }],
-    });
-    const rapport = await result;
-
-    expect(rapport?.temps.total.snapshot()).toEqual({ complete: true, valeur: new DureePassee('PT13H') });
-    expect(rapport?.cout.total.snapshot()).toEqual({ complete: true, valeur: new Montant(845) });
-    expect(rapport?.lignes[0]?.finsAutomatiques).toEqual([
-      new PeriodeDeTravail(new InstantDeTravail('2026-05-11T08:00:00Z'), new InstantDeTravail('2026-05-11T21:00:00Z')),
-    ]);
-  });
-
   it('should display a received recalculation from forty to thirty euros without dividing current activities', async () => {
     const premier = port.rapport(DEMANDE);
     await whenServerAnswers({
@@ -611,26 +569,20 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(request.request.url).toBe(`${ROUTE}/${ELEMENT}`);
   });
 
-  it.each<keyof RestRapport>(['element', 'lignes', 'temps', 'cout', 'conflits'])(
-    'should reject a server answer missing rapport.%s',
-    async champ => {
-      const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
-      await whenServerAnswers(sansChampDuRapport(toRest([fraisageFixture]), champ));
+  it.each<keyof RestRapport>(['element', 'lignes', 'temps', 'cout'])('should reject a server answer missing rapport.%s', async champ => {
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers(sansChampDuRapport(toRest([fraisageFixture]), champ));
 
-      expect(await result).toEqual(new Error(`rapport.${champ} manque dans la réponse du serveur`));
-    },
-  );
+    expect(await result).toEqual(new Error(`rapport.${champ} manque dans la réponse du serveur`));
+  });
 
-  it.each<keyof RestLigne>(['temps', 'cout', 'finsAutomatiques', 'pointages'])(
-    'should reject a server answer missing ligne.%s',
-    async champ => {
-      const rapport = toRest([fraisageFixture]);
-      const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
-      await whenServerAnswers({ ...rapport, lignes: [sansChampDeLigne(premiereLigneDe(rapport), champ)] });
+  it.each<keyof RestLigne>(['temps', 'cout', 'pointages'])('should reject a server answer missing ligne.%s', async champ => {
+    const rapport = toRest([fraisageFixture]);
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers({ ...rapport, lignes: [sansChampDeLigne(premiereLigneDe(rapport), champ)] });
 
-      expect(await result).toEqual(new Error(`ligne.${champ} manque dans la réponse du serveur`));
-    },
-  );
+    expect(await result).toEqual(new Error(`ligne.${champ} manque dans la réponse du serveur`));
+  });
 
   it('should reject a server answer missing the element name', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);

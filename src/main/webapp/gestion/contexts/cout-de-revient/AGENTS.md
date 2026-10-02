@@ -29,12 +29,13 @@ les corrections et la résolution sont disponibles par les commandes API du back
 Une correction peut faire redevenir une activité en cours : elle sort alors du coût et du diviseur
 humain au recalcul du back, et son anomalie disparaît. Le rapport restitue ce nouvel état.
 
-**Coût à résoudre** : valeur affectée par une séquence de pointages en conflit au sens de l'ADR 0047.
-Le back expose les valeurs à résoudre et la complétude des totaux, y compris lorsque le conflit affecte
-le partage humain d'autres activités. Le rapport affiche « En conflit », chaque total concerné « Incomplet » sans chiffre et
-les périodes sans fin certaine « Fin à résoudre » ; il ne remplace pas une valeur à résoudre par zéro et ne choisit pas
-une interprétation des pointages. Le gestionnaire tranche par correction ou annulation, puis le back
-recalcule le rapport. Une fin automatique ne suffit pas à résoudre un conflit.
+**Pointage à résoudre** : pointage dont des pointages contradictoires empêchent de connaître la fin, au sens
+de l'ADR 0047. Le back expose sa fin au plus tard, ses pointages contradictoires et la complétude des totaux,
+y compris lorsqu'il empêche de partager le temps d'un opérateur sur un autre élément (« partage inconnu »).
+Le rapport le signale sur le pointage, affiche « — » pour sa durée et ses montants et « Incomplet » pour chaque
+total concerné ; il ne remplace pas une valeur à résoudre par zéro et ne choisit pas une interprétation des
+pointages. Le gestionnaire corrige les pointages, puis le back recalcule le rapport. Le mot « séquence » du
+back n'apparaît jamais à l'écran.
 
 ## Langage
 
@@ -65,16 +66,18 @@ pour laquelle ils sont affichés séparément.
 ## Modèle de domaine
 
 - **CoutDeRevient** : agrégat racine. Il porte l'élément que le rapport a résolu, ses lignes, son temps
-  total et son coût total, l’évaluation, les activités en cours exclues et toutes les séquences responsables.
-  `estSansTravail()` requiert aucune ligne, aucune activité exclue et aucun conflit.
+  total et son coût total, l’évaluation et les activités en cours exclues. `estSansTravail()` requiert aucune
+  ligne et aucune activité exclue ; `lignesEnAnomalie()` rend les lignes dont un pointage porte une anomalie.
 - **ElementChiffre** : Value Object du nom et du type de l'élément que le rapport a résolus.
 - **ElementChiffreId** : Value Object de l'identifiant de l'élément, opaque à ce contexte.
 - **TypeDElementChiffre** : union des deux valeurs du type, structurellement compatible avec l'énum de
   l'API.
-- **LigneDeCout** : Value Object d'une ligne — sa nature éventuelle, son temps passé, son coût, ses périodes de
-  fin automatique datées et ses pointages. `estSansPoste()` distingue la ligne sans nature.
+- **LigneDeCout** : Value Object d'une ligne — sa nature éventuelle, son temps passé, son coût et ses pointages.
+  `estSansPoste()` distingue la ligne sans nature ; `anomalies()` compte ses pointages par anomalie, dans un ordre
+  fixe (fin automatique, à résoudre, partage inconnu).
 - **PointageDeCout** : Value Object d'un pointage de la ligne — opérateur et poste cités, catégorie, période,
-  durée, coût horaire et taux figés, coût et parts, tels que le serveur les a calculés.
+  durée, coût horaire et taux figés, coût et parts, tels que le serveur les a calculés, avec ses anomalies
+  (`FIN_AUTOMATIQUE`, `A_RESOUDRE`, `PARTAGE_INCONNU`), sa fin au plus tard et ses pointages contradictoires.
   `detailleSonPartage()` dit si ses parts expliquent quelque chose (plusieurs parts, ou une part partagée ou
   au partage inconnu).
 - **PartDePointage** : Value Object d'une part — début, fin, durée, diviseur éventuel, main d'œuvre déjà
@@ -94,9 +97,8 @@ pour laquelle ils sont affichés séparément.
 - **TotalDeTemps** et **TotalDeMontant** : complets avec une valeur certaine, zéro compris, ou incomplets
   sans valeur. Chaque catégorie garde sa propre complétude ; les snapshots sont des unions immuables.
 - **ActivitesEnCoursExclues** : nombre reçu d’activités exclues du temps, du coût et du diviseur.
-- **SequenceEnConflit** : projection immuable des identités garanties de l’élément, de l’opérateur, du poste
-  éventuel, des activités et des pointages. Les identités de diagnostic restent opaques ; aucun référentiel
-  supplémentaire n’est lu pour leur inventer un libellé.
+- **PointageEnConflit** : un pointage contradictoire — son type (début, reprise en non-conformité, fin) et son
+  instant.
 - **CoutDeRevientPort** : port secondaire de lecture du rapport.
 
 ## Responsabilités et invariants
@@ -113,8 +115,7 @@ pour laquelle ils sont affichés séparément.
   sans parc machine, dont l'opérateur reste payé. Elle s'affiche, et son coût machine vaut zéro.
 - **Un rapport vide est une réponse.** Un élément engagé sur lequel personne n'a encore pointé rend zéro
   ligne, un temps nul et un coût nul. L'écran l'explique ; ce n'est ni une panne ni une absence. Un rapport
-  uniquement en cours rend les zéros complets et l’exclusion explicite. Un conflit sans activité à résoudre
-  conserve ses diagnostics et la complétude reçue.
+  uniquement en cours rend les zéros complets et l’exclusion explicite.
 - **Un élément inconnu du référentiel est une réponse, pas une panne.** Le port rend l'absence, l'écran
   l'explique, et `ErrorHandlerPort` n'est pas dérangé.
 - **Machine et main d'œuvre ne s'agrègent pas de la même façon, et l'écran ne le cache pas.** Le coût
@@ -138,10 +139,10 @@ pour laquelle ils sont affichés séparément.
 
 ## Règles locales
 
-- Les fins automatiques reçues restent repérables avant de déplier une ligne, et leurs périodes/anomalies
-  sont explicables dans le détail. Aucun calcul de treize heures n’est exécuté par ce lecteur.
-- Tous les conflits reçus s’affichent dans une section distincte, même sur un autre élément et même sans
-  activité à résoudre. Aucun lien ne promet un écran de résolution dans ce périmètre.
+- Les anomalies restent repérables avant de déplier une ligne : un bandeau en haut de page les résume, et la
+  nature porte une pastille par type d'anomalie avec son nombre. Dépliée, chaque anomalie est montrée sur son
+  pointage avec une explication en clair. Aucun calcul de treize heures n’est exécuté par ce lecteur.
+- Aucun lien ne promet un écran de résolution dans ce périmètre ; il viendra avec cet écran.
 - Un total incomplet sans valeur est normal ; un total annoncé complet sans valeur rejette la lecture,
   signalée une seule fois par l’adapter.
 

@@ -4,7 +4,6 @@ import {
   CoutDeRevientApiFixture,
   coutDeRevientFixture,
   rapportAutomatiqueFixture,
-  rapportConflitSansActiviteFixture,
   rapportEnCoursFixture,
   rapportIncompletFixture,
 } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
@@ -26,11 +25,12 @@ describe('Cost of manufacture in gestion', () => {
     thenIndependentCompletenessIsVisible();
   });
 
-  it('should show every responsible conflict including a sequence on another element', () => {
+  it('should announce clockings to resolve in a banner and on their nature, then explain them in the detail', () => {
     givenIncompleteReport();
     whenVisitingTheReport();
+    whenOpeningTheDetailOfTheFirstRow();
 
-    thenEveryResponsibleSequenceIsVisible();
+    thenTheClockingToResolveIsExplained();
   });
 
   it('should show automatic finishes before expanding a row and explain their counted periods', () => {
@@ -53,13 +53,6 @@ describe('Cost of manufacture in gestion', () => {
     whenVisitingTheReport();
 
     thenCurrentActivityExclusionIsVisible();
-  });
-
-  it('should keep a conflict with no unresolved activity visible beside complete totals', () => {
-    givenConflictWithoutActivity();
-    whenVisitingTheReport();
-
-    thenTheConflictKeepsCompleteTotals();
   });
 
   it('should remove an automatic alert when a new server report no longer carries it', () => {
@@ -143,11 +136,6 @@ describe('Cost of manufacture in gestion', () => {
     api.install();
   };
 
-  const givenConflictWithoutActivity = (): void => {
-    api.rapport = rapportConflitSansActiviteFixture();
-    api.install();
-  };
-
   const givenReport = (): void => {
     api.install();
   };
@@ -171,7 +159,7 @@ describe('Cost of manufacture in gestion', () => {
   };
 
   const whenReloadingTheRegularisedReport = (): void => {
-    cy.get(dataSelector('cout-fin-automatique-marque')).should('be.visible');
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 fin automatique');
     cy.then(() => {
       api.rapport = coutDeRevientFixture();
     });
@@ -204,24 +192,26 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-repartition')).should('contain.text', 'Main d’œuvre Incomplet');
   };
 
-  const thenEveryResponsibleSequenceIsVisible = (): void => {
-    cy.get(dataSelector('cout-conflit')).should('have.length', 2);
-    cy.get(dataSelector('cout-conflit-element')).last().should('have.text', 'autre-element');
-    cy.get(dataSelector('cout-conflit-pointage')).should('have.length', 3);
+  const thenTheClockingToResolveIsExplained = (): void => {
+    cy.get(dataSelector('cout-bandeau-titre')).should('contain.text', '1 pointage en anomalie sur la nature Fraisage');
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 à résoudre');
+    cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'À résoudre');
+    cy.get(dataSelector('cout-pointage-fin-au-plus-tard')).should('contain.text', 'fin au plus tard');
+    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'Pointages contradictoires : début à');
   };
 
   const thenAutomaticFinishIsVisibleBeforeDetail = (): void => {
-    cy.get(dataSelector('cout-fin-automatique-marque')).should('be.visible');
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 fin automatique');
     cy.get(dataSelector('cout-detail')).should('not.exist');
     cy.get(dataSelector('cout-temps-total')).should('contain.text', '13 h 00');
   };
 
   const thenAutomaticFinishIsExplained = (): void => {
-    cy.get(dataSelector('cout-fin-automatique-marque')).should('be.visible');
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 fin automatique');
     cy.get(dataSelector('cout-temps-total')).should('contain.text', '13 h 00');
     cy.get(dataSelector('cout-total')).should('contain.text', '845,00');
-    cy.get(dataSelector('cout-fins-automatiques-detail')).should('contain.text', 'anomalie active');
-    cy.get(dataSelector('cout-fin-automatique-periode')).should('contain.text', '11 mai 2026');
+    cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'Fin automatique');
+    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'arrêtée automatiquement après 13 h');
   };
 
   const thenCurrentActivityExclusionIsVisible = (): void => {
@@ -231,15 +221,8 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-sans-travail')).should('not.exist');
   };
 
-  const thenTheConflictKeepsCompleteTotals = (): void => {
-    cy.get(dataSelector('cout-conflit-pointage')).should('have.text', 'pointage-a');
-    cy.get(dataSelector('cout-conflits')).should('contain.text', 'Aucune activité dans cette séquence');
-    cy.get(dataSelector('cout-total')).should('contain.text', '0,00');
-    cy.get(dataSelector('cout-sans-travail')).should('not.exist');
-  };
-
   const thenTheRegularisedReportIsVisible = (): void => {
-    cy.get(dataSelector('cout-fin-automatique-marque')).should('not.exist');
+    cy.get(dataSelector('cout-nature-anomalie')).should('not.exist');
     cy.get(dataSelector('cout-total')).should('contain.text', '295,00');
   };
 

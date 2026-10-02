@@ -59,6 +59,24 @@ const pointageDeFraisage: RestPointage = {
   contradictoires: [],
 };
 
+const pointageAResoudre: RestPointage = {
+  anomalies: ['A_RESOUDRE'],
+  operateur: { id: 'operateur-julien', prenom: 'Julien', nom: 'Martin' },
+  poste: { id: 'poste-dmg', libelle: 'DMG DMU 50' },
+  categorie: 'TRAVAIL',
+  debut: '2026-05-11T08:00:00Z',
+  finAuPlusTard: '2026-05-11T11:40:00Z',
+  duree: { complete: false },
+  coutHoraire: 45,
+  tauxHoraire: 20,
+  cout: { machine: { complete: false }, mainDOeuvre: { complete: false }, total: { complete: false } },
+  parts: [],
+  contradictoires: [
+    { id: 'fait-1', type: 'DEBUT', survenue: '2026-05-11T08:00:00Z' },
+    { id: 'fait-2', type: 'DEBUT', survenue: '2026-05-11T09:10:00Z' },
+  ],
+};
+
 const fraisage: RestLigne = {
   nature: 'Fraisage',
   periode: PERIODE,
@@ -115,7 +133,7 @@ export const rapportIncompletFixture = (): RestRapport => {
     ...coutDeRevientFixture(),
     temps,
     cout,
-    lignes: [{ ...fraisage, temps, cout, periode: { debut: '2026-05-11T08:00:00Z' }, nonConformites: [] }],
+    lignes: [{ ...fraisage, temps, cout, periode: { debut: '2026-05-11T08:00:00Z' }, nonConformites: [], pointages: [pointageAResoudre] }],
     conflits: [
       {
         element: 'element-1',
@@ -137,16 +155,31 @@ export const rapportAutomatiqueFixture = (): RestRapport => {
     ...coutDeRevientFixture(),
     temps,
     cout,
-    lignes: [{ ...fraisage, temps, cout, periode, nonConformites: [], finsAutomatiques: [periode] }],
+    lignes: [
+      {
+        ...fraisage,
+        temps,
+        cout,
+        periode,
+        nonConformites: [],
+        finsAutomatiques: [periode],
+        pointages: [
+          {
+            ...pointageDeFraisage,
+            anomalies: ['FIN_AUTOMATIQUE'],
+            debut: periode.debut,
+            fin: periode.fin,
+            duree: completFixture('PT13H'),
+            cout,
+            parts: [],
+          },
+        ],
+      },
+    ],
   };
 };
 
 export const rapportEnCoursFixture = (): RestRapport => ({ ...rapportVideFixture(), activitesEnCours: 2 });
-
-export const rapportConflitSansActiviteFixture = (): RestRapport => ({
-  ...rapportVideFixture(),
-  conflits: [{ element: 'element-1', operateur: 'operateur-a', activites: [], pointages: ['pointage-a'] }],
-});
 
 export class CoutDeRevientApiFixture {
   failRead = false;

@@ -1,21 +1,38 @@
 import { ElementChiffre } from '../element/ElementChiffre';
-import { ElementChiffreId } from '../element/ElementChiffreId';
 import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
 import { TotalDeMontant } from '../montant/TotalDeMontant';
+import { OperateurCite } from '../pointage/OperateurCite';
+import { AnomalieDePointage, PointageDeCout } from '../pointage/PointageDeCout';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
+import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
 import { TempsPasse } from '../temps/TempsPasse';
 import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { ActivitesEnCoursExclues } from './ActivitesEnCoursExclues';
 import { CoutDeRevient } from './CoutDeRevient';
 import { LigneDeCout } from './LigneDeCout';
 import { NatureDOperation } from './NatureDOperation';
-import { SequenceEnConflit } from './SequenceEnConflit';
 
 const ELEMENT = new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION');
 
-const ligneFixture = (nature: string): LigneDeCout =>
+const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCout =>
+  new PointageDeCout({
+    anomalies,
+    operateur: new OperateurCite('operateur-1', 'Julien', 'Martin'),
+    poste: undefined,
+    categorie: 'TRAVAIL',
+    periode: new PeriodeDeTravail(new InstantDeTravail('2026-05-11T09:00:00Z'), new InstantDeTravail('2026-05-11T11:00:00Z')),
+    finAuPlusTard: undefined,
+    duree: TotalDeTemps.complet(new DureePassee('PT2H')),
+    coutHoraire: undefined,
+    tauxHoraire: undefined,
+    cout: new Cout(TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0))),
+    parts: [],
+    contradictoires: [],
+  });
+
+const ligneFixture = (nature: string, pointages: readonly PointageDeCout[] = []): LigneDeCout =>
   new LigneDeCout({
     nature: new NatureDOperation(nature),
     temps: new TempsPasse(
@@ -28,16 +45,14 @@ const ligneFixture = (nature: string): LigneDeCout =>
       TotalDeMontant.complet(new Montant(40)),
       TotalDeMontant.complet(new Montant(130)),
     ),
-    finsAutomatiques: [],
-    pointages: [],
+    pointages,
   });
 
-const rapportFixture = (lignes: readonly LigneDeCout[], enCours = 0, conflits: readonly SequenceEnConflit[] = []): CoutDeRevient =>
+const rapportFixture = (lignes: readonly LigneDeCout[], enCours = 0): CoutDeRevient =>
   new CoutDeRevient(ELEMENT, {
     lignes,
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(enCours),
-    conflits,
     temps: new TempsPasse(
       TotalDeTemps.complet(new DureePassee('PT4H')),
       TotalDeTemps.complet(new DureePassee('PT0S')),
@@ -51,20 +66,6 @@ const rapportFixture = (lignes: readonly LigneDeCout[], enCours = 0, conflits: r
   });
 
 describe('CoutDeRevient', () => {
-  it('should not call a conflicting sequence without interpreted activities an element never clocked on', () => {
-    const sequence = new SequenceEnConflit({
-      element: new ElementChiffreId('autre-element'),
-      operateur: 'operateur-a',
-      poste: undefined,
-      activites: [],
-      pointages: ['pointage-a'],
-    });
-    const rapport = rapportFixture([], 0, [sequence]);
-
-    expect(rapport.estSansTravail()).toBe(false);
-    expect(rapport.conflits).toEqual([sequence]);
-  });
-
   it('should distinguish excluded current activities from an element never clocked on', () => {
     const rapport = rapportFixture([], 1);
 
@@ -72,31 +73,14 @@ describe('CoutDeRevient', () => {
     expect(rapport.activitesEnCours.nombre).toBe(1);
   });
 
-  it('should keep every diagnostic identity safe from callers changing their input collections', () => {
-    const activites = ['activite-a', 'activite-b'];
-    const pointages = ['pointage-a', 'pointage-b'];
-    const sequence = new SequenceEnConflit({
-      element: new ElementChiffreId('autre-element'),
-      operateur: 'operateur-a',
-      poste: 'poste-a',
-      activites,
-      pointages,
-    });
-    const conflits = [sequence];
-    const rapport = rapportFixture([], 0, conflits);
-    activites.pop();
-    pointages.pop();
-    conflits.pop();
-
-    expect(rapport.conflits).toEqual([
-      {
-        element: new ElementChiffreId('autre-element'),
-        operateur: 'operateur-a',
-        poste: 'poste-a',
-        activites: ['activite-a', 'activite-b'],
-        pointages: ['pointage-a', 'pointage-b'],
-      },
+  it('should name the lines whose clockings carry an anomaly, in the order the server sent them', () => {
+    const rapport = rapportFixture([
+      ligneFixture('Tournage', [pointageFixture(['A_RESOUDRE'])]),
+      ligneFixture('Fraisage', [pointageFixture([])]),
+      ligneFixture('Polissage', [pointageFixture(['FIN_AUTOMATIQUE'])]),
     ]);
+
+    expect(rapport.lignesEnAnomalie().map(ligne => ligne.nature?.value)).toEqual(['Tournage', 'Polissage']);
   });
 
   it('should carry the element the report resolved', () => {
