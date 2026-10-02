@@ -7,7 +7,7 @@ import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
 import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { OperateurCite } from './OperateurCite';
 import { PartDePointage } from './PartDePointage';
-import { CategorieDePointage, FicheDePointage, PointageDeCout } from './PointageDeCout';
+import { AnomalieDePointage, CategorieDePointage, FicheDePointage, PointageDeCout } from './PointageDeCout';
 
 const partFixture = (debut: string, fin: string, diviseur: number | undefined): PartDePointage =>
   new PartDePointage({
@@ -20,11 +20,17 @@ const partFixture = (debut: string, fin: string, diviseur: number | undefined): 
     bloquants: [],
   });
 
-const ficheFixture = (parts: readonly PartDePointage[], categorie: CategorieDePointage = 'TRAVAIL'): FicheDePointage => ({
+const ficheFixture = (
+  parts: readonly PartDePointage[],
+  categorie: CategorieDePointage = 'TRAVAIL',
+  anomalies: readonly AnomalieDePointage[] = [],
+): FicheDePointage => ({
+  anomalies,
   operateur: new OperateurCite('operateur-1', 'Julien', 'Martin'),
   poste: undefined,
   categorie,
   periode: new PeriodeDeTravail(new InstantDeTravail('2026-09-12T07:30:00Z'), new InstantDeTravail('2026-09-12T09:30:00Z')),
+  finAuPlusTard: undefined,
   duree: TotalDeTemps.complet(new DureePassee('PT2H')),
   coutHoraire: new Montant(48),
   tauxHoraire: new Montant(35),
@@ -34,6 +40,7 @@ const ficheFixture = (parts: readonly PartDePointage[], categorie: CategorieDePo
     TotalDeMontant.complet(new Montant(166)),
   ),
   parts,
+  contradictoires: [],
 });
 
 describe('PointageDeCout', () => {
@@ -64,6 +71,23 @@ describe('PointageDeCout', () => {
     expect(
       new PointageDeCout(ficheFixture([partFixture('2026-09-12T07:30:00Z', '2026-09-12T09:30:00Z', undefined)])).detailleSonPartage(),
     ).toBe(true);
+  });
+
+  it('should tell the anomalies a clocking carries', () => {
+    const pointage = new PointageDeCout(ficheFixture([], 'TRAVAIL', ['A_RESOUDRE']));
+
+    expect([pointage.porte('A_RESOUDRE'), pointage.porte('FIN_AUTOMATIQUE'), pointage.estAResoudre(), pointage.estEnAnomalie()]).toEqual([
+      true,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it('should not call a clocking without anomaly a clocking to resolve', () => {
+    const pointage = new PointageDeCout(ficheFixture([]));
+
+    expect([pointage.estAResoudre(), pointage.estEnAnomalie()]).toEqual([false, false]);
   });
 
   it('should tell a rework clocking', () => {

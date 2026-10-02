@@ -15,13 +15,13 @@ import { ElementCite } from '../../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../../domain/pointage/PartDePointage';
 import { FicheDePointage, PointageDeCout } from '../../../domain/pointage/PointageDeCout';
+import { PointageEnConflit } from '../../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient, FicheDuRapport } from '../../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../../domain/rapport/CoutDeRevientPort';
 import { FicheDeLigne, LigneDeCout } from '../../../domain/rapport/LigneDeCout';
 import { NatureDOperation } from '../../../domain/rapport/NatureDOperation';
-import { SequenceEnConflit } from '../../../domain/rapport/SequenceEnConflit';
 import { DureePassee } from '../../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../../domain/temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../../../domain/temps/PeriodeDeTravail';
@@ -72,7 +72,6 @@ const ligneFixture = (fixture: Partial<LigneFixture> = {}, fiche: Partial<FicheD
       TotalDeMontant.complet(new Montant(ligne.mainDOeuvre)),
       TotalDeMontant.complet(new Montant(ligne.machine + ligne.mainDOeuvre)),
     ),
-    finsAutomatiques: [],
     pointages: [],
     ...fiche,
   });
@@ -87,7 +86,6 @@ const rapportFixture = (
     lignes,
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(0),
-    conflits: [],
     temps: new TempsPasse(
       TotalDeTemps.complet(new DureePassee('PT3H')),
       TotalDeTemps.complet(new DureePassee('PT30M')),
@@ -130,10 +128,12 @@ const partFixture = (
 
 const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =>
   new PointageDeCout({
+    anomalies: [],
     operateur: new OperateurCite('operateur-julien', 'Julien', 'Martin'),
     poste: new PosteCite('poste-dmg', 'DMG DMU 50'),
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(instantFixture(7, 30), instantFixture(11, 30)),
+    finAuPlusTard: undefined,
     duree: TotalDeTemps.complet(new DureePassee('PT4H')),
     coutHoraire: new Montant(48),
     tauxHoraire: new Montant(35),
@@ -143,6 +143,7 @@ const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =
       partFixture([9, 0], [10, 30], 'PT1H30M', 2, 26.25, { paralleles: [haasFixture] }),
       partFixture([10, 30], [11, 30], 'PT1H', 1, 35),
     ],
+    contradictoires: [],
     ...fiche,
   });
 
@@ -215,7 +216,7 @@ describe('Cout de revient component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('cout-fin-automatique-marque')).toEqual(['Fin automatique']);
+    expect(textes('cout-nature-anomalie')).toEqual(['1 fin automatique']);
     expect(present('cout-detail')).toBe(false);
   });
 
@@ -227,8 +228,9 @@ describe('Cout de revient component', () => {
 
     expect(texte('cout-temps-total')).toBe('13 h 00');
     expect(texte('cout-total')).toBe('260,00 €');
-    expect(textes('cout-fin-automatique-periode')).toEqual(['11 mai 2026, 08:00 – 21:00']);
-    expect(texte('cout-fins-automatiques-detail')).toContain('anomalie active');
+    expect(textes('cout-pointage-anomalie')).toEqual(['Fin automatique']);
+    expect(texte('cout-pointage-total')).toBe('260,00 €');
+    expect(texte('cout-pointage-explication')).toContain('arrêtée automatiquement après 13 h');
   });
 
   it.each([
@@ -243,7 +245,7 @@ describe('Cout de revient component', () => {
 
     expect(texte('cout-temps-total')).toBe(`${String(heures)} h 00`);
     expect(texte('cout-total')).toBe(`${String(euros)},00 €`);
-    expect(present('cout-fin-automatique-marque')).toBe(false);
+    expect(present('cout-nature-anomalie')).toBe(false);
   });
 
   it('should remove the counted cost and anomaly when the new report reopens the activity', async () => {
@@ -255,7 +257,7 @@ describe('Cout de revient component', () => {
 
     expect(texte('cout-temps-total')).toBe('0 h 00');
     expect(texte('cout-total')).toBe('0,00 €');
-    expect(present('cout-fin-automatique-marque')).toBe(false);
+    expect(present('cout-nature-anomalie')).toBe(false);
     expect(present('cout-sans-travail')).toBe(false);
   });
 
@@ -288,45 +290,6 @@ describe('Cout de revient component', () => {
     expect(texte('cout-temps-total')).toBe('0 h 00');
     expect(texte('cout-total')).toBe('0,00 €');
     expect(present('cout-sans-travail')).toBe(false);
-  });
-
-  it('should display every responsible conflict with guaranteed identities including another element', async () => {
-    givenConflitsResponsables();
-
-    await whenEcranAffiche();
-
-    expect(textes('cout-conflit-element')).toEqual([ELEMENT, 'autre-element']);
-    expect(textes('cout-conflit-operateur')).toEqual(['operateur-a', 'operateur-b']);
-    expect(textes('cout-conflit-poste')).toEqual(['poste-a', 'Sans poste']);
-    expect(textes('cout-conflit-activite')).toEqual(['activite-a', 'activite-b']);
-    expect(textes('cout-conflit-pointage')).toEqual(['pointage-a', 'pointage-b', 'pointage-c']);
-    expect(texte('cout-total')).toBe('Incomplet');
-  });
-
-  it('should keep a conflict without unresolved activities visible alongside received complete totals', async () => {
-    givenSeulementActivitesEnCours(0);
-    givenConflitSansActivite();
-
-    await whenEcranAffiche();
-
-    expect(textes('cout-conflit-pointage')).toEqual(['pointage-c']);
-    expect(texte('cout-conflits')).toContain('Aucune activité dans cette séquence');
-    expect(texte('cout-total')).toBe('0,00 €');
-    expect(texte('cout-temps-total')).toBe('0 h 00');
-    expect(present('cout-sans-travail')).toBe(false);
-    expect(present('cout-activites-exclues')).toBe(false);
-  });
-
-  it('should remove resolved sequences and display the received complete totals on a later read', async () => {
-    givenConflitsResponsables();
-    await whenEcranAffiche();
-    givenNouveauRapport(rapportTermineFixture(2, 30, false));
-
-    await whenEcranRelu();
-
-    expect(present('cout-conflits')).toBe(false);
-    expect(texte('cout-total')).toBe('30,00 €');
-    expect(texte('cout-temps-total')).toBe('2 h 00');
   });
 
   it('should explain several excluded activities without calling the report empty', async () => {
@@ -466,15 +429,6 @@ describe('Cout de revient component', () => {
     expect(present('cout-detail')).toBe(false);
   });
 
-  it('should never invent the finish of an automatic period the server left open', async () => {
-    givenRapport([ligneFixture({}, { finsAutomatiques: [new PeriodeDeTravail(instantFixture(8, 0), undefined)] })]);
-    await whenEcranAffiche();
-
-    await whenDetailDeplie();
-
-    expect(textes('cout-fin-automatique-periode')).toEqual(['11 mai 2026, 08:00 · Fin à résoudre']);
-  });
-
   it('should list each clocking of an opened row with its work station, operator, time and costs', async () => {
     await givenDetailDe([pointageFixture()]);
 
@@ -594,21 +548,33 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should show a clocking to resolve without finish nor figures', async () => {
+  it('should show a clocking to resolve without finish nor figures, and the clockings that contradict it', async () => {
     await givenDetailDe([
       pointageSeulFixture({
+        anomalies: ['A_RESOUDRE'],
         periode: new PeriodeDeTravail(instantFixture(8, 0), undefined),
+        finAuPlusTard: instantFixture(11, 40),
         duree: TotalDeTemps.incomplet(),
         cout: new Cout(montantFixture(undefined), montantFixture(undefined), montantFixture(undefined)),
         parts: [],
+        contradictoires: [
+          new PointageEnConflit('fait-1', 'DEBUT', instantFixture(8, 0)),
+          new PointageEnConflit('fait-2', 'DEBUT', instantFixture(9, 10)),
+        ],
       }),
     ]);
 
-    expect([texte('cout-pointage-plage'), texte('cout-pointage-duree'), texte('cout-pointage-total')]).toEqual([
-      '11 mai · 08:00 → fin à résoudre',
-      'Incomplet',
-      'Incomplet',
-    ]);
+    expect([
+      texteCompact('cout-pointage-plage'),
+      texte('cout-pointage-duree'),
+      texte('cout-pointage-machine'),
+      texte('cout-pointage-main-d-oeuvre'),
+      texte('cout-pointage-total'),
+      texte('cout-pointage-anomalie'),
+    ]).toEqual(['11 mai · 08:00 → fin à résoudre fin au plus tard 11 mai 11:40', '—', '—', '—', '—', 'À résoudre']);
+    expect(texte('cout-pointage-explication')).toBe(
+      'Pointages contradictoires : début à 11 mai 08:00, début à 11 mai 09:10. Il faut les corriger pour connaître la durée et le coût de ce pointage.',
+    );
   });
 
   it('should show a share whose divisor is unknown and the clocking that blocks it', async () => {
@@ -644,6 +610,73 @@ describe('Cout de revient component', () => {
       'Total Sans poste',
       'Pointages de Sans poste',
     ]);
+  });
+
+  it('should explain a clocking to resolve whose contradictory clockings the server did not detail', async () => {
+    await givenDetailDe([pointageSeulFixture({ anomalies: ['A_RESOUDRE'], parts: [] })]);
+
+    expect(texte('cout-pointage-explication')).toBe(
+      'Les pointages de cette activité se contredisent : il faut les corriger pour connaître sa durée et son coût.',
+    );
+  });
+
+  it('should explain a share the operator cannot be split on yet', async () => {
+    await givenDetailDe([pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] })]);
+
+    expect(textes('cout-pointage-anomalie')).toEqual(['Partage inconnu']);
+    expect(texte('cout-pointage-explication')).toContain('Julien Martin a un pointage à résoudre sur un autre poste pendant ce temps');
+  });
+
+  it('should count the anomalies of each nature and sum them up in a banner above the report', async () => {
+    givenRapport([
+      ligneFixture(
+        { nature: 'Électroérosion' },
+        {
+          pointages: [
+            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] }),
+            pointageSeulFixture({ anomalies: ['A_RESOUDRE'] }),
+            pointageSeulFixture({ anomalies: ['A_RESOUDRE', 'PARTAGE_INCONNU'] }),
+          ],
+        },
+      ),
+      ligneFixture({ nature: 'Fraisage' }, { pointages: [pointageSeulFixture()] }),
+      ligneFixture({ nature: undefined }, { pointages: [pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] })] }),
+    ]);
+
+    await whenEcranAffiche();
+
+    expect(textes('cout-nature-anomalie')).toEqual(['1 fin automatique', '2 à résoudre', '1 partage inconnu', '1 partage inconnu']);
+    expect(texte('cout-bandeau-titre')).toBe('4 pointages en anomalie sur les natures Électroérosion, Sans poste.');
+    expect(texte('cout-bandeau-detail')).toBe(
+      'Électroérosion : 1 fin automatique, 2 à résoudre, 1 partage inconnu · Sans poste : 1 partage inconnu. Dépliez la nature concernée pour voir ce qu’il manque sur chaque pointage.',
+    );
+  });
+
+  it('should name the single nature in anomaly and pluralise its counts', async () => {
+    givenRapport([
+      ligneFixture(
+        {},
+        {
+          pointages: [
+            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'] }),
+            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'] }),
+          ],
+        },
+      ),
+    ]);
+
+    await whenEcranAffiche();
+
+    expect(texte('cout-bandeau-titre')).toBe('2 pointages en anomalie sur la nature Fraisage.');
+    expect(textes('cout-nature-anomalie')).toEqual(['2 fins automatiques', '2 partages inconnus']);
+  });
+
+  it('should show no banner when no clocking carries an anomaly', async () => {
+    givenRapport([ligneFixture({}, { pointages: [pointageSeulFixture()] })]);
+
+    await whenEcranAffiche();
+
+    expect(present('cout-bandeau-anomalies')).toBe(false);
   });
 
   it('should close the detail a second click dismisses', async () => {
@@ -725,61 +758,17 @@ describe('Cout de revient component', () => {
       TotalDeMontant.complet(new Montant(montant)),
       TotalDeMontant.complet(new Montant(montant)),
     );
-    const periode = periodeFixture(8, 8 + heures);
-    const ligne = ligneFixture({}, { temps, cout, finsAutomatiques: automatique ? [periode] : [] });
+    const arreteAutomatiquement = pointageSeulFixture({
+      anomalies: ['FIN_AUTOMATIQUE'],
+      periode: periodeFixture(8, 8 + heures),
+      cout: new Cout(
+        TotalDeMontant.complet(new Montant(0)),
+        TotalDeMontant.complet(new Montant(montant)),
+        TotalDeMontant.complet(new Montant(montant)),
+      ),
+    });
+    const ligne = ligneFixture({}, { temps, cout, pointages: automatique ? [arreteAutomatiquement] : [] });
     return rapportFixture([ligne], 'ORDRE_DE_FABRICATION', { temps, cout });
-  };
-
-  const conflitsFixture = (): readonly SequenceEnConflit[] => [
-    new SequenceEnConflit({
-      element: new ElementChiffreId(ELEMENT),
-      operateur: 'operateur-a',
-      poste: 'poste-a',
-      activites: ['activite-a', 'activite-b'],
-      pointages: ['pointage-a', 'pointage-b'],
-    }),
-    new SequenceEnConflit({
-      element: new ElementChiffreId('autre-element'),
-      operateur: 'operateur-b',
-      poste: undefined,
-      activites: [],
-      pointages: ['pointage-c'],
-    }),
-  ];
-
-  const givenConflitsResponsables = (): void => {
-    givenRapportIncomplet();
-    const rapport = portFixture.rapports.get(ELEMENT);
-    if (rapport === undefined) {
-      throw new Error('Le rapport du scénario manque');
-    }
-    givenNouveauRapport(
-      new CoutDeRevient(rapport.element, {
-        lignes: rapport.lignes,
-        temps: rapport.temps,
-        cout: rapport.cout,
-        evaluation: rapport.evaluation,
-        activitesEnCours: rapport.activitesEnCours,
-        conflits: conflitsFixture(),
-      }),
-    );
-  };
-
-  const givenConflitSansActivite = (): void => {
-    const rapport = portFixture.rapports.get(ELEMENT);
-    if (rapport === undefined) {
-      throw new Error('Le rapport du scénario manque');
-    }
-    givenNouveauRapport(
-      new CoutDeRevient(rapport.element, {
-        lignes: rapport.lignes,
-        temps: rapport.temps,
-        cout: rapport.cout,
-        evaluation: rapport.evaluation,
-        activitesEnCours: rapport.activitesEnCours,
-        conflits: conflitsFixture().slice(1),
-      }),
-    );
   };
 
   const givenAutreElementTermine = (): void => {
@@ -793,7 +782,6 @@ describe('Cout de revient component', () => {
         cout: rapport.cout,
         evaluation: instantFixture(11, 0),
         activitesEnCours: new ActivitesEnCoursExclues(0),
-        conflits: [],
       }),
     );
   };
@@ -817,7 +805,6 @@ describe('Cout de revient component', () => {
         cout,
         evaluation: instantFixture(10, 0),
         activitesEnCours: new ActivitesEnCoursExclues(1),
-        conflits: [],
       }),
     );
   };
@@ -955,6 +942,8 @@ describe('Cout de revient component', () => {
     [...requis(selector).querySelectorAll<HTMLElement>('th, td')].map(cellule => compacte(cellule.textContent));
 
   const textesCompacts = (selector: string): string[] => textes(selector).map(compacte);
+
+  const texteCompact = (selector: string): string => compacte(requis(selector).textContent);
 
   const diviseursPartages = (): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('cout-pointage-diviseur'))]

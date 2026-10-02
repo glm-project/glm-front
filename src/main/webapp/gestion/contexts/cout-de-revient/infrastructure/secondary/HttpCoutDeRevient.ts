@@ -14,13 +14,13 @@ import { ElementCite } from '../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
 import { PointageDeCout } from '../../domain/pointage/PointageDeCout';
+import { PointageEnConflit } from '../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../domain/rapport/CoutDeRevientPort';
 import { LigneDeCout } from '../../domain/rapport/LigneDeCout';
 import { NatureDOperation } from '../../domain/rapport/NatureDOperation';
-import { SequenceEnConflit } from '../../domain/rapport/SequenceEnConflit';
 import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../../domain/temps/PeriodeDeTravail';
@@ -31,7 +31,6 @@ type RestRapport = components['schemas']['RestCoutDeRevient'];
 type RestLigne = components['schemas']['RestLigneDeCout'];
 type RestTemps = components['schemas']['RestTempsPasse'];
 type RestCout = components['schemas']['RestCout'];
-type RestPeriode = components['schemas']['RestPeriodeDuCout'];
 type RestPointage = components['schemas']['RestPointageDuCout'];
 type RestPart = components['schemas']['RestPartDuPointageDuCout'];
 type RestActiviteCitee = components['schemas']['RestActiviteCiteeDuCout'];
@@ -68,11 +67,6 @@ const toCout = (cout: RestCout | undefined, chemin: string): Cout => {
   );
 };
 
-const toPeriode = (periode: RestPeriode | undefined, chemin: string): PeriodeDeTravail => {
-  const lue = required(periode, chemin);
-  return new PeriodeDeTravail(new InstantDeTravail(required(lue.debut, `${chemin}.debut`)), toInstant(lue.fin));
-};
-
 const toNature = (nature: string | undefined): NatureDOperation | undefined =>
   nature === undefined ? undefined : new NatureDOperation(nature);
 
@@ -107,15 +101,25 @@ const toPart = (part: RestPart): PartDePointage =>
 const toPointage = (pointage: RestPointage): PointageDeCout => {
   const operateur = required(pointage.operateur, 'pointage.operateur');
   return new PointageDeCout({
+    anomalies: required(pointage.anomalies, 'pointage.anomalies'),
     operateur: new OperateurCite(required(operateur.id, 'pointage.operateur.id'), operateur.prenom, operateur.nom),
     poste: toPoste(pointage.poste),
     categorie: required(pointage.categorie, 'pointage.categorie'),
     periode: new PeriodeDeTravail(new InstantDeTravail(required(pointage.debut, 'pointage.debut')), toInstant(pointage.fin)),
+    finAuPlusTard: toInstant(pointage.finAuPlusTard),
     duree: toDuree(pointage.duree, 'pointage.duree'),
     coutHoraire: toTarif(pointage.coutHoraire),
     tauxHoraire: toTarif(pointage.tauxHoraire),
     cout: toCout(pointage.cout, 'pointage.cout'),
     parts: required(pointage.parts, 'pointage.parts').map(toPart),
+    contradictoires: required(pointage.contradictoires, 'pointage.contradictoires').map(
+      fait =>
+        new PointageEnConflit(
+          required(fait.id, 'contradictoire.id'),
+          required(fait.type, 'contradictoire.type'),
+          new InstantDeTravail(required(fait.survenue, 'contradictoire.survenue')),
+        ),
+    ),
   });
 };
 
@@ -124,7 +128,6 @@ const toLigne = (ligne: RestLigne): LigneDeCout =>
     nature: toNature(ligne.nature),
     temps: toTemps(ligne.temps, 'ligne.temps'),
     cout: toCout(ligne.cout, 'ligne.cout'),
-    finsAutomatiques: required(ligne.finsAutomatiques, 'ligne.finsAutomatiques').map(periode => toPeriode(periode, 'ligne.finAutomatique')),
     pointages: required(ligne.pointages, 'ligne.pointages').map(toPointage),
   });
 
@@ -137,9 +140,6 @@ const toRapport = (rapport: RestRapport): CoutDeRevient =>
   new CoutDeRevient(toElement(rapport), {
     evaluation: new InstantDeTravail(rapport.evaluation),
     activitesEnCours: new ActivitesEnCoursExclues(rapport.activitesEnCours),
-    conflits: required(rapport.conflits, 'rapport.conflits').map(
-      conflit => new SequenceEnConflit({ ...conflit, element: new ElementChiffreId(conflit.element), poste: conflit.poste }),
-    ),
     lignes: required(rapport.lignes, 'rapport.lignes').map(toLigne),
     temps: toTemps(rapport.temps, 'rapport.temps'),
     cout: toCout(rapport.cout, 'rapport.cout'),
