@@ -64,6 +64,15 @@ describe('Supervision atelier in back office', () => {
     thenSupervisionOpensAfterAuthentication();
   });
 
+  it('should keep supervision closed when authentication is refused', () => {
+    const authenticationFixture = new AuthenticationFixture();
+    givenConnectedWorkshop();
+
+    whenOpeningAndRefusingAuthentication(authenticationFixture);
+
+    thenSupervisionStaysClosedAfterRefusal();
+  });
+
   it('should display the connected workshop on the root path using the server evaluation before the browser deadline', () => {
     givenConnectedWorkshop();
 
@@ -129,6 +138,11 @@ const whenOpeningAndCompletingAuthentication = (authenticationFixture: Authentic
   cy.then(() => authenticationFixture.release());
 };
 
+const whenOpeningAndRefusingAuthentication = (authenticationFixture: AuthenticationFixture): void => {
+  whenOpeningWithRetainedAuthentication(authenticationFixture);
+  cy.then(() => authenticationFixture.refuse());
+};
+
 const whenOpeningWithRetainedAuthentication = (authenticationFixture: AuthenticationFixture): void => {
   cy.viewport(1440, 900);
   cy.clock(new Date(2026, 8, 24, 9, 10).getTime(), ['Date']);
@@ -148,6 +162,12 @@ const thenSupervisionOpensAfterAuthentication = (): void => {
   cy.get('@screensBeforeAuthentication').should('eq', 0);
   thenTheConnectedOperatorIsWorking();
   cy.get(dataSelector('supervision-error')).should('not.exist');
+};
+
+const thenSupervisionStaysClosedAfterRefusal = (): void => {
+  cy.get('@screensBeforeAuthentication').should('eq', 0);
+  cy.get(dataSelector('gestion-header')).should('be.visible');
+  cy.get(dataSelector('supervision-atelier')).should('not.exist');
 };
 
 const givenAnIdleConnectedWorkshop = (): void => {
