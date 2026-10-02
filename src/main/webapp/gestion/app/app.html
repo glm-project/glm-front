@@ -1,5 +1,7 @@
 <glm-gestion-header [heading]="appName()" />
 
 <div class="flex-1">
+  @if (authenticated()) {
   <router-outlet />
+  }
 </div>

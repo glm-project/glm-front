@@ -12,9 +12,3 @@ export const authProvider: (Provider | EnvironmentProviders)[] = [
     window.gestionInitialNavigationFixture = firstValueFrom(router.events.pipe(filter(event => event instanceof NavigationEnd)));
   }),
 ];
-
-declare global {
-  interface Window {
-    gestionInitialNavigationFixture?: Promise<NavigationEnd>;
-  }
-}

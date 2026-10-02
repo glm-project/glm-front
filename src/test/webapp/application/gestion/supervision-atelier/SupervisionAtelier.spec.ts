@@ -1,5 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
+import { AuthenticationFixture } from '../../../utils/gestion/authentication/AuthenticationFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 let apiFixture: SupervisionApiFixture;
@@ -51,6 +53,15 @@ describe('Supervision atelier in back office', () => {
   beforeEach(() => {
     apiFixture = new SupervisionApiFixture();
     apiFixture.intercept();
+  });
+
+  it('should open supervision after authentication completes without a premature session read', () => {
+    const authenticationFixture = new AuthenticationFixture();
+    givenConnectedWorkshop();
+
+    whenOpeningAndCompletingAuthentication(authenticationFixture);
+
+    thenSupervisionOpensAfterAuthentication();
   });
 
   it('should display the connected workshop on the root path using the server evaluation before the browser deadline', () => {
@@ -111,6 +122,32 @@ describe('Supervision atelier in back office', () => {
 
 const givenConnectedWorkshop = (): void => {
   apiFixture.replace(connectedWorkshopFixture);
+};
+
+const whenOpeningAndCompletingAuthentication = (authenticationFixture: AuthenticationFixture): void => {
+  whenOpeningWithRetainedAuthentication(authenticationFixture);
+  cy.then(() => authenticationFixture.release());
+};
+
+const whenOpeningWithRetainedAuthentication = (authenticationFixture: AuthenticationFixture): void => {
+  cy.viewport(1440, 900);
+  cy.clock(new Date(2026, 8, 24, 9, 10).getTime(), ['Date']);
+  cy.visit('/', {
+    onBeforeLoad: window => {
+      window.gestionAuthenticationFixture = authenticationFixture;
+    },
+  });
+  cy.then(() => authenticationFixture.started);
+  cy.window().then(window => requiredFixture(window.gestionInitialNavigationFixture, 'initial gestion navigation'));
+  cy.get(dataSelector('gestion-shell'))
+    .then(shell => shell.find(dataSelector('supervision-atelier')).length)
+    .as('screensBeforeAuthentication', { type: 'static' });
+};
+
+const thenSupervisionOpensAfterAuthentication = (): void => {
+  cy.get('@screensBeforeAuthentication').should('eq', 0);
+  thenTheConnectedOperatorIsWorking();
+  cy.get(dataSelector('supervision-error')).should('not.exist');
 };
 
 const givenAnIdleConnectedWorkshop = (): void => {
