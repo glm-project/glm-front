@@ -46,6 +46,9 @@ un élément manquant ne constitue jamais un OF Perso.
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une
 activité, son échéance, sa fin retenue et l'évaluation utilisent cette valeur, normalisée en UTC.
+Les fractions ISO de une à neuf décimales sont conservées sans perte : l'ordre des instants et l'échéance
+inclusive restent exacts jusqu'à la nanoseconde, y compris dans la même milliseconde. Le calcul de
+l'échéance de démonstration à treize heures conserve également la fraction du début.
 
 **Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`. La NC est une surcouche de l'activité courante,
 jamais un couloir. Une activité à résoudre ne contribue pas au signal NC interprété.
