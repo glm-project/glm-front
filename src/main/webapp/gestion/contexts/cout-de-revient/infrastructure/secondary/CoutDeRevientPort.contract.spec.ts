@@ -97,6 +97,7 @@ const toRestLigne = (ligne: LigneFixture): RestLigne => ({
     mainDOeuvre: completFixture(ligne.mainDOeuvre),
     total: completFixture(ligne.machine + ligne.mainDOeuvre),
   },
+  pointages: [],
 });
 
 const toRest = (lignes: readonly LigneFixture[]): RestRapport => ({

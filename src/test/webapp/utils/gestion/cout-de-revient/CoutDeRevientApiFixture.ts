@@ -16,6 +16,7 @@ const fraisage: RestLigne = {
   finsAutomatiques: [],
   nonConformites: [{ debut: '2026-05-11T10:00:00Z', fin: '2026-05-11T11:00:00Z' }],
   cout: { machine: completFixture(135), mainDOeuvre: completFixture(60), total: completFixture(195) },
+  pointages: [],
 };
 
 const tournage: RestLigne = {
@@ -25,6 +26,7 @@ const tournage: RestLigne = {
   finsAutomatiques: [],
   nonConformites: [],
   cout: { machine: completFixture(60), mainDOeuvre: completFixture(20), total: completFixture(80) },
+  pointages: [],
 };
 
 const sansPoste: RestLigne = {
@@ -33,6 +35,7 @@ const sansPoste: RestLigne = {
   finsAutomatiques: [],
   nonConformites: [],
   cout: { machine: completFixture(0), mainDOeuvre: completFixture(20), total: completFixture(20) },
+  pointages: [],
 };
 
 export const coutDeRevientFixture = (): RestRapport => ({
