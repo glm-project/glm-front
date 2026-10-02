@@ -11,7 +11,7 @@ export class Instant {
       throw new InstantInvalide(value);
     }
     this.milliseconds = milliseconds;
-    const fraction = /\.(\d{1,9})/.exec(value)?.[1] ?? '000';
+    const fraction = /\.(\d{1,9})/.exec(value)?.[1] ?? '';
     this.nanosecondsWithinMillisecond = Number(fraction.slice(3).padEnd(6, '0'));
     this.value = `${new Date(milliseconds).toISOString().slice(0, -5)}.${fraction.padEnd(3, '0')}Z`;
   }
