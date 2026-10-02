@@ -2,6 +2,11 @@ import { TypeDElementChiffre } from '../../domain/element/TypeDElementChiffre';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
+import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
+import { OperateurCite } from '../../domain/pointage/OperateurCite';
+import { PartDePointage } from '../../domain/pointage/PartDePointage';
+import { PointageDeCout } from '../../domain/pointage/PointageDeCout';
+import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
@@ -26,6 +31,14 @@ const DATE_HEURE = new Intl.DateTimeFormat('fr-FR', {
 
 const SANS_POSTE = 'Sans poste';
 
+const JOUR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+
+const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+const DECIMALES = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const MINUTES_PAR_HEURE = 60;
+
 const formatDureeCertaine = (duree: DureePassee): string => `${duree.heures} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
 
 const formatMontantCertain = (montant: Montant): string => EUROS.format(montant.euros);
@@ -44,6 +57,67 @@ const formatPeriode = (periode: PeriodeDeTravail): string =>
   periode.fin === undefined
     ? `${DATE_HEURE.format(periode.debut.value)} · Fin à résoudre`
     : DATE_HEURE.formatRange(periode.debut.value, periode.fin.value);
+
+const memeJour = (debut: InstantDeTravail, fin: InstantDeTravail): boolean => debut.value.toDateString() === fin.value.toDateString();
+
+const borne = (instant: InstantDeTravail): string => `${JOUR.format(instant.value)} ${HEURE.format(instant.value)}`;
+
+const plageDuPointage = (pointage: PointageDeCout): string => {
+  const { debut, fin } = pointage.periode;
+  if (fin === undefined) {
+    return `${JOUR.format(debut.value)} · ${HEURE.format(debut.value)} → fin à résoudre`;
+  }
+  return memeJour(debut, fin)
+    ? `${JOUR.format(debut.value)} · ${HEURE.format(debut.value)} → ${HEURE.format(fin.value)}`
+    : `${borne(debut)} → ${borne(fin)}`;
+};
+
+const plageDePart = (part: PartDePointage): string =>
+  memeJour(part.debut, part.fin)
+    ? `${HEURE.format(part.debut.value)} → ${HEURE.format(part.fin.value)}`
+    : `${borne(part.debut)} → ${borne(part.fin)}`;
+
+const nomDuPoste = (poste: PosteCite | undefined): string => (poste === undefined ? SANS_POSTE : (poste.libelle ?? 'Poste inconnu'));
+
+const nomDeLOperateur = (operateur: OperateurCite): string =>
+  operateur.estNomme() ? [operateur.prenom, operateur.nom].filter(part => part !== undefined).join(' ') : 'Opérateur inconnu';
+
+const activiteCitee = (activite: ActiviteCitee): string => {
+  const lieu = `${nomDuPoste(activite.poste)} · ${activite.element.nom ?? 'élément inconnu'}`;
+  return activite.nature === undefined ? lieu : `${lieu} (${activite.nature.value})`;
+};
+
+const tarif = (montant: Montant): string => `${formatMontantCertain(montant)}/h`;
+
+const heuresDecimales = (part: PartDePointage): string => DECIMALES.format(part.duree.minutes / MINUTES_PAR_HEURE);
+
+const contexteDePart = (part: PartDePointage): string => {
+  if (part.partageInconnu()) {
+    return `partage inconnu : pointage à résoudre sur ${part.bloquants.map(activiteCitee).join(', ')}`;
+  }
+  if (part.paralleles.length > 0) {
+    return `aussi sur ${part.paralleles.map(activiteCitee).join(', ')}`;
+  }
+  return 'seul poste occupé';
+};
+
+const calculDePart = (pointage: PointageDeCout, part: PartDePointage): string => {
+  if (pointage.tauxHoraire === undefined) {
+    return 'Opérateur non valorisé';
+  }
+  const operation = `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)} ÷ ${part.diviseur ?? '?'}`;
+  return part.partageInconnu() ? `${operation} = inconnu` : `${operation} = ${formatMontant(part.mainDOeuvre)}`;
+};
+
+const calculMachine = (pointage: PointageDeCout): string => {
+  if (pointage.poste === undefined) {
+    return SANS_POSTE;
+  }
+  if (pointage.coutHoraire === undefined) {
+    return 'Poste non valorisé';
+  }
+  return `${tarif(pointage.coutHoraire)} × ${formatDuree(pointage.duree)}`;
+};
 
 export const LIBELLES_COUT_DE_REVIENT = {
   titre: 'Coût de revient',
@@ -93,9 +167,34 @@ export const LIBELLES_COUT_DE_REVIENT = {
   conflitPointages: 'Pointages contradictoires',
   conflitSansActivite: 'Aucune activité dans cette séquence',
   nc: 'NC',
-  periodeLabel: 'Période',
-  nonConformitesLabel: 'Reprises de non-conformité',
-  absenceDeReprise: (temps: TempsPasse): string => (temps.nonConformite.snapshot().complete ? 'Aucune reprise' : 'À résoudre'),
+  detail: {
+    tableau: (nature: string | undefined): string => `Pointages de ${nature ?? SANS_POSTE}`,
+    colonnes: {
+      poste: 'Poste',
+      operateur: 'Opérateur',
+      pointage: 'Pointage',
+      duree: 'Durée',
+      machine: 'Machine',
+      machineAide: 'coût horaire × durée',
+      mainDOeuvre: 'Main d’œuvre',
+      mainDOeuvreAide: 'taux × durée ÷ postes simultanés',
+      total: 'Total',
+    },
+    aucunPointage: 'Aucun pointage terminé sur cette nature.',
+    totalDeLaNature: (nature: string | undefined): string => `Total ${nature ?? SANS_POSTE}`,
+    legende:
+      'Le coût machine n’est jamais divisé. Le taux de l’opérateur est divisé par le nombre de postes qu’il occupe en même temps, tous éléments confondus ; chaque montant est déjà arrondi au centime par le serveur.',
+    tauxNonValorise: 'Opérateur non valorisé',
+    poste: nomDuPoste,
+    operateur: nomDeLOperateur,
+    plage: plageDuPointage,
+    plageDePart,
+    tarif,
+    diviseur: (part: PartDePointage): string => `÷${part.diviseur ?? '?'}`,
+    contexteDePart,
+    calculDePart,
+    calculMachine,
+  },
 
   chargement: 'Chargement du coût de revient…',
   echec: 'Impossible de charger le coût de revient. Vérifiez la connexion puis réessayez.',
@@ -108,6 +207,7 @@ export const LIBELLES_COUT_DE_REVIENT = {
   identite: (type: TypeDElementChiffre, nom: string): string => `${TYPES[type]} · ${nom}`,
   montant: formatMontant,
   duree: formatDuree,
+  dureeCertaine: formatDureeCertaine,
   periode: formatPeriode,
   nature: (nature: string | undefined): string => nature ?? SANS_POSTE,
 

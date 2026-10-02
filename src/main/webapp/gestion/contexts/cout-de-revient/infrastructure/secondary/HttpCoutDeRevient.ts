@@ -9,6 +9,12 @@ import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
+import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
+import { ElementCite } from '../../domain/pointage/ElementCite';
+import { OperateurCite } from '../../domain/pointage/OperateurCite';
+import { PartDePointage } from '../../domain/pointage/PartDePointage';
+import { PointageDeCout } from '../../domain/pointage/PointageDeCout';
+import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../domain/rapport/CoutDeRevientPort';
@@ -26,6 +32,10 @@ type RestLigne = components['schemas']['RestLigneDeCout'];
 type RestTemps = components['schemas']['RestTempsPasse'];
 type RestCout = components['schemas']['RestCout'];
 type RestPeriode = components['schemas']['RestPeriodeDuCout'];
+type RestPointage = components['schemas']['RestPointageDuCout'];
+type RestPart = components['schemas']['RestPartDuPointageDuCout'];
+type RestActiviteCitee = components['schemas']['RestActiviteCiteeDuCout'];
+type RestPoste = components['schemas']['RestPosteDuCout'];
 
 const ROUTE = '/api/couts-de-revient/{elementId}';
 const ELEMENT_INCONNU = 404;
@@ -60,23 +70,62 @@ const toCout = (cout: RestCout | undefined, chemin: string): Cout => {
 
 const toPeriode = (periode: RestPeriode | undefined, chemin: string): PeriodeDeTravail => {
   const lue = required(periode, chemin);
-  return new PeriodeDeTravail(
-    new InstantDeTravail(required(lue.debut, `${chemin}.debut`)),
-    lue.fin === undefined ? undefined : new InstantDeTravail(lue.fin),
-  );
+  return new PeriodeDeTravail(new InstantDeTravail(required(lue.debut, `${chemin}.debut`)), toInstant(lue.fin));
 };
 
 const toNature = (nature: string | undefined): NatureDOperation | undefined =>
   nature === undefined ? undefined : new NatureDOperation(nature);
 
+const toInstant = (instant: string | undefined): InstantDeTravail | undefined =>
+  instant === undefined ? undefined : new InstantDeTravail(instant);
+
+const toTarif = (tarif: number | undefined): Montant | undefined => (tarif === undefined ? undefined : new Montant(tarif));
+
+const toPoste = (poste: RestPoste | undefined): PosteCite | undefined =>
+  poste === undefined ? undefined : new PosteCite(required(poste.id, 'poste.id'), poste.libelle);
+
+const toActivite = (activite: RestActiviteCitee): ActiviteCitee => {
+  const element = required(activite.element, 'activite.element');
+  return new ActiviteCitee(
+    new ElementCite(new ElementChiffreId(required(element.id, 'activite.element.id')), element.nom, element.type),
+    toPoste(activite.poste),
+    toNature(activite.nature),
+  );
+};
+
+const toPart = (part: RestPart): PartDePointage =>
+  new PartDePointage({
+    debut: new InstantDeTravail(required(part.debut, 'part.debut')),
+    fin: new InstantDeTravail(required(part.fin, 'part.fin')),
+    duree: new DureePassee(required(part.duree, 'part.duree')),
+    diviseur: part.diviseur,
+    mainDOeuvre: toMontant(part.mainDOeuvre, 'part.mainDOeuvre'),
+    paralleles: required(part.paralleles, 'part.paralleles').map(toActivite),
+    bloquants: required(part.bloquants, 'part.bloquants').map(toActivite),
+  });
+
+const toPointage = (pointage: RestPointage): PointageDeCout => {
+  const operateur = required(pointage.operateur, 'pointage.operateur');
+  return new PointageDeCout({
+    operateur: new OperateurCite(required(operateur.id, 'pointage.operateur.id'), operateur.prenom, operateur.nom),
+    poste: toPoste(pointage.poste),
+    categorie: required(pointage.categorie, 'pointage.categorie'),
+    periode: new PeriodeDeTravail(new InstantDeTravail(required(pointage.debut, 'pointage.debut')), toInstant(pointage.fin)),
+    duree: toDuree(pointage.duree, 'pointage.duree'),
+    coutHoraire: toTarif(pointage.coutHoraire),
+    tauxHoraire: toTarif(pointage.tauxHoraire),
+    cout: toCout(pointage.cout, 'pointage.cout'),
+    parts: required(pointage.parts, 'pointage.parts').map(toPart),
+  });
+};
+
 const toLigne = (ligne: RestLigne): LigneDeCout =>
   new LigneDeCout({
     nature: toNature(ligne.nature),
-    periode: toPeriode(ligne.periode, 'ligne.periode'),
     temps: toTemps(ligne.temps, 'ligne.temps'),
     cout: toCout(ligne.cout, 'ligne.cout'),
     finsAutomatiques: required(ligne.finsAutomatiques, 'ligne.finsAutomatiques').map(periode => toPeriode(periode, 'ligne.finAutomatique')),
-    nonConformites: required(ligne.nonConformites, 'ligne.nonConformites').map(periode => toPeriode(periode, 'ligne.nonConformite')),
+    pointages: required(ligne.pointages, 'ligne.pointages').map(toPointage),
   });
 
 const toElement = (rapport: RestRapport): ElementChiffre => {

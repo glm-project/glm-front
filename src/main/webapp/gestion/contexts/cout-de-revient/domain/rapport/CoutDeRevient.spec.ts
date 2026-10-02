@@ -5,7 +5,6 @@ import { Montant } from '../montant/Montant';
 import { TotalDeMontant } from '../montant/TotalDeMontant';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
-import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
 import { TempsPasse } from '../temps/TempsPasse';
 import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { ActivitesEnCoursExclues } from './ActivitesEnCoursExclues';
@@ -19,7 +18,6 @@ const ELEMENT = new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION');
 const ligneFixture = (nature: string): LigneDeCout =>
   new LigneDeCout({
     nature: new NatureDOperation(nature),
-    periode: new PeriodeDeTravail(new InstantDeTravail('2026-05-11T09:00:00Z'), new InstantDeTravail('2026-05-11T11:00:00Z')),
     temps: new TempsPasse(
       TotalDeTemps.complet(new DureePassee('PT2H')),
       TotalDeTemps.complet(new DureePassee('PT0S')),
@@ -30,8 +28,8 @@ const ligneFixture = (nature: string): LigneDeCout =>
       TotalDeMontant.complet(new Montant(40)),
       TotalDeMontant.complet(new Montant(130)),
     ),
-    nonConformites: [],
     finsAutomatiques: [],
+    pointages: [],
   });
 
 const rapportFixture = (lignes: readonly LigneDeCout[], enCours = 0, conflits: readonly SequenceEnConflit[] = []): CoutDeRevient =>

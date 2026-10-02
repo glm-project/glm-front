@@ -10,6 +10,12 @@ import { TypeDElementChiffre } from '../../../domain/element/TypeDElementChiffre
 import { Cout } from '../../../domain/montant/Cout';
 import { Montant } from '../../../domain/montant/Montant';
 import { TotalDeMontant } from '../../../domain/montant/TotalDeMontant';
+import { ActiviteCitee } from '../../../domain/pointage/ActiviteCitee';
+import { ElementCite } from '../../../domain/pointage/ElementCite';
+import { OperateurCite } from '../../../domain/pointage/OperateurCite';
+import { PartDePointage } from '../../../domain/pointage/PartDePointage';
+import { FicheDePointage, PointageDeCout } from '../../../domain/pointage/PointageDeCout';
+import { PosteCite } from '../../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient, FicheDuRapport } from '../../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../../domain/rapport/CoutDeRevientPort';
@@ -42,7 +48,6 @@ interface LigneFixture {
   readonly total: string;
   readonly machine: number;
   readonly mainDOeuvre: number;
-  readonly reprises: readonly PeriodeDeTravail[];
 }
 
 const ligneFixture = (fixture: Partial<LigneFixture> = {}, fiche: Partial<FicheDeLigne> = {}): LigneDeCout => {
@@ -53,12 +58,10 @@ const ligneFixture = (fixture: Partial<LigneFixture> = {}, fiche: Partial<FicheD
     total: 'PT2H',
     machine: 90,
     mainDOeuvre: 40,
-    reprises: [],
     ...fixture,
   };
   return new LigneDeCout({
     nature: ligne.nature === undefined ? undefined : new NatureDOperation(ligne.nature),
-    periode: periodeFixture(9, 11),
     temps: new TempsPasse(
       TotalDeTemps.complet(new DureePassee(ligne.travail)),
       TotalDeTemps.complet(new DureePassee(ligne.nonConformite)),
@@ -69,8 +72,8 @@ const ligneFixture = (fixture: Partial<LigneFixture> = {}, fiche: Partial<FicheD
       TotalDeMontant.complet(new Montant(ligne.mainDOeuvre)),
       TotalDeMontant.complet(new Montant(ligne.machine + ligne.mainDOeuvre)),
     ),
-    nonConformites: ligne.reprises,
     finsAutomatiques: [],
+    pointages: [],
     ...fiche,
   });
 };
@@ -98,6 +101,54 @@ const rapportFixture = (
     ...fiche,
   });
 
+const montantFixture = (euros: number | undefined): TotalDeMontant =>
+  euros === undefined ? TotalDeMontant.incomplet() : TotalDeMontant.complet(new Montant(euros));
+
+const haasFixture = new ActiviteCitee(
+  new ElementCite(new ElementChiffreId('element-192'), 'OF-2026-000192', 'ORDRE_DE_FABRICATION'),
+  new PosteCite('poste-haas', 'Haas VF-2'),
+  new NatureDOperation('Fraisage'),
+);
+
+const partFixture = (
+  [heureDebut, minuteDebut]: [number, number],
+  [heureFin, minuteFin]: [number, number],
+  duree: string,
+  diviseur: number | undefined,
+  mainDOeuvre: number | undefined,
+  autour: Partial<Pick<PartDePointage, 'paralleles' | 'bloquants'>> = {},
+): PartDePointage =>
+  new PartDePointage({
+    debut: instantFixture(heureDebut, minuteDebut),
+    fin: instantFixture(heureFin, minuteFin),
+    duree: new DureePassee(duree),
+    diviseur,
+    mainDOeuvre: montantFixture(mainDOeuvre),
+    paralleles: autour.paralleles ?? [],
+    bloquants: autour.bloquants ?? [],
+  });
+
+const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =>
+  new PointageDeCout({
+    operateur: new OperateurCite('operateur-julien', 'Julien', 'Martin'),
+    poste: new PosteCite('poste-dmg', 'DMG DMU 50'),
+    categorie: 'TRAVAIL',
+    periode: new PeriodeDeTravail(instantFixture(7, 30), instantFixture(11, 30)),
+    duree: TotalDeTemps.complet(new DureePassee('PT4H')),
+    coutHoraire: new Montant(48),
+    tauxHoraire: new Montant(35),
+    cout: new Cout(montantFixture(192), montantFixture(113.75), montantFixture(305.75)),
+    parts: [
+      partFixture([7, 30], [9, 0], 'PT1H30M', 1, 52.5),
+      partFixture([9, 0], [10, 30], 'PT1H30M', 2, 26.25, { paralleles: [haasFixture] }),
+      partFixture([10, 30], [11, 30], 'PT1H', 1, 35),
+    ],
+    ...fiche,
+  });
+
+const pointageSeulFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =>
+  pointageFixture({ parts: [partFixture([7, 30], [11, 30], 'PT4H', 1, 140)], ...fiche });
+
 describe('Cout de revient component', () => {
   let componentFixture: ComponentFixture<CoutDeRevientDeLElement>;
   let portFixture: CoutDeRevientFixture;
@@ -117,15 +168,6 @@ describe('Cout de revient component', () => {
 
   afterEach(() => {
     componentFixture.destroy();
-  });
-
-  it('should show unresolved non conformity in the dated detail without claiming no rework', async () => {
-    givenRapportIncomplet();
-    await whenEcranAffiche();
-
-    await whenDetailDeplie();
-
-    expect(texte('cout-sans-non-conformite')).toBe('À résoudre');
   });
 
   it.each([
@@ -166,15 +208,6 @@ describe('Cout de revient component', () => {
     await whenEcranAffiche();
 
     expect(contenuAccessible(selector)).not.toMatch(/\d/);
-  });
-
-  it('should render an unresolved period without an invented evaluation finish', async () => {
-    givenRapportIncomplet();
-    await whenEcranAffiche();
-
-    await whenDetailDeplie();
-
-    expect(texte('cout-periode')).toBe('Période : 11 mai 2026, 08:00 · Fin à résoudre');
   });
 
   it('should make an automatic finish visible before opening any row detail', async () => {
@@ -336,7 +369,6 @@ describe('Cout de revient component', () => {
     await whenDetailDeplie();
 
     expect(texte('cout-identite')).toBe('OF · OF-B');
-    expect(texte('cout-periode')).toBe('Période : 11 mai 2026, 09:00 – 11:00');
     expect(texte('cout-main-d-oeuvre-cell')).toBe('30,00 €');
     expect(texte('cout-total')).toBe('30,00 €');
   });
@@ -434,40 +466,184 @@ describe('Cout de revient component', () => {
     expect(present('cout-detail')).toBe(false);
   });
 
-  it('should date the period of a row once its detail is opened', async () => {
-    givenRapport([ligneFixture()]);
+  it('should never invent the finish of an automatic period the server left open', async () => {
+    givenRapport([ligneFixture({}, { finsAutomatiques: [new PeriodeDeTravail(instantFixture(8, 0), undefined)] })]);
     await whenEcranAffiche();
 
     await whenDetailDeplie();
 
-    expect(texte('cout-periode')).toBe('Période : 11 mai 2026, 09:00 – 11:00');
+    expect(textes('cout-fin-automatique-periode')).toEqual(['11 mai 2026, 08:00 · Fin à résoudre']);
   });
 
-  it('should date each rework of a row once its detail is opened', async () => {
-    givenRapport([ligneFixture({ nonConformite: 'PT1H', reprises: [periodeFixture(10, 11)] })]);
-    await whenEcranAffiche();
+  it('should list each clocking of an opened row with its work station, operator, time and costs', async () => {
+    await givenDetailDe([pointageFixture()]);
 
-    await whenDetailDeplie();
-
-    expect(textes('cout-non-conformite')).toEqual(['11 mai 2026, 10:00 – 11:00']);
+    expect([
+      texte('cout-pointage-poste'),
+      texte('cout-pointage-operateur'),
+      texte('cout-pointage-plage'),
+      texte('cout-pointage-duree'),
+      texte('cout-pointage-calcul-machine'),
+      texte('cout-pointage-machine'),
+      texte('cout-pointage-taux'),
+      texte('cout-pointage-main-d-oeuvre'),
+      texte('cout-pointage-total'),
+    ]).toEqual([
+      'DMG DMU 50',
+      'Julien Martin',
+      '11 mai · 07:30 → 11:30',
+      '4 h 00',
+      '48,00 €/h × 4 h 00',
+      '192,00 €',
+      '35,00 €/h',
+      '113,75 €',
+      '305,75 €',
+    ]);
   });
 
-  it('should mark the reworks of a row with the NC label once its detail is opened', async () => {
-    givenRapport([ligneFixture({ nonConformite: 'PT1H', reprises: [periodeFixture(10, 11)] })]);
-    await whenEcranAffiche();
+  it('should show the divisor of each share of a clocking, the shared ones apart', async () => {
+    await givenDetailDe([pointageFixture()]);
 
-    await whenDetailDeplie();
-
-    expect(marquesNcDans('cout-detail')).toEqual(['NC']);
+    expect(textes('cout-pointage-diviseur')).toEqual(['÷1', '÷2', '÷1']);
+    expect(diviseursPartages()).toEqual(['÷2']);
   });
 
-  it('should say that a row carries no rework', async () => {
-    givenRapport([ligneFixture()]);
+  it('should justify each share with what else the operator ran and its calculation', async () => {
+    await givenDetailDe([pointageFixture()]);
+
+    expect(textesCompacts('cout-part-contexte')).toEqual([
+      '↳ 07:30 → 09:00 · seul poste occupé',
+      '↳ 09:00 → 10:30 · aussi sur Haas VF-2 · OF-2026-000192 (Fraisage)',
+      '↳ 10:30 → 11:30 · seul poste occupé',
+    ]);
+    expect(textes('cout-part-duree')).toEqual(['1 h 30', '1 h 30', '1 h 00']);
+    expect(textes('cout-part-calcul')).toEqual(['35,00 × 1,50 ÷ 1 = 52,50 €', '35,00 × 1,50 ÷ 2 = 26,25 €', '35,00 × 1,00 ÷ 1 = 35,00 €']);
+  });
+
+  it('should not detail the shares of a clocking run alone from start to finish', async () => {
+    await givenDetailDe([pointageSeulFixture()]);
+
+    expect(present('cout-part')).toBe(false);
+  });
+
+  it('should total the clockings of a row with the figures the server computed for it', async () => {
+    await givenDetailDe([pointageFixture()]);
+
+    expect(cellulesDe('cout-pointages-total')).toEqual(['Total Fraisage', '2 h 00', '90,00 €', '40,00 €', '130,00 €']);
+    expect(texte('cout-legende')).toContain('Le coût machine n’est jamais divisé.');
+  });
+
+  it('should mark a rework clocking with the NC label', async () => {
+    await givenDetailDe([pointageSeulFixture({ categorie: 'NON_CONFORMITE' })]);
+
+    expect(marquesNcDans('cout-pointages')).toEqual(['NC']);
+  });
+
+  it.each([
+    [undefined, 'Sans poste', 'Sans poste'],
+    [new PosteCite('poste-supprime', undefined), 'Poste inconnu', '48,00 €/h × 4 h 00'],
+  ])('should name a clocking work station %s as the referential knows it', async (poste, nom, calcul) => {
+    await givenDetailDe([pointageSeulFixture({ poste })]);
+
+    expect([texte('cout-pointage-poste'), texte('cout-pointage-calcul-machine')]).toEqual([nom, calcul]);
+  });
+
+  it('should say a work station carries no hourly cost', async () => {
+    await givenDetailDe([pointageSeulFixture({ coutHoraire: undefined })]);
+
+    expect(texte('cout-pointage-calcul-machine')).toBe('Poste non valorisé');
+  });
+
+  it.each([
+    [new OperateurCite('operateur-supprime', undefined, undefined), 'Opérateur inconnu'],
+    [new OperateurCite('operateur-sans-prenom', undefined, 'Martin'), 'Martin'],
+  ])('should name the operator %s as the referential knows them', async (operateur, nom) => {
+    await givenDetailDe([pointageSeulFixture({ operateur })]);
+
+    expect(texte('cout-pointage-operateur')).toBe(nom);
+  });
+
+  it('should say an operator carries no hourly rate, in the clocking and in each share', async () => {
+    await givenDetailDe([pointageFixture({ tauxHoraire: undefined })]);
+
+    expect(texte('cout-pointage-taux')).toBe('Opérateur non valorisé');
+    expect(textes('cout-part-calcul')).toEqual(['Opérateur non valorisé', 'Opérateur non valorisé', 'Opérateur non valorisé']);
+  });
+
+  it('should date a clocking across midnight with both of its days', async () => {
+    await givenDetailDe([
+      pointageSeulFixture({
+        periode: new PeriodeDeTravail(instantFixture(14, 0), new InstantDeTravail(new Date(2026, 4, 12, 3, 0).toISOString())),
+        parts: [
+          new PartDePointage({
+            debut: instantFixture(14, 0),
+            fin: new InstantDeTravail(new Date(2026, 4, 12, 3, 0).toISOString()),
+            duree: new DureePassee('PT13H'),
+            diviseur: 2,
+            mainDOeuvre: montantFixture(227.5),
+            paralleles: [haasFixture],
+            bloquants: [],
+          }),
+        ],
+      }),
+    ]);
+
+    expect(texte('cout-pointage-plage')).toBe('11 mai 14:00 → 12 mai 03:00');
+    expect(textesCompacts('cout-part-contexte')).toEqual([
+      '↳ 11 mai 14:00 → 12 mai 03:00 · aussi sur Haas VF-2 · OF-2026-000192 (Fraisage)',
+    ]);
+  });
+
+  it('should show a clocking to resolve without finish nor figures', async () => {
+    await givenDetailDe([
+      pointageSeulFixture({
+        periode: new PeriodeDeTravail(instantFixture(8, 0), undefined),
+        duree: TotalDeTemps.incomplet(),
+        cout: new Cout(montantFixture(undefined), montantFixture(undefined), montantFixture(undefined)),
+        parts: [],
+      }),
+    ]);
+
+    expect([texte('cout-pointage-plage'), texte('cout-pointage-duree'), texte('cout-pointage-total')]).toEqual([
+      '11 mai · 08:00 → fin à résoudre',
+      'Incomplet',
+      'Incomplet',
+    ]);
+  });
+
+  it('should show a share whose divisor is unknown and the clocking that blocks it', async () => {
+    const inconnu = new ActiviteCitee(new ElementCite(new ElementChiffreId('element-inconnu'), undefined, undefined), undefined, undefined);
+    await givenDetailDe([
+      pointageSeulFixture({
+        cout: new Cout(montantFixture(192), montantFixture(undefined), montantFixture(undefined)),
+        parts: [partFixture([7, 30], [11, 30], 'PT4H', undefined, undefined, { bloquants: [inconnu] })],
+      }),
+    ]);
+
+    expect(textes('cout-pointage-diviseur')).toEqual(['÷?']);
+    expect(textesCompacts('cout-part-contexte')).toEqual([
+      '↳ 07:30 → 11:30 · partage inconnu : pointage à résoudre sur Sans poste · élément inconnu',
+    ]);
+    expect(textes('cout-part-calcul')).toEqual(['35,00 × 4,00 ÷ ? = inconnu']);
+  });
+
+  it('should say an opened row carries no finished clocking', async () => {
+    await givenDetailDe([]);
+
+    expect(texte('cout-aucun-pointage')).toBe('Aucun pointage terminé sur cette nature.');
+    expect(present('cout-pointages')).toBe(false);
+  });
+
+  it('should name the clockings of the line without a work station', async () => {
+    givenRapport([ligneFixture({ nature: undefined }, { pointages: [pointageSeulFixture({ poste: undefined })] })]);
     await whenEcranAffiche();
 
     await whenDetailDeplie();
 
-    expect(texte('cout-sans-non-conformite')).toBe('Aucune reprise');
+    expect([cellulesDe('cout-pointages-total')[0], thenLibelleAccessibleDe('cout-pointages')]).toEqual([
+      'Total Sans poste',
+      'Pointages de Sans poste',
+    ]);
   });
 
   it('should close the detail a second click dismisses', async () => {
@@ -550,7 +726,7 @@ describe('Cout de revient component', () => {
       TotalDeMontant.complet(new Montant(montant)),
     );
     const periode = periodeFixture(8, 8 + heures);
-    const ligne = ligneFixture({}, { periode, temps, cout, finsAutomatiques: automatique ? [periode] : [] });
+    const ligne = ligneFixture({}, { temps, cout, finsAutomatiques: automatique ? [periode] : [] });
     return rapportFixture([ligne], 'ORDRE_DE_FABRICATION', { temps, cout });
   };
 
@@ -608,7 +784,7 @@ describe('Cout de revient component', () => {
 
   const givenAutreElementTermine = (): void => {
     const rapport = rapportTermineFixture(2, 30, false);
-    const ligne = ligneFixture({}, { periode: periodeFixture(9, 11), temps: rapport.temps, cout: rapport.cout });
+    const ligne = ligneFixture({}, { temps: rapport.temps, cout: rapport.cout });
     portFixture.rapports.set(
       'element-b',
       new CoutDeRevient(new ElementChiffre('OF-B', 'ORDRE_DE_FABRICATION'), {
@@ -671,7 +847,7 @@ describe('Cout de revient component', () => {
   const givenRapportIncomplet = (): void => {
     const temps = new TempsPasse(TotalDeTemps.complet(new DureePassee('PT5H')), TotalDeTemps.incomplet(), TotalDeTemps.incomplet());
     const cout = new Cout(TotalDeMontant.complet(new Montant(300)), TotalDeMontant.incomplet(), TotalDeMontant.incomplet());
-    const ligne = ligneFixture({}, { temps, cout, periode: new PeriodeDeTravail(instantFixture(8, 0), undefined) });
+    const ligne = ligneFixture({}, { temps, cout });
     portFixture.rapports.set(ELEMENT, rapportFixture([ligne], 'ORDRE_DE_FABRICATION', { temps, cout }));
   };
 
@@ -764,4 +940,24 @@ describe('Cout de revient component', () => {
     );
 
   const present = (selector: string): boolean => racine().querySelector(dataSelector(selector)) !== null;
+
+  const thenLibelleAccessibleDe = (selector: string): string | null => requis(selector).getAttribute('aria-label');
+
+  const givenDetailDe = async (pointages: readonly PointageDeCout[]): Promise<void> => {
+    givenRapport([ligneFixture({}, { pointages })]);
+    await whenEcranAffiche();
+    await whenDetailDeplie();
+  };
+
+  const compacte = (valeur: string): string => normalise(valeur).replace(/\s+/g, ' ');
+
+  const cellulesDe = (selector: string): string[] =>
+    [...requis(selector).querySelectorAll<HTMLElement>('th, td')].map(cellule => compacte(cellule.textContent));
+
+  const textesCompacts = (selector: string): string[] => textes(selector).map(compacte);
+
+  const diviseursPartages = (): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('cout-pointage-diviseur'))]
+      .filter(element => element.classList.contains('diviseur-partage'))
+      .map(element => normalise(element.textContent));
 });

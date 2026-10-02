@@ -71,8 +71,17 @@ pour laquelle ils sont affichés séparément.
 - **ElementChiffreId** : Value Object de l'identifiant de l'élément, opaque à ce contexte.
 - **TypeDElementChiffre** : union des deux valeurs du type, structurellement compatible avec l'énum de
   l'API.
-- **LigneDeCout** : Value Object d'une ligne — sa nature éventuelle, sa période, son temps passé, son coût
-  et ses périodes de non-conformité certaines et de fin automatique datées. `estSansPoste()` distingue la ligne sans nature.
+- **LigneDeCout** : Value Object d'une ligne — sa nature éventuelle, son temps passé, son coût, ses périodes de
+  fin automatique datées et ses pointages. `estSansPoste()` distingue la ligne sans nature.
+- **PointageDeCout** : Value Object d'un pointage de la ligne — opérateur et poste cités, catégorie, période,
+  durée, coût horaire et taux figés, coût et parts, tels que le serveur les a calculés.
+  `detailleSonPartage()` dit si ses parts expliquent quelque chose (plusieurs parts, ou une part partagée ou
+  au partage inconnu).
+- **PartDePointage** : Value Object d'une part — début, fin, durée, diviseur éventuel, main d'œuvre déjà
+  répartie au centime, activités parallèles et bloquantes. Un diviseur reçu doit être un entier au moins égal
+  à un.
+- **OperateurCite**, **PosteCite**, **ElementCite**, **ActiviteCitee** : identités citées par le détail, avec
+  les noms que le serveur a relus ; un nom absent laisse l'identité seule.
 - **NatureDOperation** : Value Object du métier d'une ligne, non vide.
 - **TempsPasse** : Value Object du temps, séparé en bon travail et non-conformité, avec son total.
   `porteUneNonConformite()` répond à « y a-t-il eu une reprise ».
@@ -150,8 +159,10 @@ pour laquelle ils sont affichés séparément.
 - **Le coût n'est pas séparé entre bon travail et non-conformité, et l'écran ne l'invente pas.** Seul le
   temps l'est. Le déduire au prorata du temps supposerait un tarif constant sur toute la ligne, ce que le
   parallélisme rend faux. C'est une évolution du back, pas un calcul de ce front.
-- **Il n'y a pas de détail de coût par opérateur.** `mainDOeuvre` est un agrégat ; les diagnostics portent
-  les identités des séquences responsables, sans coût ni temps par personne.
+- **Le détail d'une ligne justifie son coût sans le refaire.** Chaque pointage, chaque part et chaque calcul
+  affiché (« 35,00 × 1,50 ÷ 2 = 26,25 € ») reprend des montants déjà arrondis par le serveur ; le pied du
+  tableau reprend les totaux de la ligne, jamais une somme des pointages. Les heures décimales du calcul
+  viennent de la durée reçue, à la minute.
 - **Les montants s'affichent dans la monnaie du formateur, jamais avec un symbole en dur.** Le formatage
   vit dans `LibellesCoutDeRevient`, comme les dates et les durées.
 - **Les instants s'affichent dans le fuseau du navigateur.** Les périodes du rapport sont des

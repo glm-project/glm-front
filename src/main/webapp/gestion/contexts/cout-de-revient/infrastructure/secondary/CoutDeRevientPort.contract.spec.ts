@@ -12,6 +12,11 @@ import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
+import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
+import { ElementCite } from '../../domain/pointage/ElementCite';
+import { OperateurCite } from '../../domain/pointage/OperateurCite';
+import { PartDePointage } from '../../domain/pointage/PartDePointage';
+import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../domain/rapport/CoutDeRevientPort';
@@ -67,15 +72,6 @@ const sansPosteFixture: LigneFixture = {
   reprises: [],
 };
 
-const repriseFixture: LigneFixture = {
-  nature: 'Fraisage',
-  travail: 'PT1H',
-  nonConformite: 'PT1H',
-  machine: 90,
-  mainDOeuvre: 40,
-  reprises: [['2026-05-11T10:00:00Z', '2026-05-11T11:00:00Z']],
-};
-
 const PERIODE = { debut: '2026-05-11T09:00:00Z', fin: '2026-05-11T11:00:00Z' };
 const TOTAL = { travail: 'PT2H', nonConformite: 'PT30M', total: 'PT2H30M' };
 const COUT_TOTAL = { machine: 90, mainDOeuvre: 40, total: 130 };
@@ -97,6 +93,7 @@ const toRestLigne = (ligne: LigneFixture): RestLigne => ({
     mainDOeuvre: completFixture(ligne.mainDOeuvre),
     total: completFixture(ligne.machine + ligne.mainDOeuvre),
   },
+  pointages: [],
 });
 
 const toRest = (lignes: readonly LigneFixture[]): RestRapport => ({
@@ -116,7 +113,6 @@ const toRest = (lignes: readonly LigneFixture[]): RestRapport => ({
 const toDomainLigne = (ligne: LigneFixture): LigneDeCout =>
   new LigneDeCout({
     nature: ligne.nature === undefined ? undefined : new NatureDOperation(ligne.nature),
-    periode: new PeriodeDeTravail(new InstantDeTravail(PERIODE.debut), new InstantDeTravail(PERIODE.fin)),
     temps: new TempsPasse(
       TotalDeTemps.complet(new DureePassee(ligne.travail)),
       TotalDeTemps.complet(new DureePassee(ligne.nonConformite)),
@@ -128,7 +124,7 @@ const toDomainLigne = (ligne: LigneFixture): LigneDeCout =>
       TotalDeMontant.complet(new Montant(ligne.machine + ligne.mainDOeuvre)),
     ),
     finsAutomatiques: [],
-    nonConformites: ligne.reprises.map(([debut, fin]) => new PeriodeDeTravail(new InstantDeTravail(debut), new InstantDeTravail(fin))),
+    pointages: [],
   });
 
 const toDomain = (lignes: readonly LigneFixture[]): CoutDeRevient =>
@@ -290,14 +286,6 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
     expect(rapport?.lignes[0]?.estSansPoste()).toBe(true);
   });
 
-  it('should return the dated rework periods of a line', async () => {
-    givenRapport([repriseFixture]);
-
-    const rapport = await port.rapport(DEMANDE);
-
-    expect(rapport?.lignes[0]?.nonConformites.map(periode => periode.debut.value.toISOString())).toEqual(['2026-05-11T10:00:00.000Z']);
-  });
-
   it('should return the totals the server computed', async () => {
     givenRapport([fraisageFixture, tournageFixture]);
 
@@ -376,18 +364,6 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(rapport?.cout.total.snapshot()).toEqual({ complete: false });
   });
 
-  it('should retain a period without a reliable finish instead of closing it at evaluation', async () => {
-    const result = port.rapport(DEMANDE);
-    await whenServerAnswers({
-      ...toRest([fraisageFixture]),
-      lignes: [{ ...toRestLigne(fraisageFixture), periode: { debut: PERIODE.debut } }],
-    });
-    const rapport = await result;
-
-    expect(rapport?.lignes[0]?.periode.fin).toBeUndefined();
-    expect(rapport?.lignes[0]?.periode.debut.value.toISOString()).toBe('2026-05-11T09:00:00.000Z');
-  });
-
   it('should reject a complete duration without a value and report the failure once', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
     await whenServerAnswers({ ...toRest([fraisageFixture]), temps: { travail: { complete: true } } });
@@ -440,6 +416,153 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
         activites: [],
         pointages: ['pointage-3'],
       },
+    ]);
+  });
+
+  it('should return every clocking of a line with its frozen rates, its cost and its shares', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      lignes: [
+        {
+          ...toRestLigne(fraisageFixture),
+          pointages: [
+            {
+              anomalies: [],
+              operateur: { id: 'operateur-1', prenom: 'Julien', nom: 'Martin' },
+              poste: { id: 'poste-dmg', libelle: 'DMG DMU 50' },
+              categorie: 'TRAVAIL',
+              debut: '2026-09-12T07:30:00Z',
+              fin: '2026-09-12T09:00:00Z',
+              duree: completFixture('PT1H30M'),
+              coutHoraire: 48,
+              tauxHoraire: 35,
+              cout: { machine: completFixture(72), mainDOeuvre: completFixture(26.25), total: completFixture(98.25) },
+              parts: [
+                {
+                  debut: '2026-09-12T07:30:00Z',
+                  fin: '2026-09-12T09:00:00Z',
+                  duree: 'PT1H30M',
+                  diviseur: 2,
+                  mainDOeuvre: completFixture(26.25),
+                  paralleles: [
+                    {
+                      element: { id: 'element-2', nom: 'OF-2026-000192', type: 'ORDRE_DE_FABRICATION' },
+                      poste: { id: 'poste-haas', libelle: 'Haas VF-2' },
+                      nature: 'Fraisage',
+                    },
+                  ],
+                  bloquants: [],
+                },
+              ],
+              contradictoires: [],
+            },
+          ],
+        },
+      ],
+    });
+    const pointage = (await result)?.lignes[0]?.pointages[0];
+
+    expect(pointage?.operateur).toEqual(new OperateurCite('operateur-1', 'Julien', 'Martin'));
+    expect(pointage?.poste).toEqual(new PosteCite('poste-dmg', 'DMG DMU 50'));
+    expect([pointage?.categorie, pointage?.coutHoraire, pointage?.tauxHoraire]).toEqual(['TRAVAIL', new Montant(48), new Montant(35)]);
+    expect(pointage?.periode.fin?.value.toISOString()).toBe('2026-09-12T09:00:00.000Z');
+    expect(pointage?.cout.mainDOeuvre.snapshot()).toEqual({ complete: true, valeur: new Montant(26.25) });
+    expect(pointage?.parts).toEqual([
+      new PartDePointage({
+        debut: new InstantDeTravail('2026-09-12T07:30:00Z'),
+        fin: new InstantDeTravail('2026-09-12T09:00:00Z'),
+        duree: new DureePassee('PT1H30M'),
+        diviseur: 2,
+        mainDOeuvre: TotalDeMontant.complet(new Montant(26.25)),
+        paralleles: [
+          new ActiviteCitee(
+            new ElementCite(new ElementChiffreId('element-2'), 'OF-2026-000192', 'ORDRE_DE_FABRICATION'),
+            new PosteCite('poste-haas', 'Haas VF-2'),
+            new NatureDOperation('Fraisage'),
+          ),
+        ],
+        bloquants: [],
+      }),
+    ]);
+  });
+
+  it('should return a clocking without finish, work station, rates nor amounts as the server left it', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      lignes: [
+        {
+          ...toRestLigne(fraisageFixture),
+          pointages: [
+            {
+              anomalies: ['A_RESOUDRE'],
+              operateur: { id: 'operateur-inconnu' },
+              categorie: 'NON_CONFORMITE',
+              debut: '2026-09-17T08:00:00Z',
+              finAuPlusTard: '2026-09-17T11:40:00Z',
+              duree: { complete: false },
+              cout: { machine: { complete: false }, mainDOeuvre: { complete: false }, total: { complete: false } },
+              parts: [],
+              contradictoires: [
+                { id: 'fait-1', type: 'DEBUT', survenue: '2026-09-17T08:00:00Z' },
+                { id: 'fait-2', type: 'DEBUT', survenue: '2026-09-17T09:10:00Z' },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const pointage = (await result)?.lignes[0]?.pointages[0];
+
+    expect([pointage?.poste, pointage?.coutHoraire, pointage?.tauxHoraire, pointage?.periode.fin]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(pointage?.operateur.estNomme()).toBe(false);
+    expect(pointage?.duree.snapshot()).toEqual({ complete: false });
+  });
+
+  it('should keep a share whose divisor is unknown, with the clockings that block it', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers({
+      ...toRest([fraisageFixture]),
+      lignes: [
+        {
+          ...toRestLigne(fraisageFixture),
+          pointages: [
+            {
+              anomalies: ['PARTAGE_INCONNU'],
+              operateur: { id: 'operateur-1', prenom: 'Sophie', nom: 'Laurent' },
+              categorie: 'TRAVAIL',
+              debut: '2026-09-18T09:00:00Z',
+              fin: '2026-09-18T10:00:00Z',
+              duree: completFixture('PT1H'),
+              tauxHoraire: 32,
+              cout: { machine: completFixture(0), mainDOeuvre: { complete: false }, total: { complete: false } },
+              parts: [
+                {
+                  debut: '2026-09-18T09:00:00Z',
+                  fin: '2026-09-18T10:00:00Z',
+                  duree: 'PT1H',
+                  mainDOeuvre: { complete: false },
+                  paralleles: [],
+                  bloquants: [{ element: { id: 'element-inconnu' } }],
+                },
+              ],
+              contradictoires: [],
+            },
+          ],
+        },
+      ],
+    });
+    const part = (await result)?.lignes[0]?.pointages[0]?.parts[0];
+
+    expect(part?.partageInconnu()).toBe(true);
+    expect(part?.bloquants).toEqual([
+      new ActiviteCitee(new ElementCite(new ElementChiffreId('element-inconnu'), undefined, undefined), undefined, undefined),
     ]);
   });
 
@@ -498,7 +621,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     },
   );
 
-  it.each<keyof RestLigne>(['periode', 'temps', 'cout', 'nonConformites', 'finsAutomatiques'])(
+  it.each<keyof RestLigne>(['temps', 'cout', 'finsAutomatiques', 'pointages'])(
     'should reject a server answer missing ligne.%s',
     async champ => {
       const rapport = toRest([fraisageFixture]);

@@ -12,9 +12,8 @@ import { NatureDOperation } from './NatureDOperation';
 const periodeFixture = (debut: string, fin: string): PeriodeDeTravail =>
   new PeriodeDeTravail(new InstantDeTravail(debut), new InstantDeTravail(fin));
 
-const ficheFixture = (nature: NatureDOperation | undefined, nonConformites: readonly PeriodeDeTravail[] = []): FicheDeLigne => ({
+const ficheFixture = (nature: NatureDOperation | undefined): FicheDeLigne => ({
   nature,
-  periode: periodeFixture('2026-05-11T09:00:00Z', '2026-05-11T11:00:00Z'),
   temps: new TempsPasse(
     TotalDeTemps.complet(new DureePassee('PT2H')),
     TotalDeTemps.complet(new DureePassee('PT0S')),
@@ -25,8 +24,8 @@ const ficheFixture = (nature: NatureDOperation | undefined, nonConformites: read
     TotalDeMontant.complet(new Montant(40)),
     TotalDeMontant.complet(new Montant(130)),
   ),
-  nonConformites,
   finsAutomatiques: [],
+  pointages: [],
 });
 
 describe('LigneDeCout', () => {
@@ -54,14 +53,5 @@ describe('LigneDeCout', () => {
 
   it('should not call a line carrying a trade a line without a work station', () => {
     expect(new LigneDeCout(ficheFixture(new NatureDOperation('Tournage'))).estSansPoste()).toBe(false);
-  });
-
-  it('should keep its rework periods safe from the caller that handed them over', () => {
-    const nonConformites = [periodeFixture('2026-05-11T10:00:00Z', '2026-05-11T11:00:00Z')];
-    const ligne = new LigneDeCout(ficheFixture(new NatureDOperation('Fraisage'), nonConformites));
-
-    nonConformites.pop();
-
-    expect(ligne.nonConformites).toHaveLength(1);
   });
 });
