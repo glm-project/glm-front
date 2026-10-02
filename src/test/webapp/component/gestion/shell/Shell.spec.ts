@@ -1,7 +1,9 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 describe('Gestion shell', () => {
+  beforeEach(() => new SupervisionApiFixture().intercept());
   it('should show its header once booted', () => {
     whenVisitingTheRoot();
 

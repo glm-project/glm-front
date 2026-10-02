@@ -6,10 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
-import { HorsOf } from '../../../domain/activite/HorsOf';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
-import { ObjetDeLActivite } from '../../../domain/activite/ObjetDeLActivite';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
 import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
@@ -55,7 +53,7 @@ const ofSansReferenceFixture = (nom: string): ElementTravaille => new ElementTra
 
 interface ActiviteFixture {
   readonly id: string;
-  readonly objet: ObjetDeLActivite;
+  readonly objet: ElementTravaille;
   readonly debut: Instant;
   readonly poste?: PosteDeSupervision;
   readonly categorie?: ValeurCategorieActivite;
@@ -78,6 +76,7 @@ const aliceFixture = operateurFixture('alice', 'Martin', 'Alice');
 const bobFixture = operateurFixture('bob', 'Durand', 'Bob');
 const chloeFixture = operateurFixture('chloe', 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
+  evaluation: instantFixture(10),
   sequencesEnConflit: [],
   operateurs: [aliceFixture, bobFixture, chloeFixture],
 
@@ -95,6 +94,7 @@ const schmittFixture = operateurFixture('op-schmitt', 'Schmitt', 'Yanis');
 const vidalFixture = operateurFixture('op-vidal', 'Vidal', 'Hugo');
 
 const atelierFixture: DonneesDeSupervision = {
+  evaluation: instantFixture(10),
   sequencesEnConflit: [],
   operateurs: [
     vidalFixture,
@@ -142,6 +142,7 @@ const atelierFixture: DonneesDeSupervision = {
 const operateursNcFixture = (nombre: number): DonneesDeSupervision => {
   const operateurs = Array.from({ length: nombre }, (_, index) => operateurFixture(`op-${index}`, `Opérateur ${index}`, 'Actif'));
   return {
+    evaluation: instantFixture(10),
     sequencesEnConflit: [],
     operateurs,
 
@@ -182,7 +183,7 @@ describe('Supervision atelier component', () => {
   });
 
   afterEach(async () => {
-    sourceFixture.response.resolve({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    sourceFixture.response.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
     await componentFixture.whenStable();
     componentFixture.destroy();
     vi.restoreAllMocks();
@@ -240,7 +241,7 @@ describe('Supervision atelier component', () => {
     await whenTimePasses(60_000);
     const readsBeforeRelease = sourceFixture.reads;
     sourceFixture.prepare();
-    obsoleteResponse.resolve({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    obsoleteResponse.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
     await whenSupervisionOpened();
     const obsoleteResultWasWithheld = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     const readsAfterRelease = sourceFixture.reads;
@@ -280,7 +281,7 @@ describe('Supervision atelier component', () => {
     whenSupervisionRemounted();
     await whenSupervisionOpened();
     await whenDonneesArrive();
-    obsoleteResponse.resolve({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    obsoleteResponse.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
     await obsoleteResponse.promise;
     await whenViewSettles();
 
@@ -418,7 +419,11 @@ describe('Supervision atelier component', () => {
       id: new IdentifiantSequence('conflict-without-poste'),
       operateurId: aliceFixture.id,
       activites: [
-        activiteFixture(aliceFixture, { id: 'conflict-hors-of', objet: new HorsOf(), debut: instantFixture(8) }),
+        activiteFixture(aliceFixture, {
+          id: 'conflict-perso',
+          objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+          debut: instantFixture(8),
+        }),
         activiteFixture(aliceFixture, {
           id: 'conflict-without-reference',
           objet: ofSansReferenceFixture('OF-2026-000048'),
@@ -430,11 +435,29 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive({ operateurs: [aliceFixture], activites: [], sequencesEnConflit: [sequence] });
 
     expect(signal('supervision-sequence-en-conflit')).toContain('Séquence en conflit · Sans poste');
-    expect(elements('supervision-conflit-activite').map(texte)).toEqual(['Hors OF · À résoudre', 'OF OF-2026-000048 · À résoudre']);
+    expect(elements('supervision-conflit-activite').map(texte)).toEqual(['OF OF Perso · À résoudre', 'OF OF-2026-000048 · À résoudre']);
     thenLanesAre([
       { couloir: 'au-travail', nombre: '0', operateurs: [] },
       { couloir: 'sans-activite', nombre: '1', operateurs: ['Martin Alice'] },
     ]);
+  });
+
+  it('should display the retained automatic end instead of the received deadline', async () => {
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('retained-automatic-end'),
+      operateurId: aliceFixture.id,
+      objet: ofFixture('3001'),
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: veilleFixture(21),
+      echeance: instantFixture(10),
+      etat: 'TERMINEE_AUTOMATIQUEMENT',
+      finRetenue: instantFixture(8, 45),
+    });
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite], sequencesEnConflit: [] });
+
+    expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 08:45');
   });
 
   it('should order several automatic-end warnings by workstation while preserving their end instants', async () => {
@@ -574,7 +597,7 @@ describe('Supervision atelier component', () => {
     ]);
   });
 
-  it('should label non-billable work « Hors OF » without any reference', async () => {
+  it('should display personal fabrication orders by their name without a reference', async () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
@@ -583,8 +606,8 @@ describe('Supervision atelier component', () => {
 
       activites: [
         activiteFixture(aubertFixture, {
-          id: 'act-hors-of',
-          objet: new HorsOf(),
+          id: 'act-perso',
+          objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
           poste: posteFixture('Tour 3', 'Tournage'),
           debut: instantFixture(7, 45),
         }),
@@ -592,7 +615,7 @@ describe('Supervision atelier component', () => {
     });
 
     expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
-      { element: 'Hors OF', poste: 'Tour 3 · Tournage', debut: 'depuis 07:45' },
+      { element: 'OF OF Perso', poste: 'Tour 3 · Tournage', debut: 'depuis 07:45' },
     ]);
   });
 
@@ -693,6 +716,16 @@ describe('Supervision atelier component', () => {
 
     expect(signal('supervision-derniere-lecture')).toBe(
       '9 opérateurs · d’après les pointages reçus jusqu’à 10:00 · actualisé toutes les 30 s',
+    );
+  });
+
+  it('should preserve the acquired evaluation when the browser clock is ahead', async () => {
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ ...atelierFixture, evaluation: instantFixture(9, 57) });
+
+    expect(signal('supervision-derniere-lecture')).toBe(
+      '9 opérateurs · d’après les pointages reçus jusqu’à 09:57 · actualisé toutes les 30 s',
     );
   });
 
@@ -802,8 +835,10 @@ describe('Supervision atelier component', () => {
     await sourceFixture.arrival.promise;
   };
 
-  const whenDonneesArrive = async (donnees: DonneesDeSupervision = donneesFixture): Promise<void> => {
-    sourceFixture.response.resolve(donnees);
+  const whenDonneesArrive = async (
+    donnees: Omit<DonneesDeSupervision, 'evaluation'> & Partial<Pick<DonneesDeSupervision, 'evaluation'>> = donneesFixture,
+  ): Promise<void> => {
+    sourceFixture.response.resolve({ evaluation: new Instant(new Date().toISOString()), ...donnees });
     await componentFixture.whenStable();
   };
 

@@ -8,7 +8,8 @@ Complements [0012](0012-own-business-contexts-by-front.md). Acquisition is amend
 [0033](0033-compose-view-data-in-secondary-adapters.md), the layout by
 [0041](0041-sort-workshop-supervision-into-state-lanes.md), and activity interpretation by
 [0047](0047-count-only-finished-activities.md). This revised account retains the context and acquisition
-reasons with the delivered two-lane model. InMemory remains the only adapter; HTTP integration is separate.
+reasons with the delivered two-lane model. HTTP acquisition now uses the complete atelier projection;
+InMemory remains a demonstration adapter.
 
 ## Context
 
@@ -42,12 +43,13 @@ The living vocabulary belongs to
 Reject incomplete acquisition in the secondary adapter. Let the domain refuse activities without an
 identifiable operator. Either failure displays an error replacing the previous lanes; omitting an
 unassignable activity would silently alter the classification. Keep activities without workstations and
-show « Sans poste ». A missing element never becomes an invented « Hors OF ».
+show « Sans poste ». Personal work is represented by a supervisor-created OF Perso, read like every
+other fabrication order. Its creation and subtype are a separate feature; a missing element stays invalid.
 
 Provide reproducible activity, automatic-finish and conflict scenarios through one InMemory adapter,
-including in production. Select the single data-port implementation at the composition root. Future HTTP
-integration must provide the required complete sources and its own validation; a failed HTTP call never
-selects simulated data. The current two lanes, alphabetical order and NC overlay belong to ADR 0041.
+for fixtures. Select HTTP for the normal supervision route at the composition root. Its complete atelier
+projection supplies every required source; a failed HTTP call never selects simulated data. The current
+two lanes, alphabetical order and NC overlay belong to ADR 0041.
 
 ## Consequences
 
@@ -62,4 +64,4 @@ selects simulated data. The current two lanes, alphabetical order and NC overlay
 - Another context and API-to-domain translation must be maintained.
 - One unassignable activity prevents the whole view from refreshing.
 - Simulated scenarios validate the screen, without proving production integration.
-- HTTP integration and validation against the real backend remain outstanding.
+- Browser interception cannot establish validation against the real backend and Keycloak.

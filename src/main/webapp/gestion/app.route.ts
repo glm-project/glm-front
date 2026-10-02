@@ -5,10 +5,12 @@ import { elementsDeFabricationProvider } from './elements-de-fabrication.provide
 import { operateursProvider } from './operateurs.provider';
 import { postesProvider } from './postes.provider';
 import { releveDesHeuresProvider } from './releve-des-heures.provider';
+import { supervisionAtelierProvider } from './supervision-atelier.provider';
 
 export const routes: Routes = [
   {
     path: '',
+    providers: supervisionAtelierProvider,
     loadComponent: () =>
       import('./contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier').then(
         m => m.SupervisionAtelier,

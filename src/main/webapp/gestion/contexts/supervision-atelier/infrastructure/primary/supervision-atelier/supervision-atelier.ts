@@ -1,6 +1,5 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, inject, linkedSignal, resource, ResourceStatus } from '@angular/core';
-import { Instant } from '../../../domain/instant/Instant';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
 import { DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { OperateurSupervise } from '../../../domain/supervision/OperateurSupervise';
@@ -52,8 +51,7 @@ export class SupervisionAtelier {
       return { kind: 'ERREUR' };
     }
     const raw = this.donnees.value();
-    const maintenant = new Instant(new Date().toISOString());
-    const resultat = SupervisionDeLAtelier.determine(raw, maintenant);
+    const resultat = SupervisionDeLAtelier.determine(raw);
     if (!resultat.estExploitable) {
       return { kind: 'ERREUR' };
     }

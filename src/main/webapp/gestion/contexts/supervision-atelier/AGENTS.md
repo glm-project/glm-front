@@ -2,8 +2,8 @@
 
 Ce contexte appartient exclusivement à `gestion`. Il classe les opérateurs déclarés selon leurs activités
 interprétables en cours. L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md)
-fixe le temps opérationnel et les séquences en conflit. La supervision conserve son adapter InMemory ;
-le branchement HTTP réel relève d'un chantier distinct.
+fixe le temps opérationnel et les séquences en conflit. La supervision lit la projection complète du
+backend ; l'adapter InMemory conserve les démonstrations.
 
 ## Langage
 
@@ -16,11 +16,12 @@ Les libellés sont « Au travail » et « Sans activité ».
 
 **Activité de supervision** : activité rattachée à un opérateur, portant un objet, une catégorie, un début,
 un état et facultativement un poste. Les états sont `EN_COURS`, `TERMINEE`, `TERMINEE_AUTOMATIQUEMENT` et
-`A_RESOUDRE`. Une activité NC ou Hors OF en cours place aussi l'opérateur Au travail.
+`A_RESOUDRE`. Une activité NC ou sur un OF Perso en cours place aussi l'opérateur Au travail.
 
-**Fin automatique** : état dérivé à début + 13 heures écoulées, borne inclusive. La démonstration calcule
-cette échéance depuis le début et l'instant d'évaluation, sans produire de pointage. Une activité ainsi
-terminée quitte les activités courantes et porte un signalement sur la carte de l'opérateur.
+**Fin automatique** : état interprété par le backend avec son échéance et sa fin retenue. La vue affiche
+la fin retenue reçue. La démonstration calcule une échéance à début + 13 heures écoulées, borne inclusive,
+puis évalue son état à l'instant d'évaluation, sans produire de pointage. Une activité ainsi terminée
+quitte les activités courantes et porte un signalement sur la carte de l'opérateur.
 
 **Séquence en conflit** : séquence identifiée dont les activités nécessitent une décision du gestionnaire.
 Le port la fournit séparément des activités interprétables, y compris quand elle ne porte aucune activité
@@ -34,16 +35,20 @@ début et identifiant. L'écran dit « Sans poste » quand il manque.
 **Nature de travail** : texte libre non vide, affiché tel que saisi et nommé « Métier » à l'écran.
 Elle représente la nature d'un poste et les métiers d'un opérateur.
 
-**Objet de l'activité** : élément travaillé ou Hors OF explicite.
+**Objet de l'activité** : élément travaillé.
 
 **Élément travaillé** : moule (`PRODUIT`) ou OF (`ORDRE_DE_FABRICATION`), avec son nom et sa référence
 facultative. Sans référence, l'écran le désigne par son nom ; aucune référence n'est fabriquée.
 
-**Hors OF** : travail non facturable sans élément travaillé, déclaré explicitement. Une activité dont
-l'élément manque ne devient jamais implicitement Hors OF.
+**OF Perso** : ordre de fabrication créé par le superviseur pour représenter son travail personnel.
+La supervision le lit comme tout OF. Sa création et son sous-type appartiennent à un autre chantier ;
+un élément manquant ne constitue jamais un OF Perso.
 
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une
-activité, son échéance et l'évaluation utilisent cette valeur, normalisée en UTC.
+activité, son échéance, sa fin retenue et l'évaluation utilisent cette valeur, normalisée en UTC.
+Les fractions ISO de une à neuf décimales sont conservées sans perte : l'ordre des instants et l'échéance
+inclusive restent exacts jusqu'à la nanoseconde, y compris dans la même milliseconde. Le calcul de
+l'échéance de démonstration à treize heures conserve également la fraction du début.
 
 **Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`. La NC est une surcouche de l'activité courante,
 jamais un couloir. Une activité à résoudre ne contribue pas au signal NC interprété.
@@ -70,11 +75,15 @@ une activité, y compris dans une séquence en conflit, n'a pas d'opérateur ide
 - Une activité sans opérateur identifiable rend le résultat inexploitable ; le primaire affiche une erreur
   qui remplace les couloirs précédents.
 - Pendant la relecture toutes les 30 s ou par « Actualiser », les couloirs restent visibles. La vue est
-  réévaluée à la fin de chaque lecture même quand le port rend le même objet. Le chargement n'occupe
+  réévaluée à chaque acquisition avec son `evaluation` obligatoire, sans extrapoler depuis l'horloge du navigateur.
+  La fraîcheur affichée utilise ce même instant. Le chargement n'occupe
   l'écran que lorsqu'aucune vue exploitable n'est affichée ; une erreur remplace toujours la vue.
 - Ce contexte acquiert la vue par un seul port et ne partage aucun modèle métier avec `pupitre`.
-- Seul l'adapter InMemory est branché, y compris en production. Il fournit les démonstrations d'activité,
-  de fin automatique et de conflit ; les rapports réels de ce chantier sont le relevé et le coût.
+- La composition normale lie le port à HTTP sur la route de supervision. Chaque lecture recharge
+  opérateurs, activités et conflits sans cache ni repli de démonstration. Le backend fournit une réponse
+  complète non paginée sous READ COMMITTED ; l'évaluation commune ne garantit pas un instantané transactionnel.
+- L'adapter secondaire signale une panne technique une fois par `ErrorHandlerPort`, puis rejette la lecture.
+  Une fin automatique sans fin retenue est une réponse non représentable et rejette également la lecture.
 
 ## Règles locales
 

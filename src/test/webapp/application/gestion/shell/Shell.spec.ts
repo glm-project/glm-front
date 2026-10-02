@@ -1,8 +1,10 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 import { SyntheseDesHeuresApiFixture } from '../../../utils/gestion/releve-des-heures/SyntheseDesHeuresApiFixture';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 describe('Gestion shell', () => {
+  beforeEach(() => new SupervisionApiFixture().intercept());
   it('should boot the gestion front on its own port', () => {
     whenVisitingTheRoot();
 

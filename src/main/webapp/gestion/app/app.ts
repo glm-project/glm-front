@@ -14,10 +14,15 @@ import { GestionHeader } from '../header/header';
 })
 export class App implements OnInit {
   appName = signal('GLM');
+  protected readonly authenticated = signal(false);
   private readonly authentication = inject(AuthenticationPort);
   private readonly errorHandler = inject(ErrorHandlerPort);
 
   ngOnInit(): void {
-    this.errorHandler.observe(this.authentication.authenticate());
+    this.errorHandler.observe(
+      this.authentication.authenticate().then(() => {
+        this.authenticated.set(true);
+      }),
+    );
   }
 }

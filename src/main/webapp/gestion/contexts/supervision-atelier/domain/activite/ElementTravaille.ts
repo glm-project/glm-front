@@ -8,7 +8,6 @@ export interface DescriptionElementTravaille {
 }
 
 export class ElementTravaille {
-  readonly kind = 'ELEMENT_TRAVAILLE';
   readonly type: TypeDElement;
   readonly nom: string;
   readonly reference: ReferenceDElement | undefined;

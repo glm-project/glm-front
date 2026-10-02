@@ -1,7 +1,9 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { OperateursApiFixture, operateursFixture, postesFixture } from '../../../utils/gestion/operateur/OperateursApiFixture';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 describe('Operator referential in gestion', () => {
+  beforeEach(() => new SupervisionApiFixture().intercept());
   it('should declare the first operator and show the trades derived from its habilitations', () => {
     givenReferential();
     whenVisitingOperateurs();

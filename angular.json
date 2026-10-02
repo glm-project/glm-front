@@ -88,7 +88,7 @@
                 },
                 {
                   "replace": "src/main/webapp/gestion/auth.provider.ts",
-                  "with": "src/main/webapp/gestion/auth.provider.cypress.ts"
+                  "with": "src/test/webapp/utils/gestion/authentication/auth.provider.ts"
                 }
               ]
             }

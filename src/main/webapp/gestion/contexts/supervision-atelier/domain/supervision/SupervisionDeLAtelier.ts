@@ -30,7 +30,8 @@ export class SupervisionDeLAtelier {
     return this.operateurs.filter(supervise => supervise.isAVerifier());
   }
 
-  static determine(donnees: DonneesDeSupervision, maintenant: Instant): ResultatSupervision {
+  static determine(donnees: DonneesDeSupervision): ResultatSupervision {
+    const maintenant = donnees.evaluation;
     const hasActiviteSansOperateurIdentifiable = donnees.activites.some(activite => !activite.hasOperateurIdentifiable(donnees.operateurs));
     const hasSequenceSansOperateurIdentifiable = donnees.sequencesEnConflit.some(
       sequence => !sequence.hasOperateurIdentifiable(donnees.operateurs),

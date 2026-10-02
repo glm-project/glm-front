@@ -46,8 +46,9 @@ sequences render separately, including those without an activity to resolve. The
 current activity and no NC signal; independent activities of the same operator still render. Automatic
 finishes and conflicts remain visible in the card's verification signal without changing the lane.
 
-An explicit nonbillable activity stays Au travail and says « Hors OF ». Nothing is named GLM. Neither
-pupitre nor API currently declares this work, and a missing element never becomes Hors OF by inference.
+Personal work uses an OF Perso created by the supervisor and stays Au travail while ongoing.
+Supervision reads it like any fabrication order; creating it and choosing its subtype is another feature.
+A missing element never represents personal work.
 Show free-text workstation nature as « Métier », exactly as received, and « Sans poste » when no workstation
 is supplied. Show the operator's trades when no interpretable activity is current. Keep one card per person
 when several operators work on the same machine.
@@ -56,8 +57,8 @@ Show instants, never a computed duration. REPRENDRE opens a fresh activity, so i
 restarts. No activity or NC is shown suspended. Showing breaks would first require a source Gestion can
 read. `warn` remains the pupitre's pause-command colour and paints no supervision lane, edge or icon.
 
-Keep the InMemory demonstrations as the only wired adapter, including production, with no demonstration
-notice. Real HTTP integration is a separate project. The dated history requested by
+The normal route reads the complete backend supervision projection through HTTP, without a
+demonstration fallback. Keep InMemory for reproducible fixtures. The dated history requested by
 [glm-back#32](https://github.com/glm-project/glm-back/issues/32) has another owner.
 
 ## Consequences

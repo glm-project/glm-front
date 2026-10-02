@@ -1,9 +1,16 @@
 import { dataSelector } from '../../../utils/DataSelector';
+import { SupervisionApiFixture, updatedSupervisionFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 const DEMONSTRATION = new Date(2026, 8, 24, 9, 10);
 
+let apiFixture: SupervisionApiFixture;
+
 describe('Supervision lanes readability', () => {
+  beforeEach(() => {
+    apiFixture = new SupervisionApiFixture();
+    apiFixture.intercept();
+  });
   [390, 768, 1024, 1440].forEach(width => {
     it(`should keep lanes readable without horizontal overflow at ${width}px`, () => {
       givenViewport(width);
@@ -34,7 +41,7 @@ describe('Supervision lanes readability', () => {
     thenLaneColoursFollowTheClientCode();
   });
 
-  it('should show the demonstration workshop as the plan describes it', () => {
+  it('should show the acquired workshop as the plan describes it', () => {
     whenOpeningSupervision();
 
     thenTheLanesHoldTheDemonstrationOperators();
@@ -80,7 +87,10 @@ const whenOpeningSupervisionWithPollingClock = (): void => {
 };
 
 const whenReachingTheNextAnomalyThreshold = (): void => {
-  cy.clock().then(clock => clock.setSystemTime(new Date(2026, 8, 24, 20, 5).getTime()));
+  cy.clock().then(clock => {
+    clock.setSystemTime(new Date(2026, 8, 24, 20, 5).getTime());
+    apiFixture.replace(updatedSupervisionFixture());
+  });
 };
 
 const whenCapturingBeforePollingDeadline = (): void => {
@@ -160,14 +170,14 @@ const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
   cardOf('op-marchand').find(dataSelector('supervision-activite')).should('not.exist');
   thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien Aucune activité en cours Métiers : Sciage, Tournage');
   thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-sequence-en-conflit')), 'Séquence en conflit · Sans poste');
-  thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'Hors OF');
+  thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'OF OF Perso');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
   cardOf('op-perrin').find(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit · Tour 1');
   thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-conflit-activite')), 'OF 3006 · À résoudre');
   cardOf('op-morel').find(dataSelector('supervision-activite')).should('have.length', 2);
   cardOf('op-morel').find(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit · Erodeuse F');
-  thenTextIs(cardOf('op-morel').find(dataSelector('supervision-conflit-activite')), 'Hors OF · À résoudre');
+  thenTextIs(cardOf('op-morel').find(dataSelector('supervision-conflit-activite')), 'OF OF Perso · À résoudre');
 };
 
 const thenVisibleTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {

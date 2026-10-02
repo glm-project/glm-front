@@ -3,9 +3,9 @@ import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
 import { PosteDeSupervision } from '../poste/PosteDeSupervision';
 import { CategorieActivite } from './CategorieActivite';
+import { ElementTravaille } from './ElementTravaille';
 import { EtatActiviteDeSupervision } from './EtatActiviteDeSupervision';
 import { IdentifiantActivite } from './IdentifiantActivite';
-import { ObjetDeLActivite } from './ObjetDeLActivite';
 
 const rangDuPoste = (poste: PosteDeSupervision | undefined): number => (poste === undefined ? 1 : 0);
 
@@ -19,9 +19,11 @@ const DUREE_AVANT_FIN_AUTOMATIQUE_MS = 13 * 60 * 60 * 1000;
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
-  readonly objet: ObjetDeLActivite;
+  readonly objet: ElementTravaille;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
+  readonly echeance?: Instant;
+  readonly finRetenue?: Instant;
   readonly poste?: PosteDeSupervision;
   readonly etat?: EtatActiviteDeSupervision;
 }
@@ -29,11 +31,12 @@ export interface DescriptionActivite {
 export class ActiviteDeSupervision {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
-  readonly objet: ObjetDeLActivite;
+  readonly objet: ElementTravaille;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
   readonly poste: PosteDeSupervision | undefined;
   readonly echeance: Instant;
+  readonly finRetenue: Instant;
   private readonly etat: EtatActiviteDeSupervision;
 
   constructor(description: DescriptionActivite) {
@@ -44,7 +47,8 @@ export class ActiviteDeSupervision {
     this.categorie = description.categorie;
     this.debut = description.debut;
     this.poste = description.poste;
-    this.echeance = new Instant(new Date(Date.parse(this.debut.value) + DUREE_AVANT_FIN_AUTOMATIQUE_MS).toISOString());
+    this.echeance = description.echeance ?? this.debut.afterElapsedMilliseconds(DUREE_AVANT_FIN_AUTOMATIQUE_MS);
+    this.finRetenue = description.finRetenue ?? this.echeance;
   }
 
   isEnCours(maintenant: Instant): boolean {
