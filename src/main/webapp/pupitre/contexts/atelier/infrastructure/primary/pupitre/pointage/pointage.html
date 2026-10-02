@@ -1,5 +1,13 @@
 <main class="min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4" data-selector="pointage-grid">
-  @if (vue().moules.length > 0) {
+  @for (conflit of vue().conflits; track conflit.id) {
+  <p
+    class="mb-3 rounded border border-warn bg-surface px-3 py-2 text-body text-ink"
+    role="status"
+    [attr.data-selector]="'pointage-conflict-' + conflit.id"
+  >
+    {{ conflit.numero }} : {{ labels.conflit }}
+  </p>
+  } @if (vue().moules.length > 0) {
   <section class="zone" data-selector="moules-zone">
     <h2 class="mb-2 text-label uppercase text-ink-muted">{{ labels.zones.PRODUIT }}</h2>
     <div class="tiles tiles--moules">
@@ -71,7 +79,7 @@
 <nav class="global-actions flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actionsGlobales">
   <button
     type="button"
-    [disabled]="!gestesDisponibles() || !presence().permet('PAUSE')"
+    [disabled]="!gestesDisponibles() || !commandesGlobales().permet('PAUSE')"
     [glmLongPress]="confirmationPressMs"
     (longPressed)="pauseRequested.emit()"
     class="hold-target min-h-touch-lg flex-1 rounded bg-warn text-section text-on-accent disabled:opacity-50"
@@ -81,7 +89,7 @@
   </button>
   <button
     type="button"
-    [disabled]="!gestesDisponibles() || !presence().permet('REPRENDRE')"
+    [disabled]="!gestesDisponibles() || !commandesGlobales().permet('REPRENDRE')"
     [glmLongPress]="confirmationPressMs"
     (longPressed)="repriseRequested.emit()"
     class="hold-target min-h-touch-lg flex-1 rounded border-2 border-warn bg-surface text-section text-warn disabled:opacity-50"
@@ -91,7 +99,7 @@
   </button>
   <button
     type="button"
-    [disabled]="!gestesDisponibles() || !presence().permet('TOUT_ARRETER')"
+    [disabled]="!gestesDisponibles() || !commandesGlobales().permet('TOUT_ARRETER')"
     [glmLongPress]="confirmationPressMs"
     (longPressed)="arretTotalRequested.emit()"
     class="hold-target min-h-touch-lg flex-1 rounded border-2 border-danger bg-surface text-section text-danger disabled:opacity-50"

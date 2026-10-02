@@ -134,8 +134,6 @@ const identifiantDans = (url: string): string => url.split('/').slice(-2)[0] ?? 
 
 const corpsDe = (suivi: SuiviEnregistre): RestSuivi => ({
   activitesEnCours: [],
-  conflits: [],
-  evaluation: '2026-10-01T08:00:00Z',
   element: suivi.element,
   engageLe: ENGAGE_LE,
   engagePar: AUTEUR,

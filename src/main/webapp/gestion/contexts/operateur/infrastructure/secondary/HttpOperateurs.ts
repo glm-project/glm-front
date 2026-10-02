@@ -8,9 +8,9 @@ import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CommandeCreationOperateur } from '../../domain/CommandeCreationOperateur';
 import { CommandeModificationOperateur } from '../../domain/CommandeModificationOperateur';
+import { Identifiant } from '../../domain/Identifiant';
+import { IdentifiantDejaUtilise } from '../../domain/IdentifiantDejaUtilise';
 import { IdentiteDejaUtilisee } from '../../domain/IdentiteDejaUtilisee';
-import { Matricule } from '../../domain/Matricule';
-import { MatriculeDejaUtilise } from '../../domain/MatriculeDejaUtilise';
 import { NomOperateur } from '../../domain/NomOperateur';
 import { Operateur } from '../../domain/Operateur';
 import { OperateurAyantPointe } from '../../domain/OperateurAyantPointe';
@@ -37,7 +37,7 @@ const toOperateur = (operateur: components['schemas']['RestOperateur']): Operate
   new Operateur(new OperateurId(operateur.id), {
     nom: new NomOperateur(operateur.nom),
     prenom: new PrenomOperateur(operateur.prenom),
-    matricule: operateur.matricule === undefined ? undefined : new Matricule(operateur.matricule),
+    identifiant: operateur.identifiant === undefined ? undefined : new Identifiant(operateur.identifiant),
     tauxHoraire: operateur.tauxHoraire === undefined ? undefined : new TauxHoraire(operateur.tauxHoraire),
     postes: operateur.postes.map(toPosteHabilitable),
     natures: operateur.natures,
@@ -49,7 +49,7 @@ const toRequest = (
   nom: commande.nom.value,
   prenom: commande.prenom.value,
   postes: commande.postes.map(poste => poste.value),
-  ...(commande.matricule === undefined ? {} : { matricule: commande.matricule.value }),
+  ...(commande.identifiant === undefined ? {} : { identifiant: commande.identifiant.value }),
   ...(commande.tauxHoraire === undefined ? {} : { tauxHoraire: commande.tauxHoraire.value }),
 });
 
@@ -57,8 +57,8 @@ const refusCreation = (urn: string | undefined): RefusCreationOperateur | undefi
   switch (urn) {
     case 'urn:glm:erreur:operateur:identite-deja-utilisee':
       return new IdentiteDejaUtilisee();
-    case 'urn:glm:erreur:operateur:matricule-deja-utilise':
-      return new MatriculeDejaUtilise();
+    case 'urn:glm:erreur:operateur:identifiant-deja-utilise':
+      return new IdentifiantDejaUtilise();
     case 'urn:glm:erreur:operateur:poste-de-travail-introuvable':
       return new PosteHabilitableIntrouvable();
     default:

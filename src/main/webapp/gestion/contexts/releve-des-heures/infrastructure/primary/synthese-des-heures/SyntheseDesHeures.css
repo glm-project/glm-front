@@ -185,14 +185,6 @@
   padding: 0.5rem 0.125rem;
 }
 
-.operationnel .cellule .presumees {
-  font-size: 0.6875rem;
-}
-
-.total .presumees {
-  font-size: var(--text-label);
-}
-
 .operationnel .total {
   background: var(--color-accent);
   color: var(--color-on-accent);
@@ -222,25 +214,6 @@
   font-weight: 400;
 }
 
-.presumees {
-  color: var(--color-warn);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.operationnel .total .presumees {
-  color: var(--color-on-accent);
-}
-
-.presence {
-  min-height: 2.75rem;
-  background: var(--color-canvas);
-}
-
-.presence .total .duree {
-  font-weight: 600;
-}
-
 .barre {
   position: absolute;
   top: 1rem;
@@ -249,11 +222,6 @@
   border: 1px solid var(--color-ink-muted);
   border-radius: 3px;
   background: var(--color-sunken);
-}
-
-.barre.presumee {
-  border: 2px dashed var(--color-warn);
-  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
 }
 
 .barre.en-cours {
@@ -325,14 +293,6 @@
   position: relative;
 }
 
-.trait {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: color-mix(in srgb, var(--color-ink-muted) 70%, transparent);
-}
-
 .repere-selection {
   position: absolute;
   top: 0;
@@ -357,12 +317,6 @@
 
 .forme.fin {
   border-radius: 2px;
-}
-
-.forme.clos {
-  border-color: var(--color-ink-muted);
-  border-radius: 2px;
-  background: var(--color-surface);
 }
 
 .forme.nc {
@@ -435,26 +389,28 @@
   );
 }
 
-.pastille-presence {
-  border: 1px solid var(--color-ink-muted);
-  background: var(--color-sunken);
-}
-
-.pastille-presume {
-  border: 2px dashed var(--color-warn);
-  background: color-mix(in srgb, var(--color-warn) 8%, var(--color-surface));
-}
-
-.pastille-trait {
-  width: 1px;
-  height: 18px;
-  border-radius: 0;
-  background: var(--color-ink-muted);
-}
-
 .pastille-en-cours {
   width: 3px;
   height: 18px;
   border-radius: 2px;
   background: var(--color-ink-muted);
+}
+
+.etat-activite {
+  display: block;
+  margin-top: 3.25rem;
+  padding: 0.375rem;
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.barre.automatique {
+  border: 2px dashed var(--color-warn);
+}
+
+.barre.a-resoudre {
+  width: 3px;
+  border: 1px dashed var(--color-warn);
+  background: var(--color-surface);
 }

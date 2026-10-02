@@ -6,13 +6,13 @@ import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
-  GesteDAtelier,
+  GesteDePointage,
   JournalDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
+import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { matriculeFixture } from '@test/unit/fixtures/pupitre/atelier/MatriculeFixture';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
 import { GestesRecordingQueue } from './GestesRecordingQueue';
 
@@ -24,14 +24,13 @@ const vueFixture: JournalDuPupitre = {
         id: 'jean',
         nom: 'Dupont',
         prenom: 'Jean',
-        matricule: '049',
-        etat: 'ABSENT',
+        identifiant: '049',
         postes: [{ id: 'tour', libelle: 'Tour' }],
-        evenements: [],
       },
     ],
     suivis: [
       {
+        conflits: [],
         id: 'moule-1015',
         nom: 'PR-2026-000015',
         reference: '1015',
@@ -39,7 +38,7 @@ const vueFixture: JournalDuPupitre = {
         type: 'PRODUIT',
         activites: [
           {
-            ouverture: 'ouverture-jean-tour-2026-09-05T06:00:00Z',
+            ouverture: 'activite-fixture-30',
             echeance: '2026-09-05T19:00:00.000Z',
             operateurId: 'jean',
             categorie: 'TRAVAIL',
@@ -104,6 +103,8 @@ describe('GestesRecordingQueue', () => {
       kind: 'GESTES',
       capture: () => [
         {
+          intention: 'FIN',
+          cible: 'activite-fixture-31',
           id: 'pointage-1',
           dateDeSurvenue: '2026-09-05T09:00:00Z',
           operateurId: 'jean',
@@ -128,6 +129,8 @@ describe('GestesRecordingQueue', () => {
       kind: 'GESTES',
       capture: () => [
         {
+          intention: 'FIN',
+          cible: 'activite-fixture-32',
           id: 'pointage-1',
           dateDeSurvenue: '2026-09-05T09:00:00Z',
           operateurId: 'jean',
@@ -167,7 +170,7 @@ describe('GestesRecordingQueue', () => {
     FenetreOperateur.open(
       Entreprise.of('entreprise-a'),
       structuredClone(vueFixture),
-      matriculeFixture('049'),
+      identifiantFixture('049'),
       Date.parse('2026-09-05T09:00:00Z'),
       new IdentiteDeFenetre(1),
     );
@@ -184,19 +187,26 @@ describe('GestesRecordingQueue', () => {
     );
   };
 
-  const whenReadingRecordedGestures = async (entreprise: string): Promise<readonly GesteDAtelier[]> => {
+  const whenReadingRecordedGestures = async (entreprise: string): Promise<readonly GesteDePointage[]> => {
     const state = await journal.read(Entreprise.of(entreprise));
     return state.evenements.map(e => e.geste);
   };
 
-  const thenGesturesAreSuspensionsOf = (gestures: readonly GesteDAtelier[], pause: string): void => {
+  const thenGesturesAreSuspensionsOf = (gestures: readonly GesteDePointage[], pause: string): void => {
     expect(gestures).toEqual([
-      expect.objectContaining({ nature: 'POINTAGE', suiviId: 'moule-1015', type: 'FIN', suspension: { pause, reouverture: 'DEBUT' } }),
+      expect.objectContaining({
+        intention: 'FIN',
+        cible: 'activite-fixture-30',
+        nature: 'POINTAGE',
+        suiviId: 'moule-1015',
+        type: 'FIN',
+        suspension: { pause, reouverture: 'DEBUT' },
+      }),
     ]);
   };
 
-  const thenRecordedGesturesRetainRootIdentity = (gestures: readonly GesteDAtelier[], rootIdentity: string): void => {
-    expect(gestures.length).toBe(3);
+  const thenRecordedGesturesRetainRootIdentity = (gestures: readonly GesteDePointage[], rootIdentity: string): void => {
+    expect(gestures.length).toBe(1);
     const ids = gestures.map(g => g.id);
     expect(ids).toContain(rootIdentity);
     expect(new Set(ids).size).toBe(gestures.length);

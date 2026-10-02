@@ -48,8 +48,6 @@ const minutesDe = (instant: InstantDeReleve): number => instant.value.getHours()
 
 const finitUnAutreJour = (debut: InstantDeReleve, fin: InstantDeReleve): boolean => fin.estUnAutreJourQue(debut);
 
-export const seLePoursuit = finitUnAutreJour;
-
 export const minutesDeDebut = minutesDe;
 
 export const minutesDeFin = (debut: InstantDeReleve, fin: InstantDeReleve): number =>

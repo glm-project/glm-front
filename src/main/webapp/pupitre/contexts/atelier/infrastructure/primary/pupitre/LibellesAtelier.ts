@@ -1,5 +1,4 @@
 import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
-import { SituationDeLOperateur } from '../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
 import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
@@ -21,18 +20,13 @@ const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
   TOUT_ARRETER: 'TOUT ARRÊTER',
 };
 
-const PRESENCES: Record<SituationDeLOperateur, string> = {
-  ABSENT: 'Pas encore arrivé',
-  PRESENT: 'Présent',
-  EN_PAUSE: 'En pause',
-};
-
 export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
   contexte.kind === 'ELEMENT' ? contexte.numero.toString() : COMMANDES_GLOBALES[contexte.intention];
 
 export const LIBELLES_POINTAGE = {
   zones: ZONES,
   nonConformite: 'NC',
+  conflit: 'En conflit — nouvelle ouverture possible',
   actionPrincipale: (element: ElementDePointage): 'DÉMARRER' | 'ARRÊTER' => (element.isActive() ? 'ARRÊTER' : 'DÉMARRER'),
   actionSecondaire: (element: ElementDePointage): 'NC' | 'BON' => (element.isNonConforme() ? 'BON' : 'NC'),
   duree: (dureeMs: number): string => `depuis ${formatDuree(dureeMs)}`,
@@ -46,8 +40,8 @@ export const LIBELLES_POINTAGE = {
 } as const;
 
 export const LIBELLES_ENTETE_PUPITRE = {
-  code: (matricule: string): string => `Code ${matricule}`,
-  presence: PRESENCES,
+  code: (identifiant: string): string => `Code ${identifiant}`,
+  pause: 'En pause',
   enLigne: 'En ligne',
   horsLigne: 'Hors ligne',
   fin: "J'ai fini",

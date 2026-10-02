@@ -14,10 +14,8 @@ const OPERATEUR = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  matricule: '049',
-  etat: 'ABSENT',
+  identifiant: '049',
   postes: [],
-  evenements: [],
 } as const;
 
 let authorizationsBeforeTheRecovery = 0;
@@ -130,7 +128,7 @@ describe('Pupitre enrolment', () => {
   it('should ignore operator entry while reset confirmation is pending', () => {
     givenAnEnrolledPupitre();
     whenHoldingTheLogo();
-    whenTypingAValidMatriculeOnThePhysicalKeyboard();
+    whenTypingAValidIdentifiantOnThePhysicalKeyboard();
 
     thenNoOperatorIsDesignated();
   });
@@ -228,7 +226,7 @@ const whenConfirmingTheReset = (): void => {
   cy.tick(0);
 };
 
-const whenTypingAValidMatriculeOnThePhysicalKeyboard = (): void => {
+const whenTypingAValidIdentifiantOnThePhysicalKeyboard = (): void => {
   cy.press('0');
   cy.press('4');
   cy.press('9');

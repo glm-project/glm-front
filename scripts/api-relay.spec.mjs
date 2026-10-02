@@ -47,12 +47,22 @@ describe('API relay', () => {
     const pointage = {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: '{"operateur":"Amel"}',
+      body: '{"id":"932c0c0b-a676-408d-8f82-e9b56ad7791c","operateur":"0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d","intention":"OUVERTURE","type":"DEBUT"}',
     };
 
-    await whenTheBrowserAsks('https://glm-pupitre.pages.dev/api/atelier/journees', pointage, forward);
+    await whenTheBrowserAsks(
+      'https://glm-pupitre.pages.dev/api/atelier/suivis/b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e/pointages',
+      pointage,
+      forward,
+    );
 
-    assert.deepEqual([reached[0].method, await reached[0].text()], ['POST', '{"operateur":"Amel"}']);
+    assert.deepEqual(
+      [reached[0].method, await reached[0].text()],
+      [
+        'POST',
+        '{"id":"932c0c0b-a676-408d-8f82-e9b56ad7791c","operateur":"0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d","intention":"OUVERTURE","type":"DEBUT"}',
+      ],
+    );
   });
 
   it('should refuse to guess when the project declares no API origin', async () => {
@@ -62,10 +72,14 @@ describe('API relay', () => {
   });
 
   it('should answer with what the API answered', async () => {
-    const refusal = new Response('{"code":"urn:glm:erreur:atelier:journee-de-travail-deja-ouverte"}', { status: 409 });
+    const refusal = new Response('{"type":"urn:glm:erreur:atelier:identifiant-evenement-reutilise"}', { status: 409 });
     const { forward } = givenAnApiAnswering(refusal);
 
-    const answer = await whenTheBrowserAsks('https://glm-pupitre.pages.dev/api/atelier/journees', { method: 'POST' }, forward);
+    const answer = await whenTheBrowserAsks(
+      'https://glm-pupitre.pages.dev/api/atelier/suivis/b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e/pointages',
+      { method: 'POST' },
+      forward,
+    );
 
     assert.equal(answer.status, 409);
   });

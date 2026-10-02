@@ -1,104 +1,96 @@
+import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
-import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
+import { ActiviteDeSupervision, DescriptionActivite } from '../../../domain/activite/ActiviteDeSupervision';
+import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
+import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
+import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
+import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
+import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
+import { Instant } from '../../../domain/instant/Instant';
+import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
+import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
+import { IdentifiantPoste } from '../../../domain/poste/IdentifiantPoste';
+import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
+import { PosteDeSupervision } from '../../../domain/poste/PosteDeSupervision';
 import { DonneesDeSupervision, DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
-import { toDonneesDeSupervision } from './toDonneesDeSupervision';
 
-interface AcquisitionPage<T> {
-  readonly content: readonly T[];
-  readonly currentPage: number;
-  readonly pageSize: number;
-  readonly totalElementsCount: number;
-}
+type RestOperateur = components['schemas']['RestOperateurDeSupervision'];
+type RestElement = components['schemas']['RestElementDeSupervision'];
+type RestPoste = components['schemas']['RestPosteDeSupervision'];
+type RestActivite = components['schemas']['RestActiviteDeSupervision'];
+type RestDescription = components['schemas']['RestDescriptionDActiviteDeSupervision'];
 
-const valueFrom = <T>(result: PromiseSettledResult<T>): T => {
-  if (result.status === 'rejected') {
-    throw result.reason;
-  }
-  return result.value;
-};
+const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
+  new OperateurDeclare({
+    id: new IdentifiantOperateur(operateur.id),
+    nom: operateur.nom,
+    prenom: operateur.prenom,
+    metiers: operateur.metiers.map(metier => new NatureDeTravail(metier)),
+  });
 
-const assertAcquisition = (complete: boolean): void => {
-  if (!complete) {
-    throw new Error('Incomplete supervision acquisition');
-  }
+const toElement = (element: RestElement): ElementTravaille =>
+  new ElementTravaille({
+    type: element.type,
+    nom: element.nom,
+    ...(element.reference === undefined ? {} : { reference: new ReferenceDElement(element.reference) }),
+  });
+
+const toPoste = (poste: RestPoste): PosteDeSupervision =>
+  new PosteDeSupervision({
+    id: new IdentifiantPoste(poste.id),
+    libelle: poste.libelle,
+    ...(poste.nature === undefined ? {} : { nature: new NatureDeTravail(poste.nature) }),
+  });
+
+const toDescription = (activite: RestDescription): DescriptionActivite => ({
+  id: new IdentifiantActivite(activite.id),
+  operateurId: new IdentifiantOperateur(activite.operateurId),
+  objet: toElement(activite.element),
+  categorie: new CategorieActivite(activite.categorie),
+  debut: new Instant(activite.debut),
+  echeance: new Instant(activite.echeance),
+  ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
+});
+
+const toActivite = (activite: RestActivite): ActiviteDeSupervision => {
+  const finRetenue =
+    activite.etat === 'TERMINEE_AUTOMATIQUEMENT' ? required(activite.finRetenue, 'activite.finRetenue') : activite.finRetenue;
+  return new ActiviteDeSupervision({
+    ...toDescription(activite),
+    etat: activite.etat,
+    ...(finRetenue === undefined ? {} : { finRetenue: new Instant(finRetenue) }),
+  });
 };
 
 @Injectable()
 export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
-  private readonly authentication = inject(AuthenticationPort);
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  private readonly pending = new Map<string | undefined, Promise<DonneesDeSupervision>>();
-
-  override read(): Promise<DonneesDeSupervision> {
-    const tenant = this.authentication.currentTenant();
-    const pending = this.pending.get(tenant);
-    if (pending !== undefined) {
-      return pending;
-    }
-    const acquisition = this.acquire().finally(() => {
-      this.pending.delete(tenant);
-    });
-    this.pending.set(tenant, acquisition);
-    return acquisition;
-  }
-
-  private async acquire(): Promise<DonneesDeSupervision> {
-    const tenant = this.authentication.currentTenant();
+  override async read(): Promise<DonneesDeSupervision> {
     try {
-      const [operateurs, journees, suivis, postes] = await Promise.allSettled([
-        this.readAll(tenant, page => this.api.read('/api/operateurs', { queryParams: { page, size: 100 } })),
-        this.readAll(tenant, page => this.api.read('/api/atelier/journees', { queryParams: { page, size: 100, etat: 'PRESENT' } })),
-        this.readAll(tenant, page =>
-          this.api.read('/api/atelier/suivis', { queryParams: { page, size: 100, etats: ['EN_COURS'], inclureConflits: true } }),
+      const response = await this.api.read('/api/atelier/supervision', {});
+      return {
+        evaluation: new Instant(response.evaluation),
+        operateurs: response.operateurs.map(toOperateur),
+        activites: response.activites.map(toActivite),
+        sequencesEnConflit: response.sequencesEnConflit.map(
+          sequence =>
+            new SequenceEnConflit({
+              id: new IdentifiantSequence(sequence.id),
+              operateurId: new IdentifiantOperateur(sequence.operateurId),
+              activites: sequence.activites.map(activite => new ActiviteDeSupervision({ ...toDescription(activite), etat: 'A_RESOUDRE' })),
+              ...(sequence.poste === undefined ? {} : { poste: toPoste(sequence.poste) }),
+            }),
         ),
-        this.readAll(tenant, page => this.api.read('/api/postes-de-travail', { queryParams: { page, size: 100 } })),
-      ]);
-      this.assertTenant(tenant);
-      const postesDeTravail = valueFrom(postes);
-      return toDonneesDeSupervision({
-        operateurs: valueFrom(operateurs),
-        journees: valueFrom(journees),
-        suivis: valueFrom(suivis),
-        postes: postesDeTravail,
-      });
-    } catch (error) {
-      this.errors.handleError(error);
-      throw error;
-    }
-  }
-  private async readAll<T extends { readonly id: string }>(
-    tenant: string | undefined,
-    readPage: (page: number) => Promise<AcquisitionPage<T>>,
-  ): Promise<T[]> {
-    this.assertTenant(tenant);
-    const page = await readPage(0);
-    this.assertTenant(tenant);
-    assertAcquisition(page.currentPage === 0);
-    assertAcquisition(page.pageSize > 0);
-    assertAcquisition(page.totalElementsCount === 0 || page.content.length > 0);
-    const elements = [...page.content];
-    const pageCount = Math.ceil(page.totalElementsCount / page.pageSize);
-    for (let index = 1; index < pageCount; index++) {
-      const suivante = await readPage(index);
-      this.assertTenant(tenant);
-      assertAcquisition(suivante.currentPage === index);
-      assertAcquisition(suivante.pageSize === page.pageSize);
-      assertAcquisition(suivante.content.length > 0);
-      assertAcquisition(suivante.totalElementsCount === page.totalElementsCount);
-      elements.push(...suivante.content);
-    }
-    assertAcquisition(elements.length === page.totalElementsCount);
-    assertAcquisition(new Set(elements.map(element => element.id)).size === elements.length);
-    return elements;
-  }
-
-  private assertTenant(tenant: string | undefined): void {
-    if (tenant !== this.authentication.currentTenant()) {
-      throw new Error('Supervision company changed');
+      };
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
     }
   }
 }

@@ -5,6 +5,7 @@ import { LotDeGestesDAtelier } from './fenetre-operateur/DecisionDePointage';
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
 
 export class IntentionGlobaleInitiee {
+  private readonly instant: number;
   private readonly racine: string;
   private readonly origine: SuiteDIdentitesDeGestes;
 
@@ -12,20 +13,21 @@ export class IntentionGlobaleInitiee {
     private readonly commande: IntentionGlobaleDAtelier,
     origine: IdentiteDuGeste,
   ) {
+    this.instant = Date.parse(origine.dateDeSurvenue);
     this.racine = origine.id;
     this.origine = SuiteDIdentitesDeGestes.from(origine);
   }
 
   prepare(fenetre: FenetreOperateur): LotDeGestesDAtelier {
     const identify = this.identities();
-    const active = fenetre.afterEvaluatingAt(Date.parse(this.origine.identite().dateDeSurvenue));
+    const evaluee = fenetre.afterEvaluatingActivities(this.instant);
     switch (this.commande) {
       case 'PAUSE':
-        return active.preparePause(identify, this.racine);
+        return evaluee.preparePause(identify, this.racine);
       case 'REPRENDRE':
-        return active.prepareReprise(identify);
+        return evaluee.prepareReprise(identify);
       case 'TOUT_ARRETER':
-        return active.prepareToutArreter(identify);
+        return evaluee.prepareToutArreter(identify);
     }
   }
 

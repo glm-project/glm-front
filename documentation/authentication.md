@@ -18,10 +18,16 @@ credential or reach into an adapter.
 ## Each front owns its wiring
 
 `gestion/auth.provider.ts` builds `keycloak-js` from the front environment and binds
-`KeycloakOidcAuthentication`. Its Cypress build replaces that provider file with the in-memory adapter.
+`KeycloakOidcAuthentication`. The Gestion shell mounts routed content only after `authenticate()` succeeds,
+so the first API session synchronization cannot precede the authorization-code exchange. An authentication
+failure is reported through `ErrorHandlerPort` and keeps the routed content closed.
+
+The Cypress build replaces that provider file with a composition under `src/test/`. It uses the in-memory
+adapter by default and permits a fixture to retain or refuse authentication. Browser scenarios wait for
+authentication to reach the port and for the shell to render before releasing or refusing it; they do not
+depend on routing completing while authentication is pending. Those fixture controls belong to the test
+build alone.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
-The gestion shell mounts its routed content only after authentication completes, so a first API acquisition
-cannot ask Keycloak to renew a session that has not opened yet.
 
 `pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,
 the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort` and

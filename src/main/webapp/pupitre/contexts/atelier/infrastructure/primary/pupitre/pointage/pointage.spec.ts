@@ -2,7 +2,7 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { ExecutionDePointage, IntentionDePointage, PointageCommand } from '../../../../application/PointageCommand';
-import { PresenceDeLOperateur } from '../../../../domain/designation/fenetre-operateur/PresenceDeLOperateur';
+import { CommandesGlobales } from '../../../../domain/designation/fenetre-operateur/CommandesGlobales';
 import { ElementDePointage, VueDePointage } from '../../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../../domain/designation/NumeroDElement';
 import { Pointage } from './pointage';
@@ -10,6 +10,7 @@ import { Pointage } from './pointage';
 const CONFIRMATION_PRESS_FIXTURE_MS = 1_000;
 
 const pointageFixture: VueDePointage = {
+  conflits: [],
   moules: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
   ordresDeFabrication: [
     new ElementDePointage('of-204', NumeroDElement.assigned('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
@@ -42,7 +43,7 @@ describe('Pointage screen', () => {
     };
     fixture.componentRef.setInput('vue', pointageFixture);
     fixture.componentRef.setInput('commander', commander);
-    fixture.componentRef.setInput('presence', presenceFixture({ activiteEnCours: true, pauseEnCours: true }));
+    fixture.componentRef.setInput('commandesGlobales', commandesGlobalesFixture({ activiteEnCours: true, pauseEnCours: true }));
     fixture.componentInstance.pauseRequested.subscribe(() => emitted.push('pause'));
     fixture.componentInstance.repriseRequested.subscribe(() => emitted.push('reprendre'));
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
@@ -50,6 +51,14 @@ describe('Pointage screen', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('should state the conflict and the possible new opening even without any current activity', async () => {
+    givenAConflictWithoutCurrentActivity();
+
+    await whenRendering();
+
+    thenConflictIsExplainedWithoutDuration();
   });
 
   it('should declare no tile intention before its target has been held for one second', async () => {
@@ -304,19 +313,19 @@ describe('Pointage screen', () => {
     thenEveryWorkstationChoiceIsDisabled();
   });
 
-  it.each<[string, ConstatDePresenceFixture, readonly boolean[]]>([
+  it.each<[string, ConstatDActivitesFixture, readonly boolean[]]>([
     ['nothing to suspend nor to reopen', { activiteEnCours: false, pauseEnCours: false }, [true, true, false]],
     ['a personal activity to suspend', { activiteEnCours: true, pauseEnCours: false }, [false, true, false]],
     ['a pause in progress to reopen', { activiteEnCours: false, pauseEnCours: true }, [true, false, false]],
   ])('should disable PAUSE, REPRENDRE and TOUT ARRÊTER for an operator with %s', async (_name, constat, expectedDisabled) => {
-    givenPresence(constat);
+    givenGlobalCommands(constat);
     await whenRendering();
 
     thenGlobalCommandsDisabledStatesAre(expectedDisabled);
   });
 
-  it('should emit no gesture when a command illegal for the current presence is pressed', async () => {
-    givenPresence({ activiteEnCours: true, pauseEnCours: false });
+  it('should emit no gesture when a command illegal for the current activities is pressed', async () => {
+    givenGlobalCommands({ activiteEnCours: true, pauseEnCours: false });
     await whenRendering();
 
     whenHoldingGlobalCommand('resume');
@@ -336,7 +345,7 @@ describe('Pointage screen', () => {
   });
 
   const givenAnEmptyWorkshop = (): void => {
-    fixture.componentRef.setInput('vue', { moules: [], ordresDeFabrication: [] });
+    fixture.componentRef.setInput('vue', { conflits: [], moules: [], ordresDeFabrication: [] });
   };
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
@@ -344,8 +353,8 @@ describe('Pointage screen', () => {
   const givenGlobalGesturesAreAvailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', true);
   };
-  const givenPresence = (constat: ConstatDePresenceFixture): void => {
-    fixture.componentRef.setInput('presence', presenceFixture(constat));
+  const givenGlobalCommands = (constat: ConstatDActivitesFixture): void => {
+    fixture.componentRef.setInput('commandesGlobales', commandesGlobalesFixture(constat));
   };
   const givenTheNextPointageIsUnavailable = (): void => {
     nextExecution = { kind: 'INDISPONIBLE' };
@@ -510,16 +519,28 @@ describe('Pointage screen', () => {
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(`workstation-${posteId}`)), 'workstation');
   const button = (selector: string): HTMLButtonElement =>
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
+  const givenAConflictWithoutCurrentActivity = (): void => {
+    fixture.componentRef.setInput('vue', {
+      moules: [new ElementDePointage('piece', NumeroDElement.assigned('1015'), undefined)],
+      ordresDeFabrication: [],
+      conflits: [{ id: 'piece', numero: NumeroDElement.assigned('1015') }],
+    } satisfies VueDePointage);
+  };
+  const thenConflictIsExplainedWithoutDuration = (): void => {
+    const notice = root().querySelector(dataSelector('pointage-conflict-piece'));
+    expect(notice?.textContent).toContain('1015');
+    expect(notice?.textContent).toContain('En conflit — nouvelle ouverture possible');
+    expect(root().querySelector(dataSelector('duration'))).toBeNull();
+  };
   const root = (): HTMLElement => fixture.nativeElement as HTMLElement;
 });
 
-interface ConstatDePresenceFixture {
+interface ConstatDActivitesFixture {
   readonly activiteEnCours: boolean;
   readonly pauseEnCours: boolean;
 }
 
-const presenceFixture = (constat: ConstatDePresenceFixture): PresenceDeLOperateur =>
-  new PresenceDeLOperateur({ etat: 'PRESENT', ...constat });
+const commandesGlobalesFixture = (constat: ConstatDActivitesFixture): CommandesGlobales => new CommandesGlobales(constat);
 
 const requiredElement = <T>(element: T | null, description: string): T => {
   if (element === null) throw new Error(`Missing ${description} fixture.`);

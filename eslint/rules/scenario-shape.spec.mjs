@@ -25,7 +25,7 @@ ruleTester.run('scenario-shape', scenarioShape, {
         it('should let a helper narrow or throw', () => {
           const gestures = whenCapturingGestures();
 
-          thenGesturesAre(gestures, ['ARRIVEE']);
+          thenGesturesAre(gestures, ['DEBUT']);
         });
 
         const whenCapturingGestures = () => {
@@ -95,7 +95,7 @@ ruleTester.run('scenario-shape', scenarioShape, {
           const decision = whenDeciding();
           if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
 
-          thenGesturesAre(decision.capture(), ['ARRIVEE']);
+          thenGesturesAre(decision.capture(), ['DEBUT']);
         });
       `,
       errors: [{ messageId: 'branchInScenario' }],

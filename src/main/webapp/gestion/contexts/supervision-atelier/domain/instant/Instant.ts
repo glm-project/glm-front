@@ -3,6 +3,7 @@ import { InstantInvalide } from './InstantInvalide';
 export class Instant {
   readonly value: string;
   private readonly milliseconds: number;
+  private readonly nanosecondsWithinMillisecond: number;
 
   constructor(value: string) {
     const milliseconds = Date.parse(value);
@@ -10,7 +11,9 @@ export class Instant {
       throw new InstantInvalide(value);
     }
     this.milliseconds = milliseconds;
-    this.value = new Date(milliseconds).toISOString();
+    const fraction = /\.(\d{1,9})/.exec(value)?.[1] ?? '';
+    this.nanosecondsWithinMillisecond = Number(fraction.slice(3).padEnd(6, '0'));
+    this.value = `${new Date(milliseconds).toISOString().slice(0, -5)}.${fraction.padEnd(3, '0')}Z`;
   }
 
   private static isAbsolute(value: string, milliseconds: number): boolean {
@@ -24,6 +27,12 @@ export class Instant {
   }
 
   compare(other: Instant): number {
-    return this.milliseconds - other.milliseconds;
+    return this.milliseconds - other.milliseconds || this.nanosecondsWithinMillisecond - other.nanosecondsWithinMillisecond;
+  }
+
+  afterElapsedMilliseconds(milliseconds: number): Instant {
+    const utcMilliseconds = new Date(this.milliseconds + milliseconds).toISOString();
+    const fractionBeyondMilliseconds = this.value.slice(this.value.indexOf('.') + 4, -1);
+    return new Instant(`${utcMilliseconds.slice(0, -1)}${fractionBeyondMilliseconds}Z`);
   }
 }

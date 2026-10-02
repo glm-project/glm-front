@@ -1,9 +1,7 @@
 <glm-gestion-header [heading]="appName()" />
 
-@if (sessionReady()) {
-<div class="flex-1" data-selector="gestion-content">
+<div class="flex-1">
+  @if (authenticated()) {
   <router-outlet />
+  }
 </div>
-} @else {
-<p role="status" class="p-6 text-body text-ink-muted" data-selector="gestion-authentication-loading">Connexion en cours…</p>
-}

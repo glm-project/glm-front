@@ -47,15 +47,15 @@
             <span class="font-semibold">{{ operateur.nom.value }}</span> {{ operateur.prenom.value }}
           </td>
         </ng-container>
-        <ng-container matColumnDef="matricule">
-          <th mat-header-cell *matHeaderCellDef scope="col">Matricule</th>
+        <ng-container matColumnDef="identifiant">
+          <th mat-header-cell *matHeaderCellDef scope="col">Identifiant</th>
           <td
             mat-cell
             *matCellDef="let operateur"
-            [class.text-ink-muted]="operateur.matricule === undefined"
-            data-selector="operateur-matricule-cell"
+            [class.text-ink-muted]="operateur.identifiant === undefined"
+            data-selector="operateur-identifiant-cell"
           >
-            {{ formatMatricule(operateur.matricule) }}
+            {{ formatIdentifiant(operateur.identifiant) }}
           </td>
         </ng-container>
         <ng-container matColumnDef="natures">

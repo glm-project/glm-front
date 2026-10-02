@@ -1,7 +1,9 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { PostesApiFixture, postesFixture } from '../../../utils/gestion/poste/PostesApiFixture';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 describe('Workstation settings in gestion', () => {
+  beforeEach(() => new SupervisionApiFixture().intercept());
   it('should create the first workstation and display its saved values', () => {
     givenReferential();
     whenVisitingSettings();

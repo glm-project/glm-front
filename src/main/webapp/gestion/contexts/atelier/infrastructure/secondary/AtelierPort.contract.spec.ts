@@ -95,8 +95,6 @@ const projeter = (element: ElementALAtelier): ProjectionSuivi => ({
 
 const toRest = (suivi: SuiviFixture): RestSuivi => ({
   activitesEnCours: [],
-  conflits: [],
-  evaluation: '2026-10-01T08:00:00Z',
   element: suivi.element,
   engageLe: ENGAGEMENT_FIXTURE,
   engagePar: AUTEUR_FIXTURE,
@@ -211,8 +209,6 @@ class AtelierHttpBackendFixture implements HttpBackend {
 
 const clotureSansAuteurFixture: RestSuivi = {
   activitesEnCours: [],
-  conflits: [],
-  evaluation: '2026-10-01T08:00:00Z',
   clotureLe: CLOTURE_FIXTURE,
   element: 'moule-2',
   engageLe: ENGAGEMENT_FIXTURE,

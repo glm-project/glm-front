@@ -1,7 +1,9 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { ElementsApiFixture, elementsFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 describe('Manufacturing element referential in gestion', () => {
+  beforeEach(() => new SupervisionApiFixture().intercept());
   it('should reach the referential from the gestion menu', () => {
     givenReferential();
     whenOpeningFromTheMenu();

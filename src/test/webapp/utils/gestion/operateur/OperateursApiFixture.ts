@@ -111,8 +111,8 @@ export class OperateursApiFixture {
     if (this.identiteEstPrise(commande)) {
       return 'identite-deja-utilisee';
     }
-    if (this.matriculeEstPris(commande.matricule)) {
-      return 'matricule-deja-utilise';
+    if (this.identifiantEstPris(commande.identifiant)) {
+      return 'identifiant-deja-utilise';
     }
     return undefined;
   }
@@ -121,11 +121,11 @@ export class OperateursApiFixture {
     return this.operateurs.some(operateur => memeIdentite(operateur, commande));
   }
 
-  private matriculeEstPris(matricule: string | undefined): boolean {
-    if (matricule === undefined) {
+  private identifiantEstPris(identifiant: string | undefined): boolean {
+    if (identifiant === undefined) {
       return false;
     }
-    return this.operateurs.some(operateur => operateur.matricule === matricule);
+    return this.operateurs.some(operateur => operateur.identifiant === identifiant);
   }
 
   private resolve(id: string, commande: Commande): RestOperateur {
@@ -138,7 +138,7 @@ export class OperateursApiFixture {
       prenom: commande.prenom,
       postes,
       natures: naturesDe(postes),
-      ...(commande.matricule === undefined || commande.matricule === '' ? {} : { matricule: commande.matricule }),
+      ...(commande.identifiant === undefined || commande.identifiant === '' ? {} : { identifiant: commande.identifiant }),
       ...(commande.tauxHoraire === undefined ? {} : { tauxHoraire: commande.tauxHoraire }),
     };
   }
@@ -156,7 +156,7 @@ export const operateursFixture = (nombre: number): RestOperateur[] =>
     id: 'operateur-' + String(index + 1),
     nom: 'Nom ' + (index < 9 ? '0' + String(index + 1) : String(index + 1)),
     prenom: 'Prenom ' + String(index + 1),
-    matricule: '0' + String(index + 1),
+    identifiant: '0' + String(index + 1),
     tauxHoraire: 22,
     postes: [{ id: 'poste-1', libelle: 'Poste 01', nature: 'tournage' }],
     natures: ['tournage'],

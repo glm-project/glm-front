@@ -1,6 +1,10 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { AtelierApiFixture, engageablesFixture, suivisFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
-import { CoutDeRevientApiFixture } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
+import {
+  CoutDeRevientApiFixture,
+  rapportEnCoursFixture,
+  rapportIncompletFixture,
+} from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 import { ElementsApiFixture, elementsFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
 
 describe('Cost of manufacture of an element at the workshop', () => {
@@ -13,6 +17,30 @@ describe('Cost of manufacture of an element at the workshop', () => {
     atelier.engageables = engageablesFixture(2);
     elements = new ElementsApiFixture(elementsFixture(2));
     cout = new CoutDeRevientApiFixture();
+  });
+
+  it('should reach an incomplete report from the workshop and preserve its element address', () => {
+    givenIncompleteWorkshopReport();
+    whenVisitingWorkshop();
+    whenOpeningTheCostOfTheFirstElement();
+
+    thenTheIncompleteElementReportIsVisible();
+  });
+
+  it('should return to the workshop from a report carrying only excluded current activities', () => {
+    givenCurrentWorkshopReport();
+    whenVisitingTheReportOf('element-1');
+    whenGoingBackFromTheCurrentReport();
+
+    thenWorkshopIsVisible();
+  });
+
+  it('should display the new report after retrying a failed element reading', () => {
+    givenFailingReport();
+    whenVisitingTheReportOf('element-1');
+    whenRetryingTheAvailableReport();
+
+    thenTheReportIsDisplayed();
   });
 
   it('should reach the cost of manufacture of an element from the workshop', () => {
@@ -62,6 +90,21 @@ describe('Cost of manufacture of an element at the workshop', () => {
     thenTheUnknownElementIsExplained();
   });
 
+  const givenIncompleteWorkshopReport = (): void => {
+    cout.rapport = rapportIncompletFixture();
+    givenWorkshopAndReports();
+  };
+
+  const givenCurrentWorkshopReport = (): void => {
+    cout.rapport = rapportEnCoursFixture();
+    givenWorkshopAndReports();
+  };
+
+  const givenFailingReport = (): void => {
+    cout.failRead = true;
+    givenWorkshopAndReports();
+  };
+
   const givenWorkshopAndReports = (): void => {
     atelier.install();
     cout.install();
@@ -76,6 +119,14 @@ describe('Cost of manufacture of an element at the workshop', () => {
     atelier.install();
     cout.elementInconnu = true;
     cout.install();
+  };
+
+  const whenRetryingTheAvailableReport = (): void => {
+    cy.get(dataSelector('cout-error')).should('be.visible');
+    cy.then(() => {
+      cout.failRead = false;
+    });
+    cy.get(dataSelector('cout-retry')).click();
   };
 
   const whenVisitingWorkshop = (): void => {
@@ -103,8 +154,20 @@ describe('Cost of manufacture of an element at the workshop', () => {
     cy.get(dataSelector('element-cout-de-revient')).first().click();
   };
 
+  const whenGoingBackFromTheCurrentReport = (): void => {
+    cy.get(dataSelector('cout-activites-exclues')).should('be.visible');
+    whenGoingBackToTheWorkshop();
+  };
+
   const whenGoingBackToTheWorkshop = (): void => {
     cy.get(dataSelector('cout-retour')).click();
+  };
+
+  const thenTheIncompleteElementReportIsVisible = (): void => {
+    cy.location('pathname').should('eq', '/couts-de-revient/element-1');
+    cy.get(dataSelector('cout-total')).should('contain.text', 'Incomplet');
+    cy.get(dataSelector('cout-machine-cell')).should('contain.text', '300,00');
+    cy.get(dataSelector('cout-bandeau-anomalies')).should('be.visible');
   };
 
   const thenTheReportIsDisplayed = (): void => {

@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted — décisions métier confirmées le 29 septembre 2026, mise en œuvre à venir.
+Accepted — décisions métier confirmées le 29 septembre 2026, consommateurs pupitre et lecteurs Gestion
+du relevé et du coût mis en œuvre ; le front épingle le backend final publié après retrait et alignement
+documentaire. Les validations de publication portent sur leurs commits exacts ; ce statut ne remplace
+aucun résultat de CI ni contrôle visuel.
 Ce document fixe la comptabilisation, les transitions et le traitement des fins reçues tardivement.
 La fin automatique est dérivée, avec conservation des seuls pointages et corrections.
 Le ciblage des gestes, le recalcul après correction et l'instant commun du relevé sont confirmés.
@@ -127,6 +130,25 @@ les activités interprétables, distincte d'une contradiction entre pointages.
 - Une transition qui vise une activité échue alors qu'une autre activité est en cours sur la même clé met
   la séquence en conflit : A 08 h échue à 21 h, relance B 22 h, NC(A) 23 h.
 
+**Précisions confirmées sur corrections et lectures** :
+
+- Déplacer une ouverture vers un autre couple opérateur/poste est refusé (409) tant qu'un geste actif vise
+  cette activité depuis l'ancienne clé. Annuler ou corriger ce geste d'abord ; cette garde est l'exception
+  explicite à l'acceptation d'une correction laissant une contradiction.
+- Une activité à résoudre figure sur chaque jour de sa plage possible, du début à sa fin au plus tard,
+  bornée par l'évaluation. Les totaux concernés de ces jours sont incomplets. Une séquence en conflit
+  sans activité à résoudre reste exposée tout en laissant ces totaux complets.
+- L'incertitude du partage humain couvre toute la plage possible de l'activité à résoudre, sans noyau
+  commun calculé entre interprétations possibles. La machine d'une activité terminée reste chiffrée.
+- Travail, NC, machine et main-d'œuvre gardent chacun leur complétude. Un total incomplet porte seulement
+  cette information, sans zéro ni somme partielle. Le coût liste toutes les séquences responsables,
+  y compris sur un autre élément.
+- Un instant passé est accepté ; un instant jusqu'à l'heure serveur plus deux minutes incluses l'est
+  aussi. Au-delà, la lecture est refusée (400). Ce paramètre gouverne l'expiration des faits connus et
+  ne transforme pas les rapports en lectures historiques.
+- Un `FIN` pointé après l'échéance reste un fait du journal ; il n'est pas étiqueté « sans effet ».
+  L'anomalie de fin automatique décrit déjà la borne retenue.
+
 Les corrections et annulations recalculent les durées, les coûts, les anomalies et l'état courant.
 À 22 h, corriger un début de 08 h à 12 h déplace son échéance de 21 h à 01 h : l'activité redevient
 en cours, perd son anomalie et sort des durées et coûts comptabilisés.
@@ -144,12 +166,37 @@ Le pupitre conserve une durée écoulée indicative, figée à l'ouverture de la
 Cette indication n'est pas une durée comptabilisée. Le rapport de coût peut préciser que les
 activités en cours sont exclues de son calcul. Le pupitre calcule localement l'expiration à 13 h,
 y compris hors ligne, sans fabriquer de `FIN`. Une activité expirée cesse d'être active et ne peut
-plus être mise en pause ; un nouveau début reste possible.
+plus être mise en pause ; un nouveau début reste possible. Le socle pupitre applique maintenant cette
+règle avec l'échéance serveur et l'instant explicite de décision. Son timer d'actionnabilité est distinct
+de l'inactivité de désignation. Les captures déjà initiées gardent leur heure et cible.
 
-Les alertes réelles de ce chantier concernent le relevé et le coût. La supervision adapte son modèle
-et ses démonstrations InMemory ; son branchement HTTP réel reste un chantier distinct. Les commandes
+Les réponses de publication 200/201 en conflit restent acceptées et leurs diagnostics sont journalisés
+avant le rafraîchissement canonique. Le stockage atelier neuf conserve identités, intentions, cibles et
+marqueurs ; il utilise une clé atelier versionnée et conserve les documents d'enrôlement et de credentials. TOUT ARRÊTER conserve
+l'historique et les pending et efface la reprise dans la même mutation que ses N FIN ciblés, N=0 inclus.
+
+La supervision lit également les alertes réelles dans la projection complète du backend. Elle conserve
+l'évaluation, l'échéance et la fin retenue reçues ; aucun journal brut n'est réinterprété côté front.
+Elle classe chaque opérateur déclaré exactement une fois, dans « Au travail » si au moins une activité
+interprétable est en cours, sinon « Sans activité ». Ces deux couloirs restent visibles même vides,
+dans cet ordre, avec leurs opérateurs triés alphabétiquement. La NC reste une surcouche d'activité.
+Les séquences en conflit sont rendues séparément, y compris sans activité à résoudre ; elles ne produisent
+aucune activité courante interprétée. Les activités indépendantes du même opérateur restent visibles.
+La démonstration dérive la fin automatique à début + 13 heures écoulées, borne inclusive, depuis l'instant
+d'évaluation et sans pointage fabriqué. Une activité sans opérateur identifiable rend la lecture inexploitable. Les commandes
 back de correction et de résolution sont adaptées et testées. Le propriétaire confirme que l'écran
 de correction et de résolution des conflits Gestion relève d'une autre MR.
+
+Le relevé Gestion applique désormais cette lecture : son port unique acquiert les deux rapports avec un
+instant d'évaluation commun et vérifie leurs échos comme instants. Les portions calendaires gardent leur
+origine et leur état explicite ; les totaux incomplets n'exposent aucun chiffre. La frise et le journal
+opérationnels signalent les fins automatiques et les séquences en conflit, sans commande de résolution.
+Le coût Gestion consomme maintenant le contrat publié final : chaque catégorie de temps et de montant
+restitue sa complétude indépendante, sans valeur si elle est incomplète. Les périodes sans fin certaine
+gardent cette absence ; les activités en cours sont signalées comme entièrement exclues. Les fins
+automatiques restent repérables sur les lignes et explicables dans leurs détails. Toutes les séquences
+responsables, y compris celles d’autres éléments ou sans activité à résoudre, sont visibles sans lecture
+supplémentaire ni commande de résolution.
 
 ## Consequences
 
@@ -163,7 +210,7 @@ de correction et de résolution des conflits Gestion relève d'une autre MR.
 ### Negative
 
 - L'utilisateur peut consulter les anomalies mais doit encore passer par l'API pour les corriger.
-- La supervision conserve ses données de démonstration, y compris en production.
+- Une panne de lecture de supervision remplace les cartes par une erreur jusqu'à une acquisition réussie.
 - Le pupitre doit appliquer la règle d'expiration localement malgré un référentiel périmé.
 
 - L'historique ne prouve pas qu'une anomalie a été calculée ou affichée à une date passée.

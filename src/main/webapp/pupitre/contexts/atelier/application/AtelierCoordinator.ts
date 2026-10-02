@@ -13,7 +13,6 @@ const identityAt = (instant: number): IdentiteDuGeste => ({
   id: crypto.randomUUID(),
   dateDeSurvenue: new Date(instant).toISOString(),
 });
-const identity = (): IdentiteDuGeste => identityAt(Date.now());
 
 @Injectable()
 export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
@@ -49,7 +48,7 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
     const instant = Date.now();
     const current = this.designation.requireWindow(instant);
     const initiee = new IntentionGlobaleInitiee(intention, identityAt(instant));
-    const fenetre = current.afterIntendingGlobal(initiee);
+    const fenetre = current.afterEvaluatingActivities(instant).afterIntendingGlobal(initiee);
     this.designation.acceptDecision(fenetre);
     return this.capture(fenetre, { kind: 'GLOBALE', commande: initiee }).finally(() => {
       this.designation.completeGlobal(fenetre.identity());
@@ -62,9 +61,10 @@ export class AtelierCoordinator implements PointageCommand, CommandeGlobale {
 
   private choosePoste(opening: IdentiteDeFenetre, intention: IntentionDePointage, posteId: string): Promise<void> {
     if (!this.designation.gestesDisponibles()) return Promise.resolve();
-    this.designation.requireWindow();
+    const instant = Date.now();
+    this.designation.requireWindow(instant);
     const current = this.designation.currentWindow(opening);
-    const result = current.afterChoosingPoste(intention.suiviId, intention.cible, posteId, identity);
+    const result = current.afterChoosingPoste(intention.suiviId, intention.cible, posteId, () => identityAt(instant), instant);
     this.designation.acceptDecision(result.fenetre);
     return this.captureDecision(result.fenetre, result.decision);
   }

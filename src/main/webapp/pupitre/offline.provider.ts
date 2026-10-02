@@ -5,6 +5,7 @@ import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/E
 import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/FraicheurDuReferentiel';
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { ActiviteExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/ActiviteExpirationSchedulerPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
@@ -25,6 +26,7 @@ export const offlineProvider: Provider[] = [
   PupitreSynchronization,
   { provide: JournauxDuPupitrePort, useClass: IndexedDbJournauxDuPupitre },
   { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
+  { provide: ActiviteExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
   PupitreRuntime,
   PupitreVersionUpdater,
   { provide: AtelierExchangePort, useClass: HttpAtelierExchange },

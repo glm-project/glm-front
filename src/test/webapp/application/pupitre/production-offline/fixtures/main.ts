@@ -3,7 +3,7 @@ import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/s
 import { authProvider } from '@/pupitre/auth.provider';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
-  GesteDAtelier,
+  GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
@@ -13,7 +13,7 @@ import { enableProdMode } from '@angular/core';
 import { createApplication } from '@angular/platform-browser';
 
 export interface ProductionPupitreFixture {
-  prepare(entreprise: string, referentiel: ReferentielDuPupitre, geste: GesteDAtelier): Promise<void>;
+  prepare(entreprise: string, referentiel: ReferentielDuPupitre, geste: GesteDePointage): Promise<void>;
   read(entreprise: string): Promise<JournalDuPupitre>;
   waitForSynchronization(): Promise<void>;
 }

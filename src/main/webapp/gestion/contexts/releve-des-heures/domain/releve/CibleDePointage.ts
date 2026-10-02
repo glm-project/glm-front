@@ -6,8 +6,4 @@ export class CibleDePointage {
     readonly element: ElementReleveId,
     readonly poste: PosteReleveId | undefined,
   ) {}
-
-  estLaMeme(autre: CibleDePointage): boolean {
-    return this.element.estLeMeme(autre.element) && this.poste?.value === autre.poste?.value;
-  }
 }

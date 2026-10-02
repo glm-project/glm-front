@@ -8,9 +8,10 @@ import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/F
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { ExecutionDePointage, IntentionDePointage } from '@/pupitre/contexts/atelier/application/PointageCommand';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { ActiviteExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/ActiviteExpirationSchedulerPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
+import { CommandesGlobales } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/CommandesGlobales';
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
-import { PresenceDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ElementDePointage, VueDePointage } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/NumeroDElement';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
@@ -34,11 +35,12 @@ import { setTimeout as roundTrip } from 'node:timers';
 import { PupitrePage } from './page';
 
 const referentielFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [],
 };
-const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' };
+const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' };
 const pointageFixture: VueDePointage = {
+  conflits: [],
   moules: [],
   ordresDeFabrication: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)],
 };
@@ -50,7 +52,7 @@ class AtelierCoordinatorFixture {
   readonly refusAtelier = signal<ReturnType<CurrentOperateurLifecycle['refusAtelier']>>(undefined);
   readonly pointage = signal<VueDePointage | undefined>(undefined);
   readonly gestesDisponibles = signal(true);
-  readonly presence = signal(new PresenceDeLOperateur({ etat: 'PRESENT', activiteEnCours: true, pauseEnCours: true }));
+  readonly commandesGlobales = signal(new CommandesGlobales({ activiteEnCours: true, pauseEnCours: true }));
   readonly code = signal('');
   readonly unknownCode = signal(false);
   readonly canValidate = signal(true);
@@ -184,25 +186,22 @@ describe('Pupitre page', () => {
     expect(pupitre.finish).toHaveBeenCalledOnce();
   });
 
-  it('should relay the operator presence legality to the pointage screen', () => {
+  it('should relay the activity command availability to the pointage screen', () => {
     givenPointage();
 
-    givenPresence('PRESENT');
+    givenPause(false);
     whenRenderingThePage();
 
     expect((element('resume') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it.each<['ABSENT' | 'PRESENT', string]>([
-    ['PRESENT', 'En pause'],
-    ['ABSENT', 'Pas encore arrivé'],
-  ])('should show a %s operator whose pause is in progress as "%s" while offering REPRENDRE', (etat, libelle) => {
+  it('should show the local pause while offering REPRENDRE', () => {
     givenPointage();
+    givenPause(true);
 
-    givenPresence(etat, { pauseEnCours: true });
     whenRenderingThePage();
 
-    thenHeaderPresenceIs(libelle);
+    thenHeaderPauseIs('En pause');
     expect((element('resume') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -316,8 +315,8 @@ describe('Pupitre page', () => {
     pupitre.publishReference();
     fixture.detectChanges();
   };
-  const givenPresence = (etat: 'ABSENT' | 'PRESENT', { pauseEnCours } = { pauseEnCours: false }): void => {
-    pupitre.presence.set(new PresenceDeLOperateur({ etat, activiteEnCours: true, pauseEnCours }));
+  const givenPause = (pauseEnCours: boolean): void => {
+    pupitre.commandesGlobales.set(new CommandesGlobales({ activiteEnCours: true, pauseEnCours }));
   };
   const givenTheNextPagePressIsRefused = (): void => {
     pupitre.registerPress.mockReturnValueOnce(false);
@@ -366,8 +365,8 @@ describe('Pupitre page', () => {
   const thenHeaderMessageIs = (expected: string): void => {
     expect(element('header-message').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
   };
-  const thenHeaderPresenceIs = (expected: string): void => {
-    expect(element('header-presence').textContent.trim()).toBe(expected);
+  const thenHeaderPauseIs = (expected: string): void => {
+    expect(element('header-pause').textContent.trim()).toBe(expected);
   };
   const thenVisible = (selector: string, visible: boolean): void => {
     expect(root().querySelector(dataSelector(selector)) !== null).toBe(visible);
@@ -407,6 +406,7 @@ describe('Pupitre page with its designation keypad', () => {
         { provide: JournauxDuPupitrePort, useValue: journalFixture },
         { provide: AtelierExchangePort, useValue: serveurFixture },
         { provide: DesignationExpirationSchedulerPort, useValue: { schedule: () => undefined } },
+        { provide: ActiviteExpirationSchedulerPort, useValue: { schedule: () => undefined } },
         { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
         {
           provide: AuthenticationPort,
@@ -445,7 +445,7 @@ describe('Pupitre page with its designation keypad', () => {
     givenTheReadyKeypad();
     whenTheResetConfirmationIsOpen();
 
-    await whenTypingAValidMatriculeOnThePhysicalKeyboard();
+    await whenTypingAValidIdentifiantOnThePhysicalKeyboard();
 
     thenNoOperatorIsDesignated();
     thenDesignationCommandsAreUnavailable();
@@ -486,7 +486,7 @@ describe('Pupitre page with its designation keypad', () => {
     whenTheResetConfirmationIsOpen();
 
     whenCancellingTheReset();
-    await whenTypingAValidMatriculeOnThePhysicalKeyboard();
+    await whenTypingAValidIdentifiantOnThePhysicalKeyboard();
 
     thenTheOperatorIsDesignated();
   });
@@ -506,7 +506,7 @@ describe('Pupitre page with its designation keypad', () => {
     thenVisible('reinitialisation');
   };
 
-  const whenTypingAValidMatriculeOnThePhysicalKeyboard = async (): Promise<void> => {
+  const whenTypingAValidIdentifiantOnThePhysicalKeyboard = async (): Promise<void> => {
     whenStartingAValidDesignationOnThePhysicalKeyboard();
     await whenRenderingSettles();
   };

@@ -1,12 +1,9 @@
 import { CibleDePointage } from '../releve/CibleDePointage';
 import { InstantDeReleve } from '../releve/InstantDeReleve';
+import { ActiviteDuReleve } from './ActiviteDuReleve';
 import { CategorieDActivite } from './CategorieDActivite';
 import { ElementReleveId } from './ElementReleveId';
 import { PosteReleveId } from './PosteReleveId';
-
-const estPresumeSansFin = (fiche: FicheDIntervalle): boolean => fiche.presumee && fiche.fin === undefined;
-
-const finitAvantDeCommencer = (fiche: FicheDIntervalle): boolean => fiche.fin?.estAvant(fiche.debut) === true;
 
 export interface FicheDIntervalle {
   readonly element: ElementReleveId;
@@ -15,7 +12,7 @@ export interface FicheDIntervalle {
   readonly categorie: CategorieDActivite;
   readonly debut: InstantDeReleve;
   readonly fin: InstantDeReleve | undefined;
-  readonly presumee: boolean;
+  readonly activite: ActiviteDuReleve;
 }
 
 export class IntervalleDActivite {
@@ -25,13 +22,10 @@ export class IntervalleDActivite {
   readonly categorie: CategorieDActivite;
   readonly debut: InstantDeReleve;
   readonly fin: InstantDeReleve | undefined;
-  readonly presumee: boolean;
+  readonly activite: ActiviteDuReleve;
 
   constructor(fiche: FicheDIntervalle) {
-    if (estPresumeSansFin(fiche)) {
-      throw new Error('L’intervalle reçu du serveur est présumé sans fin.');
-    }
-    if (finitAvantDeCommencer(fiche)) {
+    if (fiche.fin?.estAvant(fiche.debut)) {
       throw new Error('L’intervalle reçu du serveur finit avant de commencer.');
     }
     this.element = fiche.element;
@@ -40,7 +34,7 @@ export class IntervalleDActivite {
     this.categorie = fiche.categorie;
     this.debut = fiche.debut;
     this.fin = fiche.fin;
-    this.presumee = fiche.presumee;
+    this.activite = fiche.activite;
   }
 
   cible(): CibleDePointage {
@@ -48,7 +42,7 @@ export class IntervalleDActivite {
   }
 
   estEnCours(): boolean {
-    return this.fin === undefined;
+    return this.activite.etat === 'EN_COURS';
   }
 
   finOuDebut(): InstantDeReleve {
@@ -60,6 +54,6 @@ export class IntervalleDActivite {
   }
 
   private commenceAvantLaFinDe(autre: IntervalleDActivite): boolean {
-    return autre.estEnCours() || this.debut.estAvant(autre.finOuDebut());
+    return autre.fin === undefined || this.debut.estAvant(autre.fin);
   }
 }

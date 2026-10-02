@@ -9,7 +9,7 @@ Use the fourteen colour roles already declared: surfaces and text (`canvas`, `su
 `border-strong`, `ink`, `ink-muted`), action (`accent`, `on-accent`) and state (`ok`, `danger`, `nc`, `sans-affectation`,
 `warn`). Choose the role that matches the meaning; a screen does not create a second value for an existing role.
 
-`danger` carries errors, refusals, destructive actions and, in supervision, absence. `nc` carries the
+`danger` carries errors, refusals and destructive actions. `nc` carries the
 non-conformity: it is never a foreground colour, and text placed on `nc` is `ink`. It paints backgrounds, borders
 and hatching; never let its border alone signal an NC, since it reaches only 1.9:1 on `surface`. See
 [ADR 0040](adr/0040-colour-non-conformity-yellow.md).

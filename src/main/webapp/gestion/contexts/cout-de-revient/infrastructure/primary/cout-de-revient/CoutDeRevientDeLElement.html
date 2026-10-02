@@ -24,6 +24,17 @@
     <button mat-stroked-button type="button" (click)="reload()" data-selector="cout-retry">{{ libelles.reessayer }}</button>
   </div>
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
+  <p class="mb-3 text-body-sm text-ink-muted" data-selector="cout-evaluation">{{ libelles.evaluation(vue.rapport.evaluation) }}</p>
+  @if (vue.rapport.activitesEnCours.existent()) {
+  <p class="mb-6 rounded-surface bg-sunken p-4 text-body-sm" data-selector="cout-activites-exclues">
+    {{ libelles.activitesExclues(vue.rapport.activitesEnCours) }}
+  </p>
+  } @if (vue.rapport.lignesEnAnomalie().length > 0) {
+  <div role="status" class="bandeau-anomalies mb-6" data-selector="cout-bandeau-anomalies">
+    <p class="font-semibold" data-selector="cout-bandeau-titre">{{ libelles.anomalies.titre(vue.rapport) }}</p>
+    <p class="mt-1 text-ink-muted" data-selector="cout-bandeau-detail">{{ libelles.anomalies.detail(vue.rapport) }}</p>
+  </div>
+  }
   <section class="mb-6 grid gap-4 sm:grid-cols-2" [attr.aria-label]="libelles.titre">
     <div class="gestion-carte p-5" data-selector="cout-indicateur-cout">
       <h2 class="text-body-sm font-semibold text-ink-muted">{{ libelles.indicateurCout }}</h2>
@@ -74,7 +85,15 @@
               [class.text-ink-muted]="ligne.estSansPoste()"
               data-selector="cout-nature-cell"
             >
-              {{ libelles.nature(ligne.nature?.value) }}
+              {{ libelles.nature(ligne.nature?.value) }} @if (ligne.porteDesAnomalies()) {
+              <span class="mt-1 flex flex-wrap gap-1">
+                @for (compte of ligne.anomalies(); track compte.anomalie) {
+                <span class="pastille" [attr.data-anomalie]="compte.anomalie" data-selector="cout-nature-anomalie"
+                  >{{ libelles.anomalies.compte(compte) }}</span
+                >
+                }
+              </span>
+              }
             </th>
             <td class="colonne-duree" data-selector="cout-travail-cell">{{ libelles.duree(ligne.temps.travail) }}</td>
             <td class="colonne-duree">
@@ -103,19 +122,119 @@
           @if (estDepliee(ligne)) {
           <tr class="detail-row" data-selector="cout-detail">
             <td colspan="8">
-              <p class="text-body-sm" data-selector="cout-periode">
-                <span class="text-ink-muted">{{ libelles.periodeLabel }} :</span> {{ libelles.periode(ligne.periode) }}
-              </p>
-              <p class="mt-1 text-body-sm">
-                <span class="mr-1 text-ink-muted">{{ libelles.nonConformitesLabel }} :</span>
-                @if (ligne.nonConformites.length === 0) {
-                <span data-selector="cout-sans-non-conformite">{{ libelles.sansNonConformite }}</span>
-                } @else {
-                <span class="mr-1.5 rounded bg-nc px-1.5 text-label text-ink" data-selector="cout-marque-nc">{{ libelles.nc }}</span>
-                @for (reprise of ligne.nonConformites; track $index) {
-                <span class="mr-3 whitespace-nowrap" data-selector="cout-non-conformite">{{ libelles.periode(reprise) }}</span>
-                } }
-              </p>
+              @if (ligne.pointages.length === 0) {
+              <p class="text-body-sm text-ink-muted" data-selector="cout-aucun-pointage">{{ libelles.detail.aucunPointage }}</p>
+              } @else {
+              <div class="pointages" tabindex="0" role="region" [attr.aria-label]="libelles.detail.tableau(ligne.nature?.value)">
+                <table
+                  class="pointages-table"
+                  [attr.aria-label]="libelles.detail.tableau(ligne.nature?.value)"
+                  data-selector="cout-pointages"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col">{{ libelles.detail.colonnes.poste }}</th>
+                      <th scope="col">{{ libelles.detail.colonnes.operateur }}</th>
+                      <th scope="col">{{ libelles.detail.colonnes.pointage }}</th>
+                      <th scope="col" class="nombre">{{ libelles.detail.colonnes.duree }}</th>
+                      <th scope="col" class="nombre">
+                        {{ libelles.detail.colonnes.machine }}<span class="aide">{{ libelles.detail.colonnes.machineAide }}</span>
+                      </th>
+                      <th scope="col" class="nombre">
+                        {{ libelles.detail.colonnes.mainDOeuvre }}<span class="aide">{{ libelles.detail.colonnes.mainDOeuvreAide }}</span>
+                      </th>
+                      <th scope="col" class="nombre">{{ libelles.detail.colonnes.total }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (pointage of ligne.pointages; track $index) {
+                    <tr class="pointage" [class.pointage-en-anomalie]="pointage.estEnAnomalie()" data-selector="cout-pointage">
+                      <th scope="row" data-selector="cout-pointage-poste">
+                        {{ libelles.detail.poste(pointage.poste) }} @if (pointage.estUneNonConformite()) {
+                        <span class="ml-1.5 rounded bg-nc px-1.5 text-label text-ink" data-selector="cout-marque-nc"
+                          >{{ libelles.nc }}</span
+                        >
+                        } @for (anomalie of pointage.anomalies; track anomalie) {
+                        <span class="pastille" [attr.data-anomalie]="anomalie" data-selector="cout-pointage-anomalie"
+                          >{{ libelles.detail.anomalie(anomalie) }}</span
+                        >
+                        }
+                      </th>
+                      <td data-selector="cout-pointage-operateur">{{ libelles.detail.operateur(pointage.operateur) }}</td>
+                      <td data-selector="cout-pointage-plage">
+                        {{ libelles.detail.plage(pointage) }} @if (pointage.finAuPlusTard; as finAuPlusTard) {
+                        <span class="calcul" data-selector="cout-pointage-fin-au-plus-tard"
+                          >{{ libelles.detail.finAuPlusTard(finAuPlusTard) }}</span
+                        >
+                        }
+                      </td>
+                      @if (pointage.estAResoudre()) {
+                      <td class="nombre" data-selector="cout-pointage-duree">{{ libelles.sansValeur }}</td>
+                      <td class="nombre"><strong data-selector="cout-pointage-machine">{{ libelles.sansValeur }}</strong></td>
+                      <td class="nombre"><strong data-selector="cout-pointage-main-d-oeuvre">{{ libelles.sansValeur }}</strong></td>
+                      <td class="nombre"><strong data-selector="cout-pointage-total">{{ libelles.sansValeur }}</strong></td>
+                      } @else {
+                      <td class="nombre" data-selector="cout-pointage-duree">{{ libelles.duree(pointage.duree) }}</td>
+                      <td class="nombre">
+                        <span class="calcul" data-selector="cout-pointage-calcul-machine"
+                          >{{ libelles.detail.calculMachine(pointage) }}</span
+                        >
+                        <strong data-selector="cout-pointage-machine">{{ libelles.montant(pointage.cout.machine) }}</strong>
+                      </td>
+                      <td class="nombre">
+                        <span class="calcul">
+                          @if (pointage.tauxHoraire === undefined) {
+                          <span data-selector="cout-pointage-taux">{{ libelles.detail.tauxNonValorise }}</span>
+                          } @else {
+                          <span data-selector="cout-pointage-taux">{{ libelles.detail.tarif(pointage.tauxHoraire) }}</span>
+                          } @for (part of pointage.parts; track $index) {
+                          <span
+                            class="diviseur"
+                            [class.diviseur-partage]="part.estPartagee()"
+                            [class.diviseur-inconnu]="part.partageInconnu()"
+                            data-selector="cout-pointage-diviseur"
+                            >{{ libelles.detail.diviseur(part) }}</span
+                          >
+                          }
+                        </span>
+                        <strong data-selector="cout-pointage-main-d-oeuvre">{{ libelles.montant(pointage.cout.mainDOeuvre) }}</strong>
+                      </td>
+                      <td class="nombre">
+                        <strong data-selector="cout-pointage-total">{{ libelles.montant(pointage.cout.total) }}</strong>
+                      </td>
+                      }
+                    </tr>
+                    @if (pointage.detailleSonPartage()) { @for (part of pointage.parts; track $index) {
+                    <tr class="part" data-selector="cout-part">
+                      <td></td>
+                      <td colspan="2" data-selector="cout-part-contexte">
+                        ↳ {{ libelles.detail.plageDePart(part) }} · {{ libelles.detail.contexteDePart(part) }}
+                      </td>
+                      <td class="nombre" data-selector="cout-part-duree">{{ libelles.dureeCertaine(part.duree) }}</td>
+                      <td></td>
+                      <td class="nombre" data-selector="cout-part-calcul">{{ libelles.detail.calculDePart(pointage, part) }}</td>
+                      <td></td>
+                    </tr>
+                    } } @for (anomalie of pointage.anomalies; track anomalie) {
+                    <tr class="explication" [attr.data-anomalie]="anomalie" data-selector="cout-pointage-explication">
+                      <td></td>
+                      <td colspan="6">{{ libelles.detail.explication(pointage, anomalie) }}</td>
+                    </tr>
+                    } }
+                  </tbody>
+                  <tfoot>
+                    <tr data-selector="cout-pointages-total">
+                      <th scope="row" colspan="3">{{ libelles.detail.totalDeLaNature(ligne.nature?.value) }}</th>
+                      <td class="nombre">{{ libelles.duree(ligne.temps.total) }}</td>
+                      <td class="nombre">{{ libelles.montant(ligne.cout.machine) }}</td>
+                      <td class="nombre">{{ libelles.montant(ligne.cout.mainDOeuvre) }}</td>
+                      <td class="nombre">{{ libelles.montant(ligne.cout.total) }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p class="mt-2 max-w-3xl text-body-sm text-ink-muted" data-selector="cout-legende">{{ libelles.detail.legende }}</p>
+              }
             </td>
           </tr>
           } }

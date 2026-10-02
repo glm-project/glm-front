@@ -1,7 +1,7 @@
+import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { TypeDElement } from '../../../domain/activite/TypeDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
-import { AnomalieDeSupervision } from '../../../domain/supervision/AnomalieDeSupervision';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
 
 export interface LibellesCouloir {
@@ -17,16 +17,8 @@ export interface MomentAffiche {
 }
 
 const COULOIRS: Record<CouloirDeSupervision, LibellesCouloir> = {
-  AU_TRAVAIL: { titre: 'Au travail', definition: 'présents, au moins une activité en cours' },
-  SANS_AFFECTATION: { titre: 'Sans affectation', definition: 'présents, aucune activité' },
-  ABSENT: { titre: 'Absents', definition: 'aucune venue ouverte' },
-};
-
-const ANOMALIES: Record<AnomalieDeSupervision, string> = {
-  SEQUENCE_EN_CONFLIT: 'Pointages en conflit',
-  ACTIVITE_D_UN_ABSENT: 'Activité d’un opérateur absent',
-  JOURNEE_OUVERTE_SANS_FENETRES: 'Venue ouverte sans heure d’arrivée',
-  JOURNEE_OUVERTE_PLUS_DE_16_HEURES: 'Aucun départ pointé depuis plus de 16\u00a0h',
+  AU_TRAVAIL: { titre: 'Au travail', definition: 'au moins une activité interprétable en cours' },
+  SANS_ACTIVITE: { titre: 'Sans activité', definition: 'aucune activité interprétable en cours' },
 };
 
 const TYPES: Record<TypeDElement, string> = {
@@ -56,23 +48,21 @@ export const LIBELLES_SUPERVISION = {
   erreur: 'Impossible de charger les données de supervision. Réessayez avec « Actualiser ».',
   vide: 'Aucun opérateur déclaré.',
   couloirs: COULOIRS,
-  anomalies: ANOMALIES,
   personne: 'Personne',
-  presents: 'Présents',
-  nombreDePresents: (nombre: number): string => pluriel(nombre, 'présent', 'présents'),
   enNc: 'en NC',
   aVerifier: 'à vérifier',
   nc: 'NC',
   types: TYPES,
-  horsOf: 'Hors OF',
   sansPoste: 'Sans poste',
   metier: 'Métier\u00a0:',
   metiers: 'Métiers\u00a0:',
   aucuneActivite: 'Aucune activité en cours',
-  arrivee: 'arrivée',
   depuis: 'depuis',
-  noteAbsents:
-    'Absent = aucune venue ouverte. Une arrivée non pointée ou un pupitre hors ligne peut faire paraître absent quelqu’un qui est là, ou présent quelqu’un qui est parti.',
+  fin: 'fin',
+  termineeAutomatiquement: 'Activité terminée automatiquement',
+  sequenceEnConflit: 'Séquence en conflit',
+  aResoudre: 'À résoudre',
+  objet: (objet: ElementTravaille): string => `${TYPES[objet.type]} ${objet.reference?.value ?? objet.nom}`,
   fraicheur: (total: number, instant: Instant): string =>
     `${total} ${pluriel(total, 'opérateur', 'opérateurs')} · d’après les pointages reçus jusqu’à ${heure(instant)} · actualisé toutes les 30 s`,
   listeDesMetiers: (metiers: readonly NatureDeTravail[]): string => metiers.map(metier => metier.value).join(', '),

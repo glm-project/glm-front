@@ -4,14 +4,14 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
-  GesteDAtelier,
+  GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
@@ -22,16 +22,27 @@ import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
-const gesteFixture: GesteDAtelier = { id: 'arrivee', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean', nature: 'ARRIVEE' };
+const gesteFixture: GesteDePointage = {
+  id: 'arrivee',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
+  operateurId: 'jean',
+  nature: 'POINTAGE',
+  suiviId: 'piece',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
+};
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
 class ServerFixture extends AtelierExchangePort {
-  readonly received: GesteDAtelier[] = [];
-  readonly rereadGestes: GesteDAtelier[] = [];
+  readonly received: GesteDePointage[] = [];
+  readonly rereadGestes: GesteDePointage[] = [];
   referentielCalls = 0;
   onReferentiel: (() => Promise<ReferentielDuPupitre> | ReferentielDuPupitre) | undefined;
   onSend:
-    | ((geste: GesteDAtelier) => Promise<Result<void, RefusDePublication> | undefined> | Result<void, RefusDePublication> | undefined)
+    | ((
+        geste: GesteDePointage,
+      ) =>
+        Promise<Result<PublicationAcceptee, RefusDePublication> | undefined> | Result<PublicationAcceptee, RefusDePublication> | undefined)
     | undefined;
 
   override async referentiel(): Promise<ReferentielDuPupitre> {
@@ -43,7 +54,7 @@ class ServerFixture extends AtelierExchangePort {
     return referenceFixture;
   }
 
-  override async send(geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
     await roundTrip();
     if (this.onSend !== undefined) {
       const result = await this.onSend(geste);
@@ -52,10 +63,10 @@ class ServerFixture extends AtelierExchangePort {
       }
     }
     this.received.push(structuredClone(geste));
-    return ok(undefined);
+    return ok({ conflits: [] });
   }
 
-  override async reread(geste: GesteDAtelier): Promise<void> {
+  override async reread(geste: GesteDePointage): Promise<void> {
     await roundTrip();
     this.rereadGestes.push(structuredClone(geste));
   }
@@ -107,7 +118,7 @@ class SynchronizationJournalFixture extends JournauxDuPupitrePort {
     return this.stored.read(entreprise);
   }
 
-  override append(entreprise: Entreprise, gestes: readonly GesteDAtelier[]): Promise<void> {
+  override append(entreprise: Entreprise, gestes: readonly GesteDePointage[]): Promise<void> {
     return this.stored.append(entreprise, gestes);
   }
 
@@ -178,6 +189,25 @@ describe('PupitreSynchronization', () => {
         { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
       ],
     }).get(PupitreSynchronization);
+  });
+
+  it('should persist accepted conflicts and keep them after the complete reference refresh fails', async () => {
+    await givenASelectedCompanyWithPendingWork();
+    givenAnAuthorizedSession();
+    const conflits = [{ operateurId: 'jean', activites: ['arrivee'], pointages: ['arrivee'] }];
+    server.onSend = () => ok({ conflits });
+    server.onReferentiel = () => {
+      throw new Error('référentiel indisponible');
+    };
+
+    await whenSynchronizing();
+
+    const stored = await journal.read(Entreprise.of('entreprise-a'));
+    expect(stored.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', conflits }]);
+    expect(stored.referentiel).toEqual(referenceFixture);
+    expect(stored.connecte).toBe(true);
+    expect(server.rereadGestes).toEqual([]);
+    expect(server.referentielCalls).toBe(1);
   });
 
   it('should restore the selected company without attempting to exchange its pending gestures when authorization expired', async () => {
@@ -335,17 +365,7 @@ describe('PupitreSynchronization', () => {
     thenExistingReferentialPreserved();
   });
 
-  it('should record an arrival absorbed on an already open day as accepted', async () => {
-    await givenASelectedCompanyWithPendingWork();
-    givenAnAuthorizedSession();
-    givenArrivalAlreadyOpened();
-
-    await whenSynchronizing();
-
-    thenEventAccepted();
-  });
-
-  it('should record an arrival opening the day as accepted', async () => {
+  it('should record a published activity opening as accepted', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
 
@@ -364,17 +384,6 @@ describe('PupitreSynchronization', () => {
     thenServerReceived(gesteFixture);
     thenServerReread(gesteFixture);
     thenEventAccepted();
-  });
-
-  it('should absorb duplicate arrival during concurrent retry', async () => {
-    await givenASelectedCompanyWithPendingWork();
-    givenAnAuthorizedSession();
-    givenConcurrentModificationFollowedByAlreadyOpenedArrival();
-
-    await whenSynchronizing();
-
-    thenEventAccepted();
-    thenServerReread(gesteFixture);
   });
 
   it('should record business refusal when server refuses gesture', async () => {
@@ -489,7 +498,7 @@ describe('PupitreSynchronization', () => {
     await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
   };
   const givenCompanyWithTwoPendingGestures = async (): Promise<void> => {
-    const secondGeste: GesteDAtelier = { ...gesteFixture, id: 'geste-2' };
+    const secondGeste: GesteDePointage = { ...gesteFixture, id: 'geste-2' };
     await journal.saveReferentiel(Entreprise.of('entreprise-a'), referenceFixture);
     await journal.append(Entreprise.of('entreprise-a'), [gesteFixture, secondGeste]);
   };
@@ -513,7 +522,7 @@ describe('PupitreSynchronization', () => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       tenant = 'entreprise-b';
       return {
-        operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', etat: 'ABSENT', postes: [], evenements: [] }],
+        operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
       };
     };
@@ -522,7 +531,7 @@ describe('PupitreSynchronization', () => {
     server.onReferentiel = (): ReferentielDuPupitre => {
       token = 'autre-token';
       return {
-        operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', etat: 'ABSENT', postes: [], evenements: [] }],
+        operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
       };
     };
@@ -547,10 +556,7 @@ describe('PupitreSynchronization', () => {
   const whenDeselectingCompany = (): void => {
     tenant = undefined;
   };
-  const givenArrivalAlreadyOpened = (): void => {
-    server.onSend = () =>
-      err(new RefusDePublication('refus-1', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte')));
-  };
+
   const givenConcurrentModificationOnFirstAttempt = (): void => {
     let attempts = 0;
     server.onSend = () => {
@@ -561,16 +567,7 @@ describe('PupitreSynchronization', () => {
       return undefined;
     };
   };
-  const givenConcurrentModificationFollowedByAlreadyOpenedArrival = (): void => {
-    let attempts = 0;
-    server.onSend = () => {
-      attempts++;
-      if (attempts === 1) {
-        return err(new RefusDePublication('concurrence', 'Concurrence', MotifDeRefus.from('saisie-concurrente')));
-      }
-      return err(new RefusDePublication('refus-2', 'Journée déjà ouverte', MotifDeRefus.from('journee-de-travail-deja-ouverte')));
-    };
-  };
+
   const givenUnauthorizedGestureRefusal = (): void => {
     server.onSend = () => err(new RefusDePublication('refus-invalide', 'Opérateur non habilité'));
   };
@@ -581,7 +578,7 @@ describe('PupitreSynchronization', () => {
   };
   const givenANewReferentialAvailableOnServer = (): void => {
     server.onReferentiel = (): ReferentielDuPupitre => ({
-      operateurs: [{ id: 'autre', matricule: '9999', nom: 'Autre', prenom: 'Op', etat: 'ABSENT', postes: [], evenements: [] }],
+      operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
       suivis: [],
     });
   };
@@ -630,10 +627,10 @@ describe('PupitreSynchronization', () => {
   const thenSynchronizationFails = async (synchronization: Promise<void>): Promise<void> => {
     await expect(synchronization).rejects.toThrow('stockage indisponible');
   };
-  const thenServerReceived = (...gestes: GesteDAtelier[]): void => {
+  const thenServerReceived = (...gestes: GesteDePointage[]): void => {
     expect(server.received).toEqual(gestes);
   };
-  const thenServerReread = (...gestes: GesteDAtelier[]): void => {
+  const thenServerReread = (...gestes: GesteDePointage[]): void => {
     expect(server.rereadGestes).toEqual(gestes);
   };
   const thenReferentialRefreshedOnce = (): void => {

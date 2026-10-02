@@ -1,4 +1,7 @@
+import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
+import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { ActiviteDuReleve } from '../element/ActiviteDuReleve';
 import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { IntervalleDActivite } from '../element/IntervalleDActivite';
@@ -6,23 +9,30 @@ import { PosteDeLElement } from '../element/PosteDeLElement';
 import { PosteReleveId } from '../element/PosteReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
+import { ActiviteReleveId } from './ActiviteReleveId';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
-import { PointageDElement } from './PointageDElement';
+import { IntentionDePointage, PointageDElement } from './PointageDElement';
 import { FicheDuReleve, ReleveDesHeures } from './ReleveDesHeures';
+
+const intentionFixture = (type: string): IntentionDePointage =>
+  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } : { type: 'OUVERTURE' };
+
+const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
+  fin === undefined
+    ? { id: new ActiviteReleveId('a'), debut, etat: 'EN_COURS' }
+    : { id: new ActiviteReleveId('a'), debut, fin, etat: 'TERMINEE' };
 
 const SEMAINE = new SemaineISO(2026, 38);
 
 const jourFixture = (jour: string): JourDeReleve =>
   new JourDeReleve({
     jour: new JourCalendaire(jour),
-    operationnelPointe: new DureeTravaillee('PT0S'),
-    operationnelPresume: new DureeTravaillee('PT0S'),
+    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     intervalles: [],
     pointages: [],
-    plages: [],
   });
 
 const semaineCompleteFixture = (): readonly JourDeReleve[] => SEMAINE.jours().map(jour => jourFixture(jour.value));
@@ -31,10 +41,8 @@ const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   operateur: new IdentiteOperateur('Dupont', 'Jean'),
   elements: [],
   jours,
-  presencePointee: new DureeTravaillee('PT38H'),
-  presencePresumee: new DureeTravaillee('PT5H20M'),
-  operationnelPointe: new DureeTravaillee('PT57H30M'),
-  operationnelPresume: new DureeTravaillee('PT0S'),
+  operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT57H30M')),
+  conflits: [],
 });
 
 const instantDe = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
@@ -46,9 +54,8 @@ const elementFixture = (id: string): ElementDuReleve =>
     nom: id,
     reference: undefined,
     description: undefined,
-    duree: new DureeTravaillee('PT0S'),
-    dureeNonConformite: new DureeTravaillee('PT0S'),
-    dureePresumee: new DureeTravaillee('PT0S'),
+    duree: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    dureeNonConformite: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     postes: [
       new PosteDeLElement(new PosteReleveId('dmu'), 'DMU 50', 'Fraisage'),
       new PosteDeLElement(new PosteReleveId('mazak'), 'Mazak QT-200', 'Tournage'),
@@ -63,11 +70,17 @@ const intervalleFixture = (element: string, poste: string, debut: string, fin: s
     categorie: 'TRAVAIL',
     debut: instantDe(debut),
     fin: fin === undefined ? undefined : instantDe(fin),
-    presumee: false,
+    activite: activiteFixture(instantDe(debut), fin === undefined ? undefined : instantDe(fin)),
   });
 
 const pointageDElementFixture = (element: string, poste: string): PointageDElement =>
-  new PointageDElement('DEBUT', instantDe('08:00'), new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)));
+  new PointageDElement({
+    id: new PointageReleveId('pointage-fixture'),
+    type: 'DEBUT',
+    instant: instantDe('08:00'),
+    cible: new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)),
+    intention: intentionFixture('DEBUT'),
+  });
 
 const releveDes = (lundi: {
   readonly intervalles?: readonly IntervalleDActivite[];
@@ -75,15 +88,14 @@ const releveDes = (lundi: {
 }): ReleveDesHeures => {
   const jourAvecFaits = new JourDeReleve({
     jour: new JourCalendaire('2026-09-14'),
-    operationnelPointe: new DureeTravaillee('PT0S'),
-    operationnelPresume: new DureeTravaillee('PT0S'),
+    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     intervalles: lundi.intervalles ?? [],
     pointages: lundi.pointages ?? [],
-    plages: [],
   });
   return new ReleveDesHeures(SEMAINE, {
     ...ficheFixture([jourAvecFaits, ...semaineCompleteFixture().slice(1)]),
     elements: [elementFixture('carter'), elementFixture('bride')],
+    conflits: [],
   });
 };
 
@@ -102,16 +114,10 @@ describe('ReleveDesHeures', () => {
     ]);
   });
 
-  it('should carry the clocked week total the server computed', () => {
+  it('should carry the operational week total the server computed', () => {
     const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
 
-    expect(releve.presencePointee).toMatchObject({ heures: 38, minutesRestantes: 0 });
-  });
-
-  it('should carry the presumed week total the server computed, without adding the days up', () => {
-    const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
-
-    expect(releve.presencePresumee).toMatchObject({ heures: 5, minutesRestantes: 20 });
+    expect(releve.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { heures: 57, minutesRestantes: 30 } });
   });
 
   it('should carry the operator the report resolved', () => {
@@ -223,7 +229,15 @@ describe('ReleveDesHeures', () => {
     it('should accept a report whose clocking names no workstation', () => {
       expect(() =>
         releveDes({
-          pointages: [new PointageDElement('DEBUT', instantDe('08:00'), new CibleDePointage(new ElementReleveId('carter'), undefined))],
+          pointages: [
+            new PointageDElement({
+              id: new PointageReleveId('pointage-fixture'),
+              type: 'DEBUT',
+              instant: instantDe('08:00'),
+              cible: new CibleDePointage(new ElementReleveId('carter'), undefined),
+              intention: intentionFixture('DEBUT'),
+            }),
+          ],
         }),
       ).not.toThrow();
     });

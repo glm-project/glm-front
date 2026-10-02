@@ -1,4 +1,3 @@
-import { SituationDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { dataSelector } from '@test/utils/DataSelector';
@@ -125,37 +124,32 @@ describe('Pupitre header', () => {
     thenThereIsNoLogo();
   });
 
-  it.each<[SituationDeLOperateur, string]>([
-    ['ABSENT', 'Pas encore arrivé'],
-    ['PRESENT', 'Présent'],
-    ['EN_PAUSE', 'En pause'],
-  ])('should show the operator situation %s as "%s" under the name', async (etat, libelle) => {
+  it('should show the local pause under the designated operator name', async () => {
     givenAConnectedPupitre();
     givenADesignatedOperator();
-    givenAPresence(etat);
+    givenAPause(true);
 
     await whenRenderingTheHeader();
 
-    thenItShowsThePresence(libelle);
+    thenItShowsThePause('En pause');
   });
 
-  it('should show the presence indicator as soon as an operator is designated', async () => {
+  it('should show no pause announcement for a designated operator without a pause', async () => {
     givenAConnectedPupitre();
     givenADesignatedOperator();
-    givenAPresence('PRESENT');
 
     await whenRenderingTheHeader();
 
-    thenItShowsThePresence('Présent');
+    thenItShowsNoPause();
   });
 
   it('should show no nominative header at all without a designated operator', async () => {
     givenAConnectedPupitre();
-    givenAPresence('PRESENT');
+    givenAPause(true);
 
     await whenRenderingTheHeader();
 
-    thenItShowsNoPresence();
+    thenItShowsNoPause();
     thenThereIsNoDesignatedOperator();
   });
 
@@ -167,11 +161,11 @@ describe('Pupitre header', () => {
     fixture.componentRef.setInput('connected', false);
   };
   const givenADesignatedOperator = (): void => {
-    fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049' });
-    fixture.componentRef.setInput('presence', 'ABSENT');
+    fixture.componentRef.setInput('operateur', { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' });
+    fixture.componentRef.setInput('enPause', false);
   };
-  const givenAPresence = (etat: SituationDeLOperateur): void => {
-    fixture.componentRef.setInput('presence', etat);
+  const givenAPause = (etat: boolean): void => {
+    fixture.componentRef.setInput('enPause', etat);
   };
   const givenACurrentRefusal = (): void => {
     fixture.componentRef.setInput('message', { contexte: '1015', message: "L'élément a été clôturé." });
@@ -258,12 +252,12 @@ describe('Pupitre header', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-operator'))).toBeNull();
   };
 
-  const thenItShowsThePresence = (libelle: string): void => {
-    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-presence'))?.textContent.trim()).toBe(libelle);
+  const thenItShowsThePause = (libelle: string): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-pause'))?.textContent.trim()).toBe(libelle);
   };
 
-  const thenItShowsNoPresence = (): void => {
-    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-presence'))).toBeNull();
+  const thenItShowsNoPause = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('header-pause'))).toBeNull();
   };
 
   const showsSign = (sign: string): boolean => {

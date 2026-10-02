@@ -130,12 +130,12 @@ describe('PupitreVersionUpdater', () => {
     thenThePupitreReloads();
   });
 
-  it('should preserve a matricule being entered until the entry ends', async () => {
-    givenAMatriculeBeingEntered();
+  it('should preserve an identifiant being entered until the entry ends', async () => {
+    givenAIdentifiantBeingEntered();
     whenStartingThePupitre();
     whenTheNewVersionIsReady();
     const reloadsDuringEntry = reload.mock.calls.length;
-    await whenTheMatriculeEntryEnds();
+    await whenTheIdentifiantEntryEnds();
 
     expect(reloadsDuringEntry).toBe(0);
     thenThePupitreReloads();
@@ -166,20 +166,20 @@ describe('PupitreVersionUpdater', () => {
     thenThePupitreReloads();
   });
 
-  it('should preserve a new matricule entry if it starts while a capture is still being stored', async () => {
+  it('should preserve a new identifiant entry if it starts while a capture is still being stored', async () => {
     givenAPendingLocalCapture();
     whenStartingThePupitre();
     whenTheNewVersionIsReady();
-    whenAMatriculeStartsDuringCapture();
+    whenAIdentifiantStartsDuringCapture();
     await whenTheCaptureCompletes();
     const reloadsDuringTheNewEntry = reload.mock.calls.length;
-    await whenTheMatriculeEntryEnds();
+    await whenTheIdentifiantEntryEnds();
 
     expect(reloadsDuringTheNewEntry).toBe(0);
     thenThePupitreReloads();
   });
 
-  const whenAMatriculeStartsDuringCapture = (): void => {
+  const whenAIdentifiantStartsDuringCapture = (): void => {
     code.set('049');
   };
 
@@ -308,10 +308,10 @@ describe('PupitreVersionUpdater', () => {
     await Promise.resolve();
   };
 
-  const givenAMatriculeBeingEntered = (): void => {
+  const givenAIdentifiantBeingEntered = (): void => {
     code.set('049');
   };
-  const whenTheMatriculeEntryEnds = async (): Promise<void> => {
+  const whenTheIdentifiantEntryEnds = async (): Promise<void> => {
     code.set('');
     await vi.advanceTimersByTimeAsync(1_000);
   };

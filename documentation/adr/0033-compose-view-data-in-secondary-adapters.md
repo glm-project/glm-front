@@ -5,8 +5,8 @@
 Accepted following the review of [PR 138](https://github.com/glm-project/glm-front/pull/138).
 
 Amends [0031](0031-own-workshop-supervision-in-gestion.md): the supervision application consumes one data
-read port; its secondary adapter makes the operator, working-visit and activity calls directly, without
-intermediate source ports. The InMemory configuration also implements only this port.
+read port; its secondary adapter acquires the complete projection directly, without intermediate
+source ports. The InMemory configuration also implements only this port.
 Complements [0013](0013-keep-business-decisions-in-rich-domain-models.md): business interpretation remains
 in the domain while acquisition details stay behind the read port.
 Complements [0025](0025-route-runtime-errors-through-error-handler-port.md): a view acquisition adapter
@@ -43,17 +43,19 @@ view in error, including after a successful load; previous data are not retained
 error without logging it again. Use resource's reload and destruction lifecycle instead of an application
 loading coordinator or a separate resource factory.
 
-MR3 provides `InMemoryDonneesDeSupervision` and a first component showing acquisition state and collection
-counts. The component deliberately does not interpret presence, activities or business validity. Those rules
-remain in the domain and will be invoked when implementing the supervision grid. Test acquisition through
-the component's rendered HTML and refresh button; keep domain rules and the secondary contract in their own
-suites. A Promise port does not imply that resource cancellation aborts the underlying HTTP requests.
+MR3 introduced `InMemoryDonneesDeSupervision` and a first component showing acquisition state and
+collection counts. The supervision grid now invokes the domain to classify the acquired activities.
+Test acquisition through the component's rendered HTML and refresh button; keep domain rules and the
+secondary contract in their own suites.
 
-Implement HTTP acquisition later in one adapter with direct `ApiClient` calls and private mapping methods.
-That adapter will own the mounted operator cache and drain engaged requests before completing a read.
-The generated backend contract must first support the required open-working-visit query. The HTTP
-implementation and its request ordering, pagination and cache tests belong together; no source ports are
-introduced to anticipate it.
+The supervision HTTP adapter reads `GET /api/atelier/supervision` through `ApiClient`. Each acquisition
+reloads the complete, unpaged projection: declared operators, interpreted activities and conflicting
+sequences. It keeps no mounted operator cache, so edits and corrections appear on the next successful
+read. A failure rejects instead of reusing an earlier reference or demonstration. The backend supplies the
+common evaluation, deadlines and retained automatic ends; the front classifies and orders the received
+data without interpreting raw journals. The primary uses that evaluation for both lanes and freshness.
+READ COMMITTED permits concurrent commits between projection queries; a common evaluation is not a
+transactional snapshot. A Promise port still does not guarantee HTTP cancellation when the view unmounts.
 
 ## Consequences
 
@@ -66,6 +68,6 @@ introduced to anticipate it.
 ### Negative
 
 - The view becomes unavailable on a failed refresh, even when an earlier grid could have been shown.
-- An unavailable required source prevents the combined read from succeeding; completion waits for engaged reads.
+- An unavailable projection prevents the complete read from succeeding.
 - Complete collections can still have been observed at different times; backend snapshot consistency remains unsolved.
 - Views whose sections load independently need an explicit functional reason for separate read ports.

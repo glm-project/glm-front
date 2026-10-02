@@ -1,114 +1,64 @@
 import {
   ActiviteDuPupitre,
-  EtatDePresence,
+  ConflitDuPupitre,
+  EvenementAccepte,
   EvenementDuJournal,
-  GesteDArrivee,
   GesteDePointage,
-  GesteDePresence,
   JournalDuPupitre,
-  OperateurDuPupitre,
-  PointageCausal,
   ReferentielDuPupitre,
   SuiviDuPupitre,
-  TypeDePresence,
 } from './JournalDuPupitre';
 
-interface SuiviEnProjection {
-  readonly suivi: SuiviDuPupitre;
-  readonly ouverturesConnues: readonly ActiviteDuPupitre[];
-  readonly ciblesConsommees: ReadonlySet<string>;
-}
-type ReferentielEnProjection = Omit<ReferentielDuPupitre, 'suivis'> & { readonly suivis: readonly SuiviEnProjection[] };
-
-const occupiesSamePlace = (activite: ActiviteDuPupitre, geste: PointageCausal): boolean =>
+const matchesPair = (activite: ActiviteDuPupitre, geste: GesteDePointage): boolean =>
   activite.operateurId === geste.operateurId && activite.posteId === geste.posteId;
 
-const targetedActivity = (
-  suivi: SuiviEnProjection,
-  geste: Exclude<PointageCausal, { readonly intention: 'OUVERTURE' }>,
-): ActiviteDuPupitre | undefined => suivi.ouverturesConnues.find(activite => activite.ouverture === geste.cible);
-
-const targetsAnotherPlace = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
-  if (geste.intention === 'OUVERTURE') return false;
-  const cible = targetedActivity(suivi, geste);
-  return cible !== undefined && !occupiesSamePlace(cible, geste);
-};
-
-const isIneffectiveLateFinish = (suivi: SuiviEnProjection, geste: PointageCausal): boolean => {
-  if (geste.intention !== 'FIN') return false;
-  if (suivi.ciblesConsommees.has(geste.cible)) return false;
-  const cible = targetedActivity(suivi, geste);
-  return cible !== undefined && Date.parse(geste.dateDeSurvenue) > Date.parse(cible.echeance);
-};
-
-const targetsUnavailableActivity = (
-  suivi: SuiviEnProjection,
-  geste: Extract<PointageCausal, { readonly intention: 'TRANSITION' }>,
-): boolean => {
-  const cible = targetedActivity(suivi, geste);
-  return (
-    cible === undefined
-    || predatesTargetOpening(cible, geste)
-    || cible.categorie === categorieFor(geste)
-    || suivi.ciblesConsommees.has(geste.cible)
-    || suivi.suivi.activites.some(activite => occupiesSamePlace(activite, geste) && activite.ouverture !== geste.cible)
+const conflictWithReplacement = (
+  suivi: SuiviDuPupitre,
+  geste: Exclude<GesteDePointage, { readonly intention: 'OUVERTURE' }>,
+): SuiviDuPupitre => {
+  const remplacantes = suivi.activites.filter(
+    activite => matchesPair(activite, geste) && Date.parse(activite.depuis) < Date.parse(geste.dateDeSurvenue),
   );
+  if (remplacantes.length === 0) return suivi;
+  const activites = suivi.activites.filter(activite => !remplacantes.includes(activite));
+  return {
+    ...suivi,
+    activites,
+    etat: etatFor(activites.length),
+    conflits: [
+      ...suivi.conflits,
+      {
+        operateurId: geste.operateurId,
+        ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
+        activites: [geste.cible, ...remplacantes.map(activite => activite.ouverture)],
+        pointages: [geste.id],
+      },
+    ],
+  };
 };
 
-const predatesTargetOpening = (cible: ActiviteDuPupitre, geste: PointageCausal): boolean =>
-  Date.parse(geste.dateDeSurvenue) < Date.parse(cible.depuis);
-
-const isUnavailableTransition = (suivi: SuiviEnProjection, geste: Exclude<PointageCausal, { readonly intention: 'FIN' }>): boolean =>
-  geste.intention === 'TRANSITION' && targetsUnavailableActivity(suivi, geste);
-
-const newlyOpenedActivities = (suivi: SuiviEnProjection, geste: PointageCausal): readonly ActiviteDuPupitre[] => {
-  if (geste.intention === 'FIN') return [];
-  if (isUnavailableTransition(suivi, geste)) return [];
-  return [
-    {
+const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
+  if (geste.intention !== 'OUVERTURE') {
+    const cible = suivi.activites.find(activite => activite.ouverture === geste.cible);
+    if (cible === undefined) return conflictWithReplacement(suivi, geste);
+  }
+  const activites = suivi.activites.filter(activite =>
+    geste.intention === 'OUVERTURE' ? !matchesPair(activite, geste) : activite.ouverture !== geste.cible,
+  );
+  if (geste.type !== 'FIN') {
+    activites.push({
       ouverture: geste.id,
       echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
       operateurId: geste.operateurId,
       categorie: categorieFor(geste),
       depuis: geste.dateDeSurvenue,
       ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
-    },
-  ];
-};
-const activitiesAtTheSamePlace = (suivi: SuiviEnProjection, geste: PointageCausal): readonly ActiviteDuPupitre[] =>
-  suivi.suivi.activites.filter(activite => occupiesSamePlace(activite, geste));
-
-const replacesActiveTarget = (activite: ActiviteDuPupitre, geste: PointageCausal): boolean =>
-  occupiesSamePlace(activite, geste) && Date.parse(geste.dateDeSurvenue) <= Date.parse(activite.echeance);
-
-const consumedTargets = (suivi: SuiviEnProjection, geste: PointageCausal): ReadonlySet<string> => {
-  const cibles = new Set(suivi.ciblesConsommees);
-  if (geste.intention === 'OUVERTURE') {
-    for (const activite of suivi.suivi.activites) {
-      if (replacesActiveTarget(activite, geste)) cibles.add(activite.ouverture);
-    }
-    return cibles;
+    });
   }
-  cibles.add(geste.cible);
-  for (const activite of activitiesAtTheSamePlace(suivi, geste)) cibles.add(activite.ouverture);
-  return cibles;
+  return { ...suivi, activites, etat: etatFor(activites.length) };
 };
 
-const applyPointage = (suivi: SuiviEnProjection, geste: GesteDePointage): SuiviEnProjection => {
-  if (geste.intention === undefined) return suivi;
-  if (targetsAnotherPlace(suivi, geste)) return suivi;
-  if (isIneffectiveLateFinish(suivi, geste)) return suivi;
-  const nouvelles = newlyOpenedActivities(suivi, geste);
-  const activites = [...suivi.suivi.activites.filter(activite => !occupiesSamePlace(activite, geste)), ...nouvelles];
-  return {
-    ...suivi,
-    suivi: { ...suivi.suivi, activites, etat: etatFor(activites.length) },
-    ouverturesConnues: [...suivi.ouverturesConnues, ...nouvelles],
-    ciblesConsommees: consumedTargets(suivi, geste),
-  };
-};
-
-const categorieFor = (geste: Exclude<PointageCausal, { readonly intention: 'FIN' }>): 'TRAVAIL' | 'NON_CONFORMITE' => {
+const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
   if (geste.type === 'NON_CONFORMITE') {
     return 'NON_CONFORMITE';
   }
@@ -128,71 +78,37 @@ const isAlreadyProjectedOrUnrelated = (suivi: SuiviDuPupitre, geste: GesteDePoin
 const applyToMatching = <T>(items: readonly T[], matches: (item: T) => boolean, transform: (item: T) => T): T[] =>
   items.map(item => (matches(item) ? transform(item) : item));
 
-const projectPointage = (suivis: readonly SuiviEnProjection[], geste: GesteDePointage): SuiviEnProjection[] =>
+const hasConflictDiagnostics = (
+  evenement: EvenementDuJournal,
+): evenement is EvenementAccepte & { readonly conflits: readonly ConflitDuPupitre[] } =>
+  evenement.etat === 'ACCEPTE' && evenement.conflits !== undefined;
+
+const applyPublication = (suivi: SuiviDuPupitre, evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>): SuiviDuPupitre => {
+  const projected = applyPointage(suivi, evenement.geste);
+  if (!hasConflictDiagnostics(evenement)) return projected;
+  const conflits = evenement.conflits;
+  const activites = projected.activites.filter(activite => !conflits.some(conflit => conflit.activites.includes(activite.ouverture)));
+  return { ...projected, conflits, activites, etat: etatFor(activites.length) };
+};
+
+const projectPointage = (
+  suivis: readonly SuiviDuPupitre[],
+  evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>,
+): SuiviDuPupitre[] =>
   applyToMatching(
     suivis,
-    suivi => !isAlreadyProjectedOrUnrelated(suivi.suivi, geste),
-    suivi => applyPointage(suivi, geste),
+    suivi => !isAlreadyProjectedOrUnrelated(suivi, evenement.geste),
+    suivi => applyPublication(suivi, evenement),
   );
 
-type CleDeTransition = 'ARRIVEE' | TypeDePresence;
-
-const TRANSITIONS_DE_PRESENCE: Record<EtatDePresence, Partial<Record<CleDeTransition, EtatDePresence>>> = {
-  ABSENT: { ARRIVEE: 'PRESENT' },
-  PRESENT: { DEPART: 'ABSENT' },
+const applyEvenement = (referentiel: ReferentielDuPupitre, evenement: EvenementDuJournal): ReferentielDuPupitre => {
+  if (evenement.etat === 'REFUSE') return referentiel;
+  return { ...referentiel, suivis: projectPointage(referentiel.suivis, evenement) };
 };
 
-const cleDeTransitionFor = (geste: GesteDArrivee | GesteDePresence): CleDeTransition =>
-  geste.nature === 'ARRIVEE' ? 'ARRIVEE' : geste.type;
-
-const isAlreadyProjectedOrUnrelatedPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | GesteDePresence): boolean =>
-  operateur.id !== geste.operateurId || operateur.evenements.includes(geste.id);
-
-const applyPresence = (operateur: OperateurDuPupitre, geste: GesteDArrivee | GesteDePresence): OperateurDuPupitre => {
-  const etatSuivant = TRANSITIONS_DE_PRESENCE[operateur.etat][cleDeTransitionFor(geste)];
-  return etatSuivant === undefined ? operateur : { ...operateur, etat: etatSuivant };
-};
-
-const projectPresence = (operateurs: readonly OperateurDuPupitre[], geste: GesteDArrivee | GesteDePresence): OperateurDuPupitre[] =>
-  applyToMatching(
-    operateurs,
-    operateur => !isAlreadyProjectedOrUnrelatedPresence(operateur, geste),
-    operateur => applyPresence(operateur, geste),
-  );
-
-const applyEvenement = (referentiel: ReferentielEnProjection, evenement: EvenementDuJournal): ReferentielEnProjection => {
-  if (evenement.etat === 'REFUSE') {
-    return referentiel;
-  }
-  const geste = evenement.geste;
-  switch (geste.nature) {
-    case 'POINTAGE':
-      return { ...referentiel, suivis: projectPointage(referentiel.suivis, geste) };
-    case 'ARRIVEE':
-    case 'PRESENCE':
-      return { ...referentiel, operateurs: projectPresence(referentiel.operateurs, geste) };
-  }
-};
-
-export const projectReferentiel = (pupitre: JournalDuPupitre, instant?: number): ReferentielDuPupitre | undefined => {
+export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupitre | undefined => {
   if (pupitre.referentiel === undefined) {
     return undefined;
   }
-  const initial: ReferentielEnProjection = {
-    ...pupitre.referentiel,
-    suivis: pupitre.referentiel.suivis.map(suivi => ({ suivi, ouverturesConnues: suivi.activites, ciblesConsommees: new Set<string>() })),
-  };
-  const projection = pupitre.evenements.reduce(applyEvenement, initial);
-  const referentiel: ReferentielDuPupitre = {
-    ...projection,
-    suivis: projection.suivis.map(({ suivi }) => suivi),
-  };
-  if (instant === undefined) return referentiel;
-  return {
-    ...referentiel,
-    suivis: referentiel.suivis.map(suivi => {
-      const activites = suivi.activites.filter(activite => Date.parse(activite.echeance) > instant);
-      return { ...suivi, activites, etat: activites.length === suivi.activites.length ? suivi.etat : etatFor(activites.length) };
-    }),
-  };
+  return pupitre.evenements.reduce(applyEvenement, pupitre.referentiel);
 };

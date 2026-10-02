@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { CommandeOperateur, FormulaireOperateur } from '../../../domain/FormulaireOperateur';
+import { Identifiant } from '../../../domain/Identifiant';
 import { Operateur } from '../../../domain/Operateur';
 import { OperateursPort } from '../../../domain/OperateursPort';
 import { PosteHabilitable } from '../../../domain/PosteHabilitable';
@@ -57,8 +58,10 @@ export class OperateurFormDialog implements OnInit {
     this.formulaire.update(formulaire => formulaire.avecPrenom(prenom));
   }
 
-  protected changeMatricule(matricule: string): void {
-    this.formulaire.update(formulaire => formulaire.avecMatricule(matricule));
+  protected changeIdentifiant(champ: HTMLInputElement): void {
+    const identifiant = Identifiant.saisie(champ.value);
+    champ.value = identifiant;
+    this.formulaire.update(formulaire => formulaire.avecIdentifiant(identifiant));
   }
 
   protected changeTauxHoraire(tauxHoraire: string): void {

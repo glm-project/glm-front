@@ -81,24 +81,6 @@ describe('LignesDElements', () => {
       expect(barres(ligneDe(releve).cellules[0])).toEqual([['en-cours', 27.08, undefined]]);
     });
 
-    it('should tell a presumed work from a clocked one', () => {
-      const releve = releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: {
-            intervalles: [
-              { debut: [8, 0], fin: [9, 0] },
-              { debut: [10, 20], fin: [15, 40], presumee: true },
-            ],
-          },
-        },
-        {},
-        [elementFixture()],
-      );
-
-      expect(ligneDe(releve).cellules[0]?.barres.map(barre => barre.presumee)).toEqual([false, true]);
-    });
-
     it('should keep in one row an element worked from two workstations one after the other', () => {
       const releve = releveFixture(
         SEMAINE_EN_COURS,
@@ -212,17 +194,6 @@ describe('LignesDElements', () => {
       ]);
     });
 
-    it('should mark the closure of an element by a departure at the instant of the departure', () => {
-      const releve = releveFixture(
-        SEMAINE_EN_COURS,
-        { 0: { pointages: [['DEPART', [16, 0]]], intervalles: [{ poste: 'poste-0', debut: [8, 0], fin: [16, 0] }] } },
-        {},
-        [elementFixture({ postes: [POSTES[0]] })],
-      );
-
-      expect(marques(ligneDe(releve, { ouvert: LUNDI }).cellules[0])).toEqual([['clos', 62.5, 'Clos par le départ 16:00']]);
-    });
-
     it('should ring the marker of the chosen clocking, and no other', () => {
       const ligne = ligneDe(releveDeMarques(), { ouvert: LUNDI, choix: 2 });
 
@@ -233,17 +204,6 @@ describe('LignesDElements', () => {
       const ligne = ligneDe(releveDeMarques(), { ouvert: LUNDI });
 
       expect(ligne.cellules[0]?.marques.map(marque => marque.choisie)).toEqual([false, false, false]);
-    });
-
-    it('should ring the closure that a chosen departure caused', () => {
-      const releve = releveFixture(
-        SEMAINE_EN_COURS,
-        { 0: { pointages: [['DEPART', [16, 0]]], intervalles: [{ poste: 'poste-0', debut: [8, 0], fin: [16, 0] }] } },
-        {},
-        [elementFixture({ postes: [POSTES[0]] })],
-      );
-
-      expect(ligneDe(releve, { ouvert: LUNDI, choix: 0 }).cellules[0]?.marques.map(marque => marque.choisie)).toEqual([true]);
     });
   });
 });

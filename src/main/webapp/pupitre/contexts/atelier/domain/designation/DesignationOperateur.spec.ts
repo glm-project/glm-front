@@ -1,15 +1,15 @@
 import { IdentiteDeFenetre } from '@/pupitre/contexts/atelier/domain/designation/IdentiteDeFenetre';
 import { Entreprise } from '../journal-du-pupitre/Entreprise';
-import { EMPTY_JOURNAL_DU_PUPITRE, GesteDAtelier, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
+import { EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, IdentiteDuGeste, JournalDuPupitre } from '../journal-du-pupitre/JournalDuPupitre';
 import { DesignationOperateur, DesignationResolution } from './DesignationOperateur';
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
-import { Matricule } from './Matricule';
+import { Identifiant } from './Identifiant';
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
-    operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
-    suivis: [{ id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
+    operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
+    suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] }],
   },
 };
 const identityFixture = (): IdentiteDuGeste => ({ id: 'geste', dateDeSurvenue: '2026-09-05T08:00:29.000Z' });
@@ -18,15 +18,6 @@ describe('DesignationOperateur', () => {
   let designation: DesignationOperateur;
   beforeEach(() => {
     designation = DesignationOperateur.empty();
-  });
-
-  it('should schedule the full inactivity period after a new press', () => {
-    const instant = 1_000;
-
-    const press = designation.afterPress(instant);
-
-    expect(press.accepted).toBe(true);
-    expect(press.designation.snapshot().deadline).toBe(31_000);
   });
 
   it('should require a selected entreprise to reconcile even before an operator is designated', () => {
@@ -100,7 +91,7 @@ describe('DesignationOperateur', () => {
   it('should leave a designation unchanged when another operator window tries to replace it', () => {
     givenDesignatedOperator();
     const before = designation;
-    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, matriculeFixture('049'), 1, new IdentiteDeFenetre(1));
+    const other = FenetreOperateur.open(Entreprise.of('atelier'), referenceFixture, identifiantFixture('049'), 1, new IdentiteDeFenetre(1));
 
     designation = designation.afterReplacingWindow(other);
 
@@ -115,6 +106,12 @@ describe('DesignationOperateur', () => {
     designation = designation.afterDigit('1a', 0);
 
     thenCodeIs('');
+  });
+
+  it('should ignore a digit beyond the sixth', () => {
+    whenEntering('1234567', 0);
+
+    thenCodeIs('123456');
   });
 
   it('should ignore a digit when an operator is already designated', () => {
@@ -258,7 +255,7 @@ describe('DesignationOperateur', () => {
     designation = designation.afterErasing(now);
   };
   const whenOpeningAWindow = (): FenetreOperateur => {
-    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, matriculeFixture('049'), 1);
+    const opening = designation.afterOpeningWindow(Entreprise.of('atelier'), referenceFixture, identifiantFixture('049'), 1);
     designation = opening.designation;
     return opening.fenetre;
   };
@@ -283,11 +280,11 @@ describe('DesignationOperateur', () => {
   const whenCheckingExpiration = (now: number): void => {
     designation = designation.afterExpiration(now);
   };
-  const whenPreparingPointage = (now: number): (() => readonly GesteDAtelier[]) => {
+  const whenPreparingPointage = (now: number): (() => readonly GesteDePointage[]) => {
     const access = designation.windowAfterPress(now);
     designation = access.designation;
     if (access.fenetre === undefined) throw new Error('Aucune fenetre operateur ouverte.');
-    const { fenetre, decision } = access.fenetre.afterDeciding('piece', 'PRINCIPALE', identityFixture);
+    const { fenetre, decision } = access.fenetre.afterDeciding('piece', 'PRINCIPALE', identityFixture, Date.parse('2026-09-05T09:00:00Z'));
     designation = designation.afterReplacingWindow(fenetre);
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     return () => fenetre.capture(decision);
@@ -308,17 +305,17 @@ describe('DesignationOperateur', () => {
     expect(designation.snapshot().code).toBe(code);
     expect(designation.snapshot().unknownCode).toBe(false);
   };
-  const thenPreparedPointageBelongsToJean = (capture: () => readonly GesteDAtelier[]): void => {
+  const thenPreparedPointageBelongsToJean = (capture: () => readonly GesteDePointage[]): void => {
     expect(capture()).toContainEqual({
       ...identityFixture(),
       suiviId: 'piece',
       type: 'DEBUT',
-      intention: 'OUVERTURE',
       operateurId: 'jean',
       nature: 'POINTAGE',
+      intention: 'OUVERTURE',
     });
   };
 });
 
-const matriculeFixture = (saisie: string): Matricule =>
-  Array.from(saisie).reduce((matricule, caractere) => matricule.afterDigit(caractere), Matricule.empty());
+const identifiantFixture = (saisie: string): Identifiant =>
+  Array.from(saisie).reduce((identifiant, caractere) => identifiant.afterDigit(caractere), Identifiant.empty());

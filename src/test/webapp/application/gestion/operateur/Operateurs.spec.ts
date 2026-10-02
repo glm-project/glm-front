@@ -1,7 +1,9 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { OperateursApiFixture, operateursFixture, postesFixture } from '../../../utils/gestion/operateur/OperateursApiFixture';
+import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 describe('Operator referential in gestion', () => {
+  beforeEach(() => new SupervisionApiFixture().intercept());
   it('should declare the first operator and show the trades derived from its habilitations', () => {
     givenReferential();
     whenVisitingOperateurs();
@@ -34,7 +36,7 @@ describe('Operator referential in gestion', () => {
     givenReferential(1);
     whenVisitingOperateurs();
     whenEditingFirstOperateur();
-    whenReplacing('operateur-matricule', '');
+    whenReplacing('operateur-identifiant', '');
     whenReplacing('operateur-taux', '');
     whenSavingRevision();
 
@@ -89,9 +91,9 @@ const givenReferential = (nombre = 0): OperateursApiFixture => {
   api.install();
   return api;
 };
-const givenOperateurUsingPayrollNumber = (matricule: string): void => {
+const givenOperateurUsingPayrollNumber = (identifiant: string): void => {
   const api = givenReferential();
-  api.operateurs.push({ id: 'autre', nom: 'Martin', prenom: 'Léa', matricule, postes: [], natures: [] });
+  api.operateurs.push({ id: 'autre', nom: 'Martin', prenom: 'Léa', identifiant, postes: [], natures: [] });
 };
 const givenProtectedOperateur = (code: string): void => {
   givenReferential(1).deletionRefusalCode = code;
@@ -120,23 +122,24 @@ const whenChoosingPoste = (libelle: string): void => {
 const whenWithdrawingPoste = (): void => {
   cy.get(dataSelector('operateur-poste-remove')).first().click();
 };
-const whenDeclaring = (nom: string, prenom: string, matricule: string, taux: string): void => {
+const whenDeclaring = (nom: string, prenom: string, identifiant: string, taux: string): void => {
   cy.get(dataSelector('operateurs-new')).should('be.enabled').click();
   whenReplacing('operateur-nom', nom);
   whenReplacing('operateur-prenom', prenom);
-  whenReplacing('operateur-matricule', matricule);
+  whenReplacing('operateur-identifiant', identifiant);
   whenReplacing('operateur-taux', taux);
   whenChoosingPoste('Poste 01');
   cy.get(dataSelector('operateur-save')).click();
   cy.wait('@operateurCreate');
 };
-const whenCorrectingPayrollNumber = (matricule: string): void => {
-  whenReplacing('operateur-matricule', matricule);
+const whenCorrectingPayrollNumber = (identifiant: string): void => {
+  whenReplacing('operateur-identifiant', identifiant);
   cy.get(dataSelector('operateur-save')).click();
   cy.wait('@operateurCreate');
 };
 const whenEditingFirstOperateur = (): void => {
   cy.get(dataSelector('operateur-edit')).first().click();
+  cy.get(dataSelector('operateur-nom')).should('be.focused');
 };
 const whenSavingRevision = (): void => {
   cy.get(dataSelector('operateur-save')).click();
@@ -159,9 +162,9 @@ const thenOperateurIsListed = (nom: string, poste: string, nature: string): void
 };
 const thenOptionalEntriesAreAbsent = (): void => {
   cy.get(dataSelector('operateur-form')).should('not.exist');
-  cy.get('@revision').should('not.have.property', 'matricule');
+  cy.get('@revision').should('not.have.property', 'identifiant');
   cy.get('@revision').should('not.have.property', 'tauxHoraire');
-  cy.get(dataSelector('operateur-matricule-cell')).should('contain.text', 'Non renseigné');
+  cy.get(dataSelector('operateur-identifiant-cell')).should('contain.text', 'Non renseigné');
   cy.get(dataSelector('operateur-taux-cell')).should('contain.text', 'Non renseigné');
 };
 const thenOperateurReferentialIsEmpty = (): void => {

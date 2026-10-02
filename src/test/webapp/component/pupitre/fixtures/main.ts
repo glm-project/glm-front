@@ -7,6 +7,7 @@ import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/E
 import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/FraicheurDuReferentiel';
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { ActiviteExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/ActiviteExpirationSchedulerPort';
 import { DesignationExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/DesignationExpirationSchedulerPort';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { SuiviDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
@@ -46,6 +47,7 @@ const serveurFixture: AtelierExchangePort = {
 
 const baseSuivis: SuiviDuPupitre[] = [
   ...Array.from({ length: 12 }, (_, index) => ({
+    conflits: [],
     id: `moule-${index + 1}`,
     nom: `PR-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(1015 + index),
@@ -55,6 +57,7 @@ const baseSuivis: SuiviDuPupitre[] = [
     evenements: [],
   })),
   ...Array.from({ length: new URLSearchParams(location.search).has('many') ? 72 : 21 }, (_, index) => ({
+    conflits: [],
     id: `of-${index + 1}`,
     nom: `OF-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(204 + index),
@@ -71,13 +74,11 @@ const referentielFixture = {
       id: 'jean',
       nom: 'Dupont',
       prenom: 'Jean',
-      matricule: '049',
-      etat: 'ABSENT' as const,
+      identifiant: '049',
       postes: [
         { id: 'tour', libelle: 'Tour' },
         { id: 'fraiseuse', libelle: 'Fraiseuse' },
       ],
-      evenements: [],
     },
   ],
   suivis: baseSuivis,
@@ -144,6 +145,7 @@ const bootstrapFixture = async (): Promise<void> => {
       { provide: DeviceEnrolmentPort, useValue: enrolmentFixture },
       { provide: JournauxDuPupitrePort, useValue: journalFixture },
       { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
+      { provide: ActiviteExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },
       { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
       { provide: AuthenticationPort, useValue: authenticationFixture },
       { provide: AtelierExchangePort, useValue: serveurFixture },

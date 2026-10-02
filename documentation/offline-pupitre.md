@@ -24,11 +24,11 @@ time.
 
 ## Domain owners decide the gesture
 
-`FenetreOperateur` resolves the operator, checks workstation qualifications, prepares the implicit arrival, turns
+`FenetreOperateur` resolves the operator, checks workstation qualifications, captures explicit targeted activity intentions, turns
 PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the whole journal, whether a pause is in progress and what it reopens. Only a
 successfully committed capture advances that view.
 
-`GesteReplayPolicy` owns contextual refusal absorption and the single concurrency retry. It compares domain
+`GesteReplayPolicy` owns the single concurrency retry. It compares domain
 motifs, never transport URNs.
 
 `CurrentOperateurLifecycle` owns the current immutable designation and derives its visible snapshots.
@@ -70,7 +70,7 @@ An operator added to the reference is therefore missing from the cache for a whi
 nothing about it. Online, the runtime interval closes that gap on its own, and the unknown-code trigger
 usually closes it sooner: the operator types their code again and it works.
 
-That last trigger fires once per code. Retyping a matricule that the freshly pushed reference still does not
+That last trigger fires once per code. Retyping an identifiant that the freshly pushed reference still does not
 know reads nothing new, and a mistyped code on a keypad repeats easily, so `FraicheurDuReferentiel` holds it
 back rather than reading the whole reference again. Any successful designation releases the hold.
 
@@ -84,10 +84,10 @@ retry once; retain a second refusal. Never generate a new UUID or occurrence tim
 
 Only a completed publication allows synchronization to refresh the complete operator and workshop reference.
 Known business refusals do not prevent completion; a technical interruption preserves the previous reference
-without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, whose single
-repeatable-read server transaction is what makes operators and workshop elements one instant. Its `genereLe`
-version is ignored: freshness here is pushed, not dated. Activating that post-write
-snapshot records accepted pointage identifiers in the local reference so their optimistic effects are no
+without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, which returns both collections in one response. The backend uses READ COMMITTED; its successive queries
+can observe concurrent commits and do not establish a shared transactional snapshot. Its `genereLe` version
+is ignored: freshness here is pushed, not dated. Activating that post-write
+reference records accepted pointage identifiers in the local reference so their optimistic effects are no
 longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
 complete cache and its optimistic effects.
 
@@ -103,32 +103,6 @@ changing that connectivity. The last outcome distinguishes a token missing its t
 failure. A reference is available there only when the active journal view belongs to the currently selected
 company.
 
-## Causal pointages and old journals
-
-Every new pointage records its intention at capture: `OUVERTURE` has no target; `TRANSITION` and `FIN`
-retain the original opening identity supplied by the reference or created by a locally accepted opening.
-The durable journal and every retry preserve that intention and target along with the gesture UUID and
-business timestamp. A resumption opens a new activity in the suspended category; it never reuses the
-suspended activity as a target.
-
-The reference contains only current, interpretable activities and supplies their stable `ouverture` and
-`echeance`. The pupitre also expires these locally, including offline, and assigns thirteen hours to an
-optimistic local opening or transition. Expiration removes the activity from tiles and global finish batches;
-it writes no automatic `FIN`. The indicative duration remains frozen at window opening, while the nearest
-activity deadline participates in the designation scheduler. Command decisions use their initiation time,
-including deferred global commands. A local transition targeting an unknown, consumed or conflicted opening exposes no current activity
-for that operator and workstation until reconciliation. The fold retains the locally known opening deadlines:
-a finish occurring after its deadline does not consume the expired target, so a later transition from that
-expired target can still open a new activity.
-
-Before deploying this contract change, empty pending queues with the preceding application version, or
-recover and regularize their evidence explicitly. A historical pointage without an intention cannot safely
-be classified or targeted. Its publication fails technically without an HTTP request and leaves it pending;
-there is no automatic purge or inferred target. Restoration retains its complete journal and makes its
-reference unavailable while such work remains pending. An old activity cache without opening identities or
-deadlines is also unavailable, but a company with no pending historical pointage can activate a newly loaded
-reference while retaining accepted and refused audit entries.
-
 ## Runtime lifecycle is explicit
 
 `PupitreRuntime` starts the enrolment and owns the online listener and the refresh timer. It installs both
@@ -143,7 +117,7 @@ separate boundary.
 
 The production pupitre checks for a new application version every five minutes while it is visible and
 online, when the network returns and when the PWA becomes visible again. Once the service worker has downloaded
-a complete version, the pupitre reloads automatically after the current matricule entry or operator window
+a complete version, the pupitre reloads automatically after the current identifiant entry or operator window
 ends and local gesture captures finish. These checks do not run when the service worker is disabled in
 development.
 
@@ -168,7 +142,7 @@ the requested callback. The page calls `CurrentOperateurLifecycle.finish()` when
 pointage does not destroy the coordinator or close the designation. `Designation` translates touch and keyboard
 events and renders the application snapshot, without owning its lifetime.
 
-Only a matricule absent from the local reference produces the unknown-code state. A technical failure during
+Only an identifiant absent from the local reference produces the unknown-code state. A technical failure during
 resolution goes to `ErrorHandlerPort` and preserves the entered code for another explicit validation, provided
 the designation has not expired or been closed. A late failure never restores an expired code or overwrites
 new input. It does not trigger the unknown-code reference refresh.
@@ -202,27 +176,36 @@ The guard consumes a press that discovers an overdue deadline that has not yet b
 callback has already reset the keypad, the next press starts a fresh code. This rule also applies after
 OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay threshold is needed.
 
-The first business command in an operator window assures arrival before its requested gestures, including
-`REPRENDRE` and `TOUT ARRÊTER`, but not `PAUSE`, which only closes: opening the day of an absent operator who
-forgot activities would open a day bound to be abandoned. No resumption precedes any gesture: the pupitre sends
-no presence gesture but the departure.
+The first action contains only its captured activity gesture. Its chrome identifies the designated operator
+and a local pause when one is in progress. Aggregate rereads concern only the affected workshop item.
 
-`TOUT ARRÊTER` is one atomically accepted local batch: every known personal `FIN`, followed by `DEPART`.
-A local storage failure retains none of that batch. Once accepted, normal FIFO replay records known business
-refusals and continues with the remaining gestures, so the durable evidence preserves both the requested
-order and each server outcome.
+`TOUT ARRÊTER` is one atomic local mutation: N targeted FIN gestures and durable invalidation of this
+operator's resumption memory, including N=0. It retains the current journal, audit history and pending
+publications. An aborted transaction changes neither the batch nor the resumption memory; the window
+advances only after completion.
 
-`PAUSE` is one atomically accepted local batch too: one `FIN` per known personal activity, on its workstation,
-each carrying its suspension — the pause, identified by the root identity of the initiated global intention, and
-the `DEBUT` or `NON_CONFORMITE` that will reopen it. The pause lives in the journal and nowhere else: the HTTP
-adapter builds its bodies field by field, so the suspension never reaches the server, which only receives
-finishes. `REPRENDRE` assures the arrival, then restarts each activity that `PauseEnCours` still reopens. A pause
-ends at `REPRENDRE`, at any later gesture of the operator appended to this journal whatever its outcome, and as soon
-as the projected reference shows an activity of the operator other than one whose suspension was refused; it
-never expires. A global command decided on a window with nothing left to do records no gesture, not even the
-arrival. Until the back and the reset of the pupitres ship, an operator still reported `EN_PAUSE`, by the server or
-by a stored reference, is read as present by the HTTP and IndexedDB adapters; [ADR
-0045](adr/0045-keep-the-pause-on-the-pupitre.md) records the decision.
+`PAUSE` captures one targeted FIN per known interpretable personal activity that has not expired and is
+outside a conflict. Each finish carries its local suspension and the opening category to resume. The HTTP
+adapter sends only the pointage fields. `REPRENDRE` opens fresh activities with new identities and no former
+target, on still eligible workstations and elements. A refused or conflicting suspension is not resumed.
+`PauseEnCours` reads that memory from the whole journal; a pause itself never expires.
+
+At the server-provided deadline, inclusive, an activity stops being actionable locally, including offline.
+Every decision receives its evaluation time explicitly. A separate activity timer reevaluates the window
+without closing the designation or synthesizing FIN. The indicative duration remains frozen at window
+opening. A capture initiated before the deadline keeps its target and occurrence through delayed I/O.
+
+Conflicts remain separate from current activities, including sequences without an activity or workstation.
+A new opening remains possible; FIN or transition never targets a conflicting activity. Other interpretable
+activities stay actionable. A stale target never applies to its replacement. An accepted 200/201 conflict
+is persisted with the gesture so a failed refresh preserves its diagnosis. Canonical activation records
+accepted identifiers and replaces the reference diagnostics without applying the optimistic effect twice.
+
+The activity journal uses `atelier-activites-v1:<tenant>`. The old `atelier:` documents are discarded by
+prefix through `LocalStoragePort`, without reading or migrating them. No credential,
+enrolment, common database or new company journal is removed. This format reset is independent of TOUT
+ARRÊTER, which retains the current journal. [ADR 0045](adr/0045-keep-the-pause-on-the-pupitre.md) owns local
+pause memory and [ADR 0047](adr/0047-count-only-finished-activities.md) owns precise targeting and expiry.
 
 A global command pressed while captures are already in flight is retained and decided from the updated
 window after those captures settle locally. From that intention until local acceptance, tiles and global

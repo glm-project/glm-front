@@ -1,10 +1,11 @@
-import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { TotalDeDuree } from '../duree/TotalDeDuree';
 import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { SemaineISO } from '../semaine/SemaineISO';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { JourDeReleve } from './JourDeReleve';
+import { SequenceEnConflit } from './SequenceEnConflit';
 
 const memesJours = (attendus: readonly { readonly value: string }[], jours: readonly JourDeReleve[]): boolean =>
   attendus.every((attendu, rang) => jours[rang]?.jour.value === attendu.value);
@@ -39,31 +40,25 @@ export interface FicheDuReleve {
   readonly operateur: IdentiteOperateur;
   readonly elements: readonly ElementDuReleve[];
   readonly jours: readonly JourDeReleve[];
-  readonly presencePointee: DureeTravaillee;
-  readonly presencePresumee: DureeTravaillee;
-  readonly operationnelPointe: DureeTravaillee;
-  readonly operationnelPresume: DureeTravaillee;
+  readonly operationnelTotal: TotalDeDuree;
+  readonly conflits: readonly SequenceEnConflit[];
 }
 
 export class ReleveDesHeures {
   readonly operateur: IdentiteOperateur;
   readonly elements: readonly ElementDuReleve[];
   readonly jours: readonly JourDeReleve[];
-  readonly presencePointee: DureeTravaillee;
-  readonly presencePresumee: DureeTravaillee;
-  readonly operationnelPointe: DureeTravaillee;
-  readonly operationnelPresume: DureeTravaillee;
+  readonly operationnelTotal: TotalDeDuree;
+  readonly conflits: readonly SequenceEnConflit[];
 
   constructor(semaine: SemaineISO, fiche: FicheDuReleve) {
     ReleveDesHeures.verifieLesSeptJours(semaine, fiche.jours);
-    ReleveDesHeures.verifieLesReferences(fiche.elements, fiche.jours);
+    ReleveDesHeures.verifieLesReferences(fiche.elements, fiche.jours, fiche.conflits);
     this.operateur = fiche.operateur;
     this.elements = [...fiche.elements];
     this.jours = [...fiche.jours];
-    this.presencePointee = fiche.presencePointee;
-    this.presencePresumee = fiche.presencePresumee;
-    this.operationnelPointe = fiche.operationnelPointe;
-    this.operationnelPresume = fiche.operationnelPresume;
+    this.operationnelTotal = fiche.operationnelTotal;
+    this.conflits = [...fiche.conflits];
   }
 
   elementDe(id: ElementReleveId): ElementDuReleve {
@@ -75,11 +70,18 @@ export class ReleveDesHeures {
     return intervalles.some((intervalle, rang) => intervalles.slice(rang + 1).some(autre => intervalle.chevauche(autre)));
   }
 
-  private static verifieLesReferences(elements: readonly ElementDuReleve[], jours: readonly JourDeReleve[]): void {
-    const cibles = jours.flatMap(jour => [
-      ...jour.intervalles.map(intervalle => intervalle.cible()),
-      ...jour.pointagesDElement().map(pointage => pointage.cible),
-    ]);
+  private static verifieLesReferences(
+    elements: readonly ElementDuReleve[],
+    jours: readonly JourDeReleve[],
+    conflits: readonly SequenceEnConflit[],
+  ): void {
+    const cibles = [
+      ...conflits.map(conflit => conflit.cible),
+      ...jours.flatMap(jour => [
+        ...jour.intervalles.map(intervalle => intervalle.cible()),
+        ...jour.pointages.map(pointage => pointage.cible),
+      ]),
+    ];
     for (const cible of cibles) {
       verifieLePoste(cible, elementDe(cible.element, elements));
     }

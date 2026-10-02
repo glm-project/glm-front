@@ -4,78 +4,64 @@
 
 Accepted during the design interview for [#60](https://github.com/glm-project/glm-front/issues/60).
 The interview synthesis was confirmed before preparing the iterative implementation plan.
-
-Complements [0012](0012-own-business-contexts-by-front.md): Gestion's `supervision-atelier`
-
-owns the interpretation of workshop presence, activities and anomalies.
-
-Amended by [0033](0033-compose-view-data-in-secondary-adapters.md): the application consumes one supervision
-data port, with one InMemory adapter for scenarios and direct API calls in the future HTTP adapter.
-Intermediate source ports and mixed per-source adapter wiring are replaced by this single acquisition boundary.
-The domain still interprets presence, activities and anomalies. A primary resource displays acquisition
-failures and domain refusals as errors, without retaining the previous grid.
-
-Amended by [0041](0041-sort-workshop-supervision-into-state-lanes.md): the grid becomes state lanes — three since
-[0046](0046-stop-showing-the-pause-in-workshop-supervision.md) removed « En pause » — ordered alphabetically
-within each lane, the screen calls an open working visit « venue ouverte », and an activity without a
-workstation shows « Sans poste » instead of omitting the workstation label.
+Complements [0012](0012-own-business-contexts-by-front.md). Acquisition is amended by
+[0033](0033-compose-view-data-in-secondary-adapters.md), the layout by
+[0041](0041-sort-workshop-supervision-into-state-lanes.md), and activity interpretation by
+[0047](0047-count-only-finished-activities.md). This revised account retains the context and acquisition
+reasons with the delivered two-lane model. HTTP acquisition now uses the complete atelier projection;
+InMemory remains a demonstration adapter.
 
 ## Context
 
-The real-time grid combines declared operators, working visits and ongoing activities. Gestion's
-`operateur` context owns the operator reference and habilitations. The screen semantics are established
-by [#12](https://github.com/glm-project/glm-front/issues/12#issuecomment-5542625574).
-
-The available generated contract supports ongoing workshop activities but lacks the working-visit state
-filter. Online reads are bounded and expose whether their results are complete.
+The view combines declared operators, interpretable activities and conflicting sequences. Gestion's
+`operateur` context owns the operator reference and habilitations; instantaneous workshop interpretation
+has another reason to change. The screen semantics originated in
+[#12](https://github.com/glm-project/glm-front/issues/12#issuecomment-5542625574) and now follow ADR 0047.
+A truncated source or an activity without an identifiable operator would produce a misleading view.
 
 ## Considered options
 
-- A dedicated `supervision-atelier` context in Gestion — **kept**: one owner for interpreting the combined sources.
-- Extend `operateur` — rejected: reference administration and instantaneous workshop interpretation have different responsibilities.
-- Reuse Pupitre's `atelier` context — rejected: the applications own independent business models.
-- Read a bounded history of working visits without a state filter — rejected for the initial wiring: history can truncate the result before all open visits are available.
+- A dedicated `supervision-atelier` context in Gestion — **kept**: one owner interprets the combined data.
+- Extend `operateur` — rejected: reference administration and workshop interpretation differ.
+- Reuse Pupitre's `atelier` — rejected: the applications own independent business models.
+- Read bounded history as a complete current view — rejected: truncation can omit an ongoing activity.
 
 ## Decision
 
-Place the grid and its business rules in Gestion's `supervision-atelier`. Consume the operator reference
-without importing the `operateur` domain. As amended by [0033](0033-compose-view-data-in-secondary-adapters.md),
-read the required resources directly in one secondary adapter implementing the supervision data port.
-Keep transport translation in that adapter.
+Place the view and its business rules in Gestion's `supervision-atelier`. Consume the required reference
+without importing `operateur` domain models. One secondary adapter implements `DonneesDeSupervisionPort`,
+acquires the resources and translates transport data. The domain separately decides their business validity.
 
-Use the following vocabulary for this responsibility (living vocabulary and invariants belong to
-[`supervision-atelier` AGENTS.md](../../src/main/webapp/gestion/contexts/supervision-atelier/AGENTS.md)):
+The living vocabulary belongs to
+[`supervision-atelier` AGENTS.md](../../src/main/webapp/gestion/contexts/supervision-atelier/AGENTS.md):
 
-- **Supervision de l'atelier**: interpretation of declared operators, presence and current activities for the real-time grid.
-- **Journée de travail**: a working visit, which can cross midnight; it is not a calendar day.
-- **Lecture complète**: all required collections have been obtained without truncation or an activity whose operator cannot be identified.
-- **Anomalie**: a situation flagged by the supervision rules, without correcting the source data or changing its presence colour.
+- **Supervision de l'atelier**: interpretation of declared operators, current activities and conflicts.
+- **Lecture complète**: every required collection acquired without truncation.
+- **Lecture exploitable**: every activity, including a conflicting one, has an identifiable operator.
+- **Opérateur à vérifier**: an operator carrying an automatic finish or conflicting sequence.
 
 Reject incomplete acquisition in the secondary adapter. Let the domain refuse activities without an
-identifiable operator. Show an error without a grid in both cases, including during refresh, as amended by
-[0033](0033-compose-view-data-in-secondary-adapters.md). Silently omitting an unassignable activity could
-create a false GLM indication.
+identifiable operator. Either failure displays an error replacing the previous lanes; omitting an
+unassignable activity would silently alter the classification. Keep activities without workstations and
+show « Sans poste ». Personal work is represented by a supervisor-created OF Perso, read like every
+other fabrication order. Its creation and subtype are a separate feature; a missing element stays invalid.
 
-For an open working visit with no presence windows, display « Journée ouverte sans heure d'ouverture ».
-Do not invent an opening timestamp. For an activity without a workstation, retain the activity and omit
-the workstation label. Use the workshop tracking name while its reference is unavailable, as already
-specified by #60.
-
-Provide a fully InMemory adapter for reproducible scenarios. Wire the HTTP adapter once the backend contract
-supports reading open working visits. Choose the implementation of the single data port in the composition
-root; an HTTP failure never selects simulated data.
+Provide reproducible activity, automatic-finish and conflict scenarios through one InMemory adapter,
+for fixtures. Select HTTP for the normal supervision route at the composition root. Its complete atelier
+projection supplies every required source; a failed HTTP call never selects simulated data. The current
+two lanes, alphabetical order and NC overlay belong to ADR 0041.
 
 ## Consequences
 
 ### Positive
 
-- The grid exercises its real business rules before the working-visit API is ready.
-- Source failures and truncation cannot silently fabricate absence or GLM.
+- The view exercises its domain rules before real HTTP integration.
+- Source failures and truncation cannot silently fabricate a current activity classification.
 - Operator reference ownership remains separate from workshop interpretation.
 
 ### Negative
 
-- Another context and its API-to-domain translation must be maintained.
-- One unassignable activity prevents the whole grid from refreshing.
-- Fully simulated scenarios validate the proposed screen, not the production integration.
-- HTTP working-visit integration and validation against the real backend remain outstanding.
+- Another context and API-to-domain translation must be maintained.
+- One unassignable activity prevents the whole view from refreshing.
+- Simulated scenarios validate the screen, without proving production integration.
+- Browser interception cannot establish validation against the real backend and Keycloak.

@@ -5,20 +5,23 @@ import { required } from '@/app/shared/api-client/infrastructure/secondary/requi
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
+import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
+import { ActiviteDuReleve } from '../../domain/element/ActiviteDuReleve';
 import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { ElementReleveId } from '../../domain/element/ElementReleveId';
 import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { PosteReleveId } from '../../domain/element/PosteReleveId';
+import { ActiviteReleveId } from '../../domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
-import { PlageDeReleve } from '../../domain/releve/PlageDeReleve';
 import { PointageDElement } from '../../domain/releve/PointageDElement';
-import { PointageDePresence } from '../../domain/releve/PointageDePresence';
 import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
+import { PointageReleveId } from '../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
+import { SequenceEnConflit } from '../../domain/releve/SequenceEnConflit';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
@@ -27,7 +30,6 @@ type RestSynthese = components['schemas']['RestSyntheseDesHeures'];
 type RestJour = components['schemas']['RestJourDeSynthese'];
 type RestPointage = components['schemas']['RestPointageDeSyntheseDesHeures'];
 type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
-type RestPlage = components['schemas']['RestPlage'];
 type RestElement = components['schemas']['RestElementDeLaSynthese'];
 type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
 type RestPosteDeLElement = components['schemas']['RestPosteDeLElementDeLaSynthese'];
@@ -39,7 +41,6 @@ const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvab
 
 type RestJourDeFeuille = components['schemas']['RestJourDeLaSemaine'];
 interface JourDeLaFeuille {
-  readonly presence: readonly RestPlage[];
   readonly activites: readonly RestActivite[];
 }
 
@@ -51,23 +52,22 @@ interface SemaineRendue {
 }
 
 const toCible = (pointage: RestPointage): CibleDePointage =>
-  new CibleDePointage(
-    new ElementReleveId(required(pointage.element, 'pointage.element')),
-    pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
-  );
+  new CibleDePointage(new ElementReleveId(pointage.element), pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste));
 
-const toPointage = (pointage: RestPointage): PointageDeReleve => {
-  const instant = new InstantDeReleve(pointage.dateDeSurvenue);
-  switch (pointage.type) {
-    case 'ARRIVEE':
-    case 'DEPART':
-      return new PointageDePresence(pointage.type, instant);
-    case 'DEBUT':
-    case 'NON_CONFORMITE':
-    case 'FIN':
-      return new PointageDElement(pointage.type, instant, toCible(pointage));
-  }
-};
+const toPointage = (pointage: RestPointage): PointageDeReleve =>
+  new PointageDElement({
+    id: new PointageReleveId(pointage.id),
+    type: pointage.type,
+    instant: new InstantDeReleve(pointage.dateDeSurvenue),
+    cible: toCible(pointage),
+    intention:
+      pointage.intention === 'OUVERTURE'
+        ? { type: 'OUVERTURE' }
+        : { type: pointage.intention, activiteVisee: new ActiviteReleveId(required(pointage.cible, 'pointage.cible')) },
+  });
+
+const toTotal = (duree: components['schemas']['RestDureeDeSynthese']): TotalDeDuree =>
+  duree.complete ? TotalDeDuree.complet(new DureeTravaillee(required(duree.valeur, 'duree.valeur'))) : TotalDeDuree.incomplet();
 
 const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
   new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature);
@@ -79,16 +79,32 @@ const toElement = (element: RestElement): ElementDuReleve =>
     nom: element.nom,
     reference: element.reference,
     description: element.description,
-    duree: new DureeTravaillee(element.duree),
-    dureeNonConformite: new DureeTravaillee(element.dureeNonConformite),
-    dureePresumee: new DureeTravaillee(element.dureePresumee),
+    duree: toTotal(element.duree),
+    dureeNonConformite: toTotal(element.dureeNonConformite),
     postes: element.postes.map(toPoste),
   });
 
 const toFin = (fin: string | undefined): InstantDeReleve | undefined => (fin === undefined ? undefined : new InstantDeReleve(fin));
 
-const toPlage = (plage: RestPlage): PlageDeReleve =>
-  new PlageDeReleve(new InstantDeReleve(required(plage.debut, 'plage.debut')), toFin(plage.fin), plage.presumee);
+const toActivite = (activite: components['schemas']['RestActiviteInterpreteeDeLaFeuilleDeTemps']): ActiviteDuReleve => {
+  const commun = { id: new ActiviteReleveId(activite.id), debut: new InstantDeReleve(activite.debut) };
+  switch (activite.etat) {
+    case 'TERMINEE':
+    case 'TERMINEE_AUTOMATIQUEMENT':
+      return { ...commun, etat: activite.etat, fin: new InstantDeReleve(required(activite.fin, 'activite.fin')) };
+    case 'EN_COURS':
+      return { ...commun, etat: activite.etat };
+    case 'A_RESOUDRE':
+      return { ...commun, etat: activite.etat, finAuPlusTard: toFin(activite.finAuPlusTard) };
+  }
+};
+
+const toConflit = (conflit: components['schemas']['RestConflitDeSynthese']): SequenceEnConflit =>
+  new SequenceEnConflit(
+    new CibleDePointage(new ElementReleveId(conflit.element), conflit.poste === undefined ? undefined : new PosteReleveId(conflit.poste)),
+    conflit.activites.map(id => new ActiviteReleveId(id)),
+    conflit.pointages.map(id => new PointageReleveId(id)),
+  );
 
 const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
   new IntervalleDActivite({
@@ -98,16 +114,11 @@ const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
     categorie: activite.categorie,
     debut: new InstantDeReleve(activite.debut),
     fin: toFin(activite.fin),
-    presumee: activite.presumee,
+    activite: toActivite(activite.activite),
   });
 
 const feuilleParJourDe = (jours: readonly RestJourDeFeuille[]): FeuilleParJour =>
-  new Map(
-    jours.map(jour => [
-      required(jour.jour, 'jourDeLaFeuille.jour'),
-      { presence: required(jour.presence, 'jourDeLaFeuille.presence'), activites: jour.activites },
-    ]),
-  );
+  new Map(jours.map(jour => [required(jour.jour, 'jourDeLaFeuille.jour'), { activites: jour.activites }]));
 
 const neCorrespondPasUnAUn = (
   jours: readonly RestJour[],
@@ -128,11 +139,9 @@ const toJour = (jour: RestJour, feuilles: FeuilleParJour): JourDeReleve => {
   const feuille = feuilleDu(date, feuilles);
   return new JourDeReleve({
     jour: new JourCalendaire(date),
-    operationnelPointe: new DureeTravaillee(jour.dureeOperationnelle),
-    operationnelPresume: new DureeTravaillee(jour.dureeOperationnellePresumee),
+    operationnelTotal: toTotal(jour.dureeOperationnelle),
     intervalles: feuille.activites.map(toIntervalle),
     pointages: required(jour.pointages, 'jour.pointages').map(toPointage),
-    plages: feuille.presence.map(toPlage),
   });
 };
 
@@ -165,11 +174,15 @@ const toReleve = (synthese: RestSynthese, feuille: RestFeuille, demandee: Semain
     operateur: toIdentite(synthese),
     elements: synthese.elements.map(toElement),
     jours: toJours(synthese, feuille),
-    presencePointee: new DureeTravaillee(required(synthese.dureeTotale, 'synthese.dureeTotale')),
-    presencePresumee: new DureeTravaillee(required(synthese.dureePresumeeTotale, 'synthese.dureePresumeeTotale')),
-    operationnelPointe: new DureeTravaillee(synthese.dureeOperationnelleTotale),
-    operationnelPresume: new DureeTravaillee(synthese.dureeOperationnellePresumeeTotale),
+    operationnelTotal: toTotal(synthese.dureeOperationnelleTotale),
+    conflits: synthese.conflits.map(toConflit),
   });
+};
+
+const verifieEvaluation = (echo: string, attendue: InstantDeReleve): void => {
+  if (!new InstantDeReleve(echo).estLeMeme(attendue)) {
+    throw new Error('Les rapports reçus du serveur ne portent pas l’instant d’évaluation demandé.');
+  }
 };
 
 const estIntrouvable = (lecture: PromiseSettledResult<unknown>, urn: string): boolean =>
@@ -191,29 +204,35 @@ export class HttpSyntheseDesHeures extends SyntheseDesHeuresPort {
   private readonly errors = inject(ErrorHandlerPort);
 
   override async synthese(demande: DemandeDeReleve): Promise<ReleveDesHeures | undefined> {
-    const [synthese, feuille] = await Promise.allSettled([this.readSynthese(demande), this.readFeuille(demande)]);
+    const evaluation = new Date().toISOString();
+    const [synthese, feuille] = await Promise.allSettled([this.readSynthese(demande, evaluation), this.readFeuille(demande, evaluation)]);
     if (operateurIntrouvable(synthese, feuille)) {
       return undefined;
     }
     try {
-      return toReleve(documentDe(synthese), documentDe(feuille), demande.semaine);
+      const documentDeSynthese = documentDe(synthese);
+      const documentDeFeuille = documentDe(feuille);
+      const instant = new InstantDeReleve(evaluation);
+      verifieEvaluation(documentDeSynthese.evaluation, instant);
+      verifieEvaluation(documentDeFeuille.evaluation, instant);
+      return toReleve(documentDeSynthese, documentDeFeuille, demande.semaine);
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
     }
   }
 
-  private readSynthese(demande: DemandeDeReleve): Promise<RestSynthese> {
+  private readSynthese(demande: DemandeDeReleve, evaluation: string): Promise<RestSynthese> {
     return this.api.read(SYNTHESE, {
       pathParams: { operateurId: demande.operateur.value },
-      queryParams: { annee: demande.semaine.annee, semaine: demande.semaine.numero },
+      queryParams: { annee: demande.semaine.annee, semaine: demande.semaine.numero, evaluation },
     });
   }
 
-  private readFeuille(demande: DemandeDeReleve): Promise<RestFeuille> {
+  private readFeuille(demande: DemandeDeReleve, evaluation: string): Promise<RestFeuille> {
     return this.api.read(FEUILLE, {
       pathParams: { operateurId: demande.operateur.value },
-      queryParams: { annee: demande.semaine.annee, semaine: demande.semaine.numero },
+      queryParams: { annee: demande.semaine.annee, semaine: demande.semaine.numero, evaluation },
     });
   }
 }

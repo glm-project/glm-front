@@ -32,16 +32,29 @@ const operator = {
   nom: 'Dupont',
   prenom: 'Jean',
   matricule: '049',
-  etat: 'ABSENT',
   postes: [],
 };
 
 const workshopItem = {
+  conflits: [],
   activites: [],
   etat: 'EN_ATTENTE',
   id: 'workshop-item-1',
   nom: 'OF-1',
   type: 'PRODUIT',
+};
+
+const publication = {
+  id: workshopItem.id,
+  nom: workshopItem.nom,
+  type: workshopItem.type,
+  etat: 'EN_ATTENTE',
+  element: 'element-1',
+  engageLe: '2026-09-05T07:00:00Z',
+  engagePar: 'gestionnaire',
+  activitesEnCours: [],
+  conflits: [],
+  journal: [],
 };
 
 const json = (response, status, body, headers = {}) => {
@@ -172,7 +185,7 @@ const appServer = createServer(async (request, response) => {
   if (isPostTo(request, url, '/__control/release-gesture-responses')) {
     state.gestureResponsesReleased = true;
     for (const pending of pendingGestureResponses.splice(0)) {
-      json(pending, 200, {});
+      json(pending, 200, publication);
     }
     recordEvidence();
     json(response, 200, state);
@@ -195,7 +208,7 @@ const appServer = createServer(async (request, response) => {
     json(response, 200, { genereLe: '2026-09-05T08:05:00Z', operateurs: [operator], suivis: [workshopItem] });
     return;
   }
-  if (isPostTo(request, url, '/api/atelier/journees')) {
+  if (isPostTo(request, url, '/api/atelier/suivis/workshop-item-1/pointages')) {
     const body = JSON.parse(await readBody(request));
     state.pushes.push({ authorization: request.headers.authorization, body });
     recordEvidence();
@@ -203,7 +216,7 @@ const appServer = createServer(async (request, response) => {
       pendingGestureResponses.push(response);
       return;
     }
-    json(response, 200, {});
+    json(response, 200, publication);
     return;
   }
   if (isDisabledServiceWorkerRequest(url)) {

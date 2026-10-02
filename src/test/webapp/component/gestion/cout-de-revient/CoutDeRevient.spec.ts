@@ -1,6 +1,12 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { interceptForever } from '../../../utils/Interceptor';
-import { CoutDeRevientApiFixture, coutDeRevientFixture } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
+import {
+  CoutDeRevientApiFixture,
+  coutDeRevientFixture,
+  rapportAutomatiqueFixture,
+  rapportEnCoursFixture,
+  rapportIncompletFixture,
+} from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 
 const RAPPORT = '/couts-de-revient/element-1';
 
@@ -9,6 +15,52 @@ describe('Cost of manufacture in gestion', () => {
 
   beforeEach(() => {
     api = new CoutDeRevientApiFixture();
+  });
+
+  it('should keep certain cells readable and incomplete cells without figures, detail opened', () => {
+    givenIncompleteReport();
+    whenVisitingTheReport();
+    whenOpeningTheDetailOfTheFirstRow();
+
+    thenIndependentCompletenessIsVisible();
+  });
+
+  it('should announce clockings to resolve in a banner and on their nature, then explain them in the detail', () => {
+    givenIncompleteReport();
+    whenVisitingTheReport();
+    whenOpeningTheDetailOfTheFirstRow();
+
+    thenTheClockingToResolveIsExplained();
+  });
+
+  it('should show automatic finishes before expanding a row and explain their counted periods', () => {
+    givenAutomaticReport();
+    whenVisitingTheReport();
+
+    thenAutomaticFinishIsVisibleBeforeDetail();
+  });
+
+  it('should explain automatic periods in the expanded detail', () => {
+    givenAutomaticReport();
+    whenVisitingTheReport();
+    whenOpeningTheDetailOfTheFirstRow();
+
+    thenAutomaticFinishIsExplained();
+  });
+
+  it('should explain excluded current activities while retaining complete zero totals', () => {
+    givenCurrentReport();
+    whenVisitingTheReport();
+
+    thenCurrentActivityExclusionIsVisible();
+  });
+
+  it('should remove an automatic alert when a new server report no longer carries it', () => {
+    givenAutomaticReport();
+    whenVisitingTheReport();
+    whenReloadingTheRegularisedReport();
+
+    thenTheRegularisedReportIsVisible();
   });
 
   it('should display the total cost and one row per operation nature on a desktop viewport', () => {
@@ -53,12 +105,12 @@ describe('Cost of manufacture in gestion', () => {
     thenTheAbsenceOfClockingIsExplained();
   });
 
-  it('should date the period and the reworks of a row when its detail is opened', () => {
+  it('should justify each clocking of a row and the sharing of its operator when its detail is opened', () => {
     givenReport();
     whenVisitingTheReport();
     whenOpeningTheDetailOfTheFirstRow();
 
-    thenTheDatedDetailIsVisible();
+    thenTheClockingsAndTheirSharesAreVisible();
   });
 
   it('should keep the detail toggle reachable from the keyboard', () => {
@@ -68,6 +120,21 @@ describe('Cost of manufacture in gestion', () => {
 
     thenTheDetailToggleHasFocus();
   });
+
+  const givenIncompleteReport = (): void => {
+    api.rapport = rapportIncompletFixture();
+    api.install();
+  };
+
+  const givenAutomaticReport = (): void => {
+    api.rapport = rapportAutomatiqueFixture();
+    api.install();
+  };
+
+  const givenCurrentReport = (): void => {
+    api.rapport = rapportEnCoursFixture();
+    api.install();
+  };
 
   const givenReport = (): void => {
     api.install();
@@ -91,6 +158,14 @@ describe('Cost of manufacture in gestion', () => {
     api.install();
   };
 
+  const whenReloadingTheRegularisedReport = (): void => {
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 fin automatique');
+    cy.then(() => {
+      api.rapport = coutDeRevientFixture();
+    });
+    cy.reload();
+  };
+
   const whenVisitingTheReport = (): void => {
     cy.viewport(1280, 900);
     cy.visit(RAPPORT);
@@ -107,6 +182,48 @@ describe('Cost of manufacture in gestion', () => {
 
   const whenFocusingTheFirstDetailToggle = (): void => {
     cy.get(dataSelector('cout-detail-toggle')).first().focus();
+  };
+
+  const thenIndependentCompletenessIsVisible = (): void => {
+    cy.get(dataSelector('cout-travail-cell')).should('contain.text', '5 h 00');
+    cy.get(dataSelector('cout-machine-cell')).should('contain.text', '300,00');
+    cy.get(dataSelector('cout-main-d-oeuvre-cell')).should('contain.text', 'Incomplet');
+    cy.get(dataSelector('cout-total')).should('contain.text', 'Incomplet');
+    cy.get(dataSelector('cout-repartition')).should('contain.text', 'Main d’œuvre Incomplet');
+  };
+
+  const thenTheClockingToResolveIsExplained = (): void => {
+    cy.get(dataSelector('cout-bandeau-titre')).should('contain.text', '1 pointage en anomalie sur la nature Fraisage');
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 à résoudre');
+    cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'À résoudre');
+    cy.get(dataSelector('cout-pointage-fin-au-plus-tard')).should('contain.text', 'fin au plus tard');
+    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'Pointages contradictoires : début à');
+  };
+
+  const thenAutomaticFinishIsVisibleBeforeDetail = (): void => {
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 fin automatique');
+    cy.get(dataSelector('cout-detail')).should('not.exist');
+    cy.get(dataSelector('cout-temps-total')).should('contain.text', '13 h 00');
+  };
+
+  const thenAutomaticFinishIsExplained = (): void => {
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 fin automatique');
+    cy.get(dataSelector('cout-temps-total')).should('contain.text', '13 h 00');
+    cy.get(dataSelector('cout-total')).should('contain.text', '845,00');
+    cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'Fin automatique');
+    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'arrêtée automatiquement après 13 h');
+  };
+
+  const thenCurrentActivityExclusionIsVisible = (): void => {
+    cy.get(dataSelector('cout-activites-exclues')).should('contain.text', '2 activités en cours exclues');
+    cy.get(dataSelector('cout-temps-total')).should('contain.text', '0 h 00');
+    cy.get(dataSelector('cout-total')).should('contain.text', '0,00');
+    cy.get(dataSelector('cout-sans-travail')).should('not.exist');
+  };
+
+  const thenTheRegularisedReportIsVisible = (): void => {
+    cy.get(dataSelector('cout-nature-anomalie')).should('not.exist');
+    cy.get(dataSelector('cout-total')).should('contain.text', '295,00');
   };
 
   const thenTheReportIsDisplayed = (): void => {
@@ -148,9 +265,13 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-ligne-row')).should('not.exist');
   };
 
-  const thenTheDatedDetailIsVisible = (): void => {
-    cy.get(dataSelector('cout-periode')).should('contain.text', '11 mai 2026');
-    cy.get(dataSelector('cout-non-conformite')).should('have.length', 1);
+  const thenTheClockingsAndTheirSharesAreVisible = (): void => {
+    cy.get(dataSelector('cout-pointage')).should('have.length', 1);
+    cy.get(dataSelector('cout-pointage-operateur')).should('have.text', 'Julien Martin');
+    cy.get(dataSelector('cout-pointage-main-d-oeuvre')).should('contain.text', '50,00');
+    cy.get(dataSelector('cout-part')).should('have.length', 3);
+    cy.get(dataSelector('cout-part-contexte')).eq(1).should('contain.text', 'aussi sur Haas VF-2 · OF-2026-000192 (Fraisage)');
+    cy.get(dataSelector('cout-part-calcul')).eq(1).should('contain.text', '20,00 × 1,00 ÷ 2 = 10,00');
   };
 
   const thenTheDetailToggleHasFocus = (): void => {

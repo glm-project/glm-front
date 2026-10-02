@@ -1,9 +1,9 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { GesteDAtelier, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { provideHttpClient } from '@angular/common/http';
@@ -21,18 +21,17 @@ const operateurFixture = {
   id: 'jean',
   nom: 'Dupont',
   prenom: 'Jean',
-  matricule: '049',
-  etat: 'PRESENT',
+  identifiant: '049',
   postes: [],
 } satisfies RestOperateurDuPupitre;
-const operateurSansMatriculeFixture = {
+const operateurSansIdentifiantFixture = {
   id: 'marie',
   nom: 'Martin',
   prenom: 'Marie',
-  etat: 'ABSENT',
   postes: [{ id: 'tour', libelle: 'Tour' }],
 } satisfies RestOperateurDuPupitre;
 const suiviSansReferenceFixture = {
+  conflits: [],
   activites: [],
   etat: 'EN_ATTENTE',
   id: 'piece',
@@ -46,31 +45,34 @@ const suiviAvecReferenceFixture = {
   reference: 'M-1187',
   activites: [
     {
-      ouverture: 'travail-original',
-      echeance: '2026-09-05T21:00:00Z',
+      ouverture: 'activite-fixture-36',
+      echeance: '2026-09-05T21:00:00.000Z',
       operateur: 'jean',
       categorie: 'TRAVAIL',
       depuis: '2026-09-05T08:00:00Z',
       poste: 'tour',
     },
     {
-      ouverture: 'nc-originale',
-      echeance: '2026-09-05T21:00:00Z',
+      ouverture: 'activite-fixture-37',
+      echeance: '2026-09-05T21:00:00.000Z',
       operateur: 'jean',
       categorie: 'NON_CONFORMITE',
       depuis: '2026-09-05T08:00:00Z',
     },
   ],
+  conflits: [
+    { operateur: 'jean', activites: [], pointages: ['conflit-reference'] },
+    { operateur: 'marie', poste: 'tour', activites: ['remplacante'], pointages: ['fin'] },
+  ],
 } satisfies RestSuiviDuPupitre;
 const referentielFixture = {
   genereLe: '2026-09-05T08:05:00Z',
-  operateurs: [operateurFixture, operateurSansMatriculeFixture],
+  operateurs: [operateurFixture, operateurSansIdentifiantFixture],
   suivis: [suiviSansReferenceFixture, suiviAvecReferenceFixture],
 } satisfies RestReferentielDuPupitre;
 const suiviDetailleFixture = {
-  activitesEnCours: [],
   conflits: [],
-  evaluation: '2026-10-01T08:00:00Z',
+  activitesEnCours: [],
   element: 'element',
   engageLe: '2026-09-05T07:30:00Z',
   engagePar: 'gestionnaire',
@@ -80,7 +82,15 @@ const suiviDetailleFixture = {
   nom: 'OF-1',
   type: 'PRODUIT',
 } satisfies RestSuiviDAtelier & RestSuiviDAtelierEnGrille;
-const arriveeFixture: GesteDAtelier = { nature: 'ARRIVEE', id: 'geste', dateDeSurvenue: '2026-09-05T08:00:00Z', operateurId: 'jean' };
+const ouvertureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  id: 'geste',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
+  operateurId: 'jean',
+  suiviId: 'piece',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
+};
 const adapters = [['HTTP', () => TestBed.inject(HttpAtelierExchange)]] as const;
 
 describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapter, build) => {
@@ -123,138 +133,84 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenItFailed(reference, 'Aucune autorisation pour lire le référentiel.');
   });
 
-  it('should preserve event identity and original business time on each write route', async () => {
-    const arrivee = whenSending(arriveeFixture);
-    const arriveeRequest = await whenServerAcceptsWrite('/api/atelier/journees');
-
-    const presence = whenSending({ ...arriveeFixture, nature: 'PRESENCE', type: 'DEPART' });
-    const presenceRequest = await whenServerAcceptsWrite('/api/atelier/journees/pointages');
-
-    const pointage = whenSending({
-      ...arriveeFixture,
-      nature: 'POINTAGE',
-      suiviId: 'piece',
-      type: 'DEBUT',
-      intention: 'OUVERTURE',
-      posteId: 'tour',
-    });
-    const pointageRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
-
-    const pointageSansPoste = whenSending({
-      ...arriveeFixture,
-      nature: 'POINTAGE',
-      suiviId: 'piece',
-      type: 'FIN',
-      intention: 'FIN',
-      cible: 'ouverture',
-    });
-    const pointageSansPosteRequest = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
-
-    await thenWriteSucceededWith(arrivee, arriveeRequest, {
-      id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
-      operateur: 'jean',
-    });
-    await thenWriteSucceededWith(presence, presenceRequest, {
-      id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
-      operateur: 'jean',
-      type: 'DEPART',
-    });
-    await thenWriteSucceededWith(pointage, pointageRequest, {
-      id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
-      operateur: 'jean',
-      type: 'DEBUT',
-      intention: 'OUVERTURE',
-      poste: 'tour',
-    });
-    await thenWriteSucceededWith(pointageSansPoste, pointageSansPosteRequest, {
-      id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
-      operateur: 'jean',
-      type: 'FIN',
-      intention: 'FIN',
-      cible: 'ouverture',
-    });
-  });
-
-  it('should publish an explicit opening without targeting an earlier activity', async () => {
-    const ouverture = whenSending({
-      ...arriveeFixture,
-      nature: 'POINTAGE',
-      suiviId: 'piece',
-      type: 'NON_CONFORMITE',
-      intention: 'OUVERTURE',
-    });
+  it.each<GesteDePointage>([
+    { ...ouvertureFixture, type: 'DEBUT' },
+    { ...ouvertureFixture, type: 'NON_CONFORMITE', posteId: 'tour' },
+    { ...ouvertureFixture, intention: 'TRANSITION', type: 'NON_CONFORMITE', cible: 'opening', posteId: 'tour' },
+    { ...ouvertureFixture, intention: 'FIN', type: 'FIN', cible: 'opening' },
+  ])('should preserve captured identity, occurrence, intention and target for $intention $type', async geste => {
+    const sent = whenSending(geste);
 
     const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
 
-    await thenWriteSucceededWith(ouverture, request, {
+    await thenWriteSucceededWith(sent, request, {
       id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      dateDeSurvenue: '2026-09-05T08:00:00Z',
       operateur: 'jean',
-      type: 'NON_CONFORMITE',
-      intention: 'OUVERTURE',
+      type: geste.type,
+      intention: geste.intention,
+      ...(geste.intention === 'OUVERTURE' ? {} : { cible: 'opening' }),
+      ...(geste.posteId === undefined ? {} : { poste: 'tour' }),
     });
   });
 
-  it('should retain the targeted opening when publishing a category transition', async () => {
-    const transition = whenSending({
-      ...arriveeFixture,
-      nature: 'POINTAGE',
-      suiviId: 'piece',
-      type: 'NON_CONFORMITE',
-      intention: 'TRANSITION',
-      cible: 'ouverture-originale',
-    });
+  it.each([200, 201])('should retain conflict diagnostics from an accepted publication with status %s', async status => {
+    const sent = whenSending(ouvertureFixture);
 
-    const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
+    await whenServerAcceptsConflict([{ activites: ['ancienne-ouverture', 'remplacante'], pointages: ['geste'] }], status);
 
-    await thenWriteSucceededWith(transition, request, {
-      id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
-      operateur: 'jean',
-      type: 'NON_CONFORMITE',
-      intention: 'TRANSITION',
-      cible: 'ouverture-originale',
+    await expect(sent).resolves.toEqual({
+      ok: true,
+      value: {
+        conflits: [{ activites: ['ancienne-ouverture', 'remplacante'], pointages: ['geste'] }],
+      },
     });
   });
 
-  it('should retain a historical pointage as a technical recovery failure without publishing an invented intention', async () => {
-    const historique: GesteDAtelier = { ...arriveeFixture, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT' };
+  it('should translate resolved operator and workstation identities from publication conflicts', async () => {
+    const sent = whenSending(ouvertureFixture);
 
-    const publication = whenSending(historique);
+    await whenServerAcceptsConflict([
+      {
+        operateur: { id: 'jean', nom: 'Dupont', prenom: 'Jean' },
+        poste: { id: 'tour', libelle: 'Tour' },
+        activites: [],
+        pointages: ['geste'],
+      },
+    ]);
 
-    await thenItFailed(publication, 'Pointage historique sans intention : récupération explicite requise.');
+    await expect(sent).resolves.toEqual({
+      ok: true,
+      value: { conflits: [{ operateurId: 'jean', posteId: 'tour', activites: [], pointages: ['geste'] }] },
+    });
   });
 
   it('should never send the pause a finish belongs to, the pause living on the pupitre', async () => {
     const fin = whenSending({
-      ...arriveeFixture,
+      ...ouvertureFixture,
       nature: 'POINTAGE',
       suiviId: 'piece',
       type: 'FIN',
-      intention: 'FIN',
-      cible: 'ouverture',
       posteId: 'tour',
       suspension: { pause: 'pause-de-midi', reouverture: 'DEBUT' },
+      intention: 'FIN',
+      cible: 'activite-fixture-40',
     });
     const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
 
     await thenWriteSucceededWith(fin, request, {
       id: 'geste',
-      dateDeSurvenue: arriveeFixture.dateDeSurvenue,
+      dateDeSurvenue: ouvertureFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'FIN',
       intention: 'FIN',
-      cible: 'ouverture',
+      cible: 'activite-fixture-40',
       poste: 'tour',
     });
   });
 
   it('should expose every stable business refusal, including codes outside the old allowlist', async () => {
-    const refused = whenSending(arriveeFixture);
+    const refused = whenSending(ouvertureFixture);
 
     await whenServerRefusesWrite('urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'collision');
 
@@ -263,11 +219,12 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
 
   it.each<[string, ReplayDecision]>([
     ['urn:glm:erreur:atelier:saisie-concurrente', 'RELIRE_ET_REJOUER'],
-    ['urn:glm:erreur:atelier:journee-de-travail-deja-ouverte', 'ACCEPTER'],
+    ['urn:glm:erreur:atelier:activite-visee-introuvable', 'PROPAGER'],
+    ['urn:glm:erreur:atelier:activite-visee-incoherente', 'PROPAGER'],
     ['urn:glm:erreur:autre:saisie-concurrente', 'PROPAGER'],
     ['urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'PROPAGER'],
   ])('should supply a domain refusal allowing %s to decide %s', async (code, decision) => {
-    const refused = whenSending(arriveeFixture);
+    const refused = whenSending(ouvertureFixture);
 
     await whenServerRefusesWrite(code, 'cause');
 
@@ -275,29 +232,21 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   });
 
   it('should preserve a transport failure as a retryable failure', async () => {
-    const refused = whenSending(arriveeFixture);
+    const refused = whenSending(ouvertureFixture);
 
     await whenTransportFails();
 
     await thenTransportFailureIs(refused);
   });
 
-  it('should reread the operator day before replaying presence', async () => {
-    const presence = whenRereading(arriveeFixture);
-    const operatorDayRequest = await whenServerReturnsOperatorDay();
-
-    thenItRequestedTheOperatorDay(operatorDayRequest);
-    await thenRereadCompletes(presence);
-  });
-
   it('should reread the workshop element before replaying pointage', async () => {
     const pointage = whenRereading({
-      ...arriveeFixture,
+      ...ouvertureFixture,
       nature: 'POINTAGE',
       suiviId: 'piece',
       type: 'FIN',
       intention: 'FIN',
-      cible: 'ouverture',
+      cible: 'activite-fixture-41',
     });
     const workshopElementRequest = await whenServerReturnsWorkshopElement();
 
@@ -313,33 +262,34 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     return operation;
   };
   const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
-  const whenSending = (geste: GesteDAtelier): Promise<Result<void, RefusDePublication>> => observeRejection(serveur.send(geste));
-  const whenRereading = (geste: GesteDAtelier): Promise<void> => serveur.reread(geste);
+  const whenSending = (geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> =>
+    observeRejection(serveur.send(geste));
+  const whenRereading = (geste: GesteDePointage): Promise<void> => serveur.reread(geste);
   const whenServerReturnsTheReference = async (): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne('/api/pupitre/referentiel');
     request.flush(referentielFixture);
     return request;
   };
+  const whenServerAcceptsConflict = async (conflits: RestSuiviDAtelier['conflits'], status = 200): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    http
+      .expectOne('/api/atelier/suivis/piece/pointages')
+      .flush({ ...suiviDetailleFixture, conflits } satisfies RestSuiviDAtelier, { status, statusText: 'Accepted' });
+  };
   const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne(url);
-    request.flush({}, { status: 200, statusText: 'Replay accepted' });
+    request.flush(suiviDetailleFixture, { status: 200, statusText: 'Replay accepted' });
     return request;
   };
   const whenServerRefusesWrite = async (code: string, message: string): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
-    http.expectOne('/api/atelier/journees').flush({ type: code, message }, { status: 409, statusText: 'Conflict' });
+    http.expectOne('/api/atelier/suivis/piece/pointages').flush({ type: code, message }, { status: 409, statusText: 'Conflict' });
   };
   const whenTransportFails = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
-    http.expectOne('/api/atelier/journees').error(new ProgressEvent('error'));
-  };
-  const whenServerReturnsOperatorDay = async (): Promise<TestRequest> => {
-    await new Promise(resolve => setTimeout(resolve));
-    const request = http.expectOne(request => request.url === '/api/atelier/journees');
-    request.flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
-    return request;
+    http.expectOne('/api/atelier/suivis/piece/pointages').error(new ProgressEvent('error'));
   };
   const whenServerReturnsWorkshopElement = async (): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
@@ -351,20 +301,21 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     expect(request.request.params.keys()).toEqual([]);
   };
   const thenWriteSucceededWith = async (
-    write: Promise<Result<void, RefusDePublication>>,
+    write: Promise<Result<PublicationAcceptee, RefusDePublication>>,
     request: ReturnType<HttpTestingController['expectOne']>,
     body: unknown,
   ): Promise<void> => {
     expect(request.request.body).toEqual(body);
-    await expect(write).resolves.toEqual({ ok: true, value: undefined });
+    await expect(write).resolves.toEqual({ ok: true, value: { conflits: [] } });
   };
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
     expect(reference.operateurs).toEqual([
-      { id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'PRESENT', postes: [], evenements: [] },
-      { id: 'marie', nom: 'Martin', prenom: 'Marie', etat: 'ABSENT', postes: [{ id: 'tour', libelle: 'Tour' }], evenements: [] },
+      { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] },
+      { id: 'marie', nom: 'Martin', prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },
     ]);
     expect(reference.suivis[0]).toEqual({
+      conflits: [],
       id: 'piece',
       nom: 'PR-2026-000001',
       etat: 'EN_ATTENTE',
@@ -373,6 +324,10 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       evenements: [],
     });
     expect(reference.suivis[1]).toEqual({
+      conflits: [
+        { operateurId: 'jean', activites: [], pointages: ['conflit-reference'] },
+        { operateurId: 'marie', posteId: 'tour', activites: ['remplacante'], pointages: ['fin'] },
+      ],
       id: 'piece-2',
       nom: 'PR-2026-000002',
       reference: 'M-1187',
@@ -380,16 +335,16 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       type: 'PRODUIT',
       activites: [
         {
-          ouverture: 'travail-original',
-          echeance: '2026-09-05T21:00:00Z',
+          ouverture: 'activite-fixture-36',
+          echeance: '2026-09-05T21:00:00.000Z',
           operateurId: 'jean',
           categorie: 'TRAVAIL',
           depuis: '2026-09-05T08:00:00Z',
           posteId: 'tour',
         },
         {
-          ouverture: 'nc-originale',
-          echeance: '2026-09-05T21:00:00Z',
+          ouverture: 'activite-fixture-37',
+          echeance: '2026-09-05T21:00:00.000Z',
           operateurId: 'jean',
           categorie: 'NON_CONFORMITE',
           depuis: '2026-09-05T08:00:00Z',
@@ -405,28 +360,25 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       await expect(operation).rejects.toBeInstanceOf(Error);
     }
   };
-  const thenBusinessRefusalIs = async (operation: Promise<Result<void, RefusDePublication>>): Promise<void> => {
+  const thenBusinessRefusalIs = async (operation: Promise<Result<PublicationAcceptee, RefusDePublication>>): Promise<void> => {
     const result = await operation;
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({ error: { code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' } });
   };
   const thenReplayDecisionIs = async (
-    operation: Promise<Result<void, RefusDePublication>>,
+    operation: Promise<Result<PublicationAcceptee, RefusDePublication>>,
     code: string,
     decision: ReplayDecision,
   ): Promise<void> => {
     const result = await operation;
     const refusal = result.ok ? undefined : result.error;
-    expect(decideReplay('ARRIVEE_ASSUREE', refusal)).toBe(decision);
+    expect(decideReplay(refusal)).toBe(decision);
     expect(refusal).toMatchObject({ code, message: 'cause' });
   };
   const thenTransportFailureIs = async (operation: Promise<unknown>): Promise<void> => {
     const failure = await operation.catch((reason: unknown) => reason);
     expect(failure).not.toBeInstanceOf(RefusDePublication);
     expect(failure).toMatchObject({ status: 0 });
-  };
-  const thenItRequestedTheOperatorDay = (request: TestRequest): void => {
-    expect(request.request.params.get('operateur')).toBe('jean');
   };
   const thenItRequestedTheWorkshopElement = (request: TestRequest): void => {
     expect(request.request.url).toBe('/api/atelier/suivis/piece');

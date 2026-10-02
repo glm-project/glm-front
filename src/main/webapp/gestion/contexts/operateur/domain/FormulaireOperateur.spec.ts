@@ -1,7 +1,7 @@
 import { FormulaireOperateur } from './FormulaireOperateur';
+import { Identifiant } from './Identifiant';
+import { IdentifiantDejaUtilise } from './IdentifiantDejaUtilise';
 import { IdentiteDejaUtilisee } from './IdentiteDejaUtilisee';
-import { Matricule } from './Matricule';
-import { MatriculeDejaUtilise } from './MatriculeDejaUtilise';
 import { NomOperateur } from './NomOperateur';
 import { Operateur } from './Operateur';
 import { OperateurId } from './OperateurId';
@@ -18,7 +18,7 @@ const scieFixture = new PosteHabilitable(new PosteHabilitableId('scie-1'), { lib
 const operateurFixture = new Operateur(new OperateurId('jean'), {
   nom: new NomOperateur('Dupont'),
   prenom: new PrenomOperateur('Jean'),
-  matricule: new Matricule('049'),
+  identifiant: new Identifiant('049'),
   tauxHoraire: new TauxHoraire(22),
   postes: [tourFixture],
   natures: ['tournage'],
@@ -30,14 +30,14 @@ describe('FormulaireOperateur', () => {
   it('should start a declaration empty and refuse to produce a command', () => {
     const formulaire = FormulaireOperateur.pourCreation();
 
-    expect(formulaire.saisie).toEqual({ nom: '', prenom: '', matricule: '', tauxHoraire: '', postes: [] });
+    expect(formulaire.saisie).toEqual({ nom: '', prenom: '', identifiant: '', tauxHoraire: '', postes: [] });
     expect(formulaire.estValide()).toBe(false);
     expect(formulaire.produireCommande()).toEqual({
       ok: false,
       error: {
         nom: 'Le nom est obligatoire et limité à 100 caractères.',
         prenom: 'Le prénom est obligatoire et limité à 100 caractères.',
-        matricule: undefined,
+        identifiant: undefined,
         tauxHoraire: undefined,
         enregistrement: undefined,
       },
@@ -47,7 +47,7 @@ describe('FormulaireOperateur', () => {
   it('should restate an existing operator for revision', () => {
     const formulaire = FormulaireOperateur.pourModification(operateurFixture);
 
-    expect(formulaire.saisie).toEqual({ nom: 'Dupont', prenom: 'Jean', matricule: '049', tauxHoraire: '22', postes: [tourFixture] });
+    expect(formulaire.saisie).toEqual({ nom: 'Dupont', prenom: 'Jean', identifiant: '049', tauxHoraire: '22', postes: [tourFixture] });
     expect(formulaire.id).toBe(operateurFixture.id);
   });
 
@@ -55,7 +55,7 @@ describe('FormulaireOperateur', () => {
     const sansOptions = new Operateur(new OperateurId('lea'), {
       nom: new NomOperateur('Martin'),
       prenom: new PrenomOperateur('Léa'),
-      matricule: undefined,
+      identifiant: undefined,
       tauxHoraire: undefined,
       postes: [],
       natures: [],
@@ -63,12 +63,12 @@ describe('FormulaireOperateur', () => {
 
     const formulaire = FormulaireOperateur.pourModification(sansOptions);
 
-    expect(formulaire.saisie.matricule).toBe('');
+    expect(formulaire.saisie.identifiant).toBe('');
     expect(formulaire.saisie.tauxHoraire).toBe('');
   });
 
   it('should produce a creation command carrying the optional entries', () => {
-    const formulaire = formulaireValideFixture().avecMatricule('049').avecTauxHoraire('22,5').avecPosteAjoute(tourFixture);
+    const formulaire = formulaireValideFixture().avecIdentifiant('049').avecTauxHoraire('22,5').avecPosteAjoute(tourFixture);
 
     expect(formulaire.produireCommande()).toEqual({
       ok: true,
@@ -76,7 +76,7 @@ describe('FormulaireOperateur', () => {
         type: 'CREATION',
         nom: new NomOperateur('Dupont'),
         prenom: new PrenomOperateur('Jean'),
-        matricule: new Matricule('049'),
+        identifiant: new Identifiant('049'),
         tauxHoraire: new TauxHoraire(22.5),
         postes: [tourFixture.id],
       },
@@ -84,7 +84,7 @@ describe('FormulaireOperateur', () => {
   });
 
   it('should produce a creation command dropping the blank optional entries', () => {
-    const formulaire = formulaireValideFixture().avecMatricule('  ').avecTauxHoraire('  ');
+    const formulaire = formulaireValideFixture().avecIdentifiant('  ').avecTauxHoraire('  ');
 
     expect(formulaire.produireCommande()).toEqual({
       ok: true,
@@ -92,7 +92,7 @@ describe('FormulaireOperateur', () => {
         type: 'CREATION',
         nom: new NomOperateur('Dupont'),
         prenom: new PrenomOperateur('Jean'),
-        matricule: undefined,
+        identifiant: undefined,
         tauxHoraire: undefined,
         postes: [],
       },
@@ -109,7 +109,7 @@ describe('FormulaireOperateur', () => {
         id: operateurFixture.id,
         nom: new NomOperateur('Durand'),
         prenom: new PrenomOperateur('Jean'),
-        matricule: new Matricule('049'),
+        identifiant: new Identifiant('049'),
         tauxHoraire: new TauxHoraire(22),
         postes: [tourFixture.id],
       },
@@ -160,39 +160,39 @@ describe('FormulaireOperateur', () => {
   });
 
   it('should keep a duplicate payroll number refusal while the payroll number is retyped identically', () => {
-    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(new MatriculeDejaUtilise()).avecMatricule('049');
+    const refuse = formulaireValideFixture().avecIdentifiant('049').avecRefus(new IdentifiantDejaUtilise()).avecIdentifiant('049');
 
-    expect(refuse.erreurMatricule()).toBe('Un autre opérateur porte déjà ce matricule.');
+    expect(refuse.erreurIdentifiant()).toBe('Un autre opérateur porte déjà cet identifiant.');
   });
 
   it('should keep a duplicate payroll number refusal when another entry changes', () => {
-    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(new MatriculeDejaUtilise()).avecNom('Durand');
+    const refuse = formulaireValideFixture().avecIdentifiant('049').avecRefus(new IdentifiantDejaUtilise()).avecNom('Durand');
 
-    expect(refuse.erreurMatricule()).toBe('Un autre opérateur porte déjà ce matricule.');
+    expect(refuse.erreurIdentifiant()).toBe('Un autre opérateur porte déjà cet identifiant.');
   });
 
   it.each([
     ['a duplicate identity', new IdentiteDejaUtilisee()],
-    ['a duplicate payroll number', new MatriculeDejaUtilise()],
+    ['a duplicate payroll number', new IdentifiantDejaUtilise()],
   ])('should not report %s as a saving failure', (_refus, refus) => {
-    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(refus);
+    const refuse = formulaireValideFixture().avecIdentifiant('049').avecRefus(refus);
 
     expect(refuse.erreurEnregistrement()).toBeUndefined();
   });
 
   it('should clear a duplicate payroll number refusal once the payroll number changes', () => {
-    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(new MatriculeDejaUtilise());
+    const refuse = formulaireValideFixture().avecIdentifiant('049').avecRefus(new IdentifiantDejaUtilise());
 
-    const corrige = refuse.avecMatricule('050');
+    const corrige = refuse.avecIdentifiant('050');
 
-    expect(refuse.erreurMatricule()).toBe('Un autre opérateur porte déjà ce matricule.');
-    expect(corrige.erreurMatricule()).toBeUndefined();
+    expect(refuse.erreurIdentifiant()).toBe('Un autre opérateur porte déjà cet identifiant.');
+    expect(corrige.erreurIdentifiant()).toBeUndefined();
   });
 
   it('should keep a duplicate payroll number refusal while another entry changes', () => {
-    const refuse = formulaireValideFixture().avecMatricule('049').avecRefus(new MatriculeDejaUtilise()).avecTauxHoraire('22');
+    const refuse = formulaireValideFixture().avecIdentifiant('049').avecRefus(new IdentifiantDejaUtilise()).avecTauxHoraire('22');
 
-    expect(refuse.erreurMatricule()).toBe('Un autre opérateur porte déjà ce matricule.');
+    expect(refuse.erreurIdentifiant()).toBe('Un autre opérateur porte déjà cet identifiant.');
   });
 
   it.each([
@@ -220,10 +220,11 @@ describe('FormulaireOperateur', () => {
     expect(refuse.estValide()).toBe(false);
   });
 
-  it('should report an oversized payroll number', () => {
-    const formulaire = formulaireValideFixture().avecMatricule('a'.repeat(51));
+  it.each(['1234567', '12A'])('should report an identifier that is not one to six digits: %s', identifiant => {
+    const formulaire = formulaireValideFixture().avecIdentifiant(identifiant);
 
-    expect(formulaire.erreurMatricule()).toBe('Le matricule est limité à 50 caractères.');
+    expect(formulaire.erreurIdentifiant()).toBe("L'identifiant contient de 1 à 6 chiffres.");
+    expect(formulaire.estValide()).toBe(false);
   });
 
   it.each(['0', '-1', 'abc'])('should report an hourly rate that is not strictly positive: %s', taux => {

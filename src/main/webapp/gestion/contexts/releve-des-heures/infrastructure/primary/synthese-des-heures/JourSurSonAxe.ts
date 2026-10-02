@@ -21,7 +21,6 @@ const bornesDe = (borne: Borne): readonly number[] =>
   borne.estEnCours() ? [minutesDeDebut(borne.debut)] : [minutesDeDebut(borne.debut), minutesDeFin(borne.debut, borne.finOuDebut())];
 
 const bornesDuJour = (jour: JourDeReleve, ouvert: boolean): readonly number[] => [
-  ...jour.plages.flatMap(bornesDe),
   ...jour.intervalles.flatMap(bornesDe),
   ...(ouvert ? jour.pointages.map(pointage => minutesDeDebut(pointage.instant)) : []),
 ];

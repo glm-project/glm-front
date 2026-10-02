@@ -1,5 +1,4 @@
 import { IdentiteOperateurDesigne } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/OperateurDesigne';
-import { SituationDeLOperateur } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/PresenceDeLOperateur';
 import { LIBELLES_ENTETE_PUPITRE } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { LongPress } from '@/pupitre/shared/design-system/infrastructure/primary/long-press/long-press';
 import { Component, input, output } from '@angular/core';
@@ -23,7 +22,7 @@ export class PupitreHeader {
   readonly heading = input.required<string>();
   readonly connected = input.required<boolean>();
   readonly operateur = input<IdentiteOperateurDesigne>();
-  readonly presence = input.required<SituationDeLOperateur>();
+  readonly enPause = input(false);
   readonly message = input<MessageDAtelierVisible>();
   readonly finRequested = output();
   readonly reinitialisationRequested = output();

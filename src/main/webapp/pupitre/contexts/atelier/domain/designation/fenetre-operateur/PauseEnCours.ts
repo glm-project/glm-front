@@ -1,9 +1,10 @@
 import {
+  ActiviteDuPupitre,
   EvenementDuJournal,
-  GesteDAtelier,
   GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
+  SuiviDuPupitre,
   Suspension,
   TypeDOuverture,
 } from '../../journal-du-pupitre/JournalDuPupitre';
@@ -17,7 +18,7 @@ export interface ActiviteSuspendue {
 
 interface Emplacement {
   readonly suiviId: string;
-  readonly posteId?: string | undefined;
+  readonly posteId?: string;
 }
 
 type GesteSuspendu = GesteDePointage & { readonly suspension: Suspension };
@@ -27,7 +28,7 @@ interface SuspensionJournalisee {
   readonly refusee: boolean;
 }
 
-const isSuspension = (geste: GesteDAtelier): geste is GesteSuspendu => geste.nature === 'POINTAGE' && geste.suspension !== undefined;
+const isSuspension = (geste: GesteDePointage): geste is GesteSuspendu => geste.suspension !== undefined;
 
 const toActiviteSuspendue = ({ geste: { suiviId, posteId, suspension } }: SuspensionJournalisee): ActiviteSuspendue =>
   posteId === undefined ? { suiviId, reouverture: suspension.reouverture } : { suiviId, posteId, reouverture: suspension.reouverture };
@@ -35,10 +36,10 @@ const toActiviteSuspendue = ({ geste: { suiviId, posteId, suspension } }: Suspen
 const suspensionsOf = (evenements: readonly EvenementDuJournal[]): readonly SuspensionJournalisee[] =>
   evenements.flatMap(({ geste, etat }) => (isSuspension(geste) ? [{ geste, refusee: etat === 'REFUSE' }] : []));
 
-const pauseOf = (geste: GesteDAtelier | undefined): string | undefined =>
+const pauseOf = (geste: GesteDePointage | undefined): string | undefined =>
   geste?.nature === 'POINTAGE' ? geste.suspension?.pause : undefined;
 
-const lastGestureOf = (evenements: readonly EvenementDuJournal[], operateurId: string): GesteDAtelier | undefined =>
+const lastGestureOf = (evenements: readonly EvenementDuJournal[], operateurId: string): GesteDePointage | undefined =>
   evenements.filter(({ geste }) => geste.operateurId === operateurId).at(-1)?.geste;
 
 const suspensionsOfTheLastPause = (evenements: readonly EvenementDuJournal[], operateurId: string): readonly SuspensionJournalisee[] => {
@@ -49,9 +50,19 @@ const suspensionsOfTheLastPause = (evenements: readonly EvenementDuJournal[], op
 const occupiesTheSamePlace = (emplacement: Emplacement, autre: Emplacement): boolean =>
   emplacement.suiviId === autre.suiviId && emplacement.posteId === autre.posteId;
 
-const openActivitiesOf = (referentiel: ReferentielDuPupitre, operateurId: string): readonly Emplacement[] =>
+const isActionnable = (activite: ActiviteDuPupitre, suivi: SuiviDuPupitre, operateurId: string, instant: number): boolean =>
+  activite.operateurId === operateurId
+  && instant < Date.parse(activite.echeance)
+  && !suivi.conflits.some(conflit => conflit.activites.includes(activite.ouverture));
+
+const suspensionInterpretable = (referentiel: ReferentielDuPupitre, geste: GesteSuspendu): boolean =>
+  !referentiel.suivis.some(suivi => suivi.conflits.some(conflit => conflit.pointages.includes(geste.id)));
+
+const openActivitiesOf = (referentiel: ReferentielDuPupitre, operateurId: string, instant: number): readonly Emplacement[] =>
   referentiel.suivis.flatMap(suivi =>
-    suivi.activites.filter(activite => activite.operateurId === operateurId).map(activite => ({ ...activite, suiviId: suivi.id })),
+    suivi.activites
+      .filter(activite => isActionnable(activite, suivi, operateurId, instant))
+      .map(activite => ({ ...activite, suiviId: suivi.id })),
   );
 
 const wasRefusedAt = (suspensions: readonly SuspensionJournalisee[], emplacement: Emplacement): boolean =>
@@ -69,17 +80,20 @@ const reopenableIn =
   ({ geste, refusee }: SuspensionJournalisee): boolean =>
     !refusee
     && referentiel.suivis.some(suivi => suivi.id === geste.suiviId)
+    && suspensionInterpretable(referentiel, geste)
     && holdsWorkstation(referentiel, operateurId, geste.posteId)
     && !ouvertes.some(ouverte => occupiesTheSamePlace(ouverte, geste));
 
 export class PauseEnCours {
   private constructor(private readonly activites: readonly ActiviteSuspendue[]) {}
 
-  static of(journal: JournalDuPupitre, operateurId: string, instant?: number): PauseEnCours | undefined {
-    const referentiel = projectReferentiel(journal, instant);
+  static of(journal: JournalDuPupitre, operateurId: string, instant: number): PauseEnCours | undefined {
+    const referentiel = projectReferentiel(journal);
     if (referentiel === undefined) return undefined;
-    const suspensions = suspensionsOfTheLastPause(journal.evenements, operateurId);
-    const ouvertes = openActivitiesOf(referentiel, operateurId);
+    const suspensions = suspensionsOfTheLastPause(journal.evenements, operateurId).filter(
+      ({ geste }) => !journal.pausesArretees?.includes(geste.suspension.pause),
+    );
+    const ouvertes = openActivitiesOf(referentiel, operateurId, instant);
     if (ouvertes.some(ouverte => !wasRefusedAt(suspensions, ouverte))) return undefined;
     const activites = suspensions.filter(reopenableIn(referentiel, operateurId, ouvertes)).map(toActiviteSuspendue);
     return activites.length === 0 ? undefined : new PauseEnCours(activites);

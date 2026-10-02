@@ -5,6 +5,7 @@ import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/E
 import { FraicheurDuReferentiel } from '@/pupitre/contexts/atelier/application/FraicheurDuReferentiel';
 import { GestesRecordingQueue } from '@/pupitre/contexts/atelier/application/GestesRecordingQueue';
 import { PupitreSynchronization } from '@/pupitre/contexts/atelier/application/PupitreSynchronization';
+import { ActiviteExpirationSchedulerPort } from '@/pupitre/contexts/atelier/domain/designation/ActiviteExpirationSchedulerPort';
 import {
   DesignationExpiration,
   DesignationExpirationSchedulerPort,
@@ -33,7 +34,7 @@ interface KeyFixture {
 }
 
 const referentielFixture: ReferentielDuPupitre = {
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', matricule: '049', etat: 'ABSENT', postes: [], evenements: [] }],
+  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [],
 };
 
@@ -114,6 +115,7 @@ describe('Designation keypad', () => {
         { provide: JournauxDuPupitrePort, useValue: journalFixture },
         { provide: AtelierExchangePort, useValue: serveurFixture },
         { provide: DesignationExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
+        { provide: ActiviteExpirationSchedulerPort, useClass: DesignationExpirationSchedulerFixture },
         { provide: DeviceSessionPort, useClass: DeviceSessionFixture },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
