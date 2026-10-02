@@ -1,32 +1,30 @@
 import { Cout } from '../montant/Cout';
+import { PointageDeCout } from '../pointage/PointageDeCout';
 import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
 import { TempsPasse } from '../temps/TempsPasse';
 import { NatureDOperation } from './NatureDOperation';
 
 export interface FicheDeLigne {
   readonly nature: NatureDOperation | undefined;
-  readonly periode: PeriodeDeTravail;
   readonly temps: TempsPasse;
   readonly cout: Cout;
-  readonly nonConformites: readonly PeriodeDeTravail[];
   readonly finsAutomatiques: readonly PeriodeDeTravail[];
+  readonly pointages: readonly PointageDeCout[];
 }
 
 export class LigneDeCout {
   readonly nature: NatureDOperation | undefined;
-  readonly periode: PeriodeDeTravail;
   readonly temps: TempsPasse;
   readonly cout: Cout;
-  readonly nonConformites: readonly PeriodeDeTravail[];
   readonly finsAutomatiques: readonly PeriodeDeTravail[];
+  readonly pointages: readonly PointageDeCout[];
 
   constructor(fiche: FicheDeLigne) {
     this.nature = fiche.nature;
-    this.periode = fiche.periode;
     this.temps = fiche.temps;
     this.cout = fiche.cout;
-    this.nonConformites = [...fiche.nonConformites];
     this.finsAutomatiques = [...fiche.finsAutomatiques];
+    this.pointages = [...fiche.pointages];
   }
 
   estSansPoste(): boolean {

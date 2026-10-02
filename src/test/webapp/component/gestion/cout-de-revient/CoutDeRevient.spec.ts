@@ -18,7 +18,7 @@ describe('Cost of manufacture in gestion', () => {
     api = new CoutDeRevientApiFixture();
   });
 
-  it('should keep certain cells readable and incomplete cells without figures including dated details', () => {
+  it('should keep certain cells readable and incomplete cells without figures, detail opened', () => {
     givenIncompleteReport();
     whenVisitingTheReport();
     whenOpeningTheDetailOfTheFirstRow();
@@ -112,12 +112,12 @@ describe('Cost of manufacture in gestion', () => {
     thenTheAbsenceOfClockingIsExplained();
   });
 
-  it('should date the period and the reworks of a row when its detail is opened', () => {
+  it('should justify each clocking of a row and the sharing of its operator when its detail is opened', () => {
     givenReport();
     whenVisitingTheReport();
     whenOpeningTheDetailOfTheFirstRow();
 
-    thenTheDatedDetailIsVisible();
+    thenTheClockingsAndTheirSharesAreVisible();
   });
 
   it('should keep the detail toggle reachable from the keyboard', () => {
@@ -202,8 +202,6 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-main-d-oeuvre-cell')).should('contain.text', 'Incomplet');
     cy.get(dataSelector('cout-total')).should('contain.text', 'Incomplet');
     cy.get(dataSelector('cout-repartition')).should('contain.text', 'Main d’œuvre Incomplet');
-    cy.get(dataSelector('cout-sans-non-conformite')).should('contain.text', 'À résoudre');
-    cy.get(dataSelector('cout-periode')).should('contain.text', 'Fin à résoudre');
   };
 
   const thenEveryResponsibleSequenceIsVisible = (): void => {
@@ -284,9 +282,13 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-ligne-row')).should('not.exist');
   };
 
-  const thenTheDatedDetailIsVisible = (): void => {
-    cy.get(dataSelector('cout-periode')).should('contain.text', '11 mai 2026');
-    cy.get(dataSelector('cout-non-conformite')).should('have.length', 1);
+  const thenTheClockingsAndTheirSharesAreVisible = (): void => {
+    cy.get(dataSelector('cout-pointage')).should('have.length', 1);
+    cy.get(dataSelector('cout-pointage-operateur')).should('have.text', 'Julien Martin');
+    cy.get(dataSelector('cout-pointage-main-d-oeuvre')).should('contain.text', '50,00');
+    cy.get(dataSelector('cout-part')).should('have.length', 3);
+    cy.get(dataSelector('cout-part-contexte')).eq(1).should('contain.text', 'aussi sur Haas VF-2 · OF-2026-000192 (Fraisage)');
+    cy.get(dataSelector('cout-part-calcul')).eq(1).should('contain.text', '20,00 × 1,00 ÷ 2 = 10,00');
   };
 
   const thenTheDetailToggleHasFocus = (): void => {

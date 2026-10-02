@@ -2,12 +2,62 @@ import { components } from '@/app/generated/schema';
 
 type RestRapport = components['schemas']['RestCoutDeRevient'];
 type RestLigne = components['schemas']['RestLigneDeCout'];
+type RestPointage = components['schemas']['RestPointageDuCout'];
 
 const ROUTE = '/api/couts-de-revient/*';
 
 const completFixture = <T>(valeur: T): { complete: true; valeur: T } => ({ complete: true, valeur });
 
 const PERIODE = { debut: '2026-05-11T09:00:00Z', fin: '2026-05-11T12:00:00Z' };
+
+const pointageDeFraisage: RestPointage = {
+  anomalies: [],
+  operateur: { id: 'operateur-julien', prenom: 'Julien', nom: 'Martin' },
+  poste: { id: 'poste-dmg', libelle: 'DMG DMU 50' },
+  categorie: 'TRAVAIL',
+  debut: '2026-05-11T09:00:00Z',
+  fin: '2026-05-11T12:00:00Z',
+  duree: completFixture('PT3H'),
+  coutHoraire: 45,
+  tauxHoraire: 20,
+  cout: { machine: completFixture(135), mainDOeuvre: completFixture(50), total: completFixture(185) },
+  parts: [
+    {
+      debut: '2026-05-11T09:00:00Z',
+      fin: '2026-05-11T10:00:00Z',
+      duree: 'PT1H',
+      diviseur: 1,
+      mainDOeuvre: completFixture(20),
+      paralleles: [],
+      bloquants: [],
+    },
+    {
+      debut: '2026-05-11T10:00:00Z',
+      fin: '2026-05-11T11:00:00Z',
+      duree: 'PT1H',
+      diviseur: 2,
+      mainDOeuvre: completFixture(10),
+      paralleles: [
+        {
+          element: { id: 'element-192', nom: 'OF-2026-000192', type: 'ORDRE_DE_FABRICATION' },
+          poste: { id: 'poste-haas', libelle: 'Haas VF-2' },
+          nature: 'Fraisage',
+        },
+      ],
+      bloquants: [],
+    },
+    {
+      debut: '2026-05-11T11:00:00Z',
+      fin: '2026-05-11T12:00:00Z',
+      duree: 'PT1H',
+      diviseur: 1,
+      mainDOeuvre: completFixture(20),
+      paralleles: [],
+      bloquants: [],
+    },
+  ],
+  contradictoires: [],
+};
 
 const fraisage: RestLigne = {
   nature: 'Fraisage',
@@ -16,7 +66,7 @@ const fraisage: RestLigne = {
   finsAutomatiques: [],
   nonConformites: [{ debut: '2026-05-11T10:00:00Z', fin: '2026-05-11T11:00:00Z' }],
   cout: { machine: completFixture(135), mainDOeuvre: completFixture(60), total: completFixture(195) },
-  pointages: [],
+  pointages: [pointageDeFraisage],
 };
 
 const tournage: RestLigne = {
