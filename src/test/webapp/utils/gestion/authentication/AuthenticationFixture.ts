@@ -45,6 +45,5 @@ export class AuthenticationFixture extends AuthenticationPort {
 declare global {
   interface Window {
     gestionAuthenticationFixture?: AuthenticationFixture;
-    gestionInitialNavigationFixture?: Promise<unknown>;
   }
 }

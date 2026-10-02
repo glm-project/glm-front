@@ -21,9 +21,10 @@ so the first API session synchronization cannot precede the authorization-code e
 failure is reported through `ErrorHandlerPort` and keeps the routed content closed.
 
 The Cypress build replaces that provider file with a composition under `src/test/`. It uses the in-memory
-adapter by default and permits a fixture to retain or refuse authentication. Its initial-navigation signal
-orders the browser scenario; assertions remain on the rendered screen. Those fixture controls belong to
-the test build alone.
+adapter by default and permits a fixture to retain or refuse authentication. Browser scenarios wait for
+authentication to reach the port and for the shell to render before releasing or refusing it; they do not
+depend on routing completing while authentication is pending. Those fixture controls belong to the test
+build alone.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
 
 `pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,

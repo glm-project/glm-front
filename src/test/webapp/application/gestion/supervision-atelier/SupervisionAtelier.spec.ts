@@ -1,6 +1,5 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
-import { requiredFixture } from '../../../utils/RequiredFixture';
 import { AuthenticationFixture } from '../../../utils/gestion/authentication/AuthenticationFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
@@ -152,7 +151,7 @@ const whenOpeningWithRetainedAuthentication = (authenticationFixture: Authentica
     },
   });
   cy.then(() => authenticationFixture.started);
-  cy.window().then(window => requiredFixture(window.gestionInitialNavigationFixture, 'initial gestion navigation'));
+  cy.get(dataSelector('gestion-header')).should('be.visible');
   cy.get(dataSelector('gestion-shell'))
     .then(shell => shell.find(dataSelector('supervision-atelier')).length)
     .as('screensBeforeAuthentication', { type: 'static' });
