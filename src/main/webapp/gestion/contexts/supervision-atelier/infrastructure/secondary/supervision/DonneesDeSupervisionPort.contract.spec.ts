@@ -306,6 +306,34 @@ const unresolvedActivityFixture: SceneFixture = {
   donnees: { ...fabricationOrderFixture.donnees, operateurs: [] },
   response: { ...fabricationOrderFixture.response, operateurs: [] },
 };
+
+const preciseEndFixture: SceneFixture = {
+  donnees: {
+    ...oneOperatorFixture.donnees,
+    activites: [
+      new ActiviteDeSupervision({
+        id: new IdentifiantActivite('automatic-end'),
+        operateurId: operateurFixture.id,
+        objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+        categorie: new CategorieActivite('TRAVAIL'),
+        debut: new Instant('2026-09-12T06:00:00.123456789Z'),
+        echeance: new Instant('2026-09-12T19:00:00.987654321Z'),
+        finRetenue: new Instant('2026-09-12T18:45:00.111222333Z'),
+        etat: 'TERMINEE_AUTOMATIQUEMENT',
+        poste: new PosteDeSupervision({ id: new IdentifiantPoste('poste-tour'), libelle: 'Tour 3' }),
+      }),
+    ],
+  },
+  response: {
+    ...automaticEndFixture.response,
+    activites: automaticEndFixture.response.activites.map(activite => ({
+      ...activite,
+      debut: '2026-09-12T08:00:00.123456789+02:00',
+      echeance: '2026-09-12T21:00:00.987654321+02:00',
+      finRetenue: '2026-09-12T20:45:00.111222333+02:00',
+    })),
+  },
+};
 const unresolvedSequenceFixture: SceneFixture = {
   donnees: { ...emptyConflictFixture.donnees, operateurs: [], activites: [] },
   response: { ...emptyConflictFixture.response, operateurs: [], activites: [] },
@@ -428,6 +456,18 @@ describe.each([
     expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(automaticEndFixture.donnees));
   });
 
+  it('should retain opening, deadline and automatic finish nanoseconds in UTC', async () => {
+    givenEvaluationAt(EVALUATION.value);
+    const harness = given(preciseEndFixture);
+
+    const donnees = await whenRead(harness);
+
+    expect(donnees.activites.map(activite => [activite.debut.value, activite.echeance.value, activite.finRetenue.value])).toEqual([
+      ['2026-09-12T06:00:00.123456789Z', '2026-09-12T19:00:00.987654321Z', '2026-09-12T18:45:00.111222333Z'],
+    ]);
+    expect(donnees.activites.map(activite => activite.isTermineeAutomatiquement(donnees.evaluation))).toEqual([true]);
+  });
+
   it('should retain an empty conflicting sequence independently of current interpretable work', async () => {
     givenEvaluationAt(EVALUATION.value);
     const harness = given(emptyConflictFixture);
@@ -480,6 +520,25 @@ describe('HTTP supervision beyond the shared contract', () => {
     expect(harnessFixture.errors.errors).toEqual([]);
   });
 
+  it.each([
+    { evaluation: '2026-09-13T08:00:00.1Z', utc: '2026-09-13T08:00:00.100Z' },
+    { evaluation: '2026-09-13T08:00:00.12Z', utc: '2026-09-13T08:00:00.120Z' },
+    { evaluation: '2026-09-13T08:00:00.123Z', utc: '2026-09-13T08:00:00.123Z' },
+    { evaluation: '2026-09-13T08:00:00.1234Z', utc: '2026-09-13T08:00:00.1234Z' },
+    { evaluation: '2026-09-13T08:00:00.12345Z', utc: '2026-09-13T08:00:00.12345Z' },
+    { evaluation: '2026-09-13T08:00:00.1234567Z', utc: '2026-09-13T08:00:00.1234567Z' },
+    { evaluation: '2026-09-13T08:00:00.12345678Z', utc: '2026-09-13T08:00:00.12345678Z' },
+    { evaluation: '2026-09-13T08:00:00.123456789-03:30', utc: '2026-09-13T11:30:00.123456789Z' },
+  ])('should retain ISO fractional server evaluations in UTC for $evaluation', async ({ evaluation, utc }) => {
+    const reading = harnessFixture.port.read();
+
+    whenEvaluationArrives(evaluation);
+    const donnees = await reading;
+
+    expect(donnees.evaluation.value).toBe(utc);
+    expect(harnessFixture.errors.errors).toEqual([]);
+  });
+
   it('should reject an unavailable acquisition and report the technical failure once', async () => {
     const reading = harnessFixture.port.read();
 
@@ -500,13 +559,24 @@ describe('HTTP supervision beyond the shared contract', () => {
     expect(harnessFixture.errors.errors).toEqual([failure]);
   });
 
-  it('should reject and report an invalid server evaluation without using the browser clock', async () => {
+  it.each([
+    '2026-09-13T10:00:00',
+    '2026-09-13T08:00:00.Z',
+    '2026-09-13T08:00:00.1234567890Z',
+    '2026-09-13T08:00:00.123456789',
+    '2026-09-13T08:00:00.123456789Zgarbage',
+    '2026-13-13T08:00:00.123456789Z',
+    '2026-09-13T08:00:60.123456789Z',
+    '2026-02-30T08:00:00.123456789Z',
+    '2026-09-13T24:00:00.123456789Z',
+  ])('should reject and report an invalid server evaluation without using the browser clock for %s', async evaluation => {
     const reading = harnessFixture.port.read();
 
-    whenInvalidEvaluationArrives();
+    whenEvaluationArrives(evaluation);
     const failure = await reading.catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(Error);
+    expect(failure).toMatchObject({ valeurRejetee: evaluation });
     expect(harnessFixture.errors.errors).toEqual([failure]);
   });
 
@@ -529,10 +599,6 @@ describe('HTTP supervision beyond the shared contract', () => {
     harnessFixture.http.expectOne('/api/atelier/supervision');
     await vi.advanceTimersByTimeAsync(30_000);
     return failure;
-  };
-
-  const whenInvalidEvaluationArrives = (): void => {
-    harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...emptyFixture.response, evaluation: '2026-09-13T10:00:00' });
   };
 
   const whenEvaluationArrives = (evaluation: string): void => {

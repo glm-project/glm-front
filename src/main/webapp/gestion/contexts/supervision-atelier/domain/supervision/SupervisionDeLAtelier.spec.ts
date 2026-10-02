@@ -57,9 +57,25 @@ describe('SupervisionDeLAtelier', () => {
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
   });
 
-  it.each([{ evaluation: '2026-09-13T21:00:00.123456790Z' }, { evaluation: '2026-09-13T21:00:00.123456791Z' }])(
+  it.each([
+    {
+      evaluation: '2026-09-13T21:00:00.123456790Z',
+      echeance: '2026-09-13T23:00:00.123456790+02:00',
+      finRetenue: '2026-09-13T21:00:00.123456790Z',
+    },
+    {
+      evaluation: '2026-09-13T21:00:00.123456791Z',
+      echeance: '2026-09-13T23:00:00.123456790+02:00',
+      finRetenue: '2026-09-13T21:00:00.123456790Z',
+    },
+    {
+      evaluation: '2026-09-13T21:00:00.123456Z',
+      echeance: '2026-09-13T23:00:00.123456000+02:00',
+      finRetenue: '2026-09-13T21:00:00.123456000Z',
+    },
+  ])(
     'should finish current work at the acquired nanosecond deadline expressed with a different offset at $evaluation',
-    ({ evaluation }) => {
+    ({ evaluation, echeance, finRetenue }) => {
       const operateur = operateurFixture('op-nanosecond-finished');
       const activite = new ActiviteDeSupervision({
         id: new IdentifiantActivite('nanosecond-finished'),
@@ -67,7 +83,7 @@ describe('SupervisionDeLAtelier', () => {
         objet: MOULE_1015,
         categorie: new CategorieActivite('TRAVAIL'),
         debut: new Instant('2026-09-13T08:00:00.123456790Z'),
-        echeance: new Instant('2026-09-13T23:00:00.123456790+02:00'),
+        echeance: new Instant(echeance),
       });
 
       const resultat = SupervisionDeLAtelier.determine({
@@ -79,11 +95,30 @@ describe('SupervisionDeLAtelier', () => {
 
       const supervision = exploitableFixture(resultat);
       expect(couloirDe(supervision, operateur)).toBe('SANS_ACTIVITE');
-      expect(supervision.operateurs[0]?.activitesTermineesAutomatiquement.map(terminee => terminee.finRetenue.value)).toEqual([
-        '2026-09-13T21:00:00.123456790Z',
-      ]);
+      expect(supervision.operateurs[0]?.activitesTermineesAutomatiquement.map(terminee => terminee.finRetenue.value)).toEqual([finRetenue]);
     },
   );
+
+  it('should keep current work one nanosecond before an acquired deadline before the Unix epoch', () => {
+    const operateur = operateurFixture('op-before-epoch');
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('before-epoch-deadline'),
+      operateurId: operateur.id,
+      objet: MOULE_1015,
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: new Instant('1969-12-31T10:59:59.999999990Z'),
+      echeance: new Instant('1969-12-31T23:59:59.999999990Z'),
+    });
+
+    const resultat = SupervisionDeLAtelier.determine({
+      evaluation: new Instant('1969-12-31T23:59:59.999999989Z'),
+      operateurs: [operateur],
+      activites: [activite],
+      sequencesEnConflit: [],
+    });
+
+    expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
+  });
 
   it('should classify current work until the acquired deadline', () => {
     const operateur = operateurFixture('op-server-deadline');
