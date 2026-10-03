@@ -96,6 +96,7 @@ export const scenariosConflits = (): readonly ScenarioConflits[] => {
             enConflit: false,
             activites: dossier.activites.map(activite => ({
               ...activite,
+              libelle: activite.id.activite === 'travail-8' ? 'Travail de 8 h à 17 h' : 'NC annulée',
               etat: activite.id.activite === 'travail-8' ? 'TERMINEE' : 'ANNULEE',
               temps: activite.id.activite === 'travail-8' ? '9 h' : 'Annulée',
             })),

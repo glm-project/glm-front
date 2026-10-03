@@ -1,6 +1,7 @@
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ApercuConflit, ApplicationActePort, PrevisualisationConflitPort, ResultatApercu } from '../../domain/acte/ConflitsActesPorts';
 import { SaisieActe } from '../../domain/acte/SaisieActe';
+import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { DemonstrationConflitsPort } from '../../domain/dossier/DemonstrationConflitsPort';
 import { DossierConflit, LectureDossier } from '../../domain/dossier/DossierConflit';
@@ -699,24 +700,37 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
 
       expect(resultat).toEqual({ lignes: [], total: 0, complete: true });
     });
-    it('should preserve the finish when the human instead cancels the transition', async () => {
+    it('should describe continuous work and a cancelled non-conformity when the transition is cancelled', async () => {
       const adapter = adapterFixture();
-      const avant = dossierFixture(await adapter.read(adresseFixture));
+      const lecture: ConflitsReadPort = adapter;
+      const previsualisation: PrevisualisationConflitPort = adapter;
+      const application: ApplicationActePort = adapter;
+      const avant = dossierFixture(await lecture.read(adresseFixture));
+      const activitesAttendues = [
+        { id: new ActiviteConflitId('travail-8'), libelle: 'Travail de 8 h à 17 h', etat: 'TERMINEE', temps: '9 h' },
+        { id: new ActiviteConflitId('nc-12'), libelle: 'NC annulée', etat: 'ANNULEE', temps: 'Annulée' },
+      ];
 
-      const apercu = await adapter.preview(adresseFixture, avant.version, acteFixture(choixFixture(avant, 1)));
+      const apercu = apercuFixture(await previsualisation.preview(adresseFixture, avant.version, acteFixture(choixFixture(avant, 1))));
+      const avantApplication = await lecture.read(adresseFixture);
+      const resultat = await application.apply(apercu);
 
+      expect(apercu.apres.activites).toEqual(activitesAttendues);
+      expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { activites: activitesAttendues } });
+      expect(avantApplication).toEqual({ kind: 'DOSSIER', dossier: avant });
+      expect(avant.activites).toMatchObject([
+        { libelle: 'Travail commencé à 8 h, remplacé à 12 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+        { libelle: 'NC commencée à 12 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+      ]);
       expect(apercu).toMatchObject({
-        kind: 'APERCU',
-        apercu: {
-          apres: {
-            enConflit: false,
-            journal: [
-              { id: { pointage: 'debut-8' } },
-              { id: { pointage: 'nc-12' }, annulation: { motif: 'Cible vérifiée avec l’opérateur' } },
-              { id: { pointage: 'fin-17' } },
-            ],
-            consequences: ['Travail de 8 h à 17 h : 9 h.', 'Le passage en NC est annulé.'],
-          },
+        apres: {
+          enConflit: false,
+          journal: [
+            { id: { pointage: 'debut-8' } },
+            { id: { pointage: 'nc-12' }, annulation: { motif: 'Cible vérifiée avec l’opérateur' } },
+            { id: { pointage: 'fin-17' } },
+          ],
+          consequences: ['Travail de 8 h à 17 h : 9 h.', 'Le passage en NC est annulé.'],
         },
       });
     });
