@@ -561,8 +561,9 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     pages: readonly components['schemas']['PageRestOperateur'][],
   ): Promise<readonly OperateurDuReleve[]> => {
     const lecture = port.operateurs();
-    for (const page of pages) {
+    for (const [numero, page] of pages.entries()) {
       const request = givenOperateursRequest();
+      expect(request.request.params.get('page')).toBe(String(numero));
       expect(request.request.params.get('size')).toBe(String(PAGE_SIZE));
       expect(request.request.params.get('poste')).toBeNull();
       request.flush(page);
