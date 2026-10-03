@@ -220,6 +220,17 @@ describe('Conflict list', () => {
     expect(portFixture.demandes).toEqual([]);
   });
 
+  it('should distinguish a page emptied by resolutions from a list with no remaining conflicts', async () => {
+    givenAnAddress({ page: '3' });
+    portFixture.page = { lignes: [], total: 6, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-page-vide')).toContain('Cette page ne contient plus de dossier');
+    expect(present('conflits-vide')).toBe(false);
+    expect(button('conflits-premiere-page').disabled).toBe(false);
+  });
+
   const whenTheDemonstrationIsReset = async (): Promise<void> => {
     portFixture.page = { lignes: [], total: 0, complete: true };
     const reading = portFixture.nextReading();

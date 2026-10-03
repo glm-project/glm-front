@@ -51,7 +51,20 @@
   <p role="status" class="mb-4 rounded-control border border-warn bg-sunken p-4 text-body text-warn" data-selector="conflits-partiel">
     {{ libelles.partiel }}
   </p>
-  } @if (page.lignes.length === 0) { @if (page.complete) { @if (filtreActif()) {
+  } @if (page.lignes.length === 0) { @if (page.total > 0) {
+  <div class="gestion-carte p-6">
+    <p class="text-body" data-selector="conflits-page-vide">{{ libelles.pageVide }}</p>
+    <button
+      type="button"
+      class="mt-4 min-h-touch rounded-control border border-border-strong px-4 text-label"
+      [routerLink]="['/conflits']"
+      [queryParams]="pageParams(1)"
+      data-selector="conflits-premiere-page"
+    >
+      {{ libelles.premierePage }}
+    </button>
+  </div>
+  } @else if (page.complete) { @if (filtreActif()) {
   <p class="gestion-carte p-6 text-body" data-selector="conflits-vide-filtre">{{ libelles.videFiltre }}</p>
   } @else {
   <p class="gestion-carte p-6 text-body" data-selector="conflits-vide">{{ libelles.vide }}</p>

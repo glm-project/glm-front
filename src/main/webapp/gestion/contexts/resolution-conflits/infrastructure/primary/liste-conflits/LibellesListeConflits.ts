@@ -11,4 +11,6 @@ export const LIBELLES_LISTE_CONFLITS = {
   page: 'Page',
   sur: 'sur',
   adresseInvalide: 'Numéro de page invalide. Appliquez les filtres pour revenir à la première page.',
+  pageVide: 'Cette page ne contient plus de dossier. D’autres conflits restent dans la sélection.',
+  premierePage: 'Revenir à la première page',
 } as const;
