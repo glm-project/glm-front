@@ -1,4 +1,4 @@
-import { FaitPropose } from '@/gestion/contexts/resolution-conflits/domain/acte/ActeResolution';
+import { ActeResolution, FaitPropose } from '@/gestion/contexts/resolution-conflits/domain/acte/ActeResolution';
 import { SaisieActe } from '@/gestion/contexts/resolution-conflits/domain/acte/SaisieActe';
 import { ActiviteConflitId } from '@/gestion/contexts/resolution-conflits/domain/dossier/ActiviteConflitId';
 import { DossierConflit } from '@/gestion/contexts/resolution-conflits/domain/dossier/DossierConflit';
@@ -94,9 +94,11 @@ class RepliesFixture<T> {
 
 class DossierPreviewFixture extends PrevisualisationConflitPort {
   readonly replies = new RepliesFixture<ResultatApercu>();
+  readonly actes: ActeResolution[] = [];
   result: ResultatApercu = { kind: 'LIMITATION', raison: 'Commande hors scénario.' };
 
-  preview(): Promise<ResultatApercu> {
+  preview(_adresse: AdresseDossier, _version: number, acte: ActeResolution): Promise<ResultatApercu> {
+    this.actes.push(acte);
     return this.replies.answer(this.result);
   }
 }
@@ -270,6 +272,19 @@ describe('Conflict dossier page', () => {
     expect(read.demandes).toHaveLength(2);
   });
 
+  it('should clear the displayed interpretation after verifying an unknown write outcome', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    await whenClicking('conflit-verifier');
+
+    thenNoInterpretationIsSelected();
+    thenAbsent('conflit-acte');
+  });
+
   it('should replace the displayed dossier with the accepted partial result while preserving its closure', async () => {
     givenASuccessfulPreview();
     const dossier = dossierConflitFixture();
@@ -378,6 +393,114 @@ describe('Conflict dossier page', () => {
     thenFieldValueIs('conflit-cible', 'travail-8');
     thenFieldValueIs('conflit-instant', '2026-09-14T17:00:00.123456789+02:00');
     thenDetailedFactIsOpen();
+  });
+
+  it('should let the manager select the named non-conformity activity and preview its exact reference', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [
+          ...dossier.activites,
+          { id: new ActiviteConflitId('nc-12'), libelle: 'Non-conformité ouverte à 12 h', etat: 'TERMINEE', temps: '5 h' },
+        ],
+      },
+    };
+    await whenRendering();
+
+    await whenClicking('conflit-detail');
+    await whenClicking('conflit-corriger');
+    await whenEntering('conflit-cible', 'nc-12');
+    await whenEntering('conflit-motif', 'Cible confirmée');
+    await whenClicking('conflit-previsualiser');
+
+    thenTargetChoiceIs('nc-12', 'Non-conformité ouverte à 12 h');
+    expect(preview.actes).toEqual([
+      {
+        kind: 'CORRECTION',
+        pointage: 'fin-17',
+        motif: 'Cible confirmée',
+        fait: { ...faitConflitFixture(), activiteVisee: 'nc-12' },
+      },
+    ]);
+  });
+
+  it('should retain the proposed target when its activity is absent from the dossier instead of selecting another one', async () => {
+    await whenRendering();
+
+    await whenClicking('conflit-choix');
+
+    thenTargetChoiceIs('nc-12', 'nc-12');
+  });
+
+  it('should let the manager explicitly choose no target activity when correcting an opening', async () => {
+    await whenRendering();
+
+    await whenClicking('conflit-detail');
+    await whenClicking('conflit-corriger');
+    await whenClicking('conflit-type-DEBUT');
+    await whenClicking('conflit-intention-OUVERTURE');
+    await whenEntering('conflit-cible', '');
+    await whenEntering('conflit-motif', 'Ouverture confirmée');
+    await whenClicking('conflit-previsualiser');
+
+    thenTargetChoiceIs('', 'Aucune activité visée');
+    expect(preview.actes).toEqual([
+      {
+        kind: 'CORRECTION',
+        pointage: 'fin-17',
+        motif: 'Ouverture confirmée',
+        fait: { ...faitConflitFixture(), type: 'DEBUT', intention: 'OUVERTURE', activiteVisee: '' },
+      },
+    ]);
+  });
+
+  it('should name the cancelled opening targeted by a remaining end without inventing an interpreted activity', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [],
+        journal: [
+          {
+            id: new PointageConflitId('debut-8'),
+            fait: {
+              ...faitConflitFixture(),
+              type: 'DEBUT',
+              intention: 'OUVERTURE',
+              activiteVisee: '',
+              instant: '2026-09-14T08:00:00+02:00',
+            },
+            activiteCreee: new ActiviteConflitId('travail-8'),
+            auteur: 'camille',
+            enregistre: '2026-09-14T08:00:00+02:00',
+            regularisation: false,
+            annulation: { motif: 'Début annulé', auteur: 'gestionnaire', instant: '2026-09-15T08:00:00+02:00' },
+          },
+          ...dossier.journal,
+        ],
+      },
+    };
+    await whenRendering();
+
+    await whenClicking('conflit-detail');
+    await whenClicking('conflit-corriger');
+
+    thenTargetChoiceIs('travail-8', 'Travail à 08:00:00');
+    thenAbsent('conflit-activite');
+  });
+
+  it('should stop presenting the guided interpretation as selected after the manager changes its target', async () => {
+    await whenRendering();
+    await whenClicking('conflit-choix');
+
+    await whenClicking('conflit-champs-detail');
+    await whenEntering('conflit-cible', 'travail-8');
+
+    thenTargetChoiceIs('travail-8', 'Travail ouvert à 8 h');
+    thenNoInterpretationIsSelected();
   });
 
   it('should expose cancellation without transforming the chosen pointage fact', async () => {
@@ -516,7 +639,7 @@ describe('Conflict dossier page', () => {
   const whenEntering = async (selector: string, value: string): Promise<void> => {
     const input = field(selector);
     input.value = value;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event(input instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
     await fixture.whenStable();
   };
 
@@ -561,14 +684,14 @@ describe('Conflict dossier page', () => {
     return found;
   };
 
-  const field = (selector: string): HTMLInputElement | HTMLTextAreaElement => {
+  const field = (selector: string): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement => {
     const found = element(selector);
     if (isField(found)) return found;
     throw new Error(`Expected a field ${selector}`);
   };
 
-  const isField = (element: HTMLElement): element is HTMLInputElement | HTMLTextAreaElement =>
-    element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement;
+  const isField = (element: HTMLElement): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
+    element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
 
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
   const thenTextContains = (selector: string, expected: string): void => {
@@ -580,10 +703,19 @@ describe('Conflict dossier page', () => {
   const thenFieldValueIs = (selector: string, expected: string): void => {
     expect(field(selector).value).toBe(expected);
   };
+  const thenTargetChoiceIs = (reference: string, libelle: string): void => {
+    const cible = field('conflit-cible');
+    if (!(cible instanceof HTMLSelectElement)) throw new Error('Expected an activity choice');
+    expect(cible.value).toBe(reference);
+    expect(cible.selectedOptions[0]?.textContent).toContain(libelle);
+  };
   const thenDisabled = (selector: string): void => {
     const button = element(selector);
     if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button');
     expect(button.disabled).toBe(true);
+  };
+  const thenNoInterpretationIsSelected = (): void => {
+    expect(element('conflit-choix').getAttribute('aria-pressed')).toBe('false');
   };
   const thenDetailedFactIsOpen = (): void => {
     const detail = element('conflit-champs-detail').parentElement;

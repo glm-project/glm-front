@@ -22,7 +22,8 @@ import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationCo
 export class DossierConflitPage {
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
-  private readonly confirmation = viewChild<ElementRef<HTMLButtonElement>>('confirmation');
+  private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
+  private readonly propositionHeading = viewChild<ElementRef<HTMLHeadingElement>>('propositionHeading');
   private readonly port = inject(ConflitsReadPort);
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
@@ -33,6 +34,7 @@ export class DossierConflitPage {
   protected readonly droits = inject(ConflitsRightsPort);
   protected readonly libelles = LIBELLES_CONFLITS;
   protected readonly detail = signal(false);
+  protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
@@ -49,6 +51,7 @@ export class DossierConflitPage {
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
+  protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
@@ -61,10 +64,10 @@ export class DossierConflitPage {
     this.verificationDemandee = false;
     if (adresse === undefined) {
       this.precedente = undefined;
-      this.preparation.contextChanged();
+      this.contextChanged();
       return undefined;
     }
-    if (!this.sameAddress(adresse)) this.preparation.contextChanged();
+    if (!this.sameAddress(adresse)) this.contextChanged();
     this.precedente = adresse;
     const resultat = await this.port.read(adresse);
     if (this.verificationIsCurrent(verification, adresse, demande)) this.preparation.acknowledgeRead();
@@ -79,9 +82,29 @@ export class DossierConflitPage {
     return this.precedente?.suivi.suivi === adresse.suivi.suivi && this.precedente.pointage.pointage === adresse.pointage.pointage;
   }
 
-  protected choose(saisie: SaisieActe): void {
+  private contextChanged(): void {
+    this.preparation.contextChanged();
+    this.choixSelectionne.set(undefined);
+  }
+
+  protected choose(saisie: SaisieActe, choix?: string): void {
     this.preparation.choose(saisie);
     this.detail.set(false);
+    this.choixSelectionne.set(choix);
+    this.focusHeading(this.propositionHeading);
+  }
+
+  protected labelForActivite(id: string, dossier: DossierConflit): string {
+    const activite = dossier.activites.find(activite => activite.id.activite === id);
+    if (activite !== undefined) return activite.libelle;
+    const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
+    if (origine !== undefined) return `${this.libelles.types[origine.fait.type]} à ${origine.fait.instant.slice(11, 19)}`;
+    return `Activité ${id}`;
+  }
+
+  protected hrefForActivite(id: string, dossier: DossierConflit): string {
+    const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
+    return origine === undefined ? `#activite-${id}` : `#pointage-${origine.id.pointage}`;
   }
 
   protected correct(pointage: PointageConflit): void {
@@ -100,12 +123,21 @@ export class DossierConflitPage {
 
   protected change(changement: ChangementSaisie): void {
     this.preparation.change(changement);
+    if (changement.fait !== undefined) this.choixSelectionne.set(undefined);
+  }
+
+  protected targetIsAbsent(dossier: DossierConflit, reference: string): boolean {
+    return reference !== '' && !dossier.activites.some(activite => activite.id.activite === reference);
   }
 
   protected async preview(dossier: DossierConflit): Promise<void> {
     await this.preparation.preview(dossier);
     this.refreshAfterConcurrency();
-    afterNextRender(() => this.confirmation()?.nativeElement.focus(), { injector: this.injector });
+    this.focusHeading(this.apercuHeading);
+  }
+
+  private focusHeading(heading: () => ElementRef<HTMLHeadingElement> | undefined): void {
+    afterNextRender(() => heading()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected async confirm(): Promise<void> {
@@ -132,6 +164,7 @@ export class DossierConflitPage {
 
   protected reset(): void {
     this.preparation.reset();
+    this.choixSelectionne.set(undefined);
     this.lecture.reload();
   }
 }
