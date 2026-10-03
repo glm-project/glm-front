@@ -353,6 +353,16 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       expect(verification).toMatchObject({ kind: 'ATTESTE', dossier: { version: 3, enConflit: false } });
       expect(repetition).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 3, enConflit: false } });
     });
+    it('should refuse reusing a recorded confirmation with a different preview version', async () => {
+      const adapter = adapterFixture();
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+      const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+      await adapter.apply(apercu);
+
+      const repetition = await adapter.apply({ ...apercu, version: 99 });
+
+      expect(repetition).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
+    });
     it('should open the same conflict from an active opening without redirecting to a different sequence', async () => {
       const lecture: ConflitsReadPort = adapterFixture();
       const adresse = { ...adresseFixture, pointage: new PointageConflitId('debut-8') };
