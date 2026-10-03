@@ -191,7 +191,8 @@
 }
 
 @media (min-width: 64rem) and (max-width: 79.999rem) {
-  .marque-produit {
+  .marque-produit,
+  .action-libelle {
     display: none;
   }
 }

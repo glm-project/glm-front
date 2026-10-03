@@ -5,9 +5,28 @@ import { elementsDeFabricationProvider } from './elements-de-fabrication.provide
 import { operateursProvider } from './operateurs.provider';
 import { postesProvider } from './postes.provider';
 import { releveDesHeuresProvider } from './releve-des-heures.provider';
+import { resolutionConflitsProvider } from './resolution-conflits.provider';
 import { supervisionAtelierProvider } from './supervision-atelier.provider';
 
 export const routes: Routes = [
+  {
+    path: 'conflits',
+    providers: resolutionConflitsProvider,
+    children: [
+      {
+        path: ':suivi',
+        loadComponent: () =>
+          import('./contexts/resolution-conflits/infrastructure/primary/dossier-conflit/DossierConflitPage').then(
+            m => m.DossierConflitPage,
+          ),
+      },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./contexts/resolution-conflits/infrastructure/primary/liste-conflits/ListeConflits').then(m => m.ListeConflits),
+      },
+    ],
+  },
   {
     path: '',
     providers: supervisionAtelierProvider,
