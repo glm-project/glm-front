@@ -71,6 +71,7 @@
                 class="inline-flex min-h-touch items-center font-semibold text-accent underline underline-offset-4"
                 [routerLink]="['/conflits', ligne.adresse.suivi.suivi]"
                 [queryParams]="{ pointage: ligne.adresse.pointage.pointage }"
+                queryParamsHandling="merge"
                 data-selector="conflit-ouvrir"
                 >{{ ligne.designation }}</a
               >
