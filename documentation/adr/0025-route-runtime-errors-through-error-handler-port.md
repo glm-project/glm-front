@@ -8,6 +8,9 @@ Amended by [glm-front#180](https://github.com/glm-project/glm-front/issues/180):
 once, in its composition root, and Angular's `ErrorHandler` reports through it. Failures Angular intercepts
 and failures raised outside Angular now reach the same adapter as every other report (decisions 5 to 7).
 
+Amended by [glm-front#216](https://github.com/glm-project/glm-front/pull/216): browser recovery and error
+reporting remain independent capabilities, composed at the global primary error boundary (decision 8).
+
 Complemented by [0033](0033-compose-view-data-in-secondary-adapters.md): for composed view reads, the
 secondary adapter reports acquisition failures once and rejects; the primary resource displays the error.
 
@@ -41,6 +44,13 @@ Where the port is bound, and what becomes of Angular's `ErrorHandler`:
 - One shared provider that receives the adapter from the composition root and routes Angular's `ErrorHandler`
   to the port — **kept**.
 
+Where failed-module recovery belongs:
+
+- A `ReloadingErrorHandler` that implements the reporting port and injects `ConsoleErrorHandler` — rejected:
+  couples recovery to a concrete reporter; selecting an HTTP reporter would also replace the recovery.
+- Recovery coordinated by the global primary error boundary, with reporting delegated to the port selected
+  by the composition root — **kept**: replacing the reporter preserves recovery without changing its code.
+
 ## Decision
 
 Adopt `ErrorHandlerPort` as the shared technical error-handling abstraction:
@@ -52,6 +62,7 @@ Adopt `ErrorHandlerPort` as the shared technical error-handling abstraction:
 5. `provideErrorHandler(adapter)`, in `app/shared/error-handler/infrastructure/primary/`, holds the only binding of the port. Each front calls it once in its composition root (`gestion/main.ts`, `pupitre/main.ts`) with the adapter it chooses, today `ConsoleErrorHandler`; the composition root chooses the adapter of every port.
 6. The same provider binds Angular's `ErrorHandler` to `AngularErrorHandler`, a primary adapter that hands every error to the port: template, lifecycle and template-event failures follow the path of all other reports. `@typescript-eslint/no-restricted-imports` rejects importing `ErrorHandler` from `@angular/core` outside the kernel's primary layer (`app/shared/error-handler/infrastructure/primary/`), in specs as in production code.
 7. The provider also includes `provideBrowserGlobalErrorListeners()`. Angular listens to `unhandledrejection` and `error` on `window` and forwards them to its `ErrorHandler`, hence to the port: a promise nobody gave to `ErrorHandlerPort.observe()`, or an exception thrown in a timer or a library callback, is reported like any other failure. An adapter therefore contains its own failures: `handleError` never throws and never leaves a promise rejected unobserved, otherwise the failure comes back to it through these listeners and a report that keeps failing, such as a remote adapter while offline, feeds itself. The contract suite of the first adapter that can fail states it ([0002](0002-port-contract-for-secondary-adapters.md)).
+8. `AngularErrorHandler` reports global Angular and browser failures through `ErrorHandlerPort`, then delegates browser recovery to `BrowserModuleRecovery` in `infrastructure/primary`. Recovery has no dependency on a reporting adapter. Explicit calls to `ErrorHandlerPort` only report errors. `BrowserModuleRecovery` reloads the current URL for a failed dynamic module import, recovering an open page whose lazy chunk disappeared after deployment. Chromium, Firefox and Safari messages are recognized; unrelated errors and offline browsers do not trigger a reload. A session-storage marker records the executing bundle URL (`import.meta.url`) before reloading, allowing at most one automatic attempt per bundle and tab across application restarts. A new hashed bundle can recover again. If storage or reload fails, `AngularErrorHandler` reports that failure through the selected port without propagating it; unavailable storage prevents an unguarded reload.
 
 ## Consequences
 
