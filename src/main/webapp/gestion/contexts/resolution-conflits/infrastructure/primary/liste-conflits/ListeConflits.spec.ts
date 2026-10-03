@@ -1,5 +1,7 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -104,6 +106,7 @@ describe('Conflict list', () => {
         { provide: ActivatedRoute, useValue: routeFixture },
         { provide: Router, useValue: routerFixture },
         { provide: DemonstrationConflitsPort, useClass: DemonstrationConflitsFixture },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
   });
@@ -206,6 +209,15 @@ describe('Conflict list', () => {
     expect(textOf('conflits-adresse-invalide')).toContain('Numéro de page invalide');
     expect(portFixture.demandes).toEqual([]);
     expect(present('conflits-vide')).toBe(false);
+  });
+
+  it('should refuse a fractional page without acquiring a misleading list', async () => {
+    givenAnAddress({ page: '1.5' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-adresse-invalide')).toContain('Numéro de page invalide');
+    expect(portFixture.demandes).toEqual([]);
   });
 
   const whenTheDemonstrationIsReset = async (): Promise<void> => {
