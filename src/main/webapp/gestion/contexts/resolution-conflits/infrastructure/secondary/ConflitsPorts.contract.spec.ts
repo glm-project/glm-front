@@ -125,6 +125,20 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       expect(application).toEqual({ kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' });
       expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
     });
+    it('should refuse a preview when the session loses its gestionnaire role while preparation is pending', async () => {
+      let gestionnaire = true;
+      const adapter = new InMemoryConflits({ canApply: () => gestionnaire }, new ErrorHandlerFixture());
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+      const acte = acteFixture(choixFixture(initial));
+
+      const preparation = adapter.preview(adresseFixture, initial.version, acte);
+      gestionnaire = false;
+      const resultat = await preparation;
+      const lecture = await adapter.read(adresseFixture);
+
+      expect(resultat).toEqual({ kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' });
+      expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
+    });
     it('should refuse confirmation when the session loses its gestionnaire role while application is pending', async () => {
       let gestionnaire = true;
       const adapter = new InMemoryConflits({ canApply: () => gestionnaire }, new ErrorHandlerFixture());
