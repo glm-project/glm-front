@@ -457,7 +457,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       expect(seconde.lignes).toHaveLength(5);
       expect(premiere.lignes.map(ligne => ligne.adresse)).not.toEqual(seconde.lignes.map(ligne => ligne.adresse));
     });
-    it('should restore the initial journal on reset and refuse a preview from the previous demonstration', async () => {
+    it('should restore the initial journal on reset after an applied act', async () => {
       const adapter = adapterFixture();
       const demonstration: DemonstrationConflitsPort = adapter;
       const initial = dossierFixture(await adapter.read(adresseFixture));
@@ -466,10 +466,24 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
 
       await demonstration.reset();
       const lecture = await adapter.read(adresseFixture);
-      const application = await adapter.apply(ancien);
 
       expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
-      expect(application).toMatchObject({ kind: 'REFUS' });
+    });
+    it('should invalidate an unconsumed preview on reset even when a fresh preview contains the same act', async () => {
+      const adapter = adapterFixture();
+      const demonstration: DemonstrationConflitsPort = adapter;
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+      const acte = acteFixture(choixFixture(initial));
+      const ancien = apercuFixture(await adapter.preview(adresseFixture, initial.version, acte));
+
+      await demonstration.reset();
+      const nouveau = apercuFixture(await adapter.preview(adresseFixture, initial.version, acte));
+      const application = await adapter.apply(ancien);
+      const lecture = await adapter.read(adresseFixture);
+
+      expect(nouveau.reference).not.toBe(ancien.reference);
+      expect(application).toEqual({ kind: 'REFUS', raison: 'Aperçu inconnu' });
+      expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
     });
     it('should keep a corrected anchor explicitly cancelled when its old address is opened again', async () => {
       const adapter = adapterFixture();
