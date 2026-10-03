@@ -93,7 +93,7 @@ Le simulateur ne prétend pas couvrir toutes les permutations acceptées par les
 ## Réinitialisation et incidents
 
 `DemonstrationConflitsPort.reset(): Promise<void>` restaure les fixtures, efface les aperçus et les
-incidents armés. Un ancien aperçu ne peut plus être confirmé après réinitialisation. Un rechargement
+incidents armés et les reçus simulés. Un ancien aperçu ne peut plus être confirmé après réinitialisation. Un rechargement
 complet recrée également l'état initial ; aucune donnée n'est stockée durablement. `arm(incident)`
 programme un incident unique pour la prochaine opération concernée. Toutes les lectures, tous les
 aperçus et toutes les applications passent par une attente asynchrone.
@@ -104,10 +104,16 @@ aperçus et toutes les applications passent par une attente asynchrone.
 | `PANNE_APERCU`       | Prochain aperçu rejeté sans écriture ; le coordinateur signale l'erreur, pas l'adapter                                                                                         |
 | `PANNE_CONFIRMATION` | Prochaine application retourne `ECHEC_CERTAIN` sans écriture ; le même aperçu peut être retenté                                                                                |
 | `CONCURRENCE`        | Prochaine confirmation augmente la version commune sans changer le journal, puis retourne `CONCURRENCE`                                                                        |
-| `ISSUE_INCONNUE`     | Prochaine confirmation applique réellement l'acte et consomme l'aperçu, puis retourne `ISSUE_INCONNUE` ; une lecture permet de vérifier le résultat, aucune répétition aveugle |
+| `ISSUE_INCONNUE`     | Prochaine confirmation applique réellement l'acte et consomme l'aperçu, puis retourne `ISSUE_INCONNUE` ; la vérification du reçu atteste l'écriture, aucune répétition aveugle |
 | `LECTURE_PARTIELLE`  | Prochaine liste fournit au plus deux lignes et `complete=false`, avec le total du filtre ; la suivante est complète                                                            |
 
 ## Tests par les points d'entrée confirmés
+
+`ApplicationActePort.verify(reference)` rend `ATTESTE` avec le dossier canonique, `NON_ATTESTE` sans
+preuve d'écriture, ou un refus. Une lecture ordinaire ne lève pas l'issue inconnue. Le coordinateur
+conserve la référence confirmée, bloque toute nouvelle décision tant que le reçu n'est pas attesté et
+ignore une réponse de vérification provenant d'un dossier quitté. Une panne de vérification reste une
+issue inconnue et est signalée par `ErrorHandlerPort`.
 
 1. Saisie publique : choix explicite, motif, champs requis et instant absolu conservé.
 2. Résolution publique : édition invalidant l'aperçu et confirmation de l'acte exact.

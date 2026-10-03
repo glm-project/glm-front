@@ -140,7 +140,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       expect(resultat).toEqual({ kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' });
       expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
     });
-    it('should refuse confirmation when the session loses its gestionnaire role while application is pending', async () => {
+    it('should refuse confirmation and receipt verification when the session loses its gestionnaire role while application is pending', async () => {
       let gestionnaire = true;
       const adapter = new InMemoryConflits({ canApply: () => gestionnaire }, new ErrorHandlerFixture());
       const initial = dossierFixture(await adapter.read(adresseFixture));
@@ -149,9 +149,11 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       const application = adapter.apply(apercu);
       gestionnaire = false;
       const resultat = await application;
+      const verification = await adapter.verify(apercu);
       const lecture = await adapter.read(adresseFixture);
 
       expect(resultat).toEqual({ kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' });
+      expect(verification).toEqual({ kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' });
       expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
     });
     it('should recognise the exact guided fact independently of object property ordering', async () => {
@@ -337,6 +339,20 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
 
       expect(resultat).toMatchObject({ version: 2, enConflit: true, choix: [{ id: 'rattacher-fin-reprise' }] });
     });
+    it('should return the current canonical dossier when verifying or retrying an earlier recorded acte', async () => {
+      const adapter = adapterFixture();
+      const adresse = { suivi: new SuiviConflitId('demo-retroactif'), pointage: new PointageConflitId('fin-17') };
+      const initial = dossierFixture(await adapter.read(adresse));
+      const premier = apercuFixture(await adapter.preview(adresse, initial.version, acteFixture(choixFixture(initial))));
+      await adapter.apply(premier);
+      await whenGuidedActIsApplied(adapter, 'demo-retroactif', 'fin-17');
+
+      const verification = await adapter.verify(premier);
+      const repetition = await adapter.apply(premier);
+
+      expect(verification).toMatchObject({ kind: 'ATTESTE', dossier: { version: 3, enConflit: false } });
+      expect(repetition).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 3, enConflit: false } });
+    });
     it('should open the same conflict from an active opening without redirecting to a different sequence', async () => {
       const lecture: ConflitsReadPort = adapterFixture();
       const adresse = { ...adresseFixture, pointage: new PointageConflitId('debut-8') };
@@ -400,7 +416,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       expect(seconde.version).toBe(2);
       expect(seconde.journal).toEqual(initial.journal);
     });
-    it('should require canonical reading after an unknown confirmation outcome and prevent applying the same act again', async () => {
+    it('should attest an unknown confirmation and return its canonical result on an identical explicit retry', async () => {
       const adapter = adapterFixture();
       const initial = dossierFixture(await adapter.read(adresseFixture));
       const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
@@ -409,9 +425,11 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
 
       const resultat = await adapter.apply(apercu);
       const lecture = await adapter.read(adresseFixture);
+      const verification = await adapter.verify(apercu);
       const repetition = await adapter.apply(apercu);
 
       expect(resultat).toEqual({ kind: 'ISSUE_INCONNUE' });
+      expect(verification).toMatchObject({ kind: 'ATTESTE', dossier: { version: 2, enConflit: false } });
       expect(lecture).toMatchObject({
         kind: 'ANCRE_ANNULEE',
         journal: [
@@ -421,7 +439,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
           { remplace: { pointage: 'fin-17' } },
         ],
       });
-      expect(repetition.kind).toBe('REFUS');
+      expect(repetition).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 2, journal: apercu.apres.journal } });
     });
     it('should make a certain confirmation failure retryable without writing the journal', async () => {
       const adapter = adapterFixture();

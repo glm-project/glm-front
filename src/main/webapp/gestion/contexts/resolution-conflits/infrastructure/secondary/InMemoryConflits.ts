@@ -6,6 +6,7 @@ import {
   PrevisualisationConflitPort,
   ResultatApercu,
   ResultatApplication,
+  ResultatVerification,
 } from '../../domain/acte/ConflitsActesPorts';
 import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
@@ -38,6 +39,7 @@ export class InMemoryConflits
   private readonly scenarios = new Map<string, ScenarioConflits>();
   private readonly dossiers = new Map<string, DossierConflit>();
   private readonly apercus = new Map<string, ApercuConflit>();
+  private readonly recus = new Map<string, DossierConflit>();
   private readonly adresses = new Map<string, string>();
   private readonly incidents = new Set<IncidentDemo>();
   private reference = 0;
@@ -55,6 +57,7 @@ export class InMemoryConflits
     this.dossiers.clear();
     this.scenarios.clear();
     this.apercus.clear();
+    this.recus.clear();
     this.adresses.clear();
     this.incidents.clear();
     this.restore();
@@ -152,17 +155,27 @@ export class InMemoryConflits
     await new Promise(resolve => setTimeout(resolve));
     if (this.incidents.delete('PANNE_CONFIRMATION')) return { kind: 'ECHEC_CERTAIN' };
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
+    const recu = this.recus.get(reference.reference);
+    if (recu !== undefined) return { kind: 'APPLIQUE', dossier: recu };
     const apercu = this.apercus.get(reference.reference);
     if (apercu === undefined) return { kind: 'REFUS', raison: 'Aperçu inconnu' };
     const refus = this.confirmationFailure(reference, apercu);
     if (refus !== undefined) return refus;
     this.install(apercu.apres);
+    this.recus.set(reference.reference, apercu.apres);
     for (const pointage of apercu.apres.journal.slice(apercu.avant.journal.length)) {
       this.adresses.set(adresseKey({ suivi: apercu.adresse.suivi, pointage: pointage.id }), adresseKey(apercu.apres.ligne.adresse));
     }
     this.apercus.delete(reference.reference);
     if (this.incidents.delete('ISSUE_INCONNUE')) return { kind: 'ISSUE_INCONNUE' };
     return { kind: 'APPLIQUE', dossier: apercu.apres };
+  }
+
+  async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
+    await new Promise(resolve => setTimeout(resolve));
+    if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
+    const dossier = this.recus.get(reference.reference);
+    return dossier === undefined ? { kind: 'NON_ATTESTE' } : { kind: 'ATTESTE', dossier };
   }
 
   private confirmationFailure(reference: ReferenceApercu, apercu: ApercuConflit): ResultatApplication | undefined {
@@ -184,6 +197,13 @@ export class InMemoryConflits
       const apres =
         key === adresseKey(dossier.ligne.adresse) ? dossier : { ...courant, journal: dossier.journal, version: dossier.version };
       this.dossiers.set(key, apres);
+      this.refreshReceipts(key, apres);
+    }
+  }
+
+  private refreshReceipts(key: string, dossier: DossierConflit): void {
+    for (const [reference, recu] of this.recus) {
+      if (adresseKey(recu.ligne.adresse) === key) this.recus.set(reference, dossier);
     }
   }
 

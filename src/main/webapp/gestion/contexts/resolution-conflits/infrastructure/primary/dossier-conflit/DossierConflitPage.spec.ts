@@ -17,6 +17,7 @@ import {
   PrevisualisationConflitPort,
   ResultatApercu,
   ResultatApplication,
+  ResultatVerification,
 } from '../../../domain/acte/ConflitsActesPorts';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
@@ -109,6 +110,10 @@ class DossierApplicationFixture extends ApplicationActePort {
 
   apply(): Promise<ResultatApplication> {
     return this.replies.answer(this.result);
+  }
+
+  verify(): Promise<ResultatVerification> {
+    return roundTripFixture(() => ({ kind: 'NON_ATTESTE' }));
   }
 }
 
@@ -257,7 +262,7 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-choix');
   });
 
-  it('should require a successful canonical read before allowing a new decision after an unknown write outcome', async () => {
+  it('should keep new decisions blocked when the confirmation receipt is not attested', async () => {
     givenASuccessfulPreview();
     application.result = { kind: 'ISSUE_INCONNUE' };
     await whenRendering();
@@ -265,10 +270,10 @@ describe('Conflict dossier page', () => {
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
     await whenClicking('conflit-verifier');
-    await whenClicking('conflit-choix');
 
-    thenAbsent('conflit-operation');
-    thenFieldValueIs('conflit-motif', '');
+    thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
+    thenDisabled('conflit-choix');
+    thenFieldValueIs('conflit-motif', 'Cible confirmée');
     expect(read.demandes).toHaveLength(2);
   });
 

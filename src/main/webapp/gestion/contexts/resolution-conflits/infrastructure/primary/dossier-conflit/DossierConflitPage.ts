@@ -70,7 +70,11 @@ export class DossierConflitPage {
     if (!this.sameAddress(adresse)) this.contextChanged();
     this.precedente = adresse;
     const resultat = await this.port.read(adresse);
-    if (this.verificationIsCurrent(verification, adresse, demande)) this.preparation.acknowledgeRead();
+    if (this.verificationIsCurrent(verification, adresse, demande)) {
+      await this.preparation.verify();
+      const resultatApplication = this.preparation.operation();
+      if (resultatApplication.kind === 'APPLIQUE') return { kind: 'DOSSIER' as const, dossier: resultatApplication.dossier };
+    }
     return resultat;
   }
 

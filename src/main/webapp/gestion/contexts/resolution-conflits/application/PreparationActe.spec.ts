@@ -8,6 +8,7 @@ import {
   PrevisualisationConflitPort,
   ResultatApercu,
   ResultatApplication,
+  ResultatVerification,
 } from '../domain/acte/ConflitsActesPorts';
 import { ReferenceApercu } from '../domain/acte/ResolutionDuConflit';
 import { SaisieActe } from '../domain/acte/SaisieActe';
@@ -85,6 +86,16 @@ class PrevisualisationFixture extends PrevisualisationConflitPort {
 class ApplicationFixture extends ApplicationActePort {
   readonly requests: ReferenceApercu[] = [];
   pending: PendingIoFixture<ResultatApplication> | undefined;
+  verification: ResultatVerification = { kind: 'ATTESTE', dossier: { ...dossierFixture, version: 2, enConflit: false } };
+  verificationFailure: Error | undefined;
+  verificationPending: PendingIoFixture<ResultatVerification> | undefined;
+
+  override async verify(): Promise<typeof this.verification> {
+    if (this.verificationPending !== undefined) return this.verificationPending.arrive();
+    await new Promise(resolve => setTimeout(resolve));
+    if (this.verificationFailure !== undefined) throw this.verificationFailure;
+    return this.verification;
+  }
 
   override apply(apercu: ReferenceApercu): Promise<ResultatApplication> {
     this.requests.push(apercu);
@@ -394,22 +405,60 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
   });
 
-  it('should clear the uncertain proposition only after a successful canonical read is acknowledged', async () => {
+  it('should retain the uncertain proposition while its canonical receipt is not attested', async () => {
     await givenUnknownOutcome();
+    applications.verification = { kind: 'NON_ATTESTE' };
 
-    preparation.acknowledgeRead();
+    await preparation.verify();
     await preparation.preview(dossierFixture);
 
-    expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.command()).toBeUndefined();
+    expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
+    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(preparation.resolution().confirmation()).toBeUndefined();
     expect(previews.requests).toHaveLength(1);
   });
 
-  it('should preserve a prepared acte when acknowledging a read without an unknown outcome', async () => {
+  it('should recover a committed acte through its canonical receipt after a lost response', async () => {
+    await givenUnknownOutcome();
+
+    await preparation.verify();
+
+    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+    expect(applications.requests).toHaveLength(1);
+  });
+
+  it('should retain uncertainty and report an unavailable receipt verification without rejecting the user action', async () => {
+    await givenUnknownOutcome();
+    const panne = new Error('Vérification indisponible');
+    applications.verificationFailure = panne;
+
+    await preparation.verify();
+
+    expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
+    expect(errors.failures).toEqual([panne]);
+    expect(applications.requests).toHaveLength(1);
+  });
+
+  it('should ignore an older receipt after leaving and reopening a dossier with a new uncertain acte', async () => {
+    await givenUnknownOutcome();
+    const ancienne = new PendingIoFixture<ResultatVerification>();
+    applications.verificationPending = ancienne;
+    const verification = preparation.verify();
+    await ancienne.arrival;
+
+    preparation.contextChanged();
+    await givenUnknownOutcome();
+    ancienne.release({ kind: 'ATTESTE', dossier: { ...dossierFixture, version: 2 } });
+    await verification;
+
+    expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
+    expect(applications.requests).toHaveLength(2);
+  });
+
+  it('should preserve a prepared acte when verifying without an unknown outcome', async () => {
     await givenValidPreview();
 
-    preparation.acknowledgeRead();
+    await preparation.verify();
 
     expect(preparation.operation().kind).toBe('REPOS');
     expect(preparation.resolution().confirmation()).toEqual(previewFixture(cancellationFixture()));
@@ -420,7 +469,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     const saisie = cancellationFixture('fin-18');
     const attente = givenPreviewWaits();
 
-    preparation.acknowledgeRead();
+    await preparation.verify();
     preparation.choose(saisie);
     const previsualisation = preparation.preview({ ...dossierFixture, version: 2 });
     await attente.arrival;
