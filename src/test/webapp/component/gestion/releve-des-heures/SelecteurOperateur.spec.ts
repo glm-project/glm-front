@@ -166,7 +166,7 @@ describe('Operator selector in the operational time header', () => {
     givenLongOperatorName();
     givenAvailableReports();
 
-    whenVisitingTheReportAt(320);
+    whenVisitingTheReportWithClassicScrollbars();
 
     thenTheMobileControlKeepsTheFullAccessibleName();
   });
@@ -181,7 +181,11 @@ describe('Operator selector in the operational time header', () => {
 
   const thenTheMobileControlUsesTheFullWidth = (): void => {
     cy.get(dataSelector('selecteur-operateur')).should(control => {
-      expect(requiredFixture(control[0]).getBoundingClientRect().width).to.equal(288);
+      const element = requiredFixture(control[0]);
+      const rect = element.getBoundingClientRect();
+      const content = boundsOfThePageContent(element);
+      expect(rect.left).to.equal(content.left);
+      expect(rect.right).to.equal(content.right);
     });
   };
 
@@ -346,10 +350,22 @@ describe('Operator selector in the operational time header', () => {
     cy.visit(ADRESSE);
   };
 
+  const whenVisitingTheReportWithClassicScrollbars = (): void => {
+    whenVisitingTheReportAt(320);
+    cy.document().then(document => {
+      const scrollbarFixture = document.createElement('style');
+      scrollbarFixture.textContent = 'html { overflow-y: scroll; } ::-webkit-scrollbar { width: 15px; }';
+      document.head.append(scrollbarFixture);
+    });
+  };
+
   const thenTheMobileControlKeepsTheFullAccessibleName = (): void => {
     cy.get(dataSelector('selecteur-operateur')).should(control => {
-      const rect = requiredFixture(control[0]).getBoundingClientRect();
-      expect(rect.width).to.equal(288);
+      const element = requiredFixture(control[0]);
+      const rect = element.getBoundingClientRect();
+      const content = boundsOfThePageContent(element);
+      expect(rect.left).to.equal(content.left);
+      expect(rect.right).to.equal(content.right);
       expect(rect.height).to.be.at.least(44);
       expect(rect.right).to.be.at.most(320);
       expect(control.text()).to.contain('Jean François Alexandre DUPONT DE LA MANUFACTURE DES OUTILS DE PRÉCISION');
@@ -361,6 +377,11 @@ describe('Operator selector in the operational time header', () => {
         );
       });
     });
+  };
+
+  const boundsOfThePageContent = (control: HTMLElement): DOMRect => {
+    const title = requiredFixture(control.ownerDocument.querySelector(dataSelector('synthese-titre')) ?? undefined);
+    return title.getBoundingClientRect();
   };
 
   const thenNoOperatorIsAvailableForChoice = (): void => {
