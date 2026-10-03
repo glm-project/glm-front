@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { FiltreConflits, PAGE_SIZE_CONFLITS } from '../../../domain/dossier/DossierConflit';
+import { readPageConflitsDemandee } from '../../../domain/dossier/PageConflitsDemandee';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
 import { LIBELLES_LISTE_CONFLITS } from './LibellesListeConflits';
@@ -17,14 +18,18 @@ export class ListeConflits {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
+  protected readonly pageDemandee = computed(() => readPageConflitsDemandee(this.params().get('page')));
   protected readonly filtre = computed(() => ({
     operateur: this.params().get('operateur') ?? '',
     element: this.params().get('element') ?? '',
-    page: Number(this.params().get('page') ?? 1),
+    page: this.pageDemandee() ?? 1,
   }));
   protected readonly filtreActif = computed(() => this.filtre().operateur !== '' || this.filtre().element !== '');
   protected readonly libelles = { ...LIBELLES_CONFLITS, ...LIBELLES_LISTE_CONFLITS };
-  protected readonly liste = resource({ params: this.filtre, loader: ({ params }) => this.port.list(params) });
+  protected readonly liste = resource({
+    params: () => (this.pageDemandee() === undefined ? undefined : this.filtre()),
+    loader: ({ params }) => this.port.list(params),
+  });
 
   protected async filter(event: Event, operateur: string, element: string): Promise<void> {
     event.preventDefault();

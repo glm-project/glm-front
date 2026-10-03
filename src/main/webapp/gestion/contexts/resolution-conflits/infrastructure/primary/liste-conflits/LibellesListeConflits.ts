@@ -10,4 +10,5 @@ export const LIBELLES_LISTE_CONFLITS = {
   pagination: 'Pages des conflits',
   page: 'Page',
   sur: 'sur',
+  adresseInvalide: 'Numéro de page invalide. Appliquez les filtres pour revenir à la première page.',
 } as const;

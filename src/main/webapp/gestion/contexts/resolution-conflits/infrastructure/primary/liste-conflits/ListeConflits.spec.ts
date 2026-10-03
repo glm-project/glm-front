@@ -198,6 +198,16 @@ describe('Conflict list', () => {
     expect(portFixture.demandes).toHaveLength(2);
   });
 
+  it('should refuse page zero without acquiring a misleading list', async () => {
+    givenAnAddress({ page: '0' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-adresse-invalide')).toContain('Numéro de page invalide');
+    expect(portFixture.demandes).toEqual([]);
+    expect(present('conflits-vide')).toBe(false);
+  });
+
   const whenTheDemonstrationIsReset = async (): Promise<void> => {
     portFixture.page = { lignes: [], total: 0, complete: true };
     const reading = portFixture.nextReading();

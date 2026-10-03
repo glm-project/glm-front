@@ -29,7 +29,11 @@
       {{ libelles.filtrer }}
     </button>
   </form>
-  @if (liste.isLoading()) {
+  @if (pageDemandee() === undefined) {
+  <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="conflits-adresse-invalide">
+    {{ libelles.adresseInvalide }}
+  </p>
+  } @else if (liste.isLoading()) {
   <p role="status" class="py-12 text-body text-ink-muted">{{ libelles.chargement }}</p>
   } @else if (liste.status() === 'error') {
   <div class="gestion-carte p-6">
