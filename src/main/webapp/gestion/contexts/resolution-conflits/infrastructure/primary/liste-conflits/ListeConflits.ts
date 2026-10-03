@@ -1,4 +1,4 @@
-import { Component, computed, inject, resource } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
@@ -18,6 +18,7 @@ export class ListeConflits {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
+  protected readonly echecNavigation = linkedSignal({ source: this.params, computation: () => false });
   protected readonly pageDemandee = computed(() => readPageConflitsDemandee(this.params().get('page')));
   protected readonly filtre = computed(() => ({
     operateur: this.params().get('operateur') ?? '',
@@ -33,7 +34,10 @@ export class ListeConflits {
 
   protected async filter(event: Event, operateur: string, element: string): Promise<void> {
     event.preventDefault();
-    await this.router.navigate(['/conflits'], { queryParams: { operateur: operateur.trim(), element: element.trim(), page: 1 } });
+    const navigue = await this.router.navigate(['/conflits'], {
+      queryParams: { operateur: operateur.trim(), element: element.trim(), page: 1 },
+    });
+    this.echecNavigation.set(!navigue);
   }
 
   protected reload(): void {

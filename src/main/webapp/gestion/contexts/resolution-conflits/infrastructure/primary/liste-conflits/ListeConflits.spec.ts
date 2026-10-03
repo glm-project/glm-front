@@ -51,6 +51,7 @@ interface UrlTreeFixture {
 class RouterFixture {
   readonly events = EMPTY;
   readonly navigations: FiltreConflits[] = [];
+  navigationResult = true;
 
   createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): UrlTreeFixture {
     return { queryParams: extras?.queryParams ?? {} };
@@ -62,7 +63,7 @@ class RouterFixture {
 
   navigate(_commands: unknown[], extras: { queryParams: FiltreConflits }): Promise<boolean> {
     this.navigations.push(extras.queryParams);
-    return Promise.resolve(true);
+    return Promise.resolve(this.navigationResult);
   }
 }
 
@@ -229,6 +230,18 @@ describe('Conflict list', () => {
     expect(textOf('conflits-page-vide')).toContain('Cette page ne contient plus de dossier');
     expect(present('conflits-vide')).toBe(false);
     expect(button('conflits-premiere-page').disabled).toBe(false);
+  });
+
+  it('should retain the acquired list when filter navigation is cancelled', async () => {
+    portFixture.page = { lignes: [ligneFixture()], total: 1, complete: true };
+    routerFixture.navigationResult = false;
+    await whenTheListIsRendered();
+
+    await whenFiltering('Autre opérateur', 'M-042');
+
+    expect(textOf('conflits-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
+    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(portFixture.demandes).toHaveLength(1);
   });
 
   const whenTheDemonstrationIsReset = async (): Promise<void> => {
