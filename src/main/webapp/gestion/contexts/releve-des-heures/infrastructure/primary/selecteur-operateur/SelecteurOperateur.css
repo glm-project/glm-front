@@ -1,0 +1,78 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
+button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+button:hover:enabled {
+  background: var(--color-sunken);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+#selecteur-operateur-identite,
+.nom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+glm-icon {
+  flex-shrink: 0;
+}
+
+.panneau {
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.panneau input {
+  width: 100%;
+}
+
+ul {
+  max-height: min(320px, 50dvh);
+  overflow: auto;
+  margin-top: 0.5rem;
+}
+
+li button {
+  width: 100%;
+  padding-inline: 0.75rem;
+  border-radius: var(--radius-control);
+}
+
+li button:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (min-width: 768px) {
+  :host {
+    width: 18rem;
+  }
+}

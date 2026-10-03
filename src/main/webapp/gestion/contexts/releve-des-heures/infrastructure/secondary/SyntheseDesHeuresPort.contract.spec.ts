@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -12,6 +13,8 @@ import { vi } from 'vitest';
 import { ElementReleveId } from '../../domain/element/ElementReleveId';
 import { ActiviteReleveId } from '../../domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '../../domain/releve/CibleDePointage';
+import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
+import { OperateurDuReleve } from '../../domain/releve/OperateurDuReleve';
 import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
 import { PointageReleveId } from '../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
@@ -30,6 +33,19 @@ const SEMAINE = new SemaineISO(2026, 38);
 const DEMANDE = new DemandeDeReleve(new OperateurReleveId(OPERATEUR), SEMAINE);
 const SYNTHESE_INTROUVABLE = 'urn:glm:erreur:synthese-des-heures:operateur-introuvable';
 const FEUILLE_INTROUVABLE = 'urn:glm:erreur:feuille-de-temps:operateur-introuvable';
+const operateursPageFixture = (page: number, count: number, total: number): components['schemas']['PageRestOperateur'] => ({
+  content: Array.from({ length: count }, (_, index) => ({
+    id: `op-${String(page * PAGE_SIZE + index)}`,
+    nom: `Nom ${String(page * PAGE_SIZE + index)}`,
+    prenom: 'Prénom',
+    postes: [],
+    natures: [],
+  })),
+  currentPage: page,
+  pageSize: PAGE_SIZE,
+  totalElementsCount: total,
+});
+
 const EVALUATION = '2026-09-14T18:00:00Z';
 
 const syntheseFixture = (): RestSynthese => ({
@@ -111,6 +127,8 @@ const domaineFixture = (): ReleveDesHeures =>
   );
 
 class ReleveHttpBackendFixture implements HttpBackend {
+  operateurs: readonly OperateurDuReleve[] = [];
+  operateursFailure = false;
   operateurInconnu = false;
   synthese = syntheseFixture();
   feuille = feuilleFixture();
@@ -123,6 +141,25 @@ class ReleveHttpBackendFixture implements HttpBackend {
 
   private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
+    if (request.url === '/api/operateurs') {
+      if (this.operateursFailure) {
+        return new HttpErrorResponse({ status: 500 });
+      }
+      return new HttpResponse({
+        body: {
+          content: this.operateurs.map(operateur => ({
+            id: operateur.id.value,
+            nom: operateur.identite.nom,
+            prenom: operateur.identite.prenom,
+            postes: [],
+            natures: [],
+          })),
+          currentPage: 0,
+          pageSize: 100,
+          totalElementsCount: this.operateurs.length,
+        },
+      });
+    }
     const feuille = request.url.startsWith(ROUTE_FEUILLE);
     if (this.operateurInconnu) {
       return new HttpErrorResponse({ status: 404, error: { type: feuille ? FEUILLE_INTROUVABLE : SYNTHESE_INTROUVABLE } });
@@ -136,6 +173,8 @@ class ReleveHttpBackendFixture implements HttpBackend {
 
 interface SyntheseHarness {
   readonly port: SyntheseDesHeuresPort;
+  seedOperateursFailure(): void;
+  seedOperateurs(operateurs: readonly OperateurDuReleve[]): void;
   seedOperateurInconnu(): void;
   seed(releve: ReleveDesHeures, synthese: RestSynthese, feuille: RestFeuille): void;
 }
@@ -154,6 +193,13 @@ const createHttpHarness = (): SyntheseHarness => {
   });
   return {
     port: TestBed.inject(HttpSyntheseDesHeures),
+    seedOperateursFailure: () => {
+      backend.operateursFailure = true;
+    },
+    seedOperateurs: operateurs => {
+      backend.operateurs = operateurs;
+      backend.operateursFailure = false;
+    },
     seed: (_releve, synthese, feuille) => {
       backend.synthese = synthese;
       backend.feuille = feuille;
@@ -169,6 +215,13 @@ const createFixtureHarness = (): SyntheseHarness => {
   fixture.releves.set(`${OPERATEUR}|2026|38`, domaineFixture());
   return {
     port: fixture,
+    seedOperateursFailure: () => {
+      fixture.operateursFailure = new Error('Indisponible');
+    },
+    seedOperateurs: operateurs => {
+      fixture.identites = operateurs;
+      fixture.operateursFailure = undefined;
+    },
     seed: releve => {
       fixture.releves.set(`${OPERATEUR}|2026|38`, releve);
     },
@@ -188,6 +241,50 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
   beforeEach(() => {
     harness = createHarness();
   });
+
+  it('should return an empty collection when no operator is available', async () => {
+    const operateurs = await harness.port.operateurs();
+
+    expect(operateurs).toEqual([]);
+  });
+
+  it('should return all available operator identities using report identifiers', async () => {
+    harness.seedOperateurs([
+      { id: new OperateurReleveId('op-1'), identite: new IdentiteOperateur('Dupont', 'Jean') },
+      { id: new OperateurReleveId('op-2'), identite: new IdentiteOperateur('Évrard', 'Zoé') },
+    ]);
+
+    const operateurs = await harness.port.operateurs();
+
+    expect(operateurs).toEqual([
+      { id: new OperateurReleveId('op-1'), identite: new IdentiteOperateur('Dupont', 'Jean') },
+      { id: new OperateurReleveId('op-2'), identite: new IdentiteOperateur('Évrard', 'Zoé') },
+    ]);
+  });
+
+  it('should reject an unavailable collection instead of returning a partial choice', async () => {
+    harness.seedOperateursFailure();
+
+    const lecture = harness.port.operateurs();
+
+    await expect(lecture).rejects.toHaveProperty('message');
+  });
+
+  it('should retry a failed operator collection with a complete new acquisition', async () => {
+    harness.seedOperateursFailure();
+
+    const result = await whenRetryingOperatorCollection();
+
+    expect(result.failure.status).toBe('rejected');
+    expect(result.operateurs).toEqual([{ id: new OperateurReleveId('nouveau'), identite: new IdentiteOperateur('Nouveau', 'Lucie') }]);
+  });
+
+  const whenRetryingOperatorCollection = async () => {
+    const [failure] = await Promise.allSettled([harness.port.operateurs()]);
+    harness.seedOperateurs([{ id: new OperateurReleveId('nouveau'), identite: new IdentiteOperateur('Nouveau', 'Lucie') }]);
+    const operateurs = await harness.port.operateurs();
+    return { failure: requiredFixture(failure), operateurs };
+  };
 
   it('should return the seven days of the week in calendar order and the resolved operator', async () => {
     const releve = await harness.port.synthese(DEMANDE);
@@ -383,6 +480,102 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     expect(await result).toBeInstanceOf(Error);
     expect(errorHandler.errors).toHaveLength(1);
   });
+
+  it('should report a failed operator acquisition only once', async () => {
+    const lecture = port.operateurs();
+    whenOperatorCollectionFails();
+
+    await expect(lecture).rejects.toHaveProperty('status', 500);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should acquire operators beyond the first full page without a workstation filter', async () => {
+    const pages = [operateursPageFixture(0, PAGE_SIZE, PAGE_SIZE + 1), operateursPageFixture(1, 1, PAGE_SIZE + 1)];
+
+    const lecture = await whenReadingOperatorPages(pages);
+
+    expect(lecture.map(operateur => operateur.id.value)).toHaveLength(PAGE_SIZE + 1);
+    expect(lecture.at(-1)).toEqual({ id: new OperateurReleveId('op-100'), identite: new IdentiteOperateur('Nom 100', 'Prénom') });
+  });
+
+  it('should reject an unexpected operator page number and report it once', async () => {
+    const lecture = whenReadingOperatorPages([operateursPageFixture(1, 0, 0)]);
+
+    await expect(lecture).rejects.toThrow();
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject duplicated operator identities instead of publishing an ambiguous collection', async () => {
+    const page = operateursPageFixture(0, 2, 2);
+    page.content = [requiredFixture(page.content[0]), requiredFixture(page.content[0])];
+
+    const lecture = whenReadingOperatorPages([page]);
+
+    await expect(lecture).rejects.toThrow();
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject operator totals that change during acquisition', async () => {
+    const pages = [operateursPageFixture(0, PAGE_SIZE, PAGE_SIZE + 1), operateursPageFixture(1, 1, PAGE_SIZE)];
+
+    const lecture = whenReadingOperatorPages(pages);
+
+    await expect(lecture).rejects.toThrow();
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each([
+    [0, 1],
+    [1, 2],
+    [2, 1],
+  ])('should reject a truncated or oversized operator page with %s entries for %s expected', async (count, total) => {
+    const lecture = whenReadingOperatorPages([operateursPageFixture(0, count, total)]);
+
+    await expect(lecture).rejects.toThrow();
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject a page served with a different operator page size', async () => {
+    const page = { ...operateursPageFixture(0, 1, 1), pageSize: 50 };
+
+    const lecture = whenReadingOperatorPages([page]);
+
+    await expect(lecture).rejects.toThrow();
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each([
+    [PAGE_SIZE, Number.POSITIVE_INFINITY],
+    [0, -1],
+    [1, 1.5],
+    [0, Number.NaN],
+    [PAGE_SIZE, Number.MAX_SAFE_INTEGER + 1],
+  ])('should reject an invalid operator total for %s entries and total %s', async (count, total) => {
+    const lecture = whenReadingOperatorPages([operateursPageFixture(0, count, total)]);
+
+    await expect(lecture).rejects.toThrow();
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  const whenReadingOperatorPages = async (
+    pages: readonly components['schemas']['PageRestOperateur'][],
+  ): Promise<readonly OperateurDuReleve[]> => {
+    const lecture = port.operateurs();
+    for (const page of pages) {
+      const request = givenOperateursRequest();
+      expect(request.request.params.get('size')).toBe(String(PAGE_SIZE));
+      expect(request.request.params.get('poste')).toBeNull();
+      request.flush(page);
+      await Promise.resolve();
+    }
+    return lecture;
+  };
+
+  const whenOperatorCollectionFails = (): void => {
+    givenOperateursRequest().flush({}, { status: 500, statusText: 'Unavailable' });
+  };
+
+  const givenOperateursRequest = (): TestRequest => server.expectOne(request => request.url === '/api/operateurs');
 
   it('should start both reads with one evaluation even when their answers cross the deadline', async () => {
     givenEvaluationAt('2026-09-14T12:59:59.999Z');

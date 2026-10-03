@@ -25,7 +25,17 @@ le secondaire et reconstituer les valeurs du contexte avant le retour du port.
 
 Un opérateur inconnu est une absence, sans signalement technique. L'absence connue d'une source l'emporte
 sur une panne de l'autre. Toute autre panne, un refus 400, un écho incohérent ou une réponse invalide
-rejette la lecture et est signalé une seule fois. Le composant conserve l'annulation des lectures obsolètes.
+rejette la lecture et est signalé une seule fois. La resource ignore les réponses des lectures obsolètes ; le contrat Promise ne garantit pas une annulation HTTP.
+
+La lecture indépendante `operateurs()` du même port acquiert toutes les identités utiles au choix :
+`OperateurReleveId`, nom et prénom, sans importer le contexte `operateur`. Le secondaire parcourt les
+pages sans filtre de poste, avec la taille commune, et refuse les numéros, tailles, totaux, doublons ou
+quantités incohérents. Une collection partielle ne devient jamais un choix présenté comme complet.
+
+La page conserve l'acquisition complète pendant son montage ; changer de personne, semaine ou jour ne
+relit pas la liste. Une panne de cette liste laisse le relevé consultable et permet une nouvelle tentative
+complète. Rouvrir la fiche recharge les identités. Ces lectures ne forment aucun instantané transactionnel.
+Une adresse invalide au montage n'acquiert ni relevé ni liste.
 
 ## Vocabulaire et invariants
 
@@ -55,7 +65,7 @@ rejette la lecture et est signalé une seule fois. Le composant conserve l'annul
 
 Ce contexte n'importe aucun contexte de `pupitre`, `operateur`, `poste` ou `element-de-fabrication`.
 Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien depuis les opérateurs est un
-`routerLink`. L'identifiant n'est pas porté par ces rapports et n'est pas recherché au référentiel.
+`routerLink`. L'identifiant de saisie au pupitre n'est ni porté par ces rapports ni acquis pour ce choix.
 
 ## Restitution
 
@@ -85,12 +95,20 @@ Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien de
 
 L'[ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md) possède l'état de vue.
 L'année, la semaine et le jour ouvert vivent dans l'URL ; les en-têtes de jour, vides compris, sont des liens.
+Le choix d'un autre opérateur inscrit la semaine affichée et le jour ouvert, même initialement implicites
+ou vides chez la cible, et ajoute une entrée d'historique. Sans jour ouvert, garder seulement la semaine.
+L'identité du rapport réussi prime sur celle de la liste pour l'ID courant ; leur absence donne un libellé
+neutre, sans proposition fictive. Recherche, panneau et focus appartiennent au sélecteur local.
+Choisir la personne courante ferme le panneau sans navigation ni nouvelle lecture. Une navigation annulée
+ou rejetée conserve la consultation réelle et son pointage ; un ancien résultat ne remplace pas l'état
+d'un choix plus récent. Signaler un rejet technique une fois et afficher la possibilité de retenter.
+
 Les liens de semaine précédente/suivante n'emportent pas le jour. Une adresse illisible ou hors calendrier
 est refusée sans acquisition. Le retour navigateur retrouve son jour.
 
 Une adresse sans semaine désigne la semaine en cours, sans réécriture de l'URL. Sans jour, ouvrir aujourd'hui
 pour la semaine en cours, même vide ; sinon le premier jour portant un pointage, ou aucun. Le pointage
-sélectionné est éphémère : aucun à l'ouverture, effacé au changement de jour/semaine, désélectionné par un
+sélectionné est éphémère : aucun à l'ouverture, effacé au changement d’opérateur/jour/semaine, désélectionné par un
 second clic. Changer seulement le jour ou la sélection conserve les rapports acquis et leur évaluation.
 
 Chaque jour possède son axe, normalement 6–22 h. Une borne dessinée en dehors de cette fenêtre ou à minuit

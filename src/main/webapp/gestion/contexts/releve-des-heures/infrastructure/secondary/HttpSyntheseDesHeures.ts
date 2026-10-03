@@ -3,6 +3,7 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { inject, Injectable } from '@angular/core';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
 import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
@@ -17,6 +18,8 @@ import { CibleDePointage } from '../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { JourDeReleve } from '../../domain/releve/JourDeReleve';
+import { OperateurDuReleve } from '../../domain/releve/OperateurDuReleve';
+import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
 import { PointageDElement } from '../../domain/releve/PointageDElement';
 import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
 import { PointageReleveId } from '../../domain/releve/PointageReleveId';
@@ -198,10 +201,60 @@ const documentDe = <T>(lecture: PromiseSettledResult<T>): T => {
   return lecture.value;
 };
 
+const pageIncoherente = (response: components['schemas']['PageRestOperateur'], page: number): boolean =>
+  response.currentPage !== page || response.pageSize !== PAGE_SIZE;
+
+const totalIncoherent = (attendu: number | undefined, recu: number): boolean =>
+  (attendu !== undefined && attendu !== recu) || !Number.isSafeInteger(recu) || recu < 0;
+
+const verifyOperateursPage = (
+  response: components['schemas']['PageRestOperateur'],
+  page: number,
+  total: number | undefined,
+  acquired: number,
+): void => {
+  if (pageIncoherente(response, page)) {
+    throw new Error('La collection des opérateurs est incohérente.');
+  }
+  if (totalIncoherent(total, response.totalElementsCount)) {
+    throw new Error('Le nombre des opérateurs est incohérent pendant la lecture.');
+  }
+  if (response.content.length !== Math.min(PAGE_SIZE, response.totalElementsCount - acquired)) {
+    throw new Error('La collection des opérateurs est tronquée.');
+  }
+};
+
 @Injectable()
 export class HttpSyntheseDesHeures extends SyntheseDesHeuresPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
+
+  override async operateurs(): Promise<readonly OperateurDuReleve[]> {
+    try {
+      const operateurs: OperateurDuReleve[] = [];
+      let page = 0;
+      let total: number | undefined;
+      do {
+        const response = await this.api.read('/api/operateurs', { queryParams: { page, size: PAGE_SIZE } });
+        verifyOperateursPage(response, page, total, operateurs.length);
+        total = response.totalElementsCount;
+        operateurs.push(
+          ...response.content.map(operateur => ({
+            id: new OperateurReleveId(operateur.id),
+            identite: new IdentiteOperateur(operateur.nom, operateur.prenom),
+          })),
+        );
+        page += 1;
+      } while (operateurs.length < total);
+      if (new Set(operateurs.map(operateur => operateur.id.value)).size !== operateurs.length) {
+        throw new Error('La collection des opérateurs contient une identité dupliquée.');
+      }
+      return operateurs;
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
 
   override async synthese(demande: DemandeDeReleve): Promise<ReleveDesHeures | undefined> {
     const evaluation = new Date().toISOString();
