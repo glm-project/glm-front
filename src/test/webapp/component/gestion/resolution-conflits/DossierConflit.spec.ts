@@ -2,6 +2,24 @@ import { dataSelector } from '../../../utils/DataSelector';
 import type {} from '../../../utils/gestion/resolution-conflits/resolution-conflits.provider';
 
 describe('Conflict dossier in Gestion', () => {
+  it('should identify an absent workstation while preserving the exact received instant', () => {
+    whenOpeningTheDossierWithoutAWorkstation();
+
+    thenTheFactsKeepTheirPrecisionAndNameTheAbsentWorkstation();
+  });
+
+  const whenOpeningTheDossierWithoutAWorkstation = (): void => {
+    cy.viewport(1280, 900);
+    cy.visit('/conflits/demo-avant-ouverture?pointage=fin-avant');
+  };
+
+  const thenTheFactsKeepTheirPrecisionAndNameTheAbsentWorkstation = (): void => {
+    cy.get(dataSelector('conflit-pointage')).should('contain.text', '2026-09-14T08:00:00.123456789+02:00');
+    cy.get(dataSelector('conflit-pointage')).each(pointage => {
+      cy.wrap(pointage).should('contain.text', 'Poste : Sans poste');
+    });
+  };
+
   it('should identify the operator and workstation of every received fact', () => {
     whenOpeningTheDossier();
 

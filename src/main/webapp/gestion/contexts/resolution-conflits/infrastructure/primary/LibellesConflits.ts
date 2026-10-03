@@ -99,6 +99,7 @@ export const LIBELLES_CONFLITS = {
   element: 'Élément',
   operateur: 'Opérateur',
   poste: 'Poste',
+  sansPoste: 'Sans poste',
   faits: 'Faits',
   diagnostic: 'Contradiction',
 } as const;
