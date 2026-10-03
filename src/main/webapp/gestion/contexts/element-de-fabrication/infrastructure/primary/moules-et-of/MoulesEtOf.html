@@ -19,6 +19,49 @@
     </div>
   </header>
 
+  <section class="mb-4 flex flex-wrap items-end gap-3" aria-label="Recherche dans le référentiel">
+    <label class="gestion-recherche">
+      <span class="text-body-sm font-semibold text-ink-muted">{{ libelles.recherche }}</span>
+      <input
+        type="search"
+        [value]="recherche()"
+        (input)="rechercher($any($event.target).value)"
+        placeholder="Référence, nom ou libellé"
+        data-selector="elements-search"
+      />
+    </label>
+    <div class="gestion-segments" role="group" [attr.aria-label]="libelles.filtrerType">
+      <button
+        class="gestion-segment"
+        type="button"
+        [attr.aria-pressed]="type() === 'TOUS'"
+        (click)="choisirType('TOUS')"
+        data-selector="elements-type-tous"
+      >
+        {{ libelles.tous }}
+      </button>
+      <button
+        class="gestion-segment"
+        type="button"
+        [attr.aria-pressed]="type() === 'PRODUIT'"
+        (click)="choisirType('PRODUIT')"
+        data-selector="elements-type-moule"
+      >
+        {{ libelles.types.PRODUIT }}
+      </button>
+      <button
+        class="gestion-segment"
+        type="button"
+        [attr.aria-pressed]="type() === 'ORDRE_DE_FABRICATION'"
+        (click)="choisirType('ORDRE_DE_FABRICATION')"
+        data-selector="elements-type-of"
+      >
+        {{ libelles.types.ORDRE_DE_FABRICATION }}
+      </button>
+    </div>
+    <button mat-stroked-button type="button" (click)="reload()" data-selector="elements-refresh">{{ libelles.actualiser }}</button>
+  </section>
+
   <section class="gestion-carte" [attr.aria-busy]="etat().chargement" [attr.aria-label]="libelles.referentiel">
     @if (etat().chargement) {
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="elements-loading">{{ libelles.chargement }}</p>
@@ -44,9 +87,13 @@
         </button>
       </div>
     </div>
+    } @else if (resultats().length === 0) {
+    <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="elements-no-results">
+      {{ libelles.aucunResultat }}
+    </p>
     } @else {
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
-      <table mat-table [dataSource]="etat().elements" [attr.aria-label]="libelles.tableau">
+      <table mat-table [dataSource]="affiches()" [attr.aria-label]="libelles.tableau">
         <ng-container matColumnDef="type">
           <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
           <td mat-cell *matCellDef="let element">
@@ -120,7 +167,7 @@
     }
 
     <mat-paginator
-      [length]="etat().totalElementsCount"
+      [length]="resultats().length"
       [pageIndex]="etat().page"
       [pageSize]="etat().taille"
       [pageSizeOptions]="[10, 20, 50]"

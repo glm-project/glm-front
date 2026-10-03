@@ -48,11 +48,12 @@
     </p>
   </div>
 
-  <div class="grid gap-3 lg:grid-cols-2" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
+  <div class="plateau grid gap-3 lg:grid-cols-2" [attr.aria-busy]="donnees.isLoading() ? 'true' : null" data-selector="supervision-plateau">
     @for (couloir of supervision.couloirs(); track couloir.couloir) { @let slug = slugs[couloir.couloir]; @let libelleCouloir =
     libelles.couloirs[couloir.couloir];
     <section
       class="flex min-w-0 flex-col rounded-surface border-t-4 bg-sunken px-1.5 pb-1.5"
+      [class.couloir-vide]="couloir.operateurs.length === 0"
       [class.border-t-ok]="couloir.couloir === 'AU_TRAVAIL'"
       [class.border-t-border-strong]="couloir.couloir === 'SANS_ACTIVITE'"
       [attr.aria-labelledby]="'couloir-' + slug + '-titre'"
@@ -95,8 +96,11 @@
           >
             <div class="flex flex-wrap items-center justify-between gap-x-1.5 text-body-sm">
               <h3 [id]="'carte-' + id" class="flex min-w-0 items-center gap-1 text-body-sm font-normal">
-                <span class="wrap-anywhere" data-selector="supervision-operateur-nom"
-                  ><span class="font-semibold">{{ supervise.operateur.nom }}</span> {{ supervise.operateur.prenom }}</span
+                <a
+                  class="lien-operateur wrap-anywhere"
+                  [routerLink]="['/operateurs', id, 'heures']"
+                  data-selector="supervision-operateur-nom"
+                  ><span class="font-semibold">{{ supervise.operateur.nom }}</span> {{ supervise.operateur.prenom }}</a
                 >
               </h3>
             </div>
@@ -165,18 +169,35 @@
             } @for (sequence of supervise.sequencesEnConflit; track sequence.id.value) {
             <div class="bandeau -mx-2.5 mt-0.5 bg-sunken px-2.5 py-2 text-body-sm text-ink" data-selector="supervision-sequence-en-conflit">
               <p class="flex items-start gap-1.5 font-semibold">
-                <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.sequenceEnConflit }} · {{
-                sequence.poste?.libelle ?? libelles.sansPoste }}
+                <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />
+                @if (sequence.activites.length === 0) {
+                <a class="lien-verification" [routerLink]="['/operateurs', id, 'heures']" data-selector="supervision-conflit-lien"
+                  >{{ libelles.sequenceEnConflit }} · {{ sequence.poste?.libelle ?? libelles.sansPoste }}</a
+                >
+                } @else {
+                <span>{{ libelles.sequenceEnConflit }} · {{ sequence.poste?.libelle ?? libelles.sansPoste }}</span>
+                }
               </p>
+              &ngsp;
               <ul role="list" class="mt-1 flex flex-col gap-0.5">
                 @for (activite of sequence.activites; track activite.id.value) {
-                <li data-selector="supervision-conflit-activite">{{ libelles.objet(activite.objet) }} · {{ libelles.aResoudre }}</li>
+                <li data-selector="supervision-conflit-activite">
+                  <a
+                    [routerLink]="['/operateurs', id, 'heures']"
+                    [queryParams]="parametresDuPointage(activite.debut)"
+                    class="lien-verification"
+                    data-selector="supervision-conflit-activite-lien"
+                    >{{ libelles.objet(activite.objet) }} · {{ libelles.aResoudre }}</a
+                  >
+                </li>
                 }
               </ul>
             </div>
             } @for (activite of supervise.activitesTermineesAutomatiquement; track activite.id.value) {
-            <p
-              class="bandeau -mx-2.5 mt-0.5 flex items-start gap-1.5 bg-sunken px-2.5 py-2 text-body-sm font-semibold text-ink"
+            <a
+              [routerLink]="['/operateurs', id, 'heures']"
+              [queryParams]="parametresDuPointage(activite.finRetenue)"
+              class="lien-verification bandeau -mx-2.5 mt-0.5 flex items-start gap-1.5 bg-sunken px-2.5 py-2 text-body-sm font-semibold text-ink"
               data-selector="supervision-anomalie"
             >
               <glm-icon name="triangleAlert" class="icone mt-0.5 shrink-0" aria-hidden="true" />{{ libelles.termineeAutomatiquement }} ·
@@ -184,7 +205,7 @@
                 [attr.datetime]="fin.instant.value"
                 >{{ fin.avant }}{{ fin.jour }}{{ fin.apres }}</time
               >
-            </p>
+            </a>
             }
           </article>
         </li>

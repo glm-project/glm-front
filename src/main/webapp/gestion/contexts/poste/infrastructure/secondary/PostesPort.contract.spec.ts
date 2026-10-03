@@ -175,6 +175,14 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     port = harness.port;
   });
 
+  it('should return the complete referential across server pages', async () => {
+    givenManyWorkstations(125);
+
+    const entries = await port.referentiel();
+
+    expect(entries).toHaveLength(125);
+  });
+
   it('should return the requested page with domain values and the total count', async () => {
     givenWorkstations([tourFixture, scieFixture]);
 
@@ -423,8 +431,8 @@ describe('Beyond the contract: HttpPostes', () => {
   });
 
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
-    const result = port.postes(new RequetePostes(0, 20)).catch((failure: unknown) => failure);
-    await whenServerFails('/api/postes-de-travail?page=0&size=20', 500);
+    const result = port.referentiel().catch((failure: unknown) => failure);
+    await whenServerFails('/api/postes-de-travail?page=0&size=100', 500);
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);

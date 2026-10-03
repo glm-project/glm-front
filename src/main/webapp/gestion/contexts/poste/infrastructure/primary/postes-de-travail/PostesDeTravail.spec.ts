@@ -48,6 +48,63 @@ describe('PostesDeTravail page', () => {
     await closed;
   });
 
+  it.each([
+    ['TOUR', 1],
+    ['introuvable', 0],
+  ])('should search the acquired referential for %s and show %s matches', async (query, expected) => {
+    givenWorkstations();
+    await whenOpening();
+
+    await whenSearching(query);
+
+    expect(texts('poste-row')).toHaveLength(expected);
+  });
+
+  it('should keep loading the current catalogue when an obsolete read fails', async () => {
+    givenManyWorkstations(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<PosteDeTravail>>();
+    givenReadingIsPending(old);
+    const firstArrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await firstArrival;
+    const current = new DeferredFixture<Page<PosteDeTravail>>();
+    givenReadingIsPending(current);
+    const secondArrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await secondArrival;
+    old.reject(new Error('Obsolete read failed'));
+    await whenViewSettles();
+    const loading = text('postes-loading');
+    const failure = text('postes-error');
+    current.resolve(new Page([scieFixture], 1));
+    await whenViewSettles();
+
+    expect(loading).toContain('Chargement');
+    expect(failure).toBe('');
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
+    expect(text('postes-pagination')).toContain('1–1 sur 1');
+  });
+
+  it('should keep the most recently requested catalogue when an older response arrives last', async () => {
+    givenManyWorkstations(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<PosteDeTravail>>();
+    givenReadingIsPending(old);
+    const arrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await arrival;
+    givenReadingSucceeds();
+    whenRefreshingCatalogue();
+    await whenViewSettles();
+    await whenPageSelected(1, 20);
+    old.resolve(new Page([tourFixture], 1));
+    await whenViewSettles();
+
+    expect(texts('poste-row')).toEqual([expect.stringContaining('Poste 21')]);
+    expect(text('postes-pagination')).toContain('21–21 sur 21');
+  });
+
   it('should show loading without displaying the empty state prematurely', async () => {
     const deferred = new DeferredFixture<Page<PosteDeTravail>>();
     givenReadingIsPending(deferred);
@@ -157,49 +214,6 @@ describe('PostesDeTravail page', () => {
     expect(text('postes-pagination')).toContain('1–1 sur 1');
   });
 
-  it('should keep the most recently requested page when an older response arrives last', async () => {
-    givenManyWorkstations(21);
-    await whenOpening();
-    const old = new DeferredFixture<Page<PosteDeTravail>>();
-    givenReadingIsPending(old);
-    const arrival = port.signalLecture();
-    whenSelectingPage(0, 20);
-    await arrival;
-    givenReadingSucceeds();
-    await whenPageSelected(1, 20);
-    old.resolve(new Page([tourFixture], 1));
-    await whenViewSettles();
-
-    expect(texts('poste-row')).toEqual([expect.stringContaining('Poste 21')]);
-    expect(text('postes-pagination')).toContain('21–21 sur 21');
-  });
-
-  it('should keep loading the current page when an obsolete read fails', async () => {
-    givenManyWorkstations(21);
-    await whenOpening();
-    const old = new DeferredFixture<Page<PosteDeTravail>>();
-    givenReadingIsPending(old);
-    const firstArrival = port.signalLecture();
-    whenSelectingPage(0, 20);
-    await firstArrival;
-    const current = new DeferredFixture<Page<PosteDeTravail>>();
-    givenReadingIsPending(current);
-    const secondArrival = port.signalLecture();
-    whenSelectingPage(1, 20);
-    await secondArrival;
-    old.reject(new Error('Obsolete read failed'));
-    await whenViewSettles();
-    const loading = text('postes-loading');
-    const failure = text('postes-error');
-    current.resolve(new Page([scieFixture], 21));
-    await whenLoaded();
-
-    expect(loading).toContain('Chargement');
-    expect(failure).toBe('');
-    expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
-    expect(text('postes-pagination')).toContain('21–21 sur 21');
-  });
-
   const givenManyWorkstations = (count: number): void => {
     port.liste = Array.from(
       { length: count },
@@ -224,10 +238,7 @@ describe('PostesDeTravail page', () => {
     port.lectureFailure = undefined;
     port.lectureDifferee = undefined;
   };
-  const whenLoaded = async (): Promise<void> => {
-    await vi.waitUntil(() => text('postes-loading') === '');
-    await fixture.whenStable();
-  };
+
   const whenClosingDialog = async (result: boolean): Promise<void> => {
     const dialogs = TestBed.inject(MatDialog);
     const closed = firstValueFrom(dialogs.afterAllClosed);
@@ -246,6 +257,15 @@ describe('PostesDeTravail page', () => {
   const whenClicking = async (selector: string): Promise<void> => {
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector).click();
     await fixture.whenStable();
+  };
+  const whenSearching = async (query: string): Promise<void> => {
+    const input = fixture.debugElement.query(By.css(dataSelector('postes-search'))).nativeElement as HTMLInputElement;
+    input.value = query;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  };
+  const whenRefreshingCatalogue = (): void => {
+    fixture.debugElement.query(By.css(dataSelector('postes-refresh'))).triggerEventHandler('click');
   };
   const whenSelectingPage = (pageIndex: number, pageSize: number): void => {
     fixture.debugElement.query(By.css(dataSelector('postes-pagination'))).triggerEventHandler('page', { pageIndex, pageSize });

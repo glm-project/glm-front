@@ -1,7 +1,7 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import { createPaginatorIntl } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
-import { Component, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -9,7 +9,6 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
-import { RequeteElements } from '../../../domain/RequeteElements';
 import { TypeDElementDeFabrication } from '../../../domain/TypeDElementDeFabrication';
 import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog/ElementFormDialog';
 import { LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
@@ -63,6 +62,33 @@ export class MoulesEtOf implements OnInit {
     echec: false,
   });
 
+  protected readonly type = signal<TypeDElementDeFabrication | 'TOUS'>('TOUS');
+
+  protected choisirType(type: TypeDElementDeFabrication | 'TOUS'): void {
+    this.type.set(type);
+    this.etat.update(etat => ({ ...etat, page: 0 }));
+  }
+
+  protected readonly recherche = signal('');
+  protected readonly resultats = computed(() => {
+    const recherche = this.recherche().trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR');
+    return this.etat().elements.filter(entry => {
+      const texte = [entry.reference?.value, entry.nom.value, entry.libelle?.value];
+      return (
+        texte.join(' ').normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR').includes(recherche)
+        && (this.type() === 'TOUS' || entry.type === this.type())
+      );
+    });
+  });
+  protected readonly affiches = computed(() =>
+    this.resultats().slice(this.etat().page * this.etat().taille, (this.etat().page + 1) * this.etat().taille),
+  );
+
+  protected rechercher(value: string): void {
+    this.recherche.set(value);
+    this.etat.update(etat => ({ ...etat, page: 0 }));
+  }
+
   ngOnInit(): void {
     this.reload();
   }
@@ -73,7 +99,6 @@ export class MoulesEtOf implements OnInit {
 
   protected changePage(event: PageEvent): void {
     this.etat.update(etat => ({ ...etat, page: event.pageIndex, taille: event.pageSize }));
-    this.reload();
   }
 
   protected libelleDuType(element: ElementDeFabrication): string {
@@ -110,9 +135,17 @@ export class MoulesEtOf implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const page = await this.port.elements(new RequeteElements(this.etat().page, this.etat().taille));
+      const entries = await this.port.referentiel();
       if (lecture === this.lecture) {
-        this.etat.update(etat => ({ ...etat, elements: page.elements, totalElementsCount: page.totalCount }));
+        this.etat.update(etat => ({
+          ...etat,
+          elements: entries,
+          totalElementsCount: entries.length,
+        }));
+        this.etat.update(etat => ({
+          ...etat,
+          page: Math.min(etat.page, Math.max(0, Math.ceil(this.resultats().length / etat.taille) - 1)),
+        }));
       }
     } catch {
       if (lecture === this.lecture) {

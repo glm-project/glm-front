@@ -9,6 +9,20 @@
     </button>
   </header>
 
+  <section class="mb-4 flex flex-wrap items-end gap-3" aria-label="Recherche dans le référentiel">
+    <label class="gestion-recherche">
+      <span class="text-body-sm font-semibold text-ink-muted">Rechercher un poste</span>
+      <input
+        type="search"
+        [value]="recherche()"
+        (input)="rechercher($any($event.target).value)"
+        placeholder="Libellé ou métier"
+        data-selector="postes-search"
+      />
+    </label>
+    <button mat-stroked-button type="button" (click)="reload()" data-selector="postes-refresh">Actualiser</button>
+  </section>
+
   <section class="gestion-carte" [attr.aria-busy]="etat().chargement" aria-label="Référentiel des postes de travail">
     @if (etat().chargement) {
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">Chargement des postes de travail…</p>
@@ -31,9 +45,13 @@
         <glm-icon name="plus" /> Créer le premier poste
       </button>
     </div>
+    } @else if (resultats().length === 0) {
+    <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="postes-no-results">
+      Aucun poste ne correspond à cette recherche.
+    </p>
     } @else {
     <div class="gestion-table" tabindex="0" role="region" aria-label="Tableau des postes, défilement horizontal disponible">
-      <table mat-table [dataSource]="etat().postes" aria-label="Postes de travail">
+      <table mat-table [dataSource]="affiches()" aria-label="Postes de travail">
         <ng-container matColumnDef="libelle">
           <th mat-header-cell *matHeaderCellDef scope="col">Libellé</th>
           <td mat-cell *matCellDef="let poste" class="font-semibold">{{ poste.libelle.value }}</td>
@@ -78,7 +96,7 @@
     }
 
     <mat-paginator
-      [length]="etat().totalElementsCount"
+      [length]="resultats().length"
       [pageIndex]="etat().page"
       [pageSize]="etat().taille"
       [pageSizeOptions]="[10, 20, 50]"

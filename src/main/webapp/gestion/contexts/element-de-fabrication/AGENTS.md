@@ -85,3 +85,12 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   change.
 - Pour les formulaires et la validation des saisies, appliquer l'[ADR 0036](../../../../../../documentation/adr/0036-rich-domain-models-for-form-interactions.md) :
   la saisie et ses invariants sont portés par un modèle de domaine riche, sans `ReactiveFormsModule`.
+
+## Recherche du référentiel
+
+Le port fournit `referentiel()` comme acquisition complète pour la recherche de l'écran. Le secondaire
+parcourt les pages avec la taille commune et refuse les échos de page, tailles, totaux, troncatures et
+doublons incohérents. Il signale une panne une seule fois et ne présente jamais une collection partielle
+comme résultat complet. La page cherche sans casse ni accents, puis pagine localement les résultats.
+Une nouvelle recherche ou un changement de type repart de la première page. Actualiser et les écritures
+réussies relisent toute la collection ; une réponse obsolète ne remplace pas une lecture récente.

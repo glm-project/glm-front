@@ -1,4 +1,5 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -175,6 +176,7 @@ describe('Supervision atelier component', () => {
     sourceFixture = new DonneesDeSupervisionFixture();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: DonneesDeSupervisionPort, useValue: sourceFixture },
       ],

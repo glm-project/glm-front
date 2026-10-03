@@ -40,6 +40,10 @@ export class OperateursFixture extends OperateursPort {
     return this.lectureSignal.promise;
   }
 
+  override async referentiel(): Promise<readonly Operateur[]> {
+    return (await this.operateurs(new RequeteOperateurs(0, Number.MAX_SAFE_INTEGER))).elements;
+  }
+
   override operateurs(requete: RequeteOperateurs): Promise<Page<Operateur>> {
     this.lectureSignal?.release();
     this.lectureSignal = undefined;

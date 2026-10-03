@@ -100,8 +100,19 @@
     (retryRequested)="reload()"
   />
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
+  <nav class="navigation-jours" [attr.aria-label]="libelles.detailDuJour">
+    @for (jour of vue.frise.jours; track jour.cle) {
+    <a [routerLink]="[]" [queryParams]="parametresDuJour(vue.semaine, jour.cle)" [attr.aria-current]="jour.ouvert ? 'date' : null"
+      >{{ jour.libelle }}</a
+    >
+    }
+  </nav>
   <div class="gestion-carte">
-    <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
+    <div class="px-5 py-4 flex flex-wrap justify-between gap-2 border-b border-border">
+      <h2 class="text-section">{{ libelles.vueSemaine }}</h2>
+      <p class="text-body-sm text-ink-muted">{{ libelles.axeSemaine }}</p>
+    </div>
+    <div class="gestion-table semaine-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
       <div class="frise" role="table" [attr.aria-label]="libelles.tableau" [style.--colonnes]="vue.frise.colonnes">
         @if (vue.frise.calque; as calque) {
         <div class="calque" aria-hidden="true">
@@ -173,10 +184,19 @@
           <span class="etiquette" role="rowheader">
             <span class="titre">
               <span class="gestion-type" data-selector="synthese-element-type">{{ ligne.type }}</span>
-              <span class="numero text-body font-semibold" data-selector="synthese-element-numero">{{ ligne.numero }}</span>
+              <a
+                class="numero text-body font-semibold"
+                [routerLink]="['/couts-de-revient', ligne.cle]"
+                data-selector="synthese-element-numero"
+                >{{ ligne.numero }}</a
+              >
             </span>
-            <span class="libelle text-body-sm text-ink-muted" data-selector="synthese-element-libelle">{{ ligne.libelle }}</span>
-            <span class="postes text-body-sm text-ink-muted" data-selector="synthese-element-postes">{{ ligne.postes }}</span>
+            <span [title]="ligne.libelle" class="libelle text-body-sm text-ink-muted" data-selector="synthese-element-libelle"
+              >{{ ligne.libelle }}</span
+            >
+            <span [title]="ligne.postes" class="postes text-body-sm text-ink-muted" data-selector="synthese-element-postes"
+              >{{ ligne.postes }}</span
+            >
           </span>
           @for (cellule of ligne.cellules; track $index) {
           <span class="cellule" role="cell" data-selector="synthese-element-jour">
@@ -203,34 +223,6 @@
           <span class="total" role="cell"></span>
         </div>
         } }
-        <ng-template #barres let-cellule>
-          @for (barre of cellule.barres; track $index) {
-          <span
-            [class]="'barre ' + barre.style"
-            [class.automatique]="barre.automatique"
-            [style.left.%]="barre.gauche"
-            [style.width.%]="barre.largeur"
-            [title]="barre.enonce"
-            data-selector="synthese-barre"
-            [attr.data-style]="barre.style"
-            [attr.data-automatique]="barre.automatique"
-            ><span class="sr-only">{{ barre.enonce }}</span></span
-          >
-          @if (barre.etat; as etat) {
-          <span class="etat-activite" data-selector="synthese-activite-etat">{{ etat }}</span>
-          } } @for (marque of cellule.marques; track $index) {
-          <span
-            [class]="'forme marque ' + marque.type"
-            [class.choisie]="marque.choisie"
-            [style.left.%]="marque.gauche"
-            [title]="marque.titre"
-            aria-hidden="true"
-            data-selector="synthese-marque"
-            [attr.data-type]="marque.type"
-            [attr.data-choisie]="marque.choisie"
-          ></span>
-          }
-        </ng-template>
       </div>
     </div>
     <div class="pied">
@@ -255,26 +247,128 @@
       </ul>
     </div>
   </div>
-  @if (vue.frise.conflits.length > 0) {
-  <section class="mt-6" aria-labelledby="conflits-heading" data-selector="synthese-conflits">
-    <h2 id="conflits-heading" class="text-section" data-selector="synthese-conflits-titre">{{ libelles.conflits }}</h2>
-    <ul class="mt-3 space-y-4">
-      @for (conflit of vue.frise.conflits; track $index) {
-      <li class="border-b border-border pb-4">
-        <h3 class="text-body font-semibold" data-selector="synthese-conflit-element">{{ conflit.element }}</h3>
-        @if (conflit.activites; as activites) {
-        <p class="mt-1 text-body-sm text-ink-muted" data-selector="synthese-conflit-activites">{{ activites }}</p>
+  <div class="details-semaine">
+    <div>
+      @if (vue.frise.detail; as detail) {
+      <section class="gestion-carte detail-jour" aria-labelledby="detail-jour-titre" data-selector="synthese-detail-jour">
+        <div class="detail-titre">
+          <h2 id="detail-jour-titre" class="text-section">{{ libelles.detailDuJour }} · {{ detail.jour.libelle }}</h2>
+          <p class="text-body-sm text-ink-muted">
+            {{ libelles.operationnel }} : <strong class="text-ink">{{ detail.jour.operationnel }}</strong>
+          </p>
+        </div>
+        @if (detail.lignes.length > 0) {
+        <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.detailDuJour">
+          <div class="frise frise-detail">
+            <div class="ligne entete">
+              <span class="etiquette">{{ libelles.colonneElement }}</span>
+              <span class="reperes-detail">
+                @for (repere of detail.jour.reperes; track repere.minutes) {
+                <span [class]="'repere ' + repere.ancrage" [style.left.%]="repere.gauche" data-selector="synthese-detail-repere"
+                  >{{ repere.libelle }}</span
+                >
+                }
+              </span>
+            </div>
+            @for (ligne of detail.lignes; track ligne.cle) {
+            <div class="ligne element">
+              <span class="etiquette"
+                ><span class="text-body font-semibold">{{ ligne.type }} {{ ligne.numero }}</span
+                ><span class="text-body-sm text-ink-muted">{{ ligne.libelle }}</span></span
+              >
+              @for (cellule of ligne.cellules; track $index) {
+              <span class="cellule"><ng-container *ngTemplateOutlet="barres; context: { $implicit: cellule, detail: true }" /></span>
+              }
+            </div>
+            @for (sousLigne of ligne.sousLignes; track sousLigne.cle) {
+            <div class="ligne sous-ligne">
+              <span class="etiquette text-body-sm text-ink-muted">{{ sousLigne.poste }}</span>
+              @for (cellule of sousLigne.cellules; track $index) {
+              <span class="cellule"><ng-container *ngTemplateOutlet="barres; context: { $implicit: cellule, detail: true }" /></span>
+              }
+            </div>
+            } }
+          </div>
+        </div>
+        } @else {
+        <p class="px-5 py-6 text-body text-ink-muted">{{ libelles.sansActiviteCeJour }}</p>
         }
-        <ul class="mt-2 space-y-1 text-body-sm">
-          @for (fait of conflit.faits; track $index) {
-          <li class="break-words" data-selector="synthese-conflit-fait">{{ fait }}</li>
+      </section>
+      } @if (vue.frise.journal; as journal) {
+      <glm-journal [journal]="journal" (choisi)="choisir($event)" />
+      }
+    </div>
+    <aside class="gestion-carte verification" aria-labelledby="verification-titre" data-selector="synthese-verification">
+      <h2 id="verification-titre" class="text-section">{{ libelles.aVerifier }}</h2>
+      @if (vue.frise.alertes.length === 0 && vue.frise.conflits.length === 0) {
+      <p class="text-body-sm text-ink-muted">{{ libelles.sansAnomalie }}</p>
+      }
+      <ul class="alertes">
+        @for (alerte of vue.frise.alertes; track $index) {
+        <li>
+          <a [routerLink]="[]" [queryParams]="parametresDuJour(vue.semaine, alerte.jour)">
+            <span class="text-body-sm font-semibold">{{ alerte.element }}</span>
+            <span class="text-body-sm text-ink-muted">{{ alerte.jourLibelle }} · {{ alerte.etat }}</span>
+            <span class="text-body-sm text-accent underline">{{ libelles.voirLesPointages }}</span>
+          </a>
+        </li>
+        }
+      </ul>
+      @if (vue.frise.conflits.length > 0) {
+      <section class="mt-6" aria-labelledby="conflits-heading" data-selector="synthese-conflits">
+        <h2 id="conflits-heading" class="text-section" data-selector="synthese-conflits-titre">{{ libelles.conflits }}</h2>
+        <ul class="mt-3 space-y-4">
+          @for (conflit of vue.frise.conflits; track $index) {
+          <li class="border-b border-border pb-4">
+            <h3 class="text-body font-semibold" data-selector="synthese-conflit-element">{{ conflit.element }}</h3>
+            @if (conflit.activites; as activites) {
+            <p class="mt-1 text-body-sm text-ink-muted" data-selector="synthese-conflit-activites">{{ activites }}</p>
+            }
+            <ul class="mt-2 space-y-1 text-body-sm">
+              @for (fait of conflit.faits; track $index) {
+              <li class="break-words" data-selector="synthese-conflit-fait">{{ fait }}</li>
+              }
+            </ul>
+          </li>
           }
         </ul>
-      </li>
+      </section>
       }
-    </ul>
-  </section>
-  } @if (vue.frise.journal; as journal) {
-  <glm-journal [journal]="journal" (choisi)="choisir($event)" />
-  } } }
+    </aside>
+  </div>
+  } }
+  <ng-template #barres let-cellule let-detail="detail">
+    @for (barre of cellule.barres; track $index) {
+    <span
+      [class]="'barre ' + barre.style"
+      [class.automatique]="barre.automatique"
+      [style.left.%]="barre.gauche"
+      [style.width.%]="barre.largeur"
+      [title]="barre.enonce"
+      [attr.data-selector]="detail ? 'synthese-detail-barre' : 'synthese-barre'"
+      [attr.data-style]="barre.style"
+      [attr.data-automatique]="barre.automatique"
+      ><span class="sr-only">{{ barre.enonce }}</span></span
+    >
+    @if (barre.etat; as etat) { @if (detail) {
+    <span class="etat-activite" data-selector="synthese-detail-etat">{{ etat }}</span>
+    } @else {
+    <span class="sr-only" data-selector="synthese-activite-etat">{{ etat }}</span>
+    <span class="etat-court" [title]="etat" data-selector="synthese-etat-court"
+      >{{ barre.automatique ? libelles.finAutomatiqueCourte : barre.style === 'en-cours' ? libelles.legende.enCours :
+      libelles.legende.aResoudre }}</span
+    >
+    } } } @for (marque of cellule.marques; track $index) {
+    <span
+      [class]="'forme marque ' + marque.type"
+      [class.choisie]="marque.choisie"
+      [style.left.%]="marque.gauche"
+      [title]="marque.titre"
+      aria-hidden="true"
+      [attr.data-selector]="detail ? 'synthese-detail-marque' : 'synthese-marque'"
+      [attr.data-type]="marque.type"
+      [attr.data-choisie]="marque.choisie"
+    ></span>
+    }
+  </ng-template>
 </main>

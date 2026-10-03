@@ -77,7 +77,7 @@ describe('Workstation settings in gestion', () => {
   });
 
   const givenAnEmptyWorkshop = (): void => {
-    cy.intercept('GET', '/api/postes-de-travail*', { content: [], currentPage: 0, pageSize: 20, totalElementsCount: 0 });
+    givenReferential();
   };
   const whenOpeningFromTheMenu = (): void => {
     cy.visit('/');

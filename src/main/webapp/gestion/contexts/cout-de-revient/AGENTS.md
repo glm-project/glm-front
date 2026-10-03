@@ -44,7 +44,7 @@ client. Le rapport n'est **jamais stocké** : il est recalculé à chaque lectur
 l'atelier, pour qu'une saisie régularisée après coup compte à l'heure où le travail a eu lieu.
 
 **Élément chiffré** : l'élément de fabrication dont le coût est lu, relu au référentiel à chaque appel.
-Réduit à son nom et à son type — c'est tout ce que la route rend.
+Le port compose le rapport avec la fiche du référentiel pour conserver la référence et le libellé facultatifs.
 
 **Nature d'opération** : le métier d'une ligne — « Fraisage », « Tournage », « Érosion ». Elle vient du
 **poste de travail**, jamais de la personne, et elle a été copiée au moment de la saisie : un poste
@@ -164,10 +164,10 @@ pour laquelle ils sont affichés séparément.
   le total restent constants, les pages non finales sont pleines et les identifiants uniques. Une incohérence
   rejette toute l’acquisition et se signale une seule fois ; elle ne livre aucune liste partielle. Cette
   acquisition ne garantit pas un instantané transactionnel. Le 404 de collection est une panne technique.
-- **Ni la référence ni le libellé de l'élément ne sont affichés.** `RestElement` ne porte que `id`, `nom`
-  et `type`. Aller chercher la référence demanderait une seconde lecture du référentiel pour une donnée
-  facultative : à rouvrir si le besoin se confirme, pas avant. Même arbitrage que l'identifiant dans
-  `releve-des-heures`.
+- **La référence reste la désignation principale, avec le nom interne en second rang et le libellé lorsqu'il existe.**
+  Le secondaire du même port relit la fiche par l'identifiant demandé après le rapport et contrôle la
+  correspondance des identités. Un échec de cette lecture rejette toute la vue, signalé une seule fois.
+  Ces lectures n'établissent pas d'instantané transactionnel ; aucun montant n'est reconstruit.
 - **Le coût n'est pas séparé entre bon travail et non-conformité, et l'écran ne l'invente pas.** Seul le
   temps l'est. Le déduire au prorata du temps supposerait un tarif constant sur toute la ligne, ce que le
   parallélisme rend faux. C'est une évolution du back, pas un calcul de ce front.

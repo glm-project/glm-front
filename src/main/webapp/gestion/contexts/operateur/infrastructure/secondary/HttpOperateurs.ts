@@ -4,6 +4,7 @@ import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CommandeCreationOperateur } from '../../domain/CommandeCreationOperateur';
@@ -92,16 +93,23 @@ export class HttpOperateurs extends OperateursPort {
   private readonly errors = inject(ErrorHandlerPort);
   private cachedPostes: readonly PosteHabilitable[] | undefined;
 
-  override async operateurs(requete: RequeteOperateurs): Promise<Page<Operateur>> {
+  override async referentiel(): Promise<readonly Operateur[]> {
     try {
-      const response = await this.api.read('/api/operateurs', {
-        queryParams: { page: requete.page, size: requete.taille },
-      });
-      return buildPageFrom(response, toOperateur);
+      return await collectAllPages(
+        (page, size) => this.operateurs(new RequeteOperateurs(page, size)),
+        entry => entry.id.value,
+      );
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
     }
+  }
+
+  override async operateurs(requete: RequeteOperateurs): Promise<Page<Operateur>> {
+    const response = await this.api.read('/api/operateurs', {
+      queryParams: { page: requete.page, size: requete.taille },
+    });
+    return buildPageFrom(response, toOperateur, requete);
   }
 
   override async postesHabilitables(): Promise<readonly PosteHabilitable[]> {

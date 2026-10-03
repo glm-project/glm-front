@@ -18,7 +18,7 @@
   [(opened)]="ouvert"
 >
   <span pickerIdentity id="cout-identite" data-selector="cout-identite"
-    >@if (identite(); as element) { {{ libelles.identite(element.type, element.nom) }} } @else { {{ libelles.choisirElement }} }</span
+    >@if (identite(); as element) { {{ libelles.identite(element.type, element.numero()) }} } @else { {{ libelles.choisirElement }} }</span
   >
   <ul class="element-options">
     @for (element of propositions(); track element.id.value) {

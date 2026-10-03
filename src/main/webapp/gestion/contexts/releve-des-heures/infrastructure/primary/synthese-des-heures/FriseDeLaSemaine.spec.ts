@@ -44,7 +44,7 @@ describe('FriseDeLaSemaine', () => {
     it('should situate a chosen clocking by a guide at its instant', () => {
       const repere = frise(releveDeTraits(), LUNDI, 1).calque?.repere;
 
-      expect([arrondi(repere?.gauche), repere?.titre]).toEqual([62.5, 'Fin 16:00']);
+      expect([arrondi(repere?.gauche), repere?.titre]).toEqual([66.67, 'Fin 16:00']);
     });
 
     it('should draw no guide while no clocking is chosen', () => {
@@ -65,26 +65,26 @@ describe('FriseDeLaSemaine', () => {
   describe('columns', () => {
     const colonnes = (releve: ReleveDesHeures, ouvert?: JourCalendaire): string[] => frise(releve, ouvert).colonnes.split(' ');
 
-    it('should give the open day the widest column, an empty day the narrowest, the others the middle one', () => {
+    it('should keep comparable widths for all days regardless of their activity', () => {
       const releve = releveFixture(SEMAINE_EN_COURS, { 0: jourTravailleFixture, 1: jourTravailleFixture });
 
       expect(colonnes(releve, LUNDI)).toEqual([
         'var(--largeur-etiquette)',
-        'var(--largeur-ouverte)',
-        'var(--largeur-fermee)',
-        'var(--largeur-vide)',
-        'var(--largeur-vide)',
-        'var(--largeur-vide)',
-        'var(--largeur-vide)',
-        'var(--largeur-vide)',
+        'var(--largeur-jour)',
+        'var(--largeur-jour)',
+        'var(--largeur-jour)',
+        'var(--largeur-jour)',
+        'var(--largeur-jour)',
+        'var(--largeur-jour)',
+        'var(--largeur-jour)',
         'var(--largeur-total)',
       ]);
     });
 
-    it('should give an empty open day the width of an open day', () => {
+    it('should keep an empty consulted day at the common width', () => {
       const releve = releveFixture(SEMAINE_EN_COURS, { 0: jourTravailleFixture });
 
-      expect(colonnes(releve, new JourCalendaire('2026-09-20'))[7]).toBe('var(--largeur-ouverte)');
+      expect(colonnes(releve, new JourCalendaire('2026-09-20'))[7]).toBe('var(--largeur-jour)');
     });
   });
 });

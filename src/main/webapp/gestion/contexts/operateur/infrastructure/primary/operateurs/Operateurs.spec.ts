@@ -65,6 +65,63 @@ describe('Operateurs page', () => {
     await closed;
   });
 
+  it.each([
+    ['JEAN', 1],
+    ['introuvable', 0],
+  ])('should search the acquired referential for %s and show %s matches', async (query, expected) => {
+    givenOperateurs();
+    await whenOpening();
+
+    await whenSearching(query);
+
+    expect(texts('operateur-row')).toHaveLength(expected);
+  });
+
+  it('should keep loading the current catalogue when an obsolete read fails', async () => {
+    givenManyOperateurs(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<Operateur>>();
+    givenReadingIsPending(old);
+    const firstArrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await firstArrival;
+    const current = new DeferredFixture<Page<Operateur>>();
+    givenReadingIsPending(current);
+    const secondArrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await secondArrival;
+    old.reject(new Error('Obsolete read failed'));
+    await whenViewSettles();
+    const loading = text('operateurs-loading');
+    const failure = text('operateurs-error');
+    current.resolve(new Page([leaFixture], 1));
+    await whenViewSettles();
+
+    expect(loading).toContain('Chargement');
+    expect(failure).toBe('');
+    expect(texts('operateur-row')).toEqual([expect.stringContaining('Martin')]);
+    expect(text('operateurs-pagination')).toContain('1–1 sur 1');
+  });
+
+  it('should keep the most recently requested catalogue when an older response arrives last', async () => {
+    givenManyOperateurs(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<Operateur>>();
+    givenReadingIsPending(old);
+    const arrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await arrival;
+    givenReadingSucceeds();
+    whenRefreshingCatalogue();
+    await whenViewSettles();
+    await whenPageSelected(1, 20);
+    old.resolve(new Page([jeanFixture], 1));
+    await whenViewSettles();
+
+    expect(texts('operateur-row')).toEqual([expect.stringContaining('Nom 21')]);
+    expect(text('operateurs-pagination')).toContain('21–21 sur 21');
+  });
+
   it('should show loading without displaying the empty state prematurely', async () => {
     const deferred = new DeferredFixture<Page<Operateur>>();
     givenReadingIsPending(deferred);
@@ -201,49 +258,6 @@ describe('Operateurs page', () => {
     expect(texts('operateur-row')).toEqual([expect.stringContaining('Dupont')]);
   });
 
-  it('should keep the most recently requested page when an older response arrives last', async () => {
-    givenManyOperateurs(21);
-    await whenOpening();
-    const old = new DeferredFixture<Page<Operateur>>();
-    givenReadingIsPending(old);
-    const arrival = port.signalLecture();
-    whenSelectingPage(0, 20);
-    await arrival;
-    givenReadingSucceeds();
-    await whenPageSelected(1, 20);
-    old.resolve(new Page([jeanFixture], 1));
-    await whenViewSettles();
-
-    expect(texts('operateur-row')).toEqual([expect.stringContaining('Nom 21')]);
-    expect(text('operateurs-pagination')).toContain('21–21 sur 21');
-  });
-
-  it('should keep loading the current page when an obsolete read fails', async () => {
-    givenManyOperateurs(21);
-    await whenOpening();
-    const old = new DeferredFixture<Page<Operateur>>();
-    givenReadingIsPending(old);
-    const firstArrival = port.signalLecture();
-    whenSelectingPage(0, 20);
-    await firstArrival;
-    const current = new DeferredFixture<Page<Operateur>>();
-    givenReadingIsPending(current);
-    const secondArrival = port.signalLecture();
-    whenSelectingPage(1, 20);
-    await secondArrival;
-    old.reject(new Error('Obsolete read failed'));
-    await whenViewSettles();
-    const loading = text('operateurs-loading');
-    const failure = text('operateurs-error');
-    current.resolve(new Page([leaFixture], 21));
-    await whenLoaded();
-
-    expect(loading).toContain('Chargement');
-    expect(failure).toBe('');
-    expect(texts('operateur-row')).toEqual([expect.stringContaining('Martin')]);
-    expect(text('operateurs-pagination')).toContain('21–21 sur 21');
-  });
-
   const givenOperateurs = (): void => {
     port.liste = [jeanFixture, leaFixture];
   };
@@ -274,10 +288,7 @@ describe('Operateurs page', () => {
     port.lectureFailure = undefined;
     port.lectureDifferee = undefined;
   };
-  const whenLoaded = async (): Promise<void> => {
-    await vi.waitUntil(() => text('operateurs-loading') === '');
-    await fixture.whenStable();
-  };
+
   const whenClosingDialog = async (result: boolean): Promise<void> => {
     const dialogs = TestBed.inject(MatDialog);
     const closed = firstValueFrom(dialogs.afterAllClosed);
@@ -296,6 +307,15 @@ describe('Operateurs page', () => {
   const whenClicking = async (selector: string): Promise<void> => {
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector).click();
     await fixture.whenStable();
+  };
+  const whenSearching = async (query: string): Promise<void> => {
+    const input = fixture.debugElement.query(By.css(dataSelector('operateurs-search'))).nativeElement as HTMLInputElement;
+    input.value = query;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  };
+  const whenRefreshingCatalogue = (): void => {
+    fixture.debugElement.query(By.css(dataSelector('operateurs-refresh'))).triggerEventHandler('click');
   };
   const whenSelectingPage = (pageIndex: number, pageSize: number): void => {
     fixture.debugElement.query(By.css(dataSelector('operateurs-pagination'))).triggerEventHandler('page', { pageIndex, pageSize });

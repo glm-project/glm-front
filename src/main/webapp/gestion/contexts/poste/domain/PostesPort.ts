@@ -11,6 +11,7 @@ import { RefusSuppressionPoste } from './RefusSuppressionPoste';
 import { RequetePostes } from './RequetePostes';
 
 export abstract class PostesPort {
+  abstract referentiel(): Promise<readonly PosteDeTravail[]>;
   abstract postes(requete: RequetePostes): Promise<Page<PosteDeTravail>>;
   abstract natures(): Promise<readonly NatureDeTravail[]>;
   abstract creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>>;

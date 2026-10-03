@@ -11,6 +11,7 @@ import { RefusSuppressionOperateur } from './RefusSuppressionOperateur';
 import { RequeteOperateurs } from './RequeteOperateurs';
 
 export abstract class OperateursPort {
+  abstract referentiel(): Promise<readonly Operateur[]>;
   abstract operateurs(requete: RequeteOperateurs): Promise<Page<Operateur>>;
   abstract postesHabilitables(): Promise<readonly PosteHabilitable[]>;
   abstract creer(commande: CommandeCreationOperateur): Promise<Result<void, RefusCreationOperateur>>;

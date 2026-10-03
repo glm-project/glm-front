@@ -188,6 +188,14 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     port = harness.port;
   });
 
+  it('should return the complete referential across server pages', async () => {
+    givenManyElements(125);
+
+    const entries = await port.referentiel();
+
+    expect(entries).toHaveLength(125);
+  });
+
   it('should return the requested page with domain values and the total count', async () => {
     givenReferential([mouleFixture, ofSansReferenceFixture]);
 
@@ -345,7 +353,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   });
 
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
-    const result = port.elements(new RequeteElements(0, 20)).catch((failure: unknown) => failure);
+    const result = port.referentiel().catch((failure: unknown) => failure);
     await whenReadFails();
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);

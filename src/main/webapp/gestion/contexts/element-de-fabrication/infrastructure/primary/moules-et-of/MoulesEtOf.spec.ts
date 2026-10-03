@@ -53,6 +53,86 @@ describe('MoulesEtOf page', () => {
     await closed;
   });
 
+  it.each([
+    ['mOuLe', 1],
+    ['000042', 1],
+    ['introuvable', 0],
+  ])('should search the acquired referential for %s and show %s matches', async (query, expected) => {
+    givenReferential();
+    await whenOpening();
+
+    await whenSearching(query);
+
+    expect(texts('element-row')).toHaveLength(expected);
+  });
+
+  it.each([
+    ['moule', 1],
+    ['of', 1],
+    ['tous', 2],
+  ])('should filter the catalogue by %s', async (type, expected) => {
+    givenReferential();
+    await whenOpening();
+
+    await whenClicking(`elements-type-${type}`);
+
+    expect(texts('element-row')).toHaveLength(expected);
+  });
+
+  it('should keep loading the current catalogue when an obsolete read fails', async () => {
+    givenManyElements(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<ElementDeFabrication>>();
+    givenReadingIsPending(old);
+    const firstArrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await firstArrival;
+    const current = new DeferredFixture<Page<ElementDeFabrication>>();
+    givenReadingIsPending(current);
+    const secondArrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await secondArrival;
+    old.reject(new Error('Obsolete read failed'));
+    await whenViewSettles();
+    const loading = text('elements-loading');
+    const failure = text('elements-error');
+    current.resolve(new Page([ofSansReferenceFixture], 1));
+    await whenViewSettles();
+
+    expect(loading).toContain('Chargement des moules et OF');
+    expect(failure).toBe('');
+    expect(texts('element-nom-cell')).toEqual(['OF-2026-000042']);
+  });
+
+  it('should keep the most recently requested catalogue when an older response arrives last', async () => {
+    givenManyElements(21);
+    await whenOpening();
+    const old = new DeferredFixture<Page<ElementDeFabrication>>();
+    givenReadingIsPending(old);
+    const arrival = port.signalLecture();
+    whenRefreshingCatalogue();
+    await arrival;
+    givenReadingSucceeds();
+    whenRefreshingCatalogue();
+    await whenViewSettles();
+    await whenPageSelected(1, 20);
+    old.resolve(new Page([mouleFixture], 1));
+    await whenViewSettles();
+
+    expect(texts('element-nom-cell')).toEqual(['PRD-2026-000021']);
+    expect(text('elements-pagination')).toContain('21–21 sur 21');
+  });
+
+  it('should paginate the acquired catalogue without changing its entries', async () => {
+    givenManyElements(21);
+    await whenOpening();
+
+    await whenPageSelected(1, 20);
+
+    expect(texts('element-nom-cell')).toEqual(['PRD-2026-000021']);
+    expect(text('elements-pagination')).toContain('21–21 sur 21');
+  });
+
   it('should show loading without displaying the empty state prematurely', async () => {
     const deferred = new DeferredFixture<Page<ElementDeFabrication>>();
     givenReadingIsPending(deferred);
@@ -180,48 +260,6 @@ describe('MoulesEtOf page', () => {
     expect(texts('element-reference-cell')).toEqual(['1016']);
   });
 
-  it('should keep the most recently requested page when an older response arrives last', async () => {
-    givenManyElements(21);
-    await whenOpening();
-    const old = new DeferredFixture<Page<ElementDeFabrication>>();
-    givenReadingIsPending(old);
-    const arrival = port.signalLecture();
-    whenSelectingPage(0, 20);
-    await arrival;
-    givenReadingSucceeds();
-    await whenPageSelected(1, 20);
-    old.resolve(new Page([mouleFixture], 1));
-    await whenViewSettles();
-
-    expect(texts('element-nom-cell')).toEqual(['PRD-2026-000021']);
-    expect(text('elements-pagination')).toContain('21–21 sur 21');
-  });
-
-  it('should keep loading the current page when an obsolete read fails', async () => {
-    givenManyElements(21);
-    await whenOpening();
-    const old = new DeferredFixture<Page<ElementDeFabrication>>();
-    givenReadingIsPending(old);
-    const firstArrival = port.signalLecture();
-    whenSelectingPage(0, 20);
-    await firstArrival;
-    const current = new DeferredFixture<Page<ElementDeFabrication>>();
-    givenReadingIsPending(current);
-    const secondArrival = port.signalLecture();
-    whenSelectingPage(1, 20);
-    await secondArrival;
-    old.reject(new Error('Obsolete read failed'));
-    await whenViewSettles();
-    const loading = text('elements-loading');
-    const failure = text('elements-error');
-    current.resolve(new Page([ofSansReferenceFixture], 21));
-    await whenLoaded();
-
-    expect(loading).toContain('Chargement des moules et OF');
-    expect(failure).toBe('');
-    expect(texts('element-nom-cell')).toEqual(['OF-2026-000042']);
-  });
-
   const givenReferential = (): void => {
     port.liste = [mouleFixture, ofSansReferenceFixture];
   };
@@ -249,10 +287,7 @@ describe('MoulesEtOf page', () => {
     fixture = TestBed.createComponent(MoulesEtOf);
     await fixture.whenStable();
   };
-  const whenLoaded = async (): Promise<void> => {
-    await vi.waitUntil(() => text('elements-loading') === '');
-    await fixture.whenStable();
-  };
+
   const whenViewSettles = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
     await fixture.whenStable();
@@ -272,6 +307,15 @@ describe('MoulesEtOf page', () => {
     await closed;
     await fixture.whenStable();
   };
+  const whenSearching = async (query: string): Promise<void> => {
+    const input = fixture.debugElement.query(By.css(dataSelector('elements-search'))).nativeElement as HTMLInputElement;
+    input.value = query;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  };
+  const whenRefreshingCatalogue = (): void => {
+    fixture.debugElement.query(By.css(dataSelector('elements-refresh'))).triggerEventHandler('click');
+  };
   const whenSelectingPage = (pageIndex: number, pageSize: number): void => {
     fixture.debugElement.query(By.css(dataSelector('elements-pagination'))).triggerEventHandler('page', { pageIndex, pageSize });
   };
@@ -283,7 +327,7 @@ describe('MoulesEtOf page', () => {
   const texts = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
   const fields = (): (string | null)[] =>
-    [...document.querySelectorAll('[data-selector] input')].map(field => field.getAttribute('data-selector'));
+    [...document.querySelectorAll('glm-element-form-dialog input')].map(field => field.getAttribute('data-selector'));
   const editLabels = (): (string | null)[] =>
     [...document.querySelectorAll(dataSelector('element-edit'))].map(element => element.getAttribute('aria-label'));
   const actionsCount = (): number[] =>

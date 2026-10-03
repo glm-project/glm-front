@@ -4,7 +4,7 @@ import {
   createPaginatorIntl,
   DEFAULT_PAGINATOR_LABELS,
 } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
-import { Component, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -12,7 +12,6 @@ import { MatTableModule } from '@angular/material/table';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
-import { RequetePostes } from '../../../domain/RequetePostes';
 import {
   ConfirmationSuppressionPosteDialog,
   ConfirmationSuppressionPosteDialogData,
@@ -57,6 +56,23 @@ export class PostesDeTravail implements OnInit {
   private readonly currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
   protected readonly colonnes = ['libelle', 'nature', 'coutHoraire', 'actions'];
 
+  protected readonly recherche = signal('');
+  protected readonly resultats = computed(() => {
+    const recherche = this.recherche().trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR');
+    return this.etat().postes.filter(entry => {
+      const texte = [entry.libelle.value, entry.nature.value];
+      return texte.join(' ').normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR').includes(recherche);
+    });
+  });
+  protected readonly affiches = computed(() =>
+    this.resultats().slice(this.etat().page * this.etat().taille, (this.etat().page + 1) * this.etat().taille),
+  );
+
+  protected rechercher(value: string): void {
+    this.recherche.set(value);
+    this.etat.update(etat => ({ ...etat, page: 0 }));
+  }
+
   ngOnInit(): void {
     this.reload();
   }
@@ -67,7 +83,6 @@ export class PostesDeTravail implements OnInit {
 
   protected changePage(event: PageEvent): void {
     this.etat.update(etat => ({ ...etat, page: event.pageIndex, taille: event.pageSize }));
-    this.reload();
   }
 
   protected openForm(poste: PosteDeTravail | null = null): void {
@@ -106,9 +121,17 @@ export class PostesDeTravail implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const page = await this.port.postes(new RequetePostes(this.etat().page, this.etat().taille));
+      const entries = await this.port.referentiel();
       if (lecture === this.lecture) {
-        this.etat.update(etat => ({ ...etat, postes: page.elements, totalElementsCount: page.totalCount }));
+        this.etat.update(etat => ({
+          ...etat,
+          postes: entries,
+          totalElementsCount: entries.length,
+        }));
+        this.etat.update(etat => ({
+          ...etat,
+          page: Math.min(etat.page, Math.max(0, Math.ceil(this.resultats().length / etat.taille) - 1)),
+        }));
       }
     } catch {
       if (lecture === this.lecture) {
@@ -129,7 +152,7 @@ export class PostesDeTravail implements OnInit {
   }
 
   private isLastRowOnLaterPage(): boolean {
-    return this.etat().postes.length === 1 && this.etat().page > 0;
+    return this.affiches().length === 1 && this.etat().page > 0;
   }
 
   protected formatCout(cout: CoutHoraire | undefined): string {

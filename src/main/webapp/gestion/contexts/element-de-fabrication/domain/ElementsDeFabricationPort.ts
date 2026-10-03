@@ -8,6 +8,7 @@ import { RefusModificationElement } from './RefusModificationElement';
 import { RequeteElements } from './RequeteElements';
 
 export abstract class ElementsDeFabricationPort {
+  abstract referentiel(): Promise<readonly ElementDeFabrication[]>;
   abstract elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>>;
   abstract creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>>;
   abstract modifier(commande: CommandeModificationElement): Promise<Result<void, RefusModificationElement>>;

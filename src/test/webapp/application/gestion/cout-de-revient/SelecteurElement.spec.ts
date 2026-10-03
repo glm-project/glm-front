@@ -7,6 +7,12 @@ import {
 } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 
 describe('Navigation between cost reports', () => {
+  beforeEach(() => {
+    cy.intercept({ method: 'GET', pathname: '/api/elements-de-fabrication/*' }, request => {
+      request.reply({ id: request.url.slice(request.url.lastIndexOf('/') + 1) });
+    });
+  });
+
   it('should navigate directly from an OF report to a mould report with its own received cost', () => {
     givenTwoDistinctReports();
     whenVisitingTheFirstReport();

@@ -5,6 +5,7 @@ import { required } from '@/app/shared/api-client/infrastructure/secondary/requi
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CommandeCreationElement } from '../../domain/CommandeCreationElement';
@@ -68,16 +69,23 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  override async elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>> {
+  override async referentiel(): Promise<readonly ElementDeFabrication[]> {
     try {
-      const response = await this.api.read('/api/elements-de-fabrication', {
-        queryParams: { ...PERIODE_DEPUIS_TOUJOURS, page: requete.page, size: requete.taille },
-      });
-      return buildPageFrom(response, toElement);
+      return await collectAllPages(
+        (page, size) => this.elements(new RequeteElements(page, size)),
+        entry => entry.id.value,
+      );
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
     }
+  }
+
+  override async elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>> {
+    const response = await this.api.read('/api/elements-de-fabrication', {
+      queryParams: { ...PERIODE_DEPUIS_TOUJOURS, page: requete.page, size: requete.taille },
+    });
+    return buildPageFrom(response, toElement, requete);
   }
 
   override creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {

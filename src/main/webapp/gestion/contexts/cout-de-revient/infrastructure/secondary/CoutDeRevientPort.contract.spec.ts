@@ -191,12 +191,12 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
         });
       }).pipe(switchMap(answer => (answer instanceof HttpErrorResponse ? throwError(() => answer) : of(answer))));
     }
-    return defer(() => this.answer()).pipe(
+    return defer(() => this.answer(request)).pipe(
       switchMap(answer => (answer instanceof HttpErrorResponse ? throwError(() => answer) : of(answer))),
     );
   }
 
-  private async answer(): Promise<HttpResponse<unknown> | HttpErrorResponse> {
+  private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
     if (this.elementInconnu) {
       return new HttpErrorResponse({
@@ -204,6 +204,9 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
         statusText: 'Not Found',
         error: { title: 'element de fabrication introuvable' },
       });
+    }
+    if (request.url.startsWith('/api/elements-de-fabrication/')) {
+      return new HttpResponse({ status: 200, body: { id: ELEMENT } });
     }
     return new HttpResponse({ status: 200, body: toRest(this.lignes) });
   }
@@ -601,6 +604,23 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     request.flush(body);
   };
 
+  it('should keep the company reference and designation with the server report', async () => {
+    const result = port.rapport(DEMANDE);
+    await whenServerAnswers(toRest([fraisageFixture]), { id: ELEMENT, reference: 'M24-0655', description: 'Support latéral' });
+    const rapport = await result;
+
+    expect(rapport?.element.numero()).toBe('M24-0655');
+    expect(rapport?.element.libelle).toBe('Support latéral');
+  });
+
+  it('should refuse a referential identity that differs from the cost report', async () => {
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers(toRest([fraisageFixture]), { id: 'autre-element' });
+
+    expect(await result).toEqual(new Error('Le référentiel ne désigne pas l’élément chiffré.'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
   it('should retain certain machine and work totals beside unresolved labour and non conformity', async () => {
     const result = port.rapport(DEMANDE);
     await whenServerAnswers({
@@ -898,10 +918,15 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(errorHandler.errors).toHaveLength(1);
   });
 
-  const whenServerAnswers = async (body: RestRapport): Promise<TestRequest> => {
+  const whenServerAnswers = async (
+    body: RestRapport,
+    fiche: components['schemas']['RestElementDeFabrication'] = { id: ELEMENT },
+  ): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = server.expectOne(candidate => candidate.method === 'GET' && candidate.url === `${ROUTE}/${ELEMENT}`);
     request.flush(body);
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(`/api/elements-de-fabrication/${ELEMENT}`).flush(fiche);
     return request;
   };
 

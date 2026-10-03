@@ -56,6 +56,10 @@ export const minutesDeFin = (debut: InstantDeReleve, fin: InstantDeReleve): numb
 export class AxeDuJour {
   private constructor(private readonly fenetre: Fenetre) {}
 
+  static entier(): AxeDuJour {
+    return new AxeDuJour(JOUR_ENTIER);
+  }
+
   static de(bornes: readonly number[]): AxeDuJour {
     return new AxeDuJour(bornes.some(sortDesHeuresDeJour) ? JOUR_ENTIER : HEURES_DE_JOUR);
   }

@@ -111,18 +111,20 @@ pour la semaine en cours, même vide ; sinon le premier jour portant un pointage
 sélectionné est éphémère : aucun à l'ouverture, effacé au changement d’opérateur/jour/semaine, désélectionné par un
 second clic. Changer seulement le jour ou la sélection conserve les rapports acquis et leur évaluation.
 
-Chaque jour possède son axe, normalement 6–22 h. Une borne dessinée en dehors de cette fenêtre ou à minuit
-ouvre le jour entier. Une fin à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette
-fin. Les pointages participent à l'axe uniquement lorsqu'ils sont dessinés dans le jour ouvert.
-Les repères restent à l'intérieur de leur colonne : deux pour le jour fermé, un toutes les deux heures pour
-le jour ouvert de jour, toutes les trois heures sur le jour entier. Un jour vide fermé n'en porte aucun.
+La vue de semaine garde sept colonnes de même largeur et une échelle commune de 0 à 24 h, vides compris.
+Les deux repères de chaque jour restent à l'intérieur de sa colonne, avec une marge lisible.
+Le jour consulté conserve son état dans l'URL, sans agrandir sa colonne. Le détail et le journal du jour
+figurent sous la semaine ; sur mobile, sept liens donnent accès aux jours sans défiler la frise.
+Le détail conserve un axe normalement 6–22 h, étendu au jour entier pour une borne nocturne ou à minuit.
+Une fin à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette fin.
+Les mentions longues de fin automatique et de conflit restent accessibles dans les barres, le détail et
+le panneau À vérifier. Leur résumé dans la semaine ne doit pas dilater ses lignes.
 
 Le serveur découpe dans son calendrier : une activité terminée 20–08 h donne 4 h puis 8 h ; dimanche
 22–lundi 03 h donne 2 h puis 3 h, dans les deux semaines ISO. Minuit répartit les portions et ne produit
 aucun geste ni fin métier.
 
-La frise tient à 1024 px et défile horizontalement en dessous. Le jour ouvert est le plus large, les jours
-vides fermés les plus étroits ; les noms longs se tronquent par CSS. L'heure des faits et de l'origine
+La frise tient à 1024 px et défile horizontalement en dessous. Les jours ont la même largeur ; les libellés longs se replient et les noms de postes restent accessibles par leur titre. L'heure des faits et de l'origine
 s'affiche dans le fuseau du navigateur, selon la convention existante. Le découpage des jours est déjà celui
 du serveur : le décalage d'une consultation depuis un autre fuseau reste une limite connue. Un fuseau
 entreprise configuré est un chantier séparé. Un instant sans fuseau est refusé.

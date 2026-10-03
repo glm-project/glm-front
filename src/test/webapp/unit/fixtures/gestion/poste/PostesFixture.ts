@@ -32,6 +32,10 @@ export class PostesFixture extends PostesPort {
     return this.lectureSignal.promise;
   }
 
+  override async referentiel(): Promise<readonly PosteDeTravail[]> {
+    return (await this.postes(new RequetePostes(0, Number.MAX_SAFE_INTEGER))).elements;
+  }
+
   override postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
     this.lectureSignal?.release();
     this.lectureSignal = undefined;
