@@ -50,6 +50,7 @@ export class DossierConflitPage {
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
+  protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),

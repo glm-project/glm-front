@@ -71,8 +71,8 @@
         class="choix"
         type="button"
         data-selector="conflit-choix"
-        [attr.aria-pressed]="choixSelectionne() === choix.id"
-        [class.choix-selectionne]="choixSelectionne() === choix.id"
+        [attr.aria-pressed]="choixAffiche() === choix.id"
+        [class.choix-selectionne]="choixAffiche() === choix.id"
         [disabled]="occupe() || !droits.canApply()"
         (click)="choose(choix.saisie, choix.id)"
       >

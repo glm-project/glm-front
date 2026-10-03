@@ -270,6 +270,19 @@ describe('Conflict dossier page', () => {
     expect(read.demandes).toHaveLength(2);
   });
 
+  it('should clear the displayed interpretation after verifying an unknown write outcome', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    await whenClicking('conflit-verifier');
+
+    thenNoInterpretationIsSelected();
+    thenAbsent('conflit-acte');
+  });
+
   it('should replace the displayed dossier with the accepted partial result while preserving its closure', async () => {
     givenASuccessfulPreview();
     const dossier = dossierConflitFixture();
@@ -584,6 +597,9 @@ describe('Conflict dossier page', () => {
     const button = element(selector);
     if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button');
     expect(button.disabled).toBe(true);
+  };
+  const thenNoInterpretationIsSelected = (): void => {
+    expect(element('conflit-choix').getAttribute('aria-pressed')).toBe('false');
   };
   const thenDetailedFactIsOpen = (): void => {
     const detail = element('conflit-champs-detail').parentElement;
