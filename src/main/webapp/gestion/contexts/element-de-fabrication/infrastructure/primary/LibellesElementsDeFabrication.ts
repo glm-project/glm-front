@@ -22,6 +22,11 @@ const COUTS_DE_REVIENT: Record<TypeDElementDeFabrication, string> = {
 
 export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   titre: 'Moules et OF',
+  recherche: 'Rechercher un moule ou un OF',
+  actualiser: 'Actualiser',
+  filtrerType: 'Filtrer par type',
+  tous: 'Tous',
+  aucunResultat: 'Aucun moule ni OF ne correspond à cette recherche.',
   sousTitre: 'Créez et tenez à jour les moules et les OF de l’atelier.',
   types: TYPES,
   creations: CREATIONS,

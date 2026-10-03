@@ -1113,7 +1113,10 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect([reperesDuJour(0), reperesDuJour(6)]).toEqual([['8 h', '20 h'], []]);
+    expect([reperesDuJour(0), reperesDuJour(6)]).toEqual([
+      ['0 h', '24 h'],
+      ['0 h', '24 h'],
+    ]);
   });
 
   it('should open today on the week in progress when the address names no day, empty as today may be', async () => {
@@ -1294,7 +1297,7 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    ['2026-09-14', 'every two hours on the daytime axis', ['6 h', '8 h', '10 h', '12 h', '14 h', '16 h', '18 h', '20 h', '22 h']],
+    ['2026-09-14', 'without a detailed activity axis when empty', []],
     ['2026-09-15', 'every third hour on the whole day', ['0 h', '3 h', '6 h', '9 h', '12 h', '15 h', '18 h', '21 h', '24 h']],
   ])('should mark the open day %s %s', async (jour, _cas, attendu) => {
     givenReleve(
@@ -1306,7 +1309,8 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(reperesDuJour(jour === '2026-09-14' ? 0 : 1)).toEqual(attendu);
+    expect(reperesDuJour(jour === '2026-09-14' ? 0 : 1)).toEqual(['0 h', '24 h']);
+    expect(reperesDetail()).toEqual(attendu);
   });
 
   it('should keep the order the server gave the clockings in, without sorting them by hour', async () => {
@@ -1477,7 +1481,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(reperesDuJour(0)).toEqual(['8 h', '20 h']);
+    expect(reperesDuJour(0)).toEqual(['0 h', '24 h']);
   });
 
   it('should not read the report again when another day of the same week is opened', async () => {
@@ -2041,6 +2045,9 @@ describe('Synthese des heures component', () => {
     [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-sous-ligne'))].map(
       sousLigne => sousLigne.querySelectorAll(dataSelector('synthese-marque')).length,
     );
+
+  const reperesDetail = (): string[] =>
+    [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-detail-repere'))].map(repere => normalise(repere.textContent));
 
   const reperesDuJour = (rang: number): string[] => {
     const entete = [...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-jour-cell'))][rang];

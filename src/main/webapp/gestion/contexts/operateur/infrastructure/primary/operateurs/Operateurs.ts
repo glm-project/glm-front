@@ -4,7 +4,7 @@ import {
   createPaginatorIntl,
   DEFAULT_PAGINATOR_LABELS,
 } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
-import { Component, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -14,7 +14,6 @@ import { Identifiant } from '../../../domain/Identifiant';
 import { Operateur } from '../../../domain/Operateur';
 import { OperateursPort } from '../../../domain/OperateursPort';
 import { PosteHabilitable } from '../../../domain/PosteHabilitable';
-import { RequeteOperateurs } from '../../../domain/RequeteOperateurs';
 import { TauxHoraire } from '../../../domain/TauxHoraire';
 import {
   ConfirmationSuppressionOperateurDialog,
@@ -63,6 +62,29 @@ export class Operateurs implements OnInit {
   private readonly currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
   protected readonly colonnes = ['identite', 'identifiant', 'natures', 'postes', 'tauxHoraire', 'actions'];
 
+  protected readonly recherche = signal('');
+  protected readonly resultats = computed(() => {
+    const recherche = this.recherche().trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR');
+    return this.etat().operateurs.filter(entry => {
+      const texte = [
+        entry.nom.value,
+        entry.prenom.value,
+        entry.identifiant?.value,
+        ...entry.natures,
+        ...entry.postes.map(poste => poste.libelle),
+      ];
+      return texte.join(' ').normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR').includes(recherche);
+    });
+  });
+  protected readonly affiches = computed(() =>
+    this.resultats().slice(this.etat().page * this.etat().taille, (this.etat().page + 1) * this.etat().taille),
+  );
+
+  protected rechercher(value: string): void {
+    this.recherche.set(value);
+    this.etat.update(etat => ({ ...etat, page: 0 }));
+  }
+
   ngOnInit(): void {
     this.reload();
   }
@@ -73,7 +95,6 @@ export class Operateurs implements OnInit {
 
   protected changePage(event: PageEvent): void {
     this.etat.update(etat => ({ ...etat, page: event.pageIndex, taille: event.pageSize }));
-    this.reload();
   }
 
   protected openForm(operateur: Operateur | null = null): void {
@@ -112,14 +133,18 @@ export class Operateurs implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const page = await this.port.operateurs(new RequeteOperateurs(this.etat().page, this.etat().taille));
+      const entries = await this.port.referentiel();
       const postes = await this.port.postesHabilitables();
       if (lecture === this.lecture) {
         this.etat.update(etat => ({
           ...etat,
-          operateurs: page.elements,
-          totalElementsCount: page.totalCount,
+          operateurs: entries,
+          totalElementsCount: entries.length,
           atelierSansPoste: postes.length === 0,
+        }));
+        this.etat.update(etat => ({
+          ...etat,
+          page: Math.min(etat.page, Math.max(0, Math.ceil(this.resultats().length / etat.taille) - 1)),
         }));
       }
     } catch {
@@ -141,7 +166,7 @@ export class Operateurs implements OnInit {
   }
 
   private isLastRowOnLaterPage(): boolean {
-    return this.etat().operateurs.length === 1 && this.etat().page > 0;
+    return this.affiches().length === 1 && this.etat().page > 0;
   }
 
   protected formatIdentifiant(identifiant: Identifiant | undefined): string {

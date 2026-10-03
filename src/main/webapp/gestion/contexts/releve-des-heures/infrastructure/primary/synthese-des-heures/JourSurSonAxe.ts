@@ -27,11 +27,16 @@ const bornesDuJour = (jour: JourDeReleve, ouvert: boolean): readonly number[] =>
 
 const estOuvert = (jour: JourCalendaire, ouvert: JourCalendaire | undefined): boolean => ouvert !== undefined && jour.estLeMeme(ouvert);
 
-export const jourSurSonAxe = (jour: JourDeReleve, ouvert: JourCalendaire | undefined, choix: number | undefined): JourSurSonAxe => {
+export const jourSurSonAxe = (
+  jour: JourDeReleve,
+  ouvert: JourCalendaire | undefined,
+  choix: number | undefined,
+  axe?: AxeDuJour,
+): JourSurSonAxe => {
   const estLeJourOuvert = estOuvert(jour.jour, ouvert);
   return {
     jour,
-    axe: AxeDuJour.de(bornesDuJour(jour, estLeJourOuvert)),
+    axe: axe ?? AxeDuJour.de(bornesDuJour(jour, estLeJourOuvert)),
     ouvert: estLeJourOuvert,
     pointageChoisi: estLeJourOuvert && choix !== undefined ? jour.pointages[choix] : undefined,
   };

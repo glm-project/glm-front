@@ -140,8 +140,10 @@ describe('Cost of manufacture in gestion', () => {
     api.install();
   };
 
-  const givenAPendingReport = (): { send: () => void } =>
-    interceptForever({ method: 'GET', pathname: '/api/couts-de-revient/*' }, { body: coutDeRevientFixture() }, 'coutDeRevientRead');
+  const givenAPendingReport = (): { send: () => void } => {
+    api.install();
+    return interceptForever({ method: 'GET', pathname: '/api/couts-de-revient/*' }, { body: coutDeRevientFixture() }, 'coutDeRevientRead');
+  };
 
   const givenAFailingRead = (): void => {
     api.failRead = true;

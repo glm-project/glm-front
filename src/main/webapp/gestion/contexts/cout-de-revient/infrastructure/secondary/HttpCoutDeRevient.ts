@@ -133,13 +133,19 @@ const toLigne = (ligne: RestLigne): LigneDeCout =>
     pointages: required(ligne.pointages, 'ligne.pointages').map(toPointage),
   });
 
-const toElement = (rapport: RestRapport): ElementChiffre => {
+const toElement = (rapport: RestRapport, fiche: components['schemas']['RestElementDeFabrication']): ElementChiffre => {
   const element = required(rapport.element, 'rapport.element');
-  return new ElementChiffre(required(element.nom, 'rapport.element.nom'), required(element.type, 'rapport.element.type'));
+  if (element.id !== fiche.id) {
+    throw new Error('Le référentiel ne désigne pas l’élément chiffré.');
+  }
+  return new ElementChiffre(required(element.nom, 'rapport.element.nom'), required(element.type, 'rapport.element.type'), {
+    reference: fiche.reference,
+    libelle: fiche.description,
+  });
 };
 
-const toRapport = (rapport: RestRapport): CoutDeRevient =>
-  new CoutDeRevient(toElement(rapport), {
+const toRapport = (rapport: RestRapport, fiche: components['schemas']['RestElementDeFabrication']): CoutDeRevient =>
+  new CoutDeRevient(toElement(rapport, fiche), {
     evaluation: new InstantDeTravail(rapport.evaluation),
     activitesEnCours: new ActivitesEnCoursExclues(rapport.activitesEnCours),
     lignes: required(rapport.lignes, 'rapport.lignes').map(toLigne),
@@ -235,7 +241,8 @@ export class HttpCoutDeRevient extends CoutDeRevientPort {
   override async rapport(element: ElementChiffreId): Promise<CoutDeRevient | undefined> {
     try {
       const response = await this.api.read(ROUTE, { pathParams: { elementId: element.value } });
-      return toRapport(response);
+      const fiche = await this.api.read('/api/elements-de-fabrication/{id}', { pathParams: { id: element.value } });
+      return toRapport(response, fiche);
     } catch (failure) {
       if (estElementInconnu(failure)) {
         return undefined;

@@ -1,5 +1,7 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, inject, linkedSignal, resource, ResourceStatus } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Instant } from '../../../domain/instant/Instant';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
 import { DonneesDeSupervisionPort } from '../../../domain/supervision/DonneesDeSupervisionPort';
 import { OperateurSupervise } from '../../../domain/supervision/OperateurSupervise';
@@ -32,7 +34,7 @@ const nomComplet = (supervise: OperateurSupervise): string => `${supervise.opera
   templateUrl: './supervision-atelier.html',
   styleUrl: './supervision-atelier.css',
   host: { 'data-selector': 'supervision-atelier' },
-  imports: [Icon],
+  imports: [Icon, RouterLink],
 })
 export class SupervisionAtelier {
   protected readonly libelles = LIBELLES_SUPERVISION;
@@ -56,6 +58,16 @@ export class SupervisionAtelier {
       return { kind: 'ERREUR' };
     }
     return { kind: 'SUCCES', supervision: resultat.supervision };
+  }
+
+  protected parametresDuPointage(instant: Instant): { annee: number; semaine: number; jour: string } {
+    const date = new Date(instant.value);
+    const jour = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const jeudi = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    jeudi.setUTCDate(jeudi.getUTCDate() + 4 - (jeudi.getUTCDay() || 7));
+    const annee = jeudi.getUTCFullYear();
+    const semaine = Math.ceil(((jeudi.getTime() - Date.UTC(annee, 0, 1)) / 86_400_000 + 1) / 7);
+    return { annee, semaine, jour };
   }
 
   protected signalNc(supervision: SupervisionDeLAtelier): SignalAffiche {

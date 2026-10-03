@@ -77,6 +77,14 @@ export interface FormeDActiviteEnCours {
 
 export const LIBELLES_RELEVE_DES_HEURES = {
   titre: 'Temps opérationnel',
+  vueSemaine: 'Vue de la semaine',
+  axeSemaine: 'Même échelle chaque jour · 0 à 24 h',
+  detailDuJour: 'Détail du jour',
+  sansActiviteCeJour: 'Aucune activité ce jour',
+  aVerifier: 'À vérifier',
+  voirLesPointages: 'Voir les pointages',
+  sansAnomalie: 'Aucune anomalie signalée cette semaine.',
+  finAutomatiqueCourte: 'Fin auto.',
   retour: 'Opérateurs',
   semaineConsultee: 'Semaine consultée',
   retourAria: 'Revenir au référentiel des opérateurs',

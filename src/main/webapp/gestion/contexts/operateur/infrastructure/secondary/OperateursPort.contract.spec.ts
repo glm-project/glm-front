@@ -217,6 +217,14 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
     port = harness.port;
   });
 
+  it('should return the complete referential across server pages', async () => {
+    givenManyOperateurs(125);
+
+    const entries = await port.referentiel();
+
+    expect(entries).toHaveLength(125);
+  });
+
   it('should return the requested page with domain values and the total count', async () => {
     givenReferential([jeanFixture, leaFixture], [tourFixture]);
 
@@ -440,8 +448,8 @@ describe('Beyond the contract: HttpOperateurs', () => {
   });
 
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
-    const result = port.operateurs(new RequeteOperateurs(0, 20)).catch((failure: unknown) => failure);
-    await whenServerFails('/api/operateurs?page=0&size=20');
+    const result = port.referentiel().catch((failure: unknown) => failure);
+    await whenServerFails('/api/operateurs?page=0&size=100');
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);

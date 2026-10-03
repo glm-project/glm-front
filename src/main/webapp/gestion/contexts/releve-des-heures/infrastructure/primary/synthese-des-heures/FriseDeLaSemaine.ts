@@ -43,7 +43,21 @@ export interface ConflitDeFrise {
   readonly faits: readonly string[];
 }
 
+export interface DetailDuJour {
+  readonly jour: JourDeFrise;
+  readonly lignes: readonly LigneDeFrise[];
+}
+
+export interface AlerteDeFrise {
+  readonly jour: string;
+  readonly jourLibelle: string;
+  readonly element: string;
+  readonly etat: string | undefined;
+}
+
 export interface FriseDeLaSemaine {
+  readonly detail: DetailDuJour | undefined;
+  readonly alertes: readonly AlerteDeFrise[];
   readonly conflits: readonly ConflitDeFrise[];
   readonly journal: JournalDuJour | undefined;
   readonly colonnes: string;
@@ -53,14 +67,14 @@ export interface FriseDeLaSemaine {
   readonly operationnelTotal: string;
 }
 
-const reperesDuJour = (jour: JourDeReleve, axe: AxeDuJour, ouvert: boolean): readonly RepereDeFrise[] =>
-  jour.estVide() && !ouvert ? [] : axe.reperes(ouvert).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) }));
+const reperesDetail = (axe: AxeDuJour): readonly RepereDeFrise[] =>
+  axe.reperes(true).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) }));
 
 const sansOperationnel = (jour: JourDeReleve): boolean => jour.estVide() && jour.operationnelTotal.snapshot().complete;
 
 const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalendaire): JourDeFrise => ({
   cle: jour.jour.value,
-  reperes: reperesDuJour(jour, axe, ouvert),
+  reperes: axe.reperes(false).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) })),
   libelle: LIBELLES.jour(jour.jour),
   aujourdhui: jour.jour.estLeMeme(aujourdhui),
   ouvert,
@@ -70,15 +84,8 @@ const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalen
 
 const PREMIERE_COLONNE_DE_JOUR = 2;
 
-const largeurDuJour = ({ jour, ouvert }: JourSurSonAxe): string => {
-  if (ouvert) {
-    return 'var(--largeur-ouverte)';
-  }
-  return jour.estVide() ? 'var(--largeur-vide)' : 'var(--largeur-fermee)';
-};
-
 const colonnesDe = (jours: readonly JourSurSonAxe[]): string =>
-  ['var(--largeur-etiquette)', ...jours.map(largeurDuJour), 'var(--largeur-total)'].join(' ');
+  ['var(--largeur-etiquette)', ...jours.map(() => 'var(--largeur-jour)'), 'var(--largeur-total)'].join(' ');
 
 const repereDe = ({ axe, pointageChoisi }: JourSurSonAxe): GuideDePointage | undefined =>
   pointageChoisi === undefined
@@ -122,20 +129,52 @@ const conflitDeFrise = (releve: ReleveDesHeures, conflit: SequenceEnConflit): Co
   };
 };
 
+const alertesDeLigne = (ligne: LigneDeFrise, jour: JourSurSonAxe, rang: number): readonly AlerteDeFrise[] =>
+  [...ligne.cellules.slice(rang, rang + 1), ...ligne.sousLignes.flatMap(sousLigne => sousLigne.cellules.slice(rang, rang + 1))].flatMap(
+    cellule =>
+      cellule.barres
+        .filter(barre => barre.automatique || barre.style === 'a-resoudre')
+        .map(barre => ({
+          jour: jour.jour.jour.value,
+          jourLibelle: LIBELLES.jour(jour.jour.jour),
+          element: `${ligne.type} ${ligne.numero}`,
+          etat: barre.etat,
+        })),
+  );
+
 export const friseDeLaSemaine = (
   releve: ReleveDesHeures,
   aujourdhui: JourCalendaire,
   ouvert: JourCalendaire | undefined,
   selection: number | undefined,
 ): FriseDeLaSemaine => {
-  const jours = releve.jours.map(jour => jourSurSonAxe(jour, ouvert, selection));
+  const jours = releve.jours.map(jour => jourSurSonAxe(jour, ouvert, selection, AxeDuJour.entier()));
+  const lignes = releve.elements.map(element => ligneDeFrise(element, jours, releve.travailleEnParallele(element)));
+  const jourDetail = jours.find(jour => jour.ouvert);
+  const axeDetail = jourDetail === undefined ? undefined : jourSurSonAxe(jourDetail.jour, ouvert, selection);
+  const detail =
+    axeDetail === undefined
+      ? undefined
+      : {
+          jour: { ...jourDeFrise(axeDetail, aujourdhui), reperes: reperesDetail(axeDetail.axe) },
+          lignes: releve.elements
+            .map(element => ligneDeFrise(element, [axeDetail], releve.travailleEnParallele(element)))
+            .filter(ligne =>
+              [...ligne.cellules, ...ligne.sousLignes.flatMap(sousLigne => sousLigne.cellules)].some(
+                cellule => cellule.barres.length + cellule.marques.length > 0,
+              ),
+            ),
+        };
+  const alertes = jours.flatMap((jour, rang) => lignes.flatMap(ligne => alertesDeLigne(ligne, jour, rang)));
   return {
+    detail,
+    alertes,
     conflits: releve.conflits.map(conflit => conflitDeFrise(releve, conflit)),
     journal: journalDuJourOuvert(releve, jours, selection),
     colonnes: colonnesDe(jours),
     calque: calqueDe(jours),
     jours: jours.map(jour => jourDeFrise(jour, aujourdhui)),
-    lignes: releve.elements.map(element => ligneDeFrise(element, jours, releve.travailleEnParallele(element))),
+    lignes,
     operationnelTotal: LIBELLES.duree(releve.operationnelTotal),
   };
 };

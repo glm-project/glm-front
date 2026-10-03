@@ -205,11 +205,11 @@ describe('Operational time report in gestion', () => {
     thenTheFriseScrollsHorizontally();
   });
 
-  it('should give the open day the widest column and an empty day the narrowest', () => {
+  it('should keep a common width when opening a day without compressing empty days', () => {
     givenAWeek(semaineDeNuitFixture());
     whenVisiting(ADRESSE);
 
-    thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne(0, 1, [2, 3, 4, 5, 6]);
+    thenEveryDayHasTheSameWidth();
   });
 
   it('should offer a retry after a read failure', () => {
@@ -347,17 +347,10 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-semaine')).focus();
   };
 
-  const thenTheColumnsAreWidestForTheOpenDayAndNarrowestForAnEmptyOne = (
-    ouvert: number,
-    fermeOccupe: number,
-    vides: readonly number[],
-  ): void => {
-    cy.get(dataSelector('synthese-jour-cell')).should($entetes => {
-      const largeurs = [...$entetes].map(entete => entete.getBoundingClientRect().width);
-      const fermees = largeurs.filter((_largeur, rang) => rang !== ouvert);
-      const largeursVides = vides.map(rang => requiredFixture(largeurs[rang]));
-      expect(requiredFixture(largeurs[ouvert])).to.be.greaterThan(Math.max(...fermees));
-      expect(Math.max(...largeursVides)).to.be.lessThan(requiredFixture(largeurs[fermeOccupe]));
+  const thenEveryDayHasTheSameWidth = (): void => {
+    cy.get(dataSelector('synthese-jour-cell')).should(entetes => {
+      const largeurs = [...entetes].map(entete => entete.getBoundingClientRect().width);
+      expect(Math.max(...largeurs) - Math.min(...largeurs)).to.be.lessThan(1);
     });
   };
 

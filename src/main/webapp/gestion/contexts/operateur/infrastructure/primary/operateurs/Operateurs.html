@@ -11,6 +11,20 @@
     </button>
   </header>
 
+  <section class="mb-4 flex flex-wrap items-end gap-3" aria-label="Recherche dans le référentiel">
+    <label class="gestion-recherche">
+      <span class="text-body-sm font-semibold text-ink-muted">Rechercher un opérateur</span>
+      <input
+        type="search"
+        [value]="recherche()"
+        (input)="rechercher($any($event.target).value)"
+        placeholder="Nom, prénom, identifiant ou métier"
+        data-selector="operateurs-search"
+      />
+    </label>
+    <button mat-stroked-button type="button" (click)="reload()" data-selector="operateurs-refresh">Actualiser</button>
+  </section>
+
   <section class="gestion-carte" [attr.aria-busy]="etat().chargement" aria-label="Référentiel des opérateurs">
     @if (etat().chargement) {
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="operateurs-loading">Chargement des opérateurs…</p>
@@ -42,9 +56,13 @@
         <glm-icon name="plus" /> Déclarer le premier opérateur
       </button>
     </div>
+    } @else if (resultats().length === 0) {
+    <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="operateurs-no-results">
+      Aucun opérateur ne correspond à cette recherche.
+    </p>
     } @else {
     <div class="gestion-table" tabindex="0" role="region" aria-label="Tableau des opérateurs, défilement horizontal disponible">
-      <table mat-table [dataSource]="etat().operateurs" aria-label="Opérateurs">
+      <table mat-table [dataSource]="affiches()" aria-label="Opérateurs">
         <ng-container matColumnDef="identite">
           <th mat-header-cell *matHeaderCellDef scope="col">Opérateur</th>
           <td mat-cell *matCellDef="let operateur" data-selector="operateur-identite-cell">
@@ -133,7 +151,7 @@
     }
 
     <mat-paginator
-      [length]="etat().totalElementsCount"
+      [length]="resultats().length"
       [pageIndex]="etat().page"
       [pageSize]="etat().taille"
       [pageSizeOptions]="[10, 20, 50]"

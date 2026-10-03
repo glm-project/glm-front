@@ -189,13 +189,17 @@ export class CoutDeRevientApiFixture {
   rapport: RestRapport = coutDeRevientFixture();
 
   install(): void {
+    cy.intercept({ method: 'GET', pathname: '/api/elements-de-fabrication/*' }, request => {
+      request.reply({ id: request.url.slice(request.url.lastIndexOf('/') + 1) });
+    }).as('costElementRead');
     cy.intercept({ method: 'GET', pathname: ROUTE }, request => {
-      this.lectures.push(request.url.slice(request.url.lastIndexOf('/') + 1));
-      request.reply(this.reponse());
+      const element = request.url.slice(request.url.lastIndexOf('/') + 1);
+      this.lectures.push(element);
+      request.reply(this.reponse(element));
     }).as('coutDeRevientRead');
   }
 
-  private reponse(): { statusCode?: number; body: RestRapport | object } {
+  private reponse(element: string): { statusCode?: number; body: RestRapport | object } {
     if (this.failRead) {
       return { statusCode: 500, body: {} };
     }
@@ -203,8 +207,9 @@ export class CoutDeRevientApiFixture {
       return { statusCode: 404, body: { title: 'element de fabrication introuvable' } };
     }
     if (this.sansPointage) {
-      return { body: rapportVideFixture() };
+      const rapport = rapportVideFixture();
+      return { body: { ...rapport, element: { ...rapport.element, id: element } } };
     }
-    return { body: this.rapport };
+    return { body: { ...this.rapport, element: { ...this.rapport.element, id: element } } };
   }
 }

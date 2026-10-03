@@ -30,6 +30,10 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     return this.lectureSignal.promise;
   }
 
+  override async referentiel(): Promise<readonly ElementDeFabrication[]> {
+    return (await this.elements(new RequeteElements(0, Number.MAX_SAFE_INTEGER))).elements;
+  }
+
   override elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>> {
     this.lectureSignal?.release();
     this.lectureSignal = undefined;

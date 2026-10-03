@@ -92,3 +92,10 @@ L'[ADR 0031](../../../../../../documentation/adr/0031-own-workshop-supervision-i
 séparation des responsabilités, l'[ADR 0041](../../../../../../documentation/adr/0041-sort-workshop-supervision-into-state-lanes.md)
 la forme en couloirs et l'[ADR 0040](../../../../../../documentation/adr/0040-colour-non-conformity-yellow.md)
 la couleur de la NC. Leur classement est amendé par l'ADR 0047.
+
+## Accès à la vérification
+
+Le nom d'une personne ouvre son relevé. Chaque fin automatique ouvre le relevé de cette personne à la
+semaine ISO et au jour de la fin retenue, dans le fuseau du navigateur. Une activité en conflit utilise
+son début reçu ; une séquence sans activité ouvre le relevé sans inventer une date. Les liens ne promettent
+aucune correction. Un couloir vide conserve son titre, son nombre et son sens dans une ligne compacte.

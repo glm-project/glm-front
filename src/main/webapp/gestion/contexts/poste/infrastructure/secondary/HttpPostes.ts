@@ -4,6 +4,7 @@ import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CommandeCreationPoste } from '../../domain/CommandeCreationPoste';
@@ -72,13 +73,20 @@ export class HttpPostes extends PostesPort {
   private readonly errors = inject(ErrorHandlerPort);
   private cachedNatures: readonly NatureDeTravail[] | undefined;
 
-  override async postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
+  override async referentiel(): Promise<readonly PosteDeTravail[]> {
     try {
-      return await this.fetchPage(requete);
+      return await collectAllPages(
+        (page, size) => this.postes(new RequetePostes(page, size)),
+        entry => entry.id.value,
+      );
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
     }
+  }
+
+  override async postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
+    return await this.fetchPage(requete);
   }
 
   override async natures(): Promise<readonly NatureDeTravail[]> {
@@ -125,7 +133,7 @@ export class HttpPostes extends PostesPort {
     const response = await this.api.read('/api/postes-de-travail', {
       queryParams: { page: requete.page, size: requete.taille },
     });
-    return buildPageFrom(response, toPoste);
+    return buildPageFrom(response, toPoste, requete);
   }
 
   override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {

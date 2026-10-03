@@ -9,5 +9,23 @@ export interface RestPage<Wire> {
   totalElementsCount: number;
 }
 
-export const buildPageFrom = <Wire, Model>(page: RestPage<Wire>, toModel: (element: Wire) => Model): Page<Model> =>
-  new Page(page.content.map(toModel), page.totalElementsCount);
+interface RequestedPage {
+  readonly page: number;
+  readonly taille: number;
+}
+
+const mismatchedPage = <Wire>(response: RestPage<Wire>, requested: RequestedPage): boolean =>
+  response.currentPage !== requested.page || response.pageSize !== requested.taille;
+
+export const buildPageFrom = <Wire, Model>(
+  page: RestPage<Wire>,
+  toModel: (element: Wire) => Model,
+  requested?: RequestedPage,
+): Page<Model> => {
+  if (requested !== undefined) {
+    if (mismatchedPage(page, requested)) {
+      throw new Error('La page reçue ne correspond pas à la page demandée.');
+    }
+  }
+  return new Page(page.content.map(toModel), page.totalElementsCount);
+};

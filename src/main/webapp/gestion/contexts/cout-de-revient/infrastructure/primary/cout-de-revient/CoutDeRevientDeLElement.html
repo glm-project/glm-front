@@ -27,7 +27,11 @@
       [inline]="true"
       (retryRequested)="collection.reload()"
     />
-    }
+    } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') { @if (vue.rapport.element.reference !== undefined) {
+    <p class="mt-1 text-body-sm text-ink-muted" data-selector="cout-nom">{{ vue.rapport.element.nom }}</p>
+    } @if (vue.rapport.element.libelle; as libelle) {
+    <p class="mt-1 text-body text-ink-muted" data-selector="cout-libelle">{{ libelle }}</p>
+    } } }
     <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
   </header>
 
