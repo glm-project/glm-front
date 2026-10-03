@@ -69,9 +69,10 @@ export class SaisieActe {
     if (proposition === undefined) return undefined;
     if (proposition.kind === 'ANNULATION') return this.errors().length > 0 ? undefined : proposition;
     const fait = proposition.fait;
-    if (!this.isCompleteFact(fait)) return undefined;
+    if (fait.type === '') return undefined;
+    if (fait.intention === '') return undefined;
     if (this.errors().length > 0) return undefined;
-    return { ...proposition, fait };
+    return { ...proposition, fait: { ...fait, type: fait.type, intention: fait.intention } };
   }
 
   matches(acte: ActeResolution): boolean {
@@ -134,9 +135,5 @@ export class SaisieActe {
 
   private intentionIsCompatible(fait: SaisieFait): boolean {
     return (fait.type === 'FIN') === (fait.intention === 'FIN');
-  }
-
-  private isCompleteFact(fait: SaisieFait): fait is FaitPropose {
-    return fait.type !== '' && fait.intention !== '';
   }
 }
