@@ -1,4 +1,5 @@
 import { SemaineISO } from '../semaine/SemaineISO';
+import { OperateurDuReleve } from './OperateurDuReleve';
 import { OperateurReleveId } from './OperateurReleveId';
 import { ReleveDesHeures } from './ReleveDesHeures';
 
@@ -14,5 +15,6 @@ export class DemandeDeReleve {
 }
 
 export abstract class SyntheseDesHeuresPort {
+  abstract operateurs(): Promise<readonly OperateurDuReleve[]>;
   abstract synthese(demande: DemandeDeReleve): Promise<ReleveDesHeures | undefined>;
 }

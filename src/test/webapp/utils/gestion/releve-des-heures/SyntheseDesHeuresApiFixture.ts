@@ -69,7 +69,10 @@ export class SyntheseDesHeuresApiFixture {
   private readonly semaines = new Map<string, SemaineSemee>();
 
   seed(semaine: SemaineSemee): void {
-    this.semaines.set(cleDe(Number(semaine.synthese.annee), Number(semaine.synthese.semaine)), semaine);
+    this.semaines.set(
+      `${semaine.synthese.operateur?.id ?? 'op-1'}|${cleDe(Number(semaine.synthese.annee), Number(semaine.synthese.semaine))}`,
+      semaine,
+    );
   }
 
   suspendSynthese(): () => void {
@@ -90,7 +93,8 @@ export class SyntheseDesHeuresApiFixture {
       this.lectures.push({ annee, semaine });
       const evaluation = String(request.query['evaluation']);
       this.evaluations.push({ source: 'SYNTHESE', evaluation });
-      const reponse = this.reponse(annee, semaine, evaluation);
+      const operateur = new URL(request.url).pathname.split('/').slice(-1)[0] ?? '';
+      const reponse = this.reponse(operateur, annee, semaine, evaluation);
       if (this.attente !== undefined) {
         return this.attente.then(() => request.reply(reponse));
       }
@@ -103,11 +107,17 @@ export class SyntheseDesHeuresApiFixture {
     cy.intercept({ method: 'GET', pathname: FEUILLE }, request => {
       const evaluation = String(request.query['evaluation']);
       this.evaluations.push({ source: 'FEUILLE', evaluation });
-      request.reply(this.reponseDeFeuille(Number(request.query['annee']), Number(request.query['semaine']), evaluation));
+      const operateur = new URL(request.url).pathname.split('/').slice(-1)[0] ?? '';
+      request.reply(this.reponseDeFeuille(operateur, Number(request.query['annee']), Number(request.query['semaine']), evaluation));
     }).as('feuilleRead');
   }
 
-  private reponse(annee: string, semaine: string, evaluation: string): { statusCode?: number; body: RestSynthese | { type?: string } } {
+  private reponse(
+    operateur: string,
+    annee: string,
+    semaine: string,
+    evaluation: string,
+  ): { statusCode?: number; body: RestSynthese | { type?: string } } {
     if (this.failRead) {
       return { statusCode: 500, body: {} };
     }
@@ -116,13 +126,15 @@ export class SyntheseDesHeuresApiFixture {
     }
     return {
       body: {
-        ...(this.semaines.get(cleDe(Number(annee), Number(semaine)))?.synthese ?? syntheseFixture(Number(annee), Number(semaine))),
+        ...(this.semaines.get(`${operateur}|${cleDe(Number(annee), Number(semaine))}`)?.synthese
+          ?? syntheseFixture(Number(annee), Number(semaine))),
         evaluation,
       },
     };
   }
 
   private reponseDeFeuille(
+    operateur: string,
     annee: number,
     semaine: number,
     evaluation: string,
@@ -130,7 +142,9 @@ export class SyntheseDesHeuresApiFixture {
     if (this.operateurInconnu) {
       return { statusCode: 404, body: { type: FEUILLE_INTROUVABLE } };
     }
-    return { body: { ...(this.semaines.get(cleDe(annee, semaine))?.feuille ?? feuilleFixture(annee, semaine)), evaluation } };
+    return {
+      body: { ...(this.semaines.get(`${operateur}|${cleDe(annee, semaine)}`)?.feuille ?? feuilleFixture(annee, semaine)), evaluation },
+    };
   }
 }
 

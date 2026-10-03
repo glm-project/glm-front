@@ -1,5 +1,7 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import {
   elementFixture,
   instantFixture,
@@ -16,7 +18,9 @@ import { ElementReleveId } from '../../../domain/element/ElementReleveId';
 import { PosteReleveId } from '../../../domain/element/PosteReleveId';
 import { ActiviteReleveId } from '../../../domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '../../../domain/releve/CibleDePointage';
+import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
+import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
 import { PointageReleveId } from '../../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { SequenceEnConflit } from '../../../domain/releve/SequenceEnConflit';
@@ -42,6 +46,9 @@ interface UrlTreeFixture {
 }
 
 class RouterFixture {
+  navigationDifferee: Promise<boolean> | undefined;
+  navigationResult = true;
+  navigationFailure: Error | undefined;
   readonly navigations: Record<string, number>[] = [];
   readonly events = EMPTY;
 
@@ -55,7 +62,10 @@ class RouterFixture {
 
   navigate(_commands: unknown[], extras?: { queryParams?: Record<string, number> }): Promise<boolean> {
     this.navigations.push(extras?.queryParams ?? {});
-    return Promise.resolve(true);
+    if (this.navigationDifferee !== undefined) {
+      return this.navigationDifferee;
+    }
+    return this.navigationFailure === undefined ? Promise.resolve(this.navigationResult) : Promise.reject(this.navigationFailure);
   }
 }
 
@@ -84,6 +94,7 @@ describe('Synthese des heures component', () => {
         { provide: SyntheseDesHeuresPort, useValue: portFixture },
         { provide: ActivatedRoute, useValue: routeFixture },
         { provide: Router, useValue: routerFixture },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
   });
@@ -92,6 +103,244 @@ describe('Synthese des heures component', () => {
     componentFixture.destroy();
     vi.useRealTimers();
   });
+
+  it('should retain the actual consultation and selected clocking when operator navigation is cancelled', async () => {
+    portFixture.identites = [
+      { id: new OperateurReleveId(OPERATEUR), identite: new IdentiteOperateur('Dupont', 'Jean') },
+      { id: new OperateurReleveId('op-2'), identite: new IdentiteOperateur('Évrard', 'Zoé') },
+    ];
+    givenReleve(
+      releveFixture(
+        SEMAINE_EN_COURS,
+        { 0: { operationnelle: 'PT2H', pointagesDElement: [{ type: 'DEBUT', heure: [8, 0] }] } },
+        { operationnelle: 'PT2H' },
+      ),
+    );
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-14' });
+    routerFixture.navigationResult = false;
+    await whenEcranAffiche();
+
+    await whenEntreeDuJournalChoisie(0);
+    await whenChoosingAnotherOperatorFromTheHeader();
+
+    expect(texte('synthese-navigation-erreur')).toContain('Impossible de changer d’opérateur');
+    expect(texte('synthese-identite')).toContain('Jean DUPONT');
+    expect(texte('synthese-operationnel-total')).toBe('2 h 00');
+    expect(entreesPressees()).toEqual(['08:00']);
+    expect(errors()).toMatchObject({ errors: [] });
+  });
+
+  it('should report a rejected operator navigation once and retain the actual consultation', async () => {
+    portFixture.identites = [
+      { id: new OperateurReleveId(OPERATEUR), identite: new IdentiteOperateur('Dupont', 'Jean') },
+      { id: new OperateurReleveId('op-2'), identite: new IdentiteOperateur('Évrard', 'Zoé') },
+    ];
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}, { operationnelle: 'PT2H' }));
+    givenNavigationFailure();
+    await whenEcranAffiche();
+
+    await whenChoosingAnotherOperatorFromTheHeader();
+
+    expect(texte('synthese-navigation-erreur')).toContain('Impossible de changer d’opérateur');
+    expect(texte('synthese-identite')).toContain('Jean DUPONT');
+    expect(errors()).toMatchObject({ errors: [new Error('Navigation indisponible')] });
+  });
+
+  it('should ignore the cancellation of an older choice superseded by a newer navigation', async () => {
+    portFixture.identites = [
+      { id: new OperateurReleveId(OPERATEUR), identite: new IdentiteOperateur('Dupont', 'Jean') },
+      { id: new OperateurReleveId('op-2'), identite: new IdentiteOperateur('Évrard', 'Zoé') },
+    ];
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}));
+    const release = givenDelayedNavigation();
+    await whenEcranAffiche();
+
+    await whenANewerChoiceSupersedesTheNavigation(release);
+
+    expect(present('synthese-navigation-erreur')).toBe(false);
+    expect(texte('synthese-identite')).toContain('Jean DUPONT');
+  });
+
+  it.each([{ jour: '2026-09-14' }, {}])('should keep the unavailable report consultation after a failed choice with day %j', async jour => {
+    givenNavigationOperators();
+    givenLectureEnEchec();
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', ...jour });
+    routerFixture.navigationResult = false;
+    await whenEcranAffiche();
+
+    await whenChoosingAnotherOperatorFromTheHeader();
+
+    expect(present('synthese-error')).toBe(true);
+    expect(texte('synthese-navigation-erreur')).toContain('Impossible de changer d’opérateur');
+    expect(texte('selecteur-operateur')).toContain('Jean DUPONT');
+  });
+
+  it('should keep a past consultation with no automatically open day after a cancelled operator choice', async () => {
+    givenNavigationOperators();
+    const semaine = new SemaineISO(2026, 37);
+    givenReleveDe(semaine, releveFixture(semaine, {}));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '37' });
+    routerFixture.navigationResult = false;
+    await whenEcranAffiche();
+
+    await whenChoosingAnotherOperatorFromTheHeader();
+
+    expect(joursOuverts()).toEqual([]);
+    expect(texte('synthese-navigation-erreur')).toContain('Impossible de changer d’opérateur');
+  });
+
+  it('should close a current-operator choice without leaving the acquired consultation', async () => {
+    givenNavigationOperators();
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}, { operationnelle: 'PT2H' }));
+    await whenEcranAffiche();
+
+    await whenChoosingCurrentOperatorFromTheHeader();
+
+    expect(present('synthese-navigation-erreur')).toBe(false);
+    expect(texte('synthese-operationnel-total')).toBe('2 h 00');
+    expect(portFixture.demandes).toHaveLength(1);
+  });
+
+  it('should keep the newly opened day when a navigation from the old day is cancelled', async () => {
+    givenNavigationOperators();
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}));
+    const release = givenDelayedNavigation();
+    await whenEcranAffiche();
+
+    await whenTheDayChangesBeforeNavigationAnswers(release);
+
+    expect(joursOuverts()).toEqual(['mar. 15']);
+    expect(present('synthese-navigation-erreur')).toBe(false);
+  });
+
+  it('should render a neutral identity if the unknown route operator is absent from the acquired list', async () => {
+    givenNavigationOperators();
+    givenOperateurInconnu();
+    portFixture.identites = portFixture.identites.slice(1);
+
+    await whenEcranAffiche();
+
+    expect(texte('selecteur-operateur')).toContain('Choisir un opérateur');
+    expect(present('synthese-operateur-introuvable')).toBe(true);
+  });
+
+  it('should keep a failed operator list local to the still readable report', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}, { operationnelle: 'PT2H' }));
+    portFixture.operateursFailure = new Error('Référentiel indisponible');
+
+    await whenEcranAffiche();
+
+    expect(present('selecteur-operateur-erreur')).toBe(true);
+    expect(texte('synthese-operationnel-total')).toBe('2 h 00');
+    expect(texte('selecteur-operateur')).toContain('Jean DUPONT');
+  });
+
+  it('should show separate acquisition failures and a neutral operator if neither identity source is available', async () => {
+    givenLectureEnEchec();
+    portFixture.operateursFailure = new Error('Référentiel indisponible');
+
+    await whenEcranAffiche();
+
+    expect(present('synthese-error')).toBe(true);
+    expect(present('selecteur-operateur-erreur')).toBe(true);
+    expect(texte('selecteur-operateur')).toContain('Choisir un opérateur');
+  });
+
+  it('should offer no operator acquisition control from a refused day after the mounted list fails', async () => {
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}));
+    portFixture.operateursFailure = new Error('Référentiel indisponible');
+    await whenEcranAffiche();
+
+    await whenAnotherDayIsOpened('2026-09-21');
+
+    expect(present('synthese-adresse-invalide')).toBe(true);
+    expect(present('selecteur-operateur-reessayer')).toBe(false);
+    expect(present('selecteur-operateur')).toBe(false);
+  });
+
+  it('should refuse a choice if the address becomes invalid while the operator panel is open', async () => {
+    givenNavigationOperators();
+    givenReleve(releveFixture(SEMAINE_EN_COURS, {}));
+    await whenEcranAffiche();
+
+    await whenTheAddressBecomesInvalidBeforeChoosing();
+
+    expect(present('synthese-adresse-invalide')).toBe(true);
+    expect(present('synthese-navigation-erreur')).toBe(false);
+    expect(portFixture.demandes).toHaveLength(1);
+  });
+
+  const whenTheAddressBecomesInvalidBeforeChoosing = async (): Promise<void> => {
+    requis('selecteur-operateur').click();
+    await componentFixture.whenStable();
+    const proposals = document.querySelectorAll<HTMLButtonElement>(dataSelector('selecteur-operateur-proposition'));
+    routeFixture.demandeBrute({ annee: '2026', semaine: '38', jour: '2026-09-21' });
+    requiredFixture(proposals[1]).click();
+    await Promise.resolve();
+    componentFixture.detectChanges();
+    await componentFixture.whenStable();
+  };
+
+  const givenNavigationOperators = (): void => {
+    portFixture.identites = [
+      { id: new OperateurReleveId(OPERATEUR), identite: new IdentiteOperateur('Dupont', 'Jean') },
+      { id: new OperateurReleveId('op-2'), identite: new IdentiteOperateur('Évrard', 'Zoé') },
+    ];
+  };
+
+  const whenChoosingCurrentOperatorFromTheHeader = async (): Promise<void> => {
+    requis('selecteur-operateur').click();
+    await componentFixture.whenStable();
+    const proposals = document.querySelectorAll<HTMLButtonElement>(dataSelector('selecteur-operateur-proposition'));
+    requiredFixture(proposals[0]).click();
+    await componentFixture.whenStable();
+  };
+
+  const whenTheDayChangesBeforeNavigationAnswers = async (release: () => void): Promise<void> => {
+    await whenChoosingAnotherOperatorFromTheHeader();
+    await whenAnotherDayIsOpened('2026-09-15');
+    release();
+    await Promise.resolve();
+    componentFixture.detectChanges();
+    await componentFixture.whenStable();
+  };
+
+  const errors = (): ErrorHandlerPort => TestBed.inject(ErrorHandlerPort);
+  const givenNavigationFailure = (): void => {
+    routerFixture.navigationFailure = new Error('Navigation indisponible');
+  };
+
+  const givenDelayedNavigation = (): (() => void) => {
+    let release = (): void => undefined;
+    routerFixture.navigationDifferee = new Promise(resolve => {
+      release = () => {
+        resolve(false);
+      };
+    });
+    return release;
+  };
+
+  const whenANewerChoiceSupersedesTheNavigation = async (release: () => void): Promise<void> => {
+    await whenChoosingAnotherOperatorFromTheHeader();
+    routerFixture.navigationDifferee = undefined;
+    await whenChoosingAnotherOperatorFromTheHeader();
+    release();
+    await Promise.resolve();
+    componentFixture.detectChanges();
+    await componentFixture.whenStable();
+  };
+
+  const whenChoosingAnotherOperatorFromTheHeader = async (): Promise<void> => {
+    const trigger = requis('selecteur-operateur');
+    trigger.click();
+    componentFixture.detectChanges();
+    await componentFixture.whenStable();
+    const proposals = document.querySelectorAll<HTMLButtonElement>(dataSelector('selecteur-operateur-proposition'));
+    requiredFixture(proposals[1]).click();
+    await Promise.resolve();
+    componentFixture.detectChanges();
+    await componentFixture.whenStable();
+  };
 
   it('should show a received two-hour activity without any arrival or presence row', async () => {
     givenReleve(

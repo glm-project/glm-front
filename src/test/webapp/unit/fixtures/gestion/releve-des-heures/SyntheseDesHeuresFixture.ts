@@ -1,3 +1,4 @@
+import { OperateurDuReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/OperateurDuReleve';
 import { ReleveDesHeures } from '@/gestion/contexts/releve-des-heures/domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '@/gestion/contexts/releve-des-heures/domain/releve/SyntheseDesHeuresPort';
 
@@ -7,12 +8,21 @@ const cleDe = (demande: DemandeDeReleve): string =>
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));
 
 export class SyntheseDesHeuresFixture extends SyntheseDesHeuresPort {
+  operateursFailure: Error | undefined;
+  identites: readonly OperateurDuReleve[] = [];
   readonly demandes: DemandeDeReleve[] = [];
   releves = new Map<string, ReleveDesHeures>();
   operateursInconnus = new Set<string>();
   lectureFailure: Error | undefined;
   lectureDifferee: Promise<ReleveDesHeures | undefined> | undefined;
   lectureEntree: (() => void) | undefined;
+
+  override operateurs(): Promise<readonly OperateurDuReleve[]> {
+    if (this.operateursFailure !== undefined) {
+      return Promise.reject(this.operateursFailure);
+    }
+    return auTourSuivant(this.identites);
+  }
 
   override synthese(demande: DemandeDeReleve): Promise<ReleveDesHeures | undefined> {
     this.demandes.push(demande);
