@@ -1,0 +1,30 @@
+<h2 mat-dialog-title class="text-section">{{ title() }}</h2>
+<mat-dialog-content>
+  <ng-content />
+  @if (refusalMessage(); as message) {
+  <p role="alert" class="mt-4 text-body-sm text-danger" [attr.data-selector]="selectorPrefix() + '-refusal'">{{ message }}</p>
+  } @if (technicalErrorMessage(); as message) {
+  <p role="alert" class="mt-4 text-body-sm text-danger" [attr.data-selector]="selectorPrefix() + '-technical-error'">{{ message }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button
+    mat-button
+    type="button"
+    (click)="cancelRequested.emit()"
+    [disabled]="pending()"
+    [attr.data-selector]="selectorPrefix() + '-cancel'"
+  >
+    {{ cancelLabel() }}
+  </button>
+  <button
+    mat-flat-button
+    type="button"
+    [class.delete-button]="destructive()"
+    (click)="confirmRequested.emit()"
+    [disabled]="pending()"
+    [attr.data-selector]="selectorPrefix() + '-confirm'"
+  >
+    {{ pending() ? pendingLabel() : confirmLabel() }}
+  </button>
+</mat-dialog-actions>

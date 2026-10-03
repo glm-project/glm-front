@@ -1,4 +1,9 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
+import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
+import {
+  createPaginatorIntl,
+  DEFAULT_PAGINATOR_LABELS,
+} from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
 import { Component, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -27,24 +32,19 @@ interface EtatOperateurs {
   readonly atelierSansPoste: boolean;
 }
 
-const paginatorLabels = (): MatPaginatorIntl =>
-  Object.assign(new MatPaginatorIntl(), {
-    itemsPerPageLabel: 'Opérateurs par page',
-    nextPageLabel: 'Page suivante',
-    previousPageLabel: 'Page précédente',
-    firstPageLabel: 'Première page',
-    lastPageLabel: 'Dernière page',
-    getRangeLabel: (page: number, taille: number, total: number): string =>
-      total === 0 ? '0 opérateur' : `${page * taille + 1}–${Math.min((page + 1) * taille, total)} sur ${total}`,
-  });
-
 @Component({
   selector: 'glm-operateurs',
   host: { 'data-selector': 'operateurs-page' },
   templateUrl: './Operateurs.html',
   styleUrl: './Operateurs.css',
-  imports: [Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
-  providers: [{ provide: MatPaginatorIntl, useFactory: paginatorLabels }],
+  imports: [ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
+  providers: [
+    {
+      provide: MatPaginatorIntl,
+      useFactory: () =>
+        createPaginatorIntl({ ...DEFAULT_PAGINATOR_LABELS, itemsPerPageLabel: 'Opérateurs par page', emptyLabel: '0 opérateur' }),
+    },
+  ],
 })
 export class Operateurs implements OnInit {
   private readonly port = inject(OperateursPort);

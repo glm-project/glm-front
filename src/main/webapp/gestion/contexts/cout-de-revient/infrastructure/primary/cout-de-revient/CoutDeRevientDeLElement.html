@@ -18,12 +18,15 @@
     } @if (collection.hasValue() && elementsDisponibles().length === 0) {
     <p class="text-body-sm text-ink-muted" role="status" data-selector="cout-element-empty">{{ libelles.aucunElement }}</p>
     } @if (collection.status() === 'error') {
-    <div class="mt-2 flex flex-wrap items-center gap-3" role="alert" data-selector="cout-element-error">
-      <p class="text-body-sm text-danger">{{ libelles.echecElements }}</p>
-      <button mat-stroked-button type="button" (click)="collection.reload()" data-selector="cout-element-retry">
-        {{ libelles.reessayer }}
-      </button>
-    </div>
+    <glm-error-message
+      class="mt-2"
+      data-selector="cout-element-error"
+      [message]="libelles.echecElements"
+      [retryLabel]="libelles.reessayer"
+      retrySelector="cout-element-retry"
+      [inline]="true"
+      (retryRequested)="collection.reload()"
+    />
     }
     <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
   </header>
@@ -35,10 +38,14 @@
     {{ libelles.elementIntrouvable }}
   </p>
   } @case ('ERREUR') {
-  <div role="alert" class="py-12 text-center" data-selector="cout-error">
-    <p class="mb-4 text-body text-danger">{{ libelles.echec }}</p>
-    <button mat-stroked-button type="button" (click)="reload()" data-selector="cout-retry">{{ libelles.reessayer }}</button>
-  </div>
+  <glm-error-message
+    class="py-12 text-center"
+    data-selector="cout-error"
+    [message]="libelles.echec"
+    [retryLabel]="libelles.reessayer"
+    retrySelector="cout-retry"
+    (retryRequested)="reload()"
+  />
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
   <p class="mb-3 text-body-sm text-ink-muted" data-selector="cout-evaluation">{{ libelles.evaluation(vue.rapport.evaluation) }}</p>
   @if (vue.rapport.activitesEnCours.existent()) {

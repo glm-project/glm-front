@@ -64,6 +64,30 @@ the card that carries a table and its paginator, the table scroller, the segment
 type tag, the row actions and the back link. Its classes are prefixed `gestion-` so they never meet a
 component's local class. A screen keeps only its own column widths and specific drawings.
 
+## Gestion shares presentation contracts, not business workflows
+
+Reusable Gestion controls live under its existing design-system primary adapter. A shared component receives
+rendering values and emits UI intentions; the consuming context keeps its domain models, validation,
+read resources, command locks, refusal interpretation and navigation.
+
+`TextField` owns a native text input and its associated label, help and error announcement. The parent owns
+the form and disabled fieldset, supplies the raw string and decides when a domain error is visible. Fields
+with autocomplete, multiple selections or immediate domain normalization remain local. The common form
+stylesheet is loaded with component encapsulation so it also styles those local fields without adding global
+unprefixed classes.
+
+`ErrorMessage` renders a failed read and its retry action; the parent decides which read to retry. Loading,
+empty states and business refusals retain their local composition. `ConfirmationContent` renders the content
+of a Material dialog; its owning context retains the command, synchronous duplicate-action guard,
+`MatDialogRef`, pending close policy and success/refusal handling.
+
+A searchable picker shares only the trigger, overlay, search input and focus protocol. Its consumers retain
+option rendering, search normalization, sorting and selection types. Preserve the local panel semantics and
+close policy when extracting it; sharing markup does not authorize changing an interaction.
+
+Paginator labels use a technical factory while each consumer keeps its own `MatPaginatorIntl` provider and
+contextual labels. Reuse Material's paginator directly instead of introducing a wrapper around the same API.
+
 ## The pupitre confirms a gesture with a sustained press
 
 `pupitre/shared/design-system/infrastructure/primary/long-press/long-press.ts` owns the `glmLongPress` primitive.

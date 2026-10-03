@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ConfirmationContent } from '@/gestion/shared/design-system/infrastructure/primary/confirmation-content/ConfirmationContent';
 import { Component, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
 import { RefusSuppressionPoste } from '../../../domain/RefusSuppressionPoste';
@@ -13,13 +13,12 @@ export interface ConfirmationSuppressionPosteDialogData {
 @Component({
   selector: 'glm-confirmation-suppression-poste-dialog',
   templateUrl: './ConfirmationSuppressionPosteDialog.html',
-  styleUrl: './ConfirmationSuppressionPosteDialog.css',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [ConfirmationContent],
 })
 export class ConfirmationSuppressionPosteDialog {
   private readonly data = inject<ConfirmationSuppressionPosteDialogData>(MAT_DIALOG_DATA);
   protected readonly poste = this.data.poste;
-  private readonly dialog = inject<MatDialogRef<ConfirmationSuppressionPosteDialog, boolean>>(MatDialogRef);
+  protected readonly dialog = inject<MatDialogRef<ConfirmationSuppressionPosteDialog, boolean>>(MatDialogRef);
   private readonly port = inject(PostesPort);
   private readonly errors = inject(ErrorHandlerPort);
 

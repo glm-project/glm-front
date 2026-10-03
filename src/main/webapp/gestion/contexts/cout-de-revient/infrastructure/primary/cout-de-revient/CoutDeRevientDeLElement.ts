@@ -1,5 +1,6 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import { Component, computed, inject, linkedSignal, resource, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,7 +25,7 @@ export type EtatVueCoutDeRevient =
   host: { 'data-selector': 'cout-de-revient-page' },
   templateUrl: './CoutDeRevientDeLElement.html',
   styleUrl: './CoutDeRevientDeLElement.css',
-  imports: [SelecteurElement, Icon, MatButtonModule, RouterLink],
+  imports: [ErrorMessage, SelecteurElement, Icon, MatButtonModule, RouterLink],
 })
 export class CoutDeRevientDeLElement {
   protected readonly libelles = LIBELLES_COUT_DE_REVIENT;

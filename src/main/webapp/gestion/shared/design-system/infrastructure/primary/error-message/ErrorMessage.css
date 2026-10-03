@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+:host(.error-message--inline) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}

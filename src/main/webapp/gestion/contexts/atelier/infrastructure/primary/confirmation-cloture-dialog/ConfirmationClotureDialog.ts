@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ConfirmationContent } from '@/gestion/shared/design-system/infrastructure/primary/confirmation-content/ConfirmationContent';
 import { Component, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { AtelierPort } from '../../../domain/AtelierPort';
 import { ElementALAtelier } from '../../../domain/ElementALAtelier';
 import { SuiviIntrouvable } from '../../../domain/SuiviIntrouvable';
@@ -14,12 +14,11 @@ export interface ConfirmationClotureDialogData {
 @Component({
   selector: 'glm-confirmation-cloture-dialog',
   templateUrl: './ConfirmationClotureDialog.html',
-  styleUrl: './ConfirmationClotureDialog.css',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [ConfirmationContent],
 })
 export class ConfirmationClotureDialog {
   private readonly data = inject<ConfirmationClotureDialogData>(MAT_DIALOG_DATA);
-  private readonly dialog = inject<MatDialogRef<ConfirmationClotureDialog, boolean>>(MatDialogRef);
+  protected readonly dialog = inject<MatDialogRef<ConfirmationClotureDialog, boolean>>(MatDialogRef);
   private readonly port = inject(AtelierPort);
   private readonly errors = inject(ErrorHandlerPort);
 
