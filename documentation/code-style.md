@@ -107,6 +107,23 @@ caller reconstructing another owner's rule behind that owner's interface.
   and `public` only for a component contract; mark references `readonly` unless replacement is part of their
   state transition. Use `private readonly` for injected collaborators.
 
+## Keep component inputs few and cohesive
+
+Expose only the inputs that consumers need to vary. Keep shared defaults, internal interaction mechanics
+and implementation details inside the component instead of making every difference configurable. Many
+inputs are a signal to review the component's responsibility and the scope of its mutualisation; there is
+no fixed numerical limit.
+
+When several inputs describe one coherent concept in the component's context, group them in a named
+immutable interface and expose that contract through one input. For example, `ConfirmationLabels` may
+group the title and action labels, while the pending state and error messages remain separate contracts.
+The interface's name must explain why its fields belong together, and its ownership must respect context
+boundaries.
+
+Do not collect every input into a generic `config` or `options` interface merely to reduce the visible
+input count. Unrelated state, content, styling and interaction policies remain distinct. Grouping fields
+does not replace removing unnecessary options or choosing a smaller shared component.
+
 ## Keep domain models and contracts immutable
 
 Every domain model is immutable. Mark all of its properties `readonly`, including private, protected and
