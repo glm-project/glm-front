@@ -1,0 +1,43 @@
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="conflits-heading">
+  <h1 id="conflits-heading" class="text-title">{{ libelles.titre }}</h1>
+  <p class="mt-2 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
+  <p class="my-6 rounded-control bg-sunken p-4 text-body-sm" data-selector="conflits-demo">{{ libelles.demonstration }}</p>
+  @if (liste.isLoading()) {
+  <p role="status" class="py-12 text-body text-ink-muted">{{ libelles.chargement }}</p>
+  } @if (liste.value(); as page) { @if (page.lignes.length === 0) {
+  <p class="gestion-carte p-6 text-body" data-selector="conflits-vide">{{ libelles.vide }}</p>
+  } @else {
+  <div class="gestion-carte">
+    <div class="gestion-table" data-selector="conflits-table">
+      <table class="text-left text-body-sm">
+        <thead class="bg-sunken text-ink-muted">
+          <tr>
+            <th class="p-4" scope="col">{{ libelles.element }}</th>
+            <th class="p-4" scope="col">{{ libelles.operateur }}</th>
+            <th class="p-4" scope="col">{{ libelles.diagnostic }}</th>
+            <th class="p-4" scope="col">{{ libelles.faits }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (ligne of page.lignes; track ligne.adresse.pointage.pointage) {
+          <tr class="border-t border-border" data-selector="conflit-ligne">
+            <td class="p-4">
+              <a
+                class="inline-flex min-h-touch items-center font-semibold text-accent underline underline-offset-4"
+                [routerLink]="['/conflits', ligne.adresse.suivi.suivi]"
+                [queryParams]="{ pointage: ligne.adresse.pointage.pointage }"
+                data-selector="conflit-ouvrir"
+                >{{ ligne.designation }}</a
+              >
+            </td>
+            <td class="p-4">{{ ligne.operateur }}<br /><span class="text-ink-muted">{{ ligne.poste }}</span></td>
+            <td class="max-w-md p-4">{{ ligne.explication }}</td>
+            <td class="p-4 tabular-nums">{{ ligne.date }}<br />{{ ligne.nombrePointages }} pointages</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  } }
+</main>
