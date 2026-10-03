@@ -63,7 +63,8 @@ correction conserve l'origine avec motif, auteur et date d'annulation, puis ajou
 à cette origine. Une régularisation ajoute un fait marqué et son auteur. Le même journal et la même
 version sont ensuite visibles depuis toutes les projections du suivi.
 
-`ConflitsRightsPort.canApply()` exige le rôle de royaume exact `GESTIONNAIRE`. L'adapter normal lit
+`ConflitsRightsPort.canApply()` exige le rôle métier `GESTIONNAIRE`, traduit depuis le claim de royaume
+`ROLE_GESTIONNAIRE` émis par le realm livré. L'adapter normal lit
 `realm_access.roles` dans le token de `AuthenticationPort` ; un token absent ou malformé refuse le droit.
 Les ports d'aperçu et d'application vérifient ce droit au terme de leur attente asynchrone, y compris
 si la session perd son rôle après l'aperçu. La composition Cypress remplace explicitement le provider

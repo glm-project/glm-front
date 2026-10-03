@@ -24,7 +24,7 @@ export class TokenConflitsRights extends ConflitsRightsPort {
     const acces = contenu['realm_access'];
     if (!this.isRecord(acces)) return false;
     const roles = acces['roles'];
-    return Array.isArray(roles) && roles.includes('GESTIONNAIRE');
+    return Array.isArray(roles) && roles.includes('ROLE_GESTIONNAIRE');
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {
