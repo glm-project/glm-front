@@ -33,7 +33,9 @@ class PupitrePageFixture {}
 
 const journalFixture = new JournauxDuPupitreFixture();
 journalFixture.answerReadsImmediately();
-const authenticationFixture: Pick<AuthenticationPort, 'currentTenant' | 'synchronizeSession' | 'logout'> = {
+const authenticationFixture: AuthenticationPort = {
+  authenticate: () => Promise.resolve(),
+  currentToken: () => undefined,
   currentTenant: () => 'atelier',
   synchronizeSession: () => Promise.resolve(),
   logout: () => undefined,

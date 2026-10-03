@@ -1,10 +1,9 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/main/webapp/*"],
-      "@test/*": ["src/test/webapp/*"]
+      "@/*": ["./src/main/webapp/*"],
+      "@test/*": ["./src/test/webapp/*"]
     },
     "strict": true,
     "noUnusedLocals": true,

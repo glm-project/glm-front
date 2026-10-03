@@ -91,6 +91,8 @@ caller reconstructing another owner's rule behind that owner's interface.
 - `signal()` for local component state (`App.appName`, `gestion/app/app.ts:15`);
 - `input.required()` for what a parent gives a component (`pupitre/header/header.ts`);
 - standalone components, no `NgModule`;
+- components use Angular 22's default `OnPush` change detection; reactive state reaches templates through
+  signals or observable consumers, and imperative browser updates explicitly request rendering;
 - each Angular component lives in its own folder. Co-locate its TypeScript, template, styles, unit spec and
   every file owned exclusively by that component; place shared files with their nearest shared owner;
 - signals expose state, `computed()` derives it, and explicit application commands drive business mutations.

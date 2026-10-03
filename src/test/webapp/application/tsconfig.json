@@ -6,7 +6,11 @@
     "strict": true,
     "target": "ES2022",
     "lib": ["ES2022", "dom", "dom.iterable"],
-    "types": ["cypress", "node"]
+    "types": ["cypress", "node"],
+    "paths": {
+      "@/*": ["./../../../../src/main/webapp/*"],
+      "@test/*": ["./../../../../src/test/webapp/*"]
+    }
   },
   "include": ["**/*.ts"]
 }
