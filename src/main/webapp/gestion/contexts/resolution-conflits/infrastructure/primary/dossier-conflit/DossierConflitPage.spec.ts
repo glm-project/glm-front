@@ -262,6 +262,23 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-choix');
   });
 
+  it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossierConflitFixture(),
+        enConflit: false,
+        activites: [
+          { id: new ActiviteConflitId('travail-8'), libelle: 'Travail commencé à 8 h', etat: 'EN_COURS', temps: 'Temps non définitif' },
+        ],
+      },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'En cours · Temps non définitif');
+  });
+
   it('should keep new decisions blocked when the confirmation receipt is not attested', async () => {
     givenASuccessfulPreview();
     application.result = { kind: 'ISSUE_INCONNUE' };

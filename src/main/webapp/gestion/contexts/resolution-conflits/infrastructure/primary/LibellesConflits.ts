@@ -26,7 +26,14 @@ export const LIBELLES_CONFLITS = {
   ouvert: 'Ouvert',
   continuation: 'Autres conflits du suivi',
   apercuRestant: 'Après cet acte : conflit restant',
-  etats: { A_RESOUDRE: 'À résoudre', TERMINEE: 'Terminée', ANNULEE: 'Annulée', REMPLACEE: 'Remplacée', ECHUE: 'Échue' },
+  etats: {
+    A_RESOUDRE: 'À résoudre',
+    EN_COURS: 'En cours',
+    TERMINEE: 'Terminée',
+    ANNULEE: 'Annulée',
+    REMPLACEE: 'Remplacée',
+    ECHUE: 'Échue',
+  },
   actes: {
     CORRECTION: 'Correction du pointage',
     ANNULATION: 'Annulation du pointage',

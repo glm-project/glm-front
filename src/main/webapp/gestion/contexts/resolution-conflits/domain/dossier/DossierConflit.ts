@@ -26,7 +26,7 @@ export interface PointageConflit {
 export interface ActiviteConflit {
   readonly id: ActiviteConflitId;
   readonly libelle: string;
-  readonly etat: 'A_RESOUDRE' | 'TERMINEE' | 'ANNULEE' | 'REMPLACEE' | 'ECHUE';
+  readonly etat: 'A_RESOUDRE' | 'EN_COURS' | 'TERMINEE' | 'ANNULEE' | 'REMPLACEE' | 'ECHUE';
   readonly temps: string;
 }
 
