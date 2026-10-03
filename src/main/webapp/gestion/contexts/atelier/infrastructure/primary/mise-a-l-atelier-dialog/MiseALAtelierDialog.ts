@@ -1,5 +1,7 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
+import { createPaginatorIntl } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -26,23 +28,26 @@ type VueMiseALAtelier =
 
 const PAGINATION = LIBELLES_MISE_A_L_ATELIER.pagination;
 
-const paginatorLabels = (): MatPaginatorIntl =>
-  Object.assign(new MatPaginatorIntl(), {
-    itemsPerPageLabel: PAGINATION.parPage,
-    nextPageLabel: PAGINATION.suivante,
-    previousPageLabel: PAGINATION.precedente,
-    firstPageLabel: PAGINATION.premiere,
-    lastPageLabel: PAGINATION.derniere,
-    getRangeLabel: (page: number, taille: number, total: number): string =>
-      total === 0 ? PAGINATION.vide : PAGINATION.intervalle(page * taille + 1, Math.min((page + 1) * taille, total), total),
-  });
-
 @Component({
   selector: 'glm-mise-a-l-atelier-dialog',
   templateUrl: './MiseALAtelierDialog.html',
   styleUrl: './MiseALAtelierDialog.css',
-  imports: [Icon, MatDialogModule, MatButtonModule, MatTableModule, MatPaginatorModule],
-  providers: [{ provide: MatPaginatorIntl, useFactory: paginatorLabels }],
+  imports: [ErrorMessage, Icon, MatDialogModule, MatButtonModule, MatTableModule, MatPaginatorModule],
+  providers: [
+    {
+      provide: MatPaginatorIntl,
+      useFactory: () =>
+        createPaginatorIntl({
+          itemsPerPageLabel: PAGINATION.parPage,
+          nextPageLabel: PAGINATION.suivante,
+          previousPageLabel: PAGINATION.precedente,
+          firstPageLabel: PAGINATION.premiere,
+          lastPageLabel: PAGINATION.derniere,
+          emptyLabel: PAGINATION.vide,
+          formatRange: PAGINATION.intervalle,
+        }),
+    },
+  ],
 })
 export class MiseALAtelierDialog implements OnInit {
   private readonly data = inject<MiseALAtelierDialogData>(MAT_DIALOG_DATA);

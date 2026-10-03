@@ -1,0 +1,19 @@
+<label [for]="fieldId()" class="field-label">{{ label() }} <span class="text-ink-muted">{{ labelComplement() }}</span></label>
+<input
+  #field
+  [id]="fieldId()"
+  [name]="name()"
+  class="field-input"
+  autocomplete="off"
+  [required]="required()"
+  [attr.inputmode]="inputMode()"
+  [value]="value()"
+  (input)="valueChanged.emit(field.value)"
+  [attr.aria-invalid]="error() !== undefined"
+  [attr.aria-describedby]="describedBy()"
+  [attr.data-selector]="fieldId()"
+/>
+@if (help(); as aide) {
+<p [id]="fieldId() + '-help'" class="mt-2 text-body-sm text-ink-muted">{{ aide }}</p>
+}
+<p [id]="fieldId() + '-error'" class="field-error" aria-live="polite" [attr.data-selector]="fieldId() + '-error'">{{ error() }}</p>

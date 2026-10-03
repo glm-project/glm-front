@@ -1,0 +1,51 @@
+<button
+  #trigger
+  type="button"
+  class="picker-control"
+  [attr.id]="triggerId()"
+  [attr.data-selector]="triggerSelector()"
+  [disabled]="disabled()"
+  [attr.aria-labelledby]="labelledBy()"
+  [attr.aria-expanded]="opened()"
+  [attr.aria-controls]="panelId()"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  (click)="open()"
+>
+  <ng-content select="[pickerIdentity]" />
+  <glm-icon name="chevronDown" />
+</button>
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="opened()"
+  [cdkConnectedOverlayViewportMargin]="16"
+  [cdkConnectedOverlayPush]="true"
+  (attach)="focusSearch()"
+  (detach)="detached.emit()"
+  (overlayKeydown)="onKeydown($event)"
+  (overlayOutsideClick)="opened.set(false)"
+>
+  <section
+    class="picker-panel"
+    [style.--picker-panel-width]="panelWidth()"
+    [style.max-height]="panelMaxHeight()"
+    [attr.id]="panelId()"
+    [attr.data-selector]="panelId()"
+    [attr.role]="panelRole()"
+    [attr.aria-label]="panelLabel()"
+  >
+    <input
+      #searchField
+      type="search"
+      class="picker-search"
+      [class.picker-search--muted-placeholder]="mutedPlaceholder()"
+      [value]="search()"
+      (input)="search.set(searchField.value)"
+      [attr.aria-label]="searchLabel()"
+      [placeholder]="searchLabel()"
+      [attr.data-selector]="searchSelector()"
+    />
+    <ng-content />
+  </section>
+</ng-template>

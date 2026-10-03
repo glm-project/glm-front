@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Result } from '@/app/shared/result/domain/Result';
+import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -29,7 +30,7 @@ const titrePour = (data: ElementFormDialogData): string =>
   selector: 'glm-element-form-dialog',
   templateUrl: './ElementFormDialog.html',
   styleUrl: './ElementFormDialog.css',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [TextField, MatDialogModule, MatButtonModule],
 })
 export class ElementFormDialog {
   private readonly data = inject<ElementFormDialogData>(MAT_DIALOG_DATA);

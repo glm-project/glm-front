@@ -1,6 +1,5 @@
-import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { OverlayModule } from '@angular/cdk/overlay';
-import { Component, computed, ElementRef, input, linkedSignal, output, signal, viewChild } from '@angular/core';
+import { SearchPicker } from '@/gestion/shared/design-system/infrastructure/primary/search-picker/SearchPicker';
+import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementDisponible } from '../../../domain/element/ElementDisponible';
 import { LIBELLES_COUT_DE_REVIENT } from '../LibellesCoutDeRevient';
@@ -16,7 +15,7 @@ const normalizeSearch = (value: string): string =>
   selector: 'glm-selecteur-element',
   templateUrl: './SelecteurElement.html',
   styleUrl: './SelecteurElement.css',
-  imports: [Icon, OverlayModule],
+  imports: [SearchPicker],
 })
 export class SelecteurElement {
   readonly elementCourant = input<string>();
@@ -36,33 +35,11 @@ export class SelecteurElement {
       ),
   );
   protected readonly ouvert = linkedSignal({ source: this.elementCourant, computation: () => false });
-  private readonly declencheur = viewChild.required<ElementRef<HTMLButtonElement>>('declencheur');
-  private readonly recherche = viewChild.required<ElementRef<HTMLInputElement>>('recherche');
-
-  protected choose(element: ElementDisponible): void {
-    this.close();
+  protected choose(element: ElementDisponible, picker: SearchPicker): void {
+    picker.close();
     if (element.id.value !== this.elementCourant()) {
       this.selection.emit(element);
     }
-  }
-
-  protected close(): void {
-    this.ouvert.set(false);
-    this.declencheur().nativeElement.focus();
-  }
-  protected onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.close();
-    }
-  }
-
-  protected open(): void {
-    this.saisie.set('');
-    this.ouvert.set(true);
-  }
-  protected focusSearch(): void {
-    this.recherche().nativeElement.focus();
   }
 
   readonly identite = input<ElementChiffre>();

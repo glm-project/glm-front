@@ -1,4 +1,5 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,8 +16,8 @@ export interface PosteFormDialogData {
 @Component({
   selector: 'glm-poste-form-dialog',
   templateUrl: './PosteFormDialog.html',
-  styleUrl: './PosteFormDialog.css',
-  imports: [MatDialogModule, MatButtonModule, MatAutocompleteModule],
+  styleUrls: ['../../../../../shared/design-system/infrastructure/primary/forms.css', './PosteFormDialog.css'],
+  imports: [TextField, MatDialogModule, MatButtonModule, MatAutocompleteModule],
 })
 export class PosteFormDialog implements OnInit {
   private readonly data = inject<PosteFormDialogData>(MAT_DIALOG_DATA);
