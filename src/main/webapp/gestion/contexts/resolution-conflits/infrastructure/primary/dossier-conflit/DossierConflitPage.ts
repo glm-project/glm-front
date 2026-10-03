@@ -33,6 +33,7 @@ export class DossierConflitPage {
   protected readonly droits = inject(ConflitsRightsPort);
   protected readonly libelles = LIBELLES_CONFLITS;
   protected readonly detail = signal(false);
+  protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
@@ -61,10 +62,10 @@ export class DossierConflitPage {
     this.verificationDemandee = false;
     if (adresse === undefined) {
       this.precedente = undefined;
-      this.preparation.contextChanged();
+      this.contextChanged();
       return undefined;
     }
-    if (!this.sameAddress(adresse)) this.preparation.contextChanged();
+    if (!this.sameAddress(adresse)) this.contextChanged();
     this.precedente = adresse;
     const resultat = await this.port.read(adresse);
     if (this.verificationIsCurrent(verification, adresse, demande)) this.preparation.acknowledgeRead();
@@ -79,9 +80,15 @@ export class DossierConflitPage {
     return this.precedente?.suivi.suivi === adresse.suivi.suivi && this.precedente.pointage.pointage === adresse.pointage.pointage;
   }
 
-  protected choose(saisie: SaisieActe): void {
+  private contextChanged(): void {
+    this.preparation.contextChanged();
+    this.choixSelectionne.set(undefined);
+  }
+
+  protected choose(saisie: SaisieActe, choix?: string): void {
     this.preparation.choose(saisie);
     this.detail.set(false);
+    this.choixSelectionne.set(choix);
   }
 
   protected correct(pointage: PointageConflit): void {
@@ -100,6 +107,7 @@ export class DossierConflitPage {
 
   protected change(changement: ChangementSaisie): void {
     this.preparation.change(changement);
+    if (changement.fait !== undefined) this.choixSelectionne.set(undefined);
   }
 
   protected async preview(dossier: DossierConflit): Promise<void> {
@@ -132,6 +140,7 @@ export class DossierConflitPage {
 
   protected reset(): void {
     this.preparation.reset();
+    this.choixSelectionne.set(undefined);
     this.lecture.reload();
   }
 }

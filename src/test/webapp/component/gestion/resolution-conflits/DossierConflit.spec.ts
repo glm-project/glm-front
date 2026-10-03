@@ -2,6 +2,18 @@ import { dataSelector } from '../../../utils/DataSelector';
 import type {} from '../../../utils/gestion/resolution-conflits/resolution-conflits.provider';
 
 describe('Conflict dossier in Gestion', () => {
+  it('should identify the chosen interpretation while its reason is being entered', () => {
+    whenOpeningTheDossier();
+    whenChoosingTheGuidedCorrection();
+
+    thenTheChosenInterpretationIsIdentified();
+  });
+
+  const thenTheChosenInterpretationIsIdentified = (): void => {
+    cy.get(dataSelector('conflit-choix')).first().should('have.attr', 'aria-pressed', 'true');
+    cy.get(dataSelector('conflit-choix')).last().should('have.attr', 'aria-pressed', 'false');
+  };
+
   it('should compare the exact previewed act and its before and after facts before confirmation', () => {
     whenOpeningTheDossier();
     whenPreparingTheGuidedCorrection();

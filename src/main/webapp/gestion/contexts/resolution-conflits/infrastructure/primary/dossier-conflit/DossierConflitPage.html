@@ -71,8 +71,10 @@
         class="choix"
         type="button"
         data-selector="conflit-choix"
+        [attr.aria-pressed]="choixSelectionne() === choix.id"
+        [class.choix-selectionne]="choixSelectionne() === choix.id"
         [disabled]="occupe() || !droits.canApply()"
-        (click)="choose(choix.saisie)"
+        (click)="choose(choix.saisie, choix.id)"
       >
         <span class="text-body font-semibold">{{ choix.libelle }}</span>
         <span class="mt-1 block text-body-sm text-ink-muted">{{ choix.explication }}</span>
