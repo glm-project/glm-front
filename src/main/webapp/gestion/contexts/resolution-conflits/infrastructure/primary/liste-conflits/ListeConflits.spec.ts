@@ -11,9 +11,10 @@ class ConflitsReadFixture extends ConflitsReadPort {
   page: PageConflits = { lignes: [], total: 0, complete: true };
   readonly demandes: FiltreConflits[] = [];
 
-  override list(filtre: FiltreConflits): Promise<PageConflits> {
+  override async list(filtre: FiltreConflits): Promise<PageConflits> {
     this.demandes.push(filtre);
-    return Promise.resolve(this.page);
+    await new Promise(resolve => setTimeout(resolve));
+    return this.page;
   }
 
   override read(): Promise<LectureDossier> {
@@ -31,6 +32,7 @@ interface UrlTreeFixture {
 
 class RouterFixture {
   readonly events = EMPTY;
+  readonly navigations: FiltreConflits[] = [];
 
   createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): UrlTreeFixture {
     return { queryParams: extras?.queryParams ?? {} };
@@ -39,22 +41,29 @@ class RouterFixture {
   serializeUrl(tree: UrlTreeFixture): string {
     return `/?${new URLSearchParams(tree.queryParams).toString()}`;
   }
+
+  navigate(_commands: unknown[], extras: { queryParams: FiltreConflits }): Promise<boolean> {
+    this.navigations.push(extras.queryParams);
+    return Promise.resolve(true);
+  }
 }
 
 describe('Conflict list', () => {
   let componentFixture: ComponentFixture<ListeConflits>;
   let portFixture: ConflitsReadFixture;
   let routeFixture: RouteFixture;
+  let routerFixture: RouterFixture;
 
   beforeEach(() => {
     portFixture = new ConflitsReadFixture();
     routeFixture = new RouteFixture();
+    routerFixture = new RouterFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ConflitsReadPort, useValue: portFixture },
         { provide: ActivatedRoute, useValue: routeFixture },
-        { provide: Router, useClass: RouterFixture },
+        { provide: Router, useValue: routerFixture },
       ],
     });
   });
@@ -82,6 +91,22 @@ describe('Conflict list', () => {
     routeFixture.queryParamMap.next(convertToParamMap(params));
   };
 
+  it('should request the submitted filters on the first page', async () => {
+    givenAnAddress({ page: '2' });
+    await whenTheListIsRendered();
+
+    await whenFiltering(' Camille ', ' M-042 ');
+
+    expect(routerFixture.navigations).toEqual([{ operateur: 'Camille', element: 'M-042', page: 1 }]);
+  });
+
+  const whenFiltering = async (operateur: string, element: string): Promise<void> => {
+    input('conflits-filtre-operateur').value = operateur;
+    input('conflits-filtre-element').value = element;
+    requiredElement('conflits-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await componentFixture.whenStable();
+  };
+
   const whenTheListIsRendered = async (): Promise<void> => {
     componentFixture = TestBed.createComponent(ListeConflits);
     componentFixture.detectChanges();
@@ -89,6 +114,20 @@ describe('Conflict list', () => {
   };
 
   const root = (): HTMLElement => componentFixture.nativeElement as HTMLElement;
+  const requiredElement = (selector: string): HTMLElement => {
+    const element = root().querySelector<HTMLElement>(dataSelector(selector));
+    if (element === null) {
+      throw new Error(`Missing ${selector}`);
+    }
+    return element;
+  };
+  const input = (selector: string): HTMLInputElement => {
+    const element = root().querySelector<HTMLInputElement>(dataSelector(selector));
+    if (element === null) {
+      throw new Error(`Missing input ${selector}`);
+    }
+    return element;
+  };
   const inputValue = (selector: string): string => root().querySelector<HTMLInputElement>(dataSelector(selector))?.value ?? '';
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';

@@ -2,10 +2,15 @@
   <h1 id="conflits-heading" class="text-title">{{ libelles.titre }}</h1>
   <p class="mt-2 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
   <p class="my-6 rounded-control bg-sunken p-4 text-body-sm" data-selector="conflits-demo">{{ libelles.demonstration }}</p>
-  <div class="mb-6 grid gap-4 sm:grid-cols-2">
+  <form
+    class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
+    (submit)="filter($event, operateur.value, element.value)"
+    data-selector="conflits-filtres"
+  >
     <label class="grid gap-2 text-label">
       {{ libelles.operateur }}
       <input
+        #operateur
         class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
         [value]="filtre().operateur"
         data-selector="conflits-filtre-operateur"
@@ -14,12 +19,16 @@
     <label class="grid gap-2 text-label">
       {{ libelles.element }}
       <input
+        #element
         class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
         [value]="filtre().element"
         data-selector="conflits-filtre-element"
       />
     </label>
-  </div>
+    <button class="min-h-touch rounded-control bg-accent px-4 text-label text-on-accent" type="submit" data-selector="conflits-filtrer">
+      {{ libelles.filtrer }}
+    </button>
+  </form>
   @if (liste.isLoading()) {
   <p role="status" class="py-12 text-body text-ink-muted">{{ libelles.chargement }}</p>
   } @if (liste.value(); as page) { @if (page.lignes.length === 0) { @if (filtreActif()) {
