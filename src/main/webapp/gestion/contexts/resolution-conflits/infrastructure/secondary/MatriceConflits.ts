@@ -229,6 +229,10 @@ const regularisation = (): ScenarioConflits =>
         enregistre: '2026-09-16T08:00:00+02:00',
       },
     ],
+    activitesInitiales: [
+      activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE'),
+      activite('nc-22', 'NC commencée à 22 h', 'À résoudre', 'A_RESOUDRE'),
+    ],
     activites: [activite('travail-8', 'Travail de 8 h à 23 h', '15 h'), activite('nc-22', 'NC annulée', 'Annulée', 'ANNULEE')],
     choix: {
       id: 'conserver-fin-regularisee',
