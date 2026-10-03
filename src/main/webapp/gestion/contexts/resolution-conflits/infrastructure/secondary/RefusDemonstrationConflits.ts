@@ -1,4 +1,5 @@
 import { ActeResolution, FaitPropose } from '../../domain/acte/ActeResolution';
+import { InstantPointage } from '../../domain/acte/InstantPointage';
 import { MotifActe } from '../../domain/acte/MotifActe';
 import { DossierConflit } from '../../domain/dossier/DossierConflit';
 
@@ -46,11 +47,13 @@ const refusPointage = (dossier: DossierConflit, acte: ActeResolution): string | 
 };
 
 const refusInstant = (dossier: DossierConflit, instant: string): string | undefined => {
-  const heure = Date.parse(instant);
-  if (heure < Date.parse(dossier.engagement)) return 'L’heure métier précède l’engagement.';
-  const apresCloture = dossier.finCloture !== undefined && heure > Date.parse(dossier.finCloture);
+  const heure = new InstantPointage(instant);
+  if (heure.compareTo(new InstantPointage(dossier.engagement)) < 0) return 'L’heure métier précède l’engagement.';
+  const apresCloture = dossier.finCloture !== undefined && heure.compareTo(new InstantPointage(dossier.finCloture)) > 0;
   if (apresCloture) return 'L’heure métier dépasse la clôture.';
-  return heure > Date.parse('2026-10-03T10:00:00Z') ? 'L’heure métier est future dans cette démonstration.' : undefined;
+  return heure.compareTo(new InstantPointage('2026-10-03T10:00:00Z')) > 0
+    ? 'L’heure métier est future dans cette démonstration.'
+    : undefined;
 };
 
 const refusCible = (dossier: DossierConflit, fait: FaitPropose): string | undefined => {
