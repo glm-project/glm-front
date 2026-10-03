@@ -69,11 +69,7 @@ describe('Explicit confirmation of a resolution', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
     const resolution = ResolutionDuConflit.prepare(saisie);
 
-    const autreDossier = resolution.afterPreview(
-      saisie,
-      { ...apercuFixture, adresse, avant: { ...dossierFixture, ligne: { ...dossierFixture.ligne, adresse } } },
-      dossierFixture,
-    );
+    const autreDossier = resolution.afterPreview(saisie, { ...apercuFixture, adresse }, dossierFixture);
 
     expect(autreDossier.confirmation()).toBeUndefined();
   });
@@ -89,12 +85,26 @@ describe('Explicit confirmation of a resolution', () => {
 
     expect(autreVersion.confirmation()).toBeUndefined();
   });
+  it('should refuse a before snapshot whose version differs from the preview reference and requested dossier', () => {
+    const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
+    const resolution = ResolutionDuConflit.prepare(saisie);
+
+    const autreVersion = resolution.afterPreview(saisie, { ...apercuFixture, avant: { ...dossierFixture, version: 2 } }, dossierFixture);
+
+    expect(autreVersion.confirmation()).toBeUndefined();
+  });
   it.each([
     ['correction', correctionFixture, correctionActeFixture, true],
     ['regularisation', SaisieActe.regularise(faitFixture), { kind: 'REGULARISATION', fait: faitFixture }, true],
     ['invalid proposition', SaisieActe.cancel('fin-17'), apercuFixture.acte, false],
     ['different correction family', correctionFixture, apercuFixture.acte, false],
     ['different regularisation family', SaisieActe.regularise(faitFixture), correctionActeFixture, false],
+    [
+      'different cancellation motif',
+      SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' }),
+      { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Autre motif' },
+      false,
+    ],
     ['different corrected pointage', correctionFixture, { ...correctionActeFixture, pointage: 'fin-18' }, false],
     ['different correction motif', correctionFixture, { ...correctionActeFixture, motif: 'Autre motif' }, false],
     ['different type', correctionFixture, { ...correctionActeFixture, fait: { ...faitFixture, type: 'DEBUT' } }, false],
