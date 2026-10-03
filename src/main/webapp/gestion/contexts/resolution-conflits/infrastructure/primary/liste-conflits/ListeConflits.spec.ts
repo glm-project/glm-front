@@ -66,6 +66,22 @@ describe('Conflict list', () => {
     expect(present('conflits-table')).toBe(false);
   });
 
+  it('should distinguish no matching conflicts from an empty global list', async () => {
+    givenAnAddress({ operateur: 'Camille', element: 'M-042', page: '2' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-vide-filtre')).toContain('Aucun conflit ne correspond');
+    expect(present('conflits-vide')).toBe(false);
+    expect(portFixture.demandes).toEqual([{ operateur: 'Camille', element: 'M-042', page: 2 }]);
+    expect(inputValue('conflits-filtre-operateur')).toBe('Camille');
+    expect(inputValue('conflits-filtre-element')).toBe('M-042');
+  });
+
+  const givenAnAddress = (params: Record<string, string>): void => {
+    routeFixture.queryParamMap.next(convertToParamMap(params));
+  };
+
   const whenTheListIsRendered = async (): Promise<void> => {
     componentFixture = TestBed.createComponent(ListeConflits);
     componentFixture.detectChanges();
@@ -73,6 +89,7 @@ describe('Conflict list', () => {
   };
 
   const root = (): HTMLElement => componentFixture.nativeElement as HTMLElement;
+  const inputValue = (selector: string): string => root().querySelector<HTMLInputElement>(dataSelector(selector))?.value ?? '';
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });
