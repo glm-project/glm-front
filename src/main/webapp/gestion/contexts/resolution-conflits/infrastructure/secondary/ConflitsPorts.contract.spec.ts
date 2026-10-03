@@ -44,6 +44,19 @@ const whenGuidedActIsApplied = async (adapter: InMemoryConflits, suivi: string, 
 describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ canApply: () => true }, new ErrorHandlerFixture()) }])(
   '$nom resolution ports',
   ({ adapterFixture }) => {
+    it('should describe both existing work openings before deciding to correct a same-category transition', async () => {
+      const lecture: ConflitsReadPort = adapterFixture();
+      const adresse = { suivi: new SuiviConflitId('demo-meme-categorie'), pointage: new PointageConflitId('transition-12') };
+
+      const dossier = dossierFixture(await lecture.read(adresse));
+
+      expect(dossier.activites).toMatchObject([
+        { id: { activite: 'travail-8' }, libelle: 'Travail commencé à 8 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+        { id: { activite: 'activite-12' }, libelle: 'Travail commencé à 12 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+      ]);
+      expect(dossier.journal[1]).toMatchObject({ fait: { type: 'DEBUT' } });
+      expect(dossier.journal[1]?.annulation).toBeUndefined();
+    });
     it('should enforce the gestionnaire role on preview and confirmation at their port boundaries', async () => {
       const adapter = new InMemoryConflits({ canApply: () => false }, new ErrorHandlerFixture());
       const initial = dossierFixture(await adapter.read(adresseFixture));

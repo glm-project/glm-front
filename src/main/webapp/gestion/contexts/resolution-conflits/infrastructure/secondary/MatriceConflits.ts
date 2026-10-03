@@ -13,6 +13,7 @@ interface ScenarioGuide {
   readonly numero: number;
   readonly explication: string;
   readonly journal: DossierConflit['journal'];
+  readonly activitesInitiales?: DossierConflit['activites'];
   readonly activites: DossierConflit['activites'];
   readonly choix: ChoixGuide;
   readonly consequences: readonly string[];
@@ -46,7 +47,7 @@ export const scenarioGuide = (options: ScenarioGuide): ScenarioConflits => ({
     engagement: '2026-09-14T07:00:00+02:00',
     ...(options.cloture === true ? { finCloture: '2026-09-14T18:00:00+02:00' } : {}),
     journal: options.journal,
-    activites: options.activites.map(activite => ({ ...activite, etat: 'A_RESOUDRE', temps: 'À résoudre' })),
+    activites: options.activitesInitiales ?? options.activites.map(activite => ({ ...activite, etat: 'A_RESOUDRE', temps: 'À résoudre' })),
     choix: [options.choix],
     enConflit: true,
     consequences: [],
@@ -168,6 +169,10 @@ const memeCategorie = (): ScenarioConflits =>
       pointageDemo('debut-8', faitDemo('08:00:00', 'DEBUT', 'OUVERTURE'), 'travail-8'),
       pointageDemo('transition-12', faitDemo('12:00:00', 'DEBUT', 'TRANSITION', 'travail-8'), 'activite-12'),
       pointageDemo('fin-17', faitDemo('17:00:00', 'FIN', 'FIN', 'activite-12')),
+    ],
+    activitesInitiales: [
+      activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE'),
+      activite('activite-12', 'Travail commencé à 12 h', 'À résoudre', 'A_RESOUDRE'),
     ],
     activites: [activite('travail-8', 'Travail de 8 h à 12 h', '4 h'), activite('activite-12', 'NC de 12 h à 17 h', '5 h')],
     choix: {
