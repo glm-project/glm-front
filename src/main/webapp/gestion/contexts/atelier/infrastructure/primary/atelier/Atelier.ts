@@ -1,5 +1,7 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
+import { createPaginatorIntl } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
 import { Component, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -29,24 +31,27 @@ interface EtatAtelier {
 
 const PAGINATION = LIBELLES_ATELIER.pagination;
 
-const paginatorLabels = (): MatPaginatorIntl =>
-  Object.assign(new MatPaginatorIntl(), {
-    itemsPerPageLabel: PAGINATION.parPage,
-    nextPageLabel: PAGINATION.suivante,
-    previousPageLabel: PAGINATION.precedente,
-    firstPageLabel: PAGINATION.premiere,
-    lastPageLabel: PAGINATION.derniere,
-    getRangeLabel: (page: number, taille: number, total: number): string =>
-      total === 0 ? PAGINATION.vide : PAGINATION.intervalle(page * taille + 1, Math.min((page + 1) * taille, total), total),
-  });
-
 @Component({
   selector: 'glm-atelier',
   host: { 'data-selector': 'atelier-page' },
   templateUrl: './Atelier.html',
   styleUrl: './Atelier.css',
-  imports: [Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
-  providers: [{ provide: MatPaginatorIntl, useFactory: paginatorLabels }],
+  imports: [ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
+  providers: [
+    {
+      provide: MatPaginatorIntl,
+      useFactory: () =>
+        createPaginatorIntl({
+          itemsPerPageLabel: PAGINATION.parPage,
+          nextPageLabel: PAGINATION.suivante,
+          previousPageLabel: PAGINATION.precedente,
+          firstPageLabel: PAGINATION.premiere,
+          lastPageLabel: PAGINATION.derniere,
+          emptyLabel: PAGINATION.vide,
+          formatRange: PAGINATION.intervalle,
+        }),
+    },
+  ],
 })
 export class Atelier implements OnInit {
   private readonly port = inject(AtelierPort);

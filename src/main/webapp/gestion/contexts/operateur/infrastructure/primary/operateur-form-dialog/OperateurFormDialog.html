@@ -12,44 +12,26 @@
     </p>
     }
     <fieldset [disabled]="enregistrement()" class="fields">
-      <div>
-        <label for="operateur-nom" class="field-label">Nom <span class="text-ink-muted">(obligatoire)</span></label>
-        <input
-          #nom
-          id="operateur-nom"
-          name="nom"
-          class="field-input"
-          autocomplete="off"
-          required
-          [value]="formulaire().saisie.nom"
-          (input)="changeNom(nom.value)"
-          [attr.aria-invalid]="soumis() && formulaire().erreurNom() !== undefined"
-          aria-describedby="operateur-nom-error"
-          data-selector="operateur-nom"
-        />
-        <p id="operateur-nom-error" class="field-error" aria-live="polite" data-selector="operateur-nom-error">
-          {{ soumis() ? formulaire().erreurNom() : '' }}
-        </p>
-      </div>
-      <div>
-        <label for="operateur-prenom" class="field-label">Prénom <span class="text-ink-muted">(obligatoire)</span></label>
-        <input
-          #prenom
-          id="operateur-prenom"
-          name="prenom"
-          class="field-input"
-          autocomplete="off"
-          required
-          [value]="formulaire().saisie.prenom"
-          (input)="changePrenom(prenom.value)"
-          [attr.aria-invalid]="soumis() && formulaire().erreurPrenom() !== undefined"
-          aria-describedby="operateur-prenom-error"
-          data-selector="operateur-prenom"
-        />
-        <p id="operateur-prenom-error" class="field-error" aria-live="polite" data-selector="operateur-prenom-error">
-          {{ soumis() ? formulaire().erreurPrenom() : '' }}
-        </p>
-      </div>
+      <glm-text-field
+        fieldId="operateur-nom"
+        name="nom"
+        label="Nom"
+        labelComplement="(obligatoire)"
+        [required]="true"
+        [value]="formulaire().saisie.nom"
+        [error]="soumis() ? formulaire().erreurNom() : undefined"
+        (valueChanged)="changeNom($event)"
+      />
+      <glm-text-field
+        fieldId="operateur-prenom"
+        name="prenom"
+        label="Prénom"
+        labelComplement="(obligatoire)"
+        [required]="true"
+        [value]="formulaire().saisie.prenom"
+        [error]="soumis() ? formulaire().erreurPrenom() : undefined"
+        (valueChanged)="changePrenom($event)"
+      />
       <div>
         <label for="operateur-identifiant" class="field-label">Identifiant <span class="text-ink-muted">(facultatif)</span></label>
         <input
@@ -70,25 +52,16 @@
           {{ soumis() ? formulaire().erreurIdentifiant() : '' }}
         </p>
       </div>
-      <div>
-        <label for="operateur-taux" class="field-label">Taux horaire <span class="text-ink-muted">(€/h, facultatif)</span></label>
-        <input
-          #taux
-          id="operateur-taux"
-          name="tauxHoraire"
-          class="field-input"
-          inputmode="decimal"
-          autocomplete="off"
-          [value]="formulaire().saisie.tauxHoraire"
-          (input)="changeTauxHoraire(taux.value)"
-          [attr.aria-invalid]="soumis() && formulaire().erreurTauxHoraire() !== undefined"
-          aria-describedby="operateur-taux-error"
-          data-selector="operateur-taux"
-        />
-        <p id="operateur-taux-error" class="field-error" aria-live="polite" data-selector="operateur-taux-error">
-          {{ soumis() ? formulaire().erreurTauxHoraire() : '' }}
-        </p>
-      </div>
+      <glm-text-field
+        fieldId="operateur-taux"
+        name="tauxHoraire"
+        label="Taux horaire"
+        labelComplement="(€/h, facultatif)"
+        inputMode="decimal"
+        [value]="formulaire().saisie.tauxHoraire"
+        [error]="soumis() ? formulaire().erreurTauxHoraire() : undefined"
+        (valueChanged)="changeTauxHoraire($event)"
+      />
       <div>
         <label for="operateur-poste-recherche" class="field-label">Postes habilités <span class="text-ink-muted">(facultatif)</span></label>
         @if (formulaire().saisie.postes.length > 0) {

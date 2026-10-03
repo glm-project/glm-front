@@ -1,6 +1,5 @@
-import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
-import { CdkConnectedOverlay, CdkOverlayOrigin } from '@angular/cdk/overlay';
-import { afterNextRender, Component, computed, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
+import { SearchPicker } from '@/gestion/shared/design-system/infrastructure/primary/search-picker/SearchPicker';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { OperateurDuReleve } from '../../../domain/releve/OperateurDuReleve';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
@@ -10,7 +9,7 @@ const normalizeSearch = (query: string): string => query.trim().normalize('NFD')
 
 @Component({
   selector: 'glm-selecteur-operateur',
-  imports: [CdkConnectedOverlay, CdkOverlayOrigin, Icon],
+  imports: [SearchPicker],
   templateUrl: './SelecteurOperateur.html',
   styleUrl: './SelecteurOperateur.css',
 })
@@ -34,27 +33,9 @@ export class SelecteurOperateur {
           || gauche.identite.prenom.localeCompare(droite.identite.prenom, 'fr'),
       ),
   );
-  protected readonly ouvert = signal(false);
-  private readonly recherche = viewChild<ElementRef<HTMLInputElement>>('recherche');
-  private readonly injector = inject(Injector);
-
-  protected open(): void {
-    this.saisie.set('');
-    this.ouvert.set(true);
-  }
-
-  protected choose(id: OperateurReleveId, control: HTMLButtonElement): void {
-    this.close(control);
+  protected choose(id: OperateurReleveId, picker: SearchPicker): void {
+    picker.close();
     this.choisi.emit(id);
-  }
-
-  protected close(control: HTMLButtonElement): void {
-    this.ouvert.set(false);
-    control.focus();
-  }
-
-  protected focusSearch(): void {
-    afterNextRender(() => this.recherche()?.nativeElement.focus(), { injector: this.injector });
   }
 
   readonly identite = input<IdentiteOperateur>();

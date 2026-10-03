@@ -7,10 +7,14 @@
     {{ libelles.chargement }}
   </p>
   } @if (vue().kind === 'ECHEC') {
-  <div role="alert" class="py-8 text-center" data-selector="atelier-engagement-error">
-    <p class="mb-4 text-body text-danger">{{ libelles.erreur }}</p>
-    <button mat-stroked-button type="button" (click)="reload()" data-selector="atelier-engagement-retry">{{ libelles.reessayer }}</button>
-  </div>
+  <glm-error-message
+    class="py-8 text-center"
+    data-selector="atelier-engagement-error"
+    [message]="libelles.erreur"
+    [retryLabel]="libelles.reessayer"
+    retrySelector="atelier-engagement-retry"
+    (retryRequested)="reload()"
+  />
   } @if (vue().kind === 'INTROUVABLE') {
   <p role="alert" class="py-8 text-center text-body text-danger" data-selector="atelier-engagement-missing">{{ libelles.introuvable }}</p>
   } @if (candidat(); as element) {

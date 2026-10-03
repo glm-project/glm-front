@@ -1,5 +1,6 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,8 +19,8 @@ export interface OperateurFormDialogData {
 @Component({
   selector: 'glm-operateur-form-dialog',
   templateUrl: './OperateurFormDialog.html',
-  styleUrl: './OperateurFormDialog.css',
-  imports: [Icon, MatDialogModule, MatButtonModule, MatAutocompleteModule, MatChipsModule],
+  styleUrls: ['../../../../../shared/design-system/infrastructure/primary/forms.css', './OperateurFormDialog.css'],
+  imports: [TextField, Icon, MatDialogModule, MatButtonModule, MatAutocompleteModule, MatChipsModule],
 })
 export class OperateurFormDialog implements OnInit {
   private readonly data = inject<OperateurFormDialogData>(MAT_DIALOG_DATA);

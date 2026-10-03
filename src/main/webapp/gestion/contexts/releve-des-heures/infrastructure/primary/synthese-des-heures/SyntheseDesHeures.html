@@ -91,10 +91,14 @@
     {{ libelles.operateurIntrouvable }}
   </p>
   } @case ('ERREUR') {
-  <div role="alert" class="py-12 text-center" data-selector="synthese-error">
-    <p class="mb-4 text-body text-danger">{{ libelles.echec }}</p>
-    <button mat-stroked-button type="button" (click)="reload()" data-selector="synthese-retry">{{ libelles.reessayer }}</button>
-  </div>
+  <glm-error-message
+    class="py-12 text-center"
+    data-selector="synthese-error"
+    [message]="libelles.echec"
+    [retryLabel]="libelles.reessayer"
+    retrySelector="synthese-retry"
+    (retryRequested)="reload()"
+  />
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
   <div class="gestion-carte">
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">

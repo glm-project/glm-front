@@ -1,0 +1,2 @@
+<p class="text-danger" [class]="inline() ? 'text-body-sm' : 'mb-4 text-body'">{{ message() }}</p>
+<button mat-stroked-button type="button" (click)="retryRequested.emit()" [attr.data-selector]="retrySelector()">{{ retryLabel() }}</button>

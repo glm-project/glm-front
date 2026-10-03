@@ -1,76 +1,46 @@
 <span class="text-body-sm font-semibold text-ink-muted" id="selecteur-operateur-label">{{ libelles.operateurLabel }}</span>
-<button
+<glm-search-picker
+  #picker
+  triggerSelector="selecteur-operateur"
+  labelledBy="selecteur-operateur-label selecteur-operateur-identite"
+  panelId="selecteur-operateur-panneau"
+  panelWidth="360px"
+  panelMaxHeight="calc(100dvh - 32px)"
+  [panelLabel]="libelles.choisirOperateur"
+  [searchLabel]="libelles.rechercherOperateur"
+  searchSelector="selecteur-operateur-recherche"
   [disabled]="chargement() || indisponible() || vide()"
-  cdkOverlayOrigin
-  #controle
-  #origine="cdkOverlayOrigin"
-  (click)="open()"
-  [attr.aria-expanded]="ouvert()"
-  aria-controls="selecteur-operateur-panneau"
-  type="button"
-  class="min-h-touch rounded-control border border-border-strong bg-surface px-3 text-body text-ink"
-  aria-labelledby="selecteur-operateur-label selecteur-operateur-identite"
-  data-selector="selecteur-operateur"
+  [focusAfterRender]="true"
+  [(search)]="saisie"
+  (detached)="picker.opened.set(false)"
 >
-  <span id="selecteur-operateur-identite"
+  <span pickerIdentity id="selecteur-operateur-identite"
     >@if (identite(); as personne) { {{ libelles.identite(personne.nom, personne.prenom) }} } @else { {{ libelles.choisirOperateur }}
     }</span
   >
-  <glm-icon name="chevronDown" />
-</button>
-
-<ng-template
-  cdkConnectedOverlay
-  [cdkConnectedOverlayOrigin]="origine"
-  [cdkConnectedOverlayOpen]="ouvert()"
-  [cdkConnectedOverlayPush]="true"
-  [cdkConnectedOverlayViewportMargin]="16"
-  (attach)="focusSearch()"
-  (detach)="ouvert.set(false)"
-  (overlayOutsideClick)="ouvert.set(false)"
->
-  <section
-    (keydown.escape)="close(controle)"
-    class="panneau"
-    id="selecteur-operateur-panneau"
-    role="region"
-    [attr.aria-label]="libelles.choisirOperateur"
-    data-selector="selecteur-operateur-panneau"
-  >
-    <input
-      #recherche
-      type="search"
-      [value]="saisie()"
-      (input)="saisie.set(recherche.value)"
-      class="min-h-touch rounded-control border border-border-strong bg-surface px-3 text-body text-ink"
-      [attr.aria-label]="libelles.rechercherOperateur"
-      [placeholder]="libelles.rechercherOperateur"
-      data-selector="selecteur-operateur-recherche"
-    />
-    @if (propositions().length === 0) {
-    <p role="status" class="py-3 text-body-sm text-ink-muted" data-selector="selecteur-operateur-sans-resultat">
-      {{ libelles.aucunResultatOperateur }}
-    </p>
+  @if (propositions().length === 0) {
+  <p role="status" class="py-3 text-body-sm text-ink-muted" data-selector="selecteur-operateur-sans-resultat">
+    {{ libelles.aucunResultatOperateur }}
+  </p>
+  }
+  <ul>
+    @for (operateur of propositions(); track operateur.id.value) {
+    <li>
+      <button
+        type="button"
+        class="min-h-touch text-body text-ink"
+        (click)="choose(operateur.id, picker)"
+        [attr.aria-current]="operateur.id.value === courant() ? 'true' : null"
+        data-selector="selecteur-operateur-proposition"
+      >
+        <span class="nom" data-selector="selecteur-operateur-nom"
+          >{{ libelles.identite(operateur.identite.nom, operateur.identite.prenom) }}</span
+        >@if (operateur.id.value === courant()) { <span class="text-body-sm text-ink-muted">{{ libelles.operateurConsulte }}</span> }
+      </button>
+    </li>
     }
-    <ul>
-      @for (operateur of propositions(); track operateur.id.value) {
-      <li>
-        <button
-          type="button"
-          class="min-h-touch text-body text-ink"
-          (click)="choose(operateur.id, controle)"
-          [attr.aria-current]="operateur.id.value === courant() ? 'true' : null"
-          data-selector="selecteur-operateur-proposition"
-        >
-          <span class="nom" data-selector="selecteur-operateur-nom"
-            >{{ libelles.identite(operateur.identite.nom, operateur.identite.prenom) }}</span
-          >@if (operateur.id.value === courant()) { <span class="text-body-sm text-ink-muted">{{ libelles.operateurConsulte }}</span> }
-        </button>
-      </li>
-      }
-    </ul>
-  </section>
-</ng-template>
+  </ul>
+</glm-search-picker>
 
 @if (chargement()) {
 <p role="status" class="text-body-sm text-ink-muted" data-selector="selecteur-operateur-chargement">{{ libelles.chargementOperateurs }}</p>

@@ -3,25 +3,16 @@
   <mat-dialog-content>
     <p class="mb-6 text-body-sm text-ink-muted">Définissez le poste et le travail qui s’y effectue. Le coût horaire est facultatif.</p>
     <fieldset [disabled]="enregistrement()" class="fields">
-      <div>
-        <label for="poste-libelle" class="field-label">Libellé <span class="text-ink-muted">(obligatoire)</span></label>
-        <input
-          #libelle
-          id="poste-libelle"
-          name="libelle"
-          class="field-input"
-          autocomplete="off"
-          required
-          [value]="formulaire().saisie.libelle"
-          (input)="changeLibelle(libelle.value)"
-          [attr.aria-invalid]="soumis() && formulaire().erreurLibelle() !== undefined"
-          aria-describedby="poste-libelle-error"
-          data-selector="poste-libelle"
-        />
-        <p id="poste-libelle-error" class="field-error" aria-live="polite" data-selector="poste-libelle-error">
-          {{ soumis() ? formulaire().erreurLibelle() : '' }}
-        </p>
-      </div>
+      <glm-text-field
+        fieldId="poste-libelle"
+        name="libelle"
+        label="Libellé"
+        labelComplement="(obligatoire)"
+        [required]="true"
+        [value]="formulaire().saisie.libelle"
+        [error]="soumis() ? formulaire().erreurLibelle() : undefined"
+        (valueChanged)="changeLibelle($event)"
+      />
       <div>
         <label for="poste-nature" class="field-label">Nature <span class="text-ink-muted">(obligatoire)</span></label>
         <input
@@ -48,25 +39,16 @@
           {{ soumis() ? formulaire().erreurNature() : '' }}
         </p>
       </div>
-      <div>
-        <label for="poste-cout" class="field-label">Coût horaire <span class="text-ink-muted">(€/h, facultatif)</span></label>
-        <input
-          #cout
-          id="poste-cout"
-          name="coutHoraire"
-          class="field-input"
-          inputmode="decimal"
-          autocomplete="off"
-          [value]="formulaire().saisie.coutHoraire"
-          (input)="changeCoutHoraire(cout.value)"
-          [attr.aria-invalid]="soumis() && formulaire().erreurCoutHoraire() !== undefined"
-          aria-describedby="poste-cout-error"
-          data-selector="poste-cout"
-        />
-        <p id="poste-cout-error" class="field-error" aria-live="polite" data-selector="poste-cout-error">
-          {{ soumis() ? formulaire().erreurCoutHoraire() : '' }}
-        </p>
-      </div>
+      <glm-text-field
+        fieldId="poste-cout"
+        name="coutHoraire"
+        label="Coût horaire"
+        labelComplement="(€/h, facultatif)"
+        inputMode="decimal"
+        [value]="formulaire().saisie.coutHoraire"
+        [error]="soumis() ? formulaire().erreurCoutHoraire() : undefined"
+        (valueChanged)="changeCoutHoraire($event)"
+      />
     </fieldset>
     @if (formulaire().erreurEnregistrement(); as erreur) {
     <p role="alert" class="mt-4 text-body-sm text-danger" data-selector="poste-enregistrement-error">{{ erreur }}</p>

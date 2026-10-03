@@ -13,10 +13,14 @@
     @if (etat().chargement) {
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">Chargement des postes de travail…</p>
     } @else if (etat().echec) {
-    <div role="alert" class="py-16 text-center" data-selector="postes-error">
-      <p class="mb-4 text-body text-danger">Impossible de charger les postes. Vérifiez la connexion puis réessayez.</p>
-      <button mat-stroked-button (click)="reload()" data-selector="postes-retry">Réessayer</button>
-    </div>
+    <glm-error-message
+      class="py-16 text-center"
+      data-selector="postes-error"
+      message="Impossible de charger les postes. Vérifiez la connexion puis réessayez."
+      retryLabel="Réessayer"
+      retrySelector="postes-retry"
+      (retryRequested)="reload()"
+    />
     } @else if (etat().totalElementsCount === 0) {
     <div class="px-6 py-16 text-center" data-selector="postes-empty">
       <h2 class="text-section">Aucun poste de travail</h2>

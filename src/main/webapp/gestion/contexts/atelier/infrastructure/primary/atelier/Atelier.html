@@ -33,10 +33,14 @@
     @if (etat().chargement) {
     <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="atelier-loading">{{ libelles.chargement }}</p>
     } @else if (etat().echec) {
-    <div role="alert" class="py-16 text-center" data-selector="atelier-error">
-      <p class="mb-4 text-body text-danger">{{ libelles.erreur }}</p>
-      <button mat-stroked-button type="button" (click)="reload()" data-selector="atelier-retry">{{ libelles.reessayer }}</button>
-    </div>
+    <glm-error-message
+      class="py-16 text-center"
+      data-selector="atelier-error"
+      [message]="libelles.erreur"
+      [retryLabel]="libelles.reessayer"
+      retrySelector="atelier-retry"
+      (retryRequested)="reload()"
+    />
     } @else if (etat().totalElementsCount === 0) {
     <div class="px-6 py-16 text-center" data-selector="atelier-empty">
       <h2 class="text-section">{{ libelles.vides[etat().filtre] }}</h2>
