@@ -109,6 +109,7 @@ const deuxFins = (): ScenarioConflits =>
       pointageDemo('fin-17', faitDemo('17:00:00', 'FIN', 'FIN', 'travail-8')),
       pointageDemo('fin-17-02', faitDemo('17:00:02', 'FIN', 'FIN', 'travail-8')),
     ],
+    activitesInitiales: [activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE')],
     activites: [activite('travail-8', 'Travail de 8 h à 17 h', '9 h')],
     choix: {
       id: 'annuler-seconde-fin',
