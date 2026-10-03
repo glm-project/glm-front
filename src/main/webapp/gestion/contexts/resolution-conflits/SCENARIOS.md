@@ -124,7 +124,7 @@ se font par les lectures ; aucune assertion n'inspecte l'état privé du simulat
 
 ## Contrat HTTP restant à arrêter
 
-Le [plan](../../../../../../plan-conflits.md) recense les ressources consultées dans le backend voisin :
+Les ressources consultées dans le backend voisin lors de la préparation sont :
 lecture du suivi et de son journal, correction d'un événement, annulation et régularisation. Avant un
 adapter HTTP, ces disponibilités doivent être revérifiées contre la révision backend épinglée. Elles
 ne fournissent pas encore l'ensemble des garanties nécessaires à ce parcours.
