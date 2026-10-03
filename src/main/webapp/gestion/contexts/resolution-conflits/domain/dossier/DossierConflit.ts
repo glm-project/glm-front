@@ -28,6 +28,22 @@ export interface ActiviteConflit {
   readonly libelle: string;
   readonly etat: 'A_RESOUDRE' | 'EN_COURS' | 'TERMINEE' | 'ANNULEE' | 'REMPLACEE' | 'ECHUE';
   readonly temps: string;
+  readonly periode?: {
+    readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
+    readonly debut: string;
+    readonly fin?: string;
+    readonly duree?: string;
+  };
+}
+
+export interface DiagnosticConflit {
+  readonly pointage: PointageConflitId;
+  readonly raison: 'CIBLE_REMPLACEE' | 'CIBLE_DEJA_TERMINEE';
+  readonly cible: {
+    readonly activite: ActiviteConflitId;
+    readonly ouvrant?: PointageConflitId;
+    readonly termineePar?: PointageConflitId;
+  };
 }
 
 export interface ChoixGuide {
@@ -62,6 +78,7 @@ export interface DossierConflit {
   readonly enConflit: boolean;
   readonly consequences: readonly string[];
   readonly continuations: readonly LigneConflit[];
+  readonly diagnostics?: readonly DiagnosticConflit[];
 }
 
 export type LectureDossier =
