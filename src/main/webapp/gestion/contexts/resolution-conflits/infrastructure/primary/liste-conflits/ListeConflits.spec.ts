@@ -4,7 +4,10 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
-import { FiltreConflits, LectureDossier, PageConflits } from '../../../domain/dossier/DossierConflit';
+import { FiltreConflits, LectureDossier, LigneConflit, PageConflits } from '../../../domain/dossier/DossierConflit';
+import { ElementConflitId } from '../../../domain/dossier/ElementConflitId';
+import { PointageConflitId } from '../../../domain/dossier/PointageConflitId';
+import { SuiviConflitId } from '../../../domain/dossier/SuiviConflitId';
 import { ListeConflits } from './ListeConflits';
 
 class ConflitsReadFixture extends ConflitsReadPort {
@@ -51,6 +54,17 @@ class RouterFixture {
     return Promise.resolve(true);
   }
 }
+
+const ligneFixture = (): LigneConflit => ({
+  adresse: { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-camille') },
+  element: new ElementConflitId('moule-42'),
+  designation: 'M-042',
+  operateur: 'Camille Martin',
+  poste: 'Fraiseuse',
+  date: '2 octobre 2026',
+  explication: 'La fin vise une activité déjà terminée.',
+  nombrePointages: 3,
+});
 
 describe('Conflict list', () => {
   let componentFixture: ComponentFixture<ListeConflits>;
@@ -139,6 +153,18 @@ describe('Conflict list', () => {
     expect(present('conflits-vide-filtre')).toBe(false);
   });
 
+  it('should show the second and last acquired page with only the previous page enabled', async () => {
+    givenAnAddress({ operateur: 'Camille', page: '2' });
+    portFixture.page = { lignes: [ligneFixture()], total: 6, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-pagination')).toContain('Page 2 sur 2');
+    expect(button('conflits-page-precedente').disabled).toBe(false);
+    expect(button('conflits-page-suivante').disabled).toBe(true);
+    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+  });
+
   const whenTheReadingRecovers = async (): Promise<void> => {
     portFixture.failure = undefined;
     requiredElement('conflits-reessayer').click();
@@ -170,6 +196,13 @@ describe('Conflict list', () => {
     const element = root().querySelector<HTMLInputElement>(dataSelector(selector));
     if (element === null) {
       throw new Error(`Missing input ${selector}`);
+    }
+    return element;
+  };
+  const button = (selector: string): HTMLButtonElement => {
+    const element = root().querySelector<HTMLButtonElement>(dataSelector(selector));
+    if (element === null) {
+      throw new Error(`Missing button ${selector}`);
     }
     return element;
   };

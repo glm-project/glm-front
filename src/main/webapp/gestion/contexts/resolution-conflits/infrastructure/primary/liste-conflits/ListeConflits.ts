@@ -2,6 +2,7 @@ import { Component, computed, inject, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
+import { FiltreConflits, PAGE_SIZE_CONFLITS } from '../../../domain/dossier/DossierConflit';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { LIBELLES_LISTE_CONFLITS } from './LibellesListeConflits';
 
@@ -31,5 +32,13 @@ export class ListeConflits {
 
   protected reload(): void {
     this.liste.reload();
+  }
+
+  protected pageCount(total: number): number {
+    return Math.ceil(total / PAGE_SIZE_CONFLITS);
+  }
+
+  protected pageParams(page: number): FiltreConflits {
+    return { ...this.filtre(), page };
   }
 }

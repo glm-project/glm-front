@@ -5,4 +5,9 @@ export const LIBELLES_LISTE_CONFLITS = {
   erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',
   reessayer: 'Réessayer',
   partiel: 'Liste partielle : certains dossiers n’ont pas pu être acquis. Cette sélection ne représente pas tous les conflits.',
+  precedente: 'Précédente',
+  suivante: 'Suivante',
+  pagination: 'Pages des conflits',
+  page: 'Page',
+  sur: 'sur',
 } as const;

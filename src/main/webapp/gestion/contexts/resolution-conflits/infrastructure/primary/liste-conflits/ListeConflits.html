@@ -83,6 +83,35 @@
         </tbody>
       </table>
     </div>
+    <nav
+      class="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4 text-body-sm"
+      [attr.aria-label]="libelles.pagination"
+      data-selector="conflits-pagination"
+    >
+      <span>{{ libelles.page }} {{ filtre().page }} {{ libelles.sur }} {{ pageCount(page.total) }}</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="min-h-touch rounded-control border border-border-strong px-3 text-label disabled:text-ink-muted"
+          [routerLink]="['/conflits']"
+          [queryParams]="pageParams(filtre().page - 1)"
+          [disabled]="filtre().page === 1"
+          data-selector="conflits-page-precedente"
+        >
+          {{ libelles.precedente }}
+        </button>
+        <button
+          type="button"
+          class="min-h-touch rounded-control border border-border-strong px-3 text-label disabled:text-ink-muted"
+          [routerLink]="['/conflits']"
+          [queryParams]="pageParams(filtre().page + 1)"
+          [disabled]="filtre().page >= pageCount(page.total)"
+          data-selector="conflits-page-suivante"
+        >
+          {{ libelles.suivante }}
+        </button>
+      </div>
+    </nav>
   </div>
   } }
 </main>
