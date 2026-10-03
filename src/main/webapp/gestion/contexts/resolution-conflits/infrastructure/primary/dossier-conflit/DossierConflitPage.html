@@ -322,7 +322,11 @@
         </div>
         <div data-selector="conflit-apercu-consequences">
           <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
-          @for (consequence of apercu.apres.consequences; track consequence) {
+          @for (activite of apercu.apres.activites; track activite.id.activite) {
+          <p class="mt-2 text-body-sm" data-selector="conflit-apercu-activite-apres">
+            {{ activite.libelle }} · {{ libelles.etats[activite.etat] }} · {{ activite.temps }}
+          </p>
+          } @for (consequence of apercu.apres.consequences; track consequence) {
           <p class="mt-2 text-body-sm">{{ consequence }}</p>
           }
         </div>

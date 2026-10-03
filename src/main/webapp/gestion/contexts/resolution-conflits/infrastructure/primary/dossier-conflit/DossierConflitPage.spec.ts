@@ -279,6 +279,21 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-activite', 'En cours · Temps non définitif');
   });
 
+  it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
+    givenASuccessfulPreview({
+      ...dossierConflitFixture(),
+      enConflit: false,
+      activites: [
+        { id: new ActiviteConflitId('travail-8'), libelle: 'Travail commencé à 8 h', etat: 'EN_COURS', temps: 'Temps non définitif' },
+      ],
+    });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('conflit-apercu-activite-apres', 'Travail commencé à 8 h · En cours · Temps non définitif');
+  });
+
   it('should keep new decisions blocked when the confirmation receipt is not attested', async () => {
     givenASuccessfulPreview();
     application.result = { kind: 'ISSUE_INCONNUE' };
@@ -628,7 +643,7 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-adresse-invalide', 'L’adresse doit préciser');
   });
 
-  const givenASuccessfulPreview = (): void => {
+  const givenASuccessfulPreview = (apres?: DossierConflit): void => {
     const dossier = dossierConflitFixture();
     preview.result = {
       kind: 'APERCU',
@@ -637,7 +652,7 @@ describe('Conflict dossier page', () => {
         version: 1,
         adresse: dossier.ligne.adresse,
         avant: dossier,
-        apres: { ...dossier, enConflit: false },
+        apres: apres ?? { ...dossier, enConflit: false },
         acte: {
           kind: 'CORRECTION',
           pointage: 'fin-17',
