@@ -95,7 +95,12 @@
                 >{{ ligne.designation }}</a
               >
             </td>
-            <td class="p-4">{{ ligne.operateur }}<br /><span class="text-ink-muted">{{ ligne.poste }}</span></td>
+            <td class="p-4">
+              {{ ligne.operateur || libelles.operateurNonResolu + ' · ' + ligne.operateurId }}<br />
+              <span class="text-ink-muted"
+                >{{ ligne.poste || (ligne.posteId ? libelles.posteNonResolu + ' · ' + ligne.posteId : libelles.sansPoste) }}</span
+              >
+            </td>
             <td class="max-w-md p-4">{{ ligne.explication }}</td>
             <td class="p-4 tabular-nums">{{ ligne.date }}<br />{{ ligne.nombrePointages }} pointages</td>
           </tr>

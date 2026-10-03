@@ -135,6 +135,28 @@ describe('Conflict list', () => {
     expect(present('conflits-table')).toBe(false);
   });
 
+  it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
+    portFixture.page = {
+      lignes: [{ ...ligneFixture(), operateur: '', operateurId: 'op-absent', poste: '', posteId: 'poste-supprime' }],
+      total: 1,
+      complete: true,
+    };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Opérateur non résolu · op-absent');
+    expect(textOf('conflit-ligne')).toContain('Poste non résolu · poste-supprime');
+  });
+
+  it('should distinguish work clocked without a workstation from an unresolved workstation reference', async () => {
+    portFixture.page = { lignes: [{ ...ligneFixture(), poste: '' }], total: 1, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Sans poste');
+    expect(textOf('conflit-ligne')).not.toContain('Poste non résolu');
+  });
+
   it('should distinguish no matching conflicts from an empty global list', async () => {
     givenAnAddress({ operateur: 'Camille', element: 'M-042', page: '2' });
 

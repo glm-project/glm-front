@@ -42,7 +42,9 @@ export interface LigneConflit {
   readonly element: ElementConflitId;
   readonly designation: string;
   readonly operateur: string;
+  readonly operateurId?: string;
   readonly poste: string;
+  readonly posteId?: string;
   readonly date: string;
   readonly explication: string;
   readonly nombrePointages: number;
