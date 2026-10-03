@@ -88,6 +88,7 @@ const toRestLigne = (ligne: LigneFixture): RestLigne => ({
     total: completFixture(ligne.travail),
   },
   finsAutomatiques: [],
+  pointages: [],
   nonConformites: ligne.reprises.map(([debut, fin]) => ({ debut, fin })),
   cout: {
     machine: completFixture(ligne.machine),
