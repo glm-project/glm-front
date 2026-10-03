@@ -108,11 +108,11 @@ describe('Conflict dossier in Gestion', () => {
     thenTheInitialDossierHasNoPreparedDecision();
   });
 
-  it('should move keyboard focus to the explicit confirmation after a successful preview', () => {
+  it('should start reading the preview at its summary before reaching confirmation', () => {
     whenOpeningTheDossier();
     whenPreparingTheGuidedCorrection();
 
-    thenTheConfirmationHasKeyboardFocus();
+    thenThePreviewSummaryHasKeyboardFocus();
   });
 
   it('should keep a guided decision focused on its reason while allowing explicit access to fact editing', () => {
@@ -294,8 +294,8 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
   };
 
-  const thenTheConfirmationHasKeyboardFocus = (): void => {
-    cy.get(dataSelector('conflit-confirmer')).should('have.focus');
+  const thenThePreviewSummaryHasKeyboardFocus = (): void => {
+    cy.get(dataSelector('conflit-apercu-titre')).should('have.focus');
   };
 
   const whenPreparingTheGuidedCorrection = (): void => {

@@ -257,7 +257,9 @@
       </nav>
       } @if (apercu(); as apercu) {
       <section class="mt-6 border-t border-border pt-5" aria-labelledby="apercu-heading" data-selector="conflit-apercu">
-        <h3 id="apercu-heading" class="text-section">{{ libelles.apercu }}</h3>
+        <h3 #apercuHeading id="apercu-heading" class="text-section" tabindex="-1" data-selector="conflit-apercu-titre">
+          {{ libelles.apercu }}
+        </h3>
         <div class="mt-4 text-body-sm" data-selector="conflit-apercu-acte">
           <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
           @if (apercu.acte.kind !== 'REGULARISATION') {
@@ -332,7 +334,6 @@
         </div>
         <p class="mt-4 text-body font-semibold">{{ apercu.apres.enConflit ? libelles.apercuRestant : libelles.resolu }}</p>
         <button
-          #confirmation
           type="button"
           class="bouton bouton-principal mt-4"
           data-selector="conflit-confirmer"

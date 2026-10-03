@@ -22,7 +22,7 @@ import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationCo
 export class DossierConflitPage {
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
-  private readonly confirmation = viewChild<ElementRef<HTMLButtonElement>>('confirmation');
+  private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
   private readonly port = inject(ConflitsReadPort);
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
@@ -113,7 +113,7 @@ export class DossierConflitPage {
   protected async preview(dossier: DossierConflit): Promise<void> {
     await this.preparation.preview(dossier);
     this.refreshAfterConcurrency();
-    afterNextRender(() => this.confirmation()?.nativeElement.focus(), { injector: this.injector });
+    afterNextRender(() => this.apercuHeading()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected async confirm(): Promise<void> {
