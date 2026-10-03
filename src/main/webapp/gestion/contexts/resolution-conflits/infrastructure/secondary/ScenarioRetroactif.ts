@@ -88,6 +88,7 @@ export const scenariosRetroactifs = (): readonly ScenarioConflits[] => {
       { ...pointageDemo('fin-tour-10', finTour), enregistre: '2026-09-15T09:00:00+02:00' },
       { ...pointageDemo('fin-tour-10-bis', finTour), enregistre: '2026-09-14T10:05:00+02:00' },
     ],
+    activitesInitiales: [activite('travail-tour', 'Travail indépendant commencé à 9 h', 'À résoudre', 'A_RESOUDRE')],
     activites: [activite('travail-tour', 'Travail indépendant de 9 h à 10 h', '1 h')],
     choix: {
       id: 'annuler-fin-tour',

@@ -44,6 +44,16 @@ const whenGuidedActIsApplied = async (adapter: InMemoryConflits, suivi: string, 
 describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ canApply: () => true }, new ErrorHandlerFixture()) }])(
   '$nom resolution ports',
   ({ adapterFixture }) => {
+    it('should keep the independent work unresolved before choosing between its simultaneous finishes', async () => {
+      const lecture: ConflitsReadPort = adapterFixture();
+      const adresse = { suivi: new SuiviConflitId('demo-retroactif'), pointage: new PointageConflitId('fin-tour-10-bis') };
+
+      const dossier = dossierFixture(await lecture.read(adresse));
+
+      expect(dossier.activites).toMatchObject([
+        { id: { activite: 'travail-tour' }, libelle: 'Travail indépendant commencé à 9 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+      ]);
+    });
     it('should describe activity origins before deciding which work the late transition targeted', async () => {
       const lecture: ConflitsReadPort = adapterFixture();
       const adresse = { suivi: new SuiviConflitId('demo-cible-echue'), pointage: new PointageConflitId('nc-23') };
