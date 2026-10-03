@@ -8,6 +8,24 @@ describe('Conflict list in Gestion', () => {
     thenThePageDoesNotOverflow();
   });
 
+  it('should explain an unmatched operator when filters are submitted with Enter', () => {
+    whenVisitingAt(1280);
+    whenFilteringWithEnter();
+
+    thenNoConflictMatchesTheFilters();
+  });
+
+  const whenFilteringWithEnter = (): void => {
+    cy.get(dataSelector('conflits-filtre-operateur')).type('Opérateur absent');
+    cy.get(dataSelector('conflits-filtre-element')).type('M-042{enter}');
+  };
+
+  const thenNoConflictMatchesTheFilters = (): void => {
+    cy.get(dataSelector('conflits-vide-filtre')).should('contain.text', 'Aucun conflit ne correspond');
+    cy.get(dataSelector('conflit-ligne')).should('not.exist');
+    cy.get(dataSelector('conflits-vide')).should('not.exist');
+  };
+
   const focusControls = [
     { selector: 'conflits-filtre-operateur', description: 'operator filter' },
     { selector: 'conflits-filtrer', description: 'filtering action' },
