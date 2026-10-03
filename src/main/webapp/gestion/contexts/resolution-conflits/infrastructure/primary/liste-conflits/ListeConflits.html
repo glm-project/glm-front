@@ -31,7 +31,9 @@
   </form>
   @if (liste.isLoading()) {
   <p role="status" class="py-12 text-body text-ink-muted">{{ libelles.chargement }}</p>
-  } @if (liste.value(); as page) { @if (page.lignes.length === 0) { @if (filtreActif()) {
+  } @else if (liste.status() === 'error') {
+  <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="conflits-erreur">{{ libelles.erreur }}</p>
+  } @else if (liste.value(); as page) { @if (page.lignes.length === 0) { @if (filtreActif()) {
   <p class="gestion-carte p-6 text-body" data-selector="conflits-vide-filtre">{{ libelles.videFiltre }}</p>
   } @else {
   <p class="gestion-carte p-6 text-body" data-selector="conflits-vide">{{ libelles.vide }}</p>

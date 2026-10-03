@@ -9,11 +9,15 @@ import { ListeConflits } from './ListeConflits';
 
 class ConflitsReadFixture extends ConflitsReadPort {
   page: PageConflits = { lignes: [], total: 0, complete: true };
+  failure: Error | undefined;
   readonly demandes: FiltreConflits[] = [];
 
   override async list(filtre: FiltreConflits): Promise<PageConflits> {
     this.demandes.push(filtre);
     await new Promise(resolve => setTimeout(resolve));
+    if (this.failure !== undefined) {
+      throw this.failure;
+    }
     return this.page;
   }
 
@@ -98,6 +102,16 @@ describe('Conflict list', () => {
     await whenFiltering(' Camille ', ' M-042 ');
 
     expect(routerFixture.navigations).toEqual([{ operateur: 'Camille', element: 'M-042', page: 1 }]);
+  });
+
+  it('should explain an acquisition failure without showing an empty list', async () => {
+    portFixture.failure = new Error('Acquisition indisponible');
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-erreur')).toContain('Impossible de charger');
+    expect(present('conflits-vide')).toBe(false);
+    expect(present('conflits-table')).toBe(false);
   });
 
   const whenFiltering = async (operateur: string, element: string): Promise<void> => {
