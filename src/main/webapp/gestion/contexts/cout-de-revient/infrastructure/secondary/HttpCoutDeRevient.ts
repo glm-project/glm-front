@@ -2,10 +2,12 @@ import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
+import { ElementDisponible } from '../../domain/element/ElementDisponible';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
@@ -152,10 +154,83 @@ const estElementInconnu = (failure: unknown): boolean => {
   return failure.status === ELEMENT_INCONNU;
 };
 
+const hasInvalidPageMetadata = (response: components['schemas']['PageRestElementDeFabrication'], page: number): boolean =>
+  !Number.isInteger(response.currentPage)
+  || response.currentPage !== page
+  || !Number.isInteger(response.pageSize)
+  || response.pageSize <= 0
+  || !Number.isInteger(response.totalElementsCount)
+  || response.totalElementsCount < 0
+  || response.content.length > response.pageSize
+  || response.content.length > response.totalElementsCount;
+
+const hasIncompletePage = (response: components['schemas']['PageRestElementDeFabrication'], acquired: number): boolean =>
+  response.content.length !== Math.min(response.pageSize, response.totalElementsCount - acquired);
+
+const hasChangedPagination = (
+  response: components['schemas']['PageRestElementDeFabrication'],
+  previous: components['schemas']['PageRestElementDeFabrication'] | undefined,
+): boolean =>
+  previous !== undefined && (response.totalElementsCount !== previous.totalElementsCount || response.pageSize !== previous.pageSize);
+
+const validateCollectionPage = (
+  response: components['schemas']['PageRestElementDeFabrication'],
+  acquisition: {
+    readonly page: number;
+    readonly acquired: number;
+    readonly previous: components['schemas']['PageRestElementDeFabrication'] | undefined;
+  },
+): void => {
+  if (hasInvalidPageMetadata(response, acquisition.page)) {
+    throw new Error('Pagination incohérente de la collection');
+  }
+  if (hasChangedPagination(response, acquisition.previous)) {
+    throw new Error('Pagination instable de la collection');
+  }
+  if (hasIncompletePage(response, acquisition.acquired)) {
+    throw new Error('Collection incomplète');
+  }
+};
+
 @Injectable()
 export class HttpCoutDeRevient extends CoutDeRevientPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
+
+  override async elementsDisponibles(): Promise<readonly ElementDisponible[]> {
+    try {
+      return await this.readElements();
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  private async readElements(): Promise<readonly ElementDisponible[]> {
+    const elements: ElementDisponible[] = [];
+    let page = 0;
+    let total: number;
+    let previous: components['schemas']['PageRestElementDeFabrication'] | undefined;
+    do {
+      const response = await this.api.read('/api/elements-de-fabrication', {
+        queryParams: { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z', page, size: PAGE_SIZE },
+      });
+      validateCollectionPage(response, { page, acquired: elements.length, previous });
+      previous = response;
+      elements.push(
+        ...response.content.map(element => ({
+          id: new ElementChiffreId(required(element.id, 'element.id')),
+          identite: new ElementChiffre(required(element.nom, 'element.nom'), required(element.type, 'element.type')),
+        })),
+      );
+      total = response.totalElementsCount;
+      page += 1;
+    } while (elements.length < total);
+    if (new Set(elements.map(element => element.id.value)).size !== elements.length) {
+      throw new Error('Identités dupliquées dans la collection');
+    }
+    return elements;
+  }
 
   override async rapport(element: ElementChiffreId): Promise<CoutDeRevient | undefined> {
     try {

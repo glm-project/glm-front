@@ -1,15 +1,28 @@
 import { ElementChiffreId } from '@/gestion/contexts/cout-de-revient/domain/element/ElementChiffreId';
+import { ElementDisponible } from '@/gestion/contexts/cout-de-revient/domain/element/ElementDisponible';
 import { CoutDeRevient } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevientPort';
 
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));
 
 export class CoutDeRevientFixture extends CoutDeRevientPort {
+  elements: readonly ElementDisponible[] = [];
+  collectionFailure: Error | undefined;
+  lecturesCollection = 0;
   readonly demandes: ElementChiffreId[] = [];
   rapports = new Map<string, CoutDeRevient>();
   elementsInconnus = new Set<string>();
   lectureFailure: Error | undefined;
   lectureDifferee: Promise<CoutDeRevient | undefined> | undefined;
+
+  override async elementsDisponibles(): Promise<readonly ElementDisponible[]> {
+    this.lecturesCollection += 1;
+    const elements = await auTourSuivant(this.elements);
+    if (this.collectionFailure !== undefined) {
+      throw this.collectionFailure;
+    }
+    return elements;
+  }
 
   override rapport(element: ElementChiffreId): Promise<CoutDeRevient | undefined> {
     this.demandes.push(element);

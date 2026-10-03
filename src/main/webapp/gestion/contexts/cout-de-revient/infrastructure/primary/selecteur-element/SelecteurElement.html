@@ -1,0 +1,71 @@
+<label id="cout-element-label" for="cout-element-trigger" class="text-label text-ink-muted" data-selector="cout-element-label"
+  >{{ libelles.element }}</label
+>
+<button
+  id="cout-element-trigger"
+  [disabled]="indisponible()"
+  #declencheur
+  type="button"
+  class="element-control"
+  data-selector="cout-element-trigger"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  (click)="open()"
+  [attr.aria-expanded]="ouvert()"
+  aria-controls="cout-element-panel"
+  aria-labelledby="cout-element-label cout-identite"
+>
+  <span id="cout-identite" data-selector="cout-identite"
+    >@if (identite(); as element) { {{ libelles.identite(element.type, element.nom) }} } @else { {{ libelles.choisirElement }} }</span
+  >
+  <glm-icon name="chevronDown" />
+</button>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="ouvert()"
+  [cdkConnectedOverlayViewportMargin]="16"
+  [cdkConnectedOverlayPush]="true"
+  (attach)="focusSearch()"
+  (overlayKeydown)="onKeydown($event)"
+  (overlayOutsideClick)="ouvert.set(false)"
+>
+  <section
+    id="cout-element-panel"
+    class="element-panel"
+    role="dialog"
+    [attr.aria-label]="libelles.choisirElement"
+    data-selector="cout-element-panel"
+  >
+    <input
+      #recherche
+      type="search"
+      [value]="saisie()"
+      (input)="saisie.set(recherche.value)"
+      class="element-search"
+      [attr.aria-label]="libelles.rechercherElement"
+      [placeholder]="libelles.rechercherElement"
+      data-selector="cout-element-search"
+    />
+    <ul class="element-options">
+      @for (element of propositions(); track element.id.value) {
+      <li>
+        <button
+          type="button"
+          class="element-option"
+          (click)="choose(element)"
+          data-selector="cout-element-option"
+          [attr.data-element]="element.id.value"
+          [attr.aria-current]="element.id.value === elementCourant() ? 'true' : null"
+        >
+          {{ libelles.identite(element.identite.type, element.identite.nom) }} @if (element.id.value === elementCourant()) {
+          <span class="text-body-sm text-ink-muted">{{ libelles.elementCourant }}</span> }
+        </button>
+      </li>
+      } @empty {
+      <li class="p-3 text-body-sm text-ink-muted" role="status" data-selector="cout-element-no-match">{{ libelles.aucunResultat }}</li>
+      }
+    </ul>
+  </section>
+</ng-template>

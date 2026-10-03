@@ -99,7 +99,8 @@ pour laquelle ils sont affichés séparément.
 - **ActivitesEnCoursExclues** : nombre reçu d’activités exclues du temps, du coût et du diviseur.
 - **PointageEnConflit** : un pointage contradictoire — son type (début, reprise en non-conformité, fin) et son
   instant.
-- **CoutDeRevientPort** : port secondaire de lecture du rapport.
+- **ElementDisponible** : projection immuable associant l’identité nom/type à son identifiant opaque pour le choix.
+- **CoutDeRevientPort** : port secondaire de lecture du rapport et des identités disponibles.
 
 ## Responsabilités et invariants
 
@@ -133,7 +134,7 @@ pour laquelle ils sont affichés séparément.
 - `atelier` possède les suivis. **Ce contexte ne l'importe pas** : il déclare son propre identifiant
   d'élément et reçoit du rapport lui-même le nom et le type à afficher. Le lien entre les deux écrans est
   un `routerLink` vers `/couts-de-revient/<id>`, jamais un import.
-- `element-de-fabrication` possède le référentiel. Même règle : aucun import, aucune lecture croisée.
+- `element-de-fabrication` possède le référentiel. Même règle : aucun import de son domaine ou de ses adaptateurs. La collection HTTP est traduite dans la projection de ce contexte.
 - Le back découpe ce rapport dans son propre bounded context `coutderevient`, qui rejoue les journaux de
   l’atelier sans importer son domaine. Ce front conserve sa propre traduction de lecture.
 
@@ -153,6 +154,16 @@ pour laquelle ils sont affichés séparément.
   moule employé par tous les autres adaptateurs du dépôt ne s'applique pas ici. Cette route n'a qu'un seul
   404 métier, ce qui rend le statut suffisant. Le jour où le back pose une URN, c'est elle qu'il faudra
   lire.
+- **La liste aide à naviguer ; le rapport reste une consultation indépendante.** Les deux opérations du même
+  port se chargent sans s’attendre et portent leurs propres erreurs et nouvelles tentatives. La liste complète
+  reste acquise pendant le montage ; changer d’élément ne relit que son rapport. Le rapport réussi fournit
+  l’identité courante en priorité. L’URL possède l’élément ; le panneau, la recherche et le détail restent
+  éphémères. Seul un changement effectif d’identifiant ferme le détail.
+- **La collection HTTP parcourt toutes les pages dans l’amplitude de création conventionnelle**, de
+  `1970-01-01T00:00:00Z` à `2999-12-31T23:59:59Z`, sans filtrer un statut d’atelier. La taille effective et
+  le total restent constants, les pages non finales sont pleines et les identifiants uniques. Une incohérence
+  rejette toute l’acquisition et se signale une seule fois ; elle ne livre aucune liste partielle. Cette
+  acquisition ne garantit pas un instantané transactionnel. Le 404 de collection est une panne technique.
 - **Ni la référence ni le libellé de l'élément ne sont affichés.** `RestElement` ne porte que `id`, `nom`
   et `type`. Aller chercher la référence demanderait une seconde lecture du référentiel pour une donnée
   facultative : à rouvrir si le besoin se confirme, pas avant. Même arbitrage que l'identifiant dans
