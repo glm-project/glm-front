@@ -53,13 +53,17 @@ describe('Preparation of a resolution acte', () => {
 
     expect(acte).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'x'.repeat(255) });
   });
-  it('should start a regularisation without choosing its type or intention for the manager', () => {
+  it('should leave all facts unchosen when starting a missing-fact regularisation', () => {
     const saisie = SaisieActe.regularise();
 
     const acte = saisie.command();
 
     expect(acte).toBeUndefined();
     expect(saisie.errors()).toEqual(['TYPE_REQUIS', 'INTENTION_REQUISE', 'OPERATEUR_REQUIS', 'INSTANT_INVALIDE']);
+    expect(saisie.proposition).toEqual({
+      kind: 'REGULARISATION',
+      fait: { type: '', intention: '', activiteVisee: '', operateur: '', poste: '', instant: '' },
+    });
   });
   it('should refuse a midnight represented as the twenty fourth hour instead of silently changing its day', () => {
     const saisie = SaisieActe.regularise({ ...faitFixture, instant: '2026-09-14T24:00:00+02:00' });
@@ -77,9 +81,20 @@ describe('Preparation of a resolution acte', () => {
     expect(ouverture.command()).toBeUndefined();
     expect(ouverture.errors()).toContain('CIBLE_INTERDITE');
   });
+  it('should require an empty target even when an opening target contains only spaces', () => {
+    const saisie = SaisieActe.regularise({ ...faitFixture, type: 'DEBUT', intention: 'OUVERTURE', activiteVisee: '   ' });
+
+    const acte = saisie.command();
+
+    expect(acte).toBeUndefined();
+    expect(saisie.errors()).toContain('CIBLE_INTERDITE');
+  });
   it.each([
     [{ activiteVisee: '' }, 'CIBLE_REQUISE'],
+    [{ activiteVisee: '   ' }, 'CIBLE_REQUISE'],
+    [{ type: 'NON_CONFORMITE', intention: 'TRANSITION', activiteVisee: '' }, 'CIBLE_REQUISE'],
     [{ operateur: '' }, 'OPERATEUR_REQUIS'],
+    [{ operateur: '   ' }, 'OPERATEUR_REQUIS'],
     [{ instant: '2026-09-14T17:00' }, 'INSTANT_INVALIDE'],
     [{ instant: '2026-02-30T17:00:00Z' }, 'INSTANT_INVALIDE'],
     [{ type: 'DEBUT', intention: 'FIN' }, 'INTENTION_INCOMPATIBLE'],
@@ -104,6 +119,14 @@ describe('Preparation of a resolution acte', () => {
     const acte = saisie.command();
 
     expect(acte).toEqual({ kind: 'CORRECTION', pointage: 'fin-17', motif: 'Cible vérifiée', fait: faitFixture });
+  });
+  it('should require the manager to provide a motif before correcting the selected pointage', () => {
+    const saisie = SaisieActe.correct('fin-17', faitFixture);
+
+    const acte = saisie.command();
+
+    expect(acte).toBeUndefined();
+    expect(saisie.errors()).toEqual(['MOTIF_REQUIS']);
   });
   it.each(['   ', 'x'.repeat(256)])('should reject an unusable cancellation motif', motif => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif });

@@ -130,7 +130,7 @@ export class SaisieActe {
   }
 
   private targetIsForbidden(fait: SaisieFait): boolean {
-    return fait.intention === 'OUVERTURE' && fait.activiteVisee.trim() !== '';
+    return fait.intention === 'OUVERTURE' && fait.activiteVisee !== '';
   }
 
   private intentionIsCompatible(fait: SaisieFait): boolean {
