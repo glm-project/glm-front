@@ -8,6 +8,36 @@ describe('Conflict list in Gestion', () => {
     thenThePageDoesNotOverflow();
   });
 
+  it('should expose a visible focus ring on the operator filter', () => {
+    whenVisitingAt(1280);
+    whenFocusingTheOperatorFilter();
+
+    thenTheFilterUsesTheFocusToken();
+  });
+
+  const whenFocusingTheOperatorFilter = (): void => {
+    cy.get(dataSelector('conflits-filtre-operateur')).focus();
+  };
+
+  const thenTheFilterUsesTheFocusToken = (): void => {
+    cy.get(dataSelector('conflits-filtre-operateur')).should('have.focus');
+    cy.get(dataSelector('conflits-filtre-operateur')).should($input => {
+      const input = $input[0];
+      if (input === undefined) {
+        throw new Error('The operator filter is unavailable');
+      }
+      const button = input.ownerDocument.querySelector(dataSelector('conflits-filtrer'));
+      if (button === null) {
+        throw new Error('The filtering action is unavailable');
+      }
+      const focus = getComputedStyle(input);
+      const accent = getComputedStyle(button).backgroundColor;
+      expect(focus.outlineWidth).to.equal('2px');
+      expect(focus.outlineStyle).to.equal('solid');
+      expect(focus.outlineColor).to.equal(accent);
+    });
+  };
+
   const whenVisitingAt = (width: number): void => {
     cy.viewport(width, 900);
     cy.visit('/conflits');
