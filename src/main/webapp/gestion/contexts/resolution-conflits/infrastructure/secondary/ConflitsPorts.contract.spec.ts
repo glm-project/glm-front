@@ -258,6 +258,11 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       { suivi: 'demo-retroactif', instant: '2026-09-14T18:01:00+02:00', raison: 'L’heure métier dépasse la clôture.' },
       { suivi: 'demo-retroactif', instant: '2026-09-14T18:00:00.000000001+02:00', raison: 'L’heure métier dépasse la clôture.' },
       { suivi: 'demo-remplacement', instant: '2026-10-04T17:00:00+02:00', raison: 'L’heure métier est future dans cette démonstration.' },
+      {
+        suivi: 'demo-remplacement',
+        instant: '2026-10-03T10:00:00.000000001Z',
+        raison: 'L’heure métier est future dans cette démonstration.',
+      },
     ])('should refuse $instant outside the permitted facts of $suivi', async ({ suivi, instant, raison }) => {
       const adapter = adapterFixture();
       const adresse = { ...adresseFixture, suivi: new SuiviConflitId(suivi) };
