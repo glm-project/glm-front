@@ -52,6 +52,7 @@ class RouterFixture {
   readonly events = EMPTY;
   readonly navigations: FiltreConflits[] = [];
   navigationResult = true;
+  navigationFailure: Error | undefined;
 
   createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): UrlTreeFixture {
     return { queryParams: extras?.queryParams ?? {} };
@@ -63,7 +64,7 @@ class RouterFixture {
 
   navigate(_commands: unknown[], extras: { queryParams: FiltreConflits }): Promise<boolean> {
     this.navigations.push(extras.queryParams);
-    return Promise.resolve(this.navigationResult);
+    return this.navigationFailure === undefined ? Promise.resolve(this.navigationResult) : Promise.reject(this.navigationFailure);
   }
 }
 
@@ -95,11 +96,13 @@ describe('Conflict list', () => {
   let portFixture: ConflitsReadFixture;
   let routeFixture: RouteFixture;
   let routerFixture: RouterFixture;
+  let errorFixture: ErrorHandlerFixture;
 
   beforeEach(() => {
     portFixture = new ConflitsReadFixture();
     routeFixture = new RouteFixture();
     routerFixture = new RouterFixture();
+    errorFixture = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
@@ -107,7 +110,7 @@ describe('Conflict list', () => {
         { provide: ActivatedRoute, useValue: routeFixture },
         { provide: Router, useValue: routerFixture },
         { provide: DemonstrationConflitsPort, useClass: DemonstrationConflitsFixture },
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        { provide: ErrorHandlerPort, useValue: errorFixture },
       ],
     });
   });
@@ -242,6 +245,19 @@ describe('Conflict list', () => {
     expect(textOf('conflits-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
     expect(portFixture.demandes).toHaveLength(1);
+  });
+
+  it('should report a failed filter navigation once and retain the acquired list', async () => {
+    const failure = new Error('Navigation indisponible');
+    portFixture.page = { lignes: [ligneFixture()], total: 1, complete: true };
+    routerFixture.navigationFailure = failure;
+    await whenTheListIsRendered();
+
+    await whenFiltering('Autre opérateur', 'M-042');
+
+    expect(textOf('conflits-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
+    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(errorFixture.errors).toEqual([failure]);
   });
 
   const whenTheDemonstrationIsReset = async (): Promise<void> => {

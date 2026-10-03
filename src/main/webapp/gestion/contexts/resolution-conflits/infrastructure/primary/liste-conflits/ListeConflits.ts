@@ -1,3 +1,4 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -17,6 +18,7 @@ export class ListeConflits {
   private readonly port = inject(ConflitsReadPort);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly errors = inject(ErrorHandlerPort);
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly echecNavigation = linkedSignal({ source: this.params, computation: () => false });
   protected readonly pageDemandee = computed(() => readPageConflitsDemandee(this.params().get('page')));
@@ -34,10 +36,15 @@ export class ListeConflits {
 
   protected async filter(event: Event, operateur: string, element: string): Promise<void> {
     event.preventDefault();
-    const navigue = await this.router.navigate(['/conflits'], {
-      queryParams: { operateur: operateur.trim(), element: element.trim(), page: 1 },
-    });
-    this.echecNavigation.set(!navigue);
+    try {
+      const navigue = await this.router.navigate(['/conflits'], {
+        queryParams: { operateur: operateur.trim(), element: element.trim(), page: 1 },
+      });
+      this.echecNavigation.set(!navigue);
+    } catch (failure: unknown) {
+      this.errors.handleError(failure);
+      this.echecNavigation.set(true);
+    }
   }
 
   protected reload(): void {
