@@ -4,11 +4,27 @@
       ><glm-icon name="arrowLeft" /> {{ libelles.retour }}</a
     >
     <h1 id="cout-de-revient-heading" class="mt-2 text-title">{{ libelles.titre }}</h1>
-    @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
-    <p class="mt-1 text-section" data-selector="cout-identite">
-      {{ libelles.identite(vue.rapport.element.type, vue.rapport.element.nom) }}
-    </p>
-    } }
+    <glm-selecteur-element
+      (selection)="choose($event)"
+      [identite]="identite()"
+      [elementCourant]="element()?.value"
+      [elements]="elementsDisponibles()"
+      [indisponible]="!collection.hasValue() || elementsDisponibles().length === 0"
+    />
+    @if (collection.isLoading()) {
+    <p class="text-body-sm text-ink-muted" role="status" data-selector="cout-element-loading">{{ libelles.chargementElements }}</p>
+    } @if (navigationFailure()) {
+    <p class="mt-2 text-body-sm text-danger" role="alert" data-selector="cout-navigation-error">{{ libelles.echecNavigation }}</p>
+    } @if (collection.hasValue() && elementsDisponibles().length === 0) {
+    <p class="text-body-sm text-ink-muted" role="status" data-selector="cout-element-empty">{{ libelles.aucunElement }}</p>
+    } @if (collection.status() === 'error') {
+    <div class="mt-2 flex flex-wrap items-center gap-3" role="alert" data-selector="cout-element-error">
+      <p class="text-body-sm text-danger">{{ libelles.echecElements }}</p>
+      <button mat-stroked-button type="button" (click)="collection.reload()" data-selector="cout-element-retry">
+        {{ libelles.reessayer }}
+      </button>
+    </div>
+    }
     <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
   </header>
 
@@ -62,7 +78,7 @@
   </div>
   } @else {
   <div class="gestion-carte">
-    <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
+    <div class="gestion-table" data-selector="cout-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
       <table class="rapport" [attr.aria-label]="libelles.tableau">
         <thead>
           <tr>

@@ -172,6 +172,15 @@ const detailDuBandeau = (rapport: CoutDeRevient): string =>
 
 export const LIBELLES_COUT_DE_REVIENT = {
   titre: 'Coût de revient',
+  element: 'Élément',
+  chargementElements: 'Chargement des éléments…',
+  echecNavigation: 'Impossible d’ouvrir ce rapport. Réessayez de choisir un élément.',
+  aucunResultat: 'Aucun élément ne correspond à la recherche.',
+  aucunElement: 'Aucun élément disponible.',
+  echecElements: 'Impossible de charger les éléments disponibles.',
+  elementCourant: 'Élément courant',
+  rechercherElement: 'Rechercher un élément',
+  choisirElement: 'Choisir un élément',
   retour: 'Atelier',
   retourAria: 'Revenir à l’atelier',
   sousTitre:

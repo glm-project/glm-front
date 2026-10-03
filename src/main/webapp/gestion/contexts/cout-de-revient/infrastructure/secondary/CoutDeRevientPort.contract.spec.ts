@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { HttpBackend, HttpErrorResponse, HttpEvent, HttpResponse, provideHttpClient } from '@angular/common/http';
+import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -9,6 +9,7 @@ import { CoutDeRevientFixture } from '@test/unit/fixtures/gestion/cout-de-revien
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
+import { ElementDisponible } from '../../domain/element/ElementDisponible';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
@@ -168,8 +169,28 @@ const projeterLigne = (ligne: LigneDeCout): Record<string, unknown> => ({
 class CoutDeRevientHttpBackendFixture implements HttpBackend {
   lignes: readonly LigneFixture[] = [];
   elementInconnu = false;
+  elements: readonly ElementDisponible[] = [];
+  collectionFailure = false;
 
-  handle(): Observable<HttpEvent<unknown>> {
+  handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
+    if (request.url === '/api/elements-de-fabrication') {
+      return defer(async () => {
+        if (this.collectionFailure) {
+          await new Promise(resolve => setTimeout(resolve));
+          return new HttpErrorResponse({ status: 500, error: {} });
+        }
+        await new Promise(resolve => setTimeout(resolve));
+        return new HttpResponse({
+          status: 200,
+          body: {
+            content: this.elements.map(element => ({ id: element.id.value, nom: element.identite.nom, type: element.identite.type })),
+            currentPage: 0,
+            pageSize: 100,
+            totalElementsCount: this.elements.length,
+          },
+        });
+      }).pipe(switchMap(answer => (answer instanceof HttpErrorResponse ? throwError(() => answer) : of(answer))));
+    }
     return defer(() => this.answer()).pipe(
       switchMap(answer => (answer instanceof HttpErrorResponse ? throwError(() => answer) : of(answer))),
     );
@@ -192,6 +213,8 @@ interface CoutDeRevientHarness {
   readonly port: CoutDeRevientPort;
   seed(lignes: readonly LigneFixture[]): void;
   seedElementInconnu(): void;
+  seedElements(elements: readonly ElementDisponible[]): void;
+  failCollection(): void;
 }
 
 const createHttpHarness = (): CoutDeRevientHarness => {
@@ -211,6 +234,13 @@ const createHttpHarness = (): CoutDeRevientHarness => {
     seed: (lignes: readonly LigneFixture[]) => {
       backend.lignes = [...lignes];
     },
+    failCollection: () => {
+      backend.collectionFailure = true;
+    },
+    seedElements: elements => {
+      backend.collectionFailure = false;
+      backend.elements = elements;
+    },
     seedElementInconnu: () => {
       backend.elementInconnu = true;
     },
@@ -223,6 +253,13 @@ const createFixtureHarness = (): CoutDeRevientHarness => {
     port: fixture,
     seed: (lignes: readonly LigneFixture[]) => {
       fixture.rapports.set(ELEMENT, toDomain(lignes));
+    },
+    failCollection: () => {
+      fixture.collectionFailure = new Error('Collection fixture failure');
+    },
+    seedElements: elements => {
+      fixture.collectionFailure = undefined;
+      fixture.elements = elements;
     },
     seedElementInconnu: () => {
       fixture.elementsInconnus.add(ELEMENT);
@@ -242,6 +279,38 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
   beforeEach(() => {
     harness = createHarness();
     port = harness.port;
+  });
+
+  it('should return an empty collection when no element is available', async () => {
+    const elements = await port.elementsDisponibles();
+
+    expect(elements).toEqual([]);
+  });
+
+  it('should return the opaque identities and both types available for navigation', async () => {
+    const elements: readonly ElementDisponible[] = [
+      { id: new ElementChiffreId('of'), identite: new ElementChiffre('OF A', 'ORDRE_DE_FABRICATION') },
+      { id: new ElementChiffreId('moule'), identite: new ElementChiffre('Moule B', 'PRODUIT') },
+    ];
+    harness.seedElements(elements);
+
+    const available = await port.elementsDisponibles();
+
+    expect(available).toEqual(elements);
+  });
+
+  it('should reject an unavailable choice collection independently of the report and allow a full retry', async () => {
+    givenRapport([fraisageFixture]);
+    harness.failCollection();
+
+    const failure = await port.elementsDisponibles().catch((error: unknown) => error);
+    const rapport = await port.rapport(DEMANDE);
+    harness.seedElements([]);
+    const retried = await port.elementsDisponibles();
+
+    expect(failure).toHaveProperty('message');
+    expect(rapport?.element.nom).toBe('OF-2026-000001');
+    expect(retried).toEqual([]);
   });
 
   it('should return the element the report resolved', async () => {
@@ -344,6 +413,193 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
   afterEach(() => {
     server.verify();
   });
+
+  it.each([
+    { pageSize: 1, totalElementsCount: 2, names: ['b'] },
+    { pageSize: 1, totalElementsCount: 4, names: ['b'] },
+    { pageSize: 2, totalElementsCount: 3, names: ['b', 'c'] },
+  ])('should reject pagination changing between pages %j', async following => {
+    const result = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionAnswers({
+      content: [{ id: 'a', nom: 'OF A', type: 'ORDRE_DE_FABRICATION' }],
+      currentPage: 0,
+      pageSize: 1,
+      totalElementsCount: 3,
+    });
+    await whenNextPageStarts();
+    whenCollectionAnswers({
+      content: following.names.map(id => ({ id, nom: id, type: 'PRODUIT' })),
+      currentPage: 1,
+      pageSize: following.pageSize,
+      totalElementsCount: following.totalElementsCount,
+    });
+    await whenNextPageStarts();
+    whenOutstandingCollectionFails();
+
+    expect(await result).toEqual(new Error('Pagination instable de la collection'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should accept a stable effective page size capped below the requested size', async () => {
+    const result = port.elementsDisponibles();
+    whenCollectionAnswers({
+      content: [
+        { id: 'a', nom: 'A', type: 'PRODUIT' },
+        { id: 'b', nom: 'B', type: 'ORDRE_DE_FABRICATION' },
+      ],
+      currentPage: 0,
+      pageSize: 2,
+      totalElementsCount: 3,
+    });
+    await whenNextPageStarts();
+    whenCollectionAnswers({ content: [{ id: 'c', nom: 'C', type: 'PRODUIT' }], currentPage: 1, pageSize: 2, totalElementsCount: 3 });
+
+    expect((await result).map(element => element.id.value)).toEqual(['a', 'b', 'c']);
+  });
+
+  it.each(['id', 'nom', 'type'])('should reject an unavailable identity field %s without dropping that choice', async field => {
+    const identity = Object.fromEntries(Object.entries({ id: 'a', nom: 'A', type: 'PRODUIT' }).filter(([name]) => name !== field));
+    const result = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionAnswers({ content: [identity], currentPage: 0, pageSize: 100, totalElementsCount: 1 });
+
+    expect(await result).toEqual(new Error(`element.${field} manque dans la réponse du serveur`));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should treat a collection 404 as a technical failure and report it once', async () => {
+    const result = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionFails(404);
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should restart at the first page after a later page fails', async () => {
+    const first = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionAnswers({ content: [{ id: 'a', nom: 'A', type: 'PRODUIT' }], currentPage: 0, pageSize: 1, totalElementsCount: 2 });
+    await whenNextPageStarts();
+    whenCollectionFails(500);
+    const failure = await first;
+    const retry = port.elementsDisponibles();
+    whenCollectionAnswers({ content: [{ id: 'a', nom: 'A', type: 'PRODUIT' }], currentPage: 0, pageSize: 1, totalElementsCount: 2 });
+    await whenNextPageStarts();
+    whenCollectionAnswers({ content: [{ id: 'b', nom: 'B', type: 'PRODUIT' }], currentPage: 1, pageSize: 1, totalElementsCount: 2 });
+    const elements = await retry;
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(elements.map(element => element.id.value)).toEqual(['a', 'b']);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  const whenCollectionFails = (status: number): void => {
+    server.expectOne(candidate => candidate.url === '/api/elements-de-fabrication').flush({}, { status, statusText: 'Failure' });
+  };
+
+  it('should reject an unfilled nonfinal page without waiting for more choices', async () => {
+    const result = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionAnswers({
+      content: [{ id: 'a', nom: 'OF A', type: 'ORDRE_DE_FABRICATION' }],
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 101,
+    });
+    await whenNextPageStarts();
+    whenOutstandingCollectionFails();
+
+    expect(await result).toEqual(new Error('Collection incomplète'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  const whenOutstandingCollectionFails = (): void => {
+    server
+      .match(candidate => candidate.url === '/api/elements-de-fabrication')
+      .forEach(request => {
+        request.flush({}, { status: 500, statusText: 'Failure' });
+      });
+  };
+
+  it.each([
+    { currentPage: -1 },
+    { currentPage: 0.5 },
+    { currentPage: 1 },
+    { pageSize: 0 },
+    { pageSize: -1 },
+    { pageSize: 0.5 },
+    { totalElementsCount: -1 },
+    { totalElementsCount: 0.5 },
+    { totalElementsCount: 0 },
+    { pageSize: 1, totalElementsCount: 3 },
+  ])('should reject inconsistent pagination metadata %j', async metadata => {
+    const result = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionAnswers(
+      {
+        content: [
+          { id: 'a', nom: 'OF A', type: 'ORDRE_DE_FABRICATION' },
+          { id: 'b', nom: 'Moule B', type: 'PRODUIT' },
+        ],
+        currentPage: 0,
+        pageSize: 100,
+        totalElementsCount: 2,
+        ...metadata,
+      },
+      false,
+    );
+
+    expect(await result).toBeInstanceOf(Error);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should reject a duplicated identity instead of presenting a partial collection', async () => {
+    const result = port.elementsDisponibles().catch((failure: unknown) => failure);
+    whenCollectionAnswers({
+      content: [
+        { id: 'same', nom: 'OF A', type: 'ORDRE_DE_FABRICATION' },
+        { id: 'same', nom: 'Moule B', type: 'PRODUIT' },
+      ],
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 2,
+    });
+
+    expect(await result).toBeInstanceOf(Error);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should acquire every page with constant creation bounds before returning navigation choices', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `element-${String(index)}`,
+      nom: `OF ${String(index)}`,
+      type: 'ORDRE_DE_FABRICATION' as const,
+    }));
+    const result = port.elementsDisponibles();
+    whenCollectionAnswers({ content: firstPage, currentPage: 0, pageSize: 100, totalElementsCount: 101 });
+    await whenNextPageStarts();
+    whenCollectionAnswers({
+      content: [{ id: 'last', nom: 'Dernier moule', type: 'PRODUIT' }],
+      currentPage: 1,
+      pageSize: 100,
+      totalElementsCount: 101,
+    });
+    const elements = await result;
+
+    expect(elements).toHaveLength(101);
+    expect(elements.at(-1)).toEqual({ id: new ElementChiffreId('last'), identite: new ElementChiffre('Dernier moule', 'PRODUIT') });
+  });
+
+  const whenNextPageStarts = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+  };
+
+  const whenCollectionAnswers = (body: components['schemas']['PageRestElementDeFabrication'], checkPage = true): void => {
+    const request = server.expectOne(candidate => candidate.url === '/api/elements-de-fabrication');
+    expect(request.request.params.get('debut')).toBe('1970-01-01T00:00:00Z');
+    expect(request.request.params.get('fin')).toBe('2999-12-31T23:59:59Z');
+    if (checkPage) {
+      expect(request.request.params.get('page')).toBe(String(body.currentPage));
+    }
+    expect(request.request.params.get('size')).toBe('100');
+    request.flush(body);
+  };
 
   it('should retain certain machine and work totals beside unresolved labour and non conformity', async () => {
     const result = port.rapport(DEMANDE);

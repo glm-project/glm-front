@@ -1,8 +1,10 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, Router, UrlTree } from '@angular/router';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { CoutDeRevientFixture } from '@test/unit/fixtures/gestion/cout-de-revient/CoutDeRevientFixture';
 import { dataSelector } from '@test/utils/DataSelector';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, EMPTY } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
@@ -33,6 +35,29 @@ const ELEMENT = '4f8d1e0a-1111-2222-3333-444455556666';
 
 class RouteFixture {
   readonly paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ element: ELEMENT }));
+}
+
+class RouterFixture {
+  readonly events = EMPTY;
+  failure: Error | undefined;
+  pending: Promise<boolean> | undefined;
+
+  createUrlTree(): UrlTree {
+    return new UrlTree();
+  }
+  serializeUrl(): string {
+    return '/atelier';
+  }
+  async navigate(): Promise<boolean> {
+    if (this.pending !== undefined) {
+      return this.pending;
+    }
+    await new Promise(resolve => setTimeout(resolve));
+    if (this.failure !== undefined) {
+      throw this.failure;
+    }
+    return true;
+  }
 }
 
 const instantFixture = (heure: number, minute: number): InstantDeTravail =>
@@ -154,14 +179,20 @@ describe('Cout de revient component', () => {
   let componentFixture: ComponentFixture<CoutDeRevientDeLElement>;
   let portFixture: CoutDeRevientFixture;
   let routeFixture: RouteFixture;
+  let routerFixture: RouterFixture;
+  let errorsFixture: ErrorHandlerFixture;
 
   beforeEach(() => {
     portFixture = new CoutDeRevientFixture();
     routeFixture = new RouteFixture();
+    routerFixture = new RouterFixture();
+    errorsFixture = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: CoutDeRevientPort, useValue: portFixture },
+        { provide: ErrorHandlerPort, useValue: errorsFixture },
+        { provide: Router, useValue: routerFixture },
         { provide: ActivatedRoute, useValue: routeFixture },
       ],
     });
@@ -335,6 +366,116 @@ describe('Cout de revient component', () => {
     expect(texte('cout-main-d-oeuvre-cell')).toBe('30,00 €');
     expect(texte('cout-total')).toBe('30,00 €');
   });
+
+  it('should close the previous detail when another element has the same operation nature', async () => {
+    givenRapport([ligneFixture()]);
+    givenAutreElementTermine();
+    await whenEcranAffiche();
+    await whenDetailDeplie();
+
+    await whenAutreElementLu();
+
+    expect(present('cout-detail')).toBe(false);
+    expect(texte('cout-identite')).toBe('OF · OF-B');
+  });
+
+  it('should ignore an old navigation rejection after a newer consultation owns the page', async () => {
+    givenRapport([ligneFixture()]);
+    givenAutreElementTermine();
+    givenAvailableElements();
+    let rejectNavigation = (failure: Error): void => {
+      throw failure;
+    };
+    const pending = new Promise<boolean>((_resolve, reject) => {
+      rejectNavigation = reject;
+    });
+    routerFixture.pending = pending;
+    await whenEcranAffiche();
+    await whenChoosingAvailableElement();
+
+    await whenChangingTheConsultationBeforeRejectingTheNavigation(pending, rejectNavigation);
+
+    expect(texte('cout-identite')).toBe('OF · OF-B');
+    expect(present('cout-navigation-error')).toBe(false);
+    expect(errorsFixture.errors).toEqual([]);
+  });
+
+  it('should ignore an old rejection after a newer choice started from the same consultation', async () => {
+    givenRapport([ligneFixture()]);
+    givenAvailableElements();
+    let rejectNavigation = (failure: Error): void => {
+      throw failure;
+    };
+    const pending = new Promise<boolean>((_resolve, reject) => {
+      rejectNavigation = reject;
+    });
+    routerFixture.pending = pending;
+    await whenEcranAffiche();
+    await whenChoosingAvailableElement();
+
+    await whenReplacingTheChoiceBeforeRejectingTheOldNavigation(pending, rejectNavigation);
+
+    expect(texte('cout-identite')).toBe('OF · OF-2026-000001');
+    expect(present('cout-navigation-error')).toBe(false);
+    expect(errorsFixture.errors).toEqual([]);
+  });
+
+  const whenReplacingTheChoiceBeforeRejectingTheOldNavigation = async (
+    pending: Promise<boolean>,
+    reject: (failure: Error) => void,
+  ): Promise<void> => {
+    routerFixture.pending = undefined;
+    await whenChoosingAvailableElement();
+    reject(new Error('Replaced navigation fixture failure'));
+    await pending.catch(() => false);
+    await componentFixture.whenStable();
+  };
+
+  it('should show the current navigation failure once while preserving the report and its detail', async () => {
+    givenRapport([ligneFixture()]);
+    givenAvailableElements();
+    const failure = new Error('Navigation fixture failure');
+    routerFixture.failure = failure;
+    await whenEcranAffiche();
+    await whenDetailDeplie();
+
+    await whenChoosingWithAnObservedFailure();
+
+    expect(texte('cout-navigation-error')).toContain('Impossible d’ouvrir ce rapport');
+    expect(present('cout-detail')).toBe(true);
+    expect(texte('cout-identite')).toBe('OF · OF-2026-000001');
+    expect(errorsFixture.errors).toEqual([failure]);
+  });
+
+  const whenChoosingWithAnObservedFailure = async (): Promise<void> => {
+    const reported = errorsFixture.nextFailure();
+    await whenChoosingAvailableElement();
+    await reported;
+    await componentFixture.whenStable();
+  };
+
+  const givenAvailableElements = (): void => {
+    portFixture.elements = [{ id: new ElementChiffreId('element-b'), identite: new ElementChiffre('OF-B', 'ORDRE_DE_FABRICATION') }];
+  };
+  const whenChoosingAvailableElement = async (): Promise<void> => {
+    requis('cout-element-trigger').click();
+    await componentFixture.whenStable();
+    const option = document.querySelector<HTMLElement>(dataSelector('cout-element-option'));
+    if (option === null) {
+      throw new Error('Available element fixture option is missing');
+    }
+    option.click();
+    await componentFixture.whenStable();
+  };
+  const whenChangingTheConsultationBeforeRejectingTheNavigation = async (
+    pending: Promise<boolean>,
+    reject: (failure: Error) => void,
+  ): Promise<void> => {
+    await whenAutreElementLu();
+    reject(new Error('Obsolete navigation fixture failure'));
+    await pending.catch(() => false);
+    await componentFixture.whenStable();
+  };
 
   it('should ask the server for the element the URL names', async () => {
     givenRapport([ligneFixture()]);
@@ -728,6 +869,7 @@ describe('Cout de revient component', () => {
 
     expect(texte('cout-element-introuvable')).toContain('n’existe plus au référentiel');
     expect(portFixture.demandes).toEqual([]);
+    expect(portFixture.lecturesCollection).toBe(0);
   });
 
   it('should display an error when the report cannot be read', async () => {
