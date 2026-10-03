@@ -2,7 +2,7 @@ import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/
 import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
 import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { httpDeviceAuthorizationInterceptor } from '@/pupitre/shared/authentication/infrastructure/primary/http-device-authorization.interceptor';
-import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -22,7 +22,7 @@ if (environment.production) {
 
 bootstrapApplication(App, {
   providers: [
-    provideHttpClient(withXhr(), withInterceptors([httpAuthInterceptor, httpDeviceAuthorizationInterceptor])),
+    provideHttpClient(withInterceptors([httpAuthInterceptor, httpDeviceAuthorizationInterceptor])),
     provideRouter(routes),
     provideErrorHandler(ConsoleErrorHandler),
     authProvider,
