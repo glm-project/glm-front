@@ -8,6 +8,9 @@ Amended by [glm-front#180](https://github.com/glm-project/glm-front/issues/180):
 once, in its composition root, and Angular's `ErrorHandler` reports through it. Failures Angular intercepts
 and failures raised outside Angular now reach the same adapter as every other report (decisions 5 to 7).
 
+Amended by [glm-front#216](https://github.com/glm-project/glm-front/pull/216): browser recovery and error
+reporting remain independent capabilities, composed at the global primary error boundary (decision 8).
+
 Complemented by [0033](0033-compose-view-data-in-secondary-adapters.md): for composed view reads, the
 secondary adapter reports acquisition failures once and rejects; the primary resource displays the error.
 
@@ -40,6 +43,13 @@ Where the port is bound, and what becomes of Angular's `ErrorHandler`:
   primary one.
 - One shared provider that receives the adapter from the composition root and routes Angular's `ErrorHandler`
   to the port — **kept**.
+
+Where failed-module recovery belongs:
+
+- A `ReloadingErrorHandler` that implements the reporting port and injects `ConsoleErrorHandler` — rejected:
+  couples recovery to a concrete reporter; selecting an HTTP reporter would also replace the recovery.
+- Recovery coordinated by the global primary error boundary, with reporting delegated to the port selected
+  by the composition root — **kept**: replacing the reporter preserves recovery without changing its code.
 
 ## Decision
 

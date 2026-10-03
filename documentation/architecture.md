@@ -156,6 +156,13 @@ framework-free. Application and domain code depend on the port; the composition 
 from `infrastructure/secondary`. `ErrorHandlerPort` is bound nowhere else than in `provideErrorHandler`: the
 composition root passes it the adapter ([ADR 0025](adr/0025-route-runtime-errors-through-error-handler-port.md)).
 
+Compose independent capabilities through their ports and let the composition root select their secondary
+adapters. Keep error reporting separate from browser recovery: the global primary error boundary reports
+through `ErrorHandlerPort` and coordinates recovery independently of the selected reporter. Replacing a
+console reporter with an HTTP reporter must preserve recovery without changing its implementation. Verify
+that substitution through the global error boundary with an injected reporting fixture; explicit calls to
+the reporting port only report errors ([ADR 0025](adr/0025-route-runtime-errors-through-error-handler-port.md)).
+
 Use the `@/*` alias across context or root boundaries. Relative imports remain appropriate inside one local
 folder.
 
