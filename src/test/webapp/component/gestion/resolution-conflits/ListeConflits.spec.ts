@@ -15,6 +15,13 @@ describe('Conflict list in Gestion', () => {
     thenTheControlUsesTheFocusToken('conflits-filtre-operateur');
   });
 
+  it('should expose a visible focus ring on the filtering action', () => {
+    whenVisitingAt(1280);
+    whenFocusingTheControl('conflits-filtrer');
+
+    thenTheControlUsesTheFocusToken('conflits-filtrer');
+  });
+
   const whenFocusingTheControl = (selector: string): void => {
     cy.get(dataSelector(selector)).first().focus();
   };
