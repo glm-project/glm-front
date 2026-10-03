@@ -180,6 +180,7 @@ describe('Operator selector in the operational time header', () => {
   });
 
   const thenTheMobileControlUsesTheFullWidth = (): void => {
+    cy.get(dataSelector('synthese-operationnel-total')).should('have.text', '2 h 00');
     cy.get(dataSelector('selecteur-operateur')).should(control => {
       const element = requiredFixture(control[0]);
       const rect = element.getBoundingClientRect();
@@ -360,6 +361,7 @@ describe('Operator selector in the operational time header', () => {
   };
 
   const thenTheMobileControlKeepsTheFullAccessibleName = (): void => {
+    cy.get(dataSelector('synthese-operationnel-total')).should('have.text', '2 h 00');
     cy.get(dataSelector('selecteur-operateur')).should(control => {
       const element = requiredFixture(control[0]);
       const rect = element.getBoundingClientRect();

@@ -1,0 +1,115 @@
+.dossier-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.chronologie {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pointage {
+  position: relative;
+  padding: 0 0 1.75rem 1.5rem;
+  border-left: 1px solid var(--color-border-strong);
+  overflow-wrap: anywhere;
+}
+.pointage::before {
+  position: absolute;
+  top: 0.4rem;
+  left: -0.3rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--color-ink-muted);
+  content: '';
+}
+.panneau-correction {
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+}
+.choix {
+  display: block;
+  width: 100%;
+  min-height: var(--spacing-touch);
+  margin-top: 0.75rem;
+  padding: 1rem;
+  text-align: left;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.choix:hover {
+  background: var(--color-sunken);
+}
+.choix:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.champ {
+  display: block;
+  width: 100%;
+  min-height: var(--spacing-touch);
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-body-sm);
+}
+.bouton {
+  display: inline-flex;
+  min-height: var(--spacing-touch);
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.bouton:hover {
+  background: var(--color-sunken);
+}
+.bouton-principal {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.bouton-principal:hover {
+  background: color-mix(in srgb, var(--color-accent) 90%, var(--color-ink));
+}
+.bouton:focus-visible,
+.champ:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.bouton:disabled,
+.choix:disabled,
+.champ:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.comparaison {
+  display: grid;
+  overflow-wrap: anywhere;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 47.999rem) {
+  .comparaison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dossier-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .panneau-correction {
+    padding: 1rem;
+  }
+}

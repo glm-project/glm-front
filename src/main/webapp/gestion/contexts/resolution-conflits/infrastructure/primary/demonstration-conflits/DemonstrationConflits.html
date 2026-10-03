@@ -1,0 +1,37 @@
+<div class="my-4 rounded-control bg-sunken p-4 text-body-sm" data-selector="conflits-demo">
+  <p>{{ libelles.demonstration }}</p>
+  <button
+    type="button"
+    class="mt-2 min-h-touch rounded-control border border-border-strong bg-surface px-3 font-semibold"
+    data-selector="conflits-reset"
+    [disabled]="disabled()"
+    (click)="reset()"
+  >
+    {{ libelles.reinitialiser }}
+  </button>
+  @if (erreur()) {
+  <p class="mt-2 text-danger" role="alert" data-selector="conflits-reset-erreur">{{ libelles.erreurReset }}</p>
+  }
+  <details class="mt-2">
+    <summary class="min-h-touch cursor-pointer py-3 font-semibold" data-selector="conflits-demonstration-toggle">
+      {{ libelles.incidentsTitre }}
+    </summary>
+    <p>{{ libelles.incidentsAide }}</p>
+    <div class="mt-2 flex flex-wrap gap-2">
+      @for (incident of incidents; track incident) {
+      <button
+        type="button"
+        class="min-h-touch rounded-control border border-border-strong bg-surface px-3"
+        [attr.data-selector]="'conflits-incident-' + incident"
+        [disabled]="disabled()"
+        (click)="arm(incident)"
+      >
+        {{ libelles.incidents[incident] }}
+      </button>
+      }
+    </div>
+    @if (arme(); as incident) {
+    <p class="mt-2 font-semibold" role="status">{{ libelles.incidentArme }} {{ libelles.incidents[incident] }}</p>
+    }
+  </details>
+</div>

@@ -7,9 +7,13 @@ import { MoulesEtOf } from './contexts/element-de-fabrication/infrastructure/pri
 import { Operateurs } from './contexts/operateur/infrastructure/primary/operateurs/Operateurs';
 import { PostesDeTravail } from './contexts/poste/infrastructure/primary/postes-de-travail/PostesDeTravail';
 import { SyntheseDesHeures } from './contexts/releve-des-heures/infrastructure/primary/synthese-des-heures/SyntheseDesHeures';
+import { DossierConflitPage } from './contexts/resolution-conflits/infrastructure/primary/dossier-conflit/DossierConflitPage';
+import { ListeConflits } from './contexts/resolution-conflits/infrastructure/primary/liste-conflits/ListeConflits';
 import { SupervisionAtelier } from './contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier';
 
 const ECRANS: [string, unknown][] = [
+  ['conflits/:suivi', DossierConflitPage],
+  ['conflits', ListeConflits],
   ['', SupervisionAtelier],
   ['atelier', Atelier],
   ['moules-et-of', MoulesEtOf],
@@ -18,6 +22,10 @@ const ECRANS: [string, unknown][] = [
   ['operateurs/:operateur/heures', SyntheseDesHeures],
   ['couts-de-revient/:element', CoutDeRevientDeLElement],
 ];
+
+const routesEcrans = routes.flatMap(
+  route => route.children?.map(enfant => ({ ...enfant, path: [route.path, enfant.path].filter(Boolean).join('/') })) ?? [route],
+);
 
 describe('Gestion routes', () => {
   it.each(ECRANS)('should load the screen of the %p route on demand', async (chemin, ecran) => {
@@ -29,17 +37,17 @@ describe('Gestion routes', () => {
   });
 
   it('should declare every screen on demand, so that none of them weighs on the first paint', () => {
-    const eagers = routes.filter(route => route.component !== undefined);
+    const eagers = routesEcrans.filter(route => route.component !== undefined);
 
     expect(eagers).toEqual([]);
   });
 
   it('should name every screen the application suite drives', () => {
-    expect(routes.map(route => route.path)).toEqual(ECRANS.map(([chemin]) => chemin));
+    expect(routesEcrans.map(route => route.path)).toEqual(ECRANS.map(([chemin]) => chemin));
   });
 
   const givenLeChargeurDe = (chemin: string): NonNullable<Route['loadComponent']> => {
-    const route = routes.find(candidate => candidate.path === chemin);
+    const route = routesEcrans.find(candidate => candidate.path === chemin);
     return requiredFixture(requiredFixture(route, `route ${chemin}`).loadComponent, `chargeur de la route ${chemin}`);
   };
 });
