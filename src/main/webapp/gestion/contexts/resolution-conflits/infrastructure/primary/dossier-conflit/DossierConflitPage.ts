@@ -114,7 +114,11 @@ export class DossierConflitPage {
   protected async preview(dossier: DossierConflit): Promise<void> {
     await this.preparation.preview(dossier);
     this.refreshAfterConcurrency();
-    afterNextRender(() => this.apercuHeading()?.nativeElement.focus(), { injector: this.injector });
+    this.focusHeading(this.apercuHeading);
+  }
+
+  private focusHeading(heading: () => ElementRef<HTMLHeadingElement> | undefined): void {
+    afterNextRender(() => heading()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected async confirm(): Promise<void> {
