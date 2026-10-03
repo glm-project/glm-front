@@ -1,24 +1,16 @@
-import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { DOCUMENT, inject, Injectable } from '@angular/core';
-import { ConsoleErrorHandler } from './ConsoleErrorHandler';
 
 const RELOAD_ATTEMPT_KEY = 'glm:failed-module-reload';
 const FAILED_IMPORT_MESSAGE =
   /^(Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed)/i;
 
 @Injectable()
-export class ReloadingErrorHandler extends ErrorHandlerPort {
+export class BrowserModuleRecovery {
   private readonly document = inject(DOCUMENT);
-  private readonly logger = inject(ConsoleErrorHandler);
 
-  override handleError(failure: unknown): void {
-    this.logger.handleError(failure);
+  recover(failure: unknown): void {
     if (!this.isFailedImport(failure)) return;
-    try {
-      this.reloadOnce();
-    } catch (recoveryFailure) {
-      this.logger.handleError(recoveryFailure);
-    }
+    this.reloadOnce();
   }
 
   private isFailedImport(failure: unknown): boolean {

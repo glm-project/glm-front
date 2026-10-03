@@ -1,6 +1,6 @@
 import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
 import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
-import { ReloadingErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ReloadingErrorHandler';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { httpDeviceAuthorizationInterceptor } from '@/pupitre/shared/authentication/infrastructure/primary/http-device-authorization.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
@@ -24,7 +24,7 @@ bootstrapApplication(App, {
   providers: [
     provideHttpClient(withInterceptors([httpAuthInterceptor, httpDeviceAuthorizationInterceptor])),
     provideRouter(routes),
-    provideErrorHandler(ReloadingErrorHandler),
+    provideErrorHandler(ConsoleErrorHandler),
     authProvider,
     offlineProvider,
     enrolementProvider,

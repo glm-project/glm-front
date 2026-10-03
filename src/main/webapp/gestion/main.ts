@@ -1,6 +1,6 @@
 import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
 import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
-import { ReloadingErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ReloadingErrorHandler';
+import { ConsoleErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ConsoleErrorHandler';
 import { httpSessionRefreshInterceptor } from '@/gestion/shared/authentication/infrastructure/primary/http-session-refresh.interceptor';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode } from '@angular/core';
@@ -21,7 +21,7 @@ bootstrapApplication(App, {
   providers: [
     provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
     provideRouter(routes),
-    provideErrorHandler(ReloadingErrorHandler),
+    provideErrorHandler(ConsoleErrorHandler),
     authProvider,
   ],
 }).catch((err: unknown) => {

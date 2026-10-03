@@ -1,8 +1,8 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { provideErrorHandler } from '@/app/shared/error-handler/infrastructure/primary/error-handler.provider';
-import { ReloadingErrorHandler } from '@/app/shared/error-handler/infrastructure/secondary/ReloadingErrorHandler';
-import { DOCUMENT } from '@angular/core';
+import { DOCUMENT, ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { provideErrorHandler } from './error-handler.provider';
 
 class BrowserFixture extends EventTarget {
   readonly navigator = { onLine: true };
@@ -11,14 +11,13 @@ class BrowserFixture extends EventTarget {
   readonly document = { defaultView: this };
 }
 
-describe('Browser error recovery', () => {
+describe('Angular error recovery with an injected reporter', () => {
   let browserFixture: BrowserFixture;
-  let errors: ErrorHandlerPort;
+  let errors: ErrorHandler;
 
   beforeEach(() => {
     browserFixture = new BrowserFixture();
     browserFixture.sessionStorage.clear();
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     errors = givenAFrontUsing(browserFixture);
   });
 
@@ -36,7 +35,25 @@ describe('Browser error recovery', () => {
     errors.handleError(failure);
 
     expect(browserFixture.location.reload).toHaveBeenCalledOnce();
-    expect(console.error).toHaveBeenCalledWith(failure);
+    thenTheReporterReceived(failure);
+  });
+
+  it('should recover an unhandled module rejection through the browser error boundary', () => {
+    const failure = missingModuleFixture();
+
+    whenTheBrowserLeavesARejectionUnhandled(browserFixture, failure);
+
+    expect(browserFixture.location.reload).toHaveBeenCalledOnce();
+    thenTheReporterReceived(failure);
+  });
+
+  it('should only report an explicitly handled module failure', () => {
+    const failure = missingModuleFixture();
+
+    whenAFailureIsExplicitlyReported(failure);
+
+    expect(browserFixture.location.reload).not.toHaveBeenCalled();
+    thenTheReporterReceived(failure);
   });
 
   it('should avoid another automatic reload when the same version still cannot load a module after restarting', () => {
@@ -71,7 +88,7 @@ describe('Browser error recovery', () => {
       errors.handleError(failure);
 
       expect(browserFixture.location.reload).not.toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(failure);
+      thenTheReporterReceived(failure);
     },
   );
 
@@ -81,7 +98,7 @@ describe('Browser error recovery', () => {
 
     errors.handleError(failure);
 
-    expect(console.error).toHaveBeenCalledWith(failure);
+    thenTheReporterReceived(failure);
     expect(browserFixture.location.reload).not.toHaveBeenCalled();
   });
 
@@ -91,7 +108,7 @@ describe('Browser error recovery', () => {
     errors.handleError(missingModuleFixture());
 
     expect(browserFixture.location.reload).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalledWith(storageFailure);
+    thenTheReporterReceived(storageFailure);
   });
 
   it('should report a rejected browser reload without propagating another failure', () => {
@@ -99,7 +116,7 @@ describe('Browser error recovery', () => {
 
     errors.handleError(missingModuleFixture());
 
-    expect(console.error).toHaveBeenCalledWith(reloadFailure);
+    thenTheReporterReceived(reloadFailure);
   });
 
   const givenAnotherVersionAlreadyReloaded = (): void => {
@@ -123,21 +140,35 @@ describe('Browser error recovery', () => {
   };
 });
 
-const givenAFrontUsing = (browserFixture: BrowserFixture): ErrorHandlerPort => {
+const givenAFrontUsing = (browserFixture: BrowserFixture): ErrorHandler => {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [provideErrorHandler(ReloadingErrorHandler), { provide: DOCUMENT, useValue: browserFixture.document }],
+    providers: [provideErrorHandler(ErrorHandlerFixture), { provide: DOCUMENT, useValue: browserFixture.document }],
   });
-  return TestBed.inject(ErrorHandlerPort);
+  return TestBed.inject(ErrorHandler);
 };
 
-const givenAFrontWithoutAWindow = (): ErrorHandlerPort => {
+const givenAFrontWithoutAWindow = (): ErrorHandler => {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [provideErrorHandler(ReloadingErrorHandler), { provide: DOCUMENT, useValue: { defaultView: null } }],
+    providers: [provideErrorHandler(ErrorHandlerFixture), { provide: DOCUMENT, useValue: { defaultView: null } }],
   });
-  return TestBed.inject(ErrorHandlerPort);
+  return TestBed.inject(ErrorHandler);
 };
 
 const missingModuleFixture = (): TypeError =>
   new TypeError('Failed to fetch dynamically imported module: https://glm.example/chunk-old.js');
+
+const thenTheReporterReceived = (failure: unknown): void => {
+  expect((TestBed.inject(ErrorHandlerPort) as ErrorHandlerFixture).errors).toContain(failure);
+};
+
+const whenAFailureIsExplicitlyReported = (failure: unknown): void => {
+  TestBed.inject(ErrorHandlerPort).handleError(failure);
+};
+
+const whenTheBrowserLeavesARejectionUnhandled = (browserFixture: BrowserFixture, failure: Error): void => {
+  const promise = Promise.reject(failure);
+  promise.catch(() => undefined);
+  browserFixture.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise, reason: failure, cancelable: true }));
+};
