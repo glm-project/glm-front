@@ -18,21 +18,34 @@ class ConflitsReadFixture extends ConflitsReadPort {
   failure: Error | undefined;
   readonly demandes: FiltreConflits[] = [];
   private notifyArrival = (): void => undefined;
+  private heldReading: Promise<PageConflits> | undefined;
 
   override async list(filtre: FiltreConflits): Promise<PageConflits> {
+    const held = this.heldReading;
     this.demandes.push(filtre);
     this.notifyArrival();
     await new Promise(resolve => setTimeout(resolve));
     if (this.failure !== undefined) {
       throw this.failure;
     }
-    return this.page;
+    return held ?? this.page;
   }
 
   nextReading(): Promise<void> {
     return new Promise(resolve => {
       this.notifyArrival = resolve;
     });
+  }
+
+  holdReading(): () => void {
+    let release = (): void => undefined;
+    this.heldReading = new Promise(resolve => {
+      release = () => {
+        resolve(this.page);
+        this.heldReading = undefined;
+      };
+    });
+    return release;
   }
 
   override read(): Promise<LectureDossier> {
@@ -259,6 +272,31 @@ describe('Conflict list', () => {
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
     expect(errorFixture.errors).toEqual([failure]);
   });
+
+  it('should distinguish a pending acquisition from a complete empty list', async () => {
+    const release = portFixture.holdReading();
+    await whenTheReadingStarts();
+
+    const pending = await whenTheReadingCompletes(release);
+
+    expect(pending).toEqual({ loading: true, empty: false });
+    expect(present('conflits-chargement')).toBe(false);
+    expect(textOf('conflits-vide')).toContain('Aucun conflit');
+  });
+
+  const whenTheReadingStarts = async (): Promise<void> => {
+    const entered = portFixture.nextReading();
+    componentFixture = TestBed.createComponent(ListeConflits);
+    componentFixture.detectChanges();
+    await entered;
+  };
+
+  const whenTheReadingCompletes = async (release: () => void): Promise<{ loading: boolean; empty: boolean }> => {
+    const pending = { loading: present('conflits-chargement'), empty: present('conflits-vide') };
+    release();
+    await componentFixture.whenStable();
+    return pending;
+  };
 
   const whenTheDemonstrationIsReset = async (): Promise<void> => {
     portFixture.page = { lignes: [], total: 0, complete: true };
