@@ -303,6 +303,8 @@
         <p class="mt-2 font-semibold">{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
         @if (pointage.fait.activiteVisee) {
         <p>{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
+        } @if (pointage.activiteCreee; as activite) {
+        <p>{{ libelles.creee }} {{ activite.activite }}</p>
         } @if (pointage.regularisation) {
         <p>{{ libelles.regularisation }}</p>
         } @if (pointage.annulation; as annulation) {

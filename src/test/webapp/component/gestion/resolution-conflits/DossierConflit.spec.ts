@@ -216,6 +216,7 @@ describe('Conflict dossier in Gestion', () => {
   const thenTheWrittenActRemainsVisibleInHistory = (): void => {
     cy.get(dataSelector('conflit-adresse-obsolete')).should('contain.text', 'annulé ou remplacé');
     cy.get(dataSelector('conflit-historique')).should('contain.text', 'Remplace le pointage fin-17');
+    cy.get(dataSelector('conflit-historique')).should('contain.text', 'Crée l’activité travail-8');
     cy.get(dataSelector('conflit-historique')).should('contain.text', 'nc-12');
     cy.get(dataSelector('conflit-pointage')).should('have.length', 4);
     cy.get(dataSelector('conflit-confirmer')).should('not.exist');
