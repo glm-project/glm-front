@@ -129,6 +129,16 @@ describe('Conflict list', () => {
     ]);
   });
 
+  it('should never describe an empty partial acquisition as a complete global list', async () => {
+    portFixture.page = { lignes: [], total: 0, complete: false };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflits-partiel')).toContain('Liste partielle');
+    expect(present('conflits-vide')).toBe(false);
+    expect(present('conflits-vide-filtre')).toBe(false);
+  });
+
   const whenTheReadingRecovers = async (): Promise<void> => {
     portFixture.failure = undefined;
     requiredElement('conflits-reessayer').click();

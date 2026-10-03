@@ -43,11 +43,15 @@
       {{ libelles.reessayer }}
     </button>
   </div>
-  } @else if (liste.value(); as page) { @if (page.lignes.length === 0) { @if (filtreActif()) {
+  } @else if (liste.value(); as page) { @if (!page.complete) {
+  <p role="status" class="mb-4 rounded-control border border-warn bg-sunken p-4 text-body text-warn" data-selector="conflits-partiel">
+    {{ libelles.partiel }}
+  </p>
+  } @if (page.lignes.length === 0) { @if (page.complete) { @if (filtreActif()) {
   <p class="gestion-carte p-6 text-body" data-selector="conflits-vide-filtre">{{ libelles.videFiltre }}</p>
   } @else {
   <p class="gestion-carte p-6 text-body" data-selector="conflits-vide">{{ libelles.vide }}</p>
-  } } @else {
+  } } } @else {
   <div class="gestion-carte">
     <div class="gestion-table" data-selector="conflits-table">
       <table class="text-left text-body-sm">

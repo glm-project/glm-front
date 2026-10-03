@@ -4,4 +4,5 @@ export const LIBELLES_LISTE_CONFLITS = {
   filtrer: 'Filtrer les conflits',
   erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',
   reessayer: 'Réessayer',
+  partiel: 'Liste partielle : certains dossiers n’ont pas pu être acquis. Cette sélection ne représente pas tous les conflits.',
 } as const;
