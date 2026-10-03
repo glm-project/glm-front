@@ -13,8 +13,8 @@ interface ScenarioGuide {
   readonly numero: number;
   readonly explication: string;
   readonly journal: DossierConflit['journal'];
-  readonly activitesInitiales?: DossierConflit['activites'];
-  readonly activites: DossierConflit['activites'];
+  readonly activitesInitiales: DossierConflit['activites'];
+  readonly activitesApres: DossierConflit['activites'];
   readonly choix: ChoixGuide;
   readonly consequences: readonly string[];
   readonly poste?: string;
@@ -47,7 +47,7 @@ export const scenarioGuide = (options: ScenarioGuide): ScenarioConflits => ({
     engagement: '2026-09-14T07:00:00+02:00',
     ...(options.cloture === true ? { finCloture: '2026-09-14T18:00:00+02:00' } : {}),
     journal: options.journal,
-    activites: options.activitesInitiales ?? options.activites.map(activite => ({ ...activite, etat: 'A_RESOUDRE', temps: 'À résoudre' })),
+    activites: options.activitesInitiales,
     choix: [options.choix],
     enConflit: true,
     consequences: [],
@@ -58,7 +58,7 @@ export const scenarioGuide = (options: ScenarioGuide): ScenarioConflits => ({
       options.choix.id,
       {
         enConflit: false,
-        activites: options.activites,
+        activites: options.activitesApres,
         consequences: options.consequences,
         choix: [],
         continuations: [],
@@ -84,7 +84,7 @@ const transition = (): ScenarioConflits =>
       activite('nc-12', 'NC commencée à 12 h', 'À résoudre', 'A_RESOUDRE'),
       activite('reprise-14', 'Reprise commencée à 14 h', 'À résoudre', 'A_RESOUDRE'),
     ],
-    activites: [
+    activitesApres: [
       activite('travail-8', 'Travail de 8 h à 12 h', '4 h'),
       activite('nc-12', 'NC de 12 h à 14 h', '2 h'),
       activite('reprise-14', 'Reprise de 14 h à 17 h', '3 h'),
@@ -110,7 +110,7 @@ const deuxFins = (): ScenarioConflits =>
       pointageDemo('fin-17-02', faitDemo('17:00:02', 'FIN', 'FIN', 'travail-8')),
     ],
     activitesInitiales: [activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE')],
-    activites: [activite('travail-8', 'Travail de 8 h à 17 h', '9 h')],
+    activitesApres: [activite('travail-8', 'Travail de 8 h à 17 h', '9 h')],
     choix: {
       id: 'annuler-seconde-fin',
       libelle: 'La seconde fin était un double appui',
@@ -131,7 +131,8 @@ const avantOuverture = (): ScenarioConflits =>
       pointageDemo('debut-precis', { ...faitDemo('08:00:00.123456789', 'DEBUT', 'OUVERTURE'), poste: '' }, 'travail-precis'),
       pointageDemo('fin-avant', { ...faitDemo('07:59:59', 'FIN', 'FIN', 'travail-precis'), poste: '' }),
     ],
-    activites: [activite('travail-precis', 'Travail avec instant précis', '8 h 59 min 59,876543211 s')],
+    activitesInitiales: [activite('travail-precis', 'Travail avec instant précis', 'À résoudre', 'A_RESOUDRE')],
+    activitesApres: [activite('travail-precis', 'Travail avec instant précis', '8 h 59 min 59,876543211 s')],
     choix: {
       id: 'corriger-heure-fin',
       libelle: 'La fin était à 17 h',
@@ -155,7 +156,8 @@ const ouvertureAnnulee = (): ScenarioConflits =>
       },
       pointageDemo('fin-orpheline', { ...faitDemo('17:00:00', 'FIN', 'FIN', 'travail-annule'), operateur: 'op-absent' }),
     ],
-    activites: [],
+    activitesInitiales: [],
+    activitesApres: [],
     choix: {
       id: 'annuler-fin-orpheline',
       libelle: 'La fin était aussi une erreur',
@@ -180,7 +182,7 @@ const memeCategorie = (): ScenarioConflits =>
       activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE'),
       activite('activite-12', 'Travail commencé à 12 h', 'À résoudre', 'A_RESOUDRE'),
     ],
-    activites: [activite('travail-8', 'Travail de 8 h à 12 h', '4 h'), activite('activite-12', 'NC de 12 h à 17 h', '5 h')],
+    activitesApres: [activite('travail-8', 'Travail de 8 h à 12 h', '4 h'), activite('activite-12', 'NC de 12 h à 17 h', '5 h')],
     choix: {
       id: 'corriger-categorie',
       libelle: 'Le passage à 12 h était en NC',
@@ -206,7 +208,7 @@ const cibleEchue = (): ScenarioConflits =>
       activite('travail-22', 'Travail B commencé à 22 h', 'À résoudre', 'A_RESOUDRE'),
       activite('nc-23', 'NC commencée à 23 h', 'À résoudre', 'A_RESOUDRE'),
     ],
-    activites: [
+    activitesApres: [
       activite('travail-8', 'Travail A, échu à 21 h', '13 h', 'ECHUE'),
       activite('travail-22', 'Travail B de 22 h à 23 h', '1 h'),
       activite('nc-23', 'NC ouverte à 23 h', '13 h', 'ECHUE'),
@@ -244,7 +246,7 @@ const regularisation = (): ScenarioConflits =>
       activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE'),
       activite('nc-22', 'NC commencée à 22 h', 'À résoudre', 'A_RESOUDRE'),
     ],
-    activites: [activite('travail-8', 'Travail de 8 h à 23 h', '15 h'), activite('nc-22', 'NC annulée', 'Annulée', 'ANNULEE')],
+    activitesApres: [activite('travail-8', 'Travail de 8 h à 23 h', '15 h'), activite('nc-22', 'NC annulée', 'Annulée', 'ANNULEE')],
     choix: {
       id: 'conserver-fin-regularisee',
       libelle: 'La transition en NC était erronée',
