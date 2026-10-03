@@ -12,6 +12,7 @@ import { LIBELLES_LISTE_CONFLITS } from './LibellesListeConflits';
 @Component({
   selector: 'glm-liste-conflits',
   templateUrl: './ListeConflits.html',
+  styleUrl: './ListeConflits.css',
   imports: [RouterLink, DemonstrationConflits],
 })
 export class ListeConflits {
