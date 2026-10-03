@@ -3,4 +3,5 @@ export const LIBELLES_LISTE_CONFLITS = {
   videFiltre: 'Aucun conflit ne correspond à ces filtres.',
   filtrer: 'Filtrer les conflits',
   erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',
+  reessayer: 'Réessayer',
 } as const;

@@ -114,6 +114,27 @@ describe('Conflict list', () => {
     expect(present('conflits-table')).toBe(false);
   });
 
+  it('should reacquire the current filters when the operator retries a failed read', async () => {
+    givenAnAddress({ operateur: 'Camille', page: '2' });
+    portFixture.failure = new Error('Acquisition indisponible');
+    await whenTheListIsRendered();
+
+    await whenTheReadingRecovers();
+
+    expect(present('conflits-erreur')).toBe(false);
+    expect(textOf('conflits-vide-filtre')).toContain('Aucun conflit ne correspond');
+    expect(portFixture.demandes).toEqual([
+      { operateur: 'Camille', element: '', page: 2 },
+      { operateur: 'Camille', element: '', page: 2 },
+    ]);
+  });
+
+  const whenTheReadingRecovers = async (): Promise<void> => {
+    portFixture.failure = undefined;
+    requiredElement('conflits-reessayer').click();
+    await componentFixture.whenStable();
+  };
+
   const whenFiltering = async (operateur: string, element: string): Promise<void> => {
     input('conflits-filtre-operateur').value = operateur;
     input('conflits-filtre-element').value = element;

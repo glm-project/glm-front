@@ -28,4 +28,8 @@ export class ListeConflits {
     event.preventDefault();
     await this.router.navigate(['/conflits'], { queryParams: { operateur: operateur.trim(), element: element.trim(), page: 1 } });
   }
+
+  protected reload(): void {
+    this.liste.reload();
+  }
 }
