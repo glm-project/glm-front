@@ -4,12 +4,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { FiltreConflits, PAGE_SIZE_CONFLITS } from '../../../domain/dossier/DossierConflit';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
+import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
 import { LIBELLES_LISTE_CONFLITS } from './LibellesListeConflits';
 
 @Component({
   selector: 'glm-liste-conflits',
   templateUrl: './ListeConflits.html',
-  imports: [RouterLink],
+  imports: [RouterLink, DemonstrationConflits],
 })
 export class ListeConflits {
   private readonly port = inject(ConflitsReadPort);
