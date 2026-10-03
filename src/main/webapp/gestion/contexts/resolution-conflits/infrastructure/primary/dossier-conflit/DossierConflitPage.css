@@ -98,6 +98,7 @@
 }
 .comparaison {
   display: grid;
+  overflow-wrap: anywhere;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
 }

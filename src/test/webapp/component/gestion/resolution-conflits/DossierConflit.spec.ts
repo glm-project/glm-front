@@ -2,6 +2,23 @@ import { dataSelector } from '../../../utils/DataSelector';
 import type {} from '../../../utils/gestion/resolution-conflits/resolution-conflits.provider';
 
 describe('Conflict dossier in Gestion', () => {
+  it('should compare the exact previewed act and its before and after facts before confirmation', () => {
+    whenOpeningTheDossier();
+    whenPreparingTheGuidedCorrection();
+
+    thenThePreviewComparesTheOriginalFactWithItsReplacement();
+  });
+
+  const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
+    cy.get(dataSelector('conflit-apercu-acte')).should('contain.text', 'fin-17').and('contain.text', 'La cible est la NC.');
+    cy.get(dataSelector('conflit-apercu-fait-avant-fin-17')).should('contain.text', 'travail-8').and('not.contain.text', 'Pointage annulé');
+    cy.get(dataSelector('conflit-apercu-fait-apres-fin-17')).should('contain.text', 'Pointage annulé');
+    cy.get(dataSelector('conflit-apercu-fait-apres-fin-17-correction-2'))
+      .should('contain.text', 'nc-12')
+      .and('contain.text', 'Remplace le pointage fin-17');
+    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+  };
+
   it('should identify an absent workstation while preserving the exact received instant', () => {
     whenOpeningTheDossierWithoutAWorkstation();
 

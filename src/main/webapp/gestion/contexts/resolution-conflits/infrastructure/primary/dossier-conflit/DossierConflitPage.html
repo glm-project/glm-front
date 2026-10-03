@@ -256,18 +256,76 @@
       } @if (apercu(); as apercu) {
       <section class="mt-6 border-t border-border pt-5" aria-labelledby="apercu-heading" data-selector="conflit-apercu">
         <h3 id="apercu-heading" class="text-section">{{ libelles.apercu }}</h3>
+        <div class="mt-4 text-body-sm" data-selector="conflit-apercu-acte">
+          <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
+          @if (apercu.acte.kind !== 'REGULARISATION') {
+          <p>{{ apercu.acte.pointage }} · {{ apercu.acte.motif }}</p>
+          } @if (apercu.acte.kind !== 'ANNULATION') {
+          <p>
+            {{ libelles.types[apercu.acte.fait.type] }} · {{ libelles.intentions[apercu.acte.fait.intention] }} · {{
+            apercu.acte.fait.instant }}
+          </p>
+          <p>{{ libelles.cible }} {{ apercu.acte.fait.activiteVisee }}</p>
+          <p>
+            {{ libelles.operateur }} : {{ apercu.acte.fait.operateur }} · {{ libelles.poste }} : {{ apercu.acte.fait.poste ||
+            libelles.sansPoste }}
+          </p>
+          }
+        </div>
         <div class="comparaison mt-4">
           <div>
             <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
             @for (activite of apercu.avant.activites; track activite.id.activite) {
             <p class="mt-2 text-body-sm">{{ activite.libelle }} · {{ activite.temps }}</p>
             }
+            <ol class="mt-4 list-none p-0">
+              @for (pointage of apercu.avant.journal | chronologiePointages; track pointage.id.pointage) {
+              <li
+                class="border-t border-border py-3 text-body-sm"
+                [attr.data-selector]="'conflit-apercu-fait-avant-' + pointage.id.pointage"
+              >
+                <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
+                <p>{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
+                @if (pointage.fait.activiteVisee) {
+                <p>{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
+                } @if (pointage.activiteCreee; as activite) {
+                <p>{{ libelles.creee }} {{ activite.activite }}</p>
+                } @if (pointage.annulation; as annulation) {
+                <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
+                } @if (pointage.regularisation) {
+                <p>{{ libelles.regularisation }}</p>
+                }
+              </li>
+              }
+            </ol>
           </div>
           <div>
             <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
             @for (consequence of apercu.apres.consequences; track consequence) {
             <p class="mt-2 text-body-sm">{{ consequence }}</p>
             }
+            <ol class="mt-4 list-none p-0">
+              @for (pointage of apercu.apres.journal | chronologiePointages; track pointage.id.pointage) {
+              <li
+                class="border-t border-border py-3 text-body-sm"
+                [attr.data-selector]="'conflit-apercu-fait-apres-' + pointage.id.pointage"
+              >
+                <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
+                <p>{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
+                @if (pointage.fait.activiteVisee) {
+                <p>{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
+                } @if (pointage.activiteCreee; as activite) {
+                <p>{{ libelles.creee }} {{ activite.activite }}</p>
+                } @if (pointage.annulation; as annulation) {
+                <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
+                } @if (pointage.remplace; as original) {
+                <p>{{ libelles.remplace }} {{ original.pointage }}</p>
+                } @if (pointage.regularisation) {
+                <p>{{ libelles.regularisation }}</p>
+                }
+              </li>
+              }
+            </ol>
           </div>
         </div>
         <p class="mt-4 text-body font-semibold">{{ apercu.apres.enConflit ? libelles.apercuRestant : libelles.resolu }}</p>
