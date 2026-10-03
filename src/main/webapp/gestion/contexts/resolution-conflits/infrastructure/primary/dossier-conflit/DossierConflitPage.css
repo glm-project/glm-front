@@ -107,6 +107,13 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
 }
+.apercu-resolution {
+  grid-column: 1 / -1;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+}
 @media (max-width: 47.999rem) {
   .comparaison {
     grid-template-columns: minmax(0, 1fr);
@@ -114,7 +121,8 @@
   .dossier-grille {
     grid-template-columns: minmax(0, 1fr);
   }
-  .panneau-correction {
+  .panneau-correction,
+  .apercu-resolution {
     padding: 1rem;
   }
 }

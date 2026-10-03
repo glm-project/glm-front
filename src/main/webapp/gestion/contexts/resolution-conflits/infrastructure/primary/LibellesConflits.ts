@@ -52,6 +52,7 @@ export const LIBELLES_CONFLITS = {
   previsualiser: 'Prévisualiser l’acte',
   confirmer: 'Confirmer cet acte',
   apercu: 'Vérifier avant d’enregistrer',
+  comparerJournal: 'Comparer tous les pointages avant et après',
   avant: 'Avant',
   apres: 'Après cet acte',
   restant: 'Acte enregistré, conflit restant',

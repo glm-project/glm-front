@@ -14,21 +14,45 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('conflit-choix')).last().should('have.attr', 'aria-pressed', 'false');
   };
 
+  it('should show the consequences before the optional journal comparison on a narrow screen', () => {
+    whenOpeningTheDossierAt(320);
+    whenPreparingTheGuidedCorrection();
+
+    thenTheConsequencesAreVisibleWithoutOpeningTheJournal();
+  });
+
+  const thenTheConsequencesAreVisibleWithoutOpeningTheJournal = (): void => {
+    cy.get(dataSelector('conflit-apercu-consequences'))
+      .should('be.visible')
+      .and('contain.text', 'Travail de 8 h à 12 h : 4 h.')
+      .and('contain.text', 'NC de 12 h à 17 h : 5 h.');
+    cy.get(dataSelector('conflit-apercu-journal')).should('not.have.attr', 'open');
+    cy.get(dataSelector('conflit-confirmer')).should('be.enabled');
+  };
+
   it('should compare the exact previewed act and its before and after facts before confirmation', () => {
     whenOpeningTheDossier();
     whenPreparingTheGuidedCorrection();
+    whenOpeningThePreviewJournal();
 
     thenThePreviewComparesTheOriginalFactWithItsReplacement();
   });
 
   const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
     cy.get(dataSelector('conflit-apercu-acte')).should('contain.text', 'fin-17').and('contain.text', 'La cible est la NC.');
-    cy.get(dataSelector('conflit-apercu-fait-avant-fin-17')).should('contain.text', 'travail-8').and('not.contain.text', 'Pointage annulé');
+    cy.get(dataSelector('conflit-apercu-fait-avant-fin-17'))
+      .should('be.visible')
+      .and('contain.text', 'travail-8')
+      .and('not.contain.text', 'Pointage annulé');
     cy.get(dataSelector('conflit-apercu-fait-apres-fin-17')).should('contain.text', 'Pointage annulé');
     cy.get(dataSelector('conflit-apercu-fait-apres-fin-17-correction-2'))
       .should('contain.text', 'nc-12')
       .and('contain.text', 'Remplace le pointage fin-17');
     cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+  };
+
+  const whenOpeningThePreviewJournal = (): void => {
+    cy.get(dataSelector('conflit-apercu-journal-ouvrir')).click();
   };
 
   it('should identify an absent workstation while preserving the exact received instant', () => {

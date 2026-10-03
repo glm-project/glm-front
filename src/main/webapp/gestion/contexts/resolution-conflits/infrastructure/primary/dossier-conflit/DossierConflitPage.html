@@ -255,33 +255,60 @@
         >
         }
       </nav>
-      } @if (apercu(); as apercu) {
-      <section class="mt-6 border-t border-border pt-5" aria-labelledby="apercu-heading" data-selector="conflit-apercu">
-        <h3 #apercuHeading id="apercu-heading" class="text-section" tabindex="-1" data-selector="conflit-apercu-titre">
-          {{ libelles.apercu }}
-        </h3>
-        <div class="mt-4 text-body-sm" data-selector="conflit-apercu-acte">
-          <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
-          @if (apercu.acte.kind !== 'REGULARISATION') {
-          <p>{{ apercu.acte.pointage }} · {{ apercu.acte.motif }}</p>
-          } @if (apercu.acte.kind !== 'ANNULATION') {
-          <p>
-            {{ libelles.types[apercu.acte.fait.type] }} · {{ libelles.intentions[apercu.acte.fait.intention] }} · {{
-            apercu.acte.fait.instant }}
-          </p>
-          <p>{{ libelles.cible }} {{ apercu.acte.fait.activiteVisee }}</p>
-          <p>
-            {{ libelles.operateur }} : {{ apercu.acte.fait.operateur }} · {{ libelles.poste }} : {{ apercu.acte.fait.poste ||
-            libelles.sansPoste }}
-          </p>
+      }
+    </aside>
+    @if (apercu(); as apercu) {
+    <section class="apercu-resolution" aria-labelledby="apercu-heading" data-selector="conflit-apercu">
+      <h3 #apercuHeading id="apercu-heading" class="text-section" tabindex="-1" data-selector="conflit-apercu-titre">
+        {{ libelles.apercu }}
+      </h3>
+      <div class="mt-4 text-body-sm" data-selector="conflit-apercu-acte">
+        <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
+        @if (apercu.acte.kind !== 'REGULARISATION') {
+        <p>{{ apercu.acte.pointage }} · {{ apercu.acte.motif }}</p>
+        } @if (apercu.acte.kind !== 'ANNULATION') {
+        <p>
+          {{ libelles.types[apercu.acte.fait.type] }} · {{ libelles.intentions[apercu.acte.fait.intention] }} · {{ apercu.acte.fait.instant
+          }}
+        </p>
+        <p>{{ libelles.cible }} {{ apercu.acte.fait.activiteVisee }}</p>
+        <p>
+          {{ libelles.operateur }} : {{ apercu.acte.fait.operateur }} · {{ libelles.poste }} : {{ apercu.acte.fait.poste ||
+          libelles.sansPoste }}
+        </p>
+        }
+      </div>
+      <div class="comparaison mt-4">
+        <div>
+          <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
+          @for (activite of apercu.avant.activites; track activite.id.activite) {
+          <p class="mt-2 text-body-sm">{{ activite.libelle }} · {{ activite.temps }}</p>
           }
         </div>
-        <div class="comparaison mt-4">
+        <div data-selector="conflit-apercu-consequences">
+          <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
+          @for (consequence of apercu.apres.consequences; track consequence) {
+          <p class="mt-2 text-body-sm">{{ consequence }}</p>
+          }
+        </div>
+      </div>
+      <p class="mt-4 text-body font-semibold">{{ apercu.apres.enConflit ? libelles.apercuRestant : libelles.resolu }}</p>
+      <button
+        type="button"
+        class="bouton bouton-principal mt-4"
+        data-selector="conflit-confirmer"
+        [disabled]="occupe() || !droits.canApply() || preparation.resolution().confirmation() === undefined"
+        (click)="confirm()"
+      >
+        {{ libelles.confirmer }}
+      </button>
+      <details class="mt-6 border-t border-border pt-3" data-selector="conflit-apercu-journal">
+        <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="conflit-apercu-journal-ouvrir">
+          {{ libelles.comparerJournal }}
+        </summary>
+        <div class="comparaison">
           <div>
             <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
-            @for (activite of apercu.avant.activites; track activite.id.activite) {
-            <p class="mt-2 text-body-sm">{{ activite.libelle }} · {{ activite.temps }}</p>
-            }
             <ol class="mt-4 list-none p-0">
               @for (pointage of apercu.avant.journal | chronologiePointages; track pointage.id.pointage) {
               <li
@@ -305,9 +332,6 @@
           </div>
           <div>
             <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
-            @for (consequence of apercu.apres.consequences; track consequence) {
-            <p class="mt-2 text-body-sm">{{ consequence }}</p>
-            }
             <ol class="mt-4 list-none p-0">
               @for (pointage of apercu.apres.journal | chronologiePointages; track pointage.id.pointage) {
               <li
@@ -332,19 +356,9 @@
             </ol>
           </div>
         </div>
-        <p class="mt-4 text-body font-semibold">{{ apercu.apres.enConflit ? libelles.apercuRestant : libelles.resolu }}</p>
-        <button
-          type="button"
-          class="bouton bouton-principal mt-4"
-          data-selector="conflit-confirmer"
-          [disabled]="occupe() || !droits.canApply() || preparation.resolution().confirmation() === undefined"
-          (click)="confirm()"
-        >
-          {{ libelles.confirmer }}
-        </button>
-      </section>
-      }
-    </aside>
+      </details>
+    </section>
+    }
   </div>
   } @if (adresse() === undefined) {
   <p role="alert" data-selector="conflit-adresse-invalide">{{ libelles.adresseInvalide }}</p>
