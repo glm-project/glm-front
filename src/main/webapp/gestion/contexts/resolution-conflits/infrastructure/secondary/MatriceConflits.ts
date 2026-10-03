@@ -79,6 +79,11 @@ const transition = (): ScenarioConflits =>
       pointageDemo('transition-14', faitDemo('14:00:00', 'DEBUT', 'TRANSITION', 'travail-8'), 'reprise-14'),
       pointageDemo('fin-17', faitDemo('17:00:00', 'FIN', 'FIN', 'reprise-14')),
     ],
+    activitesInitiales: [
+      activite('travail-8', 'Travail commencé à 8 h', 'À résoudre', 'A_RESOUDRE'),
+      activite('nc-12', 'NC commencée à 12 h', 'À résoudre', 'A_RESOUDRE'),
+      activite('reprise-14', 'Reprise commencée à 14 h', 'À résoudre', 'A_RESOUDRE'),
+    ],
     activites: [
       activite('travail-8', 'Travail de 8 h à 12 h', '4 h'),
       activite('nc-12', 'NC de 12 h à 14 h', '2 h'),

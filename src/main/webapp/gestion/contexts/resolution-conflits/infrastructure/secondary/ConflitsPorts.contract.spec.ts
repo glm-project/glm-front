@@ -44,6 +44,18 @@ const whenGuidedActIsApplied = async (adapter: InMemoryConflits, suivi: string, 
 describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ canApply: () => true }, new ErrorHandlerFixture()) }])(
   '$nom resolution ports',
   ({ adapterFixture }) => {
+    it('should describe the existing openings without anticipating a corrected restart target', async () => {
+      const lecture: ConflitsReadPort = adapterFixture();
+      const adresse = { suivi: new SuiviConflitId('demo-transition'), pointage: new PointageConflitId('transition-14') };
+
+      const dossier = dossierFixture(await lecture.read(adresse));
+
+      expect(dossier.activites).toMatchObject([
+        { id: { activite: 'travail-8' }, libelle: 'Travail commencé à 8 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+        { id: { activite: 'nc-12' }, libelle: 'NC commencée à 12 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+        { id: { activite: 'reprise-14' }, libelle: 'Reprise commencée à 14 h', etat: 'A_RESOUDRE', temps: 'À résoudre' },
+      ]);
+    });
     it('should leave the existing non-conformity unresolved before deciding to cancel its transition', async () => {
       const lecture: ConflitsReadPort = adapterFixture();
       const adresse = { suivi: new SuiviConflitId('demo-regularisation'), pointage: new PointageConflitId('nc-22') };
