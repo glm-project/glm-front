@@ -30,12 +30,13 @@ describe('Pupitre common page in a browser', () => {
     thenJeanAndPointageAreVisible();
   });
 
-  it('should return to an empty keypad after finishing', () => {
+  it('should return to an empty keypad without a runtime failure after finishing', () => {
     givenThePage();
     whenDesignatingJean();
     whenFinishing();
 
     thenAnEmptyKeypadIsVisible();
+    thenNoRuntimeFailureIsReported();
   });
 
   it('should display the workstation choice over pointage', () => {
@@ -121,12 +122,20 @@ describe('Pupitre common page in a browser', () => {
     thenTheKeypadIsVisible();
   });
 
+  const thenNoRuntimeFailureIsReported = (): void => {
+    cy.get('@runtimeFailureFixture').should('not.have.been.called');
+  };
+
   const givenThePageWithoutAReference = (): void => {
     cy.visit('/?reference-delay');
   };
 
   const givenThePage = (): void => {
-    cy.visit('/');
+    cy.visit('/', {
+      onBeforeLoad: browser => {
+        cy.spy(browser.console, 'error').as('runtimeFailureFixture');
+      },
+    });
     cy.get(dataSelector('designation')).should('be.visible');
   };
 

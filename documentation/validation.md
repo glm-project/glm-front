@@ -44,15 +44,29 @@ critical vulnerability and `2` when the registry or report is unavailable, so an
 look like a clean result. Exceptions require a narrow package or Gitleaks rule, a reason and an expiry date;
 there are no active exceptions.
 
-The Angular build tool pins a vulnerable Piscina release. A scoped npm override pins its Piscina dependency to
-the corrected 5.3.2 release for
-[GHSA-67c8-pqhq-4rmx](https://github.com/piscinajs/piscina/security/advisories/GHSA-67c8-pqhq-4rmx).
-Remove that override when the Angular 21 build tool itself pins a corrected release. It changes the installed
-dependency rather than suppressing the advisory; the audit policy still rejects every high or critical finding.
+`typed-rest-client`, used by Stryker, pins a vulnerable `qs` release. A scoped npm override installs `qs`
+6.16.0, which corrects
+[GHSA-4mjr-xmp4-gh2g](https://github.com/ljharb/qs/security/advisories/GHSA-4mjr-xmp4-gh2g),
+[GHSA-q8mj-m7cp-5q26](https://github.com/ljharb/qs/security/advisories/GHSA-q8mj-m7cp-5q26) and
+[GHSA-x5fp-wj9c-mxmx](https://github.com/ljharb/qs/security/advisories/GHSA-x5fp-wj9c-mxmx).
+Remove this override when Stryker's compatible `typed-rest-client` release permits a corrected `qs`.
+
+Angular 22 removes the former CLI dependency chain through `pacote`, `make-fetch-happen` and
+`http-cache-semantics`. The build tool also pins the corrected Piscina release directly, so neither an audit
+exception nor a Piscina override is needed.
 
 The `security-and-workflows` CI job runs on pull requests, pushes to `main` and the weekly schedule. The other
 jobs in its workflow skip that scheduled event. Its report, history-scan result and duration are uploaded
 together. The initial repository-history scan found no secret.
+
+## TypeScript tooling compatibility
+
+Angular 22 requires TypeScript 6. The installed `openapi-typescript` and the `tsconfck` dependency of
+`vite-tsconfig-paths` still declare TypeScript 5 peer ranges. Scoped overrides select the project's pinned
+TypeScript for those two consumers; normal `npm ci` remains reproducible without force or legacy peer
+resolution. API generation must remain byte-identical and the Vitest path aliases must resolve under the
+full unit suite. Remove each override when its upstream peer range accepts the project's TypeScript version.
+These compatibility overrides do not suppress any security advisory.
 
 ## Explicit local validation
 

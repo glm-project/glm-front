@@ -9,7 +9,7 @@ Draw icons through the typed `glm-icon` primitive at
 object is passed to `provideIcons`. Add a drawing and its public name in that one declaration; an unknown name
 must remain a compile error rather than a blank runtime glyph.
 
-`@ng-icons/core` and `@ng-icons/lucide` are pinned to the line compatible with Angular 21. Check their Angular
+`@ng-icons/core` and `@ng-icons/lucide` are pinned to the line compatible with Angular 22. Check their Angular
 peer range as part of an upgrade instead of moving the packages independently.
 
 ## Size and accessibility belong to the control

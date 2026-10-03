@@ -1,6 +1,6 @@
 # AGENTS.md
 
-`glmfront` is an Angular 21 repository. It contains two independent applications: `gestion`, the workshop back office, and `pupitre`, the shop-floor console. Each owns its bounded contexts and application-specific technical code. `gestion` authenticates with Keycloak through OIDC. `arch-unit-ts` enforces the boundaries.
+`glmfront` is an Angular 22 repository. It contains two independent applications: `gestion`, the workshop back office, and `pupitre`, the shop-floor console. Each owns its bounded contexts and application-specific technical code. `gestion` authenticates with Keycloak through OIDC. `arch-unit-ts` enforces the boundaries.
 
 ## Commands
 

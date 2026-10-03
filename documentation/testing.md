@@ -69,6 +69,11 @@ other shared test fixtures, never on application or infrastructure code. Only sp
 `src/test/` may import it. `HexagonalArchTest.spec.ts` enforces these dependency directions; use the
 `@test/unit/fixtures/*` alias from co-located specs.
 
+Cypress's Webpack preprocessor resolves inherited path aliases relative to the leaf TypeScript configuration
+when `baseUrl` is absent. Application specs that instantiate the authentication fixture therefore declare
+`@/*` and `@test/*` in their own `tsconfig.json`, relative to that file. Keep those targets aligned with the
+root aliases without restoring the `baseUrl` option deprecated by TypeScript 6.
+
 Each front owns a Cypress config next to its specs, differing by `baseUrl` and `specPattern`; each is reached
 by an npm script naming the front. Add a suite with its config and the `test:<layer>:headless:<front>` script;
 the aggregate scripts pick it up by glob. `AGENTS.md` owns the one-server-at-a-time trap.
