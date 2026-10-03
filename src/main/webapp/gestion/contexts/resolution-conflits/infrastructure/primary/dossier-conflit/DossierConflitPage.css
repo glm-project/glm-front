@@ -14,6 +14,17 @@
   padding: 0 0 1.75rem 1.5rem;
   border-left: 1px solid var(--color-border-strong);
   overflow-wrap: anywhere;
+  scroll-margin-top: 6rem;
+}
+h2[tabindex],
+h3[tabindex] {
+  scroll-margin-top: 6rem;
+  overflow-wrap: anywhere;
+}
+h2[tabindex]:focus-visible,
+h3[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 .pointage::before {
   position: absolute;

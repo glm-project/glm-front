@@ -2,6 +2,26 @@ import { dataSelector } from '../../../utils/DataSelector';
 import type {} from '../../../utils/gestion/resolution-conflits/resolution-conflits.provider';
 
 describe('Conflict dossier in Gestion', () => {
+  it('should open the correction from the received end and identify the fact being edited', () => {
+    whenOpeningTheDossierAt(320);
+    whenCorrectingTheReceivedEnd();
+
+    thenTheReceivedEndIsReadyToEdit();
+  });
+
+  const whenCorrectingTheReceivedEnd = (): void => {
+    cy.get(dataSelector('conflit-pointage')).last().find(dataSelector('conflit-corriger')).click();
+  };
+
+  const thenTheReceivedEndIsReadyToEdit = (): void => {
+    cy.get(dataSelector('conflit-proposition-titre')).should('have.focus');
+    cy.get(dataSelector('conflit-proposition-resume'))
+      .should('contain.text', '17:00:00')
+      .and('contain.text', 'Travail commencé à 8 h, remplacé à 12 h');
+    cy.get(dataSelector('conflit-instant')).should('have.value', '2026-09-14T17:00:00+02:00');
+    cy.get(dataSelector('conflit-cible')).should('have.value', 'travail-8');
+  };
+
   it('should identify the chosen interpretation while its reason is being entered', () => {
     whenOpeningTheDossier();
     whenChoosingTheGuidedCorrection();
@@ -27,6 +47,14 @@ describe('Conflict dossier in Gestion', () => {
       .and('contain.text', 'Travail de 8 h à 12 h : 4 h.')
       .and('contain.text', 'NC de 12 h à 17 h : 5 h.');
     cy.get(dataSelector('conflit-apercu-journal')).should('not.have.attr', 'open');
+    cy.get(dataSelector('conflit-apercu-fait-avant-fin-17')).should(fait => {
+      expect(fait[0]?.checkVisibility()).to.equal(false);
+    });
+    cy.get(dataSelector('conflit-apercu-consequences')).then(consequences => {
+      cy.get(dataSelector('conflit-apercu-journal-ouvrir')).should(journal => {
+        expect(consequences[0]?.getBoundingClientRect().bottom).to.be.at.most(journal[0]?.getBoundingClientRect().top ?? 0);
+      });
+    });
     cy.get(dataSelector('conflit-confirmer')).should('be.enabled');
   };
 
@@ -207,6 +235,7 @@ describe('Conflict dossier in Gestion', () => {
   [320, 1024, 1280].forEach(width => {
     it(`should keep the dossier and its controls reachable at ${width} pixels`, () => {
       whenOpeningTheDossierAt(width);
+      whenCapturingTheInitialDossier(width);
       whenPreparingTheGuidedCorrection();
       whenCapturingTheDossier(width);
 
@@ -218,6 +247,11 @@ describe('Conflict dossier in Gestion', () => {
   const whenCapturingTheDossier = (width: number): void => {
     cy.get(dataSelector('conflit-apercu')).scrollIntoView();
     cy.screenshot(`conflits-dossier-${width}`, { capture: 'viewport' });
+  };
+
+  const whenCapturingTheInitialDossier = (width: number): void => {
+    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+    cy.screenshot(`conflits-entree-${width}`, { capture: 'viewport' });
   };
 
   const thenTheConfirmationHasAnAdequateTouchTarget = (): void => {
@@ -352,7 +386,6 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenCorrectingTheEnd = (): void => {
-    cy.get(dataSelector('conflit-detail')).click();
     cy.get(dataSelector('conflit-corriger')).last().click();
   };
 
@@ -362,7 +395,6 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenCancellingTheEnd = (): void => {
-    cy.get(dataSelector('conflit-detail')).click();
     cy.get(dataSelector('conflit-annuler')).last().click();
   };
 
