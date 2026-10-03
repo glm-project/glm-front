@@ -8,18 +8,19 @@ describe('Conflict list in Gestion', () => {
     thenThePageDoesNotOverflow();
   });
 
-  it('should expose a visible focus ring on the operator filter', () => {
-    whenVisitingAt(1280);
-    whenFocusingTheControl('conflits-filtre-operateur');
+  const focusControls = [
+    { selector: 'conflits-filtre-operateur', description: 'operator filter' },
+    { selector: 'conflits-filtrer', description: 'filtering action' },
+    { selector: 'conflit-ouvrir', description: 'dossier link' },
+  ];
 
-    thenTheControlUsesTheFocusToken('conflits-filtre-operateur');
-  });
+  focusControls.forEach(({ selector, description }) => {
+    it(`should expose a visible focus ring on the ${description}`, () => {
+      whenVisitingAt(1280);
+      whenFocusingTheControl(selector);
 
-  it('should expose a visible focus ring on the filtering action', () => {
-    whenVisitingAt(1280);
-    whenFocusingTheControl('conflits-filtrer');
-
-    thenTheControlUsesTheFocusToken('conflits-filtrer');
+      thenTheControlUsesTheFocusToken(selector);
+    });
   });
 
   const whenFocusingTheControl = (selector: string): void => {
