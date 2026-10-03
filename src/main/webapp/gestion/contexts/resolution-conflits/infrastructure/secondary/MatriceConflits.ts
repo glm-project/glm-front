@@ -201,6 +201,11 @@ const cibleEchue = (): ScenarioConflits =>
       pointageDemo('debut-22', faitDemo('22:00:00', 'DEBUT', 'OUVERTURE'), 'travail-22'),
       pointageDemo('nc-23', faitDemo('23:00:00', 'NON_CONFORMITE', 'TRANSITION', 'travail-8'), 'nc-23'),
     ],
+    activitesInitiales: [
+      activite('travail-8', 'Travail A commencé à 8 h', 'À résoudre', 'A_RESOUDRE'),
+      activite('travail-22', 'Travail B commencé à 22 h', 'À résoudre', 'A_RESOUDRE'),
+      activite('nc-23', 'NC commencée à 23 h', 'À résoudre', 'A_RESOUDRE'),
+    ],
     activites: [
       activite('travail-8', 'Travail A, échu à 21 h', '13 h', 'ECHUE'),
       activite('travail-22', 'Travail B de 22 h à 23 h', '1 h'),
