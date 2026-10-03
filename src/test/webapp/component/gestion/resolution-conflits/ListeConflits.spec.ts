@@ -10,32 +10,34 @@ describe('Conflict list in Gestion', () => {
 
   it('should expose a visible focus ring on the operator filter', () => {
     whenVisitingAt(1280);
-    whenFocusingTheOperatorFilter();
+    whenFocusingTheControl('conflits-filtre-operateur');
 
-    thenTheFilterUsesTheFocusToken();
+    thenTheControlUsesTheFocusToken('conflits-filtre-operateur');
   });
 
-  const whenFocusingTheOperatorFilter = (): void => {
-    cy.get(dataSelector('conflits-filtre-operateur')).focus();
+  const whenFocusingTheControl = (selector: string): void => {
+    cy.get(dataSelector(selector)).first().focus();
   };
 
-  const thenTheFilterUsesTheFocusToken = (): void => {
-    cy.get(dataSelector('conflits-filtre-operateur')).should('have.focus');
-    cy.get(dataSelector('conflits-filtre-operateur')).should($input => {
-      const input = $input[0];
-      if (input === undefined) {
-        throw new Error('The operator filter is unavailable');
-      }
-      const button = input.ownerDocument.querySelector(dataSelector('conflits-filtrer'));
-      if (button === null) {
-        throw new Error('The filtering action is unavailable');
-      }
-      const focus = getComputedStyle(input);
-      const accent = getComputedStyle(button).backgroundColor;
-      expect(focus.outlineWidth).to.equal('2px');
-      expect(focus.outlineStyle).to.equal('solid');
-      expect(focus.outlineColor).to.equal(accent);
-    });
+  const thenTheControlUsesTheFocusToken = (selector: string): void => {
+    cy.get(dataSelector(selector)).first().should('have.focus');
+    cy.get(dataSelector(selector))
+      .first()
+      .should($input => {
+        const input = $input[0];
+        if (input === undefined) {
+          throw new Error('The focused control is unavailable');
+        }
+        const button = input.ownerDocument.querySelector(dataSelector('conflits-filtrer'));
+        if (button === null) {
+          throw new Error('The filtering action is unavailable');
+        }
+        const focus = getComputedStyle(input);
+        const accent = getComputedStyle(button).backgroundColor;
+        expect(focus.outlineWidth).to.equal('2px');
+        expect(focus.outlineStyle).to.equal('solid');
+        expect(focus.outlineColor).to.equal(accent);
+      });
   };
 
   const whenVisitingAt = (width: number): void => {
