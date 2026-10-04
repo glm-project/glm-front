@@ -169,6 +169,10 @@ export class DossierConflitPage {
 
   protected async confirm(): Promise<void> {
     await this.preparation.confirm();
+    this.refreshAfterConfirmation();
+  }
+
+  private refreshAfterConfirmation(): void {
     const resultat = this.preparation.operation();
     if (resultat.kind === 'APPLIQUE') {
       this.lecture.value.set({ kind: 'DOSSIER', dossier: resultat.dossier });

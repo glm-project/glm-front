@@ -97,6 +97,10 @@ export class PreparationActe {
     if (this.operationActuelle().kind === 'CONFIRMATION') return;
     const apercu = this.actuelle().confirmation();
     if (apercu === undefined) return;
+    await this.confirmReference(apercu);
+  }
+
+  private async confirmReference(apercu: ReferenceApercu): Promise<void> {
     this.referenceEnAttente = apercu;
     this.operationActuelle.set({ kind: 'CONFIRMATION' });
     const demande = Symbol('confirmation');
