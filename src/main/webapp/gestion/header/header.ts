@@ -16,7 +16,7 @@ const DESTINATIONS: readonly Destination[] = [
   { route: '/moules-et-of', libelle: 'Moules et OF', selecteur: 'gestion-navigation-elements', exacte: false },
   { route: '/postes-de-travail', libelle: 'Postes de travail', selecteur: 'gestion-navigation-postes', exacte: false },
   { route: '/operateurs', libelle: 'Opérateurs', selecteur: 'gestion-navigation-operateurs', exacte: false },
-  { route: '/conflits', libelle: 'Conflits · démo', selecteur: 'gestion-navigation-conflits', exacte: false },
+  { route: '/conflits', libelle: 'Conflits', selecteur: 'gestion-navigation-conflits', exacte: false },
 ];
 
 const LIBELLES_EN_TETE = {
