@@ -37,6 +37,7 @@ class ServerFixture extends AtelierExchangePort {
   readonly received: GesteDePointage[] = [];
   readonly rereadGestes: GesteDePointage[] = [];
   referentielCalls = 0;
+  private readonly heldReferences: ReferentielExchangeFixture[] = [];
   onReferentiel: (() => Promise<ReferentielDuPupitre> | ReferentielDuPupitre) | undefined;
   onSend:
     | ((
@@ -48,10 +49,20 @@ class ServerFixture extends AtelierExchangePort {
   override async referentiel(): Promise<ReferentielDuPupitre> {
     await roundTrip();
     this.referentielCalls++;
+    const held = this.heldReferences.shift();
+    if (held !== undefined) {
+      return held.answer();
+    }
     if (this.onReferentiel !== undefined) {
       return this.onReferentiel();
     }
     return referenceFixture;
+  }
+
+  holdNextReferentiel(): ReferentielExchangeFixture {
+    const exchange = new ReferentielExchangeFixture();
+    this.heldReferences.push(exchange);
+    return exchange;
   }
 
   override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
@@ -69,6 +80,22 @@ class ServerFixture extends AtelierExchangePort {
   override async reread(geste: GesteDePointage): Promise<void> {
     await roundTrip();
     this.rereadGestes.push(structuredClone(geste));
+  }
+}
+
+class ReferentielExchangeFixture {
+  private readonly arrival = new SignalFixture();
+  private readonly continuation = new SignalFixture();
+  readonly reached = this.arrival.promise;
+
+  async answer(): Promise<ReferentielDuPupitre> {
+    this.arrival.release();
+    await this.continuation.promise;
+    throw new Error('référentiel indisponible');
+  }
+
+  fail(): void {
+    this.continuation.release();
   }
 }
 
@@ -258,6 +285,17 @@ describe('PupitreSynchronization', () => {
     await Promise.all([first, second]);
 
     thenReferentialRefreshedTwice();
+  });
+
+  it('should finish a failed synchronization without waiting for later synchronization attempts', async () => {
+    givenAnAuthorizedSession();
+    const firstExchange = givenAnUnresponsiveReferentialExchange();
+    const followingExchange = givenAnUnresponsiveReferentialExchange();
+
+    const firstFinishedBeforeTheFollowingExchange = await whenFailingAnExchangeWhileAnotherIsRequested(firstExchange, followingExchange);
+
+    expect(firstFinishedBeforeTheFollowingExchange).toBe(true);
+    expect(errorHandler.errors).toEqual([new Error('référentiel indisponible'), new Error('référentiel indisponible')]);
   });
 
   it('should reconcile every concurrent caller with the refreshed journal', async () => {
@@ -555,6 +593,26 @@ describe('PupitreSynchronization', () => {
   };
   const whenDeselectingCompany = (): void => {
     tenant = undefined;
+  };
+
+  const givenAnUnresponsiveReferentialExchange = (): ReferentielExchangeFixture => server.holdNextReferentiel();
+
+  const whenFailingAnExchangeWhileAnotherIsRequested = async (
+    firstExchange: ReferentielExchangeFixture,
+    followingExchange: ReferentielExchangeFixture,
+  ): Promise<boolean> => {
+    let firstFinished = false;
+    const first = whenSynchronizing().then(() => {
+      firstFinished = true;
+    });
+    await firstExchange.reached;
+    const following = whenSynchronizing();
+    firstExchange.fail();
+    await followingExchange.reached;
+    const firstFinishedBeforeTheFollowingExchange = firstFinished;
+    followingExchange.fail();
+    await Promise.all([first, following]);
+    return firstFinishedBeforeTheFollowingExchange;
   };
 
   const givenConcurrentModificationOnFirstAttempt = (): void => {

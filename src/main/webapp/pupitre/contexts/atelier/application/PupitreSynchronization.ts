@@ -21,6 +21,12 @@ import { inject, Injectable } from '@angular/core';
 
 type PupitrePublisher = (entreprise: Entreprise | undefined, state: JournalDuPupitre) => void;
 
+interface SynchronizationRequest {
+  readonly publish: PupitrePublisher;
+  readonly resolve: () => void;
+  readonly reject: (failure: unknown) => void;
+}
+
 @Injectable()
 export class PupitreSynchronization {
   private readonly authentication = inject(AuthenticationPort);
@@ -29,36 +35,51 @@ export class PupitreSynchronization {
   private readonly serveur = inject(AtelierExchangePort);
   private readonly errorHandler = inject(ErrorHandlerPort);
   private synchronization: Promise<void> | undefined;
-  private synchronizationRequested = false;
-  private readonly publishers = new Set<PupitrePublisher>();
+  private readonly requests: SynchronizationRequest[] = [];
 
   synchronize(publish: PupitrePublisher): Promise<void> {
-    this.publishers.add(publish);
-    this.synchronizationRequested = true;
+    const completion = new Promise<void>((resolve, reject) => {
+      this.requests.push({ publish, resolve, reject });
+    });
     this.synchronization ??= this.runSynchronization();
-    return this.synchronization;
+    return completion;
   }
 
   private async runSynchronization(): Promise<void> {
     try {
-      while (this.synchronizationRequested) {
-        this.synchronizationRequested = false;
-        await this.journal.synchronize(() =>
-          this.exchange((entreprise, state) => {
-            for (const publish of [...this.publishers]) {
-              try {
-                publish(entreprise, state);
-              } catch (failure: unknown) {
-                this.errorHandler.handleError(failure);
-              }
-            }
-          }),
-        );
+      while (this.requests.length > 0) {
+        await this.runRequestedExchange(this.requests.splice(0));
       }
     } finally {
-      this.synchronizationRequested = false;
       this.synchronization = undefined;
-      this.publishers.clear();
+    }
+  }
+
+  private async runRequestedExchange(requests: readonly SynchronizationRequest[]): Promise<void> {
+    try {
+      await this.journal.synchronize(() =>
+        this.exchange((entreprise, state) => {
+          this.publishTo([...requests, ...this.requests], entreprise, state);
+        }),
+      );
+      requests.forEach(request => {
+        request.resolve();
+      });
+    } catch (failure: unknown) {
+      requests.forEach(request => {
+        request.reject(failure);
+      });
+    }
+  }
+
+  private publishTo(requests: readonly SynchronizationRequest[], entreprise: Entreprise | undefined, state: JournalDuPupitre): void {
+    const publishers = new Set(requests.map(request => request.publish));
+    for (const publish of publishers) {
+      try {
+        publish(entreprise, state);
+      } catch (failure: unknown) {
+        this.errorHandler.handleError(failure);
+      }
     }
   }
 

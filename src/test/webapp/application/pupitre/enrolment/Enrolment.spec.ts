@@ -48,6 +48,15 @@ describe('Pupitre enrolment', () => {
     thenTheWorkshopLoadsAndTheKeypadAppears();
   });
 
+  it('should offer a workshop retry after the first timeout while scheduled refreshes keep running', () => {
+    givenAnApprovedPupitreWithAnUnresponsiveWorkshop();
+
+    whenVisitingTheRoot();
+    whenTheWorkshopRequestTimesOutWhileTheNextRefreshStarts();
+
+    thenTheWorkshopCanBeRetried();
+  });
+
   it('should explain a granted token without a tenant before loading the workshop', () => {
     givenAnAuthorizationServerGrantingTokensWithoutATenant();
 
@@ -141,6 +150,16 @@ const givenAWorkshopBehindTheAuthorizationServer = (): void => {
   cy.intercept('POST', `${OPENID_CONNECT}/logout`, { statusCode: 204, body: {} }).as('logout');
 };
 
+const givenAnApprovedPupitreWithAnUnresponsiveWorkshop = (): void => {
+  cy.clock(Date.now(), ['setInterval', 'clearInterval']);
+  cy.intercept('POST', `${OPENID_CONNECT}/auth/device`, theDeviceAuthorizationFixture()).as('deviceAuthorization');
+  cy.intercept('POST', `${OPENID_CONNECT}/token`, theGrantedTokensFixture()).as('tokenClaim');
+  cy.intercept('GET', '/api/pupitre/referentiel', {
+    delay: 60_000,
+    body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [OPERATEUR], suivis: [] },
+  }).as('workshop');
+};
+
 const givenAnAuthorizationServerWaitingForTheCode = (): void => {
   cy.intercept('POST', `${OPENID_CONNECT}/auth/device`, theDeviceAuthorizationFixture()).as('deviceAuthorization');
 
@@ -206,6 +225,12 @@ const theGrantedTokensFixture = (): StaticResponse => ({
 
 const whenVisitingTheRoot = (): void => {
   cy.visit('/');
+};
+
+const whenTheWorkshopRequestTimesOutWhileTheNextRefreshStarts = (): void => {
+  cy.get<unknown[]>('@workshop.all').should('have.length', 1);
+  cy.tick(30_000);
+  cy.get<unknown[]>('@workshop.all').should('have.length', 2);
 };
 
 const whenPressingTheRecovery = (action: string): void => {
@@ -277,6 +302,11 @@ const thenTheWorkshopLoadsAndTheKeypadAppears = (): void => {
 
 const thenTheScreenSays = (message: string): void => {
   cy.get(dataSelector('enrolement-status')).should('have.text', message);
+};
+
+const thenTheWorkshopCanBeRetried = (): void => {
+  cy.get(dataSelector('enrolement-action')).should('be.visible').and('contain.text', 'Réessayer').and('not.be.disabled');
+  cy.get(dataSelector('designation')).should('not.exist');
 };
 
 const thenNoWorkshopRequestWasMade = (): void => {

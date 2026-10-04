@@ -23,6 +23,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
+import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { MockInstance, vi } from 'vitest';
 import { AtelierCoordinator } from './AtelierCoordinator';
@@ -132,11 +133,19 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
 
 class ApplicationJournalFixture extends JournauxDuPupitrePort {
   private readonly stored = new JournauxDuPupitreFixture();
+  private nextAcknowledgement: SignalFixture | undefined;
   override saveReferentiel(entreprise: Entreprise, reference: ReferentielDuPupitre): Promise<JournalDuPupitre> {
     return this.stored.saveReferentiel(entreprise, reference);
   }
-  override saveResult(entreprise: Entreprise, result: EvenementDuJournal): Promise<JournalDuPupitre> {
-    return this.stored.saveResult(entreprise, result);
+  override async saveResult(entreprise: Entreprise, result: EvenementDuJournal): Promise<JournalDuPupitre> {
+    const saved = await this.stored.saveResult(entreprise, result);
+    this.nextAcknowledgement?.release();
+    this.nextAcknowledgement = undefined;
+    return saved;
+  }
+  waitForNextAcknowledgement(): Promise<void> {
+    this.nextAcknowledgement = new SignalFixture();
+    return this.nextAcknowledgement.promise;
   }
   override markDisconnected(entreprise: Entreprise): Promise<JournalDuPupitre> {
     return this.stored.markDisconnected(entreprise);
@@ -925,10 +934,9 @@ describe('AtelierCoordinator', () => {
     givenAuthorizedAccess();
     givenAcknowledgementFailsOnce();
     await whenStarting();
-    const failedSynchronization = whenSynchronizing();
-    await Promise.allSettled([failedSynchronization]);
+    await whenSynchronizing();
 
-    await thenFails(failedSynchronization, 'disque plein');
+    thenBackgroundAcknowledgementFailureWasReported();
   });
 
   it('should retain a durably accepted gesture after background failure and restart', async () => {
@@ -947,9 +955,11 @@ describe('AtelierCoordinator', () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
     givenOpeningIsAppendedDuringReferenceRefresh();
+    const acknowledgement = givenTheNextPublicationAcknowledgement();
 
     await whenSynchronizing();
     await whenClosing();
+    await whenPublicationIsAcknowledged(acknowledgement);
 
     await thenQueueHas(1);
     await thenPendingIs(0);
@@ -1427,6 +1437,11 @@ describe('AtelierCoordinator', () => {
   };
   const givenEmptyCompanySelected = (): void => {
     authentication.tenant = 'entreprise-vide';
+  };
+  const givenTheNextPublicationAcknowledgement = (): Promise<void> => journal.waitForNextAcknowledgement();
+  const whenPublicationIsAcknowledged = (acknowledgement: Promise<void>): Promise<void> => acknowledgement;
+  const thenBackgroundAcknowledgementFailureWasReported = (): void => {
+    expect(errorHandler.errors).toEqual([new Error('disque plein')]);
   };
   const givenOpeningIsAppendedDuringReferenceRefresh = (): void => {
     serveur.afterReference = () => {
