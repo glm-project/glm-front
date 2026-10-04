@@ -127,7 +127,7 @@ export const toDossier = (
     diagnostics: dossier.diagnostics.map(toDiagnostic),
     choix: dossier.choix.map(toChoix),
     consequences: [],
-    continuations: [],
+    continuations: dossier.continuations.map(toLigne),
   };
 };
 

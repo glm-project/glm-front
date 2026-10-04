@@ -326,6 +326,30 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     expect(errors.errors).toEqual([failure]);
   });
 
+  it('should expose only the authoritative continuation address with its own scope and unresolved references', async () => {
+    const dossier = dossierConflitFixture();
+    dossier.continuations = [
+      { ...givenUnresolvedReferences(), adresse: { suivi: 'suivi-camille', pointage: 'fin-corrigee' }, nombrePointages: 2 },
+    ];
+    const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(dossierFromReading(resultat).continuations).toMatchObject([
+      {
+        adresse: { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-corrigee') },
+        nombrePointages: 2,
+        operateur: '',
+        operateurId: 'op-camille',
+        poste: '',
+        posteId: 'poste-dmu',
+        date: '2026-09-14T08:00:00.123456789+02:00',
+      },
+    ]);
+  });
+
   it('should reject a guided correction missing its required fact and report the incomplete acquisition once', async () => {
     const dossier = dossierConflitFixture();
     dossier.choix = [{ code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE', kind: 'CORRECTION', pointage: 'fin-17' }];
