@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
+import { SaisieActe } from '../../domain/acte/SaisieActe';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
-import { ActiviteConflit, DiagnosticConflit, DossierConflit, PointageConflit } from '../../domain/dossier/DossierConflit';
+import { ActiviteConflit, ChoixGuide, DiagnosticConflit, DossierConflit, PointageConflit } from '../../domain/dossier/DossierConflit';
 import { ElementConflitId } from '../../domain/dossier/ElementConflitId';
 import { PointageConflitId } from '../../domain/dossier/PointageConflitId';
 import { SuiviConflitId } from '../../domain/dossier/SuiviConflitId';
@@ -76,6 +77,14 @@ const toDiagnostic = (diagnostic: components['schemas']['RestDiagnosticDeConflit
   },
 });
 
+const toChoix = (choix: components['schemas']['RestChoixDeResolution']): ChoixGuide => ({
+  id: `${choix.code}:${choix.pointage}`,
+  code: choix.code,
+  libelle: '',
+  explication: '',
+  saisie: SaisieActe.cancel(choix.pointage),
+});
+
 export const toDossier = (
   dossier: components['schemas']['RestDossierConflit'],
   sequence: components['schemas']['RestSequenceDuDossier'] | undefined = dossier.sequence,
@@ -97,7 +106,7 @@ export const toDossier = (
     journal: dossier.suivi.journal.map(toPointage),
     activites: dossier.activites.map(toActivite),
     diagnostics: dossier.diagnostics.map(toDiagnostic),
-    choix: [],
+    choix: dossier.choix.map(toChoix),
     consequences: [],
     continuations: [],
   };

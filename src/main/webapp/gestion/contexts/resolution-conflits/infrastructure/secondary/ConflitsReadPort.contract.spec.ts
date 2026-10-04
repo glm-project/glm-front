@@ -8,6 +8,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
+import { DossierConflit, LectureDossier } from '../../domain/dossier/DossierConflit';
 import { ElementConflitId } from '../../domain/dossier/ElementConflitId';
 import { PointageConflitId } from '../../domain/dossier/PointageConflitId';
 import { SuiviConflitId } from '../../domain/dossier/SuiviConflitId';
@@ -258,6 +259,21 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     });
   });
 
+  it('should expose the authoritative guided cancellation while leaving its motive for the manager', async () => {
+    const dossier = dossierConflitFixture();
+    dossier.choix = [{ code: 'ANNULER_TRANSITION', kind: 'ANNULATION', pointage: 'nc-12' }];
+    const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    const choix = requiredFixture(dossierFromReading(resultat).choix[0], 'guided cancellation');
+    expect(choix.id).toBe('ANNULER_TRANSITION:nc-12');
+    expect(choix.saisie.proposition).toEqual({ kind: 'ANNULATION', pointage: 'nc-12', motif: '' });
+    expect(choix.saisie.command()).toBeUndefined();
+  });
+
   it('should reject a dossier missing its required sequence instead of reconstructing it from the journal', async () => {
     const dossier = dossierConflitFixture();
     delete dossier.sequence;
@@ -345,6 +361,11 @@ describe('Beyond the contract: HTTP conflict reading', () => {
 
   const whenConflictDossierAnswers = (dossier = dossierConflitFixture()): void => {
     server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17').flush(dossier);
+  };
+
+  const dossierFromReading = (lecture: LectureDossier): DossierConflit => {
+    if (lecture.kind !== 'DOSSIER') throw new Error('Missing dossier fixture');
+    return lecture.dossier;
   };
 
   it.each([

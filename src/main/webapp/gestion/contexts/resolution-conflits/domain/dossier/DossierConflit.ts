@@ -55,6 +55,7 @@ export interface DiagnosticConflit {
 
 export interface ChoixGuide {
   readonly id: string;
+  readonly code?: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' | 'ANNULER_TRANSITION';
   readonly libelle: string;
   readonly explication: string;
   readonly saisie: SaisieActe;
