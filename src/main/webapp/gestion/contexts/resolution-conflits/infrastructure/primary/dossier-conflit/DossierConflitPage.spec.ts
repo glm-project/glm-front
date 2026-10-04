@@ -262,7 +262,12 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-diagnostic', 'Le pointage fin-17 vise l’activité travail-8, remplacée.');
+    thenDiagnosticReferencesTheReceivedFact(
+      'conflit-diagnostic-pointage',
+      'fin-17',
+      '2026-09-14T17:00:00.123456789+02:00 · Fin · Fin ciblée',
+    );
+    thenTextContains('conflit-diagnostic', 'vise l’activité travail-8, remplacée.');
     thenTextContains('conflit-diagnostic', 'Ouverte par debut-8.');
     thenTextContains('conflit-diagnostic', 'Terminée par nc-12.');
   });
@@ -279,6 +284,19 @@ describe('Conflict dossier page', () => {
     );
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
+  });
+
+  it('should locate the challenged and opening facts identified by the received diagnostic', async () => {
+    givenTheOpeningFactReferencedByTheDiagnostic();
+
+    await whenRendering();
+
+    thenDiagnosticReferencesTheReceivedFact(
+      'conflit-diagnostic-pointage',
+      'fin-17',
+      '2026-09-14T17:00:00.123456789+02:00 · Fin · Fin ciblée',
+    );
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', '2026-09-14T08:00:00+02:00 · Travail · Ouverture');
   });
 
   it('should reject an address missing its suivi without requesting a dossier', async () => {
@@ -944,6 +962,39 @@ describe('Conflict dossier page', () => {
             pointage: new PointageConflitId('fin-17'),
             raison: 'CIBLE_REMPLACEE',
             cible: { activite: new ActiviteConflitId('travail-8'), termineePar: corrected },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenTheOpeningFactReferencedByTheDiagnostic = (): void => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [
+          ...dossier.journal,
+          {
+            id: new PointageConflitId('debut-8'),
+            fait: {
+              ...faitConflitFixture(),
+              type: 'DEBUT',
+              intention: 'OUVERTURE',
+              activiteVisee: '',
+              instant: '2026-09-14T08:00:00+02:00',
+            },
+            auteur: 'camille',
+            enregistre: '2026-09-15T08:00:00Z',
+            regularisation: false,
+          },
+        ],
+        diagnostics: [
+          {
+            pointage: new PointageConflitId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteConflitId('travail-8'), ouvrant: new PointageConflitId('debut-8') },
           },
         ],
       },

@@ -201,7 +201,14 @@ describe('HTTP conflict resolution in Gestion', () => {
         ...dossier,
         suivi: {
           ...dossier.suivi,
-          journal: [...journalFixture, correctedTermination],
+          journal: [
+            ...journalFixture.map(fact =>
+              fact.id === ncFixture
+                ? { ...fact, annulation: { motif: 'Heure vérifiée', auteur: 'gestionnaire', date: '2026-10-04T10:00:00Z' } }
+                : fact,
+            ),
+            correctedTermination,
+          ],
         },
         diagnostics: [
           {
@@ -225,6 +232,8 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('conflit-diagnostic-terminaison'))
       .should('contain.text', '2026-09-14T12:01:00.123456789+02:00')
       .and('contain.text', 'Non-conformité · Transition');
+    cy.get(dataSelector('conflit-diagnostic-pointage')).should('contain.text', 'Fin · Fin ciblée');
+    cy.get(dataSelector('conflit-diagnostic-ouvrant')).should('contain.text', 'Travail · Ouverture');
     cy.get(dataSelector('conflit-pointage'))
       .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
       .should('have.length', 1)

@@ -18,14 +18,26 @@
     </p>
     <div class="mt-4 rounded-control border border-danger bg-surface p-4" data-selector="conflit-diagnostic">
       <h3 class="text-body font-semibold">{{ libelles.pourquoi }}</h3>
-      @if (dossier.diagnostics?.length) { @for (diagnostic of dossier.diagnostics; track diagnostic.pointage.pointage) {
+      @if (dossier.diagnostics?.length) { @for (diagnostic of dossier.diagnostics; track diagnostic.pointage.pointage) { @let pointage =
+      referencePointage(dossier.journal, diagnostic.pointage);
       <p class="mt-2 text-body">
-        {{ libelles.diagnosticPointage }} {{ diagnostic.pointage.pointage }} {{ libelles.diagnosticCible }} {{
-        diagnostic.cible.activite.activite }}, {{ libelles.raisons[diagnostic.raison] }}.
+        {{ libelles.diagnosticPointage }} @if (pointage.lien) {
+        <a class="text-accent underline underline-offset-4" [href]="pointage.lien" data-selector="conflit-diagnostic-pointage"
+          >{{ pointage.libelle }}</a
+        >
+        } @else { <span>{{ pointage.libelle }}</span> } {{ libelles.diagnosticCible }} {{ diagnostic.cible.activite.activite }}, {{
+        libelles.raisons[diagnostic.raison] }}.
       </p>
-      @if (diagnostic.cible.ouvrant; as ouvrant) {
-      <p>{{ libelles.diagnosticOuvrant }} {{ ouvrant.pointage }}.</p>
-      } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin); @if (reference.lien) {
+      @if (diagnostic.cible.ouvrant; as ouvrant) { @let reference = referencePointage(dossier.journal, ouvrant); @if (reference.lien) {
+      <p>
+        {{ libelles.diagnosticOuvrant }}
+        <a class="text-accent underline underline-offset-4" [href]="reference.lien" data-selector="conflit-diagnostic-ouvrant"
+          >{{ reference.libelle }}</a
+        >.
+      </p>
+      } @else {
+      <p>{{ libelles.diagnosticOuvrant }} {{ reference.libelle }}.</p>
+      } } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin); @if (reference.lien) {
       <p>
         {{ libelles.diagnosticTerminaison }}
         <a class="text-accent underline underline-offset-4" [href]="reference.lien" data-selector="conflit-diagnostic-terminaison"
