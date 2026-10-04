@@ -6,6 +6,9 @@ Accepted. Complements [ADR 0006](0006-how-the-front-calls-the-back.md): the gene
 URLs as they are, and no base URL is configured anywhere. What changes is who answers `/api/**` once the
 front is deployed.
 
+Complété par [0048](0048-request-gestion-data-from-the-server-every-time.md) : le relais désactive son cache
+amont et interdit le stockage de la réponse pour les requêtes qui portent la politique no-store de Gestion.
+
 ## Context
 
 `deploy.yml` publishes the pupitre to Cloudflare Pages on every push to `main`. The published bundle could not

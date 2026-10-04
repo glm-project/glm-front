@@ -1,5 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { OperateursApiFixture, operateursFixture, postesFixture } from '../../../utils/gestion/operateur/OperateursApiFixture';
+import { PostesApiFixture } from '../../../utils/gestion/poste/PostesApiFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 describe('Operator referential in gestion', () => {
@@ -84,6 +85,17 @@ describe('Operator referential in gestion', () => {
 
     thenOperateurReferentialIsEmpty();
   });
+
+  it('should suggest a workstation created after leaving and returning to operators', () => {
+    givenEditableWorkshop();
+    whenVisitingOperateurs();
+    whenOpeningAndClosingOperateurCreation();
+    whenCreatingWorkstationFromSettings('Ponçage', 'ponçage');
+    whenReturningToOperateurCreation();
+    whenReplacing('operateur-poste-recherche', 'Ponçage');
+
+    thenPosteIsSuggested('Ponçage');
+  });
 });
 
 const givenReferential = (nombre = 0): OperateursApiFixture => {
@@ -100,6 +112,28 @@ const givenProtectedOperateur = (code: string): void => {
 };
 const givenWorkshopWithoutWorkstation = (): void => {
   new OperateursApiFixture([], []).install();
+};
+const givenEditableWorkshop = (): void => {
+  const operateurs = givenReferential();
+  new PostesApiFixture(operateurs.postes).install();
+};
+
+const whenOpeningAndClosingOperateurCreation = (): void => {
+  cy.get(dataSelector('operateurs-new')).should('be.enabled').click();
+  cy.get(dataSelector('operateur-cancel')).click();
+};
+const whenCreatingWorkstationFromSettings = (libelle: string, nature: string): void => {
+  cy.get(dataSelector('gestion-navigation-postes')).click();
+  cy.get(dataSelector('postes-new')).should('be.enabled').click();
+  whenReplacing('poste-libelle', libelle);
+  whenReplacing('poste-nature', nature);
+  cy.get(dataSelector('poste-save')).click();
+  cy.wait('@posteCreate');
+};
+const whenReturningToOperateurCreation = (): void => {
+  cy.get(dataSelector('poste-form')).should('not.exist');
+  cy.get(dataSelector('gestion-navigation-operateurs')).click();
+  cy.get(dataSelector('operateurs-new')).should('be.enabled').click();
 };
 
 const whenVisitingOperateurs = (): void => {
@@ -159,6 +193,9 @@ const whenGoingToNextPage = (): void => {
 const thenOperateurIsListed = (nom: string, poste: string, nature: string): void => {
   cy.get(dataSelector('operateur-form')).should('not.exist');
   cy.get(dataSelector('operateur-row')).contains(nom).closest('tr').should('contain.text', poste).and('contain.text', nature);
+};
+const thenPosteIsSuggested = (libelle: string): void => {
+  cy.get(dataSelector('operateur-poste-option')).should('contain.text', libelle);
 };
 const thenOptionalEntriesAreAbsent = (): void => {
   cy.get(dataSelector('operateur-form')).should('not.exist');

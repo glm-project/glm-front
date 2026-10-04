@@ -1,9 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { httpAuthInterceptor } from '@/app/shared/authentication/infrastructure/primary/http-auth.interceptor';
-import { HttpBackend, HttpClient, HttpEvent, HttpRequest, HttpResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { gestionHttpProvider } from '@/gestion/http.provider';
+import { HttpBackend, HttpClient, HttpEvent, HttpRequest, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, Observable, of } from 'rxjs';
-import { httpSessionRefreshInterceptor } from './http-session-refresh.interceptor';
 
 const INITIAL_TOKEN = 'initial-token';
 const RENEWED_TOKEN = 'renewed-token';
@@ -33,7 +32,7 @@ class AuthenticationFixture extends AuthenticationPort {
   }
 }
 
-describe('httpSessionRefreshInterceptor', () => {
+describe('Gestion HTTP session renewal', () => {
   let authentication: AuthenticationFixture;
   let sentAuthorizations: string[];
 
@@ -42,7 +41,7 @@ describe('httpSessionRefreshInterceptor', () => {
     sentAuthorizations = [];
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withInterceptors([httpSessionRefreshInterceptor, httpAuthInterceptor])),
+        gestionHttpProvider,
         { provide: AuthenticationPort, useValue: authentication },
         {
           provide: HttpBackend,
@@ -69,7 +68,10 @@ describe('httpSessionRefreshInterceptor', () => {
   it('should await renewal for every concurrent request', async () => {
     givenAnAuthenticatedSession();
 
-    const authorizations = await Promise.all([whenRequestingProtectedData(), whenRequestingProtectedData()]);
+    const authorizations = await Promise.all([
+      whenRequestingProtectedData('/api/atelier/supervision'),
+      whenRequestingProtectedData('/api/atelier/supervision'),
+    ]);
 
     expect(authorizations).toEqual([`Bearer ${RENEWED_TOKEN}`, `Bearer ${RENEWED_TOKEN}`]);
   });
@@ -102,6 +104,6 @@ describe('httpSessionRefreshInterceptor', () => {
     await whenRequestingProtectedData().catch(() => undefined);
     authentication.shouldFailRefresh = false;
   };
-  const whenRequestingProtectedData = (): Promise<string> =>
-    firstValueFrom(TestBed.inject(HttpClient).get('/protected', { responseType: 'text' }));
+  const whenRequestingProtectedData = (url = '/protected'): Promise<string> =>
+    firstValueFrom(TestBed.inject(HttpClient).get(url, { responseType: 'text' }));
 });

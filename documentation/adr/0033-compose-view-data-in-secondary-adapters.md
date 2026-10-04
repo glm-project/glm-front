@@ -11,6 +11,8 @@ Complements [0013](0013-keep-business-decisions-in-rich-domain-models.md): busin
 in the domain while acquisition details stay behind the read port.
 Complements [0025](0025-route-runtime-errors-through-error-handler-port.md): a view acquisition adapter
 reports its failure once and rejects; the primary resource displays the error without logging it again.
+Complété par [0048](0048-request-gestion-data-from-the-server-every-time.md) : Gestion / Supervision ne met
+pour l'instant aucune réponse métier en cache entre acquisitions ; chacune relit le serveur.
 
 ## Context
 

@@ -65,6 +65,15 @@ do not duplicate it in a mapping table without a semantic translation.
 
 ## Reads state their bounds
 
+Gestion, également déployée sous le nom Supervision, relit le serveur à chaque acquisition explicite.
+Pour l'instant, aucun adaptateur n'y conserve de réponse, de catalogue ou de promesse entre lectures ;
+une nouvelle lecture en échec ne réutilise pas une réponse antérieure. Sa composition HTTP impose
+`cache: 'no-store'` aux requêtes `/api/**` et transmet les directives de non-cache jusqu'au relais Pages.
+Les états de vue, la saisie, les assets et l'authentification gardent leur cycle de vie ; le pupitre conserve
+son référentiel et son journal hors ligne. Une future optimisation de cache exige une nouvelle décision
+explicite et mesurée. [ADR 0048](adr/0048-request-gestion-data-from-the-server-every-time.md) précise le périmètre,
+les coûts et la limite des garanties sur les intermédiaires externes.
+
 Online list ports make one request with `PAGE_SIZE` and return `Page<T>`.
 `buildPageFrom` preserves the server total alongside the returned elements so callers can identify truncation.
 A bounded read is acceptable only when the bound is visible in the result.

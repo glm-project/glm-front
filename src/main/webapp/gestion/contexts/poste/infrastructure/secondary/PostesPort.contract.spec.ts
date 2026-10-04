@@ -244,6 +244,16 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     thenNaturesAre(natures, []);
   });
 
+  it('should read the current suggested natures on every acquisition', async () => {
+    givenWorkstations([tourFixture]);
+    await port.natures();
+    givenWorkstations([scieFixture]);
+
+    const natures = await whenQueryingNatures();
+
+    thenNaturesAre(natures, ['sciage']);
+  });
+
   it('should create a workstation with hourly cost and reflect it in queries', async () => {
     givenWorkstations([scieFixture]);
     await whenQueryingNatures();
@@ -414,7 +424,11 @@ describe('Beyond the contract: HttpPostes', () => {
     expect(errorHandler.errors[0]).toEqual(new Error('Le référentiel des natures est incomplet.'));
   });
 
-  it('should reject a failed later page without retaining partial suggestions and allow retry', async () => {
+  it('should reject a failed nature refresh without reusing earlier suggestions and allow retry', async () => {
+    const earlier = port.natures();
+    await whenReferentialAnswers([tourFixture]);
+    await earlier;
+
     const result = port.natures().catch((failure: unknown) => failure);
     await whenFirstNaturePageAnswers();
     await whenServerFails('/api/postes-de-travail?page=1&size=100', 500);

@@ -91,7 +91,6 @@ const pageManquante = (extrait: Page<PosteHabilitable>, lus: number): boolean =>
 export class HttpOperateurs extends OperateursPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
-  private cachedPostes: readonly PosteHabilitable[] | undefined;
 
   override async referentiel(): Promise<readonly Operateur[]> {
     try {
@@ -113,12 +112,8 @@ export class HttpOperateurs extends OperateursPort {
   }
 
   override async postesHabilitables(): Promise<readonly PosteHabilitable[]> {
-    if (this.cachedPostes !== undefined) {
-      return this.cachedPostes;
-    }
     try {
-      this.cachedPostes = await this.readAllPostes();
-      return this.cachedPostes;
+      return await this.readAllPostes();
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
