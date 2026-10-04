@@ -64,6 +64,15 @@ const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], r
   && recu.adresse.pointage === reference.adresse.pointage.pointage
   && recu.revisionDeDepart === reference.version;
 
+const canonicalReceiptMatchesReference = (
+  confirmation: components['schemas']['RestConfirmationEnregistree'],
+  reference: ReferenceApercu,
+): boolean =>
+  receiptMatchesReference(confirmation.recu, reference)
+  && confirmation.dossier.adresse.suivi === reference.adresse.suivi.suivi
+  && confirmation.dossier.adresse.pointage === reference.adresse.pointage.pointage
+  && confirmation.dossier.revision >= confirmation.recu.revisionEnregistree;
+
 const isConcurrentRefusal = (urn: string | undefined): boolean =>
   urn === 'urn:glm:erreur:atelier:apercu-obsolete' || urn === 'urn:glm:erreur:atelier:saisie-concurrente';
 
@@ -106,7 +115,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
         body: { commande: reference.commande, reference: reference.reference },
       });
       if (resultat.kind === 'NON_ATTESTEE') return { kind: 'ISSUE_INCONNUE' };
-      if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
+      if (!canonicalReceiptMatchesReference(resultat, reference)) throw new Error('Reçu de confirmation incohérent.');
       return { kind: 'APPLIQUE', dossier: toDossierDansPerimetre(resultat.dossier) };
     } catch (failure: unknown) {
       return toActRefusal(failure);
@@ -119,7 +128,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
         pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },
       });
       if (resultat.kind === 'NON_ATTESTEE') return { kind: 'NON_ATTESTE' };
-      if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
+      if (!canonicalReceiptMatchesReference(resultat, reference)) throw new Error('Reçu de confirmation incohérent.');
       return { kind: 'ATTESTE', dossier: toDossierDansPerimetre(resultat.dossier) };
     } catch (failure: unknown) {
       const erreur = findApiErrorIn(failure);

@@ -301,6 +301,23 @@ describe('Beyond the contract: HTTP conflict actes', () => {
 
   it.each(
     [
+      { nom: 'follow-up', changement: { adresse: { suivi: 'autre-suivi', pointage: 'fin-17' } } },
+      { nom: 'anchor', changement: { adresse: { suivi: 'suivi-camille', pointage: 'autre-pointage' } } },
+      { nom: 'registered revision', changement: { revision: 7 } },
+    ].flatMap(changement => (['apply', 'verify'] as const).map(operation => ({ ...changement, operation }))),
+  )('should reject a canonical dossier with an inconsistent $nom during $operation', async ({ changement, operation }) => {
+    const confirmation = confirmationFixture();
+    confirmation.dossier = { ...confirmation.dossier, ...changement };
+
+    const reponse = application[operation](referenceFixture).catch((failure: unknown) => failure);
+    whenCanonicalAnswers(operation, confirmation);
+    const resultat = await reponse;
+
+    expect(resultat).toEqual(new Error('Reçu de confirmation incohérent.'));
+  });
+
+  it.each(
+    [
       { nom: 'command', changement: { commande: 'autre-commande' } },
       { nom: 'address', changement: { adresse: { suivi: 'suivi-camille', pointage: 'autre-pointage' } } },
       { nom: 'initial revision', changement: { revisionDeDepart: 6 } },
