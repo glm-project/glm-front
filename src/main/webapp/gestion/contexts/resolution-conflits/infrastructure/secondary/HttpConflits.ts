@@ -89,24 +89,30 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
   }
 
   async preview(adresse: AdresseDossier, version: number, acte: ActeResolution): Promise<ResultatApercu> {
-    const commande = crypto.randomUUID();
-    const apercu = await this.api.write('/api/atelier/suivis/{id}/conflits/{pointage}/apercus', {
-      pathParams: { id: adresse.suivi.suivi, pointage: adresse.pointage.pointage },
-      body: { commande, revision: version, acte: toRestActe(acte) },
-    });
-    if (!previewMatchesRequest(apercu, { adresse, commande, version, acte })) throw new Error('Réponse d’aperçu incohérente.');
-    return {
-      kind: 'APERCU',
-      apercu: {
-        adresse,
-        commande: apercu.commande,
-        reference: apercu.reference,
-        version: apercu.revision,
-        acte,
-        avant: toDossierDansPerimetre(apercu.avant),
-        apres: toDossierDansPerimetre(apercu.apres),
-      },
-    };
+    try {
+      const commande = crypto.randomUUID();
+      const apercu = await this.api.write('/api/atelier/suivis/{id}/conflits/{pointage}/apercus', {
+        pathParams: { id: adresse.suivi.suivi, pointage: adresse.pointage.pointage },
+        body: { commande, revision: version, acte: toRestActe(acte) },
+      });
+      if (!previewMatchesRequest(apercu, { adresse, commande, version, acte })) throw new Error('Réponse d’aperçu incohérente.');
+      return {
+        kind: 'APERCU',
+        apercu: {
+          adresse,
+          commande: apercu.commande,
+          reference: apercu.reference,
+          version: apercu.revision,
+          acte,
+          avant: toDossierDansPerimetre(apercu.avant),
+          apres: toDossierDansPerimetre(apercu.apres),
+        },
+      };
+    } catch (failure: unknown) {
+      const erreur = findApiErrorIn(failure);
+      if (erreur?.urn === 'urn:glm:erreur:atelier:apercu-invalide') return { kind: 'REFUS', raison: erreur.message };
+      throw failure;
+    }
   }
 
   override async list(filtre: FiltreConflits): Promise<PageConflits> {

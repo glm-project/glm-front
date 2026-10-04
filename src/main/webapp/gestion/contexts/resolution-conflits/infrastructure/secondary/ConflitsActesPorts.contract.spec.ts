@@ -137,6 +137,15 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { acte } });
   });
 
+  it('should expose a known invalid-preview refusal without describing an API limitation', async () => {
+    const demande = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
+
+    whenRequestFails('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus', 'apercu-invalide', 400, 'Aperçu invalide');
+    const resultat = await demande;
+
+    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Aperçu invalide' });
+  });
+
   it.each([
     { nom: 'command', changement: { commande: 'autre-commande' } },
     { nom: 'address', changement: { adresse: { suivi: 'suivi-camille', pointage: 'autre-pointage' } } },
@@ -239,6 +248,10 @@ describe('Beyond the contract: HTTP conflict actes', () => {
   const whenCanonicalAnswers = (operation: 'apply' | 'verify', resultat: components['schemas']['RestConfirmationDeResolution']): void => {
     if (operation === 'apply') whenConfirmationAnswers(resultat);
     else whenReceiptAnswers(resultat);
+  };
+
+  const whenRequestFails = (url: string, code: string, status: number, message: string): void => {
+    server.expectOne(url).flush({ type: `urn:glm:erreur:atelier:${code}`, message }, { status, statusText: 'Refused' });
   };
 
   const whenReceiptAnswers = (resultat: components['schemas']['RestConfirmationDeResolution']): void => {
