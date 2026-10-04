@@ -59,6 +59,17 @@ const demonstrationAdapterFixture = (): InMemoryConflits => {
 };
 
 describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }])('$nom resolution ports', ({ adapterFixture }) => {
+  it('should retain an unattested receipt before confirmation without changing the dossier', async () => {
+    const adapter = adapterFixture();
+    const initial = dossierFixture(await adapter.read(adresseFixture));
+    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+
+    const resultat = await adapter.verify(apercu);
+    const lecture = await adapter.read(adresseFixture);
+
+    expect(resultat).toEqual({ kind: 'NON_ATTESTE' });
+    expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
+  });
   it('should expose the command and address with the preview reference', async () => {
     const adapter = adapterFixture();
     const initial = dossierFixture(await adapter.read(adresseFixture));

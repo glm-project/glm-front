@@ -224,6 +224,15 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { acte: correctionFixture } });
   });
 
+  it('should reject an echoed acte of another kind instead of allowing confirmation', async () => {
+    const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
+
+    whenPreviewAnswers(acteFixture, { acte: { kind: 'REGULARISATION', fait: correctionRecueFixture.fait } });
+    const resultat = await apercu;
+
+    expect(resultat).toEqual(new Error('Réponse d’aperçu incohérente.'));
+  });
+
   it('should preserve an authoritative remaining conflict even when the proposed result cancels the anchor', async () => {
     const apercu = preview.preview(adresseFixture, 7, acteFixture);
 
