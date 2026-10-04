@@ -32,8 +32,7 @@ import { temoinsConflits } from './TemoinsConflits';
 
 const adresseKey = (adresse: AdresseDossier): string => `${adresse.suivi.suivi}/${adresse.pointage.pointage}`;
 
-interface RecuSimule {
-  readonly version: number;
+interface RecuSimule extends ReferenceApercu {
   readonly dossier: DossierConflit;
 }
 
@@ -167,7 +166,13 @@ export class InMemoryConflits
     const refus = this.confirmationFailure(reference, apercu);
     if (refus !== undefined) return refus;
     this.install(apercu.apres);
-    this.recus.set(reference.reference, { version: apercu.version, dossier: apercu.apres });
+    this.recus.set(reference.reference, {
+      adresse: apercu.adresse,
+      commande: apercu.commande,
+      reference: apercu.reference,
+      version: apercu.version,
+      dossier: apercu.apres,
+    });
     for (const pointage of apercu.apres.journal.slice(apercu.avant.journal.length)) {
       this.adresses.set(adresseKey({ suivi: apercu.adresse.suivi, pointage: pointage.id }), adresseKey(apercu.apres.ligne.adresse));
     }
@@ -177,7 +182,7 @@ export class InMemoryConflits
   }
 
   private replay(reference: ReferenceApercu, recu: RecuSimule): ResultatApplication {
-    if (reference.version !== recu.version) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
     return { kind: 'APPLIQUE', dossier: recu.dossier };
   }
 
@@ -185,11 +190,13 @@ export class InMemoryConflits
     await new Promise(resolve => setTimeout(resolve));
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
     const recu = this.recus.get(reference.reference);
-    return recu === undefined ? { kind: 'NON_ATTESTE' } : { kind: 'ATTESTE', dossier: recu.dossier };
+    if (recu === undefined) return { kind: 'NON_ATTESTE' };
+    if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    return { kind: 'ATTESTE', dossier: recu.dossier };
   }
 
   private confirmationFailure(reference: ReferenceApercu, apercu: ApercuConflit): ResultatApplication | undefined {
-    if (reference.version !== apercu.version) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    if (!this.sameReference(reference, apercu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
     const versions = [...this.dossiers.values()]
       .filter(dossier => dossier.ligne.adresse.suivi.suivi === apercu.adresse.suivi.suivi)
       .map(dossier => dossier.version);
@@ -199,6 +206,14 @@ export class InMemoryConflits
       return { kind: 'CONCURRENCE' };
     }
     return undefined;
+  }
+
+  private sameReference(reference: ReferenceApercu, attendu: ReferenceApercu): boolean {
+    return (
+      reference.version === attendu.version
+      && reference.commande === attendu.commande
+      && adresseKey(reference.adresse) === adresseKey(attendu.adresse)
+    );
   }
 
   private install(dossier: DossierConflit): void {

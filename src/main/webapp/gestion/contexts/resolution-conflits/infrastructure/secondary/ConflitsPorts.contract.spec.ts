@@ -54,6 +54,36 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       expect(apercu.adresse).toEqual(adresseFixture);
       expect(apercu).toHaveProperty('commande', expect.any(String));
     });
+    it.each([
+      { nom: 'command', changement: { commande: 'une-autre-commande' } },
+      { nom: 'address', changement: { adresse: { ...adresseFixture, pointage: new PointageConflitId('un-autre-pointage') } } },
+    ])('should refuse an altered $nom when confirming a preview', async ({ changement }) => {
+      const adapter = adapterFixture();
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+      const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+
+      const resultat = await adapter.apply({ ...apercu, ...changement });
+      const lecture = await adapter.read(adresseFixture);
+
+      expect(resultat).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
+      expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
+    });
+    it.each([
+      { nom: 'command', changement: { commande: 'une-autre-commande' } },
+      { nom: 'address', changement: { adresse: { ...adresseFixture, pointage: new PointageConflitId('un-autre-pointage') } } },
+      { nom: 'version', changement: { version: 42 } },
+    ])('should refuse to attest or replay a receipt with an altered $nom', async ({ changement }) => {
+      const adapter = adapterFixture();
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+      const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+      await adapter.apply(apercu);
+
+      const verification = await adapter.verify({ ...apercu, ...changement });
+      const repetition = await adapter.apply({ ...apercu, ...changement });
+
+      expect(verification).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
+      expect(repetition).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
+    });
     it('should keep the independent work unresolved before choosing between its simultaneous finishes', async () => {
       const lecture: ConflitsReadPort = adapterFixture();
       const adresse = { suivi: new SuiviConflitId('demo-retroactif'), pointage: new PointageConflitId('fin-tour-10-bis') };
