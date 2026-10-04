@@ -153,7 +153,7 @@ export class DossierConflitPage {
 
   protected labelForActivite(id: string, dossier: DossierConflit): string {
     const activite = dossier.activites.find(activite => activite.id.activite === id);
-    if (activite !== undefined) return activite.libelle;
+    if (activite !== undefined) return this.libelleActivite(activite);
     const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
     if (origine !== undefined) return `${this.libelles.types[origine.fait.type]} à ${origine.fait.instant.slice(11, 19)}`;
     return `Activité ${id}`;

@@ -677,6 +677,18 @@ describe('Conflict dossier page', () => {
     thenDetailedFactIsOpen();
   });
 
+  it('should name the received activity interval in the journal target and correction choices', async () => {
+    givenAnAuthoritativeActivity('TERMINEE', 'PT4H');
+    await whenRendering();
+
+    await whenClicking('conflit-detail');
+    await whenClicking('conflit-corriger');
+
+    const libelle = 'Travail · 2026-09-14T08:00:00.123456789+02:00 → 2026-09-14T17:00:00+02:00';
+    thenTextContains('conflit-pointage', libelle);
+    thenTargetChoiceIs('travail-8', libelle);
+  });
+
   it('should let the manager select the named non-conformity activity and preview its exact reference', async () => {
     const dossier = dossierConflitFixture();
     read.result = {

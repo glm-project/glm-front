@@ -230,7 +230,7 @@
             </option>
             } @for (activite of dossier.activites; track activite.id.activite) {
             <option [value]="activite.id.activite" [selected]="proposition.fait.activiteVisee === activite.id.activite">
-              {{ activite.libelle }}
+              {{ libelleActivite(activite) }}
             </option>
             }
           </select>
