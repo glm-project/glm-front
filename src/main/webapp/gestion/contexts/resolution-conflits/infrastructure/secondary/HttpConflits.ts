@@ -12,7 +12,7 @@ import {
   ResultatVerification,
 } from '../../domain/acte/ConflitsActesPorts';
 import { InstantPointage } from '../../domain/acte/InstantPointage';
-import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
+import { PropositionResolution } from '../../domain/acte/ResolutionDuConflit';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { AdresseDossier, FiltreConflits, LectureDossier, PAGE_SIZE_CONFLITS, PageConflits } from '../../domain/dossier/DossierConflit';
 import { toDossier, toDossierDansPerimetre, toLigne, toPointage } from './DossierConflitHttp';
@@ -62,7 +62,7 @@ const previewMatchesRequest = (
   && new InstantPointage(apercu.apres.evaluation).compareTo(new InstantPointage(apercu.evaluation)) === 0
   && echoRepresentsProposition(apercu.acte, request.acte);
 
-const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], reference: ReferenceApercu): boolean =>
+const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], reference: PropositionResolution): boolean =>
   recu.commande === reference.commande
   && recu.adresse.suivi === reference.adresse.suivi.suivi
   && recu.adresse.pointage === reference.adresse.pointage.pointage
@@ -70,7 +70,7 @@ const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], r
 
 const canonicalReceiptMatchesReference = (
   confirmation: components['schemas']['RestConfirmationEnregistree'],
-  reference: ReferenceApercu,
+  reference: PropositionResolution,
 ): boolean =>
   receiptMatchesReference(confirmation.recu, reference)
   && confirmation.dossier.adresse.suivi === reference.adresse.suivi.suivi
@@ -113,7 +113,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  async apply(reference: ReferenceApercu): Promise<ResultatApplication> {
+  async apply(reference: PropositionResolution): Promise<ResultatApplication> {
     try {
       const resultat = await this.api.write('/api/atelier/suivis/{suivi}/confirmations-de-resolution', {
         pathParams: { suivi: reference.adresse.suivi.suivi },
@@ -127,7 +127,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
     }
   }
 
-  async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
+  async verify(reference: PropositionResolution): Promise<ResultatVerification> {
     try {
       const resultat = await this.api.read('/api/atelier/suivis/{suivi}/confirmations-de-resolution/{commande}', {
         pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },

@@ -3,7 +3,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { PreparationActe } from '@/gestion/contexts/resolution-conflits/application/PreparationActe';
 import { ActeResolution } from '@/gestion/contexts/resolution-conflits/domain/acte/ActeResolution';
 import { ApplicationActePort, PrevisualisationConflitPort } from '@/gestion/contexts/resolution-conflits/domain/acte/ConflitsActesPorts';
-import { ReferenceApercu } from '@/gestion/contexts/resolution-conflits/domain/acte/ResolutionDuConflit';
+import { PropositionResolution } from '@/gestion/contexts/resolution-conflits/domain/acte/ResolutionDuConflit';
 import { SaisieActe } from '@/gestion/contexts/resolution-conflits/domain/acte/SaisieActe';
 import { ConflitsReadPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/ConflitsRightsPort';
@@ -18,7 +18,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 
 const adresseFixture: AdresseDossier = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
 const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
-const referenceFixture: ReferenceApercu = {
+const referenceFixture: PropositionResolution = {
   adresse: adresseFixture,
   commande: '80000000-0000-0000-0000-000000000001',
   reference: 'opaque-reference',

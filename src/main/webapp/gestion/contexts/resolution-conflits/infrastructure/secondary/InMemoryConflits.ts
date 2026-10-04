@@ -8,7 +8,7 @@ import {
   ResultatApplication,
   ResultatVerification,
 } from '../../domain/acte/ConflitsActesPorts';
-import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
+import { PropositionResolution } from '../../domain/acte/ResolutionDuConflit';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../domain/dossier/ConflitsRightsPort';
@@ -32,7 +32,7 @@ import { temoinsConflits } from './TemoinsConflits';
 
 const adresseKey = (adresse: AdresseDossier): string => `${adresse.suivi.suivi}/${adresse.pointage.pointage}`;
 
-interface RecuSimule extends ReferenceApercu {
+interface RecuSimule extends PropositionResolution {
   readonly dossier: DossierConflit;
 }
 
@@ -155,7 +155,7 @@ export class InMemoryConflits
     return [...journal, ...remplacements];
   }
 
-  async apply(reference: ReferenceApercu): Promise<ResultatApplication> {
+  async apply(reference: PropositionResolution): Promise<ResultatApplication> {
     await new Promise(resolve => setTimeout(resolve));
     if (this.incidents.delete('PANNE_CONFIRMATION')) return { kind: 'ECHEC_CERTAIN' };
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
@@ -181,12 +181,12 @@ export class InMemoryConflits
     return { kind: 'APPLIQUE', dossier: apercu.apres };
   }
 
-  private replay(reference: ReferenceApercu, recu: RecuSimule): ResultatApplication {
+  private replay(reference: PropositionResolution, recu: RecuSimule): ResultatApplication {
     if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
     return { kind: 'APPLIQUE', dossier: recu.dossier };
   }
 
-  async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
+  async verify(reference: PropositionResolution): Promise<ResultatVerification> {
     await new Promise(resolve => setTimeout(resolve));
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
     const recu = this.recus.get(reference.reference);
@@ -195,7 +195,7 @@ export class InMemoryConflits
     return { kind: 'ATTESTE', dossier: recu.dossier };
   }
 
-  private confirmationFailure(reference: ReferenceApercu, apercu: ApercuConflit): ResultatApplication | undefined {
+  private confirmationFailure(reference: PropositionResolution, apercu: ApercuConflit): ResultatApplication | undefined {
     if (!this.sameReference(reference, apercu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
     const versions = [...this.dossiers.values()]
       .filter(dossier => dossier.ligne.adresse.suivi.suivi === apercu.adresse.suivi.suivi)
@@ -208,7 +208,7 @@ export class InMemoryConflits
     return undefined;
   }
 
-  private sameReference(reference: ReferenceApercu, attendu: ReferenceApercu): boolean {
+  private sameReference(reference: PropositionResolution, attendu: PropositionResolution): boolean {
     return (
       reference.version === attendu.version
       && reference.commande === attendu.commande

@@ -10,7 +10,7 @@ import {
   ResultatApplication,
   ResultatVerification,
 } from '../domain/acte/ConflitsActesPorts';
-import { ReferenceApercu } from '../domain/acte/ResolutionDuConflit';
+import { PropositionResolution } from '../domain/acte/ResolutionDuConflit';
 import { SaisieActe } from '../domain/acte/SaisieActe';
 import { AdresseDossier, DossierConflit } from '../domain/dossier/DossierConflit';
 import { ElementConflitId } from '../domain/dossier/ElementConflitId';
@@ -85,7 +85,7 @@ class PrevisualisationFixture extends PrevisualisationConflitPort {
   }
 }
 class ApplicationFixture extends ApplicationActePort {
-  readonly requests: ReferenceApercu[] = [];
+  readonly requests: PropositionResolution[] = [];
   pending: PendingIoFixture<ResultatApplication> | undefined;
   verification: ResultatVerification = { kind: 'ATTESTE', dossier: { ...dossierFixture, version: 2, enConflit: false } };
   verificationFailure: Error | undefined;
@@ -98,7 +98,7 @@ class ApplicationFixture extends ApplicationActePort {
     return this.verification;
   }
 
-  override apply(apercu: ReferenceApercu): Promise<ResultatApplication> {
+  override apply(apercu: PropositionResolution): Promise<ResultatApplication> {
     this.requests.push(apercu);
     return requiredFixture(this.pending, 'application response').arrive();
   }

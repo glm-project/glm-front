@@ -1,8 +1,8 @@
 import { AdresseDossier, DossierConflit } from '../dossier/DossierConflit';
 import { ActeResolution } from './ActeResolution';
-import { ReferenceApercu } from './ResolutionDuConflit';
+import { PropositionResolution } from './ResolutionDuConflit';
 
-export interface ApercuConflit extends ReferenceApercu {
+export interface ApercuConflit extends PropositionResolution {
   readonly acte: ActeResolution;
   readonly avant: DossierConflit;
   readonly apres: DossierConflit;
@@ -30,6 +30,6 @@ export abstract class PrevisualisationConflitPort {
 }
 
 export abstract class ApplicationActePort {
-  abstract apply(apercu: ReferenceApercu): Promise<ResultatApplication>;
-  abstract verify(apercu: ReferenceApercu): Promise<ResultatVerification>;
+  abstract apply(apercu: PropositionResolution): Promise<ResultatApplication>;
+  abstract verify(apercu: PropositionResolution): Promise<ResultatVerification>;
 }

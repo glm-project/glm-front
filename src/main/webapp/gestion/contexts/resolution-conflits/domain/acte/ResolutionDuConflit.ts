@@ -2,7 +2,7 @@ import { AdresseDossier, DossierConflit } from '../dossier/DossierConflit';
 import { ApercuConflit } from './ConflitsActesPorts';
 import { SaisieActe } from './SaisieActe';
 
-export interface ReferenceApercu {
+export interface PropositionResolution {
   readonly adresse: AdresseDossier;
   readonly commande: string;
   readonly version: number;
@@ -49,7 +49,7 @@ export class ResolutionDuConflit {
     return new ResolutionDuConflit(this.saisie.afterChange(changement));
   }
 
-  confirmation(): ReferenceApercu | undefined {
+  confirmation(): PropositionResolution | undefined {
     return this.apercu;
   }
 }

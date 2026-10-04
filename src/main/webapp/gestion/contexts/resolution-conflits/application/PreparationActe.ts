@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable, signal } from '@angular/core';
 import { ApplicationActePort, PrevisualisationConflitPort, ResultatApercu, ResultatApplication } from '../domain/acte/ConflitsActesPorts';
-import { ReferenceApercu, ResolutionDuConflit } from '../domain/acte/ResolutionDuConflit';
+import { PropositionResolution, ResolutionDuConflit } from '../domain/acte/ResolutionDuConflit';
 import { ChangementSaisie, SaisieActe } from '../domain/acte/SaisieActe';
 import { DossierConflit } from '../domain/dossier/DossierConflit';
 
@@ -20,7 +20,7 @@ export class PreparationActe {
   readonly resolution = this.actuelle.asReadonly();
   readonly operation = this.operationActuelle.asReadonly();
   private demande = Symbol('demande');
-  private referenceEnAttente: ReferenceApercu | undefined;
+  private referenceEnAttente: PropositionResolution | undefined;
 
   choose(saisie: SaisieActe): void {
     if (this.confirmationOutcomeIsPending()) return;
@@ -110,7 +110,7 @@ export class PreparationActe {
     await this.confirmReference(reference);
   }
 
-  private async confirmReference(apercu: ReferenceApercu): Promise<void> {
+  private async confirmReference(apercu: PropositionResolution): Promise<void> {
     this.referenceEnAttente = apercu;
     this.operationActuelle.set({ kind: 'CONFIRMATION' });
     const demande = Symbol('confirmation');

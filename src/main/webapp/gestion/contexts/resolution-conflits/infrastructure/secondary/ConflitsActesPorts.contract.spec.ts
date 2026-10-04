@@ -7,7 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ActeResolution } from '../../domain/acte/ActeResolution';
 import { ApplicationActePort, PrevisualisationConflitPort } from '../../domain/acte/ConflitsActesPorts';
-import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
+import { PropositionResolution } from '../../domain/acte/ResolutionDuConflit';
 import { AdresseDossier } from '../../domain/dossier/DossierConflit';
 import { PointageConflitId } from '../../domain/dossier/PointageConflitId';
 import { SuiviConflitId } from '../../domain/dossier/SuiviConflitId';
@@ -15,7 +15,7 @@ import { HttpConflits } from './HttpConflits';
 
 const adresseFixture: AdresseDossier = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
 const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
-const referenceFixture: ReferenceApercu = {
+const referenceFixture: PropositionResolution = {
   adresse: adresseFixture,
   commande: '80000000-0000-0000-0000-000000000001',
   reference: 'opaque-reference',
