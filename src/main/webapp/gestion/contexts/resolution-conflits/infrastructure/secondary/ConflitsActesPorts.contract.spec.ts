@@ -224,6 +224,17 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { acte: correctionFixture } });
   });
 
+  it('should reject preview consequences belonging to another addressed dossier', async () => {
+    const apres = dossierFixture('ANCRE_ANNULEE', 8);
+    apres.adresse = { suivi: 'autre-suivi', pointage: 'fin-17' };
+
+    const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
+    whenPreviewAnswers(acteFixture, { apres });
+    const resultat = await apercu;
+
+    expect(resultat).toEqual(new Error('Réponse d’aperçu incohérente.'));
+  });
+
   it('should reject an echoed acte of another kind instead of allowing confirmation', async () => {
     const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
 

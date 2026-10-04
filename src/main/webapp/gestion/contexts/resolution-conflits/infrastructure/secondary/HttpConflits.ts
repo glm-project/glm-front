@@ -56,6 +56,8 @@ const previewMatchesRequest = (
   && apercu.adresse.pointage === request.adresse.pointage.pointage
   && apercu.revision === request.version
   && apercu.reference !== ''
+  && apercu.apres.adresse.suivi === request.adresse.suivi.suivi
+  && apercu.apres.adresse.pointage === request.adresse.pointage.pointage
   && echoRepresentsProposition(apercu.acte, request.acte);
 
 const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], reference: ReferenceApercu): boolean =>
