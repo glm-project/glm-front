@@ -8,7 +8,14 @@ import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
 import { DemonstrationConflitsPort } from '../../../domain/dossier/DemonstrationConflitsPort';
-import { ActiviteConflit, AdresseDossier, ChoixGuide, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
+import {
+  ActiviteConflit,
+  AdresseDossier,
+  ChoixGuide,
+  DossierConflit,
+  LigneConflit,
+  PointageConflit,
+} from '../../../domain/dossier/DossierConflit';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
@@ -71,6 +78,13 @@ export class DossierConflitPage {
 
   protected explicationChoix(choix: ChoixGuide): string {
     return choix.code === undefined ? choix.explication : this.libelles.choix[choix.code].explication;
+  }
+
+  protected libelleContinuation(ligne: LigneConflit): string {
+    return (
+      ligne.explication
+      || `${ligne.designation} · ${ligne.operateur || ligne.operateurId} · ${ligne.date} · ${ligne.nombrePointages} pointages`
+    );
   }
 
   protected tempsActivite(activite: ActiviteConflit): string {

@@ -305,6 +305,47 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-activite', 'À résoudre · Temps à résoudre');
   });
 
+  it('should label an explicit continuation from its authoritative sequence instead of presenting an empty link', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, continuations: [{ ...dossier.ligne, explication: '', nombrePointages: 3 }] },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-continuation', 'M-042 · Camille Martin · 14 septembre 2026 · 3 pointages');
+  });
+
+  it.each([
+    { operateur: '', operateurId: 'op-absent', explication: '', attendu: 'M-042 · op-absent · 14 septembre 2026 · 3 pointages' },
+    {
+      operateur: 'Camille Martin',
+      operateurId: 'op-camille',
+      explication: 'Autre fin contradictoire.',
+      attendu: 'Autre fin contradictoire.',
+    },
+  ])('should retain the continuation information $attendu', async ({ operateur, operateurId, explication, attendu }) => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, continuations: [{ ...dossier.ligne, operateur, operateurId, explication, nombrePointages: 3 }] },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-continuation', attendu);
+  });
+
+  it('should distinguish a missing workstation from an unresolved workstation in the heading', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, ligne: { ...dossier.ligne, poste: '' } } };
+
+    await whenRendering();
+
+    thenHeadingContains('Camille Martin · Sans poste · 14 septembre 2026');
+  });
+
   it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
     read.result = {
       kind: 'DOSSIER',

@@ -310,7 +310,7 @@
           [routerLink]="['/conflits', suite.adresse.suivi.suivi]"
           [queryParams]="{ pointage: suite.adresse.pointage.pointage }"
           queryParamsHandling="merge"
-          >{{ suite.explication }}</a
+          >{{ libelleContinuation(suite) }}</a
         >
         }
       </nav>
