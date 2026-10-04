@@ -37,7 +37,7 @@ fonctionne indépendamment de cette lecture. `NON_ATTESTE` et les erreurs techni
 inconnue : toute nouvelle décision reste bloquée. La reprise explicite réutilise la même commande et
 la même référence ; seul un résultat canonique attesté conclut l'écriture.
 
-La composition de démonstration indépendante conserve un seul InMemory pendant les navigations.
+La composition de démonstration des tests conserve un seul InMemory pendant les navigations.
 Il rejoue les [trajectoires bornées](SCENARIOS.md), sans moteur général d'interprétation ni
 stockage durable. La démonstration permet de réinitialiser et de déclencher panne ou concurrence.
 Une commande hors trajectoire donne une limitation explicite. Aucun identifiant réel provenant

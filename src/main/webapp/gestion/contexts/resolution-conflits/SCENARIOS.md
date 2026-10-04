@@ -131,7 +131,7 @@ se font par les lectures ; aucune assertion n'inspecte l'état privé du simulat
 
 ## Parcours HTTP réel
 
-La composition normale utilise les trois ports HTTP ; la démonstration dispose de son propre graphe.
+La composition normale utilise les trois ports HTTP ; les tests de démonstration disposent de leur propre graphe dans les utilitaires de tests.
 Les tests navigateur choisissent explicitement leur composition et réutilisent ces graphes, avec des
 réponses aux limites HTTP pour les parcours réels. Le backend épinglé dans `.glm-back-revision` fournit
 le contrat généré ; les types wire restent au secondaire.

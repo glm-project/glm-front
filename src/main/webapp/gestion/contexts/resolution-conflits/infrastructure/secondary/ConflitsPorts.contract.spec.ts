@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { resolutionConflitsDemonstrationProvider } from '@/gestion/resolution-conflits-demonstration.provider';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { resolutionConflitsDemonstrationProvider } from '@test/utils/gestion/resolution-conflits/resolution-conflits-demonstration.provider';
 import { ApercuConflit, ApplicationActePort, PrevisualisationConflitPort, ResultatApercu } from '../../domain/acte/ConflitsActesPorts';
 import { SaisieActe } from '../../domain/acte/SaisieActe';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';

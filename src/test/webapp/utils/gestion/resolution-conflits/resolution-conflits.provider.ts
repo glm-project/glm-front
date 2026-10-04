@@ -1,7 +1,7 @@
 import { ConflitsRightsPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/ConflitsRightsPort';
-import { resolutionConflitsDemonstrationProvider } from '@/gestion/resolution-conflits-demonstration.provider';
 import { resolutionConflitsHttpProvider } from '@/gestion/resolution-conflits-http.provider';
 import { Provider } from '@angular/core';
+import { resolutionConflitsDemonstrationProvider } from './resolution-conflits-demonstration.provider';
 
 declare global {
   interface Window {
