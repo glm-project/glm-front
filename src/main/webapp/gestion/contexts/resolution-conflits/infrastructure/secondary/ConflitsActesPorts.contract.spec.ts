@@ -37,6 +37,7 @@ const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
 };
 const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierConflit'] => ({
   kind,
+  enConflit: kind === 'EN_CONFLIT',
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
   revision,
   evaluation: '2026-10-04T10:00:00Z',
@@ -45,6 +46,7 @@ const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number):
   activites: [],
   diagnostics: [],
   choix: [],
+  continuations: [],
   suivi: {
     id: 'suivi-camille',
     element: 'moule-42',

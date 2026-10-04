@@ -317,6 +317,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     return {
       ...dossier,
       kind: 'EN_CONFLIT',
+      enConflit: true,
       sequence: {
         operateurId: 'op-camille',
         posteId: 'poste-dmu',
@@ -379,10 +380,12 @@ describe('Beyond the contract: HTTP conflict reading', () => {
 
   const dossierAnnuleFixture = (): components['schemas']['RestDossierConflit'] => ({
     kind: 'ANCRE_ANNULEE',
+    enConflit: false,
     adresse: ligneFixture.adresse,
     revision: 8,
     evaluation: '2026-09-15T08:00:00Z',
     choix: [],
+    continuations: [],
     diagnostics: [],
     activites: [],
     suivi: {

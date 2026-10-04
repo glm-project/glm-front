@@ -38,7 +38,14 @@ export interface ActiviteConflit {
 
 export interface DiagnosticConflit {
   readonly pointage: PointageConflitId;
-  readonly raison: 'CIBLE_REMPLACEE' | 'CIBLE_DEJA_TERMINEE';
+  readonly raison:
+    | 'CIBLE_REMPLACEE'
+    | 'CIBLE_DEJA_TERMINEE'
+    | 'GESTE_AVANT_OUVERTURE'
+    | 'OUVRANT_ANNULE'
+    | 'TRANSITION_MEME_CATEGORIE'
+    | 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE'
+    | 'CONTRADICTION_REGULARISATION';
   readonly cible: {
     readonly activite: ActiviteConflitId;
     readonly ouvrant?: PointageConflitId;
