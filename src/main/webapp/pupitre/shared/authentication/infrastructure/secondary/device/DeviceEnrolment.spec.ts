@@ -456,12 +456,15 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     thenSessionIs(authentication, anotherCompanyTokenFixture, 'entreprise-b');
   });
 
-  it('should clear credentials revoked in another tab while retaining its company', async () => {
+  it('should request visible enrolment after synchronizing a session retired in another tab while retaining its company', async () => {
     await givenAnEnrolledSession();
     await givenAnotherTabLoggedOut();
+    const requirement = authentication.waitForRequiredEnrolment();
 
     await whenSynchronizingTheSession();
+    requirement.stop();
 
+    expect(await requirement.outcome).toBe('REQUIRED');
     thenSessionIs(authentication, undefined, 'entreprise-a');
   });
 
@@ -481,12 +484,15 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     thenSessionIs(authentication, undefined, 'entreprise-a');
   });
 
-  it('should make no refresh request after another tab removed the enrolment', async () => {
+  it('should request visible enrolment without refreshing after another tab removed the durable enrolment', async () => {
     await givenAnEnrolledSession();
     givenAnotherTabRemovedTheEnrolment();
+    const requirement = authentication.waitForRequiredEnrolment();
 
     await whenTheRenewalIsDue();
+    requirement.stop();
 
+    expect(await requirement.outcome).toBe('REQUIRED');
     thenSessionIs(authentication, undefined, undefined);
   });
 

@@ -121,6 +121,8 @@ A transient renewal refusal keeps the unexpired access token and retries later. 
 matching credential and requests visible enrolment while retaining the selected tenant. `DeviceAuthorizationPort`
 provides a cancellable wait for that requirement, retained until the caller starts enrolment. `PupitreRuntime`
 starts observing loss before beginning its initial enrolment, then drives `EnrolementDuPupitre.enroler()` after each loss.
+When synchronization or background renewal discovers that another tab removed the durable credential,
+the adapter requests the same visible enrolment and adopts the tenant still selected in storage.
 The adapter owns credential retirement; the runtime owns restarting the visible lifecycle outside the
 session locks. Its destruction cancels the current wait. Logout conditionally
 removes the session it ended, so it cannot erase a newer enrolment.

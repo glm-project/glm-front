@@ -82,6 +82,29 @@ export const givenEnrolledPupitreFixture = (fixture: EnrolledPupitreFixture): vo
   cy.window().then(window => persistPupitreFixture(window, { ...fixture, evenements: [] }));
 };
 
+const retirePupitreSessionFixture = (window: Cypress.AUTWindow, entreprise: string): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    const request = window.indexedDB.open('glm-pupitre', 1);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction('documents', 'readwrite');
+      transaction.objectStore('documents').put({ tenant: entreprise }, 'enrolement');
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onabort = () => {
+        database.close();
+        reject(new Error('Retrait de la session fixture non conserve'));
+      };
+    };
+    request.onerror = () => reject(new Error('Stockage fixture inaccessible'));
+  });
+
+export const givenRetiredPupitreSessionFixture = (entreprise: string): void => {
+  cy.window().then(window => retirePupitreSessionFixture(window, entreprise));
+};
+
 export const clearPupitreStorageFixture = (): void => {
   cy.window().then(
     window =>

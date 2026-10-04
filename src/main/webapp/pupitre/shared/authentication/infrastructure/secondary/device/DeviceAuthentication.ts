@@ -159,10 +159,14 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     if (this.isSynchronizationUnnecessary(enrolment, stored)) {
       return;
     }
+    const authorizationWasLost = this.hasLostStoredSession(stored);
     clearTimeout(this.renewal);
     this.session = undefined;
     this.tenant = stored.tenant;
     this.openIfPresent(stored.session);
+    if (authorizationWasLost) {
+      this.enrolmentRequirements.request();
+    }
   }
 
   override currentToken(): string | undefined {
@@ -182,6 +186,10 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private matchesStoredEnrolment(stored: StoredDeviceCredentials): boolean {
     return SessionDAppareil.same(stored.session, this.session) && stored.tenant === this.tenant;
+  }
+
+  private hasLostStoredSession(stored: StoredDeviceCredentials): boolean {
+    return this.session !== undefined && stored.session === undefined;
   }
 
   override logout(): void {
@@ -279,8 +287,8 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     }
     const persisted = stored.session;
     if (persisted === undefined) {
-      this.session = undefined;
       this.tenant = stored.tenant;
+      this.requireEnrolment();
       return;
     }
     if (!persisted.hasSameRefreshTokenAs(session)) {
@@ -333,6 +341,10 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     if (this.session !== session) {
       return;
     }
+    this.requireEnrolment();
+  }
+
+  private requireEnrolment(): void {
     clearTimeout(this.renewal);
     this.session = undefined;
     this.enrolmentRequirements.request();

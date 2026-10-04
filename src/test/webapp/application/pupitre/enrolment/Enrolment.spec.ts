@@ -1,6 +1,11 @@
 import type { StaticResponse } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
-import { clearPupitreStorageFixture, givenEnrolledPupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
+import {
+  clearPupitreStorageFixture,
+  givenEnrolledPupitreFixture,
+  givenRetiredPupitreSessionFixture,
+  pupitreTokenFixture,
+} from '../../../utils/PupitreStorageFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 const OPENID_CONNECT = '**/realms/glmproject/protocol/openid-connect';
@@ -124,6 +129,28 @@ describe('Pupitre enrolment', () => {
     givenARevokedRefreshCredential();
 
     whenTheRestoredCredentialRenews();
+
+    thenTheCodeToApproveIsVisible();
+    thenTheValidationLinkIsScannable();
+    thenOnlyEnrolmentIsAvailable();
+  });
+
+  it('should show a new approval code when synchronization discovers a session retired in another tab', () => {
+    givenAnEnrolledPupitre();
+    givenRetiredPupitreSessionFixture(ENTREPRISE);
+
+    whenSynchronizingAfterAnotherTabRetiredTheSession();
+
+    thenTheCodeToApproveIsVisible();
+    thenTheValidationLinkIsScannable();
+    thenOnlyEnrolmentIsAvailable();
+  });
+
+  it('should show a new approval code when renewal discovers a session retired in another tab', () => {
+    givenAnEnrolledPupitre();
+    givenRetiredPupitreSessionFixture(ENTREPRISE);
+
+    whenRenewalDiscoversAnotherTabRetiredTheSession();
 
     thenTheCodeToApproveIsVisible();
     thenTheValidationLinkIsScannable();
@@ -285,6 +312,18 @@ const whenTheRestoredCredentialRenews = (): void => {
 const whenTheNetworkReturns = (): void => {
   cy.window().then(window => window.dispatchEvent(new Event('online')));
   cy.wait('@refusedWorkshop');
+  cy.wait('@deviceAuthorization');
+  cy.tick(0);
+};
+
+const whenSynchronizingAfterAnotherTabRetiredTheSession = (): void => {
+  cy.window().then(window => window.dispatchEvent(new Event('online')));
+  cy.wait('@deviceAuthorization');
+  cy.tick(0);
+};
+
+const whenRenewalDiscoversAnotherTabRetiredTheSession = (): void => {
+  cy.tick(5_000);
   cy.wait('@deviceAuthorization');
   cy.tick(0);
 };

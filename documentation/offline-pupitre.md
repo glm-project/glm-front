@@ -114,7 +114,8 @@ belongs to the enrolment, not to the runtime: it happens when the device becomes
 Tests use explicit completion signals for asynchronous exchanges; arbitrary waits hide ordering failures.
 
 The runtime also starts observing definitive loss of device authorization before starting its initial enrolment.
-After durable credential retirement it restarts the same visible enrolment, preserving company journals.
+After durable credential retirement, including its discovery during cross-tab synchronization or renewal,
+it restarts the same visible enrolment, preserving company journals.
 That wait is cancellable on destruction; it stays distinct from the network refresh triggers, because a
 temporary outage retains the existing device enrolment and offline workshop.
 
