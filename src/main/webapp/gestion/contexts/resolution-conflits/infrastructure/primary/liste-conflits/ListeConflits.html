@@ -103,7 +103,7 @@
                 >{{ ligne.poste || (ligne.posteId ? libelles.posteNonResolu + ' · ' + ligne.posteId : libelles.sansPoste) }}</span
               >
             </td>
-            <td class="max-w-md p-4">{{ ligne.explication }}</td>
+            <td class="max-w-md p-4">{{ ligne.explication || libelles.sequenceEnConflit }}</td>
             <td class="p-4 tabular-nums">{{ ligne.date }}<br />{{ ligne.nombrePointages }} pointages</td>
           </tr>
           }

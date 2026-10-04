@@ -166,6 +166,14 @@ describe('Conflict list', () => {
     expect(textOf('conflit-ligne')).not.toContain('Poste non résolu');
   });
 
+  it('should identify a conflicting sequence when the API supplies no presentation explanation', async () => {
+    portFixture.page = { lignes: [{ ...ligneFixture(), explication: '' }], total: 1, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Séquence en conflit');
+  });
+
   it('should distinguish no matching conflicts from an empty global list', async () => {
     givenAnAddress({ operateur: 'Camille', element: 'M-042', page: '2' });
 
