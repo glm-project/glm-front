@@ -8,7 +8,10 @@
   } @if (dossier(); as dossier) {
   <header class="mb-6">
     <h2 class="text-section">{{ dossier.ligne.designation }}</h2>
-    <p class="mt-1 text-body-sm text-ink-muted">{{ dossier.ligne.operateur }} · {{ dossier.ligne.poste }} · {{ dossier.ligne.date }}</p>
+    <p class="mt-1 text-body-sm text-ink-muted">
+      {{ dossier.ligne.operateur || libelles.operateurNonResolu + ' · ' + dossier.ligne.operateurId }} · {{ dossier.ligne.poste ||
+      (dossier.ligne.posteId ? libelles.posteNonResolu + ' · ' + dossier.ligne.posteId : libelles.sansPoste) }} · {{ dossier.ligne.date }}
+    </p>
     <p class="mt-2 text-body-sm" data-selector="conflit-cloture">
       {{ dossier.cloture ? libelles.cloture : libelles.ouvert }} @if (dossier.finCloture) { · {{ dossier.finCloture }} } · {{
       dossier.engagement }}

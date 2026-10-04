@@ -283,6 +283,19 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-cloture', 'Ouvert');
   });
 
+  it('should retain unresolved reference identities in the dossier heading', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, ligne: { ...dossier.ligne, operateur: '', poste: '', operateurId: 'op-absent', posteId: 'poste-absent' } },
+    };
+
+    await whenRendering();
+
+    thenHeadingContains('Opérateur non résolu · op-absent');
+    thenHeadingContains('Poste non résolu · poste-absent');
+  });
+
   it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
     read.result = {
       kind: 'DOSSIER',
@@ -922,6 +935,9 @@ describe('Conflict dossier page', () => {
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
+  };
+  const thenHeadingContains = (expected: string): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector('header')?.textContent).toContain(expected);
   };
   const thenTextDoesNotContain = (selector: string, expected: string): void => {
     expect(element(selector).textContent).not.toContain(expected);
