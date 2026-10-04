@@ -99,14 +99,18 @@ export class DossierConflitPage {
     const fait = pointage.fait;
     return {
       libelle: `${fait.instant} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
-      lien: this.router.serializeUrl(
-        this.router.createUrlTree([], {
-          relativeTo: this.route,
-          queryParamsHandling: 'preserve',
-          fragment: `pointage-${pointage.id.pointage}`,
-        }),
-      ),
+      lien: this.hrefForRepere(`pointage-${pointage.id.pointage}`),
     };
+  }
+
+  private hrefForRepere(repere: string): string {
+    return this.router.serializeUrl(
+      this.router.createUrlTree([], {
+        relativeTo: this.route,
+        queryParamsHandling: 'preserve',
+        fragment: repere,
+      }),
+    );
   }
 
   protected tempsActivite(activite: ActiviteConflit): string {
