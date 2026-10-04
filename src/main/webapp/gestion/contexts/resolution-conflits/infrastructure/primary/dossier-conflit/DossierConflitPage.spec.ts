@@ -273,6 +273,15 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-choix');
   });
 
+  it('should omit simulation controls when displaying a dossier without a demonstration port', async () => {
+    givenNoDemonstration();
+
+    await whenRendering();
+
+    thenAbsent('conflits-demo');
+    thenTextContains('conflit-cloture', 'Ouvert');
+  });
+
   it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
     read.result = {
       kind: 'DOSSIER',
@@ -858,6 +867,10 @@ describe('Conflict dossier page', () => {
       ...demonstration.automaticResponses,
     ]);
     await fixture.whenStable();
+  };
+
+  const givenNoDemonstration = (): void => {
+    TestBed.overrideProvider(DemonstrationConflitsPort, { useValue: null });
   };
 
   const whenRendering = async (): Promise<void> => {

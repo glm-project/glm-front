@@ -1,8 +1,9 @@
 <main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="dossier-heading">
   <a class="gestion-retour" routerLink="/conflits" [queryParams]="retour()" data-selector="conflit-retour">{{ libelles.retour }}</a>
   <h1 id="dossier-heading" class="mt-2 text-title">{{ libelles.dossier }}</h1>
+  @if (demonstration !== null) {
   <p class="mb-4 mt-2 text-body-sm text-ink-muted">{{ libelles.donneesFictives }}</p>
-  @if (lecture.isLoading()) {
+  } @if (lecture.isLoading()) {
   <p role="status">{{ libelles.chargement }}</p>
   } @if (dossier(); as dossier) {
   <header class="mb-6">
@@ -456,6 +457,7 @@
       }
     </ol>
   </section>
-  } }
+  } } @if (demonstration !== null) {
   <glm-demonstration-conflits [disabled]="occupe()" (changed)="reset()" />
+  }
 </main>

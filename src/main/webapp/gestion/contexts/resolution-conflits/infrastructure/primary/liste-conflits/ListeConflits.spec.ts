@@ -135,6 +135,15 @@ describe('Conflict list', () => {
     expect(present('conflits-table')).toBe(false);
   });
 
+  it('should omit simulation controls when the list has no demonstration port', async () => {
+    givenNoDemonstration();
+
+    await whenTheListIsRendered();
+
+    expect(present('conflits-demo')).toBe(false);
+    expect(textOf('conflits-vide')).toContain('Aucun conflit');
+  });
+
   it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
     portFixture.page = {
       lignes: [{ ...ligneFixture(), operateur: '', operateurId: 'op-absent', poste: '', posteId: 'poste-supprime' }],
@@ -339,6 +348,10 @@ describe('Conflict list', () => {
     input('conflits-filtre-element').value = element;
     requiredElement('conflits-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await componentFixture.whenStable();
+  };
+
+  const givenNoDemonstration = (): void => {
+    TestBed.overrideProvider(DemonstrationConflitsPort, { useValue: null });
   };
 
   const whenTheListIsRendered = async (): Promise<void> => {

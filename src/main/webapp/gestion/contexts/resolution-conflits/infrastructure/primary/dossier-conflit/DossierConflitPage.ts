@@ -7,6 +7,7 @@ import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
+import { DemonstrationConflitsPort } from '../../../domain/dossier/DemonstrationConflitsPort';
 import { ActiviteConflit, AdresseDossier, ChoixGuide, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
@@ -32,6 +33,7 @@ export class DossierConflitPage {
   private demandeLecture = Symbol('lecture');
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(ConflitsRightsPort);
+  protected readonly demonstration = inject(DemonstrationConflitsPort, { optional: true });
   protected readonly libelles = LIBELLES_CONFLITS;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
