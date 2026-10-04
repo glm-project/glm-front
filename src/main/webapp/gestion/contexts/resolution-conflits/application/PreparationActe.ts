@@ -58,7 +58,10 @@ export class PreparationActe {
     try {
       const resultat = await this.application.verify(reference);
       if (this.demande !== demande) return;
-      if (resultat.kind === 'ATTESTE') this.showApplicationResult({ kind: 'APPLIQUE', dossier: resultat.dossier });
+      if (resultat.kind === 'ATTESTE') {
+        this.showApplicationResult({ kind: 'APPLIQUE', dossier: resultat.dossier });
+        this.actuelle.set(ResolutionDuConflit.prepare(SaisieActe.empty()));
+      }
     } catch (failure: unknown) {
       this.erreurs.handleError(failure);
     }

@@ -538,9 +538,10 @@ describe('Conflict dossier page', () => {
     expect(read.demandes).toHaveLength(1);
   });
 
-  it('should clear the displayed interpretation after verifying an unknown write outcome', async () => {
+  it('should clear the displayed interpretation only after the receipt attests the unknown write', async () => {
     givenASuccessfulPreview();
     application.result = { kind: 'ISSUE_INCONNUE' };
+    application.verification = { kind: 'ATTESTE', dossier: { ...dossierConflitFixture(), version: 2 } };
     await whenRendering();
 
     await whenPreparingTheCorrection();
