@@ -291,6 +291,21 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(1);
   });
 
+  it('should show a refused confirmation without discarding the exact proposal or retrying it automatically', async () => {
+    await givenValidPreview();
+    const attente = givenApplicationWaits();
+    const confirmation = preparation.confirm();
+    await attente.arrival;
+
+    attente.release({ kind: 'REFUS', raison: 'Confirmation refusée' });
+    await confirmation;
+
+    expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Confirmation refusée' });
+    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
+    expect(applications.requests).toHaveLength(1);
+  });
+
   it('should treat an unexpected confirmation failure as an unknown outcome without replaying it', async () => {
     await givenValidPreview();
     const attente = givenApplicationWaits();
