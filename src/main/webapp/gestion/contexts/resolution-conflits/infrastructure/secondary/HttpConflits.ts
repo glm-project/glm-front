@@ -85,6 +85,7 @@ const knownActRefusals = new Set(
     'apercu-invalide',
     'confirmation-reutilisee',
     'suivi-d-atelier-introuvable',
+    'suivi-d-atelier-cloture',
     'evenement-d-atelier-introuvable',
     'operateur-introuvable',
     'poste-de-travail-introuvable',

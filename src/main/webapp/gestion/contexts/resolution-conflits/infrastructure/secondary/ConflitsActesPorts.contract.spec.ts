@@ -161,6 +161,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
   it.each([
     'confirmation-reutilisee',
     'suivi-d-atelier-introuvable',
+    'suivi-d-atelier-cloture',
     'evenement-d-atelier-introuvable',
     'operateur-introuvable',
     'poste-de-travail-introuvable',
