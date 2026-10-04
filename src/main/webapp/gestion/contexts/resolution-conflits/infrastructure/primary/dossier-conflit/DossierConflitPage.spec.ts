@@ -244,6 +244,18 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-diagnostic');
   });
 
+  it('should reacquire the dossier after the manager explicitly retries an unavailable reading', async () => {
+    read.failure = new Error('Dossier indisponible');
+    await whenRendering();
+    read.failure = undefined;
+
+    await whenClicking('conflit-retry');
+
+    thenTextContains('conflit-diagnostic', 'La fin vise le travail remplacé.');
+    thenAbsent('conflit-retry');
+    expect(read.demandes).toHaveLength(2);
+  });
+
   it('should explain the explicit target and termination supplied by the conflict diagnostic', async () => {
     givenAStructuredDiagnostic();
 
@@ -396,6 +408,18 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-activite', '2026-09-14T08:00:00.123456789+02:00');
     thenTextContains('conflit-activite', '2026-09-14T17:00:00+02:00');
     thenTextContains('conflit-activite', '8 h 59 min 59,876543211 s');
+  });
+
+  it('should retain the finished duration already supplied by the demonstration projection', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, activites: [{ id: new ActiviteConflitId('travail-8'), libelle: 'Travail', etat: 'TERMINEE', temps: '4 h' }] },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'Terminée · 4 h');
   });
 
   it('should describe ongoing authoritative work without a definitive duration', async () => {
