@@ -47,18 +47,24 @@ export const toPointage = (pointage: components['schemas']['RestEvenementDAtelie
       }),
 });
 
-const toActivite = (activite: components['schemas']['RestActiviteDuDossier']): ActiviteConflit => ({
-  id: new ActiviteConflitId(activite.activite),
-  libelle: '',
-  etat: activite.etat,
-  temps: '',
-  periode: {
-    categorie: activite.categorie,
-    debut: activite.debut,
-    ...(activite.fin === undefined ? {} : { fin: activite.fin }),
-    ...(activite.duree === undefined ? {} : { duree: activite.duree }),
-  },
-});
+const isFinishedWithoutDuration = (activite: components['schemas']['RestActiviteDuDossier']): boolean =>
+  (activite.etat === 'TERMINEE' || activite.etat === 'ECHUE') && activite.duree === undefined;
+
+const toActivite = (activite: components['schemas']['RestActiviteDuDossier']): ActiviteConflit => {
+  if (isFinishedWithoutDuration(activite)) throw new Error('Durée définitive de l’activité absente.');
+  return {
+    id: new ActiviteConflitId(activite.activite),
+    libelle: '',
+    etat: activite.etat,
+    temps: '',
+    periode: {
+      categorie: activite.categorie,
+      debut: activite.debut,
+      ...(activite.fin === undefined ? {} : { fin: activite.fin }),
+      ...(activite.duree === undefined ? {} : { duree: activite.duree }),
+    },
+  };
+};
 
 const toDiagnostic = (diagnostic: components['schemas']['RestDiagnosticDeConflit']): DiagnosticConflit => ({
   pointage: new PointageConflitId(diagnostic.pointage),

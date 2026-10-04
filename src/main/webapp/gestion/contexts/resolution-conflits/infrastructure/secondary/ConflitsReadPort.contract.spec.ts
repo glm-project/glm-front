@@ -271,6 +271,24 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     expect(errors.errors).toEqual([failure]);
   });
 
+  it.each(['TERMINEE', 'ECHUE'] as const)(
+    'should reject $etat work missing its authoritative duration instead of showing a complete dossier',
+    async etat => {
+      const dossier = givenAClosedDossierWithExactDuration();
+      const activite = requiredFixture(dossier.activites[0], 'finished work');
+      activite.etat = etat;
+      delete activite.duree;
+      const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+      const lecture = port.read(adresse).catch((failure: unknown) => failure);
+      whenConflictDossierAnswers(dossier);
+      const resultat = await lecture;
+
+      expect(resultat).toEqual(new Error('Durée définitive de l’activité absente.'));
+      expect(errors.errors).toEqual([resultat]);
+    },
+  );
+
   const givenAClosedDossierWithExactDuration = (): components['schemas']['RestDossierConflit'] => {
     const dossier = dossierConflitFixture();
     const sequence = requiredFixture(dossier.sequence, 'addressed sequence');
