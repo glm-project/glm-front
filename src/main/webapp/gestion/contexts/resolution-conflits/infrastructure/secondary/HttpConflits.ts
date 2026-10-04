@@ -87,6 +87,13 @@ const knownActRefusals = new Set(
 
 const isKnownActRefusal = (erreur: ApiError | undefined): erreur is ApiError => erreur !== undefined && knownActRefusals.has(erreur.urn);
 
+const toActRefusal = (failure: unknown): { kind: 'CONCURRENCE' } | { kind: 'REFUS'; raison: string } => {
+  const erreur = findApiErrorIn(failure);
+  if (isConcurrentRefusal(erreur?.urn)) return { kind: 'CONCURRENCE' };
+  if (isKnownActRefusal(erreur)) return { kind: 'REFUS', raison: erreur.message };
+  throw failure;
+};
+
 @Injectable()
 export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort, ApplicationActePort {
   private readonly api = inject(ApiClient);
@@ -132,10 +139,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
         },
       };
     } catch (failure: unknown) {
-      const erreur = findApiErrorIn(failure);
-      if (isConcurrentRefusal(erreur?.urn)) return { kind: 'CONCURRENCE' };
-      if (isKnownActRefusal(erreur)) return { kind: 'REFUS', raison: erreur.message };
-      throw failure;
+      return toActRefusal(failure);
     }
   }
 
