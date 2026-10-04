@@ -77,7 +77,12 @@ const toDiagnostic = (diagnostic: components['schemas']['RestDiagnosticDeConflit
   },
 });
 
+const isSupportedGuide = (choix: components['schemas']['RestChoixDeResolution']): boolean =>
+  (choix.code === 'ANNULER_TRANSITION' && choix.kind === 'ANNULATION')
+  || (choix.code === 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' && choix.kind === 'CORRECTION');
+
 const toSaisie = (choix: components['schemas']['RestChoixDeResolution']): SaisieActe => {
+  if (!isSupportedGuide(choix)) throw new Error('Proposition guidée incohérente.');
   if (choix.kind === 'ANNULATION') return SaisieActe.cancel(choix.pointage);
   const fait = choix.fait;
   if (fait === undefined) throw new Error('Fait de la proposition guidée absent.');

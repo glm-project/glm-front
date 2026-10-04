@@ -339,6 +339,36 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     expect(errors.errors).toEqual([resultat]);
   });
 
+  it.each([
+    { code: 'ANNULER_TRANSITION' as const, kind: 'CORRECTION' as const },
+    { code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const, kind: 'ANNULATION' as const },
+    { code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const, kind: 'REGULARISATION' as const },
+  ])('should reject an unsupported $code and $kind combination rather than inventing a guided hypothesis', async ({ code, kind }) => {
+    const dossier = dossierConflitFixture();
+    dossier.choix = [
+      {
+        code,
+        kind,
+        pointage: 'fin-17',
+        fait: {
+          type: 'FIN',
+          intention: 'FIN',
+          activiteVisee: 'nc-12',
+          operateur: 'op-camille',
+          instant: '2026-09-14T17:00:00.123456789+02:00',
+        },
+      },
+    ];
+    const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Proposition guidée incohérente.'));
+    expect(errors.errors).toEqual([resultat]);
+  });
+
   it.each(['TERMINEE', 'ECHUE'] as const)(
     'should reject $etat work missing its authoritative duration instead of showing a complete dossier',
     async etat => {
