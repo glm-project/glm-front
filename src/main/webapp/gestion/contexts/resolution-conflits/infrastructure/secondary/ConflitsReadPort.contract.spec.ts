@@ -363,6 +363,31 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     expect(errors.errors).toEqual([resultat]);
   });
 
+  it('should reject a guided finish correction missing its replacement target instead of selecting another activity', async () => {
+    const dossier = dossierConflitFixture();
+    dossier.choix = [
+      {
+        code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE',
+        kind: 'CORRECTION',
+        pointage: 'fin-17',
+        fait: {
+          type: 'FIN',
+          intention: 'FIN',
+          operateur: 'op-camille',
+          instant: '2026-09-14T17:00:00.123456789+02:00',
+        },
+      },
+    ];
+    const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Cible de la proposition guidée absente.'));
+    expect(errors.errors).toEqual([resultat]);
+  });
+
   it.each([
     { code: 'ANNULER_TRANSITION' as const, kind: 'CORRECTION' as const },
     { code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const, kind: 'ANNULATION' as const },

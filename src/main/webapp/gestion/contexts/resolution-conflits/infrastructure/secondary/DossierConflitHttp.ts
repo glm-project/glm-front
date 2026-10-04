@@ -86,10 +86,12 @@ const toSaisie = (choix: components['schemas']['RestChoixDeResolution']): Saisie
   if (choix.kind === 'ANNULATION') return SaisieActe.cancel(choix.pointage);
   const fait = choix.fait;
   if (fait === undefined) throw new Error('Fait de la proposition guidée absent.');
+  const cible = fait.activiteVisee;
+  if (cible === undefined) throw new Error('Cible de la proposition guidée absente.');
   return SaisieActe.correct(choix.pointage, {
     type: fait.type,
     intention: fait.intention,
-    activiteVisee: fait.activiteVisee ?? '',
+    activiteVisee: cible,
     operateur: fait.operateur,
     poste: fait.poste ?? '',
     instant: fait.instant,
