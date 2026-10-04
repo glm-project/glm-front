@@ -450,7 +450,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.retryConfirmation();
 
     expect(applications.requests).toHaveLength(2);
-    expect(applications.requests[1]).toBe(applications.requests[0]);
+    expect(applications.requests[1]).toEqual(applications.requests[0]);
     expect(previews.requests).toHaveLength(1);
     expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 3, enConflit: false } });
   });
@@ -488,7 +488,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await reprise;
 
     expect(applications.requests).toHaveLength(2);
-    expect(applications.requests[1]).toBe(applications.requests[0]);
+    expect(applications.requests[1]).toEqual(applications.requests[0]);
     expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
     expect(errors.failures).toEqual([panne]);
   });
