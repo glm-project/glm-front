@@ -2,14 +2,36 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
+import { ActeResolution } from '../../domain/acte/ActeResolution';
+import { PrevisualisationConflitPort, ResultatApercu } from '../../domain/acte/ConflitsActesPorts';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { AdresseDossier, FiltreConflits, LectureDossier, PAGE_SIZE_CONFLITS, PageConflits } from '../../domain/dossier/DossierConflit';
 import { toDossier, toLigne, toPointage } from './DossierConflitHttp';
 
 @Injectable()
-export class HttpConflits extends ConflitsReadPort {
+export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
+
+  async preview(adresse: AdresseDossier, version: number, acte: ActeResolution): Promise<ResultatApercu> {
+    const commande = crypto.randomUUID();
+    const apercu = await this.api.write('/api/atelier/suivis/{id}/conflits/{pointage}/apercus', {
+      pathParams: { id: adresse.suivi.suivi, pointage: adresse.pointage.pointage },
+      body: { commande, revision: version, acte },
+    });
+    return {
+      kind: 'APERCU',
+      apercu: {
+        adresse,
+        commande: apercu.commande,
+        reference: apercu.reference,
+        version: apercu.revision,
+        acte,
+        avant: toDossier(apercu.avant, apercu.avant.perimetre),
+        apres: toDossier(apercu.apres, apercu.apres.perimetre),
+      },
+    };
+  }
 
   override async list(filtre: FiltreConflits): Promise<PageConflits> {
     try {

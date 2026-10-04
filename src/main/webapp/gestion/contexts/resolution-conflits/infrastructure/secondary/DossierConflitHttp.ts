@@ -76,8 +76,10 @@ const toDiagnostic = (diagnostic: components['schemas']['RestDiagnosticDeConflit
   },
 });
 
-export const toDossier = (dossier: components['schemas']['RestDossierConflit']): DossierConflit => {
-  const sequence = dossier.sequence;
+export const toDossier = (
+  dossier: components['schemas']['RestDossierConflit'],
+  sequence: components['schemas']['RestSequenceDuDossier'] | undefined = dossier.sequence,
+): DossierConflit => {
   if (sequence === undefined) throw new Error('Séquence du dossier absente.');
   return {
     ligne: toLigne({
