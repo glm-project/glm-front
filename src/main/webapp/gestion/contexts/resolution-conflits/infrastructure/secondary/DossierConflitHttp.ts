@@ -102,3 +102,9 @@ export const toDossier = (
     continuations: [],
   };
 };
+
+export const toDossierDansPerimetre = (dossier: components['schemas']['RestDossierConflit']): DossierConflit => {
+  const perimetre = dossier.perimetre;
+  if (perimetre === undefined) throw new Error('Périmètre du dossier absent.');
+  return toDossier(dossier, perimetre);
+};

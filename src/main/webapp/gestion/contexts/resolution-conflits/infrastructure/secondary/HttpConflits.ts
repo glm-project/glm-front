@@ -15,7 +15,7 @@ import { InstantPointage } from '../../domain/acte/InstantPointage';
 import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { AdresseDossier, FiltreConflits, LectureDossier, PAGE_SIZE_CONFLITS, PageConflits } from '../../domain/dossier/DossierConflit';
-import { toDossier, toLigne, toPointage } from './DossierConflitHttp';
+import { toDossier, toDossierDansPerimetre, toLigne, toPointage } from './DossierConflitHttp';
 
 const toRestFait = (fait: FaitPropose): components['schemas']['RestFaitDeResolution'] => ({
   type: fait.type,
@@ -58,6 +58,12 @@ const previewMatchesRequest = (
   && apercu.reference !== ''
   && echoRepresentsProposition(apercu.acte, request.acte);
 
+const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], reference: ReferenceApercu): boolean =>
+  recu.commande === reference.commande
+  && recu.adresse.suivi === reference.adresse.suivi.suivi
+  && recu.adresse.pointage === reference.adresse.pointage.pointage
+  && recu.revisionDeDepart === reference.version;
+
 @Injectable()
 export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort, ApplicationActePort {
   private readonly api = inject(ApiClient);
@@ -69,7 +75,8 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
       body: { commande: reference.commande, reference: reference.reference },
     });
     if (resultat.kind === 'NON_ATTESTEE') return { kind: 'ISSUE_INCONNUE' };
-    return { kind: 'APPLIQUE', dossier: toDossier(resultat.dossier, resultat.dossier.perimetre) };
+    if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
+    return { kind: 'APPLIQUE', dossier: toDossierDansPerimetre(resultat.dossier) };
   }
 
   async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
@@ -77,7 +84,8 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
       pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },
     });
     if (resultat.kind === 'NON_ATTESTEE') return { kind: 'NON_ATTESTE' };
-    return { kind: 'ATTESTE', dossier: toDossier(resultat.dossier, resultat.dossier.perimetre) };
+    if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
+    return { kind: 'ATTESTE', dossier: toDossierDansPerimetre(resultat.dossier) };
   }
 
   async preview(adresse: AdresseDossier, version: number, acte: ActeResolution): Promise<ResultatApercu> {
@@ -95,8 +103,8 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
         reference: apercu.reference,
         version: apercu.revision,
         acte,
-        avant: toDossier(apercu.avant, apercu.avant.perimetre),
-        apres: toDossier(apercu.apres, apercu.apres.perimetre),
+        avant: toDossierDansPerimetre(apercu.avant),
+        apres: toDossierDansPerimetre(apercu.apres),
       },
     };
   }

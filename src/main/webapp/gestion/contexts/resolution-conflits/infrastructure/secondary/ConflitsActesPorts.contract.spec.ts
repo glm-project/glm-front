@@ -190,6 +190,17 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { apres: { enConflit: true } } });
   });
 
+  it('should reject an act preview missing its authoritative perimeter instead of falling back to the current sequence', async () => {
+    const avant = dossierFixture('EN_CONFLIT', 7);
+    delete avant.perimetre;
+
+    const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
+    whenPreviewAnswers(acteFixture, { avant });
+    const resultat = await apercu;
+
+    expect(resultat).toEqual(new Error('Périmètre du dossier absent.'));
+  });
+
   it('should confirm the exact public command and return the current canonical dossier from its receipt', async () => {
     const confirmation = application.apply(referenceFixture);
 
@@ -207,6 +218,28 @@ describe('Beyond the contract: HTTP conflict actes', () => {
 
     expect(resultat).toMatchObject({ kind: 'ATTESTE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
   });
+
+  it.each(
+    [
+      { nom: 'command', changement: { commande: 'autre-commande' } },
+      { nom: 'address', changement: { adresse: { suivi: 'suivi-camille', pointage: 'autre-pointage' } } },
+      { nom: 'initial revision', changement: { revisionDeDepart: 6 } },
+    ].flatMap(changement => (['apply', 'verify'] as const).map(operation => ({ ...changement, operation }))),
+  )('should reject a receipt for another $nom during $operation', async ({ changement, operation }) => {
+    const recu = confirmationFixture();
+    recu.recu = { ...recu.recu, ...changement };
+
+    const reponse = application[operation](referenceFixture).catch((failure: unknown) => failure);
+    whenCanonicalAnswers(operation, recu);
+    const resultat = await reponse;
+
+    expect(resultat).toEqual(new Error('Reçu de confirmation incohérent.'));
+  });
+
+  const whenCanonicalAnswers = (operation: 'apply' | 'verify', resultat: components['schemas']['RestConfirmationDeResolution']): void => {
+    if (operation === 'apply') whenConfirmationAnswers(resultat);
+    else whenReceiptAnswers(resultat);
+  };
 
   const whenReceiptAnswers = (resultat: components['schemas']['RestConfirmationDeResolution']): void => {
     const request = server.expectOne(`/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${referenceFixture.commande}`);
@@ -228,11 +261,11 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     dossier: dossierFixture('ANCRE_ANNULEE', 9),
   });
 
-  const whenConfirmationAnswers = (): void => {
+  const whenConfirmationAnswers = (resultat: components['schemas']['RestConfirmationDeResolution'] = confirmationFixture()): void => {
     const request = server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ commande: referenceFixture.commande, reference: referenceFixture.reference });
-    request.flush(confirmationFixture());
+    request.flush(resultat);
   };
 
   const whenPreviewAnswers = (
