@@ -106,6 +106,7 @@ class DossierPreviewFixture extends PrevisualisationConflitPort {
 
 class DossierApplicationFixture extends ApplicationActePort {
   readonly replies = new RepliesFixture<ResultatApplication>();
+  readonly receiptReplies = new RepliesFixture<ResultatVerification>();
   result: ResultatApplication = { kind: 'ECHEC_CERTAIN' };
   verification: ResultatVerification = { kind: 'NON_ATTESTE' };
 
@@ -114,7 +115,7 @@ class DossierApplicationFixture extends ApplicationActePort {
   }
 
   verify(): Promise<ResultatVerification> {
-    return roundTripFixture(() => this.verification);
+    return this.receiptReplies.answer(this.verification);
   }
 }
 
@@ -716,8 +717,8 @@ describe('Conflict dossier page', () => {
     await whenRendering();
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
-    const ancienneVerification = new PendingResponseFixture<LectureDossier>();
-    read.pending = ancienneVerification;
+    const ancienneVerification = new PendingResponseFixture<ResultatVerification>();
+    application.receiptReplies.pending = ancienneVerification;
 
     whenStartingClick('conflit-verifier');
     await ancienneVerification.arrival;
@@ -727,7 +728,10 @@ describe('Conflict dossier page', () => {
     await whenAddressChanges('fin-17');
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
-    await whenResponseArrives(ancienneVerification, { kind: 'DOSSIER', dossier: dossierConflitFixture() });
+    await whenResponseArrives(ancienneVerification, {
+      kind: 'ATTESTE',
+      dossier: { ...dossierConflitFixture(), version: 3, enConflit: false },
+    });
 
     thenDisabled('conflit-choix');
     thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
@@ -864,6 +868,7 @@ describe('Conflict dossier page', () => {
     await Promise.allSettled([
       ...preview.replies.automaticResponses,
       ...application.replies.automaticResponses,
+      ...application.receiptReplies.automaticResponses,
       ...demonstration.automaticResponses,
     ]);
     await fixture.whenStable();
