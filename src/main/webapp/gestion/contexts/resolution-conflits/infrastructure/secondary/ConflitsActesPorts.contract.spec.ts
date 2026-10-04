@@ -146,6 +146,18 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toEqual({ kind: 'REFUS', raison: 'Aperçu invalide' });
   });
 
+  it.each(['apercu-obsolete', 'saisie-concurrente'])(
+    'should invalidate preview preparation after the known concurrent refusal %s',
+    async code => {
+      const demande = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
+
+      whenRequestFails('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus', code, 409, 'Le suivi a changé');
+      const resultat = await demande;
+
+      expect(resultat).toEqual({ kind: 'CONCURRENCE' });
+    },
+  );
+
   it.each([
     { nom: 'command', changement: { commande: 'autre-commande' } },
     { nom: 'address', changement: { adresse: { suivi: 'suivi-camille', pointage: 'autre-pointage' } } },

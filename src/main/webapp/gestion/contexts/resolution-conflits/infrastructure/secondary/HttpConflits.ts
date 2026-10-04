@@ -64,6 +64,9 @@ const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], r
   && recu.adresse.pointage === reference.adresse.pointage.pointage
   && recu.revisionDeDepart === reference.version;
 
+const isConcurrentRefusal = (urn: string | undefined): boolean =>
+  urn === 'urn:glm:erreur:atelier:apercu-obsolete' || urn === 'urn:glm:erreur:atelier:saisie-concurrente';
+
 @Injectable()
 export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort, ApplicationActePort {
   private readonly api = inject(ApiClient);
@@ -110,6 +113,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
       };
     } catch (failure: unknown) {
       const erreur = findApiErrorIn(failure);
+      if (isConcurrentRefusal(erreur?.urn)) return { kind: 'CONCURRENCE' };
       if (erreur?.urn === 'urn:glm:erreur:atelier:apercu-invalide') return { kind: 'REFUS', raison: erreur.message };
       throw failure;
     }
