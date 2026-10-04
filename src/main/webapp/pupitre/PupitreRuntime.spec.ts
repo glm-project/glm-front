@@ -2,6 +2,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
+import { DeviceAuthorizationPort, EnrolmentRequirement } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -10,10 +11,12 @@ import { PupitreRuntime } from './PupitreRuntime';
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
 class EnrolementFixture {
+  attempts = 0;
   private enrolment: Promise<void> | undefined;
   private completeEnrolment: (() => void) | undefined;
 
   enroler(): Promise<void> {
+    this.attempts += 1;
     return this.enrolment ?? roundTrip();
   }
 
@@ -25,6 +28,32 @@ class EnrolementFixture {
 
   approve(): void {
     this.completeEnrolment?.();
+  }
+}
+
+class DeviceAuthorizationFixture extends DeviceAuthorizationPort {
+  private notify: (() => void) | undefined;
+  listening = false;
+
+  override invalidateAuthorization(): Promise<void> {
+    this.notify?.();
+    return Promise.resolve();
+  }
+
+  override waitForRequiredEnrolment(): EnrolmentRequirement {
+    let stop = (): void => undefined;
+    const outcome = new Promise<'REQUIRED' | 'STOPPED'>(resolve => {
+      this.listening = true;
+      this.notify = () => {
+        resolve('REQUIRED');
+      };
+      stop = () => {
+        this.listening = false;
+        this.notify = undefined;
+        resolve('STOPPED');
+      };
+    });
+    return { outcome, stop };
   }
 }
 
@@ -56,12 +85,14 @@ describe('PupitreRuntime', () => {
   let enrolement: EnrolementFixture;
   let pupitre: AtelierCoordinatorFixture;
   let errorHandler: ErrorHandlerFixture;
+  let authorization: DeviceAuthorizationFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     errorHandler = new ErrorHandlerFixture();
     enrolement = new EnrolementFixture();
     pupitre = new AtelierCoordinatorFixture();
+    authorization = new DeviceAuthorizationFixture();
     TestBed.configureTestingModule({
       providers: [
         PupitreRuntime,
@@ -69,6 +100,7 @@ describe('PupitreRuntime', () => {
         { provide: AtelierCoordinator, useValue: pupitre },
         { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
+        { provide: DeviceAuthorizationPort, useValue: authorization },
       ],
     });
     runtime = TestBed.inject(PupitreRuntime);
@@ -102,6 +134,35 @@ describe('PupitreRuntime', () => {
     await whenJustUnderThirtySecondsPass();
 
     await thenSynchronizationAttemptsAre(0);
+  });
+
+  it('should return to visible enrolment after each loss of device authorization', async () => {
+    await whenStartingPupitre();
+
+    await whenAuthorizationIsLost();
+    await whenAuthorizationIsLost();
+
+    expect(enrolement.attempts).toBe(3);
+  });
+
+  it('should replace the initial enrolment when authorization is lost during its workshop load', async () => {
+    givenAnEnrolmentAwaitingApproval();
+
+    const startup = whenStartingPupitre();
+    await whenAuthorizationIsLost();
+    await whenTheEnrolmentCompletes(startup);
+
+    expect(enrolement.attempts).toBe(2);
+  });
+
+  it('should release the authorization waiter when the runtime is destroyed', async () => {
+    await whenStartingPupitre();
+
+    whenDestroyingTheRuntime();
+    await whenAuthorizationIsLost();
+
+    expect(authorization.listening).toBe(false);
+    expect(enrolement.attempts).toBe(1);
   });
 
   it('should start only one refresh schedule', async () => {
@@ -171,6 +232,10 @@ describe('PupitreRuntime', () => {
     pupitre.unavailable = true;
   };
   const whenStartingPupitre = (): Promise<void> => runtime.start();
+  const whenAuthorizationIsLost = async (): Promise<void> => {
+    await authorization.invalidateAuthorization();
+    await roundTrip();
+  };
   const whenStartingPupitreTwice = async (): Promise<void> => {
     await Promise.all([runtime.start(), runtime.start()]);
   };

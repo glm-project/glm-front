@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { DeviceAuthorizationPort } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
@@ -21,4 +22,5 @@ export const authProvider: Provider[] = [
   { provide: AuthenticationPort, useExisting: DeviceAuthentication },
   { provide: DeviceSessionPort, useExisting: DeviceAuthentication },
   { provide: DeviceEnrolmentPort, useExisting: DeviceAuthentication },
+  { provide: DeviceAuthorizationPort, useExisting: DeviceAuthentication },
 ];

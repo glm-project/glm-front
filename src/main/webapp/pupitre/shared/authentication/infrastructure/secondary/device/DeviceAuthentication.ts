@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { DeviceAuthorizationPort, EnrolmentRequirement } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import {
   DeviceEnrolmentOutcome,
   DeviceEnrolmentPort,
@@ -8,6 +9,7 @@ import {
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
+import { DeviceCredentialsStorage, StoredDeviceCredentials } from './DeviceCredentialsStorage';
 import {
   authorizationCodeFrom,
   DeviceAuthorization,
@@ -17,7 +19,8 @@ import {
   RefusedGrant,
   Tokens,
 } from './DeviceGrantClient';
-import { SessionDAppareil, StoredSession } from './SessionDAppareil';
+import { EnrolmentRequirements } from './EnrolmentRequirements';
+import { SessionDAppareil } from './SessionDAppareil';
 
 const SLOW_DOWN_EXTRA_SECONDS = 5;
 const EXTRA_SECONDS_WHEN_STILL_WAITING = new Map<string, number>([
@@ -33,44 +36,28 @@ const SECONDS_BETWEEN_CLAIMS_UNLESS_TOLD = 5;
 const SECONDS_BEFORE_RETRYING_A_RENEWAL = 60;
 const MILLISECONDS_PER_SECOND = 1000;
 
-interface PersistedEnrolment {
-  session?: StoredSession;
-  tenant?: string;
-}
-
-const ENROLEMENT = 'enrolement';
-
 const isBeyondRenewal = (refusal: RefusedGrant): boolean => refusal.refusedBecause === REFUSAL_NO_RETRY_WILL_FIX;
 
 const pause = (seconds: number): Promise<void> => new Promise(resolve => setTimeout(resolve, seconds * MILLISECONDS_PER_SECOND));
 
-const persistedEnrolmentFrom = (session: SessionDAppareil | undefined, tenant: string | undefined): PersistedEnrolment => {
-  const enrolment: PersistedEnrolment = {};
-  if (session !== undefined) {
-    enrolment.session = session.document();
-  }
-  if (tenant !== undefined) {
-    enrolment.tenant = tenant;
-  }
-  return enrolment;
-};
+const credentialsFor = (stockage: LocalStoragePort | null): DeviceCredentialsStorage | undefined =>
+  stockage === null ? undefined : new DeviceCredentialsStorage(stockage);
 
-const canRestoreSession = (restored: boolean, stockage: LocalStoragePort | null): stockage is LocalStoragePort =>
-  !(restored || stockage === null);
-
-const hasConcurrentSession = (expected: SessionDAppareil | undefined, current: PersistedEnrolment): boolean =>
-  expected !== undefined && !SessionDAppareil.same(SessionDAppareil.restored(current.session), expected);
+const canRestoreSession = (restored: boolean, credentials: DeviceCredentialsStorage | undefined): credentials is DeviceCredentialsStorage =>
+  !(restored || credentials === undefined);
 
 const SHOW_NO_CODE: ShowDeviceAuthorizationCode = () => undefined;
 
 type Restoration = 'RESTORED' | 'ABANDONED' | 'ABSENT' | 'UNREACHABLE';
 
 @Injectable()
-export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort, DeviceSessionPort {
+export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort, DeviceSessionPort, DeviceAuthorizationPort {
   private readonly grant = inject(DeviceGrantClient);
-  private readonly stockage = inject(LocalStoragePort, { optional: true });
+  private readonly credentials = credentialsFor(inject(LocalStoragePort, { optional: true }));
   private readonly errorHandler = inject(ErrorHandlerPort);
+  private readonly enrolmentRequirements = new EnrolmentRequirements();
   private tenant: string | undefined;
+  private readonly readSelectedTenant = (): string | undefined => this.tenant;
   private restored = false;
 
   private session: SessionDAppareil | undefined;
@@ -83,6 +70,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   }
 
   async enrol(showCode: ShowDeviceAuthorizationCode): Promise<DeviceEnrolmentOutcome> {
+    this.enrolmentRequirements.reset();
     const enrolment = Symbol('enrolment');
     this.enrolment = enrolment;
 
@@ -133,9 +121,9 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     const session = SessionDAppareil.granted(granted, Date.now());
     this.pendingEnrolmentSession = session;
     try {
-      await this.storeEnrolmentSession(session, enrolment);
+      await this.credentials?.storeEnrolment(session, () => this.isAbandoned(enrolment), this.readSelectedTenant);
       if (this.isAbandoned(enrolment)) {
-        await this.removeSessionIfMatching(session);
+        await this.credentials?.retire(session, this.readSelectedTenant);
         return 'ABANDONED';
       }
       this.open(session);
@@ -155,21 +143,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     if (expected === undefined) {
       return;
     }
-    await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, current => {
-      if (!SessionDAppareil.same(SessionDAppareil.restored(current.session), expected)) {
-        return current;
-      }
-      return persistedEnrolmentFrom(undefined, this.tenant);
-    });
-  }
-
-  private storeEnrolmentSession(session: SessionDAppareil, enrolment: symbol): Promise<void> {
-    return this.updateStoredEnrolment(current => {
-      if (this.isAbandoned(enrolment)) {
-        return current;
-      }
-      return persistedEnrolmentFrom(session, session.tenant() ?? this.tenant);
-    });
+    await this.credentials?.discardPending(expected, this.readSelectedTenant);
   }
 
   override currentTenant(): string | undefined {
@@ -177,18 +151,22 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   }
 
   override async synchronizeSession(): Promise<void> {
-    if (this.stockage === null) {
+    if (this.credentials === undefined) {
       return;
     }
     const enrolment = this.enrolment;
-    const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
+    const stored = await this.credentials.read();
     if (this.isSynchronizationUnnecessary(enrolment, stored)) {
       return;
     }
+    const authorizationWasLost = this.hasLostStoredSession(stored);
     clearTimeout(this.renewal);
     this.session = undefined;
-    this.tenant = stored?.tenant;
-    this.openIfPresent(SessionDAppareil.restored(stored?.session));
+    this.tenant = stored.tenant;
+    this.openIfPresent(stored.session);
+    if (authorizationWasLost) {
+      this.enrolmentRequirements.request();
+    }
   }
 
   override currentToken(): string | undefined {
@@ -196,19 +174,22 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   }
 
   withSession<T>(action: () => Promise<T>): Promise<T> {
-    const stockage = this.stockage;
-    if (stockage === null) {
+    if (this.credentials === undefined) {
       return action();
     }
-    return stockage.lock('enrolement', () => stockage.lock('session', action));
+    return this.credentials.withSession(action);
   }
 
-  private isSynchronizationUnnecessary(enrolment: symbol | undefined, stored: PersistedEnrolment | undefined): boolean {
+  private isSynchronizationUnnecessary(enrolment: symbol | undefined, stored: StoredDeviceCredentials): boolean {
     return this.enrolment !== enrolment || this.matchesStoredEnrolment(stored);
   }
 
-  private matchesStoredEnrolment(stored: PersistedEnrolment | undefined): boolean {
-    return SessionDAppareil.same(SessionDAppareil.restored(stored?.session), this.session) && stored?.tenant === this.tenant;
+  private matchesStoredEnrolment(stored: StoredDeviceCredentials): boolean {
+    return SessionDAppareil.same(stored.session, this.session) && stored.tenant === this.tenant;
+  }
+
+  private hasLostStoredSession(stored: StoredDeviceCredentials): boolean {
+    return this.session !== undefined && stored.session === undefined;
   }
 
   override logout(): void {
@@ -217,7 +198,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     this.session = undefined;
     this.enrolment = undefined;
     clearTimeout(this.renewal);
-    const removal = ended === undefined ? this.clearStoredSession() : this.removeSessionIfMatching(ended);
+    const removal = this.removeLoggedOutCredentials(ended);
     void removal.catch((failure: unknown) => {
       this.errorHandler.handleError(failure);
     });
@@ -225,6 +206,14 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     if (ended !== undefined) {
       void this.grant.endSession(ended.refreshToken());
     }
+  }
+
+  private async removeLoggedOutCredentials(ended: SessionDAppareil | undefined): Promise<void> {
+    if (ended === undefined) {
+      await this.credentials?.clear(this.readSelectedTenant);
+      return;
+    }
+    await this.credentials?.retire(ended, this.readSelectedTenant);
   }
 
   private isAbandoned(enrolment: symbol): boolean {
@@ -277,8 +266,9 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private async renewFrom(session: SessionDAppareil): Promise<void> {
     try {
-      if (this.stockage !== null) {
-        await this.stockage.lock('enrolement', () => this.renewStoredSession(session));
+      const credentials = this.credentials;
+      if (credentials !== undefined) {
+        await credentials.withRenewal(() => this.renewStoredSession(session, credentials));
         return;
       }
       await this.renewSession(session);
@@ -290,15 +280,15 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     }
   }
 
-  private async renewStoredSession(session: SessionDAppareil): Promise<void> {
-    const stored = await this.stockage?.read<PersistedEnrolment>(ENROLEMENT);
+  private async renewStoredSession(session: SessionDAppareil, credentials: DeviceCredentialsStorage): Promise<void> {
+    const stored = await credentials.read();
     if (this.session !== session) {
       return;
     }
-    const persisted = SessionDAppareil.restored(stored?.session);
+    const persisted = stored.session;
     if (persisted === undefined) {
-      this.session = undefined;
-      this.tenant = stored?.tenant;
+      this.tenant = stored.tenant;
+      this.requireEnrolment();
       return;
     }
     if (!persisted.hasSameRefreshTokenAs(session)) {
@@ -321,7 +311,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     }
 
     if (isBeyondRenewal(answer)) {
-      await this.reenrol(session);
+      await this.retireAuthorization(session);
       return;
     }
 
@@ -330,7 +320,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
 
   private async persistRenewal(tokens: Tokens, session: SessionDAppareil): Promise<void> {
     const renewed = SessionDAppareil.granted(tokens, Date.now());
-    const persistence = await this.storeSession(renewed, session);
+    const persistence = await this.credentials?.storeRenewal(renewed, session, this.readSelectedTenant);
     if (persistence === 'REMPLACE') {
       await this.synchronizeSession();
       return;
@@ -339,71 +329,54 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
       this.open(renewed);
       return;
     }
-    await this.removeSessionIfMatching(renewed);
+    await this.credentials?.retire(renewed, this.readSelectedTenant);
   }
 
-  private async reenrol(session: SessionDAppareil): Promise<void> {
-    const persistence = await this.removeSessionIfMatching(session);
+  private async retireAuthorization(session: SessionDAppareil): Promise<void> {
+    const persistence = await this.credentials?.retire(session, this.readSelectedTenant);
     if (persistence === 'REMPLACE') {
       await this.synchronizeSession();
       return;
     }
+    if (this.session !== session) {
+      return;
+    }
+    this.requireEnrolment();
+  }
+
+  private requireEnrolment(): void {
+    clearTimeout(this.renewal);
     this.session = undefined;
-    await this.authenticate();
+    this.enrolmentRequirements.request();
+  }
+
+  async invalidateAuthorization(token: string): Promise<void> {
+    const session = this.session;
+    if (session?.accessTokenAt(Date.now()) !== token) {
+      return;
+    }
+    await this.retireAuthorization(session);
+  }
+
+  waitForRequiredEnrolment(): EnrolmentRequirement {
+    return this.enrolmentRequirements.wait();
   }
 
   private async restore(enrolment: symbol): Promise<Restoration> {
-    if (!canRestoreSession(this.restored, this.stockage)) {
+    if (!canRestoreSession(this.restored, this.credentials)) {
       return 'ABSENT';
     }
-    const stored = await this.stockage.read<PersistedEnrolment>(ENROLEMENT);
+    const stored = await this.credentials.read();
     if (this.isAbandoned(enrolment)) {
       return 'ABANDONED';
     }
     this.restored = true;
-    this.tenant = stored?.tenant;
-    const persisted = SessionDAppareil.restored(stored?.session);
+    this.tenant = stored.tenant;
+    const persisted = stored.session;
     if (persisted === undefined) {
       return 'ABSENT';
     }
     this.open(persisted);
     return 'RESTORED';
-  }
-
-  private async storeSession(session: SessionDAppareil, expected?: SessionDAppareil): Promise<'CONSERVE' | 'REMPLACE'> {
-    let resultat: 'CONSERVE' | 'REMPLACE' = 'CONSERVE';
-    await this.updateStoredEnrolment(current => {
-      if (hasConcurrentSession(expected, current)) {
-        resultat = 'REMPLACE';
-        return current;
-      }
-      return persistedEnrolmentFrom(session, session.tenant() ?? this.tenant);
-    });
-    return resultat;
-  }
-
-  private async removeSessionIfMatching(expected: SessionDAppareil): Promise<'CONSERVE' | 'REMPLACE'> {
-    let resultat: 'CONSERVE' | 'REMPLACE' = 'CONSERVE';
-    await this.updateStoredEnrolment(current => {
-      if (!SessionDAppareil.same(SessionDAppareil.restored(current.session), expected)) {
-        resultat = 'REMPLACE';
-        return current;
-      }
-      return persistedEnrolmentFrom(undefined, this.tenant);
-    });
-    return resultat;
-  }
-
-  private clearStoredSession(): Promise<void> {
-    return this.updateStoredEnrolment(() => persistedEnrolmentFrom(undefined, this.tenant));
-  }
-
-  private async updateStoredEnrolment(change: (current: PersistedEnrolment) => PersistedEnrolment): Promise<void> {
-    if (this.stockage === null) {
-      return;
-    }
-    return this.stockage.lock('session', async () => {
-      await this.stockage?.update<PersistedEnrolment>(ENROLEMENT, {}, change);
-    });
   }
 }

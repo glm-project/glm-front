@@ -3,7 +3,8 @@
 ## Status
 
 Accepted. Complements [ADR 0003](0003-hand-written-device-grant-for-the-pupitre.md) and
-[ADR 0007](0007-durable-offline-pupitre.md).
+[ADR 0007](0007-durable-offline-pupitre.md). The visible lifecycle also handles definitive renewal and
+current-token authorization refusals through the runtime, as described below.
 
 ## Context
 
@@ -34,6 +35,13 @@ from an unreachable server, and no caller could observe the code while the poll 
 Own the enrolment lifecycle in a new business context, `pupitre/contexts/enrolement/`. Its domain holds the
 authorization code, its absolute deadline and the state machine; the application coordinates the asynchronous
 grant and the workshop load; the primary adapter renders the screen and ticks the countdown.
+
+Retire a definitively refused credential durably, retaining the selected tenant and workshop journals.
+The device adapter publishes a requirement through a cancellable `DeviceAuthorizationPort` wait;
+`PupitreRuntime` consumes it and drives the same visible enrolment coordinator again. This keeps the
+coordinator out of the authentication adapter and runs the new grant outside session locks. Retain a
+requirement raised before the runtime can wait, and cancel its wait when the runtime is destroyed.
+Only the exact refused credential may be retired; a replacement session remains authoritative.
 
 Expose the grant lifecycle through a narrow port. `DeviceEnrolmentPort.enrol(showCode)` publishes the
 authorization code as soon as the authorization server answers, then resolves to one outcome: `ENROLLED`,
@@ -66,8 +74,6 @@ logo followed by a modal confirmation, so no operator reaches it by accident.
 
 - Enrolment now depends on the Keycloak client having the device authorization grant enabled and mapping the
   `tenant` claim. That configuration lives outside this repository and breaks the screen when it drifts.
-- `reenrol()`, reached when a refresh token becomes `invalid_grant`, still re-enrols silently without showing a
-  screen. That path is out of the scope of this decision and remains invisible to the workshop.
 - A network cut occurring _during_ the poll is reported as an initial network failure with "Réessayer": the
   polling loop does not distinguish a transient outage from a definitive refusal.
 - The administration gesture is unavailable while an operator is designated, because the header then shows that

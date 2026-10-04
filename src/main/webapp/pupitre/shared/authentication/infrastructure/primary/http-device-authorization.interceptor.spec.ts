@@ -1,7 +1,10 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { DeviceAuthorizationPort } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { firstValueFrom } from 'rxjs';
 import { httpDeviceAuthorizationInterceptor } from './http-device-authorization.interceptor';
 
@@ -31,6 +34,18 @@ class AuthenticationFixture extends AuthenticationPort {
   }
 }
 
+class DeviceAuthorizationFixture {
+  private readonly authentication: AuthenticationFixture;
+  constructor(authentication: AuthenticationFixture) {
+    this.authentication = authentication;
+  }
+  invalidateAuthorization(): Promise<void> {
+    this.authentication.logout();
+    this.authentication.reenrolments += 1;
+    return Promise.resolve();
+  }
+}
+
 describe('Pupitre authorization refusal', () => {
   let authentication: AuthenticationFixture;
   let http: HttpTestingController;
@@ -44,6 +59,8 @@ describe('Pupitre authorization refusal', () => {
         provideHttpClient(withInterceptors([httpDeviceAuthorizationInterceptor])),
         provideHttpClientTesting(),
         { provide: AuthenticationPort, useValue: authentication },
+        { provide: DeviceAuthorizationPort, useValue: new DeviceAuthorizationFixture(authentication) },
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
     http = TestBed.inject(HttpTestingController);

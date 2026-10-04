@@ -1,6 +1,11 @@
 import type { StaticResponse } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
-import { clearPupitreStorageFixture, givenEnrolledPupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
+import {
+  clearPupitreStorageFixture,
+  givenEnrolledPupitreFixture,
+  givenRetiredPupitreSessionFixture,
+  pupitreTokenFixture,
+} from '../../../utils/PupitreStorageFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 const OPENID_CONNECT = '**/realms/glmproject/protocol/openid-connect';
@@ -119,6 +124,62 @@ describe('Pupitre enrolment', () => {
     thenTheResetIsExplainedBeforeItHappens();
   });
 
+  it('should show a new approval code when the refresh credential is definitively revoked', () => {
+    givenAnEnrolledPupitre();
+    givenARevokedRefreshCredential();
+
+    whenTheRestoredCredentialRenews();
+
+    thenTheCodeToApproveIsVisible();
+    thenTheValidationLinkIsScannable();
+    thenOnlyEnrolmentIsAvailable();
+  });
+
+  it('should show a new approval code when synchronization discovers a session retired in another tab', () => {
+    givenAnEnrolledPupitre();
+    givenRetiredPupitreSessionFixture(ENTREPRISE);
+
+    whenSynchronizingAfterAnotherTabRetiredTheSession();
+
+    thenTheCodeToApproveIsVisible();
+    thenTheValidationLinkIsScannable();
+    thenOnlyEnrolmentIsAvailable();
+  });
+
+  it('should show a new approval code when renewal discovers a session retired in another tab', () => {
+    givenAnEnrolledPupitre();
+    givenRetiredPupitreSessionFixture(ENTREPRISE);
+
+    whenRenewalDiscoversAnotherTabRetiredTheSession();
+
+    thenTheCodeToApproveIsVisible();
+    thenTheValidationLinkIsScannable();
+    thenOnlyEnrolmentIsAvailable();
+  });
+
+  [401, 403].forEach(status => {
+    it(`should show a new approval code when the current device authorization is refused (${status})`, () => {
+      givenAnEnrolledPupitre();
+      givenARefusedWorkshopAuthorization(status);
+
+      whenTheNetworkReturns();
+
+      thenTheCodeToApproveIsVisible();
+      thenTheValidationLinkIsScannable();
+      thenOnlyEnrolmentIsAvailable();
+    });
+  });
+
+  it('should return to the workshop after the replacement device authorization is approved', () => {
+    givenAnEnrolledPupitre();
+    givenARevokedRefreshCredential();
+
+    whenTheRestoredCredentialRenews();
+    whenTheReplacementAuthorizationIsApproved();
+
+    thenTheKeypadIsAvailable();
+  });
+
   it('should return to enrolment after administrator confirmation', () => {
     givenAnEnrolledPupitre();
     whenHoldingTheLogo();
@@ -194,7 +255,7 @@ const givenAnUnreachableAuthorizationServer = (): void => {
 };
 
 const givenAnEnrolledPupitre = (): void => {
-  cy.clock(Date.UTC(2026, 8, 6, 12));
+  cy.clock(Date.now());
   givenAnAuthorizationServerAnswering('authorization_pending');
   cy.visit('/');
   cy.wait('@deviceAuthorization');
@@ -203,6 +264,14 @@ const givenAnEnrolledPupitre = (): void => {
   cy.wait('@workshop');
   cy.tick(0);
   cy.get(dataSelector('designation')).should('be.visible');
+};
+
+const givenARevokedRefreshCredential = (): void => {
+  cy.intercept('POST', `${OPENID_CONNECT}/token`, { statusCode: 400, body: { error: 'invalid_grant' } }).as('revokedRefresh');
+};
+
+const givenARefusedWorkshopAuthorization = (statusCode: number): void => {
+  cy.intercept('GET', '/api/pupitre/referentiel', { statusCode, body: {} }).as('refusedWorkshop');
 };
 
 const theDeviceAuthorizationFixture = (): StaticResponse => ({
@@ -231,6 +300,41 @@ const whenTheWorkshopRequestTimesOutWhileTheNextRefreshStarts = (): void => {
   cy.get<unknown[]>('@workshop.all').should('have.length', 1);
   cy.tick(30_000);
   cy.get<unknown[]>('@workshop.all').should('have.length', 2);
+};
+
+const whenTheRestoredCredentialRenews = (): void => {
+  cy.tick(5_000);
+  cy.wait('@revokedRefresh');
+  cy.wait('@deviceAuthorization');
+  cy.tick(0);
+};
+
+const whenTheNetworkReturns = (): void => {
+  cy.window().then(window => window.dispatchEvent(new Event('online')));
+  cy.wait('@refusedWorkshop');
+  cy.wait('@deviceAuthorization');
+  cy.tick(0);
+};
+
+const whenSynchronizingAfterAnotherTabRetiredTheSession = (): void => {
+  cy.window().then(window => window.dispatchEvent(new Event('online')));
+  cy.wait('@deviceAuthorization');
+  cy.tick(0);
+};
+
+const whenRenewalDiscoversAnotherTabRetiredTheSession = (): void => {
+  cy.tick(5_000);
+  cy.wait('@deviceAuthorization');
+  cy.tick(0);
+};
+
+const whenTheReplacementAuthorizationIsApproved = (): void => {
+  cy.get(dataSelector('user-code')).should('be.visible');
+  cy.intercept('POST', `${OPENID_CONNECT}/token`, theGrantedTokensFixture()).as('replacementTokens');
+  cy.tick(1_000);
+  cy.wait('@replacementTokens');
+  cy.wait('@workshop');
+  cy.tick(1);
 };
 
 const whenPressingTheRecovery = (action: string): void => {
@@ -296,6 +400,10 @@ const thenTheCountdownRunsDown = (): void => {
 
 const thenTheWorkshopLoadsAndTheKeypadAppears = (): void => {
   cy.wait('@workshop');
+  thenTheKeypadIsAvailable();
+};
+
+const thenTheKeypadIsAvailable = (): void => {
   cy.get(dataSelector('designation')).should('be.visible');
   cy.get(dataSelector('enrolement')).should('not.exist');
 };
@@ -333,6 +441,12 @@ const thenThePupitreAsksForANewCodeAgain = (): void => {
   cy.wait('@logout');
   cy.get(dataSelector('enrolement')).should('be.visible');
   cy.get(dataSelector('designation')).should('not.exist');
+};
+
+const thenOnlyEnrolmentIsAvailable = (): void => {
+  cy.get(dataSelector('enrolement')).should('be.visible');
+  cy.get(dataSelector('designation')).should('not.exist');
+  cy.get(dataSelector('pointage')).should('not.exist');
 };
 
 const thenOnlyTheResetActionsAreActive = (): void => {
