@@ -7,7 +7,6 @@ import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
-import { DemonstrationConflitsPort } from '../../../domain/dossier/DemonstrationConflitsPort';
 import {
   ActiviteConflit,
   AdresseDossier,
@@ -19,13 +18,12 @@ import {
 import { PointageConflitId } from '../../../domain/dossier/PointageConflitId';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
-import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
 
 @Component({
   selector: 'glm-dossier-conflit',
+  imports: [RouterLink, ChronologiePointagesPipe],
   templateUrl: './DossierConflitPage.html',
   styleUrl: './DossierConflitPage.css',
-  imports: [RouterLink, DemonstrationConflits, ChronologiePointagesPipe],
   providers: [PreparationActe],
 })
 export class DossierConflitPage {
@@ -40,7 +38,6 @@ export class DossierConflitPage {
   private precedente: AdresseDossier | undefined;
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(ConflitsRightsPort);
-  protected readonly demonstration = inject(DemonstrationConflitsPort, { optional: true });
   protected readonly libelles = LIBELLES_CONFLITS;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
@@ -236,11 +233,5 @@ export class DossierConflitPage {
   protected async verify(): Promise<void> {
     await this.preparation.verify();
     this.refreshAfterConfirmation();
-  }
-
-  protected reset(): void {
-    this.preparation.reset();
-    this.choixSelectionne.set(undefined);
-    this.lecture.reload();
   }
 }

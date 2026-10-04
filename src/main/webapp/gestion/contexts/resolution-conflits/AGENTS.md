@@ -19,7 +19,7 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   en mémoire dans la page ; un rechargement abandonne la saisie. La saisie conserve les nanosecondes,
   avec comparaison des instants équivalents indépendamment de leur fuseau.
 - **Journal** : faits d'origine, annulations et remplacements conservés. Une contradiction restante
-  est un résultat accepté, distinct d'un refus métier ou d'une limitation de simulation.
+  est un résultat accepté, distinct d'un refus métier.
 - **Continuation** : lien explicite vers un pointage actif d'une séquence restante après correction
   de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
 
@@ -43,11 +43,9 @@ Après obsolescence, la saisie reste disponible et l'aperçu est retiré. La pag
 une acquisition échouée laisse la confirmation indisponible. Le gestionnaire demande ensuite un nouvel
 aperçu avant toute confirmation. Une adresse devenue obsolète conserve son résultat explicite.
 
-La composition de démonstration des tests conserve un seul InMemory pendant les navigations.
-Il rejoue les [trajectoires bornées](SCENARIOS.md), sans moteur général d'interprétation ni
-stockage durable. La démonstration permet de réinitialiser et de déclencher panne ou concurrence.
-Une commande hors trajectoire donne une limitation explicite. Aucun identifiant réel provenant
-d'un autre contexte n'est relié aux fixtures. Les droits d'application restent `GESTIONNAIRE`.
+La composition utilise uniquement `HttpConflits`, y compris dans les parcours Cypress. Les réponses
+réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier
+et n'interprètent aucun acte. Les droits d'application restent `GESTIONNAIRE`.
 
 Les tests passent par la saisie et la résolution publiques, les contrats des ports, le DOM Cypress
-et les routes réelles. Leur liste et les garanties HTTP sont dans les trajectoires.
+et les routes réelles. Leur liste et les garanties HTTP sont dans les [garanties de résolution](SCENARIOS.md).

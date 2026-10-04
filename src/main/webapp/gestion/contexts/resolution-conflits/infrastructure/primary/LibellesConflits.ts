@@ -12,8 +12,6 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
 };
 
 export const LIBELLES_CONFLITS = {
-  reinitialiser: 'Réinitialiser la démonstration',
-  erreurReset: 'Impossible de réinitialiser la démonstration. Réessayez.',
   detail: 'Un pointage manque dans la chronologie ?',
   pourquoi: 'Pourquoi ces pointages sont incohérents',
   tracabilite: 'Voir les détails et l’enregistrement',
@@ -46,17 +44,6 @@ export const LIBELLES_CONFLITS = {
   identitePoste: 'Identifiant du poste (facultatif)',
   instant: 'Date et heure du fait',
   instantAide: 'Format ISO avec fuseau, par exemple 2026-09-14T17:00:00+02:00. Les fractions de seconde sont conservées.',
-  incidentsTitre: 'Rejouer un incident de démonstration',
-  incidentsAide: 'L’incident choisi affectera la prochaine opération concernée, dans cette session.',
-  incidentArme: 'Incident prêt :',
-  incidents: {
-    PANNE_LECTURE: 'Lecture indisponible',
-    PANNE_APERCU: 'Aperçu indisponible',
-    PANNE_CONFIRMATION: 'Échec avant écriture',
-    CONCURRENCE: 'Modification concurrente',
-    ISSUE_INCONNUE: 'Réponse perdue après écriture',
-    LECTURE_PARTIELLE: 'Acquisition partielle',
-  },
   motif: 'Motif de la correction ou de l’annulation',
   motifAide: 'Obligatoire, 255 caractères au maximum.',
   previsualiser: 'Vérifier les conséquences',
@@ -88,7 +75,6 @@ export const LIBELLES_CONFLITS = {
     ISSUE_INCONNUE: 'L’issue de l’écriture est inconnue. Vérifiez le journal avant toute nouvelle décision.',
     ERREUR: 'L’opération a échoué. Votre saisie est conservée.',
     REFUS: 'Acte refusé',
-    LIMITATION: 'Limitation de la démonstration',
     APPLIQUE: 'Acte enregistré',
   },
   erreurs: ERREURS_SAISIE,
@@ -116,8 +102,6 @@ export const LIBELLES_CONFLITS = {
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
   titre: 'Conflits de pointage',
   sousTitre: 'Comprendre les faits, choisir une correction et vérifier ses conséquences avant de l’enregistrer.',
-  donneesFictives: 'Démonstration · données fictives.',
-  demonstration: 'Démonstration · données fictives, conservées pendant cette session. Un rechargement restaure les scénarios initiaux.',
   chargement: 'Chargement des conflits…',
   ouvrir: 'Examiner le dossier',
   element: 'Élément',

@@ -7,7 +7,7 @@ import { DossierConflit } from '../domain/dossier/DossierConflit';
 
 export type EtatPreparationActe =
   | { readonly kind: 'REPOS' | 'PREVISUALISATION' | 'CONFIRMATION' | 'CONCURRENCE' | 'ISSUE_INCONNUE' | 'ERREUR' }
-  | { readonly kind: 'REFUS' | 'LIMITATION'; readonly raison: string }
+  | { readonly kind: 'REFUS'; readonly raison: string }
   | { readonly kind: 'APPLIQUE'; readonly dossier: DossierConflit };
 
 @Injectable()
@@ -130,7 +130,7 @@ export class PreparationActe {
     if (this.shouldInvalidatePreview(resultat)) {
       this.actuelle.update(resolution => ResolutionDuConflit.prepare(resolution.saisie));
     }
-    this.operationActuelle.set(resultat.kind === 'ECHEC_CERTAIN' ? { kind: 'ERREUR' } : resultat);
+    this.operationActuelle.set(resultat);
   }
 
   private shouldInvalidatePreview(resultat: ResultatApplication): boolean {

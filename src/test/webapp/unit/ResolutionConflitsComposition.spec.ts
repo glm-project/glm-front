@@ -15,7 +15,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
-import { resolutionConflitsProvider as cypressResolutionConflitsFixture } from '@test/utils/gestion/resolution-conflits/resolution-conflits.provider';
 
 const adresseFixture: AdresseDossier = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
 const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
@@ -217,45 +216,5 @@ describe('Real conflict resolution composition', () => {
     });
     server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution').flush({ kind: 'NON_ATTESTEE' });
     return { lecture: resultatLecture, apercu: resultatApercu, confirmation: await confirmation };
-  };
-});
-
-describe('Conflict resolution source selected before the route runtime starts', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [
-        ...cypressResolutionConflitsFixture,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
-      ],
-    });
-  });
-
-  afterEach(() => {
-    delete window.gestionConflitsSource;
-    TestBed.inject(HttpTestingController).verify();
-  });
-
-  it('should read through HTTP when the browser selects that source after the route providers were declared', async () => {
-    givenTheBrowserSelectsHttp();
-
-    const lecture = whenReadingTheConflictList();
-    whenTheHttpConflictListAnswers();
-    const resultat = await lecture;
-
-    expect(resultat).toEqual({ lignes: [], total: 0, complete: true });
-  });
-
-  const givenTheBrowserSelectsHttp = (): void => {
-    window.gestionConflitsSource = 'HTTP';
-  };
-
-  const whenReadingTheConflictList = () => TestBed.inject(ConflitsReadPort).list({ operateur: '', element: '', page: 1 });
-
-  const whenTheHttpConflictListAnswers = (): void => {
-    TestBed.inject(HttpTestingController)
-      .expectOne('/api/atelier/conflits?operateur=&element=&page=0&size=5')
-      .flush({ lignes: [], total: 0, complete: true, page: 0, size: 5 });
   };
 });

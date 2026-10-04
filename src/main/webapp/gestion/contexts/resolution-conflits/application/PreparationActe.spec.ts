@@ -308,28 +308,6 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(errors.failures).toEqual([panne]);
   });
 
-  it('should keep the valid preview for a retry after a confirmed failure before any write', async () => {
-    await givenValidPreview();
-    const premiereAttente = givenApplicationWaits();
-    const premiere = preparation.confirm();
-    await premiereAttente.arrival;
-
-    premiereAttente.release({ kind: 'ECHEC_CERTAIN' });
-    await premiere;
-    const echecCertain = preparation.operation().kind;
-    const propositionRetenue = preparation.resolution().saisie.command();
-    const secondeAttente = givenApplicationWaits();
-    const seconde = preparation.confirm();
-    await secondeAttente.arrival;
-    secondeAttente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
-    await seconde;
-
-    expect(echecCertain).toBe('ERREUR');
-    expect(propositionRetenue).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
-    expect(applications.requests).toHaveLength(2);
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
-  });
-
   it('should refuse to preview an incomplete acte without starting any port request', async () => {
     preparation.choose(SaisieActe.regularise());
 
@@ -341,23 +319,22 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(0);
   });
 
-  it.each([
-    { kind: 'REFUS', raison: 'Événement annulé' },
-    { kind: 'LIMITATION', raison: 'Commande hors trajectoire' },
-    { kind: 'CONCURRENCE' },
-  ] satisfies readonly ResultatApercu[])('should retain the proposal when previewing returns $kind', async resultat => {
-    const attente = givenPreviewWaits();
-    preparation.choose(cancellationFixture());
-    const previsualisation = preparation.preview(dossierFixture);
-    await attente.arrival;
+  it.each([{ kind: 'REFUS', raison: 'Événement annulé' }, { kind: 'CONCURRENCE' }] satisfies readonly ResultatApercu[])(
+    'should retain the proposal when previewing returns $kind',
+    async resultat => {
+      const attente = givenPreviewWaits();
+      preparation.choose(cancellationFixture());
+      const previsualisation = preparation.preview(dossierFixture);
+      await attente.arrival;
 
-    attente.release(resultat);
-    await previsualisation;
+      attente.release(resultat);
+      await previsualisation;
 
-    expect(preparation.operation()).toEqual(resultat);
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
-    expect(preparation.resolution().confirmation()).toBeUndefined();
-  });
+      expect(preparation.operation()).toEqual(resultat);
+      expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+      expect(preparation.resolution().confirmation()).toBeUndefined();
+    },
+  );
 
   it('should show a current preview failure and keep the proposal available for retrying', async () => {
     const attente = givenPreviewWaits();

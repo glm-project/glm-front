@@ -3,21 +3,18 @@ import { Component, computed, inject, linkedSignal, resource } from '@angular/co
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
-import { DemonstrationConflitsPort } from '../../../domain/dossier/DemonstrationConflitsPort';
 import { FiltreConflits, PAGE_SIZE_CONFLITS } from '../../../domain/dossier/DossierConflit';
 import { readPageConflitsDemandee } from '../../../domain/dossier/PageConflitsDemandee';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
-import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
 import { LIBELLES_LISTE_CONFLITS } from './LibellesListeConflits';
 
 @Component({
   selector: 'glm-liste-conflits',
+  imports: [RouterLink],
   templateUrl: './ListeConflits.html',
   styleUrl: './ListeConflits.css',
-  imports: [RouterLink, DemonstrationConflits],
 })
 export class ListeConflits {
-  protected readonly demonstration = inject(DemonstrationConflitsPort, { optional: true });
   private readonly port = inject(ConflitsReadPort);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

@@ -10,14 +10,13 @@ export interface ApercuConflit extends PropositionResolution {
 
 export type ResultatApercu =
   | { readonly kind: 'APERCU'; readonly apercu: ApercuConflit }
-  | { readonly kind: 'REFUS' | 'LIMITATION'; readonly raison: string }
+  | { readonly kind: 'REFUS'; readonly raison: string }
   | { readonly kind: 'CONCURRENCE' };
 
 export type ResultatApplication =
   | { readonly kind: 'APPLIQUE'; readonly dossier: DossierConflit }
   | { readonly kind: 'CONCURRENCE' }
   | { readonly kind: 'ISSUE_INCONNUE' }
-  | { readonly kind: 'ECHEC_CERTAIN' }
   | { readonly kind: 'REFUS'; readonly raison: string };
 
 export type ResultatVerification =
