@@ -77,7 +77,10 @@ The adapter implements RFC 8628 because `keycloak-js` does not support `device_c
 5. renew before expiry and commit token rotation before use.
 
 `DeviceGrantClient` owns that transport: the `HttpBackend` client, the endpoints, the wire documents and the
-four protocol calls. `DeviceAuthentication` owns the session, its persistence and its renewal.
+four protocol calls. `DeviceAuthentication` owns the session and its enrolment and renewal lifecycle.
+Its internal `DeviceCredentialsStorage` owns durable credential documents, conditional writes and lock ordering;
+`EnrolmentRequirements` owns retained notifications and cancellable waits. These objects remain implementation
+details of the same adapter; the four ports still resolve to one session owner.
 
 Use a `Map` for authorization-server refusal delays and for translating a refusal into an enrolment outcome.
 The refusal string is external input; a plain object would also expose prototype members such as
