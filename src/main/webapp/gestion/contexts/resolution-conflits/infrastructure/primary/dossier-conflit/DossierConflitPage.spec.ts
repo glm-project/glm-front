@@ -107,13 +107,14 @@ class DossierPreviewFixture extends PrevisualisationConflitPort {
 class DossierApplicationFixture extends ApplicationActePort {
   readonly replies = new RepliesFixture<ResultatApplication>();
   result: ResultatApplication = { kind: 'ECHEC_CERTAIN' };
+  verification: ResultatVerification = { kind: 'NON_ATTESTE' };
 
   apply(): Promise<ResultatApplication> {
     return this.replies.answer(this.result);
   }
 
   verify(): Promise<ResultatVerification> {
-    return roundTripFixture(() => ({ kind: 'NON_ATTESTE' }));
+    return roundTripFixture(() => this.verification);
   }
 }
 
@@ -297,6 +298,35 @@ describe('Conflict dossier page', () => {
 
     thenTextContains('conflit-activite', 'En cours · Temps non définitif');
     thenTextDoesNotContain('conflit-activite', '3 h');
+  });
+
+  it.each([
+    { duree: 'PT0S', attendu: '0 s' },
+    { duree: 'PT45M', attendu: '45 min' },
+    { duree: 'PT24H', attendu: '24 h' },
+    { duree: 'durée reçue', attendu: 'durée reçue' },
+  ])('should present the received non-conformity duration $duree', async ({ duree, attendu }) => {
+    givenAnAuthoritativeActivity('TERMINEE', duree, 'NON_CONFORMITE');
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'Non-conformité');
+    thenTextContains('conflit-activite', attendu);
+  });
+
+  it('should show the attested canonical dossier when the original address has become obsolete', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    application.verification = { kind: 'ATTESTE', dossier: { ...dossierConflitFixture(), version: 3, enConflit: false } };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    read.result = { kind: 'ANCRE_ANNULEE', journal: dossierConflitFixture().journal };
+
+    await whenClicking('conflit-verifier');
+
+    thenTextContains('conflit-resultat', 'Conflit résolu');
+    thenAbsent('conflit-adresse-obsolete');
   });
 
   it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
@@ -684,7 +714,11 @@ describe('Conflict dossier page', () => {
     };
   };
 
-  const givenAnAuthoritativeActivity = (etat: 'TERMINEE' | 'EN_COURS', duree?: string): void => {
+  const givenAnAuthoritativeActivity = (
+    etat: 'TERMINEE' | 'EN_COURS',
+    duree?: string,
+    categorie: 'TRAVAIL' | 'NON_CONFORMITE' = 'TRAVAIL',
+  ): void => {
     const dossier = dossierConflitFixture();
     read.result = {
       kind: 'DOSSIER',
@@ -697,7 +731,7 @@ describe('Conflict dossier page', () => {
             temps: '',
             etat,
             periode: {
-              categorie: 'TRAVAIL',
+              categorie,
               debut: '2026-09-14T08:00:00.123456789+02:00',
               ...(etat === 'TERMINEE' ? { fin: '2026-09-14T17:00:00+02:00' } : {}),
               ...(duree === undefined ? {} : { duree }),
