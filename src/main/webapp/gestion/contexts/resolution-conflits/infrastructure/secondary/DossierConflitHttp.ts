@@ -90,7 +90,7 @@ export const toDossier = (
       designation: dossier.suivi.nom,
     }),
     version: dossier.revision,
-    enConflit: dossier.kind === 'EN_CONFLIT',
+    enConflit: dossier.enConflit,
     cloture: dossier.suivi.clotureLe !== undefined,
     ...(dossier.suivi.clotureLe === undefined ? {} : { finCloture: dossier.suivi.clotureLe }),
     engagement: dossier.suivi.engageLe,
