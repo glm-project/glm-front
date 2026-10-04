@@ -14,4 +14,5 @@ export const LIBELLES_LISTE_CONFLITS = {
   pageVide: 'Cette page ne contient plus de dossier. D’autres conflits restent dans la sélection.',
   premierePage: 'Revenir à la première page',
   erreurNavigation: 'Impossible d’appliquer les filtres. Réessayez ; la liste acquise reste consultable.',
+  sequenceEnConflit: 'Séquence en conflit',
 } as const;

@@ -1,26 +1,16 @@
-import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { ApplicationActePort, PrevisualisationConflitPort } from '@/gestion/contexts/resolution-conflits/domain/acte/ConflitsActesPorts';
-import { ConflitsReadPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/ConflitsRightsPort';
-import { DemonstrationConflitsPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/DemonstrationConflitsPort';
-import { InMemoryConflits } from '@/gestion/contexts/resolution-conflits/infrastructure/secondary/InMemoryConflits';
+import { resolutionConflitsHttpProvider } from '@/gestion/resolution-conflits-http.provider';
 import { Provider } from '@angular/core';
+import { resolutionConflitsDemonstrationProvider } from './resolution-conflits-demonstration.provider';
 
 declare global {
   interface Window {
     gestionConflitsGestionnaire?: boolean;
+    gestionConflitsSource?: 'HTTP' | 'DEMONSTRATION';
   }
 }
 
 export const resolutionConflitsProvider: Provider[] = [
+  ...(window.gestionConflitsSource === 'HTTP' ? resolutionConflitsHttpProvider : resolutionConflitsDemonstrationProvider),
   { provide: ConflitsRightsPort, useFactory: () => ({ canApply: () => window.gestionConflitsGestionnaire !== false }) },
-  {
-    provide: InMemoryConflits,
-    useFactory: (droits: ConflitsRightsPort, errors: ErrorHandlerPort) => new InMemoryConflits(droits, errors),
-    deps: [ConflitsRightsPort, ErrorHandlerPort],
-  },
-  { provide: ConflitsReadPort, useExisting: InMemoryConflits },
-  { provide: PrevisualisationConflitPort, useExisting: InMemoryConflits },
-  { provide: ApplicationActePort, useExisting: InMemoryConflits },
-  { provide: DemonstrationConflitsPort, useExisting: InMemoryConflits },
 ];

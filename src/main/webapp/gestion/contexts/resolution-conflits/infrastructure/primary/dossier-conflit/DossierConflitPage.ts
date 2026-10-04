@@ -1,13 +1,22 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
-import { AdresseDossier, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
+import { DemonstrationConflitsPort } from '../../../domain/dossier/DemonstrationConflitsPort';
+import {
+  ActiviteConflit,
+  AdresseDossier,
+  ChoixGuide,
+  DossierConflit,
+  LigneConflit,
+  PointageConflit,
+} from '../../../domain/dossier/DossierConflit';
+import { PointageConflitId } from '../../../domain/dossier/PointageConflitId';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
@@ -21,6 +30,7 @@ import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationCo
 })
 export class DossierConflitPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
   private readonly propositionHeading = viewChild<ElementRef<HTMLHeadingElement>>('propositionHeading');
@@ -28,13 +38,13 @@ export class DossierConflitPage {
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
   private precedente: AdresseDossier | undefined;
-  private verificationDemandee = false;
-  private demandeLecture = Symbol('lecture');
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(ConflitsRightsPort);
+  protected readonly demonstration = inject(DemonstrationConflitsPort, { optional: true });
   protected readonly libelles = LIBELLES_CONFLITS;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
+  protected readonly pointageConsulte = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
@@ -57,25 +67,77 @@ export class DossierConflitPage {
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
   );
 
-  private async read(adresse: AdresseDossier | undefined) {
-    const demande = Symbol('lecture');
-    this.demandeLecture = demande;
-    const verification = this.verificationDemandee;
-    this.verificationDemandee = false;
+  protected libelleActivite(activite: ActiviteConflit): string {
+    const periode = activite.periode;
+    if (periode === undefined) return activite.libelle;
+    const categorie = periode.categorie === 'TRAVAIL' ? this.libelles.types.DEBUT : this.libelles.types.NON_CONFORMITE;
+    const fin = periode.fin === undefined ? '' : ` → ${periode.fin}`;
+    return `${categorie} · ${periode.debut}${fin}`;
+  }
+
+  protected libelleChoix(choix: ChoixGuide): string {
+    return choix.code === undefined ? choix.libelle : this.libelles.choix[choix.code].libelle;
+  }
+
+  protected explicationChoix(choix: ChoixGuide): string {
+    return choix.code === undefined ? choix.explication : this.libelles.choix[choix.code].explication;
+  }
+
+  protected libelleContinuation(ligne: LigneConflit): string {
+    return (
+      ligne.explication
+      || `${ligne.designation} · ${ligne.operateur || ligne.operateurId} · ${ligne.date} · ${ligne.nombrePointages} pointages`
+    );
+  }
+
+  protected referencePointage(
+    journal: readonly PointageConflit[],
+    identifiant: PointageConflitId,
+  ): Readonly<{ libelle: string; lien?: string }> {
+    const pointage = journal.find(pointage => pointage.id.pointage === identifiant.pointage);
+    if (pointage === undefined) return { libelle: identifiant.pointage };
+    const fait = pointage.fait;
+    return {
+      libelle: `${fait.instant} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
+      lien: this.hrefForRepere(`pointage-${pointage.id.pointage}`),
+    };
+  }
+
+  private hrefForRepere(repere: string): string {
+    return this.router.serializeUrl(
+      this.router.createUrlTree([], {
+        relativeTo: this.route,
+        queryParamsHandling: 'preserve',
+        fragment: repere,
+      }),
+    );
+  }
+
+  protected tempsActivite(activite: ActiviteConflit): string {
+    if (activite.etat === 'EN_COURS') return 'Temps non définitif';
+    if (activite.etat === 'A_RESOUDRE') return activite.temps || 'Temps à résoudre';
+    const duree = activite.periode?.duree;
+    if (duree === undefined) return activite.temps;
+    const composants = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(duree);
+    if (composants === null) return duree;
+    return [
+      composants[1] && `${composants[1]} h`,
+      composants[2] && `${composants[2]} min`,
+      composants[3] && `${composants[3].replace('.', ',')} s`,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  private read(adresse: AdresseDossier | undefined) {
     if (adresse === undefined) {
       this.precedente = undefined;
       this.contextChanged();
-      return undefined;
+      return Promise.resolve(undefined);
     }
     if (!this.sameAddress(adresse)) this.contextChanged();
     this.precedente = adresse;
-    const resultat = await this.port.read(adresse);
-    if (this.verificationIsCurrent(verification, adresse, demande)) this.preparation.acknowledgeRead();
-    return resultat;
-  }
-
-  private verificationIsCurrent(verification: boolean, adresse: AdresseDossier, demande: symbol): boolean {
-    return verification && this.demandeLecture === demande && this.sameAddress(adresse);
+    return this.port.read(adresse);
   }
 
   private sameAddress(adresse: AdresseDossier): boolean {
@@ -96,7 +158,7 @@ export class DossierConflitPage {
 
   protected labelForActivite(id: string, dossier: DossierConflit): string {
     const activite = dossier.activites.find(activite => activite.id.activite === id);
-    if (activite !== undefined) return activite.libelle;
+    if (activite !== undefined) return this.libelleActivite(activite);
     const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
     if (origine !== undefined) return `${this.libelles.types[origine.fait.type]} à ${origine.fait.instant.slice(11, 19)}`;
     return `Activité ${id}`;
@@ -104,7 +166,12 @@ export class DossierConflitPage {
 
   protected hrefForActivite(id: string, dossier: DossierConflit): string {
     const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
-    return origine === undefined ? `#activite-${id}` : `#pointage-${origine.id.pointage}`;
+    return this.hrefForRepere(origine === undefined ? `activite-${id}` : `pointage-${origine.id.pointage}`);
+  }
+
+  protected traceToggled(pointage: string, ouverte: boolean): void {
+    const consultationFermee = !ouverte && this.pointageConsulte() === pointage;
+    if (consultationFermee) this.pointageConsulte.set(undefined);
   }
 
   protected correct(pointage: PointageConflit): void {
@@ -142,6 +209,15 @@ export class DossierConflitPage {
 
   protected async confirm(): Promise<void> {
     await this.preparation.confirm();
+    this.refreshAfterConfirmation();
+  }
+
+  protected async retryConfirmation(): Promise<void> {
+    await this.preparation.retryConfirmation();
+    this.refreshAfterConfirmation();
+  }
+
+  private refreshAfterConfirmation(): void {
     const resultat = this.preparation.operation();
     if (resultat.kind === 'APPLIQUE') {
       this.lecture.value.set({ kind: 'DOSSIER', dossier: resultat.dossier });
@@ -157,9 +233,9 @@ export class DossierConflitPage {
     this.lecture.reload();
   }
 
-  protected verify(): void {
-    this.verificationDemandee = true;
-    this.lecture.reload();
+  protected async verify(): Promise<void> {
+    await this.preparation.verify();
+    this.refreshAfterConfirmation();
   }
 
   protected reset(): void {

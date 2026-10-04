@@ -135,6 +135,45 @@ describe('Conflict list', () => {
     expect(present('conflits-table')).toBe(false);
   });
 
+  it('should omit simulation controls when the list has no demonstration port', async () => {
+    givenNoDemonstration();
+
+    await whenTheListIsRendered();
+
+    expect(present('conflits-demo')).toBe(false);
+    expect(textOf('conflits-vide')).toContain('Aucun conflit');
+  });
+
+  it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
+    portFixture.page = {
+      lignes: [{ ...ligneFixture(), operateur: '', operateurId: 'op-absent', poste: '', posteId: 'poste-supprime' }],
+      total: 1,
+      complete: true,
+    };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Opérateur non résolu · op-absent');
+    expect(textOf('conflit-ligne')).toContain('Poste non résolu · poste-supprime');
+  });
+
+  it('should distinguish work clocked without a workstation from an unresolved workstation reference', async () => {
+    portFixture.page = { lignes: [{ ...ligneFixture(), poste: '' }], total: 1, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Sans poste');
+    expect(textOf('conflit-ligne')).not.toContain('Poste non résolu');
+  });
+
+  it('should identify a conflicting sequence when the API supplies no presentation explanation', async () => {
+    portFixture.page = { lignes: [{ ...ligneFixture(), explication: '' }], total: 1, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Séquence en conflit');
+  });
+
   it('should distinguish no matching conflicts from an empty global list', async () => {
     givenAnAddress({ operateur: 'Camille', element: 'M-042', page: '2' });
 
@@ -317,6 +356,10 @@ describe('Conflict list', () => {
     input('conflits-filtre-element').value = element;
     requiredElement('conflits-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await componentFixture.whenStable();
+  };
+
+  const givenNoDemonstration = (): void => {
+    TestBed.overrideProvider(DemonstrationConflitsPort, { useValue: null });
   };
 
   const whenTheListIsRendered = async (): Promise<void> => {

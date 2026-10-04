@@ -38,6 +38,10 @@ describe('Gestion header', () => {
     thenItShowsTheHeading('glmfront');
   });
 
+  it('should identify conflict resolution as a regular workshop destination', () => {
+    thenNavigationHasLabel('gestion-navigation-conflits', 'Conflits');
+  });
+
   it.each([
     ['gestion-navigation-supervision', '/', 'Supervision'],
     ['gestion-navigation-atelier', '/atelier', 'Atelier'],
@@ -92,6 +96,10 @@ describe('Gestion header', () => {
     const link = document.querySelector(dataSelector(selector));
     expect(link?.getAttribute('href')).toBe(href);
     expect(link?.textContent).toContain(label);
+  };
+
+  const thenNavigationHasLabel = (selector: string, label: string): void => {
+    expect(document.querySelector(dataSelector(selector))?.textContent.trim()).toBe(label);
   };
 
   const thenItShowsTheHeading = (heading: string): void => {

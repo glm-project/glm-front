@@ -35,8 +35,8 @@ describe('ConflitsRightsPort', () => {
     expect(droits).toBe(false);
   });
 
-  it('should allow the explicit gestionnaire realm role', () => {
-    givenSessionFixture({ realm_access: { roles: ['GESTIONNAIRE'] } });
+  it('should allow the gestionnaire realm role issued by the delivered realm', () => {
+    givenSessionFixture({ realm_access: { roles: ['ROLE_GESTIONNAIRE'] } });
 
     const droits = whenApplicationRightsAreRead();
 

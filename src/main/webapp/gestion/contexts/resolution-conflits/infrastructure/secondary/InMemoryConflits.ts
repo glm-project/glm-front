@@ -6,6 +6,7 @@ import {
   PrevisualisationConflitPort,
   ResultatApercu,
   ResultatApplication,
+  ResultatVerification,
 } from '../../domain/acte/ConflitsActesPorts';
 import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
@@ -31,6 +32,10 @@ import { temoinsConflits } from './TemoinsConflits';
 
 const adresseKey = (adresse: AdresseDossier): string => `${adresse.suivi.suivi}/${adresse.pointage.pointage}`;
 
+interface RecuSimule extends ReferenceApercu {
+  readonly dossier: DossierConflit;
+}
+
 export class InMemoryConflits
   extends ConflitsReadPort
   implements PrevisualisationConflitPort, ApplicationActePort, DemonstrationConflitsPort
@@ -38,6 +43,7 @@ export class InMemoryConflits
   private readonly scenarios = new Map<string, ScenarioConflits>();
   private readonly dossiers = new Map<string, DossierConflit>();
   private readonly apercus = new Map<string, ApercuConflit>();
+  private readonly recus = new Map<string, RecuSimule>();
   private readonly adresses = new Map<string, string>();
   private readonly incidents = new Set<IncidentDemo>();
   private reference = 0;
@@ -55,6 +61,7 @@ export class InMemoryConflits
     this.dossiers.clear();
     this.scenarios.clear();
     this.apercus.clear();
+    this.recus.clear();
     this.adresses.clear();
     this.incidents.clear();
     this.restore();
@@ -101,7 +108,7 @@ export class InMemoryConflits
     const continuations = this.changesAnchor(avant.ligne.adresse, acte) ? this.remainingLines(avant.ligne.adresse) : suite.continuations;
     const apres = { ...avant, ...suite, continuations, version: avant.version + 1, journal };
     const reference = `demo-apercu-${++this.reference}`;
-    const apercu = { adresse, version: avant.version, acte, reference, avant, apres };
+    const apercu = { adresse, commande: `demo-commande-${this.reference}`, version: avant.version, acte, reference, avant, apres };
     this.apercus.set(reference, apercu);
     return { kind: 'APERCU', apercu };
   }
@@ -152,11 +159,20 @@ export class InMemoryConflits
     await new Promise(resolve => setTimeout(resolve));
     if (this.incidents.delete('PANNE_CONFIRMATION')) return { kind: 'ECHEC_CERTAIN' };
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
+    const recu = this.recus.get(reference.reference);
+    if (recu !== undefined) return this.replay(reference, recu);
     const apercu = this.apercus.get(reference.reference);
     if (apercu === undefined) return { kind: 'REFUS', raison: 'Aperçu inconnu' };
     const refus = this.confirmationFailure(reference, apercu);
     if (refus !== undefined) return refus;
     this.install(apercu.apres);
+    this.recus.set(reference.reference, {
+      adresse: apercu.adresse,
+      commande: apercu.commande,
+      reference: apercu.reference,
+      version: apercu.version,
+      dossier: apercu.apres,
+    });
     for (const pointage of apercu.apres.journal.slice(apercu.avant.journal.length)) {
       this.adresses.set(adresseKey({ suivi: apercu.adresse.suivi, pointage: pointage.id }), adresseKey(apercu.apres.ligne.adresse));
     }
@@ -165,8 +181,22 @@ export class InMemoryConflits
     return { kind: 'APPLIQUE', dossier: apercu.apres };
   }
 
+  private replay(reference: ReferenceApercu, recu: RecuSimule): ResultatApplication {
+    if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    return { kind: 'APPLIQUE', dossier: recu.dossier };
+  }
+
+  async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
+    await new Promise(resolve => setTimeout(resolve));
+    if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
+    const recu = this.recus.get(reference.reference);
+    if (recu === undefined) return { kind: 'NON_ATTESTE' };
+    if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    return { kind: 'ATTESTE', dossier: recu.dossier };
+  }
+
   private confirmationFailure(reference: ReferenceApercu, apercu: ApercuConflit): ResultatApplication | undefined {
-    if (reference.version !== apercu.version) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    if (!this.sameReference(reference, apercu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
     const versions = [...this.dossiers.values()]
       .filter(dossier => dossier.ligne.adresse.suivi.suivi === apercu.adresse.suivi.suivi)
       .map(dossier => dossier.version);
@@ -178,12 +208,27 @@ export class InMemoryConflits
     return undefined;
   }
 
+  private sameReference(reference: ReferenceApercu, attendu: ReferenceApercu): boolean {
+    return (
+      reference.version === attendu.version
+      && reference.commande === attendu.commande
+      && adresseKey(reference.adresse) === adresseKey(attendu.adresse)
+    );
+  }
+
   private install(dossier: DossierConflit): void {
     for (const [key, courant] of this.dossiers) {
       if (courant.ligne.adresse.suivi.suivi !== dossier.ligne.adresse.suivi.suivi) continue;
       const apres =
         key === adresseKey(dossier.ligne.adresse) ? dossier : { ...courant, journal: dossier.journal, version: dossier.version };
       this.dossiers.set(key, apres);
+      this.refreshReceipts(key, apres);
+    }
+  }
+
+  private refreshReceipts(key: string, dossier: DossierConflit): void {
+    for (const [reference, recu] of this.recus) {
+      if (adresseKey(recu.dossier.ligne.adresse) === key) this.recus.set(reference, { ...recu, dossier });
     }
   }
 

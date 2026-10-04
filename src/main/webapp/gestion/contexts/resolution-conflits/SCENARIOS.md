@@ -1,4 +1,4 @@
-# Trajectoires de démonstration
+# Résolution réelle et trajectoires de démonstration
 
 Les snapshots de l'InMemory illustrent les règles de l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md).
 Ils décrivent les résultats de commandes précises ; ils ne constituent pas un interpréteur des commandes
@@ -56,14 +56,15 @@ derniers résultats conservent le journal disponible. Une adresse refusée n'ouv
 une autre séquence. Les faits ajoutés par un acte sont également adressables dans leur séquence.
 
 Prévisualiser conserve le journal et la version lus. L'aperçu porte l'acte exact, son adresse, la version
-du suivi et une référence propre. Confirmer consomme cette référence ; modifier sa version est refusé.
+du suivi et une référence propre. La référence porte aussi la commande créée par le client. Confirmer consomme cette référence ; modifier sa version est refusé.
 L'application compare la version commune à tous les dossiers du suivi. Deux aperçus concurrents peuvent
 être lus, mais la deuxième confirmation devient `CONCURRENCE` après l'application du premier. Une
 correction conserve l'origine avec motif, auteur et date d'annulation, puis ajoute le remplacement lié
 à cette origine. Une régularisation ajoute un fait marqué et son auteur. Le même journal et la même
 version sont ensuite visibles depuis toutes les projections du suivi.
 
-`ConflitsRightsPort.canApply()` exige le rôle de royaume exact `GESTIONNAIRE`. L'adapter normal lit
+`ConflitsRightsPort.canApply()` exige le rôle métier `GESTIONNAIRE`, traduit depuis le claim de royaume
+`ROLE_GESTIONNAIRE` émis par le realm livré. L'adapter normal lit
 `realm_access.roles` dans le token de `AuthenticationPort` ; un token absent ou malformé refuse le droit.
 Les ports d'aperçu et d'application vérifient ce droit au terme de leur attente asynchrone, y compris
 si la session perd son rôle après l'aperçu. La composition Cypress remplace explicitement le provider
@@ -92,21 +93,27 @@ Le simulateur ne prétend pas couvrir toutes les permutations acceptées par les
 ## Réinitialisation et incidents
 
 `DemonstrationConflitsPort.reset(): Promise<void>` restaure les fixtures, efface les aperçus et les
-incidents armés. Un ancien aperçu ne peut plus être confirmé après réinitialisation. Un rechargement
+incidents armés et les reçus simulés. Un ancien aperçu ne peut plus être confirmé après réinitialisation. Un rechargement
 complet recrée également l'état initial ; aucune donnée n'est stockée durablement. `arm(incident)`
 programme un incident unique pour la prochaine opération concernée. Toutes les lectures, tous les
 aperçus et toutes les applications passent par une attente asynchrone.
 
-| Incident             | Opération et résultat                                                                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PANNE_LECTURE`      | Prochaine liste ou lecture rejetée ; signalement unique par `ErrorHandlerPort`, puis lecture suivante possible                                                                 |
-| `PANNE_APERCU`       | Prochain aperçu rejeté sans écriture ; le coordinateur signale l'erreur, pas l'adapter                                                                                         |
-| `PANNE_CONFIRMATION` | Prochaine application retourne `ECHEC_CERTAIN` sans écriture ; le même aperçu peut être retenté                                                                                |
-| `CONCURRENCE`        | Prochaine confirmation augmente la version commune sans changer le journal, puis retourne `CONCURRENCE`                                                                        |
-| `ISSUE_INCONNUE`     | Prochaine confirmation applique réellement l'acte et consomme l'aperçu, puis retourne `ISSUE_INCONNUE` ; une lecture permet de vérifier le résultat, aucune répétition aveugle |
-| `LECTURE_PARTIELLE`  | Prochaine liste fournit au plus deux lignes et `complete=false`, avec le total du filtre ; la suivante est complète                                                            |
+| Incident             | Opération et résultat                                                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PANNE_LECTURE`      | Prochaine liste ou lecture rejetée ; signalement unique par `ErrorHandlerPort`, puis lecture suivante possible                                                                                             |
+| `PANNE_APERCU`       | Prochain aperçu rejeté sans écriture ; le coordinateur signale l'erreur, pas l'adapter                                                                                                                     |
+| `PANNE_CONFIRMATION` | Prochaine application retourne `ECHEC_CERTAIN` sans écriture ; le même aperçu peut être retenté                                                                                                            |
+| `CONCURRENCE`        | Prochaine confirmation augmente la version commune sans changer le journal, puis retourne `CONCURRENCE`                                                                                                    |
+| `ISSUE_INCONNUE`     | Prochaine confirmation applique réellement l'acte et consomme l'aperçu, puis retourne `ISSUE_INCONNUE` ; la vérification du reçu atteste l'écriture ; une reprise explicite conserve commande et référence |
+| `LECTURE_PARTIELLE`  | Prochaine liste fournit au plus deux lignes et `complete=false`, avec le total du filtre ; la suivante est complète                                                                                        |
 
 ## Tests par les points d'entrée confirmés
+
+`ApplicationActePort.verify(reference)` rend `ATTESTE` avec le dossier canonique, `NON_ATTESTE` sans
+preuve d'écriture, ou un refus. La vérification ne dépend pas d'une lecture ordinaire ; celle-ci ne lève pas l'issue inconnue. Le coordinateur
+conserve la référence confirmée, bloque toute nouvelle décision tant que le reçu n'est pas attesté et
+ignore une réponse de vérification provenant d'un dossier quitté. Une panne de vérification reste une
+issue inconnue et est signalée par `ErrorHandlerPort`. Une reprise explicite de la même confirmation reste disponible après `NON_ATTESTE`, sans nouvelle identité ni nouvel aperçu.
 
 1. Saisie publique : choix explicite, motif, champs requis et instant absolu conservé.
 2. Résolution publique : édition invalidant l'aperçu et confirmation de l'acte exact.
@@ -122,24 +129,33 @@ Les contrats d'adapters exercent les ports publics. Ils gardent les mêmes atten
 privé, une map ou la représentation des fixtures change. Les observations du journal et des versions
 se font par les lectures ; aucune assertion n'inspecte l'état privé du simulateur.
 
-## Contrat HTTP restant à arrêter
+## Parcours HTTP réel
 
-Les ressources consultées dans le backend voisin lors de la préparation sont :
-lecture du suivi et de son journal, correction d'un événement, annulation et régularisation. Avant un
-adapter HTTP, ces disponibilités doivent être revérifiées contre la révision backend épinglée. Elles
-ne fournissent pas encore l'ensemble des garanties nécessaires à ce parcours.
+La composition normale utilise les trois ports HTTP ; les tests de démonstration disposent de leur propre graphe dans les utilitaires de tests.
+Les tests navigateur choisissent explicitement leur composition et réutilisent ces graphes, avec des
+réponses aux limites HTTP pour les parcours réels. Le backend épinglé dans `.glm-back-revision` fournit
+le contrat généré ; les types wire restent au secondaire.
 
-| Besoin découvert       | Contrat à préciser avec Atelier                                                                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Liste globale          | Filtres opérateur/élément, pagination, total, ordre stable et indication explicite de complétude                                                                               |
-| Projection du dossier  | Faits d'origine et actifs, cibles et identités créées, annulations, remplacements, auteurs, dates de réception, heures métier précises, activités et conséquences autoritaires |
-| Adresse par pointage   | Validation du couple suivi/pointage, distinction absent/annulé/hors conflit et continuation explicite vers les séquences restantes                                             |
-| Prévisualisation       | Simulation sans écriture avec les mêmes règles que l'application, résultat partiel accepté, refus métier distincts et conflits restants                                        |
-| Confirmation           | Référence liée à l'acte exact et version autoritaire commune à toutes les séquences du suivi ; refus des confirmations périmées                                                |
-| Issue inconnue         | Lecture canonique permettant de constater l'écriture et clé d'idempotence avant toute nouvelle tentative                                                                       |
-| Référentiels et droits | Identités résolues ou explicitement non résolues, références valides, poste facultatif et contrôle `GESTIONNAIRE` côté serveur                                                 |
-| Régularisation         | Traduction du fait manquant vers le corps actuel ; décider séparément d'un éventuel justificatif, absent du contrat actuel                                                     |
+La liste conserve pagination, total et complétude. Un dossier courant traduit `sequence` ; un aperçu
+ou un reçu traduit `perimetre`, même lorsque l'ancrage devient annulé. Le booléen `enConflit` concerne
+ce périmètre : une continuation indépendante ne prouve pas qu'il reste contradictoire. Une URL
+ancienne reste obsolète lors d'une lecture ordinaire ; les liens de continuation restent explicites.
 
-Le branchement devra aussi préciser les diagnostics structurés, les refus et erreurs techniques qui
-garantissent une absence d'écriture. Un statut réseau seul ne permet pas d'assimiler un échec de
-confirmation à `ECHEC_CERTAIN`.
+L'aperçu envoie l'acte exact, la version lue et une commande UUID créée par le client, sans auteur
+client. Avant/après et leurs durées viennent du serveur. Une équivalence de fuseau conserve l'instant
+à la nanoseconde ; le formulaire garde sa saisie d'origine. Un écho altéré, une durée définitive absente
+ou une proposition guidée incohérente sont des erreurs techniques, jamais une limitation de démo.
+Les guides serveur proposent rattachement de fin ou annulation de transition ; la saisie manuelle
+reste disponible sans motif, cible ou instant inventé.
+
+Confirmation et vérification utilisent adresse et commande publiques, sans mémoire privée d'aperçu.
+Un reçu attesté rend le dossier canonique courant ; son adresse, sa commande et ses révisions doivent
+correspondre à la confirmation. `NON_ATTESTEE` conserve l'incertitude. Une tentative explicite répète
+la même commande et la même référence, protégées par l'idempotence serveur. Une nouvelle décision
+reste bloquée jusqu'à la preuve canonique.
+
+`ApiClient` borne chaque échange à trente secondes. Timeout, rupture réseau, perte de rôle et code
+URN inconnu restent techniques ; une confirmation sans preuve d'échec devient `ISSUE_INCONNUE`.
+Le coordinateur les signale une fois. Les refus métier sont traduits par leurs codes stables ; un
+statut HTTP seul ne prouve jamais une absence d'écriture. La composition normale utilise les droits
+issus du token et le contrôle serveur ; seuls les graphes de test remplacent ce droit par une fixture.

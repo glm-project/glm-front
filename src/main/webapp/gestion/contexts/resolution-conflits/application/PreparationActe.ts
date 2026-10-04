@@ -1,7 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable, signal } from '@angular/core';
 import { ApplicationActePort, PrevisualisationConflitPort, ResultatApercu, ResultatApplication } from '../domain/acte/ConflitsActesPorts';
-import { ResolutionDuConflit } from '../domain/acte/ResolutionDuConflit';
+import { ReferenceApercu, ResolutionDuConflit } from '../domain/acte/ResolutionDuConflit';
 import { ChangementSaisie, SaisieActe } from '../domain/acte/SaisieActe';
 import { DossierConflit } from '../domain/dossier/DossierConflit';
 
@@ -20,6 +20,7 @@ export class PreparationActe {
   readonly resolution = this.actuelle.asReadonly();
   readonly operation = this.operationActuelle.asReadonly();
   private demande = Symbol('demande');
+  private referenceEnAttente: ReferenceApercu | undefined;
 
   choose(saisie: SaisieActe): void {
     if (this.confirmationOutcomeIsPending()) return;
@@ -43,14 +44,27 @@ export class PreparationActe {
     this.demande = Symbol('réinitialisation');
     this.actuelle.set(ResolutionDuConflit.prepare(SaisieActe.empty()));
     this.operationActuelle.set({ kind: 'REPOS' });
+    this.referenceEnAttente = undefined;
   }
 
   contextChanged(): void {
     this.reset();
   }
 
-  acknowledgeRead(): void {
-    if (this.operationActuelle().kind === 'ISSUE_INCONNUE') this.reset();
+  async verify(): Promise<void> {
+    const reference = this.referenceEnAttente;
+    if (reference === undefined) return;
+    const demande = this.demande;
+    try {
+      const resultat = await this.application.verify(reference);
+      if (this.demande !== demande) return;
+      if (resultat.kind === 'ATTESTE') {
+        this.showApplicationResult({ kind: 'APPLIQUE', dossier: resultat.dossier });
+        this.actuelle.set(ResolutionDuConflit.prepare(SaisieActe.empty()));
+      }
+    } catch (failure: unknown) {
+      this.erreurs.handleError(failure);
+    }
   }
 
   async preview(dossier: DossierConflit): Promise<void> {
@@ -86,6 +100,18 @@ export class PreparationActe {
     if (this.operationActuelle().kind === 'CONFIRMATION') return;
     const apercu = this.actuelle().confirmation();
     if (apercu === undefined) return;
+    await this.confirmReference(apercu);
+  }
+
+  async retryConfirmation(): Promise<void> {
+    const reference = this.referenceEnAttente;
+    if (reference === undefined) return;
+    if (this.operationActuelle().kind !== 'ISSUE_INCONNUE') return;
+    await this.confirmReference(reference);
+  }
+
+  private async confirmReference(apercu: ReferenceApercu): Promise<void> {
+    this.referenceEnAttente = apercu;
     this.operationActuelle.set({ kind: 'CONFIRMATION' });
     const demande = Symbol('confirmation');
     this.demande = demande;

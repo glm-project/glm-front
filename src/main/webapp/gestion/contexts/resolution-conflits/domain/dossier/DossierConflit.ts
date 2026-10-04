@@ -26,12 +26,36 @@ export interface PointageConflit {
 export interface ActiviteConflit {
   readonly id: ActiviteConflitId;
   readonly libelle: string;
-  readonly etat: 'A_RESOUDRE' | 'TERMINEE' | 'ANNULEE' | 'REMPLACEE' | 'ECHUE';
+  readonly etat: 'A_RESOUDRE' | 'EN_COURS' | 'TERMINEE' | 'ANNULEE' | 'REMPLACEE' | 'ECHUE';
   readonly temps: string;
+  readonly periode?: {
+    readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
+    readonly debut: string;
+    readonly fin?: string;
+    readonly duree?: string;
+  };
+}
+
+export interface DiagnosticConflit {
+  readonly pointage: PointageConflitId;
+  readonly raison:
+    | 'CIBLE_REMPLACEE'
+    | 'CIBLE_DEJA_TERMINEE'
+    | 'GESTE_AVANT_OUVERTURE'
+    | 'OUVRANT_ANNULE'
+    | 'TRANSITION_MEME_CATEGORIE'
+    | 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE'
+    | 'CONTRADICTION_REGULARISATION';
+  readonly cible: {
+    readonly activite: ActiviteConflitId;
+    readonly ouvrant?: PointageConflitId;
+    readonly termineePar?: PointageConflitId;
+  };
 }
 
 export interface ChoixGuide {
   readonly id: string;
+  readonly code?: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' | 'ANNULER_TRANSITION';
   readonly libelle: string;
   readonly explication: string;
   readonly saisie: SaisieActe;
@@ -42,7 +66,9 @@ export interface LigneConflit {
   readonly element: ElementConflitId;
   readonly designation: string;
   readonly operateur: string;
+  readonly operateurId?: string;
   readonly poste: string;
+  readonly posteId?: string;
   readonly date: string;
   readonly explication: string;
   readonly nombrePointages: number;
@@ -60,6 +86,7 @@ export interface DossierConflit {
   readonly enConflit: boolean;
   readonly consequences: readonly string[];
   readonly continuations: readonly LigneConflit[];
+  readonly diagnostics?: readonly DiagnosticConflit[];
 }
 
 export type LectureDossier =

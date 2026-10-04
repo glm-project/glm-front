@@ -17,6 +17,7 @@ import {
   PrevisualisationConflitPort,
   ResultatApercu,
   ResultatApplication,
+  ResultatVerification,
 } from '../../../domain/acte/ConflitsActesPorts';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
@@ -105,10 +106,16 @@ class DossierPreviewFixture extends PrevisualisationConflitPort {
 
 class DossierApplicationFixture extends ApplicationActePort {
   readonly replies = new RepliesFixture<ResultatApplication>();
+  readonly receiptReplies = new RepliesFixture<ResultatVerification>();
   result: ResultatApplication = { kind: 'ECHEC_CERTAIN' };
+  verification: ResultatVerification = { kind: 'NON_ATTESTE' };
 
   apply(): Promise<ResultatApplication> {
     return this.replies.answer(this.result);
+  }
+
+  verify(): Promise<ResultatVerification> {
+    return this.receiptReplies.answer(this.verification);
   }
 }
 
@@ -134,11 +141,12 @@ class RouteFixture {
 
 class RouterFixture {
   readonly events = EMPTY;
-  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): Record<string, string> {
-    return extras?.queryParams ?? {};
+  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string>; fragment?: string | null }) {
+    return { queryParams: extras?.queryParams ?? {}, fragment: extras?.fragment ?? null };
   }
-  serializeUrl(tree: Record<string, string>): string {
-    return `/?${new URLSearchParams(tree).toString()}`;
+  serializeUrl(tree: { queryParams: Record<string, string>; fragment: string | null }): string {
+    const fragment = tree.fragment === null ? '' : `#${tree.fragment}`;
+    return `/?${new URLSearchParams(tree.queryParams).toString()}${fragment}`;
   }
 }
 
@@ -237,6 +245,90 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-diagnostic');
   });
 
+  it('should reacquire the dossier after the manager explicitly retries an unavailable reading', async () => {
+    read.failure = new Error('Dossier indisponible');
+    await whenRendering();
+    read.failure = undefined;
+
+    await whenClicking('conflit-retry');
+
+    thenTextContains('conflit-diagnostic', 'La fin vise le travail remplacé.');
+    thenAbsent('conflit-retry');
+    expect(read.demandes).toHaveLength(2);
+  });
+
+  it('should explain the explicit target and termination supplied by the conflict diagnostic', async () => {
+    givenAStructuredDiagnostic();
+
+    await whenRendering();
+
+    thenDiagnosticReferencesTheReceivedFact(
+      'conflit-diagnostic-pointage',
+      'fin-17',
+      '2026-09-14T17:00:00.123456789+02:00 · Fin · Fin ciblée',
+    );
+    thenTextContains('conflit-diagnostic', 'vise l’activité travail-8, remplacée.');
+    thenTextContains('conflit-diagnostic', 'Ouverte par debut-8.');
+    thenTextContains('conflit-diagnostic', 'Terminée par nc-12.');
+  });
+
+  it('should link a diagnostic to its corrected terminating fact independently of the preserved activity identity', async () => {
+    givenACorrectedTerminatingFact();
+
+    await whenRendering();
+
+    thenDiagnosticReferencesTheReceivedFact(
+      'conflit-diagnostic-terminaison',
+      '90000000-0000-0000-0000-000000000001',
+      '2026-09-14T12:01:00.123456789+02:00 · Non-conformité · Transition',
+    );
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
+  });
+
+  it('should disclose the received terminating fact when following its diagnostic reference', async () => {
+    givenACorrectedTerminatingFact();
+    await whenRendering();
+
+    await whenClicking('conflit-diagnostic-terminaison');
+
+    thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
+  });
+
+  it('should reopen the same received trace after the manager closes it', async () => {
+    givenACorrectedTerminatingFact();
+    await whenRendering();
+
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-terminaison');
+    await whenClosingTheReceivedTrace('90000000-0000-0000-0000-000000000001');
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-terminaison');
+
+    thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
+  });
+
+  it('should keep the newly requested fact trace open when the previously consulted trace closes', async () => {
+    givenTheOpeningFactReferencedByTheDiagnostic();
+    await whenRendering();
+
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-ouvrant');
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-pointage');
+
+    thenReceivedFactDetailsAreOpen('fin-17');
+  });
+
+  it('should locate the challenged and opening facts identified by the received diagnostic', async () => {
+    givenTheOpeningFactReferencedByTheDiagnostic();
+
+    await whenRendering();
+
+    thenDiagnosticReferencesTheReceivedFact(
+      'conflit-diagnostic-pointage',
+      'fin-17',
+      '2026-09-14T17:00:00.123456789+02:00 · Fin · Fin ciblée',
+    );
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', '2026-09-14T08:00:00+02:00 · Travail · Ouverture');
+  });
+
   it('should reject an address missing its suivi without requesting a dossier', async () => {
     givenAnIncompletePath();
 
@@ -257,7 +349,211 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-choix');
   });
 
-  it('should require a successful canonical read before allowing a new decision after an unknown write outcome', async () => {
+  it('should omit simulation controls when displaying a dossier without a demonstration port', async () => {
+    givenNoDemonstration();
+
+    await whenRendering();
+
+    thenAbsent('conflits-demo');
+    thenTextContains('conflit-cloture', 'Ouvert');
+  });
+
+  it('should retain unresolved reference identities in the dossier heading', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, ligne: { ...dossier.ligne, operateur: '', poste: '', operateurId: 'op-absent', posteId: 'poste-absent' } },
+    };
+
+    await whenRendering();
+
+    thenHeadingContains('Opérateur non résolu · op-absent');
+    thenHeadingContains('Poste non résolu · poste-absent');
+  });
+
+  it('should explain an unresolved activity without presenting an empty duration', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, activites: dossier.activites.map(activite => ({ ...activite, temps: '' })) } };
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'À résoudre · Temps à résoudre');
+  });
+
+  it('should label an explicit continuation from its authoritative sequence instead of presenting an empty link', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, continuations: [{ ...dossier.ligne, explication: '', nombrePointages: 3 }] },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-continuation', 'M-042 · Camille Martin · 14 septembre 2026 · 3 pointages');
+  });
+
+  it.each([
+    { operateur: '', operateurId: 'op-absent', explication: '', attendu: 'M-042 · op-absent · 14 septembre 2026 · 3 pointages' },
+    {
+      operateur: 'Camille Martin',
+      operateurId: 'op-camille',
+      explication: 'Autre fin contradictoire.',
+      attendu: 'Autre fin contradictoire.',
+    },
+  ])('should retain the continuation information $attendu', async ({ operateur, operateurId, explication, attendu }) => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, continuations: [{ ...dossier.ligne, operateur, operateurId, explication, nombrePointages: 3 }] },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-continuation', attendu);
+  });
+
+  it('should distinguish a missing workstation from an unresolved workstation in the heading', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, ligne: { ...dossier.ligne, poste: '' } } };
+
+    await whenRendering();
+
+    thenHeadingContains('Camille Martin · Sans poste · 14 septembre 2026');
+  });
+
+  it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossierConflitFixture(),
+        enConflit: false,
+        activites: [
+          { id: new ActiviteConflitId('travail-8'), libelle: 'Travail commencé à 8 h', etat: 'EN_COURS', temps: 'Temps non définitif' },
+        ],
+      },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'En cours · Temps non définitif');
+  });
+
+  it.each([
+    { code: 'ANNULER_TRANSITION' as const, libelle: 'Annuler la transition', saisie: SaisieActe.cancel('nc-12') },
+    {
+      code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const,
+      libelle: 'Rattacher la fin à l’activité remplaçante',
+      saisie: SaisieActe.correct('fin-17', faitConflitFixture()),
+    },
+  ])(
+    'should explain the structured guide $code without choosing a motive or previewing automatically',
+    async ({ code, libelle, saisie }) => {
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: { ...dossierConflitFixture(), choix: [{ id: 'guide', code, libelle: '', explication: '', saisie }] },
+      };
+      await whenRendering();
+
+      await whenClicking('conflit-choix');
+
+      thenTextContains('conflit-choix', libelle);
+      thenFieldValueIs('conflit-motif', '');
+      thenAbsent('conflit-apercu');
+    },
+  );
+
+  it('should present the exact authoritative period and duration of finished work', async () => {
+    givenAnAuthoritativeActivity('TERMINEE', 'PT8H59M59.876543211S');
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'Travail');
+    thenTextContains('conflit-activite', '2026-09-14T08:00:00.123456789+02:00');
+    thenTextContains('conflit-activite', '2026-09-14T17:00:00+02:00');
+    thenTextContains('conflit-activite', '8 h 59 min 59,876543211 s');
+  });
+
+  it('should retain the finished duration already supplied by the demonstration projection', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, activites: [{ id: new ActiviteConflitId('travail-8'), libelle: 'Travail', etat: 'TERMINEE', temps: '4 h' }] },
+    };
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'Terminée · 4 h');
+  });
+
+  it('should describe ongoing authoritative work without a definitive duration', async () => {
+    givenAnAuthoritativeActivity('EN_COURS', 'PT3H');
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'En cours · Temps non définitif');
+    thenTextDoesNotContain('conflit-activite', '3 h');
+  });
+
+  it.each([
+    { duree: 'PT0S', attendu: '0 s' },
+    { duree: 'PT45M', attendu: '45 min' },
+    { duree: 'PT24H', attendu: '24 h' },
+    { duree: 'durée reçue', attendu: 'durée reçue' },
+  ])('should present the received non-conformity duration $duree', async ({ duree, attendu }) => {
+    givenAnAuthoritativeActivity('TERMINEE', duree, 'NON_CONFORMITE');
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'Non-conformité');
+    thenTextContains('conflit-activite', attendu);
+  });
+
+  it('should show the attested canonical dossier when the original address has become obsolete', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    application.verification = { kind: 'ATTESTE', dossier: { ...dossierConflitFixture(), version: 3, enConflit: false } };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    read.result = { kind: 'ANCRE_ANNULEE', journal: dossierConflitFixture().journal };
+
+    await whenClicking('conflit-verifier');
+
+    thenTextContains('conflit-resultat', 'Conflit résolu');
+    thenAbsent('conflit-adresse-obsolete');
+  });
+
+  it('should recover the canonical receipt even when an ordinary dossier read is unavailable', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    application.verification = { kind: 'ATTESTE', dossier: { ...dossierConflitFixture(), version: 3, enConflit: false } };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    read.failure = new Error('Lecture ordinaire indisponible');
+
+    await whenClicking('conflit-verifier');
+
+    thenTextContains('conflit-resultat', 'Conflit résolu');
+    thenAbsent('conflit-retry');
+  });
+
+  it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
+    givenASuccessfulPreview({
+      ...dossierConflitFixture(),
+      enConflit: false,
+      activites: [
+        { id: new ActiviteConflitId('travail-8'), libelle: 'Travail commencé à 8 h', etat: 'EN_COURS', temps: 'Temps non définitif' },
+      ],
+    });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('conflit-apercu-activite-apres', 'Travail commencé à 8 h · En cours · Temps non définitif');
+  });
+
+  it('should keep new decisions blocked when the confirmation receipt is not attested', async () => {
     givenASuccessfulPreview();
     application.result = { kind: 'ISSUE_INCONNUE' };
     await whenRendering();
@@ -265,16 +561,17 @@ describe('Conflict dossier page', () => {
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
     await whenClicking('conflit-verifier');
-    await whenClicking('conflit-choix');
 
-    thenAbsent('conflit-operation');
-    thenFieldValueIs('conflit-motif', '');
-    expect(read.demandes).toHaveLength(2);
+    thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
+    thenDisabled('conflit-choix');
+    thenFieldValueIs('conflit-motif', 'Cible confirmée');
+    expect(read.demandes).toHaveLength(1);
   });
 
-  it('should clear the displayed interpretation after verifying an unknown write outcome', async () => {
+  it('should clear the displayed interpretation only after the receipt attests the unknown write', async () => {
     givenASuccessfulPreview();
     application.result = { kind: 'ISSUE_INCONNUE' };
+    application.verification = { kind: 'ATTESTE', dossier: { ...dossierConflitFixture(), version: 2 } };
     await whenRendering();
 
     await whenPreparingTheCorrection();
@@ -283,6 +580,21 @@ describe('Conflict dossier page', () => {
 
     thenNoInterpretationIsSelected();
     thenAbsent('conflit-acte');
+  });
+
+  it('should explicitly resume the same uncertain confirmation and display its canonical result', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    await whenClicking('conflit-verifier');
+    application.result = { kind: 'APPLIQUE', dossier: { ...dossierConflitFixture(), version: 3, enConflit: false } };
+
+    await whenClicking('conflit-reprendre-confirmation');
+
+    thenTextContains('conflit-resultat', 'Conflit résolu');
+    thenAbsent('conflit-reprendre-confirmation');
   });
 
   it('should replace the displayed dossier with the accepted partial result while preserving its closure', async () => {
@@ -344,14 +656,14 @@ describe('Conflict dossier page', () => {
     await whenRendering();
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
-    read.failure = new Error('Vérification indisponible');
+    const attente = new PendingResponseFixture<ResultatVerification>();
+    application.receiptReplies.pending = attente;
 
-    await whenClicking('conflit-verifier');
-    const verificationFailed = present('conflit-retry');
-    read.failure = undefined;
-    await whenClicking('conflit-retry');
+    whenStartingClick('conflit-verifier');
+    await attente.arrival;
+    await whenResponseFails(attente, new Error('Vérification indisponible'));
 
-    expect(verificationFailed).toBe(true);
+    expect(present('conflit-verifier')).toBe(true);
     thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
     thenDisabled('conflit-choix');
     thenFieldValueIs('conflit-motif', 'Cible confirmée');
@@ -393,6 +705,18 @@ describe('Conflict dossier page', () => {
     thenFieldValueIs('conflit-cible', 'travail-8');
     thenFieldValueIs('conflit-instant', '2026-09-14T17:00:00.123456789+02:00');
     thenDetailedFactIsOpen();
+  });
+
+  it('should name the received activity interval in the journal target and correction choices', async () => {
+    givenAnAuthoritativeActivity('TERMINEE', 'PT4H');
+    await whenRendering();
+
+    await whenClicking('conflit-detail');
+    await whenClicking('conflit-corriger');
+
+    const libelle = 'Travail · 2026-09-14T08:00:00.123456789+02:00 → 2026-09-14T17:00:00+02:00';
+    thenTextContains('conflit-pointage', libelle);
+    thenTargetChoiceIs('travail-8', libelle);
   });
 
   it('should let the manager select the named non-conformity activity and preview its exact reference', async () => {
@@ -571,8 +895,8 @@ describe('Conflict dossier page', () => {
     await whenRendering();
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
-    const ancienneVerification = new PendingResponseFixture<LectureDossier>();
-    read.pending = ancienneVerification;
+    const ancienneVerification = new PendingResponseFixture<ResultatVerification>();
+    application.receiptReplies.pending = ancienneVerification;
 
     whenStartingClick('conflit-verifier');
     await ancienneVerification.arrival;
@@ -582,7 +906,10 @@ describe('Conflict dossier page', () => {
     await whenAddressChanges('fin-17');
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
-    await whenResponseArrives(ancienneVerification, { kind: 'DOSSIER', dossier: dossierConflitFixture() });
+    await whenResponseArrives(ancienneVerification, {
+      kind: 'ATTESTE',
+      dossier: { ...dossierConflitFixture(), version: 3, enConflit: false },
+    });
 
     thenDisabled('conflit-choix');
     thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
@@ -606,22 +933,141 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-adresse-invalide', 'L’adresse doit préciser');
   });
 
-  const givenASuccessfulPreview = (): void => {
+  const givenASuccessfulPreview = (apres?: DossierConflit): void => {
     const dossier = dossierConflitFixture();
     preview.result = {
       kind: 'APERCU',
       apercu: {
         reference: 'apercu-1',
+        commande: 'commande-1',
         version: 1,
         adresse: dossier.ligne.adresse,
         avant: dossier,
-        apres: { ...dossier, enConflit: false },
+        apres: apres ?? { ...dossier, enConflit: false },
         acte: {
           kind: 'CORRECTION',
           pointage: 'fin-17',
           motif: 'Cible confirmée',
           fait: { ...faitConflitFixture(), activiteVisee: 'nc-12' },
         },
+      },
+    };
+  };
+
+  const givenAStructuredDiagnostic = (): void => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        diagnostics: [
+          {
+            pointage: new PointageConflitId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: {
+              activite: new ActiviteConflitId('travail-8'),
+              ouvrant: new PointageConflitId('debut-8'),
+              termineePar: new PointageConflitId('nc-12'),
+            },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenACorrectedTerminatingFact = (): void => {
+    const dossier = dossierConflitFixture();
+    const corrected = new PointageConflitId('90000000-0000-0000-0000-000000000001');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [
+          ...dossier.journal,
+          {
+            id: corrected,
+            fait: {
+              ...faitConflitFixture(),
+              type: 'NON_CONFORMITE',
+              intention: 'TRANSITION',
+              instant: '2026-09-14T12:01:00.123456789+02:00',
+            },
+            activiteCreee: new ActiviteConflitId('nc-12'),
+            remplace: new PointageConflitId('nc-12'),
+            auteur: 'gestionnaire',
+            enregistre: '2026-10-04T10:00:00Z',
+            regularisation: true,
+          },
+        ],
+        diagnostics: [
+          {
+            pointage: new PointageConflitId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteConflitId('travail-8'), termineePar: corrected },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenTheOpeningFactReferencedByTheDiagnostic = (): void => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [
+          ...dossier.journal,
+          {
+            id: new PointageConflitId('debut-8'),
+            fait: {
+              ...faitConflitFixture(),
+              type: 'DEBUT',
+              intention: 'OUVERTURE',
+              activiteVisee: '',
+              instant: '2026-09-14T08:00:00+02:00',
+            },
+            auteur: 'camille',
+            enregistre: '2026-09-15T08:00:00Z',
+            regularisation: false,
+          },
+        ],
+        diagnostics: [
+          {
+            pointage: new PointageConflitId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteConflitId('travail-8'), ouvrant: new PointageConflitId('debut-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAnAuthoritativeActivity = (
+    etat: 'TERMINEE' | 'EN_COURS',
+    duree?: string,
+    categorie: 'TRAVAIL' | 'NON_CONFORMITE' = 'TRAVAIL',
+  ): void => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [
+          {
+            id: new ActiviteConflitId('travail-8'),
+            libelle: '',
+            temps: '',
+            etat,
+            periode: {
+              categorie,
+              debut: '2026-09-14T08:00:00.123456789+02:00',
+              ...(etat === 'TERMINEE' ? { fin: '2026-09-14T17:00:00+02:00' } : {}),
+              ...(duree === undefined ? {} : { duree }),
+            },
+          },
+        ],
       },
     };
   };
@@ -663,14 +1109,37 @@ describe('Conflict dossier page', () => {
     await fixture.whenStable();
   };
 
+  const whenResponseFails = async <T>(pending: PendingResponseFixture<T>, failure: Error): Promise<void> => {
+    pending.fail(failure);
+    await Promise.allSettled([pending.completion]);
+    await fixture.whenStable();
+  };
+
   const whenClicking = async (selector: string): Promise<void> => {
     element(selector).click();
     await Promise.allSettled([
       ...preview.replies.automaticResponses,
       ...application.replies.automaticResponses,
+      ...application.receiptReplies.automaticResponses,
       ...demonstration.automaticResponses,
     ]);
     await fixture.whenStable();
+  };
+
+  const whenFollowingTheDiagnosticReference = async (selector: string): Promise<void> => {
+    await whenClicking(selector);
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const whenClosingTheReceivedTrace = async (pointage: string): Promise<void> => {
+    requiredFixture(receivedFact(pointage).querySelector('summary'), 'received trace summary').click();
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const givenNoDemonstration = (): void => {
+    TestBed.overrideProvider(DemonstrationConflitsPort, { useValue: null });
   };
 
   const whenRendering = async (): Promise<void> => {
@@ -696,6 +1165,31 @@ describe('Conflict dossier page', () => {
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
+  };
+  const thenDiagnosticReferencesTheReceivedFact = (selector: string, pointage: string, label: string): void => {
+    const link = element(selector);
+    expect(new URL(requiredFixture(link.getAttribute('href'), 'diagnostic link'), 'https://fixture').hash).toBe(`#pointage-${pointage}`);
+    expect(link.textContent.replace(/\s+/g, ' ').trim()).toBe(label);
+    expect(receivedFact(pointage).id).toBe(`pointage-${pointage}`);
+  };
+  const thenReceivedFactContains = (pointage: string, expected: string): void => {
+    expect(receivedFact(pointage).textContent).toContain(expected);
+  };
+  const thenReceivedFactDetailsAreOpen = (pointage: string): void => {
+    expect(receivedFact(pointage).querySelector<HTMLDetailsElement>('details')?.open).toBe(true);
+  };
+  const receivedFact = (pointage: string): HTMLElement => {
+    const journal = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('conflit-pointage'))];
+    return requiredFixture(
+      journal.find(fact => fact.id === `pointage-${pointage}`),
+      'referenced journal fact',
+    );
+  };
+  const thenHeadingContains = (expected: string): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector('header')?.textContent).toContain(expected);
+  };
+  const thenTextDoesNotContain = (selector: string, expected: string): void => {
+    expect(element(selector).textContent).not.toContain(expected);
   };
   const thenAbsent = (selector: string): void => {
     expect(present(selector)).toBe(false);
