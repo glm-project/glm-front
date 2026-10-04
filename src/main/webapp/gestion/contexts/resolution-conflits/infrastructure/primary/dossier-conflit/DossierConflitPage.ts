@@ -1,6 +1,6 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
@@ -16,6 +16,7 @@ import {
   LigneConflit,
   PointageConflit,
 } from '../../../domain/dossier/DossierConflit';
+import { PointageConflitId } from '../../../domain/dossier/PointageConflitId';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
@@ -29,6 +30,7 @@ import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationCo
 })
 export class DossierConflitPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
   private readonly propositionHeading = viewChild<ElementRef<HTMLHeadingElement>>('propositionHeading');
@@ -85,6 +87,25 @@ export class DossierConflitPage {
       ligne.explication
       || `${ligne.designation} · ${ligne.operateur || ligne.operateurId} · ${ligne.date} · ${ligne.nombrePointages} pointages`
     );
+  }
+
+  protected referencePointage(
+    journal: readonly PointageConflit[],
+    identifiant: PointageConflitId,
+  ): Readonly<{ libelle: string; lien?: string }> {
+    const pointage = journal.find(pointage => pointage.id.pointage === identifiant.pointage);
+    if (pointage === undefined) return { libelle: identifiant.pointage };
+    const fait = pointage.fait;
+    return {
+      libelle: `${fait.instant} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
+      lien: this.router.serializeUrl(
+        this.router.createUrlTree([], {
+          relativeTo: this.route,
+          queryParamsHandling: 'preserve',
+          fragment: `pointage-${pointage.id.pointage}`,
+        }),
+      ),
+    };
   }
 
   protected tempsActivite(activite: ActiviteConflit): string {

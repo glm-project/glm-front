@@ -141,11 +141,12 @@ class RouteFixture {
 
 class RouterFixture {
   readonly events = EMPTY;
-  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): Record<string, string> {
-    return extras?.queryParams ?? {};
+  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string>; fragment?: string | null }) {
+    return { queryParams: extras?.queryParams ?? {}, fragment: extras?.fragment ?? null };
   }
-  serializeUrl(tree: Record<string, string>): string {
-    return `/?${new URLSearchParams(tree).toString()}`;
+  serializeUrl(tree: { queryParams: Record<string, string>; fragment: string | null }): string {
+    const fragment = tree.fragment === null ? '' : `#${tree.fragment}`;
+    return `/?${new URLSearchParams(tree.queryParams).toString()}${fragment}`;
   }
 }
 
@@ -264,6 +265,20 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-diagnostic', 'Le pointage fin-17 vise l’activité travail-8, remplacée.');
     thenTextContains('conflit-diagnostic', 'Ouverte par debut-8.');
     thenTextContains('conflit-diagnostic', 'Terminée par nc-12.');
+  });
+
+  it('should link a diagnostic to its corrected terminating fact independently of the preserved activity identity', async () => {
+    givenACorrectedTerminatingFact();
+
+    await whenRendering();
+
+    thenDiagnosticReferencesTheReceivedFact(
+      'conflit-diagnostic-terminaison',
+      '90000000-0000-0000-0000-000000000001',
+      '2026-09-14T12:01:00.123456789+02:00 · Non-conformité · Transition',
+    );
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
   });
 
   it('should reject an address missing its suivi without requesting a dossier', async () => {
@@ -900,6 +915,41 @@ describe('Conflict dossier page', () => {
     };
   };
 
+  const givenACorrectedTerminatingFact = (): void => {
+    const dossier = dossierConflitFixture();
+    const corrected = new PointageConflitId('90000000-0000-0000-0000-000000000001');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [
+          ...dossier.journal,
+          {
+            id: corrected,
+            fait: {
+              ...faitConflitFixture(),
+              type: 'NON_CONFORMITE',
+              intention: 'TRANSITION',
+              instant: '2026-09-14T12:01:00.123456789+02:00',
+            },
+            activiteCreee: new ActiviteConflitId('nc-12'),
+            remplace: new PointageConflitId('nc-12'),
+            auteur: 'gestionnaire',
+            enregistre: '2026-10-04T10:00:00Z',
+            regularisation: true,
+          },
+        ],
+        diagnostics: [
+          {
+            pointage: new PointageConflitId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteConflitId('travail-8'), termineePar: corrected },
+          },
+        ],
+      },
+    };
+  };
+
   const givenAnAuthoritativeActivity = (
     etat: 'TERMINEE' | 'EN_COURS',
     duree?: string,
@@ -1009,6 +1059,22 @@ describe('Conflict dossier page', () => {
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
+  };
+  const thenDiagnosticReferencesTheReceivedFact = (selector: string, pointage: string, label: string): void => {
+    const link = element(selector);
+    expect(new URL(requiredFixture(link.getAttribute('href'), 'diagnostic link'), 'https://fixture').hash).toBe(`#pointage-${pointage}`);
+    expect(link.textContent.replace(/\s+/g, ' ').trim()).toBe(label);
+    expect(receivedFact(pointage).id).toBe(`pointage-${pointage}`);
+  };
+  const thenReceivedFactContains = (pointage: string, expected: string): void => {
+    expect(receivedFact(pointage).textContent).toContain(expected);
+  };
+  const receivedFact = (pointage: string): HTMLElement => {
+    const journal = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('conflit-pointage'))];
+    return requiredFixture(
+      journal.find(fact => fact.id === `pointage-${pointage}`),
+      'referenced journal fact',
+    );
   };
   const thenHeadingContains = (expected: string): void => {
     expect((fixture.nativeElement as HTMLElement).querySelector('header')?.textContent).toContain(expected);

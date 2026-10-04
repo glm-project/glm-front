@@ -25,9 +25,16 @@
       </p>
       @if (diagnostic.cible.ouvrant; as ouvrant) {
       <p>{{ libelles.diagnosticOuvrant }} {{ ouvrant.pointage }}.</p>
-      } @if (diagnostic.cible.termineePar; as fin) {
-      <p>{{ libelles.diagnosticTerminaison }} {{ fin.pointage }}.</p>
-      } } } @else {
+      } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin); @if (reference.lien) {
+      <p>
+        {{ libelles.diagnosticTerminaison }}
+        <a class="text-accent underline underline-offset-4" [href]="reference.lien" data-selector="conflit-diagnostic-terminaison"
+          >{{ reference.libelle }}</a
+        >.
+      </p>
+      } @else {
+      <p>{{ libelles.diagnosticTerminaison }} {{ reference.libelle }}.</p>
+      } } } } @else {
       <p class="mt-2 text-body">{{ dossier.ligne.explication }}</p>
       }
     </div>
@@ -438,7 +445,7 @@
     <h2 id="historique-heading" class="mb-4 text-section">{{ libelles.chronologie }}</h2>
     <ol class="chronologie">
       @for (pointage of resultat.journal | chronologiePointages; track pointage.id.pointage) {
-      <li class="pointage" data-selector="conflit-pointage">
+      <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="conflit-pointage">
         <time class="text-body-sm" [attr.datetime]="pointage.fait.instant">{{ pointage.fait.instant }}</time>
         <p class="mt-2 font-semibold">{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
         @if (pointage.fait.activiteVisee) {

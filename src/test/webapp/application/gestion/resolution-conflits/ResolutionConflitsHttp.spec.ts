@@ -172,6 +172,66 @@ const confirmationFixture = (commande: string): components['schemas']['RestConfi
 });
 
 describe('HTTP conflict resolution in Gestion', () => {
+  it('should locate the corrected terminating fact from its diagnostic while retaining the original activity identity', () => {
+    givenAConflictWhoseTerminationWasCorrected();
+
+    whenOpeningTheRealDossier();
+    whenFollowingTheCorrectedTermination();
+
+    thenTheCorrectedTerminatingFactIsReachable();
+  });
+
+  const givenAConflictWhoseTerminationWasCorrected = (): void => {
+    const dossier = dossierFixture();
+    const correctedTermination: components['schemas']['RestEvenementDAtelier'] = {
+      id: remplacementFixture,
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      activite: ncFixture,
+      cible: debutFixture,
+      dateDeSurvenue: '2026-09-14T12:01:00.123456789+02:00',
+      operateurId: operateurFixture,
+      auteur: 'gestionnaire',
+      dateDEnregistrement: '2026-10-04T10:00:00Z',
+      estUneRegularisation: true,
+      remplace: ncFixture,
+    };
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, {
+      body: {
+        ...dossier,
+        suivi: {
+          ...dossier.suivi,
+          journal: [...journalFixture, correctedTermination],
+        },
+        diagnostics: [
+          {
+            pointage: finFixture,
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: debutFixture, ouvrant: debutFixture, termineePar: remplacementFixture },
+          },
+        ],
+      } satisfies components['schemas']['RestDossierConflit'],
+    });
+  };
+
+  const whenFollowingTheCorrectedTermination = (): void => {
+    cy.get(dataSelector('conflit-diagnostic-terminaison')).click();
+  };
+
+  const thenTheCorrectedTerminatingFactIsReachable = (): void => {
+    cy.location('pathname').should('equal', `/conflits/${suiviFixture}`);
+    cy.location('search').should('equal', `?pointage=${finFixture}`);
+    cy.location('hash').should('equal', `#pointage-${remplacementFixture}`);
+    cy.get(dataSelector('conflit-diagnostic-terminaison'))
+      .should('contain.text', '2026-09-14T12:01:00.123456789+02:00')
+      .and('contain.text', 'Non-conformité · Transition');
+    cy.get(dataSelector('conflit-pointage'))
+      .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
+      .should('have.length', 1)
+      .and('contain.text', `Crée l’activité ${ncFixture}`)
+      .and('contain.text', `Remplace le pointage ${ncFixture}`);
+  };
+
   it('should load the authoritative conflict list through the production HTTP composition', () => {
     givenACompleteConflictList();
 
