@@ -120,8 +120,8 @@
         [disabled]="occupe() || !droits.canApply()"
         (click)="choose(choix.saisie, choix.id)"
       >
-        <span class="text-body font-semibold">{{ choix.libelle }}</span>
-        <span class="mt-1 block text-body-sm text-ink-muted">{{ choix.explication }}</span>
+        <span class="text-body font-semibold">{{ libelleChoix(choix) }}</span>
+        <span class="mt-1 block text-body-sm text-ink-muted">{{ explicationChoix(choix) }}</span>
       </button>
       } @if (!droits.canApply()) {
       <p class="mt-4 text-body-sm" data-selector="conflit-droits">{{ libelles.droits }}</p>

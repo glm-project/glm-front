@@ -290,6 +290,30 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-activite', 'En cours · Temps non définitif');
   });
 
+  it.each([
+    { code: 'ANNULER_TRANSITION' as const, libelle: 'Annuler la transition', saisie: SaisieActe.cancel('nc-12') },
+    {
+      code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const,
+      libelle: 'Rattacher la fin à l’activité remplaçante',
+      saisie: SaisieActe.correct('fin-17', faitConflitFixture()),
+    },
+  ])(
+    'should explain the structured guide $code without choosing a motive or previewing automatically',
+    async ({ code, libelle, saisie }) => {
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: { ...dossierConflitFixture(), choix: [{ id: 'guide', code, libelle: '', explication: '', saisie }] },
+      };
+      await whenRendering();
+
+      await whenClicking('conflit-choix');
+
+      thenTextContains('conflit-choix', libelle);
+      thenFieldValueIs('conflit-motif', '');
+      thenAbsent('conflit-apercu');
+    },
+  );
+
   it('should present the exact authoritative period and duration of finished work', async () => {
     givenAnAuthoritativeActivity('TERMINEE', 'PT8H59M59.876543211S');
 

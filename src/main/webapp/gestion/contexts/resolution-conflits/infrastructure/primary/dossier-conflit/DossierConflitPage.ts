@@ -7,7 +7,7 @@ import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
-import { ActiviteConflit, AdresseDossier, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
+import { ActiviteConflit, AdresseDossier, ChoixGuide, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
@@ -63,6 +63,14 @@ export class DossierConflitPage {
     const categorie = periode.categorie === 'TRAVAIL' ? this.libelles.types.DEBUT : this.libelles.types.NON_CONFORMITE;
     const fin = periode.fin === undefined ? '' : ` → ${periode.fin}`;
     return `${categorie} · ${periode.debut}${fin}`;
+  }
+
+  protected libelleChoix(choix: ChoixGuide): string {
+    return choix.code === undefined ? choix.libelle : this.libelles.choix[choix.code].libelle;
+  }
+
+  protected explicationChoix(choix: ChoixGuide): string {
+    return choix.code === undefined ? choix.explication : this.libelles.choix[choix.code].explication;
   }
 
   protected tempsActivite(activite: ActiviteConflit): string {

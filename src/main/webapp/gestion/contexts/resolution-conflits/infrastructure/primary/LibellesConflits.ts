@@ -102,6 +102,16 @@ export const LIBELLES_CONFLITS = {
   decision: 'Votre décision',
   choisir:
     'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare une correction ; vous vérifierez ses conséquences avant de l’enregistrer.',
+  choix: {
+    ANNULER_TRANSITION: {
+      libelle: 'Annuler la transition',
+      explication: 'Le pointage restera dans le journal avec votre motif d’annulation. Vérifiez ses conséquences dans l’aperçu.',
+    },
+    RATTACHER_FIN_A_ACTIVITE_REMPLACANTE: {
+      libelle: 'Rattacher la fin à l’activité remplaçante',
+      explication: 'La fin proposée visera l’activité indiquée dans les faits. Renseignez un motif, puis vérifiez l’aperçu.',
+    },
+  },
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' },
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
   titre: 'Conflits de pointage',
