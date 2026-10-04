@@ -255,6 +255,31 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheRealConflictListIsVisible();
   });
 
+  it('should retain the dossier route and anchor while following the named activity opening', () => {
+    givenRealResolutionReplies();
+
+    whenOpeningTheRealDossier();
+    whenFollowingTheReceivedActivityOpening();
+
+    thenTheOpeningRemainsWithinTheCurrentDossier();
+  });
+
+  const whenFollowingTheReceivedActivityOpening = (): void => {
+    cy.get(dataSelector('conflit-pointage'))
+      .filter((_index, fact) => fact.id === `pointage-${finFixture}`)
+      .contains('a', 'Travail · 2026-09-14T08:00:00.123456789+02:00')
+      .click();
+  };
+
+  const thenTheOpeningRemainsWithinTheCurrentDossier = (): void => {
+    cy.location('pathname').should('equal', `/conflits/${suiviFixture}`);
+    cy.location('search').should('equal', `?pointage=${finFixture}`);
+    cy.location('hash').should('equal', `#pointage-${debutFixture}`);
+    cy.get(dataSelector('conflit-pointage'))
+      .filter((_index, fact) => fact.id === `pointage-${debutFixture}`)
+      .should('be.visible');
+  };
+
   it('should preserve a precise arbitrary correction through preview and confirmation and refresh the authoritative list', () => {
     givenRealResolutionReplies();
 

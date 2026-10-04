@@ -166,7 +166,7 @@ export class DossierConflitPage {
 
   protected hrefForActivite(id: string, dossier: DossierConflit): string {
     const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
-    return origine === undefined ? `#activite-${id}` : `#pointage-${origine.id.pointage}`;
+    return this.hrefForRepere(origine === undefined ? `activite-${id}` : `pointage-${origine.id.pointage}`);
   }
 
   protected correct(pointage: PointageConflit): void {
