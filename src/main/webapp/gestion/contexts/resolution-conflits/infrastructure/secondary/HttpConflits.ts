@@ -4,8 +4,15 @@ import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { ActeResolution, FaitPropose } from '../../domain/acte/ActeResolution';
-import { PrevisualisationConflitPort, ResultatApercu } from '../../domain/acte/ConflitsActesPorts';
+import {
+  ApplicationActePort,
+  PrevisualisationConflitPort,
+  ResultatApercu,
+  ResultatApplication,
+  ResultatVerification,
+} from '../../domain/acte/ConflitsActesPorts';
 import { InstantPointage } from '../../domain/acte/InstantPointage';
+import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { AdresseDossier, FiltreConflits, LectureDossier, PAGE_SIZE_CONFLITS, PageConflits } from '../../domain/dossier/DossierConflit';
 import { toDossier, toLigne, toPointage } from './DossierConflitHttp';
@@ -52,9 +59,26 @@ const previewMatchesRequest = (
   && echoRepresentsProposition(apercu.acte, request.acte);
 
 @Injectable()
-export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort {
+export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort, ApplicationActePort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
+
+  async apply(reference: ReferenceApercu): Promise<ResultatApplication> {
+    const resultat = await this.api.write('/api/atelier/suivis/{suivi}/confirmations-de-resolution', {
+      pathParams: { suivi: reference.adresse.suivi.suivi },
+      body: { commande: reference.commande, reference: reference.reference },
+    });
+    if (resultat.kind === 'NON_ATTESTEE') return { kind: 'ISSUE_INCONNUE' };
+    return { kind: 'APPLIQUE', dossier: toDossier(resultat.dossier, resultat.dossier.perimetre) };
+  }
+
+  async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
+    const resultat = await this.api.read('/api/atelier/suivis/{suivi}/confirmations-de-resolution/{commande}', {
+      pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },
+    });
+    if (resultat.kind === 'NON_ATTESTEE') return { kind: 'NON_ATTESTE' };
+    return { kind: 'ATTESTE', dossier: toDossier(resultat.dossier, resultat.dossier.perimetre) };
+  }
 
   async preview(adresse: AdresseDossier, version: number, acte: ActeResolution): Promise<ResultatApercu> {
     const commande = crypto.randomUUID();

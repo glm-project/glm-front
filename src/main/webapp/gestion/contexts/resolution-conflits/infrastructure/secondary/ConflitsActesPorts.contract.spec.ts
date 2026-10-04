@@ -6,7 +6,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ActeResolution } from '../../domain/acte/ActeResolution';
-import { PrevisualisationConflitPort } from '../../domain/acte/ConflitsActesPorts';
+import { ApplicationActePort, PrevisualisationConflitPort } from '../../domain/acte/ConflitsActesPorts';
+import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
 import { AdresseDossier } from '../../domain/dossier/DossierConflit';
 import { PointageConflitId } from '../../domain/dossier/PointageConflitId';
 import { SuiviConflitId } from '../../domain/dossier/SuiviConflitId';
@@ -14,6 +15,12 @@ import { HttpConflits } from './HttpConflits';
 
 const adresseFixture: AdresseDossier = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
 const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
+const referenceFixture: ReferenceApercu = {
+  adresse: adresseFixture,
+  commande: '80000000-0000-0000-0000-000000000001',
+  reference: 'opaque-reference',
+  version: 7,
+};
 const correctionFixture: ActeResolution = {
   kind: 'CORRECTION',
   pointage: 'fin-17',
@@ -63,6 +70,7 @@ const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number):
 
 describe('Beyond the contract: HTTP conflict actes', () => {
   let preview: PrevisualisationConflitPort;
+  let application: ApplicationActePort;
   let server: HttpTestingController;
 
   beforeEach(() => {
@@ -73,9 +81,11 @@ describe('Beyond the contract: HTTP conflict actes', () => {
         ApiClient,
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
         { provide: PrevisualisationConflitPort, useClass: HttpConflits },
+        { provide: ApplicationActePort, useClass: HttpConflits },
       ],
     });
     preview = TestBed.inject(PrevisualisationConflitPort);
+    application = TestBed.inject(ApplicationActePort);
     server = TestBed.inject(HttpTestingController);
   });
 
@@ -179,6 +189,51 @@ describe('Beyond the contract: HTTP conflict actes', () => {
 
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { apres: { enConflit: true } } });
   });
+
+  it('should confirm the exact public command and return the current canonical dossier from its receipt', async () => {
+    const confirmation = application.apply(referenceFixture);
+
+    whenConfirmationAnswers();
+    const resultat = await confirmation;
+
+    expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
+  });
+
+  it('should verify a public command without a prior local preview and return its current canonical dossier', async () => {
+    const verification = application.verify(referenceFixture).catch((failure: unknown) => failure);
+
+    whenReceiptAnswers(confirmationFixture());
+    const resultat = await verification;
+
+    expect(resultat).toMatchObject({ kind: 'ATTESTE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
+  });
+
+  const whenReceiptAnswers = (resultat: components['schemas']['RestConfirmationDeResolution']): void => {
+    const request = server.expectOne(`/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${referenceFixture.commande}`);
+    expect(request.request.method).toBe('GET');
+    request.flush(resultat);
+  };
+
+  const confirmationFixture = (): components['schemas']['RestConfirmationEnregistree'] => ({
+    kind: 'ENREGISTREE',
+    recu: {
+      commande: referenceFixture.commande,
+      adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
+      acte: acteFixture,
+      revisionDeDepart: 7,
+      revisionEnregistree: 8,
+      enregistreLe: '2026-10-04T10:00:00Z',
+      evenementsTouches: ['fin-17'],
+    },
+    dossier: dossierFixture('ANCRE_ANNULEE', 9),
+  });
+
+  const whenConfirmationAnswers = (): void => {
+    const request = server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ commande: referenceFixture.commande, reference: referenceFixture.reference });
+    request.flush(confirmationFixture());
+  };
 
   const whenPreviewAnswers = (
     acte: components['schemas']['RestActeDeResolution'] = acteFixture,
