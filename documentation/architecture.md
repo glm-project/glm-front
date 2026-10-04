@@ -170,7 +170,9 @@ folder.
 
 When a view needs data from several APIs, define one domain-owned read port for that view's functional
 need. Its secondary adapter composes the source reads, translates transport data, handles pagination and
-source caching, and resolves only complete data. On an acquisition failure or truncated required collection,
+source acquisition, and resolves only complete data. Gestion / Supervision keeps no business-response cache
+for now: every explicit acquisition reads the server again, under
+[ADR 0048](adr/0048-request-gestion-data-from-the-server-every-time.md). On an acquisition failure or truncated required collection,
 it reports the failure once through `ErrorHandlerPort` and rejects the read. Implement the API calls directly
 in this adapter, using private methods when useful. A call to one endpoint does not justify an additional
 port, injected reader or callback contract. The primary adapter and application caller remain independent

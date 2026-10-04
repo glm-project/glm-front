@@ -6,12 +6,14 @@ const apiOrigin = 'https://api.deployment.test';
 
 const givenAnApiAnswering = answer => {
   const reached = [];
-  const forward = request => {
+  const cachePolicies = [];
+  const forward = (request, options) => {
     reached.push(request);
+    cachePolicies.push(options);
     return Promise.resolve(answer);
   };
 
-  return { reached, forward };
+  return { reached, cachePolicies, forward };
 };
 
 const whenTheBrowserAsks = (url, options, forward) => relayToBackend(new Request(url, options), { apiOrigin, forward });
@@ -31,6 +33,25 @@ describe('API relay', () => {
     await whenTheBrowserAsks('https://glm-pupitre.pages.dev/api/atelier/suivis?size=100&page=0', {}, forward);
 
     assert.equal(reached[0].url, 'https://api.deployment.test/api/atelier/suivis?size=100&page=0');
+  });
+
+  it('should preserve Gestion no-store through the origin exchange and its response', async () => {
+    const { reached, cachePolicies, forward } = givenAnApiAnswering(
+      new Response('current-data', { headers: { 'Cache-Control': 'public, max-age=3600', 'X-Request-Id': 'current-reading' } }),
+    );
+
+    const answer = await whenTheBrowserAsks(
+      'https://glm-supervision.pages.dev/api/operateurs',
+      { headers: { 'Cache-Control': 'no-cache, no-store' } },
+      forward,
+    );
+    const body = await answer.text();
+
+    assert.deepEqual(cachePolicies, [{ cf: { cacheTtlByStatus: { '100-599': -1 } } }]);
+    assert.equal(reached[0].headers.get('Cache-Control'), 'no-cache, no-store');
+    assert.equal(answer.headers.get('Cache-Control'), 'no-store');
+    assert.equal(answer.headers.get('X-Request-Id'), 'current-reading');
+    assert.equal(body, 'current-data');
   });
 
   it('should forward the bearer token the interceptor attached', async () => {

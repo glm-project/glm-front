@@ -455,14 +455,15 @@ describe('Beyond the contract: HttpOperateurs', () => {
     expect(errorHandler.errors).toHaveLength(1);
   });
 
-  it('should serve the workstation catalogue from memory after a first acquisition', async () => {
+  it('should read the current workstation catalogue on every acquisition', async () => {
     const premier = port.postesHabilitables();
     await whenCatalogueAnswers([tourFixture]);
     await premier;
 
-    const second = await port.postesHabilitables();
+    const second = port.postesHabilitables();
+    await whenCatalogueAnswers([tourFixture, scieFixture]);
 
-    expect(second.map(poste => poste.libelle)).toEqual(['Tour 1']);
+    expect((await second).map(poste => poste.libelle)).toEqual(['Scie 1', 'Tour 1']);
   });
 
   it('should reject an incomplete catalogue when the server stops providing entries', async () => {
@@ -473,7 +474,11 @@ describe('Beyond the contract: HttpOperateurs', () => {
     expect(errorHandler.errors).toEqual([new Error('Le référentiel des postes est incomplet.')]);
   });
 
-  it('should reject a failed later catalogue page without retaining partial entries and allow retry', async () => {
+  it('should reject a failed catalogue refresh without reusing the earlier catalogue and allow retry', async () => {
+    const earlier = port.postesHabilitables();
+    await whenCatalogueAnswers([tourFixture]);
+    await earlier;
+
     const result = port.postesHabilitables().catch((failure: unknown) => failure);
     await whenFirstCataloguePageAnswers();
     await whenServerFails('/api/postes-de-travail?page=1&size=100');

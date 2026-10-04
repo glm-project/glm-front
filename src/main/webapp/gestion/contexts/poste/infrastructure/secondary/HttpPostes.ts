@@ -71,7 +71,6 @@ const pageManquante = (extrait: Page<PosteDeTravail>, lus: number): boolean => e
 export class HttpPostes extends PostesPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
-  private cachedNatures: readonly NatureDeTravail[] | undefined;
 
   override async referentiel(): Promise<readonly PosteDeTravail[]> {
     try {
@@ -90,12 +89,8 @@ export class HttpPostes extends PostesPort {
   }
 
   override async natures(): Promise<readonly NatureDeTravail[]> {
-    if (this.cachedNatures !== undefined) {
-      return this.cachedNatures;
-    }
     try {
-      this.cachedNatures = await this.readAllNatures();
-      return this.cachedNatures;
+      return await this.readAllNatures();
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
@@ -136,31 +131,19 @@ export class HttpPostes extends PostesPort {
     return buildPageFrom(response, toPoste, requete);
   }
 
-  override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {
-    const resultat = await this.execute(this.api.write('/api/postes-de-travail', { body: toRequest(commande) }), refusCreation);
-    if (resultat.ok) {
-      this.cachedNatures = undefined;
-    }
-    return resultat;
+  override creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {
+    return this.execute(this.api.write('/api/postes-de-travail', { body: toRequest(commande) }), refusCreation);
   }
 
-  override async modifier(commande: CommandeModificationPoste): Promise<Result<void, RefusModificationPoste>> {
-    const resultat = await this.execute(
+  override modifier(commande: CommandeModificationPoste): Promise<Result<void, RefusModificationPoste>> {
+    return this.execute(
       this.api.update('/api/postes-de-travail/{id}', { pathParams: { id: commande.id.value }, body: toRequest(commande) }),
       refusModification,
     );
-    if (resultat.ok) {
-      this.cachedNatures = undefined;
-    }
-    return resultat;
   }
 
-  override async supprimer(id: PosteDeTravailId): Promise<Result<void, RefusSuppressionPoste>> {
-    const resultat = await this.execute(this.api.delete('/api/postes-de-travail/{id}', { pathParams: { id: id.value } }), refusSuppression);
-    if (resultat.ok) {
-      this.cachedNatures = undefined;
-    }
-    return resultat;
+  override supprimer(id: PosteDeTravailId): Promise<Result<void, RefusSuppressionPoste>> {
+    return this.execute(this.api.delete('/api/postes-de-travail/{id}', { pathParams: { id: id.value } }), refusSuppression);
   }
 
   private async execute<Refus>(

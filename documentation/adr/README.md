@@ -118,3 +118,6 @@ something stays, with a status that says what died.
   décisions appliquées aux consommateurs et au contrat final épinglé : fin automatique corrigible et immédiatement comptabilisée,
   activités en cours exclues du coût et du diviseur, durée indicative conservée au pupitre,
   séquences en conflit à résoudre par le gestionnaire et totaux concernés incomplets
+
+- [0048 — Relire les données de Gestion sur le serveur à chaque acquisition](0048-request-gestion-data-from-the-server-every-time.md) —
+  aucun cache de réponses métier pour l'instant dans Gestion / Supervision, politique HTTP propre au front
