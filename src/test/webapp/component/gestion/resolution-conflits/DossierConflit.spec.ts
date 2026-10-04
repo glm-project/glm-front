@@ -313,7 +313,7 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const thenTheConcurrentDossierIsReloadedWithTheProposal = (): void => {
-    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Ce suivi a changé');
+    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Les données ont changé');
     cy.get(dataSelector('conflit-motif')).should('have.value', 'La cible est la NC.');
     cy.get(dataSelector('conflit-confirmer')).should('not.exist');
     cy.get(dataSelector('conflit-pointage')).should('have.length', 3);

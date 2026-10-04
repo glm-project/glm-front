@@ -84,7 +84,7 @@ export const LIBELLES_CONFLITS = {
     REPOS: '',
     PREVISUALISATION: 'Prévisualisation en cours…',
     CONFIRMATION: 'Enregistrement en cours…',
-    CONCURRENCE: 'Ce suivi a changé. Le dossier est relu ; prévisualisez à nouveau votre décision.',
+    CONCURRENCE: 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.',
     ISSUE_INCONNUE: 'L’issue de l’écriture est inconnue. Vérifiez le journal avant toute nouvelle décision.',
     ERREUR: 'L’opération a échoué. Votre saisie est conservée.',
     REFUS: 'Acte refusé',

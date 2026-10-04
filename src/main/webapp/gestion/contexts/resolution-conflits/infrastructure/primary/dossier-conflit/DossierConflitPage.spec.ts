@@ -632,6 +632,31 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-apercu');
   });
 
+  it('should retain the obsolete proposition through a failed reacquisition and require an explicit new preview after recovery', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'CONCURRENCE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    read.failure = new Error('Dossier courant indisponible');
+
+    await whenClicking('conflit-confirmer');
+    const echecVisible = present('conflit-retry');
+    const confirmationApresEchec = present('conflit-confirmer');
+    const apercuApresEchec = present('conflit-apercu');
+    read.failure = undefined;
+    const dossier = dossierConflitFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, version: 2 } };
+    await whenClicking('conflit-retry');
+
+    expect(echecVisible).toBe(true);
+    expect(confirmationApresEchec).toBe(false);
+    expect(apercuApresEchec).toBe(false);
+    thenFieldValueIs('conflit-motif', 'Cible confirmée');
+    thenAbsent('conflit-apercu');
+    thenAbsent('conflit-confirmer');
+    thenTextContains('conflit-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
+    expect(preview.actes).toHaveLength(1);
+  });
   it('should reread a concurrent dossier without discarding the manager proposal', async () => {
     preview.result = { kind: 'CONCURRENCE' };
     await whenRendering();
@@ -644,7 +669,7 @@ describe('Conflict dossier page', () => {
     await whenPreparingTheCorrection();
 
     thenTextContains('conflit-diagnostic', 'Le journal a été actualisé.');
-    thenTextContains('conflit-operation', 'Ce suivi a changé');
+    thenTextContains('conflit-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
     thenFieldValueIs('conflit-motif', 'Cible confirmée');
     thenAbsent('conflit-apercu');
     expect(read.demandes).toHaveLength(2);
@@ -938,7 +963,9 @@ describe('Conflict dossier page', () => {
     preview.result = {
       kind: 'APERCU',
       apercu: {
-        reference: 'apercu-1',
+        empreinteConsequences: 'empreinte-1',
+        evaluation: '2026-10-03T10:00:00Z',
+        evenement: 'evenement-1',
         commande: 'commande-1',
         version: 1,
         adresse: dossier.ligne.adresse,

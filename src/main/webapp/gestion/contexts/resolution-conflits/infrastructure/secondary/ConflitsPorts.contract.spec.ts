@@ -35,6 +35,11 @@ const choixFixture = (dossier: DossierConflit, rang = 0): SaisieActe => {
   return choix.saisie;
 };
 
+const correctionActeFixture = (acte: ReturnType<typeof acteFixture>): Extract<typeof acte, { kind: 'CORRECTION' }> => {
+  if (acte.kind !== 'CORRECTION') throw new Error('Correction fixture attendue');
+  return acte;
+};
+
 const adresseFixture = { suivi: new SuiviConflitId('demo-remplacement'), pointage: new PointageConflitId('fin-17') };
 
 const whenGuidedActIsApplied = async (adapter: InMemoryConflits, suivi: string, pointage: string): Promise<DossierConflit> => {
@@ -59,6 +64,106 @@ const demonstrationAdapterFixture = (): InMemoryConflits => {
 };
 
 describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }])('$nom resolution ports', ({ adapterFixture }) => {
+  it('should refuse incomplete prospective metadata without recording the correction or a receipt', async () => {
+    const adapter = adapterFixture();
+    const initial = dossierFixture(await adapter.read(adresseFixture));
+    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+    const proposition = {
+      adresse: apercu.adresse,
+      commande: apercu.commande,
+      version: apercu.version,
+      acte: apercu.acte,
+      empreinteConsequences: apercu.empreinteConsequences,
+    };
+
+    const resultat = await adapter.apply(proposition);
+    const verification = await adapter.verify(proposition);
+    const lecture = await adapter.read(adresseFixture);
+
+    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
+    expect(verification).toEqual({ kind: 'NON_ATTESTE' });
+    expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
+  });
+  it('should confirm unchanged consequences when the explicit correction fact is rebuilt with another property order', async () => {
+    const adapter = adapterFixture();
+    const initial = dossierFixture(await adapter.read(adresseFixture));
+    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+    const correction = correctionActeFixture(apercu.acte);
+    const fait = correction.fait;
+    const reconstruite = {
+      ...apercu,
+      acte: {
+        ...correction,
+        fait: {
+          instant: fait.instant,
+          poste: fait.poste,
+          operateur: fait.operateur,
+          activiteVisee: fait.activiteVisee,
+          intention: fait.intention,
+          type: fait.type,
+        },
+      },
+    };
+
+    const resultat = await adapter.apply(reconstruite);
+
+    expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 2, enConflit: false } });
+  });
+  it('should attest and replay the same recorded correction rebuilt with another property order', async () => {
+    const adapter = adapterFixture();
+    const initial = dossierFixture(await adapter.read(adresseFixture));
+    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+    await adapter.apply(apercu);
+    const correction = correctionActeFixture(apercu.acte);
+    const reconstruite = {
+      ...apercu,
+      acte: { motif: correction.motif, fait: { ...correction.fait }, pointage: correction.pointage, kind: 'CORRECTION' as const },
+    };
+
+    const verification = await adapter.verify(reconstruite);
+    const repetition = await adapter.apply(reconstruite);
+
+    expect(verification).toMatchObject({ kind: 'ATTESTE', dossier: { version: 2, enConflit: false } });
+    expect(repetition).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 2, enConflit: false } });
+  });
+  it('should refuse reusing a recorded command for a different acte without rewriting its journal', async () => {
+    const adapter = adapterFixture();
+    const initial = dossierFixture(await adapter.read(adresseFixture));
+    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+    await adapter.apply(apercu);
+    const journalEnregistre = await adapter.read(adresseFixture);
+    const autreActe = acteFixture(choixFixture(initial, 1));
+
+    const resultat = await adapter.apply({ ...apercu, acte: autreActe });
+    const verification = await adapter.verify({ ...apercu, acte: autreActe });
+    const lecture = await adapter.read(adresseFixture);
+
+    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
+    expect(verification).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
+    expect(lecture).toEqual(journalEnregistre);
+  });
+  it('should invalidate changed consequences without writing the proposed correction', async () => {
+    const adapter = adapterFixture();
+    const initial = dossierFixture(await adapter.read(adresseFixture));
+    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+
+    const resultat = await adapter.apply({ ...apercu, empreinteConsequences: 'consequences-modifiees' });
+    const lecture = await adapter.read(adresseFixture);
+
+    expect(resultat).toEqual({ kind: 'CONCURRENCE' });
+    expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
+  });
+  it('should confirm an explicit proposal without retaining the original preview in the adapter', async () => {
+    const original = adapterFixture();
+    const initial = dossierFixture(await original.read(adresseFixture));
+    const apercu = apercuFixture(await original.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+    const adapter = adapterFixture();
+
+    const resultat = await adapter.apply(apercu);
+
+    expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 2, enConflit: false } });
+  });
+
   it('should retain an unattested receipt before confirmation without changing the dossier', async () => {
     const adapter = adapterFixture();
     const initial = dossierFixture(await adapter.read(adresseFixture));
@@ -70,7 +175,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
     expect(resultat).toEqual({ kind: 'NON_ATTESTE' });
     expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
   });
-  it('should expose the command and address with the preview reference', async () => {
+  it('should expose the command and address with the explicit proposal', async () => {
     const adapter = adapterFixture();
     const initial = dossierFixture(await adapter.read(adresseFixture));
 
@@ -79,24 +184,25 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
     expect(apercu.adresse).toEqual(adresseFixture);
     expect(apercu).toHaveProperty('commande', expect.any(String));
   });
-  it.each([
-    { nom: 'command', changement: { commande: 'une-autre-commande' } },
-    { nom: 'address', changement: { adresse: { ...adresseFixture, pointage: new PointageConflitId('un-autre-pointage') } } },
-  ])('should refuse an altered $nom when confirming a preview', async ({ changement }) => {
-    const adapter = adapterFixture();
-    const initial = dossierFixture(await adapter.read(adresseFixture));
-    const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+  it.each([{ nom: 'address', changement: { adresse: { ...adresseFixture, pointage: new PointageConflitId('un-autre-pointage') } } }])(
+    'should refuse an altered $nom when confirming a preview',
+    async ({ changement }) => {
+      const adapter = adapterFixture();
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+      const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
 
-    const resultat = await adapter.apply({ ...apercu, ...changement });
-    const lecture = await adapter.read(adresseFixture);
+      const resultat = await adapter.apply({ ...apercu, ...changement });
+      const lecture = await adapter.read(adresseFixture);
 
-    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
-    expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
-  });
+      expect(resultat).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
+      expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
+    },
+  );
   it.each([
-    { nom: 'command', changement: { commande: 'une-autre-commande' } },
     { nom: 'address', changement: { adresse: { ...adresseFixture, pointage: new PointageConflitId('un-autre-pointage') } } },
     { nom: 'version', changement: { version: 42 } },
+    { nom: 'consequences fingerprint', changement: { empreinteConsequences: 'autres-consequences' } },
+    { nom: 'event', changement: { evenement: 'autre-evenement' } },
   ])('should refuse to attest or replay a receipt with an altered $nom', async ({ changement }) => {
     const adapter = adapterFixture();
     const initial = dossierFixture(await adapter.read(adresseFixture));
@@ -106,8 +212,8 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
     const verification = await adapter.verify({ ...apercu, ...changement });
     const repetition = await adapter.apply({ ...apercu, ...changement });
 
-    expect(verification).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
-    expect(repetition).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
+    expect(verification).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
+    expect(repetition).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
   });
   it('should keep the independent work unresolved before choosing between its simultaneous finishes', async () => {
     const lecture: ConflitsReadPort = adapterFixture();
@@ -187,7 +293,8 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
       adresse: adresseFixture,
       commande: 'commande-1',
       version: 1,
-      reference: 'aucun-apercu-autorise',
+      acte: acteFixture(choixFixture(initial)),
+      empreinteConsequences: 'aucun-apercu-autorise',
     });
     const lecture = await adapter.read(adresseFixture);
 
@@ -430,7 +537,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
 
     const repetition = await adapter.apply({ ...apercu, version: 99 });
 
-    expect(repetition).toEqual({ kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' });
+    expect(repetition).toEqual({ kind: 'REFUS', raison: 'Proposition de confirmation incohérente' });
   });
   it('should open the same conflict from an active opening without redirecting to a different sequence', async () => {
     const lecture: ConflitsReadPort = adapterFixture();
@@ -585,22 +692,6 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
     await demonstration.reset();
     const lecture = await adapter.read(adresseFixture);
 
-    expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
-  });
-  it('should invalidate an unconsumed preview on reset even when a fresh preview contains the same act', async () => {
-    const adapter = adapterFixture();
-    const demonstration: DemonstrationConflitsPort = adapter;
-    const initial = dossierFixture(await adapter.read(adresseFixture));
-    const acte = acteFixture(choixFixture(initial));
-    const ancien = apercuFixture(await adapter.preview(adresseFixture, initial.version, acte));
-
-    await demonstration.reset();
-    const nouveau = apercuFixture(await adapter.preview(adresseFixture, initial.version, acte));
-    const application = await adapter.apply(ancien);
-    const lecture = await adapter.read(adresseFixture);
-
-    expect(nouveau.reference).not.toBe(ancien.reference);
-    expect(application).toEqual({ kind: 'REFUS', raison: 'Aperçu inconnu' });
     expect(lecture).toEqual({ kind: 'DOSSIER', dossier: initial });
   });
   it('should keep a corrected anchor explicitly cancelled when its old address is opened again', async () => {
@@ -763,7 +854,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
     expect(premier.kind).toBe('APPLIQUE');
     expect(second).toEqual({ kind: 'CONCURRENCE' });
   });
-  it('should refuse to apply a preview when its confirmation version was altered', async () => {
+  it('should invalidate a confirmation whose expected version differs from the current follow-up', async () => {
     const adapter = adapterFixture();
     const dossier = dossierFixture(await adapter.read(adresseFixture));
     const apercu = apercuFixture(await adapter.preview(adresseFixture, dossier.version, acteFixture(choixFixture(dossier))));
@@ -771,7 +862,7 @@ describe.each([{ nom: 'InMemory', adapterFixture: demonstrationAdapterFixture }]
     const resultat = await adapter.apply({ ...apercu, version: 9 });
     const lecture = await adapter.read(adresseFixture);
 
-    expect(resultat).toMatchObject({ kind: 'REFUS' });
+    expect(resultat).toEqual({ kind: 'CONCURRENCE' });
     expect(lecture).toEqual({ kind: 'DOSSIER', dossier });
   });
   it('should reject a preview based on an obsolete version', async () => {

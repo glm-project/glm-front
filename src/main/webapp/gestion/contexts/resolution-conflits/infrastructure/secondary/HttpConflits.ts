@@ -55,26 +55,29 @@ const previewMatchesRequest = (
   && apercu.adresse.suivi === request.adresse.suivi.suivi
   && apercu.adresse.pointage === request.adresse.pointage.pointage
   && apercu.revision === request.version
-  && apercu.reference !== ''
+  && apercu.empreinteConsequences !== ''
+  && (request.acte.kind === 'ANNULATION' ? apercu.evenement === undefined : apercu.evenement !== undefined)
   && apercu.apres.adresse.suivi === request.adresse.suivi.suivi
   && apercu.apres.adresse.pointage === request.adresse.pointage.pointage
   && new InstantPointage(apercu.avant.evaluation).compareTo(new InstantPointage(apercu.evaluation)) === 0
   && new InstantPointage(apercu.apres.evaluation).compareTo(new InstantPointage(apercu.evaluation)) === 0
   && echoRepresentsProposition(apercu.acte, request.acte);
 
-const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], reference: PropositionResolution): boolean =>
-  recu.commande === reference.commande
-  && recu.adresse.suivi === reference.adresse.suivi.suivi
-  && recu.adresse.pointage === reference.adresse.pointage.pointage
-  && recu.revisionDeDepart === reference.version;
+const receiptMatchesProposition = (recu: components['schemas']['RestRecuDActe'], proposition: PropositionResolution): boolean =>
+  recu.commande === proposition.commande
+  && recu.adresse.suivi === proposition.adresse.suivi.suivi
+  && recu.adresse.pointage === proposition.adresse.pointage.pointage
+  && recu.revisionDeDepart === proposition.version
+  && echoRepresentsProposition(recu.acte, proposition.acte)
+  && recu.evenementCree === proposition.evenement;
 
-const canonicalReceiptMatchesReference = (
+const canonicalReceiptMatchesProposition = (
   confirmation: components['schemas']['RestConfirmationEnregistree'],
-  reference: PropositionResolution,
+  proposition: PropositionResolution,
 ): boolean =>
-  receiptMatchesReference(confirmation.recu, reference)
-  && confirmation.dossier.adresse.suivi === reference.adresse.suivi.suivi
-  && confirmation.dossier.adresse.pointage === reference.adresse.pointage.pointage
+  receiptMatchesProposition(confirmation.recu, proposition)
+  && confirmation.dossier.adresse.suivi === proposition.adresse.suivi.suivi
+  && confirmation.dossier.adresse.pointage === proposition.adresse.pointage.pointage
   && confirmation.dossier.revision >= confirmation.recu.revisionEnregistree;
 
 const isConcurrentRefusal = (urn: string | undefined): boolean =>
@@ -82,7 +85,7 @@ const isConcurrentRefusal = (urn: string | undefined): boolean =>
 
 const knownActRefusals = new Set(
   [
-    'apercu-invalide',
+    'proposition-invalide',
     'confirmation-reutilisee',
     'suivi-d-atelier-introuvable',
     'suivi-d-atelier-cloture',
@@ -113,27 +116,34 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  async apply(reference: PropositionResolution): Promise<ResultatApplication> {
+  async apply(proposition: PropositionResolution): Promise<ResultatApplication> {
     try {
       const resultat = await this.api.write('/api/atelier/suivis/{suivi}/confirmations-de-resolution', {
-        pathParams: { suivi: reference.adresse.suivi.suivi },
-        body: { commande: reference.commande, reference: reference.reference },
+        pathParams: { suivi: proposition.adresse.suivi.suivi },
+        body: {
+          commande: proposition.commande,
+          adresse: { suivi: proposition.adresse.suivi.suivi, pointage: proposition.adresse.pointage.pointage },
+          revision: proposition.version,
+          acte: toRestActe(proposition.acte),
+          empreinteConsequences: proposition.empreinteConsequences,
+          ...(proposition.evenement === undefined ? {} : { evenement: proposition.evenement }),
+        },
       });
       if (resultat.kind === 'NON_ATTESTEE') return { kind: 'ISSUE_INCONNUE' };
-      if (!canonicalReceiptMatchesReference(resultat, reference)) throw new Error('Reçu de confirmation incohérent.');
+      if (!canonicalReceiptMatchesProposition(resultat, proposition)) throw new Error('Reçu de confirmation incohérent.');
       return { kind: 'APPLIQUE', dossier: toDossierDansPerimetre(resultat.dossier) };
     } catch (failure: unknown) {
       return toActRefusal(failure);
     }
   }
 
-  async verify(reference: PropositionResolution): Promise<ResultatVerification> {
+  async verify(proposition: PropositionResolution): Promise<ResultatVerification> {
     try {
       const resultat = await this.api.read('/api/atelier/suivis/{suivi}/confirmations-de-resolution/{commande}', {
-        pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },
+        pathParams: { suivi: proposition.adresse.suivi.suivi, commande: proposition.commande },
       });
       if (resultat.kind === 'NON_ATTESTEE') return { kind: 'NON_ATTESTE' };
-      if (!canonicalReceiptMatchesReference(resultat, reference)) throw new Error('Reçu de confirmation incohérent.');
+      if (!canonicalReceiptMatchesProposition(resultat, proposition)) throw new Error('Reçu de confirmation incohérent.');
       return { kind: 'ATTESTE', dossier: toDossierDansPerimetre(resultat.dossier) };
     } catch (failure: unknown) {
       const erreur = findApiErrorIn(failure);
@@ -155,7 +165,9 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
         apercu: {
           adresse,
           commande: apercu.commande,
-          reference: apercu.reference,
+          empreinteConsequences: apercu.empreinteConsequences,
+          evaluation: apercu.evaluation,
+          ...(apercu.evenement === undefined ? {} : { evenement: apercu.evenement }),
           version: apercu.revision,
           acte,
           avant: toDossierDansPerimetre(apercu.avant),

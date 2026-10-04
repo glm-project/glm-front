@@ -15,13 +15,15 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { resolutionConflitsProvider as cypressResolutionConflitsFixture } from '@test/utils/gestion/resolution-conflits/resolution-conflits.provider';
 
 const adresseFixture: AdresseDossier = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
 const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
-const referenceFixture: PropositionResolution = {
+const propositionFixture: PropositionResolution = {
   adresse: adresseFixture,
   commande: '80000000-0000-0000-0000-000000000001',
-  reference: 'opaque-reference',
+  acte: acteFixture,
+  empreinteConsequences: 'empreinte-1',
   version: 7,
 };
 
@@ -86,7 +88,7 @@ describe('Real conflict resolution composition', () => {
     const resultat = await whenUsingThePublicResolutionPorts();
 
     expect(resultat.lecture).toEqual({ lignes: [], total: 0, complete: true });
-    expect(resultat.apercu).toEqual({ kind: 'REFUS', raison: 'Aperçu invalide' });
+    expect(resultat.apercu).toEqual({ kind: 'REFUS', raison: 'Proposition invalide' });
     expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
   });
 
@@ -107,7 +109,13 @@ describe('Real conflict resolution composition', () => {
 
     expect(inconnue).toEqual({ kind: 'ISSUE_INCONNUE' });
     expect(nonAttestee).toEqual({ kind: 'ISSUE_INCONNUE' });
-    expect(premiereDemande).toEqual({ commande, reference: referenceFixture.reference });
+    expect(premiereDemande).toEqual({
+      commande,
+      adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
+      revision: 7,
+      acte: acteFixture,
+      empreinteConsequences: 'empreinte-1',
+    });
     expect(deuxiemeDemande).toEqual(premiereDemande);
     expect(errors.errors).toMatchObject([{ name: 'TimeoutError' }]);
     expect(preparation.operation()).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false } });
@@ -151,7 +159,7 @@ describe('Real conflict resolution composition', () => {
   const confirmationFixture = (): components['schemas']['RestConfirmationEnregistree'] => ({
     kind: 'ENREGISTREE',
     recu: {
-      commande: referenceFixture.commande,
+      commande: propositionFixture.commande,
       adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
       acte: acteFixture,
       revisionDeDepart: 7,
@@ -173,8 +181,7 @@ describe('Real conflict resolution composition', () => {
       adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
       revision: 7,
       evaluation: '2026-10-04T10:00:00Z',
-      expireLe: '2026-10-04T10:05:00Z',
-      reference: referenceFixture.reference,
+      empreinteConsequences: 'empreinte-1',
       acte: acteFixture,
       avant: dossierFixture('EN_CONFLIT', 7),
       apres: dossierFixture('ANCRE_ANNULEE', 8),
@@ -196,10 +203,59 @@ describe('Real conflict resolution composition', () => {
     });
     server
       .expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus')
-      .flush({ type: 'urn:glm:erreur:atelier:apercu-invalide', message: 'Aperçu invalide' }, { status: 400, statusText: 'Invalid' });
+      .flush(
+        { type: 'urn:glm:erreur:atelier:proposition-invalide', message: 'Proposition invalide' },
+        { status: 400, statusText: 'Invalid' },
+      );
     const resultatApercu = await apercu;
-    const confirmation = TestBed.inject(ApplicationActePort).apply({ adresse, version: 1, commande: 'commande-1', reference: 'opaque' });
+    const confirmation = TestBed.inject(ApplicationActePort).apply({
+      adresse,
+      version: 1,
+      commande: 'commande-1',
+      acte: acteFixture,
+      empreinteConsequences: 'empreinte-1',
+    });
     server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution').flush({ kind: 'NON_ATTESTEE' });
     return { lecture: resultatLecture, apercu: resultatApercu, confirmation: await confirmation };
+  };
+});
+
+describe('Conflict resolution source selected before the route runtime starts', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        ...cypressResolutionConflitsFixture,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    delete window.gestionConflitsSource;
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('should read through HTTP when the browser selects that source after the route providers were declared', async () => {
+    givenTheBrowserSelectsHttp();
+
+    const lecture = whenReadingTheConflictList();
+    whenTheHttpConflictListAnswers();
+    const resultat = await lecture;
+
+    expect(resultat).toEqual({ lignes: [], total: 0, complete: true });
+  });
+
+  const givenTheBrowserSelectsHttp = (): void => {
+    window.gestionConflitsSource = 'HTTP';
+  };
+
+  const whenReadingTheConflictList = () => TestBed.inject(ConflitsReadPort).list({ operateur: '', element: '', page: 1 });
+
+  const whenTheHttpConflictListAnswers = (): void => {
+    TestBed.inject(HttpTestingController)
+      .expectOne('/api/atelier/conflits?operateur=&element=&page=0&size=5')
+      .flush({ lignes: [], total: 0, complete: true, page: 0, size: 5 });
   };
 });

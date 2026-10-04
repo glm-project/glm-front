@@ -55,9 +55,12 @@ retourne `ANCRE_ANNULEE`, et un pointage actif d'une séquence résolue retourne
 derniers résultats conservent le journal disponible. Une adresse refusée n'ouvre jamais silencieusement
 une autre séquence. Les faits ajoutés par un acte sont également adressables dans leur séquence.
 
-Prévisualiser conserve le journal et la version lus. L'aperçu porte l'acte exact, son adresse, la version
-du suivi et une référence propre. La référence porte aussi la commande créée par le client. Confirmer consomme cette référence ; modifier sa version est refusé.
-L'application compare la version commune à tous les dossiers du suivi. Deux aperçus concurrents peuvent
+Prévisualiser conserve le journal et la version lus, sans retenir l'aperçu dans l'adapter. L'aperçu
+porte la proposition explicite : acte exact, adresse, commande, version du suivi, empreinte des conséquences
+et identité prospective de l'événement éventuel. Il ajoute l'évaluation et les dossiers avant et après.
+La correction et la régularisation créent un événement ; l'annulation n'en crée aucun. Commande et événement
+ont des identités distinctes. Confirmer reprépare la trajectoire et compare les conséquences attendues.
+L'application compare également la version commune à tous les dossiers du suivi. Deux aperçus concurrents peuvent
 être lus, mais la deuxième confirmation devient `CONCURRENCE` après l'application du premier. Une
 correction conserve l'origine avec motif, auteur et date d'annulation, puis ajoute le remplacement lié
 à cette origine. Une régularisation ajoute un fait marqué et son auteur. Le même journal et la même
@@ -92,26 +95,26 @@ Le simulateur ne prétend pas couvrir toutes les permutations acceptées par les
 
 ## Réinitialisation et incidents
 
-`DemonstrationConflitsPort.reset(): Promise<void>` restaure les fixtures, efface les aperçus et les
-incidents armés et les reçus simulés. Un ancien aperçu ne peut plus être confirmé après réinitialisation. Un rechargement
-complet recrée également l'état initial ; aucune donnée n'est stockée durablement. `arm(incident)`
+`DemonstrationConflitsPort.reset(): Promise<void>` restaure les fixtures, efface les incidents armés
+et les reçus simulés. Les aperçus ne sont jamais retenus par l'adapter. Un rechargement complet recrée
+également l'état initial ; aucune donnée n'est stockée durablement. `arm(incident)`
 programme un incident unique pour la prochaine opération concernée. Toutes les lectures, tous les
 aperçus et toutes les applications passent par une attente asynchrone.
 
-| Incident             | Opération et résultat                                                                                                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PANNE_LECTURE`      | Prochaine liste ou lecture rejetée ; signalement unique par `ErrorHandlerPort`, puis lecture suivante possible                                                                                             |
-| `PANNE_APERCU`       | Prochain aperçu rejeté sans écriture ; le coordinateur signale l'erreur, pas l'adapter                                                                                                                     |
-| `PANNE_CONFIRMATION` | Prochaine application retourne `ECHEC_CERTAIN` sans écriture ; le même aperçu peut être retenté                                                                                                            |
-| `CONCURRENCE`        | Prochaine confirmation augmente la version commune sans changer le journal, puis retourne `CONCURRENCE`                                                                                                    |
-| `ISSUE_INCONNUE`     | Prochaine confirmation applique réellement l'acte et consomme l'aperçu, puis retourne `ISSUE_INCONNUE` ; la vérification du reçu atteste l'écriture ; une reprise explicite conserve commande et référence |
-| `LECTURE_PARTIELLE`  | Prochaine liste fournit au plus deux lignes et `complete=false`, avec le total du filtre ; la suivante est complète                                                                                        |
+| Incident             | Opération et résultat                                                                                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PANNE_LECTURE`      | Prochaine liste ou lecture rejetée ; signalement unique par `ErrorHandlerPort`, puis lecture suivante possible                                                                                |
+| `PANNE_APERCU`       | Prochain aperçu rejeté sans écriture ; le coordinateur signale l'erreur, pas l'adapter                                                                                                        |
+| `PANNE_CONFIRMATION` | Prochaine application retourne `ECHEC_CERTAIN` sans écriture ; le même aperçu peut être retenté                                                                                               |
+| `CONCURRENCE`        | Prochaine confirmation augmente la version commune sans changer le journal, puis retourne `CONCURRENCE`                                                                                       |
+| `ISSUE_INCONNUE`     | Prochaine confirmation applique réellement l'acte, puis retourne `ISSUE_INCONNUE` ; la vérification du reçu atteste l'écriture ; une reprise explicite conserve la proposition et sa commande |
+| `LECTURE_PARTIELLE`  | Prochaine liste fournit au plus deux lignes et `complete=false`, avec le total du filtre ; la suivante est complète                                                                           |
 
 ## Tests par les points d'entrée confirmés
 
-`ApplicationActePort.verify(reference)` rend `ATTESTE` avec le dossier canonique, `NON_ATTESTE` sans
+`ApplicationActePort.verify(proposition)` rend `ATTESTE` avec le dossier canonique, `NON_ATTESTE` sans
 preuve d'écriture, ou un refus. La vérification ne dépend pas d'une lecture ordinaire ; celle-ci ne lève pas l'issue inconnue. Le coordinateur
-conserve la référence confirmée, bloque toute nouvelle décision tant que le reçu n'est pas attesté et
+conserve la proposition confirmée, bloque toute nouvelle décision tant que le reçu n'est pas attesté et
 ignore une réponse de vérification provenant d'un dossier quitté. Une panne de vérification reste une
 issue inconnue et est signalée par `ErrorHandlerPort`. Une reprise explicite de la même confirmation reste disponible après `NON_ATTESTE`, sans nouvelle identité ni nouvel aperçu.
 
@@ -148,11 +151,19 @@ ou une proposition guidée incohérente sont des erreurs techniques, jamais une 
 Les guides serveur proposent rattachement de fin ou annulation de transition ; la saisie manuelle
 reste disponible sans motif, cible ou instant inventé.
 
-Confirmation et vérification utilisent adresse et commande publiques, sans mémoire privée d'aperçu.
-Un reçu attesté rend le dossier canonique courant ; son adresse, sa commande et ses révisions doivent
-correspondre à la confirmation. `NON_ATTESTEE` conserve l'incertitude. Une tentative explicite répète
-la même commande et la même référence, protégées par l'idempotence serveur. Une nouvelle décision
+La confirmation transmet la proposition explicite, sans les dossiers avant et après ni l'évaluation.
+Le serveur compare la révision attendue et les conséquences recalculées ; les échéances métier restent
+contrôlées. La vérification utilise adresse et commande publiques, sans mémoire privée d'aperçu.
+Un reçu attesté rend le dossier canonique courant ; son adresse, sa commande, ses révisions, son acte et
+son événement créé doivent correspondre à la confirmation. `NON_ATTESTEE` conserve l'incertitude. Une tentative explicite répète
+la même commande et la même proposition, protégées par l'idempotence serveur. Une nouvelle décision
 reste bloquée jusqu'à la preuve canonique.
+
+Un refus `apercu-obsolete` retire l'aperçu, conserve la saisie et réacquiert le dossier courant.
+Tant que cette lecture échoue, la page ne permet aucun aperçu ni aucune confirmation. Une lecture
+réussie invite à revoir la proposition et à demander explicitement un nouvel aperçu. Une adresse annulée
+ou devenue hors conflit reste explicite et ne déclenche aucune navigation vers une autre séquence.
+Un rechargement abandonne la saisie mais ne retire aucune écriture déjà enregistrée par le serveur.
 
 `ApiClient` borne chaque échange à trente secondes. Timeout, rupture réseau, perte de rôle et code
 URN inconnu restent techniques ; une confirmation sans preuve d'échec devient `ISSUE_INCONNUE`.

@@ -172,6 +172,17 @@ const confirmationFixture = (commande: string): components['schemas']['RestConfi
 });
 
 describe('HTTP conflict resolution in Gestion', () => {
+  it('should reacquire changed data after an obsolete confirmation and retain the exact proposal for an explicit new preview', () => {
+    givenRealResolutionReplies();
+    givenAConfirmationWhoseConsequencesBecameObsolete();
+
+    whenOpeningTheRealDossier();
+    whenPreparingTheArbitraryCorrection();
+    whenSubmittingTheObsoleteConfirmation();
+
+    thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal();
+  });
+
   it('should locate the corrected terminating fact from its diagnostic while retaining the original activity identity', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
@@ -368,6 +379,38 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('conflit-acte')).should('contain.text', 'Correction du pointage');
   };
 
+  const givenAConfirmationWhoseConsequencesBecameObsolete = (): void => {
+    const lectures = [dossierFixture(), { ...dossierFixture(), revision: 4 }];
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, request => {
+      const dossier = lectures.shift();
+      if (dossier === undefined) throw new Error('Lecture de dossier fixture inattendue');
+      request.reply({ body: dossier });
+    }).as('dossierCourant');
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, {
+      statusCode: 409,
+      body: { type: 'urn:glm:erreur:atelier:apercu-obsolete', message: 'Les conséquences ont changé' },
+    }).as('confirmationObsolete');
+  };
+
+  const whenSubmittingTheObsoleteConfirmation = (): void => {
+    cy.get(dataSelector('conflit-confirmer')).click();
+  };
+
+  const thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal = (): void => {
+    cy.get('@dossierCourant.all').should('have.length', 2);
+    cy.get('@confirmationObsolete.all').should('have.length', 1);
+    cy.get('@apercuReel.all').should('have.length', 1);
+    cy.get(dataSelector('conflit-operation')).should(
+      'contain.text',
+      'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.',
+    );
+    cy.get(dataSelector('conflit-motif')).should('have.value', motifFixture);
+    cy.get(dataSelector('conflit-instant')).should('have.value', instantCorrigeFixture);
+    cy.get(dataSelector('conflit-previsualiser')).should('be.enabled');
+    cy.get(dataSelector('conflit-apercu')).should('not.exist');
+    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
+  };
+
   const givenRealResolutionReplies = (): void => {
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierFixture() });
     cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}/apercus`, request => {
@@ -378,8 +421,8 @@ describe('HTTP conflict resolution in Gestion', () => {
           adresse: ligneFixture.adresse,
           revision: 3,
           evaluation: '2026-10-04T10:00:00Z',
-          expireLe: '2026-10-04T10:05:00Z',
-          reference: 'opaque-correction',
+          empreinteConsequences: 'empreinte-correction',
+          evenement: remplacementFixture,
           acte: { ...correctionFixture, fait: { ...correctionFixture.fait, instant: '2026-09-14T15:01:00.123456789Z' } },
           avant: dossierFixture(),
           apres: dossierFixture(true),
@@ -426,7 +469,13 @@ describe('HTTP conflict resolution in Gestion', () => {
 
   const thenTheExactActeAndCanonicalResultArePreserved = (): void => {
     cy.wait('@apercuReel').its('request.body.acte').should('deep.equal', correctionFixture);
-    cy.wait('@confirmationReelle').its('request.body.reference').should('equal', 'opaque-correction');
+    cy.wait('@confirmationReelle').its('request.body').should('deep.include', {
+      adresse: ligneFixture.adresse,
+      revision: 3,
+      acte: correctionFixture,
+      empreinteConsequences: 'empreinte-correction',
+      evenement: remplacementFixture,
+    });
     cy.get('@journalCanonique')
       .should('contain', instantCorrigeFixture)
       .and('contain', 'Pointage annulé')

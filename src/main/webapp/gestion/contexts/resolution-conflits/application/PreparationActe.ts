@@ -20,7 +20,7 @@ export class PreparationActe {
   readonly resolution = this.actuelle.asReadonly();
   readonly operation = this.operationActuelle.asReadonly();
   private demande = Symbol('demande');
-  private referenceEnAttente: PropositionResolution | undefined;
+  private propositionEnAttente: PropositionResolution | undefined;
 
   choose(saisie: SaisieActe): void {
     if (this.confirmationOutcomeIsPending()) return;
@@ -44,7 +44,7 @@ export class PreparationActe {
     this.demande = Symbol('réinitialisation');
     this.actuelle.set(ResolutionDuConflit.prepare(SaisieActe.empty()));
     this.operationActuelle.set({ kind: 'REPOS' });
-    this.referenceEnAttente = undefined;
+    this.propositionEnAttente = undefined;
   }
 
   contextChanged(): void {
@@ -52,11 +52,11 @@ export class PreparationActe {
   }
 
   async verify(): Promise<void> {
-    const reference = this.referenceEnAttente;
-    if (reference === undefined) return;
+    const proposition = this.propositionEnAttente;
+    if (proposition === undefined) return;
     const demande = this.demande;
     try {
-      const resultat = await this.application.verify(reference);
+      const resultat = await this.application.verify(proposition);
       if (this.demande !== demande) return;
       if (resultat.kind === 'ATTESTE') {
         this.showApplicationResult({ kind: 'APPLIQUE', dossier: resultat.dossier });
@@ -100,18 +100,18 @@ export class PreparationActe {
     if (this.operationActuelle().kind === 'CONFIRMATION') return;
     const apercu = this.actuelle().confirmation();
     if (apercu === undefined) return;
-    await this.confirmReference(apercu);
+    await this.confirmProposition(apercu);
   }
 
   async retryConfirmation(): Promise<void> {
-    const reference = this.referenceEnAttente;
-    if (reference === undefined) return;
+    const proposition = this.propositionEnAttente;
+    if (proposition === undefined) return;
     if (this.operationActuelle().kind !== 'ISSUE_INCONNUE') return;
-    await this.confirmReference(reference);
+    await this.confirmProposition(proposition);
   }
 
-  private async confirmReference(apercu: PropositionResolution): Promise<void> {
-    this.referenceEnAttente = apercu;
+  private async confirmProposition(apercu: PropositionResolution): Promise<void> {
+    this.propositionEnAttente = apercu;
     this.operationActuelle.set({ kind: 'CONFIRMATION' });
     const demande = Symbol('confirmation');
     this.demande = demande;

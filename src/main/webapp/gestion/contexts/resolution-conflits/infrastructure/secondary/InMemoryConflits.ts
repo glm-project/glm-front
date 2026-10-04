@@ -1,5 +1,5 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { ActeResolution } from '../../domain/acte/ActeResolution';
+import { ActeResolution, FaitPropose } from '../../domain/acte/ActeResolution';
 import {
   ApercuConflit,
   ApplicationActePort,
@@ -9,6 +9,7 @@ import {
   ResultatVerification,
 } from '../../domain/acte/ConflitsActesPorts';
 import { PropositionResolution } from '../../domain/acte/ResolutionDuConflit';
+import { SaisieActe } from '../../domain/acte/SaisieActe';
 import { ActiviteConflitId } from '../../domain/dossier/ActiviteConflitId';
 import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../domain/dossier/ConflitsRightsPort';
@@ -42,11 +43,10 @@ export class InMemoryConflits
 {
   private readonly scenarios = new Map<string, ScenarioConflits>();
   private readonly dossiers = new Map<string, DossierConflit>();
-  private readonly apercus = new Map<string, ApercuConflit>();
   private readonly recus = new Map<string, RecuSimule>();
   private readonly adresses = new Map<string, string>();
   private readonly incidents = new Set<IncidentDemo>();
-  private reference = 0;
+  private commande = 0;
 
   constructor(
     private readonly droits: ConflitsRightsPort,
@@ -60,7 +60,6 @@ export class InMemoryConflits
     await new Promise(resolve => setTimeout(resolve));
     this.dossiers.clear();
     this.scenarios.clear();
-    this.apercus.clear();
     this.recus.clear();
     this.adresses.clear();
     this.incidents.clear();
@@ -93,10 +92,16 @@ export class InMemoryConflits
     if (version !== avant.version) return { kind: 'CONCURRENCE' };
     const refus = refusDemonstrationConflits(avant, acte);
     if (refus !== undefined) return { kind: 'REFUS', raison: refus };
-    return this.previewScenario(adresse, avant, acte);
+    return this.previewScenario(adresse, avant, acte, `demo-commande-${++this.commande}`, this.prospectiveEvent(avant, acte));
   }
 
-  private previewScenario(adresse: AdresseDossier, avant: DossierConflit, acte: ActeResolution): ResultatApercu {
+  private previewScenario(
+    adresse: AdresseDossier,
+    avant: DossierConflit,
+    acte: ActeResolution,
+    commande: string,
+    evenement: string | undefined,
+  ): ResultatApercu {
     const key = adresseKey(avant.ligne.adresse);
     const choix = avant.choix.find(choix => {
       const motif = acte.kind === 'REGULARISATION' ? '' : acte.motif;
@@ -104,13 +109,28 @@ export class InMemoryConflits
     });
     const suite = choix === undefined ? undefined : this.scenarios.get(key)?.resultats.get(choix.id);
     if (suite === undefined) return { kind: 'LIMITATION', raison: 'Trajectoire non simulée' };
-    const journal = this.afterActe(avant, acte);
+    const journal = this.afterActe(avant, acte, evenement ?? '');
     const continuations = this.changesAnchor(avant.ligne.adresse, acte) ? this.remainingLines(avant.ligne.adresse) : suite.continuations;
     const apres = { ...avant, ...suite, continuations, version: avant.version + 1, journal };
-    const reference = `demo-apercu-${++this.reference}`;
-    const apercu = { adresse, commande: `demo-commande-${this.reference}`, version: avant.version, acte, reference, avant, apres };
-    this.apercus.set(reference, apercu);
+    const apercu = {
+      adresse,
+      commande,
+      version: avant.version,
+      acte,
+      empreinteConsequences: JSON.stringify(apres),
+      evaluation: '2026-10-03T10:00:00Z',
+      ...(evenement === undefined ? {} : { evenement }),
+      avant,
+      apres,
+    };
     return { kind: 'APERCU', apercu };
+  }
+
+  private prospectiveEvent(avant: DossierConflit, acte: ActeResolution): string | undefined {
+    if (acte.kind === 'ANNULATION') return undefined;
+    return acte.kind === 'REGULARISATION'
+      ? `regularisation-${avant.ligne.adresse.pointage.pointage}`
+      : `${acte.pointage}-correction-${avant.version + 1}`;
   }
 
   private changesAnchor(adresse: AdresseDossier, acte: ActeResolution): boolean {
@@ -125,14 +145,14 @@ export class InMemoryConflits
       .map(([, dossier]) => dossier.ligne);
   }
 
-  private afterActe(avant: DossierConflit, acte: ActeResolution): readonly PointageConflit[] {
+  private afterActe(avant: DossierConflit, acte: ActeResolution, evenement: string): readonly PointageConflit[] {
     if (acte.kind === 'REGULARISATION') {
       return [
         ...avant.journal,
         {
-          id: new PointageConflitId(`regularisation-${avant.ligne.adresse.pointage.pointage}`),
-          activiteCreee: new ActiviteConflitId(`regularisation-${avant.ligne.adresse.pointage.pointage}`),
-          fait: { ...acte.fait },
+          id: new PointageConflitId(evenement),
+          activiteCreee: new ActiviteConflitId(evenement),
+          fait: this.toJournalFact(acte.fait),
           auteur: 'Gestionnaire de démonstration',
           enregistre: '2026-10-03T10:00:00Z',
           regularisation: true,
@@ -146,8 +166,8 @@ export class InMemoryConflits
       .filter(pointage => pointage.id.pointage === acte.pointage)
       .map(original => ({
         ...original,
-        id: new PointageConflitId(`${acte.pointage}-correction-${avant.version + 1}`),
-        fait: { ...acte.fait },
+        id: new PointageConflitId(evenement),
+        fait: this.toJournalFact(acte.fait),
         remplace: original.id,
         auteur: annulation.auteur,
         enregistre: annulation.instant,
@@ -155,48 +175,76 @@ export class InMemoryConflits
     return [...journal, ...remplacements];
   }
 
-  async apply(reference: PropositionResolution): Promise<ResultatApplication> {
+  private toJournalFact(fait: FaitPropose): FaitPropose {
+    return {
+      type: fait.type,
+      intention: fait.intention,
+      activiteVisee: fait.activiteVisee,
+      operateur: fait.operateur,
+      poste: fait.poste,
+      instant: fait.instant,
+    };
+  }
+
+  async apply(proposition: PropositionResolution): Promise<ResultatApplication> {
     await new Promise(resolve => setTimeout(resolve));
     if (this.incidents.delete('PANNE_CONFIRMATION')) return { kind: 'ECHEC_CERTAIN' };
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
-    const recu = this.recus.get(reference.reference);
-    if (recu !== undefined) return this.replay(reference, recu);
-    const apercu = this.apercus.get(reference.reference);
-    if (apercu === undefined) return { kind: 'REFUS', raison: 'Aperçu inconnu' };
-    const refus = this.confirmationFailure(reference, apercu);
+    const recu = this.recus.get(proposition.commande);
+    if (recu !== undefined) return this.replay(proposition, recu);
+    const resultat = this.prepareConfirmation(proposition);
+    if (resultat.kind !== 'APERCU') return resultat.kind === 'CONCURRENCE' ? resultat : { kind: 'REFUS', raison: resultat.raison };
+    const apercu = resultat.apercu;
+    const refus = this.confirmationFailure(proposition, apercu);
     if (refus !== undefined) return refus;
+    return this.record(apercu);
+  }
+
+  private prepareConfirmation(proposition: PropositionResolution): ResultatApercu {
+    const avant = this.lookupDossier(proposition.adresse);
+    if (avant === undefined) return { kind: 'REFUS', raison: 'Proposition de confirmation incohérente' };
+    if (proposition.version !== avant.version) return { kind: 'CONCURRENCE' };
+    if ((proposition.acte.kind === 'ANNULATION') !== (proposition.evenement === undefined)) {
+      return { kind: 'REFUS', raison: 'Proposition de confirmation incohérente' };
+    }
+    return this.previewScenario(proposition.adresse, avant, proposition.acte, proposition.commande, proposition.evenement);
+  }
+
+  private record(apercu: ApercuConflit): ResultatApplication {
     this.install(apercu.apres);
-    this.recus.set(reference.reference, {
+    this.recus.set(apercu.commande, {
       adresse: apercu.adresse,
       commande: apercu.commande,
-      reference: apercu.reference,
+      acte: apercu.acte,
+      empreinteConsequences: apercu.empreinteConsequences,
+      ...(apercu.evenement === undefined ? {} : { evenement: apercu.evenement }),
       version: apercu.version,
       dossier: apercu.apres,
     });
     for (const pointage of apercu.apres.journal.slice(apercu.avant.journal.length)) {
       this.adresses.set(adresseKey({ suivi: apercu.adresse.suivi, pointage: pointage.id }), adresseKey(apercu.apres.ligne.adresse));
     }
-    this.apercus.delete(reference.reference);
     if (this.incidents.delete('ISSUE_INCONNUE')) return { kind: 'ISSUE_INCONNUE' };
     return { kind: 'APPLIQUE', dossier: apercu.apres };
   }
 
-  private replay(reference: PropositionResolution, recu: RecuSimule): ResultatApplication {
-    if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+  private replay(proposition: PropositionResolution, recu: RecuSimule): ResultatApplication {
+    if (!this.sameProposition(proposition, recu)) return { kind: 'REFUS', raison: 'Proposition de confirmation incohérente' };
     return { kind: 'APPLIQUE', dossier: recu.dossier };
   }
 
-  async verify(reference: PropositionResolution): Promise<ResultatVerification> {
+  async verify(proposition: PropositionResolution): Promise<ResultatVerification> {
     await new Promise(resolve => setTimeout(resolve));
     if (!this.droits.canApply()) return { kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' };
-    const recu = this.recus.get(reference.reference);
+    const recu = this.recus.get(proposition.commande);
     if (recu === undefined) return { kind: 'NON_ATTESTE' };
-    if (!this.sameReference(reference, recu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+    if (!this.sameProposition(proposition, recu)) return { kind: 'REFUS', raison: 'Proposition de confirmation incohérente' };
     return { kind: 'ATTESTE', dossier: recu.dossier };
   }
 
-  private confirmationFailure(reference: PropositionResolution, apercu: ApercuConflit): ResultatApplication | undefined {
-    if (!this.sameReference(reference, apercu)) return { kind: 'REFUS', raison: 'Confirmation différente de l’aperçu' };
+  private confirmationFailure(proposition: PropositionResolution, apercu: ApercuConflit): ResultatApplication | undefined {
+    if (proposition.empreinteConsequences !== apercu.empreinteConsequences) return { kind: 'CONCURRENCE' };
+    if (!this.sameProposition(proposition, apercu)) return { kind: 'REFUS', raison: 'Proposition de confirmation incohérente' };
     const versions = [...this.dossiers.values()]
       .filter(dossier => dossier.ligne.adresse.suivi.suivi === apercu.adresse.suivi.suivi)
       .map(dossier => dossier.version);
@@ -208,12 +256,20 @@ export class InMemoryConflits
     return undefined;
   }
 
-  private sameReference(reference: PropositionResolution, attendu: PropositionResolution): boolean {
+  private sameProposition(proposition: PropositionResolution, attendu: PropositionResolution): boolean {
     return (
-      reference.version === attendu.version
-      && reference.commande === attendu.commande
-      && adresseKey(reference.adresse) === adresseKey(attendu.adresse)
+      this.sameActe(proposition.acte, attendu.acte)
+      && proposition.empreinteConsequences === attendu.empreinteConsequences
+      && proposition.evenement === attendu.evenement
+      && proposition.version === attendu.version
+      && adresseKey(proposition.adresse) === adresseKey(attendu.adresse)
     );
+  }
+
+  private sameActe(acte: ActeResolution, attendu: ActeResolution): boolean {
+    if (acte.kind === 'REGULARISATION') return SaisieActe.regularise(acte.fait).matches(attendu);
+    const saisie = acte.kind === 'ANNULATION' ? SaisieActe.cancel(acte.pointage) : SaisieActe.correct(acte.pointage, acte.fait);
+    return saisie.afterChange({ motif: acte.motif }).matches(attendu);
   }
 
   private install(dossier: DossierConflit): void {
@@ -227,8 +283,8 @@ export class InMemoryConflits
   }
 
   private refreshReceipts(key: string, dossier: DossierConflit): void {
-    for (const [reference, recu] of this.recus) {
-      if (adresseKey(recu.dossier.ligne.adresse) === key) this.recus.set(reference, { ...recu, dossier });
+    for (const [commande, recu] of this.recus) {
+      if (adresseKey(recu.dossier.ligne.adresse) === key) this.recus.set(commande, { ...recu, dossier });
     }
   }
 

@@ -41,13 +41,22 @@ const dossierFixture: DossierConflit = {
 };
 const cancellationFixture = (pointage = 'fin-17'): SaisieActe => SaisieActe.cancel(pointage).afterChange({ motif: 'Double appui' });
 const previewFixture = (saisie: SaisieActe): ApercuConflit => ({
-  reference: 'apercu-1',
+  empreinteConsequences: 'empreinte-1',
+  evaluation: '2026-10-03T10:00:00Z',
   commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
   acte: requiredFixture(saisie.command(), 'chosen acte'),
   avant: dossierFixture,
   apres: { ...dossierFixture, enConflit: false },
+});
+
+const propositionFixture = (saisie: SaisieActe): PropositionResolution => ({
+  empreinteConsequences: 'empreinte-1',
+  commande: 'commande-1',
+  version: 1,
+  adresse: dossierFixture.ligne.adresse,
+  acte: requiredFixture(saisie.command(), 'chosen acte'),
 });
 
 class PendingIoFixture<T> {
@@ -149,7 +158,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await second;
 
     expect(etatPendantLeNouvelApercu).toBe('PREVISUALISATION');
-    expect(preparation.resolution().confirmation()).toEqual(previewFixture(nouvelleSaisie));
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(nouvelleSaisie));
     expect(preparation.operation().kind).toBe('REPOS');
   });
 
@@ -473,7 +482,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.retryConfirmation();
 
     expect(applications.requests).toEqual([]);
-    expect(preparation.resolution().confirmation()).toEqual(previewFixture(cancellationFixture()));
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
   });
 
   it('should dispatch one explicit retry while retaining uncertainty if its response is also lost', async () => {
@@ -515,7 +524,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.verify();
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().confirmation()).toEqual(previewFixture(cancellationFixture()));
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
   });
 
   it('should require a new explicit choice after verifying the unknown outcome', async () => {
@@ -532,7 +541,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await previsualisation;
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().confirmation()).toEqual(apercu);
+    expect(preparation.resolution().confirmation()).toEqual({ ...propositionFixture(saisie), version: 2 });
     expect(previews.requests).toHaveLength(2);
   });
 

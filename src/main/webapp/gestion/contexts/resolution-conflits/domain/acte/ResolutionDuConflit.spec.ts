@@ -30,7 +30,8 @@ const dossierFixture: DossierConflit = {
   continuations: [],
 };
 const apercuFixture: ApercuConflit = {
-  reference: 'apercu-1',
+  empreinteConsequences: 'empreinte-1',
+  evaluation: '2026-10-03T10:00:00Z',
   commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
@@ -50,6 +51,72 @@ const correctionFixture = SaisieActe.correct('fin-17', faitFixture).afterChange(
 const correctionActeFixture: ActeResolution = { kind: 'CORRECTION', pointage: 'fin-17', motif: 'Cible vérifiée', fait: faitFixture };
 
 describe('Explicit confirmation of a resolution', () => {
+  it.each([
+    [correctionFixture, correctionActeFixture],
+    [SaisieActe.regularise(faitFixture), { kind: 'REGULARISATION', fait: faitFixture }],
+  ] satisfies readonly [SaisieActe, ActeResolution][])(
+    'should preserve the exact prospective event in an explicit creation proposal',
+    (saisie, acte) => {
+      const apercu = { ...apercuFixture, acte, evenement: 'evenement-1' };
+      const resolution = ResolutionDuConflit.prepare(saisie).afterPreview(saisie, apercu);
+
+      const confirmation = resolution.confirmation();
+
+      expect(confirmation).toStrictEqual({
+        adresse: dossierFixture.ligne.adresse,
+        commande: 'commande-1',
+        version: 1,
+        acte,
+        empreinteConsequences: 'empreinte-1',
+        evenement: 'evenement-1',
+      });
+    },
+  );
+
+  it('should keep the command identity distinct from the event created by its correction', () => {
+    const resolution = ResolutionDuConflit.prepare(correctionFixture);
+
+    const confondue = resolution.afterPreview(correctionFixture, {
+      ...apercuFixture,
+      acte: correctionActeFixture,
+      evenement: 'commande-1',
+    });
+
+    expect(confondue.confirmation()).toBeUndefined();
+  });
+  it('should refuse a cancellation preview carrying a prospective event although cancellation creates none', () => {
+    const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
+    const resolution = ResolutionDuConflit.prepare(saisie);
+
+    const incorrect = resolution.afterPreview(saisie, { ...apercuFixture, evenement: 'evenement-1' });
+
+    expect(incorrect.confirmation()).toBeUndefined();
+  });
+
+  it('should refuse a correction preview without the prospective event needed for confirmation and retries', () => {
+    const resolution = ResolutionDuConflit.prepare(correctionFixture);
+
+    const incomplete = resolution.afterPreview(correctionFixture, { ...apercuFixture, acte: correctionActeFixture });
+
+    expect(incomplete.confirmation()).toBeUndefined();
+  });
+
+  it('should confirm the explicit cancellation without submitting its preview snapshots or technical ticket', () => {
+    const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
+    const apercu = { ...apercuFixture, empreinteConsequences: 'empreinte-1', evaluation: '2026-10-03T10:00:00Z' };
+    const resolution = ResolutionDuConflit.prepare(saisie).afterPreview(saisie, apercu);
+
+    const confirmation = resolution.confirmation();
+
+    expect(confirmation).toStrictEqual({
+      adresse: dossierFixture.ligne.adresse,
+      commande: 'commande-1',
+      version: 1,
+      acte: { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' },
+      empreinteConsequences: 'empreinte-1',
+    });
+  });
+
   it('should refuse a preview whose before snapshot belongs to another dossier', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
     const resolution = ResolutionDuConflit.prepare(saisie);
@@ -86,7 +153,7 @@ describe('Explicit confirmation of a resolution', () => {
 
     expect(autreVersion.confirmation()).toBeUndefined();
   });
-  it('should refuse a before snapshot whose version differs from the preview reference and requested dossier', () => {
+  it('should refuse a before snapshot whose version differs from the preview proposal and requested dossier', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
     const resolution = ResolutionDuConflit.prepare(saisie);
 
@@ -124,12 +191,16 @@ describe('Explicit confirmation of a resolution', () => {
     (_description, saisie, acte, confirmable) => {
       const resolution = ResolutionDuConflit.prepare(saisie);
 
-      const previsualisee = resolution.afterPreview(saisie, { ...apercuFixture, acte });
+      const previsualisee = resolution.afterPreview(saisie, {
+        ...apercuFixture,
+        acte,
+        ...(acte.kind === 'ANNULATION' ? {} : { evenement: 'evenement-1' }),
+      });
 
       expect(previsualisee.confirmation() !== undefined).toBe(confirmable);
     },
   );
-  it('should refuse a preview whose reference version differs from the observed dossier', () => {
+  it('should refuse a preview whose expected version differs from the observed dossier', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'Double appui' });
     const resolution = ResolutionDuConflit.prepare(saisie);
 

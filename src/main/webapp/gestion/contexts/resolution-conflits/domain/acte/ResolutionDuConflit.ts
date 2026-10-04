@@ -1,4 +1,5 @@
 import { AdresseDossier, DossierConflit } from '../dossier/DossierConflit';
+import { ActeResolution } from './ActeResolution';
 import { ApercuConflit } from './ConflitsActesPorts';
 import { SaisieActe } from './SaisieActe';
 
@@ -6,7 +7,9 @@ export interface PropositionResolution {
   readonly adresse: AdresseDossier;
   readonly commande: string;
   readonly version: number;
-  readonly reference: string;
+  readonly acte: ActeResolution;
+  readonly empreinteConsequences: string;
+  readonly evenement?: string;
 }
 
 export class ResolutionDuConflit {
@@ -30,6 +33,8 @@ export class ResolutionDuConflit {
     return (
       saisie === this.saisie
       && saisie.matches(apercu.acte)
+      && (apercu.acte.kind === 'ANNULATION' ? apercu.evenement === undefined : apercu.evenement !== undefined)
+      && apercu.evenement !== apercu.commande
       && apercu.version === apercu.avant.version
       && apercu.version === dossier.version
       && this.isPreviewForDossier(apercu, dossier)
@@ -50,6 +55,15 @@ export class ResolutionDuConflit {
   }
 
   confirmation(): PropositionResolution | undefined {
-    return this.apercu;
+    const apercu = this.apercu;
+    if (apercu === undefined) return undefined;
+    return {
+      adresse: apercu.adresse,
+      commande: apercu.commande,
+      version: apercu.version,
+      acte: apercu.acte,
+      empreinteConsequences: apercu.empreinteConsequences,
+      ...(apercu.evenement === undefined ? {} : { evenement: apercu.evenement }),
+    };
   }
 }

@@ -3,7 +3,7 @@ import { ActeResolution } from './ActeResolution';
 import { PropositionResolution } from './ResolutionDuConflit';
 
 export interface ApercuConflit extends PropositionResolution {
-  readonly acte: ActeResolution;
+  readonly evaluation: string;
   readonly avant: DossierConflit;
   readonly apres: DossierConflit;
 }
