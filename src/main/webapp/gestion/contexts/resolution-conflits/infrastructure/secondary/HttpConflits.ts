@@ -100,13 +100,17 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
   private readonly errors = inject(ErrorHandlerPort);
 
   async apply(reference: ReferenceApercu): Promise<ResultatApplication> {
-    const resultat = await this.api.write('/api/atelier/suivis/{suivi}/confirmations-de-resolution', {
-      pathParams: { suivi: reference.adresse.suivi.suivi },
-      body: { commande: reference.commande, reference: reference.reference },
-    });
-    if (resultat.kind === 'NON_ATTESTEE') return { kind: 'ISSUE_INCONNUE' };
-    if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
-    return { kind: 'APPLIQUE', dossier: toDossierDansPerimetre(resultat.dossier) };
+    try {
+      const resultat = await this.api.write('/api/atelier/suivis/{suivi}/confirmations-de-resolution', {
+        pathParams: { suivi: reference.adresse.suivi.suivi },
+        body: { commande: reference.commande, reference: reference.reference },
+      });
+      if (resultat.kind === 'NON_ATTESTEE') return { kind: 'ISSUE_INCONNUE' };
+      if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
+      return { kind: 'APPLIQUE', dossier: toDossierDansPerimetre(resultat.dossier) };
+    } catch (failure: unknown) {
+      return toActRefusal(failure);
+    }
   }
 
   async verify(reference: ReferenceApercu): Promise<ResultatVerification> {

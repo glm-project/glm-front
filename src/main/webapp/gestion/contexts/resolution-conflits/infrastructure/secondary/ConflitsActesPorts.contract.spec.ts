@@ -253,6 +253,20 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
   });
 
+  it.each([
+    { code: 'apercu-invalide', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
+    { code: 'confirmation-reutilisee', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
+    { code: 'apercu-obsolete', attendu: { kind: 'CONCURRENCE' } },
+    { code: 'saisie-concurrente', attendu: { kind: 'CONCURRENCE' } },
+  ])('should expose the known confirmation refusal $code without attesting a write', async ({ code, attendu }) => {
+    const demande = application.apply(referenceFixture).catch((failure: unknown) => failure);
+
+    whenRequestFails('/api/atelier/suivis/suivi-camille/confirmations-de-resolution', code, 409, 'Confirmation refusée');
+    const resultat = await demande;
+
+    expect(resultat).toEqual(attendu);
+  });
+
   it('should verify a public command without a prior local preview and return its current canonical dossier', async () => {
     const verification = application.verify(referenceFixture).catch((failure: unknown) => failure);
 
