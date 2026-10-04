@@ -274,6 +274,45 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     expect(choix.saisie.command()).toBeUndefined();
   });
 
+  it('should acquire the exact guided replacement fact without inventing a motive or workstation', async () => {
+    const dossier = dossierConflitFixture();
+    dossier.choix = [
+      {
+        code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE',
+        kind: 'CORRECTION',
+        pointage: 'fin-17',
+        fait: {
+          type: 'FIN',
+          intention: 'FIN',
+          activiteVisee: 'nc-12',
+          operateur: 'op-camille',
+          instant: '2026-09-14T17:00:00.123456789+02:00',
+        },
+      },
+    ];
+    const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    const choix = requiredFixture(dossierFromReading(resultat).choix[0], 'guided correction');
+    expect(choix.saisie.proposition).toEqual({
+      kind: 'CORRECTION',
+      pointage: 'fin-17',
+      motif: '',
+      fait: {
+        type: 'FIN',
+        intention: 'FIN',
+        activiteVisee: 'nc-12',
+        operateur: 'op-camille',
+        poste: '',
+        instant: '2026-09-14T17:00:00.123456789+02:00',
+      },
+    });
+    expect(choix.saisie.command()).toBeUndefined();
+  });
+
   it('should reject a dossier missing its required sequence instead of reconstructing it from the journal', async () => {
     const dossier = dossierConflitFixture();
     delete dossier.sequence;
@@ -285,6 +324,19 @@ describe('Beyond the contract: HTTP conflict reading', () => {
 
     expect(failure).toEqual(new Error('Séquence du dossier absente.'));
     expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should reject a guided correction missing its required fact and report the incomplete acquisition once', async () => {
+    const dossier = dossierConflitFixture();
+    dossier.choix = [{ code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE', kind: 'CORRECTION', pointage: 'fin-17' }];
+    const adresse = { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-17') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Fait de la proposition guidée absent.'));
+    expect(errors.errors).toEqual([resultat]);
   });
 
   it.each(['TERMINEE', 'ECHUE'] as const)(

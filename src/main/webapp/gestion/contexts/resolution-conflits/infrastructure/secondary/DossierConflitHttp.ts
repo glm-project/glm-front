@@ -77,12 +77,26 @@ const toDiagnostic = (diagnostic: components['schemas']['RestDiagnosticDeConflit
   },
 });
 
+const toSaisie = (choix: components['schemas']['RestChoixDeResolution']): SaisieActe => {
+  if (choix.kind === 'ANNULATION') return SaisieActe.cancel(choix.pointage);
+  const fait = choix.fait;
+  if (fait === undefined) throw new Error('Fait de la proposition guidée absent.');
+  return SaisieActe.correct(choix.pointage, {
+    type: fait.type,
+    intention: fait.intention,
+    activiteVisee: fait.activiteVisee ?? '',
+    operateur: fait.operateur,
+    poste: fait.poste ?? '',
+    instant: fait.instant,
+  });
+};
+
 const toChoix = (choix: components['schemas']['RestChoixDeResolution']): ChoixGuide => ({
   id: `${choix.code}:${choix.pointage}`,
   code: choix.code,
   libelle: '',
   explication: '',
-  saisie: SaisieActe.cancel(choix.pointage),
+  saisie: toSaisie(choix),
 });
 
 export const toDossier = (
