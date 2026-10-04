@@ -1,3 +1,4 @@
+import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { Provider } from '@angular/core';
 import { ApplicationActePort, PrevisualisationConflitPort } from './contexts/resolution-conflits/domain/acte/ConflitsActesPorts';
 import { ConflitsReadPort } from './contexts/resolution-conflits/domain/dossier/ConflitsReadPort';
@@ -6,6 +7,7 @@ import { HttpConflits } from './contexts/resolution-conflits/infrastructure/seco
 import { TokenConflitsRights } from './contexts/resolution-conflits/infrastructure/secondary/TokenConflitsRights';
 
 export const resolutionConflitsHttpProvider: Provider[] = [
+  ApiClient,
   { provide: ConflitsRightsPort, useClass: TokenConflitsRights },
   HttpConflits,
   { provide: ConflitsReadPort, useExisting: HttpConflits },

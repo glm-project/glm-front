@@ -1,4 +1,3 @@
-import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ApplicationActePort, PrevisualisationConflitPort } from '@/gestion/contexts/resolution-conflits/domain/acte/ConflitsActesPorts';
 import { ConflitsReadPort } from '@/gestion/contexts/resolution-conflits/domain/dossier/ConflitsReadPort';
@@ -20,7 +19,6 @@ describe('Real conflict resolution composition', () => {
         ...resolutionConflitsProvider,
         provideHttpClient(),
         provideHttpClientTesting(),
-        ApiClient,
         { provide: ConflitsRightsPort, useValue: { canApply: () => true } },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
