@@ -124,6 +124,8 @@ export const LIBELLES_CONFLITS = {
   operateur: 'Opérateur',
   poste: 'Poste',
   sansPoste: 'Sans poste',
+  operateurNonResolu: 'Opérateur non résolu',
+  posteNonResolu: 'Poste non résolu',
   faits: 'Faits',
   diagnostic: 'Contradiction',
   raisons: {
