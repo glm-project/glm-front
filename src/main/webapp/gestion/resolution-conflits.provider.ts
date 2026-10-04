@@ -1,1 +1,1 @@
-export { resolutionConflitsDemonstrationProvider as resolutionConflitsProvider } from './resolution-conflits-demonstration.provider';
+export { resolutionConflitsHttpProvider as resolutionConflitsProvider } from './resolution-conflits-http.provider';
