@@ -75,6 +75,7 @@ export class DossierConflitPage {
 
   protected tempsActivite(activite: ActiviteConflit): string {
     if (activite.etat === 'EN_COURS') return 'Temps non définitif';
+    if (activite.etat === 'A_RESOUDRE') return activite.temps || 'Temps à résoudre';
     const duree = activite.periode?.duree;
     if (duree === undefined) return activite.temps;
     const composants = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(duree);

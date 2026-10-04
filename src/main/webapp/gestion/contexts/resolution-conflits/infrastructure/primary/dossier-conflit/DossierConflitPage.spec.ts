@@ -296,6 +296,15 @@ describe('Conflict dossier page', () => {
     thenHeadingContains('Poste non résolu · poste-absent');
   });
 
+  it('should explain an unresolved activity without presenting an empty duration', async () => {
+    const dossier = dossierConflitFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, activites: dossier.activites.map(activite => ({ ...activite, temps: '' })) } };
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'À résoudre · Temps à résoudre');
+  });
+
   it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
     read.result = {
       kind: 'DOSSIER',
