@@ -649,6 +649,7 @@ describe('Conflict dossier page', () => {
       kind: 'APERCU',
       apercu: {
         reference: 'apercu-1',
+        commande: 'commande-1',
         version: 1,
         adresse: dossier.ligne.adresse,
         avant: dossier,

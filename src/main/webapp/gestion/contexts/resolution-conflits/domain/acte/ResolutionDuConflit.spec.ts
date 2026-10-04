@@ -31,6 +31,7 @@ const dossierFixture: DossierConflit = {
 };
 const apercuFixture: ApercuConflit = {
   reference: 'apercu-1',
+  commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
   acte: { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' },

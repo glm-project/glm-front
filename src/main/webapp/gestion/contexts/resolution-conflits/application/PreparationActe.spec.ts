@@ -42,6 +42,7 @@ const dossierFixture: DossierConflit = {
 const cancellationFixture = (pointage = 'fin-17'): SaisieActe => SaisieActe.cancel(pointage).afterChange({ motif: 'Double appui' });
 const previewFixture = (saisie: SaisieActe): ApercuConflit => ({
   reference: 'apercu-1',
+  commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
   acte: requiredFixture(saisie.command(), 'chosen acte'),

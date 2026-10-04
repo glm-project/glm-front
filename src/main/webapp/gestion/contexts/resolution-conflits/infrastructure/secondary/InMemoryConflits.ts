@@ -109,7 +109,7 @@ export class InMemoryConflits
     const continuations = this.changesAnchor(avant.ligne.adresse, acte) ? this.remainingLines(avant.ligne.adresse) : suite.continuations;
     const apres = { ...avant, ...suite, continuations, version: avant.version + 1, journal };
     const reference = `demo-apercu-${++this.reference}`;
-    const apercu = { adresse, version: avant.version, acte, reference, avant, apres };
+    const apercu = { adresse, commande: `demo-commande-${this.reference}`, version: avant.version, acte, reference, avant, apres };
     this.apercus.set(reference, apercu);
     return { kind: 'APERCU', apercu };
   }

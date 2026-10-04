@@ -3,6 +3,8 @@ import { ApercuConflit } from './ConflitsActesPorts';
 import { SaisieActe } from './SaisieActe';
 
 export interface ReferenceApercu {
+  readonly adresse: AdresseDossier;
+  readonly commande: string;
   readonly version: number;
   readonly reference: string;
 }

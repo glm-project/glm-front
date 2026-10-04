@@ -3,7 +3,6 @@ import { ActeResolution } from './ActeResolution';
 import { ReferenceApercu } from './ResolutionDuConflit';
 
 export interface ApercuConflit extends ReferenceApercu {
-  readonly adresse: AdresseDossier;
   readonly acte: ActeResolution;
   readonly avant: DossierConflit;
   readonly apres: DossierConflit;

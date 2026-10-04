@@ -45,6 +45,15 @@ const whenGuidedActIsApplied = async (adapter: InMemoryConflits, suivi: string, 
 describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ canApply: () => true }, new ErrorHandlerFixture()) }])(
   '$nom resolution ports',
   ({ adapterFixture }) => {
+    it('should expose the command and address with the preview reference', async () => {
+      const adapter = adapterFixture();
+      const initial = dossierFixture(await adapter.read(adresseFixture));
+
+      const apercu = apercuFixture(await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial))));
+
+      expect(apercu.adresse).toEqual(adresseFixture);
+      expect(apercu).toHaveProperty('commande', expect.any(String));
+    });
     it('should keep the independent work unresolved before choosing between its simultaneous finishes', async () => {
       const lecture: ConflitsReadPort = adapterFixture();
       const adresse = { suivi: new SuiviConflitId('demo-retroactif'), pointage: new PointageConflitId('fin-tour-10-bis') };
@@ -119,7 +128,12 @@ describe.each([{ nom: 'InMemory', adapterFixture: () => new InMemoryConflits({ c
       const initial = dossierFixture(await adapter.read(adresseFixture));
 
       const apercu = await adapter.preview(adresseFixture, initial.version, acteFixture(choixFixture(initial)));
-      const application = await adapter.apply({ version: 1, reference: 'aucun-apercu-autorise' });
+      const application = await adapter.apply({
+        adresse: adresseFixture,
+        commande: 'commande-1',
+        version: 1,
+        reference: 'aucun-apercu-autorise',
+      });
       const lecture = await adapter.read(adresseFixture);
 
       expect(apercu).toEqual({ kind: 'REFUS', raison: 'Rôle GESTIONNAIRE requis' });
