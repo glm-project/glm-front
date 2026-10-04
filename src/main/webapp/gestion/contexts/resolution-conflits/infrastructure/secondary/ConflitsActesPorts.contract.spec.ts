@@ -5,9 +5,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { PreparationActe } from '../../application/PreparationActe';
 import { ActeResolution } from '../../domain/acte/ActeResolution';
 import { ApplicationActePort, PrevisualisationConflitPort } from '../../domain/acte/ConflitsActesPorts';
 import { ReferenceApercu } from '../../domain/acte/ResolutionDuConflit';
+import { SaisieActe } from '../../domain/acte/SaisieActe';
+import { ConflitsReadPort } from '../../domain/dossier/ConflitsReadPort';
 import { AdresseDossier } from '../../domain/dossier/DossierConflit';
 import { PointageConflitId } from '../../domain/dossier/PointageConflitId';
 import { SuiviConflitId } from '../../domain/dossier/SuiviConflitId';
@@ -72,14 +75,18 @@ describe('Beyond the contract: HTTP conflict actes', () => {
   let preview: PrevisualisationConflitPort;
   let application: ApplicationActePort;
   let server: HttpTestingController;
+  let errors: ErrorHandlerFixture;
 
   beforeEach(() => {
+    errors = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         ApiClient,
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        { provide: ErrorHandlerPort, useValue: errors },
+        PreparationActe,
+        { provide: ConflitsReadPort, useClass: HttpConflits },
         { provide: PrevisualisationConflitPort, useClass: HttpConflits },
         { provide: ApplicationActePort, useClass: HttpConflits },
       ],
@@ -91,6 +98,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
 
   afterEach(() => {
     server.verify();
+    vi.useRealTimers();
   });
 
   it('should preview the proposed cancellation and expose its command with the canonical result at the cancelled anchor', async () => {
@@ -276,6 +284,58 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
   });
 
+  it('should keep a thirty-second confirmation timeout unknown and retry only its original public command', async () => {
+    const { preparation, commande } = await givenAPreparedCancellation();
+
+    const premiereDemande = await whenTheConfirmationTimesOut(preparation);
+    const inconnue = preparation.operation();
+    const verification = preparation.verify();
+    whenReceiptAnswers({ kind: 'NON_ATTESTEE' }, commande);
+    await verification;
+    const nonAttestee = preparation.operation();
+    const reprise = preparation.retryConfirmation();
+    const confirmation = confirmationFixture();
+    confirmation.recu.commande = commande;
+    const deuxiemeDemande = whenTheRetriedConfirmationAnswers(confirmation);
+    await reprise;
+
+    expect(inconnue).toEqual({ kind: 'ISSUE_INCONNUE' });
+    expect(nonAttestee).toEqual({ kind: 'ISSUE_INCONNUE' });
+    expect(premiereDemande).toEqual({ commande, reference: referenceFixture.reference });
+    expect(deuxiemeDemande).toEqual(premiereDemande);
+    expect(errors.errors).toMatchObject([{ name: 'TimeoutError' }]);
+    expect(preparation.operation()).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false } });
+  });
+
+  const givenAPreparedCancellation = async () => {
+    const lecture = TestBed.inject(ConflitsReadPort).read(adresseFixture);
+    server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17').flush(dossierFixture('EN_CONFLIT', 7));
+    const dossier = await lecture;
+    if (dossier.kind !== 'DOSSIER') throw new Error('Dossier de préparation fixture absent');
+    const preparation = TestBed.inject(PreparationActe);
+    preparation.choose(SaisieActe.cancel('fin-17').afterChange({ motif: acteFixture.motif }));
+    const demande = preparation.preview(dossier.dossier);
+    const commande = whenPreviewAnswers();
+    await demande;
+    return { preparation, commande };
+  };
+
+  const whenTheConfirmationTimesOut = async (preparation: PreparationActe): Promise<unknown> => {
+    vi.useFakeTimers();
+    const confirmation = preparation.confirm();
+    const request = server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution');
+    await vi.advanceTimersByTimeAsync(30_000);
+    await confirmation;
+    vi.useRealTimers();
+    return request.request.body;
+  };
+
+  const whenTheRetriedConfirmationAnswers = (confirmation: components['schemas']['RestConfirmationEnregistree']): unknown => {
+    const request = server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution');
+    request.flush(confirmation);
+    return request.request.body;
+  };
+
   it.each([
     { code: 'apercu-invalide', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
     { code: 'confirmation-reutilisee', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
@@ -394,8 +454,11 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     server.expectOne(url).flush({ type: `urn:glm:erreur:atelier:${code}`, message }, { status, statusText: 'Refused' });
   };
 
-  const whenReceiptAnswers = (resultat: components['schemas']['RestConfirmationDeResolution']): void => {
-    const request = server.expectOne(`/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${referenceFixture.commande}`);
+  const whenReceiptAnswers = (
+    resultat: components['schemas']['RestConfirmationDeResolution'],
+    commande = referenceFixture.commande,
+  ): void => {
+    const request = server.expectOne(`/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${commande}`);
     expect(request.request.method).toBe('GET');
     request.flush(resultat);
   };
