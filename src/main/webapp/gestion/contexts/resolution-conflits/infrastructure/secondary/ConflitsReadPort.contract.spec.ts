@@ -364,6 +364,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     adresse: ligneFixture.adresse,
     revision: 8,
     evaluation: '2026-09-15T08:00:00Z',
+    choix: [],
     diagnostics: [],
     activites: [],
     suivi: {
