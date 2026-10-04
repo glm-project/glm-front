@@ -224,9 +224,12 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { acte: correctionFixture } });
   });
 
-  it('should reject preview consequences belonging to another addressed dossier', async () => {
+  it.each([
+    { suivi: 'autre-suivi', pointage: 'fin-17' },
+    { suivi: 'suivi-camille', pointage: 'autre-pointage' },
+  ])('should reject preview consequences belonging to another addressed dossier $suivi/$pointage', async adresse => {
     const apres = dossierFixture('ANCRE_ANNULEE', 8);
-    apres.adresse = { suivi: 'autre-suivi', pointage: 'fin-17' };
+    apres.adresse = adresse;
 
     const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
     whenPreviewAnswers(acteFixture, { apres });
