@@ -286,6 +286,15 @@ describe('Conflict dossier page', () => {
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
   });
 
+  it('should disclose the received terminating fact when following its diagnostic reference', async () => {
+    givenACorrectedTerminatingFact();
+    await whenRendering();
+
+    await whenClicking('conflit-diagnostic-terminaison');
+
+    thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
+  });
+
   it('should locate the challenged and opening facts identified by the received diagnostic', async () => {
     givenTheOpeningFactReferencedByTheDiagnostic();
 
@@ -1132,6 +1141,9 @@ describe('Conflict dossier page', () => {
   };
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);
+  };
+  const thenReceivedFactDetailsAreOpen = (pointage: string): void => {
+    expect(receivedFact(pointage).querySelector<HTMLDetailsElement>('details')?.open).toBe(true);
   };
   const receivedFact = (pointage: string): HTMLElement => {
     const journal = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('conflit-pointage'))];

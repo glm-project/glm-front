@@ -44,6 +44,7 @@ export class DossierConflitPage {
   protected readonly libelles = LIBELLES_CONFLITS;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
+  protected readonly pointageConsulte = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));

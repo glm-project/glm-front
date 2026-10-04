@@ -237,8 +237,14 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('conflit-pointage'))
       .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
       .should('have.length', 1)
-      .and('contain.text', `Crée l’activité ${ncFixture}`)
-      .and('contain.text', `Remplace le pointage ${ncFixture}`);
+      .and('be.visible')
+      .within(() => {
+        cy.get(dataSelector('conflit-pointage-detail'))
+          .should('have.prop', 'open', true)
+          .contains('p', `Crée l’activité ${ncFixture}`)
+          .should('be.visible');
+        cy.contains('p', `Remplace le pointage ${ncFixture}`).should('be.visible');
+      });
   };
 
   it('should load the authoritative conflict list through the production HTTP composition', () => {

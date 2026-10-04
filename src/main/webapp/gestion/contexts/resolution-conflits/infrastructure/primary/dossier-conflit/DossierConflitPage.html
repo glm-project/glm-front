@@ -22,7 +22,11 @@
       referencePointage(dossier.journal, diagnostic.pointage);
       <p class="mt-2 text-body">
         {{ libelles.diagnosticPointage }} @if (pointage.lien) {
-        <a class="text-accent underline underline-offset-4" [href]="pointage.lien" data-selector="conflit-diagnostic-pointage"
+        <a
+          class="text-accent underline underline-offset-4"
+          [href]="pointage.lien"
+          data-selector="conflit-diagnostic-pointage"
+          (click)="pointageConsulte.set(diagnostic.pointage.pointage)"
           >{{ pointage.libelle }}</a
         >
         } @else { <span>{{ pointage.libelle }}</span> } {{ libelles.diagnosticCible }} {{ diagnostic.cible.activite.activite }}, {{
@@ -31,7 +35,11 @@
       @if (diagnostic.cible.ouvrant; as ouvrant) { @let reference = referencePointage(dossier.journal, ouvrant); @if (reference.lien) {
       <p>
         {{ libelles.diagnosticOuvrant }}
-        <a class="text-accent underline underline-offset-4" [href]="reference.lien" data-selector="conflit-diagnostic-ouvrant"
+        <a
+          class="text-accent underline underline-offset-4"
+          [href]="reference.lien"
+          data-selector="conflit-diagnostic-ouvrant"
+          (click)="pointageConsulte.set(ouvrant.pointage)"
           >{{ reference.libelle }}</a
         >.
       </p>
@@ -40,7 +48,11 @@
       } } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin); @if (reference.lien) {
       <p>
         {{ libelles.diagnosticTerminaison }}
-        <a class="text-accent underline underline-offset-4" [href]="reference.lien" data-selector="conflit-diagnostic-terminaison"
+        <a
+          class="text-accent underline underline-offset-4"
+          [href]="reference.lien"
+          data-selector="conflit-diagnostic-terminaison"
+          (click)="pointageConsulte.set(fin.pointage)"
           >{{ reference.libelle }}</a
         >.
       </p>
@@ -109,7 +121,7 @@
             </button>
           </div>
           }
-          <details class="mt-2" data-selector="conflit-pointage-detail">
+          <details class="mt-2" data-selector="conflit-pointage-detail" [open]="pointageConsulte() === pointage.id.pointage">
             <summary class="min-h-touch cursor-pointer py-3 text-body-sm text-ink-muted">{{ libelles.tracabilite }}</summary>
             <p class="text-body-sm">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
             @if (pointage.fait.activiteVisee) {
