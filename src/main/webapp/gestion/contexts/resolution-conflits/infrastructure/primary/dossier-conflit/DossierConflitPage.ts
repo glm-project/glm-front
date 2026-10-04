@@ -29,8 +29,6 @@ export class DossierConflitPage {
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
   private precedente: AdresseDossier | undefined;
-  private verificationDemandee = false;
-  private demandeLecture = Symbol('lecture');
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(ConflitsRightsPort);
   protected readonly demonstration = inject(DemonstrationConflitsPort, { optional: true });
@@ -90,29 +88,15 @@ export class DossierConflitPage {
       .join(' ');
   }
 
-  private async read(adresse: AdresseDossier | undefined) {
-    const demande = Symbol('lecture');
-    this.demandeLecture = demande;
-    const verification = this.verificationDemandee;
-    this.verificationDemandee = false;
+  private read(adresse: AdresseDossier | undefined) {
     if (adresse === undefined) {
       this.precedente = undefined;
       this.contextChanged();
-      return undefined;
+      return Promise.resolve(undefined);
     }
     if (!this.sameAddress(adresse)) this.contextChanged();
     this.precedente = adresse;
-    const resultat = await this.port.read(adresse);
-    if (this.verificationIsCurrent(verification, adresse, demande)) {
-      await this.preparation.verify();
-      const resultatApplication = this.preparation.operation();
-      if (resultatApplication.kind === 'APPLIQUE') return { kind: 'DOSSIER' as const, dossier: resultatApplication.dossier };
-    }
-    return resultat;
-  }
-
-  private verificationIsCurrent(verification: boolean, adresse: AdresseDossier, demande: symbol): boolean {
-    return verification && this.demandeLecture === demande && this.sameAddress(adresse);
+    return this.port.read(adresse);
   }
 
   private sameAddress(adresse: AdresseDossier): boolean {
@@ -203,9 +187,9 @@ export class DossierConflitPage {
     this.lecture.reload();
   }
 
-  protected verify(): void {
-    this.verificationDemandee = true;
-    this.lecture.reload();
+  protected async verify(): Promise<void> {
+    await this.preparation.verify();
+    this.refreshAfterConfirmation();
   }
 
   protected reset(): void {

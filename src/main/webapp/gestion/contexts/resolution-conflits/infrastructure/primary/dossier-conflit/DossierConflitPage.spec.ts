@@ -373,6 +373,21 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-adresse-obsolete');
   });
 
+  it('should recover the canonical receipt even when an ordinary dossier read is unavailable', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    application.verification = { kind: 'ATTESTE', dossier: { ...dossierConflitFixture(), version: 3, enConflit: false } };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    read.failure = new Error('Lecture ordinaire indisponible');
+
+    await whenClicking('conflit-verifier');
+
+    thenTextContains('conflit-resultat', 'Conflit résolu');
+    thenAbsent('conflit-retry');
+  });
+
   it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
     givenASuccessfulPreview({
       ...dossierConflitFixture(),
@@ -400,7 +415,7 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
     thenDisabled('conflit-choix');
     thenFieldValueIs('conflit-motif', 'Cible confirmée');
-    expect(read.demandes).toHaveLength(2);
+    expect(read.demandes).toHaveLength(1);
   });
 
   it('should clear the displayed interpretation after verifying an unknown write outcome', async () => {
@@ -490,14 +505,14 @@ describe('Conflict dossier page', () => {
     await whenRendering();
     await whenPreparingTheCorrection();
     await whenClicking('conflit-confirmer');
-    read.failure = new Error('Vérification indisponible');
+    const attente = new PendingResponseFixture<ResultatVerification>();
+    application.receiptReplies.pending = attente;
 
-    await whenClicking('conflit-verifier');
-    const verificationFailed = present('conflit-retry');
-    read.failure = undefined;
-    await whenClicking('conflit-retry');
+    whenStartingClick('conflit-verifier');
+    await attente.arrival;
+    await whenResponseFails(attente, new Error('Vérification indisponible'));
 
-    expect(verificationFailed).toBe(true);
+    expect(present('conflit-verifier')).toBe(true);
     thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
     thenDisabled('conflit-choix');
     thenFieldValueIs('conflit-motif', 'Cible confirmée');
@@ -860,6 +875,12 @@ describe('Conflict dossier page', () => {
   const whenResponseArrives = async <T>(pending: PendingResponseFixture<T>, result: T): Promise<void> => {
     pending.release(result);
     await pending.completion;
+    await fixture.whenStable();
+  };
+
+  const whenResponseFails = async <T>(pending: PendingResponseFixture<T>, failure: Error): Promise<void> => {
+    pending.fail(failure);
+    await Promise.allSettled([pending.completion]);
     await fixture.whenStable();
   };
 
