@@ -114,12 +114,18 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
   }
 
   async verify(reference: ReferenceApercu): Promise<ResultatVerification> {
-    const resultat = await this.api.read('/api/atelier/suivis/{suivi}/confirmations-de-resolution/{commande}', {
-      pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },
-    });
-    if (resultat.kind === 'NON_ATTESTEE') return { kind: 'NON_ATTESTE' };
-    if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
-    return { kind: 'ATTESTE', dossier: toDossierDansPerimetre(resultat.dossier) };
+    try {
+      const resultat = await this.api.read('/api/atelier/suivis/{suivi}/confirmations-de-resolution/{commande}', {
+        pathParams: { suivi: reference.adresse.suivi.suivi, commande: reference.commande },
+      });
+      if (resultat.kind === 'NON_ATTESTEE') return { kind: 'NON_ATTESTE' };
+      if (!receiptMatchesReference(resultat.recu, reference)) throw new Error('Reçu de confirmation incohérent.');
+      return { kind: 'ATTESTE', dossier: toDossierDansPerimetre(resultat.dossier) };
+    } catch (failure: unknown) {
+      const erreur = findApiErrorIn(failure);
+      if (erreur?.urn === 'urn:glm:erreur:atelier:suivi-d-atelier-introuvable') return { kind: 'REFUS', raison: erreur.message };
+      throw failure;
+    }
   }
 
   async preview(adresse: AdresseDossier, version: number, acte: ActeResolution): Promise<ResultatApercu> {

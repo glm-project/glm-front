@@ -276,6 +276,20 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toMatchObject({ kind: 'ATTESTE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
   });
 
+  it('should retain the known inaccessible-follow-up refusal without attesting absence of a confirmation', async () => {
+    const demande = application.verify(referenceFixture).catch((failure: unknown) => failure);
+
+    whenRequestFails(
+      `/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${referenceFixture.commande}`,
+      'suivi-d-atelier-introuvable',
+      404,
+      'Suivi inaccessible',
+    );
+    const resultat = await demande;
+
+    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Suivi inaccessible' });
+  });
+
   it.each(
     [
       { nom: 'command', changement: { commande: 'autre-commande' } },
@@ -297,6 +311,44 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     if (operation === 'apply') whenConfirmationAnswers(resultat);
     else whenReceiptAnswers(resultat);
   };
+
+  it.each([
+    { operation: 'apply' as const, attendu: { kind: 'ISSUE_INCONNUE' } },
+    { operation: 'verify' as const, attendu: { kind: 'NON_ATTESTE' } },
+  ])('should preserve uncertainty when $operation receives no attested receipt', async ({ operation, attendu }) => {
+    const demande = application[operation](referenceFixture);
+
+    whenCanonicalAnswers(operation, { kind: 'NON_ATTESTEE' });
+    const resultat = await demande;
+
+    expect(resultat).toEqual(attendu);
+  });
+
+  it.each((['preview', 'apply', 'verify'] as const).flatMap(operation => [403, 409, 500].map(status => ({ operation, status }))))(
+    'should reject the unknown code with status $status during $operation as a technical failure',
+    async ({ operation, status }) => {
+      const demande = requestActOperation(operation).catch((failure: unknown) => failure);
+
+      whenRequestFails(actOperationUrl(operation), 'code-inconnu', status, 'Refus inconnu');
+      const resultat = await demande;
+
+      expect(resultat).toMatchObject({ name: 'HttpErrorResponse', status, error: { type: 'urn:glm:erreur:atelier:code-inconnu' } });
+    },
+  );
+
+  const requestActOperation = (operation: 'preview' | 'apply' | 'verify'): Promise<unknown> =>
+    ({
+      preview: () => preview.preview(adresseFixture, 7, acteFixture),
+      apply: () => application.apply(referenceFixture),
+      verify: () => application.verify(referenceFixture),
+    })[operation]();
+
+  const actOperationUrl = (operation: 'preview' | 'apply' | 'verify'): string =>
+    ({
+      preview: '/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus',
+      apply: '/api/atelier/suivis/suivi-camille/confirmations-de-resolution',
+      verify: `/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${referenceFixture.commande}`,
+    })[operation];
 
   const whenRequestFails = (url: string, code: string, status: number, message: string): void => {
     server.expectOne(url).flush({ type: `urn:glm:erreur:atelier:${code}`, message }, { status, statusText: 'Refused' });
