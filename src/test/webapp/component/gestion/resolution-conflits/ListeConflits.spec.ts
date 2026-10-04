@@ -1,6 +1,13 @@
+import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
+import { ligneFixture } from '../../../utils/gestion/resolution-conflits/ConflitsHttp.fixture';
 
 describe('Conflict list in Gestion', () => {
+  beforeEach(() => {
+    cy.intercept('GET', '/api/atelier/conflits*', {
+      body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesConflits'],
+    });
+  });
   it('should keep the wide list inside an accessible scroll region on a narrow screen', () => {
     whenVisitingAt(320);
 
@@ -16,6 +23,9 @@ describe('Conflict list in Gestion', () => {
   });
 
   const whenFilteringWithEnter = (): void => {
+    cy.intercept('GET', '/api/atelier/conflits?operateur=Op%C3%A9rateur%20absent&element=M-042&page=0&size=5', {
+      body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesConflits'],
+    });
     cy.get(dataSelector('conflits-filtre-operateur')).type('Opérateur absent');
     cy.get(dataSelector('conflits-filtre-element')).type('M-042{enter}');
   };

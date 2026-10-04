@@ -1,7 +1,75 @@
+import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
+import {
+  confirmationFixture,
+  debutFixture,
+  dossierFixture,
+  finFixture,
+  journalFixture,
+  ligneFixture,
+  ncFixture,
+  operateurFixture,
+  remplacementFixture,
+  suiviFixture,
+} from '../../../utils/gestion/resolution-conflits/ConflitsHttp.fixture';
 import type {} from '../../../utils/gestion/resolution-conflits/resolution-conflits.provider';
 
+const posteFixture = '70000000-0000-0000-0000-000000000008';
+const instantFinFixture = '2026-09-14T17:00:00.123456789+02:00';
+const motifCorrectionFixture = 'La cible est la NC.';
+
+const dossierRecuFixture = (): components['schemas']['RestDossierConflit'] => {
+  const dossier = dossierFixture();
+  return {
+    ...dossier,
+    suivi: { ...dossier.suivi, journal: journalFixture.map(fait => ({ ...fait, posteId: posteFixture })) },
+    choix: [...dossier.choix, { code: 'ANNULER_TRANSITION', kind: 'ANNULATION', pointage: ncFixture }],
+  };
+};
+
+const dossierApresFixture = (): components['schemas']['RestDossierConflit'] => {
+  const dossier = dossierFixture(true);
+  return {
+    ...dossier,
+    activites: [
+      requiredFixture(dossier.activites[0], 'donnée HTTP de résolution'),
+      { ...requiredFixture(dossier.activites[1], 'donnée HTTP de résolution'), fin: instantFinFixture, duree: 'PT5H' },
+    ],
+    suivi: {
+      ...dossier.suivi,
+      journal: [
+        ...journalFixture.slice(0, 2),
+        {
+          ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
+          annulation: { motif: motifCorrectionFixture, auteur: 'gestionnaire', date: '2026-10-04T10:00:00Z' },
+        },
+        { ...requiredFixture(dossier.suivi.journal[3], 'donnée HTTP de résolution'), dateDeSurvenue: instantFinFixture },
+      ],
+    },
+  };
+};
+
 describe('Conflict dossier in Gestion', () => {
+  beforeEach(() => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierRecuFixture() }).as('dossier');
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}/apercus`, request => {
+      const body = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: {
+          commande: body.commande,
+          adresse: ligneFixture.adresse,
+          revision: 3,
+          evaluation: '2026-10-04T10:00:00Z',
+          empreinteConsequences: 'empreinte-consequences',
+          evenement: remplacementFixture,
+          acte: body.acte,
+          avant: dossierRecuFixture(),
+          apres: dossierApresFixture(),
+        } satisfies components['schemas']['RestApercuDeResolution'],
+      });
+    }).as('apercu');
+  });
   it('should open the correction from the received end and identify the fact being edited', () => {
     whenOpeningTheDossierAt(320);
     whenCorrectingTheReceivedEnd();
@@ -17,9 +85,9 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('conflit-proposition-titre')).should('have.focus');
     cy.get(dataSelector('conflit-proposition-resume'))
       .should('contain.text', '17:00:00')
-      .and('contain.text', 'Travail commencé à 8 h, remplacé à 12 h');
-    cy.get(dataSelector('conflit-instant')).should('have.value', '2026-09-14T17:00:00+02:00');
-    cy.get(dataSelector('conflit-cible')).should('have.value', 'travail-8');
+      .and('contain.text', 'Travail · 2026-09-14T08:00:00.123456789+02:00');
+    cy.get(dataSelector('conflit-instant')).should('have.value', instantFinFixture);
+    cy.get(dataSelector('conflit-cible')).should('have.value', debutFixture);
   };
 
   it('should identify the chosen interpretation while its reason is being entered', () => {
@@ -44,10 +112,10 @@ describe('Conflict dossier in Gestion', () => {
   const thenTheConsequencesAreVisibleWithoutOpeningTheJournal = (): void => {
     cy.get(dataSelector('conflit-apercu-consequences'))
       .should('be.visible')
-      .and('contain.text', 'Travail de 8 h à 12 h : 4 h.')
-      .and('contain.text', 'NC de 12 h à 17 h : 5 h.');
+      .and('contain.text', 'Terminée · 4 h')
+      .and('contain.text', 'Terminée · 5 h');
     cy.get(dataSelector('conflit-apercu-journal')).should('not.have.attr', 'open');
-    cy.get(dataSelector('conflit-apercu-fait-avant-fin-17')).should(fait => {
+    cy.get(dataSelector(`conflit-apercu-fait-avant-${finFixture}`)).should(fait => {
       expect(fait[0]?.checkVisibility()).to.equal(false);
     });
     cy.get(dataSelector('conflit-apercu-consequences')).then(consequences => {
@@ -67,15 +135,15 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
-    cy.get(dataSelector('conflit-apercu-acte')).should('contain.text', 'fin-17').and('contain.text', 'La cible est la NC.');
-    cy.get(dataSelector('conflit-apercu-fait-avant-fin-17'))
+    cy.get(dataSelector('conflit-apercu-acte')).should('contain.text', finFixture).and('contain.text', 'La cible est la NC.');
+    cy.get(dataSelector(`conflit-apercu-fait-avant-${finFixture}`))
       .should('be.visible')
-      .and('contain.text', 'travail-8')
+      .and('contain.text', debutFixture)
       .and('not.contain.text', 'Pointage annulé');
-    cy.get(dataSelector('conflit-apercu-fait-apres-fin-17')).should('contain.text', 'Pointage annulé');
-    cy.get(dataSelector('conflit-apercu-fait-apres-fin-17-correction-2'))
-      .should('contain.text', 'nc-12')
-      .and('contain.text', 'Remplace le pointage fin-17');
+    cy.get(dataSelector(`conflit-apercu-fait-apres-${finFixture}`)).should('contain.text', 'Pointage annulé');
+    cy.get(dataSelector(`conflit-apercu-fait-apres-${remplacementFixture}`))
+      .should('contain.text', ncFixture)
+      .and('contain.text', `Remplace le pointage ${finFixture}`);
     cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
   };
 
@@ -91,7 +159,8 @@ describe('Conflict dossier in Gestion', () => {
 
   const whenOpeningTheDossierWithoutAWorkstation = (): void => {
     cy.viewport(1280, 900);
-    cy.visit('/conflits/demo-avant-ouverture?pointage=fin-avant');
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierFixture() });
+    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
   };
 
   const thenTheFactsKeepTheirPrecisionAndNameTheAbsentWorkstation = (): void => {
@@ -109,19 +178,46 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenEveryFactIdentifiesItsOperatorAndWorkstation = (): void => {
     cy.get(dataSelector('conflit-pointage')).each(pointage => {
-      cy.wrap(pointage).should('contain.text', 'Opérateur : op-camille').and('contain.text', 'Poste : poste-dmu');
+      cy.wrap(pointage).should('contain.text', `Opérateur : ${operateurFixture}`).and('contain.text', `Poste : ${posteFixture}`);
     });
   };
 
   it('should display received facts in chronological order while keeping equal instants separate', () => {
-    whenOpeningTheRetroactiveDossier();
+    whenOpeningTheDossierWithEqualInstants();
 
     thenTheReceivedFactsFollowTheirOccurrenceTime();
   });
 
-  const whenOpeningTheRetroactiveDossier = (): void => {
+  const whenOpeningTheDossierWithEqualInstants = (): void => {
     cy.viewport(1280, 900);
-    cy.visit('/conflits/demo-retroactif?pointage=fin-17');
+    const dossier = dossierRecuFixture();
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, {
+      body: {
+        ...dossier,
+        suivi: {
+          ...dossier.suivi,
+          journal: [
+            ...dossier.suivi.journal,
+            {
+              ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
+              id: '70000000-0000-0000-0000-000000000011',
+              dateDeSurvenue: '2026-09-14T09:00:00+02:00',
+            },
+            {
+              ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
+              id: '70000000-0000-0000-0000-000000000012',
+              dateDeSurvenue: '2026-09-14T10:00:00+02:00',
+            },
+            {
+              ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
+              id: '70000000-0000-0000-0000-000000000013',
+              dateDeSurvenue: '2026-09-14T10:00:00+02:00',
+            },
+          ],
+        },
+      } satisfies components['schemas']['RestDossierConflit'],
+    });
+    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
   };
 
   const thenTheReceivedFactsFollowTheirOccurrenceTime = (): void => {
@@ -152,14 +248,6 @@ describe('Conflict dossier in Gestion', () => {
     thenTheCancellationOnlyRequiresAReason();
   });
 
-  it('should clear the prepared decision when resetting the demonstration', () => {
-    whenOpeningTheDossier();
-    whenPreparingTheGuidedCorrection();
-    whenResettingTheDemonstration();
-
-    thenTheInitialDossierHasNoPreparedDecision();
-  });
-
   it('should start reading the preview at its summary before reaching confirmation', () => {
     whenOpeningTheDossier();
     whenPreparingTheGuidedCorrection();
@@ -188,28 +276,10 @@ describe('Conflict dossier in Gestion', () => {
     thenTheFormerPreviewCannotBeConfirmed();
   });
 
-  it('should identify an unsupported valid correction as a simulation limitation and retain the proposal', () => {
-    whenOpeningTheDossier();
-    whenChoosingTheGuidedCorrection();
-    whenMovingTheEndOutsideTheScript();
-    whenRequestingThePreview();
-
-    thenTheUnsupportedCorrectionIsRetained();
-  });
-
-  it('should preserve the reason and preview when confirmation certainly failed before writing', () => {
-    whenOpeningTheDossier();
-    whenPreparingTheGuidedCorrection();
-    whenArming('PANNE_CONFIRMATION');
-    whenConfirmingTheAct();
-
-    thenTheCertainFailureCanBeRetried();
-  });
-
   it('should retain the proposal and require a new preview after a concurrent modification', () => {
     whenOpeningTheDossier();
     whenPreparingTheGuidedCorrection();
-    whenArming('CONCURRENCE');
+    givenAnObsoleteConfirmation();
     whenConfirmingTheAct();
 
     thenTheConcurrentDossierIsReloadedWithTheProposal();
@@ -218,7 +288,7 @@ describe('Conflict dossier in Gestion', () => {
   it('should verify the written journal after a lost response without replaying the act', () => {
     whenOpeningTheDossier();
     whenPreparingTheGuidedCorrection();
-    whenArming('ISSUE_INCONNUE');
+    givenALostConfirmation();
     whenConfirmingTheAct();
     whenVerifyingTheJournal();
 
@@ -267,7 +337,7 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenConsultingWithoutManagementRights = (): void => {
-    cy.visit('/conflits/demo-remplacement?pointage=fin-17', {
+    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`, {
       onBeforeLoad: win => {
         win.gestionConflitsGestionnaire = false;
       },
@@ -287,9 +357,19 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('conflit-regulariser')).should('be.disabled');
   };
 
-  const whenArming = (incident: string): void => {
-    cy.get(dataSelector('conflits-demonstration-toggle')).click();
-    cy.get(dataSelector(`conflits-incident-${incident}`)).click();
+  const givenAnObsoleteConfirmation = (): void => {
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, {
+      statusCode: 409,
+      body: { type: 'urn:glm:erreur:atelier:apercu-obsolete', message: 'Conséquences modifiées' },
+    });
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: { ...dossierRecuFixture(), revision: 4 } });
+  };
+
+  const givenALostConfirmation = (): void => {
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, {
+      statusCode: 500,
+      body: { type: 'urn:glm:erreur:atelier:issue-inconnue', message: 'Réponse perdue' },
+    }).as('confirmationPerdue');
   };
 
   const whenConfirmingTheAct = (): void => {
@@ -297,6 +377,13 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenVerifyingTheJournal = (): void => {
+    cy.wait('@confirmationPerdue').then(interception => {
+      const body = interception.request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      const confirmation = confirmationFixture(body.commande);
+      cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution/${body.commande}`, {
+        body: { ...confirmation, recu: { ...confirmation.recu, acte: body.acte }, dossier: dossierApresFixture() },
+      });
+    });
     cy.get(dataSelector('conflit-verifier')).click();
   };
 
@@ -304,45 +391,24 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('conflit-operation')).should('contain.text', 'Acte enregistré');
     cy.get(dataSelector('conflit-resultat')).should('contain.text', 'Conflit résolu');
     cy.get(dataSelector('conflit-adresse-obsolete')).should('not.exist');
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', 'Remplace le pointage fin-17');
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', 'Crée l’activité travail-8');
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', 'nc-12');
+    cy.get(dataSelector('conflit-pointage')).should('contain.text', `Remplace le pointage ${finFixture}`);
+    cy.get(dataSelector('conflit-pointage')).should('contain.text', `Crée l’activité ${debutFixture}`);
+    cy.get(dataSelector('conflit-pointage')).should('contain.text', ncFixture);
     cy.get(dataSelector('conflit-annulation')).should('have.length', 1).and('contain.text', 'La cible est la NC.');
     cy.get(dataSelector('conflit-pointage')).should('have.length', 4);
     cy.get(dataSelector('conflit-confirmer')).should('not.exist');
   };
 
   const thenTheConcurrentDossierIsReloadedWithTheProposal = (): void => {
-    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Ce suivi a changé');
+    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Les données ont changé');
     cy.get(dataSelector('conflit-motif')).should('have.value', 'La cible est la NC.');
     cy.get(dataSelector('conflit-confirmer')).should('not.exist');
     cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
     cy.get(dataSelector('conflit-previsualiser')).should('be.enabled');
   };
 
-  const thenTheCertainFailureCanBeRetried = (): void => {
-    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Votre saisie est conservée');
-    cy.get(dataSelector('conflit-motif')).should('have.value', 'La cible est la NC.');
-    cy.get(dataSelector('conflit-confirmer')).should('be.enabled');
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
-    cy.get(dataSelector('conflit-resultat')).should('not.exist');
-  };
-
-  const whenMovingTheEndOutsideTheScript = (): void => {
-    cy.get(dataSelector('conflit-champs-detail')).click();
-    cy.get(dataSelector('conflit-instant')).clear();
-    cy.get(dataSelector('conflit-instant')).type('2026-09-14T17:01:00+02:00');
-  };
-
   const whenRequestingThePreview = (): void => {
     cy.get(dataSelector('conflit-previsualiser')).click();
-  };
-
-  const thenTheUnsupportedCorrectionIsRetained = (): void => {
-    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Limitation de la démonstration');
-    cy.get(dataSelector('conflit-instant')).should('have.value', '2026-09-14T17:01:00+02:00');
-    cy.get(dataSelector('conflit-motif')).should('have.value', 'La cible est la NC.');
-    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
   };
 
   const whenChangingTheReason = (): void => {
@@ -369,23 +435,13 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('conflit-motif')).type('La cible est la NC.');
   };
 
-  const whenResettingTheDemonstration = (): void => {
-    cy.get(dataSelector('conflits-reset')).click();
-  };
-
-  const thenTheInitialDossierHasNoPreparedDecision = (): void => {
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
-    cy.get(dataSelector('conflit-apercu')).should('not.exist');
-    cy.get(dataSelector('conflit-acte')).should('not.exist');
-  };
-
   const whenOpeningTheDossier = (): void => {
     whenOpeningTheDossierAt(1280);
   };
 
   const whenOpeningTheDossierAt = (width: number): void => {
     cy.viewport(width, 900);
-    cy.visit('/conflits/demo-remplacement?pointage=fin-17');
+    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
   };
 
   const whenCorrectingTheEnd = (): void => {
@@ -418,9 +474,9 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const thenTheDetailedFactPreservesTheReceivedValues = (): void => {
-    cy.get(dataSelector('conflit-instant')).should('have.value', '2026-09-14T17:00:00+02:00');
-    cy.get(dataSelector('conflit-operateur')).should('have.value', 'op-camille');
-    cy.get(dataSelector('conflit-cible')).should('have.value', 'travail-8');
+    cy.get(dataSelector('conflit-instant')).should('have.value', instantFinFixture);
+    cy.get(dataSelector('conflit-operateur')).should('have.value', operateurFixture);
+    cy.get(dataSelector('conflit-cible')).should('have.value', debutFixture);
     cy.get(dataSelector('conflit-previsualiser')).should('be.disabled');
     cy.get(dataSelector('conflit-confirmer')).should('not.exist');
   };

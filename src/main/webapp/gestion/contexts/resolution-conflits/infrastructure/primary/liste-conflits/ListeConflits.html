@@ -1,9 +1,7 @@
 <main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="conflits-heading">
   <h1 id="conflits-heading" class="text-title">{{ libelles.titre }}</h1>
   <p class="mt-2 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
-  @if (demonstration !== null) {
-  <glm-demonstration-conflits (changed)="reload()" />
-  }
+
   <form
     class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
     (submit)="filter($event, operateur.value, element.value)"

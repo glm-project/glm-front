@@ -1,23 +1,22 @@
 import { AdresseDossier, DossierConflit } from '../dossier/DossierConflit';
 import { ActeResolution } from './ActeResolution';
-import { ReferenceApercu } from './ResolutionDuConflit';
+import { PropositionResolution } from './ResolutionDuConflit';
 
-export interface ApercuConflit extends ReferenceApercu {
-  readonly acte: ActeResolution;
+export interface ApercuConflit extends PropositionResolution {
+  readonly evaluation: string;
   readonly avant: DossierConflit;
   readonly apres: DossierConflit;
 }
 
 export type ResultatApercu =
   | { readonly kind: 'APERCU'; readonly apercu: ApercuConflit }
-  | { readonly kind: 'REFUS' | 'LIMITATION'; readonly raison: string }
+  | { readonly kind: 'REFUS'; readonly raison: string }
   | { readonly kind: 'CONCURRENCE' };
 
 export type ResultatApplication =
   | { readonly kind: 'APPLIQUE'; readonly dossier: DossierConflit }
   | { readonly kind: 'CONCURRENCE' }
   | { readonly kind: 'ISSUE_INCONNUE' }
-  | { readonly kind: 'ECHEC_CERTAIN' }
   | { readonly kind: 'REFUS'; readonly raison: string };
 
 export type ResultatVerification =
@@ -30,6 +29,6 @@ export abstract class PrevisualisationConflitPort {
 }
 
 export abstract class ApplicationActePort {
-  abstract apply(apercu: ReferenceApercu): Promise<ResultatApplication>;
-  abstract verify(apercu: ReferenceApercu): Promise<ResultatVerification>;
+  abstract apply(apercu: PropositionResolution): Promise<ResultatApplication>;
+  abstract verify(apercu: PropositionResolution): Promise<ResultatVerification>;
 }

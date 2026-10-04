@@ -10,7 +10,7 @@ import {
   ResultatApplication,
   ResultatVerification,
 } from '../domain/acte/ConflitsActesPorts';
-import { ReferenceApercu } from '../domain/acte/ResolutionDuConflit';
+import { PropositionResolution } from '../domain/acte/ResolutionDuConflit';
 import { SaisieActe } from '../domain/acte/SaisieActe';
 import { AdresseDossier, DossierConflit } from '../domain/dossier/DossierConflit';
 import { ElementConflitId } from '../domain/dossier/ElementConflitId';
@@ -41,13 +41,22 @@ const dossierFixture: DossierConflit = {
 };
 const cancellationFixture = (pointage = 'fin-17'): SaisieActe => SaisieActe.cancel(pointage).afterChange({ motif: 'Double appui' });
 const previewFixture = (saisie: SaisieActe): ApercuConflit => ({
-  reference: 'apercu-1',
+  empreinteConsequences: 'empreinte-1',
+  evaluation: '2026-10-03T10:00:00Z',
   commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
   acte: requiredFixture(saisie.command(), 'chosen acte'),
   avant: dossierFixture,
   apres: { ...dossierFixture, enConflit: false },
+});
+
+const propositionFixture = (saisie: SaisieActe): PropositionResolution => ({
+  empreinteConsequences: 'empreinte-1',
+  commande: 'commande-1',
+  version: 1,
+  adresse: dossierFixture.ligne.adresse,
+  acte: requiredFixture(saisie.command(), 'chosen acte'),
 });
 
 class PendingIoFixture<T> {
@@ -85,7 +94,7 @@ class PrevisualisationFixture extends PrevisualisationConflitPort {
   }
 }
 class ApplicationFixture extends ApplicationActePort {
-  readonly requests: ReferenceApercu[] = [];
+  readonly requests: PropositionResolution[] = [];
   pending: PendingIoFixture<ResultatApplication> | undefined;
   verification: ResultatVerification = { kind: 'ATTESTE', dossier: { ...dossierFixture, version: 2, enConflit: false } };
   verificationFailure: Error | undefined;
@@ -98,7 +107,7 @@ class ApplicationFixture extends ApplicationActePort {
     return this.verification;
   }
 
-  override apply(apercu: ReferenceApercu): Promise<ResultatApplication> {
+  override apply(apercu: PropositionResolution): Promise<ResultatApplication> {
     this.requests.push(apercu);
     return requiredFixture(this.pending, 'application response').arrive();
   }
@@ -149,7 +158,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await second;
 
     expect(etatPendantLeNouvelApercu).toBe('PREVISUALISATION');
-    expect(preparation.resolution().confirmation()).toEqual(previewFixture(nouvelleSaisie));
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(nouvelleSaisie));
     expect(preparation.operation().kind).toBe('REPOS');
   });
 
@@ -282,6 +291,21 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(1);
   });
 
+  it('should show a refused confirmation without discarding the exact proposal or retrying it automatically', async () => {
+    await givenValidPreview();
+    const attente = givenApplicationWaits();
+    const confirmation = preparation.confirm();
+    await attente.arrival;
+
+    attente.release({ kind: 'REFUS', raison: 'Confirmation refusée' });
+    await confirmation;
+
+    expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Confirmation refusée' });
+    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
+    expect(applications.requests).toHaveLength(1);
+  });
+
   it('should treat an unexpected confirmation failure as an unknown outcome without replaying it', async () => {
     await givenValidPreview();
     const attente = givenApplicationWaits();
@@ -299,28 +323,6 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(errors.failures).toEqual([panne]);
   });
 
-  it('should keep the valid preview for a retry after a confirmed failure before any write', async () => {
-    await givenValidPreview();
-    const premiereAttente = givenApplicationWaits();
-    const premiere = preparation.confirm();
-    await premiereAttente.arrival;
-
-    premiereAttente.release({ kind: 'ECHEC_CERTAIN' });
-    await premiere;
-    const echecCertain = preparation.operation().kind;
-    const propositionRetenue = preparation.resolution().saisie.command();
-    const secondeAttente = givenApplicationWaits();
-    const seconde = preparation.confirm();
-    await secondeAttente.arrival;
-    secondeAttente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
-    await seconde;
-
-    expect(echecCertain).toBe('ERREUR');
-    expect(propositionRetenue).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
-    expect(applications.requests).toHaveLength(2);
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
-  });
-
   it('should refuse to preview an incomplete acte without starting any port request', async () => {
     preparation.choose(SaisieActe.regularise());
 
@@ -332,23 +334,22 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(0);
   });
 
-  it.each([
-    { kind: 'REFUS', raison: 'Événement annulé' },
-    { kind: 'LIMITATION', raison: 'Commande hors trajectoire' },
-    { kind: 'CONCURRENCE' },
-  ] satisfies readonly ResultatApercu[])('should retain the proposal when previewing returns $kind', async resultat => {
-    const attente = givenPreviewWaits();
-    preparation.choose(cancellationFixture());
-    const previsualisation = preparation.preview(dossierFixture);
-    await attente.arrival;
+  it.each([{ kind: 'REFUS', raison: 'Événement annulé' }, { kind: 'CONCURRENCE' }] satisfies readonly ResultatApercu[])(
+    'should retain the proposal when previewing returns $kind',
+    async resultat => {
+      const attente = givenPreviewWaits();
+      preparation.choose(cancellationFixture());
+      const previsualisation = preparation.preview(dossierFixture);
+      await attente.arrival;
 
-    attente.release(resultat);
-    await previsualisation;
+      attente.release(resultat);
+      await previsualisation;
 
-    expect(preparation.operation()).toEqual(resultat);
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
-    expect(preparation.resolution().confirmation()).toBeUndefined();
-  });
+      expect(preparation.operation()).toEqual(resultat);
+      expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+      expect(preparation.resolution().confirmation()).toBeUndefined();
+    },
+  );
 
   it('should show a current preview failure and keep the proposal available for retrying', async () => {
     const attente = givenPreviewWaits();
@@ -473,7 +474,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.retryConfirmation();
 
     expect(applications.requests).toEqual([]);
-    expect(preparation.resolution().confirmation()).toEqual(previewFixture(cancellationFixture()));
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
   });
 
   it('should dispatch one explicit retry while retaining uncertainty if its response is also lost', async () => {
@@ -515,7 +516,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.verify();
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().confirmation()).toEqual(previewFixture(cancellationFixture()));
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
   });
 
   it('should require a new explicit choice after verifying the unknown outcome', async () => {
@@ -532,7 +533,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await previsualisation;
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().confirmation()).toEqual(apercu);
+    expect(preparation.resolution().confirmation()).toEqual({ ...propositionFixture(saisie), version: 2 });
     expect(previews.requests).toHaveLength(2);
   });
 

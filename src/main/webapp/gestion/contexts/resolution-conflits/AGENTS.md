@@ -11,12 +11,15 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 - **Acte** : correction, annulation ou régularisation humaine. Aucun acte n'est choisi par défaut.
   Correction et annulation demandent un motif non vide d'au plus 255 caractères ; la régularisation
   ne porte aucun motif.
-- **Aperçu** : conséquences fournies par le port sans écriture. Toute modification de la proposition
-  l'invalide. La référence publique porte adresse, commande, version et référence opaque ; confirmation
-  et vérification réutilisent cette identité sans cache privé. La saisie conserve les nanosecondes,
+- **Aperçu** : conséquences fournies par le port sans écriture, avec l'évaluation et les dossiers avant
+  et après. Toute modification de la saisie l'invalide.
+- **Proposition confirmable** : adresse, commande, version attendue, acte exact, empreinte des conséquences
+  et identité prospective de l'événement pour une correction ou une régularisation ; une annulation
+  n'en crée aucun. Confirmation et reprise transmettent cette proposition immuable. Elle reste seulement
+  en mémoire dans la page ; un rechargement abandonne la saisie. La saisie conserve les nanosecondes,
   avec comparaison des instants équivalents indépendamment de leur fuseau.
 - **Journal** : faits d'origine, annulations et remplacements conservés. Une contradiction restante
-  est un résultat accepté, distinct d'un refus métier ou d'une limitation de simulation.
+  est un résultat accepté, distinct d'un refus métier.
 - **Continuation** : lien explicite vers un pointage actif d'une séquence restante après correction
   de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
 
@@ -35,13 +38,14 @@ Le reçu fournit le dossier canonique courant depuis `perimetre`, même à une a
 ordinaire utilise `sequence` et conserve le résultat d'adresse obsolète. La vérification canonique
 fonctionne indépendamment de cette lecture. `NON_ATTESTE` et les erreurs techniques gardent l'issue
 inconnue : toute nouvelle décision reste bloquée. La reprise explicite réutilise la même commande et
-la même référence ; seul un résultat canonique attesté conclut l'écriture.
+la même proposition ; seul un résultat canonique attesté conclut l'écriture.
+Après obsolescence, la saisie reste disponible et l'aperçu est retiré. La page réacquiert le dossier ;
+une acquisition échouée laisse la confirmation indisponible. Le gestionnaire demande ensuite un nouvel
+aperçu avant toute confirmation. Une adresse devenue obsolète conserve son résultat explicite.
 
-La composition de démonstration des tests conserve un seul InMemory pendant les navigations.
-Il rejoue les [trajectoires bornées](SCENARIOS.md), sans moteur général d'interprétation ni
-stockage durable. La démonstration permet de réinitialiser et de déclencher panne ou concurrence.
-Une commande hors trajectoire donne une limitation explicite. Aucun identifiant réel provenant
-d'un autre contexte n'est relié aux fixtures. Les droits d'application restent `GESTIONNAIRE`.
+La composition utilise uniquement `HttpConflits`, y compris dans les parcours Cypress. Les réponses
+réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier
+et n'interprètent aucun acte. Les droits d'application restent `GESTIONNAIRE`.
 
 Les tests passent par la saisie et la résolution publiques, les contrats des ports, le DOM Cypress
-et les routes réelles. Leur liste et les garanties HTTP sont dans les trajectoires.
+et les routes réelles. Leur liste et les garanties HTTP sont dans les [garanties de résolution](SCENARIOS.md).

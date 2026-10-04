@@ -6,7 +6,6 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
-import { DemonstrationConflitsPort, IncidentDemo } from '../../../domain/dossier/DemonstrationConflitsPort';
 import { FiltreConflits, LectureDossier, LigneConflit, PageConflits } from '../../../domain/dossier/DossierConflit';
 import { ElementConflitId } from '../../../domain/dossier/ElementConflitId';
 import { PointageConflitId } from '../../../domain/dossier/PointageConflitId';
@@ -81,18 +80,6 @@ class RouterFixture {
   }
 }
 
-class DemonstrationConflitsFixture extends DemonstrationConflitsPort {
-  readonly incidents: IncidentDemo[] = [];
-
-  override async reset(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve));
-  }
-
-  override arm(incident: IncidentDemo): void {
-    this.incidents.push(incident);
-  }
-}
-
 const ligneFixture = (): LigneConflit => ({
   adresse: { suivi: new SuiviConflitId('suivi-camille'), pointage: new PointageConflitId('fin-camille') },
   element: new ElementConflitId('moule-42'),
@@ -122,7 +109,6 @@ describe('Conflict list', () => {
         { provide: ConflitsReadPort, useValue: portFixture },
         { provide: ActivatedRoute, useValue: routeFixture },
         { provide: Router, useValue: routerFixture },
-        { provide: DemonstrationConflitsPort, useClass: DemonstrationConflitsFixture },
         { provide: ErrorHandlerPort, useValue: errorFixture },
       ],
     });
@@ -135,9 +121,7 @@ describe('Conflict list', () => {
     expect(present('conflits-table')).toBe(false);
   });
 
-  it('should omit simulation controls when the list has no demonstration port', async () => {
-    givenNoDemonstration();
-
+  it('should display only conflict consultation controls', async () => {
     await whenTheListIsRendered();
 
     expect(present('conflits-demo')).toBe(false);
@@ -246,17 +230,6 @@ describe('Conflict list', () => {
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
   });
 
-  it('should reacquire the current list after resetting the demonstration', async () => {
-    portFixture.page = { lignes: [ligneFixture()], total: 1, complete: true };
-    await whenTheListIsRendered();
-
-    await whenTheDemonstrationIsReset();
-
-    expect(textOf('conflits-vide')).toContain('Aucun conflit');
-    expect(present('conflit-ligne')).toBe(false);
-    expect(portFixture.demandes).toHaveLength(2);
-  });
-
   it('should refuse page zero without acquiring a misleading list', async () => {
     givenAnAddress({ page: '0' });
 
@@ -337,14 +310,6 @@ describe('Conflict list', () => {
     return pending;
   };
 
-  const whenTheDemonstrationIsReset = async (): Promise<void> => {
-    portFixture.page = { lignes: [], total: 0, complete: true };
-    const reading = portFixture.nextReading();
-    requiredElement('conflits-reset').click();
-    await reading;
-    await componentFixture.whenStable();
-  };
-
   const whenTheReadingRecovers = async (): Promise<void> => {
     portFixture.failure = undefined;
     requiredElement('conflits-reessayer').click();
@@ -356,10 +321,6 @@ describe('Conflict list', () => {
     input('conflits-filtre-element').value = element;
     requiredElement('conflits-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await componentFixture.whenStable();
-  };
-
-  const givenNoDemonstration = (): void => {
-    TestBed.overrideProvider(DemonstrationConflitsPort, { useValue: null });
   };
 
   const whenTheListIsRendered = async (): Promise<void> => {

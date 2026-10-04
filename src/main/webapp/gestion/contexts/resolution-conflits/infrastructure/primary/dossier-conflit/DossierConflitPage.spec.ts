@@ -21,7 +21,6 @@ import {
 } from '../../../domain/acte/ConflitsActesPorts';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
-import { DemonstrationConflitsPort, IncidentDemo } from '../../../domain/dossier/DemonstrationConflitsPort';
 import { AdresseDossier, LectureDossier, PageConflits } from '../../../domain/dossier/DossierConflit';
 import { DossierConflitPage } from './DossierConflitPage';
 
@@ -96,7 +95,7 @@ class RepliesFixture<T> {
 class DossierPreviewFixture extends PrevisualisationConflitPort {
   readonly replies = new RepliesFixture<ResultatApercu>();
   readonly actes: ActeResolution[] = [];
-  result: ResultatApercu = { kind: 'LIMITATION', raison: 'Commande hors scénario.' };
+  result: ResultatApercu = { kind: 'REFUS', raison: 'Le pointage est déjà annulé.' };
 
   preview(_adresse: AdresseDossier, _version: number, acte: ActeResolution): Promise<ResultatApercu> {
     this.actes.push(acte);
@@ -107,7 +106,7 @@ class DossierPreviewFixture extends PrevisualisationConflitPort {
 class DossierApplicationFixture extends ApplicationActePort {
   readonly replies = new RepliesFixture<ResultatApplication>();
   readonly receiptReplies = new RepliesFixture<ResultatVerification>();
-  result: ResultatApplication = { kind: 'ECHEC_CERTAIN' };
+  result: ResultatApplication = { kind: 'REFUS', raison: 'Le pointage est déjà annulé.' };
   verification: ResultatVerification = { kind: 'NON_ATTESTE' };
 
   apply(): Promise<ResultatApplication> {
@@ -116,21 +115,6 @@ class DossierApplicationFixture extends ApplicationActePort {
 
   verify(): Promise<ResultatVerification> {
     return this.receiptReplies.answer(this.verification);
-  }
-}
-
-class DemonstrationFixture extends DemonstrationConflitsPort {
-  armed: IncidentDemo | undefined;
-  readonly automaticResponses: Promise<void>[] = [];
-
-  reset(): Promise<void> {
-    const response = roundTripFixture(() => undefined);
-    this.automaticResponses.push(response);
-    return response;
-  }
-
-  arm(incident: IncidentDemo): void {
-    this.armed = incident;
   }
 }
 
@@ -214,14 +198,12 @@ describe('Conflict dossier page', () => {
   let route: RouteFixture;
   let preview: DossierPreviewFixture;
   let application: DossierApplicationFixture;
-  let demonstration: DemonstrationFixture;
 
   beforeEach(() => {
     read = new DossierReadFixture();
     route = new RouteFixture();
     preview = new DossierPreviewFixture();
     application = new DossierApplicationFixture();
-    demonstration = new DemonstrationFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ActivatedRoute, useValue: route },
@@ -230,7 +212,6 @@ describe('Conflict dossier page', () => {
         { provide: PrevisualisationConflitPort, useValue: preview },
         { provide: ApplicationActePort, useValue: application },
         { provide: ConflitsRightsPort, useValue: { canApply: () => true } },
-        { provide: DemonstrationConflitsPort, useValue: demonstration },
         { provide: ErrorHandlerPort, useValue: { handleError: () => undefined } },
       ],
     });
@@ -349,9 +330,7 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-choix');
   });
 
-  it('should omit simulation controls when displaying a dossier without a demonstration port', async () => {
-    givenNoDemonstration();
-
+  it('should display a dossier with only resolution controls', async () => {
     await whenRendering();
 
     thenAbsent('conflits-demo');
@@ -473,7 +452,7 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-activite', '8 h 59 min 59,876543211 s');
   });
 
-  it('should retain the finished duration already supplied by the demonstration projection', async () => {
+  it('should retain the finished duration supplied by the dossier', async () => {
     const dossier = dossierConflitFixture();
     read.result = {
       kind: 'DOSSIER',
@@ -621,17 +600,42 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-apercu');
   });
 
-  it('should preserve the detailed proposition when previewing is limited to supported demonstration trajectories', async () => {
+  it('should preserve the detailed proposition when the preview is refused', async () => {
     await whenRendering();
 
     await whenPreparingTheCorrection();
 
-    thenTextContains('conflit-operation', 'Limitation de la démonstration');
-    thenTextContains('conflit-refus', 'Commande hors scénario.');
+    thenTextContains('conflit-operation', 'Acte refusé');
+    thenTextContains('conflit-refus', 'Le pointage est déjà annulé.');
     thenFieldValueIs('conflit-motif', 'Cible confirmée');
     thenAbsent('conflit-apercu');
   });
 
+  it('should retain the obsolete proposition through a failed reacquisition and require an explicit new preview after recovery', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'CONCURRENCE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    read.failure = new Error('Dossier courant indisponible');
+
+    await whenClicking('conflit-confirmer');
+    const echecVisible = present('conflit-retry');
+    const confirmationApresEchec = present('conflit-confirmer');
+    const apercuApresEchec = present('conflit-apercu');
+    read.failure = undefined;
+    const dossier = dossierConflitFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, version: 2 } };
+    await whenClicking('conflit-retry');
+
+    expect(echecVisible).toBe(true);
+    expect(confirmationApresEchec).toBe(false);
+    expect(apercuApresEchec).toBe(false);
+    thenFieldValueIs('conflit-motif', 'Cible confirmée');
+    thenAbsent('conflit-apercu');
+    thenAbsent('conflit-confirmer');
+    thenTextContains('conflit-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
+    expect(preview.actes).toHaveLength(1);
+  });
   it('should reread a concurrent dossier without discarding the manager proposal', async () => {
     preview.result = { kind: 'CONCURRENCE' };
     await whenRendering();
@@ -644,7 +648,7 @@ describe('Conflict dossier page', () => {
     await whenPreparingTheCorrection();
 
     thenTextContains('conflit-diagnostic', 'Le journal a été actualisé.');
-    thenTextContains('conflit-operation', 'Ce suivi a changé');
+    thenTextContains('conflit-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
     thenFieldValueIs('conflit-motif', 'Cible confirmée');
     thenAbsent('conflit-apercu');
     expect(read.demandes).toHaveLength(2);
@@ -858,18 +862,6 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-motif');
   });
 
-  it('should reread the dossier and clear its proposition when demonstration data is reset', async () => {
-    await whenRendering();
-    await whenClicking('conflit-choix');
-    await whenEntering('conflit-motif', 'Décision abandonnée');
-
-    await whenClicking('conflits-reset');
-
-    thenAbsent('conflit-acte');
-    thenTextContains('conflit-diagnostic', 'La fin vise le travail remplacé.');
-    expect(read.demandes).toHaveLength(2);
-  });
-
   it('should ignore preview consequences arriving after another dossier has replaced its proposition', async () => {
     givenASuccessfulPreview();
     const ancienneReponse = preview.result;
@@ -938,7 +930,9 @@ describe('Conflict dossier page', () => {
     preview.result = {
       kind: 'APERCU',
       apercu: {
-        reference: 'apercu-1',
+        empreinteConsequences: 'empreinte-1',
+        evaluation: '2026-10-03T10:00:00Z',
+        evenement: 'evenement-1',
         commande: 'commande-1',
         version: 1,
         adresse: dossier.ligne.adresse,
@@ -1121,7 +1115,6 @@ describe('Conflict dossier page', () => {
       ...preview.replies.automaticResponses,
       ...application.replies.automaticResponses,
       ...application.receiptReplies.automaticResponses,
-      ...demonstration.automaticResponses,
     ]);
     await fixture.whenStable();
   };
@@ -1136,10 +1129,6 @@ describe('Conflict dossier page', () => {
     requiredFixture(receivedFact(pointage).querySelector('summary'), 'received trace summary').click();
     await roundTripFixture(() => undefined);
     await fixture.whenStable();
-  };
-
-  const givenNoDemonstration = (): void => {
-    TestBed.overrideProvider(DemonstrationConflitsPort, { useValue: null });
   };
 
   const whenRendering = async (): Promise<void> => {

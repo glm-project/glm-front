@@ -1,177 +1,55 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
-
-const suiviFixture = '70000000-0000-0000-0000-000000000001';
-const finFixture = '70000000-0000-0000-0000-000000000002';
-const operateurFixture = '70000000-0000-0000-0000-000000000003';
-const elementFixture = '70000000-0000-0000-0000-000000000004';
-const debutFixture = '70000000-0000-0000-0000-000000000005';
-const ncFixture = '70000000-0000-0000-0000-000000000006';
-const remplacementFixture = '70000000-0000-0000-0000-000000000007';
-const instantCorrigeFixture = '2026-09-14T17:01:00.123456789+02:00';
-const motifFixture = 'Heure et cible vérifiées avec l’opérateur';
-const correctionFixture: components['schemas']['RestActeCorrection'] = {
-  kind: 'CORRECTION',
-  pointage: finFixture,
-  motif: motifFixture,
-  fait: { type: 'FIN', intention: 'FIN', activiteVisee: ncFixture, operateur: operateurFixture, instant: instantCorrigeFixture },
-};
-const ligneFixture: components['schemas']['RestConflitEnListe'] = {
-  adresse: { suivi: suiviFixture, pointage: finFixture },
-  revision: 3,
-  elementId: elementFixture,
-  designation: 'M-042 réel',
-  operateurId: operateurFixture,
-  datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
-  nombrePointages: 3,
-};
-
-const journalFixture: components['schemas']['RestEvenementDAtelier'][] = [
-  {
-    id: debutFixture,
-    type: 'DEBUT',
-    intention: 'OUVERTURE',
-    activite: debutFixture,
-    dateDeSurvenue: '2026-09-14T08:00:00.123456789+02:00',
-    operateurId: operateurFixture,
-    auteur: 'camille',
-    dateDEnregistrement: '2026-09-15T08:00:00Z',
-    estUneRegularisation: false,
-  },
-  {
-    id: ncFixture,
-    type: 'NON_CONFORMITE',
-    intention: 'TRANSITION',
-    activite: ncFixture,
-    cible: debutFixture,
-    dateDeSurvenue: '2026-09-14T12:00:00.123456789+02:00',
-    operateurId: operateurFixture,
-    auteur: 'camille',
-    dateDEnregistrement: '2026-09-15T08:01:00Z',
-    estUneRegularisation: false,
-  },
-  {
-    id: finFixture,
-    type: 'FIN',
-    intention: 'FIN',
-    cible: debutFixture,
-    dateDeSurvenue: '2026-09-14T17:00:00.123456789+02:00',
-    operateurId: operateurFixture,
-    auteur: 'camille',
-    dateDEnregistrement: '2026-09-15T08:02:00Z',
-    estUneRegularisation: false,
-  },
-];
-
-const perimetreFixture = (corrige: boolean): components['schemas']['RestSequenceDuDossier'] => ({
-  operateurId: operateurFixture,
-  datePremierPointage: ligneFixture.datePremierPointage,
-  activites: [debutFixture, ncFixture],
-  pointages: [debutFixture, ncFixture, finFixture, ...(corrige ? [remplacementFixture] : [])],
-  nombrePointages: corrige ? 4 : 3,
-});
-
-const journalCorrigeFixture = (): components['schemas']['RestEvenementDAtelier'][] => [
-  ...journalFixture.map(fait =>
-    fait.id === finFixture ? { ...fait, annulation: { motif: motifFixture, auteur: 'gestionnaire', date: '2026-10-04T10:00:00Z' } } : fait,
-  ),
-  {
-    id: remplacementFixture,
-    type: 'FIN',
-    intention: 'FIN',
-    cible: ncFixture,
-    dateDeSurvenue: instantCorrigeFixture,
-    operateurId: operateurFixture,
-    auteur: 'gestionnaire',
-    dateDEnregistrement: '2026-10-04T10:00:00Z',
-    estUneRegularisation: true,
-    remplace: finFixture,
-  },
-];
-
-const activitesFixture = (corrige: boolean): components['schemas']['RestActiviteDuDossier'][] => [
-  {
-    activite: debutFixture,
-    evenement: debutFixture,
-    operateurId: operateurFixture,
-    categorie: 'TRAVAIL',
-    debut: '2026-09-14T08:00:00.123456789+02:00',
-    etat: corrige ? 'TERMINEE' : 'A_RESOUDRE',
-    ...(corrige ? { fin: '2026-09-14T12:00:00.123456789+02:00', duree: 'PT4H' } : {}),
-  },
-  {
-    activite: ncFixture,
-    evenement: ncFixture,
-    operateurId: operateurFixture,
-    categorie: 'NON_CONFORMITE',
-    debut: '2026-09-14T12:00:00.123456789+02:00',
-    etat: corrige ? 'TERMINEE' : 'A_RESOUDRE',
-    ...(corrige ? { fin: instantCorrigeFixture, duree: 'PT5H1M' } : {}),
-  },
-];
-
-const dossierFixture = (corrige = false): components['schemas']['RestDossierConflit'] => {
-  const perimetre = perimetreFixture(corrige);
-  return {
-    kind: corrige ? 'ANCRE_ANNULEE' : 'EN_CONFLIT',
-    enConflit: !corrige,
-    adresse: ligneFixture.adresse,
-    revision: corrige ? 4 : 3,
-    evaluation: '2026-10-04T10:00:00Z',
-    perimetre,
-    ...(corrige ? {} : { sequence: perimetre }),
-    suivi: {
-      id: suiviFixture,
-      element: elementFixture,
-      nom: ligneFixture.designation,
-      type: 'PRODUIT',
-      engageLe: '2026-09-14T06:00:00Z',
-      engagePar: 'gestionnaire',
-      etat: 'EN_ATTENTE',
-      activitesEnCours: [],
-      conflits: [],
-      journal: corrige ? journalCorrigeFixture() : journalFixture,
-    },
-    activites: activitesFixture(corrige),
-    diagnostics: corrige
-      ? []
-      : [
-          {
-            pointage: finFixture,
-            raison: 'CIBLE_REMPLACEE',
-            cible: { activite: debutFixture, ouvrant: debutFixture, termineePar: ncFixture },
-          },
-        ],
-    choix: corrige
-      ? []
-      : [
-          {
-            code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE',
-            kind: 'CORRECTION',
-            pointage: finFixture,
-            fait: { ...correctionFixture.fait, instant: '2026-09-14T17:00:00.123456789+02:00' },
-          },
-        ],
-    continuations: [],
-  };
-};
-
-const confirmationFixture = (commande: string): components['schemas']['RestConfirmationEnregistree'] => ({
-  kind: 'ENREGISTREE',
-  recu: {
-    commande,
-    adresse: ligneFixture.adresse,
-    acte: correctionFixture,
-    revisionDeDepart: 3,
-    revisionEnregistree: 4,
-    enregistreLe: '2026-10-04T10:00:00Z',
-    evenementCree: remplacementFixture,
-    evenementsTouches: [finFixture, remplacementFixture],
-  },
-  dossier: dossierFixture(true),
-});
+import {
+  confirmationFixture,
+  correctionFixture,
+  debutFixture,
+  dossierFixture,
+  finFixture,
+  instantCorrigeFixture,
+  journalFixture,
+  ligneFixture,
+  motifFixture,
+  ncFixture,
+  operateurFixture,
+  remplacementFixture,
+  suiviFixture,
+} from '../../../utils/gestion/resolution-conflits/ConflitsHttp.fixture';
 
 describe('HTTP conflict resolution in Gestion', () => {
+  it('should abandon an unconfirmed proposal when the page is reloaded', () => {
+    givenRealResolutionReplies();
+
+    whenOpeningTheRealDossier();
+    whenPreparingTheArbitraryCorrection();
+    whenReloadingTheDossier();
+
+    thenTheDossierRequiresANewDecision();
+  });
+
+  it('should follow the explicit remaining conflict after confirmation while retaining the closure', () => {
+    givenRealResolutionReplies();
+    givenACanonicalResultWithAnotherConflict();
+
+    whenOpeningTheRealDossier();
+    whenPreparingTheArbitraryCorrection();
+    whenConfirmingThePreviewWithARemainingConflict();
+    whenOpeningTheRemainingConflict();
+
+    thenTheClosedElementShowsTheExplicitRemainingConflict();
+  });
+
+  it('should reacquire changed data after an obsolete confirmation and retain the exact proposal for an explicit new preview', () => {
+    givenRealResolutionReplies();
+    givenAConfirmationWhoseConsequencesBecameObsolete();
+
+    whenOpeningTheRealDossier();
+    whenPreparingTheArbitraryCorrection();
+    whenSubmittingTheObsoleteConfirmation();
+
+    thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal();
+  });
+
   it('should locate the corrected terminating fact from its diagnostic while retaining the original activity identity', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
@@ -368,6 +246,38 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('conflit-acte')).should('contain.text', 'Correction du pointage');
   };
 
+  const givenAConfirmationWhoseConsequencesBecameObsolete = (): void => {
+    const lectures = [dossierFixture(), { ...dossierFixture(), revision: 4 }];
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, request => {
+      const dossier = lectures.shift();
+      if (dossier === undefined) throw new Error('Lecture de dossier fixture inattendue');
+      request.reply({ body: dossier });
+    }).as('dossierCourant');
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, {
+      statusCode: 409,
+      body: { type: 'urn:glm:erreur:atelier:apercu-obsolete', message: 'Les conséquences ont changé' },
+    }).as('confirmationObsolete');
+  };
+
+  const whenSubmittingTheObsoleteConfirmation = (): void => {
+    cy.get(dataSelector('conflit-confirmer')).click();
+  };
+
+  const thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal = (): void => {
+    cy.get('@dossierCourant.all').should('have.length', 2);
+    cy.get('@confirmationObsolete.all').should('have.length', 1);
+    cy.get('@apercuReel.all').should('have.length', 1);
+    cy.get(dataSelector('conflit-operation')).should(
+      'contain.text',
+      'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.',
+    );
+    cy.get(dataSelector('conflit-motif')).should('have.value', motifFixture);
+    cy.get(dataSelector('conflit-instant')).should('have.value', instantCorrigeFixture);
+    cy.get(dataSelector('conflit-previsualiser')).should('be.enabled');
+    cy.get(dataSelector('conflit-apercu')).should('not.exist');
+    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
+  };
+
   const givenRealResolutionReplies = (): void => {
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierFixture() });
     cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}/apercus`, request => {
@@ -378,8 +288,8 @@ describe('HTTP conflict resolution in Gestion', () => {
           adresse: ligneFixture.adresse,
           revision: 3,
           evaluation: '2026-10-04T10:00:00Z',
-          expireLe: '2026-10-04T10:05:00Z',
-          reference: 'opaque-correction',
+          empreinteConsequences: 'empreinte-correction',
+          evenement: remplacementFixture,
           acte: { ...correctionFixture, fait: { ...correctionFixture.fait, instant: '2026-09-14T15:01:00.123456789Z' } },
           avant: dossierFixture(),
           apres: dossierFixture(true),
@@ -396,11 +306,88 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const whenOpeningTheRealDossier = (): void => {
-    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`, {
-      onBeforeLoad: window => {
-        Object.assign(window, { gestionConflitsSource: 'HTTP' });
-      },
+    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
+  };
+
+  const whenReloadingTheDossier = (): void => {
+    cy.reload();
+  };
+
+  const thenTheDossierRequiresANewDecision = (): void => {
+    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+    cy.get(dataSelector('conflit-choix')).should('be.enabled');
+    cy.get(dataSelector('conflit-motif')).should('not.exist');
+    cy.get(dataSelector('conflit-apercu')).should('not.exist');
+    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
+    cy.get('@confirmationReelle.all').should('have.length', 0);
+  };
+
+  const givenACanonicalResultWithAnotherConflict = (): void => {
+    const continuation = { ...ligneFixture, adresse: { suivi: suiviFixture, pointage: ncFixture }, revision: 4 };
+    const cloture = { clotureLe: '2026-09-14T18:00:00Z', cloturePar: 'gestionnaire', etat: 'CLOTURE' as const };
+    const avant = dossierFixture();
+    const apres = dossierFixture(true);
+    const dossierApres = {
+      ...apres,
+      enConflit: true,
+      continuations: [continuation],
+      suivi: { ...apres.suivi, ...cloture },
+    };
+    const dossierAvant = { ...avant, suivi: { ...avant.suivi, ...cloture } };
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierAvant });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}/apercus`, request => {
+      const body = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: {
+          commande: body.commande,
+          adresse: ligneFixture.adresse,
+          revision: 3,
+          evaluation: '2026-10-04T10:00:00Z',
+          empreinteConsequences: 'empreinte-correction',
+          evenement: remplacementFixture,
+          acte: correctionFixture,
+          avant: dossierAvant,
+          apres: dossierApres,
+        } satisfies components['schemas']['RestApercuDeResolution'],
+      });
     });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, request => {
+      const body = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      const confirmation = confirmationFixture(body.commande);
+      request.reply({
+        body: {
+          ...confirmation,
+          dossier: dossierApres,
+        } satisfies components['schemas']['RestConfirmationEnregistree'],
+      });
+    });
+    const dossier = dossierFixture();
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${ncFixture}`, {
+      body: {
+        ...dossier,
+        adresse: continuation.adresse,
+        revision: 4,
+        suivi: { ...dossier.suivi, ...cloture },
+      } satisfies components['schemas']['RestDossierConflit'],
+    });
+  };
+
+  const whenConfirmingThePreviewWithARemainingConflict = (): void => {
+    cy.get(dataSelector('conflit-confirmer')).click();
+    cy.get(dataSelector('conflit-resultat')).should('contain.text', 'Acte enregistré, conflit restant');
+  };
+
+  const whenOpeningTheRemainingConflict = (): void => {
+    cy.get(dataSelector('conflit-resultat')).invoke('text').as('resultatAvecContinuation', { type: 'static' });
+    cy.get(dataSelector('conflit-continuation')).click();
+  };
+
+  const thenTheClosedElementShowsTheExplicitRemainingConflict = (): void => {
+    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, conflit restant');
+    cy.location('pathname').should('equal', `/conflits/${suiviFixture}`);
+    cy.location('search').should('equal', `?pointage=${ncFixture}`);
+    cy.get(dataSelector('conflit-cloture')).should('contain.text', 'Clôturé');
+    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
   };
 
   const whenPreparingTheArbitraryCorrection = (): void => {
@@ -426,7 +413,13 @@ describe('HTTP conflict resolution in Gestion', () => {
 
   const thenTheExactActeAndCanonicalResultArePreserved = (): void => {
     cy.wait('@apercuReel').its('request.body.acte').should('deep.equal', correctionFixture);
-    cy.wait('@confirmationReelle').its('request.body.reference').should('equal', 'opaque-correction');
+    cy.wait('@confirmationReelle').its('request.body').should('deep.include', {
+      adresse: ligneFixture.adresse,
+      revision: 3,
+      acte: correctionFixture,
+      empreinteConsequences: 'empreinte-correction',
+      evenement: remplacementFixture,
+    });
     cy.get('@journalCanonique')
       .should('contain', instantCorrigeFixture)
       .and('contain', 'Pointage annulé')
@@ -444,11 +437,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const whenVisitingRealConflicts = (): void => {
-    cy.visit('/conflits', {
-      onBeforeLoad: window => {
-        Object.assign(window, { gestionConflitsSource: 'HTTP' });
-      },
-    });
+    cy.visit('/conflits');
   };
 
   const thenTheRealConflictListIsVisible = (): void => {
