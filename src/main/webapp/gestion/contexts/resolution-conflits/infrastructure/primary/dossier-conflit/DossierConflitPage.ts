@@ -7,7 +7,7 @@ import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { ConflitsReadPort } from '../../../domain/dossier/ConflitsReadPort';
 import { ConflitsRightsPort } from '../../../domain/dossier/ConflitsRightsPort';
-import { AdresseDossier, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
+import { ActiviteConflit, AdresseDossier, DossierConflit, PointageConflit } from '../../../domain/dossier/DossierConflit';
 import { LIBELLES_CONFLITS } from '../LibellesConflits';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { DemonstrationConflits } from '../demonstration-conflits/DemonstrationConflits';
@@ -56,6 +56,29 @@ export class DossierConflitPage {
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
   );
+
+  protected libelleActivite(activite: ActiviteConflit): string {
+    const periode = activite.periode;
+    if (periode === undefined) return activite.libelle;
+    const categorie = periode.categorie === 'TRAVAIL' ? this.libelles.types.DEBUT : this.libelles.types.NON_CONFORMITE;
+    const fin = periode.fin === undefined ? '' : ` → ${periode.fin}`;
+    return `${categorie} · ${periode.debut}${fin}`;
+  }
+
+  protected tempsActivite(activite: ActiviteConflit): string {
+    if (activite.etat === 'EN_COURS') return 'Temps non définitif';
+    const duree = activite.periode?.duree;
+    if (duree === undefined) return activite.temps;
+    const composants = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(duree);
+    if (composants === null) return duree;
+    return [
+      composants[1] && `${composants[1]} h`,
+      composants[2] && `${composants[2]} min`,
+      composants[3] && `${composants[3].replace('.', ',')} s`,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
 
   private async read(adresse: AdresseDossier | undefined) {
     const demande = Symbol('lecture');

@@ -91,8 +91,8 @@
       <h2 class="mb-3 mt-6 text-section">{{ libelles.activites }}</h2>
       @for (activite of dossier.activites; track activite.id.activite) {
       <div class="border-t border-border py-4" [id]="'activite-' + activite.id.activite" data-selector="conflit-activite">
-        <p class="text-body font-semibold">{{ activite.libelle }}</p>
-        <p class="mt-1 text-body-sm">{{ libelles.etats[activite.etat] }} · {{ activite.temps }}</p>
+        <p class="text-body font-semibold">{{ libelleActivite(activite) }}</p>
+        <p class="mt-1 text-body-sm">{{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}</p>
       </div>
       }
     </section>
@@ -317,14 +317,14 @@
         <div>
           <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
           @for (activite of apercu.avant.activites; track activite.id.activite) {
-          <p class="mt-2 text-body-sm">{{ activite.libelle }} · {{ activite.temps }}</p>
+          <p class="mt-2 text-body-sm">{{ libelleActivite(activite) }} · {{ tempsActivite(activite) }}</p>
           }
         </div>
         <div data-selector="conflit-apercu-consequences">
           <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
           @for (activite of apercu.apres.activites; track activite.id.activite) {
           <p class="mt-2 text-body-sm" data-selector="conflit-apercu-activite-apres">
-            {{ activite.libelle }} · {{ libelles.etats[activite.etat] }} · {{ activite.temps }}
+            {{ libelleActivite(activite) }} · {{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}
           </p>
           } @for (consequence of apercu.apres.consequences; track consequence) {
           <p class="mt-2 text-body-sm">{{ consequence }}</p>

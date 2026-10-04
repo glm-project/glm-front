@@ -279,6 +279,26 @@ describe('Conflict dossier page', () => {
     thenTextContains('conflit-activite', 'En cours · Temps non définitif');
   });
 
+  it('should present the exact authoritative period and duration of finished work', async () => {
+    givenAnAuthoritativeActivity('TERMINEE', 'PT8H59M59.876543211S');
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'Travail');
+    thenTextContains('conflit-activite', '2026-09-14T08:00:00.123456789+02:00');
+    thenTextContains('conflit-activite', '2026-09-14T17:00:00+02:00');
+    thenTextContains('conflit-activite', '8 h 59 min 59,876543211 s');
+  });
+
+  it('should describe ongoing authoritative work without a definitive duration', async () => {
+    givenAnAuthoritativeActivity('EN_COURS', 'PT3H');
+
+    await whenRendering();
+
+    thenTextContains('conflit-activite', 'En cours · Temps non définitif');
+    thenTextDoesNotContain('conflit-activite', '3 h');
+  });
+
   it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
     givenASuccessfulPreview({
       ...dossierConflitFixture(),
@@ -664,6 +684,30 @@ describe('Conflict dossier page', () => {
     };
   };
 
+  const givenAnAuthoritativeActivity = (etat: 'TERMINEE' | 'EN_COURS', duree?: string): void => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [
+          {
+            id: new ActiviteConflitId('travail-8'),
+            libelle: '',
+            temps: '',
+            etat,
+            periode: {
+              categorie: 'TRAVAIL',
+              debut: '2026-09-14T08:00:00.123456789+02:00',
+              ...(etat === 'TERMINEE' ? { fin: '2026-09-14T17:00:00+02:00' } : {}),
+              ...(duree === undefined ? {} : { duree }),
+            },
+          },
+        ],
+      },
+    };
+  };
+
   const givenAnIncompletePath = (): void => {
     route.paramMap.next(convertToParamMap({}));
   };
@@ -734,6 +778,9 @@ describe('Conflict dossier page', () => {
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
+  };
+  const thenTextDoesNotContain = (selector: string, expected: string): void => {
+    expect(element(selector).textContent).not.toContain(expected);
   };
   const thenAbsent = (selector: string): void => {
     expect(present(selector)).toBe(false);
