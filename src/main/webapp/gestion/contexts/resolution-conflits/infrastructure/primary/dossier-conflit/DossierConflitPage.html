@@ -14,7 +14,18 @@
     </p>
     <div class="mt-4 rounded-control border border-danger bg-surface p-4" data-selector="conflit-diagnostic">
       <h3 class="text-body font-semibold">{{ libelles.pourquoi }}</h3>
+      @if (dossier.diagnostics?.length) { @for (diagnostic of dossier.diagnostics; track diagnostic.pointage.pointage) {
+      <p class="mt-2 text-body">
+        {{ libelles.diagnosticPointage }} {{ diagnostic.pointage.pointage }} {{ libelles.diagnosticCible }} {{
+        diagnostic.cible.activite.activite }}, {{ libelles.raisons[diagnostic.raison] }}.
+      </p>
+      @if (diagnostic.cible.ouvrant; as ouvrant) {
+      <p>{{ libelles.diagnosticOuvrant }} {{ ouvrant.pointage }}.</p>
+      } @if (diagnostic.cible.termineePar; as fin) {
+      <p>{{ libelles.diagnosticTerminaison }} {{ fin.pointage }}.</p>
+      } } } @else {
       <p class="mt-2 text-body">{{ dossier.ligne.explication }}</p>
+      }
     </div>
   </header>
   <div class="dossier-grille">

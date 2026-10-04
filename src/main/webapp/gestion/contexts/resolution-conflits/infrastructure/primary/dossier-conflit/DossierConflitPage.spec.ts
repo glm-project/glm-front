@@ -243,6 +243,16 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-diagnostic');
   });
 
+  it('should explain the explicit target and termination supplied by the conflict diagnostic', async () => {
+    givenAStructuredDiagnostic();
+
+    await whenRendering();
+
+    thenTextContains('conflit-diagnostic', 'Le pointage fin-17 vise l’activité travail-8, remplacée.');
+    thenTextContains('conflit-diagnostic', 'Ouverte par debut-8.');
+    thenTextContains('conflit-diagnostic', 'Terminée par nc-12.');
+  });
+
   it('should reject an address missing its suivi without requesting a dossier', async () => {
     givenAnIncompletePath();
 
@@ -710,6 +720,28 @@ describe('Conflict dossier page', () => {
           motif: 'Cible confirmée',
           fait: { ...faitConflitFixture(), activiteVisee: 'nc-12' },
         },
+      },
+    };
+  };
+
+  const givenAStructuredDiagnostic = (): void => {
+    const dossier = dossierConflitFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        diagnostics: [
+          {
+            pointage: new PointageConflitId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: {
+              activite: new ActiviteConflitId('travail-8'),
+              ouvrant: new PointageConflitId('debut-8'),
+              termineePar: new PointageConflitId('nc-12'),
+            },
+          },
+        ],
       },
     };
   };

@@ -115,4 +115,9 @@ export const LIBELLES_CONFLITS = {
   sansPoste: 'Sans poste',
   faits: 'Faits',
   diagnostic: 'Contradiction',
+  raisons: { CIBLE_REMPLACEE: 'remplacée', CIBLE_DEJA_TERMINEE: 'déjà terminée' },
+  diagnosticPointage: 'Le pointage',
+  diagnosticCible: 'vise l’activité',
+  diagnosticOuvrant: 'Ouverte par',
+  diagnosticTerminaison: 'Terminée par',
 } as const;
