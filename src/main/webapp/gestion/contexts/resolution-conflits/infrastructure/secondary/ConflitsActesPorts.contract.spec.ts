@@ -246,6 +246,28 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     expect(resultat).toEqual(new Error('Réponse d’aperçu incohérente.'));
   });
 
+  it.each(['avant', 'apres'] as const)('should reject the %s dossier evaluated at another nanosecond than its preview', async cote => {
+    const dossier = dossierFixture(cote === 'avant' ? 'EN_CONFLIT' : 'ANCRE_ANNULEE', cote === 'avant' ? 7 : 8);
+    dossier.evaluation = '2026-10-04T10:00:00.000000001Z';
+
+    const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
+    whenPreviewAnswers(acteFixture, { [cote]: dossier });
+    const resultat = await apercu;
+
+    expect(resultat).toEqual(new Error('Réponse d’aperçu incohérente.'));
+  });
+
+  it('should accept before and after evaluations expressed with equivalent offsets', async () => {
+    const avant = { ...dossierFixture('EN_CONFLIT', 7), evaluation: '2026-10-04T12:00:00+02:00' };
+    const apres = { ...dossierFixture('ANCRE_ANNULEE', 8), evaluation: '2026-10-04T07:00:00-03:00' };
+
+    const apercu = preview.preview(adresseFixture, 7, acteFixture);
+    whenPreviewAnswers(acteFixture, { avant, apres });
+    const resultat = await apercu;
+
+    expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { acte: acteFixture } });
+  });
+
   it('should reject an echoed acte of another kind instead of allowing confirmation', async () => {
     const apercu = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
 
