@@ -1,6 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
-import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
+import { ApiError, findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { ActeResolution, FaitPropose } from '../../domain/acte/ActeResolution';
@@ -67,6 +67,26 @@ const receiptMatchesReference = (recu: components['schemas']['RestRecuDActe'], r
 const isConcurrentRefusal = (urn: string | undefined): boolean =>
   urn === 'urn:glm:erreur:atelier:apercu-obsolete' || urn === 'urn:glm:erreur:atelier:saisie-concurrente';
 
+const knownActRefusals = new Set(
+  [
+    'apercu-invalide',
+    'confirmation-reutilisee',
+    'suivi-d-atelier-introuvable',
+    'evenement-d-atelier-introuvable',
+    'operateur-introuvable',
+    'poste-de-travail-introuvable',
+    'activite-visee-introuvable',
+    'operateur-non-habilite',
+    'activite-visee-incoherente',
+    'evenement-deja-annule',
+    'evenement-anterieur-a-l-engagement',
+    'identifiant-evenement-reutilise',
+    'date-de-survenue-future',
+  ].map(code => `urn:glm:erreur:atelier:${code}`),
+);
+
+const isKnownActRefusal = (erreur: ApiError | undefined): erreur is ApiError => erreur !== undefined && knownActRefusals.has(erreur.urn);
+
 @Injectable()
 export class HttpConflits extends ConflitsReadPort implements PrevisualisationConflitPort, ApplicationActePort {
   private readonly api = inject(ApiClient);
@@ -114,7 +134,7 @@ export class HttpConflits extends ConflitsReadPort implements PrevisualisationCo
     } catch (failure: unknown) {
       const erreur = findApiErrorIn(failure);
       if (isConcurrentRefusal(erreur?.urn)) return { kind: 'CONCURRENCE' };
-      if (erreur?.urn === 'urn:glm:erreur:atelier:apercu-invalide') return { kind: 'REFUS', raison: erreur.message };
+      if (isKnownActRefusal(erreur)) return { kind: 'REFUS', raison: erreur.message };
       throw failure;
     }
   }
