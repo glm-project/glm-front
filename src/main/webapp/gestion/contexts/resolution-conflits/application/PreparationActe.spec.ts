@@ -440,6 +440,59 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(1);
   });
 
+  it('should explicitly retry the identical uncertain confirmation after its receipt remains unattested', async () => {
+    await givenUnknownOutcome();
+    applications.verification = { kind: 'NON_ATTESTE' };
+    await preparation.verify();
+    const attente = givenApplicationWaits();
+    attente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 3, enConflit: false } });
+
+    await preparation.retryConfirmation();
+
+    expect(applications.requests).toHaveLength(2);
+    expect(applications.requests[1]).toBe(applications.requests[0]);
+    expect(previews.requests).toHaveLength(1);
+    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 3, enConflit: false } });
+  });
+
+  it('should refuse retrying a confirmation whose canonical receipt has already settled the uncertainty', async () => {
+    await givenUnknownOutcome();
+    await preparation.verify();
+    const attente = givenApplicationWaits();
+    attente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+
+    await preparation.retryConfirmation();
+
+    expect(applications.requests).toHaveLength(1);
+    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+  });
+
+  it('should leave an unsubmitted proposition untouched when retrying without an uncertain confirmation', async () => {
+    await givenValidPreview();
+
+    await preparation.retryConfirmation();
+
+    expect(applications.requests).toEqual([]);
+    expect(preparation.resolution().confirmation()).toEqual(previewFixture(cancellationFixture()));
+  });
+
+  it('should dispatch one explicit retry while retaining uncertainty if its response is also lost', async () => {
+    await givenUnknownOutcome();
+    const attente = givenApplicationWaits();
+    const panne = new Error('Nouvelle réponse perdue');
+
+    const reprise = preparation.retryConfirmation();
+    await attente.arrival;
+    await preparation.retryConfirmation();
+    attente.fail(panne);
+    await reprise;
+
+    expect(applications.requests).toHaveLength(2);
+    expect(applications.requests[1]).toBe(applications.requests[0]);
+    expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
+    expect(errors.failures).toEqual([panne]);
+  });
+
   it('should ignore an older receipt after leaving and reopening a dossier with a new uncertain acte', async () => {
     await givenUnknownOutcome();
     const ancienne = new PendingIoFixture<ResultatVerification>();

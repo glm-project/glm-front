@@ -100,6 +100,13 @@ export class PreparationActe {
     await this.confirmReference(apercu);
   }
 
+  async retryConfirmation(): Promise<void> {
+    const reference = this.referenceEnAttente;
+    if (reference === undefined) return;
+    if (this.operationActuelle().kind !== 'ISSUE_INCONNUE') return;
+    await this.confirmReference(reference);
+  }
+
   private async confirmReference(apercu: ReferenceApercu): Promise<void> {
     this.referenceEnAttente = apercu;
     this.operationActuelle.set({ kind: 'CONFIRMATION' });

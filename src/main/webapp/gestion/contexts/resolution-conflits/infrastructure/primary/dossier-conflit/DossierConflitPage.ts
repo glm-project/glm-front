@@ -172,6 +172,11 @@ export class DossierConflitPage {
     this.refreshAfterConfirmation();
   }
 
+  protected async retryConfirmation(): Promise<void> {
+    await this.preparation.retryConfirmation();
+    this.refreshAfterConfirmation();
+  }
+
   private refreshAfterConfirmation(): void {
     const resultat = this.preparation.operation();
     if (resultat.kind === 'APPLIQUE') {

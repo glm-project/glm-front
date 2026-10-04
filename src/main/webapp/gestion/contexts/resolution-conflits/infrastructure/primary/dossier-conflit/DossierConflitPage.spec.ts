@@ -382,6 +382,21 @@ describe('Conflict dossier page', () => {
     thenAbsent('conflit-acte');
   });
 
+  it('should explicitly resume the same uncertain confirmation and display its canonical result', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('conflit-confirmer');
+    await whenClicking('conflit-verifier');
+    application.result = { kind: 'APPLIQUE', dossier: { ...dossierConflitFixture(), version: 3, enConflit: false } };
+
+    await whenClicking('conflit-reprendre-confirmation');
+
+    thenTextContains('conflit-resultat', 'Conflit résolu');
+    thenAbsent('conflit-reprendre-confirmation');
+  });
+
   it('should replace the displayed dossier with the accepted partial result while preserving its closure', async () => {
     givenASuccessfulPreview();
     const dossier = dossierConflitFixture();
