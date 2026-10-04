@@ -295,6 +295,27 @@ describe('Conflict dossier page', () => {
     thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
   });
 
+  it('should reopen the same received trace after the manager closes it', async () => {
+    givenACorrectedTerminatingFact();
+    await whenRendering();
+
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-terminaison');
+    await whenClosingTheReceivedTrace('90000000-0000-0000-0000-000000000001');
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-terminaison');
+
+    thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
+  });
+
+  it('should keep the newly requested fact trace open when the previously consulted trace closes', async () => {
+    givenTheOpeningFactReferencedByTheDiagnostic();
+    await whenRendering();
+
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-ouvrant');
+    await whenFollowingTheDiagnosticReference('conflit-diagnostic-pointage');
+
+    thenReceivedFactDetailsAreOpen('fin-17');
+  });
+
   it('should locate the challenged and opening facts identified by the received diagnostic', async () => {
     givenTheOpeningFactReferencedByTheDiagnostic();
 
@@ -1102,6 +1123,18 @@ describe('Conflict dossier page', () => {
       ...application.receiptReplies.automaticResponses,
       ...demonstration.automaticResponses,
     ]);
+    await fixture.whenStable();
+  };
+
+  const whenFollowingTheDiagnosticReference = async (selector: string): Promise<void> => {
+    await whenClicking(selector);
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const whenClosingTheReceivedTrace = async (pointage: string): Promise<void> => {
+    requiredFixture(receivedFact(pointage).querySelector('summary'), 'received trace summary').click();
+    await roundTripFixture(() => undefined);
     await fixture.whenStable();
   };
 

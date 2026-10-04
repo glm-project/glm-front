@@ -181,6 +181,17 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheCorrectedTerminatingFactIsReachable();
   });
 
+  it('should reopen the same received fact after its trace was manually closed', () => {
+    givenAConflictWhoseTerminationWasCorrected();
+
+    whenOpeningTheRealDossier();
+    whenFollowingTheCorrectedTermination();
+    whenClosingTheCorrectedFactTrace();
+    whenFollowingTheCorrectedTermination();
+
+    thenTheCorrectedTerminatingFactIsReachable();
+  });
+
   const givenAConflictWhoseTerminationWasCorrected = (): void => {
     const dossier = dossierFixture();
     const correctedTermination: components['schemas']['RestEvenementDAtelier'] = {
@@ -223,6 +234,14 @@ describe('HTTP conflict resolution in Gestion', () => {
 
   const whenFollowingTheCorrectedTermination = (): void => {
     cy.get(dataSelector('conflit-diagnostic-terminaison')).click();
+  };
+
+  const whenClosingTheCorrectedFactTrace = (): void => {
+    cy.get(dataSelector('conflit-pointage'))
+      .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
+      .find(dataSelector('conflit-pointage-detail'))
+      .find('summary')
+      .click();
   };
 
   const thenTheCorrectedTerminatingFactIsReachable = (): void => {

@@ -121,7 +121,13 @@
             </button>
           </div>
           }
-          <details class="mt-2" data-selector="conflit-pointage-detail" [open]="pointageConsulte() === pointage.id.pointage">
+          <details
+            #trace
+            class="mt-2"
+            data-selector="conflit-pointage-detail"
+            [open]="pointageConsulte() === pointage.id.pointage"
+            (toggle)="traceToggled(pointage.id.pointage, trace.open)"
+          >
             <summary class="min-h-touch cursor-pointer py-3 text-body-sm text-ink-muted">{{ libelles.tracabilite }}</summary>
             <p class="text-body-sm">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
             @if (pointage.fait.activiteVisee) {

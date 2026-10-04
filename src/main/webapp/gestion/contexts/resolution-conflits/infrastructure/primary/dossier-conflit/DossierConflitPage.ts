@@ -169,6 +169,11 @@ export class DossierConflitPage {
     return this.hrefForRepere(origine === undefined ? `activite-${id}` : `pointage-${origine.id.pointage}`);
   }
 
+  protected traceToggled(pointage: string, ouverte: boolean): void {
+    const consultationFermee = !ouverte && this.pointageConsulte() === pointage;
+    if (consultationFermee) this.pointageConsulte.set(undefined);
+  }
+
   protected correct(pointage: PointageConflit): void {
     this.choose(SaisieActe.correct(pointage.id.pointage, pointage.fait));
     this.detail.set(true);
