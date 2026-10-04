@@ -43,6 +43,6 @@ Le `user_code` s'affiche tel que le serveur l'a émis. L'espacement visuel entre
 
 Le geste de réinitialisation exige un appui continu de trois secondes sur le logo puis une confirmation modale. Il est indisponible tant qu'un opérateur est désigné, puisque l'en-tête montre alors son identité à la place du logo.
 
-`reenrol()` du chemin `invalid_grant` ré-enrôle sans passer par cet écran. Cet écart est consigné dans [ADR 0026](../../../../../../documentation/adr/0026-enrol-pupitre-screen-and-keycloak-delegation.md); ne pas le considérer comme couvert ici.
+Une perte définitive d'autorisation ramène au même parcours visible via `PupitreRuntime`, après retrait durable du credential exact. Le contexte ne connaît ni le renouvellement ni les refus HTTP; [Authentication](../../../../../../documentation/authentication.md) possède cette couture.
 
 Lire [Authentication](../../../../../../documentation/authentication.md) avant de toucher au port d'enrôlement ou au device grant, et [Offline pupitre](../../../../../../documentation/offline-pupitre.md) avant de changer le démarrage du runtime ou la composition de la page.

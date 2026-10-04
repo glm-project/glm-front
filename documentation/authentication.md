@@ -28,8 +28,8 @@ build alone.
 Keep the replacement at build time: a runtime flag would ship the bypass in the production bundle.
 
 `pupitre/auth.provider.ts` binds `DeviceAuthentication`, its protocol client, its device-grant configuration,
-the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort` and
-`DeviceEnrolmentPort`) with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
+the IndexedDB storage adapter, and its exposed ports (`AuthenticationPort`, `DeviceSessionPort`,
+`DeviceEnrolmentPort` and `DeviceAuthorizationPort`) with `useExisting`, so one object owns the session and its enrolment lifecycle. Keycloak URL, realm and
 client ID stay in front environments; no client secret belongs in a browser repository. The `deployed`
 configuration of `build-gestion` and of `build-pupitre` substitutes the front's `environment.deployed.ts`, whose
 Keycloak origin is the `NG_DEPLOYED_KEYCLOAK_URL` identifier that `--define` replaces at build time from
@@ -61,8 +61,10 @@ keeps the still-valid session and uses the existing delayed retry. The polling i
 lifetime remain separate from this per-request limit.
 
 The pupitre alone registers `httpDeviceAuthorizationInterceptor`. A 401 or 403 synchronizes the durable
-session first, then retires and reenrols only the exact token that was refused. A delayed response from an
-older session must not remove its replacement.
+session first, then requests retirement of only the exact token that was refused through
+`DeviceAuthorizationPort`. Observe this retirement through `ErrorHandlerPort` rather than awaiting it
+inside the intercepted exchange: publication can hold the session lock until that exchange returns.
+A delayed response from an older session must not remove its replacement.
 
 ## The pupitre uses the device grant
 
@@ -113,7 +115,11 @@ allows a replay to use a token while the server is rotating it. Never acquire `e
 `session`, or reacquire `session` inside its own critical section.
 
 A transient renewal refusal keeps the unexpired access token and retries later. `invalid_grant` removes the
-matching credential and starts enrolment again while retaining the selected tenant. Logout conditionally
+matching credential and requests visible enrolment while retaining the selected tenant. `DeviceAuthorizationPort`
+provides a cancellable wait for that requirement, retained until the caller starts enrolment. `PupitreRuntime`
+starts observing loss before beginning its initial enrolment, then drives `EnrolementDuPupitre.enroler()` after each loss.
+The adapter owns credential retirement; the runtime owns restarting the visible lifecycle outside the
+session locks. Its destruction cancels the current wait. Logout conditionally
 removes the session it ended, so it cannot erase a newer enrolment.
 
 The durable session contains a bearer credential accessible to same-origin injected code. This is the

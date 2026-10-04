@@ -113,6 +113,11 @@ Starting it is idempotent. Its destruction removes the listener and clears the t
 belongs to the enrolment, not to the runtime: it happens when the device becomes enrolled, and only then.
 Tests use explicit completion signals for asynchronous exchanges; arbitrary waits hide ordering failures.
 
+The runtime also starts observing definitive loss of device authorization before starting its initial enrolment.
+After durable credential retirement it restarts the same visible enrolment, preserving company journals.
+That wait is cancellable on destruction; it stays distinct from the network refresh triggers, because a
+temporary outage retains the existing device enrolment and offline workshop.
+
 The service worker caches the application shell and static assets only. It does not cache API responses or
 implement the durable queue; [ADR 0004](adr/0004-ngsw-caches-the-pupitre-shell-and-nothing-else.md) owns that
 separate boundary.

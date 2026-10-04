@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { DeviceAuthorizationPort, EnrolmentRequirement } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import {
   DeviceEnrolmentOutcome,
   DeviceEnrolmentPort,
@@ -66,7 +67,7 @@ const SHOW_NO_CODE: ShowDeviceAuthorizationCode = () => undefined;
 type Restoration = 'RESTORED' | 'ABANDONED' | 'ABSENT' | 'UNREACHABLE';
 
 @Injectable()
-export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort, DeviceSessionPort {
+export class DeviceAuthentication extends AuthenticationPort implements DeviceEnrolmentPort, DeviceSessionPort, DeviceAuthorizationPort {
   private readonly grant = inject(DeviceGrantClient);
   private readonly stockage = inject(LocalStoragePort, { optional: true });
   private readonly errorHandler = inject(ErrorHandlerPort);
@@ -77,12 +78,15 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
   private pendingEnrolmentSession: SessionDAppareil | undefined;
   private enrolment: symbol | undefined;
   private renewal: ReturnType<typeof setTimeout> | undefined;
+  private authorizationRequired = false;
+  private readonly authorizationWaiters = new Map<symbol, (outcome: 'REQUIRED' | 'STOPPED') => void>();
 
   override async authenticate(): Promise<void> {
     await this.enrol(SHOW_NO_CODE);
   }
 
   async enrol(showCode: ShowDeviceAuthorizationCode): Promise<DeviceEnrolmentOutcome> {
+    this.authorizationRequired = false;
     const enrolment = Symbol('enrolment');
     this.enrolment = enrolment;
 
@@ -321,7 +325,7 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     }
 
     if (isBeyondRenewal(answer)) {
-      await this.reenrol(session);
+      await this.retireAuthorization(session);
       return;
     }
 
@@ -342,14 +346,51 @@ export class DeviceAuthentication extends AuthenticationPort implements DeviceEn
     await this.removeSessionIfMatching(renewed);
   }
 
-  private async reenrol(session: SessionDAppareil): Promise<void> {
+  private async retireAuthorization(session: SessionDAppareil): Promise<void> {
     const persistence = await this.removeSessionIfMatching(session);
     if (persistence === 'REMPLACE') {
       await this.synchronizeSession();
       return;
     }
+    if (this.session !== session) {
+      return;
+    }
+    clearTimeout(this.renewal);
     this.session = undefined;
-    await this.authenticate();
+    this.authorizationRequired = true;
+    for (const waiting of this.authorizationWaiters.keys()) {
+      this.completeRequirement(waiting, 'REQUIRED');
+    }
+  }
+
+  async invalidateAuthorization(token: string): Promise<void> {
+    const session = this.session;
+    if (session?.accessTokenAt(Date.now()) !== token) {
+      return;
+    }
+    await this.retireAuthorization(session);
+  }
+
+  waitForRequiredEnrolment(): EnrolmentRequirement {
+    const waiting = Symbol('authorization requirement');
+    const outcome = new Promise<'REQUIRED' | 'STOPPED'>(resolve => {
+      this.authorizationWaiters.set(waiting, resolve);
+      if (this.authorizationRequired) {
+        this.completeRequirement(waiting, 'REQUIRED');
+      }
+    });
+    return {
+      outcome,
+      stop: () => {
+        this.completeRequirement(waiting, 'STOPPED');
+      },
+    };
+  }
+
+  private completeRequirement(waiting: symbol, outcome: 'REQUIRED' | 'STOPPED'): void {
+    const resolve = this.authorizationWaiters.get(waiting);
+    this.authorizationWaiters.delete(waiting);
+    resolve?.(outcome);
   }
 
   private async restore(enrolment: symbol): Promise<Restoration> {

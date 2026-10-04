@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { DeviceAuthorizationPort } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import {
   DeviceAuthorizationCode,
   DeviceEnrolmentOutcome,
@@ -165,7 +166,7 @@ class StorageFixture extends LocalStoragePort {
 }
 
 describe('Persistent device enrolment, through AuthenticationPort', () => {
-  let authentication: AuthenticationPort;
+  let authentication: AuthenticationPort & DeviceAuthorizationPort;
   let stockage: StorageFixture;
   let http: HttpTestingController;
 
@@ -209,6 +210,82 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     thenSessionIs(authentication, undefined, 'entreprise-a');
   });
 
+  it('should request visible enrolment only after the revoked refresh credential is durably retired', async () => {
+    await givenAnEnrolledSession();
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    await whenRenewalIsRevoked();
+
+    expect(await requirement.outcome).toBe('REQUIRED');
+    thenSessionIs(authentication, undefined, 'entreprise-a');
+  });
+
+  it('should retain a request for visible enrolment until the runtime can observe it', async () => {
+    await givenAnEnrolledSession();
+
+    await whenInvalidatingAuthorization(tokenFixture);
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    expect(await requirement.outcome).toBe('REQUIRED');
+  });
+
+  it('should release a cancelled enrolment requirement without later restarting its caller', async () => {
+    await givenAnEnrolledSession();
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    requirement.stop();
+    requirement.stop();
+    await whenInvalidatingAuthorization(tokenFixture);
+
+    expect(await requirement.outcome).toBe('STOPPED');
+  });
+
+  it('should coalesce simultaneous refusals of one credential into the same enrolment requirement', async () => {
+    await givenAnEnrolledSession();
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    await whenInvalidatingAuthorizationTwice();
+
+    expect(await requirement.outcome).toBe('REQUIRED');
+    thenSessionIs(authentication, undefined, 'entreprise-a');
+  });
+
+  it('should preserve a replacement credential when an earlier token is refused', async () => {
+    await givenAnEnrolledSession();
+    await whenRenewalIsGranted();
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    await whenInvalidatingAuthorization(tokenFixture);
+    requirement.stop();
+
+    expect(await requirement.outcome).toBe('STOPPED');
+    thenSessionIs(authentication, rotatedFixture, 'entreprise-a');
+  });
+
+  it('should leave an explicit reset in charge when credential retirement completes after logout', async () => {
+    await givenAnEnrolledSession();
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    await whenLoggingOutDuringCredentialRetirement();
+    requirement.stop();
+
+    expect(await requirement.outcome).toBe('STOPPED');
+    thenSessionIs(authentication, undefined, 'entreprise-a');
+  });
+
+  it('should report a failed durable retirement without requesting enrolment or dropping its credential', async () => {
+    await givenAnEnrolledSession();
+    givenTheNextStorageWriteFails();
+    const requirement = authentication.waitForRequiredEnrolment();
+
+    const failure = await whenRetirementFails();
+    requirement.stop();
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(await requirement.outcome).toBe('STOPPED');
+    thenSessionIs(authentication, tokenFixture, 'entreprise-a');
+  });
+
   it('should commit rotating refresh credentials before exposing a renewed token', async () => {
     await givenAnEnrolledSession();
 
@@ -240,7 +317,7 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
   it('should retain the company while requiring a new enrolment after revocation', async () => {
     await givenAnEnrolledSession();
 
-    await whenRenewalIsRevokedAndReenrolmentIsUnavailable();
+    await whenRenewalIsRevoked();
     const restarted = await whenRestartingWithoutAStoredCredential();
 
     thenSessionIs(authentication, undefined, 'entreprise-a');
@@ -477,7 +554,8 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     refreshToken: string | null;
   }
 
-  const newAuthentication = (): AuthenticationPort => TestBed.runInInjectionContext(() => new DeviceAuthentication());
+  const newAuthentication = (): AuthenticationPort & DeviceAuthorizationPort =>
+    TestBed.runInInjectionContext(() => new DeviceAuthentication());
 
   const givenATokenWith = (claims: unknown): string => jwtFixture(claims);
 
@@ -651,12 +729,33 @@ describe('Persistent device enrolment, through AuthenticationPort', () => {
     await Promise.resolve();
   };
 
-  const whenRenewalIsRevokedAndReenrolmentIsUnavailable = async (): Promise<void> => {
+  const whenRenewalIsRevoked = async (): Promise<void> => {
     await whenTheRenewalIsDue();
     (await whenRequestArrives(`${baseFixture}/token`)).flush({ error: 'invalid_grant' }, { status: 400, statusText: 'Revoked' });
     await stockage.drainIO();
-    (await whenRequestArrives(`${baseFixture}/auth/device`)).error(new ProgressEvent('error'));
-    await Promise.resolve();
+  };
+
+  const whenInvalidatingAuthorization = (token: string): Promise<void> =>
+    stockage.completeIOUntil(authentication.invalidateAuthorization(token));
+
+  const whenInvalidatingAuthorizationTwice = async (): Promise<void> => {
+    await stockage.completeIOUntil(
+      Promise.all([authentication.invalidateAuthorization(tokenFixture), authentication.invalidateAuthorization(tokenFixture)]),
+    );
+  };
+
+  const whenRetirementFails = (): Promise<unknown> =>
+    stockage.completeIOUntil(authentication.invalidateAuthorization(tokenFixture).catch((failure: unknown) => failure));
+
+  const whenLoggingOutDuringCredentialRetirement = async (): Promise<void> => {
+    const completion = stockage.holdNextWriteCompletion();
+    const retirement = authentication.invalidateAuthorization(tokenFixture);
+    await stockage.completeIOUntil(completion.committed);
+    authentication.logout();
+    (await whenRequestArrives(`${baseFixture}/logout`)).flush({});
+    completion.release();
+    await stockage.completeIOUntil(retirement);
+    await stockage.completeIOUntil(stockage.lock('session', () => Promise.resolve()));
   };
 
   const whenLoggingOut = async (session = authentication): Promise<void> => {

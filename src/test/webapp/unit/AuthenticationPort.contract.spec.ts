@@ -694,13 +694,13 @@ describe('Device Authentication, beyond the contract', () => {
     thenTokenIs(authentication, RENEWED_DEVICE_TOKEN);
   });
 
-  it('should enrol again once the authorization server has buried its refresh token', async () => {
+  it('should stop exposing a token once the authorization server has buried its refresh token', async () => {
     const authentication = givenAuthentication({ claims: [granting, grantingAgain], renewals: [buryingTheRefreshToken] });
 
     await givenAnEnrolledPupitre(authentication);
     await whenTheShiftGoesOn();
 
-    thenTokenIs(authentication, RE_ENROLLED_DEVICE_TOKEN);
+    thenNoTokenIsAvailable(authentication);
   });
 
   it('should stop asking to renew a refresh token the authorization server has buried', async () => {
