@@ -3,7 +3,10 @@ import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte
 import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
 import { DossierAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
+import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
+import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
+import { ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
@@ -63,11 +66,42 @@ class PendingResponseFixture<T> {
   }
 }
 
+const referentielFixture = (): ReferentielAnomalies => {
+  const dmu = { id: new PosteAnomalieId('poste-1'), libelle: 'DMU 50' };
+  const tour = { id: new PosteAnomalieId('poste-2'), libelle: 'Tour 1' };
+  const scie = { id: new PosteAnomalieId('poste-3'), libelle: 'Scie 1' };
+  return new ReferentielAnomalies(
+    [
+      { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007', postesHabilites: [dmu.id] },
+      { id: new OperateurAnomalieId('op-alex'), nom: 'Alex Durand', postesHabilites: [tour.id, scie.id] },
+      { id: new OperateurAnomalieId('op-zoe'), nom: 'Zoé Évrard', code: '012', postesHabilites: [] },
+    ],
+    [dmu, tour, scie],
+  );
+};
+
 class DossierReadFixture extends AnomaliesReadPort {
   failure: Error | undefined;
   result: LectureDossier = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
   pending: PendingResponseFixture<LectureDossier> | undefined;
   readonly demandes: AdresseDossier[] = [];
+  referentielFailure: Error | undefined;
+  referentielResult = referentielFixture();
+  referentielPending: PendingResponseFixture<ReferentielAnomalies> | undefined;
+  referentielDemandes = 0;
+
+  referentiel(): Promise<ReferentielAnomalies> {
+    this.referentielDemandes += 1;
+    const pending = this.referentielPending;
+    this.referentielPending = undefined;
+    if (pending !== undefined) return pending.arrive();
+    const failure = this.referentielFailure;
+    const result = this.referentielResult;
+    return roundTripFixture(() => {
+      if (failure !== undefined) throw failure;
+      return result;
+    });
+  }
 
   read(adresse: AdresseDossier): Promise<LectureDossier> {
     this.demandes.push(adresse);
@@ -206,12 +240,12 @@ const acteFinRegulariseeFixture = (poste: string, instant: string): ActeResoluti
   fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', poste, instant },
 });
 
-const finARegulariserFixture = (poste = 'poste-1'): SaisieActe =>
+const finARegulariserFixture = (poste = 'poste-1', operateur = 'op-camille'): SaisieActe =>
   SaisieActe.regularise({
     type: 'FIN',
     intention: 'FIN',
     activiteVisee: 'travail-8',
-    operateur: 'op-camille',
+    operateur,
     poste,
     instant: '',
   });
@@ -1081,6 +1115,284 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-motif');
   });
 
+  it('should offer the operators of the referential by name and pupitre code when the fact is edited', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    await whenOpeningTheOperatorChoice();
+
+    expect(operatorOptions()).toEqual(['Camille Martin · 007', 'Alex Durand', 'Zoé Évrard · 012']);
+    thenTextDoesNotContainAnIdentifier('anomalie-fait-propose');
+  });
+
+  it('should ask to choose the operator, and say why the act cannot be previewed, when a missing fact is regularised from scratch', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-regulariser');
+
+    thenOperatorIs('Choisissez l’opérateur');
+    thenTextContains('anomalie-validation', 'Choisissez l’opérateur.');
+    thenTheOperatorChoiceIsDescribedByItsError('Choisissez l’opérateur.');
+    thenPosteChoiceIs('', 'Sans poste');
+  });
+
+  it('should stop describing the operator control by an error once an operator is chosen', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+
+    await whenChoosingTheOperator('Zoé Évrard · 012');
+
+    thenOperatorIs('Zoé Évrard · 012');
+    thenTheOperatorChoiceIsNoLongerDescribedByAnError();
+  });
+
+  it('should label the operator and workstation fields by their role, never by an identifier', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    expect(labelOf('anomalie-operateur')).toBe('Opérateur concerné');
+    expect(labelOf('anomalie-poste')).toBe('Poste (facultatif)');
+  });
+
+  it('should find the operator the manager looks for by its pupitre code and put it in the proposition', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    await whenChoosingTheOperator('Zoé Évrard · 012', '012');
+    await whenEntering('anomalie-motif', 'Opérateur corrigé');
+    await whenClicking('anomalie-previsualiser');
+
+    thenOperatorIs('Zoé Évrard · 012');
+    expect(preview.actes).toMatchObject([{ kind: 'CORRECTION', fait: { operateur: 'op-zoe' } }]);
+  });
+
+  it('should withdraw the preview when the manager chooses another operator', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenChoosingTheOperator('Alex Durand');
+
+    thenAbsent('anomalie-apercu');
+    thenAbsent('anomalie-confirmer');
+  });
+
+  it('should preview the operator chosen after a former preview was withdrawn', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenChoosingTheOperator('Alex Durand');
+
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes).toHaveLength(2);
+    expect(preview.actes[1]).toMatchObject({ fait: { operateur: 'op-alex' } });
+  });
+
+  it('should keep an operator the referential does not hold as the selected reference without showing its identifier', async () => {
+    givenAnAutomaticEnd(finARegulariserFixture('poste-supprime', 'op-supprime'));
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenOperatorIs('Opérateur non résolu (référence actuelle)');
+    thenPosteChoiceIs('poste-supprime', 'Poste non résolu (référence actuelle)');
+    thenTextDoesNotContain('anomalie-fait-propose', 'op-supprime');
+    thenTextDoesNotContain('anomalie-fait-propose', 'poste-supprime');
+  });
+
+  it('should offer no workstation first, then the workstations the operator is qualified on, then the others', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-corriger');
+
+    expect(posteChoices()).toEqual(['Sans poste', 'Postes habilités: DMU 50', 'Autres postes: Tour 1, Scie 1']);
+  });
+
+  it('should regroup the workstations when the manager chooses an operator with other qualifications', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    await whenChoosingTheOperator('Alex Durand');
+
+    expect(posteChoices()).toEqual(['Sans poste', 'Postes habilités: Tour 1, Scie 1', 'Autres postes: DMU 50']);
+  });
+
+  it('should offer every workstation as another one when the operator chosen is qualified on none', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    await whenChoosingTheOperator('Zoé Évrard · 012');
+
+    expect(posteChoices()).toEqual(['Sans poste', 'Autres postes: DMU 50, Tour 1, Scie 1']);
+  });
+
+  it('should withdraw the preview when the manager chooses another workstation', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenEntering('anomalie-poste', 'poste-2');
+
+    thenAbsent('anomalie-apercu');
+    thenAbsent('anomalie-confirmer');
+  });
+
+  it.each([
+    { choix: 'poste-2', attendu: 'poste-2' },
+    { choix: '', attendu: '' },
+  ])('should preview the workstation chosen, "$choix", in the proposition', async ({ choix, attendu }) => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenEntering('anomalie-poste', choix);
+
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes[1]).toMatchObject({ fait: { poste: attendu } });
+  });
+
+  it('should read the referential once when the manager may apply decisions', async () => {
+    await whenRendering();
+
+    expect(read.referentielDemandes).toBe(1);
+  });
+
+  it('should not read the referential for a consultant who cannot apply decisions', async () => {
+    givenAConsultantWhoCannotApplyDecisions();
+
+    await whenRendering();
+
+    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
+    expect(read.referentielDemandes).toBe(0);
+  });
+
+  it('should announce the loading of the referential in place of the operator and workstation fields', async () => {
+    const attente = givenTheReferentielIsStillLoading();
+
+    await whenOpeningTheGuidedCorrectionWhileTheReferentielLoads(attente);
+
+    thenTextContains('anomalie-referentiel-chargement', 'Chargement des opérateurs et des postes…');
+    thenAbsent('anomalie-operateur');
+    thenAbsent('anomalie-poste');
+  });
+
+  it('should offer the operator and workstation fields once the referential has arrived', async () => {
+    const attente = givenTheReferentielIsStillLoading();
+    await whenOpeningTheGuidedCorrectionWhileTheReferentielLoads(attente);
+
+    await whenResponseArrives(attente, referentielFixture());
+
+    thenAbsent('anomalie-referentiel-chargement');
+    thenOperatorIs('Camille Martin · 007');
+  });
+
+  it('should say that the referential is unavailable and keep the current choices, which can no longer be changed', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenTextContains('anomalie-referentiel-erreur', 'Liste des opérateurs et des postes indisponible');
+    thenOperatorIs('Opérateur non résolu (référence actuelle)');
+    thenDisabled('anomalie-operateur');
+    thenPosteChoiceIs('poste-1', 'Poste non résolu (référence actuelle)');
+    thenInputIsDisabled('anomalie-poste');
+  });
+
+  it('should let the manager preview the current choices while the referential is unavailable', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-motif', 'Cible confirmée');
+
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes).toMatchObject([{ fait: { operateur: 'op-camille', poste: 'poste-1' } }]);
+  });
+
+  it('should offer the operators and workstations again once the manager retries an unavailable referential', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    read.referentielFailure = undefined;
+
+    await whenClicking('anomalie-referentiel-retry');
+
+    thenAbsent('anomalie-referentiel-erreur');
+    thenOperatorIs('Camille Martin · 007');
+    expect(posteChoices()).toEqual(['Sans poste', 'Postes habilités: DMU 50', 'Autres postes: Tour 1, Scie 1']);
+    expect(read.referentielDemandes).toBe(2);
+  });
+
+  it.each([
+    {
+      cas: 'the referential',
+      fait: { operateur: 'op-alex', poste: 'poste-2' },
+      referentiel: referentielFixture(),
+      attendu: 'Opérateur : Alex Durand · Poste : Tour 1',
+    },
+    {
+      cas: 'the journal when the referential does not hold them',
+      fait: { operateur: 'op-camille', poste: 'poste-1' },
+      referentiel: new ReferentielAnomalies([], []),
+      attendu: 'Opérateur : Camille Martin · Poste : DMU 50',
+    },
+    {
+      cas: 'nothing but their unresolved state when neither the referential nor the journal knows them',
+      fait: { operateur: 'op-inconnu', poste: 'poste-inconnu' },
+      referentiel: referentielFixture(),
+      attendu: 'Opérateur : Opérateur non résolu · Poste : Poste non résolu',
+    },
+  ])('should name the operator and workstation of the previewed act from $cas', async ({ fait, referentiel, attendu }) => {
+    read.referentielResult = referentiel;
+    givenAGuidedCorrectionOf(fait);
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', attendu);
+    thenTextDoesNotContain('anomalie-apercu-acte', fait.operateur);
+    thenTextDoesNotContain('anomalie-apercu-acte', fait.poste);
+  });
+
+  it('should name the operator and workstation of the previewed act from the journal after the act when the referential is unavailable', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    const fait = { operateur: 'op-nouveau', poste: 'poste-nouveau' };
+    const acte = givenAGuidedCorrectionOf(fait);
+    const dossier = dossierAnomalieFixture();
+    const origine = requiredFixture(dossier.journal[0], 'received fact');
+    givenASuccessfulPreview(
+      {
+        ...dossier,
+        journal: [
+          origine,
+          {
+            ...origine,
+            id: new PointageAnomalieId('fin-corrigee'),
+            fait: { ...origine.fait, ...fait },
+            operateurNom: 'Nina Nouveau',
+            posteLibelle: 'Four 3',
+          },
+        ],
+      },
+      acte,
+    );
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', 'Opérateur : Nina Nouveau · Poste : Four 3');
+  });
+
   it('should ignore preview consequences arriving after another dossier has replaced its proposition', async () => {
     givenASuccessfulPreview();
     const ancienneReponse = preview.result;
@@ -1205,7 +1517,7 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
     thenTheInstantFieldsShow('', '');
     thenFieldValueIs('anomalie-cible', 'travail-8');
-    thenFieldValueIs('anomalie-operateur', 'op-camille');
+    thenOperatorIs('Camille Martin · 007');
     thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
     thenDetailedFactIsOpen();
     thenAbsent('anomalie-motif');
@@ -1241,7 +1553,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenClicking('anomalie-choix');
 
-    await whenEntering('anomalie-operateur', 'op-autre');
+    await whenChoosingTheOperator('Alex Durand');
 
     thenNoInterpretationIsSelected();
   });
@@ -1663,6 +1975,21 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const givenAGuidedCorrectionOf = (fait: Pick<FaitPropose, 'operateur' | 'poste'>): ActeResolution => {
+    const dossier = dossierAnomalieFixture();
+    const corrige = { ...faitConflitFixture(), activiteVisee: 'nc-12', ...fait };
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        choix: dossier.choix.map(choix => ({ ...choix, saisie: SaisieActe.correct('fin-17', corrige) })),
+      },
+    };
+    const acte: ActeResolution = { kind: 'CORRECTION', pointage: 'fin-17', motif: 'Cible confirmée', fait: corrige };
+    givenASuccessfulPreview(undefined, acte);
+    return acte;
+  };
+
   const givenASuccessfulPreview = (apres?: DossierAnomalie, acte: ActeResolution = acteCorrectionFixture): void => {
     const dossier = dossierAnomalieFixture();
     preview.result = {
@@ -1869,6 +2196,81 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const givenAConsultantWhoCannotApplyDecisions = (): void => {
+    TestBed.overrideProvider(AnomaliesRightsPort, { useValue: { canApply: () => false } });
+  };
+
+  const givenTheReferentielIsStillLoading = (): PendingResponseFixture<ReferentielAnomalies> => {
+    const attente = new PendingResponseFixture<ReferentielAnomalies>();
+    read.referentielPending = attente;
+    return attente;
+  };
+
+  const whenOpeningTheGuidedCorrectionWhileTheReferentielLoads = async (
+    attente: PendingResponseFixture<ReferentielAnomalies>,
+  ): Promise<void> => {
+    whenRenderingWithoutWaiting();
+    await attente.arrival;
+    await roundTripFixture(() => undefined);
+    fixture.detectChanges();
+    element('anomalie-choix').click();
+    fixture.detectChanges();
+  };
+
+  const thenTheOperatorChoiceIsDescribedByItsError = (message: string): void => {
+    expect(element('anomalie-operateur').getAttribute('aria-describedby')).toBe('operateur-acte-erreur');
+    expect(requiredFixture(document.getElementById('operateur-acte-erreur'), 'operator error').textContent).toContain(message);
+  };
+
+  const thenTheOperatorChoiceIsNoLongerDescribedByAnError = (): void => {
+    expect(element('anomalie-operateur').hasAttribute('aria-describedby')).toBe(false);
+    expect(document.getElementById('operateur-acte-erreur')).toBeNull();
+  };
+
+  const whenOpeningTheOperatorChoice = async (): Promise<void> => {
+    element('anomalie-operateur').click();
+    await fixture.whenStable();
+  };
+
+  const whenChoosingTheOperator = async (name: string, search?: string): Promise<void> => {
+    await whenOpeningTheOperatorChoice();
+    if (search !== undefined) {
+      const input = requiredFixture(
+        document.querySelector<HTMLInputElement>(dataSelector('anomalie-operateur-recherche')),
+        'operator search',
+      );
+      input.value = search;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await fixture.whenStable();
+    }
+    const option = operatorOptionElements().find(candidate => candidate.textContent.trim() === name);
+    requiredFixture(option, `operator option ${name}`).click();
+    await fixture.whenStable();
+  };
+
+  const operatorOptionElements = (): HTMLElement[] => [
+    ...document.querySelectorAll<HTMLElement>(dataSelector('anomalie-operateur-proposition')),
+  ];
+  const operatorOptions = (): string[] => operatorOptionElements().map(option => option.textContent.trim());
+
+  const posteSelect = (): HTMLSelectElement => {
+    const select = field('anomalie-poste');
+    if (!(select instanceof HTMLSelectElement)) throw new Error('Expected a workstation choice');
+    return select;
+  };
+
+  const posteChoices = (): string[] =>
+    [...posteSelect().children].map(child =>
+      child instanceof HTMLOptGroupElement
+        ? `${child.label}: ${[...child.children].map(option => option.textContent.trim()).join(', ')}`
+        : child.textContent.trim(),
+    );
+
+  const labelOf = (selector: string): string => {
+    const label = (fixture.nativeElement as HTMLElement).querySelector<HTMLLabelElement>(`label[for="${element(selector).id}"]`);
+    return requiredFixture(label, `label of ${selector}`).textContent.trim();
+  };
+
   const whenEnteringTheInstant = async (date: string, time: string): Promise<void> => {
     await whenEntering('anomalie-instant-date', date);
     await whenEntering('anomalie-instant-heure', time);
@@ -2003,6 +2405,14 @@ describe('Anomaly dossier page', () => {
   };
   const thenTextDoesNotContainAnIdentifier = (selector: string): void => {
     expect(element(selector).textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/i);
+  };
+  const thenOperatorIs = (expected: string): void => {
+    expect(element('anomalie-operateur').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+  const thenPosteChoiceIs = (value: string, libelle: string): void => {
+    const select = posteSelect();
+    expect(select.value).toBe(value);
+    expect(select.selectedOptions[0]?.textContent.trim()).toBe(libelle);
   };
   const thenAbsent = (selector: string): void => {
     expect(present(selector)).toBe(false);

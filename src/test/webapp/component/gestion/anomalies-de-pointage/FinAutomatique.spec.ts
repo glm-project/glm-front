@@ -1,12 +1,14 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import {
   dossierFinAutomatiqueFixture,
+  givenTheReferentielFinAutomatique,
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
 
 describe('Automatic end dossier in Gestion', () => {
   beforeEach(() => {
+    givenTheReferentielFinAutomatique();
     cy.intercept('GET', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`, {
       body: dossierFinAutomatiqueFixture(),
     });

@@ -48,6 +48,16 @@ un pointage sans poste « Sans poste ». Le journal porte le nom et le libellé 
 du fait, vides lorsque la fiche manque ; une ligne de liste n'en garde que `posteId`, pour distinguer l'absence de
 poste d'un poste non résolu.
 
+Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
+par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le
+prénom et le code ; le poste se choisit dans une liste qui commence par « Sans poste », puis les postes habilités de
+l'opérateur choisi, puis les autres. Tant que la saisie n'a pas d'opérateur (régularisation d'un fait manquant), le bouton
+dit « Choisissez l'opérateur » et l'aperçu reste indisponible. Choisir un opérateur ou un poste modifie la saisie et retire
+l'aperçu. Une référence que le référentiel ne contient pas reste sélectionnée comme « Opérateur non résolu (référence
+actuelle) » ou « Poste non résolu (référence actuelle) ». L'aperçu nomme l'opérateur et le poste de l'acte depuis le
+référentiel, puis depuis le journal, sinon « non résolu ». Si le référentiel est indisponible, le dossier le dit, propose
+« Réessayer » et conserve la saisie ; un consultant, qui ne peut rien appliquer, ne le lit pas.
+
 Un refus d'acte (aperçu, confirmation ou vérification du reçu) n'affiche pas non plus d'identifiant : le serveur
 nomme l'opérateur et le poste par leur UUID dans son message (« L'operateur … n'est pas habilite sur le poste de
 travail … »), que le front ignore. Il traduit le code du refus (`operateur-non-habilite`, `operateur-introuvable`,
@@ -93,6 +103,11 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
   dans `anomalie-refus`.
 - Les contrats HTTP vérifient que le journal porte les noms reçus, ou des noms vides sans fiche, et que les lignes de
   la liste ne portent plus l'identifiant de l'opérateur.
+- Les contrats HTTP vérifient que le référentiel lit toutes les pages des opérateurs et des postes, et refuse une collection
+  dont le total change, une page tronquée, une page autre que la demandée ou une identité dupliquée ; la composition le lit
+  par les ports publics. Les specs DOM et Cypress vérifient qu'il n'est lu que pour un gestionnaire, que le choix se fait
+  par nom (recherche, groupes de postes), qu'il invalide l'aperçu et que son échec se réessaie sans perdre la saisie ;
+  Cypress intercepte `/api/operateurs` et `/api/postes-de-travail` en données REST typées.
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

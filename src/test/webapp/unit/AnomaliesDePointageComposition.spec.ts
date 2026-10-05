@@ -12,7 +12,10 @@ import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte
 import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
+import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
+import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
+import { ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -94,6 +97,49 @@ describe('Real conflict resolution composition', () => {
     expect(resultat.apercu).toEqual({ kind: 'REFUS', code: 'proposition-invalide' });
     expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
   });
+
+  it('should read the operator and workstation referential through the public read port on the same-origin API', async () => {
+    const lecture = whenReadingTheReferential();
+    whenTheReferentielAnswers();
+
+    const referentiel = await lecture;
+
+    expect(referentiel.operateurs).toEqual([
+      {
+        id: new OperateurAnomalieId('op-camille'),
+        nom: 'Camille Martin',
+        code: '007',
+        postesHabilites: [new PosteAnomalieId('poste-tour')],
+      },
+    ]);
+    expect(referentiel.postes).toEqual([{ id: new PosteAnomalieId('poste-tour'), libelle: 'Tour 1' }]);
+  });
+
+  const whenReadingTheReferential = (): Promise<ReferentielAnomalies> => TestBed.inject(AnomaliesReadPort).referentiel();
+
+  const whenTheReferentielAnswers = (): void => {
+    server.expectOne('/api/operateurs?page=0&size=100').flush({
+      content: [
+        {
+          id: 'op-camille',
+          identifiant: '007',
+          prenom: 'Camille',
+          nom: 'Martin',
+          natures: ['tournage'],
+          postes: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+        },
+      ],
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 1,
+    } satisfies components['schemas']['PageRestOperateur']);
+    server.expectOne('/api/postes-de-travail?page=0&size=100').flush({
+      content: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 1,
+    } satisfies components['schemas']['PageRestPosteDeTravail']);
+  };
 
   it('should keep a thirty-second confirmation timeout unknown and retry only its original public command', async () => {
     const { preparation, commande } = await givenAPreparedCancellation();

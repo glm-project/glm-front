@@ -11,6 +11,7 @@ import {
   finCorrigeeFixture,
   finRegulariseeFixture,
   finTardiveFixture,
+  givenTheReferentielFinAutomatique,
   instantRegulariseLocalFixture,
   instantRegulariseSaisiFixture,
   instantTardifFixture,
@@ -58,6 +59,7 @@ const refusFixture = [
 describe('Automatic end of an activity in Gestion', () => {
   beforeEach(() => {
     givenTheClockOnAFixedDay();
+    givenTheReferentielFinAutomatique();
   });
 
   it('should regularise an automatic end from its dossier through preview, confirmation and receipt', () => {

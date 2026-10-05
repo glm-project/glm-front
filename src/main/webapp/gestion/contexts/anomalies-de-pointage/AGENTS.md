@@ -56,6 +56,21 @@ chronologie, l'historique d'adresse obsolète et les continuations, sans jamais 
 résolue s'affiche « Opérateur non résolu » ou « Poste non résolu », un pointage sans poste « Sans poste ». Le modèle
 garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de l'opérateur et du poste, qu'il envoie
 au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
+Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le port de lecture
+expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
+`PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et
+`GET /api/postes-de-travail` (`collectAllPages`, page demandée vérifiée, aucune collection tronquée ni identité dupliquée).
+`nom` est « Prénom Nom » ; `code` est le code pupitre facultatif (`RestOperateur.identifiant`), pas un UUID. Les identités
+du référentiel suivent `ElementAnomalieId` (`OperateurAnomalieId`, `PosteAnomalieId`) ; `FaitPropose` et `SaisieFait`
+gardent des `string`, que le serveur reçoit tels quels, et le primaire emballe l'identité à la frontière. Le dossier ne lit
+le référentiel que si `droits.canApply()` (le consultant ne le lit pas), à chaque ouverture, sans cache. L'opérateur se choisit
+dans `SelecteurOperateurAnomalie` (le `SearchPicker` de Gestion : recherche sans accents sur le nom, le prénom et le code,
+options « Prénom Nom · code »), le bouton disant « Choisissez l'opérateur » tant que la saisie est vide ; le poste est un
+`<select>` natif qui commence par « Sans poste », puis les postes habilités de l'opérateur choisi, puis les autres. Une
+valeur que le référentiel ne contient pas reste sélectionnée comme « … non résolu (référence actuelle) », sans identifiant.
+Si le référentiel échoue, le formulaire affiche « Liste des opérateurs et des postes indisponible » avec « Réessayer », garde
+la saisie courante et désactive les deux champs. L'aperçu de l'acte nomme l'opérateur et le poste depuis le référentiel, puis
+depuis le journal, sinon « non résolu ».
 Un refus d'acte se traduit par code (`urn:glm:erreur:atelier:<code>`, [API](../../../../../../documentation/api.md)) :
 le port rend `{ kind: 'REFUS', code }` pour les quatorze codes connus (`CODES_REFUS_ACTE`) et ne transmet jamais le
 message du serveur, qui contient des identifiants ; le primaire rend `LIBELLES_ANOMALIES.refus[code]`, un libellé du

@@ -2,6 +2,8 @@ import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { buildPageFrom } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { inject, Injectable } from '@angular/core';
 import { ActeResolution, FaitPropose } from '../../domain/acte/ActeResolution';
 import {
@@ -18,8 +20,10 @@ import { InstantPointage } from '../../domain/acte/InstantPointage';
 import { PropositionResolution } from '../../domain/acte/ResolutionDeLAnomalie';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { AdresseDossier, FiltreAnomalies, LectureDossier, PAGE_SIZE_ANOMALIES, PageAnomalies } from '../../domain/dossier/DossierAnomalie';
+import { ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
 import { toDossier, toDossierDansPerimetre, toPointage } from './DossierAnomalieHttp';
 import { toPageAnomalies } from './ListeAnomaliesHttp';
+import { toOperateurAnomalie, toPosteAnomalie } from './ReferentielAnomaliesHttp';
 
 const toRestFait = (fait: FaitPropose): components['schemas']['RestFaitDeResolution'] => ({
   type: fait.type,
@@ -204,6 +208,33 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
       if (findApiErrorIn(failure)?.urn === 'urn:glm:erreur:atelier:suivi-d-atelier-introuvable') {
         return { kind: 'INTROUVABLE', journal: [] };
       }
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  override async referentiel(): Promise<ReferentielAnomalies> {
+    try {
+      const [operateurs, postes] = await Promise.all([
+        collectAllPages(
+          async (page, size) =>
+            buildPageFrom(await this.api.read('/api/operateurs', { queryParams: { page, size } }), toOperateurAnomalie, {
+              page,
+              taille: size,
+            }),
+          operateur => operateur.id.operateur,
+        ),
+        collectAllPages(
+          async (page, size) =>
+            buildPageFrom(await this.api.read('/api/postes-de-travail', { queryParams: { page, size } }), toPosteAnomalie, {
+              page,
+              taille: size,
+            }),
+          poste => poste.id.poste,
+        ),
+      ]);
+      return new ReferentielAnomalies(operateurs, postes);
+    } catch (failure: unknown) {
       this.errors.handleError(failure);
       throw failure;
     }

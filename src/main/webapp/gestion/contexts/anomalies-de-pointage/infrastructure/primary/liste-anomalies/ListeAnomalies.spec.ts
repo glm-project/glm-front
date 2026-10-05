@@ -9,6 +9,7 @@ import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, LectureDossier, LigneConflit, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
+import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
 import { ListeAnomalies } from './ListeAnomalies';
 
@@ -49,6 +50,10 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
 
   override read(): Promise<LectureDossier> {
     return Promise.resolve({ kind: 'INTROUVABLE', journal: [] });
+  }
+
+  override referentiel(): Promise<ReferentielAnomalies> {
+    return Promise.resolve(new ReferentielAnomalies([], []));
   }
 }
 

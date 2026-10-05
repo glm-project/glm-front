@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { instantLocalFixture, instantLocalWithOffsetFixture } from './InstantLocal.fixture';
+import { interceptReferentiel } from './ReferentielHttp.fixture';
 
 export const suiviFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000001';
 export const ouvrantFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000002';
@@ -225,3 +226,19 @@ export const confirmationFinAutomatiqueFixture = (
   },
   dossier,
 });
+
+export const givenTheReferentielFinAutomatique = (): void => {
+  interceptReferentiel(
+    [
+      {
+        id: operateurFinAutomatiqueFixture,
+        identifiant: '007',
+        prenom: 'Camille',
+        nom: 'Martin',
+        natures: ['fraisage'],
+        postes: [{ id: posteFinAutomatiqueFixture, libelle: 'DMU 50', nature: 'fraisage' }],
+      },
+    ],
+    [{ id: posteFinAutomatiqueFixture, libelle: 'DMU 50', nature: 'fraisage' }],
+  );
+};

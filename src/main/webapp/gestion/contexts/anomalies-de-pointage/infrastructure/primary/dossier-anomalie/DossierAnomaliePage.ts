@@ -25,10 +25,16 @@ import {
   LigneConflit,
   PointageAnomalie,
 } from '../../../domain/dossier/DossierAnomalie';
+import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
+import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
+import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { operateurPresente, postePresente } from '../PresentationIdentites';
+import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
+import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
+
+const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 
 @Component({
   selector: 'glm-dossier-anomalie',
@@ -40,6 +46,7 @@ import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePo
     InstantLongDayWithSecondsPipe,
     InstantTimeAndLongDayWithSecondsPipe,
     DateTimeField,
+    SelecteurOperateurAnomalie,
   ],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',
@@ -79,6 +86,11 @@ export class DossierAnomaliePage {
     page: this.parametres().get('page'),
   }));
   protected readonly lecture = resource({ params: () => ({ adresse: this.adresse() }), loader: ({ params }) => this.read(params.adresse) });
+  protected readonly referentiel = resource({
+    params: () => (this.droits.canApply() ? true : undefined),
+    loader: () => this.port.referentiel(),
+  });
+  protected readonly referentielLu = computed(() => (this.referentiel.hasValue() ? this.referentiel.value() : REFERENTIEL_VIDE));
   protected readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
   protected readonly dossier = computed(() => {
     if (this.lecture.isLoading()) return undefined;
@@ -227,6 +239,30 @@ export class DossierAnomaliePage {
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {
     return reference !== '' && !dossier.activites.some(activite => activite.id.activite === reference);
+  }
+
+  protected choisirOperateur(operateur: OperateurAnomalieId): void {
+    this.change({ fait: { operateur: operateur.operateur } });
+  }
+
+  protected postesHabilites(operateur: string) {
+    return this.referentielLu().postesHabilites(new OperateurAnomalieId(operateur));
+  }
+
+  protected autresPostes(operateur: string) {
+    return this.referentielLu().autresPostes(new OperateurAnomalieId(operateur));
+  }
+
+  protected posteEstAbsent(poste: string): boolean {
+    return poste !== '' && this.referentielLu().poste(new PosteAnomalieId(poste)) === undefined;
+  }
+
+  protected operateurDeLActe(operateur: string, journal: readonly PointageAnomalie[]): string {
+    return operateurDeLActe(operateur, this.referentielLu(), journal);
+  }
+
+  protected posteDeLActe(poste: string, journal: readonly PointageAnomalie[]): string {
+    return posteDeLActe(poste, this.referentielLu(), journal);
   }
 
   protected async preview(dossier: DossierAnomalie): Promise<void> {

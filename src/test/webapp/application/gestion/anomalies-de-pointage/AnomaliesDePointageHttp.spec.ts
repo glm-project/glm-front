@@ -6,6 +6,7 @@ import {
   debutFixture,
   dossierFixture,
   finFixture,
+  givenTheReferentiel,
   instantCorrigeLocalFixture,
   journalFixture,
   ligneFixture,
@@ -23,6 +24,7 @@ const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8
 describe('HTTP conflict resolution in Gestion', () => {
   beforeEach(() => {
     givenTheClockOnAFixedDay();
+    givenTheReferentiel();
   });
 
   it('should abandon an unconfirmed proposal when the page is reloaded', () => {
