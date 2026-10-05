@@ -12,6 +12,7 @@ import {
   formatInstantNumericDayMonth,
   formatInstantShortDateTime,
   formatInstantShortDayMonth,
+  formatInstantShortWeekdayDay,
   formatInstantTime,
   formatInstantWeekdayDay,
   localCalendarDay,
@@ -188,5 +189,21 @@ describe('DateFormats', () => {
     const text = formatInstantWeekdayDay(instant);
 
     expect(text).toBe('dimanche 13');
+  });
+
+  it('should format an instant as its local abbreviated weekday and day', () => {
+    const instant = new Date(2026, 9, 1, 9, 41);
+
+    const text = formatInstantShortWeekdayDay(instant);
+
+    expect(text).toBe('jeu. 1');
+  });
+
+  it('should keep the local abbreviated weekday and day of an instant whose UTC day is the next one', () => {
+    const instant = new Date(Date.UTC(2026, 9, 2, 1, 30));
+
+    const text = formatInstantShortWeekdayDay(instant);
+
+    expect(text).toBe('jeu. 1');
   });
 });

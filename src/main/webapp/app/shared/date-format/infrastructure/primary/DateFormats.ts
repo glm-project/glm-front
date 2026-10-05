@@ -25,6 +25,8 @@ const SHORT_DATE_TIME = new Intl.DateTimeFormat(LOCALE, {
 
 const SHORT_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short' });
 
+const SHORT_WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric' });
+
 const WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric' });
 
 const CALENDAR_DAY_SHORT_DAY_MONTH_YEAR = new Intl.DateTimeFormat(LOCALE, {
@@ -70,6 +72,8 @@ export const formatInstantNumericDayMonth = (instant: Date): string => NUMERIC_D
 export const formatInstantShortDateTime = (instant: Date): string => SHORT_DATE_TIME.format(instant);
 
 export const formatInstantShortDayMonth = (instant: Date): string => SHORT_DAY_MONTH.format(instant);
+
+export const formatInstantShortWeekdayDay = (instant: Date): string => SHORT_WEEKDAY_DAY.format(instant);
 
 export const formatInstantWeekdayDay = (instant: Date): string => WEEKDAY_DAY.format(instant);
 
