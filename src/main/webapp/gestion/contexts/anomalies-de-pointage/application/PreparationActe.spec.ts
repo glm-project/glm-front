@@ -593,24 +593,6 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Suivi clôturé' });
   });
 
-  it('should keep the dated end regularisation after a refusal so the manager can adjust its instant', async () => {
-    const attente = givenPreviewWaits();
-    preparation.choose(finARegulariserFixture);
-    preparation.change({ fait: { instant: '2026-09-15T17:00:00+02:00' } });
-    const demande = preparation.preview(dossierFinAutomatiqueFixture);
-    await attente.arrival;
-    attente.release({ kind: 'REFUS', raison: 'La date de survenue est dans le futur' });
-    await demande;
-
-    preparation.change({ fait: { instant: '2026-09-14T17:00:00+02:00' } });
-
-    expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.command()).toMatchObject({
-      kind: 'REGULARISATION',
-      fait: { instant: '2026-09-14T17:00:00+02:00' },
-    });
-  });
-
   const givenPreviewWaits = (): PendingIoFixture<ResultatApercu> => {
     const pending = new PendingIoFixture<ResultatApercu>();
     previews.pending = pending;

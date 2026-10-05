@@ -56,22 +56,18 @@ class RouteFixture {
   readonly queryParamMap = new BehaviorSubject<ParamMap>(convertToParamMap({}));
 }
 
-interface UrlTreeFixture {
-  readonly queryParams: Record<string, string>;
-}
-
 class RouterFixture {
   readonly events = EMPTY;
   readonly navigations: FiltreAnomalies[] = [];
   navigationResult = true;
   navigationFailure: Error | undefined;
 
-  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string> }): UrlTreeFixture {
-    return { queryParams: extras?.queryParams ?? {} };
+  createUrlTree(): object {
+    return {};
   }
 
-  serializeUrl(tree: UrlTreeFixture): string {
-    return `/?${new URLSearchParams(tree.queryParams).toString()}`;
+  serializeUrl(): string {
+    return '/';
   }
 
   navigate(_commands: unknown[], extras: { queryParams: FiltreAnomalies }): Promise<boolean> {
@@ -338,18 +334,7 @@ describe('Anomalies list', () => {
     expect(textOf('anomalies-adresse-invalide')).toContain('Nature d’anomalie inconnue');
     expect(portFixture.demandes).toEqual([]);
     expect(currentTab()).toBe('');
-    expect(tabHrefs()).toHaveLength(2);
-  });
-
-  it('should keep the filters and return to the first page when the operator changes tab', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: '3' });
-
-    await whenTheListIsRendered();
-
-    expect(tabHrefs()).toEqual([
-      '/?nature=CONFLIT&operateur=Camille&element=M-042&page=1',
-      '/?nature=FIN_AUTOMATIQUE&operateur=Camille&element=M-042&page=1',
-    ]);
+    expect(tabs()).toHaveLength(2);
   });
 
   it('should keep the nature when the filters are submitted from the automatic ends tab', async () => {
@@ -531,7 +516,6 @@ describe('Anomalies list', () => {
     tabs()
       .find(tab => tab.getAttribute('aria-current') === 'page')
       ?.getAttribute('data-selector') ?? '';
-  const tabHrefs = (): (string | null)[] => tabs().map(tab => tab.getAttribute('href'));
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });

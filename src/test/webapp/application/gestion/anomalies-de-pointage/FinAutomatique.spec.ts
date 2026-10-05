@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import {
+  activiteFinAutomatiqueFixture,
   apercuFixture,
   confirmationFinAutomatiqueFixture,
   dossierApresCorrectionFixture,
@@ -100,7 +101,7 @@ describe('Automatic end of an activity in Gestion', () => {
         fait: {
           type: 'FIN',
           intention: 'FIN',
-          activiteVisee: ouvrantFinAutomatiqueFixture,
+          activiteVisee: activiteFinAutomatiqueFixture,
           operateur: operateurFinAutomatiqueFixture,
           poste: posteFinAutomatiqueFixture,
           instant: instantRegulariseFixture,
@@ -197,7 +198,7 @@ describe('Automatic end of an activity in Gestion', () => {
         fait: {
           type: 'FIN',
           intention: 'FIN',
-          activiteVisee: ouvrantFinAutomatiqueFixture,
+          activiteVisee: activiteFinAutomatiqueFixture,
           operateur: operateurFinAutomatiqueFixture,
           poste: posteFinAutomatiqueFixture,
           instant: instantTardifFixture,

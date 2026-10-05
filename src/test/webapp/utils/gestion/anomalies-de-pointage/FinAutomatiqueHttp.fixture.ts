@@ -8,6 +8,7 @@ export const posteFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000005'
 export const elementFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000006';
 export const finRegulariseeFixture = '71000000-0000-0000-0000-000000000007';
 export const finCorrigeeFixture = '71000000-0000-0000-0000-000000000008';
+export const activiteFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000009';
 export const debutFinAutomatiqueFixture = '2026-09-14T08:00:00Z';
 export const echeanceFinAutomatiqueFixture = '2026-09-14T21:00:00Z';
 export const instantRegulariseFixture = '2026-09-14T17:00:00Z';
@@ -20,7 +21,7 @@ const ouvertureFixture = (sansPoste = false): components['schemas']['RestEveneme
   id: ouvrantFinAutomatiqueFixture,
   type: 'DEBUT',
   intention: 'OUVERTURE',
-  activite: ouvrantFinAutomatiqueFixture,
+  activite: activiteFinAutomatiqueFixture,
   dateDeSurvenue: debutFinAutomatiqueFixture,
   operateurId: operateurFinAutomatiqueFixture,
   ...(sansPoste ? {} : { posteId: posteFinAutomatiqueFixture }),
@@ -33,7 +34,7 @@ const finTardiveRecueFixture: components['schemas']['RestEvenementDAtelier'] = {
   id: finTardiveFixture,
   type: 'FIN',
   intention: 'FIN',
-  cible: ouvrantFinAutomatiqueFixture,
+  cible: activiteFinAutomatiqueFixture,
   dateDeSurvenue: instantTardifFixture,
   operateurId: operateurFinAutomatiqueFixture,
   posteId: posteFinAutomatiqueFixture,
@@ -46,7 +47,7 @@ const perimetreFixture = (pointages: string[]): components['schemas']['RestSeque
   operateurId: operateurFinAutomatiqueFixture,
   posteId: posteFinAutomatiqueFixture,
   datePremierPointage: debutFinAutomatiqueFixture,
-  activites: [ouvrantFinAutomatiqueFixture],
+  activites: [activiteFinAutomatiqueFixture],
   pointages,
   nombrePointages: pointages.length,
 });
@@ -66,7 +67,7 @@ const suiviFixture = (journal: components['schemas']['RestEvenementDAtelier'][])
 
 const activiteEchueFixture = (sansPoste: boolean): components['schemas']['RestActiviteDuDossier'] => ({
   evenement: ouvrantFinAutomatiqueFixture,
-  activite: ouvrantFinAutomatiqueFixture,
+  activite: activiteFinAutomatiqueFixture,
   operateurId: operateurFinAutomatiqueFixture,
   ...(sansPoste ? {} : { posteId: posteFinAutomatiqueFixture }),
   categorie: 'TRAVAIL',
@@ -86,7 +87,7 @@ const activiteTermineeFixture = (instant: string, duree: string, sansPoste: bool
 export const finARegulariserFixture = (sansPoste = false): components['schemas']['RestFaitARegulariser'] => ({
   type: 'FIN',
   intention: 'FIN',
-  activiteVisee: ouvrantFinAutomatiqueFixture,
+  activiteVisee: activiteFinAutomatiqueFixture,
   operateur: operateurFinAutomatiqueFixture,
   ...(sansPoste ? {} : { poste: posteFinAutomatiqueFixture }),
 });
@@ -126,7 +127,7 @@ export const dossierFinTardiveFixture = (
         fait: {
           type,
           intention,
-          activiteVisee: ouvrantFinAutomatiqueFixture,
+          activiteVisee: activiteFinAutomatiqueFixture,
           operateur: operateurFinAutomatiqueFixture,
           poste: posteFinAutomatiqueFixture,
           instant: instantTardifFixture,
@@ -141,7 +142,7 @@ export const dossierApresRegularisationFixture = (sansPoste = false): components
     id: finRegulariseeFixture,
     type: 'FIN',
     intention: 'FIN',
-    cible: ouvrantFinAutomatiqueFixture,
+    cible: activiteFinAutomatiqueFixture,
     dateDeSurvenue: instantRegulariseFixture,
     operateurId: operateurFinAutomatiqueFixture,
     ...(sansPoste ? {} : { posteId: posteFinAutomatiqueFixture }),

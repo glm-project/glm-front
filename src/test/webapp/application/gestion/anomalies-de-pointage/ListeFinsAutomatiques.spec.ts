@@ -38,7 +38,7 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   it('should open the dossier of the automatic end at its opening, keeping the list address', () => {
     givenADossierAddressedByTheOpening();
 
-    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=1');
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
     whenOpeningTheAutomaticEnd();
 
     thenTheDossierOfTheOpeningIsRequested();
@@ -49,13 +49,26 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   it('should return from the dossier of an automatic end to the same tab, filters and page', () => {
     givenADossierAddressedByTheOpening();
 
-    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=1');
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
     whenOpeningTheAutomaticEnd();
     whenReturningToTheAnomalies();
 
-    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=1');
+    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
     thenTheAutomaticEndIsListedWithItsPeriod();
+  });
+
+  it('should keep the nature and the filters while paginating the automatic ends and ask the back for each page', () => {
+    givenTwelveAutomaticEnds();
+
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF');
+    whenChoosingThePage('anomalies-page-suivante');
+    whenChoosingThePage('anomalies-page-suivante');
+    whenChoosingThePage('anomalies-page-precedente');
+
+    thenThePagesAreRequested([0, 1, 2, 1]);
+    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
+    thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
   });
 
   it('should explain that no automatic end remains', () => {
@@ -86,6 +99,12 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     }).as('dossier');
   };
 
+  const givenTwelveAutomaticEnds = (): void => {
+    cy.intercept('GET', '/api/atelier/anomalies?nature=FIN_AUTOMATIQUE*', {
+      body: { ...pageFinsAutomatiquesFixture(), total: 12 },
+    }).as('pagesDesFinsAutomatiques');
+  };
+
   const givenNoAutomaticEnd = (): void => {
     cy.intercept('GET', '/api/atelier/anomalies?nature=FIN_AUTOMATIQUE*', { body: pageFinsAutomatiquesFixture([]) });
   };
@@ -95,6 +114,10 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   };
 
   const whenChoosingTheTab = (selector: string): void => {
+    cy.get(dataSelector(selector)).click();
+  };
+
+  const whenChoosingThePage = (selector: string): void => {
     cy.get(dataSelector(selector)).click();
   };
 
@@ -108,6 +131,16 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
 
   const thenTheListIsRequested = (alias: string, query: string): void => {
     cy.wait(`@${alias}`).its('request.url').should('contain', query);
+  };
+
+  const thenThePagesAreRequested = (pages: number[]): void => {
+    cy.get('@pagesDesFinsAutomatiques.all').should('have.length', pages.length);
+    pages.forEach((page, index) => {
+      cy.get('@pagesDesFinsAutomatiques.all')
+        .its(index)
+        .its('request.url')
+        .should('contain', `nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=${page}&size=5`);
+    });
   };
 
   const thenTheAddressIs = (search: string): void => {
@@ -142,7 +175,7 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
         nature: 'FIN_AUTOMATIQUE',
         operateur: 'Jean',
         element: 'OF',
-        page: '1',
+        page: '2',
         pointage: ouvrantFinAutomatiqueFixture,
       });
     });

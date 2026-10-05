@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import {
+  activiteFinAutomatiqueFixture,
   elementFinAutomatiqueFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
@@ -9,7 +10,7 @@ import {
 
 export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
   nature: 'FIN_AUTOMATIQUE',
-  activite: ouvrantFinAutomatiqueFixture,
+  activite: activiteFinAutomatiqueFixture,
   adresse: { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture },
   revision: 0,
   elementId: elementFinAutomatiqueFixture,

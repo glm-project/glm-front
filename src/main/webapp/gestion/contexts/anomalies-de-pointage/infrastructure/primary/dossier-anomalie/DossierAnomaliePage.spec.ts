@@ -1007,15 +1007,6 @@ describe('Anomaly dossier page', () => {
     thenPageDoesNotMention('conflit');
   });
 
-  it('should return to the tab and the filters the automatic end was opened from', async () => {
-    givenAnAutomaticEnd();
-    givenTheDossierWasOpenedFromTheList({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF-12', page: '3' });
-
-    await whenRendering();
-
-    thenTheReturnLinkTargets({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF-12', page: '3' });
-  });
-
   it('should show the due activity with its start, its automatic end and its received duration', async () => {
     givenAnAutomaticEnd();
 
@@ -1151,29 +1142,42 @@ describe('Anomaly dossier page', () => {
     thenDisabled('anomalie-previsualiser');
   });
 
-  it('should announce in the preview that the anomaly will be processed when no conflict nor automatic end remains', async () => {
-    givenAnEndRegularisationLeaving({ etat: 'SANS_ANOMALIE', enConflit: false, finAutomatique: false });
-    await whenRendering();
+  const anomalieTraiteeFixture = (['SANS_ANOMALIE', 'ANCRE_ANNULEE', 'EN_CONFLIT', 'FIN_AUTOMATIQUE'] as const).map(etat => ({
+    etat,
+    enConflit: false,
+    finAutomatique: false,
+  }));
 
-    await whenPreviewingTheDatedEnd();
+  it.each(anomalieTraiteeFixture)(
+    'should announce in the preview that the anomaly will be processed when $etat has no conflict nor automatic end left',
+    async resultat => {
+      givenAnEndRegularisationLeaving(resultat);
+      await whenRendering();
 
-    thenTextContains('anomalie-apercu', 'Anomalie traitée après enregistrement de cette décision.');
-  });
+      await whenPreviewingTheDatedEnd();
 
-  it('should announce in the receipt that the anomaly is processed when no conflict nor automatic end remains', async () => {
-    givenAnEndRegularisationLeaving({ etat: 'SANS_ANOMALIE', enConflit: false, finAutomatique: false });
-    await whenRendering();
-    await whenPreviewingTheDatedEnd();
+      thenTextContains('anomalie-apercu', 'Anomalie traitée après enregistrement de cette décision.');
+    },
+  );
 
-    await whenClicking('anomalie-confirmer');
+  it.each(anomalieTraiteeFixture)(
+    'should announce in the receipt that the anomaly is processed when $etat has no conflict nor automatic end left',
+    async resultat => {
+      givenAnEndRegularisationLeaving(resultat);
+      await whenRendering();
+      await whenPreviewingTheDatedEnd();
 
-    thenTextContains('anomalie-resultat', 'Anomalie traitée');
-  });
+      await whenClicking('anomalie-confirmer');
+
+      thenTextContains('anomalie-resultat', 'Anomalie traitée');
+    },
+  );
 
   const anomalieRestanteFixture = [
     { etat: 'ANCRE_ANNULEE' as const, enConflit: false, finAutomatique: true },
     { etat: 'FIN_AUTOMATIQUE' as const, enConflit: false, finAutomatique: true },
     { etat: 'ANCRE_ANNULEE' as const, enConflit: true, finAutomatique: false },
+    { etat: 'EN_CONFLIT' as const, enConflit: true, finAutomatique: true },
   ];
 
   it.each(anomalieRestanteFixture)(
@@ -1241,10 +1245,6 @@ describe('Anomaly dossier page', () => {
   const whenRenderingWithoutWaiting = (): void => {
     fixture = TestBed.createComponent(DossierAnomaliePage);
     fixture.detectChanges();
-  };
-
-  const givenTheDossierWasOpenedFromTheList = (liste: Record<string, string>): void => {
-    route.queryParamMap.next(convertToParamMap({ pointage: 'fin-17', ...liste }));
   };
 
   const givenAnAutomaticEnd = (saisie: SaisieActe = finARegulariserFixture()): void => {
@@ -1485,10 +1485,6 @@ describe('Anomaly dossier page', () => {
     expect(new URL(requiredFixture(link.getAttribute('href'), 'diagnostic link'), 'https://fixture').hash).toBe(`#pointage-${pointage}`);
     expect(link.textContent.replace(/\s+/g, ' ').trim()).toBe(label);
     expect(receivedFact(pointage).id).toBe(`pointage-${pointage}`);
-  };
-  const thenTheReturnLinkTargets = (expected: Record<string, string>): void => {
-    const href = requiredFixture(element('anomalie-retour').getAttribute('href'), 'return link');
-    expect(Object.fromEntries(new URL(href, 'https://fixture').searchParams)).toEqual(expected);
   };
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);

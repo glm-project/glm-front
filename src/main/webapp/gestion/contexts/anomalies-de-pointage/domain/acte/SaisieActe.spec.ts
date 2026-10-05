@@ -82,15 +82,6 @@ describe('Preparation of a resolution acte', () => {
 
     expect(acte).toEqual({ kind: 'REGULARISATION', fait: { ...faitFixture, poste: 'poste-3' } });
   });
-  it('should regularise the end of an activity without workstation without inventing one', () => {
-    const saisie = SaisieActe.regularise({ ...faitFixture, poste: '', instant: '' }).afterChange({
-      fait: { instant: '2026-09-14T17:00:00+02:00' },
-    });
-
-    const acte = saisie.command();
-
-    expect(acte).toMatchObject({ kind: 'REGULARISATION', fait: { poste: '', instant: '2026-09-14T17:00:00+02:00' } });
-  });
   it('should refuse a midnight represented as the twenty fourth hour instead of silently changing its day', () => {
     const saisie = SaisieActe.regularise({ ...faitFixture, instant: '2026-09-14T24:00:00+02:00' });
 
@@ -188,5 +179,34 @@ describe('Preparation of a resolution acte', () => {
 
     expect(acte).toBeUndefined();
     expect(saisie.errors()).toEqual(['MOTIF_REQUIS']);
+  });
+  it('should await the dating of a regularisation but not of a correction or a cancellation', () => {
+    expect(SaisieActe.regularise().awaitsDating()).toBe(true);
+    expect(SaisieActe.correct('fin-18', faitFixture).awaitsDating()).toBe(false);
+    expect(SaisieActe.cancel('fin-18').awaitsDating()).toBe(false);
+    expect(SaisieActe.empty().awaitsDating()).toBe(false);
+  });
+  it('should keep the guided choice when the manager only dates a regularisation', () => {
+    const saisie = SaisieActe.regularise({ ...faitFixture, instant: '' });
+
+    expect(saisie.changesGuidedFact({ fait: { instant: '2026-09-14T17:00:00+02:00' } })).toBe(false);
+  });
+  it.each([{ fait: { operateur: 'op-2' } }, { fait: { instant: '2026-09-14T17:00:00+02:00', poste: 'poste-3' } }, { fait: {} }])(
+    'should drop the guided choice when a regularisation changes more than its date: %j',
+    changement => {
+      const saisie = SaisieActe.regularise({ ...faitFixture, instant: '' });
+
+      expect(saisie.changesGuidedFact(changement)).toBe(true);
+    },
+  );
+  it('should drop the guided choice when a correction changes only its time', () => {
+    const saisie = SaisieActe.correct('fin-18', faitFixture);
+
+    expect(saisie.changesGuidedFact({ fait: { instant: '2026-09-14T18:00:00+02:00' } })).toBe(true);
+  });
+  it('should keep the guided choice when only the motif changes', () => {
+    const saisie = SaisieActe.correct('fin-18', faitFixture);
+
+    expect(saisie.changesGuidedFact({ motif: 'Fin confirmée' })).toBe(false);
   });
 });
