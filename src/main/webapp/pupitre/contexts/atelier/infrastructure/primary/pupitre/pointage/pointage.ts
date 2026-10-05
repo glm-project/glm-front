@@ -25,6 +25,7 @@ export class Pointage {
   readonly vue = input.required<VueDePointage>();
   readonly commander = input.required<PointageCommand>();
   readonly gestesDisponibles = input(true);
+  readonly connected = input(true);
   readonly commandesGlobales = input.required<CommandesGlobales>();
   readonly pauseRequested = output();
   readonly repriseRequested = output();

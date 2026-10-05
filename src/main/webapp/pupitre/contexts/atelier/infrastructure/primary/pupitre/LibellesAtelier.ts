@@ -36,6 +36,7 @@ export const LIBELLES_POINTAGE = {
   reprise: COMMANDES_GLOBALES.REPRENDRE,
   arretTotal: COMMANDES_GLOBALES.TOUT_ARRETER,
   mesPointages: 'MES POINTAGES',
+  mesPointagesHorsLigne: 'Disponible uniquement en ligne',
   choixPoste: 'Sur quel poste ?',
   element: (numero: NumeroDElement): string => `Élément ${numero.toString()}`,
   annuler: 'Annuler',

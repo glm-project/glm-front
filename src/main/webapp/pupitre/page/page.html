@@ -17,6 +17,7 @@
     [vue]="vue"
     [commander]="pupitre"
     [gestesDisponibles]="designation.gestesDisponibles()"
+    [connected]="etatHorsLigne.connected()"
     [commandesGlobales]="designation.commandesGlobales()"
     (pauseRequested)="executeGlobale('PAUSE')"
     (repriseRequested)="executeGlobale('REPRENDRE')"

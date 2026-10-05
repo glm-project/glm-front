@@ -1,11 +1,22 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { dataSelector } from '../../../utils/DataSelector';
+import { longPressFixture } from '../../../utils/LongPressFixture';
 import { clearPupitreStorageFixture, givenEnrolledPupitreFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
 const referentielFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-  suivis: [],
+  suivis: [
+    {
+      conflits: [],
+      id: 'piece-1',
+      nom: '204',
+      etat: 'EN_ATTENTE',
+      type: 'ORDRE_DE_FABRICATION',
+      activites: [],
+      evenements: [],
+    },
+  ],
 };
 
 const SEMAINE_EN_COURS = 38;
@@ -103,6 +114,15 @@ describe('Pupitre my pointages journey', () => {
     thenThePreviousWeekDayIsDetailed();
   });
 
+  it('should keep my pointages out of reach once the server cannot be reached', () => {
+    givenAnEnrolledPupitreWithOperator049();
+    whenDesignatingOperator049();
+
+    whenAPointageCannotReachTheServer();
+
+    thenMyPointagesAreUnavailableOffline();
+  });
+
   it('should let the designated operator open my pointages and return to the pointage screen', () => {
     givenAnEnrolledPupitreWithOperator049();
     whenDesignatingOperator049();
@@ -117,7 +137,11 @@ describe('Pupitre my pointages journey', () => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
     cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: { genereLe: '2026-09-17T05:00:00Z', operateurs: referentielFixture.operateurs, suivis: [] },
+      body: {
+        genereLe: '2026-09-17T05:00:00Z',
+        operateurs: referentielFixture.operateurs,
+        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], conflits: [] }],
+      },
     }).as('workshop');
     cy.intercept('GET', '/api/syntheses-des-heures/jean*', request => {
       request.reply({ body: syntheseFixture(Number(request.query['semaine']), String(request.query['evaluation'])) });
@@ -137,6 +161,13 @@ describe('Pupitre my pointages journey', () => {
     for (const digit of ['0', '4', '9']) cy.get(dataSelector(`digit-${digit}`)).click();
     cy.get(dataSelector('validate')).click();
     cy.get(dataSelector('pointage')).should('be.visible');
+  };
+
+  const whenAPointageCannotReachTheServer = (): void => {
+    cy.intercept('POST', '/api/atelier/suivis/*/pointages', { forceNetworkError: true }).as('pointage');
+    longPressFixture(cy.get(dataSelector('tile-piece-1')).find(dataSelector('primary-target')));
+    cy.wait('@pointage');
+    cy.get(dataSelector('pupitre-disconnected')).should('be.visible');
   };
 
   const whenOpeningMyPointages = (): void => {
@@ -171,6 +202,11 @@ describe('Pupitre my pointages journey', () => {
   const thenThePreviousWeekDayIsDetailed = (): void => {
     cy.get(dataSelector('jour-titre')).should('contain.text', 'Lundi 7 septembre 2026');
     cy.get(dataSelector('lignes')).should('contain.text', '1239').and('contain.text', '07:00 → 14:45');
+  };
+
+  const thenMyPointagesAreUnavailableOffline = (): void => {
+    cy.get(dataSelector('show-mes-pointages')).should('be.disabled');
+    cy.get(dataSelector('mes-pointages-indisponible')).should('contain.text', 'Disponible uniquement en ligne');
   };
 
   const thenThePointageScreenIsShown = (): void => {

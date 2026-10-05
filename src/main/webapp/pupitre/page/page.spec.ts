@@ -286,6 +286,14 @@ describe('Pupitre page', () => {
     thenVisible('pointage', true);
   });
 
+  it('should keep my pointages out of reach while the pupitre is offline', () => {
+    givenThePupitreIsOffline();
+
+    givenPointage();
+
+    expect((element('show-mes-pointages') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('should show the pointage screen to the next designated operator', () => {
     givenPointage();
     whenPressing('show-mes-pointages');
@@ -353,6 +361,9 @@ describe('Pupitre page', () => {
       });
     }
     fixture.detectChanges();
+  };
+  const givenThePupitreIsOffline = (): void => {
+    pupitre.connected.set(false);
   };
   const givenReference = (): void => {
     pupitre.publishReference();

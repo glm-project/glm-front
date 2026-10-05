@@ -150,6 +150,14 @@ describe('Pointage screen', () => {
     thenMyPointagesAreRequested();
   });
 
+  it('should keep my pointages out of reach while the pupitre is offline', async () => {
+    givenThePupitreIsOffline();
+
+    await whenRendering();
+
+    thenMyPointagesAreUnavailableOffline();
+  });
+
   it('should choose no workstation on a brief tap', async () => {
     givenAWorkstationChoice();
     await whenRendering();
@@ -356,6 +364,9 @@ describe('Pointage screen', () => {
   const givenAnEmptyWorkshop = (): void => {
     fixture.componentRef.setInput('vue', { conflits: [], moules: [], ordresDeFabrication: [] });
   };
+  const givenThePupitreIsOffline = (): void => {
+    fixture.componentRef.setInput('connected', false);
+  };
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
   };
@@ -506,6 +517,15 @@ describe('Pointage screen', () => {
   };
   const thenMyPointagesAreRequested = (): void => {
     expect(emitted).toEqual(['mes-pointages']);
+  };
+  const thenMyPointagesAreUnavailableOffline = (): void => {
+    const mesPointages = button('show-mes-pointages');
+    expect(mesPointages.disabled).toBe(true);
+    expect(
+      root()
+        .querySelector(`#${mesPointages.getAttribute('aria-describedby') ?? ''}`)
+        ?.textContent.trim(),
+    ).toBe('Disponible uniquement en ligne');
   };
   const thenNoGlobalIntentionIsExposed = (): void => {
     expect(emitted).toEqual([]);

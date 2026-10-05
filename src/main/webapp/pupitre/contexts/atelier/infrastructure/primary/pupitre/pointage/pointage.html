@@ -107,14 +107,23 @@
   >
     {{ labels.arretTotal }}
   </button>
-  <button
-    type="button"
-    (click)="mesPointagesRequested.emit()"
-    class="min-h-touch-lg flex-1 rounded border-2 border-accent bg-surface text-section text-accent"
-    data-selector="show-mes-pointages"
-  >
-    {{ labels.mesPointages }}
-  </button>
+  <div class="flex flex-1 flex-col gap-1">
+    <button
+      type="button"
+      [disabled]="!connected()"
+      [attr.aria-describedby]="connected() ? null : 'mes-pointages-indisponible'"
+      (click)="mesPointagesRequested.emit()"
+      class="min-h-touch-lg rounded border-2 border-accent bg-surface text-section text-accent disabled:border-border-strong disabled:bg-sunken disabled:text-ink-muted"
+      data-selector="show-mes-pointages"
+    >
+      {{ labels.mesPointages }}
+    </button>
+    @if (!connected()) {
+    <span id="mes-pointages-indisponible" class="text-center text-label text-ink-muted" data-selector="mes-pointages-indisponible">
+      {{ labels.mesPointagesHorsLigne }}
+    </span>
+    }
+  </div>
 </nav>
 
 @if (attente(); as attenteDePoste) {
