@@ -9,10 +9,9 @@ import {
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { keyFor } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/ClesDesJournaux';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
-
-const keyFor = (entreprise: Entreprise): string => `atelier-activites-v1:${entreprise.toString()}`;
 
 @Injectable()
 export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
