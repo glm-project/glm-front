@@ -107,6 +107,14 @@
   >
     {{ labels.arretTotal }}
   </button>
+  <button
+    type="button"
+    (click)="mesPointagesRequested.emit()"
+    class="min-h-touch-lg flex-1 rounded border-2 border-accent bg-surface text-section text-accent"
+    data-selector="show-mes-pointages"
+  >
+    {{ labels.mesPointages }}
+  </button>
 </nav>
 
 @if (attente(); as attenteDePoste) {

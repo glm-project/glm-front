@@ -47,6 +47,7 @@ describe('Pointage screen', () => {
     fixture.componentInstance.pauseRequested.subscribe(() => emitted.push('pause'));
     fixture.componentInstance.repriseRequested.subscribe(() => emitted.push('reprendre'));
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
+    fixture.componentInstance.mesPointagesRequested.subscribe(() => emitted.push('mes-pointages'));
   });
 
   afterEach(() => {
@@ -139,6 +140,14 @@ describe('Pointage screen', () => {
     whenTimePasses(999);
 
     thenNoGlobalIntentionIsExposed();
+  });
+
+  it('should request my pointages on a brief tap, without holding', async () => {
+    await whenRendering();
+
+    whenTappingGlobalCommand('show-mes-pointages');
+
+    thenMyPointagesAreRequested();
   });
 
   it('should choose no workstation on a brief tap', async () => {
@@ -494,6 +503,9 @@ describe('Pointage screen', () => {
   };
   const thenGlobalIntentionsAreExposed = (): void => {
     expect(emitted).toEqual(['pause', 'reprendre', 'tout-arreter']);
+  };
+  const thenMyPointagesAreRequested = (): void => {
+    expect(emitted).toEqual(['mes-pointages']);
   };
   const thenNoGlobalIntentionIsExposed = (): void => {
     expect(emitted).toEqual([]);

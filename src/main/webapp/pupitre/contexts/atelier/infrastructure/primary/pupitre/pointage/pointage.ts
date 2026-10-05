@@ -29,6 +29,7 @@ export class Pointage {
   readonly pauseRequested = output();
   readonly repriseRequested = output();
   readonly arretTotalRequested = output();
+  readonly mesPointagesRequested = output();
   readonly busy = signal<ReadonlySet<string>>(new Set());
   readonly attente = signal<AttenteDePoste | undefined>(undefined);
   readonly choosing = signal(false);

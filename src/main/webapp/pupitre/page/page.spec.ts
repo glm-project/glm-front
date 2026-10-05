@@ -264,6 +264,36 @@ describe('Pupitre page', () => {
     thenHeaderMessageIs(expected);
   });
 
+  it('should open my pointages from the pointage screen', () => {
+    givenPointage();
+
+    whenPressing('show-mes-pointages');
+
+    thenVisible('pointage', false);
+    thenVisible('mes-pointages', true);
+  });
+
+  it('should come back to the pointage screen from my pointages', () => {
+    givenPointage();
+    whenPressing('show-mes-pointages');
+
+    whenPressing('retour-au-pointage');
+
+    thenVisible('mes-pointages', false);
+    thenVisible('pointage', true);
+  });
+
+  it('should show the pointage screen to the next designated operator', () => {
+    givenPointage();
+    whenPressing('show-mes-pointages');
+
+    whenPointageCloses();
+    givenPointage();
+
+    thenVisible('mes-pointages', false);
+    thenVisible('pointage', true);
+  });
+
   it('should display a local capture failure ahead of a workshop refusal', () => {
     givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' });
     givenLocalCaptureFailure();
