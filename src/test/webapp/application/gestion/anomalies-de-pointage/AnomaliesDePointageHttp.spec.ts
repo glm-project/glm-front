@@ -458,7 +458,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.wait('@conflitsReels');
     cy.get(dataSelector('anomalies-demo')).should('not.exist');
     cy.get(dataSelector('conflit-ligne')).should('have.length', 1).and('contain.text', 'M-042 réel');
-    cy.get(dataSelector('conflit-ligne')).should('contain.text', 'Opérateur non résolu').and('contain.text', operateurFixture);
+    cy.get(dataSelector('conflit-ligne')).should('contain.text', 'Opérateur non résolu').and('not.contain.text', operateurFixture);
   };
 
   const givenTheClockOnAFixedDay = (): void => {

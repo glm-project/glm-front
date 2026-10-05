@@ -13,7 +13,6 @@ const toLigneFinAutomatique = (ligne: FinAutomatiqueRecue): LigneFinAutomatique 
   element: new ElementAnomalieId(ligne.elementId),
   designation: ligne.designation,
   operateur: ligne.operateur === undefined ? '' : `${ligne.operateur.prenom} ${ligne.operateur.nom}`,
-  operateurId: ligne.operateurId,
   poste: ligne.poste?.libelle ?? '',
   ...(ligne.posteId === undefined ? {} : { posteId: ligne.posteId }),
   debut: ligne.debut,

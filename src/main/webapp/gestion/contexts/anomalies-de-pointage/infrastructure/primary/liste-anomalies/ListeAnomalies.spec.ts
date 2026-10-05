@@ -92,7 +92,6 @@ const finAutomatiqueFixture = (): LigneFinAutomatique => ({
   element: new ElementAnomalieId('of-m24-0655'),
   designation: 'OF M24-0655',
   operateur: 'Camille Martin',
-  operateurId: 'op-camille',
   poste: 'Fraiseuse 1',
   debut: new Date(2026, 0, 1, 9, 26).toISOString(),
   echeance: new Date(2026, 0, 1, 22, 26).toISOString(),
@@ -149,19 +148,20 @@ describe('Anomalies list', () => {
     expect(textOf('anomalies-vide')).toContain('Aucun conflit');
   });
 
-  it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
+  it('should present an unresolved operator and workstation without any identity in the conflict list', async () => {
     givenAnAddress({ nature: 'CONFLIT' });
     portFixture.page = {
       nature: 'CONFLIT',
-      lignes: [{ ...ligneFixture(), operateur: '', operateurId: 'op-absent', poste: '', posteId: 'poste-supprime' }],
+      lignes: [{ ...ligneFixture(), operateur: '', poste: '', posteId: 'poste-supprime' }],
       total: 1,
       complete: true,
     };
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflit-ligne')).toContain('Opérateur non résolu · op-absent');
-    expect(textOf('conflit-ligne')).toContain('Poste non résolu · poste-supprime');
+    expect(textOf('conflit-ligne')).toContain('Opérateur non résolu');
+    expect(textOf('conflit-ligne')).toContain('Poste non résolu');
+    expect(textOf('conflit-ligne')).not.toContain('poste-supprime');
   });
 
   it('should distinguish work clocked without a workstation from an unresolved workstation reference', async () => {
@@ -454,7 +454,7 @@ describe('Anomalies list', () => {
     expect(textOf('fin-automatique-ligne')).toContain('Début jeu. 1 à 15:00 · fin automatique ven. 2 à 04:00');
   });
 
-  it('should keep unresolved identities and work without workstation visible in the automatic ends', async () => {
+  it('should present unresolved identities without any identifier and work without workstation in the automatic ends', async () => {
     givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
     portFixture.page = {
       nature: 'FIN_AUTOMATIQUE',
@@ -468,8 +468,9 @@ describe('Anomalies list', () => {
 
     await whenTheListIsRendered();
 
-    expect(texts('fin-automatique-ligne')[0]).toContain('Opérateur non résolu · op-camille');
-    expect(texts('fin-automatique-ligne')[0]).toContain('Poste non résolu · poste-supprime');
+    expect(texts('fin-automatique-ligne')[0]).toContain('Opérateur non résolu');
+    expect(texts('fin-automatique-ligne')[0]).toContain('Poste non résolu');
+    expect(texts('fin-automatique-ligne')[0]).not.toContain('poste-supprime');
     expect(texts('fin-automatique-ligne')[1]).toContain('Sans poste');
   });
 

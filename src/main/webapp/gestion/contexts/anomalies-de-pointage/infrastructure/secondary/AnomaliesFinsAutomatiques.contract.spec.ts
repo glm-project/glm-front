@@ -75,7 +75,6 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
           element: new ElementAnomalieId('of-m24-0655'),
           designation: 'OF M24-0655',
           operateur: 'Camille Martin',
-          operateurId: 'op-camille',
           poste: 'DMU 50',
           posteId: 'poste-dmu',
           debut: '2026-09-14T08:00:00.123456789+02:00',
@@ -87,7 +86,7 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
     });
   });
 
-  it('should keep raw identities when the operator and the workstation cannot be resolved, and none for work without workstation', async () => {
+  it('should keep only the workstation reference when the operator and the workstation cannot be resolved, and none for work without workstation', async () => {
     const sansFiches = { ...finAutomatiqueFixture };
     delete sansFiches.operateur;
     delete sansFiches.poste;
@@ -99,10 +98,11 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
     const page = await lecture;
 
     expect(page.lignes).toMatchObject([
-      { operateur: '', operateurId: 'op-camille', poste: '', posteId: 'poste-dmu' },
-      { operateur: '', operateurId: 'op-camille', poste: '' },
+      { operateur: '', poste: '', posteId: 'poste-dmu' },
+      { operateur: '', poste: '' },
     ]);
     expect(page.lignes[1]).not.toHaveProperty('posteId');
+    expect(page.lignes[0]).not.toHaveProperty('operateurId');
   });
 
   it('should reject and report an incomplete page of automatic ends', async () => {

@@ -20,13 +20,23 @@ import { instantLocalFixture, instantLocalWithOffsetFixture } from '../../../uti
 import type {} from '../../../utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider';
 
 const posteFixture = '70000000-0000-0000-0000-000000000008';
+const operateurNomFixture = 'Camille Martin';
+const posteLibelleFixture = 'Fraiseuse 1';
 const motifCorrectionFixture = 'La cible est la NC.';
 
 const dossierRecuFixture = (): components['schemas']['RestDossierAnomalie'] => {
   const dossier = dossierFixture();
   return {
     ...dossier,
-    suivi: { ...dossier.suivi, journal: journalFixture.map(fait => ({ ...fait, posteId: posteFixture })) },
+    suivi: {
+      ...dossier.suivi,
+      journal: journalFixture.map(fait => ({
+        ...fait,
+        operateur: { id: operateurFixture, prenom: 'Camille', nom: 'Martin' },
+        posteId: posteFixture,
+        poste: { id: posteFixture, libelle: posteLibelleFixture },
+      })),
+    },
     choix: [...dossier.choix, { code: 'ANNULER_TRANSITION', kind: 'ANNULATION', pointage: ncFixture }],
   };
 };
@@ -175,7 +185,7 @@ describe('Conflict dossier in Gestion', () => {
     });
   };
 
-  it('should identify the operator and workstation of every received fact', () => {
+  it('should name the operator and workstation of every received fact without showing their identifiers', () => {
     whenOpeningTheDossier();
 
     thenEveryFactIdentifiesItsOperatorAndWorkstation();
@@ -183,7 +193,11 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenEveryFactIdentifiesItsOperatorAndWorkstation = (): void => {
     cy.get(dataSelector('anomalie-pointage')).each(pointage => {
-      cy.wrap(pointage).should('contain.text', `Opérateur : ${operateurFixture}`).and('contain.text', `Poste : ${posteFixture}`);
+      cy.wrap(pointage)
+        .should('contain.text', `Opérateur : ${operateurNomFixture}`)
+        .and('contain.text', `Poste : ${posteLibelleFixture}`)
+        .and('not.contain.text', operateurFixture)
+        .and('not.contain.text', posteFixture);
     });
   };
 

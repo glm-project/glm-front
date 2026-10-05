@@ -39,6 +39,15 @@ Chaque onglet a son message de chargement, son message vide, ses erreurs et sa p
 rejette la lecture. Une fin automatique montre son début et son échéance reçus, sans calcul, et ouvre le
 dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, aux filtres et à la page d'origine.
 
+## Opérateur et poste affichés
+
+La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, la chronologie, l'historique d'une adresse
+obsolète et les continuations nomment l'opérateur (« Prénom Nom ») et le poste (libellé) reçus. Aucun identifiant
+d'opérateur ou de poste n'y est affiché : une fiche non résolue donne « Opérateur non résolu » ou « Poste non résolu »,
+un pointage sans poste « Sans poste ». Le journal porte le nom et le libellé de chaque pointage à côté des identités
+du fait, vides lorsque la fiche manque ; une ligne de liste n'en garde que `posteId`, pour distinguer l'absence de
+poste d'un poste non résolu.
+
 ## Dates affichées
 
 Le dossier et la liste n'affichent aucun instant ISO brut. Chaque instant reçu s'affiche en heure locale, en jour
@@ -73,6 +82,8 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
   incohérent avec son code (régularisation portant une heure, correction sans heure).
 - Les contrats HTTP contrôlent les requêtes REST (liste de chaque nature, dossier et aperçu sous
   `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
+- Les contrats HTTP vérifient que le journal porte les noms reçus, ou des noms vides sans fiche, et que les lignes de
+  la liste ne portent plus l'identifiant de l'opérateur.
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

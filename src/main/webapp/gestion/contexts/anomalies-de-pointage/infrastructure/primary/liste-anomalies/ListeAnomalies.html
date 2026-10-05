@@ -118,7 +118,9 @@
                 >{{ ligne.designation }}</a
               >
             </td>
-            <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
+            <td class="p-4">
+              {{ operateurDe(ligne.operateur) }}<br /><span class="text-ink-muted">{{ posteDe(ligne.poste, ligne.posteId) }}</span>
+            </td>
             <td class="max-w-md p-4">{{ ligne.explication || libelles.sequenceEnConflit }}</td>
             <td class="p-4 tabular-nums">{{ ligne.date | instantLongDay: now }}<br />{{ ligne.nombrePointages }} pointages</td>
           </tr>
@@ -134,7 +136,9 @@
                 >{{ ligne.designation }}</a
               >
             </td>
-            <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
+            <td class="p-4">
+              {{ operateurDe(ligne.operateur) }}<br /><span class="text-ink-muted">{{ posteDe(ligne.poste, ligne.posteId) }}</span>
+            </td>
             <td class="p-4 tabular-nums">{{ libelles.periodeFinAutomatique(ligne.debut, ligne.echeance) }}</td>
           </tr>
           } }

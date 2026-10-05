@@ -172,6 +172,8 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
     {
       id: new PointageAnomalieId('fin-17'),
       fait: faitConflitFixture(),
+      operateurNom: 'Camille Martin',
+      posteLibelle: 'DMU 50',
       auteur: 'camille',
       enregistre: INSTANT_ENREGISTREMENT,
       regularisation: false,
@@ -232,6 +234,8 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
           activiteVisee: '',
           instant: INSTANT_DEBUT,
         },
+        operateurNom: 'Camille Martin',
+        posteLibelle: 'DMU 50',
         activiteCreee: new ActiviteAnomalieId('travail-8'),
         auteur: 'camille',
         enregistre: INSTANT_DEBUT,
@@ -488,6 +492,53 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-choix');
   });
 
+  it('should name the operator and the workstation of each pointage in the chronology without any identifier', async () => {
+    await whenRendering();
+
+    thenReceivedFactContains('fin-17', 'Opérateur : Camille Martin · Poste : DMU 50');
+    thenReceivedFactDoesNotContain('fin-17', 'op-camille');
+    thenReceivedFactDoesNotContain('fin-17', 'poste-1');
+  });
+
+  it('should present an unresolved operator and workstation of a pointage without any identifier', async () => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, journal: dossier.journal.map(pointage => ({ ...pointage, operateurNom: '', posteLibelle: '' })) },
+    };
+
+    await whenRendering();
+
+    thenReceivedFactContains('fin-17', 'Opérateur : Opérateur non résolu · Poste : Poste non résolu');
+    thenReceivedFactDoesNotContain('fin-17', 'op-camille');
+    thenReceivedFactDoesNotContain('fin-17', 'poste-1');
+  });
+
+  it('should distinguish a pointage without workstation from an unresolved workstation in the chronology', async () => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: dossier.journal.map(pointage => ({ ...pointage, posteLibelle: '', fait: { ...pointage.fait, poste: '' } })),
+      },
+    };
+
+    await whenRendering();
+
+    thenReceivedFactContains('fin-17', 'Poste : Sans poste');
+  });
+
+  it('should name the operator and the workstation in an obsolete address history without any identifier', async () => {
+    const journal = dossierAnomalieFixture().journal;
+    read.result = { kind: 'ANCRE_ANNULEE', journal: journal.map(pointage => ({ ...pointage, operateurNom: '' })) };
+
+    await whenRendering();
+
+    thenReceivedFactContains('fin-17', 'Opérateur : Opérateur non résolu · Poste : DMU 50');
+    thenReceivedFactDoesNotContain('fin-17', 'op-camille');
+  });
+
   it('should explain that the addressed pointage no longer carries an anomaly', async () => {
     read.result = { kind: 'SANS_ANOMALIE', journal: dossierAnomalieFixture().journal };
 
@@ -504,17 +555,17 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-cloture', 'Ouvert');
   });
 
-  it('should retain unresolved reference identities in the dossier heading', async () => {
+  it('should present unresolved references in the dossier heading without any identity', async () => {
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
-      dossier: { ...dossier, ligne: { ...dossier.ligne, operateur: '', poste: '', operateurId: 'op-absent', posteId: 'poste-absent' } },
+      dossier: { ...dossier, ligne: { ...dossier.ligne, operateur: '', poste: '', posteId: 'poste-absent' } },
     };
 
     await whenRendering();
 
-    thenHeadingContains('Opérateur non résolu · op-absent');
-    thenHeadingContains('Poste non résolu · poste-absent');
+    thenHeadingContains('Opérateur non résolu · Poste non résolu');
+    thenHeadingDoesNotContain('poste-absent');
   });
 
   it('should explain an unresolved activity without presenting an empty duration', async () => {
@@ -539,18 +590,17 @@ describe('Anomaly dossier page', () => {
   });
 
   it.each([
-    { operateur: '', operateurId: 'op-absent', explication: '', attendu: 'M-042 · op-absent · lundi 14 septembre à 17:00 · 3 pointages' },
+    { operateur: '', explication: '', attendu: 'M-042 · Opérateur non résolu · lundi 14 septembre à 17:00 · 3 pointages' },
     {
       operateur: 'Camille Martin',
-      operateurId: 'op-camille',
       explication: 'Autre fin contradictoire.',
       attendu: 'Autre fin contradictoire.',
     },
-  ])('should retain the continuation information $attendu', async ({ operateur, operateurId, explication, attendu }) => {
+  ])('should retain the continuation information $attendu', async ({ operateur, explication, attendu }) => {
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
-      dossier: { ...dossier, continuations: [{ ...dossier.ligne, operateur, operateurId, explication, nombrePointages: 3 }] },
+      dossier: { ...dossier, continuations: [{ ...dossier.ligne, operateur, explication, nombrePointages: 3 }] },
     };
 
     await whenRendering();
@@ -1645,6 +1695,8 @@ describe('Anomaly dossier page', () => {
             },
             activiteCreee: new ActiviteAnomalieId('nc-12'),
             remplace: new PointageAnomalieId('nc-12'),
+            operateurNom: 'Camille Martin',
+            posteLibelle: 'DMU 50',
             auteur: 'gestionnaire',
             enregistre: '2026-10-04T10:00:00Z',
             regularisation: true,
@@ -1678,6 +1730,8 @@ describe('Anomaly dossier page', () => {
               activiteVisee: '',
               instant: INSTANT_DEBUT,
             },
+            operateurNom: 'Camille Martin',
+            posteLibelle: 'DMU 50',
             auteur: 'camille',
             enregistre: INSTANT_ENREGISTREMENT,
             regularisation: false,
@@ -1740,6 +1794,8 @@ describe('Anomaly dossier page', () => {
               instant: INSTANT_DEBUT,
             },
             activiteCreee: new ActiviteAnomalieId('travail-8'),
+            operateurNom: 'Camille Martin',
+            posteLibelle: 'DMU 50',
             auteur: 'camille',
             enregistre: INSTANT_DEBUT,
             regularisation: false,
@@ -1879,6 +1935,9 @@ describe('Anomaly dossier page', () => {
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);
   };
+  const thenReceivedFactDoesNotContain = (pointage: string, expected: string): void => {
+    expect(receivedFact(pointage).textContent).not.toContain(expected);
+  };
   const thenReceivedFactTimeIs = (pointage: string, expected: string): void => {
     expect(receivedFactTime(pointage).textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
   };
@@ -1908,6 +1967,9 @@ describe('Anomaly dossier page', () => {
   };
   const thenHeadingContains = (expected: string): void => {
     expect((fixture.nativeElement as HTMLElement).querySelector('header')?.textContent).toContain(expected);
+  };
+  const thenHeadingDoesNotContain = (expected: string): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector('header')?.textContent).not.toContain(expected);
   };
   const thenTextDoesNotContain = (selector: string, expected: string): void => {
     expect(element(selector).textContent).not.toContain(expected);

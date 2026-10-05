@@ -88,14 +88,15 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     });
   });
 
-  it('should preserve raw operator and workstation identities when their references cannot be resolved', async () => {
+  it('should present neither name nor operator identity when the operator and workstation references cannot be resolved', async () => {
     const ligne = givenUnresolvedReferences();
 
     const lecture = port.list({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 2 });
     whenPageAnswers([ligne]);
     const page = await lecture;
 
-    expect(page.lignes[0]).toMatchObject({ operateur: '', operateurId: 'op-camille', poste: '', posteId: 'poste-dmu' });
+    expect(page.lignes[0]).toMatchObject({ operateur: '', poste: '', posteId: 'poste-dmu' });
+    expect(page.lignes[0]).not.toHaveProperty('operateurId');
   });
 
   it('should retain the journal of a cancelled anchor instead of opening another sequence', async () => {
@@ -118,12 +119,39 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
             poste: '',
             instant: '2026-09-14T17:00:00.123456789+02:00',
           },
+          operateurNom: '',
+          posteLibelle: '',
           annulation: { motif: 'Double pression confirmée', auteur: 'gestionnaire', instant: '2026-09-15T08:00:00Z' },
           auteur: 'camille',
           enregistre: '2026-09-15T07:00:00Z',
           regularisation: false,
         },
       ],
+    });
+  });
+
+  it('should carry the operator name and the workstation label of each journal fact beside the received identities', async () => {
+    const dossier = dossierAnnuleFixture();
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenCancelledDossierAnswers({
+      ...dossier,
+      suivi: {
+        ...dossier.suivi,
+        journal: dossier.suivi.journal.map(pointage => ({
+          ...pointage,
+          operateur: { id: 'op-camille', nom: 'Martin', prenom: 'Camille' },
+          posteId: 'poste-dmu',
+          poste: { id: 'poste-dmu', libelle: 'DMU 50' },
+        })),
+      },
+    });
+    const resultat = await lecture;
+
+    expect(resultat).toMatchObject({
+      kind: 'ANCRE_ANNULEE',
+      journal: [{ fait: { operateur: 'op-camille', poste: 'poste-dmu' }, operateurNom: 'Camille Martin', posteLibelle: 'DMU 50' }],
     });
   });
 
@@ -200,7 +228,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         enConflit: false,
         finAutomatique: true,
         cloture: false,
-        ligne: { adresse: { suivi: adresse.suivi, pointage: adresse.pointage }, nombrePointages: 1, operateurId: 'op-camille' },
+        ligne: { adresse: { suivi: adresse.suivi, pointage: adresse.pointage }, nombrePointages: 1 },
         activites: [
           {
             id: new ActiviteAnomalieId('travail-8'),
@@ -460,7 +488,6 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
           adresse,
           nombrePointages: 3,
           date: '2026-09-14T08:00:00.123456789+02:00',
-          operateurId: 'op-camille',
           posteId: 'poste-dmu',
         },
         activites: [
@@ -588,7 +615,6 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-corrigee') },
         nombrePointages: 2,
         operateur: '',
-        operateurId: 'op-camille',
         poste: '',
         posteId: 'poste-dmu',
         date: '2026-09-14T08:00:00.123456789+02:00',

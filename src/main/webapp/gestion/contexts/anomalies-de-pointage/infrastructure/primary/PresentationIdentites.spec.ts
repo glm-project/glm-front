@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { operateurOuIdentifiant } from './PresentationIdentites';
+import { operateurPresente, postePresente } from './PresentationIdentites';
 
 describe('Operator and workstation presentation', () => {
   it('should present the resolved operator name', () => {
-    expect(operateurOuIdentifiant({ operateur: 'Ada Lovelace', operateurId: 'op-1' })).toBe('Ada Lovelace');
+    expect(operateurPresente('Ada Lovelace')).toBe('Ada Lovelace');
   });
 
-  it('should fall back to the operator identity when the name is not resolved', () => {
-    expect(operateurOuIdentifiant({ operateur: '', operateurId: 'op-1' })).toBe('op-1');
+  it('should present an unresolved operator without any identity', () => {
+    expect(operateurPresente('')).toBe('Opérateur non résolu');
   });
 
-  it('should present nothing when neither the name nor the identity is known', () => {
-    expect(operateurOuIdentifiant({ operateur: '' })).toBe('');
+  it('should present the resolved workstation label', () => {
+    expect(postePresente('Fraiseuse 1', 'poste-1')).toBe('Fraiseuse 1');
+  });
+
+  it('should present an unresolved workstation without any identity', () => {
+    expect(postePresente('', 'poste-supprime')).toBe('Poste non résolu');
+  });
+
+  it.each([undefined, ''])('should present work clocked without a workstation as having none when the reference is %j', posteId => {
+    expect(postePresente('', posteId)).toBe('Sans poste');
   });
 });

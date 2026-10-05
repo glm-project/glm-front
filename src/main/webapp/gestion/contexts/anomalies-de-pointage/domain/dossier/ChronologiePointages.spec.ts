@@ -92,6 +92,8 @@ const pointageFixture = (id: string, instant: string): PointageAnomalie => ({
     poste: 'fraiseuse',
     instant,
   },
+  operateurNom: 'Camille Martin',
+  posteLibelle: 'Fraiseuse',
   auteur: 'Camille Martin',
   enregistre: '2026-09-15T10:00:00Z',
   regularisation: false,

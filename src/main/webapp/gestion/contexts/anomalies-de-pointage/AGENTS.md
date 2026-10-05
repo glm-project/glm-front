@@ -51,7 +51,11 @@ asynchrones et les doubles soumissions. Le primaire rend les faits et leur cible
 dans l'URL et utilise les surfaces de Gestion. Trois ports séparent lecture, aperçu et application.
 La composition normale de Gestion relie ces trois ports au même adapter HTTP et à `ApiClient`.
 Le serveur fournit états, intervalles, durées ISO, diagnostics, choix et continuations. Le primaire
-possède leurs libellés ; il conserve les identités brutes lorsque les fiches ne sont pas résolues.
+possède leurs libellés. Il nomme l'opérateur (« Prénom Nom ») et le poste (libellé) reçus avec la liste, l'en-tête, la
+chronologie, l'historique d'adresse obsolète et les continuations, sans jamais en afficher l'identifiant : une fiche non
+résolue s'affiche « Opérateur non résolu » ou « Poste non résolu », un pointage sans poste « Sans poste ». Le modèle
+garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de l'opérateur et du poste, qu'il envoie
+au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
 Le domaine garde chaque instant reçu en texte ISO ; le primaire l'affiche en heure locale par les formats
 et les pipes de `app/shared/date-format` : jour long (« jeudi 1 octobre à 09:41 »), année ajoutée quand elle diffère
 de celle de la page, secondes réservées à l'instant d'un fait pointé (« à 09:41:22 »), heure en gras puis jour long dans
