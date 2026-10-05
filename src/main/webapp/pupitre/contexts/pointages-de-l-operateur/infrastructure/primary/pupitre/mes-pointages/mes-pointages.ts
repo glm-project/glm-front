@@ -4,6 +4,7 @@ import { DemandeDePointages } from '../../../../domain/DemandeDePointages';
 import { JourDePointages } from '../../../../domain/JourDePointages';
 import { OperateurId } from '../../../../domain/OperateurId';
 import { PeriodeConsultable } from '../../../../domain/PeriodeConsultable';
+import { PointagesDeLaSemaine } from '../../../../domain/PointagesDeLaSemaine';
 import { PointagesDeLOperateurPort } from '../../../../domain/PointagesDeLOperateurPort';
 import { JourCalendaire } from '../../../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../../../domain/semaine/SemaineISO';
@@ -40,23 +41,26 @@ export class MesPointages {
     source: this.semaine,
     computation: () => undefined,
   });
-  protected readonly jourAffiche = computed<JourDePointages | undefined>(() => {
-    if (!this.pointages.hasValue()) return undefined;
-    const choisi = this.jourChoisi();
-    const semaine = this.pointages.value();
-    return choisi === undefined ? semaine.jourParDefaut(this.aujourdhui) : semaine.jourDu(choisi);
-  });
   protected readonly labels = LIBELLES_MES_POINTAGES;
 
   protected voir(semaine: SemaineISO): void {
     this.semaine.set(semaine);
   }
 
+  protected reessayer(): void {
+    this.pointages.reload();
+  }
+
   protected choisir(jour: JourDePointages): void {
     this.jourChoisi.set(jour.jour);
   }
 
-  protected estAffiche(jour: JourDePointages): boolean {
-    return this.jourAffiche()?.jour.estLeMeme(jour.jour) === true;
+  protected jourAfficheDans(semaine: PointagesDeLaSemaine): JourDePointages | undefined {
+    const choisi = this.jourChoisi();
+    return choisi === undefined ? semaine.jourParDefaut(this.aujourdhui) : semaine.jourDu(choisi);
+  }
+
+  protected estAffiche(jour: JourDePointages, semaine: PointagesDeLaSemaine): boolean {
+    return this.jourAfficheDans(semaine)?.jour.estLeMeme(jour.jour) === true;
   }
 }

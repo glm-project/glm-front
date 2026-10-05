@@ -254,11 +254,70 @@ describe('Mes pointages screen', () => {
     thenLinesAre([['1231', '', '07:00 → 14:50', '7 h 50']]);
   });
 
+  it('should tell the operator their pointages are being read', () => {
+    whenOpeningMyPointagesWithoutWaiting();
+
+    thenVisible('chargement', true);
+    thenVisible('total-semaine', false);
+  });
+
+  it('should show no figure and offer to retry when the week cannot be read', async () => {
+    givenTheServerIsUnreachable();
+
+    await whenShowingMyPointages();
+
+    thenTextOf('echec', ['Impossible de charger vos pointages', 'Vos pointages ne sont pas perdus.']);
+    thenVisible('total-semaine', false);
+    thenVisible('jour-affiche', false);
+  });
+
+  it('should read the week again on retry', async () => {
+    givenTheServerIsUnreachable();
+    givenTheCurrentWeek(semaineEnCoursFixture());
+    await whenShowingMyPointages();
+    givenTheServerIsBack();
+
+    await whenGoingTo('reessayer');
+
+    thenTheRequestedWeeksAre([
+      new DemandeDePointages(new OperateurId('jean'), SEMAINE_EN_COURS),
+      new DemandeDePointages(new OperateurId('jean'), SEMAINE_EN_COURS),
+    ]);
+    thenVisible('echec', false);
+    thenTextOf('total-semaine', ['10 h 58']);
+  });
+
+  it('should tell that a past week holds no pointage', async () => {
+    await whenShowingMyPointages();
+
+    await whenGoingTo('semaine-precedente');
+
+    thenTextOf('aucun-pointage', ['Aucun pointage cette semaine.']);
+  });
+
+  it('should tell that today holds no pointage yet', async () => {
+    await whenShowingMyPointages();
+
+    thenTextOf('jour-titre', ['Aujourd’hui — jeudi 8 octobre']);
+    thenTextOf('aucun-pointage-du-jour', ['Aucun pointage ce jour.']);
+  });
+
+  const givenTheServerIsUnreachable = (): void => {
+    port.lectureFailure = new Error('Serveur injoignable');
+  };
+  const givenTheServerIsBack = (): void => {
+    port.lectureFailure = undefined;
+  };
   const givenTheWeek = (semaine: SemaineISO, pointages: ReturnType<typeof semaineFixture>): void => {
     port.seed(new DemandeDePointages(new OperateurId('jean'), semaine), pointages);
   };
   const givenTheCurrentWeek = (pointages: ReturnType<typeof semaineFixture>): void => {
     port.seed(new DemandeDePointages(new OperateurId('jean'), SEMAINE_EN_COURS), pointages);
+  };
+  const whenOpeningMyPointagesWithoutWaiting = (): void => {
+    fixture = TestBed.createComponent(MesPointages);
+    fixture.componentRef.setInput('operateur', 'jean');
+    fixture.detectChanges();
   };
   const whenShowingMyPointages = async (): Promise<void> => {
     fixture = TestBed.createComponent(MesPointages);
@@ -320,6 +379,9 @@ describe('Mes pointages screen', () => {
   const thenLinesAre = (expected: readonly (readonly string[])[]): void => {
     const lignes = Array.from(element('lignes').children);
     expect(lignes.map(ligne => Array.from(ligne.children).map(colonne => normalized(colonne.textContent)))).toEqual(expected);
+  };
+  const thenVisible = (selector: string, visible: boolean): void => {
+    expect(root().querySelector(dataSelector(selector)) !== null).toBe(visible);
   };
   const thenNavigationIs = (expected: { precedente: boolean; suivante: boolean; aujourdhui: boolean }): void => {
     expect({

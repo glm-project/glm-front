@@ -58,3 +58,7 @@
   background: var(--color-sunken);
   color: var(--color-ink-muted);
 }
+
+.etat {
+  grid-column: 1;
+}

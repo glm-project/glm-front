@@ -1,6 +1,31 @@
 <main class="mes-pointages min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4">
   <h1 class="sr-only">{{ labels.titre }}</h1>
-  @if (jourAffiche(); as jour) {
+  @if (pointages.isLoading()) {
+  <p
+    class="etat rounded-surface border border-border bg-surface px-6 py-5 text-body text-ink-muted"
+    role="status"
+    data-selector="chargement"
+  >
+    {{ labels.chargement }}
+  </p>
+  } @else if (pointages.error()) {
+  <section
+    class="etat flex flex-col items-start gap-4 rounded-surface border border-border bg-surface px-6 py-5"
+    role="status"
+    data-selector="echec"
+  >
+    <p class="text-title text-ink">{{ labels.echec }}</p>
+    <p class="text-body text-ink-muted">{{ labels.echecExplication }}</p>
+    <button
+      type="button"
+      class="min-h-touch-lg rounded-control bg-accent px-8 text-section text-on-accent"
+      (click)="reessayer()"
+      data-selector="reessayer"
+    >
+      {{ labels.reessayer }}
+    </button>
+  </section>
+  } @else if (pointages.hasValue()) { @if (jourAfficheDans(pointages.value()); as jour) {
   <section class="jour rounded-surface border border-border bg-surface px-6 py-5" aria-labelledby="jour-titre" data-selector="jour-affiche">
     <h2 id="jour-titre" class="text-label uppercase text-ink-muted" data-selector="jour-titre">
       {{ labels.titreDuJour(jour.jour, aujourdhui) }}
@@ -11,6 +36,8 @@
     </p>
     @for (explication of labels.explications(jour); track explication) {
     <p class="text-body-sm text-warn" data-selector="explication">{{ explication }}</p>
+    } @if (jour.lignes.length === 0) {
+    <p class="text-body text-ink-muted" data-selector="aucun-pointage-du-jour">{{ labels.aucunPointageDuJour }}</p>
     }
     <ul class="lignes border-t border-border" data-selector="lignes">
       @for (ligne of jour.lignes; track $index) {
@@ -33,7 +60,11 @@
       }
     </ul>
   </section>
-  }
+  } @else {
+  <p class="etat rounded-surface border border-border bg-surface px-6 py-5 text-body text-ink-muted" data-selector="aucun-pointage">
+    {{ labels.aucunPointage }}
+  </p>
+  } }
   <section
     class="semaine rounded-surface border border-border bg-surface px-6 py-5"
     aria-labelledby="semaine-titre"
@@ -83,8 +114,8 @@
         <button
           type="button"
           class="jour-pointe flex min-h-touch-lg w-full items-center justify-between gap-3 rounded-control border-2 bg-surface px-4 text-body text-ink"
-          [class.jour-pointe--choisi]="estAffiche(jourPointe)"
-          [attr.aria-pressed]="estAffiche(jourPointe)"
+          [class.jour-pointe--choisi]="estAffiche(jourPointe, lue)"
+          [attr.aria-pressed]="estAffiche(jourPointe, lue)"
           (click)="choisir(jourPointe)"
           [attr.data-selector]="'jour-' + jourPointe.jour.value"
         >
