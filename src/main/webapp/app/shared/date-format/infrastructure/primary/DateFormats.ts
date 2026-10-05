@@ -14,11 +14,26 @@ const TIME = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit
 
 const NUMERIC_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { day: '2-digit', month: '2-digit' });
 
+const SHORT_DATE_TIME = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: HOUR_CYCLE,
+});
+
+const SHORT_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short' });
+
 export const formatInstantNumericDateTime = (instant: Date): string => NUMERIC_DATE_TIME.format(instant);
 
 export const formatInstantTime = (instant: Date): string => TIME.format(instant);
 
 export const formatInstantNumericDayMonth = (instant: Date): string => NUMERIC_DAY_MONTH.format(instant);
+
+export const formatInstantShortDateTime = (instant: Date): string => SHORT_DATE_TIME.format(instant);
+
+export const formatInstantShortDayMonth = (instant: Date): string => SHORT_DAY_MONTH.format(instant);
 
 const twoDigits = (value: number): string => String(value).padStart(2, '0');
 

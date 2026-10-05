@@ -1,4 +1,11 @@
-import { formatInstantNumericDateTime, formatInstantNumericDayMonth, formatInstantTime, localCalendarDay } from './DateFormats';
+import {
+  formatInstantNumericDateTime,
+  formatInstantNumericDayMonth,
+  formatInstantShortDateTime,
+  formatInstantShortDayMonth,
+  formatInstantTime,
+  localCalendarDay,
+} from './DateFormats';
 
 describe('DateFormats', () => {
   it('should format an instant as day, month, year and time in local time', () => {
@@ -63,5 +70,37 @@ describe('DateFormats', () => {
     const day = localCalendarDay(date);
 
     expect(day).toBe('2026-09-04');
+  });
+
+  it('should format an instant as day, abbreviated month, year and time in local time', () => {
+    const instant = new Date(2026, 9, 5, 8, 2);
+
+    const text = formatInstantShortDateTime(instant);
+
+    expect(text).toBe('5 oct. 2026, 08:02');
+  });
+
+  it('should keep the local day of an instant whose UTC day is the next one in a short date and time', () => {
+    const instant = new Date(Date.UTC(2026, 9, 6, 1, 30));
+
+    const text = formatInstantShortDateTime(instant);
+
+    expect(text).toBe('5 oct. 2026, 22:30');
+  });
+
+  it('should format an instant as its local day and abbreviated month', () => {
+    const instant = new Date(2026, 9, 5, 22, 30);
+
+    const text = formatInstantShortDayMonth(instant);
+
+    expect(text).toBe('5 oct.');
+  });
+
+  it('should keep the local day and abbreviated month of an instant whose UTC day is the next one', () => {
+    const instant = new Date(Date.UTC(2026, 9, 6, 1, 30));
+
+    const text = formatInstantShortDayMonth(instant);
+
+    expect(text).toBe('5 oct.');
   });
 });

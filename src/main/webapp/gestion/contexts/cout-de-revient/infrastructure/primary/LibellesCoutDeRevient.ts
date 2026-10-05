@@ -1,3 +1,9 @@
+import {
+  formatInstantShortDateTime,
+  formatInstantShortDayMonth,
+  formatInstantTime,
+  localCalendarDay,
+} from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { TypeDElementChiffre } from '../../domain/element/TypeDElementChiffre';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
@@ -23,19 +29,7 @@ const TYPES: Record<TypeDElementChiffre, string> = {
 
 const EUROS = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
-const DATE_HEURE = new Intl.DateTimeFormat('fr-FR', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
 const SANS_POSTE = 'Sans poste';
-
-const JOUR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
-
-const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 const DECIMALES = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -55,24 +49,24 @@ const formatMontant = (total: TotalDeMontant): string => {
   return lecture.complete ? formatMontantCertain(lecture.valeur) : 'Incomplet';
 };
 
-const memeJour = (debut: InstantDeTravail, fin: InstantDeTravail): boolean => debut.value.toDateString() === fin.value.toDateString();
+const memeJour = (debut: InstantDeTravail, fin: InstantDeTravail): boolean => localCalendarDay(debut.value) === localCalendarDay(fin.value);
 
-const borne = (instant: InstantDeTravail): string => `${JOUR.format(instant.value)} ${HEURE.format(instant.value)}`;
+const borne = (instant: InstantDeTravail): string => `${formatInstantShortDayMonth(instant.value)} ${formatInstantTime(instant.value)}`;
 
 const plageDuPointage = (pointage: PointageDeCout): string => {
   const debut = pointage.periode.debut;
   const fin = pointage.periode.fin;
   if (fin === undefined) {
-    return `${JOUR.format(debut.value)} · ${HEURE.format(debut.value)} → fin à résoudre`;
+    return `${formatInstantShortDayMonth(debut.value)} · ${formatInstantTime(debut.value)} → fin à résoudre`;
   }
   return memeJour(debut, fin)
-    ? `${JOUR.format(debut.value)} · ${HEURE.format(debut.value)} → ${HEURE.format(fin.value)}`
+    ? `${formatInstantShortDayMonth(debut.value)} · ${formatInstantTime(debut.value)} → ${formatInstantTime(fin.value)}`
     : `${borne(debut)} → ${borne(fin)}`;
 };
 
 const plageDePart = (part: PartDePointage): string =>
   memeJour(part.debut, part.fin)
-    ? `${HEURE.format(part.debut.value)} → ${HEURE.format(part.fin.value)}`
+    ? `${formatInstantTime(part.debut.value)} → ${formatInstantTime(part.fin.value)}`
     : `${borne(part.debut)} → ${borne(part.fin)}`;
 
 const nomDuPoste = (poste: PosteCite | undefined): string => (poste === undefined ? SANS_POSTE : (poste.libelle ?? 'Poste inconnu'));
@@ -188,7 +182,7 @@ export const LIBELLES_COUT_DE_REVIENT = {
 
   types: TYPES,
   sansPoste: SANS_POSTE,
-  evaluation: (instant: InstantDeTravail): string => `Rapport évalué le ${DATE_HEURE.format(instant.value)}`,
+  evaluation: (instant: InstantDeTravail): string => `Rapport évalué le ${formatInstantShortDateTime(instant.value)}`,
   activitesExclues: (activites: ActivitesEnCoursExclues): string =>
     activites.nombre === 1
       ? '1 activité en cours exclue du temps, du coût et du partage humain.'
