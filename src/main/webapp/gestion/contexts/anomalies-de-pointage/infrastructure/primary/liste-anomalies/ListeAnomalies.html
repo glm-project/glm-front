@@ -19,18 +19,41 @@
 
   <form
     class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
-    (submit)="filter($event, operateur.value, element.value)"
+    (submit)="filter($event, element.value)"
     data-selector="anomalies-filtres"
   >
-    <label class="grid gap-2 text-label">
-      {{ libelles.operateur }}
-      <input
-        #operateur
-        class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
-        [value]="filtre().operateur"
-        data-selector="anomalies-filtre-operateur"
+    <div class="grid min-w-0 content-start gap-2">
+      <label id="anomalies-operateur-label" class="text-label" for="anomalies-operateur">{{ libelles.operateur }}</label>
+      @if (referentiel.isLoading()) {
+      <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-referentiel-chargement">
+        {{ libelles.chargementOperateurs }}
+      </p>
+      } @else {
+      <glm-selecteur-operateur-anomalie
+        triggerId="anomalies-operateur"
+        labelId="anomalies-operateur-label"
+        selector="anomalies-filtre-operateur"
+        [avecTous]="true"
+        [operateurs]="operateurs()"
+        [courant]="operateurChoisi()"
+        [disabled]="referentiel.error() !== undefined"
+        (choisi)="choisirOperateur($event)"
+        (tousChoisis)="operateurChoisi.set('')"
       />
-    </label>
+      @if (referentiel.error()) {
+      <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-referentiel-erreur">
+        <p>{{ libelles.operateursIndisponibles }}</p>
+        <button
+          type="button"
+          class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
+          data-selector="anomalies-referentiel-reessayer"
+          (click)="referentiel.reload()"
+        >
+          {{ libelles.reessayer }}
+        </button>
+      </div>
+      } }
+    </div>
     <label class="grid gap-2 text-label">
       {{ libelles.element }}
       <input

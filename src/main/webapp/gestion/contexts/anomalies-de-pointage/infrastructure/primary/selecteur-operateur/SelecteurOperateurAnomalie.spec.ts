@@ -15,18 +15,22 @@ interface InputsFixture {
   readonly courant?: string;
   readonly disabled?: boolean;
   readonly describedBy?: string;
+  readonly avecTous?: boolean;
   readonly operateurs?: readonly OperateurAnomalie[];
 }
 
 describe('Anomaly operator selector', () => {
   let fixture: ComponentFixture<SelecteurOperateurAnomalie>;
   let choisis: OperateurAnomalieId[];
+  let tousChoisis: number;
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [{ provide: ComponentFixtureAutoDetect, useValue: true }] });
     fixture = TestBed.createComponent(SelecteurOperateurAnomalie);
     choisis = [];
+    tousChoisis = 0;
     fixture.componentInstance.choisi.subscribe(id => choisis.push(id));
+    fixture.componentInstance.tousChoisis.subscribe(() => (tousChoisis += 1));
   });
 
   afterEach(() => {
@@ -137,6 +141,78 @@ describe('Anomaly operator selector', () => {
     await whenSearching('martin');
 
     expect(optionTexts()).toEqual(['Camille Martin · 007']);
+  });
+
+  it('should not offer an entry for every operator unless asked to', async () => {
+    await whenRendering({ courant: '' });
+
+    await whenOpening();
+
+    expect(optionTexts()).not.toContain('Tous les opérateurs');
+  });
+
+  it('should say that every operator is concerned when asked to offer that entry and no operator is current', async () => {
+    await whenRendering({ courant: '', avecTous: true });
+
+    expect(textOf('anomalie-operateur')).toBe('Tous les opérateurs');
+  });
+
+  it('should offer the entry for every operator first and mark it as current when no operator is current', async () => {
+    await whenRendering({ courant: '', avecTous: true });
+
+    await whenOpening();
+
+    expect(optionTexts()).toEqual(['Tous les opérateurs', 'Jean Dupont · 012', 'Zoé Évrard', 'Camille Martin · 007']);
+    expect(currentOptionTexts()).toEqual(['Tous les opérateurs']);
+  });
+
+  it('should name the current operator and not mark the entry for every operator when one is current', async () => {
+    await whenRendering({ courant: 'op-martin', avecTous: true });
+
+    await whenOpening();
+
+    expect(textOf('anomalie-operateur')).toBe('Camille Martin · 007');
+    expect(currentOptionTexts()).toEqual(['Camille Martin · 007']);
+  });
+
+  it('should announce that every operator is chosen, close and return focus to the trigger when the manager picks that entry', async () => {
+    await whenRendering({ courant: 'op-martin', avecTous: true });
+    await whenOpening();
+
+    await whenChoosingTheFirstOption();
+
+    expect(tousChoisis).toBe(1);
+    expect(choisis).toEqual([]);
+    expect(panelIsPresent()).toBe(false);
+    expect(document.activeElement).toBe(element('anomalie-operateur'));
+  });
+
+  it('should announce nothing when the manager picks the entry for every operator while it is already current', async () => {
+    await whenRendering({ courant: '', avecTous: true });
+    await whenOpening();
+
+    await whenChoosingTheFirstOption();
+
+    expect(tousChoisis).toBe(0);
+    expect(panelIsPresent()).toBe(false);
+  });
+
+  it('should leave the entry for every operator out of a search', async () => {
+    await whenRendering({ courant: '', avecTous: true });
+    await whenOpening();
+
+    await whenSearching('martin');
+
+    expect(optionTexts()).toEqual(['Camille Martin · 007']);
+  });
+
+  it('should keep an unresolved current reference right after the entry for every operator', async () => {
+    await whenRendering({ courant: 'op-supprime', avecTous: true });
+    await whenOpening();
+
+    expect(textOf('anomalie-operateur')).toBe('Opérateur non résolu (référence actuelle)');
+    expect(optionTexts().slice(0, 2)).toEqual(['Tous les opérateurs', 'Opérateur non résolu (référence actuelle)']);
+    expect(currentOptionTexts()).toEqual(['Opérateur non résolu (référence actuelle)']);
   });
 
   it('should not open while disabled', async () => {

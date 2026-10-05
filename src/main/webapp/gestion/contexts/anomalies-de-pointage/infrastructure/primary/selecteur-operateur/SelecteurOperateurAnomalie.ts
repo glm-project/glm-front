@@ -21,7 +21,9 @@ export class SelecteurOperateurAnomalie {
   readonly triggerId = input.required<string>();
   readonly labelId = input.required<string>();
   readonly selector = input('selecteur-operateur-anomalie');
+  readonly avecTous = input(false);
   readonly choisi = output<OperateurAnomalieId>();
+  readonly tousChoisis = output();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly nomme = operateurNomme;
   protected readonly saisie = signal('');
@@ -30,12 +32,19 @@ export class SelecteurOperateurAnomalie {
   protected readonly identite = computed(() => {
     const operateur = this.operateurCourant();
     if (operateur !== undefined) return operateurNomme(operateur);
-    return this.nonResolu() ? this.libelles.operateurNonResoluActuel : this.libelles.choisirOperateur;
+    if (this.nonResolu()) return this.libelles.operateurNonResoluActuel;
+    return this.avecTous() ? this.libelles.tousLesOperateurs : this.libelles.choisirOperateur;
   });
+  protected readonly tousEstCourant = computed(() => this.courant() === '');
   protected readonly propositions = computed(() => {
     const recherche = normalizeSearch(this.saisie());
     return this.operateurs().filter(operateur => normalizeSearch(`${operateur.nom} ${operateur.code ?? ''}`).includes(recherche));
   });
+
+  protected chooseAll(picker: SearchPicker): void {
+    picker.close();
+    if (!this.tousEstCourant()) this.tousChoisis.emit();
+  }
 
   protected choose(id: OperateurAnomalieId, picker: SearchPicker): void {
     picker.close();

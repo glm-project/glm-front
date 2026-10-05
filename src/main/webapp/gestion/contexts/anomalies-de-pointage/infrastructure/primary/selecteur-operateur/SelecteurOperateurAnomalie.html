@@ -22,7 +22,19 @@
   </p>
   }
   <ul>
-    @if (nonResolu() && saisie() === '') {
+    @if (avecTous() && saisie() === '') {
+    <li>
+      <button
+        type="button"
+        class="min-h-touch text-body text-ink"
+        [attr.aria-current]="tousEstCourant() ? 'true' : null"
+        [attr.data-selector]="selector() + '-proposition'"
+        (click)="chooseAll(picker)"
+      >
+        <span class="nom">{{ libelles.tousLesOperateurs }}</span>
+      </button>
+    </li>
+    } @if (nonResolu() && saisie() === '') {
     <li>
       <button
         type="button"

@@ -7,6 +7,7 @@ import {
   posteFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from './FinAutomatiqueHttp.fixture';
+import { interceptReferentiel } from './ReferentielHttp.fixture';
 
 export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
   nature: 'FIN_AUTOMATIQUE',
@@ -26,3 +27,15 @@ export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiq
 export const pageFinsAutomatiquesFixture = (
   lignes: components['schemas']['RestFinAutomatiqueEnListe'][] = [finAutomatiqueLigneFixture],
 ): components['schemas']['RestPageDesAnomalies'] => ({ lignes, total: lignes.length, complete: true, page: 0, size: 5 });
+
+export const autreOperateurFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000009';
+
+export const givenTheReferentielFinsAutomatiques = (): void => {
+  interceptReferentiel(
+    [
+      { id: operateurFinAutomatiqueFixture, prenom: 'Jean', nom: 'Dupont', natures: ['fraisage'], postes: [] },
+      { id: autreOperateurFinAutomatiqueFixture, identifiant: '012', prenom: 'Alex', nom: 'Durand', natures: ['tournage'], postes: [] },
+    ],
+    [],
+  );
+};

@@ -43,6 +43,11 @@ conserve les filtres et revient à `page=1` ; la pagination est propre à chaque
 ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début
 et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
 sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
+Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entrée « Tous les opérateurs » par
+`avecTous`), alimenté par `referentiel()` que la liste lit pour tout lecteur, consultant compris, à chaque ouverture, sans cache.
+L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que le
+référentiel ne contient pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Un référentiel indisponible
+affiche « Liste des opérateurs indisponible » et « Réessayer », désactive le filtre sans toucher à la liste.
 Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 

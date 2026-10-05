@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, LectureDossier, LigneConflit, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
+import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
@@ -16,9 +17,30 @@ import { ListeAnomalies } from './ListeAnomalies';
 class AnomaliesReadFixture extends AnomaliesReadPort {
   page: PageAnomalies = { nature: 'CONFLIT', lignes: [], total: 0, complete: true };
   failure: Error | undefined;
+  referentielLu = new ReferentielAnomalies(
+    [
+      { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007', postesHabilites: [] },
+      { id: new OperateurAnomalieId('op-jean'), nom: 'Jean Dupont', postesHabilites: [] },
+    ],
+    [],
+  );
+  referentielFailure: Error | undefined;
+  referentielLectures = 0;
   readonly demandes: FiltreAnomalies[] = [];
   private notifyArrival = (): void => undefined;
   private heldReading: Promise<PageAnomalies> | undefined;
+  private heldReferentiel: Promise<ReferentielAnomalies> | undefined;
+
+  holdReferentiel(): () => void {
+    let release = (): void => undefined;
+    this.heldReferentiel = new Promise(resolve => {
+      release = () => {
+        resolve(this.referentielLu);
+        this.heldReferentiel = undefined;
+      };
+    });
+    return release;
+  }
 
   override async list(filtre: FiltreAnomalies): Promise<PageAnomalies> {
     const held = this.heldReading;
@@ -53,7 +75,9 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
   }
 
   override referentiel(): Promise<ReferentielAnomalies> {
-    return Promise.resolve(new ReferentielAnomalies([], []));
+    this.referentielLectures += 1;
+    if (this.heldReferentiel !== undefined) return this.heldReferentiel;
+    return this.referentielFailure === undefined ? Promise.resolve(this.referentielLu) : Promise.reject(this.referentielFailure);
   }
 }
 
@@ -108,6 +132,7 @@ describe('Anomalies list', () => {
   let routeFixture: RouteFixture;
   let routerFixture: RouterFixture;
   let errorFixture: ErrorHandlerFixture;
+  let releaseReferentiel: () => void;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -218,16 +243,233 @@ describe('Anomalies list', () => {
   });
 
   it('should distinguish no matching conflicts from an empty global list', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', element: 'M-042', page: '2' });
 
     await whenTheListIsRendered();
 
     expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
     expect(present('anomalies-vide')).toBe(false);
-    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 2 }]);
-    expect(inputValue('anomalies-filtre-operateur')).toBe('Camille');
+    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: 'M-042', page: 2 }]);
+    expect(textOf('anomalies-filtre-operateur')).toBe('Camille Martin · 007');
     expect(inputValue('anomalies-filtre-element')).toBe('M-042');
   });
+
+  it('should read the referentiel for any reader to name the operator filter', async () => {
+    await whenTheListIsRendered();
+
+    expect(portFixture.referentielLectures).toBe(1);
+  });
+
+  it('should offer every operator by name, after an entry for all of them', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
+    await whenTheListIsRendered();
+
+    await whenOpeningTheOperatorFilter();
+
+    expect(propositionTexts()).toEqual(['Tous les opérateurs', 'Camille Martin · 007', 'Jean Dupont']);
+    expect(textOf('anomalies-filtre-operateur')).toBe('Tous les opérateurs');
+  });
+
+  it('should never show the identifier of an operator among the proposals', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
+    await whenTheListIsRendered();
+
+    await whenOpeningTheOperatorFilter();
+
+    thenNoIdentifierIsShown('op-camille');
+  });
+
+  it('should name the operator held by the address and never show its identifier', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-filtre-operateur')).toBe('Camille Martin · 007');
+    thenNoIdentifierIsShown('op-camille');
+  });
+
+  it('should hold the identifier of the chosen operator in the address once the filters are applied', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '3' });
+    await whenTheListIsRendered();
+
+    await whenChoosingTheOperator('Jean Dupont');
+    await whenFiltering('');
+
+    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: 'op-jean', element: '', page: 1 }]);
+  });
+
+  it('should name the chosen operator before the filters are applied', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    await whenTheListIsRendered();
+
+    await whenChoosingTheOperator('Jean Dupont');
+
+    expect(textOf('anomalies-filtre-operateur')).toBe('Jean Dupont');
+    expect(routerFixture.navigations).toEqual([]);
+  });
+
+  it('should drop the operator from the address when the manager chooses all the operators', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
+    await whenTheListIsRendered();
+
+    await whenChoosingTheOperator('Tous les opérateurs');
+    await whenFiltering('');
+
+    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
+  });
+
+  it('should keep the operator held by the address when the filters are applied without choosing another', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    await whenTheListIsRendered();
+
+    await whenFiltering('M-042');
+
+    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: 'M-042', page: 1 }]);
+  });
+
+  it('should name an operator of the address that the referentiel does not contain as unresolved, without its identifier', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-filtre-operateur')).toBe('Opérateur non résolu (référence actuelle)');
+    thenNoIdentifierIsShown('op-supprime');
+  });
+
+  it('should still list with an operator of the address that the referentiel does not contain', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
+
+    await whenTheListIsRendered();
+
+    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'op-supprime', element: '', page: 1 }]);
+  });
+
+  it('should keep an operator of the address that the referentiel does not contain when the filters are applied', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
+    await whenTheListIsRendered();
+
+    await whenFiltering('M-042');
+
+    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-supprime', element: 'M-042', page: 1 }]);
+  });
+
+  it('should follow the address when the operator it holds changes', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    await whenTheListIsRendered();
+
+    await whenTheAddressBecomes({ nature: 'CONFLIT', operateur: 'op-jean' });
+
+    expect(textOf('anomalies-filtre-operateur')).toBe('Jean Dupont');
+  });
+
+  it('should say that the operators are loading instead of offering a filter that could not name them', async () => {
+    givenTheReferentielIsPending();
+
+    await whenTheReferentielIsRequested();
+
+    expect(textOf('anomalies-referentiel-chargement')).toBe('Chargement des opérateurs…');
+    expect(present('anomalies-filtre-operateur')).toBe(false);
+  });
+
+  it('should offer the operator filter once the referentiel is read', async () => {
+    givenTheReferentielIsPending();
+    await whenTheReferentielIsRequested();
+
+    await whenTheReferentielArrives();
+
+    expect(present('anomalies-referentiel-chargement')).toBe(false);
+    expect(present('anomalies-filtre-operateur')).toBe(true);
+  });
+
+  it('should tell the manager that the operators are unavailable, keeping the operator filter disabled', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenTheReferentielIsUnavailable();
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-referentiel-erreur')).toContain('Liste des opérateurs indisponible');
+    expect(button('anomalies-filtre-operateur').disabled).toBe(true);
+  });
+
+  it('should keep the list usable when the referentiel is unavailable', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenTheReferentielIsUnavailable();
+    givenAConflict();
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(present('anomalies-erreur')).toBe(false);
+    expect(button('anomalies-filtrer').disabled).toBe(false);
+  });
+
+  it('should keep the operator held by the address when the filters are applied while the referentiel is unavailable', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenTheReferentielIsUnavailable();
+    await whenTheListIsRendered();
+
+    await whenFiltering('M-042');
+
+    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: 'M-042', page: 1 }]);
+  });
+
+  it('should read the referentiel again and enable the operator filter when the manager retries', async () => {
+    givenTheReferentielIsUnavailable();
+    await whenTheListIsRendered();
+
+    await whenTheReferentielRecovers();
+
+    expect(present('anomalies-referentiel-erreur')).toBe(false);
+    expect(button('anomalies-filtre-operateur').disabled).toBe(false);
+    expect(portFixture.referentielLectures).toBe(2);
+  });
+
+  it('should not read the list again when the referentiel is retried', async () => {
+    givenTheReferentielIsUnavailable();
+    await whenTheListIsRendered();
+
+    await whenTheReferentielRecovers();
+
+    expect(portFixture.demandes).toHaveLength(1);
+  });
+
+  const givenTheReferentielIsUnavailable = (): void => {
+    portFixture.referentielFailure = new Error('Référentiel indisponible');
+  };
+
+  const givenTheReferentielIsPending = (): void => {
+    releaseReferentiel = portFixture.holdReferentiel();
+  };
+
+  const givenAConflict = (): void => {
+    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
+  };
+
+  const whenTheReferentielIsRequested = async (): Promise<void> => {
+    componentFixture = TestBed.createComponent(ListeAnomalies);
+    componentFixture.detectChanges();
+    await Promise.resolve();
+  };
+
+  const whenTheReferentielArrives = async (): Promise<void> => {
+    releaseReferentiel();
+    await componentFixture.whenStable();
+  };
+
+  const whenTheReferentielRecovers = async (): Promise<void> => {
+    portFixture.referentielFailure = undefined;
+    requiredElement('anomalies-referentiel-reessayer').click();
+    await componentFixture.whenStable();
+  };
+
+  const whenTheAddressBecomes = async (params: Record<string, string>): Promise<void> => {
+    givenAnAddress(params);
+    await componentFixture.whenStable();
+  };
+
+  const thenNoIdentifierIsShown = (identifier: string): void => {
+    expect(document.body.textContent).not.toContain(identifier);
+  };
 
   const givenAnAddress = (params: Record<string, string>): void => {
     routeFixture.queryParamMap.next(convertToParamMap(params));
@@ -237,9 +479,10 @@ describe('Anomalies list', () => {
     givenAnAddress({ nature: 'CONFLIT', page: '2' });
     await whenTheListIsRendered();
 
-    await whenFiltering(' Camille ', ' M-042 ');
+    await whenChoosingTheOperator('Camille Martin · 007');
+    await whenFiltering(' M-042 ');
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: 'M-042', page: 1 }]);
   });
 
   it('should explain an acquisition failure without showing an empty list', async () => {
@@ -254,7 +497,7 @@ describe('Anomalies list', () => {
   });
 
   it('should reacquire the current filters when the operator retries a failed read', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
     portFixture.failure = new Error('Acquisition indisponible');
     await whenTheListIsRendered();
 
@@ -263,8 +506,8 @@ describe('Anomalies list', () => {
     expect(present('anomalies-erreur')).toBe(false);
     expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
     expect(portFixture.demandes).toEqual([
-      { nature: 'CONFLIT', operateur: 'Camille', element: '', page: 2 },
-      { nature: 'CONFLIT', operateur: 'Camille', element: '', page: 2 },
+      { nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 2 },
+      { nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 2 },
     ]);
   });
 
@@ -280,7 +523,7 @@ describe('Anomalies list', () => {
   });
 
   it('should show the second and last acquired page with only the previous page enabled', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
     portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 6, complete: true };
 
     await whenTheListIsRendered();
@@ -327,7 +570,7 @@ describe('Anomalies list', () => {
     routerFixture.navigationResult = false;
     await whenTheListIsRendered();
 
-    await whenFiltering('Autre opérateur', 'M-042');
+    await whenFiltering('M-042');
 
     expect(textOf('anomalies-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
@@ -341,7 +584,7 @@ describe('Anomalies list', () => {
     routerFixture.navigationFailure = failure;
     await whenTheListIsRendered();
 
-    await whenFiltering('Autre opérateur', 'M-042');
+    await whenFiltering('M-042');
 
     expect(textOf('anomalies-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
@@ -421,9 +664,10 @@ describe('Anomalies list', () => {
     givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '2' });
     await whenTheListIsRendered();
 
-    await whenFiltering('Camille', 'OF');
+    await whenChoosingTheOperator('Jean Dupont');
+    await whenFiltering('OF');
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: 'op-jean', element: 'OF', page: 1 }]);
   });
 
   it('should show an automatic end with its element, operator, workstation and the received start and automatic end', async () => {
@@ -488,7 +732,7 @@ describe('Anomalies list', () => {
   });
 
   it('should explain that no automatic end matches the filters', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille' });
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', operateur: 'op-camille' });
 
     await whenTheListIsRendered();
 
@@ -552,8 +796,21 @@ describe('Anomalies list', () => {
     await componentFixture.whenStable();
   };
 
-  const whenFiltering = async (operateur: string, element: string): Promise<void> => {
-    input('anomalies-filtre-operateur').value = operateur;
+  const whenChoosingTheOperator = async (libelle: string): Promise<void> => {
+    requiredElement('anomalies-filtre-operateur').click();
+    await componentFixture.whenStable();
+    const proposition = propositions().find(candidate => candidate.textContent.trim() === libelle);
+    if (proposition === undefined) throw new Error(`Missing operator proposition ${libelle}`);
+    proposition.click();
+    await componentFixture.whenStable();
+  };
+
+  const whenOpeningTheOperatorFilter = async (): Promise<void> => {
+    requiredElement('anomalies-filtre-operateur').click();
+    await componentFixture.whenStable();
+  };
+
+  const whenFiltering = async (element: string): Promise<void> => {
     input('anomalies-filtre-element').value = element;
     requiredElement('anomalies-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await componentFixture.whenStable();
@@ -565,6 +822,10 @@ describe('Anomalies list', () => {
     await componentFixture.whenStable();
   };
 
+  const propositions = (): HTMLElement[] => [
+    ...document.querySelectorAll<HTMLElement>(dataSelector('anomalies-filtre-operateur-proposition')),
+  ];
+  const propositionTexts = (): string[] => propositions().map(proposition => proposition.textContent.trim());
   const root = (): HTMLElement => componentFixture.nativeElement as HTMLElement;
   const requiredElement = (selector: string): HTMLElement => {
     const element = root().querySelector<HTMLElement>(dataSelector(selector));

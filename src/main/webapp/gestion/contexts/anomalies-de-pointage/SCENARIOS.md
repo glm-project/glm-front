@@ -39,6 +39,17 @@ Chaque onglet a son message de chargement, son message vide, ses erreurs et sa p
 rejette la lecture. Une fin automatique montre son début et son échéance reçus, sans calcul, et ouvre le
 dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, aux filtres et à la page d'origine.
 
+Le filtre « Opérateur » se choisit par son nom, dans le même sélecteur que le formulaire du dossier (recherche sans
+accents sur le nom, le prénom et le code), qui commence par « Tous les opérateurs ». L'URL garde l'identifiant
+(`operateur=<id>`, [ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)) et le champ ne l'affiche
+jamais : un identifiant que le référentiel ne contient pas s'affiche « Opérateur non résolu (référence actuelle) ». Le choix
+se range dans le brouillon du formulaire, comme le champ « Élément » ; il entre dans l'URL, avec `page=1`, quand le
+gestionnaire applique les filtres, et « Tous les opérateurs » en retire l'identifiant (`operateur=` vide). Le référentiel est
+lu à chaque ouverture de la liste, pour tout lecteur, consultant compris : le filtre sert à qui consulte. Pendant sa
+lecture, la liste dit « Chargement des opérateurs… » à la place du filtre ; s'il échoue, elle dit « Liste des opérateurs
+indisponible » avec « Réessayer », désactive le filtre, qui garde l'opérateur de l'URL, et reste utilisable : la liste des
+anomalies ne dépend pas du référentiel et ne se relit pas.
+
 ## Opérateur et poste affichés
 
 La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, la chronologie, l'historique d'une adresse

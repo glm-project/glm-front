@@ -3,17 +3,23 @@ import { dataSelector } from '../../../utils/DataSelector';
 import { ligneFixture } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import {
   dossierFinAutomatiqueFixture,
+  operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
 import {
+  autreOperateurFinAutomatiqueFixture,
   finAutomatiqueLigneFixture,
+  givenTheReferentielFinsAutomatiques,
   pageFinsAutomatiquesFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
+
+const operateurAbsentFixture = '71000000-0000-0000-0000-000000000099';
 
 describe('Automatic end tab of the anomalies list in Gestion', () => {
   beforeEach(() => {
     givenTheTwoNaturesOfAnomalies();
+    givenTheReferentielFinsAutomatiques();
   });
 
   it('should open on the automatic ends when the address names no nature', () => {
@@ -31,28 +37,31 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   });
 
   it('should list the automatic ends of the filtered selection from the conflicts tab, back on the first page', () => {
-    whenVisiting('/anomalies?nature=CONFLIT&operateur=Jean&element=OF&page=2');
+    whenVisiting(`/anomalies?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
     whenChoosingTheTab('anomalies-onglet-fins-automatiques');
 
-    thenTheListIsRequested('finsAutomatiques', 'nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=0&size=5');
-    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=1');
+    thenTheListIsRequested(
+      'finsAutomatiques',
+      `nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=0&size=5`,
+    );
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=1`);
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
 
   it('should list the conflicts with the same filters when the operator chooses their tab', () => {
-    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=1');
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=1`);
     whenChoosingTheTab('anomalies-onglet-conflits');
 
-    thenTheListIsRequested('conflits', 'nature=CONFLIT&operateur=Jean&element=OF&page=0&size=5');
-    thenTheAddressIs('?nature=CONFLIT&operateur=Jean&element=OF&page=1');
+    thenTheListIsRequested('conflits', `nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=0&size=5`);
+    thenTheAddressIs(`?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=1`);
     thenOneConflictIsListed();
   });
 
   it('should open the dossier of the automatic end at its opening, keeping the list address', () => {
     givenADossierAddressedByTheOpening();
 
-    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
     whenOpeningTheAutomaticEnd();
 
     thenTheDossierOfTheOpeningIsRequested();
@@ -63,11 +72,11 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   it('should return from the dossier of an automatic end to the same tab, filters and page', () => {
     givenADossierAddressedByTheOpening();
 
-    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
     whenOpeningTheAutomaticEnd();
     whenReturningToTheAnomalies();
 
-    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
@@ -75,14 +84,65 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   it('should keep the nature and the filters while paginating the automatic ends and ask the back for each page', () => {
     givenTwelveAutomaticEnds();
 
-    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF');
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF`);
     whenChoosingThePage('anomalies-page-suivante');
     whenChoosingThePage('anomalies-page-suivante');
     whenChoosingThePage('anomalies-page-precedente');
 
     thenThePagesAreRequested([0, 1, 2, 1]);
-    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=2');
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
+  });
+
+  it('should name the operator held by the address, never its identifier', () => {
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}`);
+
+    thenTheOperatorFilterNames('Jean Dupont');
+    thenTheFiltersNeverShow(operateurFinAutomatiqueFixture);
+  });
+
+  it('should hold the identifier of the operator chosen by name in the address and request the list with it', () => {
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+    whenChoosingTheOperator('Alex Durand · 012');
+    whenApplyingTheFilters();
+
+    thenTheLastRequestedListIs(`nature=FIN_AUTOMATIQUE&operateur=${autreOperateurFinAutomatiqueFixture}&element=&page=0&size=5`);
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${autreOperateurFinAutomatiqueFixture}&element=&page=1`);
+    thenTheOperatorFilterNames('Alex Durand · 012');
+  });
+
+  it('should remove the operator from the address when all the operators are chosen', () => {
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&page=2`);
+    whenChoosingTheOperator('Tous les opérateurs');
+    whenApplyingTheFilters();
+
+    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=&element=&page=1');
+    thenTheOperatorFilterNames('Tous les opérateurs');
+  });
+
+  it('should name an operator of the address that the referentiel does not contain as unresolved, without its identifier', () => {
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurAbsentFixture}`);
+
+    thenTheOperatorFilterNames('Opérateur non résolu (référence actuelle)');
+    thenTheFiltersNeverShow(operateurAbsentFixture);
+  });
+
+  it('should tell that the operators are unavailable while the list stays usable', () => {
+    givenTheReferentielFails();
+
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+
+    thenTheOperatorsAreUnavailable();
+    thenTheAutomaticEndIsListedWithItsPeriod();
+  });
+
+  it('should offer the operator filter again when the manager retries after a failed referentiel', () => {
+    givenTheReferentielFails();
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+
+    whenRetryingTheReferentiel();
+
+    thenTheOperatorFilterIsEnabled();
   });
 
   it('should explain that no automatic end remains', () => {
@@ -127,6 +187,41 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     cy.visit(address);
   };
 
+  const givenTheReferentielFails = (): void => {
+    cy.intercept({ method: 'GET', url: '/api/operateurs*', times: 1 }, { statusCode: 500, body: {} });
+  };
+
+  const whenRetryingTheReferentiel = (): void => {
+    cy.get(dataSelector('anomalies-referentiel-reessayer')).click();
+  };
+
+  const thenTheOperatorsAreUnavailable = (): void => {
+    cy.get(dataSelector('anomalies-referentiel-erreur')).should('contain.text', 'Liste des opérateurs indisponible');
+    cy.get(dataSelector('anomalies-filtre-operateur')).should('be.disabled');
+  };
+
+  const thenTheOperatorFilterIsEnabled = (): void => {
+    cy.get(dataSelector('anomalies-referentiel-erreur')).should('not.exist');
+    cy.get(dataSelector('anomalies-filtre-operateur')).should('not.be.disabled');
+  };
+
+  const thenTheFiltersNeverShow = (identifier: string): void => {
+    cy.get(dataSelector('anomalies-filtres')).should('not.contain.text', identifier);
+  };
+
+  const whenChoosingTheOperator = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-operateur')).click();
+    cy.get(dataSelector('anomalies-filtre-operateur-proposition')).contains(libelle).click();
+  };
+
+  const whenApplyingTheFilters = (): void => {
+    cy.get(dataSelector('anomalies-filtrer')).click();
+  };
+
+  const thenTheOperatorFilterNames = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-operateur')).should('have.text', libelle);
+  };
+
   const whenChoosingTheTab = (selector: string): void => {
     cy.get(dataSelector(selector)).click();
   };
@@ -147,13 +242,19 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     cy.wait(`@${alias}`).its('request.url').should('contain', query);
   };
 
+  const thenTheLastRequestedListIs = (query: string): void => {
+    cy.get<{ request: { url: string } }[]>('@finsAutomatiques.all').should(requests => {
+      expect(requests.at(-1)?.request.url).to.contain(query);
+    });
+  };
+
   const thenThePagesAreRequested = (pages: number[]): void => {
     cy.get('@pagesDesFinsAutomatiques.all').should('have.length', pages.length);
     pages.forEach((page, index) => {
       cy.get('@pagesDesFinsAutomatiques.all')
         .its(index)
         .its('request.url')
-        .should('contain', `nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=${page}&size=5`);
+        .should('contain', `nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=${page}&size=5`);
     });
   };
 
@@ -199,7 +300,7 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     cy.location('search').should(search => {
       expect(Object.fromEntries(new URLSearchParams(search))).to.deep.equal({
         nature: 'FIN_AUTOMATIQUE',
-        operateur: 'Jean',
+        operateur: operateurFinAutomatiqueFixture,
         element: 'OF',
         page: '2',
         pointage: ouvrantFinAutomatiqueFixture,

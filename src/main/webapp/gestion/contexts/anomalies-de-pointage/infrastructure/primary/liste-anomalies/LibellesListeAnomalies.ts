@@ -18,6 +18,8 @@ export const LIBELLES_LISTE_ANOMALIES = {
   page: 'Page',
   sur: 'sur',
   nature: 'Nature des anomalies',
+  chargementOperateurs: 'Chargement des opérateurs…',
+  operateursIndisponibles: 'Liste des opérateurs indisponible',
   adresseInvalide: 'Numéro de page invalide. Appliquez les filtres pour revenir à la première page.',
   natureInconnue: 'Nature d’anomalie inconnue. Choisissez un onglet pour revenir à une liste valide.',
   premierePage: 'Revenir à la première page',

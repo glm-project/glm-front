@@ -1,9 +1,15 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
-import { ligneFixture } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+import {
+  autreOperateurFixture,
+  autreOperateurNomFixture,
+  givenTheReferentiel,
+  ligneFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 
 describe('Conflict list in Gestion', () => {
   beforeEach(() => {
+    givenTheReferentiel();
     cy.intercept('GET', '/api/atelier/anomalies*', {
       body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
     });
@@ -22,12 +28,36 @@ describe('Conflict list in Gestion', () => {
     thenNoConflictMatchesTheFilters();
   });
 
+  it('should choose the operator by name with the picker', () => {
+    whenVisitingAt(1280);
+    whenChoosingTheOperator(autreOperateurNomFixture);
+
+    thenTheOperatorFilterNames(autreOperateurNomFixture);
+  });
+
+  it('should name all the operators once the manager chooses that entry', () => {
+    whenVisitingAt(1280);
+    whenChoosingTheOperator(autreOperateurNomFixture);
+    whenChoosingTheOperator('Tous les opérateurs');
+
+    thenTheOperatorFilterNames('Tous les opérateurs');
+  });
+
   const whenFilteringWithEnter = (): void => {
-    cy.intercept('GET', '/api/atelier/anomalies?nature=CONFLIT&operateur=Op%C3%A9rateur%20absent&element=M-042&page=0&size=5', {
+    cy.intercept('GET', `/api/atelier/anomalies?nature=CONFLIT&operateur=${autreOperateurFixture}&element=M-042&page=0&size=5`, {
       body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
     });
-    cy.get(dataSelector('anomalies-filtre-operateur')).type('Opérateur absent');
+    whenChoosingTheOperator(autreOperateurNomFixture);
     cy.get(dataSelector('anomalies-filtre-element')).type('M-042{enter}');
+  };
+
+  const whenChoosingTheOperator = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-operateur')).click();
+    cy.get(dataSelector('anomalies-filtre-operateur-proposition')).contains(libelle).click();
+  };
+
+  const thenTheOperatorFilterNames = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-operateur')).should('have.text', libelle);
   };
 
   const thenNoConflictMatchesTheFilters = (): void => {

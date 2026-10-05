@@ -6,14 +6,16 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, NatureAnomalie, PAGE_SIZE_ANOMALIES } from '../../../domain/dossier/DossierAnomalie';
 import { NATURE_ANOMALIE_PAR_DEFAUT, readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
+import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { operateurPresente, postePresente } from '../PresentationIdentites';
+import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
 
 @Component({
   selector: 'glm-liste-anomalies',
-  imports: [RouterLink, InstantLongDayPipe],
+  imports: [RouterLink, InstantLongDayPipe, SelecteurOperateurAnomalie],
   templateUrl: './ListeAnomalies.html',
   styleUrl: './ListeAnomalies.css',
 })
@@ -43,11 +45,19 @@ export class ListeAnomalies {
     loader: ({ params }) => this.port.list(params),
   });
 
-  protected async filter(event: Event, operateur: string, element: string): Promise<void> {
+  protected readonly referentiel = resource({ loader: () => this.port.referentiel() });
+  protected readonly operateurs = computed(() => (this.referentiel.hasValue() ? this.referentiel.value().operateurs : []));
+  protected readonly operateurChoisi = linkedSignal(() => this.filtre().operateur);
+
+  protected choisirOperateur(operateur: OperateurAnomalieId): void {
+    this.operateurChoisi.set(operateur.operateur);
+  }
+
+  protected async filter(event: Event, element: string): Promise<void> {
     event.preventDefault();
     try {
       const navigue = await this.router.navigate(['/anomalies'], {
-        queryParams: { nature: this.filtre().nature, operateur: operateur.trim(), element: element.trim(), page: 1 },
+        queryParams: { nature: this.filtre().nature, operateur: this.operateurChoisi(), element: element.trim(), page: 1 },
       });
       this.echecNavigation.set(!navigue);
     } catch (failure: unknown) {

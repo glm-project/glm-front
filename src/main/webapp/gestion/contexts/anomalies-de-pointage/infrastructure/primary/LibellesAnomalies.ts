@@ -68,6 +68,7 @@ export const LIBELLES_ANOMALIES = {
   operateurConcerne: 'Opérateur concerné',
   posteConcerne: 'Poste (facultatif)',
   choisirOperateur: 'Choisissez l’opérateur',
+  tousLesOperateurs: 'Tous les opérateurs',
   rechercherOperateur: 'Rechercher un opérateur',
   aucunResultatOperateur: 'Aucun opérateur ne correspond à cette recherche',
   operateurNonResoluActuel: 'Opérateur non résolu (référence actuelle)',
