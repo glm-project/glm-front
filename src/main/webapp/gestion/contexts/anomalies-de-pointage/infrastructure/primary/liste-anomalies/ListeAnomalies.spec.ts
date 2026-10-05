@@ -5,7 +5,6 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, LectureDossier, LigneConflit, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
@@ -94,7 +93,6 @@ const ligneFixture = (): LigneConflit => ({
 
 const finAutomatiqueFixture = (): LigneFinAutomatique => ({
   adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-camille') },
-  activite: new ActiviteAnomalieId('travail-camille'),
   element: new ElementAnomalieId('of-m24-0655'),
   designation: 'OF M24-0655',
   operateur: 'Camille Martin',
@@ -104,7 +102,7 @@ const finAutomatiqueFixture = (): LigneFinAutomatique => ({
   echeance: new Date(2026, 0, 1, 22, 26).toISOString(),
 });
 
-describe('Conflict list', () => {
+describe('Anomalies list', () => {
   let componentFixture: ComponentFixture<ListeAnomalies>;
   let portFixture: AnomaliesReadFixture;
   let routeFixture: RouteFixture;
@@ -320,7 +318,7 @@ describe('Conflict list', () => {
     await whenTheListIsRendered();
 
     expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
-    expect(currentTab()).toBe('Conflits');
+    expect(currentTab()).toBe('anomalies-onglet-conflits');
   });
 
   it('should acquire the automatic ends and mark their tab as the current one when the address names them', async () => {
@@ -329,7 +327,7 @@ describe('Conflict list', () => {
     await whenTheListIsRendered();
 
     expect(portFixture.demandes).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: '', element: '', page: 1 }]);
-    expect(currentTab()).toBe('Fins automatiques');
+    expect(currentTab()).toBe('anomalies-onglet-fins-automatiques');
   });
 
   it('should refuse an unknown nature without acquiring a list and keep both tabs reachable', async () => {
@@ -532,7 +530,7 @@ describe('Conflict list', () => {
   const currentTab = (): string =>
     tabs()
       .find(tab => tab.getAttribute('aria-current') === 'page')
-      ?.textContent.trim() ?? '';
+      ?.getAttribute('data-selector') ?? '';
   const tabHrefs = (): (string | null)[] => tabs().map(tab => tab.getAttribute('href'));
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';

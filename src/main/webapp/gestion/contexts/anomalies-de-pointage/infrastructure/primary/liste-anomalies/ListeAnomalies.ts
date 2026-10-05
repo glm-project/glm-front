@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, NatureAnomalie, PAGE_SIZE_ANOMALIES } from '../../../domain/dossier/DossierAnomalie';
-import { readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
+import { NATURE_ANOMALIE_PAR_DEFAUT, readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
@@ -25,7 +25,7 @@ export class ListeAnomalies {
   protected readonly pageDemandee = computed(() => readPageAnomaliesDemandee(this.params().get('page')));
   protected readonly natureDemandee = computed(() => readNatureAnomalieDemandee(this.params().get('nature')));
   protected readonly filtre = computed(() => ({
-    nature: this.natureDemandee() ?? 'CONFLIT',
+    nature: this.natureDemandee() ?? NATURE_ANOMALIE_PAR_DEFAUT,
     operateur: this.params().get('operateur') ?? '',
     element: this.params().get('element') ?? '',
     page: this.pageDemandee() ?? 1,

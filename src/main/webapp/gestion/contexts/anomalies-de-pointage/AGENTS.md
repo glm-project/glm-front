@@ -42,7 +42,7 @@ conserve les filtres et revient à `page=1` ; la pagination est propre à chaque
 `LigneConflit` ou `LigneFinAutomatique` est traduite à la frontière HTTP, qui rejette la lecture dont une
 ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début
 et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
-sur l'ouvrant actif (`adresse.pointage`) ; l'activité visée est `activite`, jamais l'identifiant d'événement.
+sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
 Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 

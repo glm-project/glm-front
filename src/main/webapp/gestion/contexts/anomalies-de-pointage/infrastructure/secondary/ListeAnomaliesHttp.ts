@@ -1,5 +1,4 @@
 import { components } from '@/app/generated/schema';
-import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { LigneFinAutomatique, NatureAnomalie, PageAnomalies } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
@@ -11,7 +10,6 @@ type FinAutomatiqueRecue = components['schemas']['RestFinAutomatiqueEnListe'];
 
 const toLigneFinAutomatique = (ligne: FinAutomatiqueRecue): LigneFinAutomatique => ({
   adresse: { suivi: new SuiviAnomalieId(ligne.adresse.suivi), pointage: new PointageAnomalieId(ligne.adresse.pointage) },
-  activite: new ActiviteAnomalieId(ligne.activite),
   element: new ElementAnomalieId(ligne.elementId),
   designation: ligne.designation,
   operateur: ligne.operateur === undefined ? '' : `${ligne.operateur.prenom} ${ligne.operateur.nom}`,

@@ -83,7 +83,6 @@ export type EtatDAdresseDossier = 'EN_CONFLIT' | 'INTROUVABLE' | 'ANCRE_ANNULEE'
 
 export interface LigneFinAutomatique {
   readonly adresse: AdresseDossier;
-  readonly activite: ActiviteAnomalieId;
   readonly element: ElementAnomalieId;
   readonly designation: string;
   readonly operateur: string;

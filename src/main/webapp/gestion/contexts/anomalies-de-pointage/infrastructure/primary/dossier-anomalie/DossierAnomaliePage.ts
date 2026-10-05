@@ -5,6 +5,7 @@ import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
+import { anomalieTraitee } from '../../../domain/dossier/AnomalieTraitee';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
 import {
@@ -39,6 +40,7 @@ export class DossierAnomaliePage {
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(AnomaliesRightsPort);
   protected readonly libelles = LIBELLES_ANOMALIES;
+  protected readonly anomalieTraitee = anomalieTraitee;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly pointageConsulte = signal<string | undefined>(undefined);
@@ -156,7 +158,7 @@ export class DossierAnomaliePage {
 
   protected chooseGuide(choix: ChoixGuide): void {
     this.choose(choix.saisie, choix.id);
-    this.detail.set(choix.code === 'REGULARISER_FIN');
+    this.detail.set(choix.saisie.awaitsDating());
   }
 
   protected labelForActivite(id: string, dossier: DossierAnomalie): string {
@@ -193,16 +195,7 @@ export class DossierAnomaliePage {
 
   protected change(changement: ChangementSaisie): void {
     this.preparation.change(changement);
-    if (this.modifieLeFaitGuide(changement)) this.choixSelectionne.set(undefined);
-  }
-
-  private modifieLeFaitGuide(changement: ChangementSaisie): boolean {
-    if (changement.fait === undefined) return false;
-    return !this.datesLaFinGuidee(changement.fait);
-  }
-
-  private datesLaFinGuidee(fait: object): boolean {
-    return this.proposition()?.kind === 'REGULARISATION' && Object.keys(fait).join() === 'instant';
+    if (this.preparation.resolution().saisie.changesGuidedFact(changement)) this.choixSelectionne.set(undefined);
   }
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {

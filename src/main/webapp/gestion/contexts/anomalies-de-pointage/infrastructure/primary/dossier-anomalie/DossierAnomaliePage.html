@@ -346,7 +346,7 @@
       </div>
       } } @if (operation.kind === 'APPLIQUE') {
       <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">
-        {{ operation.dossier.enConflit || operation.dossier.finAutomatique ? libelles.restant : libelles.resolu }}
+        {{ anomalieTraitee(operation.dossier) ? libelles.resolu : libelles.restant }}
       </p>
       } } @if (dossier.continuations.length > 0) {
       <nav class="mt-5 border-t border-border pt-4" [attr.aria-label]="libelles.continuation">
@@ -405,9 +405,7 @@
           }
         </div>
       </div>
-      <p class="mt-4 text-body font-semibold">
-        {{ apercu.apres.enConflit || apercu.apres.finAutomatique ? libelles.apercuRestant : libelles.apercuResolu }}
-      </p>
+      <p class="mt-4 text-body font-semibold">{{ anomalieTraitee(apercu.apres) ? libelles.apercuResolu : libelles.apercuRestant }}</p>
       <button
         type="button"
         class="bouton bouton-principal mt-4"

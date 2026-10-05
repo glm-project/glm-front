@@ -89,7 +89,7 @@ const dossierFixture = (
   },
 });
 
-describe('Beyond the contract: HTTP conflict actes', () => {
+describe('Beyond the contract: HTTP anomaly actes', () => {
   let preview: PrevisualisationAnomaliePort;
   let application: ApplicationActePort;
   let server: HttpTestingController;

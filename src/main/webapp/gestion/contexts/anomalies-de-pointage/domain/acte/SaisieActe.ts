@@ -64,6 +64,16 @@ export class SaisieActe {
     return new SaisieActe({ ...proposition, fait, motif: changement.motif ?? proposition.motif });
   }
 
+  awaitsDating(): boolean {
+    return this.proposition?.kind === 'REGULARISATION';
+  }
+
+  changesGuidedFact(changement: ChangementSaisie): boolean {
+    if (changement.fait === undefined) return false;
+    const champs = Object.keys(changement.fait);
+    return !(this.awaitsDating() && champs.length === 1 && champs[0] === 'instant');
+  }
+
   command(): ActeResolution | undefined {
     const proposition = this.proposition;
     if (proposition === undefined) return undefined;

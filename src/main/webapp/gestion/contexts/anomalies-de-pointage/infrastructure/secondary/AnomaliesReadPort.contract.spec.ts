@@ -28,7 +28,7 @@ const ligneFixture: components['schemas']['RestConflitEnListe'] = {
   nombrePointages: 3,
 };
 
-describe('Beyond the contract: HTTP conflict reading', () => {
+describe('Beyond the contract: HTTP anomaly dossier reading', () => {
   let port: AnomaliesReadPort;
   let server: HttpTestingController;
   let errors: ErrorHandlerFixture;

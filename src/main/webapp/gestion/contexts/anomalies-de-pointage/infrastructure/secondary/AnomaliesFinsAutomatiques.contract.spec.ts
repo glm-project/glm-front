@@ -5,7 +5,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
-import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { NatureAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
@@ -73,7 +72,6 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
       lignes: [
         {
           adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') },
-          activite: new ActiviteAnomalieId('travail-8'),
           element: new ElementAnomalieId('of-m24-0655'),
           designation: 'OF M24-0655',
           operateur: 'Camille Martin',

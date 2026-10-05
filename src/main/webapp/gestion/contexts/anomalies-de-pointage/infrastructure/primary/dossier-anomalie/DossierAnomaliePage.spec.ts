@@ -254,7 +254,7 @@ const dossierAtFixture = (pointage: string, explication: string): DossierAnomali
   };
 };
 
-describe('Conflict dossier page', () => {
+describe('Anomaly dossier page', () => {
   let fixture: ComponentFixture<DossierAnomaliePage>;
   let read: DossierReadFixture;
   let route: RouteFixture;
