@@ -8,6 +8,7 @@ const LIBELLES_SELECTEUR: LibellesSelecteurRecherchable = {
   choisir: LIBELLES_ANOMALIES.choisirElement,
   tous: LIBELLES_ANOMALIES.tousLesElements,
   nonResolu: LIBELLES_ANOMALIES.elementNonResoluActuel,
+  conserve: LIBELLES_ANOMALIES.elementActuelConserve,
   rechercher: LIBELLES_ANOMALIES.rechercherElement,
   aucunResultat: LIBELLES_ANOMALIES.aucunResultatElement,
 };
@@ -25,6 +26,7 @@ export class SelecteurElementAnomalie {
   readonly elements = input<readonly ElementAnomalie[]>([]);
   readonly courant = input('');
   readonly disabled = input(false);
+  readonly indisponible = input(false);
   readonly triggerId = input.required<string>();
   readonly labelId = input.required<string>();
   readonly selector = input.required<string>();

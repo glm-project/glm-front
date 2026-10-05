@@ -14,6 +14,7 @@ const elementsFixture: readonly ElementAnomalie[] = [
 interface InputsFixture {
   readonly courant?: string;
   readonly disabled?: boolean;
+  readonly indisponible?: boolean;
   readonly elements?: readonly ElementAnomalie[];
 }
 
@@ -142,6 +143,13 @@ describe('Anomaly element selector', () => {
     expect(optionTexts().slice(0, 2)).toEqual(['Tous les éléments', 'Élément non résolu (référence actuelle)']);
     expect(currentOptionTexts()).toEqual(['Élément non résolu (référence actuelle)']);
     thenNothingShowsTheIdentifier('element-supprime');
+  });
+
+  it('should keep the current element without calling it unresolved while the elements are unavailable', async () => {
+    await whenRendering({ courant: 'moule-42', elements: [], disabled: true, indisponible: true });
+
+    expect(textOf('anomalies-filtre-element')).toBe('Élément actuel conservé');
+    thenNothingShowsTheIdentifier('moule-42');
   });
 
   it('should keep the unresolved reference and emit nothing when the manager selects it again', async () => {

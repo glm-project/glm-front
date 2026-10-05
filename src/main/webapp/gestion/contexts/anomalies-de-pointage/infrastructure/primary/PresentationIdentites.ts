@@ -14,17 +14,30 @@ export const postePresente = (libelle: string, posteId: string | undefined): str
 export const operateurNomme = (operateur: OperateurAnomalie): string =>
   operateur.code === undefined ? operateur.nom : `${operateur.nom} · ${operateur.code}`;
 
-export const operateurDeLActe = (operateur: string, referentiel: ReferentielAnomalies, journal: readonly PointageAnomalie[]): string =>
-  operateurPresente(
-    referentiel.operateur(new OperateurAnomalieId(operateur))?.nom
-      ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom
-      ?? '',
-  );
+const operateurSansNom = (referentiel: ReferentielAnomalies | undefined): string =>
+  referentiel === undefined ? LIBELLES_ANOMALIES.operateurActuelConserve : operateurPresente('');
 
-export const posteDeLActe = (poste: string, referentiel: ReferentielAnomalies, journal: readonly PointageAnomalie[]): string =>
-  postePresente(
-    referentiel.poste(new PosteAnomalieId(poste))?.libelle
-      ?? journal.find(pointage => pointage.fait.poste === poste && pointage.posteLibelle !== '')?.posteLibelle
-      ?? '',
-    poste,
-  );
+const posteSansLibelle = (poste: string, referentiel: ReferentielAnomalies | undefined): string =>
+  referentiel === undefined && poste !== '' ? LIBELLES_ANOMALIES.posteActuelConserve : postePresente('', poste);
+
+export const operateurDeLActe = (
+  operateur: string,
+  referentiel: ReferentielAnomalies | undefined,
+  journal: readonly PointageAnomalie[],
+): string => {
+  const nom =
+    referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
+    ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
+  return nom ?? operateurSansNom(referentiel);
+};
+
+export const posteDeLActe = (
+  poste: string,
+  referentiel: ReferentielAnomalies | undefined,
+  journal: readonly PointageAnomalie[],
+): string => {
+  const libelle =
+    referentiel?.poste(new PosteAnomalieId(poste))?.libelle
+    ?? journal.find(pointage => pointage.fait.poste === poste && pointage.posteLibelle !== '')?.posteLibelle;
+  return libelle ?? posteSansLibelle(poste, referentiel);
+};

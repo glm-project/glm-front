@@ -150,6 +150,15 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
 
+  it('should keep the operator held by the address without calling it unresolved while the operators are unavailable', () => {
+    givenTheReferentielFails();
+
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}`);
+
+    thenTheOperatorFilterNames('Opérateur actuel conservé');
+    thenTheFiltersNeverShow(operateurFinAutomatiqueFixture);
+  });
+
   it('should offer the operator filter again when the manager retries after a failed referentiel', () => {
     givenTheReferentielFails();
     whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');

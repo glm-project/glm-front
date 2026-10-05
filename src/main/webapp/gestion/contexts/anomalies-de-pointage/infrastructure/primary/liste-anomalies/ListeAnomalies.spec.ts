@@ -428,6 +428,16 @@ describe('Anomalies list', () => {
     expect(button('anomalies-filtre-operateur').disabled).toBe(true);
   });
 
+  it('should keep the operator held by the address without calling it unresolved while the operators are unavailable', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenTheOperatorsAreUnavailable();
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-filtre-operateur')).toBe('Opérateur actuel conservé');
+    thenNoIdentifierIsShown('op-camille');
+  });
+
   it('should keep the list usable when the operators are unavailable', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
     givenTheOperatorsAreUnavailable();
@@ -680,6 +690,16 @@ describe('Anomalies list', () => {
     expect(portFixture.elementsLectures).toBe(2);
     expect(portFixture.operateursLectures).toBe(1);
     expect(portFixture.demandes).toHaveLength(1);
+  });
+
+  it('should keep the element held by the address without calling it unresolved while the elements are unavailable', async () => {
+    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42' });
+    portFixture.elementsFailure = new Error('Éléments indisponibles');
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-filtre-element')).toBe('Élément actuel conservé');
+    thenNoIdentifierIsShown('moule-42');
   });
 
   it('should keep the focus on the retry button while the elements are read again', async () => {

@@ -92,7 +92,8 @@ export class DossierAnomaliePage {
     loader: () => this.port.referentiel(),
   });
   protected readonly etatReferentiel = etatDeLecture(this.referentiel);
-  protected readonly referentielLu = computed(() => (this.referentiel.hasValue() ? this.referentiel.value() : REFERENTIEL_VIDE));
+  private readonly referentielConnu = computed(() => (this.referentiel.hasValue() ? this.referentiel.value() : undefined));
+  protected readonly referentielLu = computed(() => this.referentielConnu() ?? REFERENTIEL_VIDE);
   protected readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
   protected readonly dossier = computed(() => {
     if (this.lecture.isLoading()) return undefined;
@@ -260,11 +261,11 @@ export class DossierAnomaliePage {
   }
 
   protected operateurDeLActe(operateur: string, journal: readonly PointageAnomalie[]): string {
-    return operateurDeLActe(operateur, this.referentielLu(), journal);
+    return operateurDeLActe(operateur, this.referentielConnu(), journal);
   }
 
   protected posteDeLActe(poste: string, journal: readonly PointageAnomalie[]): string {
-    return posteDeLActe(poste, this.referentielLu(), journal);
+    return posteDeLActe(poste, this.referentielConnu(), journal);
   }
 
   protected async preview(dossier: DossierAnomalie): Promise<void> {

@@ -76,6 +76,22 @@ describe('Operator and workstation presentation', () => {
     expect(operateurDeLActe('op-2', referentielFixture, journal)).toBe('Opérateur non résolu');
   });
 
+  it('should keep the operator of an act without calling it unresolved when the referential could not be read', () => {
+    expect(operateurDeLActe('op-3', undefined, journalFixture)).toBe('Opérateur actuel conservé');
+  });
+
+  it('should still name the operator of an act from the journal when the referential could not be read', () => {
+    expect(operateurDeLActe('op-2', undefined, journalFixture)).toBe('Alan Turing');
+  });
+
+  it('should keep the workstation of an act without calling it unresolved when the referential could not be read', () => {
+    expect(posteDeLActe('poste-3', undefined, journalFixture)).toBe('Poste actuel conservé');
+  });
+
+  it('should still present an act without workstation as having none when the referential could not be read', () => {
+    expect(posteDeLActe('', undefined, journalFixture)).toBe('Sans poste');
+  });
+
   it('should name the workstation of an act from the referential before the journal', () => {
     const journal = [{ ...requiredJournal(), posteLibelle: 'Autre poste', fait: { ...requiredJournal().fait, poste: 'poste-1' } }];
 

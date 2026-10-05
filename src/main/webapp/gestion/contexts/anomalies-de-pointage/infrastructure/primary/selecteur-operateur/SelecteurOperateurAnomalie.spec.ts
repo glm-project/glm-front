@@ -15,6 +15,7 @@ interface InputsFixture {
   readonly courant?: string;
   readonly disabled?: boolean;
   readonly describedBy?: string;
+  readonly indisponible?: boolean;
   readonly avecTous?: boolean;
   readonly operateurs?: readonly OperateurAnomalie[];
 }
@@ -113,6 +114,13 @@ describe('Anomaly operator selector', () => {
 
     expect(textOf('anomalie-operateur')).toBe('Opérateur non résolu (référence actuelle)');
     thenNothingShowsTheIdentifier('op-supprime');
+  });
+
+  it('should keep the current operator without calling it unresolved while the operators are unavailable', async () => {
+    await whenRendering({ courant: 'op-martin', operateurs: [], disabled: true, indisponible: true });
+
+    expect(textOf('anomalie-operateur')).toBe('Opérateur actuel conservé');
+    thenNothingShowsTheIdentifier('op-martin');
   });
 
   it('should keep an unresolved current reference selected as the first option', async () => {

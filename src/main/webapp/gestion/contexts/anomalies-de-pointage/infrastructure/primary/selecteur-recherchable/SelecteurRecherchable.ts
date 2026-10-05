@@ -11,6 +11,7 @@ export interface LibellesSelecteurRecherchable {
   readonly choisir: string;
   readonly tous: string;
   readonly nonResolu: string;
+  readonly conserve: string;
   readonly rechercher: string;
   readonly aucunResultat: string;
 }
@@ -27,6 +28,7 @@ export class SelecteurRecherchable {
   readonly choix = input<readonly ChoixRecherchable[]>([]);
   readonly courant = input('');
   readonly disabled = input(false);
+  readonly indisponible = input(false);
   readonly describedBy = input<string | null>(null);
   readonly triggerId = input.required<string>();
   readonly labelId = input.required<string>();
@@ -37,11 +39,12 @@ export class SelecteurRecherchable {
   readonly tousChoisis = output();
   protected readonly saisie = signal('');
   private readonly choixCourant = computed(() => this.choix().find(choix => choix.id === this.courant()));
-  protected readonly nonResolu = computed(() => this.courant() !== '' && this.choixCourant() === undefined);
+  private readonly courantInconnu = computed(() => this.courant() !== '' && this.choixCourant() === undefined);
+  protected readonly nonResolu = computed(() => this.courantInconnu() && !this.indisponible());
   protected readonly identite = computed(() => {
     const choix = this.choixCourant();
     if (choix !== undefined) return choix.libelle;
-    if (this.nonResolu()) return this.libelles().nonResolu;
+    if (this.courantInconnu()) return this.indisponible() ? this.libelles().conserve : this.libelles().nonResolu;
     return this.avecTous() ? this.libelles().tous : this.libelles().choisir;
   });
   protected readonly tousEstCourant = computed(() => this.courant() === '');

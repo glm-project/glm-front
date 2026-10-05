@@ -49,7 +49,8 @@ sont lus seuls (`operateurs()`, sans les postes que la liste n'emploie pas) à c
 lecteur, consultant compris : le filtre sert à qui consulte, et une panne de `/api/postes-de-travail` ne l'atteint pas.
 Pendant leur lecture, la liste dit « Chargement des opérateurs… » à la place du filtre ; s'il échoue, elle dit « Liste des opérateurs
 indisponible » avec « Réessayer », désactive le filtre, qui garde l'opérateur de l'URL, et reste utilisable : la liste des
-anomalies ne dépend pas des opérateurs et ne se relit pas.
+anomalies ne dépend pas des opérateurs et ne se relit pas. Tant que les opérateurs ne sont pas lus, le filtre ne prétend pas
+que l'opérateur de l'URL est inconnu : il dit « Opérateur actuel conservé », jamais « Opérateur non résolu » ni l'identifiant.
 
 Le filtre « Élément » se choisit de la même manière, par sa désignation (nom de l'élément, suivi de sa référence quand il en a
 une, « Bielle · B-12 »), dans le même sélecteur (recherche sans accents sur le nom et la référence, éléments par ordre
@@ -59,7 +60,8 @@ actuelle) ». Le choix se range dans le même brouillon que l'opérateur jusqu'�
 `page=1` ; « Tous les éléments » en retire l'identifiant (`element=` vide). Les éléments sont lus à chaque ouverture de la
 liste, pour tout lecteur, séparément des opérateurs : la liste dit « Chargement des éléments… » à la place du filtre ;
 s'ils échouent, elle dit « Liste des éléments indisponible » avec son propre « Réessayer », désactive le filtre, qui garde
-l'élément de l'URL, sans toucher au filtre « Opérateur » ni à la liste. Le dossier ne les lit pas.
+l'élément de l'URL, qu'il nomme « Élément actuel conservé » et non « non résolu », sans toucher au filtre « Opérateur » ni à
+la liste. Le dossier ne les lit pas.
 
 Comme dans le dossier, « Réessayer » d'un filtre reste affiché, `aria-busy`, pendant la relecture : le focus y reste, et le
 filtre n'est remplacé par « Chargement… » qu'à la première lecture. Pendant ce chargement, l'étiquette du filtre ne désigne
@@ -82,7 +84,9 @@ dit « Choisissez l'opérateur » et l'aperçu reste indisponible. Choisir un op
 l'aperçu. Une référence que le référentiel ne contient pas reste sélectionnée comme « Opérateur non résolu (référence
 actuelle) » ou « Poste non résolu (référence actuelle) ». L'aperçu nomme l'opérateur et le poste de l'acte depuis le
 référentiel, puis depuis le journal, sinon « non résolu ». Si le référentiel est indisponible, le dossier le dit, propose
-« Réessayer » et conserve la saisie ; un consultant, qui ne peut rien appliquer, ne le lit pas. Pendant la relecture,
+« Réessayer » et conserve la saisie, l'opérateur et le poste courants s'affichant « Opérateur actuel conservé » et « Poste
+actuel conservé » (jamais « non résolu » : le référentiel n'a pas été lu), de même que l'aperçu de l'acte quand le journal
+ne les nomme pas ; un consultant, qui ne peut rien appliquer, ne le lit pas. Pendant la relecture,
 les champs restent en place et « Réessayer » reste affiché, `aria-busy`, si bien que le focus ne tombe pas sur le document
 (seule la première lecture remplace les champs par « Chargement… »).
 

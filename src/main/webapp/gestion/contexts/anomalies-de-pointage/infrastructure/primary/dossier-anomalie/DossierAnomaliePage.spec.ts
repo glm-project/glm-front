@@ -1319,9 +1319,9 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-choix');
 
     thenTextContains('anomalie-referentiel-erreur', 'Liste des opérateurs et des postes indisponible');
-    thenOperatorIs('Opérateur non résolu (référence actuelle)');
+    thenOperatorIs('Opérateur actuel conservé');
     thenDisabled('anomalie-operateur');
-    thenPosteChoiceIs('poste-1', 'Poste non résolu (référence actuelle)');
+    thenPosteChoiceIs('poste-1', 'Poste actuel conservé');
     thenInputIsDisabled('anomalie-poste');
   });
 
@@ -1378,7 +1378,7 @@ describe('Anomaly dossier page', () => {
     await whenRetryingTheReferentielWhileItIsRead();
 
     thenAbsent('anomalie-referentiel-chargement');
-    thenPosteChoiceIs('poste-1', 'Poste non résolu (référence actuelle)');
+    thenPosteChoiceIs('poste-1', 'Poste actuel conservé');
   });
 
   it.each([
@@ -1439,6 +1439,16 @@ describe('Anomaly dossier page', () => {
     await whenPreparingTheCorrection();
 
     thenTextContains('anomalie-apercu-acte', 'Opérateur : Nina Nouveau · Poste : Four 3');
+  });
+
+  it('should keep the operator and workstation of the previewed act without calling them unresolved when the referential is unavailable and the journal does not know them', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    givenAGuidedCorrectionOf({ operateur: 'op-inconnu', poste: 'poste-inconnu' });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', 'Opérateur : Opérateur actuel conservé · Poste : Poste actuel conservé');
   });
 
   it('should ignore preview consequences arriving after another dossier has replaced its proposition', async () => {

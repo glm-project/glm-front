@@ -47,7 +47,8 @@ Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entr
 `avecTous`), alimenté par `operateurs()` que la liste lit pour tout lecteur, consultant compris, à chaque ouverture, sans cache.
 L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que
 les opérateurs ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Des opérateurs indisponibles
-affichent « Liste des opérateurs indisponible » et « Réessayer », désactivent le filtre sans toucher à la liste.
+affichent « Liste des opérateurs indisponible » et « Réessayer », désactivent le filtre sans toucher à la liste, et le
+champ ne prétend pas que la valeur de l'URL est « non résolue » : il dit « Opérateur actuel conservé ».
 Le filtre « Élément » est le `SelecteurElementAnomalie` (même `SelecteurRecherchable` que l'opérateur, entrée « Tous les
 éléments »). Il choisit un élément par sa désignation, « nom · référence » (`ElementAnomalie { id, nom, reference? }`, par
 ordre alphabétique du nom ; recherche sans accents sur le nom et la référence). Le port de lecture expose
@@ -57,7 +58,8 @@ création). `elements()` est distinct de `referentiel()` : le dossier, qui n'a p
 lecture complète, et la liste les charge à part des opérateurs, si bien que l'échec ou la lenteur de l'un ne retient pas
 l'autre. L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Élément non résolu (référence actuelle) » celui que
 les éléments ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer » ; des éléments indisponibles affichent
-« Liste des éléments indisponible » et leur propre « Réessayer », désactivent ce seul filtre.
+« Liste des éléments indisponible » et leur propre « Réessayer », désactivent ce seul filtre, qui dit « Élément actuel
+conservé » au lieu de « non résolu ».
 Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 
@@ -86,8 +88,9 @@ options « Prénom Nom · code »), le bouton disant « Choisissez l'opérateur 
 `<select>` natif qui commence par « Sans poste », puis les postes habilités de l'opérateur choisi, puis les autres. Une
 valeur que le référentiel ne contient pas reste sélectionnée comme « … non résolu (référence actuelle) », sans identifiant.
 Si le référentiel échoue, le formulaire affiche « Liste des opérateurs et des postes indisponible » avec « Réessayer », garde
-la saisie courante et désactive les deux champs. L'aperçu de l'acte nomme l'opérateur et le poste depuis le référentiel, puis
-depuis le journal, sinon « non résolu ».
+la saisie courante et désactive les deux champs, qui disent « Opérateur actuel conservé » et « Poste actuel conservé » : un
+référentiel qu'on n'a pas lu ne rend aucune valeur « non résolue ». L'aperçu de l'acte nomme l'opérateur et le poste depuis le
+référentiel, puis depuis le journal, sinon « non résolu » (« actuel conservé » tant que le référentiel n'est pas lu).
 Une lecture de référentiel, d'opérateurs ou d'éléments que « Réessayer » relit ne démonte pas sa zone (`etatDeLecture` :
 seule la première lecture remplace le champ par « Chargement… ») : le bouton reste, `aria-busy`, et garde le focus.
 Un refus d'acte se traduit par code (`urn:glm:erreur:atelier:<code>`, [API](../../../../../../documentation/api.md)) :

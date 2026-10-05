@@ -9,6 +9,7 @@ const LIBELLES_SELECTEUR: LibellesSelecteurRecherchable = {
   choisir: LIBELLES_ANOMALIES.choisirOperateur,
   tous: LIBELLES_ANOMALIES.tousLesOperateurs,
   nonResolu: LIBELLES_ANOMALIES.operateurNonResoluActuel,
+  conserve: LIBELLES_ANOMALIES.operateurActuelConserve,
   rechercher: LIBELLES_ANOMALIES.rechercherOperateur,
   aucunResultat: LIBELLES_ANOMALIES.aucunResultatOperateur,
 };
@@ -23,6 +24,7 @@ export class SelecteurOperateurAnomalie {
   readonly operateurs = input<readonly OperateurAnomalie[]>([]);
   readonly courant = input('');
   readonly disabled = input(false);
+  readonly indisponible = input(false);
   readonly describedBy = input<string | null>(null);
   readonly triggerId = input.required<string>();
   readonly labelId = input.required<string>();

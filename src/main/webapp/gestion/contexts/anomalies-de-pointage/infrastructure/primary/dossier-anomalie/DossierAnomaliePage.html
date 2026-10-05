@@ -293,6 +293,7 @@
             labelId="operateur-acte-label"
             selector="anomalie-operateur"
             [operateurs]="referentielLu().operateurs"
+            [indisponible]="etatReferentiel.enPanne()"
             [courant]="proposition.fait.operateur"
             [disabled]="occupe() || etatReferentiel.enPanne()"
             [describedBy]="preparation.resolution().saisie.errors().includes('OPERATEUR_REQUIS') ? 'operateur-acte-erreur' : null"
@@ -310,7 +311,9 @@
           >
             <option value="" [selected]="proposition.fait.poste === ''">{{ libelles.sansPoste }}</option>
             @if (posteEstAbsent(proposition.fait.poste)) {
-            <option [value]="proposition.fait.poste" selected>{{ libelles.posteNonResoluActuel }}</option>
+            <option [value]="proposition.fait.poste" selected>
+              {{ etatReferentiel.enPanne() ? libelles.posteActuelConserve : libelles.posteNonResoluActuel }}
+            </option>
             } @let habilites = postesHabilites(proposition.fait.operateur); @let autres = autresPostes(proposition.fait.operateur); @if
             (habilites.length > 0) {
             <optgroup [label]="libelles.postesHabilites">
