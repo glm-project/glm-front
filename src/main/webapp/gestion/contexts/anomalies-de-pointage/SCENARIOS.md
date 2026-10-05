@@ -63,6 +63,9 @@ s'ils échouent, elle dit « Liste des éléments indisponible » avec son propr
 l'élément de l'URL, qu'il nomme « Élément actuel conservé » et non « non résolu », sans toucher au filtre « Opérateur » ni à
 la liste. Le dossier ne les lit pas.
 
+Dans l'un et l'autre sélecteur, une liste vide sans recherche dit « Aucun opérateur disponible » ou « Aucun élément
+disponible » ; « Aucun … ne correspond à cette recherche » n'apparaît que lorsque le gestionnaire a saisi une recherche.
+
 Comme dans le dossier, « Réessayer » d'un filtre reste affiché, `aria-busy`, pendant la relecture : le focus y reste, et le
 filtre n'est remplacé par « Chargement… » qu'à la première lecture. Pendant ce chargement, l'étiquette du filtre ne désigne
 pas un champ absent.

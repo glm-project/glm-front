@@ -89,6 +89,23 @@ describe('Anomaly operator selector', () => {
     expect(textOf('anomalie-operateur-sans-resultat')).toBe('Aucun opérateur ne correspond à cette recherche');
   });
 
+  it('should say that no operator is available, not that none matches a search, when there is none and nothing is searched', async () => {
+    await whenRendering({ courant: '', operateurs: [] });
+
+    await whenOpening();
+
+    expect(textOf('anomalie-operateur-sans-resultat')).toBe('Aucun opérateur disponible');
+  });
+
+  it('should say that no operator matches a search made in an empty list', async () => {
+    await whenRendering({ courant: '', operateurs: [] });
+    await whenOpening();
+
+    await whenSearching('martin');
+
+    expect(textOf('anomalie-operateur-sans-resultat')).toBe('Aucun opérateur ne correspond à cette recherche');
+  });
+
   it('should emit the identity of the operator chosen and return focus to the trigger', async () => {
     await whenRendering({ courant: '' });
     await whenOpening();

@@ -10,6 +10,7 @@ const LIBELLES_SELECTEUR: LibellesSelecteurRecherchable = {
   nonResolu: LIBELLES_ANOMALIES.elementNonResoluActuel,
   conserve: LIBELLES_ANOMALIES.elementActuelConserve,
   rechercher: LIBELLES_ANOMALIES.rechercherElement,
+  aucun: LIBELLES_ANOMALIES.aucunElement,
   aucunResultat: LIBELLES_ANOMALIES.aucunResultatElement,
 };
 

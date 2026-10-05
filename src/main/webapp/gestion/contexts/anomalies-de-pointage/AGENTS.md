@@ -60,6 +60,8 @@ l'autre. L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « É
 les éléments ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer » ; des éléments indisponibles affichent
 « Liste des éléments indisponible » et leur propre « Réessayer », désactivent ce seul filtre, qui dit « Élément actuel
 conservé » au lieu de « non résolu ».
+Le `SelecteurRecherchable` ne dit « ne correspond à cette recherche » que si quelque chose est saisi : une liste vide sans
+recherche dit « Aucun opérateur disponible » (« Aucun élément disponible »).
 Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 

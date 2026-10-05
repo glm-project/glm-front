@@ -94,6 +94,14 @@ describe('Anomaly element selector', () => {
     expect(textOf('anomalies-filtre-element-sans-resultat')).toBe('Aucun élément ne correspond à cette recherche');
   });
 
+  it('should say that no element is available, not that none matches a search, when there is none and nothing is searched', async () => {
+    await whenRendering({ courant: '', elements: [] });
+
+    await whenOpening();
+
+    expect(textOf('anomalies-filtre-element-sans-resultat')).toBe('Aucun élément disponible');
+  });
+
   it('should emit the identity of the element chosen and return focus to the trigger', async () => {
     await whenRendering({ courant: '' });
     await whenOpening();

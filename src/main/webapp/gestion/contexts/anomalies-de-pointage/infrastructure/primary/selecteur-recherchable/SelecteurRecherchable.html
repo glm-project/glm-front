@@ -18,7 +18,7 @@
   <span pickerIdentity class="identite" [id]="triggerId() + '-identite'">{{ identite() }}</span>
   @if (propositions().length === 0) {
   <p role="status" class="py-3 text-body-sm text-ink-muted" [attr.data-selector]="selector() + '-sans-resultat'">
-    {{ libelles().aucunResultat }}
+    {{ saisie() === '' ? libelles().aucun : libelles().aucunResultat }}
   </p>
   }
   <ul>

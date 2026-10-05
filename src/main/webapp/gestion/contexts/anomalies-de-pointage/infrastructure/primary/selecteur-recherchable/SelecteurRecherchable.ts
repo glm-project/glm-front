@@ -13,6 +13,7 @@ export interface LibellesSelecteurRecherchable {
   readonly nonResolu: string;
   readonly conserve: string;
   readonly rechercher: string;
+  readonly aucun: string;
   readonly aucunResultat: string;
 }
 

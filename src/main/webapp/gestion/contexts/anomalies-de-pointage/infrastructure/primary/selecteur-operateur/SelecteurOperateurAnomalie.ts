@@ -11,6 +11,7 @@ const LIBELLES_SELECTEUR: LibellesSelecteurRecherchable = {
   nonResolu: LIBELLES_ANOMALIES.operateurNonResoluActuel,
   conserve: LIBELLES_ANOMALIES.operateurActuelConserve,
   rechercher: LIBELLES_ANOMALIES.rechercherOperateur,
+  aucun: LIBELLES_ANOMALIES.aucunOperateur,
   aucunResultat: LIBELLES_ANOMALIES.aucunResultatOperateur,
 };
 
