@@ -17,7 +17,7 @@ import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/doma
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
-import { ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
+import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -117,9 +117,27 @@ describe('Real conflict resolution composition', () => {
     expect(referentiel.postes).toEqual([{ id: new PosteAnomalieId('poste-tour'), libelle: 'Tour 1' }]);
   });
 
+  it('should read the operators alone through the public read port on the same-origin API, without asking for the workstations', async () => {
+    const lecture = whenReadingTheOperators();
+    whenTheOperatorsAnswer();
+
+    const operateurs = await lecture;
+
+    expect(operateurs).toEqual([
+      {
+        id: new OperateurAnomalieId('op-camille'),
+        nom: 'Camille Martin',
+        code: '007',
+        postesHabilites: [new PosteAnomalieId('poste-tour')],
+      },
+    ]);
+  });
+
+  const whenReadingTheOperators = (): Promise<readonly OperateurAnomalie[]> => TestBed.inject(AnomaliesReadPort).operateurs();
+
   const whenReadingTheReferential = (): Promise<ReferentielAnomalies> => TestBed.inject(AnomaliesReadPort).referentiel();
 
-  const whenTheReferentielAnswers = (): void => {
+  const whenTheOperatorsAnswer = (): void => {
     server.expectOne('/api/operateurs?page=0&size=100').flush({
       content: [
         {
@@ -135,6 +153,10 @@ describe('Real conflict resolution composition', () => {
       pageSize: 100,
       totalElementsCount: 1,
     } satisfies components['schemas']['PageRestOperateur']);
+  };
+
+  const whenTheReferentielAnswers = (): void => {
+    whenTheOperatorsAnswer();
     server.expectOne('/api/postes-de-travail?page=0&size=100').flush({
       content: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
       currentPage: 0,

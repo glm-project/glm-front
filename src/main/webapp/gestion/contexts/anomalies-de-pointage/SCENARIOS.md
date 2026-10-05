@@ -42,13 +42,14 @@ dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, a
 Le filtre « Opérateur » se choisit par son nom, dans le même sélecteur que le formulaire du dossier (recherche sans
 accents sur le nom, le prénom et le code), qui commence par « Tous les opérateurs ». L'URL garde l'identifiant
 (`operateur=<id>`, [ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)) et le champ ne l'affiche
-jamais : un identifiant que le référentiel ne contient pas s'affiche « Opérateur non résolu (référence actuelle) ». Le choix
+jamais : un identifiant que les opérateurs ne contiennent pas s'affiche « Opérateur non résolu (référence actuelle) ». Le choix
 se range dans le brouillon du formulaire, comme le champ « Élément » ; il entre dans l'URL, avec `page=1`, quand le
-gestionnaire applique les filtres, et « Tous les opérateurs » en retire l'identifiant (`operateur=` vide). Le référentiel est
-lu à chaque ouverture de la liste, pour tout lecteur, consultant compris : le filtre sert à qui consulte. Pendant sa
-lecture, la liste dit « Chargement des opérateurs… » à la place du filtre ; s'il échoue, elle dit « Liste des opérateurs
+gestionnaire applique les filtres, et « Tous les opérateurs » en retire l'identifiant (`operateur=` vide). Les opérateurs
+sont lus seuls (`operateurs()`, sans les postes que la liste n'emploie pas) à chaque ouverture de la liste, pour tout
+lecteur, consultant compris : le filtre sert à qui consulte, et une panne de `/api/postes-de-travail` ne l'atteint pas.
+Pendant leur lecture, la liste dit « Chargement des opérateurs… » à la place du filtre ; s'il échoue, elle dit « Liste des opérateurs
 indisponible » avec « Réessayer », désactive le filtre, qui garde l'opérateur de l'URL, et reste utilisable : la liste des
-anomalies ne dépend pas du référentiel et ne se relit pas.
+anomalies ne dépend pas des opérateurs et ne se relit pas.
 
 Le filtre « Élément » se choisit de la même manière, par sa désignation (nom de l'élément, suivi de sa référence quand il en a
 une, « Bielle · B-12 »), dans le même sélecteur (recherche sans accents sur le nom et la référence, éléments par ordre
@@ -125,10 +126,10 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
 - Les contrats HTTP vérifient que le journal porte les noms reçus, ou des noms vides sans fiche, et que les lignes de
   la liste ne portent plus l'identifiant de l'opérateur.
 - Les contrats HTTP vérifient que le référentiel lit toutes les pages des opérateurs et des postes, et refuse une collection
-  dont le total change, une page tronquée, une page autre que la demandée ou une identité dupliquée ; la composition le lit
-  par les ports publics. Les specs DOM et Cypress vérifient qu'il n'est lu que pour un gestionnaire, que le choix se fait
-  par nom (recherche, groupes de postes), qu'il invalide l'aperçu et que son échec se réessaie sans perdre la saisie ;
-  Cypress intercepte `/api/operateurs` et `/api/postes-de-travail` en données REST typées.
+  dont le total change, une page tronquée, une page autre que la demandée ou une identité dupliquée ; les opérateurs se lisent
+  aussi seuls, sans aucune requête de postes, avec les mêmes refus ; la composition lit l'un et l'autre par les ports publics. Les specs DOM et Cypress vérifient qu'il n'est lu que pour un gestionnaire, que le choix se fait
+  par nom (recherche, groupes de postes), qu'il invalide l'aperçu et que son échec se réessaie sans perdre la saisie ; ils vérifient que la liste ne lit que les opérateurs et que le filtre
+  « Opérateur » reste utilisable quand les postes sont en panne ; Cypress intercepte `/api/operateurs` et `/api/postes-de-travail` en données REST typées.
 - Les contrats HTTP vérifient que les éléments se lisent sur toutes les pages de `GET /api/elements-de-fabrication`, sur
   toute période, et refusent un total qui change, une page tronquée, une page autre que la demandée, une identité dupliquée
   ou un élément reçu sans identifiant ni nom ; la composition les lit par les ports publics. Les specs DOM et Cypress

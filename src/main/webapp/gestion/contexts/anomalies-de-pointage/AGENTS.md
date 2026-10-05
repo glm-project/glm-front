@@ -44,10 +44,10 @@ ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément,
 et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
 sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
 Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entrée « Tous les opérateurs » par
-`avecTous`), alimenté par `referentiel()` que la liste lit pour tout lecteur, consultant compris, à chaque ouverture, sans cache.
-L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que le
-référentiel ne contient pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Un référentiel indisponible
-affiche « Liste des opérateurs indisponible » et « Réessayer », désactive le filtre sans toucher à la liste.
+`avecTous`), alimenté par `operateurs()` que la liste lit pour tout lecteur, consultant compris, à chaque ouverture, sans cache.
+L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que
+les opérateurs ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Des opérateurs indisponibles
+affichent « Liste des opérateurs indisponible » et « Réessayer », désactivent le filtre sans toucher à la liste.
 Le filtre « Élément » est le `SelecteurElementAnomalie` (même `SelecteurRecherchable` que l'opérateur, entrée « Tous les
 éléments »). Il choisit un élément par sa désignation, « nom · référence » (`ElementAnomalie { id, nom, reference? }`, par
 ordre alphabétique du nom ; recherche sans accents sur le nom et la référence). Le port de lecture expose
@@ -75,6 +75,8 @@ Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais 
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et
 `GET /api/postes-de-travail` (`collectAllPages`, page demandée vérifiée, aucune collection tronquée ni identité dupliquée).
+`operateurs()` en est la première moitié, lue seule : la liste, qui n'emploie pas les postes, ne paie pas leur lecture et
+ne tombe pas avec eux ; seul le dossier lit le référentiel entier.
 `nom` est « Prénom Nom » ; `code` est le code pupitre facultatif (`RestOperateur.identifiant`), pas un UUID. Les identités
 du référentiel suivent `ElementAnomalieId` (`OperateurAnomalieId`, `PosteAnomalieId`) ; `FaitPropose` et `SaisieFait`
 gardent des `string`, que le serveur reçoit tels quels, et le primaire emballe l'identité à la frontière. Le dossier ne lit

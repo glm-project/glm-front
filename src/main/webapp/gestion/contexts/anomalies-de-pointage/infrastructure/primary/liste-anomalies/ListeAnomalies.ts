@@ -47,8 +47,8 @@ export class ListeAnomalies {
     loader: ({ params }) => this.port.list(params),
   });
 
-  protected readonly referentiel = resource({ loader: () => this.port.referentiel() });
-  protected readonly operateurs = computed(() => (this.referentiel.hasValue() ? this.referentiel.value().operateurs : []));
+  protected readonly operateursLus = resource({ loader: () => this.port.operateurs() });
+  protected readonly operateurs = computed(() => (this.operateursLus.hasValue() ? this.operateursLus.value() : []));
   protected readonly operateurChoisi = linkedSignal(() => this.filtre().operateur);
   protected readonly elementsLus = resource({ loader: () => this.port.elements() });
   protected readonly elements = computed(() => (this.elementsLus.hasValue() ? this.elementsLus.value() : []));

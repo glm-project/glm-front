@@ -7,7 +7,7 @@ import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/doma
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
-import { ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
+import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
@@ -95,6 +95,10 @@ class DossierReadFixture extends AnomaliesReadPort {
   elements(): Promise<readonly ElementAnomalie[]> {
     this.elementsDemandes += 1;
     return Promise.resolve([]);
+  }
+
+  operateurs(): Promise<readonly OperateurAnomalie[]> {
+    return Promise.reject(new Error('Le dossier lit le référentiel entier, jamais les opérateurs seuls.'));
   }
 
   referentiel(): Promise<ReferentielAnomalies> {

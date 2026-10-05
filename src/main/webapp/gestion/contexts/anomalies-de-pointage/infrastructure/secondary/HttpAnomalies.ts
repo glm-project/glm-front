@@ -21,7 +21,7 @@ import { PropositionResolution } from '../../domain/acte/ResolutionDeLAnomalie';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { AdresseDossier, FiltreAnomalies, LectureDossier, PAGE_SIZE_ANOMALIES, PageAnomalies } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '../../domain/dossier/ElementAnomalie';
-import { ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
+import { OperateurAnomalie, PosteAnomalie, ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
 import { toDossier, toDossierDansPerimetre, toPointage } from './DossierAnomalieHttp';
 import { toPageAnomalies } from './ListeAnomaliesHttp';
 import { toElementAnomalie, toOperateurAnomalie, toPosteAnomalie } from './ReferentielAnomaliesHttp';
@@ -216,31 +216,45 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
     }
   }
 
+  override async operateurs(): Promise<readonly OperateurAnomalie[]> {
+    try {
+      return await this.readOperateurs();
+    } catch (failure: unknown) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
   override async referentiel(): Promise<ReferentielAnomalies> {
     try {
-      const [operateurs, postes] = await Promise.all([
-        collectAllPages(
-          async (page, size) =>
-            buildPageFrom(await this.api.read('/api/operateurs', { queryParams: { page, size } }), toOperateurAnomalie, {
-              page,
-              taille: size,
-            }),
-          operateur => operateur.id.operateur,
-        ),
-        collectAllPages(
-          async (page, size) =>
-            buildPageFrom(await this.api.read('/api/postes-de-travail', { queryParams: { page, size } }), toPosteAnomalie, {
-              page,
-              taille: size,
-            }),
-          poste => poste.id.poste,
-        ),
-      ]);
+      const [operateurs, postes] = await Promise.all([this.readOperateurs(), this.readPostes()]);
       return new ReferentielAnomalies(operateurs, postes);
     } catch (failure: unknown) {
       this.errors.handleError(failure);
       throw failure;
     }
+  }
+
+  private readOperateurs(): Promise<readonly OperateurAnomalie[]> {
+    return collectAllPages(
+      async (page, size) =>
+        buildPageFrom(await this.api.read('/api/operateurs', { queryParams: { page, size } }), toOperateurAnomalie, {
+          page,
+          taille: size,
+        }),
+      operateur => operateur.id.operateur,
+    );
+  }
+
+  private readPostes(): Promise<readonly PosteAnomalie[]> {
+    return collectAllPages(
+      async (page, size) =>
+        buildPageFrom(await this.api.read('/api/postes-de-travail', { queryParams: { page, size } }), toPosteAnomalie, {
+          page,
+          taille: size,
+        }),
+      poste => poste.id.poste,
+    );
   }
 
   override async elements(): Promise<readonly ElementAnomalie[]> {

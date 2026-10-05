@@ -11,21 +11,19 @@ import { ElementAnomalie } from '../../../domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
-import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
+import { OperateurAnomalie, ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
 import { ListeAnomalies } from './ListeAnomalies';
 
 class AnomaliesReadFixture extends AnomaliesReadPort {
   page: PageAnomalies = { nature: 'CONFLIT', lignes: [], total: 0, complete: true };
   failure: Error | undefined;
-  referentielLu = new ReferentielAnomalies(
-    [
-      { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007', postesHabilites: [] },
-      { id: new OperateurAnomalieId('op-jean'), nom: 'Jean Dupont', postesHabilites: [] },
-    ],
-    [],
-  );
-  referentielFailure: Error | undefined;
+  operateursLus: readonly OperateurAnomalie[] = [
+    { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007', postesHabilites: [] },
+    { id: new OperateurAnomalieId('op-jean'), nom: 'Jean Dupont', postesHabilites: [] },
+  ];
+  operateursFailure: Error | undefined;
+  operateursLectures = 0;
   referentielLectures = 0;
   elementsLus: readonly ElementAnomalie[] = [
     { id: new ElementAnomalieId('moule-42'), nom: 'Moule M-042', reference: 'M-042' },
@@ -36,15 +34,15 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
   readonly demandes: FiltreAnomalies[] = [];
   private notifyArrival = (): void => undefined;
   private heldReading: Promise<PageAnomalies> | undefined;
-  private heldReferentiel: Promise<ReferentielAnomalies> | undefined;
+  private heldOperateurs: Promise<readonly OperateurAnomalie[]> | undefined;
   private heldElements: Promise<readonly ElementAnomalie[]> | undefined;
 
-  holdReferentiel(): () => void {
+  holdOperateurs(): () => void {
     let release = (): void => undefined;
-    this.heldReferentiel = new Promise(resolve => {
+    this.heldOperateurs = new Promise(resolve => {
       release = () => {
-        resolve(this.referentielLu);
-        this.heldReferentiel = undefined;
+        resolve(this.operateursLus);
+        this.heldOperateurs = undefined;
       };
     });
     return release;
@@ -93,10 +91,15 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
     return Promise.resolve({ kind: 'INTROUVABLE', journal: [] });
   }
 
+  override operateurs(): Promise<readonly OperateurAnomalie[]> {
+    this.operateursLectures += 1;
+    if (this.heldOperateurs !== undefined) return this.heldOperateurs;
+    return this.operateursFailure === undefined ? Promise.resolve(this.operateursLus) : Promise.reject(this.operateursFailure);
+  }
+
   override referentiel(): Promise<ReferentielAnomalies> {
     this.referentielLectures += 1;
-    if (this.heldReferentiel !== undefined) return this.heldReferentiel;
-    return this.referentielFailure === undefined ? Promise.resolve(this.referentielLu) : Promise.reject(this.referentielFailure);
+    return Promise.reject(new Error('Postes indisponibles'));
   }
 
   override elements(): Promise<readonly ElementAnomalie[]> {
@@ -157,7 +160,7 @@ describe('Anomalies list', () => {
   let routeFixture: RouteFixture;
   let routerFixture: RouterFixture;
   let errorFixture: ErrorHandlerFixture;
-  let releaseReferentiel: () => void;
+  let releaseOperateurs: () => void;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -279,10 +282,19 @@ describe('Anomalies list', () => {
     expect(textOf('anomalies-filtre-element')).toBe('Moule M-042 · M-042');
   });
 
-  it('should read the referentiel for any reader to name the operator filter', async () => {
+  it('should read the operators alone for any reader to name the operator filter, without the workstations the list does not use', async () => {
     await whenTheListIsRendered();
 
-    expect(portFixture.referentielLectures).toBe(1);
+    expect(portFixture.operateursLectures).toBe(1);
+    expect(portFixture.referentielLectures).toBe(0);
+  });
+
+  it('should keep the operator filter usable while the workstations are unavailable', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
+    await whenTheListIsRendered();
+
+    expect(button('anomalies-filtre-operateur').disabled).toBe(false);
+    expect(present('anomalies-referentiel-erreur')).toBe(false);
   });
 
   it('should offer every operator by name, after an entry for all of them', async () => {
@@ -352,7 +364,7 @@ describe('Anomalies list', () => {
     expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 1 }]);
   });
 
-  it('should name an operator of the address that the referentiel does not contain as unresolved, without its identifier', async () => {
+  it('should name an operator of the address that the operators do not contain as unresolved, without its identifier', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
 
     await whenTheListIsRendered();
@@ -361,7 +373,7 @@ describe('Anomalies list', () => {
     thenNoIdentifierIsShown('op-supprime');
   });
 
-  it('should still list with an operator of the address that the referentiel does not contain', async () => {
+  it('should still list with an operator of the address that the operators do not contain', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
 
     await whenTheListIsRendered();
@@ -369,7 +381,7 @@ describe('Anomalies list', () => {
     expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'op-supprime', element: '', page: 1 }]);
   });
 
-  it('should keep an operator of the address that the referentiel does not contain when the filters are applied', async () => {
+  it('should keep an operator of the address that the operators do not contain when the filters are applied', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
     await whenTheListIsRendered();
 
@@ -388,19 +400,19 @@ describe('Anomalies list', () => {
   });
 
   it('should say that the operators are loading instead of offering a filter that could not name them', async () => {
-    givenTheReferentielIsPending();
+    givenTheOperatorsArePending();
 
-    await whenTheReferentielIsRequested();
+    await whenTheOperatorsAreRequested();
 
     expect(textOf('anomalies-referentiel-chargement')).toBe('Chargement des opérateurs…');
     expect(present('anomalies-filtre-operateur')).toBe(false);
   });
 
-  it('should offer the operator filter once the referentiel is read', async () => {
-    givenTheReferentielIsPending();
-    await whenTheReferentielIsRequested();
+  it('should offer the operator filter once the operators are read', async () => {
+    givenTheOperatorsArePending();
+    await whenTheOperatorsAreRequested();
 
-    await whenTheReferentielArrives();
+    await whenTheOperatorsArrive();
 
     expect(present('anomalies-referentiel-chargement')).toBe(false);
     expect(present('anomalies-filtre-operateur')).toBe(true);
@@ -408,7 +420,7 @@ describe('Anomalies list', () => {
 
   it('should tell the manager that the operators are unavailable, keeping the operator filter disabled', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
-    givenTheReferentielIsUnavailable();
+    givenTheOperatorsAreUnavailable();
 
     await whenTheListIsRendered();
 
@@ -416,9 +428,9 @@ describe('Anomalies list', () => {
     expect(button('anomalies-filtre-operateur').disabled).toBe(true);
   });
 
-  it('should keep the list usable when the referentiel is unavailable', async () => {
+  it('should keep the list usable when the operators are unavailable', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
-    givenTheReferentielIsUnavailable();
+    givenTheOperatorsAreUnavailable();
     givenAConflict();
 
     await whenTheListIsRendered();
@@ -428,9 +440,9 @@ describe('Anomalies list', () => {
     expect(button('anomalies-filtrer').disabled).toBe(false);
   });
 
-  it('should keep the operator held by the address when the filters are applied while the referentiel is unavailable', async () => {
+  it('should keep the operator held by the address when the filters are applied while the operators are unavailable', async () => {
     givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
-    givenTheReferentielIsUnavailable();
+    givenTheOperatorsAreUnavailable();
     await whenTheListIsRendered();
 
     await whenFiltering();
@@ -438,22 +450,22 @@ describe('Anomalies list', () => {
     expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 1 }]);
   });
 
-  it('should read the referentiel again and enable the operator filter when the manager retries', async () => {
-    givenTheReferentielIsUnavailable();
+  it('should read the operators again and enable the operator filter when the manager retries', async () => {
+    givenTheOperatorsAreUnavailable();
     await whenTheListIsRendered();
 
-    await whenTheReferentielRecovers();
+    await whenTheOperatorsRecover();
 
     expect(present('anomalies-referentiel-erreur')).toBe(false);
     expect(button('anomalies-filtre-operateur').disabled).toBe(false);
-    expect(portFixture.referentielLectures).toBe(2);
+    expect(portFixture.operateursLectures).toBe(2);
   });
 
-  it('should not read the list again when the referentiel is retried', async () => {
-    givenTheReferentielIsUnavailable();
+  it('should not read the list again when the operators are retried', async () => {
+    givenTheOperatorsAreUnavailable();
     await whenTheListIsRendered();
 
-    await whenTheReferentielRecovers();
+    await whenTheOperatorsRecover();
 
     expect(portFixture.demandes).toHaveLength(1);
   });
@@ -531,7 +543,7 @@ describe('Anomalies list', () => {
     expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: 'moule-42', page: 1 }]);
   });
 
-  it('should name an element of the address that the referentiel does not contain as unresolved, without its identifier', async () => {
+  it('should name an element of the address that the elements do not contain as unresolved, without its identifier', async () => {
     givenAnAddress({ nature: 'CONFLIT', element: 'element-supprime' });
 
     await whenTheListIsRendered();
@@ -540,7 +552,7 @@ describe('Anomalies list', () => {
     thenNoIdentifierIsShown('element-supprime');
   });
 
-  it('should still list with an element of the address that the referentiel does not contain', async () => {
+  it('should still list with an element of the address that the elements do not contain', async () => {
     givenAnAddress({ nature: 'CONFLIT', element: 'element-supprime' });
 
     await whenTheListIsRendered();
@@ -548,7 +560,7 @@ describe('Anomalies list', () => {
     expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: '', element: 'element-supprime', page: 1 }]);
   });
 
-  it('should keep an element of the address that the referentiel does not contain when the filters are applied', async () => {
+  it('should keep an element of the address that the elements do not contain when the filters are applied', async () => {
     givenAnAddress({ nature: 'CONFLIT', element: 'element-supprime' });
     await whenTheListIsRendered();
 
@@ -569,7 +581,7 @@ describe('Anomalies list', () => {
   it('should say that the elements are loading, while the operator filter is already offered', async () => {
     portFixture.holdElements();
 
-    await whenTheReferentielIsRequested();
+    await whenTheOperatorsAreRequested();
     await new Promise(resolve => setTimeout(resolve));
     componentFixture.detectChanges();
 
@@ -580,7 +592,7 @@ describe('Anomalies list', () => {
 
   it('should offer the element filter once the elements are read', async () => {
     const release = portFixture.holdElements();
-    await whenTheReferentielIsRequested();
+    await whenTheOperatorsAreRequested();
 
     release();
     await componentFixture.whenStable();
@@ -615,7 +627,7 @@ describe('Anomalies list', () => {
   });
 
   it('should leave the element filter usable when only the operators are unavailable', async () => {
-    givenTheReferentielIsUnavailable();
+    givenTheOperatorsAreUnavailable();
 
     await whenTheListIsRendered();
 
@@ -634,35 +646,35 @@ describe('Anomalies list', () => {
     expect(present('anomalies-elements-erreur')).toBe(false);
     expect(button('anomalies-filtre-element').disabled).toBe(false);
     expect(portFixture.elementsLectures).toBe(2);
-    expect(portFixture.referentielLectures).toBe(1);
+    expect(portFixture.operateursLectures).toBe(1);
     expect(portFixture.demandes).toHaveLength(1);
   });
 
-  const givenTheReferentielIsUnavailable = (): void => {
-    portFixture.referentielFailure = new Error('Référentiel indisponible');
+  const givenTheOperatorsAreUnavailable = (): void => {
+    portFixture.operateursFailure = new Error('Opérateurs indisponibles');
   };
 
-  const givenTheReferentielIsPending = (): void => {
-    releaseReferentiel = portFixture.holdReferentiel();
+  const givenTheOperatorsArePending = (): void => {
+    releaseOperateurs = portFixture.holdOperateurs();
   };
 
   const givenAConflict = (): void => {
     portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
   };
 
-  const whenTheReferentielIsRequested = async (): Promise<void> => {
+  const whenTheOperatorsAreRequested = async (): Promise<void> => {
     componentFixture = TestBed.createComponent(ListeAnomalies);
     componentFixture.detectChanges();
     await Promise.resolve();
   };
 
-  const whenTheReferentielArrives = async (): Promise<void> => {
-    releaseReferentiel();
+  const whenTheOperatorsArrive = async (): Promise<void> => {
+    releaseOperateurs();
     await componentFixture.whenStable();
   };
 
-  const whenTheReferentielRecovers = async (): Promise<void> => {
-    portFixture.referentielFailure = undefined;
+  const whenTheOperatorsRecover = async (): Promise<void> => {
+    portFixture.operateursFailure = undefined;
     requiredElement('anomalies-referentiel-reessayer').click();
     await componentFixture.whenStable();
   };

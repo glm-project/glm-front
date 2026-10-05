@@ -159,6 +159,15 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     thenTheOperatorFilterIsEnabled();
   });
 
+  it('should keep the operator filter usable without reading the workstations, whatever they would answer', () => {
+    givenTheWorkstationsFail();
+
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+
+    thenTheOperatorFilterIsEnabled();
+    thenNoWorkstationWasRead();
+  });
+
   it('should name the element held by the address, never its identifier', () => {
     whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&element=${elementFinAutomatiqueFixture}`);
 
@@ -254,6 +263,14 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
 
   const givenTheReferentielFails = (): void => {
     cy.intercept({ method: 'GET', url: '/api/operateurs*', times: 1 }, { statusCode: 500, body: {} });
+  };
+
+  const givenTheWorkstationsFail = (): void => {
+    cy.intercept('GET', '/api/postes-de-travail*', { statusCode: 500, body: {} }).as('postes');
+  };
+
+  const thenNoWorkstationWasRead = (): void => {
+    cy.get('@postes.all').should('have.length', 0);
   };
 
   const whenRetryingTheReferentiel = (): void => {

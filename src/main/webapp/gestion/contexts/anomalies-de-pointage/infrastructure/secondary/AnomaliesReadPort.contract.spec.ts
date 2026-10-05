@@ -13,6 +13,7 @@ import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '../../domain/dossier/PosteAnomalieId';
+import { OperateurAnomalie } from '../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
 
@@ -929,6 +930,91 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect(errors.errors).toEqual([failure]);
   });
+
+  it('should read the operators alone across server pages, without asking for any workstation', async () => {
+    const operateurs = Array.from({ length: 125 }, (_, index) => restOperateurFixture(`op-${index}`, { nom: `Nom ${index}` }));
+    operateurs[1] = restOperateurFixture('op-camille', {
+      identifiant: '007',
+      postes: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+    });
+
+    const lus = await whenReadingTheOperatorsAnsweredWith(operateurs);
+
+    expect(lus).toHaveLength(125);
+    expect(lus[1]).toEqual({
+      id: new OperateurAnomalieId('op-camille'),
+      nom: 'Camille Martin',
+      code: '007',
+      postesHabilites: [new PosteAnomalieId('poste-tour')],
+    });
+    thenNoWorkstationWasAsked();
+    expect(errors.errors).toEqual([]);
+  });
+
+  it.each<{ incoherence: string; attendu: string; pages: { taille: number; total: number; page?: number }[] }>([
+    {
+      incoherence: 'a changing total',
+      attendu: 'Le nombre des entrées est incohérent pendant la lecture.',
+      pages: [
+        { taille: 100, total: 101 },
+        { taille: 1, total: 102 },
+      ],
+    },
+    { incoherence: 'a truncated page', attendu: 'Le référentiel reçu est tronqué.', pages: [{ taille: 99, total: 100 }] },
+    {
+      incoherence: 'a page other than the requested one',
+      attendu: 'La page reçue ne correspond pas à la page demandée.',
+      pages: [{ taille: 1, total: 1, page: 3 }],
+    },
+  ])('should refuse and report an operator list with $incoherence', async ({ attendu, pages }) => {
+    const failure = await whenReadingTheOperatorsWhilePagesAnswer(pages);
+
+    expect(failure).toEqual(new Error(attendu));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should refuse and report an operator list that repeats an identity', async () => {
+    const failure = await whenReadingTheOperatorsAnsweredWith([restOperateurFixture('doublon'), restOperateurFixture('doublon')]).catch(
+      (failure: unknown) => failure,
+    );
+
+    expect(failure).toEqual(new Error('Le référentiel contient une identité dupliquée.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should report a failed operator read once and reject', async () => {
+    const lecture = port.operateurs().catch((failure: unknown) => failure);
+    await whenReferentialFails('/api/operateurs?page=0&size=100');
+    const failure = await lecture;
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  const whenReadingTheOperatorsAnsweredWith = async (operateurs: readonly unknown[]): Promise<readonly OperateurAnomalie[]> => {
+    const lecture = port.operateurs();
+    lecture.catch(() => undefined);
+    await answerPages('/api/operateurs', operateurs);
+    return lecture;
+  };
+
+  const whenReadingTheOperatorsWhilePagesAnswer = async (pages: { taille: number; total: number; page?: number }[]): Promise<unknown> => {
+    const lecture = port.operateurs().catch((failure: unknown) => failure);
+    for (const [index, page] of pages.entries()) {
+      await flushPage(
+        '/api/operateurs',
+        index,
+        Array.from({ length: page.taille }, (_, operateur) => restOperateurFixture(`id-${index}-${operateur}`)),
+        page.total,
+        page.page,
+      );
+    }
+    return lecture;
+  };
+
+  const thenNoWorkstationWasAsked = (): void => {
+    server.expectNone('/api/postes-de-travail?page=0&size=100');
+  };
 
   it('should read the whole element referential across server pages, over the whole period, into the anomaly vocabulary', async () => {
     const elements = Array.from({ length: 125 }, (_, index) => restElementFixture(`element-${index}`, { nom: `Pièce ${index}` }));

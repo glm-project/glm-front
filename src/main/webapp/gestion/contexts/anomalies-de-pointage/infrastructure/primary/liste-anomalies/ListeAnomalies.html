@@ -24,7 +24,7 @@
   >
     <div class="grid min-w-0 content-start gap-2">
       <label id="anomalies-operateur-label" class="text-label" for="anomalies-operateur">{{ libelles.operateur }}</label>
-      @if (referentiel.isLoading()) {
+      @if (operateursLus.isLoading()) {
       <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-referentiel-chargement">
         {{ libelles.chargementOperateurs }}
       </p>
@@ -36,18 +36,18 @@
         [avecTous]="true"
         [operateurs]="operateurs()"
         [courant]="operateurChoisi()"
-        [disabled]="referentiel.error() !== undefined"
+        [disabled]="operateursLus.error() !== undefined"
         (choisi)="choisirOperateur($event)"
         (tousChoisis)="operateurChoisi.set('')"
       />
-      @if (referentiel.error()) {
+      @if (operateursLus.error()) {
       <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-referentiel-erreur">
         <p>{{ libelles.operateursIndisponibles }}</p>
         <button
           type="button"
           class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
           data-selector="anomalies-referentiel-reessayer"
-          (click)="referentiel.reload()"
+          (click)="operateursLus.reload()"
         >
           {{ libelles.reessayer }}
         </button>
