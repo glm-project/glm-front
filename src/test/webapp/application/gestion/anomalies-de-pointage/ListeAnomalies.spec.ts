@@ -21,7 +21,7 @@ describe('Conflict list addresses in Gestion', () => {
 
   const whenVisitingTheFilteredList = (): void => {
     cy.viewport(1280, 900);
-    cy.visit('/anomalies?operateur=Camille&element=M-042&page=1');
+    cy.visit('/anomalies?nature=CONFLIT&operateur=Camille&element=M-042&page=1');
   };
 
   const whenOpeningTheDossier = (): void => {
@@ -32,7 +32,7 @@ describe('Conflict list addresses in Gestion', () => {
     cy.location('pathname').should('eq', `/anomalies/${suiviFixture}`);
     cy.location('search').should(search => {
       const params = Object.fromEntries(new URLSearchParams(search));
-      expect(params).to.deep.equal({ operateur: 'Camille', element: 'M-042', page: '1', pointage: finFixture });
+      expect(params).to.deep.equal({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: '1', pointage: finFixture });
     });
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };

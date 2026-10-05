@@ -28,8 +28,8 @@ export const LIBELLES_LISTE_ANOMALIES = {
     return `Début ${aLHeure(instantDebut)} · fin automatique ${finAutomatique(new Date(echeance), instantDebut)}`;
   },
   onglets: [
-    { nature: 'CONFLIT', libelle: 'Conflits', selecteur: 'anomalies-onglet-conflits' },
     { nature: 'FIN_AUTOMATIQUE', libelle: 'Fins automatiques', selecteur: 'anomalies-onglet-fins-automatiques' },
+    { nature: 'CONFLIT', libelle: 'Conflits', selecteur: 'anomalies-onglet-conflits' },
   ] as readonly { nature: NatureAnomalie; libelle: string; selecteur: string }[],
   natures: {
     CONFLIT: {
