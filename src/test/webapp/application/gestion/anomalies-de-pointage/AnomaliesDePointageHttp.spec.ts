@@ -6,7 +6,7 @@ import {
   debutFixture,
   dossierFixture,
   finFixture,
-  instantCorrigeFixture,
+  instantCorrigeLocalFixture,
   journalFixture,
   ligneFixture,
   motifFixture,
@@ -15,8 +15,16 @@ import {
   remplacementFixture,
   suiviFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+
+const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 1), '123456789');
 
 describe('HTTP conflict resolution in Gestion', () => {
+  beforeEach(() => {
+    givenTheClockOnAFixedDay();
+  });
+
   it('should abandon an unconfirmed proposal when the page is reloaded', () => {
     givenRealResolutionReplies();
 
@@ -78,7 +86,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       intention: 'TRANSITION',
       activite: ncFixture,
       cible: debutFixture,
-      dateDeSurvenue: '2026-09-14T12:01:00.123456789+02:00',
+      dateDeSurvenue: instantCorrectionTerminaisonFixture,
       operateurId: operateurFixture,
       auteur: 'gestionnaire',
       dateDEnregistrement: '2026-10-04T10:00:00Z',
@@ -127,7 +135,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.location('search').should('equal', `?pointage=${finFixture}`);
     cy.location('hash').should('equal', `#pointage-${remplacementFixture}`);
     cy.get(dataSelector('conflit-diagnostic-terminaison'))
-      .should('contain.text', '2026-09-14T12:01:00.123456789+02:00')
+      .should('contain.text', 'lundi 14 septembre à 12:01:00')
       .and('contain.text', 'Non-conformité · Transition');
     cy.get(dataSelector('conflit-diagnostic-pointage')).should('contain.text', 'Fin · Fin ciblée');
     cy.get(dataSelector('conflit-diagnostic-ouvrant')).should('contain.text', 'Travail · Ouverture');
@@ -164,7 +172,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   const whenFollowingTheReceivedActivityOpening = (): void => {
     cy.get(dataSelector('anomalie-pointage'))
       .filter((_index, fact) => fact.id === `pointage-${finFixture}`)
-      .contains('a', 'Travail · 2026-09-14T08:00:00.123456789+02:00')
+      .contains('a', 'Travail · lundi 14 septembre à 08:00')
       .click();
   };
 
@@ -272,7 +280,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.',
     );
     cy.get(dataSelector('anomalie-motif')).should('have.value', motifFixture);
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantCorrigeFixture);
+    thenTheInstantFieldsShow(instantCorrigeLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).should('be.enabled');
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
@@ -290,7 +298,10 @@ describe('HTTP conflict resolution in Gestion', () => {
           evaluation: '2026-10-04T10:00:00Z',
           empreinteConsequences: 'empreinte-correction',
           evenement: remplacementFixture,
-          acte: { ...correctionFixture, fait: { ...correctionFixture.fait, instant: '2026-09-14T15:01:00.123456789Z' } },
+          acte: {
+            ...correctionFixture,
+            fait: { ...correctionFixture.fait, instant: instantLocalFixture(instantCorrigeLocalFixture) },
+          },
           avant: dossierFixture(),
           apres: dossierFixture(true),
         } satisfies components['schemas']['RestApercuDeResolution'],
@@ -398,8 +409,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('anomalie-choix')).first().click();
     cy.get(dataSelector('anomalie-motif')).type(motifFixture);
     cy.get(dataSelector('anomalie-champs-detail')).click();
-    cy.get(dataSelector('anomalie-instant')).clear();
-    cy.get(dataSelector('anomalie-instant')).type(instantCorrigeFixture);
+    whenTypingTheInstant(instantCorrigeLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).click();
     cy.get(dataSelector('anomalie-apercu')).should('contain.text', '4 h').and('contain.text', '5 h 1 min');
   };
@@ -425,7 +435,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       evenement: remplacementFixture,
     });
     cy.get('@journalCanonique')
-      .should('contain', instantCorrigeFixture)
+      .should('contain', 'lundi 14 septembre à 17:01:00')
       .and('contain', 'Pointage annulé')
       .and('contain', 'Remplace le pointage');
     cy.get('@dureesCanoniques').should('contain', '4 h').and('contain', '5 h 1 min');
@@ -449,5 +459,9 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('anomalies-demo')).should('not.exist');
     cy.get(dataSelector('conflit-ligne')).should('have.length', 1).and('contain.text', 'M-042 réel');
     cy.get(dataSelector('conflit-ligne')).should('contain.text', 'Opérateur non résolu').and('contain.text', operateurFixture);
+  };
+
+  const givenTheClockOnAFixedDay = (): void => {
+    cy.clock(new Date(2026, 9, 5, 10, 0).getTime(), ['Date']);
   };
 });

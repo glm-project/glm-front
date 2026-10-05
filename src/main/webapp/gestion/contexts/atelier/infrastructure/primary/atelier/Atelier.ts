@@ -1,3 +1,4 @@
+import { formatInstantNumericDateTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
@@ -15,7 +16,6 @@ import { FiltreDAtelier } from '../../../domain/FiltreDAtelier';
 import { RequeteAtelier } from '../../../domain/RequeteAtelier';
 import { SuiviIntrouvable } from '../../../domain/SuiviIntrouvable';
 import { ConfirmationClotureDialog, ConfirmationClotureDialogData } from '../confirmation-cloture-dialog/ConfirmationClotureDialog';
-import { formatInstant } from '../formatInstant';
 import { LIBELLES_ATELIER } from '../LibellesAtelier';
 import { MiseALAtelierDialog, MiseALAtelierDialogData } from '../mise-a-l-atelier-dialog/MiseALAtelierDialog';
 
@@ -111,7 +111,7 @@ export class Atelier implements OnInit {
   }
 
   protected engagementDe(element: ElementALAtelier): string {
-    return formatInstant(element.engagement.instant);
+    return formatInstantNumericDateTime(element.engagement.instant.value);
   }
 
   protected auteurDeLEngagement(element: ElementALAtelier): string {
@@ -120,7 +120,7 @@ export class Atelier implements OnInit {
 
   protected clotureDe(element: ElementALAtelier): string {
     const cloture = element.cloture;
-    return cloture === undefined ? this.libelles.sansValeur : formatInstant(cloture.instant);
+    return cloture === undefined ? this.libelles.sansValeur : formatInstantNumericDateTime(cloture.instant.value);
   }
 
   protected auteurDeLaCloture(element: ElementALAtelier): string {

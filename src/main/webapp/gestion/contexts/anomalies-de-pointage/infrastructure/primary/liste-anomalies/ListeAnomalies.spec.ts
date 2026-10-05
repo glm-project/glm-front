@@ -82,7 +82,7 @@ const ligneFixture = (): LigneConflit => ({
   designation: 'M-042',
   operateur: 'Camille Martin',
   poste: 'Fraiseuse',
-  date: '2 octobre 2026',
+  date: new Date(2026, 9, 2, 9, 41).toISOString(),
   explication: 'La fin vise une activité déjà terminée.',
   nombrePointages: 3,
 });
@@ -106,6 +106,8 @@ describe('Anomalies list', () => {
   let errorFixture: ErrorHandlerFixture;
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
     portFixture = new AnomaliesReadFixture();
     routeFixture = new RouteFixture();
     routerFixture = new RouterFixture();
@@ -119,6 +121,10 @@ describe('Anomalies list', () => {
         { provide: ErrorHandlerPort, useValue: errorFixture },
       ],
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should title the page as the anomalies of pointage', async () => {
@@ -175,6 +181,35 @@ describe('Anomalies list', () => {
     await whenTheListIsRendered();
 
     expect(textOf('conflit-ligne')).toContain('Séquence en conflit');
+  });
+
+  it('should show the date of a conflict as its long day and local time without the current year', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
+    portFixture.page = {
+      nature: 'CONFLIT',
+      lignes: [{ ...ligneFixture(), date: new Date(2026, 9, 2, 9, 41, 22).toISOString() }],
+      total: 1,
+      complete: true,
+    };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('vendredi 2 octobre à 09:41');
+    expect(textOf('conflit-ligne')).not.toContain('09:41:22');
+  });
+
+  it('should add the year to the date of a conflict that did not start during the current year', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
+    portFixture.page = {
+      nature: 'CONFLIT',
+      lignes: [{ ...ligneFixture(), date: new Date(2025, 9, 2, 9, 41).toISOString() }],
+      total: 1,
+      complete: true,
+    };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('conflit-ligne')).toContain('jeudi 2 octobre 2025 à 09:41');
   });
 
   it('should distinguish no matching conflicts from an empty global list', async () => {

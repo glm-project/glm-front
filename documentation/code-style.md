@@ -163,6 +163,15 @@ name that reads as a hidden verb behind a French preposition (`xxxDans`, `versXx
 explicit English verb instead of the preposition standing in for one. Constants and types carrying
 only domain nouns keep their French name (`CODES_DE_REFUS_D_ATELIER`, `CodeDeRefusDAtelier`).
 
+## Format dates through the shared module
+
+Show a date with a named format of `app/shared/date-format` (`DateFormats.ts`): a `Date` is an instant shown in
+local time, a `string` `AAAA-MM-JJ` is a calendar day shown without shift, and the current local day comes from
+`localCalendarDay`. Add a missing format to that file, with its spec, beside the code that first calls it.
+Lint refuses `Intl.DateTimeFormat`, `toLocaleDateString`, `toLocaleTimeString`, `toLocaleString`, `DatePipe`,
+`formatDate` and the `date` pipe everywhere else, and `toLocaleString` on a number with them: use
+`Intl.NumberFormat`. See [ADR 0051](adr/0051-format-dates-through-one-shared-convention.md).
+
 ## Linting and formatting
 
 ESLint is strict on `main/webapp/**`: `typescript-eslint` `strictTypeChecked` + `stylistic` +

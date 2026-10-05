@@ -11,14 +11,21 @@ import {
   finCorrigeeFixture,
   finRegulariseeFixture,
   finTardiveFixture,
-  instantRegulariseFixture,
+  instantRegulariseLocalFixture,
+  instantRegulariseSaisiFixture,
   instantTardifFixture,
+  instantTardifLocalFixture,
   motifFinAutomatiqueFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
   posteFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
+import {
+  thenTheInstantFieldsAreEmpty,
+  thenTheInstantFieldsShow,
+  whenTypingTheInstant,
+} from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const urlApercu = `${urlDossier}/apercus`;
@@ -31,6 +38,10 @@ const refusFixture = [
 ];
 
 describe('Automatic end of an activity in Gestion', () => {
+  beforeEach(() => {
+    givenTheClockOnAFixedDay();
+  });
+
   it('should regularise an automatic end from its dossier through preview, confirmation and receipt', () => {
     givenAnAutomaticEndRegularisedByTheBackend();
 
@@ -63,17 +74,19 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenChoosingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-fin-automatique-activite'))
-      .should('contain.text', 'Début 2026-09-14T08:00:00Z')
-      .and('contain.text', 'Fin automatique 2026-09-14T21:00:00Z')
+      .should('contain.text', 'Début lundi 14 septembre à 08:00')
+      .and('contain.text', 'Fin automatique lundi 14 septembre à 21:00')
       .and('contain.text', 'Durée 13 h');
     cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
     cy.get(dataSelector('anomalie-choix')).should('have.length', 1).and('contain.text', 'Régulariser la fin').click();
   };
 
   const whenDatingTheEnd = (): void => {
-    cy.get(dataSelector('anomalie-instant')).should('be.visible').and('have.value', '');
+    thenTheInstantFieldsAreEmpty();
+    cy.get(dataSelector('anomalie-validation')).should('contain.text', 'Renseignez la date et l’heure du fait.');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
-    cy.get(dataSelector('anomalie-instant')).type(instantRegulariseFixture);
+    whenTypingTheInstant(instantRegulariseLocalFixture);
+    cy.get(dataSelector('anomalie-validation')).should('not.contain.text', 'Renseignez la date et l’heure du fait.');
     cy.get(dataSelector('anomalie-choix')).should('have.attr', 'aria-pressed', 'true');
   };
 
@@ -105,7 +118,7 @@ describe('Automatic end of an activity in Gestion', () => {
           activiteVisee: activiteFinAutomatiqueFixture,
           operateur: operateurFinAutomatiqueFixture,
           poste: posteFinAutomatiqueFixture,
-          instant: instantRegulariseFixture,
+          instant: instantRegulariseSaisiFixture,
         },
       });
     cy.wait('@confirmation')
@@ -173,7 +186,7 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenChoosingTheLateEndCorrection = (): void => {
     cy.get(dataSelector('anomalie-choix')).should('contain.text', 'Corriger la fin pointée après l’échéance').click();
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantTardifFixture);
+    thenTheInstantFieldsShow(instantTardifLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
   };
 
@@ -253,7 +266,7 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Acte refusé');
     cy.get(dataSelector('anomalie-refus')).should('contain.text', message);
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantRegulariseFixture);
+    thenTheInstantFieldsShow(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-fin-automatique')).should('be.visible');
   };
 
@@ -291,9 +304,13 @@ describe('Automatic end of an activity in Gestion', () => {
   const thenTheEndRegularisationAwaitsANewPreview = (): void => {
     cy.get('@dossierCourant.all').should('have.length', 2);
     cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Les données ont changé');
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantRegulariseFixture);
+    thenTheInstantFieldsShow(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.enabled');
+  };
+
+  const givenTheClockOnAFixedDay = (): void => {
+    cy.clock(new Date(2026, 9, 5, 10, 0).getTime(), ['Date']);
   };
 });

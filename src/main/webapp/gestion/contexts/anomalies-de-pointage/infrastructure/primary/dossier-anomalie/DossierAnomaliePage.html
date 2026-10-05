@@ -8,11 +8,12 @@
     <h2 class="text-section">{{ dossier.ligne.designation }}</h2>
     <p class="mt-1 text-body-sm text-ink-muted">
       {{ dossier.ligne.operateur || libelles.operateurNonResolu + ' · ' + dossier.ligne.operateurId }} · {{ dossier.ligne.poste ||
-      (dossier.ligne.posteId ? libelles.posteNonResolu + ' · ' + dossier.ligne.posteId : libelles.sansPoste) }} · {{ dossier.ligne.date }}
+      (dossier.ligne.posteId ? libelles.posteNonResolu + ' · ' + dossier.ligne.posteId : libelles.sansPoste) }} · {{ dossier.ligne.date |
+      instantLongDay: now }}
     </p>
     <p class="mt-2 text-body-sm" data-selector="anomalie-cloture">
-      {{ dossier.cloture ? libelles.cloture : libelles.ouvert }} @if (dossier.finCloture) { · {{ dossier.finCloture }} } · {{
-      dossier.engagement }}
+      {{ dossier.cloture ? libelles.cloture : libelles.ouvert }} @if (dossier.finCloture) { · {{ dossier.finCloture | instantLongDay: now }}
+      } · {{ dossier.engagement | instantLongDay: now }}
     </p>
     @if (dossier.finAutomatique) {
     <div class="mt-4 rounded-control border border-border-strong bg-surface p-4" data-selector="anomalie-fin-automatique">
@@ -21,7 +22,8 @@
       @for (activite of dossier.activites; track activite.id.activite) { @if (activite.etat === 'ECHUE' && activite.periode; as periode) {
       <p class="mt-2 text-body" data-selector="anomalie-fin-automatique-activite">
         {{ periode.categorie === 'TRAVAIL' ? libelles.types.DEBUT : libelles.types.NON_CONFORMITE }} · {{ libelles.debut }} {{ periode.debut
-        }} · {{ libelles.finAutomatiqueA }} {{ periode.fin }} · {{ libelles.duree }} {{ tempsActivite(activite) }}
+        | instantLongDay: now }} · {{ libelles.finAutomatiqueA }} {{ (periode.fin ?? '') | instantLongDay: now }} · {{ libelles.duree }} {{
+        tempsActivite(activite) }}
       </p>
       } }
     </div>
@@ -80,9 +82,9 @@
       <ol class="chronologie">
         @for (pointage of dossier.journal | chronologiePointages; track pointage.id.pointage) {
         <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="anomalie-pointage">
-          <time class="text-body tabular-nums font-semibold" [attr.datetime]="pointage.fait.instant"
-            >{{ pointage.fait.instant.slice(11, 19) }}
-            <span class="text-body-sm text-ink-muted">· {{ pointage.fait.instant.slice(0, 10) }}</span></time
+          @let horodatage = pointage.fait.instant | instantTimeAndLongDayWithSeconds: now;
+          <time class="text-body tabular-nums font-semibold" [attr.datetime]="pointage.fait.instant | instantDatetime"
+            >{{ horodatage.time }} <span class="text-body-sm text-ink-muted">· {{ horodatage.day }}</span></time
           >
           <p class="mt-2 text-body font-semibold">
             <span class="gestion-type" [class.bg-nc]="pointage.fait.type === 'NON_CONFORMITE'"
@@ -101,7 +103,7 @@
           <p class="mt-2 text-body-sm font-semibold">{{ libelles.regularisation }}</p>
           } @if (pointage.annulation; as annulation) {
           <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-annulation">
-            {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant }}
+            {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}
           </p>
           } @if (pointage.remplace; as original) {
           <p class="mt-2 text-body-sm">{{ libelles.remplace }} {{ original.pointage }}</p>
@@ -140,13 +142,15 @@
             (toggle)="traceToggled(pointage.id.pointage, trace.open)"
           >
             <summary class="min-h-touch cursor-pointer py-3 text-body-sm text-ink-muted">{{ libelles.tracabilite }}</summary>
-            <p class="text-body-sm">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
+            <p class="text-body-sm">{{ pointage.id.pointage }} · {{ pointage.fait.instant | instantLongDayWithSeconds: now }}</p>
             @if (pointage.fait.activiteVisee) {
             <p class="text-body-sm">{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
             } @if (pointage.activiteCreee; as activite) {
             <p class="text-body-sm">{{ libelles.creee }} {{ activite.activite }}</p>
             }
-            <p class="mt-2 text-body-sm text-ink-muted">{{ libelles.enregistrement }} {{ pointage.enregistre }} · {{ pointage.auteur }}</p>
+            <p class="mt-2 text-body-sm text-ink-muted">
+              {{ libelles.enregistrement }} {{ pointage.enregistre | instantLongDay: now }} · {{ pointage.auteur }}
+            </p>
           </details>
         </li>
         }
@@ -198,9 +202,9 @@
         <div class="mt-2 text-body-sm" data-selector="anomalie-proposition-resume">
           @if (proposition.kind === 'ANNULATION') { @for (pointage of dossier.journal; track pointage.id.pointage) { @if
           (pointage.id.pointage === proposition.pointage) {
-          <p>{{ libelles.types[pointage.fait.type] }} · {{ pointage.fait.instant }}</p>
+          <p>{{ libelles.types[pointage.fait.type] }} · {{ pointage.fait.instant | instantLongDayWithSeconds: now }}</p>
           } } } @else { @if (proposition.fait.type) {
-          <p>{{ libelles.types[proposition.fait.type] }} · {{ proposition.fait.instant }}</p>
+          <p>{{ libelles.types[proposition.fait.type] }} · {{ proposition.fait.instant | instantLongDayWithSeconds: now }}</p>
           } @if (proposition.fait.activiteVisee) {
           <p>{{ libelles.cible }} {{ labelForActivite(proposition.fait.activiteVisee, dossier) }}</p>
           } }
@@ -283,18 +287,17 @@
             [disabled]="occupe()"
             (input)="change({ fait: { poste: poste.value } })"
           />
-          <label class="mt-4 block text-body-sm font-semibold" for="instant-acte">{{ libelles.instant }}</label>
-          <input
-            id="instant-acte"
-            #instant
-            class="champ mt-2"
-            data-selector="anomalie-instant"
+          @for (proposee of [propositionsFaites()]; track proposee) {
+          <glm-date-time-field
+            class="mt-4"
+            fieldId="instant-acte"
+            selector="anomalie-instant"
+            [labels]="libelles.champInstant"
             [value]="proposition.fait.instant"
             [disabled]="occupe()"
-            (input)="change({ fait: { instant: instant.value } })"
-            aria-describedby="instant-aide"
+            (valueChanged)="change({ fait: { instant: $event } })"
           />
-          <p id="instant-aide" class="mt-1 text-body-sm text-ink-muted">{{ libelles.instantAide }}</p>
+          }
         </details>
         } @if (proposition.kind !== 'REGULARISATION') {
         <label class="mt-4 block text-body-sm font-semibold" for="motif-acte">{{ libelles.motif }}</label>
@@ -376,7 +379,7 @@
         } @if (apercu.acte.kind !== 'ANNULATION') {
         <p>
           {{ libelles.types[apercu.acte.fait.type] }} · {{ libelles.intentions[apercu.acte.fait.intention] }} · {{ apercu.acte.fait.instant
-          }}
+          | instantLongDayWithSeconds: now }}
         </p>
         @if (apercu.acte.fait.activiteVisee) {
         <p>{{ libelles.cible }} {{ labelForActivite(apercu.acte.fait.activiteVisee, apercu.apres) }}</p>
@@ -428,7 +431,7 @@
                 class="border-t border-border py-3 text-body-sm"
                 [attr.data-selector]="'anomalie-apercu-fait-avant-' + pointage.id.pointage"
               >
-                <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
+                <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant | instantLongDayWithSeconds: now }}</p>
                 <p>{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
                 @if (pointage.fait.activiteVisee) {
                 <p>{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
@@ -451,7 +454,7 @@
                 class="border-t border-border py-3 text-body-sm"
                 [attr.data-selector]="'anomalie-apercu-fait-apres-' + pointage.id.pointage"
               >
-                <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
+                <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant | instantLongDayWithSeconds: now }}</p>
                 <p>{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
                 @if (pointage.fait.activiteVisee) {
                 <p>{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
@@ -487,7 +490,9 @@
     <ol class="chronologie">
       @for (pointage of resultat.journal | chronologiePointages; track pointage.id.pointage) {
       <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="anomalie-pointage">
-        <time class="text-body-sm" [attr.datetime]="pointage.fait.instant">{{ pointage.fait.instant }}</time>
+        <time class="text-body-sm" [attr.datetime]="pointage.fait.instant | instantDatetime"
+          >{{ pointage.fait.instant | instantLongDayWithSeconds: now }}</time
+        >
         <p class="mt-2 font-semibold">{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
         @if (pointage.fait.activiteVisee) {
         <p>{{ libelles.cible }} {{ pointage.fait.activiteVisee }}</p>
@@ -496,14 +501,16 @@
         } @if (pointage.regularisation) {
         <p>{{ libelles.regularisation }}</p>
         } @if (pointage.annulation; as annulation) {
-        <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant }}</p>
+        <p class="text-danger">
+          {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}
+        </p>
         } @if (pointage.remplace; as original) {
         <p>{{ libelles.remplace }} {{ original.pointage }}</p>
         }
         <p class="text-body-sm">
           {{ libelles.operateur }} : {{ pointage.fait.operateur }} · {{ libelles.poste }} : {{ pointage.fait.poste || libelles.sansPoste }}
         </p>
-        <p class="text-ink-muted">{{ libelles.enregistrement }} {{ pointage.enregistre }} · {{ pointage.auteur }}</p>
+        <p class="text-ink-muted">{{ libelles.enregistrement }} {{ pointage.enregistre | instantLongDay: now }} · {{ pointage.auteur }}</p>
       </li>
       }
     </ol>

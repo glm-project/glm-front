@@ -1,3 +1,4 @@
+import { localCalendarDay } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, computed, inject, input, linkedSignal, output, resource, signal } from '@angular/core';
 import { DemandeDePointages } from '../../../../domain/DemandeDePointages';
@@ -11,11 +12,6 @@ import { SemaineISO } from '../../../../domain/semaine/SemaineISO';
 import { ChoixDeSemaine } from '../choix-de-semaine/choix-de-semaine';
 import { LIBELLES_MES_POINTAGES } from '../LibellesMesPointages';
 
-const deuxChiffres = (valeur: number): string => String(valeur).padStart(2, '0');
-
-const jourLocal = (instant: Date): JourCalendaire =>
-  new JourCalendaire(`${String(instant.getFullYear())}-${deuxChiffres(instant.getMonth() + 1)}-${deuxChiffres(instant.getDate())}`);
-
 @Component({
   selector: 'glm-mes-pointages',
   host: { 'data-selector': 'mes-pointages', class: 'relative flex min-h-0 flex-1 flex-col' },
@@ -27,7 +23,7 @@ export class MesPointages {
   readonly operateur = input.required<string>();
   readonly retourRequested = output();
   private readonly port = inject(PointagesDeLOperateurPort);
-  protected readonly aujourdhui = jourLocal(new Date());
+  protected readonly aujourdhui = new JourCalendaire(localCalendarDay(new Date()));
   protected readonly periode = new PeriodeConsultable(this.aujourdhui);
   protected readonly semaine = signal<SemaineISO>(this.periode.semaineCourante);
   protected readonly precedente = computed(() => this.periode.precedente(this.semaine()));

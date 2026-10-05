@@ -1,3 +1,11 @@
+import {
+  InstantDatetimePipe,
+  InstantLongDayPipe,
+  InstantLongDayWithSecondsPipe,
+  InstantTimeAndLongDayWithSecondsPipe,
+} from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
+import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
+import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -23,10 +31,18 @@ import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePo
 
 @Component({
   selector: 'glm-dossier-anomalie',
-  imports: [RouterLink, ChronologiePointagesPipe],
+  imports: [
+    RouterLink,
+    ChronologiePointagesPipe,
+    InstantDatetimePipe,
+    InstantLongDayPipe,
+    InstantLongDayWithSecondsPipe,
+    InstantTimeAndLongDayWithSecondsPipe,
+    DateTimeField,
+  ],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',
-  providers: [PreparationActe],
+  providers: [PreparationActe, ...provideGestionDateAdapter()],
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
@@ -37,7 +53,10 @@ export class DossierAnomaliePage {
   private readonly port = inject(AnomaliesReadPort);
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
+  private readonly instantLongDay = new InstantLongDayPipe();
+  private readonly instantLongDayWithSeconds = new InstantLongDayWithSecondsPipe();
   private precedente: AdresseDossier | undefined;
+  protected readonly now = new Date();
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(AnomaliesRightsPort);
   protected readonly libelles = LIBELLES_ANOMALIES;
@@ -45,6 +64,7 @@ export class DossierAnomaliePage {
   protected readonly conflitAExpliquer = conflitAExpliquer;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
+  protected readonly propositionsFaites = signal(0);
   protected readonly pointageConsulte = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
@@ -73,8 +93,8 @@ export class DossierAnomaliePage {
     const periode = activite.periode;
     if (periode === undefined) return activite.libelle;
     const categorie = periode.categorie === 'TRAVAIL' ? this.libelles.types.DEBUT : this.libelles.types.NON_CONFORMITE;
-    const fin = periode.fin === undefined ? '' : ` → ${periode.fin}`;
-    return `${categorie} · ${periode.debut}${fin}`;
+    const fin = periode.fin === undefined ? '' : ` → ${this.instantLongDay.transform(periode.fin, this.now)}`;
+    return `${categorie} · ${this.instantLongDay.transform(periode.debut, this.now)}${fin}`;
   }
 
   protected libelleChoix(choix: ChoixGuide): string {
@@ -88,7 +108,7 @@ export class DossierAnomaliePage {
   protected libelleContinuation(ligne: LigneConflit): string {
     return (
       ligne.explication
-      || `${ligne.designation} · ${ligne.operateur || ligne.operateurId} · ${ligne.date} · ${ligne.nombrePointages} pointages`
+      || `${ligne.designation} · ${ligne.operateur || ligne.operateurId} · ${this.instantLongDay.transform(ligne.date, this.now)} · ${ligne.nombrePointages} pointages`
     );
   }
 
@@ -100,7 +120,7 @@ export class DossierAnomaliePage {
     if (pointage === undefined) return { libelle: identifiant.pointage };
     const fait = pointage.fait;
     return {
-      libelle: `${fait.instant} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
+      libelle: `${this.instantLongDayWithSeconds.transform(fait.instant, this.now)} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
       lien: this.hrefForRepere(`pointage-${pointage.id.pointage}`),
     };
   }
@@ -153,6 +173,7 @@ export class DossierAnomaliePage {
 
   protected choose(saisie: SaisieActe, choix?: string): void {
     this.preparation.choose(saisie);
+    this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
     this.choixSelectionne.set(choix);
     this.focusHeading(this.propositionHeading);
@@ -167,7 +188,8 @@ export class DossierAnomaliePage {
     const activite = dossier.activites.find(activite => activite.id.activite === id);
     if (activite !== undefined) return this.libelleActivite(activite);
     const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
-    if (origine !== undefined) return `${this.libelles.types[origine.fait.type]} à ${origine.fait.instant.slice(11, 19)}`;
+    if (origine !== undefined)
+      return `${this.libelles.types[origine.fait.type]} · ${this.instantLongDayWithSeconds.transform(origine.fait.instant, this.now)}`;
     return `Activité ${id}`;
   }
 

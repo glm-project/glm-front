@@ -80,11 +80,30 @@ const FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS = {
   selector: ':matches(PropertyDefinition, VariableDeclarator)[definite=true]',
   message: 'Definite-assignment assertions hide an uninitialized value: initialize it or model its possible absence.',
 };
-const restrictedSyntax = (...additionalRestrictions) => [
+const DATE_FORMAT_MESSAGE =
+  'Format dates through app/shared/date-format: one locale, one hour cycle and one place to change them — see documentation/adr/0051-format-dates-through-one-shared-convention.md.';
+const FORBIDDEN_DATE_FORMATTING = [
+  "NewExpression[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+  "CallExpression[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
+  "CallExpression[callee.property.name='toLocaleDateString']",
+  "CallExpression[callee.property.name='toLocaleTimeString']",
+  "CallExpression[callee.property.name='toLocaleString']",
+].map(selector => ({ selector, message: DATE_FORMAT_MESSAGE }));
+const FORBIDDEN_DATE_IMPORTS = {
+  name: '@angular/common',
+  importNames: ['DatePipe', 'formatDate'],
+  message: DATE_FORMAT_MESSAGE,
+};
+const FORBIDDEN_DATE_PIPE = {
+  selector: "BindingPipe[name='date']",
+  message: DATE_FORMAT_MESSAGE,
+};
+const restrictedSyntax = (additionalRestrictions = [], { dates = true } = {}) => [
   'error',
   ...FORBIDDEN_DYNAMIC_ANGULAR_IMPORTS,
   FORBIDDEN_ANGULAR_NAMESPACES,
   FORBIDDEN_DEFINITE_ASSIGNMENT_ASSERTIONS,
+  ...(dates ? FORBIDDEN_DATE_FORMATTING : []),
   ...additionalRestrictions,
 ];
 
@@ -95,14 +114,15 @@ const lazyRouteSelectors = forbiddenPathPattern => [
   `ImportExpression > TemplateLiteral > TemplateElement[value.cooked=/${forbiddenPathPattern}/]`,
 ];
 
-const boundary = (files, restrictions) => ({
+const boundary = (files, restrictions, options) => ({
   files,
   rules: {
-    'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS], patterns: restrictions }],
+    'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS, FORBIDDEN_DATE_IMPORTS], patterns: restrictions }],
     'no-restricted-syntax': restrictedSyntax(
-      ...restrictions.flatMap(({ regex, message }) =>
+      restrictions.flatMap(({ regex, message }) =>
         lazyRouteSelectors(regex).map(selector => ({ selector, message: `Lazy route: ${message}` })),
       ),
+      options,
     ),
   },
 });
@@ -198,7 +218,7 @@ export default typescript.config(
   {
     files: ['**/*.{js,mjs,cjs,ts}'],
     rules: {
-      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS] }],
+      'no-restricted-imports': ['error', { paths: [FORBIDDEN_ANGULAR_EFFECTS, FORBIDDEN_DATE_IMPORTS] }],
       'no-restricted-syntax': restrictedSyntax(),
     },
   },
@@ -326,9 +346,13 @@ export default typescript.config(
   boundary(['src/main/webapp/app/**/*.ts'], [noFrontAtAll]),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/**/*.ts`], [noOtherFront(front)])),
   ...FRONTS.map(front => boundary([`src/main/webapp/${front}/shared/**/*.ts`], [noOtherFront(front), noBusinessContext(front)])),
+  boundary(['src/main/webapp/app/shared/date-format/**/*.ts'], [noFrontAtAll], { dates: false }),
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
+    rules: {
+      'no-restricted-syntax': ['error', FORBIDDEN_DATE_PIPE],
+    },
   },
   {
     files: ['src/**/*.ts', 'src/**/*.html'],

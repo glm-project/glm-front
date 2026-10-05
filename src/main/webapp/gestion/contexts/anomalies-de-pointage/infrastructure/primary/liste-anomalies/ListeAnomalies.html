@@ -120,7 +120,7 @@
             </td>
             <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
             <td class="max-w-md p-4">{{ ligne.explication || libelles.sequenceEnConflit }}</td>
-            <td class="p-4 tabular-nums">{{ ligne.date }}<br />{{ ligne.nombrePointages }} pointages</td>
+            <td class="p-4 tabular-nums">{{ ligne.date | instantLongDay: now }}<br />{{ ligne.nombrePointages }} pointages</td>
           </tr>
           } } @else { @for (ligne of page.lignes; track ligne.adresse.pointage.pointage) {
           <tr class="border-t border-border" data-selector="fin-automatique-ligne">

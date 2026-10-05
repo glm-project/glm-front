@@ -1,3 +1,12 @@
+import {
+  formatCalendarDayFull,
+  formatCalendarDayLong,
+  formatCalendarDayRange,
+  formatCalendarDayShort,
+  formatInstantTime,
+  formatInstantWeekdayDay,
+  localCalendarDay,
+} from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
 import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
 import { CategorieDActivite } from '../../domain/element/CategorieDActivite';
@@ -10,29 +19,16 @@ import { TypeDePointage } from '../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 
-const PLAGE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
-const JOUR_LONG = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
-
-const JOUR_ORIGINE = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric' });
-const DATE_ORIGINE = new Intl.DateTimeFormat('fr-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
-
-const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-const dateDe = (jour: JourCalendaire): Date => new Date(`${jour.value}T00:00:00Z`);
-
 const formatDuree = (duree: DureeTravaillee): string => `${duree.heures} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
 
-const heure = (instant: InstantDeReleve): string => HEURE.format(instant.value);
+const heure = (instant: InstantDeReleve): string => formatInstantTime(instant.value);
 
 const debutDOrigine = (debut: InstantDeReleve, jour: JourCalendaire): string =>
-  DATE_ORIGINE.format(debut.value) === jour.value ? heure(debut) : `${JOUR_ORIGINE.format(debut.value)} à ${heure(debut)}`;
+  localCalendarDay(debut.value) === jour.value ? heure(debut) : `${formatInstantWeekdayDay(debut.value)} à ${heure(debut)}`;
 
 const MINUTES_PAR_HEURE = 60;
 
 const TYPES_D_ELEMENT: Record<TypeDElement, string> = { PRODUIT: 'Moule', ORDRE_DE_FABRICATION: 'OF' };
-
-const JOUR_COMPLET = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
 
 const nomDeLElement = (element: ElementDuReleve): string => `${TYPES_D_ELEMENT[element.type]} ${element.numero()}`;
 
@@ -138,7 +134,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     'Cette adresse ne désigne pas une semaine ou un jour que le calendrier porte. Revenez au référentiel pour repartir de la semaine en cours.',
 
   semaine: (semaine: SemaineISO): string =>
-    `Semaine ${semaine.numero} · ${PLAGE.formatRange(dateDe(semaine.lundi()), dateDe(semaine.dimanche()))}`,
+    `Semaine ${semaine.numero} · ${formatCalendarDayRange(semaine.lundi().value, semaine.dimanche().value)}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
   duree: (total: TotalDeDuree): string => {
     const lecture = total.snapshot();
@@ -148,25 +144,25 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     const lecture = total.snapshot();
     return lecture.complete ? `NC ${formatDuree(lecture.valeur)}` : 'NC Incomplet';
   },
-  jour: (jour: JourCalendaire): string => JOUR.format(dateDe(jour)),
+  jour: (jour: JourCalendaire): string => formatCalendarDayShort(jour.value),
   typeDElement: (type: TypeDElement): string => TYPES_D_ELEMENT[type],
   nomDElement: nomDeLElement,
   heure,
   libelleDePointage: (type: TypeDePointage): string => POINTAGES[type],
   pointage: (type: TypeDePointage, instant: InstantDeReleve): string => `${POINTAGES[type]} ${heure(instant)}`,
-  titreDuJournal: (jour: JourCalendaire, nombre: number): string => `Pointages du ${JOUR_COMPLET.format(dateDe(jour))} · ${nombre}`,
+  titreDuJournal: (jour: JourCalendaire, nombre: number): string => `Pointages du ${formatCalendarDayFull(jour.value)} · ${nombre}`,
   sansPointageCeJour: 'Aucun pointage ce jour',
   postes: (postes: readonly PosteDeLElement[]): string => postes.map(posteEtNature).join(', '),
   repere: (minutes: number): string => `${Math.floor(minutes / MINUTES_PAR_HEURE)} h`,
 
   enonceDActivite: ({ element, jour, categorie, debut, fin }: FormeDActivite): string => {
-    const enonce = `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
+    const enonce = `${nomDeLElement(element)}, ${formatCalendarDayLong(jour.value)}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
     return enonce;
   },
   enonceDActiviteAResoudre: ({ element, jour, categorie }: FormeDActiviteEnCours): string =>
-    `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, ${CATEGORIES_D_ACTIVITE[categorie]}, À résoudre`,
+    `${nomDeLElement(element)}, ${formatCalendarDayLong(jour.value)}, ${CATEGORIES_D_ACTIVITE[categorie]}, À résoudre`,
   finAutomatique: (fin: InstantDeReleve): string => `Fin automatique à ${heure(fin)} · Anomalie`,
   activiteEnCours: (debut: InstantDeReleve, jour: JourCalendaire): string => `En cours depuis ${debutDOrigine(debut, jour)}`,
   enonceDActiviteEnCours: ({ element, jour, categorie, debut }: FormeDActiviteEnCours): string =>
-    `${nomDeLElement(element)}, ${JOUR_LONG.format(dateDe(jour))}, depuis ${debutDOrigine(debut, jour)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
+    `${nomDeLElement(element)}, ${formatCalendarDayLong(jour.value)}, depuis ${debutDOrigine(debut, jour)}, ${CATEGORIES_D_ACTIVITE[categorie]}, ${EN_COURS}`,
 } as const;

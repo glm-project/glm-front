@@ -6,6 +6,8 @@ import {
   debutFixture,
   dossierFixture,
   finFixture,
+  instantFinFixture,
+  instantFinLocalFixture,
   journalFixture,
   ligneFixture,
   ncFixture,
@@ -13,10 +15,11 @@ import {
   remplacementFixture,
   suiviFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import { instantLocalFixture, instantLocalWithOffsetFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import type {} from '../../../utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider';
 
 const posteFixture = '70000000-0000-0000-0000-000000000008';
-const instantFinFixture = '2026-09-14T17:00:00.123456789+02:00';
 const motifCorrectionFixture = 'La cible est la NC.';
 
 const dossierRecuFixture = (): components['schemas']['RestDossierAnomalie'] => {
@@ -52,6 +55,7 @@ const dossierApresFixture = (): components['schemas']['RestDossierAnomalie'] => 
 
 describe('Conflict dossier in Gestion', () => {
   beforeEach(() => {
+    givenTheClockOnAFixedDay();
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierRecuFixture() }).as('dossier');
     cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}/apercus`, request => {
       const body = request.body as components['schemas']['RestDemandeDApercu'];
@@ -85,8 +89,8 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-proposition-titre')).should('have.focus');
     cy.get(dataSelector('anomalie-proposition-resume'))
       .should('contain.text', '17:00:00')
-      .and('contain.text', 'Travail · 2026-09-14T08:00:00.123456789+02:00');
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantFinFixture);
+      .and('contain.text', 'Travail · lundi 14 septembre à 08:00');
+    thenTheInstantFieldsShow(instantFinLocalFixture);
     cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
   };
 
@@ -151,10 +155,10 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-apercu-journal-ouvrir')).click();
   };
 
-  it('should identify an absent workstation while preserving the exact received instant', () => {
+  it('should identify an absent workstation while showing the received instant to the second', () => {
     whenOpeningTheDossierWithoutAWorkstation();
 
-    thenTheFactsKeepTheirPrecisionAndNameTheAbsentWorkstation();
+    thenTheFactsShowTheirSecondsAndNameTheAbsentWorkstation();
   });
 
   const whenOpeningTheDossierWithoutAWorkstation = (): void => {
@@ -163,8 +167,9 @@ describe('Conflict dossier in Gestion', () => {
     cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
   };
 
-  const thenTheFactsKeepTheirPrecisionAndNameTheAbsentWorkstation = (): void => {
-    cy.get(dataSelector('anomalie-pointage')).should('contain.text', '2026-09-14T08:00:00.123456789+02:00');
+  const thenTheFactsShowTheirSecondsAndNameTheAbsentWorkstation = (): void => {
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', '08:00:00 · lundi 14 septembre');
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', 'lundi 14 septembre à 08:00:00');
     cy.get(dataSelector('anomalie-pointage')).each(pointage => {
       cy.wrap(pointage).should('contain.text', 'Poste : Sans poste');
     });
@@ -201,17 +206,17 @@ describe('Conflict dossier in Gestion', () => {
             {
               ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
               id: '70000000-0000-0000-0000-000000000011',
-              dateDeSurvenue: '2026-09-14T09:00:00+02:00',
+              dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 9, 0)),
             },
             {
               ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
               id: '70000000-0000-0000-0000-000000000012',
-              dateDeSurvenue: '2026-09-14T10:00:00+02:00',
+              dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 10, 0)),
             },
             {
               ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
               id: '70000000-0000-0000-0000-000000000013',
-              dateDeSurvenue: '2026-09-14T10:00:00+02:00',
+              dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 10, 0)),
             },
           ],
         },
@@ -222,9 +227,9 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenTheReceivedFactsFollowTheirOccurrenceTime = (): void => {
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 6);
-    cy.get(dataSelector('anomalie-pointage')).eq(1).should('contain.text', '2026-09-14T09:00:00+02:00');
-    cy.get(dataSelector('anomalie-pointage')).eq(2).should('contain.text', '2026-09-14T10:00:00+02:00');
-    cy.get(dataSelector('anomalie-pointage')).eq(3).should('contain.text', '2026-09-14T10:00:00+02:00');
+    cy.get(dataSelector('anomalie-pointage')).eq(1).should('contain.text', 'lundi 14 septembre à 09:00:00');
+    cy.get(dataSelector('anomalie-pointage')).eq(2).should('contain.text', 'lundi 14 septembre à 10:00:00');
+    cy.get(dataSelector('anomalie-pointage')).eq(3).should('contain.text', 'lundi 14 septembre à 10:00:00');
   };
 
   it('should offer an explicit detailed correction and preserve the received precision', () => {
@@ -233,6 +238,65 @@ describe('Conflict dossier in Gestion', () => {
 
     thenTheDetailedFactPreservesTheReceivedValues();
   });
+
+  it('should send the received instant untouched, nanoseconds included, when only the reason is entered', () => {
+    whenOpeningTheDossier();
+    whenCorrectingTheEnd();
+    whenGivingTheReason();
+    whenRequestingThePreview();
+
+    thenThePreviewedActCarries(instantFinFixture);
+  });
+
+  it('should open the calendar in French on the month of the received instant, starting on Monday', () => {
+    whenOpeningTheDossier();
+    whenCorrectingTheEnd();
+    whenOpeningTheCalendar();
+
+    thenTheCalendarIsInFrenchOnTheReceivedMonthStartingOnMonday();
+  });
+
+  const whenOpeningTheCalendar = (): void => {
+    cy.get(dataSelector('anomalie-instant-calendrier')).find('button').click();
+  };
+
+  const thenTheCalendarIsInFrenchOnTheReceivedMonthStartingOnMonday = (): void => {
+    cy.get('.mat-calendar-period-button')
+      .invoke('text')
+      .should('match', /sept\. 2026/i);
+    cy.get('.mat-calendar-table-header th').first().should('contain.text', 'L');
+  };
+
+  it('should choose the day in the calendar and the hour in the time list', () => {
+    whenOpeningTheDossier();
+    whenCorrectingTheEnd();
+    whenGivingTheReason();
+    whenChoosingTheDayInTheCalendar('15 septembre 2026');
+    whenChoosingTheHourInTheList('18:30');
+    whenRequestingThePreview();
+
+    thenThePreviewedActCarries(instantLocalWithOffsetFixture(new Date(2026, 8, 15, 18, 30)));
+  });
+
+  const whenGivingTheReason = (): void => {
+    cy.get(dataSelector('anomalie-motif')).type('La cible est la NC.');
+  };
+
+  const whenChoosingTheDayInTheCalendar = (day: string): void => {
+    whenOpeningTheCalendar();
+    cy.get('.mat-datepicker-content').should(popup => expect(popup[0]?.getAnimations()).to.have.length(0));
+    cy.get(`.mat-calendar-body-cell[aria-label="${day}"]`).click();
+    cy.get('.mat-calendar').should('not.exist');
+  };
+
+  const whenChoosingTheHourInTheList = (hour: string): void => {
+    cy.get(dataSelector('anomalie-instant-horloge')).find('button').click();
+    cy.contains('mat-option', hour).click();
+  };
+
+  const thenThePreviewedActCarries = (instant: string): void => {
+    cy.wait('@apercu').its('request.body.acte.fait.instant').should('equal', instant);
+  };
 
   it('should ask for the missing fact without choosing a type or intention or requesting a reason', () => {
     whenOpeningTheDossier();
@@ -460,24 +524,29 @@ describe('Conflict dossier in Gestion', () => {
   const thenTheCancellationOnlyRequiresAReason = (): void => {
     cy.get(dataSelector('anomalie-acte')).should('contain.text', 'Annulation');
     cy.get(dataSelector('anomalie-motif')).should('have.value', '');
-    cy.get(dataSelector('anomalie-instant')).should('not.exist');
+    cy.get(dataSelector('anomalie-instant-date')).should('not.exist');
+    cy.get(dataSelector('anomalie-instant-heure')).should('not.exist');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
   };
 
   const thenTheMissingFactRequiresAnExplicitDecision = (): void => {
     cy.get('input[name="type-acte"]:checked').should('not.exist');
     cy.get('input[name="intention-acte"]:checked').should('not.exist');
-    cy.get(dataSelector('anomalie-instant')).should('have.value', '');
+    thenTheInstantFieldsAreEmpty();
     cy.get(dataSelector('anomalie-motif')).should('not.exist');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
     cy.get(dataSelector('anomalie-validation')).should('contain.text', 'Choisissez le type');
   };
 
   const thenTheDetailedFactPreservesTheReceivedValues = (): void => {
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantFinFixture);
+    thenTheInstantFieldsShow(instantFinLocalFixture);
     cy.get(dataSelector('anomalie-operateur')).should('have.value', operateurFixture);
     cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
+  };
+
+  const givenTheClockOnAFixedDay = (): void => {
+    cy.clock(new Date(2026, 9, 5, 10, 0).getTime(), ['Date']);
   };
 });

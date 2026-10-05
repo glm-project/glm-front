@@ -1,3 +1,4 @@
+import { localCalendarDay } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { Component, inject, linkedSignal, resource, ResourceStatus } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -62,12 +63,11 @@ export class SupervisionAtelier {
 
   protected parametresDuPointage(instant: Instant): { annee: number; semaine: number; jour: string } {
     const date = new Date(instant.value);
-    const jour = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const jeudi = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     jeudi.setUTCDate(jeudi.getUTCDate() + 4 - (jeudi.getUTCDay() || 7));
     const annee = jeudi.getUTCFullYear();
     const semaine = Math.ceil(((jeudi.getTime() - Date.UTC(annee, 0, 1)) / 86_400_000 + 1) / 7);
-    return { annee, semaine, jour };
+    return { annee, semaine, jour: localCalendarDay(date) };
   }
 
   protected signalNc(supervision: SupervisionDeLAtelier): SignalAffiche {

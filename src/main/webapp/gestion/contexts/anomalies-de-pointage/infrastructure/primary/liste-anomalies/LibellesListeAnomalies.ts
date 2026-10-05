@@ -1,13 +1,14 @@
+import {
+  formatInstantShortWeekdayDay,
+  formatInstantTime,
+  localCalendarDay,
+} from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { NatureAnomalie } from '../../../domain/dossier/DossierAnomalie';
 
-const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric' });
-const JOUR_CALENDAIRE = new Intl.DateTimeFormat('fr-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
-const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-const aLHeure = (instant: Date): string => `${JOUR.format(instant)} à ${HEURE.format(instant)}`;
+const aLHeure = (instant: Date): string => `${formatInstantShortWeekdayDay(instant)} à ${formatInstantTime(instant)}`;
 
 const finAutomatique = (echeance: Date, debut: Date): string =>
-  JOUR_CALENDAIRE.format(echeance) === JOUR_CALENDAIRE.format(debut) ? `à ${HEURE.format(echeance)}` : aLHeure(echeance);
+  localCalendarDay(echeance) === localCalendarDay(debut) ? `à ${formatInstantTime(echeance)}` : aLHeure(echeance);
 
 export const LIBELLES_LISTE_ANOMALIES = {
   filtrer: 'Filtrer',
