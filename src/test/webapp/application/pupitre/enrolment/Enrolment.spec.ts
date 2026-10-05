@@ -313,18 +313,19 @@ const givenAnEnrolledPupitreWithAnUnpublishedGesture = (): void => {
   cy.get(dataSelector('designation')).should('be.visible');
 };
 
-const whenTheKeypadReturns = (): void => {
-  cy.get(dataSelector('designation')).should($keypad => {
+const untilVisibleUnderTheFrozenClock = (selector: string): void => {
+  cy.get(dataSelector(selector)).should($element => {
     requiredFixture(pupitreClock, 'frozen clock').tick(0);
-    expect($keypad.is(':visible')).to.equal(true);
+    expect($element.is(':visible')).to.equal(true);
   });
 };
 
+const whenTheKeypadReturns = (): void => {
+  untilVisibleUnderTheFrozenClock('designation');
+};
+
 const whenTheJournalsAreErasedAndTheNewCodeIsShown = (): void => {
-  cy.get(dataSelector('user-code')).should($code => {
-    requiredFixture(pupitreClock, 'frozen clock').tick(0);
-    expect($code.is(':visible')).to.equal(true);
-  });
+  untilVisibleUnderTheFrozenClock('user-code');
   cy.get<unknown[]>('@push.all').then(requests => {
     pushesBeforeTheReset = requests.length;
   });
