@@ -13,6 +13,7 @@ import {
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementEnAttente,
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
@@ -86,9 +87,13 @@ class DesignationExpirationSchedulerFixture extends DesignationExpirationSchedul
   }
 }
 
+const UNE_MINUTE = 60_000;
+const UNE_HEURE = 60 * UNE_MINUTE;
+
 describe('Designation keypad', () => {
   let fixture: ComponentFixture<Designation>;
   let designation: CurrentOperateurLifecycle;
+  let etatHorsLigne: EtatHorsLigneDuPupitre;
   let journalFixture: DesignationJournalFixture;
   let serveurFixture: AtelierExchangeFixture;
   beforeEach(() => {
@@ -122,6 +127,7 @@ describe('Designation keypad', () => {
     });
     fixture = TestBed.createComponent(Designation);
     designation = TestBed.inject(CurrentOperateurLifecycle);
+    etatHorsLigne = TestBed.inject(EtatHorsLigneDuPupitre);
     fixture.detectChanges();
   });
   afterEach(async () => {
@@ -260,6 +266,85 @@ describe('Designation keypad', () => {
     thenDisplayedCodeIs('');
   });
 
+  it('should show the publication delay banner with its finding and instruction for a gesture pending for two hours', () => {
+    givenPendingGestureSince(2 * UNE_HEURE);
+
+    whenDisplayed();
+
+    thenPublicationDelayBannerSays('1 geste non envoyé depuis 2 h 00. Prévenez le superviseur.');
+  });
+
+  it('should stay silent when the pending gesture is recent', () => {
+    givenPendingGestureSince(30 * UNE_MINUTE);
+
+    whenDisplayed();
+
+    thenNoPublicationDelayBannerIsShown();
+  });
+
+  it('should raise the warning when time crosses the one hour threshold without any new event', () => {
+    givenPendingGestureSince(30 * UNE_MINUTE);
+    whenDisplayed();
+
+    whenTimePasses(31 * UNE_MINUTE);
+
+    thenPublicationDelayBannerSays('1 geste non envoyé depuis 1 h 01. Prévenez le superviseur.');
+  });
+
+  it('should judge the delay again when the keypad comes back after hours away', () => {
+    givenPendingGestureSince(0);
+
+    whenReturningToTheKeypadAfter(2 * UNE_HEURE);
+
+    thenPublicationDelayBannerSays('1 geste non envoyé depuis 2 h 00. Prévenez le superviseur.');
+  });
+
+  it('should stop following the clock once the keypad is left', () => {
+    givenPendingGestureSince(30 * UNE_MINUTE);
+
+    whenLeavingTheKeypadFor(31 * UNE_MINUTE);
+
+    thenNoPublicationDelayIsKnown();
+  });
+
+  const givenPendingGestureSince = (ancienneteMs: number): void => {
+    const geste: EvenementEnAttente = {
+      etat: 'EN_ATTENTE',
+      geste: {
+        nature: 'POINTAGE',
+        intention: 'OUVERTURE',
+        type: 'DEBUT',
+        id: 'geste-en-attente',
+        operateurId: 'jean',
+        suiviId: 'piece',
+        dateDeSurvenue: new Date(Date.now() - ancienneteMs).toISOString(),
+      },
+    };
+    etatHorsLigne.publish({ ...EMPTY_JOURNAL_DU_PUPITRE, evenements: [geste] });
+  };
+  const whenDisplayed = (): void => {
+    fixture.detectChanges();
+  };
+  const whenReturningToTheKeypadAfter = (dureeMs: number): void => {
+    fixture.destroy();
+    vi.setSystemTime(Date.now() + dureeMs);
+    fixture = TestBed.createComponent(Designation);
+    fixture.detectChanges();
+  };
+  const whenLeavingTheKeypadFor = (dureeMs: number): void => {
+    fixture.destroy();
+    vi.advanceTimersByTime(dureeMs);
+  };
+  const thenNoPublicationDelayBannerIsShown = (): void => {
+    const host: HTMLElement = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector(dataSelector('retard-de-publication'))).toBeNull();
+  };
+  const thenNoPublicationDelayIsKnown = (): void => {
+    expect(etatHorsLigne.retardDePublication()).toBeUndefined();
+  };
+  const thenPublicationDelayBannerSays = (message: string): void => {
+    expect(element('retard-de-publication').textContent.trim()).toBe(message);
+  };
   const whenHolding = (selector: string): void => {
     element(selector).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
     fixture.detectChanges();

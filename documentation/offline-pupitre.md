@@ -108,6 +108,13 @@ changing that connectivity. The last outcome distinguishes a token missing its t
 failure. A reference is available there only when the active journal view belongs to the currently selected
 company.
 
+A technical interruption can leave gestures pending for hours. The designation screen therefore shows a
+**publication delay** banner as soon as the oldest pending gesture of the company's journal occurred at least
+one hour before the evaluation instant, with the number of pending gestures and that age; it asks the operator
+to warn the supervisor. Accepted and refused gestures never count. `EtatHorsLigneDuPupitre` holds the evaluation
+instant, which the screen pushes through `updateClock()` when it is displayed and then once a minute, so the
+threshold is crossed without any new event. The screen stops pushing when it is left.
+
 ## Runtime lifecycle is explicit
 
 `PupitreRuntime` starts the enrolment and owns the online listener and the refresh timer. It installs both

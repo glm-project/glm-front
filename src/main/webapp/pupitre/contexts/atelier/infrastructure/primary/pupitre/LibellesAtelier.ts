@@ -2,6 +2,7 @@ import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../doma
 import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
 import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
+import { RetardDePublication } from '../../../domain/journal-du-pupitre/RetardDePublication';
 
 const formatDuree = (dureeMs: number): string => {
   const minutes = Math.floor(dureeMs / 60_000);
@@ -46,3 +47,8 @@ export const LIBELLES_ENTETE_PUPITRE = {
   horsLigne: 'Hors ligne',
   fin: "J'ai fini",
 } as const;
+
+export const messageDeRetardDePublication = (retard: RetardDePublication): { readonly constat: string; readonly consigne: string } => ({
+  constat: `${String(retard.gestes)} ${retard.gestes === 1 ? 'geste non envoyé' : 'gestes non envoyés'} depuis ${formatDuree(retard.depuis)}.`,
+  consigne: 'Prévenez le superviseur.',
+});

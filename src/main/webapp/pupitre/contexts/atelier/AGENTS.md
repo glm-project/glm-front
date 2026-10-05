@@ -64,6 +64,8 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 
 **Bilan de publication** : issue du traitement des gestes en attente. Un bilan terminé permet de rafraîchir le référentiel, y compris si des refus métier ont été conservés. Un bilan interrompu impose de conserver le référentiel. `BilanDePublication` porte cette décision; l'orchestration vérifie séparément l'autorisation d'échanger.
 
+**Retard de publication** : situation où le plus ancien geste en attente du journal de l'entreprise est survenu au moins une heure avant l'instant d'évaluation (seuil inclus, `SEUIL_DU_RETARD_DE_PUBLICATION`). L'écran de désignation demande alors de prévenir le superviseur. Les gestes acceptés et refusés n'y comptent pas.
+
 **Entreprise** : portée d'un journal du pupitre et de tous les gestes qu'il contient. Deux journaux d'entreprises différentes restent indépendants.
 
 > « GLM » n'est pas un concept du produit : c'est le nom que l'entreprise cliente donne à son travail non facturable, par exemple un projet interne, qu'elle veut déclarer manuellement. Ce travail n'est pas encore modélisé. Une activité manquante n'en constitue aucune preuve, et aucun type, champ ni sélecteur ne s'appelle GLM.
@@ -81,6 +83,7 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 - Une fenêtre ouverte réconcilie chaque nouvelle version du journal de son entreprise sans changer l'opérateur désigné ni son instant d'observation. La projection optimiste disparaît ainsi dès qu'un geste de cette fenêtre est refusé.
 - La fenêtre expose au plus le dernier refus d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
+- `RetardDePublication.of(journal, instant)` répond `undefined` ou `{ gestes, depuis }` : `gestes` est le nombre total de gestes en attente et `depuis` l'ancienneté du plus ancien. Le signal `retardDePublication` d'`EtatHorsLigneDuPupitre` n'avance que lorsque `updateClock()` pousse l'instant courant : l'écran de désignation le fait à son affichage puis chaque minute, et cesse à sa destruction. Il affiche le retard dans un bandeau d'état au-dessus de l'identifiant, sans bloquer la saisie.
 - Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
 - Un geste conserve l'opérateur, l'identifiant et l'heure fixés à son initiation.
 - « Tout arrêter » forme un unique lot local atomique et ordonné de fins ciblées avec l'invalidation durable de la reprise. Un échec d'acceptation locale n'en conserve aucune partie ; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.

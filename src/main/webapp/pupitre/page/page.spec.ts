@@ -17,6 +17,7 @@ import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/Nu
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { RetardDePublication } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/RetardDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
@@ -56,9 +57,11 @@ class AtelierCoordinatorFixture {
   readonly code = signal('');
   readonly unknownCode = signal(false);
   readonly canValidate = signal(true);
+  readonly retardDePublication = signal<RetardDePublication | undefined>(undefined);
   readonly globales: IntentionGlobale[] = [];
   readonly pointages: IntentionDePointage[] = [];
   registerPress = vi.fn(() => true);
+  updateClock = vi.fn();
   finish = vi.fn<() => Promise<void>>(() => Promise.resolve());
   private readonly reference = signal<ReferentielDuPupitre | undefined>(undefined);
 
