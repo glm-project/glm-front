@@ -43,16 +43,23 @@ export class ListeAnomalies {
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
   protected readonly libellesDeNature = computed(() => LIBELLES_LISTE_ANOMALIES.natures[this.filtre().nature]);
+  private readonly adresseValide = computed(() => this.pageDemandee() !== undefined && this.natureDemandee() !== undefined);
   protected readonly liste = resource({
-    params: () => (this.pageDemandee() === undefined || this.natureDemandee() === undefined ? undefined : this.filtre()),
+    params: () => (this.adresseValide() ? this.filtre() : undefined),
     loader: ({ params }) => this.port.list(params),
   });
 
-  protected readonly operateursLus = resource({ loader: () => this.port.operateurs() });
+  protected readonly operateursLus = resource({
+    params: () => (this.adresseValide() ? true : undefined),
+    loader: () => this.port.operateurs(),
+  });
   protected readonly etatOperateurs = etatDeLecture(this.operateursLus);
   protected readonly operateurs = computed(() => (this.operateursLus.hasValue() ? this.operateursLus.value() : []));
   protected readonly operateurChoisi = linkedSignal(() => this.filtre().operateur);
-  protected readonly elementsLus = resource({ loader: () => this.port.elements() });
+  protected readonly elementsLus = resource({
+    params: () => (this.adresseValide() ? true : undefined),
+    loader: () => this.port.elements(),
+  });
   protected readonly etatElements = etatDeLecture(this.elementsLus);
   protected readonly elements = computed(() => (this.elementsLus.hasValue() ? this.elementsLus.value() : []));
   protected readonly elementChoisi = linkedSignal(() => this.filtre().element);

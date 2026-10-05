@@ -883,6 +883,37 @@ describe('Anomalies list', () => {
     expect(portFixture.demandes).toEqual([]);
   });
 
+  it.each([{ nature: 'CONFLITS' }, { page: '0' }, { page: '1.5' }])(
+    'should not read the operators nor the elements for the refused address %j',
+    async address => {
+      givenAnAddress(address);
+
+      await whenTheListIsRendered();
+
+      expect(portFixture.operateursLectures).toBe(0);
+      expect(portFixture.elementsLectures).toBe(0);
+    },
+  );
+
+  it('should read the operators and the elements once the refused address becomes valid', async () => {
+    givenAnAddress({ nature: 'CONFLITS' });
+    await whenTheListIsRendered();
+
+    await whenTheAddressBecomes({ nature: 'CONFLIT' });
+
+    expect(portFixture.operateursLectures).toBe(1);
+    expect(portFixture.elementsLectures).toBe(1);
+  });
+
+  it('should keep the operator held by a refused address without calling it unresolved', async () => {
+    givenAnAddress({ nature: 'CONFLITS', operateur: 'op-camille' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-filtre-operateur')).toBe('Opérateur actuel conservé');
+    expect(button('anomalies-filtre-operateur').disabled).toBe(true);
+  });
+
   it('should distinguish a page emptied by resolutions from a list with no remaining conflicts', async () => {
     givenAnAddress({ nature: 'CONFLIT', page: '3' });
     portFixture.page = { nature: 'CONFLIT', lignes: [], total: 6, complete: true };

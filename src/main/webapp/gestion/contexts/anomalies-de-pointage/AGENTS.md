@@ -37,7 +37,8 @@ route `/conflits` n'existe plus et ne redirige pas.
 
 La liste offre deux onglets accessibles, « Fins automatiques » à gauche puis « Conflits », et garde la nature dans
 l'URL (`/anomalies?nature=CONFLIT|FIN_AUTOMATIQUE`, [ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)).
-Sans `nature`, l'onglet Fins automatiques, le premier ; une valeur inconnue est une adresse refusée, sans requête. Changer d'onglet
+Sans `nature`, l'onglet Fins automatiques, le premier ; une valeur inconnue (nature, page) est une adresse refusée, sans aucune requête : ni la liste, ni les opérateurs, ni
+les éléments ne sont lus, et les deux filtres, désactivés, gardent la valeur de l'URL (« Opérateur actuel conservé »). Changer d'onglet
 conserve les filtres et revient à `page=1` ; la pagination est propre à chaque onglet. Une ligne
 `LigneConflit` ou `LigneFinAutomatique` est traduite à la frontière HTTP, qui rejette la lecture dont une
 ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début

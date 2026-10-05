@@ -34,7 +34,8 @@ réservé au périmètre qui porte encore un conflit. Une activité sans poste n
 ## Liste des anomalies
 
 La liste demande la nature de l'onglet courant : `FIN_AUTOMATIQUE` sans `nature` dans l'URL, `CONFLIT` à la
-demande ; l'onglet des fins automatiques se place à gauche. Une valeur inconnue n'émet aucune requête. Changer d'onglet conserve les filtres et remet `page=1`.
+demande ; l'onglet des fins automatiques se place à gauche. Une valeur inconnue (nature, page) n'émet aucune requête, pas même celles des opérateurs et des éléments : les filtres
+restent désactivés jusqu'à une adresse valide. Changer d'onglet conserve les filtres et remet `page=1`.
 Chaque onglet a son message de chargement, son message vide, ses erreurs et sa pagination. Une ligne d'une autre nature que celle demandée
 rejette la lecture. Une fin automatique montre son début et son échéance reçus, sans calcul, et ouvre le
 dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, aux filtres et à la page d'origine.

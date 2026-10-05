@@ -41,8 +41,8 @@
         [avecTous]="true"
         [operateurs]="operateurs()"
         [courant]="operateurChoisi()"
-        [disabled]="etatOperateurs.enPanne()"
-        [indisponible]="etatOperateurs.enPanne()"
+        [disabled]="etatOperateurs.indisponible()"
+        [indisponible]="etatOperateurs.indisponible()"
         (choisi)="choisirOperateur($event)"
         (tousChoisis)="operateurChoisi.set('')"
       />
@@ -76,8 +76,8 @@
         selector="anomalies-filtre-element"
         [elements]="elements()"
         [courant]="elementChoisi()"
-        [disabled]="etatElements.enPanne()"
-        [indisponible]="etatElements.enPanne()"
+        [disabled]="etatElements.indisponible()"
+        [indisponible]="etatElements.indisponible()"
         (choisi)="choisirElement($event)"
         (tousChoisis)="elementChoisi.set('')"
       />
