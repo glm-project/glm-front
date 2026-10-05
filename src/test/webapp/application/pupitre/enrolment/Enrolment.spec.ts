@@ -371,26 +371,26 @@ const whenTheRestoredCredentialRenews = (): void => {
   cy.tick(5_000);
   cy.wait('@revokedRefresh');
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenTheNetworkReturns = (): void => {
   cy.window().then(window => window.dispatchEvent(new Event('online')));
   cy.wait('@refusedWorkshop');
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenSynchronizingAfterAnotherTabRetiredTheSession = (): void => {
   cy.window().then(window => window.dispatchEvent(new Event('online')));
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenRenewalDiscoversAnotherTabRetiredTheSession = (): void => {
   cy.tick(5_000);
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenTheReplacementAuthorizationIsApproved = (): void => {
