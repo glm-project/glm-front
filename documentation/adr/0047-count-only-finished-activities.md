@@ -11,6 +11,9 @@ La fin automatique est dérivée, avec conservation des seuls pointages et corre
 Le ciblage des gestes, le recalcul après correction et l'instant commun du relevé sont confirmés.
 La relecture confirme aussi les séquences en conflit, leur résolution par le gestionnaire et les
 totaux incomplets tant que les durées ou coûts concernés restent à résoudre.
+Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md) : le journal du pupitre
+n'est plus un historique ; TOUT ARRÊTER conserve les pending, les refus et ce que la dernière pause lit
+encore, et les gestes acceptés déjà intégrés au référentiel sont oubliés à son activation.
 
 ## Context
 

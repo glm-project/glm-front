@@ -5,6 +5,7 @@ import {
   IssueDuChargementDeLAtelier,
 } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { JournauxDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/JournauxDeLAtelierPort';
 import {
   DeviceAuthorizationCode,
   DeviceEnrolmentOutcome,
@@ -13,6 +14,8 @@ import {
 } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
+import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { EnrolementDuPupitre } from './EnrolementDuPupitre';
 
@@ -105,6 +108,7 @@ describe('EnrolementDuPupitre', () => {
   let enrolement: EnrolementDuPupitre;
   let appareil: DeviceEnrolmentFixture;
   let atelier: ChargementDeLAtelierFixture;
+  let journaux: JournauxDeLAtelierFixture;
   let authentication: AuthenticationFixture;
   let attempts: Promise<void>[];
 
@@ -113,6 +117,7 @@ describe('EnrolementDuPupitre', () => {
     vi.setSystemTime(MAINTENANT);
     appareil = new DeviceEnrolmentFixture();
     atelier = new ChargementDeLAtelierFixture();
+    journaux = new JournauxDeLAtelierFixture();
     authentication = new AuthenticationFixture();
     attempts = [];
     TestBed.configureTestingModule({
@@ -120,6 +125,7 @@ describe('EnrolementDuPupitre', () => {
         EnrolementDuPupitre,
         { provide: DeviceEnrolmentPort, useValue: appareil },
         { provide: ChargementDeLAtelierPort, useValue: atelier },
+        { provide: JournauxDeLAtelierPort, useValue: journaux },
         { provide: AuthenticationPort, useValue: authentication },
       ],
     });
@@ -347,12 +353,44 @@ describe('EnrolementDuPupitre', () => {
     thenTheScreenShows('DEMANDE_EN_COURS');
   });
 
-  it('should revoke the durable enrolment before asking for a new code', () => {
+  it('should revoke the durable enrolment and show the request again before the journals are erased', async () => {
+    await givenAnEnrolledPupitreWithAWorkshop();
+    givenTheErasureWaits();
+
     whenResetting();
 
     thenRevocationsAre(1);
+    thenTheScreenShows('DEMANDE_EN_COURS');
+  });
+
+  it('should erase the journals before asking for a new code', async () => {
+    const erasure = givenTheErasureWaits();
+
+    whenResetting();
+    const authorizationsWhileErasing = whenCountingTheAuthorizations();
+    await whenTheErasureEnds(erasure);
+
+    expect(authorizationsWhileErasing).toBe(0);
+    thenJournalErasuresAre(1);
     thenAuthorizationsAskedAre(1);
     thenTheScreenShows('DEMANDE_EN_COURS');
+  });
+
+  it('should keep the journals when the loss of authorization brings the pupitre back to enrolment', async () => {
+    await givenAnEnrolledPupitreWithAWorkshop();
+
+    whenTheAuthorizationIsLost();
+
+    thenTheScreenShows('DEMANDE_EN_COURS');
+    thenJournalErasuresAre(0);
+  });
+
+  it('should tell how many gestures an explicit reset would lose', async () => {
+    givenPendingGestures(3);
+
+    const gestes = await whenCountingThePendingGestures();
+
+    expect(gestes).toBe(3);
   });
 
   const whenEnrolling = (): void => {
@@ -366,6 +404,19 @@ describe('EnrolementDuPupitre', () => {
   const whenResetting = (): void => {
     attempts.push(enrolement.reinitialiser());
   };
+
+  const whenTheAuthorizationIsLost = (): void => {
+    attempts.push(enrolement.enroler());
+  };
+
+  const whenCountingTheAuthorizations = (): number => appareil.count();
+
+  const whenTheErasureEnds = async (erasure: DeferredFixture<void>): Promise<void> => {
+    erasure.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+  };
+
+  const whenCountingThePendingGestures = (): Promise<number> => enrolement.gestesEnAttente();
 
   const whenRetryingTheWorkshopLoad = (): Promise<void> => enrolement.chargerLAtelier();
 
@@ -399,6 +450,18 @@ describe('EnrolementDuPupitre', () => {
     atelier.connecte.set(false);
   };
 
+  const givenAnEnrolledPupitreWithAWorkshop = async (): Promise<void> => {
+    whenEnrolling();
+    await whenTheAttemptAnswers('ENROLLED');
+    whenTheFirstReferenceLands();
+  };
+
+  const givenTheErasureWaits = (): DeferredFixture<void> => journaux.holdNextErasure();
+
+  const givenPendingGestures = (count: number): void => {
+    journaux.pending = count;
+  };
+
   const givenTheWorkshopLoadFails = (): void => {
     atelier.issue = 'ECHEC';
   };
@@ -429,6 +492,10 @@ describe('EnrolementDuPupitre', () => {
 
   const thenAuthorizationsAskedAre = (count: number): void => {
     expect(appareil.count()).toBe(count);
+  };
+
+  const thenJournalErasuresAre = (count: number): void => {
+    expect(journaux.erasures).toBe(count);
   };
 
   const thenWorkshopLoadsAre = (count: number): void => {

@@ -8,7 +8,8 @@ extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented
 to every context and brings interaction and lifecycle rules into the domain. Revised under
 [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and [ADR 0047](0047-count-only-finished-activities.md):
 activity intentions retain precise targets, accepted conflicts retain diagnostics, and pause/resumption
-memory has its own local domain owner.
+memory has its own local domain owner. Complemented by [ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md):
+the device-wide erasure of the journals has its own port, apart from the per-company `JournauxDuPupitrePort`.
 
 ## Context
 
@@ -46,6 +47,8 @@ exchanges, FIFO processing, aggregate rereads and reference refreshes. Their cal
 `GestesRecordingQueue` is shared by capture and closure.
 
 `JournauxDuPupitrePort` exposes company reads, atomic gesture batches, reference activation and push outcomes.
+Erasing every company's journal on an explicit reset is not part of it: that port stays per company, and
+`EffacementDesJournauxPort` carries the device-wide erasure ([ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md)).
 `IndexedDbJournauxDuPupitre` owns the document layout and delegates durable transactions and locks to
 `LocalStoragePort`. Its session lock is the existing authentication lock; changing the application port does
 not create an independent lock that would let a credential commit overlap an outgoing gesture.

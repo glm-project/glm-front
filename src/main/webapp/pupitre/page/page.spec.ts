@@ -17,18 +17,22 @@ import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/Nu
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import { EMPTY_JOURNAL_DU_PUPITRE, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { RetardDePublication } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/RetardDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { JournauxDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/JournauxDeLAtelierPort';
 import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
+import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { setTimeout as roundTrip } from 'node:timers';
@@ -56,9 +60,11 @@ class AtelierCoordinatorFixture {
   readonly code = signal('');
   readonly unknownCode = signal(false);
   readonly canValidate = signal(true);
+  readonly retardDePublication = signal<RetardDePublication | undefined>(undefined);
   readonly globales: IntentionGlobale[] = [];
   readonly pointages: IntentionDePointage[] = [];
   registerPress = vi.fn(() => true);
+  updateClock = vi.fn();
   finish = vi.fn<() => Promise<void>>(() => Promise.resolve());
   private readonly reference = signal<ReferentielDuPupitre | undefined>(undefined);
 
@@ -112,6 +118,10 @@ class EnrolementDuPupitreFixture {
 
   chargerLAtelier(): Promise<void> {
     return Promise.resolve();
+  }
+
+  gestesEnAttente(): Promise<number> {
+    return Promise.resolve(0);
   }
 
   reinitialiser(): Promise<void> {
@@ -263,26 +273,26 @@ describe('Pupitre page', () => {
     thenHeaderMessageIs('Action non enregistrée — recommencez');
   });
 
-  it('should request confirmation before an administration reset', () => {
+  it('should request confirmation before an administration reset', async () => {
     givenReference();
-    whenTheAdministrationGestureIsHeld();
+    await whenTheAdministrationGestureIsHeld();
 
     thenVisible('reinitialisation', true);
   });
 
-  it('should revoke enrolment after reset confirmation', () => {
+  it('should revoke enrolment after reset confirmation', async () => {
     givenReference();
-    whenTheAdministrationGestureIsHeld();
+    await whenTheAdministrationGestureIsHeld();
     whenPressing('reset-confirm');
 
     thenVisible('reinitialisation', false);
     expect(enrolement.resets).toBe(1);
   });
 
-  it('should revoke nothing when the administration reset is cancelled', () => {
+  it('should revoke nothing when the administration reset is cancelled', async () => {
     givenReference();
 
-    whenTheAdministrationGestureIsHeld();
+    await whenTheAdministrationGestureIsHeld();
     whenPressing('reset-cancel');
 
     thenVisible('reinitialisation', false);
@@ -348,9 +358,9 @@ describe('Pupitre page', () => {
     held.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
     fixture.detectChanges();
   };
-  const whenTheAdministrationGestureIsHeld = (): void => {
+  const whenTheAdministrationGestureIsHeld = async (): Promise<void> => {
     element('header-heading').dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
-    vi.advanceTimersByTime(3_000);
+    await vi.advanceTimersByTimeAsync(3_000);
     fixture.detectChanges();
   };
   const whenPointageCloses = (): void => {
@@ -385,6 +395,8 @@ describe('Pupitre page with its designation keypad', () => {
   let fixture: ComponentFixture<PupitrePage>;
   let journalFixture: JournauxDuPupitreFixture;
   let serveurFixture: AtelierExchangeFixture;
+  let journauxDeLAtelier: JournauxDeLAtelierFixture;
+  let errorHandler: ErrorHandlerFixture;
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -393,6 +405,8 @@ describe('Pupitre page with its designation keypad', () => {
     journalFixture.seedJournal(Entreprise.of('atelier'), { ...EMPTY_JOURNAL_DU_PUPITRE, referentiel: referentielFixture });
     serveurFixture = new AtelierExchangeFixture();
     serveurFixture.reference = referentielFixture;
+    journauxDeLAtelier = new JournauxDeLAtelierFixture();
+    errorHandler = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       imports: [PupitrePage],
       providers: [
@@ -424,7 +438,8 @@ describe('Pupitre page with its designation keypad', () => {
             charger: () => Promise.resolve('CHARGE'),
           },
         },
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        { provide: JournauxDeLAtelierPort, useValue: journauxDeLAtelier },
+        { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     });
     await TestBed.inject(EnrolementDuPupitre).enroler();
@@ -491,8 +506,71 @@ describe('Pupitre page with its designation keypad', () => {
     thenTheOperatorIsDesignated();
   });
 
+  it('should hold the reset confirmation back until the waiting gestures are counted', async () => {
+    const count = givenTheWaitingGesturesCountIsHeld();
+    whenTheResetConfirmationIsOpen();
+    const whileCounting = whenReadingTheConfirmationAvailability();
+
+    await whenTheCountAnswers(count, 0);
+
+    expect(whileCounting).toBe(false);
+    thenTheResetActionsRemainAvailable();
+  });
+
+  it('should announce the waiting gestures before the reset is confirmed', async () => {
+    givenWaitingGestures(12);
+
+    whenTheResetConfirmationIsOpen();
+    await whenRenderingSettles();
+
+    thenThePendingWarningIs("12 gestes n'ont pas encore été envoyés au serveur. Ils seront définitivement perdus.");
+    thenTheConfirmationReads('Réinitialiser quand même');
+  });
+
+  it('should warn generically and report the failure when the waiting gestures cannot be counted', async () => {
+    const count = givenTheWaitingGesturesCountIsHeld();
+    whenTheResetConfirmationIsOpen();
+
+    await whenTheCountFails(count, new Error('journal illisible'));
+
+    thenThePendingWarningIs("Des gestes n'ont peut-être pas été envoyés au serveur. Ils seront définitivement perdus.");
+    thenTheResetActionsRemainAvailable();
+    expect(errorHandler.errors).toEqual([new Error('journal illisible')]);
+  });
+
+  it('should ignore a count that answers after the confirmation was closed and reopened', async () => {
+    const firstCount = givenTheWaitingGesturesCountIsHeld();
+    whenTheResetConfirmationIsOpen();
+    whenCancellingTheReset();
+    givenWaitingGestures(0);
+    whenTheResetConfirmationIsOpen();
+    await whenRenderingSettles();
+
+    await whenTheCountAnswers(firstCount, 12);
+
+    thenNoPendingWarning();
+  });
+
   const givenTheReadyKeypad = (): void => {
     thenVisible('designation');
+  };
+
+  const givenTheWaitingGesturesCountIsHeld = (): DeferredFixture<number> => journauxDeLAtelier.holdNextCount();
+
+  const givenWaitingGestures = (count: number): void => {
+    journauxDeLAtelier.pending = count;
+  };
+
+  const whenReadingTheConfirmationAvailability = (): boolean => !button('reset-confirm').disabled;
+
+  const whenTheCountAnswers = async (count: DeferredFixture<number>, gestes: number): Promise<void> => {
+    count.resolve(gestes);
+    await whenRenderingSettles();
+  };
+
+  const whenTheCountFails = async (count: DeferredFixture<number>, failure: Error): Promise<void> => {
+    count.reject(failure);
+    await whenRenderingSettles();
   };
 
   const givenTheLogoHasFocus = (): void => {
@@ -546,6 +624,18 @@ describe('Pupitre page with its designation keypad', () => {
   const thenDesignationCommandsAreUnavailable = (): void => {
     expect(button('digit-0').disabled).toBe(true);
     expect(button('validate').disabled).toBe(true);
+  };
+
+  const thenThePendingWarningIs = (message: string): void => {
+    expect(element('reset-pending-warning').textContent.trim()).toBe(message);
+  };
+
+  const thenTheConfirmationReads = (label: string): void => {
+    expect(element('reset-confirm').textContent.trim()).toBe(label);
+  };
+
+  const thenNoPendingWarning = (): void => {
+    expect(root().querySelector(dataSelector('reset-pending-warning'))).toBeNull();
   };
 
   const thenFocused = (selector: string): void => {

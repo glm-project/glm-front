@@ -27,7 +27,6 @@ const finishFixture: GesteDePointage = {
   type: 'FIN',
   cible: idFixture,
 };
-const acceptedGestureFixture = { geste: gestureFixture, etat: 'ACCEPTE' } as const;
 const acceptedFinishFixture = { geste: finishFixture, etat: 'ACCEPTE' } as const;
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
@@ -155,7 +154,7 @@ describe('Production pupitre offline restart', () => {
     thenOfflineRestartPreservedPendingWork('second-offline-restart');
     thenTheOriginalGestureWasReplayedAndAccepted();
     thenOnlinePupitreWasObserved('final-restart', 4);
-    thenTheAcceptedGestureSurvivedTheFinalRestart();
+    thenTheLastAcceptedGestureSurvivedTheFinalRestart();
   });
 
   it('should reload a running pupitre after a new version is published', () => {
@@ -357,7 +356,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
       },
     ]);
   });
-  cy.get('@accepted-journal').its('evenements').should('deep.equal', [acceptedGestureFixture, acceptedFinishFixture]);
+  cy.get('@accepted-journal').its('evenements').should('deep.equal', [acceptedFinishFixture]);
   cy.get('@accepted-server')
     .its('pushes')
     .should('deep.equal', [
@@ -380,8 +379,8 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
   cy.get('@accepted-server').its('referenceRequests').should('be.at.least', 3);
 };
 
-const thenTheAcceptedGestureSurvivedTheFinalRestart = (): void => {
-  cy.get('@final-journal').its('evenements').should('deep.equal', [acceptedGestureFixture, acceptedFinishFixture]);
+const thenTheLastAcceptedGestureSurvivedTheFinalRestart = (): void => {
+  cy.get('@final-journal').its('evenements').should('deep.equal', [acceptedFinishFixture]);
   cy.get('@final-restart-server').its('pushes').should('have.length', 2);
   thenOtherCompanyJournalWasPreserved('final-other-company-journal');
 };

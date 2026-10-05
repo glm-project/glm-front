@@ -33,4 +33,10 @@ export const LIBELLES_REINITIALISATION = {
   message: "L'enrôlement de cet appareil sera révoqué sur le serveur et le pupitre devra être ré-enrôlé.",
   annuler: 'Annuler',
   confirmer: 'Réinitialiser',
+  confirmerQuandMeme: 'Réinitialiser quand même',
+  avertissement: (gestes: number): string =>
+    gestes === 1
+      ? "1 geste n'a pas encore été envoyé au serveur. Il sera définitivement perdu."
+      : `${String(gestes)} gestes n'ont pas encore été envoyés au serveur. Ils seront définitivement perdus.`,
+  avertissementGenerique: "Des gestes n'ont peut-être pas été envoyés au serveur. Ils seront définitivement perdus.",
 } as const;

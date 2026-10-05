@@ -482,6 +482,34 @@ describe('AtelierCoordinator', () => {
     });
   });
 
+  it('should resume only the activities whose pause finish was published after the reference was refreshed', async () => {
+    await givenTwoActiveWorkstations();
+    await whenPausingGlobally();
+    givenAuthorizedAccess();
+    givenServerFailures(undefined, refusalFixture('suivi-d-atelier-cloture'));
+    givenServerReferenceWithoutActivityOn('piece-tour');
+
+    await whenSynchronizing();
+    await whenResuming();
+
+    await thenPendingGesturesAre(['DEBUT:piece-tour:tour']);
+  });
+
+  it('should keep projecting a pending transition on the reference activity once its published opening is forgotten', async () => {
+    await givenAnOpenWindow();
+    await whenStarting();
+    givenAuthorizedAccess();
+    givenServerReferenceHoldingTheActivityOpenedBy(await firstQueuedGesture());
+    givenServerFailures(undefined, new Error('reseau coupe'));
+    givenNonConformityIsReportedDuringReferenceRefresh();
+
+    await whenSynchronizing();
+
+    await thenQueueHas(1);
+    await thenPendingGesturesAre(['NON_CONFORMITE:piece:tour']);
+    thenActivityIs('NON_CONFORMITE');
+  });
+
   it('should clear the current refusal as soon as a new business intent starts', async () => {
     await givenAnOpenWindow();
     givenAuthorizedAccess();
@@ -835,7 +863,7 @@ describe('AtelierCoordinator', () => {
     await whenSynchronizingConcurrently();
     await whenClosing();
 
-    await thenQueueHas(2);
+    thenPublishedTypesAre(['DEBUT', 'FIN']);
     await thenPendingIs(0);
   });
 
@@ -1290,6 +1318,7 @@ describe('AtelierCoordinator', () => {
     await Promise.all([whenStarting(), completionOf(pupitre.execute({ suiviId: 'piece', cible: 'SECONDAIRE' }))]);
   };
   const whenPausingGlobally = (): Promise<void> => pupitre.executeGlobale('PAUSE');
+  const whenResuming = (): Promise<void> => pupitre.executeGlobale('REPRENDRE');
   const whenStoppingEverything = (): Promise<void> => pupitre.executeGlobale('TOUT_ARRETER');
   const whenSynchronizing = (): Promise<void> => pupitre.synchronize();
   const whenSynchronizingConcurrently = async (): Promise<void> => {
@@ -1322,10 +1351,10 @@ describe('AtelierCoordinator', () => {
     });
     await givenAnOpenWindow();
   };
-  const givenTwoActiveWorkstations = async (): Promise<void> => {
+  const twoActiveWorkstationsReference = (): ReferentielDuPupitre => {
     const operateur = requiredFixture(referenceFixture.operateurs[0], 'operator');
     const suivi = requiredFixture(referenceFixture.suivis[0], 'workshop element');
-    await givenCachedReference({
+    return {
       ...referenceFixture,
       operateurs: [{ ...operateur, postes: [...operateur.postes, { id: 'fraiseuse', libelle: 'Fraiseuse' }] }],
       suivis: [
@@ -1362,7 +1391,10 @@ describe('AtelierCoordinator', () => {
           conflits: [],
         },
       ],
-    });
+    };
+  };
+  const givenTwoActiveWorkstations = async (): Promise<void> => {
+    await givenCachedReference(twoActiveWorkstationsReference());
     await givenAnOpenWindow();
   };
   const givenWorkStartedOffline = async (): Promise<void> => {
@@ -1438,6 +1470,42 @@ describe('AtelierCoordinator', () => {
   const givenEmptyCompanySelected = (): void => {
     authentication.tenant = 'entreprise-vide';
   };
+  const givenServerReferenceWithoutActivityOn = (suiviId: string): void => {
+    const reference = twoActiveWorkstationsReference();
+    serveur.reference = {
+      ...reference,
+      suivis: reference.suivis.map(suivi => (suivi.id === suiviId ? { ...suivi, activites: [] } : suivi)),
+    };
+  };
+  const firstQueuedGesture = async (): Promise<GesteDePointage> => requiredFixture((await readQueuedGestures())[0], 'first queued gesture');
+  const givenServerReferenceHoldingTheActivityOpenedBy = (opening: GesteDePointage): void => {
+    const suivi = requiredFixture(serveur.reference.suivis[0], 'server workshop element');
+    serveur.reference = {
+      ...serveur.reference,
+      suivis: [
+        {
+          ...suivi,
+          etat: 'EN_COURS',
+          activites: [
+            {
+              ouverture: opening.id,
+              echeance: '2026-09-06T01:00:00.000Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: opening.dateDeSurvenue,
+              posteId: 'tour',
+            },
+          ],
+        },
+      ],
+    };
+  };
+  const givenNonConformityIsReportedDuringReferenceRefresh = (): void => {
+    serveur.afterReference = () => {
+      serveur.afterReference = undefined;
+      void whenPointingAt('piece', 'SECONDAIRE');
+    };
+  };
   const givenTheNextPublicationAcknowledgement = (): Promise<void> => journal.waitForNextAcknowledgement();
   const whenPublicationIsAcknowledged = (acknowledgement: Promise<void>): Promise<void> => acknowledgement;
   const thenBackgroundAcknowledgementFailureWasReported = (): void => {
@@ -1451,6 +1519,10 @@ describe('AtelierCoordinator', () => {
   };
   const thenQueueHas = async (count: number): Promise<void> => {
     expect((await journal.read(Entreprise.of('entreprise-a'))).evenements).toHaveLength(count);
+  };
+  const thenPendingGesturesAre = async (descriptions: string[]): Promise<void> => {
+    const pending = (await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'EN_ATTENTE');
+    expect(pending.map(({ geste }) => `${geste.type}:${geste.suiviId}:${geste.posteId}`)).toEqual(descriptions);
   };
   const thenAcceptedBatchesAre = (batches: string[][]): void => {
     expect(journal.acceptedBatches).toEqual(batches);
@@ -1524,6 +1596,9 @@ describe('AtelierCoordinator', () => {
     expect(gestes).toHaveLength(2);
     expect(new Set(identities).size).toBe(gestes.length);
     expect(gestes.every(geste => geste.dateDeSurvenue === instant)).toBe(true);
+  };
+  const thenPublishedTypesAre = (types: string[]): void => {
+    expect(serveur.journal.map(geste => geste.type)).toEqual(types);
   };
   const thenReplayedGesturesAre = (gestures: readonly GesteDePointage[]): void => {
     expect(serveur.journal).toEqual(gestures);

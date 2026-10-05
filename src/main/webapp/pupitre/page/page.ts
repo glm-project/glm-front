@@ -8,7 +8,10 @@ import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastruct
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { Enrolement } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/enrolement/enrolement';
-import { Reinitialisation } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/reinitialisation/reinitialisation';
+import {
+  ComptageDesGestesEnAttente,
+  Reinitialisation,
+} from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/reinitialisation/reinitialisation';
 import { ChangeDetectorRef, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { MessageDAtelierVisible, PupitreHeader } from '../header/header';
 
@@ -28,6 +31,8 @@ export class PupitrePage implements OnInit, OnDestroy {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private consumeNextClick = false;
   protected readonly resetRequested = signal(false);
+  protected readonly gestesEnAttente = signal<ComptageDesGestesEnAttente>('EN_COURS');
+  private comptageCourant = Symbol('comptage');
   protected readonly messageAtelier = computed<MessageDAtelierVisible | undefined>(() => {
     if (this.pupitre.echecCaptureLocale()) return { message: 'Action non enregistrée — recommencez' };
     const message = this.designation.refusAtelier();
@@ -65,7 +70,11 @@ export class PupitrePage implements OnInit, OnDestroy {
   }
 
   protected askReset(): void {
+    const comptage = Symbol('comptage');
+    this.comptageCourant = comptage;
+    this.gestesEnAttente.set('EN_COURS');
     this.resetRequested.set(true);
+    this.errorHandler.observe(this.countPendingGestures(comptage));
   }
 
   protected cancelReset(): void {
@@ -80,6 +89,19 @@ export class PupitrePage implements OnInit, OnDestroy {
 
   protected executeGlobale(intention: IntentionGlobale): void {
     this.errorHandler.observe(this.pupitre.executeGlobale(intention));
+  }
+
+  private async countPendingGestures(comptage: symbol): Promise<void> {
+    try {
+      this.showCount(comptage, await this.enrolement.gestesEnAttente());
+    } catch (failure: unknown) {
+      this.errorHandler.handleError(failure);
+      this.showCount(comptage, 'ECHEC');
+    }
+  }
+
+  private showCount(comptage: symbol, resultat: ComptageDesGestesEnAttente): void {
+    if (this.comptageCourant === comptage) this.gestesEnAttente.set(resultat);
   }
 
   private renderExpiryBeforeCompatibilityClick(): void {

@@ -1,4 +1,5 @@
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
+import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import {
   afterNextRender,
   AfterRenderRef,
@@ -10,7 +11,11 @@ import {
   input,
   OnChanges,
   OnDestroy,
+  OnInit,
 } from '@angular/core';
+import { messageDeRetardDePublication } from '../LibellesAtelier';
+
+const UNE_MINUTE = 60_000;
 
 @Directive({ selector: '[glmFollowContent]' })
 export class FollowContent implements OnChanges, OnDestroy {
@@ -48,11 +53,26 @@ export class FollowContent implements OnChanges, OnDestroy {
     '(document:keydown)': 'onKey($event)',
   },
 })
-export class Designation {
+export class Designation implements OnInit, OnDestroy {
   readonly designation = inject(CurrentOperateurLifecycle);
+  private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
+  private tic: ReturnType<typeof setInterval> | undefined;
+  protected readonly retardDePublication = this.etatHorsLigne.retardDePublication;
+  protected readonly messageDeRetard = messageDeRetardDePublication;
   readonly commandsEnabled = input(true);
   readonly digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
   private consumedPress = false;
+
+  ngOnInit(): void {
+    this.etatHorsLigne.updateClock();
+    this.tic = setInterval(() => {
+      this.etatHorsLigne.updateClock();
+    }, UNE_MINUTE);
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.tic);
+  }
 
   onPress(event: PointerEvent): void {
     this.consumedPress = !this.designation.registerPress();

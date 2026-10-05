@@ -1,11 +1,17 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
-import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import {
+  EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementEnAttente,
+  JournalDuPupitre,
+} from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { EtatHorsLigneDuPupitre, SourceDOuverture } from './EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
+
+const UNE_HEURE = 3_600_000;
 
 describe('EtatHorsLigneDuPupitre', () => {
   let etatHorsLigne: EtatHorsLigneDuPupitre;
@@ -41,6 +47,10 @@ describe('EtatHorsLigneDuPupitre', () => {
         },
       ],
     }).get(EtatHorsLigneDuPupitre);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should initialize connection state as connected', () => {
@@ -108,6 +118,28 @@ describe('EtatHorsLigneDuPupitre', () => {
     thenReferentielContainsOperator(state.referentiel?.operateurs[0]?.nom ?? '');
   });
 
+  it('should signal a publication delay once the clock is pushed past one hour', () => {
+    const geste = givenPendingGesture();
+    whenPublishing({ ...EMPTY_JOURNAL_DU_PUPITRE, evenements: [geste] });
+
+    whenTheClockIsPushedTo(Date.parse(geste.geste.dateDeSurvenue) + 2 * UNE_HEURE);
+
+    thenPublicationDelayIs({ gestes: 1, depuis: 2 * UNE_HEURE });
+  });
+
+  const givenPendingGesture = (): EvenementEnAttente => ({
+    etat: 'EN_ATTENTE',
+    geste: {
+      nature: 'POINTAGE',
+      intention: 'OUVERTURE',
+      type: 'DEBUT',
+      id: 'geste',
+      operateurId: 'jean',
+      suiviId: 'piece',
+      dateDeSurvenue: new Date().toISOString(),
+    },
+  });
+
   const givenDisconnectedStateInJournal = (entreprise: string): void => {
     journal.seedJournal(Entreprise.of(entreprise), { ...EMPTY_JOURNAL_DU_PUPITRE, connecte: false });
   };
@@ -128,10 +160,23 @@ describe('EtatHorsLigneDuPupitre', () => {
     await etatHorsLigne.refresh('RESTORE', reconcile);
   };
 
+  const whenTimePassesTo = (instant: number): void => {
+    vi.setSystemTime(instant);
+  };
+
+  const whenTheClockIsPushedTo = (instant: number): void => {
+    whenTimePassesTo(instant);
+    etatHorsLigne.updateClock();
+  };
+
   const whenOpeningSource = async (): Promise<SourceDOuverture> => etatHorsLigne.openingSource();
 
   const whenPublishing = (state: JournalDuPupitre): void => {
     etatHorsLigne.publish(state);
+  };
+
+  const thenPublicationDelayIs = (expected: { gestes: number; depuis: number }): void => {
+    expect(etatHorsLigne.retardDePublication()).toEqual(expected);
   };
 
   const thenConnectionIs = (expected: boolean): void => {

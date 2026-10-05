@@ -3,7 +3,8 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import { EMPTY_JOURNAL_DU_PUPITRE, JournalDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { inject, Injectable, signal } from '@angular/core';
+import { RetardDePublication } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/RetardDePublication';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
 type RefreshIntent = 'RESTORE' | 'SYNCHRONIZE';
@@ -22,8 +23,14 @@ export class EtatHorsLigneDuPupitre {
   private readonly vue = signal<JournalDuPupitre>(EMPTY_JOURNAL_DU_PUPITRE);
   private readonly entrepriseDuJournalEnMemoire = signal<Entreprise | undefined>(undefined);
   private readonly connexion = signal(true);
+  private readonly maintenant = signal(Date.now());
 
   readonly connected = this.connexion.asReadonly();
+  readonly retardDePublication = computed(() => RetardDePublication.of(this.vue(), this.maintenant()));
+
+  updateClock(): void {
+    this.maintenant.set(Date.now());
+  }
 
   referentiel(): ReturnType<typeof projectReferentiel> {
     return projectReferentiel(this.vue());
