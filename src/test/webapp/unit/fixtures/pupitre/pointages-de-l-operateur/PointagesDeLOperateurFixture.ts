@@ -2,7 +2,7 @@ import { DemandeDePointages } from '@/pupitre/contexts/pointages-de-l-operateur/
 import { DureeTravaillee } from '@/pupitre/contexts/pointages-de-l-operateur/domain/duree/DureeTravaillee';
 import { TotalDeDuree } from '@/pupitre/contexts/pointages-de-l-operateur/domain/duree/TotalDeDuree';
 import { JourDePointages } from '@/pupitre/contexts/pointages-de-l-operateur/domain/JourDePointages';
-import { CategorieDePointage, LigneDePointage } from '@/pupitre/contexts/pointages-de-l-operateur/domain/LigneDePointage';
+import { CategorieDePointage, EtatDeLigne, LigneDePointage } from '@/pupitre/contexts/pointages-de-l-operateur/domain/LigneDePointage';
 import { PointagesDeLaSemaine } from '@/pupitre/contexts/pointages-de-l-operateur/domain/PointagesDeLaSemaine';
 import { PointagesDeLOperateurPort } from '@/pupitre/contexts/pointages-de-l-operateur/domain/PointagesDeLOperateurPort';
 import { SemaineISO } from '@/pupitre/contexts/pointages-de-l-operateur/domain/semaine/SemaineISO';
@@ -20,10 +20,20 @@ export interface LigneFixture {
   readonly categorie?: CategorieDePointage;
   readonly debut: Date;
   readonly fin?: Date;
+  readonly automatique?: boolean;
+  readonly aVerifier?: boolean;
 }
 
-export const ligneFixture = ({ element, poste, categorie = 'TRAVAIL', debut, fin }: LigneFixture): LigneDePointage =>
-  new LigneDePointage({ element, poste, categorie, debut }, fin === undefined ? { etat: 'EN_COURS' } : { etat: 'TERMINEE', fin });
+const etatFixture = ({ fin, automatique = false, aVerifier = false }: LigneFixture): EtatDeLigne => {
+  if (fin !== undefined) return { etat: automatique ? 'TERMINEE_AUTOMATIQUEMENT' : 'TERMINEE', fin };
+  return { etat: aVerifier ? 'A_RESOUDRE' : 'EN_COURS' };
+};
+
+export const ligneFixture = (ligne: LigneFixture): LigneDePointage =>
+  new LigneDePointage(
+    { element: ligne.element, poste: ligne.poste, categorie: ligne.categorie ?? 'TRAVAIL', debut: ligne.debut },
+    etatFixture(ligne),
+  );
 
 export const totalFixture = (total: TotalFixture): TotalDeDuree =>
   total === false ? TotalDeDuree.incomplet() : TotalDeDuree.complet(new DureeTravaillee(total));

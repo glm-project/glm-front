@@ -37,6 +37,34 @@ describe('PointagesDeLaSemaine', () => {
     expect(pointages.jourParDefaut(new JourCalendaire(aujourdhui))?.jour.value).toBe(attendu);
   });
 
+  it.each<[string, LigneDePointage, readonly [number, boolean, boolean]]>([
+    ['an ongoing activity', ligne, [1, false, false]],
+    [
+      'an automatic end',
+      new LigneDePointage({ ...ligne.activite }, { etat: 'TERMINEE_AUTOMATIQUEMENT', fin: new Date(2026, 9, 5, 20) }),
+      [0, true, false],
+    ],
+    ['a clocking to check', new LigneDePointage({ ...ligne.activite }, { etat: 'A_RESOUDRE' }), [0, false, true]],
+    [
+      'a finished clocking',
+      new LigneDePointage({ ...ligne.activite }, { etat: 'TERMINEE', fin: new Date(2026, 9, 5, 8) }),
+      [0, false, false],
+    ],
+  ])('should tell what a day holding %s still needs', (_cas, ligneDuJour, [enCours, finAutomatique, aVerifier]) => {
+    const jour = new JourDePointages(SEMAINE.lundi(), TotalDeDuree.incomplet(), [ligneDuJour]);
+
+    expect([jour.activitesEnCours(), jour.aUneFinAutomatique(), jour.aUnPointageAVerifier()]).toEqual([enCours, finAutomatique, aVerifier]);
+  });
+
+  it.each([
+    [[1], true],
+    [[], false],
+  ])('should tell whether the week still holds ongoing activities', (rangsPointes, attendu) => {
+    const pointages = new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), joursDe(SEMAINE, rangsPointes));
+
+    expect(pointages.aDesActivitesEnCours()).toBe(attendu);
+  });
+
   it('should show no day by default for a past week without any clocking', () => {
     const pointages = new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), joursDe(SEMAINE));
 

@@ -23,6 +23,10 @@ export class PointagesDeLaSemaine {
     return this.jours.filter(jour => jour.estPointe());
   }
 
+  aDesActivitesEnCours(): boolean {
+    return this.jours.some(jour => jour.activitesEnCours() > 0);
+  }
+
   jourDu(jour: JourCalendaire): JourDePointages | undefined {
     return this.jours.find(candidat => candidat.jour.estLeMeme(jour));
   }

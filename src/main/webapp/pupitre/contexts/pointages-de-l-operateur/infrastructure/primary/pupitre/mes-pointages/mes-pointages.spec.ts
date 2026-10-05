@@ -66,7 +66,7 @@ describe('Mes pointages screen', () => {
     thenTextOf('semaine', ['Semaine 41 · cette semaine', '5 oct. – 11 oct. 2026', 'Total de la semaine', '10 h 58']);
     thenClockedDaysAre([
       ['jour-2026-10-05', 'Lun. 5 oct.', '7 h 45'],
-      ['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '3 h 13'],
+      ['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '3 h 13 + en cours'],
     ]);
   });
 
@@ -76,7 +76,7 @@ describe('Mes pointages screen', () => {
     await whenShowingMyPointages();
 
     thenTextOf('total-semaine', ['—']);
-    thenClockedDaysAre([['jour-2026-10-05', 'Lun. 5 oct.', '—']]);
+    thenClockedDaysAre([['jour-2026-10-05', 'Lun. 5 oct.', '— à vérifier']]);
   });
 
   it('should detail today by default, with its server total and each clocked portion', async () => {
@@ -89,7 +89,7 @@ describe('Mes pointages screen', () => {
     thenLinesAre([
       ['1243', 'Fraiseuse', '07:02 → 09:40', '2 h 38'],
       ['1243', 'Fraiseuse NC', '09:40 → 10:15', '0 h 35'],
-      ['1250', '', '12:45 → …', ''],
+      ['1250', '', '12:45 → …', 'EN COURS'],
     ]);
   });
 
@@ -102,6 +102,96 @@ describe('Mes pointages screen', () => {
     thenTextOf('jour-titre', ['Lundi 5 octobre 2026']);
     thenLinesAre([['1240', 'Fraiseuse', '07:00 → 14:45', '7 h 45']]);
     thenChosenDayIs('jour-2026-10-05');
+  });
+
+  it('should explain that an ongoing activity is counted once stopped', async () => {
+    givenTheCurrentWeek(semaineEnCoursFixture());
+
+    await whenShowingMyPointages();
+
+    thenExplanationsAre(['1 activité en cours : comptée quand vous l’arrêterez.']);
+    thenTextOf('note-semaine', ['+ en cours, pas encore compté']);
+    thenClockedDaysAre([
+      ['jour-2026-10-05', 'Lun. 5 oct.', '7 h 45'],
+      ['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '3 h 13 + en cours'],
+    ]);
+  });
+
+  it('should count several ongoing activities in the explanation', async () => {
+    givenTheCurrentWeek(
+      semaineFixture(SEMAINE_EN_COURS, {
+        3: {
+          total: 'PT0S',
+          lignes: [
+            ligneFixture({ element: '1250', debut: new Date(2026, 9, 8, 12, 45) }),
+            ligneFixture({ element: '1251', debut: new Date(2026, 9, 8, 12, 50) }),
+          ],
+        },
+      }),
+    );
+
+    await whenShowingMyPointages();
+
+    thenExplanationsAre(['2 activités en cours : comptées quand vous les arrêterez.']);
+  });
+
+  it('should count and flag a clocking ended automatically after 13 hours', async () => {
+    givenTheCurrentWeek(
+      semaineFixture(
+        SEMAINE_EN_COURS,
+        {
+          3: {
+            total: 'PT13H',
+            lignes: [
+              ligneFixture({
+                element: '1236',
+                poste: 'Fraiseuse',
+                debut: new Date(2026, 9, 8, 6),
+                fin: new Date(2026, 9, 8, 19),
+                automatique: true,
+              }),
+            ],
+          },
+        },
+        'PT13H',
+      ),
+    );
+
+    await whenShowingMyPointages();
+
+    thenLinesAre([['1236', 'Fraiseuse', '06:00 → 19:00', '13 h 00 fin automatique']]);
+    thenExplanationsAre(['Un pointage n’a pas été arrêté : il s’est terminé tout seul après 13 h. Signalez-le au responsable.']);
+    thenClockedDaysAre([['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '13 h 00 fin automatique']]);
+  });
+
+  it('should show no figure for a day and a week whose clocking must be checked', async () => {
+    givenTheCurrentWeek(
+      semaineFixture(
+        SEMAINE_EN_COURS,
+        {
+          3: {
+            total: false,
+            lignes: [
+              ligneFixture({ element: '1233', poste: 'Fraiseuse', debut: new Date(2026, 9, 8, 7), fin: new Date(2026, 9, 8, 12) }),
+              ligneFixture({ element: '1233', poste: 'Fraiseuse', debut: new Date(2026, 9, 8, 13), aVerifier: true }),
+            ],
+          },
+        },
+        false,
+      ),
+    );
+
+    await whenShowingMyPointages();
+
+    thenTextOf('total-jour-affiche', ['—']);
+    thenTextOf('libelle-total-jour', ['à vérifier']);
+    thenLinesAre([
+      ['1233', 'Fraiseuse', '07:00 → 12:00', '5 h 00'],
+      ['1233', 'Fraiseuse', '13:00 → ?', 'à vérifier'],
+    ]);
+    thenExplanationsAre(['Un pointage n’a pas de fin connue : le responsable doit le corriger avant que le total s’affiche.']);
+    thenTextOf('note-semaine', ['à vérifier par le responsable']);
+    thenClockedDaysAre([['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '— à vérifier']]);
   });
 
   const givenTheCurrentWeek = (pointages: ReturnType<typeof semaineFixture>): void => {
@@ -140,13 +230,19 @@ describe('Mes pointages screen', () => {
       jours.map(jour => [
         jour.getAttribute('data-selector'),
         normalized(jour.firstElementChild?.textContent ?? ''),
-        normalized(jour.lastElementChild?.textContent ?? ''),
+        Array.from(jour.lastElementChild?.children ?? [])
+          .map(partie => normalized(partie.textContent))
+          .join(' '),
       ]),
     ).toEqual(expected);
   };
   const thenLinesAre = (expected: readonly (readonly string[])[]): void => {
     const lignes = Array.from(element('lignes').children);
     expect(lignes.map(ligne => Array.from(ligne.children).map(colonne => normalized(colonne.textContent)))).toEqual(expected);
+  };
+  const thenExplanationsAre = (expected: readonly string[]): void => {
+    const explications = Array.from(element('jour-affiche').querySelectorAll(dataSelector('explication')));
+    expect(explications.map(explication => normalized(explication.textContent))).toEqual(expected);
   };
   const thenChosenDayIs = (selector: string): void => {
     const choisis = Array.from(element('jours-pointes').querySelectorAll('[aria-pressed="true"]'));

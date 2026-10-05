@@ -7,8 +7,11 @@
     </h2>
     <p class="flex flex-wrap items-baseline gap-4">
       <span class="text-display text-ink tabular-nums" data-selector="total-jour-affiche">{{ labels.duree(jour.total) }}</span>
-      <span class="text-section text-ink-muted">{{ labels.pointees }}</span>
+      <span class="text-section text-ink-muted" data-selector="libelle-total-jour">{{ labels.libelleDuTotalDuJour(jour) }}</span>
     </p>
+    @for (explication of labels.explications(jour); track explication) {
+    <p class="text-body-sm text-warn" data-selector="explication">{{ explication }}</p>
+    }
     <ul class="lignes border-t border-border" data-selector="lignes">
       @for (ligne of jour.lignes; track $index) {
       <li class="ligne border-b border-sunken text-body text-ink">
@@ -19,7 +22,13 @@
           }
         </span>
         <span class="text-ink-muted tabular-nums">{{ labels.plage(ligne) }}</span>
-        <span class="text-right tabular-nums">{{ labels.dureeDeLaLigne(ligne) }}</span>
+        <span class="flex flex-col items-end tabular-nums">
+          @if (ligne.etat.etat === 'EN_COURS') {
+          <span class="rounded bg-ok px-2 text-label text-on-accent" data-selector="en-cours">{{ labels.mentionDeLaLigne(ligne) }}</span>
+          } @else { {{ labels.dureeDeLaLigne(ligne) }} @if (labels.mentionDeLaLigne(ligne); as mention) {
+          <span class="text-label text-warn" data-selector="mention">{{ mention }}</span>
+          } }
+        </span>
       </li>
       }
     </ul>
@@ -36,7 +45,12 @@
     </div>
     <p class="flex items-baseline justify-between gap-3 border-t border-border pt-3">
       <span class="text-body-sm text-ink-muted">{{ labels.totalDeLaSemaine }}</span>
-      <span class="text-title text-ink tabular-nums" data-selector="total-semaine">{{ labels.duree(lue.total) }}</span>
+      <span class="flex flex-col items-end">
+        <span class="text-title text-ink tabular-nums" data-selector="total-semaine">{{ labels.duree(lue.total) }}</span>
+        @if (labels.noteDeLaSemaine(lue); as note) {
+        <span class="text-label text-warn" data-selector="note-semaine">{{ note }}</span>
+        }
+      </span>
     </p>
     <ul class="flex flex-col gap-2" data-selector="jours-pointes">
       @for (jourPointe of lue.joursPointes(); track jourPointe.jour.value) {
@@ -50,7 +64,12 @@
           [attr.data-selector]="'jour-' + jourPointe.jour.value"
         >
           <span class="font-semibold">{{ labels.jour(jourPointe.jour, aujourdhui) }}</span>
-          <span class="tabular-nums">{{ labels.duree(jourPointe.total) }}</span>
+          <span class="flex flex-col items-end">
+            <span class="tabular-nums">{{ labels.duree(jourPointe.total) }}</span>
+            @if (labels.noteDuJour(jourPointe); as note) {
+            <span class="text-label text-warn">{{ note }}</span>
+            }
+          </span>
         </button>
       </li>
       }

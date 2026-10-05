@@ -141,7 +141,7 @@ class PointagesHttpBackendFixture implements HttpBackend {
 
 interface PointagesHarness {
   readonly port: PointagesDeLOperateurPort;
-  seed(pointages: PointagesDeLaSemaine, synthese: RestSynthese): void;
+  seed(pointages: PointagesDeLaSemaine, synthese: RestSynthese, feuille?: RestFeuille): void;
   seedFailure(): void;
 }
 
@@ -159,8 +159,9 @@ const createHttpHarness = (): PointagesHarness => {
   });
   return {
     port: TestBed.inject(HttpPointagesDeLOperateur),
-    seed: (_pointages, synthese) => {
+    seed: (_pointages, synthese, feuille = feuilleFixture()) => {
       backend.synthese = synthese;
+      backend.feuille = feuille;
     },
     seedFailure: () => {
       backend.failure = true;
@@ -216,6 +217,53 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
     expect(pointages.joursPointes()[1]?.lignes).toEqual([
       ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-06T05:00:00Z'), fin: new Date('2026-10-06T12:40:00Z') }),
       ligneFixture({ element: 'OF-2026-000205', debut: new Date('2026-10-06T13:00:00Z') }),
+    ]);
+  });
+
+  it('should transport an automatic end and a clocking to check as such', async () => {
+    harness.seed(
+      semaineFixture(SEMAINE, {
+        2: {
+          total: false,
+          lignes: [
+            ligneFixture({
+              element: '204',
+              poste: 'Tour',
+              debut: new Date('2026-10-07T04:00:00Z'),
+              fin: new Date('2026-10-07T17:00:00Z'),
+              automatique: true,
+            }),
+            ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-07T18:00:00Z'), aVerifier: true }),
+          ],
+        },
+      }),
+      syntheseFixture(),
+      {
+        ...feuilleFixture(),
+        jours: SEMAINE.jours().map(jour => ({
+          jour: jour.value,
+          activites:
+            jour.value === '2026-10-07'
+              ? [
+                  {
+                    ...activiteFixture('2026-10-07T04:00:00Z', '2026-10-07T17:00:00Z'),
+                    activite: { id: 'auto', debut: '2026-10-07T04:00:00Z', fin: '2026-10-07T17:00:00Z', etat: 'TERMINEE_AUTOMATIQUEMENT' },
+                  },
+                  {
+                    ...activiteFixture('2026-10-07T18:00:00Z', undefined),
+                    activite: { id: 'conflit', debut: '2026-10-07T18:00:00Z', finAuPlusTard: '2026-10-08T07:00:00Z', etat: 'A_RESOUDRE' },
+                  },
+                ]
+              : [],
+        })),
+      },
+    );
+
+    const pointages = await harness.port.semaine(DEMANDE);
+
+    expect(pointages.joursPointes()[0]?.lignes.map(ligne => ligne.etat)).toEqual([
+      { etat: 'TERMINEE_AUTOMATIQUEMENT', fin: new Date('2026-10-07T17:00:00Z') },
+      { etat: 'A_RESOUDRE' },
     ]);
   });
 
