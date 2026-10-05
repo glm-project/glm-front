@@ -27,6 +27,7 @@ import {
 } from '../../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { operateurOuIdentifiant, operateurPresente, postePresente } from '../PresentationIdentites';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 
 @Component({
@@ -60,6 +61,8 @@ export class DossierAnomaliePage {
   protected readonly preparation = inject(PreparationActe);
   protected readonly droits = inject(AnomaliesRightsPort);
   protected readonly libelles = LIBELLES_ANOMALIES;
+  protected readonly operateurDe = operateurPresente;
+  protected readonly posteDe = postePresente;
   protected readonly anomalieTraitee = anomalieTraitee;
   protected readonly conflitAExpliquer = conflitAExpliquer;
   protected readonly detail = signal(false);
@@ -108,7 +111,7 @@ export class DossierAnomaliePage {
   protected libelleContinuation(ligne: LigneConflit): string {
     return (
       ligne.explication
-      || `${ligne.designation} · ${ligne.operateur || ligne.operateurId} · ${this.instantLongDay.transform(ligne.date, this.now)} · ${ligne.nombrePointages} pointages`
+      || `${ligne.designation} · ${operateurOuIdentifiant(ligne)} · ${this.instantLongDay.transform(ligne.date, this.now)} · ${ligne.nombrePointages} pointages`
     );
   }
 

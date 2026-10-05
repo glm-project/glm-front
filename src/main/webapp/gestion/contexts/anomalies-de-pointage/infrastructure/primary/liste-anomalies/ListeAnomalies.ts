@@ -8,6 +8,7 @@ import { FiltreAnomalies, NatureAnomalie, PAGE_SIZE_ANOMALIES } from '../../../d
 import { NATURE_ANOMALIE_PAR_DEFAUT, readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { operateurPresente, postePresente } from '../PresentationIdentites';
 import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
 
 @Component({
@@ -34,6 +35,8 @@ export class ListeAnomalies {
   }));
   protected readonly filtreActif = computed(() => this.filtre().operateur !== '' || this.filtre().element !== '');
   protected readonly libelles = { ...LIBELLES_ANOMALIES, ...LIBELLES_LISTE_ANOMALIES };
+  protected readonly operateurDe = operateurPresente;
+  protected readonly posteDe = postePresente;
   protected readonly libellesDeNature = computed(() => LIBELLES_LISTE_ANOMALIES.natures[this.filtre().nature]);
   protected readonly liste = resource({
     params: () => (this.pageDemandee() === undefined || this.natureDemandee() === undefined ? undefined : this.filtre()),
@@ -63,14 +66,6 @@ export class ListeAnomalies {
 
   protected ongletParams(nature: NatureAnomalie): FiltreAnomalies {
     return { ...this.filtre(), nature, page: 1 };
-  }
-
-  protected operateurDe(ligne: { operateur: string; operateurId?: string }): string {
-    return ligne.operateur || [this.libelles.operateurNonResolu, ligne.operateurId].join(' · ');
-  }
-
-  protected posteDe(ligne: { poste: string; posteId?: string }): string {
-    return ligne.poste || (ligne.posteId ? this.libelles.posteNonResolu + ' · ' + ligne.posteId : this.libelles.sansPoste);
   }
 
   protected pageParams(page: number): FiltreAnomalies {
