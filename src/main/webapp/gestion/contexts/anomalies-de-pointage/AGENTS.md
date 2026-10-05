@@ -11,8 +11,11 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   ne traite aujourd'hui que la nature `CONFLIT` ; la liste la demande explicitement
   (`GET /api/atelier/anomalies?nature=CONFLIT`). Le coût de revient emploie déjà « anomalie » au sens large ;
   les contextes restent isolés et ne partagent aucun type. « Séquence en conflit » garde son sens.
-- **Dossier** : projection d'une séquence en conflit, adressée par suivi et pointage d'ancrage ; une
-  adresse annulée, remplacée ou résolue reçoit un résultat explicite, jamais une autre séquence.
+- **Dossier** : projection d'une anomalie de pointage, adressée par suivi et pointage d'ancrage : une
+  séquence en conflit (`EN_CONFLIT`) ou une fin automatique (`FIN_AUTOMATIQUE`, ancrée sur l'ouvrant actif
+  de l'activité échue). Une adresse annulée, remplacée ou résolue reçoit un résultat explicite, jamais une
+  autre séquence. Les deux identifiants restent distincts : l'adresse d'une fin automatique est
+  l'événement ouvrant, l'activité visée par un acte est l'`ActiviteId` d'origine (`activites[].activite`).
 - **Acte** : correction, annulation ou régularisation humaine. Aucun acte n'est choisi par défaut.
   Correction et annulation demandent un motif non vide d'au plus 255 caractères ; la régularisation
   ne porte aucun motif.
@@ -41,6 +44,17 @@ Le serveur fournit états, intervalles, durées ISO, diagnostics, choix et conti
 possède leurs libellés ; il conserve les identités brutes lorsque les fiches ne sont pas résolues.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
+
+Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le
+modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. « Anomalie traitée » signifie ni
+`enConflit` ni `finAutomatique`, quel que soit l'état d'adresse : une adresse `ANCRE_ANNULEE` peut rester
+en fin automatique lorsque l'ouvrant corrigé est encore échu. Le dossier affiche l'activité échue, son
+début, sa fin automatique, sa durée et la clôture reçus, sans les calculer, et ne se présente jamais comme
+un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :
+`REGULARISER_FIN` prérempli sans heure, que le gestionnaire saisit (aucune heure n'est inventée) ;
+`CORRIGER_FIN_TARDIVE` et `CORRIGER_TRANSITION_TARDIVE` reprenant l'heure du pointage tardif, le motif
+restant à saisir. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
+reprise et obsolescence restent ceux de toute saisie.
 
 Le reçu fournit le dossier canonique courant depuis `perimetre`, même à une ancre annulée. Une lecture
 ordinaire utilise `sequence` et conserve le résultat d'adresse obsolète. La vérification canonique

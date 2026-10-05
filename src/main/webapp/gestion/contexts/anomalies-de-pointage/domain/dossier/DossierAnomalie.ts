@@ -55,7 +55,12 @@ export interface DiagnosticConflit {
 
 export interface ChoixGuide {
   readonly id: string;
-  readonly code?: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' | 'ANNULER_TRANSITION';
+  readonly code?:
+    | 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE'
+    | 'ANNULER_TRANSITION'
+    | 'REGULARISER_FIN'
+    | 'CORRIGER_FIN_TARDIVE'
+    | 'CORRIGER_TRANSITION_TARDIVE';
   readonly libelle: string;
   readonly explication: string;
   readonly saisie: SaisieActe;
@@ -74,7 +79,10 @@ export interface LigneConflit {
   readonly nombrePointages: number;
 }
 
+export type EtatDAdresseDossier = 'EN_CONFLIT' | 'INTROUVABLE' | 'ANCRE_ANNULEE' | 'SANS_ANOMALIE' | 'FIN_AUTOMATIQUE';
+
 export interface DossierAnomalie {
+  readonly etat: EtatDAdresseDossier;
   readonly ligne: LigneConflit;
   readonly version: number;
   readonly cloture: boolean;
@@ -84,6 +92,7 @@ export interface DossierAnomalie {
   readonly activites: readonly ActiviteAnomalie[];
   readonly choix: readonly ChoixGuide[];
   readonly enConflit: boolean;
+  readonly finAutomatique: boolean;
   readonly consequences: readonly string[];
   readonly continuations: readonly LigneConflit[];
   readonly diagnostics?: readonly DiagnosticConflit[];

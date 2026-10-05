@@ -39,6 +39,7 @@ const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
 const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierAnomalie'] => ({
   kind,
   enConflit: kind === 'EN_CONFLIT',
+  finAutomatique: false,
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
   revision,
   evaluation: '2026-10-04T10:00:00Z',

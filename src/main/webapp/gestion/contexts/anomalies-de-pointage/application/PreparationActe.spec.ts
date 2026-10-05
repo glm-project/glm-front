@@ -19,6 +19,7 @@ import { SuiviAnomalieId } from '../domain/dossier/SuiviAnomalieId';
 import { PreparationActe } from './PreparationActe';
 
 const dossierFixture: DossierAnomalie = {
+  etat: 'EN_CONFLIT',
   ligne: {
     adresse: { suivi: new SuiviAnomalieId('suivi-1'), pointage: new PointageAnomalieId('fin-17') },
     element: new ElementAnomalieId('element-1'),
@@ -36,9 +37,24 @@ const dossierFixture: DossierAnomalie = {
   activites: [],
   choix: [],
   enConflit: true,
+  finAutomatique: false,
   consequences: [],
   continuations: [],
 };
+const dossierFinAutomatiqueFixture: DossierAnomalie = {
+  ...dossierFixture,
+  etat: 'FIN_AUTOMATIQUE',
+  enConflit: false,
+  finAutomatique: true,
+};
+const finARegulariserFixture = SaisieActe.regularise({
+  type: 'FIN',
+  intention: 'FIN',
+  activiteVisee: 'travail-8',
+  operateur: 'op-camille',
+  poste: '',
+  instant: '',
+});
 const cancellationFixture = (pointage = 'fin-17'): SaisieActe => SaisieActe.cancel(pointage).afterChange({ motif: 'Double appui' });
 const previewFixture = (saisie: SaisieActe): ApercuAnomalie => ({
   empreinteConsequences: 'empreinte-1',
@@ -535,6 +551,64 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(preparation.operation().kind).toBe('REPOS');
     expect(preparation.resolution().confirmation()).toEqual({ ...propositionFixture(saisie), version: 2 });
     expect(previews.requests).toHaveLength(2);
+  });
+
+  it('should not preview an end regularisation before the manager dates it', async () => {
+    preparation.choose(finARegulariserFixture);
+
+    await preparation.preview(dossierFinAutomatiqueFixture);
+
+    expect(previews.requests).toEqual([]);
+    expect(preparation.operation().kind).toBe('REPOS');
+    expect(preparation.resolution().saisie.errors()).toEqual(['INSTANT_INVALIDE']);
+  });
+
+  it('should preview the end regularisation at the instant entered by the manager against the received version', async () => {
+    const attente = givenPreviewWaits();
+    preparation.choose(finARegulariserFixture);
+    preparation.change({ fait: { instant: '2026-09-14T17:00:00+02:00' } });
+
+    const demande = preparation.preview({ ...dossierFinAutomatiqueFixture, version: 4 });
+    await attente.arrival;
+    attente.release({ kind: 'REFUS', raison: 'Suivi clôturé' });
+    await demande;
+
+    expect(previews.requests).toEqual([
+      {
+        adresse: dossierFixture.ligne.adresse,
+        version: 4,
+        acte: {
+          kind: 'REGULARISATION',
+          fait: {
+            type: 'FIN',
+            intention: 'FIN',
+            activiteVisee: 'travail-8',
+            operateur: 'op-camille',
+            poste: '',
+            instant: '2026-09-14T17:00:00+02:00',
+          },
+        },
+      },
+    ]);
+    expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Suivi clôturé' });
+  });
+
+  it('should keep the dated end regularisation after a refusal so the manager can adjust its instant', async () => {
+    const attente = givenPreviewWaits();
+    preparation.choose(finARegulariserFixture);
+    preparation.change({ fait: { instant: '2026-09-15T17:00:00+02:00' } });
+    const demande = preparation.preview(dossierFinAutomatiqueFixture);
+    await attente.arrival;
+    attente.release({ kind: 'REFUS', raison: 'La date de survenue est dans le futur' });
+    await demande;
+
+    preparation.change({ fait: { instant: '2026-09-14T17:00:00+02:00' } });
+
+    expect(preparation.operation().kind).toBe('REPOS');
+    expect(preparation.resolution().saisie.command()).toMatchObject({
+      kind: 'REGULARISATION',
+      fait: { instant: '2026-09-14T17:00:00+02:00' },
+    });
   });
 
   const givenPreviewWaits = (): PendingIoFixture<ResultatApercu> => {

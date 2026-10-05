@@ -389,7 +389,7 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenTheWrittenActRemainsVisibleInHistory = (): void => {
     cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Acte enregistré');
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Conflit résolu');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-adresse-obsolete')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('contain.text', `Remplace le pointage ${finFixture}`);
     cy.get(dataSelector('anomalie-pointage')).should('contain.text', `Crée l’activité ${debutFixture}`);

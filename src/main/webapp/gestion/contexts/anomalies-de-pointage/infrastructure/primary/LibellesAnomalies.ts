@@ -14,6 +14,12 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
 export const LIBELLES_ANOMALIES = {
   detail: 'Un pointage manque dans la chronologie ?',
   pourquoi: 'Pourquoi ces pointages sont incohérents',
+  finAutomatique: 'Fin automatique',
+  finAutomatiqueExplication:
+    'Aucune fin réelle n’a terminé cette activité : elle a été terminée automatiquement à son échéance. Indiquez l’heure réelle de fin ou corrigez le pointage tardif.',
+  debut: 'Début',
+  finAutomatiqueA: 'Fin automatique',
+  duree: 'Durée',
   tracabilite: 'Voir les détails et l’enregistrement',
   corriger: 'Corriger ce pointage',
   regulariser: 'Régulariser un fait manquant',
@@ -24,7 +30,7 @@ export const LIBELLES_ANOMALIES = {
   cloture: 'Clôturé',
   ouvert: 'Ouvert',
   continuation: 'Autres conflits du suivi',
-  apercuRestant: 'Après cet acte : conflit restant',
+  apercuRestant: 'Après cet acte : anomalie restante',
   etats: {
     A_RESOUDRE: 'À résoudre',
     EN_COURS: 'En cours',
@@ -50,11 +56,11 @@ export const LIBELLES_ANOMALIES = {
   confirmer: 'Enregistrer cette décision',
   apercu: 'Vérifier avant d’enregistrer',
   comparerJournal: 'Comparer tous les pointages avant et après',
-  apercuResolu: 'Conflit résolu après enregistrement de cette décision.',
+  apercuResolu: 'Anomalie traitée après enregistrement de cette décision.',
   avant: 'Avant',
   apres: 'Après cet acte',
-  restant: 'Acte enregistré, conflit restant',
-  resolu: 'Conflit résolu',
+  restant: 'Acte enregistré, anomalie restante',
+  resolu: 'Anomalie traitée',
   annule: 'Pointage annulé',
   remplace: 'Remplace le pointage',
   regularisation: 'Régularisation',
@@ -65,7 +71,7 @@ export const LIBELLES_ANOMALIES = {
   absences: {
     INTROUVABLE: 'Ce pointage est introuvable dans ce suivi.',
     ANCRE_ANNULEE: 'Le pointage de cette adresse a été annulé ou remplacé.',
-    SANS_ANOMALIE: 'Ce pointage ne relève plus d’un conflit.',
+    SANS_ANOMALIE: 'Ce pointage ne relève plus d’une anomalie.',
   },
   operation: {
     REPOS: '',
@@ -78,8 +84,9 @@ export const LIBELLES_ANOMALIES = {
     APPLIQUE: 'Acte enregistré',
   },
   erreurs: ERREURS_SAISIE,
-  retour: 'Retour aux conflits',
-  dossier: 'Dossier de conflit',
+  retour: 'Retour aux anomalies',
+  dossier: 'Dossier d’anomalie de pointage',
+  chargementDossier: 'Chargement du dossier…',
   chronologie: 'Pointages et rattachements',
   cible: 'Vise l’activité',
   creee: 'Crée l’activité',
@@ -87,7 +94,7 @@ export const LIBELLES_ANOMALIES = {
   activites: 'Activités concernées',
   decision: 'Votre décision',
   choisir:
-    'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare une correction ; vous vérifierez ses conséquences avant de l’enregistrer.',
+    'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',
   choix: {
     ANNULER_TRANSITION: {
       libelle: 'Annuler la transition',
@@ -96,6 +103,18 @@ export const LIBELLES_ANOMALIES = {
     RATTACHER_FIN_A_ACTIVITE_REMPLACANTE: {
       libelle: 'Rattacher la fin à l’activité remplaçante',
       explication: 'La fin proposée visera l’activité indiquée dans les faits. Renseignez un motif, puis vérifiez l’aperçu.',
+    },
+    REGULARISER_FIN: {
+      libelle: 'Régulariser la fin',
+      explication: 'Aucune heure n’est proposée : saisissez l’heure réelle de fin, puis vérifiez l’aperçu avant d’enregistrer.',
+    },
+    CORRIGER_FIN_TARDIVE: {
+      libelle: 'Corriger la fin pointée après l’échéance',
+      explication: 'La fin pointée après l’échéance est reprise avec son heure. Renseignez un motif, puis vérifiez l’aperçu.',
+    },
+    CORRIGER_TRANSITION_TARDIVE: {
+      libelle: 'Corriger la transition pointée après l’échéance',
+      explication: 'La transition pointée après l’échéance est reprise avec son heure. Renseignez un motif, puis vérifiez l’aperçu.',
     },
   },
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' },

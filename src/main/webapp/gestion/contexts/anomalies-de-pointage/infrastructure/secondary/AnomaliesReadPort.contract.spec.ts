@@ -183,6 +183,238 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     });
   });
 
+  it('should read an automatic end from its perimeter without inventing a sequence or a conflict', async () => {
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers();
+    const resultat = await lecture;
+
+    expect(resultat).toMatchObject({
+      kind: 'DOSSIER',
+      dossier: {
+        version: 8,
+        etat: 'FIN_AUTOMATIQUE',
+        enConflit: false,
+        finAutomatique: true,
+        cloture: false,
+        ligne: { adresse: { suivi: adresse.suivi, pointage: adresse.pointage }, nombrePointages: 1, operateurId: 'op-camille' },
+        activites: [
+          {
+            id: new ActiviteAnomalieId('travail-8'),
+            etat: 'ECHUE',
+            periode: {
+              categorie: 'TRAVAIL',
+              debut: '2026-09-14T08:00:00.123456789+02:00',
+              fin: '2026-09-14T21:00:00.123456789+02:00',
+              duree: 'PT13H',
+            },
+          },
+        ],
+        diagnostics: [],
+      },
+    });
+  });
+
+  it('should keep the closure of the workshop supplied with an automatic end', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    dossier.suivi = { ...dossier.suivi, etat: 'CLOTURE', clotureLe: '2026-09-14T23:00:00Z', cloturePar: 'gestionnaire' };
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toMatchObject({ kind: 'DOSSIER', dossier: { cloture: true, finCloture: '2026-09-14T23:00:00Z' } });
+  });
+
+  it('should reject an automatic end missing its perimeter instead of reconstructing it from the journal', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    delete dossier.perimetre;
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenAutomaticEndDossierAnswers(dossier);
+    const failure = await lecture;
+
+    expect(failure).toEqual(new Error('Périmètre du dossier absent.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should reject an automatic end whose received duration is missing instead of computing it', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    delete requiredFixture(dossier.activites[0], 'automatic end activity').duree;
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Durée définitive de l’activité absente.'));
+  });
+
+  it('should prefill the guided end regularisation from the received fact and leave its time for the manager', async () => {
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers();
+    const resultat = await lecture;
+
+    const choix = requiredFixture(dossierFromReading(resultat).choix[0], 'guided regularisation');
+    expect(choix.id).toBe('REGULARISER_FIN:debut-8');
+    expect(choix.saisie.proposition).toEqual({
+      kind: 'REGULARISATION',
+      fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', poste: 'poste-dmu', instant: '' },
+    });
+    expect(choix.saisie.command()).toBeUndefined();
+  });
+
+  it('should prefill the guided end regularisation of an activity without workstation', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    delete requiredFixture(dossier.choix[0], 'guided regularisation').fait?.poste;
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    const choix = requiredFixture(dossierFromReading(resultat).choix[0], 'guided regularisation');
+    expect(choix.saisie.proposition).toMatchObject({ kind: 'REGULARISATION', fait: { poste: '', instant: '' } });
+  });
+
+  it.each([
+    {
+      code: 'CORRIGER_FIN_TARDIVE' as const,
+      fait: { type: 'FIN' as const, intention: 'FIN' as const, instant: '2026-09-14T23:00:00.123456789+02:00' },
+    },
+    {
+      code: 'CORRIGER_TRANSITION_TARDIVE' as const,
+      fait: { type: 'NON_CONFORMITE' as const, intention: 'TRANSITION' as const, instant: '2026-09-14T22:00:00+02:00' },
+    },
+  ])('should prefill the guided $code with the instant of the late fact and leave its reason empty', async ({ code, fait }) => {
+    const dossier = dossierFinAutomatiqueFixture();
+    dossier.choix = [
+      { code, kind: 'CORRECTION', pointage: 'tardif-30', fait: { ...fait, activiteVisee: 'travail-8', operateur: 'op-camille' } },
+    ];
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    const choix = requiredFixture(dossierFromReading(resultat).choix[0], 'guided late correction');
+    expect(choix.id).toBe(`${code}:tardif-30`);
+    expect(choix.saisie.proposition).toEqual({
+      kind: 'CORRECTION',
+      pointage: 'tardif-30',
+      motif: '',
+      fait: { ...fait, activiteVisee: 'travail-8', operateur: 'op-camille', poste: '' },
+    });
+    expect(choix.saisie.command()).toBeUndefined();
+  });
+
+  it('should reject a guided end regularisation missing its fact', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    delete requiredFixture(dossier.choix[0], 'guided regularisation').fait;
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Fait de la proposition guidée absent.'));
+  });
+
+  it('should reject a guided end regularisation that already carries a time instead of keeping an invented one', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const choix = requiredFixture(dossier.choix[0], 'guided regularisation');
+    choix.fait = { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', instant: '2026-09-14T17:00:00Z' };
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Proposition guidée incohérente.'));
+  });
+
+  it('should reject a guided end regularisation missing the activity it ends', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    delete requiredFixture(dossier.choix[0], 'guided regularisation').fait?.activiteVisee;
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(resultat).toEqual(new Error('Cible de la proposition guidée absente.'));
+  });
+
+  it.each(['CORRIGER_FIN_TARDIVE' as const, 'CORRIGER_TRANSITION_TARDIVE' as const])(
+    'should reject a guided %s whose fact lacks the time of the late pointage',
+    async code => {
+      const dossier = dossierFinAutomatiqueFixture();
+      dossier.choix = [
+        {
+          code,
+          kind: 'CORRECTION',
+          pointage: 'tardif-30',
+          fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille' },
+        },
+      ];
+      const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+      const lecture = port.read(adresse).catch((failure: unknown) => failure);
+      whenAutomaticEndDossierAnswers(dossier);
+      const resultat = await lecture;
+
+      expect(resultat).toEqual(new Error('Instant de la proposition guidée absent.'));
+    },
+  );
+
+  const dossierFinAutomatiqueFixture = (): components['schemas']['RestDossierAnomalie'] => {
+    const dossier = dossierAnnuleFixture();
+    return {
+      ...dossier,
+      kind: 'FIN_AUTOMATIQUE',
+      adresse: { suivi: 'suivi-camille', pointage: 'debut-8' },
+      finAutomatique: true,
+      perimetre: {
+        operateurId: 'op-camille',
+        posteId: 'poste-dmu',
+        activites: ['travail-8'],
+        pointages: ['debut-8'],
+        datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
+        nombrePointages: 1,
+      },
+      activites: [
+        {
+          evenement: 'debut-8',
+          activite: 'travail-8',
+          operateurId: 'op-camille',
+          posteId: 'poste-dmu',
+          categorie: 'TRAVAIL',
+          debut: '2026-09-14T08:00:00.123456789+02:00',
+          fin: '2026-09-14T21:00:00.123456789+02:00',
+          duree: 'PT13H',
+          etat: 'ECHUE',
+        },
+      ],
+      choix: [
+        {
+          code: 'REGULARISER_FIN',
+          kind: 'REGULARISATION',
+          pointage: 'debut-8',
+          fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', poste: 'poste-dmu' },
+        },
+      ],
+    };
+  };
+
+  const whenAutomaticEndDossierAnswers = (dossier = dossierFinAutomatiqueFixture()): void => {
+    server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/debut-8').flush(dossier);
+  };
+
   const givenACorrectedOpening = (): components['schemas']['RestDossierAnomalie'] => {
     const dossier = dossierAnnuleFixture();
     const original = requiredFixture(dossier.suivi.journal[0], 'original finish');
@@ -218,7 +450,9 @@ describe('Beyond the contract: HTTP conflict reading', () => {
       kind: 'DOSSIER',
       dossier: {
         version: 8,
+        etat: 'EN_CONFLIT',
         enConflit: true,
+        finAutomatique: false,
         cloture: false,
         ligne: {
           adresse,
@@ -402,6 +636,10 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     { code: 'ANNULER_TRANSITION' as const, kind: 'CORRECTION' as const },
     { code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const, kind: 'ANNULATION' as const },
     { code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' as const, kind: 'REGULARISATION' as const },
+    { code: 'REGULARISER_FIN' as const, kind: 'CORRECTION' as const },
+    { code: 'REGULARISER_FIN' as const, kind: 'ANNULATION' as const },
+    { code: 'CORRIGER_FIN_TARDIVE' as const, kind: 'REGULARISATION' as const },
+    { code: 'CORRIGER_TRANSITION_TARDIVE' as const, kind: 'ANNULATION' as const },
   ])('should reject an unsupported $code and $kind combination rather than inventing a guided hypothesis', async ({ code, kind }) => {
     const dossier = dossierAnomalieFixture();
     dossier.choix = [
@@ -475,6 +713,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
       ...dossier,
       kind: 'EN_CONFLIT',
       enConflit: true,
+      finAutomatique: false,
       sequence: {
         operateurId: 'op-camille',
         posteId: 'poste-dmu',
@@ -543,6 +782,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   const dossierAnnuleFixture = (): components['schemas']['RestDossierAnomalie'] => ({
     kind: 'ANCRE_ANNULEE',
     enConflit: false,
+    finAutomatique: false,
     adresse: ligneFixture.adresse,
     revision: 8,
     evaluation: '2026-09-15T08:00:00Z',

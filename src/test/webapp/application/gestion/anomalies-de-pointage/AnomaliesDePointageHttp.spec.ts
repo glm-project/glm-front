@@ -240,7 +240,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       cy.wait('@repriseConfirmation').its('request.body').should('deep.equal', initiale);
     });
     cy.get('@apercuReel.all').should('have.length', 1);
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Conflit résolu');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 4);
     cy.get(dataSelector('anomalie-reprendre-confirmation')).should('not.exist');
     cy.get(dataSelector('anomalie-acte')).should('contain.text', 'Correction du pointage');
@@ -374,7 +374,7 @@ describe('HTTP conflict resolution in Gestion', () => {
 
   const whenConfirmingThePreviewWithARemainingConflict = (): void => {
     cy.get(dataSelector('anomalie-confirmer')).click();
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Acte enregistré, conflit restant');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Acte enregistré, anomalie restante');
   };
 
   const whenOpeningTheRemainingConflict = (): void => {
@@ -383,7 +383,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const thenTheClosedElementShowsTheExplicitRemainingConflict = (): void => {
-    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, conflit restant');
+    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, anomalie restante');
     cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
     cy.location('search').should('equal', `?pointage=${ncFixture}`);
     cy.get(dataSelector('anomalie-cloture')).should('contain.text', 'Clôturé');
@@ -402,7 +402,7 @@ describe('HTTP conflict resolution in Gestion', () => {
 
   const whenConfirmingTheRealPreview = (): void => {
     cy.get(dataSelector('anomalie-confirmer')).click();
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Conflit résolu');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-pointage')).invoke('text').as('journalCanonique', { type: 'static' });
     cy.get(dataSelector('anomalie-activite')).invoke('text').as('dureesCanoniques', { type: 'static' });
   };

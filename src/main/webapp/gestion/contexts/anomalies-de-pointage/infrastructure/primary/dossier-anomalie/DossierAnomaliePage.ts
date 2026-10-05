@@ -153,6 +153,11 @@ export class DossierAnomaliePage {
     this.focusHeading(this.propositionHeading);
   }
 
+  protected chooseGuide(choix: ChoixGuide): void {
+    this.choose(choix.saisie, choix.id);
+    this.detail.set(choix.code === 'REGULARISER_FIN');
+  }
+
   protected labelForActivite(id: string, dossier: DossierAnomalie): string {
     const activite = dossier.activites.find(activite => activite.id.activite === id);
     if (activite !== undefined) return this.libelleActivite(activite);
@@ -187,7 +192,16 @@ export class DossierAnomaliePage {
 
   protected change(changement: ChangementSaisie): void {
     this.preparation.change(changement);
-    if (changement.fait !== undefined) this.choixSelectionne.set(undefined);
+    if (this.modifieLeFaitGuide(changement)) this.choixSelectionne.set(undefined);
+  }
+
+  private modifieLeFaitGuide(changement: ChangementSaisie): boolean {
+    if (changement.fait === undefined) return false;
+    return !this.datesLaFinGuidee(changement.fait);
+  }
+
+  private datesLaFinGuidee(fait: object): boolean {
+    return this.proposition()?.kind === 'REGULARISATION' && Object.keys(fait).join() === 'instant';
   }
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {

@@ -35,6 +35,21 @@ const correctionFixture: ActeResolution = {
     instant: '2026-09-14T17:00:00.123456789+02:00',
   },
 };
+const finRegulariseeFixture: ActeResolution = {
+  kind: 'REGULARISATION',
+  fait: {
+    type: 'FIN',
+    intention: 'FIN',
+    activiteVisee: 'travail-8',
+    operateur: 'op-camille',
+    poste: '',
+    instant: '2026-09-14T17:00:00+02:00',
+  },
+};
+const finRegulariseeRecueFixture: components['schemas']['RestActeDeResolution'] = {
+  kind: 'REGULARISATION',
+  fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', instant: '2026-09-14T17:00:00+02:00' },
+};
 const correctionRecueFixture: components['schemas']['RestActeCorrection'] = correctionFixture;
 const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
   operateurId: 'op-camille',
@@ -43,9 +58,14 @@ const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
   datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
   nombrePointages: 2,
 };
-const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierAnomalie'] => ({
+const dossierFixture = (
+  kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE' | 'FIN_AUTOMATIQUE' | 'SANS_ANOMALIE',
+  revision: number,
+  finAutomatique = kind === 'FIN_AUTOMATIQUE',
+): components['schemas']['RestDossierAnomalie'] => ({
   kind,
   enConflit: kind === 'EN_CONFLIT',
+  finAutomatique,
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
   revision,
   evaluation: '2026-10-04T10:00:00Z',
@@ -328,6 +348,57 @@ describe('Beyond the contract: HTTP conflict actes', () => {
 
     expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false } });
   });
+  it('should preview the regularised end of an automatic end and keep the anomaly state of each side', async () => {
+    const apercu = preview.preview(adresseFixture, 7, finRegulariseeFixture);
+
+    whenPreviewAnswers(finRegulariseeRecueFixture, {
+      avant: dossierFixture('FIN_AUTOMATIQUE', 7),
+      apres: dossierFixture('ANCRE_ANNULEE', 8, false),
+    });
+    const resultat = await apercu;
+
+    expect(resultat).toMatchObject({
+      kind: 'APERCU',
+      apercu: {
+        acte: finRegulariseeFixture,
+        avant: { etat: 'FIN_AUTOMATIQUE', enConflit: false, finAutomatique: true },
+        apres: { etat: 'ANCRE_ANNULEE', enConflit: false, finAutomatique: false },
+      },
+    });
+  });
+
+  it('should keep a remaining automatic end in the dossier whose anchor was replaced by the preview', async () => {
+    const apercu = preview.preview(adresseFixture, 7, finRegulariseeFixture);
+
+    whenPreviewAnswers(finRegulariseeRecueFixture, { apres: dossierFixture('ANCRE_ANNULEE', 8, true) });
+    const resultat = await apercu;
+
+    expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { apres: { etat: 'ANCRE_ANNULEE', finAutomatique: true } } });
+  });
+
+  it('should confirm an end regularisation and receive the canonical dossier without anomaly', async () => {
+    const proposition = { ...propositionFixture, acte: finRegulariseeFixture, evenement: '80000000-0000-0000-0000-000000000002' };
+    const recu = confirmationFixture();
+    recu.recu = { ...recu.recu, acte: finRegulariseeRecueFixture, evenementCree: '80000000-0000-0000-0000-000000000002' };
+    recu.dossier = dossierFixture('SANS_ANOMALIE', 9);
+
+    const confirmation = application.apply(proposition);
+    whenConfirmationAnswers(recu, {
+      commande: propositionFixture.commande,
+      adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
+      revision: 7,
+      acte: finRegulariseeRecueFixture,
+      empreinteConsequences: 'empreinte-1',
+      evenement: '80000000-0000-0000-0000-000000000002',
+    });
+    const resultat = await confirmation;
+
+    expect(resultat).toMatchObject({
+      kind: 'APPLIQUE',
+      dossier: { version: 9, etat: 'SANS_ANOMALIE', enConflit: false, finAutomatique: false },
+    });
+  });
+
   it('should confirm the exact public command and return the current canonical dossier from its receipt', async () => {
     const confirmation = application.apply(propositionFixture);
 
@@ -342,6 +413,9 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     { code: 'confirmation-reutilisee', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
     { code: 'apercu-obsolete', attendu: { kind: 'CONCURRENCE' } },
     { code: 'saisie-concurrente', attendu: { kind: 'CONCURRENCE' } },
+    { code: 'suivi-d-atelier-cloture', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
+    { code: 'operateur-non-habilite', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
+    { code: 'date-de-survenue-future', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
   ])('should expose the known confirmation refusal $code without attesting a write', async ({ code, attendu }) => {
     const demande = application.apply(propositionFixture).catch((failure: unknown) => failure);
 

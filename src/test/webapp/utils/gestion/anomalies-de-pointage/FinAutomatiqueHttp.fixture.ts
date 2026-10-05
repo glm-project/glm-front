@@ -1,0 +1,222 @@
+import { components } from '@/app/generated/schema';
+
+export const suiviFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000001';
+export const ouvrantFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000002';
+export const finTardiveFixture = '71000000-0000-0000-0000-000000000003';
+export const operateurFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000004';
+export const posteFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000005';
+export const elementFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000006';
+export const finRegulariseeFixture = '71000000-0000-0000-0000-000000000007';
+export const finCorrigeeFixture = '71000000-0000-0000-0000-000000000008';
+export const debutFinAutomatiqueFixture = '2026-09-14T08:00:00Z';
+export const echeanceFinAutomatiqueFixture = '2026-09-14T21:00:00Z';
+export const instantRegulariseFixture = '2026-09-14T17:00:00Z';
+export const instantTardifFixture = '2026-09-14T23:00:00Z';
+export const motifFinAutomatiqueFixture = 'Fin tardive confirmée avec l’opérateur';
+
+const adresseFixture = { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture };
+
+const ouvertureFixture = (sansPoste = false): components['schemas']['RestEvenementDAtelier'] => ({
+  id: ouvrantFinAutomatiqueFixture,
+  type: 'DEBUT',
+  intention: 'OUVERTURE',
+  activite: ouvrantFinAutomatiqueFixture,
+  dateDeSurvenue: debutFinAutomatiqueFixture,
+  operateurId: operateurFinAutomatiqueFixture,
+  ...(sansPoste ? {} : { posteId: posteFinAutomatiqueFixture }),
+  auteur: 'camille',
+  dateDEnregistrement: '2026-09-14T08:00:01Z',
+  estUneRegularisation: false,
+});
+
+const finTardiveRecueFixture: components['schemas']['RestEvenementDAtelier'] = {
+  id: finTardiveFixture,
+  type: 'FIN',
+  intention: 'FIN',
+  cible: ouvrantFinAutomatiqueFixture,
+  dateDeSurvenue: instantTardifFixture,
+  operateurId: operateurFinAutomatiqueFixture,
+  posteId: posteFinAutomatiqueFixture,
+  auteur: 'camille',
+  dateDEnregistrement: '2026-09-14T23:00:01Z',
+  estUneRegularisation: false,
+};
+
+const perimetreFixture = (pointages: string[]): components['schemas']['RestSequenceDuDossier'] => ({
+  operateurId: operateurFinAutomatiqueFixture,
+  posteId: posteFinAutomatiqueFixture,
+  datePremierPointage: debutFinAutomatiqueFixture,
+  activites: [ouvrantFinAutomatiqueFixture],
+  pointages,
+  nombrePointages: pointages.length,
+});
+
+const suiviFixture = (journal: components['schemas']['RestEvenementDAtelier'][]): components['schemas']['RestSuiviDAtelier'] => ({
+  id: suiviFinAutomatiqueFixture,
+  element: elementFinAutomatiqueFixture,
+  nom: 'M24-0655',
+  type: 'ORDRE_DE_FABRICATION',
+  engageLe: '2026-09-14T06:00:00Z',
+  engagePar: 'gestionnaire',
+  etat: 'EN_COURS',
+  activitesEnCours: [],
+  conflits: [],
+  journal,
+});
+
+const activiteEchueFixture = (sansPoste: boolean): components['schemas']['RestActiviteDuDossier'] => ({
+  evenement: ouvrantFinAutomatiqueFixture,
+  activite: ouvrantFinAutomatiqueFixture,
+  operateurId: operateurFinAutomatiqueFixture,
+  ...(sansPoste ? {} : { posteId: posteFinAutomatiqueFixture }),
+  categorie: 'TRAVAIL',
+  debut: debutFinAutomatiqueFixture,
+  fin: echeanceFinAutomatiqueFixture,
+  etat: 'ECHUE',
+  duree: 'PT13H',
+});
+
+const activiteTermineeFixture = (instant: string, duree: string, sansPoste: boolean): components['schemas']['RestActiviteDuDossier'] => ({
+  ...activiteEchueFixture(sansPoste),
+  fin: instant,
+  etat: 'TERMINEE',
+  duree,
+});
+
+export const finARegulariserFixture = (sansPoste = false): components['schemas']['RestFaitARegulariser'] => ({
+  type: 'FIN',
+  intention: 'FIN',
+  activiteVisee: ouvrantFinAutomatiqueFixture,
+  operateur: operateurFinAutomatiqueFixture,
+  ...(sansPoste ? {} : { poste: posteFinAutomatiqueFixture }),
+});
+
+export const dossierFinAutomatiqueFixture = (sansPoste = false): components['schemas']['RestDossierAnomalie'] => ({
+  kind: 'FIN_AUTOMATIQUE',
+  enConflit: false,
+  finAutomatique: true,
+  adresse: adresseFixture,
+  revision: 0,
+  evaluation: '2026-09-14T22:00:00Z',
+  perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture]),
+  suivi: suiviFixture([ouvertureFixture(sansPoste)]),
+  activites: [activiteEchueFixture(sansPoste)],
+  diagnostics: [],
+  choix: [
+    { code: 'REGULARISER_FIN', kind: 'REGULARISATION', pointage: ouvrantFinAutomatiqueFixture, fait: finARegulariserFixture(sansPoste) },
+  ],
+  continuations: [],
+});
+
+export const dossierFinTardiveFixture = (
+  code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE' = 'CORRIGER_FIN_TARDIVE',
+): components['schemas']['RestDossierAnomalie'] => {
+  const transition = code === 'CORRIGER_TRANSITION_TARDIVE';
+  const type = transition ? 'NON_CONFORMITE' : 'FIN';
+  const intention = transition ? 'TRANSITION' : 'FIN';
+  return {
+    ...dossierFinAutomatiqueFixture(),
+    perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture, finTardiveFixture]),
+    suivi: suiviFixture([ouvertureFixture(), { ...finTardiveRecueFixture, type, intention }]),
+    choix: [
+      {
+        code,
+        kind: 'CORRECTION',
+        pointage: finTardiveFixture,
+        fait: {
+          type,
+          intention,
+          activiteVisee: ouvrantFinAutomatiqueFixture,
+          operateur: operateurFinAutomatiqueFixture,
+          poste: posteFinAutomatiqueFixture,
+          instant: instantTardifFixture,
+        },
+      },
+    ],
+  };
+};
+
+export const dossierApresRegularisationFixture = (sansPoste = false): components['schemas']['RestDossierAnomalie'] => {
+  const regularisation: components['schemas']['RestEvenementDAtelier'] = {
+    id: finRegulariseeFixture,
+    type: 'FIN',
+    intention: 'FIN',
+    cible: ouvrantFinAutomatiqueFixture,
+    dateDeSurvenue: instantRegulariseFixture,
+    operateurId: operateurFinAutomatiqueFixture,
+    ...(sansPoste ? {} : { posteId: posteFinAutomatiqueFixture }),
+    auteur: 'gestionnaire',
+    dateDEnregistrement: '2026-09-14T22:00:01Z',
+    estUneRegularisation: true,
+  };
+  return {
+    ...dossierFinAutomatiqueFixture(sansPoste),
+    kind: 'SANS_ANOMALIE',
+    finAutomatique: false,
+    revision: 1,
+    perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture, finRegulariseeFixture]),
+    suivi: suiviFixture([ouvertureFixture(sansPoste), regularisation]),
+    activites: [activiteTermineeFixture(instantRegulariseFixture, 'PT9H', sansPoste)],
+    choix: [],
+  };
+};
+
+export const dossierApresCorrectionFixture = (): components['schemas']['RestDossierAnomalie'] => {
+  const finAnnulee: components['schemas']['RestEvenementDAtelier'] = {
+    ...finTardiveRecueFixture,
+    annulation: { motif: motifFinAutomatiqueFixture, auteur: 'gestionnaire', date: '2026-09-14T23:30:00Z' },
+  };
+  const finCorrigee: components['schemas']['RestEvenementDAtelier'] = {
+    ...finTardiveRecueFixture,
+    id: finCorrigeeFixture,
+    auteur: 'gestionnaire',
+    dateDEnregistrement: '2026-09-14T23:30:00Z',
+    estUneRegularisation: true,
+    remplace: finTardiveFixture,
+  };
+  return {
+    ...dossierFinAutomatiqueFixture(),
+    kind: 'SANS_ANOMALIE',
+    finAutomatique: false,
+    revision: 2,
+    perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture, finTardiveFixture, finCorrigeeFixture]),
+    suivi: suiviFixture([ouvertureFixture(), finAnnulee, finCorrigee]),
+    activites: [activiteTermineeFixture(instantTardifFixture, 'PT15H', false)],
+    choix: [],
+  };
+};
+
+export const apercuFixture = (
+  demande: components['schemas']['RestDemandeDApercu'],
+  avant: components['schemas']['RestDossierAnomalie'],
+  apres: components['schemas']['RestDossierAnomalie'],
+  evenement: string,
+): components['schemas']['RestApercuDeResolution'] => ({
+  commande: demande.commande,
+  adresse: adresseFixture,
+  revision: avant.revision,
+  evaluation: '2026-09-14T22:00:00Z',
+  empreinteConsequences: 'empreinte-fin-automatique',
+  evenement,
+  acte: demande.acte,
+  avant,
+  apres,
+});
+
+export const confirmationFinAutomatiqueFixture = (
+  demande: components['schemas']['RestConfirmationAEnregistrer'],
+  dossier: components['schemas']['RestDossierAnomalie'],
+): components['schemas']['RestConfirmationEnregistree'] => ({
+  kind: 'ENREGISTREE',
+  recu: {
+    commande: demande.commande,
+    adresse: adresseFixture,
+    acte: demande.acte,
+    revisionDeDepart: demande.revision,
+    revisionEnregistree: dossier.revision,
+    enregistreLe: '2026-09-14T22:00:01Z',
+    ...(demande.evenement === undefined ? {} : { evenementCree: demande.evenement }),
+    evenementsTouches: demande.evenement === undefined ? [] : [demande.evenement],
+  },
+  dossier,
+});

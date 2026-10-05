@@ -144,6 +144,7 @@ const faitConflitFixture = (): FaitPropose => ({
 });
 
 const dossierAnomalieFixture = (): DossierAnomalie => ({
+  etat: 'EN_CONFLIT',
   ligne: {
     adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') },
     element: new ElementAnomalieId('moule-42'),
@@ -176,9 +177,69 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
     },
   ],
   enConflit: true,
+  finAutomatique: false,
   consequences: [],
   continuations: [],
 });
+
+const acteCorrectionFixture: ActeResolution = {
+  kind: 'CORRECTION',
+  pointage: 'fin-17',
+  motif: 'Cible confirmée',
+  fait: { ...faitConflitFixture(), activiteVisee: 'nc-12' },
+};
+
+const acteFinRegulariseeFixture = (poste: string, instant: string): ActeResolution => ({
+  kind: 'REGULARISATION',
+  fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', poste, instant },
+});
+
+const finARegulariserFixture = (poste = 'poste-1'): SaisieActe =>
+  SaisieActe.regularise({
+    type: 'FIN',
+    intention: 'FIN',
+    activiteVisee: 'travail-8',
+    operateur: 'op-camille',
+    poste,
+    instant: '',
+  });
+
+const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
+  const dossier = dossierAnomalieFixture();
+  return {
+    ...dossier,
+    etat: 'FIN_AUTOMATIQUE',
+    enConflit: false,
+    finAutomatique: true,
+    ligne: { ...dossier.ligne, explication: '', nombrePointages: 1 },
+    journal: [
+      {
+        id: new PointageAnomalieId('debut-8'),
+        fait: {
+          ...faitConflitFixture(),
+          type: 'DEBUT',
+          intention: 'OUVERTURE',
+          activiteVisee: '',
+          instant: '2026-09-14T08:00:00+02:00',
+        },
+        activiteCreee: new ActiviteAnomalieId('travail-8'),
+        auteur: 'camille',
+        enregistre: '2026-09-14T08:00:00+02:00',
+        regularisation: false,
+      },
+    ],
+    activites: [
+      {
+        id: new ActiviteAnomalieId('travail-8'),
+        libelle: '',
+        etat: 'ECHUE',
+        temps: '',
+        periode: { categorie: 'TRAVAIL', debut: '2026-09-14T08:00:00+02:00', fin: '2026-09-14T21:00:00+02:00', duree: 'PT13H' },
+      },
+    ],
+    choix: [{ id: 'REGULARISER_FIN:debut-8', code: 'REGULARISER_FIN', libelle: '', explication: '', saisie: finARegulariserFixture() }],
+  };
+};
 
 const dossierAtFixture = (pointage: string, explication: string): DossierAnomalie => {
   const dossier = dossierAnomalieFixture();
@@ -335,7 +396,7 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('anomalie-adresse-obsolete', 'ne relève plus d’un conflit');
+    thenTextContains('anomalie-adresse-obsolete', 'ne relève plus d’une anomalie');
     thenAbsent('anomalie-choix');
   });
 
@@ -507,7 +568,7 @@ describe('Conflict dossier page', () => {
 
     await whenClicking('anomalie-verifier');
 
-    thenTextContains('anomalie-resultat', 'Conflit résolu');
+    thenTextContains('anomalie-resultat', 'Anomalie traitée');
     thenAbsent('anomalie-adresse-obsolete');
   });
 
@@ -522,7 +583,7 @@ describe('Conflict dossier page', () => {
 
     await whenClicking('anomalie-verifier');
 
-    thenTextContains('anomalie-resultat', 'Conflit résolu');
+    thenTextContains('anomalie-resultat', 'Anomalie traitée');
     thenAbsent('anomalie-retry');
   });
 
@@ -581,7 +642,7 @@ describe('Conflict dossier page', () => {
 
     await whenClicking('anomalie-reprendre-confirmation');
 
-    thenTextContains('anomalie-resultat', 'Conflit résolu');
+    thenTextContains('anomalie-resultat', 'Anomalie traitée');
     thenAbsent('anomalie-reprendre-confirmation');
   });
 
@@ -605,7 +666,7 @@ describe('Conflict dossier page', () => {
 
     thenTextContains('conflit-diagnostic', 'Reprise encore à rattacher.');
     thenTextContains('anomalie-cloture', 'Clôturé');
-    thenTextContains('anomalie-resultat', 'Acte enregistré, conflit restant');
+    thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
     thenAbsent('anomalie-apercu');
   });
 
@@ -934,7 +995,253 @@ describe('Conflict dossier page', () => {
     thenTextContains('anomalie-adresse-invalide', 'L’adresse doit préciser');
   });
 
-  const givenASuccessfulPreview = (apres?: DossierAnomalie): void => {
+  it('should present an automatic end as an anomaly of pointage and never as a conflict', async () => {
+    givenAnAutomaticEnd();
+
+    await whenRendering();
+
+    thenHeadingOfThePageIs('Dossier d’anomalie de pointage');
+    thenTextContains('anomalie-retour', 'Retour aux anomalies');
+    thenAbsent('conflit-diagnostic');
+    thenPageDoesNotMention('conflit');
+  });
+
+  it('should show the due activity with its start, its automatic end and its received duration', async () => {
+    givenAnAutomaticEnd();
+
+    await whenRendering();
+
+    thenTextContains('anomalie-fin-automatique', 'Fin automatique');
+    thenTextContains('anomalie-fin-automatique-activite', 'Travail');
+    thenTextContains('anomalie-fin-automatique-activite', 'Début 2026-09-14T08:00:00+02:00');
+    thenTextContains('anomalie-fin-automatique-activite', 'Fin automatique 2026-09-14T21:00:00+02:00');
+    thenTextContains('anomalie-fin-automatique-activite', 'Durée 13 h');
+  });
+
+  it('should keep the closure of the workshop visible on an automatic end', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, cloture: true, finCloture: '2026-09-14T23:00:00+02:00' } };
+
+    await whenRendering();
+
+    thenTextContains('anomalie-cloture', '2026-09-14T23:00:00+02:00');
+  });
+
+  it('should not present the automatic end block on a conflict dossier', async () => {
+    await whenRendering();
+
+    thenAbsent('anomalie-fin-automatique');
+  });
+
+  it('should keep both the conflict and the automatic end visible when the perimeter still carries both', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, enConflit: true } };
+
+    await whenRendering();
+
+    thenTextContains('anomalie-fin-automatique', 'Fin automatique');
+    thenTextContains('conflit-diagnostic', 'Pourquoi ces pointages sont incohérents');
+  });
+
+  it('should offer the guided end regularisation with its fact open and no time proposed', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenTextContains('anomalie-choix', 'Régulariser la fin');
+    thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
+    thenFieldValueIs('anomalie-instant', '');
+    thenFieldValueIs('anomalie-cible', 'travail-8');
+    thenFieldValueIs('anomalie-operateur', 'op-camille');
+    thenTextContains('anomalie-validation', 'Renseignez une date et heure ISO avec son fuseau.');
+    thenDetailedFactIsOpen();
+    thenAbsent('anomalie-motif');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should keep the end regularisation chosen while the manager types its time and preview exactly that instant', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEntering('anomalie-instant', '2026-09-14T17:00:00.123456789+02:00');
+    await whenClicking('anomalie-previsualiser');
+
+    thenInterpretationIsSelected();
+    expect(preview.actes).toEqual([
+      {
+        kind: 'REGULARISATION',
+        fait: {
+          type: 'FIN',
+          intention: 'FIN',
+          activiteVisee: 'travail-8',
+          operateur: 'op-camille',
+          poste: 'poste-1',
+          instant: '2026-09-14T17:00:00.123456789+02:00',
+        },
+      },
+    ]);
+  });
+
+  it('should stop presenting the end regularisation as chosen once the manager changes its target', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEntering('anomalie-operateur', 'op-autre');
+
+    thenNoInterpretationIsSelected();
+  });
+
+  it('should preview the end regularisation of an activity without workstation without naming one', async () => {
+    givenAnAutomaticEnd(finARegulariserFixture(''));
+    givenASuccessfulPreview(
+      { ...dossierFinAutomatiqueFixture(), etat: 'SANS_ANOMALIE', finAutomatique: false },
+      acteFinRegulariseeFixture('', '2026-09-14T17:00:00+02:00'),
+    );
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEntering('anomalie-instant', '2026-09-14T17:00:00+02:00');
+    await whenClicking('anomalie-previsualiser');
+
+    thenTextContains('anomalie-apercu-acte', 'Poste : Sans poste');
+  });
+
+  it.each([
+    { code: 'CORRIGER_FIN_TARDIVE' as const, libelle: 'Corriger la fin pointée après l’échéance' },
+    { code: 'CORRIGER_TRANSITION_TARDIVE' as const, libelle: 'Corriger la transition pointée après l’échéance' },
+  ])('should offer the guided $code with the time of the late pointage and wait for its reason', async ({ code, libelle }) => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        choix: [
+          {
+            id: `${code}:tardif-30`,
+            code,
+            libelle: '',
+            explication: '',
+            saisie: SaisieActe.correct('tardif-30', { ...faitConflitFixture(), instant: '2026-09-14T23:00:00+02:00' }),
+          },
+        ],
+      },
+    };
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenTextContains('anomalie-choix', libelle);
+    thenTextContains('anomalie-acte', 'Correction du pointage');
+    thenFieldValueIs('anomalie-instant', '2026-09-14T23:00:00+02:00');
+    thenFieldValueIs('anomalie-motif', '');
+    thenTextContains('anomalie-validation', 'Renseignez un motif.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should announce in the preview that the anomaly will be processed when no conflict nor automatic end remains', async () => {
+    givenAnEndRegularisationLeaving({ etat: 'SANS_ANOMALIE', enConflit: false, finAutomatique: false });
+    await whenRendering();
+
+    await whenPreviewingTheDatedEnd();
+
+    thenTextContains('anomalie-apercu', 'Anomalie traitée après enregistrement de cette décision.');
+  });
+
+  it('should announce in the receipt that the anomaly is processed when no conflict nor automatic end remains', async () => {
+    givenAnEndRegularisationLeaving({ etat: 'SANS_ANOMALIE', enConflit: false, finAutomatique: false });
+    await whenRendering();
+    await whenPreviewingTheDatedEnd();
+
+    await whenClicking('anomalie-confirmer');
+
+    thenTextContains('anomalie-resultat', 'Anomalie traitée');
+  });
+
+  const anomalieRestanteFixture = [
+    { etat: 'ANCRE_ANNULEE' as const, enConflit: false, finAutomatique: true },
+    { etat: 'FIN_AUTOMATIQUE' as const, enConflit: false, finAutomatique: true },
+    { etat: 'ANCRE_ANNULEE' as const, enConflit: true, finAutomatique: false },
+  ];
+
+  it.each(anomalieRestanteFixture)(
+    'should keep the anomaly open in the preview when $etat has conflict $enConflit and automatic end $finAutomatique',
+    async resultat => {
+      givenAnEndRegularisationLeaving(resultat);
+      await whenRendering();
+
+      await whenPreviewingTheDatedEnd();
+
+      thenTextContains('anomalie-apercu', 'Après cet acte : anomalie restante');
+    },
+  );
+
+  it.each(anomalieRestanteFixture)(
+    'should keep the anomaly open in the receipt when $etat has conflict $enConflit and automatic end $finAutomatique',
+    async resultat => {
+      givenAnEndRegularisationLeaving(resultat);
+      await whenRendering();
+      await whenPreviewingTheDatedEnd();
+
+      await whenClicking('anomalie-confirmer');
+
+      thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
+    },
+  );
+
+  it.each([
+    { etat: 'ECHUE' as const, attendu: 'Échue · 13 h' },
+    { etat: 'TERMINEE' as const, attendu: 'Terminée · 13 h' },
+  ])('should list the $etat activity of an automatic end with its received duration', async ({ etat, attendu }) => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, activites: dossier.activites.map(activite => ({ ...activite, etat })) } };
+
+    await whenRendering();
+
+    thenTextContains('anomalie-activite', attendu);
+  });
+
+  it('should explain the loading of a dossier without calling it a conflict', () => {
+    givenTheDossierIsStillLoading();
+
+    whenRenderingWithoutWaiting();
+
+    thenTextContains('anomalie-chargement', 'Chargement du dossier…');
+  });
+
+  const givenTheDossierIsStillLoading = (): void => {
+    read.pending = new PendingResponseFixture<LectureDossier>();
+  };
+
+  const givenAnEndRegularisationLeaving = (resultat: Pick<DossierAnomalie, 'etat' | 'enConflit' | 'finAutomatique'>): void => {
+    givenAnAutomaticEnd();
+    const apres = { ...dossierFinAutomatiqueFixture(), ...resultat };
+    givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00+02:00'));
+    application.result = { kind: 'APPLIQUE', dossier: apres };
+  };
+
+  const whenPreviewingTheDatedEnd = async (): Promise<void> => {
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-instant', '2026-09-14T17:00:00+02:00');
+    await whenClicking('anomalie-previsualiser');
+  };
+
+  const whenRenderingWithoutWaiting = (): void => {
+    fixture = TestBed.createComponent(DossierAnomaliePage);
+    fixture.detectChanges();
+  };
+
+  const givenAnAutomaticEnd = (saisie: SaisieActe = finARegulariserFixture()): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, choix: dossier.choix.map(choix => ({ ...choix, saisie })) },
+    };
+  };
+
+  const givenASuccessfulPreview = (apres?: DossierAnomalie, acte: ActeResolution = acteCorrectionFixture): void => {
     const dossier = dossierAnomalieFixture();
     preview.result = {
       kind: 'APERCU',
@@ -947,12 +1254,7 @@ describe('Conflict dossier page', () => {
         adresse: dossier.ligne.adresse,
         avant: dossier,
         apres: apres ?? { ...dossier, enConflit: false },
-        acte: {
-          kind: 'CORRECTION',
-          pointage: 'fin-17',
-          motif: 'Cible confirmée',
-          fait: { ...faitConflitFixture(), activiteVisee: 'nc-12' },
-        },
+        acte,
       },
     };
   };
@@ -1182,6 +1484,15 @@ describe('Conflict dossier page', () => {
       journal.find(fact => fact.id === `pointage-${pointage}`),
       'referenced journal fact',
     );
+  };
+  const thenHeadingOfThePageIs = (expected: string): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent).toBe(expected);
+  };
+  const thenPageDoesNotMention = (word: string): void => {
+    expect((fixture.nativeElement as HTMLElement).textContent.toLowerCase()).not.toContain(word);
+  };
+  const thenInterpretationIsSelected = (): void => {
+    expect(element('anomalie-choix').getAttribute('aria-pressed')).toBe('true');
   };
   const thenHeadingContains = (expected: string): void => {
     expect((fixture.nativeElement as HTMLElement).querySelector('header')?.textContent).toContain(expected);

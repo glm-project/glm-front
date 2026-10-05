@@ -2,7 +2,7 @@
   <a class="gestion-retour" routerLink="/anomalies" [queryParams]="retour()" data-selector="anomalie-retour">{{ libelles.retour }}</a>
   <h1 id="dossier-heading" class="mt-2 text-title">{{ libelles.dossier }}</h1>
   @if (lecture.isLoading()) {
-  <p role="status">{{ libelles.chargement }}</p>
+  <p role="status" data-selector="anomalie-chargement">{{ libelles.chargementDossier }}</p>
   } @if (dossier(); as dossier) {
   <header class="mb-6">
     <h2 class="text-section">{{ dossier.ligne.designation }}</h2>
@@ -14,6 +14,18 @@
       {{ dossier.cloture ? libelles.cloture : libelles.ouvert }} @if (dossier.finCloture) { · {{ dossier.finCloture }} } · {{
       dossier.engagement }}
     </p>
+    @if (dossier.finAutomatique) {
+    <div class="mt-4 rounded-control border border-border-strong bg-surface p-4" data-selector="anomalie-fin-automatique">
+      <h3 class="text-body font-semibold">{{ libelles.finAutomatique }}</h3>
+      <p class="mt-2 text-body-sm">{{ libelles.finAutomatiqueExplication }}</p>
+      @for (activite of dossier.activites; track activite.id.activite) { @if (activite.etat === 'ECHUE' && activite.periode; as periode) {
+      <p class="mt-2 text-body" data-selector="anomalie-fin-automatique-activite">
+        {{ periode.categorie === 'TRAVAIL' ? libelles.types.DEBUT : libelles.types.NON_CONFORMITE }} · {{ libelles.debut }} {{ periode.debut
+        }} · {{ libelles.finAutomatiqueA }} {{ periode.fin }} · {{ libelles.duree }} {{ tempsActivite(activite) }}
+      </p>
+      } }
+    </div>
+    } @if (!dossier.finAutomatique || dossier.enConflit) {
     <div class="mt-4 rounded-control border border-danger bg-surface p-4" data-selector="conflit-diagnostic">
       <h3 class="text-body font-semibold">{{ libelles.pourquoi }}</h3>
       @if (dossier.diagnostics?.length) { @for (diagnostic of dossier.diagnostics; track diagnostic.pointage.pointage) { @let pointage =
@@ -60,6 +72,7 @@
       <p class="mt-2 text-body">{{ dossier.ligne.explication }}</p>
       }
     </div>
+    }
   </header>
   <div class="dossier-grille">
     <section aria-labelledby="chronologie-heading">
@@ -157,7 +170,7 @@
         [attr.aria-pressed]="choixAffiche() === choix.id"
         [class.choix-selectionne]="choixAffiche() === choix.id"
         [disabled]="occupe() || !droits.canApply()"
-        (click)="choose(choix.saisie, choix.id)"
+        (click)="chooseGuide(choix)"
       >
         <span class="text-body font-semibold">{{ libelleChoix(choix) }}</span>
         <span class="mt-1 block text-body-sm text-ink-muted">{{ explicationChoix(choix) }}</span>
@@ -333,7 +346,7 @@
       </div>
       } } @if (operation.kind === 'APPLIQUE') {
       <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">
-        {{ operation.dossier.enConflit ? libelles.restant : libelles.resolu }}
+        {{ operation.dossier.enConflit || operation.dossier.finAutomatique ? libelles.restant : libelles.resolu }}
       </p>
       } } @if (dossier.continuations.length > 0) {
       <nav class="mt-5 border-t border-border pt-4" [attr.aria-label]="libelles.continuation">
@@ -392,7 +405,9 @@
           }
         </div>
       </div>
-      <p class="mt-4 text-body font-semibold">{{ apercu.apres.enConflit ? libelles.apercuRestant : libelles.apercuResolu }}</p>
+      <p class="mt-4 text-body font-semibold">
+        {{ apercu.apres.enConflit || apercu.apres.finAutomatique ? libelles.apercuRestant : libelles.apercuResolu }}
+      </p>
       <button
         type="button"
         class="bouton bouton-principal mt-4"

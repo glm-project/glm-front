@@ -65,6 +65,32 @@ describe('Preparation of a resolution acte', () => {
       fait: { type: '', intention: '', activiteVisee: '', operateur: '', poste: '', instant: '' },
     });
   });
+  it('should wait for the manager to date a prefilled end regularisation instead of proposing a time', () => {
+    const saisie = SaisieActe.regularise({ ...faitFixture, poste: 'poste-3', instant: '' });
+
+    const acte = saisie.command();
+
+    expect(acte).toBeUndefined();
+    expect(saisie.errors()).toEqual(['INSTANT_INVALIDE']);
+  });
+  it('should regularise the end at the instant entered by the manager while keeping the prefilled fact', () => {
+    const saisie = SaisieActe.regularise({ ...faitFixture, poste: 'poste-3', instant: '' }).afterChange({
+      fait: { instant: '2026-09-14T17:00:00.123456789+02:00' },
+    });
+
+    const acte = saisie.command();
+
+    expect(acte).toEqual({ kind: 'REGULARISATION', fait: { ...faitFixture, poste: 'poste-3' } });
+  });
+  it('should regularise the end of an activity without workstation without inventing one', () => {
+    const saisie = SaisieActe.regularise({ ...faitFixture, poste: '', instant: '' }).afterChange({
+      fait: { instant: '2026-09-14T17:00:00+02:00' },
+    });
+
+    const acte = saisie.command();
+
+    expect(acte).toMatchObject({ kind: 'REGULARISATION', fait: { poste: '', instant: '2026-09-14T17:00:00+02:00' } });
+  });
   it('should refuse a midnight represented as the twenty fourth hour instead of silently changing its day', () => {
     const saisie = SaisieActe.regularise({ ...faitFixture, instant: '2026-09-14T24:00:00+02:00' });
 

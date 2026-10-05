@@ -203,8 +203,13 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
       const dossier = await this.api.read('/api/atelier/suivis/{id}/anomalies/{pointage}', {
         pathParams: { id: adresse.suivi.suivi, pointage: adresse.pointage.pointage },
       });
-      if (dossier.kind === 'EN_CONFLIT') return { kind: 'DOSSIER', dossier: toDossier(dossier) };
-      return { kind: dossier.kind, journal: dossier.suivi.journal.map(toPointage) };
+      switch (dossier.kind) {
+        case 'EN_CONFLIT':
+        case 'FIN_AUTOMATIQUE':
+          return { kind: 'DOSSIER', dossier: toDossier(dossier) };
+        default:
+          return { kind: dossier.kind, journal: dossier.suivi.journal.map(toPointage) };
+      }
     } catch (failure: unknown) {
       if (findApiErrorIn(failure)?.urn === 'urn:glm:erreur:atelier:suivi-d-atelier-introuvable') {
         return { kind: 'INTROUVABLE', journal: [] };

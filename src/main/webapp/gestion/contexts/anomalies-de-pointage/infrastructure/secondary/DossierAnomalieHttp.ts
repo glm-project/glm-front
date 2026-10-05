@@ -77,25 +77,42 @@ const toDiagnostic = (diagnostic: components['schemas']['RestDiagnosticDeConflit
   },
 });
 
-const isSupportedGuide = (choix: components['schemas']['RestChoixDeResolution']): boolean =>
-  (choix.code === 'ANNULER_TRANSITION' && choix.kind === 'ANNULATION')
-  || (choix.code === 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' && choix.kind === 'CORRECTION');
+const isSupportedGuide = (choix: components['schemas']['RestChoixDeResolution']): boolean => {
+  switch (choix.code) {
+    case 'ANNULER_TRANSITION':
+      return choix.kind === 'ANNULATION';
+    case 'REGULARISER_FIN':
+      return choix.kind === 'REGULARISATION';
+    case 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE':
+    case 'CORRIGER_FIN_TARDIVE':
+    case 'CORRIGER_TRANSITION_TARDIVE':
+      return choix.kind === 'CORRECTION';
+  }
+};
+
+type FaitGuide = components['schemas']['RestFaitDeResolution'] | components['schemas']['RestFaitARegulariser'];
+
+const toFaitSansInstant = (fait: FaitGuide) => {
+  const cible = fait.activiteVisee;
+  if (cible === undefined) throw new Error('Cible de la proposition guidée absente.');
+  return { type: fait.type, intention: fait.intention, activiteVisee: cible, operateur: fait.operateur, poste: fait.poste ?? '' };
+};
+
+const toSaisieDeRegularisation = (fait: FaitGuide): SaisieActe => {
+  if ('instant' in fait) throw new Error('Proposition guidée incohérente.');
+  return SaisieActe.regularise({ ...toFaitSansInstant(fait), instant: '' });
+};
+
+const toSaisieDeCorrection = (pointage: string, fait: FaitGuide): SaisieActe => {
+  if (!('instant' in fait)) throw new Error('Instant de la proposition guidée absent.');
+  return SaisieActe.correct(pointage, { ...toFaitSansInstant(fait), instant: fait.instant });
+};
 
 const toSaisie = (choix: components['schemas']['RestChoixDeResolution']): SaisieActe => {
   if (!isSupportedGuide(choix)) throw new Error('Proposition guidée incohérente.');
   if (choix.kind === 'ANNULATION') return SaisieActe.cancel(choix.pointage);
-  const fait = choix.fait;
-  if (fait === undefined) throw new Error('Fait de la proposition guidée absent.');
-  const cible = fait.activiteVisee;
-  if (cible === undefined) throw new Error('Cible de la proposition guidée absente.');
-  return SaisieActe.correct(choix.pointage, {
-    type: fait.type,
-    intention: fait.intention,
-    activiteVisee: cible,
-    operateur: fait.operateur,
-    poste: fait.poste ?? '',
-    instant: fait.instant,
-  });
+  if (choix.fait === undefined) throw new Error('Fait de la proposition guidée absent.');
+  return choix.kind === 'REGULARISATION' ? toSaisieDeRegularisation(choix.fait) : toSaisieDeCorrection(choix.pointage, choix.fait);
 };
 
 const toChoix = (choix: components['schemas']['RestChoixDeResolution']): ChoixGuide => ({
@@ -108,9 +125,12 @@ const toChoix = (choix: components['schemas']['RestChoixDeResolution']): ChoixGu
 
 export const toDossier = (
   dossier: components['schemas']['RestDossierAnomalie'],
-  sequence: components['schemas']['RestSequenceDuDossier'] | undefined = dossier.sequence,
+  sequence: components['schemas']['RestSequenceDuDossier'] | undefined = dossier.kind === 'FIN_AUTOMATIQUE'
+    ? dossier.perimetre
+    : dossier.sequence,
 ): DossierAnomalie => {
-  if (sequence === undefined) throw new Error('Séquence du dossier absente.');
+  if (sequence === undefined)
+    throw new Error(dossier.kind === 'FIN_AUTOMATIQUE' ? 'Périmètre du dossier absent.' : 'Séquence du dossier absente.');
   return {
     ligne: toLigne({
       ...sequence,
@@ -120,7 +140,9 @@ export const toDossier = (
       designation: dossier.suivi.nom,
     }),
     version: dossier.revision,
+    etat: dossier.kind,
     enConflit: dossier.enConflit,
+    finAutomatique: dossier.finAutomatique,
     cloture: dossier.suivi.clotureLe !== undefined,
     ...(dossier.suivi.clotureLe === undefined ? {} : { finCloture: dossier.suivi.clotureLe }),
     engagement: dossier.suivi.engageLe,

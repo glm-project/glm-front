@@ -114,6 +114,7 @@ export const dossierFixture = (corrige = false): components['schemas']['RestDoss
   return {
     kind: corrige ? 'ANCRE_ANNULEE' : 'EN_CONFLIT',
     enConflit: !corrige,
+    finAutomatique: false,
     adresse: ligneFixture.adresse,
     revision: corrige ? 4 : 3,
     evaluation: '2026-10-04T10:00:00Z',

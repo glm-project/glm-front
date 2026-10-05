@@ -9,6 +9,7 @@ import { ResolutionDeLAnomalie } from './ResolutionDeLAnomalie';
 import { SaisieActe } from './SaisieActe';
 
 const dossierFixture: DossierAnomalie = {
+  etat: 'EN_CONFLIT',
   ligne: {
     adresse: { suivi: new SuiviAnomalieId('suivi-1'), pointage: new PointageAnomalieId('fin-17') },
     element: new ElementAnomalieId('element-1'),
@@ -26,6 +27,7 @@ const dossierFixture: DossierAnomalie = {
   activites: [{ id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail', etat: 'A_RESOUDRE', temps: 'À résoudre' }],
   choix: [],
   enConflit: true,
+  finAutomatique: false,
   consequences: [],
   continuations: [],
 };

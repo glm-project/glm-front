@@ -18,12 +18,26 @@ La reprise explicite transmet la proposition initiale immuable. Un reçu ne conc
 la commande, l'adresse, la révision de départ, l'acte et l'événement créé correspondent exactement.
 Une ancre annulée reste consultable et les continuations désignent les autres conflits explicitement.
 
+## Fin automatique
+
+Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
+conflit. Il affiche l'activité échue, son début, sa fin automatique et sa durée telles que reçues. Le
+gestionnaire régularise la fin avec une heure qu'il saisit : le choix guidé arrive sans heure et l'aperçu
+reste indisponible tant qu'elle manque. Une fin ou une transition pointée après l'échéance se corrige avec
+l'heure de ce pointage et un motif. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
+ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
+`date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
+annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
+sur une adresse annulée. Une activité sans poste n'en reçoit aucun.
+
 ## Frontières de vérification
 
 - Les specs de domaine passent par `SaisieActe` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
   le choix explicite, la précision des instants et l'invalidation d'un aperçu.
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
+- Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé
+  incohérent avec son code (régularisation portant une heure, correction sans heure).
 - Les contrats HTTP contrôlent les requêtes REST (liste de la nature `CONFLIT`, dossier et aperçu sous
   `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
 - Les specs DOM et Cypress vérifient les faits reçus, les formulaires, la comparaison avant/après,
