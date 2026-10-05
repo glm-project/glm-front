@@ -53,6 +53,12 @@ indisponible » avec « Réessayer », désactive le filtre, qui garde l'opérat
 anomalies ne dépend pas des opérateurs et ne se relit pas. Tant que les opérateurs ne sont pas lus, le filtre ne prétend pas
 que l'opérateur de l'URL est inconnu : il dit « Opérateur actuel conservé », jamais « Opérateur non résolu » ni l'identifiant.
 
+Une ancienne adresse à texte libre (`?operateur=Camille`, `?element=M-042`) n'a pas de compatibilité particulière : la
+décision est que l'URL porte un identifiant. Le serveur reçoit la valeur telle quelle et continue de filtrer (recherche
+partielle), mais le filtre ne la trouve pas parmi les opérateurs ou les éléments et l'affiche « Opérateur non résolu
+(référence actuelle) » (« Élément non résolu (référence actuelle) »), sans jamais montrer le texte ; « Filtrer » la conserve
+telle quelle dans l'adresse tant que le gestionnaire ne choisit pas autre chose.
+
 Le filtre « Élément » se choisit de la même manière, par sa désignation (nom de l'élément, suivi de sa référence quand il en a
 une, « Bielle · B-12 »), dans le même sélecteur (recherche sans accents sur le nom et la référence, éléments par ordre
 alphabétique du nom), qui commence par « Tous les éléments ». L'URL garde l'identifiant (`element=<id>`) et le champ ne
