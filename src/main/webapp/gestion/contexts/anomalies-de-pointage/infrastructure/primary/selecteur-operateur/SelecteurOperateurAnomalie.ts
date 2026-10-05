@@ -1,15 +1,21 @@
-import { SearchPicker } from '@/gestion/shared/design-system/infrastructure/primary/search-picker/SearchPicker';
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { OperateurAnomalie } from '../../../domain/dossier/ReferentielAnomalies';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { operateurNomme } from '../PresentationIdentites';
+import { ChoixRecherchable, LibellesSelecteurRecherchable, SelecteurRecherchable } from '../selecteur-recherchable/SelecteurRecherchable';
 
-const normalizeSearch = (query: string): string => query.trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR');
+const LIBELLES_SELECTEUR: LibellesSelecteurRecherchable = {
+  choisir: LIBELLES_ANOMALIES.choisirOperateur,
+  tous: LIBELLES_ANOMALIES.tousLesOperateurs,
+  nonResolu: LIBELLES_ANOMALIES.operateurNonResoluActuel,
+  rechercher: LIBELLES_ANOMALIES.rechercherOperateur,
+  aucunResultat: LIBELLES_ANOMALIES.aucunResultatOperateur,
+};
 
 @Component({
   selector: 'glm-selecteur-operateur-anomalie',
-  imports: [SearchPicker],
+  imports: [SelecteurRecherchable],
   templateUrl: './SelecteurOperateurAnomalie.html',
   styleUrl: './SelecteurOperateurAnomalie.css',
 })
@@ -24,30 +30,16 @@ export class SelecteurOperateurAnomalie {
   readonly avecTous = input(false);
   readonly choisi = output<OperateurAnomalieId>();
   readonly tousChoisis = output();
-  protected readonly libelles = LIBELLES_ANOMALIES;
-  protected readonly nomme = operateurNomme;
-  protected readonly saisie = signal('');
-  private readonly operateurCourant = computed(() => this.operateurs().find(operateur => operateur.id.operateur === this.courant()));
-  protected readonly nonResolu = computed(() => this.courant() !== '' && this.operateurCourant() === undefined);
-  protected readonly identite = computed(() => {
-    const operateur = this.operateurCourant();
-    if (operateur !== undefined) return operateurNomme(operateur);
-    if (this.nonResolu()) return this.libelles.operateurNonResoluActuel;
-    return this.avecTous() ? this.libelles.tousLesOperateurs : this.libelles.choisirOperateur;
-  });
-  protected readonly tousEstCourant = computed(() => this.courant() === '');
-  protected readonly propositions = computed(() => {
-    const recherche = normalizeSearch(this.saisie());
-    return this.operateurs().filter(operateur => normalizeSearch(`${operateur.nom} ${operateur.code ?? ''}`).includes(recherche));
-  });
+  protected readonly libelles = LIBELLES_SELECTEUR;
+  protected readonly choix = computed<readonly ChoixRecherchable[]>(() =>
+    this.operateurs().map(operateur => ({
+      id: operateur.id.operateur,
+      libelle: operateurNomme(operateur),
+      recherche: `${operateur.nom} ${operateur.code ?? ''}`,
+    })),
+  );
 
-  protected chooseAll(picker: SearchPicker): void {
-    picker.close();
-    if (!this.tousEstCourant()) this.tousChoisis.emit();
-  }
-
-  protected choose(id: OperateurAnomalieId, picker: SearchPicker): void {
-    picker.close();
-    this.choisi.emit(id);
+  protected choisir(id: string): void {
+    this.choisi.emit(new OperateurAnomalieId(id));
   }
 }
