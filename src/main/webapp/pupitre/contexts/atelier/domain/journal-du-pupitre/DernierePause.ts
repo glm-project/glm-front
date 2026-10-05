@@ -15,13 +15,13 @@ const suspensionsOf = (evenements: readonly EvenementDuJournal[]): readonly Susp
 const pauseOf = (geste: GesteDePointage | undefined): string | undefined =>
   geste?.nature === 'POINTAGE' ? geste.suspension?.pause : undefined;
 
-const lastGestureOf = (evenements: readonly EvenementDuJournal[], operateurId: string): GesteDePointage | undefined =>
-  evenements.filter(({ geste }) => geste.operateurId === operateurId).at(-1)?.geste;
+export const lastGesturesOfEachOperator = (evenements: readonly EvenementDuJournal[]): ReadonlyMap<string, GesteDePointage> =>
+  new Map(evenements.map(({ geste }) => [geste.operateurId, geste]));
 
 export const suspensionsOfTheLastPause = (
   evenements: readonly EvenementDuJournal[],
   operateurId: string,
 ): readonly SuspensionJournalisee[] => {
-  const derniere = pauseOf(lastGestureOf(evenements, operateurId));
+  const derniere = pauseOf(lastGesturesOfEachOperator(evenements).get(operateurId));
   return suspensionsOf(evenements).filter(({ geste }) => geste.suspension.pause === derniere);
 };

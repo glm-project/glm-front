@@ -25,7 +25,7 @@ time.
 ## Domain owners decide the gesture
 
 `FenetreOperateur` resolves the operator, checks workstation qualifications, captures explicit targeted activity intentions, turns
-PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the whole journal, whether a pause is in progress and what it reopens. Only a
+PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the journal that remains, whether a pause is in progress and what it reopens. Only a
 successfully committed capture advances that view.
 
 `GesteReplayPolicy` owns the single concurrency retry. It compares domain
@@ -87,9 +87,12 @@ Known business refusals do not prevent completion; a technical interruption pres
 without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, which returns both collections in one response. The backend uses READ COMMITTED; its successive queries
 can observe concurrent commits and do not establish a shared transactional snapshot. Its `genereLe` version
 is ignored: freshness here is pushed, not dated. Activating that post-write
-reference records accepted pointage identifiers in the local reference so their optimistic effects are no
-longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
-complete cache and its optimistic effects.
+reference forgets the accepted gestures it integrates, except the last gesture of each operator and the gestures of
+that operator's last pause, which `PauseEnCours` still reads; pending and refused gestures stay. It records the
+identifiers of the accepted gestures it keeps in the local reference so their optimistic effects are not applied
+twice, and drops the stopped pauses that no kept gesture carries. The same transaction stores the reference and
+cleans the journal, and a failed refresh cleans nothing. The journal's size therefore follows its pending and
+refused gestures, not past activity ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)).
 
 Concurrent synchronization callers share sequential exchanges, and each caller receives publications for
 its reconciliation until its requested exchange completes. Callers already waiting when an exchange starts
@@ -188,15 +191,15 @@ The first action contains only its captured activity gesture. Its chrome identif
 and a local pause when one is in progress. Aggregate rereads concern only the affected workshop item.
 
 `TOUT ARRÊTER` is one atomic local mutation: N targeted FIN gestures and durable invalidation of this
-operator's resumption memory, including N=0. It retains the current journal, audit history and pending
-publications. An aborted transaction changes neither the batch nor the resumption memory; the window
+operator's resumption memory, including N=0. It retains pending publications and refusals. An aborted transaction changes neither the batch nor the resumption memory; the window
 advances only after completion.
 
 `PAUSE` captures one targeted FIN per known interpretable personal activity that has not expired and is
 outside a conflict. Each finish carries its local suspension and the opening category to resume. The HTTP
 adapter sends only the pointage fields. `REPRENDRE` opens fresh activities with new identities and no former
 target, on still eligible workstations and elements. A refused or conflicting suspension is not resumed.
-`PauseEnCours` reads that memory from the whole journal; a pause itself never expires.
+`PauseEnCours` reads that memory from the journal that remains, which always holds the last pause of each
+operator; a pause itself never expires.
 
 At the server-provided deadline, inclusive, an activity stops being actionable locally, including offline.
 Every decision receives its evaluation time explicitly. A separate activity timer reevaluates the window
@@ -206,8 +209,9 @@ opening. A capture initiated before the deadline keeps its target and occurrence
 Conflicts remain separate from current activities, including sequences without an activity or workstation.
 A new opening remains possible; FIN or transition never targets a conflicting activity. Other interpretable
 activities stay actionable. A stale target never applies to its replacement. An accepted 200/201 conflict
-is persisted with the gesture so a failed refresh preserves its diagnosis. Canonical activation records
-accepted identifiers and replaces the reference diagnostics without applying the optimistic effect twice.
+is persisted with the gesture so a failed refresh preserves its diagnosis. Canonical activation forgets
+the accepted gestures the reference integrates, keeps the identifiers of the accepted gestures it retains and replaces the
+reference diagnostics without applying the optimistic effect twice.
 
 The activity journal uses `atelier-activites-v1:<tenant>`. The old `atelier:` documents are discarded by
 prefix through `LocalStoragePort`, without reading or migrating them. No credential,

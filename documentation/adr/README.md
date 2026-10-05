@@ -121,3 +121,7 @@ something stays, with a status that says what died.
 
 - [0048 — Relire les données de Gestion sur le serveur à chaque acquisition](0048-request-gestion-data-from-the-server-every-time.md) —
   aucun cache de réponses métier pour l'instant dans Gestion / Supervision, politique HTTP propre au front
+
+- [0049 — Forget integrated gestures at reference activation](0049-forget-integrated-gestures-at-reference-activation.md) —
+  accepted gestures dropped when a complete reference integrates them, except the last gesture and last pause of
+  each operator; pending and refused ones kept, in the activation transaction

@@ -84,6 +84,8 @@ const suspensionFixture: GesteDePointage = {
   cible: 'activite-fixture-47',
 };
 
+const refusFixture = { code: 'CONFLIT', message: 'refusé' };
+
 const adapters = [
   ['local storage', () => TestBed.inject(IndexedDbJournauxDuPupitre)],
   ['application fixture', () => new JournauxDuPupitreFixture()],
@@ -163,8 +165,8 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     });
   });
 
-  it('should retain its audit trail while registering accepted pointages in a fresh reference', async () => {
-    await givenAnAcceptedGestureAndAPendingOne();
+  it('should forget accepted gestures already in a fresh reference while keeping pending and refused ones', async () => {
+    await givenAcceptedPendingAndRefusedGestures();
 
     const state = await whenSavingAFreshReference();
 
@@ -172,15 +174,14 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
       referentiel: {
         ...refreshedReferenceFixture,
         suivis: [
-          { ...requiredFixture(refreshedReferenceFixture.suivis[0], 'refreshed workshop element'), evenements: ['pointage', 'depart'] },
-          { ...requiredFixture(refreshedReferenceFixture.suivis[1], 'other refreshed workshop element'), evenements: ['pointage-autre'] },
+          { ...requiredFixture(refreshedReferenceFixture.suivis[0], 'refreshed workshop element'), evenements: ['depart'] },
+          requiredFixture(refreshedReferenceFixture.suivis[1], 'other refreshed workshop element'),
         ],
       },
       connecte: true,
       evenements: [
-        { geste: pointageFixture, etat: 'ACCEPTE' },
         { geste: pointageEnAttenteFixture, etat: 'EN_ATTENTE' },
-        { geste: pointageAutreSuiviFixture, etat: 'ACCEPTE' },
+        { geste: pointageAutreSuiviFixture, etat: 'REFUSE', refus: refusFixture },
         { geste: finFixture, etat: 'ACCEPTE' },
       ],
     });
@@ -227,10 +228,10 @@ describe.each(adapters)('JournauxDuPupitrePort contract, honoured by %s', (_name
     await journal.markDisconnected(Entreprise.of('entreprise-a'));
     return { geste: ouvertureFixture, etat: 'REFUSE', refus: { code: 'cause', message: 'cause conservee' } };
   };
-  const givenAnAcceptedGestureAndAPendingOne = async (): Promise<void> => {
+  const givenAcceptedPendingAndRefusedGestures = async (): Promise<void> => {
     await journal.append(Entreprise.of('entreprise-a'), [pointageFixture, pointageEnAttenteFixture, pointageAutreSuiviFixture, finFixture]);
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageFixture, etat: 'ACCEPTE' });
-    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageAutreSuiviFixture, etat: 'ACCEPTE' });
+    await journal.saveResult(Entreprise.of('entreprise-a'), { geste: pointageAutreSuiviFixture, etat: 'REFUSE', refus: refusFixture });
     await journal.saveResult(Entreprise.of('entreprise-a'), { geste: finFixture, etat: 'ACCEPTE' });
   };
 
