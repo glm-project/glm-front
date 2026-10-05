@@ -1,11 +1,9 @@
+import { GesteSuspendu, SuspensionJournalisee, suspensionsOfTheLastPause } from '../../journal-du-pupitre/DernierePause';
 import {
   ActiviteDuPupitre,
-  EvenementDuJournal,
-  GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
   SuiviDuPupitre,
-  Suspension,
   TypeDOuverture,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
@@ -21,31 +19,8 @@ interface Emplacement {
   readonly posteId?: string;
 }
 
-type GesteSuspendu = GesteDePointage & { readonly suspension: Suspension };
-
-interface SuspensionJournalisee {
-  readonly geste: GesteSuspendu;
-  readonly refusee: boolean;
-}
-
-const isSuspension = (geste: GesteDePointage): geste is GesteSuspendu => geste.suspension !== undefined;
-
 const toActiviteSuspendue = ({ geste: { suiviId, posteId, suspension } }: SuspensionJournalisee): ActiviteSuspendue =>
   posteId === undefined ? { suiviId, reouverture: suspension.reouverture } : { suiviId, posteId, reouverture: suspension.reouverture };
-
-const suspensionsOf = (evenements: readonly EvenementDuJournal[]): readonly SuspensionJournalisee[] =>
-  evenements.flatMap(({ geste, etat }) => (isSuspension(geste) ? [{ geste, refusee: etat === 'REFUSE' }] : []));
-
-const pauseOf = (geste: GesteDePointage | undefined): string | undefined =>
-  geste?.nature === 'POINTAGE' ? geste.suspension?.pause : undefined;
-
-const lastGestureOf = (evenements: readonly EvenementDuJournal[], operateurId: string): GesteDePointage | undefined =>
-  evenements.filter(({ geste }) => geste.operateurId === operateurId).at(-1)?.geste;
-
-const suspensionsOfTheLastPause = (evenements: readonly EvenementDuJournal[], operateurId: string): readonly SuspensionJournalisee[] => {
-  const derniere = pauseOf(lastGestureOf(evenements, operateurId));
-  return suspensionsOf(evenements).filter(({ geste }) => geste.suspension.pause === derniere);
-};
 
 const occupiesTheSamePlace = (emplacement: Emplacement, autre: Emplacement): boolean =>
   emplacement.suiviId === autre.suiviId && emplacement.posteId === autre.posteId;

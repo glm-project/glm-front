@@ -16,6 +16,7 @@ import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchroni
 import { TimerDesignationExpirationScheduler } from '@/pupitre/contexts/atelier/infrastructure/secondary/TimerDesignationExpirationScheduler';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
+import { JournauxDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/JournauxDeLAtelierPort';
 import { PupitrePage } from '@/pupitre/page/page';
 import { DeviceEnrolmentOutcome, DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
@@ -23,6 +24,7 @@ import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
 
 @Component({
   selector: 'glm-root',
@@ -144,6 +146,7 @@ const bootstrapFixture = async (): Promise<void> => {
       PupitreSynchronization,
       EnrolementDuPupitre,
       chargementProvider,
+      { provide: JournauxDeLAtelierPort, useValue: new JournauxDeLAtelierFixture() },
       { provide: DeviceEnrolmentPort, useValue: enrolmentFixture },
       { provide: JournauxDuPupitrePort, useValue: journalFixture },
       { provide: DesignationExpirationSchedulerPort, useClass: TimerDesignationExpirationScheduler },

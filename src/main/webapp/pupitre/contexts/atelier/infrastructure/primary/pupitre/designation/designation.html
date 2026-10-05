@@ -1,16 +1,23 @@
 <div class="mx-auto grid h-full max-h-[36rem] w-full max-w-xl grid-rows-[auto_minmax(0,1fr)] gap-3 p-4">
-  <div
-    data-selector="code"
-    [glmFollowContent]="designation.code()"
-    role="status"
-    aria-label="Identifiant"
-    aria-live="polite"
-    tabindex="0"
-    class="min-h-touch-lg overflow-x-auto whitespace-nowrap rounded border border-border bg-sunken p-4 text-display text-ink"
-  >
-    @if (designation.unknownCode()) {
-    <span class="text-danger">Code inconnu</span>
-    } @else { {{ designation.code() }} }
+  <div class="grid gap-3">
+    @let retard = retardDePublication(); @if (retard !== undefined) {
+    <p role="status" data-selector="retard-de-publication" class="rounded-control border border-warn bg-sunken p-3 text-body text-warn">
+      @let message = messageDeRetard(retard); <strong>{{ message.constat }}</strong> {{ message.consigne }}
+    </p>
+    }
+    <div
+      data-selector="code"
+      [glmFollowContent]="designation.code()"
+      role="status"
+      aria-label="Identifiant"
+      aria-live="polite"
+      tabindex="0"
+      class="min-h-touch-lg overflow-x-auto whitespace-nowrap rounded border border-border bg-sunken p-4 text-display text-ink"
+    >
+      @if (designation.unknownCode()) {
+      <span class="text-danger">Code inconnu</span>
+      } @else { {{ designation.code() }} }
+    </div>
   </div>
   <div class="grid min-h-0 auto-rows-fr grid-cols-3 gap-3">
     @for (digit of digits; track digit) {

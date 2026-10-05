@@ -1,26 +1,17 @@
+import { afterActivatingReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/ActivationDuReferentiel';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   afterLocalCapture,
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
-  EvenementsDuJournal,
   GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { keyFor } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/ClesDesJournaux';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
-
-const keyFor = (entreprise: Entreprise): string => `atelier-activites-v1:${entreprise.toString()}`;
-
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
-  ...referentiel,
-  suivis: referentiel.suivis.map(suivi => ({
-    ...suivi,
-    evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
-  })),
-});
 
 @Injectable()
 export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
@@ -37,13 +28,7 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
   }
 
   override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
-    return this.update(entreprise, current => {
-      const journal = new EvenementsDuJournal(current.evenements);
-      return {
-        ...current,
-        referentiel: includeAcceptedPointages(referentiel, journal),
-      };
-    });
+    return this.update(entreprise, current => afterActivatingReferentiel(current, referentiel));
   }
 
   override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {

@@ -1,9 +1,9 @@
+import { afterActivatingReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/ActivationDuReferentiel';
 import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
 import {
   afterLocalCapture,
   EMPTY_JOURNAL_DU_PUPITRE,
   EvenementDuJournal,
-  EvenementsDuJournal,
   GesteDePointage,
   JournalDuPupitre,
   ReferentielDuPupitre,
@@ -38,14 +38,6 @@ const appendBarrier = (): AppendBarrier => {
   return { started, ...callbacks, wait: () => waiting };
 };
 
-const includeAcceptedPointages = (referentiel: ReferentielDuPupitre, journal: EvenementsDuJournal): ReferentielDuPupitre => ({
-  ...referentiel,
-  suivis: referentiel.suivis.map(suivi => ({
-    ...suivi,
-    evenements: [...new Set([...suivi.evenements, ...journal.acceptedPointageIds(suivi.id)])],
-  })),
-});
-
 export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   private readonly entreprises = new Map<string, JournalDuPupitre>();
 
@@ -72,10 +64,7 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
     await this.update(entreprise, state => afterLocalCapture(state, gestes, repriseAEffacer));
   }
   override saveReferentiel(entreprise: Entreprise, referentiel: ReferentielDuPupitre): Promise<JournalDuPupitre> {
-    return this.update(entreprise, state => {
-      const journal = new EvenementsDuJournal(state.evenements);
-      return { ...state, referentiel: includeAcceptedPointages(referentiel, journal) };
-    });
+    return this.update(entreprise, state => afterActivatingReferentiel(state, referentiel));
   }
   override saveResult(entreprise: Entreprise, resultat: EvenementDuJournal): Promise<JournalDuPupitre> {
     return this.update(entreprise, state => ({
@@ -122,6 +111,10 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   }
   seedJournal(entreprise: Entreprise, journal: JournalDuPupitre): void {
     this.entreprises.set(entreprise.toString(), structuredClone(journal));
+  }
+  async eraseEveryJournal(): Promise<void> {
+    await answerOnNextTask();
+    this.entreprises.clear();
   }
   answerReadsImmediately(): void {
     this.readsImmediately = true;

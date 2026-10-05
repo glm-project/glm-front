@@ -2,6 +2,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { CodeDEnrolement } from '@/pupitre/contexts/enrolement/domain/CodeDEnrolement';
 import { Enrolement, IssueDEnrolement, VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
+import { JournauxDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/JournauxDeLAtelierPort';
 import {
   DeviceAuthorizationCode,
   DeviceEnrolmentOutcome,
@@ -31,6 +32,7 @@ export class EnrolementDuPupitre {
   private readonly appareil = inject(DeviceEnrolmentPort);
   private readonly atelier = inject(ChargementDeLAtelierPort);
   private readonly authentication = inject(AuthenticationPort);
+  private readonly journaux = inject(JournauxDeLAtelierPort);
   private readonly etat = signal(Enrolement.demande());
   private readonly maintenant = signal(Date.now());
   private tentative = Symbol('tentative');
@@ -39,11 +41,7 @@ export class EnrolementDuPupitre {
   readonly vue = computed<VueDEnrolement>(() => this.etat().vue(this.maintenant(), this.atelier.etat()));
 
   async enroler(): Promise<void> {
-    const tentative = Symbol('tentative');
-    this.tentative = tentative;
-    this.chargement = Symbol('chargement abandonne');
-    this.etat.set(Enrolement.demande());
-    this.rafraichir();
+    const tentative = this.beginRequest();
 
     const issue = await this.appareil.enrol(code => {
       this.showCode(tentative, code);
@@ -68,9 +66,24 @@ export class EnrolementDuPupitre {
     await this.loadAtelier();
   }
 
+  gestesEnAttente(): Promise<number> {
+    return this.journaux.pendingGestures();
+  }
+
   async reinitialiser(): Promise<void> {
     this.authentication.logout();
+    this.beginRequest();
+    await this.journaux.discardAll();
     await this.enroler();
+  }
+
+  private beginRequest(): symbol {
+    const tentative = Symbol('tentative');
+    this.tentative = tentative;
+    this.chargement = Symbol('chargement abandonne');
+    this.etat.set(Enrolement.demande());
+    this.rafraichir();
+    return tentative;
   }
 
   private isCurrentAttemptOutcome(issue: DeviceEnrolmentOutcome, tentative: symbol): issue is Exclude<DeviceEnrolmentOutcome, 'ABANDONED'> {

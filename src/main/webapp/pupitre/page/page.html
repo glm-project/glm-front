@@ -26,5 +26,10 @@
   }
 </div>
 @if (resetRequested()) {
-<glm-reinitialisation [confirmationEnabled]="designation.operateur() === undefined" (annule)="cancelReset()" (confirme)="confirmReset()" />
+<glm-reinitialisation
+  [confirmationEnabled]="designation.operateur() === undefined"
+  [gestesEnAttente]="gestesEnAttente()"
+  (annule)="cancelReset()"
+  (confirme)="confirmReset()"
+/>
 }

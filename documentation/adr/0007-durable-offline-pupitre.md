@@ -14,6 +14,13 @@ complete acquisition, without a shared transactional snapshot. Revised under
 [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and [ADR 0047](0047-count-only-finished-activities.md):
 activity intentions retain stable targets, accepted conflicts retain diagnostics, and pause memory remains
 local and atomic.
+Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md): an accepted gesture is
+forgotten once a complete reference that integrates it is activated, except the last gesture and last pause of
+each operator, so the journal no longer retains acknowledged events or grows with past activity; pending and
+refused gestures stay.
+Amended by [ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md): an explicit
+reset erases every company journal, pending gestures included, so the former queue is suspended intact only
+after the automatic return to enrolment.
 
 ## Context
 
@@ -47,8 +54,8 @@ outgoing gestures; the authentication port rereads the selected durable session 
 
 `AtelierCoordinator` coordinates capture; `PupitreSynchronization` coordinates exchange. Each company has
 its own `atelier-activites-v1:<tenant>` document containing the complete last reference, original gestures,
-outcomes, pause markers and the last push state. Reenrolment selects a different document. The former document remains intact and its pending
-queue is suspended. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. Targeted finishes and transitions keep their original
+outcomes, pause markers and the last push state. Reenrolment after an automatic return selects a different document. The former document remains intact and
+its pending queue is suspended; an explicit reset erases every document, pending queue included. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. Targeted finishes and transitions keep their original
 activity identity. A deferred global batch is decided from the updated window with deterministic identities
 and its initiation timestamp; an atomic stop invalidates resumption memory even for an empty batch.
 An unsuccessful local commit confirms nothing and changes no optimistic view.
@@ -57,7 +64,9 @@ The queue is FIFO. An identical retry carries the same body. A concurrent entry 
 then one identical retry; a further business refusal is retained with its cause, and following gestures continue.
 Every other published business code likewise becomes a durable refusal with its cause. Following gestures continue,
 even for the same operator. Unknown technical failures remain pending and stop that push. No record has an
-application size limit, expiry, rotation or purge; acknowledged events are retained too.
+application size limit, expiry or rotation. Activating a complete reference forgets the accepted gestures it
+integrates, except the last gesture and last pause of each operator
+([ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md)).
 
 `HttpAtelierExchange` reads operators and workshop elements together, unpaged and unfiltered by operator, in
 one `GET /api/pupitre/referentiel` response under READ COMMITTED. It emits no
@@ -78,7 +87,7 @@ remain pupitre read models, without imports from another context's domain.
 PAUSE commits eligible targeted finishes and their suspension in one durable batch; REPRENDRE opens new
 activities on still eligible elements and workstations. The pause belongs to the recording pupitre. TOUT
 ARRÊTER commits N finishes and clears that operator's resumption memory atomically, N=0 included, while
-retaining history and pending work. The activity format discards obsolete `atelier:` documents without
+retaining pending work and refusals. The activity format discards obsolete `atelier:` documents without
 reading or migrating them; credentials and enrolment remain independent.
 
 The device adapter persists the refresh credential, access-token expiry and company in the same IndexedDB
@@ -101,7 +110,7 @@ inaccessible to injected same-origin code; this is the explicit trade required b
 - An enrolled pupitre keeps collecting through a network outage of any length, and a server that committed a
   gesture whose acknowledgement was lost returns 200 on the identical replay rather than duplicating it.
 - Company partitioning is structural: reenrolment selects another document, and the former queue is suspended
-  intact rather than merged or discarded.
+  intact rather than merged. Only an explicit reset discards it, after announcing how many gestures it holds.
 - Behavior is what the assertions hold. Moving or renaming an implementation file, a private helper or a CSS
   class does not invalidate them, so the document layout stays free to change.
 
@@ -111,8 +120,8 @@ inaccessible to injected same-origin code; this is the explicit trade required b
   local storage fails explicitly; there is no fallback that pretends to have recorded a gesture.
 - Browser-managed quota and user deletion remain possible. No application cap can eliminate those platform
   failures, and requesting another gesture cannot recover a failed commit.
-- Each company document grows with its event history, with no size limit, expiry, rotation or purge.
-  Transactions copy that document today; an event-indexed store is the next change if measured growth makes
+- Each company document grows with its pending and refused gestures, with no size limit or expiry; accepted
+  gestures are forgotten at reference activation (ADR 0049). Transactions copy that document today; an event-indexed store is the next change if measured growth makes
   this costly, and it must preserve the same atomic contract.
 - The reference read trusts server identifiers and semantics. Under READ COMMITTED, concurrent commits can
   become visible between its queries; a single response does not make both collections one historical instant.

@@ -11,11 +11,20 @@ fallback that pretends to have captured work.
 
 `JournalDuPupitre` is the local consistency root for one company. `JournauxDuPupitrePort` exposes company reads,
 atomic gesture batches, reference activation and push outcomes.
-`IndexedDbJournauxDuPupitre` alone owns document keys and layout. Keep application code and tests on the port so a
-schema change stays local to that adapter.
+`IndexedDbJournauxDuPupitre` alone owns the document layout; the key format lives in `ClesDesJournaux.ts`, which
+only the local journal adapters share. Keep application code and tests on the port so a schema change stays local
+to those adapters. Erasing every company journal is a device-wide operation with its own port,
+`EffacementDesJournauxPort`: `IndexedDbEffacementDesJournaux` removes the documents under the journal prefix, and
+nothing else.
 
-Each tenant has an independent journal. Reenrolment selects another journal without deleting or pushing the
-former tenant's pending work. Immediate gestures receive their UUID and business timestamp when the screen
+Each tenant has an independent journal. Reenrolment after an automatic return selects another journal without
+deleting or pushing the former tenant's pending work. An explicit reset instead erases every journal, pending
+gestures included, as [ADR 0050](adr/0050-erase-workshop-journals-on-explicit-reset.md) records: its confirmation
+announces the pending gestures of the current tenant, `EffacementDesJournaux` waits for the captures already
+initiated and for the `synchronisation` lock before erasing, then empties the in-memory journal view so the
+pupitre cannot look ready on an erased disk.
+
+Immediate gestures receive their UUID and business timestamp when the screen
 declares the intention, before asynchronous capture begins; on the pointage, that is the deadline of the sustained
 press, not its start. A deferred global intention receives one UUID root and its business timestamp at that same
 declaration; once the updated window decides its batch, every gesture UUID is derived deterministically
@@ -25,7 +34,7 @@ time.
 ## Domain owners decide the gesture
 
 `FenetreOperateur` resolves the operator, checks workstation qualifications, captures explicit targeted activity intentions, turns
-PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the whole journal, whether a pause is in progress and what it reopens. Only a
+PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the journal that remains, whether a pause is in progress and what it reopens. Only a
 successfully committed capture advances that view.
 
 `GesteReplayPolicy` owns the single concurrency retry. It compares domain
@@ -87,9 +96,12 @@ Known business refusals do not prevent completion; a technical interruption pres
 without attempting a new read. That refresh is one unpaged `GET /api/pupitre/referentiel`, which returns both collections in one response. The backend uses READ COMMITTED; its successive queries
 can observe concurrent commits and do not establish a shared transactional snapshot. Its `genereLe` version
 is ignored: freshness here is pushed, not dated. Activating that post-write
-reference records accepted pointage identifiers in the local reference so their optimistic effects are no
-longer applied, while retaining the gestures in the audit trail. A failed refresh preserves the previous
-complete cache and its optimistic effects.
+reference forgets the accepted gestures it integrates, except the last gesture of each operator and the gestures of
+that operator's last pause, which `PauseEnCours` still reads; pending and refused gestures stay. It records the
+identifiers of the accepted gestures it keeps in the local reference so their optimistic effects are not applied
+twice, and drops the stopped pauses that no kept gesture carries. The same transaction stores the reference and
+cleans the journal, and a failed refresh cleans nothing. The journal's size therefore follows its pending and
+refused gestures, not past activity ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)).
 
 Concurrent synchronization callers share sequential exchanges, and each caller receives publications for
 its reconciliation until its requested exchange completes. Callers already waiting when an exchange starts
@@ -104,6 +116,13 @@ The initial workshop load reports its own `CHARGE`, `ECHEC` or `TENANT_ABSENT` o
 changing that connectivity. The last outcome distinguishes a token missing its tenant claim from a network
 failure. A reference is available there only when the active journal view belongs to the currently selected
 company.
+
+A technical interruption can leave gestures pending for hours. The designation screen therefore shows a
+**publication delay** banner as soon as the oldest pending gesture of the company's journal occurred at least
+one hour before the evaluation instant, with the number of pending gestures and that age; it asks the operator
+to warn the supervisor. Accepted and refused gestures never count. `EtatHorsLigneDuPupitre` holds the evaluation
+instant, which the screen pushes through `updateClock()` when it is displayed and then once a minute, so the
+threshold is crossed without any new event. The screen stops pushing when it is left.
 
 ## Runtime lifecycle is explicit
 
@@ -188,15 +207,15 @@ The first action contains only its captured activity gesture. Its chrome identif
 and a local pause when one is in progress. Aggregate rereads concern only the affected workshop item.
 
 `TOUT ARRÊTER` is one atomic local mutation: N targeted FIN gestures and durable invalidation of this
-operator's resumption memory, including N=0. It retains the current journal, audit history and pending
-publications. An aborted transaction changes neither the batch nor the resumption memory; the window
+operator's resumption memory, including N=0. It retains pending publications and refusals. An aborted transaction changes neither the batch nor the resumption memory; the window
 advances only after completion.
 
 `PAUSE` captures one targeted FIN per known interpretable personal activity that has not expired and is
 outside a conflict. Each finish carries its local suspension and the opening category to resume. The HTTP
 adapter sends only the pointage fields. `REPRENDRE` opens fresh activities with new identities and no former
 target, on still eligible workstations and elements. A refused or conflicting suspension is not resumed.
-`PauseEnCours` reads that memory from the whole journal; a pause itself never expires.
+`PauseEnCours` reads that memory from the journal that remains, which always holds the last pause of each
+operator; a pause itself never expires.
 
 At the server-provided deadline, inclusive, an activity stops being actionable locally, including offline.
 Every decision receives its evaluation time explicitly. A separate activity timer reevaluates the window
@@ -206,8 +225,9 @@ opening. A capture initiated before the deadline keeps its target and occurrence
 Conflicts remain separate from current activities, including sequences without an activity or workstation.
 A new opening remains possible; FIN or transition never targets a conflicting activity. Other interpretable
 activities stay actionable. A stale target never applies to its replacement. An accepted 200/201 conflict
-is persisted with the gesture so a failed refresh preserves its diagnosis. Canonical activation records
-accepted identifiers and replaces the reference diagnostics without applying the optimistic effect twice.
+is persisted with the gesture so a failed refresh preserves its diagnosis. Canonical activation forgets
+the accepted gestures the reference integrates, keeps the identifiers of the accepted gestures it retains and replaces the
+reference diagnostics without applying the optimistic effect twice.
 
 The activity journal uses `atelier-activites-v1:<tenant>`. The old `atelier:` documents are discarded by
 prefix through `LocalStoragePort`, without reading or migrating them. No credential,
@@ -229,8 +249,8 @@ projection disappears on closure while the retained model lets previously initia
 
 Under the permanent chrome, the page renders the enrolment screen until the device is enrolled and its first
 complete reference is active, and the workshop views afterwards. That switch reads the enrolment context's
-projected state, never the reference alone: an administration reset returns the pupitre to enrolment even
-though its last reference is still on disk. The header's own reset gesture opens a confirmation the page
+projected state, never the reference alone: an administration reset returns the pupitre to enrolment at once,
+before the erasure of the journals ends, so the keypad never waits for the disk. The header's own reset gesture opens a confirmation the page
 owns. The same chrome identifies a
 rejected pointage by its element number and a rejected gesture of a global command by the originating `PAUSE`,
 `REPRENDRE` or `TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local

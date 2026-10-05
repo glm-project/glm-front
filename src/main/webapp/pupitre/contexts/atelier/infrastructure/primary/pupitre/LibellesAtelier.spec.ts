@@ -1,6 +1,6 @@
 import { ElementDePointage } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '@/pupitre/contexts/atelier/domain/designation/NumeroDElement';
-import { LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE, toLibelleContexteAtelier } from './LibellesAtelier';
+import { LIBELLES_ENTETE_PUPITRE, LIBELLES_POINTAGE, messageDeRetardDePublication, toLibelleContexteAtelier } from './LibellesAtelier';
 
 describe('LibellesAtelier', () => {
   it('should format duration label in hours and zero-padded minutes', () => {
@@ -46,5 +46,13 @@ describe('LibellesAtelier', () => {
     expect(LIBELLES_ENTETE_PUPITRE.horsLigne).toBe('Hors ligne');
     expect(LIBELLES_ENTETE_PUPITRE.fin).toBe("J'ai fini");
     expect(LIBELLES_ENTETE_PUPITRE.pause).toBe('En pause');
+  });
+
+  it.each([
+    { gestes: 12, depuis: 80 * 60_000, constat: '12 gestes non envoyés depuis 1 h 20.' },
+    { gestes: 1, depuis: 60 * 60_000, constat: '1 geste non envoyé depuis 1 h 00.' },
+    { gestes: 2, depuis: (27 * 60 + 5) * 60_000, constat: '2 gestes non envoyés depuis 27 h 05.' },
+  ])('should state the delay as: $constat', ({ gestes, depuis, constat }) => {
+    expect(messageDeRetardDePublication({ gestes, depuis })).toEqual({ constat, consigne: 'Prévenez le superviseur.' });
   });
 });

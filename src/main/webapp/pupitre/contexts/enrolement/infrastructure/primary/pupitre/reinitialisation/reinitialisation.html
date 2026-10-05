@@ -9,6 +9,9 @@
   >
     <h2 id="reinitialisation-titre" class="text-title text-ink" data-selector="reset-title">{{ labels.titre }}</h2>
     <p class="text-body text-ink-muted" data-selector="reset-message">{{ labels.message }}</p>
+    @if (avertissement(); as texte) {
+    <p class="text-body text-danger" data-selector="reset-pending-warning"><strong>{{ texte }}</strong></p>
+    }
     <div class="dialog-actions">
       <button
         #annuler
@@ -21,12 +24,12 @@
       </button>
       <button
         type="button"
-        [disabled]="confirmationEnabled() === false"
+        [disabled]="confirmationAvailable() === false"
         class="min-h-touch-lg rounded bg-danger px-6 text-body text-on-accent"
         data-selector="reset-confirm"
         (click)="confirme.emit()"
       >
-        {{ labels.confirmer }}
+        {{ confirmationLibelle() }}
       </button>
     </div>
   </div>

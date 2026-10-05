@@ -7,6 +7,9 @@
 Revised under [ADR 0047](0047-count-only-finished-activities.md): PAUSE closes only interpretable,
 unexpired activities by stable target; REPRENDRE opens new activities. TOUT ARRÊTER atomically invalidates
 local resumption memory even without a finish. The global commands are the confirmed activity workflow.
+Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md): the journal no longer keeps
+accepted history. `PauseEnCours` reads the journal that remains, which always holds the last pause of every
+operator, and TOUT ARRÊTER retains pending gestures, refusals and what the last pause still needs.
 
 ## Context
 
@@ -34,7 +37,7 @@ targeted `FIN` per activity, on its workstation, carrying a **suspension** — t
 the initiated global intention, and the pointage that will reopen the activity (`DEBUT`, or `NON_CONFORMITE` for
 an activity in non-conformity). The suspension never leaves the pupitre.
 
-`PauseEnCours`, read from the whole journal of the pupitre, is the only owner of when a pause ends and what it
+`PauseEnCours`, read from the journal of the pupitre, is the only owner of when a pause ends and what it
 reopens. The pause of an operator is the one of their last suspension; it ends at REPRENDRE, at any later gesture
 of that operator appended to this journal whatever its fate at publication, and as soon as the projected
 reference shows an activity of that operator other than one whose suspension was refused, considering only interpretable nonexpired activities. It reopens the
@@ -47,7 +50,7 @@ former target. PAUSE is offered while an interpretable personal activity remains
 pause remains, TOUT ARRÊTER always. The chrome shows the operator identity and « En pause » when appropriate.
 
 TOUT ARRÊTER appends N targeted finishes and clears durable resumption memory in one journal mutation,
-including N=0. It retains history and pending gestures. No local or server gesture is fabricated to express
+including N=0. It retains pending gestures. No local or server gesture is fabricated to express
 that invalidation. A failed transaction leaves both effects unapplied; restart cannot restore a cleared
 pause. The company-scoped activity journal uses its own versioned key and discards obsolete `atelier:` documents
 without reading or migrating them. Device enrolment and credentials retain their documents.
