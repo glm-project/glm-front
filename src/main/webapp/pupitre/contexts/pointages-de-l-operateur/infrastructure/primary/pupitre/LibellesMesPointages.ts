@@ -4,6 +4,7 @@ import { JourDePointages } from '../../../domain/JourDePointages';
 import { LigneDePointage } from '../../../domain/LigneDePointage';
 import { PointagesDeLaSemaine } from '../../../domain/PointagesDeLaSemaine';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
+import { MoisCalendaire } from '../../../domain/semaine/MoisCalendaire';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 
 const JOUR_COURT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -18,10 +19,13 @@ const JOUR_LONG_AVEC_ANNEE = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'UTC',
 });
 const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const MOIS = new Intl.DateTimeFormat('fr-FR', { month: 'long', timeZone: 'UTC' });
 
 const enDate = (jour: JourCalendaire): Date => new Date(`${jour.value}T00:00:00Z`);
 
 const avecMajuscule = (texte: string): string => `${texte.charAt(0).toUpperCase()}${texte.slice(1)}`;
+
+const nomDuMois = (mois: MoisCalendaire): string => avecMajuscule(MOIS.format(new Date(Date.UTC(mois.annee, mois.numero - 1, 1))));
 
 const heuresEtMinutes = (duree: DureeTravaillee): string => `${String(duree.heures)} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
 
@@ -99,6 +103,12 @@ export const LIBELLES_MES_POINTAGES = {
   semainePrecedente: 'Semaine précédente',
   semaineSuivante: 'Semaine suivante',
   revenirAujourdhui: 'Revenir à aujourd’hui',
+  choisirUneSemaine: 'Choisir une semaine',
+  choisirUnMois: 'Choisir un mois',
+  autreMois: 'Autre mois',
+  fermer: 'Fermer',
+  mois: nomDuMois,
+  moisEtAnnee: (mois: MoisCalendaire): string => `${nomDuMois(mois)} ${String(mois.annee)}`,
   chargement: 'Chargement de vos pointages…',
   echec: 'Impossible de charger vos pointages',
   echecExplication: 'Le pupitre n’arrive pas à joindre le serveur. Vos pointages ne sont pas perdus.',

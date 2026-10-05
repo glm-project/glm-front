@@ -131,17 +131,36 @@
       }
     </ul>
     }
-    <button
-      type="button"
-      class="min-h-touch-lg rounded-control border-2 border-border-strong bg-surface px-4 text-body text-ink disabled:opacity-50"
-      [disabled]="estLaSemaineCourante()"
-      (click)="voir(periodeCourante)"
-      data-selector="revenir-aujourdhui"
-    >
-      {{ labels.revenirAujourdhui }}
-    </button>
+    <div class="grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        class="min-h-touch-lg rounded-control border-2 border-accent bg-surface px-4 text-body text-accent"
+        (click)="ouvrirLeChoix()"
+        data-selector="choisir-une-semaine"
+      >
+        {{ labels.choisirUneSemaine }}
+      </button>
+      <button
+        type="button"
+        class="min-h-touch-lg rounded-control border-2 border-border-strong bg-surface px-4 text-body text-ink disabled:opacity-50"
+        [disabled]="estLaSemaineCourante()"
+        (click)="voir(periodeCourante)"
+        data-selector="revenir-aujourdhui"
+      >
+        {{ labels.revenirAujourdhui }}
+      </button>
+    </div>
   </section>
 </main>
+
+@if (choixOuvert()) {
+<glm-choix-de-semaine
+  [periode]="periode"
+  [semaineAffichee]="semaine()"
+  (semaineChoisie)="voirLaSemaineChoisie($event)"
+  (fermetureDemandee)="fermerLeChoix()"
+/>
+}
 
 <nav class="flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actions">
   <button

@@ -1,0 +1,43 @@
+.dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--color-ink) 55%, transparent);
+}
+
+.dialog-box {
+  width: min(46rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  border-radius: var(--radius-surface);
+  padding: 1.5rem;
+  background: var(--color-surface);
+}
+
+.grille-des-mois {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.mois {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.mois--affiche {
+  border-color: var(--color-accent);
+  background: var(--color-sunken);
+}
+
+.mois:disabled {
+  border-style: dashed;
+  border-color: var(--color-border);
+  background: var(--color-canvas);
+  color: var(--color-ink-muted);
+}

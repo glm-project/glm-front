@@ -1,0 +1,61 @@
+<div class="dialog-backdrop" data-selector="choix-de-semaine">
+  <section class="dialog-box flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby="choix-titre">
+    <div class="flex items-center justify-between gap-4">
+      @if (moisChoisi(); as mois) {
+      <h2 id="choix-titre" class="text-title text-ink" data-selector="choix-titre">{{ labels.moisEtAnnee(mois) }}</h2>
+      <button
+        type="button"
+        class="min-h-touch-lg rounded-control border-2 border-border-strong bg-surface px-5 text-body text-ink"
+        (click)="revenirAuxMois()"
+        data-selector="autre-mois"
+      >
+        {{ labels.autreMois }}
+      </button>
+      } @else {
+      <h2 id="choix-titre" class="text-title text-ink" data-selector="choix-titre">{{ labels.choisirUnMois }}</h2>
+      }
+    </div>
+
+    @if (moisChoisi(); as mois) {
+    <ul class="flex flex-col gap-2" data-selector="semaines-du-mois">
+      @for (semaine of periode().semainesDu(mois); track semaine.numero) {
+      <li>
+        <button
+          type="button"
+          class="flex min-h-touch-lg w-full items-center justify-between gap-4 rounded-control border-2 border-border bg-surface px-5 text-body text-ink"
+          (click)="semaineChoisie.emit(semaine)"
+          [attr.data-selector]="'semaine-' + semaine.annee + '-' + semaine.numero"
+        >
+          <span class="font-semibold">{{ labels.semaine(semaine, estLaSemaineCourante(semaine)) }}</span>
+          <span class="text-ink-muted">{{ labels.dates(semaine) }}</span>
+        </button>
+      </li>
+      }
+    </ul>
+    } @else {
+    <div class="grille-des-mois" data-selector="mois-de-l-annee">
+      @for (mois of moisDeLAnnee(); track mois.numero) {
+      <button
+        type="button"
+        class="mois min-h-touch-lg rounded-control border-2 text-body font-semibold"
+        [class.mois--affiche]="mois.estLeMeme(moisAffiche())"
+        [disabled]="!periode().estConsultable(mois)"
+        (click)="choisirLeMois(mois)"
+        [attr.data-selector]="'mois-' + mois.annee + '-' + mois.numero"
+      >
+        {{ labels.mois(mois) }}
+      </button>
+      }
+    </div>
+    }
+
+    <button
+      type="button"
+      class="min-h-touch-lg self-end rounded-control border-2 border-border-strong bg-surface px-8 text-body text-ink"
+      (click)="fermetureDemandee.emit()"
+      data-selector="fermer-choix"
+    >
+      {{ labels.fermer }}
+    </button>
+  </section>
+</div>
