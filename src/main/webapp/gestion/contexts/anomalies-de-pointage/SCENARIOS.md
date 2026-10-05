@@ -28,13 +28,14 @@ l'heure de ce pointage et un motif. L'aperçu, la confirmation, le reçu, la rep
 ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
 `date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
 annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
-sur une adresse annulée. Une activité sans poste n'en reçoit aucun.
+sur une adresse annulée, et n'affiche alors plus le diagnostic « Pourquoi ces pointages sont incohérents »,
+réservé au périmètre qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
 
 ## Liste des anomalies
 
 La liste demande la nature de l'onglet courant : `CONFLIT` sans `nature` dans l'URL, `FIN_AUTOMATIQUE` à la
 demande. Une valeur inconnue n'émet aucune requête. Changer d'onglet conserve les filtres et remet `page=1`.
-Chaque onglet a son message vide, ses erreurs et sa pagination. Une ligne d'une autre nature que celle demandée
+Chaque onglet a son message de chargement, son message vide, ses erreurs et sa pagination. Une ligne d'une autre nature que celle demandée
 rejette la lecture. Une fin automatique montre son début et son échéance reçus, sans calcul, et ouvre le
 dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, aux filtres et à la page d'origine.
 

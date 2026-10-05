@@ -43,7 +43,7 @@ conserve les filtres et revient à `page=1` ; la pagination est propre à chaque
 ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début
 et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
 sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
-Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
+Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 
 Le domaine possède les identités, la saisie et la confirmation ; l'application protège les appels
@@ -58,7 +58,11 @@ l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit 
 Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le
 modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. « Anomalie traitée » signifie ni
 `enConflit` ni `finAutomatique`, quel que soit l'état d'adresse : une adresse `ANCRE_ANNULEE` peut rester
-en fin automatique lorsque l'ouvrant corrigé est encore échu. Le dossier affiche l'activité échue, son
+en fin automatique lorsque l'ouvrant corrigé est encore échu. Le domaine la pose en question nommée
+(`anomalieTraitee`), que l'aperçu et le reçu appellent. Le diagnostic « Pourquoi ces pointages sont
+incohérents » n'existe que pour un conflit à expliquer (`conflitAExpliquer`, soit `enConflit`) : il disparaît
+dès que le périmètre n'en porte plus, y compris après le reçu d'une fin automatique ou d'un conflit résolu.
+Le dossier affiche l'activité échue, son
 début, sa fin automatique, sa durée et la clôture reçus, sans les calculer, et ne se présente jamais comme
 un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :
 `REGULARISER_FIN` prérempli sans heure, que le gestionnaire saisit (aucune heure n'est inventée) ;

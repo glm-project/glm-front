@@ -23,7 +23,8 @@ active par recalcul. La fin automatique et l'anomalie sont dérivées par le bac
 et corrections sont conservés dans l'historique.
 
 Les anomalies réelles sont signalées dans ce rapport ; leur correction relève des commandes back.
-La résolution des séquences en conflit se fait dans le contexte [anomalies-de-pointage](../anomalies-de-pointage/AGENTS.md).
+Le traitement des anomalies de pointage, séquences en conflit et fins automatiques, se fait dans le contexte
+[anomalies-de-pointage](../anomalies-de-pointage/AGENTS.md). Ce contexte reste lecteur et ne partage aucun type avec lui.
 
 Une correction peut faire redevenir une activité en cours : elle sort alors du coût et du diviseur
 humain au recalcul du back, et son anomalie disparaît. Le rapport restitue ce nouvel état.
