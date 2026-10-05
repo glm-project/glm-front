@@ -1,8 +1,13 @@
 import {
   formatCalendarDayFull,
+  formatCalendarDayFullWithYear,
   formatCalendarDayLong,
   formatCalendarDayRange,
   formatCalendarDayShort,
+  formatCalendarDayShortDayMonth,
+  formatCalendarDayShortDayMonthYear,
+  formatCalendarDayShortWithMonth,
+  formatCalendarMonthName,
   formatInstantNumericDateTime,
   formatInstantNumericDayMonth,
   formatInstantShortDateTime,
@@ -125,6 +130,36 @@ describe('DateFormats', () => {
     const text = formatCalendarDayFull('2026-09-14');
 
     expect(text).toBe('lundi 14 septembre');
+  });
+
+  it('should format a calendar day as its abbreviated weekday, day and abbreviated month without any time zone shift', () => {
+    const text = formatCalendarDayShortWithMonth('2026-09-14');
+
+    expect(text).toBe('lun. 14 sept.');
+  });
+
+  it('should format a calendar day as its day and abbreviated month without any time zone shift', () => {
+    const text = formatCalendarDayShortDayMonth('2026-09-14');
+
+    expect(text).toBe('14 sept.');
+  });
+
+  it('should format a calendar day as its day, abbreviated month and year without any time zone shift', () => {
+    const text = formatCalendarDayShortDayMonthYear('2026-09-14');
+
+    expect(text).toBe('14 sept. 2026');
+  });
+
+  it('should format a calendar day as its full weekday, day, month and year without any time zone shift', () => {
+    const text = formatCalendarDayFullWithYear('2026-09-14');
+
+    expect(text).toBe('lundi 14 septembre 2026');
+  });
+
+  it('should format a calendar month as its full name whatever the year', () => {
+    const text = formatCalendarMonthName(2026, 9);
+
+    expect(text).toBe('septembre');
   });
 
   it('should format a range of calendar days within a month once', () => {

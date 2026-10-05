@@ -1,3 +1,12 @@
+import {
+  formatCalendarDayFull,
+  formatCalendarDayFullWithYear,
+  formatCalendarDayShortDayMonth,
+  formatCalendarDayShortDayMonthYear,
+  formatCalendarDayShortWithMonth,
+  formatCalendarMonthName,
+  formatInstantTime,
+} from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
 import { TotalDeDuree } from '../../../domain/duree/TotalDeDuree';
 import { JourDePointages } from '../../../domain/JourDePointages';
@@ -7,25 +16,9 @@ import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { MoisCalendaire } from '../../../domain/semaine/MoisCalendaire';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 
-const JOUR_COURT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-const DATE_COURTE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-const DATE_AVEC_ANNEE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-const JOUR_LONG = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-const JOUR_LONG_AVEC_ANNEE = new Intl.DateTimeFormat('fr-FR', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
-const MOIS = new Intl.DateTimeFormat('fr-FR', { month: 'long', timeZone: 'UTC' });
-
-const enDate = (jour: JourCalendaire): Date => new Date(`${jour.value}T00:00:00Z`);
-
 const avecMajuscule = (texte: string): string => `${texte.charAt(0).toUpperCase()}${texte.slice(1)}`;
 
-const nomDuMois = (mois: MoisCalendaire): string => avecMajuscule(MOIS.format(new Date(Date.UTC(mois.annee, mois.numero - 1, 1))));
+const nomDuMois = (mois: MoisCalendaire): string => avecMajuscule(formatCalendarMonthName(mois.annee, mois.numero));
 
 const heuresEtMinutes = (duree: DureeTravaillee): string => `${String(duree.heures)} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
 
@@ -37,7 +30,7 @@ const duree = (total: TotalDeDuree): string => {
 const FIN_INCONNUE = { EN_COURS: '…', A_RESOUDRE: '?' } as const;
 
 const plage = (ligne: LigneDePointage): string =>
-  `${HEURE.format(ligne.activite.debut)} → ${'fin' in ligne.etat ? HEURE.format(ligne.etat.fin) : FIN_INCONNUE[ligne.etat.etat]}`;
+  `${formatInstantTime(ligne.activite.debut)} → ${'fin' in ligne.etat ? formatInstantTime(ligne.etat.fin) : FIN_INCONNUE[ligne.etat.etat]}`;
 
 const MENTIONS_DE_LIGNE = {
   TERMINEE: '',
@@ -86,14 +79,14 @@ const dureeDeLaLigne = (ligne: LigneDePointage): string => {
 
 const titreDuJour = (jourAffiche: JourCalendaire, aujourdhui: JourCalendaire): string =>
   jourAffiche.estLeMeme(aujourdhui)
-    ? `Aujourd’hui — ${JOUR_LONG.format(enDate(jourAffiche))}`
-    : avecMajuscule(JOUR_LONG_AVEC_ANNEE.format(enDate(jourAffiche)));
+    ? `Aujourd’hui — ${formatCalendarDayFull(jourAffiche.value)}`
+    : avecMajuscule(formatCalendarDayFullWithYear(jourAffiche.value));
 
 const dates = (semaine: SemaineISO): string =>
-  `${DATE_COURTE.format(enDate(semaine.lundi()))} – ${DATE_AVEC_ANNEE.format(enDate(semaine.dimanche()))}`;
+  `${formatCalendarDayShortDayMonth(semaine.lundi().value)} – ${formatCalendarDayShortDayMonthYear(semaine.dimanche().value)}`;
 
 const jour = (jourPointe: JourCalendaire, aujourdhui: JourCalendaire): string =>
-  `${avecMajuscule(JOUR_COURT.format(enDate(jourPointe)))}${jourPointe.estLeMeme(aujourdhui) ? ' · aujourd’hui' : ''}`;
+  `${avecMajuscule(formatCalendarDayShortWithMonth(jourPointe.value))}${jourPointe.estLeMeme(aujourdhui) ? ' · aujourd’hui' : ''}`;
 
 export const LIBELLES_MES_POINTAGES = {
   titre: 'Mes pointages',
