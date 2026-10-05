@@ -1,9 +1,14 @@
 import {
+  formatCalendarDayFull,
+  formatCalendarDayLong,
+  formatCalendarDayRange,
+  formatCalendarDayShort,
   formatInstantNumericDateTime,
   formatInstantNumericDayMonth,
   formatInstantShortDateTime,
   formatInstantShortDayMonth,
   formatInstantTime,
+  formatInstantWeekdayDay,
   localCalendarDay,
 } from './DateFormats';
 
@@ -102,5 +107,51 @@ describe('DateFormats', () => {
     const text = formatInstantShortDayMonth(instant);
 
     expect(text).toBe('5 oct.');
+  });
+
+  it('should format a calendar day as its abbreviated weekday and day without any time zone shift', () => {
+    const text = formatCalendarDayShort('2026-09-14');
+
+    expect(text).toBe('lun. 14');
+  });
+
+  it('should format a calendar day as its full weekday and day without any time zone shift', () => {
+    const text = formatCalendarDayLong('2026-09-14');
+
+    expect(text).toBe('lundi 14');
+  });
+
+  it('should format a calendar day as its full weekday, day and month without any time zone shift', () => {
+    const text = formatCalendarDayFull('2026-09-14');
+
+    expect(text).toBe('lundi 14 septembre');
+  });
+
+  it('should format a range of calendar days within a month once', () => {
+    const text = formatCalendarDayRange('2026-09-14', '2026-09-20');
+
+    expect(text).toBe('14–20 sept. 2026');
+  });
+
+  it('should format a range of calendar days across years with both ends', () => {
+    const text = formatCalendarDayRange('2025-12-29', '2026-01-04');
+
+    expect(text).toBe('29 déc. 2025\u2009–\u20094 janv. 2026');
+  });
+
+  it('should format an instant as its local full weekday and day', () => {
+    const instant = new Date(2026, 8, 13, 22, 0);
+
+    const text = formatInstantWeekdayDay(instant);
+
+    expect(text).toBe('dimanche 13');
+  });
+
+  it('should keep the local weekday and day of an instant whose UTC day is the next one', () => {
+    const instant = new Date(Date.UTC(2026, 8, 14, 1, 30));
+
+    const text = formatInstantWeekdayDay(instant);
+
+    expect(text).toBe('dimanche 13');
   });
 });
