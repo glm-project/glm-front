@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
+  ligneFixture,
   PointagesDeLOperateurFixture,
   semaineFixture,
 } from '@test/unit/fixtures/pupitre/pointages-de-l-operateur/PointagesDeLOperateurFixture';
@@ -11,6 +12,20 @@ import { SemaineISO } from '../../../../domain/semaine/SemaineISO';
 import { MesPointages } from './mes-pointages';
 
 const SEMAINE_EN_COURS = new SemaineISO(2026, 41);
+const LUNDI = ligneFixture({ element: '1240', poste: 'Fraiseuse', debut: new Date(2026, 9, 5, 7), fin: new Date(2026, 9, 5, 14, 45) });
+const JEUDI = [
+  ligneFixture({ element: '1243', poste: 'Fraiseuse', debut: new Date(2026, 9, 8, 7, 2), fin: new Date(2026, 9, 8, 9, 40) }),
+  ligneFixture({
+    element: '1243',
+    poste: 'Fraiseuse',
+    categorie: 'NON_CONFORMITE',
+    debut: new Date(2026, 9, 8, 9, 40),
+    fin: new Date(2026, 9, 8, 10, 15),
+  }),
+  ligneFixture({ element: '1250', debut: new Date(2026, 9, 8, 12, 45) }),
+];
+const semaineEnCoursFixture = (): ReturnType<typeof semaineFixture> =>
+  semaineFixture(SEMAINE_EN_COURS, { 0: { total: 'PT7H45M', lignes: [LUNDI] }, 3: { total: 'PT3H13M', lignes: JEUDI } }, 'PT10H58M');
 
 describe('Mes pointages screen', () => {
   let fixture: ComponentFixture<MesPointages>;
@@ -44,26 +59,49 @@ describe('Mes pointages screen', () => {
   });
 
   it('should show the week, its server total and its clocked days with their totals', async () => {
-    givenTheCurrentWeek(
-      semaineFixture(SEMAINE_EN_COURS, { 0: { total: 'PT7H45M', pointages: 2 }, 3: { total: 'PT4H53M', pointages: 3 } }, 'PT12H38M'),
-    );
+    givenTheCurrentWeek(semaineEnCoursFixture());
 
     await whenShowingMyPointages();
 
-    thenTextOf('semaine', ['Semaine 41 · cette semaine', '5 oct. – 11 oct. 2026', 'Total de la semaine', '12 h 38']);
+    thenTextOf('semaine', ['Semaine 41 · cette semaine', '5 oct. – 11 oct. 2026', 'Total de la semaine', '10 h 58']);
     thenClockedDaysAre([
       ['jour-2026-10-05', 'Lun. 5 oct.', '7 h 45'],
-      ['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '4 h 53'],
+      ['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '3 h 13'],
     ]);
   });
 
   it('should show an incomplete week total without any figure', async () => {
-    givenTheCurrentWeek(semaineFixture(SEMAINE_EN_COURS, { 0: { total: false, pointages: 1 } }, false));
+    givenTheCurrentWeek(semaineFixture(SEMAINE_EN_COURS, { 0: { total: false, lignes: [LUNDI] } }, false));
 
     await whenShowingMyPointages();
 
     thenTextOf('total-semaine', ['—']);
     thenClockedDaysAre([['jour-2026-10-05', 'Lun. 5 oct.', '—']]);
+  });
+
+  it('should detail today by default, with its server total and each clocked portion', async () => {
+    givenTheCurrentWeek(semaineEnCoursFixture());
+
+    await whenShowingMyPointages();
+
+    thenTextOf('jour-titre', ['Aujourd’hui — jeudi 8 octobre']);
+    thenTextOf('total-jour-affiche', ['3 h 13']);
+    thenLinesAre([
+      ['1243', 'Fraiseuse', '07:02 → 09:40', '2 h 38'],
+      ['1243', 'Fraiseuse NC', '09:40 → 10:15', '0 h 35'],
+      ['1250', '', '12:45 → …', ''],
+    ]);
+  });
+
+  it('should detail the clocked day chosen in the week', async () => {
+    givenTheCurrentWeek(semaineEnCoursFixture());
+    await whenShowingMyPointages();
+
+    whenChoosingDay('jour-2026-10-05');
+
+    thenTextOf('jour-titre', ['Lundi 5 octobre 2026']);
+    thenLinesAre([['1240', 'Fraiseuse', '07:00 → 14:45', '7 h 45']]);
+    thenChosenDayIs('jour-2026-10-05');
   });
 
   const givenTheCurrentWeek = (pointages: ReturnType<typeof semaineFixture>): void => {
@@ -77,6 +115,10 @@ describe('Mes pointages screen', () => {
     await fixture.whenStable();
     await new Promise(resolve => setTimeout(resolve));
     await fixture.whenStable();
+    fixture.detectChanges();
+  };
+  const whenChoosingDay = (selector: string): void => {
+    element(selector).click();
     fixture.detectChanges();
   };
   const whenReturningToPointage = (): void => {
@@ -93,7 +135,7 @@ describe('Mes pointages screen', () => {
     for (const part of expected) expect(text).toContain(part);
   };
   const thenClockedDaysAre = (expected: readonly (readonly [string, string, string])[]): void => {
-    const jours = Array.from(element('jours-pointes').children);
+    const jours = Array.from(element('jours-pointes').querySelectorAll('button'));
     expect(
       jours.map(jour => [
         jour.getAttribute('data-selector'),
@@ -101,6 +143,14 @@ describe('Mes pointages screen', () => {
         normalized(jour.lastElementChild?.textContent ?? ''),
       ]),
     ).toEqual(expected);
+  };
+  const thenLinesAre = (expected: readonly (readonly string[])[]): void => {
+    const lignes = Array.from(element('lignes').children);
+    expect(lignes.map(ligne => Array.from(ligne.children).map(colonne => normalized(colonne.textContent)))).toEqual(expected);
+  };
+  const thenChosenDayIs = (selector: string): void => {
+    const choisis = Array.from(element('jours-pointes').querySelectorAll('[aria-pressed="true"]'));
+    expect(choisis.map(choisi => choisi.getAttribute('data-selector'))).toEqual([selector]);
   };
   const element = (selector: string): HTMLElement => {
     const selected = root().querySelector<HTMLElement>(dataSelector(selector));

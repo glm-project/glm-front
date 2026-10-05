@@ -1,6 +1,30 @@
 <main class="mes-pointages min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4">
   <h1 class="sr-only">{{ labels.titre }}</h1>
-  @if (pointages.hasValue()) { @let lue = pointages.value();
+  @if (jourAffiche(); as jour) {
+  <section class="jour rounded-surface border border-border bg-surface px-6 py-5" aria-labelledby="jour-titre" data-selector="jour-affiche">
+    <h2 id="jour-titre" class="text-label uppercase text-ink-muted" data-selector="jour-titre">
+      {{ labels.titreDuJour(jour.jour, aujourdhui) }}
+    </h2>
+    <p class="flex flex-wrap items-baseline gap-4">
+      <span class="text-display text-ink tabular-nums" data-selector="total-jour-affiche">{{ labels.duree(jour.total) }}</span>
+      <span class="text-section text-ink-muted">{{ labels.pointees }}</span>
+    </p>
+    <ul class="lignes border-t border-border" data-selector="lignes">
+      @for (ligne of jour.lignes; track $index) {
+      <li class="ligne border-b border-sunken text-body text-ink">
+        <span class="font-bold">{{ ligne.activite.element }}</span>
+        <span class="flex min-w-0 items-center gap-2">
+          {{ ligne.activite.poste }} @if (ligne.activite.categorie === 'NON_CONFORMITE') {
+          <span class="rounded bg-nc px-2 text-label text-ink" data-selector="nc">{{ labels.nonConformite }}</span>
+          }
+        </span>
+        <span class="text-ink-muted tabular-nums">{{ labels.plage(ligne) }}</span>
+        <span class="text-right tabular-nums">{{ labels.dureeDeLaLigne(ligne) }}</span>
+      </li>
+      }
+    </ul>
+  </section>
+  } @if (pointages.hasValue()) { @let lue = pointages.value();
   <section
     class="semaine rounded-surface border border-border bg-surface px-6 py-5"
     aria-labelledby="semaine-titre"
@@ -16,12 +40,18 @@
     </p>
     <ul class="flex flex-col gap-2" data-selector="jours-pointes">
       @for (jourPointe of lue.joursPointes(); track jourPointe.jour.value) {
-      <li
-        class="flex min-h-touch-lg items-center justify-between gap-3 rounded-control border-2 border-border px-4 text-body text-ink"
-        [attr.data-selector]="'jour-' + jourPointe.jour.value"
-      >
-        <span class="font-semibold">{{ labels.jour(jourPointe.jour, aujourdhui) }}</span>
-        <span class="tabular-nums" data-selector="total-jour">{{ labels.duree(jourPointe.total) }}</span>
+      <li>
+        <button
+          type="button"
+          class="jour-pointe flex min-h-touch-lg w-full items-center justify-between gap-3 rounded-control border-2 bg-surface px-4 text-body text-ink"
+          [class.jour-pointe--choisi]="estAffiche(jourPointe)"
+          [attr.aria-pressed]="estAffiche(jourPointe)"
+          (click)="choisir(jourPointe)"
+          [attr.data-selector]="'jour-' + jourPointe.jour.value"
+        >
+          <span class="font-semibold">{{ labels.jour(jourPointe.jour, aujourdhui) }}</span>
+          <span class="tabular-nums">{{ labels.duree(jourPointe.total) }}</span>
+        </button>
       </li>
       }
     </ul>

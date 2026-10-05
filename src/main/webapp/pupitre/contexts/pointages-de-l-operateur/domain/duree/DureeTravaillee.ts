@@ -1,6 +1,7 @@
 const FORMAT = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)(?:\.\d+)?S)?$/;
 const MINUTES_PAR_HEURE = 60;
 const SECONDES_PAR_MINUTE = 60;
+const MILLISECONDES_PAR_MINUTE = 60_000;
 
 const messageDeRefus = (value: string): string => `La durée « ${value} » reçue du serveur n’est pas une durée de pointage.`;
 
@@ -26,5 +27,9 @@ export class DureeTravaillee {
     const minutes = minutesDe(value);
     this.heures = Math.floor(minutes / MINUTES_PAR_HEURE);
     this.minutesRestantes = minutes % MINUTES_PAR_HEURE;
+  }
+
+  static entre(debut: Date, fin: Date): DureeTravaillee {
+    return new DureeTravaillee(`PT${String(Math.floor((fin.getTime() - debut.getTime()) / MILLISECONDES_PAR_MINUTE))}M`);
   }
 }

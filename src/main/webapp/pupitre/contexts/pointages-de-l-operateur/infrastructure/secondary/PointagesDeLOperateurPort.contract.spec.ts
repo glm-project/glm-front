@@ -5,6 +5,7 @@ import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, p
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import {
+  ligneFixture,
   PointagesDeLOperateurFixture,
   semaineFixture,
 } from '@test/unit/fixtures/pupitre/pointages-de-l-operateur/PointagesDeLOperateurFixture';
@@ -17,6 +18,8 @@ import { SemaineISO } from '../../domain/semaine/SemaineISO';
 import { HttpPointagesDeLOperateur } from './http/HttpPointagesDeLOperateur';
 
 type RestSynthese = components['schemas']['RestSyntheseDesHeures'];
+type RestFeuille = components['schemas']['RestFeuilleDeTemps'];
+type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
 
 const OPERATEUR = 'jean';
 const SEMAINE = new SemaineISO(2026, 41);
@@ -29,7 +32,25 @@ const syntheseFixture = (): RestSynthese => ({
   evaluation: '2026-10-08T12:00:00Z',
   dureeOperationnelleTotale: { complete: true, valeur: 'PT15H25M' },
   conflits: [],
-  elements: [],
+  elements: [
+    {
+      id: 'of-1',
+      type: 'ORDRE_DE_FABRICATION',
+      nom: 'OF-2026-000204',
+      reference: '204',
+      duree: { complete: true, valeur: 'PT15H25M' },
+      dureeNonConformite: { complete: true, valeur: 'PT35M' },
+      postes: [{ poste: { id: 'tour', libelle: 'Tour' }, nature: 'Tournage' }],
+    },
+    {
+      id: 'of-2',
+      type: 'ORDRE_DE_FABRICATION',
+      nom: 'OF-2026-000205',
+      duree: { complete: true, valeur: 'PT0S' },
+      dureeNonConformite: { complete: true, valeur: 'PT0S' },
+      postes: [],
+    },
+  ],
   jours: SEMAINE.jours().map((jour, rang) => ({
     jour: jour.value,
     dureeOperationnelle: { complete: true, valeur: ['PT7H45M', 'PT7H40M'][rang] ?? 'PT0S' },
@@ -49,18 +70,56 @@ const syntheseFixture = (): RestSynthese => ({
   })),
 });
 
+const activiteFixture = (debut: string, fin: string | undefined, element = 'of-1'): RestActivite => ({
+  element,
+  ...(element === 'of-1' ? { poste: 'tour', nature: 'Tournage' } : {}),
+  categorie: 'TRAVAIL',
+  debut,
+  ...(fin === undefined ? {} : { fin }),
+  activite: { id: `activite-${debut}`, debut, ...(fin === undefined ? { etat: 'EN_COURS' } : { fin, etat: 'TERMINEE' }) },
+});
+
+const feuilleFixture = (): RestFeuille => ({
+  annee: 2026,
+  semaine: 41,
+  operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
+  evaluation: '2026-10-08T12:00:00Z',
+  jours: SEMAINE.jours()
+    .map((jour, rang) => ({
+      jour: jour.value,
+      activites:
+        [
+          [activiteFixture('2026-10-05T05:00:00Z', '2026-10-05T12:45:00Z')],
+          [activiteFixture('2026-10-06T05:00:00Z', '2026-10-06T12:40:00Z'), activiteFixture('2026-10-06T13:00:00Z', undefined, 'of-2')],
+        ][rang] ?? [],
+    }))
+    .reverse(),
+});
+
 const domaineFixture = (): PointagesDeLaSemaine =>
   semaineFixture(
     SEMAINE,
     {
-      0: { total: 'PT7H45M', pointages: 1 },
-      1: { total: 'PT7H40M', pointages: 1 },
+      0: {
+        total: 'PT7H45M',
+        lignes: [
+          ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-05T05:00:00Z'), fin: new Date('2026-10-05T12:45:00Z') }),
+        ],
+      },
+      1: {
+        total: 'PT7H40M',
+        lignes: [
+          ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-06T05:00:00Z'), fin: new Date('2026-10-06T12:40:00Z') }),
+          ligneFixture({ element: 'OF-2026-000205', debut: new Date('2026-10-06T13:00:00Z') }),
+        ],
+      },
     },
     'PT15H25M',
   );
 
 class PointagesHttpBackendFixture implements HttpBackend {
   synthese = syntheseFixture();
+  feuille = feuilleFixture();
   echo: (evaluation: string) => string = evaluation => evaluation;
   failure = false;
   readonly requests: HttpRequest<unknown>[] = [];
@@ -75,7 +134,8 @@ class PointagesHttpBackendFixture implements HttpBackend {
     this.requests.push(request);
     await new Promise(resolve => setTimeout(resolve));
     if (this.failure) return new HttpErrorResponse({ status: 500 });
-    return new HttpResponse({ status: 200, body: { ...this.synthese, evaluation: this.echo(request.params.get('evaluation') ?? '') } });
+    const lecture = request.url.startsWith('/api/feuilles-de-temps') ? this.feuille : this.synthese;
+    return new HttpResponse({ status: 200, body: { ...lecture, evaluation: this.echo(request.params.get('evaluation') ?? '') } });
   }
 }
 
@@ -150,12 +210,18 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
     ]);
   });
 
+  it('should detail each clocked portion with its element reference, workstation and bounds', async () => {
+    const pointages = await harness.port.semaine(DEMANDE);
+
+    expect(pointages.joursPointes()[1]?.lignes).toEqual([
+      ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-06T05:00:00Z'), fin: new Date('2026-10-06T12:40:00Z') }),
+      ligneFixture({ element: 'OF-2026-000205', debut: new Date('2026-10-06T13:00:00Z') }),
+    ]);
+  });
+
   it('should keep an incomplete total without any value', async () => {
     const synthese = { ...syntheseFixture(), dureeOperationnelleTotale: { complete: false, valeur: 'PT99H' } };
-    harness.seed(
-      semaineFixture(SEMAINE, { 0: { total: 'PT7H45M', pointages: 1 }, 1: { total: 'PT7H40M', pointages: 1 } }, false),
-      synthese,
-    );
+    harness.seed(semaineFixture(SEMAINE, {}, false), synthese);
 
     const pointages = await harness.port.semaine(DEMANDE);
 
@@ -192,13 +258,38 @@ describe('Beyond the contract: HttpPointagesDeLOperateur', () => {
     port = TestBed.inject(HttpPointagesDeLOperateur);
   });
 
-  it('should ask the operator week for one evaluation instant', async () => {
+  it('should ask the summary and the time sheet of the operator week for one evaluation instant', async () => {
     await port.semaine(DEMANDE);
 
     expect(backend.requests.map(request => [request.url, request.params.get('annee'), request.params.get('semaine')])).toEqual([
       ['/api/syntheses-des-heures/jean', '2026', '41'],
+      ['/api/feuilles-de-temps/jean', '2026', '41'],
     ]);
-    expect(backend.requests[0]?.params.get('evaluation')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(new Set(backend.requests.map(request => request.params.get('evaluation'))).size).toBe(1);
+  });
+
+  it.each<[string, (feuille: RestFeuille) => RestFeuille, string]>([
+    ['another week', feuille => ({ ...feuille, semaine: 40 }), 'au lieu de celle demandée'],
+    [
+      'an element missing from the summary',
+      feuille => ({ ...feuille, jours: [{ jour: '2026-10-07', activites: [activiteFixture('2026-10-07T05:00:00Z', undefined, 'of-9')] }] }),
+      'cite l’élément of-9, absent de la synthèse des heures',
+    ],
+    [
+      'a workstation missing from the summary',
+      feuille => ({
+        ...feuille,
+        jours: [{ jour: '2026-10-07', activites: [{ ...activiteFixture('2026-10-07T05:00:00Z', undefined), poste: 'fraiseuse' }] }],
+      }),
+      'cite le poste fraiseuse, absent de la synthèse des heures',
+    ],
+  ])('should reject and report once a time sheet with %s', async (_cas, transforme, message) => {
+    backend.feuille = transforme(feuilleFixture());
+
+    const lecture = port.semaine(DEMANDE);
+
+    await expect(lecture).rejects.toThrow(message);
+    expect(errors.errors).toHaveLength(1);
   });
 
   it('should accept another spelling of the same evaluation instant', async () => {

@@ -1,5 +1,6 @@
 import { TotalDeDuree } from './duree/TotalDeDuree';
 import { JourDePointages } from './JourDePointages';
+import { JourCalendaire } from './semaine/JourCalendaire';
 import { SemaineISO } from './semaine/SemaineISO';
 
 const correspondentALaSemaine = (semaine: SemaineISO, jours: readonly JourDePointages[]): boolean => {
@@ -20,5 +21,13 @@ export class PointagesDeLaSemaine {
 
   joursPointes(): readonly JourDePointages[] {
     return this.jours.filter(jour => jour.estPointe());
+  }
+
+  jourDu(jour: JourCalendaire): JourDePointages | undefined {
+    return this.jours.find(candidat => candidat.jour.estLeMeme(jour));
+  }
+
+  jourParDefaut(aujourdhui: JourCalendaire): JourDePointages | undefined {
+    return this.jourDu(aujourdhui) ?? this.joursPointes()[0];
   }
 }
