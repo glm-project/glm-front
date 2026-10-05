@@ -9,7 +9,7 @@
   "files": [
     "src/main/webapp/gestion/main.ts",
     "src/test/webapp/utils/gestion/authentication/auth.provider.ts",
-    "src/test/webapp/utils/gestion/resolution-conflits/resolution-conflits.provider.ts",
+    "src/test/webapp/utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider.ts",
     "src/main/webapp/gestion/environments/environment.deployed.ts",
     "src/main/webapp/pupitre/main.ts",
     "src/main/webapp/pupitre/environments/environment.deployed.ts",

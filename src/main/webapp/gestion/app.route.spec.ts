@@ -1,19 +1,19 @@
 import { Route } from '@angular/router';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { routes } from './app.route';
+import { DossierAnomaliePage } from './contexts/anomalies-de-pointage/infrastructure/primary/dossier-anomalie/DossierAnomaliePage';
+import { ListeAnomalies } from './contexts/anomalies-de-pointage/infrastructure/primary/liste-anomalies/ListeAnomalies';
 import { Atelier } from './contexts/atelier/infrastructure/primary/atelier/Atelier';
 import { CoutDeRevientDeLElement } from './contexts/cout-de-revient/infrastructure/primary/cout-de-revient/CoutDeRevientDeLElement';
 import { MoulesEtOf } from './contexts/element-de-fabrication/infrastructure/primary/moules-et-of/MoulesEtOf';
 import { Operateurs } from './contexts/operateur/infrastructure/primary/operateurs/Operateurs';
 import { PostesDeTravail } from './contexts/poste/infrastructure/primary/postes-de-travail/PostesDeTravail';
 import { SyntheseDesHeures } from './contexts/releve-des-heures/infrastructure/primary/synthese-des-heures/SyntheseDesHeures';
-import { DossierConflitPage } from './contexts/resolution-conflits/infrastructure/primary/dossier-conflit/DossierConflitPage';
-import { ListeConflits } from './contexts/resolution-conflits/infrastructure/primary/liste-conflits/ListeConflits';
 import { SupervisionAtelier } from './contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier';
 
 const ECRANS: [string, unknown][] = [
-  ['conflits/:suivi', DossierConflitPage],
-  ['conflits', ListeConflits],
+  ['conflits/:suivi', DossierAnomaliePage],
+  ['conflits', ListeAnomalies],
   ['', SupervisionAtelier],
   ['atelier', Atelier],
   ['moules-et-of', MoulesEtOf],
