@@ -1,3 +1,8 @@
+import {
+  formatInstantNumericDayMonth,
+  formatInstantTime,
+  localCalendarDay,
+} from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { TypeDElement } from '../../../domain/activite/TypeDElement';
 import { Instant } from '../../../domain/instant/Instant';
@@ -28,14 +33,10 @@ const TYPES: Record<TypeDElement, string> = {
 
 const NOMS_CITES_AU_PLUS = 6;
 
-const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
-const JOUR = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
-const DATE = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-const heure = (instant: Instant): string => HEURE.format(new Date(instant.value));
+const heure = (instant: Instant): string => formatInstantTime(new Date(instant.value));
 
 const isMemeJour = (instant: Instant, reference: Instant): boolean =>
-  DATE.format(new Date(instant.value)) === DATE.format(new Date(reference.value));
+  localCalendarDay(new Date(instant.value)) === localCalendarDay(new Date(reference.value));
 
 const citeLesNoms = (noms: readonly string[]): boolean => noms.length > 0 && noms.length <= NOMS_CITES_AU_PLUS;
 
@@ -70,5 +71,10 @@ export const LIBELLES_SUPERVISION = {
   moment: (prefixe: string, instant: Instant, reference: Instant): MomentAffiche =>
     isMemeJour(instant, reference)
       ? { instant, avant: `${prefixe} `, jour: undefined, apres: heure(instant) }
-      : { instant, avant: `${prefixe} `, jour: `le ${JOUR.format(new Date(instant.value))}`, apres: ` à ${heure(instant)}` },
+      : {
+          instant,
+          avant: `${prefixe} `,
+          jour: `le ${formatInstantNumericDayMonth(new Date(instant.value))}`,
+          apres: ` à ${heure(instant)}`,
+        },
 } as const;
