@@ -12,6 +12,8 @@ import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte
 import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
+import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
+import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
@@ -139,6 +141,28 @@ describe('Real conflict resolution composition', () => {
       pageSize: 100,
       totalElementsCount: 1,
     } satisfies components['schemas']['PageRestPosteDeTravail']);
+  };
+
+  it('should read the element referential through the public read port on the same-origin API', async () => {
+    const lecture = whenReadingTheElements();
+    whenTheElementsAnswer();
+
+    const elements = await lecture;
+
+    expect(elements).toEqual([{ id: new ElementAnomalieId('element-bielle'), nom: 'Bielle', reference: 'OF M24-0655' }]);
+  });
+
+  const whenReadingTheElements = (): Promise<readonly ElementAnomalie[]> => TestBed.inject(AnomaliesReadPort).elements();
+
+  const whenTheElementsAnswer = (): void => {
+    server
+      .expectOne(request => request.url === '/api/elements-de-fabrication' && request.params.get('page') === '0')
+      .flush({
+        content: [{ id: 'element-bielle', nom: 'Bielle', reference: 'OF M24-0655', type: 'PRODUIT' }],
+        currentPage: 0,
+        pageSize: 100,
+        totalElementsCount: 1,
+      } satisfies components['schemas']['PageRestElementDeFabrication']);
   };
 
   it('should keep a thirty-second confirmation timeout unknown and retry only its original public command', async () => {

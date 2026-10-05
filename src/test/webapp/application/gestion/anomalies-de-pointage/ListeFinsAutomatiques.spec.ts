@@ -3,23 +3,28 @@ import { dataSelector } from '../../../utils/DataSelector';
 import { ligneFixture } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import {
   dossierFinAutomatiqueFixture,
+  elementFinAutomatiqueFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
 import {
+  autreElementFinAutomatiqueFixture,
   autreOperateurFinAutomatiqueFixture,
   finAutomatiqueLigneFixture,
+  givenTheElementsFinsAutomatiques,
   givenTheReferentielFinsAutomatiques,
   pageFinsAutomatiquesFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 
 const operateurAbsentFixture = '71000000-0000-0000-0000-000000000099';
+const elementAbsentFixture = '71000000-0000-0000-0000-000000000098';
 
 describe('Automatic end tab of the anomalies list in Gestion', () => {
   beforeEach(() => {
     givenTheTwoNaturesOfAnomalies();
     givenTheReferentielFinsAutomatiques();
+    givenTheElementsFinsAutomatiques();
   });
 
   it('should open on the automatic ends when the address names no nature', () => {
@@ -37,31 +42,38 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   });
 
   it('should list the automatic ends of the filtered selection from the conflicts tab, back on the first page', () => {
-    whenVisiting(`/anomalies?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
+    whenVisiting(`/anomalies?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
     whenChoosingTheTab('anomalies-onglet-fins-automatiques');
 
     thenTheListIsRequested(
       'finsAutomatiques',
-      `nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=0&size=5`,
+      `nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=0&size=5`,
     );
-    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=1`);
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=1`);
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
 
   it('should list the conflicts with the same filters when the operator chooses their tab', () => {
-    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=1`);
+    whenVisiting(
+      `/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=1`,
+    );
     whenChoosingTheTab('anomalies-onglet-conflits');
 
-    thenTheListIsRequested('conflits', `nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=0&size=5`);
-    thenTheAddressIs(`?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=1`);
+    thenTheListIsRequested(
+      'conflits',
+      `nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=0&size=5`,
+    );
+    thenTheAddressIs(`?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=1`);
     thenOneConflictIsListed();
   });
 
   it('should open the dossier of the automatic end at its opening, keeping the list address', () => {
     givenADossierAddressedByTheOpening();
 
-    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
+    whenVisiting(
+      `/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`,
+    );
     whenOpeningTheAutomaticEnd();
 
     thenTheDossierOfTheOpeningIsRequested();
@@ -72,11 +84,13 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   it('should return from the dossier of an automatic end to the same tab, filters and page', () => {
     givenADossierAddressedByTheOpening();
 
-    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
+    whenVisiting(
+      `/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`,
+    );
     whenOpeningTheAutomaticEnd();
     whenReturningToTheAnomalies();
 
-    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
@@ -84,13 +98,13 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   it('should keep the nature and the filters while paginating the automatic ends and ask the back for each page', () => {
     givenTwelveAutomaticEnds();
 
-    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF`);
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}`);
     whenChoosingThePage('anomalies-page-suivante');
     whenChoosingThePage('anomalies-page-suivante');
     whenChoosingThePage('anomalies-page-precedente');
 
     thenThePagesAreRequested([0, 1, 2, 1]);
-    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=2`);
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
     thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
   });
 
@@ -143,6 +157,57 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     whenRetryingTheReferentiel();
 
     thenTheOperatorFilterIsEnabled();
+  });
+
+  it('should name the element held by the address, never its identifier', () => {
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&element=${elementFinAutomatiqueFixture}`);
+
+    thenTheElementFilterNames('OF M24-0655');
+    thenTheFiltersNeverShow(elementFinAutomatiqueFixture);
+  });
+
+  it('should hold the identifier of the element chosen by designation in the address and request the list with it', () => {
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+    whenChoosingTheElement('Bielle · B-12');
+    whenApplyingTheFilters();
+
+    thenTheLastRequestedListIs(`nature=FIN_AUTOMATIQUE&operateur=&element=${autreElementFinAutomatiqueFixture}&page=0&size=5`);
+    thenTheAddressIs(`?nature=FIN_AUTOMATIQUE&operateur=&element=${autreElementFinAutomatiqueFixture}&page=1`);
+    thenTheElementFilterNames('Bielle · B-12');
+  });
+
+  it('should remove the element from the address when all the elements are chosen', () => {
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&element=${elementFinAutomatiqueFixture}&page=2`);
+    whenChoosingTheElement('Tous les éléments');
+    whenApplyingTheFilters();
+
+    thenTheAddressIs('?nature=FIN_AUTOMATIQUE&operateur=&element=&page=1');
+    thenTheElementFilterNames('Tous les éléments');
+  });
+
+  it('should name an element of the address that the referentiel does not contain as unresolved, without its identifier', () => {
+    whenVisiting(`/anomalies?nature=FIN_AUTOMATIQUE&element=${elementAbsentFixture}`);
+
+    thenTheElementFilterNames('Élément non résolu (référence actuelle)');
+    thenTheFiltersNeverShow(elementAbsentFixture);
+  });
+
+  it('should tell that the elements are unavailable while the list and the operator filter stay usable', () => {
+    givenTheElementsFail();
+
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+
+    thenTheElementsAreUnavailable();
+    thenTheAutomaticEndIsListedWithItsPeriod();
+  });
+
+  it('should offer the element filter again when the manager retries after a failed read of the elements', () => {
+    givenTheElementsFail();
+    whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE');
+
+    whenRetryingTheElements();
+
+    thenTheElementFilterIsEnabled();
   });
 
   it('should explain that no automatic end remains', () => {
@@ -205,6 +270,34 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     cy.get(dataSelector('anomalies-filtre-operateur')).should('not.be.disabled');
   };
 
+  const givenTheElementsFail = (): void => {
+    cy.intercept({ method: 'GET', url: '/api/elements-de-fabrication*', times: 1 }, { statusCode: 500, body: {} });
+  };
+
+  const whenRetryingTheElements = (): void => {
+    cy.get(dataSelector('anomalies-elements-reessayer')).click();
+  };
+
+  const thenTheElementsAreUnavailable = (): void => {
+    cy.get(dataSelector('anomalies-elements-erreur')).should('contain.text', 'Liste des éléments indisponible');
+    cy.get(dataSelector('anomalies-filtre-element')).should('be.disabled');
+    cy.get(dataSelector('anomalies-filtre-operateur')).should('not.be.disabled');
+  };
+
+  const thenTheElementFilterIsEnabled = (): void => {
+    cy.get(dataSelector('anomalies-elements-erreur')).should('not.exist');
+    cy.get(dataSelector('anomalies-filtre-element')).should('not.be.disabled');
+  };
+
+  const whenChoosingTheElement = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-element')).click();
+    cy.get(dataSelector('anomalies-filtre-element-proposition')).contains(libelle).click();
+  };
+
+  const thenTheElementFilterNames = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-element')).should('have.text', libelle);
+  };
+
   const thenTheFiltersNeverShow = (identifier: string): void => {
     cy.get(dataSelector('anomalies-filtres')).should('not.contain.text', identifier);
   };
@@ -254,7 +347,10 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
       cy.get('@pagesDesFinsAutomatiques.all')
         .its(index)
         .its('request.url')
-        .should('contain', `nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=OF&page=${page}&size=5`);
+        .should(
+          'contain',
+          `nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=${page}&size=5`,
+        );
     });
   };
 
@@ -301,7 +397,7 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
       expect(Object.fromEntries(new URLSearchParams(search))).to.deep.equal({
         nature: 'FIN_AUTOMATIQUE',
         operateur: operateurFinAutomatiqueFixture,
-        element: 'OF',
+        element: elementFinAutomatiqueFixture,
         page: '2',
         pointage: ouvrantFinAutomatiqueFixture,
       });

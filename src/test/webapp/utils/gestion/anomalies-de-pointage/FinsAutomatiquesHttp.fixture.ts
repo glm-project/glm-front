@@ -7,7 +7,7 @@ import {
   posteFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from './FinAutomatiqueHttp.fixture';
-import { interceptReferentiel } from './ReferentielHttp.fixture';
+import { interceptElements, interceptReferentiel } from './ReferentielHttp.fixture';
 
 export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
   nature: 'FIN_AUTOMATIQUE',
@@ -29,6 +29,7 @@ export const pageFinsAutomatiquesFixture = (
 ): components['schemas']['RestPageDesAnomalies'] => ({ lignes, total: lignes.length, complete: true, page: 0, size: 5 });
 
 export const autreOperateurFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000009';
+export const autreElementFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000010';
 
 export const givenTheReferentielFinsAutomatiques = (): void => {
   interceptReferentiel(
@@ -38,4 +39,11 @@ export const givenTheReferentielFinsAutomatiques = (): void => {
     ],
     [],
   );
+};
+
+export const givenTheElementsFinsAutomatiques = (): void => {
+  interceptElements([
+    { id: elementFinAutomatiqueFixture, nom: 'OF M24-0655', type: 'ORDRE_DE_FABRICATION' },
+    { id: autreElementFinAutomatiqueFixture, nom: 'Bielle', reference: 'B-12', type: 'PRODUIT' },
+  ]);
 };

@@ -50,6 +50,16 @@ lecture, la liste dit « Chargement des opérateurs… » à la place du filtre 
 indisponible » avec « Réessayer », désactive le filtre, qui garde l'opérateur de l'URL, et reste utilisable : la liste des
 anomalies ne dépend pas du référentiel et ne se relit pas.
 
+Le filtre « Élément » se choisit de la même manière, par sa désignation (nom de l'élément, suivi de sa référence quand il en a
+une, « Bielle · B-12 »), dans le même sélecteur (recherche sans accents sur le nom et la référence, éléments par ordre
+alphabétique du nom), qui commence par « Tous les éléments ». L'URL garde l'identifiant (`element=<id>`) et le champ ne
+l'affiche jamais : un identifiant que les éléments ne contiennent pas s'affiche « Élément non résolu (référence
+actuelle) ». Le choix se range dans le même brouillon que l'opérateur jusqu'à « Filtrer », puis entre dans l'URL avec
+`page=1` ; « Tous les éléments » en retire l'identifiant (`element=` vide). Les éléments sont lus à chaque ouverture de la
+liste, pour tout lecteur, séparément des opérateurs : la liste dit « Chargement des éléments… » à la place du filtre ;
+s'ils échouent, elle dit « Liste des éléments indisponible » avec son propre « Réessayer », désactive le filtre, qui garde
+l'élément de l'URL, sans toucher au filtre « Opérateur » ni à la liste. Le dossier ne les lit pas.
+
 ## Opérateur et poste affichés
 
 La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, la chronologie, l'historique d'une adresse
@@ -119,6 +129,12 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
   par les ports publics. Les specs DOM et Cypress vérifient qu'il n'est lu que pour un gestionnaire, que le choix se fait
   par nom (recherche, groupes de postes), qu'il invalide l'aperçu et que son échec se réessaie sans perdre la saisie ;
   Cypress intercepte `/api/operateurs` et `/api/postes-de-travail` en données REST typées.
+- Les contrats HTTP vérifient que les éléments se lisent sur toutes les pages de `GET /api/elements-de-fabrication`, sur
+  toute période, et refusent un total qui change, une page tronquée, une page autre que la demandée, une identité dupliquée
+  ou un élément reçu sans identifiant ni nom ; la composition les lit par les ports publics. Les specs DOM et Cypress
+  vérifient que le dossier ne les lit pas, que le filtre « Élément » de la liste se choisit par désignation sans jamais
+  montrer l'identifiant, que son chargement et son échec se réessaient sans toucher au filtre « Opérateur » ; Cypress
+  intercepte `/api/elements-de-fabrication` en données REST typées.
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

@@ -2,6 +2,7 @@ import { ActeResolution, FaitPropose } from '@/gestion/contexts/anomalies-de-poi
 import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
 import { DossierAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
+import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
@@ -89,6 +90,12 @@ class DossierReadFixture extends AnomaliesReadPort {
   referentielResult = referentielFixture();
   referentielPending: PendingResponseFixture<ReferentielAnomalies> | undefined;
   referentielDemandes = 0;
+  elementsDemandes = 0;
+
+  elements(): Promise<readonly ElementAnomalie[]> {
+    this.elementsDemandes += 1;
+    return Promise.resolve([]);
+  }
 
   referentiel(): Promise<ReferentielAnomalies> {
     this.referentielDemandes += 1;
@@ -1264,6 +1271,12 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     expect(read.referentielDemandes).toBe(1);
+  });
+
+  it('should not pay for the element referential, which only the list filter needs', async () => {
+    await whenRendering();
+
+    expect(read.elementsDemandes).toBe(0);
   });
 
   it('should not read the referential for a consultant who cannot apply decisions', async () => {

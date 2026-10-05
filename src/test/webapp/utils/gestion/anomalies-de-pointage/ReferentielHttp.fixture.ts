@@ -2,6 +2,7 @@ import { components } from '@/app/generated/schema';
 
 type RestOperateur = components['schemas']['RestOperateur'];
 type RestPosteDeTravail = components['schemas']['RestPosteDeTravail'];
+type RestElementDeFabrication = components['schemas']['RestElementDeFabrication'];
 
 export const interceptReferentiel = (operateurs: RestOperateur[], postes: RestPosteDeTravail[]): void => {
   cy.intercept('GET', '/api/operateurs*', {
@@ -20,4 +21,15 @@ export const interceptReferentiel = (operateurs: RestOperateur[], postes: RestPo
       totalElementsCount: postes.length,
     } satisfies components['schemas']['PageRestPosteDeTravail'],
   }).as('postes');
+};
+
+export const interceptElements = (elements: RestElementDeFabrication[]): void => {
+  cy.intercept('GET', '/api/elements-de-fabrication*', {
+    body: {
+      content: elements,
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: elements.length,
+    } satisfies components['schemas']['PageRestElementDeFabrication'],
+  }).as('elements');
 };

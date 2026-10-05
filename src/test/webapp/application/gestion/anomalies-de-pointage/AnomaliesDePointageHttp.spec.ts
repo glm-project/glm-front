@@ -6,6 +6,7 @@ import {
   debutFixture,
   dossierFixture,
   finFixture,
+  givenTheElements,
   givenTheReferentiel,
   instantCorrigeLocalFixture,
   journalFixture,
@@ -25,6 +26,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   beforeEach(() => {
     givenTheClockOnAFixedDay();
     givenTheReferentiel();
+    givenTheElements();
   });
 
   it('should abandon an unconfirmed proposal when the page is reloaded', () => {

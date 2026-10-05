@@ -1,6 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { instantLocalFixture, instantLocalWithOffsetFixture } from './InstantLocal.fixture';
-import { interceptReferentiel } from './ReferentielHttp.fixture';
+import { interceptElements, interceptReferentiel } from './ReferentielHttp.fixture';
 
 export const suiviFixture = '70000000-0000-0000-0000-000000000001';
 export const finFixture = '70000000-0000-0000-0000-000000000002';
@@ -17,6 +17,10 @@ export const operateurCodeFixture = '007';
 export const autreOperateurNomFixture = 'Alex Durand';
 export const posteLibelleFixture = 'Fraiseuse 1';
 export const autrePosteLibelleFixture = 'Tour 1';
+export const autreElementFixture = '70000000-0000-0000-0000-000000000011';
+export const elementNomFixture = 'Moule M-042';
+export const elementReferenceFixture = 'M-042';
+export const autreElementNomFixture = 'Bielle';
 export const instantDebutFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0), '123456789');
 export const instantNonConformiteFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 0), '123456789');
 export const instantFinLocalFixture = new Date(2026, 8, 14, 17, 0);
@@ -211,4 +215,11 @@ export const givenTheReferentiel = (): void => {
       { id: autrePosteFixture, libelle: autrePosteLibelleFixture, nature: 'tournage' },
     ],
   );
+};
+
+export const givenTheElements = (): void => {
+  interceptElements([
+    { id: elementFixture, nom: elementNomFixture, reference: elementReferenceFixture, type: 'PRODUIT' },
+    { id: autreElementFixture, nom: autreElementNomFixture, type: 'PRODUIT' },
+  ]);
 };

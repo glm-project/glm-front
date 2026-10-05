@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpRequest, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -47,6 +47,11 @@ const restPosteFixture = (id: string, libelle: string): components['schemas']['R
   libelle,
   nature: 'tournage',
 });
+
+const restElementFixture = (
+  id: string,
+  extra: Partial<components['schemas']['RestElementDeFabrication']> = {},
+): components['schemas']['RestElementDeFabrication'] => ({ id, nom: 'Bielle', type: 'PRODUIT', ...extra });
 
 describe('Beyond the contract: HTTP anomaly dossier reading', () => {
   let port: AnomaliesReadPort;
@@ -924,6 +929,124 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect(errors.errors).toEqual([failure]);
   });
+
+  it('should read the whole element referential across server pages, over the whole period, into the anomaly vocabulary', async () => {
+    const elements = Array.from({ length: 125 }, (_, index) => restElementFixture(`element-${index}`, { nom: `Pièce ${index}` }));
+    elements[1] = restElementFixture('element-of', { nom: 'Bielle', reference: 'OF M24-0655' });
+
+    const lecture = port.elements();
+    await answerElementPages(elements);
+    const lus = await lecture;
+
+    expect(lus).toHaveLength(125);
+    expect(lus[1]).toEqual({ id: new ElementAnomalieId('element-of'), nom: 'Bielle', reference: 'OF M24-0655' });
+    expect(lus[2]).toEqual({ id: new ElementAnomalieId('element-2'), nom: 'Pièce 2' });
+    expect(lus[2]).not.toHaveProperty('reference');
+    expect(errors.errors).toEqual([]);
+  });
+
+  it('should ask the elements of every period, since the filter looks for an element whatever its dates', async () => {
+    const demande = await whenReadingTheElementsOfAnEmptyServer();
+
+    expect(demande.params.get('debut')).toBe('1970-01-01T00:00:00Z');
+    expect(demande.params.get('fin')).toBe('2999-12-31T23:59:59Z');
+  });
+
+  it.each<{ incoherence: string; attendu: string; pages: { taille: number; total: number; page?: number }[] }>([
+    {
+      incoherence: 'a changing total',
+      attendu: 'Le nombre des entrées est incohérent pendant la lecture.',
+      pages: [
+        { taille: 100, total: 101 },
+        { taille: 1, total: 102 },
+      ],
+    },
+    { incoherence: 'a truncated page', attendu: 'Le référentiel reçu est tronqué.', pages: [{ taille: 99, total: 100 }] },
+    {
+      incoherence: 'a page other than the requested one',
+      attendu: 'La page reçue ne correspond pas à la page demandée.',
+      pages: [{ taille: 1, total: 1, page: 3 }],
+    },
+  ])('should refuse and report an element referential with $incoherence', async ({ attendu, pages }) => {
+    const failure = await whenReadingTheElementsWhilePagesAnswer(pages);
+
+    expect(failure).toEqual(new Error(attendu));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should refuse and report an element referential that repeats an identity', async () => {
+    const failure = await whenReadingTheElementsAnsweredWith([restElementFixture('doublon'), restElementFixture('doublon')]);
+
+    expect(failure).toEqual(new Error('Le référentiel contient une identité dupliquée.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it.each<{ champ: string; element: components['schemas']['RestElementDeFabrication'] }>([
+    { champ: 'element.id', element: { nom: 'Bielle' } },
+    { champ: 'element.nom', element: { id: 'element-sans-nom' } },
+  ])('should refuse and report an element received without its $champ', async ({ champ, element }) => {
+    const failure = await whenReadingTheElementsAnsweredWith([element]);
+
+    expect(failure).toEqual(new Error(`${champ} manque dans la réponse du serveur`));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should report a failed element read once and reject instead of offering a partial list', async () => {
+    const failure = await whenTheElementReadFails();
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  const whenReadingTheElementsOfAnEmptyServer = async (): Promise<HttpRequest<unknown>> => {
+    const lecture = port.elements();
+    await new Promise(resolve => setTimeout(resolve));
+    const demande = server.expectOne(request => request.url === '/api/elements-de-fabrication');
+    demande.flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
+    await lecture;
+    return demande.request;
+  };
+
+  const whenReadingTheElementsWhilePagesAnswer = async (pages: { taille: number; total: number; page?: number }[]): Promise<unknown> => {
+    const lecture = port.elements().catch((failure: unknown) => failure);
+    for (const [index, page] of pages.entries()) {
+      await flushElementsPage(
+        index,
+        Array.from({ length: page.taille }, (_, element) => restElementFixture(`id-${index}-${element}`)),
+        page.total,
+        page.page,
+      );
+    }
+    return lecture;
+  };
+
+  const whenReadingTheElementsAnsweredWith = async (elements: readonly unknown[]): Promise<unknown> => {
+    const lecture = port.elements().catch((failure: unknown) => failure);
+    await answerElementPages(elements);
+    return lecture;
+  };
+
+  const whenTheElementReadFails = async (): Promise<unknown> => {
+    const lecture = port.elements().catch((failure: unknown) => failure);
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(request => request.url === '/api/elements-de-fabrication').flush({}, { status: 500, statusText: 'Failure' });
+    return lecture;
+  };
+
+  const flushElementsPage = async (page: number, content: unknown[], total: number, answeredPage = page): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server
+      .expectOne(request => request.url === '/api/elements-de-fabrication' && request.params.get('page') === String(page))
+      .flush({ content, currentPage: answeredPage, pageSize: 100, totalElementsCount: total });
+  };
+
+  const answerElementPages = async (elements: readonly unknown[]): Promise<void> => {
+    let page = 0;
+    do {
+      await flushElementsPage(page, elements.slice(page * 100, (page + 1) * 100), elements.length);
+      page += 1;
+    } while (page * 100 < elements.length);
+  };
 
   const flushPage = async (url: string, page: number, content: unknown[], total: number, answeredPage = page): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));

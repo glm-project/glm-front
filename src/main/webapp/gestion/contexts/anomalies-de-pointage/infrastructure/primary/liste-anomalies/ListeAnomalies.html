@@ -19,7 +19,7 @@
 
   <form
     class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
-    (submit)="filter($event, element.value)"
+    (submit)="filter($event)"
     data-selector="anomalies-filtres"
   >
     <div class="grid min-w-0 content-start gap-2">
@@ -54,15 +54,37 @@
       </div>
       } }
     </div>
-    <label class="grid gap-2 text-label">
-      {{ libelles.element }}
-      <input
-        #element
-        class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
-        [value]="filtre().element"
-        data-selector="anomalies-filtre-element"
+    <div class="grid min-w-0 content-start gap-2">
+      <label id="anomalies-element-label" class="text-label" for="anomalies-element">{{ libelles.element }}</label>
+      @if (elementsLus.isLoading()) {
+      <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-elements-chargement">
+        {{ libelles.chargementElements }}
+      </p>
+      } @else {
+      <glm-selecteur-element-anomalie
+        triggerId="anomalies-element"
+        labelId="anomalies-element-label"
+        selector="anomalies-filtre-element"
+        [elements]="elements()"
+        [courant]="elementChoisi()"
+        [disabled]="elementsLus.error() !== undefined"
+        (choisi)="choisirElement($event)"
+        (tousChoisis)="elementChoisi.set('')"
       />
-    </label>
+      @if (elementsLus.error()) {
+      <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-elements-erreur">
+        <p>{{ libelles.elementsIndisponibles }}</p>
+        <button
+          type="button"
+          class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
+          data-selector="anomalies-elements-reessayer"
+          (click)="elementsLus.reload()"
+        >
+          {{ libelles.reessayer }}
+        </button>
+      </div>
+      } }
+    </div>
     <button class="min-h-touch rounded-control bg-accent px-4 text-label text-on-accent" type="submit" data-selector="anomalies-filtrer">
       {{ libelles.filtrer }}
     </button>

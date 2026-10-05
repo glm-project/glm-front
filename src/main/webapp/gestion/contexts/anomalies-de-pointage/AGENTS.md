@@ -48,6 +48,16 @@ Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entr
 L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que le
 référentiel ne contient pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Un référentiel indisponible
 affiche « Liste des opérateurs indisponible » et « Réessayer », désactive le filtre sans toucher à la liste.
+Le filtre « Élément » est le `SelecteurElementAnomalie` (même `SelecteurRecherchable` que l'opérateur, entrée « Tous les
+éléments »). Il choisit un élément par sa désignation, « nom · référence » (`ElementAnomalie { id, nom, reference? }`, par
+ordre alphabétique du nom ; recherche sans accents sur le nom et la référence). Le port de lecture expose
+`elements()`, lu en entier par `GET /api/elements-de-fabrication` (`collectAllPages`, page demandée vérifiée, aucune
+collection tronquée ni identité dupliquée, sur toute période : la liste cherche un élément quelle que soit sa date de
+création). `elements()` est distinct de `referentiel()` : le dossier, qui n'a pas besoin des éléments, ne paie pas leur
+lecture complète, et la liste les charge à part des opérateurs, si bien que l'échec ou la lenteur de l'un ne retient pas
+l'autre. L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Élément non résolu (référence actuelle) » celui que
+les éléments ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer » ; des éléments indisponibles affichent
+« Liste des éléments indisponible » et leur propre « Réessayer », désactivent ce seul filtre.
 Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 

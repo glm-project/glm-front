@@ -20,10 +20,13 @@ import { InstantPointage } from '../../domain/acte/InstantPointage';
 import { PropositionResolution } from '../../domain/acte/ResolutionDeLAnomalie';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { AdresseDossier, FiltreAnomalies, LectureDossier, PAGE_SIZE_ANOMALIES, PageAnomalies } from '../../domain/dossier/DossierAnomalie';
+import { ElementAnomalie } from '../../domain/dossier/ElementAnomalie';
 import { ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
 import { toDossier, toDossierDansPerimetre, toPointage } from './DossierAnomalieHttp';
 import { toPageAnomalies } from './ListeAnomaliesHttp';
-import { toOperateurAnomalie, toPosteAnomalie } from './ReferentielAnomaliesHttp';
+import { toElementAnomalie, toOperateurAnomalie, toPosteAnomalie } from './ReferentielAnomaliesHttp';
+
+const PERIODE_DEPUIS_TOUJOURS = { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z' };
 
 const toRestFait = (fait: FaitPropose): components['schemas']['RestFaitDeResolution'] => ({
   type: fait.type,
@@ -234,6 +237,23 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
         ),
       ]);
       return new ReferentielAnomalies(operateurs, postes);
+    } catch (failure: unknown) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  override async elements(): Promise<readonly ElementAnomalie[]> {
+    try {
+      return await collectAllPages(
+        async (page, size) =>
+          buildPageFrom(
+            await this.api.read('/api/elements-de-fabrication', { queryParams: { ...PERIODE_DEPUIS_TOUJOURS, page, size } }),
+            toElementAnomalie,
+            { page, taille: size },
+          ),
+        element => element.id.element,
+      );
     } catch (failure: unknown) {
       this.errors.handleError(failure);
       throw failure;
