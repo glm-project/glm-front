@@ -1,0 +1,175 @@
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="anomalies-heading">
+  <h1 id="anomalies-heading" class="text-title">{{ libelles.titre }}</h1>
+  <p class="mt-2 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
+
+  <nav class="mb-6" [attr.aria-label]="libelles.nature" data-selector="anomalies-onglets">
+    <div class="gestion-segments">
+      @for (onglet of libelles.onglets; track onglet.nature) {
+      <a
+        class="gestion-segment"
+        [routerLink]="['/anomalies']"
+        [queryParams]="ongletParams(onglet.nature)"
+        [attr.aria-current]="natureDemandee() === onglet.nature ? 'page' : null"
+        [attr.data-selector]="onglet.selecteur"
+        >{{ onglet.libelle }}</a
+      >
+      }
+    </div>
+  </nav>
+
+  <form
+    class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
+    (submit)="filter($event, operateur.value, element.value)"
+    data-selector="anomalies-filtres"
+  >
+    <label class="grid gap-2 text-label">
+      {{ libelles.operateur }}
+      <input
+        #operateur
+        class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
+        [value]="filtre().operateur"
+        data-selector="anomalies-filtre-operateur"
+      />
+    </label>
+    <label class="grid gap-2 text-label">
+      {{ libelles.element }}
+      <input
+        #element
+        class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
+        [value]="filtre().element"
+        data-selector="anomalies-filtre-element"
+      />
+    </label>
+    <button class="min-h-touch rounded-control bg-accent px-4 text-label text-on-accent" type="submit" data-selector="anomalies-filtrer">
+      {{ libelles.filtrer }}
+    </button>
+  </form>
+  @if (echecNavigation()) {
+  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="anomalies-navigation-erreur">{{ libelles.erreurNavigation }}</p>
+  } @if (natureDemandee() === undefined) {
+  <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="anomalies-adresse-invalide">
+    {{ libelles.natureInconnue }}
+  </p>
+  } @else if (pageDemandee() === undefined) {
+  <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="anomalies-adresse-invalide">
+    {{ libelles.adresseInvalide }}
+  </p>
+  } @else if (liste.isLoading()) {
+  <p role="status" class="py-12 text-body text-ink-muted" data-selector="anomalies-chargement">{{ libellesDeNature().chargement }}</p>
+  } @else if (liste.status() === 'error') {
+  <div class="gestion-carte p-6">
+    <p role="alert" class="text-body text-danger" data-selector="anomalies-erreur">{{ libellesDeNature().erreur }}</p>
+    <button
+      class="mt-4 min-h-touch rounded-control border border-border-strong px-4 text-label"
+      type="button"
+      (click)="reload()"
+      data-selector="anomalies-reessayer"
+    >
+      {{ libelles.reessayer }}
+    </button>
+  </div>
+  } @else if (liste.value(); as page) { @if (!page.complete) {
+  <p role="status" class="mb-4 rounded-control border border-warn bg-sunken p-4 text-body text-warn" data-selector="anomalies-partiel">
+    {{ libellesDeNature().partiel }}
+  </p>
+  } @if (page.lignes.length === 0) { @if (page.total > 0) {
+  <div class="gestion-carte p-6">
+    <p class="text-body" data-selector="anomalies-page-vide">{{ libellesDeNature().pageVide }}</p>
+    <button
+      type="button"
+      class="mt-4 min-h-touch rounded-control border border-border-strong px-4 text-label"
+      [routerLink]="['/anomalies']"
+      [queryParams]="pageParams(1)"
+      data-selector="anomalies-premiere-page"
+    >
+      {{ libelles.premierePage }}
+    </button>
+  </div>
+  } @else if (page.complete) { @if (filtreActif()) {
+  <p class="gestion-carte p-6 text-body" data-selector="anomalies-vide-filtre">{{ libellesDeNature().videFiltre }}</p>
+  } @else {
+  <p class="gestion-carte p-6 text-body" data-selector="anomalies-vide">{{ libellesDeNature().vide }}</p>
+  } } } @else {
+  <div class="gestion-carte">
+    <div class="gestion-table" role="region" [attr.aria-label]="libelles.titre" tabindex="0" data-selector="anomalies-table">
+      <table class="text-left text-body-sm">
+        <thead class="bg-sunken text-ink-muted">
+          <tr>
+            <th class="p-4" scope="col">{{ libelles.element }}</th>
+            <th class="p-4" scope="col">{{ libelles.operateur }}</th>
+            @if (page.nature === 'CONFLIT') {
+            <th class="p-4" scope="col">{{ libelles.diagnostic }}</th>
+            <th class="p-4" scope="col">{{ libelles.faits }}</th>
+            } @else {
+            <th class="p-4" scope="col">{{ libelles.periode }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @if (page.nature === 'CONFLIT') { @for (ligne of page.lignes; track ligne.adresse.pointage.pointage) {
+          <tr class="border-t border-border" data-selector="conflit-ligne">
+            <td class="p-4">
+              <a
+                class="inline-flex min-h-touch items-center font-semibold text-accent underline underline-offset-4"
+                [routerLink]="['/anomalies', ligne.adresse.suivi.suivi]"
+                [queryParams]="{ pointage: ligne.adresse.pointage.pointage }"
+                queryParamsHandling="merge"
+                data-selector="conflit-ouvrir"
+                >{{ ligne.designation }}</a
+              >
+            </td>
+            <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
+            <td class="max-w-md p-4">{{ ligne.explication || libelles.sequenceEnConflit }}</td>
+            <td class="p-4 tabular-nums">{{ ligne.date }}<br />{{ ligne.nombrePointages }} pointages</td>
+          </tr>
+          } } @else { @for (ligne of page.lignes; track ligne.adresse.pointage.pointage) {
+          <tr class="border-t border-border" data-selector="fin-automatique-ligne">
+            <td class="p-4">
+              <a
+                class="inline-flex min-h-touch items-center font-semibold text-accent underline underline-offset-4"
+                [routerLink]="['/anomalies', ligne.adresse.suivi.suivi]"
+                [queryParams]="{ pointage: ligne.adresse.pointage.pointage }"
+                queryParamsHandling="merge"
+                data-selector="fin-automatique-ouvrir"
+                >{{ ligne.designation }}</a
+              >
+            </td>
+            <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
+            <td class="p-4 tabular-nums">{{ libelles.periodeFinAutomatique(ligne.debut, ligne.echeance) }}</td>
+          </tr>
+          } }
+        </tbody>
+      </table>
+    </div>
+    <nav
+      class="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4 text-body-sm"
+      [attr.aria-label]="libellesDeNature().pagination"
+      data-selector="anomalies-pagination"
+    >
+      <span>{{ libelles.page }} {{ filtre().page }} {{ libelles.sur }} {{ pageCount(page.total) }}</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="min-h-touch rounded-control border border-border-strong px-3 text-label disabled:text-ink-muted"
+          [routerLink]="['/anomalies']"
+          [queryParams]="pageParams(filtre().page - 1)"
+          [disabled]="filtre().page === 1"
+          data-selector="anomalies-page-precedente"
+        >
+          {{ libelles.precedente }}
+        </button>
+        <button
+          type="button"
+          class="min-h-touch rounded-control border border-border-strong px-3 text-label disabled:text-ink-muted"
+          [routerLink]="['/anomalies']"
+          [queryParams]="pageParams(filtre().page + 1)"
+          [disabled]="filtre().page >= pageCount(page.total)"
+          data-selector="anomalies-page-suivante"
+        >
+          {{ libelles.suivante }}
+        </button>
+      </div>
+    </nav>
+  </div>
+  } }
+</main>

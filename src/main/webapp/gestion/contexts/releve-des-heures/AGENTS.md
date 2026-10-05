@@ -1,7 +1,8 @@
 # Relevé des heures
 
 Ce contexte de `gestion` porte le relevé hebdomadaire du **temps opérationnel** d'une personne.
-Il est lecteur : les corrections et la résolution des conflits appartiennent à un autre chantier.
+Il est lecteur : les corrections et le traitement des anomalies de pointage, conflits et fins automatiques,
+appartiennent au contexte `anomalies-de-pointage`.
 La route `/operateurs/:operateur/heures`, le composant `SyntheseDesHeures` et le port
 `SyntheseDesHeuresPort` conservent leur nom pour garder les liens partagés.
 

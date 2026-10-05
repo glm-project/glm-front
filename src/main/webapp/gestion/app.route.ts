@@ -1,29 +1,29 @@
 import { Routes } from '@angular/router';
+import { anomaliesDePointageProvider } from './anomalies-de-pointage.provider';
 import { atelierProvider } from './atelier.provider';
 import { coutDeRevientProvider } from './cout-de-revient.provider';
 import { elementsDeFabricationProvider } from './elements-de-fabrication.provider';
 import { operateursProvider } from './operateurs.provider';
 import { postesProvider } from './postes.provider';
 import { releveDesHeuresProvider } from './releve-des-heures.provider';
-import { resolutionConflitsProvider } from './resolution-conflits.provider';
 import { supervisionAtelierProvider } from './supervision-atelier.provider';
 
 export const routes: Routes = [
   {
-    path: 'conflits',
-    providers: resolutionConflitsProvider,
+    path: 'anomalies',
+    providers: anomaliesDePointageProvider,
     children: [
       {
         path: ':suivi',
         loadComponent: () =>
-          import('./contexts/resolution-conflits/infrastructure/primary/dossier-conflit/DossierConflitPage').then(
-            m => m.DossierConflitPage,
+          import('./contexts/anomalies-de-pointage/infrastructure/primary/dossier-anomalie/DossierAnomaliePage').then(
+            m => m.DossierAnomaliePage,
           ),
       },
       {
         path: '',
         loadComponent: () =>
-          import('./contexts/resolution-conflits/infrastructure/primary/liste-conflits/ListeConflits').then(m => m.ListeConflits),
+          import('./contexts/anomalies-de-pointage/infrastructure/primary/liste-anomalies/ListeAnomalies').then(m => m.ListeAnomalies),
       },
     ],
   },
