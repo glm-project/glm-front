@@ -1,4 +1,5 @@
 import { components } from '@/app/generated/schema';
+import { instantLocalFixture, instantLocalWithOffsetFixture } from './InstantLocal.fixture';
 
 export const suiviFixture = '70000000-0000-0000-0000-000000000001';
 export const finFixture = '70000000-0000-0000-0000-000000000002';
@@ -7,7 +8,10 @@ export const elementFixture = '70000000-0000-0000-0000-000000000004';
 export const debutFixture = '70000000-0000-0000-0000-000000000005';
 export const ncFixture = '70000000-0000-0000-0000-000000000006';
 export const remplacementFixture = '70000000-0000-0000-0000-000000000007';
-export const instantCorrigeFixture = '2026-09-14T17:01:00.123456789+02:00';
+export const instantDebutFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0), '123456789');
+export const instantNonConformiteFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 0), '123456789');
+export const instantFinFixture = instantLocalFixture(new Date(2026, 8, 14, 17, 0), '123456789');
+export const instantCorrigeFixture = instantLocalWithOffsetFixture(new Date(2026, 8, 14, 17, 1), '123456789');
 export const motifFixture = 'Heure et cible vérifiées avec l’opérateur';
 export const correctionFixture: components['schemas']['RestActeCorrection'] = {
   kind: 'CORRECTION',
@@ -22,7 +26,7 @@ export const ligneFixture: components['schemas']['RestConflitEnListe'] = {
   elementId: elementFixture,
   designation: 'M-042 réel',
   operateurId: operateurFixture,
-  datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
+  datePremierPointage: instantDebutFixture,
   nombrePointages: 3,
 };
 
@@ -32,7 +36,7 @@ export const journalFixture: components['schemas']['RestEvenementDAtelier'][] = 
     type: 'DEBUT',
     intention: 'OUVERTURE',
     activite: debutFixture,
-    dateDeSurvenue: '2026-09-14T08:00:00.123456789+02:00',
+    dateDeSurvenue: instantDebutFixture,
     operateurId: operateurFixture,
     auteur: 'camille',
     dateDEnregistrement: '2026-09-15T08:00:00Z',
@@ -44,7 +48,7 @@ export const journalFixture: components['schemas']['RestEvenementDAtelier'][] = 
     intention: 'TRANSITION',
     activite: ncFixture,
     cible: debutFixture,
-    dateDeSurvenue: '2026-09-14T12:00:00.123456789+02:00',
+    dateDeSurvenue: instantNonConformiteFixture,
     operateurId: operateurFixture,
     auteur: 'camille',
     dateDEnregistrement: '2026-09-15T08:01:00Z',
@@ -55,7 +59,7 @@ export const journalFixture: components['schemas']['RestEvenementDAtelier'][] = 
     type: 'FIN',
     intention: 'FIN',
     cible: debutFixture,
-    dateDeSurvenue: '2026-09-14T17:00:00.123456789+02:00',
+    dateDeSurvenue: instantFinFixture,
     operateurId: operateurFixture,
     auteur: 'camille',
     dateDEnregistrement: '2026-09-15T08:02:00Z',
@@ -95,16 +99,16 @@ export const activitesFixture = (corrige: boolean): components['schemas']['RestA
     evenement: debutFixture,
     operateurId: operateurFixture,
     categorie: 'TRAVAIL',
-    debut: '2026-09-14T08:00:00.123456789+02:00',
+    debut: instantDebutFixture,
     etat: corrige ? 'TERMINEE' : 'A_RESOUDRE',
-    ...(corrige ? { fin: '2026-09-14T12:00:00.123456789+02:00', duree: 'PT4H' } : {}),
+    ...(corrige ? { fin: instantNonConformiteFixture, duree: 'PT4H' } : {}),
   },
   {
     activite: ncFixture,
     evenement: ncFixture,
     operateurId: operateurFixture,
     categorie: 'NON_CONFORMITE',
-    debut: '2026-09-14T12:00:00.123456789+02:00',
+    debut: instantNonConformiteFixture,
     etat: corrige ? 'TERMINEE' : 'A_RESOUDRE',
     ...(corrige ? { fin: instantCorrigeFixture, duree: 'PT5H1M' } : {}),
   },
@@ -150,7 +154,7 @@ export const dossierFixture = (corrige = false): components['schemas']['RestDoss
             code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE',
             kind: 'CORRECTION',
             pointage: finFixture,
-            fait: { ...correctionFixture.fait, instant: '2026-09-14T17:00:00.123456789+02:00' },
+            fait: { ...correctionFixture.fait, instant: instantFinFixture },
           },
         ],
     continuations: [],

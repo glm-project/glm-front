@@ -10,6 +10,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { dataSelector } from '@test/utils/DataSelector';
+import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import {
@@ -23,6 +24,14 @@ import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier, LectureDossier, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { DossierAnomaliePage } from './DossierAnomaliePage';
+
+const INSTANT_FIN = instantLocalFixture(new Date(2026, 8, 14, 17, 0), '123456789');
+const INSTANT_DEBUT = instantLocalFixture(new Date(2026, 8, 14, 8, 0));
+const INSTANT_NON_CONFORMITE = instantLocalFixture(new Date(2026, 8, 14, 12, 1), '123456789');
+const INSTANT_ECHEANCE = instantLocalFixture(new Date(2026, 8, 14, 21, 0));
+const INSTANT_FIN_DE_TRAVAIL = instantLocalFixture(new Date(2026, 8, 14, 17, 0));
+const INSTANT_ENREGISTREMENT = instantLocalFixture(new Date(2026, 8, 15, 8, 0));
+const INSTANT_ENGAGEMENT = instantLocalFixture(new Date(2026, 8, 1, 7, 30));
 
 const roundTripFixture = async <T>(result: () => T): Promise<T> => {
   await new Promise<void>(resolve => setTimeout(resolve));
@@ -141,7 +150,7 @@ const faitConflitFixture = (): FaitPropose => ({
   activiteVisee: 'travail-8',
   operateur: 'op-camille',
   poste: 'poste-1',
-  instant: '2026-09-14T17:00:00.123456789+02:00',
+  instant: INSTANT_FIN,
 });
 
 const dossierAnomalieFixture = (): DossierAnomalie => ({
@@ -152,19 +161,19 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
     designation: 'M-042',
     operateur: 'Camille Martin',
     poste: 'DMU 50',
-    date: '14 septembre 2026',
+    date: INSTANT_FIN,
     explication: 'La fin vise le travail remplacé.',
     nombrePointages: 1,
   },
   version: 1,
   cloture: false,
-  engagement: 'ENGAGE',
+  engagement: INSTANT_ENGAGEMENT,
   journal: [
     {
       id: new PointageAnomalieId('fin-17'),
       fait: faitConflitFixture(),
       auteur: 'camille',
-      enregistre: '2026-09-15T08:00:00+02:00',
+      enregistre: INSTANT_ENREGISTREMENT,
       regularisation: false,
     },
   ],
@@ -221,11 +230,11 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
           type: 'DEBUT',
           intention: 'OUVERTURE',
           activiteVisee: '',
-          instant: '2026-09-14T08:00:00+02:00',
+          instant: INSTANT_DEBUT,
         },
         activiteCreee: new ActiviteAnomalieId('travail-8'),
         auteur: 'camille',
-        enregistre: '2026-09-14T08:00:00+02:00',
+        enregistre: INSTANT_DEBUT,
         regularisation: false,
       },
     ],
@@ -235,7 +244,7 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
         libelle: '',
         etat: 'ECHUE',
         temps: '',
-        periode: { categorie: 'TRAVAIL', debut: '2026-09-14T08:00:00+02:00', fin: '2026-09-14T21:00:00+02:00', duree: 'PT13H' },
+        periode: { categorie: 'TRAVAIL', debut: INSTANT_DEBUT, fin: INSTANT_ECHEANCE, duree: 'PT13H' },
       },
     ],
     choix: [{ id: 'REGULARISER_FIN:debut-8', code: 'REGULARISER_FIN', libelle: '', explication: '', saisie: finARegulariserFixture() }],
@@ -262,6 +271,8 @@ describe('Anomaly dossier page', () => {
   let application: DossierApplicationFixture;
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
     read = new DossierReadFixture();
     route = new RouteFixture();
     preview = new DossierPreviewFixture();
@@ -277,6 +288,10 @@ describe('Anomaly dossier page', () => {
         { provide: ErrorHandlerPort, useValue: { handleError: () => undefined } },
       ],
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should offer a retry when reading fails without showing a misleading dossier', async () => {
@@ -305,11 +320,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact(
-      'conflit-diagnostic-pointage',
-      'fin-17',
-      '2026-09-14T17:00:00.123456789+02:00 · Fin · Fin ciblée',
-    );
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
     thenTextContains('conflit-diagnostic', 'vise l’activité travail-8, remplacée.');
     thenTextContains('conflit-diagnostic', 'Ouverte par debut-8.');
     thenTextContains('conflit-diagnostic', 'Terminée par nc-12.');
@@ -323,7 +334,7 @@ describe('Anomaly dossier page', () => {
     thenDiagnosticReferencesTheReceivedFact(
       'conflit-diagnostic-terminaison',
       '90000000-0000-0000-0000-000000000001',
-      '2026-09-14T12:01:00.123456789+02:00 · Non-conformité · Transition',
+      'lundi 14 septembre à 12:01:00 · Non-conformité · Transition',
     );
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
@@ -364,12 +375,106 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact(
-      'conflit-diagnostic-pointage',
-      'fin-17',
-      '2026-09-14T17:00:00.123456789+02:00 · Fin · Fin ciblée',
-    );
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', '2026-09-14T08:00:00+02:00 · Travail · Ouverture');
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', 'lundi 14 septembre à 08:00:00 · Travail · Ouverture');
+  });
+
+  it('should show the engagement of the workshop in the header as a long day and local time', async () => {
+    await whenRendering();
+
+    thenTextContains('anomalie-cloture', 'mardi 1 septembre à 07:30');
+  });
+
+  it('should show the date of the first pointage in the header as a long day and local time', async () => {
+    await whenRendering();
+
+    thenHeadingContains('lundi 14 septembre à 17:00');
+  });
+
+  it('should show the time of a received fact with its seconds, then its long day, in the chronology', async () => {
+    await whenRendering();
+
+    thenReceivedFactTimeIs('fin-17', '17:00:00 · lundi 14 septembre');
+  });
+
+  it('should add the year to the day of a received fact that is not from the current year', async () => {
+    givenAReceivedFactFromAnotherYear();
+
+    await whenRendering();
+
+    thenReceivedFactTimeIs('fin-17', '09:41:22 · mercredi 1 octobre 2025');
+  });
+
+  it('should describe the instant of a received fact to the browser with at most three decimals', async () => {
+    await whenRendering();
+
+    thenReceivedFactDatetimeIs('fin-17', new Date(2026, 8, 14, 17, 0, 0, 123).toISOString());
+  });
+
+  it('should show the registration of a received fact as a long day and local time without seconds', async () => {
+    await whenRendering();
+
+    thenReceivedFactContains('fin-17', 'Enregistré le mardi 15 septembre à 08:00');
+  });
+
+  it('should show the time of a received fact with its seconds in its traceability details', async () => {
+    await whenRendering();
+
+    thenReceivedFactContains('fin-17', 'fin-17 · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should show when a cancelled pointage was cancelled as a long day and local time without seconds', async () => {
+    givenACancelledOpeningTargetedByTheRemainingEnd();
+
+    await whenRendering();
+
+    thenTextContains('anomalie-annulation', 'Début annulé · gestionnaire · mardi 15 septembre à 08:00');
+  });
+
+  it('should show the instant of the proposed fact with its seconds', async () => {
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenTextContains('anomalie-proposition-resume', 'Fin · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should show the instant of the pointage to cancel with its seconds', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-annuler');
+
+    thenTextContains('anomalie-proposition-resume', 'Fin · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should keep showing an instant the manager has not finished typing as it was typed', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEntering('anomalie-instant', 'pas encore un instant');
+
+    thenTextContains('anomalie-proposition-resume', 'pas encore un instant');
+  });
+
+  it('should show the instant of the previewed act and of the compared journals with their seconds', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', 'lundi 14 septembre à 17:00:00');
+    thenTextContains('anomalie-apercu-journal', 'fin-17 · lundi 14 septembre à 17:00:00');
+    thenTextContains('anomalie-apercu-fait-avant-fin-17', 'lundi 14 septembre à 17:00:00');
+    thenTextContains('anomalie-apercu-fait-apres-fin-17', 'lundi 14 septembre à 17:00:00');
+  });
+
+  it('should describe the instant of an obsolete address history to the browser with at most three decimals', async () => {
+    read.result = { kind: 'ANCRE_ANNULEE', journal: dossierAnomalieFixture().journal };
+
+    await whenRendering();
+
+    thenReceivedFactDatetimeIs('fin-17', new Date(2026, 8, 14, 17, 0, 0, 123).toISOString());
   });
 
   it('should reject an address missing its suivi without requesting a dossier', async () => {
@@ -388,7 +493,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     thenTextContains('anomalie-adresse-obsolete', 'annulé ou remplacé');
-    thenTextContains('anomalie-historique', '2026-09-14T17:00:00.123456789+02:00');
+    thenTextContains('anomalie-historique', 'lundi 14 septembre à 17:00:00');
     thenAbsent('anomalie-choix');
   });
 
@@ -439,11 +544,11 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-continuation', 'M-042 · Camille Martin · 14 septembre 2026 · 3 pointages');
+    thenTextContains('conflit-continuation', 'M-042 · Camille Martin · lundi 14 septembre à 17:00 · 3 pointages');
   });
 
   it.each([
-    { operateur: '', operateurId: 'op-absent', explication: '', attendu: 'M-042 · op-absent · 14 septembre 2026 · 3 pointages' },
+    { operateur: '', operateurId: 'op-absent', explication: '', attendu: 'M-042 · op-absent · lundi 14 septembre à 17:00 · 3 pointages' },
     {
       operateur: 'Camille Martin',
       operateurId: 'op-camille',
@@ -468,7 +573,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenHeadingContains('Camille Martin · Sans poste · 14 septembre 2026');
+    thenHeadingContains('Camille Martin · Sans poste · lundi 14 septembre à 17:00');
   });
 
   it('should show an ongoing activity after resolution without presenting a definitive duration', async () => {
@@ -518,8 +623,8 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     thenTextContains('anomalie-activite', 'Travail');
-    thenTextContains('anomalie-activite', '2026-09-14T08:00:00.123456789+02:00');
-    thenTextContains('anomalie-activite', '2026-09-14T17:00:00+02:00');
+    thenTextContains('anomalie-activite', 'lundi 14 septembre à 08:00');
+    thenTextContains('anomalie-activite', 'lundi 14 septembre à 17:00');
     thenTextContains('anomalie-activite', '8 h 59 min 59,876543211 s');
   });
 
@@ -656,7 +761,7 @@ describe('Anomaly dossier page', () => {
         ...dossier,
         version: 2,
         cloture: true,
-        finCloture: '2026-09-14T18:00:00+02:00',
+        finCloture: instantLocalFixture(new Date(2026, 8, 14, 18, 0)),
         ligne: { ...dossier.ligne, explication: 'Reprise encore à rattacher.' },
       },
     };
@@ -778,7 +883,7 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-acte', 'Correction du pointage');
     thenFieldValueIs('anomalie-cible', 'travail-8');
-    thenFieldValueIs('anomalie-instant', '2026-09-14T17:00:00.123456789+02:00');
+    thenFieldValueIs('anomalie-instant', INSTANT_FIN);
     thenDetailedFactIsOpen();
   });
 
@@ -789,7 +894,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenClicking('anomalie-corriger');
 
-    const libelle = 'Travail · 2026-09-14T08:00:00.123456789+02:00 → 2026-09-14T17:00:00+02:00';
+    const libelle = 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 17:00';
     thenTextContains('anomalie-pointage', libelle);
     thenTargetChoiceIs('travail-8', libelle);
   });
@@ -856,38 +961,13 @@ describe('Anomaly dossier page', () => {
   });
 
   it('should name the cancelled opening targeted by a remaining end without inventing an interpreted activity', async () => {
-    const dossier = dossierAnomalieFixture();
-    read.result = {
-      kind: 'DOSSIER',
-      dossier: {
-        ...dossier,
-        activites: [],
-        journal: [
-          {
-            id: new PointageAnomalieId('debut-8'),
-            fait: {
-              ...faitConflitFixture(),
-              type: 'DEBUT',
-              intention: 'OUVERTURE',
-              activiteVisee: '',
-              instant: '2026-09-14T08:00:00+02:00',
-            },
-            activiteCreee: new ActiviteAnomalieId('travail-8'),
-            auteur: 'camille',
-            enregistre: '2026-09-14T08:00:00+02:00',
-            regularisation: false,
-            annulation: { motif: 'Début annulé', auteur: 'gestionnaire', instant: '2026-09-15T08:00:00+02:00' },
-          },
-          ...dossier.journal,
-        ],
-      },
-    };
+    givenACancelledOpeningTargetedByTheRemainingEnd();
     await whenRendering();
 
     await whenClicking('anomalie-detail');
     await whenClicking('anomalie-corriger');
 
-    thenTargetChoiceIs('travail-8', 'Travail à 08:00:00');
+    thenTargetChoiceIs('travail-8', 'Travail · lundi 14 septembre à 08:00:00');
     thenAbsent('anomalie-activite');
   });
 
@@ -909,7 +989,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-annuler');
 
     thenTextContains('anomalie-acte', 'Annulation du pointage');
-    thenTextContains('anomalie-pointage', '2026-09-14T17:00:00.123456789+02:00');
+    thenTextContains('anomalie-pointage', 'lundi 14 septembre à 17:00:00');
     thenAbsent('anomalie-cible');
     thenFieldValueIs('anomalie-motif', '');
   });
@@ -1014,18 +1094,21 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-fin-automatique', 'Fin automatique');
     thenTextContains('anomalie-fin-automatique-activite', 'Travail');
-    thenTextContains('anomalie-fin-automatique-activite', 'Début 2026-09-14T08:00:00+02:00');
-    thenTextContains('anomalie-fin-automatique-activite', 'Fin automatique 2026-09-14T21:00:00+02:00');
+    thenTextContains('anomalie-fin-automatique-activite', 'Début lundi 14 septembre à 08:00');
+    thenTextContains('anomalie-fin-automatique-activite', 'Fin automatique lundi 14 septembre à 21:00');
     thenTextContains('anomalie-fin-automatique-activite', 'Durée 13 h');
   });
 
   it('should keep the closure of the workshop visible on an automatic end', async () => {
     const dossier = dossierFinAutomatiqueFixture();
-    read.result = { kind: 'DOSSIER', dossier: { ...dossier, cloture: true, finCloture: '2026-09-14T23:00:00+02:00' } };
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, cloture: true, finCloture: instantLocalFixture(new Date(2026, 8, 14, 23, 0)) },
+    };
 
     await whenRendering();
 
-    thenTextContains('anomalie-cloture', '2026-09-14T23:00:00+02:00');
+    thenTextContains('anomalie-cloture', 'lundi 14 septembre à 23:00');
   });
 
   it('should not present the automatic end block on a conflict dossier', async () => {
@@ -1344,7 +1427,7 @@ describe('Anomaly dossier page', () => {
               ...faitConflitFixture(),
               type: 'NON_CONFORMITE',
               intention: 'TRANSITION',
-              instant: '2026-09-14T12:01:00.123456789+02:00',
+              instant: INSTANT_NON_CONFORMITE,
             },
             activiteCreee: new ActiviteAnomalieId('nc-12'),
             remplace: new PointageAnomalieId('nc-12'),
@@ -1379,10 +1462,10 @@ describe('Anomaly dossier page', () => {
               type: 'DEBUT',
               intention: 'OUVERTURE',
               activiteVisee: '',
-              instant: '2026-09-14T08:00:00+02:00',
+              instant: INSTANT_DEBUT,
             },
             auteur: 'camille',
-            enregistre: '2026-09-15T08:00:00Z',
+            enregistre: INSTANT_ENREGISTREMENT,
             regularisation: false,
           },
         ],
@@ -1415,13 +1498,52 @@ describe('Anomaly dossier page', () => {
             etat,
             periode: {
               categorie,
-              debut: '2026-09-14T08:00:00.123456789+02:00',
-              ...(etat === 'TERMINEE' ? { fin: '2026-09-14T17:00:00+02:00' } : {}),
+              debut: INSTANT_DEBUT,
+              ...(etat === 'TERMINEE' ? { fin: INSTANT_FIN_DE_TRAVAIL } : {}),
               ...(duree === undefined ? {} : { duree }),
             },
           },
         ],
       },
+    };
+  };
+
+  const givenACancelledOpeningTargetedByTheRemainingEnd = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [],
+        journal: [
+          {
+            id: new PointageAnomalieId('debut-8'),
+            fait: {
+              ...faitConflitFixture(),
+              type: 'DEBUT',
+              intention: 'OUVERTURE',
+              activiteVisee: '',
+              instant: INSTANT_DEBUT,
+            },
+            activiteCreee: new ActiviteAnomalieId('travail-8'),
+            auteur: 'camille',
+            enregistre: INSTANT_DEBUT,
+            regularisation: false,
+            annulation: { motif: 'Début annulé', auteur: 'gestionnaire', instant: INSTANT_ENREGISTREMENT },
+          },
+          ...dossier.journal,
+        ],
+      },
+    };
+  };
+
+  const givenAReceivedFactFromAnotherYear = (): void => {
+    const dossier = dossierAnomalieFixture();
+    const [fait] = dossier.journal;
+    if (fait === undefined) throw new Error('Expected a received fact');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, journal: [{ ...fait, fait: { ...fait.fait, instant: new Date(2025, 9, 1, 9, 41, 22).toISOString() } }] },
     };
   };
 
@@ -1523,6 +1645,14 @@ describe('Anomaly dossier page', () => {
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);
   };
+  const thenReceivedFactTimeIs = (pointage: string, expected: string): void => {
+    expect(receivedFactTime(pointage).textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+  const thenReceivedFactDatetimeIs = (pointage: string, expected: string): void => {
+    expect(receivedFactTime(pointage).getAttribute('datetime')).toBe(expected);
+  };
+  const receivedFactTime = (pointage: string): HTMLElement =>
+    requiredFixture(receivedFact(pointage).querySelector<HTMLElement>('time'), 'received fact time');
   const thenReceivedFactDetailsAreOpen = (pointage: string): void => {
     expect(receivedFact(pointage).querySelector<HTMLDetailsElement>('details')?.open).toBe(true);
   };

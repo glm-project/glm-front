@@ -29,6 +29,17 @@ const SHORT_WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', da
 
 const WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric' });
 
+const TIME_WITH_SECONDS = new Intl.DateTimeFormat(LOCALE, {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: HOUR_CYCLE,
+});
+
+const LONG_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
+
+const LONG_DAY_WITH_YEAR = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
 const CALENDAR_DAY_SHORT_DAY_MONTH_YEAR = new Intl.DateTimeFormat(LOCALE, {
   day: 'numeric',
   month: 'short',
@@ -76,6 +87,21 @@ export const formatInstantShortDayMonth = (instant: Date): string => SHORT_DAY_M
 export const formatInstantShortWeekdayDay = (instant: Date): string => SHORT_WEEKDAY_DAY.format(instant);
 
 export const formatInstantWeekdayDay = (instant: Date): string => WEEKDAY_DAY.format(instant);
+
+const longDayOf = (instant: Date, now: Date): string =>
+  (instant.getFullYear() === now.getFullYear() ? LONG_DAY : LONG_DAY_WITH_YEAR).format(instant);
+
+export const formatInstantLongDay = (instant: Date, now: Date): string => `${longDayOf(instant, now)} à ${TIME.format(instant)}`;
+
+export const formatInstantLongDayWithSeconds = (instant: Date, now: Date): string =>
+  `${longDayOf(instant, now)} à ${TIME_WITH_SECONDS.format(instant)}`;
+
+export const formatInstantTimeAndLongDayWithSeconds = (instant: Date, now: Date): Readonly<{ time: string; day: string }> => ({
+  time: TIME_WITH_SECONDS.format(instant),
+  day: longDayOf(instant, now),
+});
+
+export const toHtmlDatetime = (instant: Date): string => instant.toISOString();
 
 export const formatCalendarDayRange = (first: string, last: string): string =>
   CALENDAR_DAY_SHORT_DAY_MONTH_YEAR.formatRange(utcMidnightOf(first), utcMidnightOf(last));

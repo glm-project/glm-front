@@ -1,3 +1,4 @@
+import { InstantLongDayPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -11,7 +12,7 @@ import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
 
 @Component({
   selector: 'glm-liste-anomalies',
-  imports: [RouterLink],
+  imports: [RouterLink, InstantLongDayPipe],
   templateUrl: './ListeAnomalies.html',
   styleUrl: './ListeAnomalies.css',
 })
@@ -20,6 +21,7 @@ export class ListeAnomalies {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly errors = inject(ErrorHandlerPort);
+  protected readonly now = new Date();
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly echecNavigation = linkedSignal({ source: this.params, computation: () => false });
   protected readonly pageDemandee = computed(() => readPageAnomaliesDemandee(this.params().get('page')));

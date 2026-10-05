@@ -52,6 +52,11 @@ dans l'URL et utilise les surfaces de Gestion. Trois ports séparent lecture, ap
 La composition normale de Gestion relie ces trois ports au même adapter HTTP et à `ApiClient`.
 Le serveur fournit états, intervalles, durées ISO, diagnostics, choix et continuations. Le primaire
 possède leurs libellés ; il conserve les identités brutes lorsque les fiches ne sont pas résolues.
+Le domaine garde chaque instant reçu en texte ISO ; le primaire l'affiche en heure locale par les formats
+et les pipes de `app/shared/date-format` : jour long (« jeudi 1 octobre à 09:41 »), année ajoutée quand elle diffère
+de celle de la page, secondes réservées à l'instant d'un fait pointé (« à 09:41:22 »), heure en gras puis jour long dans
+la chronologie. La page lit l'horloge une fois et la passe aux pipes. Un texte qui n'est pas un instant (la saisie en
+cours) s'affiche tel quel ; l'attribut `datetime` n'a jamais plus de trois décimales.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
 

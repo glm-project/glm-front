@@ -39,6 +39,16 @@ Chaque onglet a son message de chargement, son message vide, ses erreurs et sa p
 rejette la lecture. Une fin automatique montre son début et son échéance reçus, sans calcul, et ouvre le
 dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, aux filtres et à la page d'origine.
 
+## Dates affichées
+
+Le dossier et la liste n'affichent aucun instant ISO brut. Chaque instant reçu s'affiche en heure locale, en jour
+long (« jeudi 1 octobre à 09:41 ») avec l'année quand elle diffère de celle de la page. L'instant d'un fait pointé
+porte ses secondes (« à 09:41:22 ») : chronologie (heure en gras, puis jour long), références des diagnostics,
+détails de traçabilité, proposition, aperçu et journaux avant/après. L'engagement, la clôture, le début et la fin
+d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la liste restent à la minute. L'attribut
+`datetime` des heures porte un instant valide, de trois décimales au plus, sans perdre l'ordre du journal. La saisie
+de l'instant reste un texte ISO.
+
 ## Frontières de vérification
 
 - Les specs de domaine passent par `SaisieActe` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
@@ -49,7 +59,8 @@ dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, a
   incohérent avec son code (régularisation portant une heure, correction sans heure).
 - Les contrats HTTP contrôlent les requêtes REST (liste de chaque nature, dossier et aperçu sous
   `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
-- Les specs DOM et Cypress vérifient les faits reçus, les formulaires, la comparaison avant/après,
+- Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
+  depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des
   réponses JSON typées interceptées, sans adapter de simulation ni stockage des aperçus.
 

@@ -31,6 +31,10 @@ const refusFixture = [
 ];
 
 describe('Automatic end of an activity in Gestion', () => {
+  beforeEach(() => {
+    givenTheClockOnAFixedDay();
+  });
+
   it('should regularise an automatic end from its dossier through preview, confirmation and receipt', () => {
     givenAnAutomaticEndRegularisedByTheBackend();
 
@@ -63,8 +67,8 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenChoosingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-fin-automatique-activite'))
-      .should('contain.text', 'Début 2026-09-14T08:00:00Z')
-      .and('contain.text', 'Fin automatique 2026-09-14T21:00:00Z')
+      .should('contain.text', 'Début lundi 14 septembre à 08:00')
+      .and('contain.text', 'Fin automatique lundi 14 septembre à 21:00')
       .and('contain.text', 'Durée 13 h');
     cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
     cy.get(dataSelector('anomalie-choix')).should('have.length', 1).and('contain.text', 'Régulariser la fin').click();
@@ -295,5 +299,9 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.enabled');
+  };
+
+  const givenTheClockOnAFixedDay = (): void => {
+    cy.clock(new Date(2026, 9, 5, 10, 0).getTime(), ['Date']);
   };
 });

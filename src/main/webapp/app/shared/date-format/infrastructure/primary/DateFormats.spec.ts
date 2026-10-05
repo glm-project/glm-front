@@ -8,14 +8,18 @@ import {
   formatCalendarDayShortDayMonthYear,
   formatCalendarDayShortWithMonth,
   formatCalendarMonthName,
+  formatInstantLongDay,
+  formatInstantLongDayWithSeconds,
   formatInstantNumericDateTime,
   formatInstantNumericDayMonth,
   formatInstantShortDateTime,
   formatInstantShortDayMonth,
   formatInstantShortWeekdayDay,
   formatInstantTime,
+  formatInstantTimeAndLongDayWithSeconds,
   formatInstantWeekdayDay,
   localCalendarDay,
+  toHtmlDatetime,
 } from './DateFormats';
 
 describe('DateFormats', () => {
@@ -205,5 +209,94 @@ describe('DateFormats', () => {
     const text = formatInstantShortWeekdayDay(instant);
 
     expect(text).toBe('jeu. 1');
+  });
+
+  it('should format an instant as its long day and local time without the year during the current year', () => {
+    const instant = new Date(2026, 9, 1, 9, 41, 22);
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const text = formatInstantLongDay(instant, now);
+
+    expect(text).toBe('jeudi 1 octobre à 09:41');
+  });
+
+  it('should add the year to the long day of an instant that falls in another year than now', () => {
+    const instant = new Date(2025, 9, 1, 9, 41, 22);
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const text = formatInstantLongDay(instant, now);
+
+    expect(text).toBe('mercredi 1 octobre 2025 à 09:41');
+  });
+
+  it('should keep the local day and time of an instant whose UTC day is the next one in a long day', () => {
+    const instant = new Date(Date.UTC(2026, 9, 2, 1, 30));
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const text = formatInstantLongDay(instant, now);
+
+    expect(text).toBe('jeudi 1 octobre à 22:30');
+  });
+
+  it('should compare the local years of the instant and of now, not their UTC years', () => {
+    const instant = new Date(2026, 11, 31, 23, 30);
+    const now = new Date(2026, 11, 31, 23, 45);
+
+    const text = formatInstantLongDay(instant, now);
+
+    expect(text).toBe('jeudi 31 décembre à 23:30');
+  });
+
+  it('should write the seconds of an instant after its long day and local time', () => {
+    const instant = new Date(2026, 9, 1, 9, 41, 22);
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const text = formatInstantLongDayWithSeconds(instant, now);
+
+    expect(text).toBe('jeudi 1 octobre à 09:41:22');
+  });
+
+  it('should add the year to the long day of an instant with seconds that falls in another year than now', () => {
+    const instant = new Date(2025, 9, 1, 9, 41, 22);
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const text = formatInstantLongDayWithSeconds(instant, now);
+
+    expect(text).toBe('mercredi 1 octobre 2025 à 09:41:22');
+  });
+
+  it('should split an instant into its local time with seconds and its long day', () => {
+    const instant = new Date(2026, 9, 1, 9, 41, 22);
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const parts = formatInstantTimeAndLongDayWithSeconds(instant, now);
+
+    expect(parts).toEqual({ time: '09:41:22', day: 'jeudi 1 octobre' });
+  });
+
+  it('should add the year to the long day part of an instant that falls in another year than now', () => {
+    const instant = new Date(2025, 9, 1, 9, 41, 22);
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const parts = formatInstantTimeAndLongDayWithSeconds(instant, now);
+
+    expect(parts).toEqual({ time: '09:41:22', day: 'mercredi 1 octobre 2025' });
+  });
+
+  it('should keep the local day and time of an instant whose UTC day is the next one in its time and long day parts', () => {
+    const instant = new Date(Date.UTC(2026, 9, 2, 1, 30, 5));
+    const now = new Date(2026, 9, 5, 10, 0);
+
+    const parts = formatInstantTimeAndLongDayWithSeconds(instant, now);
+
+    expect(parts).toEqual({ time: '22:30:05', day: 'jeudi 1 octobre' });
+  });
+
+  it('should write an instant as a UTC date-time with milliseconds, valid for an HTML datetime attribute', () => {
+    const instant = new Date(Date.UTC(2026, 9, 1, 12, 41, 22, 123));
+
+    const text = toHtmlDatetime(instant);
+
+    expect(text).toBe('2026-10-01T12:41:22.123Z');
   });
 });
