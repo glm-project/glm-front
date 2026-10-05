@@ -12,12 +12,15 @@ import {
   ComptageDesGestesEnAttente,
   Reinitialisation,
 } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/reinitialisation/reinitialisation';
-import { ChangeDetectorRef, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { MesPointages } from '@/pupitre/contexts/pointages-de-l-operateur/infrastructure/primary/pupitre/mes-pointages/mes-pointages';
+import { ChangeDetectorRef, Component, computed, ElementRef, inject, linkedSignal, OnDestroy, OnInit, signal } from '@angular/core';
 import { MessageDAtelierVisible, PupitreHeader } from '../header/header';
+
+type EcranOperateur = 'POINTAGE' | 'MES_POINTAGES';
 
 @Component({
   selector: 'glm-pupitre-page',
-  imports: [Designation, Enrolement, Pointage, PupitreHeader, Reinitialisation],
+  imports: [Designation, Enrolement, MesPointages, Pointage, PupitreHeader, Reinitialisation],
   host: { class: 'flex h-screen flex-col', 'data-selector': 'pupitre-page' },
   templateUrl: './page.html',
 })
@@ -32,6 +35,10 @@ export class PupitrePage implements OnInit, OnDestroy {
   private consumeNextClick = false;
   protected readonly resetRequested = signal(false);
   protected readonly gestesEnAttente = signal<ComptageDesGestesEnAttente>('EN_COURS');
+  protected readonly ecranOperateur = linkedSignal<string | undefined, EcranOperateur>({
+    source: () => this.designation.operateur()?.id,
+    computation: () => 'POINTAGE',
+  });
   private comptageCourant = Symbol('comptage');
   protected readonly messageAtelier = computed<MessageDAtelierVisible | undefined>(() => {
     if (this.pupitre.echecCaptureLocale()) return { message: 'Action non enregistrée — recommencez' };
@@ -85,6 +92,14 @@ export class PupitrePage implements OnInit, OnDestroy {
     if (this.designation.operateur() !== undefined) return;
     this.resetRequested.set(false);
     this.errorHandler.observe(this.enrolement.reinitialiser());
+  }
+
+  protected showMesPointages(): void {
+    this.ecranOperateur.set('MES_POINTAGES');
+  }
+
+  protected showPointage(): void {
+    this.ecranOperateur.set('POINTAGE');
   }
 
   protected executeGlobale(intention: IntentionGlobale): void {

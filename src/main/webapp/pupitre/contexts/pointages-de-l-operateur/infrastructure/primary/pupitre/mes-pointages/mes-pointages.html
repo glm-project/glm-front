@@ -1,0 +1,155 @@
+<main class="mes-pointages min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4">
+  <h1 class="sr-only">{{ labels.titre }}</h1>
+  @if (pointages.isLoading()) {
+  <p
+    class="etat rounded-surface border border-border bg-surface px-6 py-5 text-body text-ink-muted"
+    role="status"
+    data-selector="chargement"
+  >
+    {{ labels.chargement }}
+  </p>
+  } @else if (pointages.error()) {
+  <section
+    class="etat flex flex-col items-start gap-4 rounded-surface border border-border bg-surface px-6 py-5"
+    role="status"
+    data-selector="echec"
+  >
+    <p class="text-title text-ink">{{ labels.echec }}</p>
+    <p class="text-body text-ink-muted">{{ labels.echecExplication }}</p>
+    <button
+      type="button"
+      class="min-h-touch-lg rounded-control bg-accent px-8 text-section text-on-accent"
+      (click)="reessayer()"
+      data-selector="reessayer"
+    >
+      {{ labels.reessayer }}
+    </button>
+  </section>
+  } @else if (pointages.hasValue()) { @if (jourAfficheDans(pointages.value()); as jour) {
+  <section class="jour rounded-surface border border-border bg-surface px-6 py-5" aria-labelledby="jour-titre" data-selector="jour-affiche">
+    <h2 id="jour-titre" class="text-label uppercase text-ink-muted" data-selector="jour-titre">
+      {{ labels.titreDuJour(jour.jour, aujourdhui) }}
+    </h2>
+    <p class="flex flex-wrap items-baseline gap-4">
+      <span class="text-display text-ink tabular-nums" data-selector="total-jour-affiche">{{ labels.duree(jour.total) }}</span>
+      <span class="text-section text-ink-muted" data-selector="libelle-total-jour">{{ labels.libelleDuTotalDuJour(jour) }}</span>
+    </p>
+    @for (explication of labels.explications(jour); track explication) {
+    <p class="text-body-sm text-warn" data-selector="explication">{{ explication }}</p>
+    } @if (jour.lignes.length === 0) {
+    <p class="text-body text-ink-muted" data-selector="aucun-pointage-du-jour">{{ labels.aucunPointageDuJour }}</p>
+    }
+    <ul class="lignes border-t border-border" data-selector="lignes">
+      @for (ligne of jour.lignes; track $index) {
+      <li class="ligne border-b border-sunken text-body text-ink">
+        <span class="font-bold">{{ ligne.activite.element }}</span>
+        <span class="flex min-w-0 items-center gap-2">
+          {{ ligne.activite.poste }} @if (ligne.activite.categorie === 'NON_CONFORMITE') {
+          <span class="rounded bg-nc px-2 text-label text-ink" data-selector="nc">{{ labels.nonConformite }}</span>
+          }
+        </span>
+        <span class="text-ink-muted tabular-nums">{{ labels.plage(ligne) }}</span>
+        <span class="flex flex-col items-end tabular-nums">
+          @if (ligne.etat.etat === 'EN_COURS') {
+          <span class="rounded bg-ok px-2 text-label text-on-accent" data-selector="en-cours">{{ labels.mentionDeLaLigne(ligne) }}</span>
+          } @else { {{ labels.dureeDeLaLigne(ligne) }} @if (labels.mentionDeLaLigne(ligne); as mention) {
+          <span class="text-label text-warn" data-selector="mention">{{ mention }}</span>
+          } }
+        </span>
+      </li>
+      }
+    </ul>
+  </section>
+  } @else {
+  <p class="etat rounded-surface border border-border bg-surface px-6 py-5 text-body text-ink-muted" data-selector="aucun-pointage">
+    {{ labels.aucunPointage }}
+  </p>
+  } }
+  <section
+    class="semaine rounded-surface border border-border bg-surface px-6 py-5"
+    aria-labelledby="semaine-titre"
+    data-selector="semaine"
+  >
+    <div class="navigation-semaine">
+      <button
+        type="button"
+        class="navigation rounded-control border-2 text-title"
+        [disabled]="!peutReculer()"
+        (click)="voir(precedente())"
+        [attr.aria-label]="labels.semainePrecedente"
+        data-selector="semaine-precedente"
+      >
+        <glm-icon name="chevronLeft" />
+      </button>
+      <div class="text-center">
+        <h2 id="semaine-titre" class="text-section text-ink" data-selector="semaine-titre">
+          {{ labels.semaine(semaine(), estLaSemaineCourante()) }}
+        </h2>
+        <p class="text-body-sm text-ink-muted" data-selector="semaine-dates">{{ labels.dates(semaine()) }}</p>
+      </div>
+      <button
+        type="button"
+        class="navigation rounded-control border-2 text-title"
+        [disabled]="!peutAvancer()"
+        (click)="voir(suivante())"
+        [attr.aria-label]="labels.semaineSuivante"
+        data-selector="semaine-suivante"
+      >
+        <glm-icon name="chevronRight" />
+      </button>
+    </div>
+    @if (pointages.hasValue()) { @let lue = pointages.value();
+    <p class="flex items-baseline justify-between gap-3 border-t border-border pt-3">
+      <span class="text-body-sm text-ink-muted">{{ labels.totalDeLaSemaine }}</span>
+      <span class="flex flex-col items-end">
+        <span class="text-title text-ink tabular-nums" data-selector="total-semaine">{{ labels.duree(lue.total) }}</span>
+        @if (labels.noteDeLaSemaine(lue); as note) {
+        <span class="text-label text-warn" data-selector="note-semaine">{{ note }}</span>
+        }
+      </span>
+    </p>
+    <ul class="flex flex-col gap-2" data-selector="jours-pointes">
+      @for (jourPointe of lue.joursPointes(); track jourPointe.jour.value) {
+      <li>
+        <button
+          type="button"
+          class="jour-pointe flex min-h-touch-lg w-full items-center justify-between gap-3 rounded-control border-2 bg-surface px-4 text-body text-ink"
+          [class.jour-pointe--choisi]="estAffiche(jourPointe, lue)"
+          [attr.aria-pressed]="estAffiche(jourPointe, lue)"
+          (click)="choisir(jourPointe)"
+          [attr.data-selector]="'jour-' + jourPointe.jour.value"
+        >
+          <span class="font-semibold">{{ labels.jour(jourPointe.jour, aujourdhui) }}</span>
+          <span class="flex flex-col items-end">
+            <span class="tabular-nums">{{ labels.duree(jourPointe.total) }}</span>
+            @if (labels.noteDuJour(jourPointe); as note) {
+            <span class="text-label text-warn">{{ note }}</span>
+            }
+          </span>
+        </button>
+      </li>
+      }
+    </ul>
+    }
+    <button
+      type="button"
+      class="min-h-touch-lg rounded-control border-2 border-border-strong bg-surface px-4 text-body text-ink disabled:opacity-50"
+      [disabled]="estLaSemaineCourante()"
+      (click)="voir(periodeCourante)"
+      data-selector="revenir-aujourdhui"
+    >
+      {{ labels.revenirAujourdhui }}
+    </button>
+  </section>
+</main>
+
+<nav class="flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actions">
+  <button
+    type="button"
+    (click)="retourRequested.emit()"
+    class="min-h-touch-lg rounded border-2 border-border-strong bg-surface px-6 text-section text-ink"
+    data-selector="retour-au-pointage"
+  >
+    {{ labels.retour }}
+  </button>
+</nav>

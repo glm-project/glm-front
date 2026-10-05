@@ -47,6 +47,7 @@ describe('Pointage screen', () => {
     fixture.componentInstance.pauseRequested.subscribe(() => emitted.push('pause'));
     fixture.componentInstance.repriseRequested.subscribe(() => emitted.push('reprendre'));
     fixture.componentInstance.arretTotalRequested.subscribe(() => emitted.push('tout-arreter'));
+    fixture.componentInstance.mesPointagesRequested.subscribe(() => emitted.push('mes-pointages'));
   });
 
   afterEach(() => {
@@ -139,6 +140,22 @@ describe('Pointage screen', () => {
     whenTimePasses(999);
 
     thenNoGlobalIntentionIsExposed();
+  });
+
+  it('should request my pointages on a brief tap, without holding', async () => {
+    await whenRendering();
+
+    whenTappingGlobalCommand('show-mes-pointages');
+
+    thenMyPointagesAreRequested();
+  });
+
+  it('should keep my pointages out of reach while the pupitre is offline', async () => {
+    givenThePupitreIsOffline();
+
+    await whenRendering();
+
+    thenMyPointagesAreUnavailableOffline();
   });
 
   it('should choose no workstation on a brief tap', async () => {
@@ -347,6 +364,9 @@ describe('Pointage screen', () => {
   const givenAnEmptyWorkshop = (): void => {
     fixture.componentRef.setInput('vue', { conflits: [], moules: [], ordresDeFabrication: [] });
   };
+  const givenThePupitreIsOffline = (): void => {
+    fixture.componentRef.setInput('connected', false);
+  };
   const givenGlobalGesturesAreUnavailable = (): void => {
     fixture.componentRef.setInput('gestesDisponibles', false);
   };
@@ -494,6 +514,18 @@ describe('Pointage screen', () => {
   };
   const thenGlobalIntentionsAreExposed = (): void => {
     expect(emitted).toEqual(['pause', 'reprendre', 'tout-arreter']);
+  };
+  const thenMyPointagesAreRequested = (): void => {
+    expect(emitted).toEqual(['mes-pointages']);
+  };
+  const thenMyPointagesAreUnavailableOffline = (): void => {
+    const mesPointages = button('show-mes-pointages');
+    expect(mesPointages.disabled).toBe(true);
+    expect(
+      root()
+        .querySelector(`#${mesPointages.getAttribute('aria-describedby') ?? ''}`)
+        ?.textContent.trim(),
+    ).toBe('Disponible uniquement en ligne');
   };
   const thenNoGlobalIntentionIsExposed = (): void => {
     expect(emitted).toEqual([]);

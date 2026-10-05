@@ -13,6 +13,7 @@ import { App } from './app/app';
 import { authProvider } from './auth.provider';
 import { enrolementProvider } from './enrolement.provider';
 import { offlineProvider } from './offline.provider';
+import { pointagesDeLOperateurProvider } from './pointages-de-l-operateur.provider';
 
 import { environment } from './environments/environment';
 
@@ -28,6 +29,7 @@ bootstrapApplication(App, {
     authProvider,
     offlineProvider,
     enrolementProvider,
+    pointagesDeLOperateurProvider,
     provideServiceWorker('ngsw-worker.js', { enabled: environment.production, registrationStrategy: 'registerWhenStable:30000' }),
   ],
 }).catch((err: unknown) => {

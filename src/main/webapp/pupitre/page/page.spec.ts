@@ -23,6 +23,7 @@ import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/E
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { JournauxDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/JournauxDeLAtelierPort';
+import { PointagesDeLOperateurPort } from '@/pupitre/contexts/pointages-de-l-operateur/domain/PointagesDeLOperateurPort';
 import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { computed, signal } from '@angular/core';
@@ -33,6 +34,7 @@ import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/Atel
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
+import { PointagesDeLOperateurFixture } from '@test/unit/fixtures/pupitre/pointages-de-l-operateur/PointagesDeLOperateurFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { setTimeout as roundTrip } from 'node:timers';
@@ -149,6 +151,7 @@ describe('Pupitre page', () => {
         { provide: CurrentOperateurLifecycle, useValue: pupitre },
         { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: ErrorHandlerPort, useValue: errorHandler },
+        { provide: PointagesDeLOperateurPort, useValue: new PointagesDeLOperateurFixture() },
       ],
     });
     fixture = TestBed.createComponent(PupitrePage);
@@ -264,6 +267,44 @@ describe('Pupitre page', () => {
     thenHeaderMessageIs(expected);
   });
 
+  it('should open my pointages from the pointage screen', () => {
+    givenPointage();
+
+    whenPressing('show-mes-pointages');
+
+    thenVisible('pointage', false);
+    thenVisible('mes-pointages', true);
+  });
+
+  it('should come back to the pointage screen from my pointages', () => {
+    givenPointage();
+    whenPressing('show-mes-pointages');
+
+    whenPressing('retour-au-pointage');
+
+    thenVisible('mes-pointages', false);
+    thenVisible('pointage', true);
+  });
+
+  it('should keep my pointages out of reach while the pupitre is offline', () => {
+    givenThePupitreIsOffline();
+
+    givenPointage();
+
+    expect((element('show-mes-pointages') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('should show the pointage screen to the next designated operator', () => {
+    givenPointage();
+    whenPressing('show-mes-pointages');
+
+    whenPointageCloses();
+    givenPointage();
+
+    thenVisible('mes-pointages', false);
+    thenVisible('pointage', true);
+  });
+
   it('should display a local capture failure ahead of a workshop refusal', () => {
     givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' });
     givenLocalCaptureFailure();
@@ -320,6 +361,9 @@ describe('Pupitre page', () => {
       });
     }
     fixture.detectChanges();
+  };
+  const givenThePupitreIsOffline = (): void => {
+    pupitre.connected.set(false);
   };
   const givenReference = (): void => {
     pupitre.publishReference();
