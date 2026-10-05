@@ -55,8 +55,18 @@ possède leurs libellés ; il conserve les identités brutes lorsque les fiches 
 Le domaine garde chaque instant reçu en texte ISO ; le primaire l'affiche en heure locale par les formats
 et les pipes de `app/shared/date-format` : jour long (« jeudi 1 octobre à 09:41 »), année ajoutée quand elle diffère
 de celle de la page, secondes réservées à l'instant d'un fait pointé (« à 09:41:22 »), heure en gras puis jour long dans
-la chronologie. La page lit l'horloge une fois et la passe aux pipes. Un texte qui n'est pas un instant (la saisie en
-cours) s'affiche tel quel ; l'attribut `datetime` n'a jamais plus de trois décimales.
+la chronologie. La page lit l'horloge une fois et la passe aux pipes ; l'attribut `datetime` n'a jamais plus de trois
+décimales.
+Le gestionnaire choisit la date et l'heure du fait avec `glm-date-time-field`, le `datepicker` et le `timepicker` de
+Material en français (adapter et locale fournis par `provideGestionDateAdapter()` sur la page du dossier, chargée à la demande). Le champ
+est lié par valeur, sans formulaire : seul un geste du gestionnaire émet un instant (`2026-10-01T09:41:22-03:00`, offset
+local, sans fraction de seconde, composé par `app/shared/date-format`), si bien qu'un instant reçu qu'il ne touche pas
+garde ses nanosecondes. Modifier la date ou l'heure d'un instant reçu abandonne sa fraction de seconde. Une date ou une
+heure absente, mal saisie ou impossible laisse le champ en l'état et transmet `instant: ''` : le domaine répond
+`INSTANT_INVALIDE` (« Renseignez la date et l'heure du fait. »). Le domaine valide et ordonne les instants ; il ne lit
+jamais le fuseau ambiant. Au changement d'heure, une heure que l'horloge saute (printemps) est refusée avec son message
+propre, une heure répétée (automne) prend sa première occurrence, même le jour du changement. Chaque nouvelle proposition
+(un choix, même identique, ou « Régulariser ») recrée le champ : une saisie partielle ne lui survit pas.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
 

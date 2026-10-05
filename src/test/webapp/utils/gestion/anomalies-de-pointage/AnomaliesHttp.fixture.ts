@@ -10,8 +10,10 @@ export const ncFixture = '70000000-0000-0000-0000-000000000006';
 export const remplacementFixture = '70000000-0000-0000-0000-000000000007';
 export const instantDebutFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0), '123456789');
 export const instantNonConformiteFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 0), '123456789');
-export const instantFinFixture = instantLocalFixture(new Date(2026, 8, 14, 17, 0), '123456789');
-export const instantCorrigeFixture = instantLocalWithOffsetFixture(new Date(2026, 8, 14, 17, 1), '123456789');
+export const instantFinLocalFixture = new Date(2026, 8, 14, 17, 0);
+export const instantFinFixture = instantLocalFixture(instantFinLocalFixture, '123456789');
+export const instantCorrigeLocalFixture = new Date(2026, 8, 14, 17, 1);
+export const instantCorrigeFixture = instantLocalWithOffsetFixture(instantCorrigeLocalFixture);
 export const motifFixture = 'Heure et cible vérifiées avec l’opérateur';
 export const correctionFixture: components['schemas']['RestActeCorrection'] = {
   kind: 'CORRECTION',

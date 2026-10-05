@@ -448,15 +448,6 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-proposition-resume', 'Fin · lundi 14 septembre à 17:00:00');
   });
 
-  it('should keep showing an instant the manager has not finished typing as it was typed', async () => {
-    await whenRendering();
-    await whenClicking('anomalie-choix');
-
-    await whenEntering('anomalie-instant', 'pas encore un instant');
-
-    thenTextContains('anomalie-proposition-resume', 'pas encore un instant');
-  });
-
   it('should show the instant of the previewed act and of the compared journals with their seconds', async () => {
     givenASuccessfulPreview();
     await whenRendering();
@@ -883,7 +874,7 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-acte', 'Correction du pointage');
     thenFieldValueIs('anomalie-cible', 'travail-8');
-    thenFieldValueIs('anomalie-instant', INSTANT_FIN);
+    thenTheInstantFieldsShow('14/09/2026', '17:00:00');
     thenDetailedFactIsOpen();
   });
 
@@ -1135,10 +1126,10 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-choix', 'Régulariser la fin');
     thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
-    thenFieldValueIs('anomalie-instant', '');
+    thenTheInstantFieldsShow('', '');
     thenFieldValueIs('anomalie-cible', 'travail-8');
     thenFieldValueIs('anomalie-operateur', 'op-camille');
-    thenTextContains('anomalie-validation', 'Renseignez une date et heure ISO avec son fuseau.');
+    thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
     thenDetailedFactIsOpen();
     thenAbsent('anomalie-motif');
     thenDisabled('anomalie-previsualiser');
@@ -1149,7 +1140,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenClicking('anomalie-choix');
 
-    await whenEntering('anomalie-instant', '2026-09-14T17:00:00.123456789+02:00');
+    await whenEnteringTheInstant('14/09/2026', '17:00:00');
     await whenClicking('anomalie-previsualiser');
 
     thenInterpretationIsSelected();
@@ -1162,7 +1153,7 @@ describe('Anomaly dossier page', () => {
           activiteVisee: 'travail-8',
           operateur: 'op-camille',
           poste: 'poste-1',
-          instant: '2026-09-14T17:00:00.123456789+02:00',
+          instant: '2026-09-14T17:00:00-03:00',
         },
       },
     ]);
@@ -1178,16 +1169,239 @@ describe('Anomaly dossier page', () => {
     thenNoInterpretationIsSelected();
   });
 
+  it('should preview the received instant untouched, nanoseconds included, when the manager changes something else', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    await whenEntering('anomalie-motif', 'Cible confirmée');
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes).toMatchObject([{ kind: 'CORRECTION', fait: { instant: INSTANT_FIN } }]);
+  });
+
+  it('should keep the time and drop the fraction of a second when the manager changes the day of a received instant', async () => {
+    await givenACorrectionOfTheReceivedEndWithItsReason();
+
+    await whenEntering('anomalie-instant-date', '15/09/2026');
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes).toMatchObject([{ fait: { instant: '2026-09-15T17:00:00-03:00' } }]);
+  });
+
+  it('should keep the day when the manager changes the time of a received instant', async () => {
+    await givenACorrectionOfTheReceivedEndWithItsReason();
+
+    await whenEntering('anomalie-instant-heure', '18:30');
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes).toMatchObject([{ fait: { instant: '2026-09-14T18:30:00-03:00' } }]);
+  });
+
+  it('should ask for the date and the time while the manager has only given a date', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEntering('anomalie-instant-date', '14/09/2026');
+
+    thenTheInstantFieldsShow('14/09/2026', '');
+    thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should forget the date the manager had given alone when the same regularisation is proposed anew', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+    await whenEntering('anomalie-instant-date', '14/09/2026');
+
+    await whenClicking('anomalie-regulariser');
+
+    thenTheInstantFieldsShow('', '');
+  });
+
+  it('should forget the time the manager had given alone when the same guided choice is chosen again', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-instant-heure', '17:00:00');
+
+    await whenClicking('anomalie-choix');
+
+    thenTheInstantFieldsShow('', '');
+  });
+
+  it('should ask for the date and the time while the manager has only given a time', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEntering('anomalie-instant-heure', '17:00:00');
+
+    thenTheInstantFieldsShow('', '17:00:00');
+    thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should accept the instant as soon as the missing part is given, whatever the order of the two parts', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-instant-heure', '17:00:00');
+
+    await whenEntering('anomalie-instant-date', '14/09/2026');
+
+    thenTheInstantFieldsShow('14/09/2026', '17:00:00');
+    thenTextDoesNotContain('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+  });
+
+  it('should keep the time the manager typed and ask again for the instant when the day of a received instant is erased', async () => {
+    await givenACorrectionOfTheReceivedEndWithItsReason();
+
+    await whenEntering('anomalie-instant-date', '');
+
+    thenTheInstantFieldsShow('', '17:00:00');
+    thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should ask again for the instant, without blaming the clock, when the typed time does not exist', async () => {
+    await givenACorrectionOfTheReceivedEndWithItsReason();
+
+    field('anomalie-instant-heure').focus();
+    await whenEntering('anomalie-instant-heure', '25:00');
+
+    thenTheInstantFieldsShow('14/09/2026', '25:00');
+    thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+    thenTextDoesNotContain('anomalie-instant-erreur', 'Cette heure');
+  });
+
+  it('should keep the typed text and ask again for the instant when the typed day does not exist', async () => {
+    await givenACorrectionOfTheReceivedEndWithItsReason();
+
+    await whenEntering('anomalie-instant-date', '31/02/2026');
+
+    thenTheInstantFieldsShow('31/02/2026', '17:00:00');
+    thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+  });
+
+  it('should show the received instant in local time whatever its offset', async () => {
+    givenACorrectionReceivedWithAnOffset('2026-09-14T22:15:30+02:00');
+
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    thenTheInstantFieldsShow('14/09/2026', '17:15:30');
+  });
+
+  it('should name the buttons that open the calendar and the time list in French', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    thenTheButtonInsideIsNamed('anomalie-instant-calendrier', 'Ouvrir le calendrier');
+    thenTheButtonInsideIsNamed('anomalie-instant-horloge', 'Ouvrir la liste des heures');
+  });
+
+  it('should lock the instant fields and their buttons while the outcome of a write is unknown', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenClicking('anomalie-confirmer');
+
+    thenInputIsDisabled('anomalie-instant-date');
+    thenInputIsDisabled('anomalie-instant-heure');
+    thenTheButtonInsideIsDisabled('anomalie-instant-calendrier');
+    thenTheButtonInsideIsDisabled('anomalie-instant-horloge');
+  });
+
+  describe('in a time zone that changes hour', () => {
+    const original = process.env['TZ'];
+
+    beforeEach(() => {
+      process.env['TZ'] = 'Europe/Paris';
+      vi.setSystemTime(new Date(2026, 2, 29, 10, 0));
+    });
+
+    afterEach(() => {
+      if (original === undefined) delete process.env['TZ'];
+      else process.env['TZ'] = original;
+    });
+
+    it('should refuse an hour the clock skips and say why', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEnteringTheInstant('29/03/2026', '02:30');
+
+      thenTextContains('anomalie-instant-erreur', 'Cette heure n’existe pas ce jour-là, à cause du changement d’heure.');
+      thenDisabled('anomalie-previsualiser');
+    });
+
+    it('should refuse an hour the clock skips on the day of the change of hour even when the instant was received that day', async () => {
+      givenACorrectionReceivedWithAnOffset('2026-03-29T04:00:00+02:00');
+      await whenRendering();
+      await whenClicking('anomalie-detail');
+      await whenClicking('anomalie-corriger');
+
+      await whenEntering('anomalie-instant-heure', '02:30');
+
+      thenTextContains('anomalie-instant-erreur', 'Cette heure n’existe pas ce jour-là, à cause du changement d’heure.');
+      thenTheInstantFieldsShow('29/03/2026', '02:30:00');
+    });
+
+    it('should stop reproaching the skipped hour when the same guided choice is chosen again', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEnteringTheInstant('29/03/2026', '02:30');
+
+      await whenClicking('anomalie-choix');
+
+      thenTextDoesNotContain('anomalie-instant-erreur', 'Cette heure');
+      thenTheInstantFieldsShow('', '');
+    });
+
+    it('should stop reproaching the hour once the manager chooses one that exists', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEnteringTheInstant('29/03/2026', '02:30');
+
+      await whenEntering('anomalie-instant-heure', '03:30');
+
+      thenTextDoesNotContain('anomalie-instant-erreur', 'Cette heure');
+      thenTextDoesNotContain('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+    });
+
+    it('should take the first occurrence of an hour the clock repeats', async () => {
+      givenAnAutomaticEnd();
+      givenASuccessfulPreview(undefined, acteFinRegulariseeFixture('poste-1', '2026-10-25T02:30:00+02:00'));
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEnteringTheInstant('25/10/2026', '02:30');
+
+      await whenClicking('anomalie-previsualiser');
+
+      expect(preview.actes).toEqual([acteFinRegulariseeFixture('poste-1', '2026-10-25T02:30:00+02:00')]);
+    });
+  });
+
   it('should preview the end regularisation of an activity without workstation without naming one', async () => {
     givenAnAutomaticEnd(finARegulariserFixture(''));
     givenASuccessfulPreview(
       { ...dossierFinAutomatiqueFixture(), etat: 'SANS_ANOMALIE', finAutomatique: false },
-      acteFinRegulariseeFixture('', '2026-09-14T17:00:00+02:00'),
+      acteFinRegulariseeFixture('', '2026-09-14T17:00:00-03:00'),
     );
     await whenRendering();
     await whenClicking('anomalie-choix');
 
-    await whenEntering('anomalie-instant', '2026-09-14T17:00:00+02:00');
+    await whenEnteringTheInstant('14/09/2026', '17:00');
     await whenClicking('anomalie-previsualiser');
 
     thenTextContains('anomalie-apercu-acte', 'Poste : Sans poste');
@@ -1219,7 +1433,7 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-choix', libelle);
     thenTextContains('anomalie-acte', 'Correction du pointage');
-    thenFieldValueIs('anomalie-instant', '2026-09-14T23:00:00+02:00');
+    thenTheInstantFieldsShow('14/09/2026', '18:00:00');
     thenFieldValueIs('anomalie-motif', '');
     thenTextContains('anomalie-validation', 'Renseignez un motif.');
     thenDisabled('anomalie-previsualiser');
@@ -1349,13 +1563,13 @@ describe('Anomaly dossier page', () => {
   const givenAnEndRegularisationLeaving = (resultat: Pick<DossierAnomalie, 'etat' | 'enConflit' | 'finAutomatique'>): void => {
     givenAnAutomaticEnd();
     const apres = { ...dossierFinAutomatiqueFixture(), ...resultat };
-    givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00+02:00'));
+    givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'));
     application.result = { kind: 'APPLIQUE', dossier: apres };
   };
 
   const whenPreviewingTheDatedEnd = async (): Promise<void> => {
     await whenClicking('anomalie-choix');
-    await whenEntering('anomalie-instant', '2026-09-14T17:00:00+02:00');
+    await whenEnteringTheInstant('14/09/2026', '17:00:00');
     await whenClicking('anomalie-previsualiser');
   };
 
@@ -1557,6 +1771,26 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-previsualiser');
   };
 
+  const givenACorrectionOfTheReceivedEndWithItsReason = async (): Promise<void> => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+    await whenEntering('anomalie-motif', 'Cible confirmée');
+  };
+
+  const givenACorrectionReceivedWithAnOffset = (instant: string): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, journal: dossier.journal.map(pointage => ({ ...pointage, fait: { ...pointage.fait, instant } })) },
+    };
+  };
+
+  const whenEnteringTheInstant = async (date: string, time: string): Promise<void> => {
+    await whenEntering('anomalie-instant-date', date);
+    await whenEntering('anomalie-instant-heure', time);
+  };
+
   const whenEntering = async (selector: string, value: string): Promise<void> => {
     const input = field(selector);
     input.value = value;
@@ -1684,6 +1918,10 @@ describe('Anomaly dossier page', () => {
   const thenFieldValueIs = (selector: string, expected: string): void => {
     expect(field(selector).value).toBe(expected);
   };
+  const thenTheInstantFieldsShow = (date: string, time: string): void => {
+    thenFieldValueIs('anomalie-instant-date', date);
+    thenFieldValueIs('anomalie-instant-heure', time);
+  };
   const thenTargetChoiceIs = (reference: string, libelle: string): void => {
     const cible = field('anomalie-cible');
     if (!(cible instanceof HTMLSelectElement)) throw new Error('Expected an activity choice');
@@ -1694,6 +1932,15 @@ describe('Anomaly dossier page', () => {
     const button = element(selector);
     if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button');
     expect(button.disabled).toBe(true);
+  };
+  const thenInputIsDisabled = (selector: string): void => {
+    expect(field(selector).disabled).toBe(true);
+  };
+  const thenTheButtonInsideIsDisabled = (selector: string): void => {
+    expect(element(selector).querySelector('button')?.disabled).toBe(true);
+  };
+  const thenTheButtonInsideIsNamed = (selector: string, name: string): void => {
+    expect(element(selector).querySelector('button')?.getAttribute('aria-label')).toBe(name);
   };
   const thenNoInterpretationIsSelected = (): void => {
     expect(element('anomalie-choix').getAttribute('aria-pressed')).toBe('false');

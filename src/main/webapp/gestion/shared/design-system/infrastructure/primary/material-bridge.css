@@ -42,6 +42,12 @@
   --mat-button-tonal-container-height: var(--spacing-touch);
   --mat-icon-button-state-layer-size: var(--spacing-touch);
 
+  --mat-datepicker-calendar-container-background-color: var(--color-surface);
+  --mat-datepicker-calendar-container-shape: var(--radius-surface);
+  --mat-datepicker-calendar-container-touch-shape: var(--radius-surface);
+  --mat-timepicker-container-background-color: var(--color-surface);
+  --mat-timepicker-container-shape: var(--radius-control);
+
   --mat-sys-headline-small-size: var(--text-title);
   --mat-sys-headline-small-line-height: var(--text-title--line-height);
 

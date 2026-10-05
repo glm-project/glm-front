@@ -6,7 +6,7 @@ import {
   debutFixture,
   dossierFixture,
   finFixture,
-  instantCorrigeFixture,
+  instantCorrigeLocalFixture,
   journalFixture,
   ligneFixture,
   motifFixture,
@@ -15,6 +15,7 @@ import {
   remplacementFixture,
   suiviFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 
 const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 1), '123456789');
@@ -279,7 +280,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.',
     );
     cy.get(dataSelector('anomalie-motif')).should('have.value', motifFixture);
-    cy.get(dataSelector('anomalie-instant')).should('have.value', instantCorrigeFixture);
+    thenTheInstantFieldsShow(instantCorrigeLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).should('be.enabled');
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
@@ -299,7 +300,7 @@ describe('HTTP conflict resolution in Gestion', () => {
           evenement: remplacementFixture,
           acte: {
             ...correctionFixture,
-            fait: { ...correctionFixture.fait, instant: instantLocalFixture(new Date(2026, 8, 14, 17, 1), '123456789') },
+            fait: { ...correctionFixture.fait, instant: instantLocalFixture(instantCorrigeLocalFixture) },
           },
           avant: dossierFixture(),
           apres: dossierFixture(true),
@@ -408,8 +409,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('anomalie-choix')).first().click();
     cy.get(dataSelector('anomalie-motif')).type(motifFixture);
     cy.get(dataSelector('anomalie-champs-detail')).click();
-    cy.get(dataSelector('anomalie-instant')).clear();
-    cy.get(dataSelector('anomalie-instant')).type(instantCorrigeFixture);
+    whenTypingTheInstant(instantCorrigeLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).click();
     cy.get(dataSelector('anomalie-apercu')).should('contain.text', '4 h').and('contain.text', '5 h 1 min');
   };

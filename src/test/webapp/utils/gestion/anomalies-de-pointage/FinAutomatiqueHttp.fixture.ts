@@ -1,5 +1,5 @@
 import { components } from '@/app/generated/schema';
-import { instantLocalFixture } from './InstantLocal.fixture';
+import { instantLocalFixture, instantLocalWithOffsetFixture } from './InstantLocal.fixture';
 
 export const suiviFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000001';
 export const ouvrantFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000002';
@@ -12,8 +12,11 @@ export const finCorrigeeFixture = '71000000-0000-0000-0000-000000000008';
 export const activiteFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000009';
 export const debutFinAutomatiqueFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0));
 export const echeanceFinAutomatiqueFixture = instantLocalFixture(new Date(2026, 8, 14, 21, 0));
-export const instantRegulariseFixture = instantLocalFixture(new Date(2026, 8, 14, 17, 0));
-export const instantTardifFixture = instantLocalFixture(new Date(2026, 8, 14, 23, 0));
+export const instantRegulariseLocalFixture = new Date(2026, 8, 14, 17, 0);
+export const instantRegulariseFixture = instantLocalFixture(instantRegulariseLocalFixture);
+export const instantRegulariseSaisiFixture = instantLocalWithOffsetFixture(instantRegulariseLocalFixture);
+export const instantTardifLocalFixture = new Date(2026, 8, 14, 23, 0);
+export const instantTardifFixture = instantLocalFixture(instantTardifLocalFixture);
 export const motifFinAutomatiqueFixture = 'Fin tardive confirmée avec l’opérateur';
 
 const adresseFixture = { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture };

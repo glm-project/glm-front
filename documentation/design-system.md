@@ -76,6 +76,11 @@ with autocomplete, multiple selections or immediate domain normalization remain 
 stylesheet is loaded with component encapsulation so it also styles those local fields without adding global
 unprefixed classes.
 
+`DateTimeField` pairs Material's `datepicker` and `timepicker` behind the shared `.field-input` style. It receives an
+instant as text and its labels, and emits the offset instant the user composed, or an empty text while the date or the
+hour is missing or impossible. It emits only on a user gesture, so an untouched instant keeps its precision. The
+lazy component that renders it provides `provideGestionDateAdapter()` in its own `providers`.
+
 `ErrorMessage` renders a failed read and its retry action; the parent decides which read to retry. Loading,
 empty states and business refusals retain their local composition. `ConfirmationContent` renders the content
 of a Material dialog; its owning context retains the command, synchronous duplicate-action guard,

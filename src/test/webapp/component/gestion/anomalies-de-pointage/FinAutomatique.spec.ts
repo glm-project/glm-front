@@ -33,11 +33,13 @@ describe('Automatic end dossier in Gestion', () => {
   };
 
   const whenReachingTheTimeField = (): void => {
-    cy.get(dataSelector('anomalie-instant')).scrollIntoView();
+    cy.get(dataSelector('anomalie-instant-heure')).scrollIntoView();
   };
 
   const thenTheTimeIsReachableWithoutHorizontalOverflow = (): void => {
-    cy.get(dataSelector('anomalie-instant')).should('be.visible').and('have.value', '');
+    cy.get(dataSelector('anomalie-instant-date')).should('be.visible').and('have.value', '');
+    cy.get(dataSelector('anomalie-instant-heure')).should('be.visible').and('have.value', '');
+    cy.get(dataSelector('anomalie-instant-horloge')).should('be.visible');
     cy.document().should(document => {
       expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
     });

@@ -4,6 +4,8 @@ import {
   InstantLongDayWithSecondsPipe,
   InstantTimeAndLongDayWithSecondsPipe,
 } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
+import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
+import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -36,10 +38,11 @@ import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePo
     InstantLongDayPipe,
     InstantLongDayWithSecondsPipe,
     InstantTimeAndLongDayWithSecondsPipe,
+    DateTimeField,
   ],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',
-  providers: [PreparationActe],
+  providers: [PreparationActe, ...provideGestionDateAdapter()],
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
@@ -61,6 +64,7 @@ export class DossierAnomaliePage {
   protected readonly conflitAExpliquer = conflitAExpliquer;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
+  protected readonly propositionsFaites = signal(0);
   protected readonly pointageConsulte = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
@@ -169,6 +173,7 @@ export class DossierAnomaliePage {
 
   protected choose(saisie: SaisieActe, choix?: string): void {
     this.preparation.choose(saisie);
+    this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
     this.choixSelectionne.set(choix);
     this.focusHeading(this.propositionHeading);

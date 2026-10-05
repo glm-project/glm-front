@@ -287,18 +287,17 @@
             [disabled]="occupe()"
             (input)="change({ fait: { poste: poste.value } })"
           />
-          <label class="mt-4 block text-body-sm font-semibold" for="instant-acte">{{ libelles.instant }}</label>
-          <input
-            id="instant-acte"
-            #instant
-            class="champ mt-2"
-            data-selector="anomalie-instant"
+          @for (proposee of [propositionsFaites()]; track proposee) {
+          <glm-date-time-field
+            class="mt-4"
+            fieldId="instant-acte"
+            selector="anomalie-instant"
+            [labels]="libelles.champInstant"
             [value]="proposition.fait.instant"
             [disabled]="occupe()"
-            (input)="change({ fait: { instant: instant.value } })"
-            aria-describedby="instant-aide"
+            (valueChanged)="change({ fait: { instant: $event } })"
           />
-          <p id="instant-aide" class="mt-1 text-body-sm text-ink-muted">{{ libelles.instantAide }}</p>
+          }
         </details>
         } @if (proposition.kind !== 'REGULARISATION') {
         <label class="mt-4 block text-body-sm font-semibold" for="motif-acte">{{ libelles.motif }}</label>

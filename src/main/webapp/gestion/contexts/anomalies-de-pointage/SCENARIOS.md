@@ -46,8 +46,22 @@ long (« jeudi 1 octobre à 09:41 ») avec l'année quand elle diffère de celle
 porte ses secondes (« à 09:41:22 ») : chronologie (heure en gras, puis jour long), références des diagnostics,
 détails de traçabilité, proposition, aperçu et journaux avant/après. L'engagement, la clôture, le début et la fin
 d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la liste restent à la minute. L'attribut
-`datetime` des heures porte un instant valide, de trois décimales au plus, sans perdre l'ordre du journal. La saisie
-de l'instant reste un texte ISO.
+`datetime` des heures porte un instant valide, de trois décimales au plus, sans perdre l'ordre du journal.
+
+## Saisie de la date et de l'heure du fait
+
+La date et l'heure se choisissent avec le `datepicker` et le `timepicker` de Material, en français, la semaine
+commençant le lundi, au clavier comme au calendrier et à la liste des heures. Une date se tape `JJ/MM/AAAA` ; une
+date impossible (`31/02/2026`) est refusée, jamais relue en mois d'abord. Une heure se tape `HH:MM` ou `HH:MM:SS`.
+Tant que le gestionnaire ne touche à rien, l'instant reçu part inchangé, nanosecondes comprises. Après un geste, il part
+avec l'offset local et sans fraction de seconde. Une date sans heure, ou l'inverse, garde ce qui est saisi, bloque
+l'aperçu et affiche « Renseignez la date et l'heure du fait. ». Au changement d'heure, une heure inexistante est refusée
+(« Cette heure n'existe pas ce jour-là, à cause du changement d'heure. ») et une heure répétée prend sa première
+occurrence, y compris le jour même du changement d'heure, que l'horloge de la page soit ce jour-là ou que l'instant reçu
+en soit. Une nouvelle proposition (un choix, même identique, ou « Régulariser ») repart d'un champ neuf : la date ou
+l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les specs unitaires fixent `America/Sao_Paulo`
+(sans changement d'heure) ; les cas de changement d'heure rebasculent `TZ` en `Europe/Paris` et placent l'horloge le
+29 mars le temps du test. Cypress saisit une date au clavier et choisit un jour et une heure à la souris.
 
 ## Frontières de vérification
 

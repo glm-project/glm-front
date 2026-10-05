@@ -1,5 +1,11 @@
-const LOCALE = 'fr-FR';
+export const LOCALE = 'fr-FR';
 const HOUR_CYCLE = 'h23';
+
+export const DATE_INPUT_OPTIONS: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
+
+export const TIME_OPTION_LABEL_OPTIONS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: HOUR_CYCLE };
+
+export const TIME_INPUT_OPTIONS: Intl.DateTimeFormatOptions = { ...TIME_OPTION_LABEL_OPTIONS, second: '2-digit' };
 
 const NUMERIC_DATE_TIME = new Intl.DateTimeFormat(LOCALE, {
   day: '2-digit',
@@ -10,7 +16,7 @@ const NUMERIC_DATE_TIME = new Intl.DateTimeFormat(LOCALE, {
   hourCycle: HOUR_CYCLE,
 });
 
-const TIME = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit', hourCycle: HOUR_CYCLE });
+const TIME = new Intl.DateTimeFormat(LOCALE, TIME_OPTION_LABEL_OPTIONS);
 
 const NUMERIC_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { day: '2-digit', month: '2-digit' });
 
@@ -29,12 +35,7 @@ const SHORT_WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', da
 
 const WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric' });
 
-const TIME_WITH_SECONDS = new Intl.DateTimeFormat(LOCALE, {
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: HOUR_CYCLE,
-});
+const TIME_WITH_SECONDS = new Intl.DateTimeFormat(LOCALE, TIME_INPUT_OPTIONS);
 
 const LONG_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -127,3 +128,17 @@ const twoDigits = (value: number): string => String(value).padStart(2, '0');
 
 export const localCalendarDay = (date: Date): string =>
   `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())}`;
+
+const offsetOf = (date: Date): string => {
+  const minutes = -date.getTimezoneOffset();
+  const sign = minutes < 0 ? '-' : '+';
+  return `${sign}${twoDigits(Math.floor(Math.abs(minutes) / 60))}:${twoDigits(Math.abs(minutes) % 60)}`;
+};
+
+export const toOffsetIsoString = (date: Date): string =>
+  `${localCalendarDay(date)}T${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}${offsetOf(date)}`;
+
+export const combineLocalDayAndTime = (day: Date, time: Date): Date | undefined => {
+  const combined = new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.getHours(), time.getMinutes(), time.getSeconds());
+  return combined.getHours() === time.getHours() && combined.getMinutes() === time.getMinutes() ? combined : undefined;
+};
