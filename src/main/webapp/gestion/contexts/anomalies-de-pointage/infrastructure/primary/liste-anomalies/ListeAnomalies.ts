@@ -9,7 +9,7 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
 
 @Component({
-  selector: 'glm-liste-conflits',
+  selector: 'glm-liste-anomalies',
   imports: [RouterLink],
   templateUrl: './ListeAnomalies.html',
   styleUrl: './ListeAnomalies.css',
@@ -37,7 +37,7 @@ export class ListeAnomalies {
   protected async filter(event: Event, operateur: string, element: string): Promise<void> {
     event.preventDefault();
     try {
-      const navigue = await this.router.navigate(['/conflits'], {
+      const navigue = await this.router.navigate(['/anomalies'], {
         queryParams: { operateur: operateur.trim(), element: element.trim(), page: 1 },
       });
       this.echecNavigation.set(!navigue);

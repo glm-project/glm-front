@@ -43,7 +43,7 @@ const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
   datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
   nombrePointages: 2,
 };
-const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierConflit'] => ({
+const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierAnomalie'] => ({
   kind,
   enConflit: kind === 'EN_CONFLIT',
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
@@ -159,7 +159,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
   it('should expose a known invalid-proposal refusal without describing an API limitation', async () => {
     const demande = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
 
-    whenRequestFails('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus', 'proposition-invalide', 400, 'Proposition invalide');
+    whenRequestFails('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus', 'proposition-invalide', 400, 'Proposition invalide');
     const resultat = await demande;
 
     expect(resultat).toEqual({ kind: 'REFUS', raison: 'Proposition invalide' });
@@ -170,7 +170,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     async code => {
       const demande = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
 
-      whenRequestFails('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus', code, 409, 'Le suivi a changé');
+      whenRequestFails('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus', code, 409, 'Le suivi a changé');
       const resultat = await demande;
 
       expect(resultat).toEqual({ kind: 'CONCURRENCE' });
@@ -194,7 +194,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
   ])('should preserve the known preview refusal %s and its message', async code => {
     const demande = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
 
-    whenRequestFails('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus', code, 409, 'Acte refusé par Atelier');
+    whenRequestFails('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus', code, 409, 'Acte refusé par Atelier');
     const resultat = await demande;
 
     expect(resultat).toEqual({ kind: 'REFUS', raison: 'Acte refusé par Atelier' });
@@ -448,7 +448,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
 
   const actOperationUrl = (operation: 'preview' | 'apply' | 'verify'): string =>
     ({
-      preview: '/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus',
+      preview: '/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus',
       apply: '/api/atelier/suivis/suivi-camille/confirmations-de-resolution',
       verify: `/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${propositionFixture.commande}`,
     })[operation];
@@ -497,7 +497,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
   };
 
   const whenPreviewWithoutEventAnswers = (acte: components['schemas']['RestActeDeResolution']): void => {
-    const request = server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus');
+    const request = server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus');
     const body = request.request.body as components['schemas']['RestDemandeDApercu'];
     request.flush({
       commande: body.commande,
@@ -514,7 +514,7 @@ describe('Beyond the contract: HTTP conflict actes', () => {
     acte: components['schemas']['RestActeDeResolution'] = acteFixture,
     changement: Partial<components['schemas']['RestApercuDeResolution']> = {},
   ): string => {
-    const request = server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus');
+    const request = server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus');
     const body = request.request.body as components['schemas']['RestDemandeDApercu'];
     expect(request.request.method).toBe('POST');
     expect(body).toEqual({ revision: 7, acte, commande: body.commande });

@@ -20,7 +20,7 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 
 @Component({
-  selector: 'glm-dossier-conflit',
+  selector: 'glm-dossier-anomalie',
   imports: [RouterLink, ChronologiePointagesPipe],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',

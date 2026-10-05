@@ -38,8 +38,13 @@ describe('Gestion header', () => {
     thenItShowsTheHeading('glmfront');
   });
 
-  it('should identify conflict resolution as a regular workshop destination', () => {
-    thenNavigationHasLabel('gestion-navigation-conflits', 'Conflits');
+  it('should identify anomalies of pointage as a regular workshop destination', () => {
+    thenNavigationHasLabel('gestion-navigation-anomalies', 'Anomalies');
+  });
+
+  it('should link the anomalies destination to the anomalies route, and no longer offer the conflicts one', () => {
+    thenNavigationLinksTo('gestion-navigation-anomalies', '/anomalies', 'Anomalies');
+    thenNavigationOffers('gestion-navigation-conflits', false);
   });
 
   it.each([
@@ -96,6 +101,10 @@ describe('Gestion header', () => {
     const link = document.querySelector(dataSelector(selector));
     expect(link?.getAttribute('href')).toBe(href);
     expect(link?.textContent).toContain(label);
+  };
+
+  const thenNavigationOffers = (selector: string, offered: boolean): void => {
+    expect(document.querySelector(dataSelector(selector)) !== null).toBe(offered);
   };
 
   const thenNavigationHasLabel = (selector: string, label: string): void => {

@@ -107,7 +107,7 @@ const toChoix = (choix: components['schemas']['RestChoixDeResolution']): ChoixGu
 });
 
 export const toDossier = (
-  dossier: components['schemas']['RestDossierConflit'],
+  dossier: components['schemas']['RestDossierAnomalie'],
   sequence: components['schemas']['RestSequenceDuDossier'] | undefined = dossier.sequence,
 ): DossierAnomalie => {
   if (sequence === undefined) throw new Error('Séquence du dossier absente.');
@@ -133,7 +133,7 @@ export const toDossier = (
   };
 };
 
-export const toDossierDansPerimetre = (dossier: components['schemas']['RestDossierConflit']): DossierAnomalie => {
+export const toDossierDansPerimetre = (dossier: components['schemas']['RestDossierAnomalie']): DossierAnomalie => {
   const perimetre = dossier.perimetre;
   if (perimetre === undefined) throw new Error('Périmètre du dossier absent.');
   return toDossier(dossier, perimetre);

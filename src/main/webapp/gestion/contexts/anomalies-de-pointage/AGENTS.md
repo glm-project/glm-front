@@ -1,4 +1,4 @@
-# Résolution des conflits
+# Anomalies de pointage
 
 Ce contexte de Gestion possède la décision explicite du gestionnaire et sa saisie. Le calcul des
 activités, des durées et des coûts reste au backend Atelier, selon
@@ -6,6 +6,11 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 
 ## Langage et invariants
 
+- **Anomalie de pointage** : ce que le gestionnaire doit trancher. Deux natures : `CONFLIT`, une séquence
+  en conflit, et `FIN_AUTOMATIQUE`, une activité terminée à son échéance faute de fin réelle. Le contexte
+  ne traite aujourd'hui que la nature `CONFLIT` ; la liste la demande explicitement
+  (`GET /api/atelier/anomalies?nature=CONFLIT`). Le coût de revient emploie déjà « anomalie » au sens large ;
+  les contextes restent isolés et ne partagent aucun type. « Séquence en conflit » garde son sens.
 - **Dossier** : projection d'une séquence en conflit, adressée par suivi et pointage d'ancrage ; une
   adresse annulée, remplacée ou résolue reçoit un résultat explicite, jamais une autre séquence.
 - **Acte** : correction, annulation ou régularisation humaine. Aucun acte n'est choisi par défaut.
@@ -24,6 +29,9 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
 
 ## Responsabilités
+
+Gestion expose la liste sous `/anomalies` et un dossier sous `/anomalies/:suivi?pointage=…`. L'ancienne
+route `/conflits` n'existe plus et ne redirige pas.
 
 Le domaine possède les identités, la saisie et la confirmation ; l'application protège les appels
 asynchrones et les doubles soumissions. Le primaire rend les faits et leur cible, conserve les filtres

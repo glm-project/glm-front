@@ -1,5 +1,5 @@
 <main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="dossier-heading">
-  <a class="gestion-retour" routerLink="/conflits" [queryParams]="retour()" data-selector="conflit-retour">{{ libelles.retour }}</a>
+  <a class="gestion-retour" routerLink="/anomalies" [queryParams]="retour()" data-selector="anomalie-retour">{{ libelles.retour }}</a>
   <h1 id="dossier-heading" class="mt-2 text-title">{{ libelles.dossier }}</h1>
   @if (lecture.isLoading()) {
   <p role="status">{{ libelles.chargement }}</p>
@@ -10,7 +10,7 @@
       {{ dossier.ligne.operateur || libelles.operateurNonResolu + ' · ' + dossier.ligne.operateurId }} · {{ dossier.ligne.poste ||
       (dossier.ligne.posteId ? libelles.posteNonResolu + ' · ' + dossier.ligne.posteId : libelles.sansPoste) }} · {{ dossier.ligne.date }}
     </p>
-    <p class="mt-2 text-body-sm" data-selector="conflit-cloture">
+    <p class="mt-2 text-body-sm" data-selector="anomalie-cloture">
       {{ dossier.cloture ? libelles.cloture : libelles.ouvert }} @if (dossier.finCloture) { · {{ dossier.finCloture }} } · {{
       dossier.engagement }}
     </p>
@@ -66,7 +66,7 @@
       <h2 id="chronologie-heading" class="mb-4 text-section">{{ libelles.chronologie }}</h2>
       <ol class="chronologie">
         @for (pointage of dossier.journal | chronologiePointages; track pointage.id.pointage) {
-        <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="conflit-pointage">
+        <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="anomalie-pointage">
           <time class="text-body tabular-nums font-semibold" [attr.datetime]="pointage.fait.instant"
             >{{ pointage.fait.instant.slice(11, 19) }}
             <span class="text-body-sm text-ink-muted">· {{ pointage.fait.instant.slice(0, 10) }}</span></time
@@ -87,7 +87,7 @@
           } @if (pointage.regularisation) {
           <p class="mt-2 text-body-sm font-semibold">{{ libelles.regularisation }}</p>
           } @if (pointage.annulation; as annulation) {
-          <p class="mt-2 text-body-sm text-danger" data-selector="conflit-annulation">
+          <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-annulation">
             {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant }}
           </p>
           } @if (pointage.remplace; as original) {
@@ -102,7 +102,7 @@
             <button
               type="button"
               class="bouton"
-              data-selector="conflit-corriger"
+              data-selector="anomalie-corriger"
               [disabled]="occupe() || !droits.canApply()"
               (click)="correct(pointage)"
             >
@@ -111,7 +111,7 @@
             <button
               type="button"
               class="bouton"
-              data-selector="conflit-annuler"
+              data-selector="anomalie-annuler"
               [disabled]="occupe() || !droits.canApply()"
               (click)="cancel(pointage)"
             >
@@ -122,7 +122,7 @@
           <details
             #trace
             class="mt-2"
-            data-selector="conflit-pointage-detail"
+            data-selector="anomalie-pointage-detail"
             [open]="pointageConsulte() === pointage.id.pointage"
             (toggle)="traceToggled(pointage.id.pointage, trace.open)"
           >
@@ -140,7 +140,7 @@
       </ol>
       <h2 class="mb-3 mt-6 text-section">{{ libelles.activites }}</h2>
       @for (activite of dossier.activites; track activite.id.activite) {
-      <div class="border-t border-border py-4" [id]="'activite-' + activite.id.activite" data-selector="conflit-activite">
+      <div class="border-t border-border py-4" [id]="'activite-' + activite.id.activite" data-selector="anomalie-activite">
         <p class="text-body font-semibold">{{ libelleActivite(activite) }}</p>
         <p class="mt-1 text-body-sm">{{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}</p>
       </div>
@@ -153,7 +153,7 @@
       <button
         class="choix"
         type="button"
-        data-selector="conflit-choix"
+        data-selector="anomalie-choix"
         [attr.aria-pressed]="choixAffiche() === choix.id"
         [class.choix-selectionne]="choixAffiche() === choix.id"
         [disabled]="occupe() || !droits.canApply()"
@@ -163,14 +163,14 @@
         <span class="mt-1 block text-body-sm text-ink-muted">{{ explicationChoix(choix) }}</span>
       </button>
       } @if (!droits.canApply()) {
-      <p class="mt-4 text-body-sm" data-selector="conflit-droits">{{ libelles.droits }}</p>
+      <p class="mt-4 text-body-sm" data-selector="anomalie-droits">{{ libelles.droits }}</p>
       }
       <details class="mt-4">
-        <summary class="min-h-touch cursor-pointer py-3 font-semibold" data-selector="conflit-detail">{{ libelles.detail }}</summary>
+        <summary class="min-h-touch cursor-pointer py-3 font-semibold" data-selector="anomalie-detail">{{ libelles.detail }}</summary>
         <button
           type="button"
           class="bouton mt-3"
-          data-selector="conflit-regulariser"
+          data-selector="anomalie-regulariser"
           [disabled]="occupe() || !droits.canApply()"
           (click)="regularise()"
         >
@@ -179,10 +179,10 @@
       </details>
       @if (proposition(); as proposition) {
       <div class="mt-6 border-t border-border pt-5">
-        <h3 #propositionHeading class="text-section" tabindex="-1" data-selector="conflit-proposition-titre">
-          <span data-selector="conflit-acte">{{ libelles.actes[proposition.kind] }}</span>
+        <h3 #propositionHeading class="text-section" tabindex="-1" data-selector="anomalie-proposition-titre">
+          <span data-selector="anomalie-acte">{{ libelles.actes[proposition.kind] }}</span>
         </h3>
-        <div class="mt-2 text-body-sm" data-selector="conflit-proposition-resume">
+        <div class="mt-2 text-body-sm" data-selector="anomalie-proposition-resume">
           @if (proposition.kind === 'ANNULATION') { @for (pointage of dossier.journal; track pointage.id.pointage) { @if
           (pointage.id.pointage === proposition.pointage) {
           <p>{{ libelles.types[pointage.fait.type] }} · {{ pointage.fait.instant }}</p>
@@ -193,8 +193,8 @@
           } }
         </div>
         @if (proposition.kind !== 'ANNULATION') {
-        <details class="mt-3" [open]="detail()" data-selector="conflit-fait-propose">
-          <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="conflit-champs-detail">
+        <details class="mt-3" [open]="detail()" data-selector="anomalie-fait-propose">
+          <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="anomalie-champs-detail">
             {{ libelles.modifierFait }}
           </summary>
           <fieldset class="mt-4">
@@ -207,7 +207,7 @@
                 [value]="type"
                 [checked]="proposition.fait.type === type"
                 [disabled]="occupe()"
-                [attr.data-selector]="'conflit-type-' + type"
+                [attr.data-selector]="'anomalie-type-' + type"
                 (change)="change({ fait: { type } })"
               />{{ libelles.types[type] }}</label
             >
@@ -223,7 +223,7 @@
                 [value]="intention"
                 [checked]="proposition.fait.intention === intention"
                 [disabled]="occupe()"
-                [attr.data-selector]="'conflit-intention-' + intention"
+                [attr.data-selector]="'anomalie-intention-' + intention"
                 (change)="change({ fait: { intention } })"
               />{{ libelles.intentions[intention] }}</label
             >
@@ -234,7 +234,7 @@
             id="cible-acte"
             #cible
             class="champ mt-2"
-            data-selector="conflit-cible"
+            data-selector="anomalie-cible"
             [value]="proposition.fait.activiteVisee"
             [disabled]="occupe()"
             (change)="change({ fait: { activiteVisee: cible.value } })"
@@ -255,7 +255,7 @@
             id="operateur-acte"
             #operateur
             class="champ mt-2"
-            data-selector="conflit-operateur"
+            data-selector="anomalie-operateur"
             [value]="proposition.fait.operateur"
             [disabled]="occupe()"
             (input)="change({ fait: { operateur: operateur.value } })"
@@ -265,7 +265,7 @@
             id="poste-acte"
             #poste
             class="champ mt-2"
-            data-selector="conflit-poste"
+            data-selector="anomalie-poste"
             [value]="proposition.fait.poste"
             [disabled]="occupe()"
             (input)="change({ fait: { poste: poste.value } })"
@@ -275,7 +275,7 @@
             id="instant-acte"
             #instant
             class="champ mt-2"
-            data-selector="conflit-instant"
+            data-selector="anomalie-instant"
             [value]="proposition.fait.instant"
             [disabled]="occupe()"
             (input)="change({ fait: { instant: instant.value } })"
@@ -291,7 +291,7 @@
           rows="3"
           maxlength="255"
           class="champ mt-2"
-          data-selector="conflit-motif"
+          data-selector="anomalie-motif"
           [value]="proposition.motif"
           [disabled]="occupe()"
           (input)="change({ motif: motif.value })"
@@ -299,7 +299,7 @@
         ></textarea>
         <p id="motif-aide" class="mt-1 text-body-sm text-ink-muted">{{ libelles.motifAide }}</p>
         }
-        <ul class="mt-3 text-body-sm text-danger" aria-live="polite" data-selector="conflit-validation">
+        <ul class="mt-3 text-body-sm text-danger" aria-live="polite" data-selector="anomalie-validation">
           @for (erreur of preparation.resolution().saisie.errors(); track erreur) {
           <li>{{ libelles.erreurs[erreur] }}</li>
           }
@@ -308,23 +308,23 @@
           type="button"
           class="bouton mt-4"
           [disabled]="occupe() || preparation.resolution().saisie.command() === undefined || !droits.canApply()"
-          data-selector="conflit-previsualiser"
+          data-selector="anomalie-previsualiser"
           (click)="preview(dossier)"
         >
           {{ libelles.previsualiser }}
         </button>
       </div>
       } @if (preparation.operation(); as operation) { @if (operation.kind !== 'REPOS') {
-      <p class="mt-4 text-body-sm" role="status" data-selector="conflit-operation">{{ libelles.operation[operation.kind] }}</p>
+      <p class="mt-4 text-body-sm" role="status" data-selector="anomalie-operation">{{ libelles.operation[operation.kind] }}</p>
       @if (operation.kind === 'REFUS') {
-      <p class="mt-2 text-body-sm text-danger" data-selector="conflit-refus">{{ operation.raison }}</p>
+      <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-refus">{{ operation.raison }}</p>
       } @if (operation.kind === 'ISSUE_INCONNUE') {
       <div class="mt-3 flex flex-wrap gap-3">
-        <button class="bouton" type="button" data-selector="conflit-verifier" (click)="verify()">{{ libelles.verifier }}</button>
+        <button class="bouton" type="button" data-selector="anomalie-verifier" (click)="verify()">{{ libelles.verifier }}</button>
         <button
           class="bouton"
           type="button"
-          data-selector="conflit-reprendre-confirmation"
+          data-selector="anomalie-reprendre-confirmation"
           [disabled]="!droits.canApply()"
           (click)="retryConfirmation()"
         >
@@ -332,7 +332,7 @@
         </button>
       </div>
       } } @if (operation.kind === 'APPLIQUE') {
-      <p class="mt-4 text-body font-semibold" role="status" data-selector="conflit-resultat">
+      <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">
         {{ operation.dossier.enConflit ? libelles.restant : libelles.resolu }}
       </p>
       } } @if (dossier.continuations.length > 0) {
@@ -342,7 +342,7 @@
         <a
           class="bouton mt-2 text-accent underline"
           data-selector="conflit-continuation"
-          [routerLink]="['/conflits', suite.adresse.suivi.suivi]"
+          [routerLink]="['/anomalies', suite.adresse.suivi.suivi]"
           [queryParams]="{ pointage: suite.adresse.pointage.pointage }"
           queryParamsHandling="merge"
           >{{ libelleContinuation(suite) }}</a
@@ -352,11 +352,11 @@
       }
     </aside>
     @if (apercu(); as apercu) {
-    <section class="apercu-resolution" aria-labelledby="apercu-heading" data-selector="conflit-apercu">
-      <h2 #apercuHeading id="apercu-heading" class="text-section" tabindex="-1" data-selector="conflit-apercu-titre">
+    <section class="apercu-resolution" aria-labelledby="apercu-heading" data-selector="anomalie-apercu">
+      <h2 #apercuHeading id="apercu-heading" class="text-section" tabindex="-1" data-selector="anomalie-apercu-titre">
         {{ libelles.apercu }}
       </h2>
-      <div class="mt-4 text-body-sm" data-selector="conflit-apercu-acte">
+      <div class="mt-4 text-body-sm" data-selector="anomalie-apercu-acte">
         <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
         @if (apercu.acte.kind !== 'REGULARISATION') {
         <p>{{ apercu.acte.pointage }} · {{ apercu.acte.motif }}</p>
@@ -381,10 +381,10 @@
           <p class="mt-2 text-body-sm">{{ libelleActivite(activite) }} · {{ tempsActivite(activite) }}</p>
           }
         </div>
-        <div data-selector="conflit-apercu-consequences">
+        <div data-selector="anomalie-apercu-consequences">
           <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
           @for (activite of apercu.apres.activites; track activite.id.activite) {
-          <p class="mt-2 text-body-sm" data-selector="conflit-apercu-activite-apres">
+          <p class="mt-2 text-body-sm" data-selector="anomalie-apercu-activite-apres">
             {{ libelleActivite(activite) }} · {{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}
           </p>
           } @for (consequence of apercu.apres.consequences; track consequence) {
@@ -396,14 +396,14 @@
       <button
         type="button"
         class="bouton bouton-principal mt-4"
-        data-selector="conflit-confirmer"
+        data-selector="anomalie-confirmer"
         [disabled]="occupe() || !droits.canApply() || preparation.resolution().confirmation() === undefined"
         (click)="confirm()"
       >
         {{ libelles.confirmer }}
       </button>
-      <details class="mt-6 border-t border-border pt-3" data-selector="conflit-apercu-journal">
-        <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="conflit-apercu-journal-ouvrir">
+      <details class="mt-6 border-t border-border pt-3" data-selector="anomalie-apercu-journal">
+        <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="anomalie-apercu-journal-ouvrir">
           {{ libelles.comparerJournal }}
         </summary>
         <div class="comparaison">
@@ -413,7 +413,7 @@
               @for (pointage of apercu.avant.journal | chronologiePointages; track pointage.id.pointage) {
               <li
                 class="border-t border-border py-3 text-body-sm"
-                [attr.data-selector]="'conflit-apercu-fait-avant-' + pointage.id.pointage"
+                [attr.data-selector]="'anomalie-apercu-fait-avant-' + pointage.id.pointage"
               >
                 <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
                 <p>{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
@@ -436,7 +436,7 @@
               @for (pointage of apercu.apres.journal | chronologiePointages; track pointage.id.pointage) {
               <li
                 class="border-t border-border py-3 text-body-sm"
-                [attr.data-selector]="'conflit-apercu-fait-apres-' + pointage.id.pointage"
+                [attr.data-selector]="'anomalie-apercu-fait-apres-' + pointage.id.pointage"
               >
                 <p class="font-semibold">{{ pointage.id.pointage }} · {{ pointage.fait.instant }}</p>
                 <p>{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
@@ -461,19 +461,19 @@
     }
   </div>
   } @if (adresse() === undefined) {
-  <p role="alert" data-selector="conflit-adresse-invalide">{{ libelles.adresseInvalide }}</p>
+  <p role="alert" data-selector="anomalie-adresse-invalide">{{ libelles.adresseInvalide }}</p>
   } @if (lecture.error()) {
   <div role="alert" class="py-8">
     <p>{{ libelles.erreurLecture }}</p>
-    <button type="button" class="bouton mt-3" data-selector="conflit-retry" (click)="reload()">{{ libelles.reessayer }}</button>
+    <button type="button" class="bouton mt-3" data-selector="anomalie-retry" (click)="reload()">{{ libelles.reessayer }}</button>
   </div>
   } @if (resultatLecture(); as resultat) { @if (resultat.kind !== 'DOSSIER') {
-  <p role="status" class="py-8" data-selector="conflit-adresse-obsolete">{{ libelles.absences[resultat.kind] }}</p>
-  <section aria-labelledby="historique-heading" data-selector="conflit-historique">
+  <p role="status" class="py-8" data-selector="anomalie-adresse-obsolete">{{ libelles.absences[resultat.kind] }}</p>
+  <section aria-labelledby="historique-heading" data-selector="anomalie-historique">
     <h2 id="historique-heading" class="mb-4 text-section">{{ libelles.chronologie }}</h2>
     <ol class="chronologie">
       @for (pointage of resultat.journal | chronologiePointages; track pointage.id.pointage) {
-      <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="conflit-pointage">
+      <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="anomalie-pointage">
         <time class="text-body-sm" [attr.datetime]="pointage.fait.instant">{{ pointage.fait.instant }}</time>
         <p class="mt-2 font-semibold">{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
         @if (pointage.fait.activiteVisee) {

@@ -125,6 +125,16 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     });
   });
 
+  it('should retain the journal of an address that no longer carries any anomaly', async () => {
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenCancelledDossierAnswers({ ...dossierAnnuleFixture(), kind: 'SANS_ANOMALIE' });
+    const resultat = await lecture;
+
+    expect(resultat).toMatchObject({ kind: 'SANS_ANOMALIE', journal: [{ id: new PointageAnomalieId('fin-17') }] });
+  });
+
   it('should return an inaccessible follow-up explicitly without revealing a journal', async () => {
     const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
 
@@ -173,7 +183,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     });
   });
 
-  const givenACorrectedOpening = (): components['schemas']['RestDossierConflit'] => {
+  const givenACorrectedOpening = (): components['schemas']['RestDossierAnomalie'] => {
     const dossier = dossierAnnuleFixture();
     const original = requiredFixture(dossier.suivi.journal[0], 'original finish');
     const ouverture: components['schemas']['RestEvenementDAtelier'] = {
@@ -189,7 +199,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     return { ...dossier, suivi: { ...dossier.suivi, journal: [original, ouverture] } };
   };
 
-  const givenAReplacementInTheJournal = (): components['schemas']['RestDossierConflit'] => {
+  const givenAReplacementInTheJournal = (): components['schemas']['RestDossierAnomalie'] => {
     const dossier = dossierAnnuleFixture();
     const original = requiredFixture(dossier.suivi.journal[0], 'original finish');
     const remplacement = { ...original, id: 'fin-corrigee', estUneRegularisation: true, remplace: 'fin-17' };
@@ -436,7 +446,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     },
   );
 
-  const givenAClosedDossierWithExactDuration = (): components['schemas']['RestDossierConflit'] => {
+  const givenAClosedDossierWithExactDuration = (): components['schemas']['RestDossierAnomalie'] => {
     const dossier = dossierAnomalieFixture();
     const sequence = requiredFixture(dossier.sequence, 'addressed sequence');
     delete sequence.posteId;
@@ -459,7 +469,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
     };
   };
 
-  const dossierAnomalieFixture = (): components['schemas']['RestDossierConflit'] => {
+  const dossierAnomalieFixture = (): components['schemas']['RestDossierAnomalie'] => {
     const dossier = dossierAnnuleFixture();
     return {
       ...dossier,
@@ -491,7 +501,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   };
 
   const whenConflictDossierAnswers = (dossier = dossierAnomalieFixture()): void => {
-    server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17').flush(dossier);
+    server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17').flush(dossier);
   };
 
   const dossierFromReading = (lecture: LectureDossier): DossierAnomalie => {
@@ -518,19 +528,19 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   );
 
   const whenDossierFails = (status: number, urn: string | undefined): void => {
-    server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17').flush({ type: urn }, { status, statusText: 'Read failed' });
+    server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17').flush({ type: urn }, { status, statusText: 'Read failed' });
   };
 
   const whenFollowUpIsMissing = (): void => {
     server
-      .expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17')
+      .expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17')
       .flush(
         { type: 'urn:glm:erreur:atelier:suivi-d-atelier-introuvable', detail: 'Suivi introuvable.' },
         { status: 404, statusText: 'Not found' },
       );
   };
 
-  const dossierAnnuleFixture = (): components['schemas']['RestDossierConflit'] => ({
+  const dossierAnnuleFixture = (): components['schemas']['RestDossierAnomalie'] => ({
     kind: 'ANCRE_ANNULEE',
     enConflit: false,
     adresse: ligneFixture.adresse,
@@ -568,7 +578,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   });
 
   const whenCancelledDossierAnswers = (dossier = dossierAnnuleFixture()): void => {
-    server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17').flush(dossier);
+    server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17').flush(dossier);
   };
 
   const givenUnresolvedReferences = (): components['schemas']['RestConflitEnListe'] => {
@@ -579,7 +589,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   };
 
   const whenPageAnswers = (lignes: components['schemas']['RestConflitEnListe'][] = [ligneFixture], complete = true): void => {
-    server.expectOne('/api/atelier/conflits?operateur=Camille&element=M-042&page=1&size=5').flush({
+    server.expectOne('/api/atelier/anomalies?nature=CONFLIT&operateur=Camille&element=M-042&page=1&size=5').flush({
       lignes,
       total: 12,
       complete,

@@ -13,15 +13,15 @@ describe('Conflict list addresses in Gestion', () => {
   });
 
   const givenAnAddressedConflict = (): void => {
-    cy.intercept('GET', '/api/atelier/conflits*', {
-      body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesConflits'],
+    cy.intercept('GET', '/api/atelier/anomalies*', {
+      body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
     });
-    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierFixture() });
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierFixture() });
   };
 
   const whenVisitingTheFilteredList = (): void => {
     cy.viewport(1280, 900);
-    cy.visit('/conflits?operateur=Camille&element=M-042&page=1');
+    cy.visit('/anomalies?operateur=Camille&element=M-042&page=1');
   };
 
   const whenOpeningTheDossier = (): void => {
@@ -29,11 +29,11 @@ describe('Conflict list addresses in Gestion', () => {
   };
 
   const thenTheDossierKeepsTheListAddress = (): void => {
-    cy.location('pathname').should('eq', `/conflits/${suiviFixture}`);
+    cy.location('pathname').should('eq', `/anomalies/${suiviFixture}`);
     cy.location('search').should(search => {
       const params = Object.fromEntries(new URLSearchParams(search));
       expect(params).to.deep.equal({ operateur: 'Camille', element: 'M-042', page: '1', pointage: finFixture });
     });
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 });

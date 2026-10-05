@@ -91,7 +91,7 @@ export interface DossierAnomalie {
 
 export type LectureDossier =
   | { readonly kind: 'DOSSIER'; readonly dossier: DossierAnomalie }
-  | { readonly kind: 'INTROUVABLE' | 'ANCRE_ANNULEE' | 'HORS_CONFLIT'; readonly journal: readonly PointageAnomalie[] };
+  | { readonly kind: 'INTROUVABLE' | 'ANCRE_ANNULEE' | 'SANS_ANOMALIE'; readonly journal: readonly PointageAnomalie[] };
 
 export interface PageAnomalies {
   readonly lignes: readonly LigneConflit[];

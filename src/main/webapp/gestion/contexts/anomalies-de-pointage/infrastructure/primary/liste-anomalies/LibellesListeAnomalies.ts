@@ -1,5 +1,5 @@
 export const LIBELLES_LISTE_ANOMALIES = {
-  vide: 'Aucun conflit de pointage à résoudre.',
+  vide: 'Aucun conflit à résoudre.',
   videFiltre: 'Aucun conflit ne correspond à ces filtres.',
   filtrer: 'Filtrer les conflits',
   erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',

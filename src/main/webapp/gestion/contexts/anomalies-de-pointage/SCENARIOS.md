@@ -1,4 +1,4 @@
-# Garanties de résolution
+# Anomalies de pointage : garanties
 
 Le backend Atelier fournit le dossier, l'aperçu et le reçu canonique. Le front utilise uniquement
 `HttpAnomalies` et ne calcule ni interprétation du journal ni conséquences d'un acte.
@@ -24,8 +24,8 @@ Une ancre annulée reste consultable et les continuations désignent les autres 
   le choix explicite, la précision des instants et l'invalidation d'un aperçu.
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
-- Les contrats HTTP contrôlent les requêtes REST, l'acquisition autoritaire, les refus et les reçus
-  incohérents ; ils utilisent `HttpTestingController`.
+- Les contrats HTTP contrôlent les requêtes REST (liste de la nature `CONFLIT`, dossier et aperçu sous
+  `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
 - Les specs DOM et Cypress vérifient les faits reçus, les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des
   réponses JSON typées interceptées, sans adapter de simulation ni stockage des aperçus.

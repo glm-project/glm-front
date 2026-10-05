@@ -222,7 +222,7 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-retry', 'Réessayer');
+    thenTextContains('anomalie-retry', 'Réessayer');
     thenAbsent('conflit-diagnostic');
   });
 
@@ -231,10 +231,10 @@ describe('Conflict dossier page', () => {
     await whenRendering();
     read.failure = undefined;
 
-    await whenClicking('conflit-retry');
+    await whenClicking('anomalie-retry');
 
     thenTextContains('conflit-diagnostic', 'La fin vise le travail remplacé.');
-    thenAbsent('conflit-retry');
+    thenAbsent('anomalie-retry');
     expect(read.demandes).toHaveLength(2);
   });
 
@@ -315,7 +315,7 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-adresse-invalide', 'L’adresse doit préciser');
+    thenTextContains('anomalie-adresse-invalide', 'L’adresse doit préciser');
     thenAbsent('conflit-diagnostic');
     expect(read.demandes).toHaveLength(0);
   });
@@ -325,16 +325,25 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-adresse-obsolete', 'annulé ou remplacé');
-    thenTextContains('conflit-historique', '2026-09-14T17:00:00.123456789+02:00');
-    thenAbsent('conflit-choix');
+    thenTextContains('anomalie-adresse-obsolete', 'annulé ou remplacé');
+    thenTextContains('anomalie-historique', '2026-09-14T17:00:00.123456789+02:00');
+    thenAbsent('anomalie-choix');
+  });
+
+  it('should explain that the addressed pointage no longer carries an anomaly', async () => {
+    read.result = { kind: 'SANS_ANOMALIE', journal: dossierAnomalieFixture().journal };
+
+    await whenRendering();
+
+    thenTextContains('anomalie-adresse-obsolete', 'ne relève plus d’un conflit');
+    thenAbsent('anomalie-choix');
   });
 
   it('should display a dossier with only resolution controls', async () => {
     await whenRendering();
 
-    thenAbsent('conflits-demo');
-    thenTextContains('conflit-cloture', 'Ouvert');
+    thenAbsent('anomalies-demo');
+    thenTextContains('anomalie-cloture', 'Ouvert');
   });
 
   it('should retain unresolved reference identities in the dossier heading', async () => {
@@ -356,7 +365,7 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-activite', 'À résoudre · Temps à résoudre');
+    thenTextContains('anomalie-activite', 'À résoudre · Temps à résoudre');
   });
 
   it('should label an explicit continuation from its authoritative sequence instead of presenting an empty link', async () => {
@@ -414,7 +423,7 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-activite', 'En cours · Temps non définitif');
+    thenTextContains('anomalie-activite', 'En cours · Temps non définitif');
   });
 
   it.each([
@@ -433,11 +442,11 @@ describe('Conflict dossier page', () => {
       };
       await whenRendering();
 
-      await whenClicking('conflit-choix');
+      await whenClicking('anomalie-choix');
 
-      thenTextContains('conflit-choix', libelle);
-      thenFieldValueIs('conflit-motif', '');
-      thenAbsent('conflit-apercu');
+      thenTextContains('anomalie-choix', libelle);
+      thenFieldValueIs('anomalie-motif', '');
+      thenAbsent('anomalie-apercu');
     },
   );
 
@@ -446,10 +455,10 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-activite', 'Travail');
-    thenTextContains('conflit-activite', '2026-09-14T08:00:00.123456789+02:00');
-    thenTextContains('conflit-activite', '2026-09-14T17:00:00+02:00');
-    thenTextContains('conflit-activite', '8 h 59 min 59,876543211 s');
+    thenTextContains('anomalie-activite', 'Travail');
+    thenTextContains('anomalie-activite', '2026-09-14T08:00:00.123456789+02:00');
+    thenTextContains('anomalie-activite', '2026-09-14T17:00:00+02:00');
+    thenTextContains('anomalie-activite', '8 h 59 min 59,876543211 s');
   });
 
   it('should retain the finished duration supplied by the dossier', async () => {
@@ -461,7 +470,7 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-activite', 'Terminée · 4 h');
+    thenTextContains('anomalie-activite', 'Terminée · 4 h');
   });
 
   it('should describe ongoing authoritative work without a definitive duration', async () => {
@@ -469,8 +478,8 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-activite', 'En cours · Temps non définitif');
-    thenTextDoesNotContain('conflit-activite', '3 h');
+    thenTextContains('anomalie-activite', 'En cours · Temps non définitif');
+    thenTextDoesNotContain('anomalie-activite', '3 h');
   });
 
   it.each([
@@ -483,8 +492,8 @@ describe('Conflict dossier page', () => {
 
     await whenRendering();
 
-    thenTextContains('conflit-activite', 'Non-conformité');
-    thenTextContains('conflit-activite', attendu);
+    thenTextContains('anomalie-activite', 'Non-conformité');
+    thenTextContains('anomalie-activite', attendu);
   });
 
   it('should show the attested canonical dossier when the original address has become obsolete', async () => {
@@ -493,13 +502,13 @@ describe('Conflict dossier page', () => {
     application.verification = { kind: 'ATTESTE', dossier: { ...dossierAnomalieFixture(), version: 3, enConflit: false } };
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
     read.result = { kind: 'ANCRE_ANNULEE', journal: dossierAnomalieFixture().journal };
 
-    await whenClicking('conflit-verifier');
+    await whenClicking('anomalie-verifier');
 
-    thenTextContains('conflit-resultat', 'Conflit résolu');
-    thenAbsent('conflit-adresse-obsolete');
+    thenTextContains('anomalie-resultat', 'Conflit résolu');
+    thenAbsent('anomalie-adresse-obsolete');
   });
 
   it('should recover the canonical receipt even when an ordinary dossier read is unavailable', async () => {
@@ -508,13 +517,13 @@ describe('Conflict dossier page', () => {
     application.verification = { kind: 'ATTESTE', dossier: { ...dossierAnomalieFixture(), version: 3, enConflit: false } };
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
     read.failure = new Error('Lecture ordinaire indisponible');
 
-    await whenClicking('conflit-verifier');
+    await whenClicking('anomalie-verifier');
 
-    thenTextContains('conflit-resultat', 'Conflit résolu');
-    thenAbsent('conflit-retry');
+    thenTextContains('anomalie-resultat', 'Conflit résolu');
+    thenAbsent('anomalie-retry');
   });
 
   it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
@@ -529,7 +538,7 @@ describe('Conflict dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenTextContains('conflit-apercu-activite-apres', 'Travail commencé à 8 h · En cours · Temps non définitif');
+    thenTextContains('anomalie-apercu-activite-apres', 'Travail commencé à 8 h · En cours · Temps non définitif');
   });
 
   it('should keep new decisions blocked when the confirmation receipt is not attested', async () => {
@@ -538,12 +547,12 @@ describe('Conflict dossier page', () => {
     await whenRendering();
 
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
-    await whenClicking('conflit-verifier');
+    await whenClicking('anomalie-confirmer');
+    await whenClicking('anomalie-verifier');
 
-    thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
-    thenDisabled('conflit-choix');
-    thenFieldValueIs('conflit-motif', 'Cible confirmée');
+    thenTextContains('anomalie-operation', 'L’issue de l’écriture est inconnue');
+    thenDisabled('anomalie-choix');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
     expect(read.demandes).toHaveLength(1);
   });
 
@@ -554,11 +563,11 @@ describe('Conflict dossier page', () => {
     await whenRendering();
 
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
-    await whenClicking('conflit-verifier');
+    await whenClicking('anomalie-confirmer');
+    await whenClicking('anomalie-verifier');
 
     thenNoInterpretationIsSelected();
-    thenAbsent('conflit-acte');
+    thenAbsent('anomalie-acte');
   });
 
   it('should explicitly resume the same uncertain confirmation and display its canonical result', async () => {
@@ -566,14 +575,14 @@ describe('Conflict dossier page', () => {
     application.result = { kind: 'ISSUE_INCONNUE' };
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
-    await whenClicking('conflit-verifier');
+    await whenClicking('anomalie-confirmer');
+    await whenClicking('anomalie-verifier');
     application.result = { kind: 'APPLIQUE', dossier: { ...dossierAnomalieFixture(), version: 3, enConflit: false } };
 
-    await whenClicking('conflit-reprendre-confirmation');
+    await whenClicking('anomalie-reprendre-confirmation');
 
-    thenTextContains('conflit-resultat', 'Conflit résolu');
-    thenAbsent('conflit-reprendre-confirmation');
+    thenTextContains('anomalie-resultat', 'Conflit résolu');
+    thenAbsent('anomalie-reprendre-confirmation');
   });
 
   it('should replace the displayed dossier with the accepted partial result while preserving its closure', async () => {
@@ -592,12 +601,12 @@ describe('Conflict dossier page', () => {
     await whenRendering();
 
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
 
     thenTextContains('conflit-diagnostic', 'Reprise encore à rattacher.');
-    thenTextContains('conflit-cloture', 'Clôturé');
-    thenTextContains('conflit-resultat', 'Acte enregistré, conflit restant');
-    thenAbsent('conflit-apercu');
+    thenTextContains('anomalie-cloture', 'Clôturé');
+    thenTextContains('anomalie-resultat', 'Acte enregistré, conflit restant');
+    thenAbsent('anomalie-apercu');
   });
 
   it('should preserve the detailed proposition when the preview is refused', async () => {
@@ -605,10 +614,10 @@ describe('Conflict dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenTextContains('conflit-operation', 'Acte refusé');
-    thenTextContains('conflit-refus', 'Le pointage est déjà annulé.');
-    thenFieldValueIs('conflit-motif', 'Cible confirmée');
-    thenAbsent('conflit-apercu');
+    thenTextContains('anomalie-operation', 'Acte refusé');
+    thenTextContains('anomalie-refus', 'Le pointage est déjà annulé.');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
+    thenAbsent('anomalie-apercu');
   });
 
   it('should retain the obsolete proposition through a failed reacquisition and require an explicit new preview after recovery', async () => {
@@ -618,22 +627,22 @@ describe('Conflict dossier page', () => {
     await whenPreparingTheCorrection();
     read.failure = new Error('Dossier courant indisponible');
 
-    await whenClicking('conflit-confirmer');
-    const echecVisible = present('conflit-retry');
-    const confirmationApresEchec = present('conflit-confirmer');
-    const apercuApresEchec = present('conflit-apercu');
+    await whenClicking('anomalie-confirmer');
+    const echecVisible = present('anomalie-retry');
+    const confirmationApresEchec = present('anomalie-confirmer');
+    const apercuApresEchec = present('anomalie-apercu');
     read.failure = undefined;
     const dossier = dossierAnomalieFixture();
     read.result = { kind: 'DOSSIER', dossier: { ...dossier, version: 2 } };
-    await whenClicking('conflit-retry');
+    await whenClicking('anomalie-retry');
 
     expect(echecVisible).toBe(true);
     expect(confirmationApresEchec).toBe(false);
     expect(apercuApresEchec).toBe(false);
-    thenFieldValueIs('conflit-motif', 'Cible confirmée');
-    thenAbsent('conflit-apercu');
-    thenAbsent('conflit-confirmer');
-    thenTextContains('conflit-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
+    thenAbsent('anomalie-apercu');
+    thenAbsent('anomalie-confirmer');
+    thenTextContains('anomalie-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
     expect(preview.actes).toHaveLength(1);
   });
   it('should reread a concurrent dossier without discarding the manager proposal', async () => {
@@ -648,9 +657,9 @@ describe('Conflict dossier page', () => {
     await whenPreparingTheCorrection();
 
     thenTextContains('conflit-diagnostic', 'Le journal a été actualisé.');
-    thenTextContains('conflit-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
-    thenFieldValueIs('conflit-motif', 'Cible confirmée');
-    thenAbsent('conflit-apercu');
+    thenTextContains('anomalie-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
+    thenAbsent('anomalie-apercu');
     expect(read.demandes).toHaveLength(2);
   });
 
@@ -659,25 +668,25 @@ describe('Conflict dossier page', () => {
     application.result = { kind: 'ISSUE_INCONNUE' };
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
     const attente = new PendingResponseFixture<ResultatVerification>();
     application.receiptReplies.pending = attente;
 
-    whenStartingClick('conflit-verifier');
+    whenStartingClick('anomalie-verifier');
     await attente.arrival;
     await whenResponseFails(attente, new Error('Vérification indisponible'));
 
-    expect(present('conflit-verifier')).toBe(true);
-    thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
-    thenDisabled('conflit-choix');
-    thenFieldValueIs('conflit-motif', 'Cible confirmée');
-    thenAbsent('conflit-apercu');
+    expect(present('anomalie-verifier')).toBe(true);
+    thenTextContains('anomalie-operation', 'L’issue de l’écriture est inconnue');
+    thenDisabled('anomalie-choix');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
+    thenAbsent('anomalie-apercu');
   });
 
   it('should discard the former dossier proposition when its address changes reactively', async () => {
     await whenRendering();
-    await whenClicking('conflit-choix');
-    await whenEntering('conflit-motif', 'Ancienne décision');
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-motif', 'Ancienne décision');
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
@@ -694,20 +703,20 @@ describe('Conflict dossier page', () => {
     await whenAddressChanges('fin-18');
 
     thenTextContains('conflit-diagnostic', 'Autre contradiction.');
-    thenAbsent('conflit-acte');
-    thenAbsent('conflit-apercu');
+    thenAbsent('anomalie-acte');
+    thenAbsent('anomalie-apercu');
     expect(read.demandes).toHaveLength(2);
   });
 
   it('should start detailed correction with the selected pointage facts unchanged', async () => {
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-corriger');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
 
-    thenTextContains('conflit-acte', 'Correction du pointage');
-    thenFieldValueIs('conflit-cible', 'travail-8');
-    thenFieldValueIs('conflit-instant', '2026-09-14T17:00:00.123456789+02:00');
+    thenTextContains('anomalie-acte', 'Correction du pointage');
+    thenFieldValueIs('anomalie-cible', 'travail-8');
+    thenFieldValueIs('anomalie-instant', '2026-09-14T17:00:00.123456789+02:00');
     thenDetailedFactIsOpen();
   });
 
@@ -715,11 +724,11 @@ describe('Conflict dossier page', () => {
     givenAnAuthoritativeActivity('TERMINEE', 'PT4H');
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-corriger');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
 
     const libelle = 'Travail · 2026-09-14T08:00:00.123456789+02:00 → 2026-09-14T17:00:00+02:00';
-    thenTextContains('conflit-pointage', libelle);
+    thenTextContains('anomalie-pointage', libelle);
     thenTargetChoiceIs('travail-8', libelle);
   });
 
@@ -737,11 +746,11 @@ describe('Conflict dossier page', () => {
     };
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-corriger');
-    await whenEntering('conflit-cible', 'nc-12');
-    await whenEntering('conflit-motif', 'Cible confirmée');
-    await whenClicking('conflit-previsualiser');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+    await whenEntering('anomalie-cible', 'nc-12');
+    await whenEntering('anomalie-motif', 'Cible confirmée');
+    await whenClicking('anomalie-previsualiser');
 
     thenTargetChoiceIs('nc-12', 'Non-conformité ouverte à 12 h');
     expect(preview.actes).toEqual([
@@ -757,7 +766,7 @@ describe('Conflict dossier page', () => {
   it('should retain the proposed target when its activity is absent from the dossier instead of selecting another one', async () => {
     await whenRendering();
 
-    await whenClicking('conflit-choix');
+    await whenClicking('anomalie-choix');
 
     thenTargetChoiceIs('nc-12', 'nc-12');
   });
@@ -765,13 +774,13 @@ describe('Conflict dossier page', () => {
   it('should let the manager explicitly choose no target activity when correcting an opening', async () => {
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-corriger');
-    await whenClicking('conflit-type-DEBUT');
-    await whenClicking('conflit-intention-OUVERTURE');
-    await whenEntering('conflit-cible', '');
-    await whenEntering('conflit-motif', 'Ouverture confirmée');
-    await whenClicking('conflit-previsualiser');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+    await whenClicking('anomalie-type-DEBUT');
+    await whenClicking('anomalie-intention-OUVERTURE');
+    await whenEntering('anomalie-cible', '');
+    await whenEntering('anomalie-motif', 'Ouverture confirmée');
+    await whenClicking('anomalie-previsualiser');
 
     thenTargetChoiceIs('', 'Aucune activité visée');
     expect(preview.actes).toEqual([
@@ -813,19 +822,19 @@ describe('Conflict dossier page', () => {
     };
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-corriger');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
 
     thenTargetChoiceIs('travail-8', 'Travail à 08:00:00');
-    thenAbsent('conflit-activite');
+    thenAbsent('anomalie-activite');
   });
 
   it('should stop presenting the guided interpretation as selected after the manager changes its target', async () => {
     await whenRendering();
-    await whenClicking('conflit-choix');
+    await whenClicking('anomalie-choix');
 
-    await whenClicking('conflit-champs-detail');
-    await whenEntering('conflit-cible', 'travail-8');
+    await whenClicking('anomalie-champs-detail');
+    await whenEntering('anomalie-cible', 'travail-8');
 
     thenTargetChoiceIs('travail-8', 'Travail ouvert à 8 h');
     thenNoInterpretationIsSelected();
@@ -834,32 +843,32 @@ describe('Conflict dossier page', () => {
   it('should expose cancellation without transforming the chosen pointage fact', async () => {
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-annuler');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-annuler');
 
-    thenTextContains('conflit-acte', 'Annulation du pointage');
-    thenTextContains('conflit-pointage', '2026-09-14T17:00:00.123456789+02:00');
-    thenAbsent('conflit-cible');
-    thenFieldValueIs('conflit-motif', '');
+    thenTextContains('anomalie-acte', 'Annulation du pointage');
+    thenTextContains('anomalie-pointage', '2026-09-14T17:00:00.123456789+02:00');
+    thenAbsent('anomalie-cible');
+    thenFieldValueIs('anomalie-motif', '');
   });
 
   it('should open detailed regularisation without any selected type or intention', async () => {
     await whenRendering();
 
-    await whenClicking('conflit-detail');
-    await whenClicking('conflit-regulariser');
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
 
-    thenTextContains('conflit-acte', 'Régularisation d’un fait manquant');
+    thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
     thenNothingIsChosen([
-      'conflit-type-DEBUT',
-      'conflit-type-NON_CONFORMITE',
-      'conflit-type-FIN',
-      'conflit-intention-OUVERTURE',
-      'conflit-intention-TRANSITION',
-      'conflit-intention-FIN',
+      'anomalie-type-DEBUT',
+      'anomalie-type-NON_CONFORMITE',
+      'anomalie-type-FIN',
+      'anomalie-intention-OUVERTURE',
+      'anomalie-intention-TRANSITION',
+      'anomalie-intention-FIN',
     ]);
     thenDetailedFactIsOpen();
-    thenAbsent('conflit-motif');
+    thenAbsent('anomalie-motif');
   });
 
   it('should ignore preview consequences arriving after another dossier has replaced its proposition', async () => {
@@ -876,9 +885,9 @@ describe('Conflict dossier page', () => {
     await whenResponseArrives(attente, ancienneReponse);
 
     thenTextContains('conflit-diagnostic', 'Autre contradiction.');
-    thenAbsent('conflit-acte');
-    thenAbsent('conflit-apercu');
-    thenAbsent('conflit-operation');
+    thenAbsent('anomalie-acte');
+    thenAbsent('anomalie-apercu');
+    thenAbsent('anomalie-operation');
   });
 
   it('should keep a later unknown outcome blocked when an earlier verification returns after leaving and reopening the same dossier', async () => {
@@ -886,26 +895,26 @@ describe('Conflict dossier page', () => {
     application.result = { kind: 'ISSUE_INCONNUE' };
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
     const ancienneVerification = new PendingResponseFixture<ResultatVerification>();
     application.receiptReplies.pending = ancienneVerification;
 
-    whenStartingClick('conflit-verifier');
+    whenStartingClick('anomalie-verifier');
     await ancienneVerification.arrival;
     read.result = { kind: 'DOSSIER', dossier: dossierAtFixture('fin-18', 'Autre contradiction.') };
     await whenAddressChanges('fin-18');
     read.result = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
     await whenAddressChanges('fin-17');
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
     await whenResponseArrives(ancienneVerification, {
       kind: 'ATTESTE',
       dossier: { ...dossierAnomalieFixture(), version: 3, enConflit: false },
     });
 
-    thenDisabled('conflit-choix');
-    thenTextContains('conflit-operation', 'L’issue de l’écriture est inconnue');
-    thenFieldValueIs('conflit-motif', 'Cible confirmée');
+    thenDisabled('anomalie-choix');
+    thenTextContains('anomalie-operation', 'L’issue de l’écriture est inconnue');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
   });
 
   it('should abandon the confirmed dossier when its address becomes incomplete before the write response arrives', async () => {
@@ -914,15 +923,15 @@ describe('Conflict dossier page', () => {
     application.replies.pending = attente;
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenClicking('conflit-confirmer');
+    await whenClicking('anomalie-confirmer');
     await attente.arrival;
 
     await whenAddressBecomesIncomplete();
     await whenResponseArrives(attente, { kind: 'APPLIQUE', dossier: { ...dossierAnomalieFixture(), version: 2, enConflit: false } });
 
     thenAbsent('conflit-diagnostic');
-    thenAbsent('conflit-acte');
-    thenTextContains('conflit-adresse-invalide', 'L’adresse doit préciser');
+    thenAbsent('anomalie-acte');
+    thenTextContains('anomalie-adresse-invalide', 'L’adresse doit préciser');
   });
 
   const givenASuccessfulPreview = (apres?: DossierAnomalie): void => {
@@ -1071,9 +1080,9 @@ describe('Conflict dossier page', () => {
   };
 
   const whenPreparingTheCorrection = async (): Promise<void> => {
-    await whenClicking('conflit-choix');
-    await whenEntering('conflit-motif', 'Cible confirmée');
-    await whenClicking('conflit-previsualiser');
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-motif', 'Cible confirmée');
+    await whenClicking('anomalie-previsualiser');
   };
 
   const whenEntering = async (selector: string, value: string): Promise<void> => {
@@ -1168,7 +1177,7 @@ describe('Conflict dossier page', () => {
     expect(receivedFact(pointage).querySelector<HTMLDetailsElement>('details')?.open).toBe(true);
   };
   const receivedFact = (pointage: string): HTMLElement => {
-    const journal = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('conflit-pointage'))];
+    const journal = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-pointage'))];
     return requiredFixture(
       journal.find(fact => fact.id === `pointage-${pointage}`),
       'referenced journal fact',
@@ -1187,7 +1196,7 @@ describe('Conflict dossier page', () => {
     expect(field(selector).value).toBe(expected);
   };
   const thenTargetChoiceIs = (reference: string, libelle: string): void => {
-    const cible = field('conflit-cible');
+    const cible = field('anomalie-cible');
     if (!(cible instanceof HTMLSelectElement)) throw new Error('Expected an activity choice');
     expect(cible.value).toBe(reference);
     expect(cible.selectedOptions[0]?.textContent).toContain(libelle);
@@ -1198,10 +1207,10 @@ describe('Conflict dossier page', () => {
     expect(button.disabled).toBe(true);
   };
   const thenNoInterpretationIsSelected = (): void => {
-    expect(element('conflit-choix').getAttribute('aria-pressed')).toBe('false');
+    expect(element('anomalie-choix').getAttribute('aria-pressed')).toBe('false');
   };
   const thenDetailedFactIsOpen = (): void => {
-    const detail = element('conflit-champs-detail').parentElement;
+    const detail = element('anomalie-champs-detail').parentElement;
     if (!(detail instanceof HTMLDetailsElement)) throw new Error('Expected detailed fact');
     expect(detail.open).toBe(true);
   };

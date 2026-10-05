@@ -1,11 +1,11 @@
-<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="conflits-heading">
-  <h1 id="conflits-heading" class="text-title">{{ libelles.titre }}</h1>
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="anomalies-heading">
+  <h1 id="anomalies-heading" class="text-title">{{ libelles.titre }}</h1>
   <p class="mt-2 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
 
   <form
     class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
     (submit)="filter($event, operateur.value, element.value)"
-    data-selector="conflits-filtres"
+    data-selector="anomalies-filtres"
   >
     <label class="grid gap-2 text-label">
       {{ libelles.operateur }}
@@ -13,7 +13,7 @@
         #operateur
         class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
         [value]="filtre().operateur"
-        data-selector="conflits-filtre-operateur"
+        data-selector="anomalies-filtre-operateur"
       />
     </label>
     <label class="grid gap-2 text-label">
@@ -22,57 +22,57 @@
         #element
         class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
         [value]="filtre().element"
-        data-selector="conflits-filtre-element"
+        data-selector="anomalies-filtre-element"
       />
     </label>
-    <button class="min-h-touch rounded-control bg-accent px-4 text-label text-on-accent" type="submit" data-selector="conflits-filtrer">
+    <button class="min-h-touch rounded-control bg-accent px-4 text-label text-on-accent" type="submit" data-selector="anomalies-filtrer">
       {{ libelles.filtrer }}
     </button>
   </form>
   @if (echecNavigation()) {
-  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="conflits-navigation-erreur">{{ libelles.erreurNavigation }}</p>
+  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="anomalies-navigation-erreur">{{ libelles.erreurNavigation }}</p>
   } @if (pageDemandee() === undefined) {
-  <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="conflits-adresse-invalide">
+  <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="anomalies-adresse-invalide">
     {{ libelles.adresseInvalide }}
   </p>
   } @else if (liste.isLoading()) {
-  <p role="status" class="py-12 text-body text-ink-muted" data-selector="conflits-chargement">{{ libelles.chargement }}</p>
+  <p role="status" class="py-12 text-body text-ink-muted" data-selector="anomalies-chargement">{{ libelles.chargement }}</p>
   } @else if (liste.status() === 'error') {
   <div class="gestion-carte p-6">
-    <p role="alert" class="text-body text-danger" data-selector="conflits-erreur">{{ libelles.erreur }}</p>
+    <p role="alert" class="text-body text-danger" data-selector="anomalies-erreur">{{ libelles.erreur }}</p>
     <button
       class="mt-4 min-h-touch rounded-control border border-border-strong px-4 text-label"
       type="button"
       (click)="reload()"
-      data-selector="conflits-reessayer"
+      data-selector="anomalies-reessayer"
     >
       {{ libelles.reessayer }}
     </button>
   </div>
   } @else if (liste.value(); as page) { @if (!page.complete) {
-  <p role="status" class="mb-4 rounded-control border border-warn bg-sunken p-4 text-body text-warn" data-selector="conflits-partiel">
+  <p role="status" class="mb-4 rounded-control border border-warn bg-sunken p-4 text-body text-warn" data-selector="anomalies-partiel">
     {{ libelles.partiel }}
   </p>
   } @if (page.lignes.length === 0) { @if (page.total > 0) {
   <div class="gestion-carte p-6">
-    <p class="text-body" data-selector="conflits-page-vide">{{ libelles.pageVide }}</p>
+    <p class="text-body" data-selector="anomalies-page-vide">{{ libelles.pageVide }}</p>
     <button
       type="button"
       class="mt-4 min-h-touch rounded-control border border-border-strong px-4 text-label"
-      [routerLink]="['/conflits']"
+      [routerLink]="['/anomalies']"
       [queryParams]="pageParams(1)"
-      data-selector="conflits-premiere-page"
+      data-selector="anomalies-premiere-page"
     >
       {{ libelles.premierePage }}
     </button>
   </div>
   } @else if (page.complete) { @if (filtreActif()) {
-  <p class="gestion-carte p-6 text-body" data-selector="conflits-vide-filtre">{{ libelles.videFiltre }}</p>
+  <p class="gestion-carte p-6 text-body" data-selector="anomalies-vide-filtre">{{ libelles.videFiltre }}</p>
   } @else {
-  <p class="gestion-carte p-6 text-body" data-selector="conflits-vide">{{ libelles.vide }}</p>
+  <p class="gestion-carte p-6 text-body" data-selector="anomalies-vide">{{ libelles.vide }}</p>
   } } } @else {
   <div class="gestion-carte">
-    <div class="gestion-table" role="region" [attr.aria-label]="libelles.titre" tabindex="0" data-selector="conflits-table">
+    <div class="gestion-table" role="region" [attr.aria-label]="libelles.titre" tabindex="0" data-selector="anomalies-table">
       <table class="text-left text-body-sm">
         <thead class="bg-sunken text-ink-muted">
           <tr>
@@ -88,7 +88,7 @@
             <td class="p-4">
               <a
                 class="inline-flex min-h-touch items-center font-semibold text-accent underline underline-offset-4"
-                [routerLink]="['/conflits', ligne.adresse.suivi.suivi]"
+                [routerLink]="['/anomalies', ligne.adresse.suivi.suivi]"
                 [queryParams]="{ pointage: ligne.adresse.pointage.pointage }"
                 queryParamsHandling="merge"
                 data-selector="conflit-ouvrir"
@@ -111,27 +111,27 @@
     <nav
       class="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4 text-body-sm"
       [attr.aria-label]="libelles.pagination"
-      data-selector="conflits-pagination"
+      data-selector="anomalies-pagination"
     >
       <span>{{ libelles.page }} {{ filtre().page }} {{ libelles.sur }} {{ pageCount(page.total) }}</span>
       <div class="flex gap-2">
         <button
           type="button"
           class="min-h-touch rounded-control border border-border-strong px-3 text-label disabled:text-ink-muted"
-          [routerLink]="['/conflits']"
+          [routerLink]="['/anomalies']"
           [queryParams]="pageParams(filtre().page - 1)"
           [disabled]="filtre().page === 1"
-          data-selector="conflits-page-precedente"
+          data-selector="anomalies-page-precedente"
         >
           {{ libelles.precedente }}
         </button>
         <button
           type="button"
           class="min-h-touch rounded-control border border-border-strong px-3 text-label disabled:text-ink-muted"
-          [routerLink]="['/conflits']"
+          [routerLink]="['/anomalies']"
           [queryParams]="pageParams(filtre().page + 1)"
           [disabled]="filtre().page >= pageCount(page.total)"
-          data-selector="conflits-page-suivante"
+          data-selector="anomalies-page-suivante"
         >
           {{ libelles.suivante }}
         </button>

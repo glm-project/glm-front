@@ -19,7 +19,7 @@ const posteFixture = '70000000-0000-0000-0000-000000000008';
 const instantFinFixture = '2026-09-14T17:00:00.123456789+02:00';
 const motifCorrectionFixture = 'La cible est la NC.';
 
-const dossierRecuFixture = (): components['schemas']['RestDossierConflit'] => {
+const dossierRecuFixture = (): components['schemas']['RestDossierAnomalie'] => {
   const dossier = dossierFixture();
   return {
     ...dossier,
@@ -28,7 +28,7 @@ const dossierRecuFixture = (): components['schemas']['RestDossierConflit'] => {
   };
 };
 
-const dossierApresFixture = (): components['schemas']['RestDossierConflit'] => {
+const dossierApresFixture = (): components['schemas']['RestDossierAnomalie'] => {
   const dossier = dossierFixture(true);
   return {
     ...dossier,
@@ -52,8 +52,8 @@ const dossierApresFixture = (): components['schemas']['RestDossierConflit'] => {
 
 describe('Conflict dossier in Gestion', () => {
   beforeEach(() => {
-    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierRecuFixture() }).as('dossier');
-    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}/apercus`, request => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierRecuFixture() }).as('dossier');
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}/apercus`, request => {
       const body = request.body as components['schemas']['RestDemandeDApercu'];
       request.reply({
         body: {
@@ -78,16 +78,16 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const whenCorrectingTheReceivedEnd = (): void => {
-    cy.get(dataSelector('conflit-pointage')).last().find(dataSelector('conflit-corriger')).click();
+    cy.get(dataSelector('anomalie-pointage')).last().find(dataSelector('anomalie-corriger')).click();
   };
 
   const thenTheReceivedEndIsReadyToEdit = (): void => {
-    cy.get(dataSelector('conflit-proposition-titre')).should('have.focus');
-    cy.get(dataSelector('conflit-proposition-resume'))
+    cy.get(dataSelector('anomalie-proposition-titre')).should('have.focus');
+    cy.get(dataSelector('anomalie-proposition-resume'))
       .should('contain.text', '17:00:00')
       .and('contain.text', 'Travail · 2026-09-14T08:00:00.123456789+02:00');
-    cy.get(dataSelector('conflit-instant')).should('have.value', instantFinFixture);
-    cy.get(dataSelector('conflit-cible')).should('have.value', debutFixture);
+    cy.get(dataSelector('anomalie-instant')).should('have.value', instantFinFixture);
+    cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
   };
 
   it('should identify the chosen interpretation while its reason is being entered', () => {
@@ -98,8 +98,8 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenTheChosenInterpretationIsIdentified = (): void => {
-    cy.get(dataSelector('conflit-choix')).first().should('have.attr', 'aria-pressed', 'true');
-    cy.get(dataSelector('conflit-choix')).last().should('have.attr', 'aria-pressed', 'false');
+    cy.get(dataSelector('anomalie-choix')).first().should('have.attr', 'aria-pressed', 'true');
+    cy.get(dataSelector('anomalie-choix')).last().should('have.attr', 'aria-pressed', 'false');
   };
 
   it('should show the consequences before the optional journal comparison on a narrow screen', () => {
@@ -110,20 +110,20 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenTheConsequencesAreVisibleWithoutOpeningTheJournal = (): void => {
-    cy.get(dataSelector('conflit-apercu-consequences'))
+    cy.get(dataSelector('anomalie-apercu-consequences'))
       .should('be.visible')
       .and('contain.text', 'Terminée · 4 h')
       .and('contain.text', 'Terminée · 5 h');
-    cy.get(dataSelector('conflit-apercu-journal')).should('not.have.attr', 'open');
-    cy.get(dataSelector(`conflit-apercu-fait-avant-${finFixture}`)).should(fait => {
+    cy.get(dataSelector('anomalie-apercu-journal')).should('not.have.attr', 'open');
+    cy.get(dataSelector(`anomalie-apercu-fait-avant-${finFixture}`)).should(fait => {
       expect(fait[0]?.checkVisibility()).to.equal(false);
     });
-    cy.get(dataSelector('conflit-apercu-consequences')).then(consequences => {
-      cy.get(dataSelector('conflit-apercu-journal-ouvrir')).should(journal => {
+    cy.get(dataSelector('anomalie-apercu-consequences')).then(consequences => {
+      cy.get(dataSelector('anomalie-apercu-journal-ouvrir')).should(journal => {
         expect(consequences[0]?.getBoundingClientRect().bottom).to.be.at.most(journal[0]?.getBoundingClientRect().top ?? 0);
       });
     });
-    cy.get(dataSelector('conflit-confirmer')).should('be.enabled');
+    cy.get(dataSelector('anomalie-confirmer')).should('be.enabled');
   };
 
   it('should compare the exact previewed act and its before and after facts before confirmation', () => {
@@ -135,20 +135,20 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
-    cy.get(dataSelector('conflit-apercu-acte')).should('contain.text', finFixture).and('contain.text', 'La cible est la NC.');
-    cy.get(dataSelector(`conflit-apercu-fait-avant-${finFixture}`))
+    cy.get(dataSelector('anomalie-apercu-acte')).should('contain.text', finFixture).and('contain.text', 'La cible est la NC.');
+    cy.get(dataSelector(`anomalie-apercu-fait-avant-${finFixture}`))
       .should('be.visible')
       .and('contain.text', debutFixture)
       .and('not.contain.text', 'Pointage annulé');
-    cy.get(dataSelector(`conflit-apercu-fait-apres-${finFixture}`)).should('contain.text', 'Pointage annulé');
-    cy.get(dataSelector(`conflit-apercu-fait-apres-${remplacementFixture}`))
+    cy.get(dataSelector(`anomalie-apercu-fait-apres-${finFixture}`)).should('contain.text', 'Pointage annulé');
+    cy.get(dataSelector(`anomalie-apercu-fait-apres-${remplacementFixture}`))
       .should('contain.text', ncFixture)
       .and('contain.text', `Remplace le pointage ${finFixture}`);
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 
   const whenOpeningThePreviewJournal = (): void => {
-    cy.get(dataSelector('conflit-apercu-journal-ouvrir')).click();
+    cy.get(dataSelector('anomalie-apercu-journal-ouvrir')).click();
   };
 
   it('should identify an absent workstation while preserving the exact received instant', () => {
@@ -159,13 +159,13 @@ describe('Conflict dossier in Gestion', () => {
 
   const whenOpeningTheDossierWithoutAWorkstation = (): void => {
     cy.viewport(1280, 900);
-    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: dossierFixture() });
-    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierFixture() });
+    cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
   };
 
   const thenTheFactsKeepTheirPrecisionAndNameTheAbsentWorkstation = (): void => {
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', '2026-09-14T08:00:00.123456789+02:00');
-    cy.get(dataSelector('conflit-pointage')).each(pointage => {
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', '2026-09-14T08:00:00.123456789+02:00');
+    cy.get(dataSelector('anomalie-pointage')).each(pointage => {
       cy.wrap(pointage).should('contain.text', 'Poste : Sans poste');
     });
   };
@@ -177,7 +177,7 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenEveryFactIdentifiesItsOperatorAndWorkstation = (): void => {
-    cy.get(dataSelector('conflit-pointage')).each(pointage => {
+    cy.get(dataSelector('anomalie-pointage')).each(pointage => {
       cy.wrap(pointage).should('contain.text', `Opérateur : ${operateurFixture}`).and('contain.text', `Poste : ${posteFixture}`);
     });
   };
@@ -191,7 +191,7 @@ describe('Conflict dossier in Gestion', () => {
   const whenOpeningTheDossierWithEqualInstants = (): void => {
     cy.viewport(1280, 900);
     const dossier = dossierRecuFixture();
-    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, {
       body: {
         ...dossier,
         suivi: {
@@ -215,16 +215,16 @@ describe('Conflict dossier in Gestion', () => {
             },
           ],
         },
-      } satisfies components['schemas']['RestDossierConflit'],
+      } satisfies components['schemas']['RestDossierAnomalie'],
     });
-    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
+    cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
   };
 
   const thenTheReceivedFactsFollowTheirOccurrenceTime = (): void => {
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 6);
-    cy.get(dataSelector('conflit-pointage')).eq(1).should('contain.text', '2026-09-14T09:00:00+02:00');
-    cy.get(dataSelector('conflit-pointage')).eq(2).should('contain.text', '2026-09-14T10:00:00+02:00');
-    cy.get(dataSelector('conflit-pointage')).eq(3).should('contain.text', '2026-09-14T10:00:00+02:00');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 6);
+    cy.get(dataSelector('anomalie-pointage')).eq(1).should('contain.text', '2026-09-14T09:00:00+02:00');
+    cy.get(dataSelector('anomalie-pointage')).eq(2).should('contain.text', '2026-09-14T10:00:00+02:00');
+    cy.get(dataSelector('anomalie-pointage')).eq(3).should('contain.text', '2026-09-14T10:00:00+02:00');
   };
 
   it('should offer an explicit detailed correction and preserve the received precision', () => {
@@ -263,9 +263,9 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenTheGuidedFactIsCollapsedAndTheReasonIsVisible = (): void => {
-    cy.get(dataSelector('conflit-fait-propose')).should('not.have.attr', 'open');
-    cy.get(dataSelector('conflit-motif')).should('be.visible');
-    cy.get(dataSelector('conflit-champs-detail')).should('be.visible');
+    cy.get(dataSelector('anomalie-fait-propose')).should('not.have.attr', 'open');
+    cy.get(dataSelector('anomalie-motif')).should('be.visible');
+    cy.get(dataSelector('anomalie-champs-detail')).should('be.visible');
   };
 
   it('should invalidate the preview when the reason is edited', () => {
@@ -315,17 +315,17 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const whenCapturingTheDossier = (width: number): void => {
-    cy.get(dataSelector('conflit-apercu')).scrollIntoView();
-    cy.screenshot(`conflits-dossier-${width}`, { capture: 'viewport' });
+    cy.get(dataSelector('anomalie-apercu')).scrollIntoView();
+    cy.screenshot(`anomalies-dossier-${width}`, { capture: 'viewport' });
   };
 
   const whenCapturingTheInitialDossier = (width: number): void => {
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
-    cy.screenshot(`conflits-entree-${width}`, { capture: 'viewport' });
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
+    cy.screenshot(`anomalies-entree-${width}`, { capture: 'viewport' });
   };
 
   const thenTheConfirmationHasAnAdequateTouchTarget = (): void => {
-    cy.get(dataSelector('conflit-confirmer')).should($button => {
+    cy.get(dataSelector('anomalie-confirmer')).should($button => {
       expect($button[0]?.getBoundingClientRect().height).to.be.at.least(44);
     });
   };
@@ -337,7 +337,7 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenConsultingWithoutManagementRights = (): void => {
-    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`, {
+    cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`, {
       onBeforeLoad: win => {
         win.gestionAnomaliesGestionnaire = false;
       },
@@ -345,16 +345,16 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenOpeningTheDetailedControls = (): void => {
-    cy.get(dataSelector('conflit-detail')).click();
+    cy.get(dataSelector('anomalie-detail')).click();
   };
 
   const thenTheDossierCanOnlyBeRead = (): void => {
-    cy.get(dataSelector('conflit-droits')).should('contain.text', 'gestionnaires');
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
-    cy.get(dataSelector('conflit-choix')).should('be.disabled');
-    cy.get(dataSelector('conflit-corriger')).should('be.disabled');
-    cy.get(dataSelector('conflit-annuler')).should('be.disabled');
-    cy.get(dataSelector('conflit-regulariser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-droits')).should('contain.text', 'gestionnaires');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
+    cy.get(dataSelector('anomalie-choix')).should('be.disabled');
+    cy.get(dataSelector('anomalie-corriger')).should('be.disabled');
+    cy.get(dataSelector('anomalie-annuler')).should('be.disabled');
+    cy.get(dataSelector('anomalie-regulariser')).should('be.disabled');
   };
 
   const givenAnObsoleteConfirmation = (): void => {
@@ -362,7 +362,7 @@ describe('Conflict dossier in Gestion', () => {
       statusCode: 409,
       body: { type: 'urn:glm:erreur:atelier:apercu-obsolete', message: 'Conséquences modifiées' },
     });
-    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/conflits/${finFixture}`, { body: { ...dossierRecuFixture(), revision: 4 } });
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: { ...dossierRecuFixture(), revision: 4 } });
   };
 
   const givenALostConfirmation = (): void => {
@@ -373,7 +373,7 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenConfirmingTheAct = (): void => {
-    cy.get(dataSelector('conflit-confirmer')).click();
+    cy.get(dataSelector('anomalie-confirmer')).click();
   };
 
   const whenVerifyingTheJournal = (): void => {
@@ -384,45 +384,45 @@ describe('Conflict dossier in Gestion', () => {
         body: { ...confirmation, recu: { ...confirmation.recu, acte: body.acte }, dossier: dossierApresFixture() },
       });
     });
-    cy.get(dataSelector('conflit-verifier')).click();
+    cy.get(dataSelector('anomalie-verifier')).click();
   };
 
   const thenTheWrittenActRemainsVisibleInHistory = (): void => {
-    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Acte enregistré');
-    cy.get(dataSelector('conflit-resultat')).should('contain.text', 'Conflit résolu');
-    cy.get(dataSelector('conflit-adresse-obsolete')).should('not.exist');
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', `Remplace le pointage ${finFixture}`);
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', `Crée l’activité ${debutFixture}`);
-    cy.get(dataSelector('conflit-pointage')).should('contain.text', ncFixture);
-    cy.get(dataSelector('conflit-annulation')).should('have.length', 1).and('contain.text', 'La cible est la NC.');
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 4);
-    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
+    cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Acte enregistré');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Conflit résolu');
+    cy.get(dataSelector('anomalie-adresse-obsolete')).should('not.exist');
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', `Remplace le pointage ${finFixture}`);
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', `Crée l’activité ${debutFixture}`);
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', ncFixture);
+    cy.get(dataSelector('anomalie-annulation')).should('have.length', 1).and('contain.text', 'La cible est la NC.');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 4);
+    cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
   };
 
   const thenTheConcurrentDossierIsReloadedWithTheProposal = (): void => {
-    cy.get(dataSelector('conflit-operation')).should('contain.text', 'Les données ont changé');
-    cy.get(dataSelector('conflit-motif')).should('have.value', 'La cible est la NC.');
-    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
-    cy.get(dataSelector('conflit-previsualiser')).should('be.enabled');
+    cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Les données ont changé');
+    cy.get(dataSelector('anomalie-motif')).should('have.value', 'La cible est la NC.');
+    cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.enabled');
   };
 
   const whenRequestingThePreview = (): void => {
-    cy.get(dataSelector('conflit-previsualiser')).click();
+    cy.get(dataSelector('anomalie-previsualiser')).click();
   };
 
   const whenChangingTheReason = (): void => {
-    cy.get(dataSelector('conflit-motif')).type(' Motif précisé.');
+    cy.get(dataSelector('anomalie-motif')).type(' Motif précisé.');
   };
 
   const thenTheFormerPreviewCannotBeConfirmed = (): void => {
-    cy.get(dataSelector('conflit-apercu')).should('not.exist');
-    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
-    cy.get(dataSelector('conflit-pointage')).should('have.length', 3);
+    cy.get(dataSelector('anomalie-apercu')).should('not.exist');
+    cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 
   const thenThePreviewSummaryHasKeyboardFocus = (): void => {
-    cy.get(dataSelector('conflit-apercu-titre')).should('have.focus');
+    cy.get(dataSelector('anomalie-apercu-titre')).should('have.focus');
   };
 
   const whenPreparingTheGuidedCorrection = (): void => {
@@ -431,8 +431,8 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenChoosingTheGuidedCorrection = (): void => {
-    cy.get(dataSelector('conflit-choix')).first().click();
-    cy.get(dataSelector('conflit-motif')).type('La cible est la NC.');
+    cy.get(dataSelector('anomalie-choix')).first().click();
+    cy.get(dataSelector('anomalie-motif')).type('La cible est la NC.');
   };
 
   const whenOpeningTheDossier = (): void => {
@@ -441,43 +441,43 @@ describe('Conflict dossier in Gestion', () => {
 
   const whenOpeningTheDossierAt = (width: number): void => {
     cy.viewport(width, 900);
-    cy.visit(`/conflits/${suiviFixture}?pointage=${finFixture}`);
+    cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
   };
 
   const whenCorrectingTheEnd = (): void => {
-    cy.get(dataSelector('conflit-corriger')).last().click();
+    cy.get(dataSelector('anomalie-corriger')).last().click();
   };
 
   const whenRegularisingAMissingFact = (): void => {
-    cy.get(dataSelector('conflit-detail')).click();
-    cy.get(dataSelector('conflit-regulariser')).click();
+    cy.get(dataSelector('anomalie-detail')).click();
+    cy.get(dataSelector('anomalie-regulariser')).click();
   };
 
   const whenCancellingTheEnd = (): void => {
-    cy.get(dataSelector('conflit-annuler')).last().click();
+    cy.get(dataSelector('anomalie-annuler')).last().click();
   };
 
   const thenTheCancellationOnlyRequiresAReason = (): void => {
-    cy.get(dataSelector('conflit-acte')).should('contain.text', 'Annulation');
-    cy.get(dataSelector('conflit-motif')).should('have.value', '');
-    cy.get(dataSelector('conflit-instant')).should('not.exist');
-    cy.get(dataSelector('conflit-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-acte')).should('contain.text', 'Annulation');
+    cy.get(dataSelector('anomalie-motif')).should('have.value', '');
+    cy.get(dataSelector('anomalie-instant')).should('not.exist');
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
   };
 
   const thenTheMissingFactRequiresAnExplicitDecision = (): void => {
     cy.get('input[name="type-acte"]:checked').should('not.exist');
     cy.get('input[name="intention-acte"]:checked').should('not.exist');
-    cy.get(dataSelector('conflit-instant')).should('have.value', '');
-    cy.get(dataSelector('conflit-motif')).should('not.exist');
-    cy.get(dataSelector('conflit-previsualiser')).should('be.disabled');
-    cy.get(dataSelector('conflit-validation')).should('contain.text', 'Choisissez le type');
+    cy.get(dataSelector('anomalie-instant')).should('have.value', '');
+    cy.get(dataSelector('anomalie-motif')).should('not.exist');
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-validation')).should('contain.text', 'Choisissez le type');
   };
 
   const thenTheDetailedFactPreservesTheReceivedValues = (): void => {
-    cy.get(dataSelector('conflit-instant')).should('have.value', instantFinFixture);
-    cy.get(dataSelector('conflit-operateur')).should('have.value', operateurFixture);
-    cy.get(dataSelector('conflit-cible')).should('have.value', debutFixture);
-    cy.get(dataSelector('conflit-previsualiser')).should('be.disabled');
-    cy.get(dataSelector('conflit-confirmer')).should('not.exist');
+    cy.get(dataSelector('anomalie-instant')).should('have.value', instantFinFixture);
+    cy.get(dataSelector('anomalie-operateur')).should('have.value', operateurFixture);
+    cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
   };
 });

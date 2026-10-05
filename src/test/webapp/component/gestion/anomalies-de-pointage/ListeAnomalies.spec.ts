@@ -4,8 +4,8 @@ import { ligneFixture } from '../../../utils/gestion/anomalies-de-pointage/Anoma
 
 describe('Conflict list in Gestion', () => {
   beforeEach(() => {
-    cy.intercept('GET', '/api/atelier/conflits*', {
-      body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesConflits'],
+    cy.intercept('GET', '/api/atelier/anomalies*', {
+      body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
     });
   });
   it('should keep the wide list inside an accessible scroll region on a narrow screen', () => {
@@ -23,22 +23,22 @@ describe('Conflict list in Gestion', () => {
   });
 
   const whenFilteringWithEnter = (): void => {
-    cy.intercept('GET', '/api/atelier/conflits?operateur=Op%C3%A9rateur%20absent&element=M-042&page=0&size=5', {
-      body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesConflits'],
+    cy.intercept('GET', '/api/atelier/anomalies?nature=CONFLIT&operateur=Op%C3%A9rateur%20absent&element=M-042&page=0&size=5', {
+      body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
     });
-    cy.get(dataSelector('conflits-filtre-operateur')).type('Opérateur absent');
-    cy.get(dataSelector('conflits-filtre-element')).type('M-042{enter}');
+    cy.get(dataSelector('anomalies-filtre-operateur')).type('Opérateur absent');
+    cy.get(dataSelector('anomalies-filtre-element')).type('M-042{enter}');
   };
 
   const thenNoConflictMatchesTheFilters = (): void => {
-    cy.get(dataSelector('conflits-vide-filtre')).should('contain.text', 'Aucun conflit ne correspond');
+    cy.get(dataSelector('anomalies-vide-filtre')).should('contain.text', 'Aucun conflit ne correspond');
     cy.get(dataSelector('conflit-ligne')).should('not.exist');
-    cy.get(dataSelector('conflits-vide')).should('not.exist');
+    cy.get(dataSelector('anomalies-vide')).should('not.exist');
   };
 
   const focusControls = [
-    { selector: 'conflits-filtre-operateur', description: 'operator filter' },
-    { selector: 'conflits-filtrer', description: 'filtering action' },
+    { selector: 'anomalies-filtre-operateur', description: 'operator filter' },
+    { selector: 'anomalies-filtrer', description: 'filtering action' },
     { selector: 'conflit-ouvrir', description: 'dossier link' },
   ];
 
@@ -64,7 +64,7 @@ describe('Conflict list in Gestion', () => {
         if (input === undefined) {
           throw new Error('The focused control is unavailable');
         }
-        const button = input.ownerDocument.querySelector(dataSelector('conflits-filtrer'));
+        const button = input.ownerDocument.querySelector(dataSelector('anomalies-filtrer'));
         if (button === null) {
           throw new Error('The filtering action is unavailable');
         }
@@ -78,14 +78,14 @@ describe('Conflict list in Gestion', () => {
 
   const whenVisitingAt = (width: number): void => {
     cy.viewport(width, 900);
-    cy.visit('/conflits');
+    cy.visit('/anomalies');
   };
 
   const thenTheTableOwnsItsHorizontalScroll = (): void => {
-    cy.get(dataSelector('conflits-table')).should('have.attr', 'role', 'region');
-    cy.get(dataSelector('conflits-table')).should('have.attr', 'aria-label', 'Conflits de pointage');
-    cy.get(dataSelector('conflits-table')).should('have.attr', 'tabindex', '0');
-    cy.get(dataSelector('conflits-table')).should($region => {
+    cy.get(dataSelector('anomalies-table')).should('have.attr', 'role', 'region');
+    cy.get(dataSelector('anomalies-table')).should('have.attr', 'aria-label', 'Anomalies de pointage');
+    cy.get(dataSelector('anomalies-table')).should('have.attr', 'tabindex', '0');
+    cy.get(dataSelector('anomalies-table')).should($region => {
       expect($region[0]?.scrollWidth).to.be.greaterThan($region[0]?.clientWidth ?? 0);
     });
   };

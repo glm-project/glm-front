@@ -155,7 +155,7 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
   async preview(adresse: AdresseDossier, version: number, acte: ActeResolution): Promise<ResultatApercu> {
     try {
       const commande = crypto.randomUUID();
-      const apercu = await this.api.write('/api/atelier/suivis/{id}/conflits/{pointage}/apercus', {
+      const apercu = await this.api.write('/api/atelier/suivis/{id}/anomalies/{pointage}/apercus', {
         pathParams: { id: adresse.suivi.suivi, pointage: adresse.pointage.pointage },
         body: { commande, revision: version, acte: toRestActe(acte) },
       });
@@ -181,8 +181,14 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
 
   override async list(filtre: FiltreAnomalies): Promise<PageAnomalies> {
     try {
-      const page = await this.api.read('/api/atelier/conflits', {
-        queryParams: { operateur: filtre.operateur, element: filtre.element, page: filtre.page - 1, size: PAGE_SIZE_ANOMALIES },
+      const page = await this.api.read('/api/atelier/anomalies', {
+        queryParams: {
+          nature: 'CONFLIT',
+          operateur: filtre.operateur,
+          element: filtre.element,
+          page: filtre.page - 1,
+          size: PAGE_SIZE_ANOMALIES,
+        },
       });
       if (!page.complete) throw new Error('Lecture des conflits incomplète.');
       return { lignes: page.lignes.map(toLigne), total: page.total, complete: page.complete };
@@ -194,7 +200,7 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
 
   override async read(adresse: AdresseDossier): Promise<LectureDossier> {
     try {
-      const dossier = await this.api.read('/api/atelier/suivis/{id}/conflits/{pointage}', {
+      const dossier = await this.api.read('/api/atelier/suivis/{id}/anomalies/{pointage}', {
         pathParams: { id: adresse.suivi.suivi, pointage: adresse.pointage.pointage },
       });
       if (dossier.kind === 'EN_CONFLIT') return { kind: 'DOSSIER', dossier: toDossier(dossier) };

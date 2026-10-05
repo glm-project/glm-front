@@ -109,7 +109,7 @@ export const activitesFixture = (corrige: boolean): components['schemas']['RestA
   },
 ];
 
-export const dossierFixture = (corrige = false): components['schemas']['RestDossierConflit'] => {
+export const dossierFixture = (corrige = false): components['schemas']['RestDossierAnomalie'] => {
   const perimetre = perimetreFixture(corrige);
   return {
     kind: corrige ? 'ANCRE_ANNULEE' : 'EN_CONFLIT',

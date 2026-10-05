@@ -12,8 +12,8 @@ import { SyntheseDesHeures } from './contexts/releve-des-heures/infrastructure/p
 import { SupervisionAtelier } from './contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier';
 
 const ECRANS: [string, unknown][] = [
-  ['conflits/:suivi', DossierAnomaliePage],
-  ['conflits', ListeAnomalies],
+  ['anomalies/:suivi', DossierAnomaliePage],
+  ['anomalies', ListeAnomalies],
   ['', SupervisionAtelier],
   ['atelier', Atelier],
   ['moules-et-of', MoulesEtOf],
@@ -40,6 +40,12 @@ describe('Gestion routes', () => {
     const eagers = routesEcrans.filter(route => route.component !== undefined);
 
     expect(eagers).toEqual([]);
+  });
+
+  it('should no longer serve the former conflits path, without redirection', () => {
+    const anciennes = routes.filter(route => route.path === 'conflits' || route.redirectTo !== undefined);
+
+    expect(anciennes).toEqual([]);
   });
 
   it('should name every screen the application suite drives', () => {

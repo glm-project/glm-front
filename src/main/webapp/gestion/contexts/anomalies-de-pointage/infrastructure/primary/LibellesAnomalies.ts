@@ -65,7 +65,7 @@ export const LIBELLES_ANOMALIES = {
   absences: {
     INTROUVABLE: 'Ce pointage est introuvable dans ce suivi.',
     ANCRE_ANNULEE: 'Le pointage de cette adresse a été annulé ou remplacé.',
-    HORS_CONFLIT: 'Ce pointage ne relève plus d’un conflit.',
+    SANS_ANOMALIE: 'Ce pointage ne relève plus d’un conflit.',
   },
   operation: {
     REPOS: '',
@@ -100,7 +100,7 @@ export const LIBELLES_ANOMALIES = {
   },
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' },
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
-  titre: 'Conflits de pointage',
+  titre: 'Anomalies de pointage',
   sousTitre: 'Comprendre les faits, choisir une correction et vérifier ses conséquences avant de l’enregistrer.',
   chargement: 'Chargement des conflits…',
   ouvrir: 'Examiner le dossier',

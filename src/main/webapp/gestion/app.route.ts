@@ -10,7 +10,7 @@ import { supervisionAtelierProvider } from './supervision-atelier.provider';
 
 export const routes: Routes = [
   {
-    path: 'conflits',
+    path: 'anomalies',
     providers: anomaliesDePointageProvider,
     children: [
       {

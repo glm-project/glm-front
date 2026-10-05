@@ -114,18 +114,24 @@ describe('Conflict list', () => {
     });
   });
 
+  it('should title the page as the anomalies of pointage', async () => {
+    await whenTheListIsRendered();
+
+    expect(headingText()).toBe('Anomalies de pointage');
+  });
+
   it('should explain that the complete global list has no conflicts', async () => {
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-vide')).toContain('Aucun conflit');
-    expect(present('conflits-table')).toBe(false);
+    expect(textOf('anomalies-vide')).toBe('Aucun conflit à résoudre.');
+    expect(present('anomalies-table')).toBe(false);
   });
 
   it('should display only conflict consultation controls', async () => {
     await whenTheListIsRendered();
 
-    expect(present('conflits-demo')).toBe(false);
-    expect(textOf('conflits-vide')).toContain('Aucun conflit');
+    expect(present('anomalies-demo')).toBe(false);
+    expect(textOf('anomalies-vide')).toContain('Aucun conflit');
   });
 
   it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
@@ -163,11 +169,11 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-vide-filtre')).toContain('Aucun conflit ne correspond');
-    expect(present('conflits-vide')).toBe(false);
+    expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
+    expect(present('anomalies-vide')).toBe(false);
     expect(portFixture.demandes).toEqual([{ operateur: 'Camille', element: 'M-042', page: 2 }]);
-    expect(inputValue('conflits-filtre-operateur')).toBe('Camille');
-    expect(inputValue('conflits-filtre-element')).toBe('M-042');
+    expect(inputValue('anomalies-filtre-operateur')).toBe('Camille');
+    expect(inputValue('anomalies-filtre-element')).toBe('M-042');
   });
 
   const givenAnAddress = (params: Record<string, string>): void => {
@@ -188,9 +194,9 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-erreur')).toContain('Impossible de charger');
-    expect(present('conflits-vide')).toBe(false);
-    expect(present('conflits-table')).toBe(false);
+    expect(textOf('anomalies-erreur')).toContain('Impossible de charger');
+    expect(present('anomalies-vide')).toBe(false);
+    expect(present('anomalies-table')).toBe(false);
   });
 
   it('should reacquire the current filters when the operator retries a failed read', async () => {
@@ -200,8 +206,8 @@ describe('Conflict list', () => {
 
     await whenTheReadingRecovers();
 
-    expect(present('conflits-erreur')).toBe(false);
-    expect(textOf('conflits-vide-filtre')).toContain('Aucun conflit ne correspond');
+    expect(present('anomalies-erreur')).toBe(false);
+    expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
     expect(portFixture.demandes).toEqual([
       { operateur: 'Camille', element: '', page: 2 },
       { operateur: 'Camille', element: '', page: 2 },
@@ -213,9 +219,9 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-partiel')).toContain('Liste partielle');
-    expect(present('conflits-vide')).toBe(false);
-    expect(present('conflits-vide-filtre')).toBe(false);
+    expect(textOf('anomalies-partiel')).toContain('Liste partielle');
+    expect(present('anomalies-vide')).toBe(false);
+    expect(present('anomalies-vide-filtre')).toBe(false);
   });
 
   it('should show the second and last acquired page with only the previous page enabled', async () => {
@@ -224,9 +230,9 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-pagination')).toContain('Page 2 sur 2');
-    expect(button('conflits-page-precedente').disabled).toBe(false);
-    expect(button('conflits-page-suivante').disabled).toBe(true);
+    expect(textOf('anomalies-pagination')).toContain('Page 2 sur 2');
+    expect(button('anomalies-page-precedente').disabled).toBe(false);
+    expect(button('anomalies-page-suivante').disabled).toBe(true);
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
   });
 
@@ -235,9 +241,9 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-adresse-invalide')).toContain('Numéro de page invalide');
+    expect(textOf('anomalies-adresse-invalide')).toContain('Numéro de page invalide');
     expect(portFixture.demandes).toEqual([]);
-    expect(present('conflits-vide')).toBe(false);
+    expect(present('anomalies-vide')).toBe(false);
   });
 
   it('should refuse a fractional page without acquiring a misleading list', async () => {
@@ -245,7 +251,7 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-adresse-invalide')).toContain('Numéro de page invalide');
+    expect(textOf('anomalies-adresse-invalide')).toContain('Numéro de page invalide');
     expect(portFixture.demandes).toEqual([]);
   });
 
@@ -255,9 +261,9 @@ describe('Conflict list', () => {
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflits-page-vide')).toContain('Cette page ne contient plus de dossier');
-    expect(present('conflits-vide')).toBe(false);
-    expect(button('conflits-premiere-page').disabled).toBe(false);
+    expect(textOf('anomalies-page-vide')).toContain('Cette page ne contient plus de dossier');
+    expect(present('anomalies-vide')).toBe(false);
+    expect(button('anomalies-premiere-page').disabled).toBe(false);
   });
 
   it('should retain the acquired list when filter navigation is cancelled', async () => {
@@ -267,7 +273,7 @@ describe('Conflict list', () => {
 
     await whenFiltering('Autre opérateur', 'M-042');
 
-    expect(textOf('conflits-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
+    expect(textOf('anomalies-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
     expect(portFixture.demandes).toHaveLength(1);
   });
@@ -280,7 +286,7 @@ describe('Conflict list', () => {
 
     await whenFiltering('Autre opérateur', 'M-042');
 
-    expect(textOf('conflits-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
+    expect(textOf('anomalies-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
     expect(textOf('conflit-ligne')).toContain('Camille Martin');
     expect(errorFixture.errors).toEqual([failure]);
   });
@@ -292,8 +298,8 @@ describe('Conflict list', () => {
     const pending = await whenTheReadingCompletes(release);
 
     expect(pending).toEqual({ loading: true, empty: false });
-    expect(present('conflits-chargement')).toBe(false);
-    expect(textOf('conflits-vide')).toContain('Aucun conflit');
+    expect(present('anomalies-chargement')).toBe(false);
+    expect(textOf('anomalies-vide')).toContain('Aucun conflit');
   });
 
   const whenTheReadingStarts = async (): Promise<void> => {
@@ -304,7 +310,7 @@ describe('Conflict list', () => {
   };
 
   const whenTheReadingCompletes = async (release: () => void): Promise<{ loading: boolean; empty: boolean }> => {
-    const pending = { loading: present('conflits-chargement'), empty: present('conflits-vide') };
+    const pending = { loading: present('anomalies-chargement'), empty: present('anomalies-vide') };
     release();
     await componentFixture.whenStable();
     return pending;
@@ -312,14 +318,14 @@ describe('Conflict list', () => {
 
   const whenTheReadingRecovers = async (): Promise<void> => {
     portFixture.failure = undefined;
-    requiredElement('conflits-reessayer').click();
+    requiredElement('anomalies-reessayer').click();
     await componentFixture.whenStable();
   };
 
   const whenFiltering = async (operateur: string, element: string): Promise<void> => {
-    input('conflits-filtre-operateur').value = operateur;
-    input('conflits-filtre-element').value = element;
-    requiredElement('conflits-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    input('anomalies-filtre-operateur').value = operateur;
+    input('anomalies-filtre-element').value = element;
+    requiredElement('anomalies-filtres').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await componentFixture.whenStable();
   };
 
@@ -352,6 +358,7 @@ describe('Conflict list', () => {
     return element;
   };
   const inputValue = (selector: string): string => root().querySelector<HTMLInputElement>(dataSelector(selector))?.value ?? '';
+  const headingText = (): string => root().querySelector('h1')?.textContent.trim() ?? '';
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });

@@ -36,7 +36,7 @@ const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
   datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
   nombrePointages: 2,
 };
-const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierConflit'] => ({
+const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierAnomalie'] => ({
   kind,
   enConflit: kind === 'EN_CONFLIT',
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
@@ -125,7 +125,7 @@ describe('Real conflict resolution composition', () => {
 
   const givenAPreparedCancellation = async () => {
     const lecture = TestBed.inject(AnomaliesReadPort).read(adresseFixture);
-    server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17').flush(dossierFixture('EN_CONFLIT', 7));
+    server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17').flush(dossierFixture('EN_CONFLIT', 7));
     const dossier = await lecture;
     if (dossier.kind !== 'DOSSIER') throw new Error('Dossier de préparation fixture absent');
     const preparation = TestBed.inject(PreparationActe);
@@ -173,7 +173,7 @@ describe('Real conflict resolution composition', () => {
   });
 
   const whenPreviewAnswers = (): string => {
-    const request = server.expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus');
+    const request = server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus');
     const body = request.request.body as components['schemas']['RestDemandeDApercu'];
     expect(request.request.method).toBe('POST');
     expect(body).toEqual({ revision: 7, acte: acteFixture, commande: body.commande });
@@ -195,7 +195,7 @@ describe('Real conflict resolution composition', () => {
     const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
     const lecture = TestBed.inject(AnomaliesReadPort).list({ operateur: '', element: '', page: 1 });
     server
-      .expectOne('/api/atelier/conflits?operateur=&element=&page=0&size=5')
+      .expectOne('/api/atelier/anomalies?nature=CONFLIT&operateur=&element=&page=0&size=5')
       .flush({ lignes: [], total: 0, complete: true, page: 0, size: 5 });
     const resultatLecture = await lecture;
     const apercu = TestBed.inject(PrevisualisationAnomaliePort).preview(adresse, 1, {
@@ -204,7 +204,7 @@ describe('Real conflict resolution composition', () => {
       motif: 'Double appui',
     });
     server
-      .expectOne('/api/atelier/suivis/suivi-camille/conflits/fin-17/apercus')
+      .expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus')
       .flush(
         { type: 'urn:glm:erreur:atelier:proposition-invalide', message: 'Proposition invalide' },
         { status: 400, statusText: 'Invalid' },
