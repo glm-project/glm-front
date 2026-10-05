@@ -119,7 +119,7 @@ describe('Pupitre my pointages journey', () => {
     whenDesignatingOperator049();
     whenOpeningMyPointages();
 
-    whenChoosingWeekThroughMonth('mois-2026-9', 'semaine-2026-37');
+    whenChoosingWeekThroughMonth('annee-2026', 'mois-2026-9', 'semaine-2026-37');
 
     thenThePreviousWeekDayIsDetailed();
   });
@@ -190,8 +190,9 @@ describe('Pupitre my pointages journey', () => {
     cy.get(dataSelector('semaine-titre')).should('contain.text', 'Semaine 37');
   };
 
-  const whenChoosingWeekThroughMonth = (mois: string, semaine: string): void => {
+  const whenChoosingWeekThroughMonth = (annee: string, mois: string, semaine: string): void => {
     cy.get(dataSelector('choisir-une-semaine')).click();
+    cy.get(dataSelector(annee)).click();
     cy.get(dataSelector(mois)).click();
     cy.get(dataSelector(semaine)).click();
     cy.get(dataSelector('choix-de-semaine')).should('not.exist');

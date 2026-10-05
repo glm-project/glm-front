@@ -60,4 +60,14 @@ describe('PeriodeConsultable', () => {
 
     expect(resultat).toBe(consultable);
   });
+
+  it.each([
+    ['2026-10-08', [2025, 2026]],
+    ['2026-01-07', [2025, 2026]],
+    ['2026-12-31', [2025, 2026]],
+  ])('should offer from today %s the years holding a consultable week', (aujourdhui, annees) => {
+    const anneesConsultables = new PeriodeConsultable(new JourCalendaire(aujourdhui)).annees();
+
+    expect(anneesConsultables).toEqual(annees);
+  });
 });

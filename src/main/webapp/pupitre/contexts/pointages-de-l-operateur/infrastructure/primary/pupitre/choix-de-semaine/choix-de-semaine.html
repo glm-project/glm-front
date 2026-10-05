@@ -33,6 +33,20 @@
       }
     </ul>
     } @else {
+    <div class="annees" data-selector="annees">
+      @for (anneeConsultable of periode().annees(); track anneeConsultable) {
+      <button
+        type="button"
+        class="annee min-h-touch-lg rounded-control border-2 text-section"
+        [class.annee--choisie]="anneeConsultable === annee()"
+        [attr.aria-pressed]="anneeConsultable === annee()"
+        (click)="choisirLAnnee(anneeConsultable)"
+        [attr.data-selector]="'annee-' + anneeConsultable"
+      >
+        {{ anneeConsultable }}
+      </button>
+      }
+    </div>
     <div class="grille-des-mois" data-selector="mois-de-l-annee">
       @for (mois of moisDeLAnnee(); track mois.numero) {
       <button

@@ -42,6 +42,28 @@ describe('Week chooser', () => {
     thenFramedMonthIs('mois-2026-9');
   });
 
+  it('should open on the year of the displayed week among the consultable years', () => {
+    whenOpeningOn(new SemaineISO(2025, 45));
+
+    thenYearsAre([
+      ['2025', true],
+      ['2026', false],
+    ]);
+    thenFramedMonthIs('mois-2025-11');
+  });
+
+  it('should offer the months of another year, only those of the last year being reachable', () => {
+    whenOpeningOn(new SemaineISO(2026, 41));
+
+    whenChoosing('annee-2025');
+
+    thenYearsAre([
+      ['2025', true],
+      ['2026', false],
+    ]);
+    thenReachableMonthsAre(['Octobre', 'Novembre', 'Décembre']);
+  });
+
   it('should list the weeks of the chosen month from the oldest, flagging the current one', () => {
     whenOpeningOn(new SemaineISO(2026, 41));
 
@@ -104,6 +126,14 @@ describe('Week chooser', () => {
   const thenMonthsAre = (expected: readonly (readonly [string, boolean])[]): void => {
     const mois = Array.from(element('mois-de-l-annee').querySelectorAll('button'));
     expect(mois.map(unMois => [normalized(unMois.textContent), !unMois.disabled])).toEqual(expected);
+  };
+  const thenYearsAre = (expected: readonly (readonly [string, boolean])[]): void => {
+    const annees = Array.from(element('annees').querySelectorAll('button'));
+    expect(annees.map(annee => [normalized(annee.textContent), annee.getAttribute('aria-pressed') === 'true'])).toEqual(expected);
+  };
+  const thenReachableMonthsAre = (expected: readonly string[]): void => {
+    const mois = Array.from(element('mois-de-l-annee').querySelectorAll('button'));
+    expect(mois.filter(unMois => !unMois.disabled).map(unMois => normalized(unMois.textContent))).toEqual(expected);
   };
   const thenFramedMonthIs = (selector: string): void => {
     const encadres = Array.from(element('mois-de-l-annee').querySelectorAll('.mois--affiche'));

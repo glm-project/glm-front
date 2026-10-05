@@ -30,6 +30,10 @@ export class PeriodeConsultable {
     return this.semaines.filter(semaine => MoisCalendaire.deLaSemaine(semaine).estLeMeme(mois));
   }
 
+  annees(): readonly number[] {
+    return [...new Set(this.semaines.map(semaine => MoisCalendaire.deLaSemaine(semaine).annee))];
+  }
+
   estConsultable(mois: MoisCalendaire): boolean {
     return this.semainesDu(mois).length > 0;
   }
