@@ -1,18 +1,53 @@
+import { NatureAnomalie } from '../../../domain/dossier/DossierAnomalie';
+
+const JOUR = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric' });
+const JOUR_CALENDAIRE = new Intl.DateTimeFormat('fr-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+const HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+const aLHeure = (instant: Date): string => `${JOUR.format(instant)} à ${HEURE.format(instant)}`;
+
+const finAutomatique = (echeance: Date, debut: Date): string =>
+  JOUR_CALENDAIRE.format(echeance) === JOUR_CALENDAIRE.format(debut) ? `à ${HEURE.format(echeance)}` : aLHeure(echeance);
+
 export const LIBELLES_LISTE_ANOMALIES = {
-  vide: 'Aucun conflit à résoudre.',
-  videFiltre: 'Aucun conflit ne correspond à ces filtres.',
-  filtrer: 'Filtrer les conflits',
-  erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',
+  filtrer: 'Filtrer',
   reessayer: 'Réessayer',
-  partiel: 'Liste partielle : certains dossiers n’ont pas pu être acquis. Cette sélection ne représente pas tous les conflits.',
   precedente: 'Précédente',
   suivante: 'Suivante',
-  pagination: 'Pages des conflits',
   page: 'Page',
   sur: 'sur',
+  nature: 'Nature des anomalies',
   adresseInvalide: 'Numéro de page invalide. Appliquez les filtres pour revenir à la première page.',
-  pageVide: 'Cette page ne contient plus de dossier. D’autres conflits restent dans la sélection.',
+  natureInconnue: 'Nature d’anomalie inconnue. Choisissez un onglet pour revenir à une liste valide.',
   premierePage: 'Revenir à la première page',
   erreurNavigation: 'Impossible d’appliquer les filtres. Réessayez ; la liste acquise reste consultable.',
   sequenceEnConflit: 'Séquence en conflit',
+  periode: 'Début et fin automatique',
+  periodeFinAutomatique: (debut: string, echeance: string): string => {
+    const instantDebut = new Date(debut);
+    return `Début ${aLHeure(instantDebut)} · fin automatique ${finAutomatique(new Date(echeance), instantDebut)}`;
+  },
+  onglets: [
+    { nature: 'CONFLIT', libelle: 'Conflits', selecteur: 'anomalies-onglet-conflits' },
+    { nature: 'FIN_AUTOMATIQUE', libelle: 'Fins automatiques', selecteur: 'anomalies-onglet-fins-automatiques' },
+  ] as readonly { nature: NatureAnomalie; libelle: string; selecteur: string }[],
+  natures: {
+    CONFLIT: {
+      vide: 'Aucun conflit à résoudre.',
+      videFiltre: 'Aucun conflit ne correspond à ces filtres.',
+      erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',
+      partiel: 'Liste partielle : certains dossiers n’ont pas pu être acquis. Cette sélection ne représente pas tous les conflits.',
+      pagination: 'Pages des conflits',
+      pageVide: 'Cette page ne contient plus de dossier. D’autres conflits restent dans la sélection.',
+    },
+    FIN_AUTOMATIQUE: {
+      vide: 'Aucune fin automatique à traiter.',
+      videFiltre: 'Aucune fin automatique ne correspond à ces filtres.',
+      erreur: 'Impossible de charger les fins automatiques. Réessayez pour obtenir une liste complète.',
+      partiel:
+        'Liste partielle : certains dossiers n’ont pas pu être acquis. Cette sélection ne représente pas toutes les fins automatiques.',
+      pagination: 'Pages des fins automatiques',
+      pageVide: 'Cette page ne contient plus de dossier. D’autres fins automatiques restent dans la sélection.',
+    },
+  },
 } as const;

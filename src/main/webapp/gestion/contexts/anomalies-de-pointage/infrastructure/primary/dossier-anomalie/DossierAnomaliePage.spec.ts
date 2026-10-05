@@ -74,7 +74,7 @@ class DossierReadFixture extends AnomaliesReadPort {
   }
 
   list(): Promise<PageAnomalies> {
-    return roundTripFixture(() => ({ lignes: [], total: 0, complete: true }));
+    return roundTripFixture(() => ({ nature: 'CONFLIT', lignes: [], total: 0, complete: true }));
   }
 }
 
@@ -125,8 +125,9 @@ class RouteFixture {
 
 class RouterFixture {
   readonly events = EMPTY;
-  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string>; fragment?: string | null }) {
-    return { queryParams: extras?.queryParams ?? {}, fragment: extras?.fragment ?? null };
+  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string | null | undefined>; fragment?: string | null }) {
+    const queryParams = Object.entries(extras?.queryParams ?? {}).filter(([, value]) => value !== null && value !== undefined);
+    return { queryParams: Object.fromEntries(queryParams), fragment: extras?.fragment ?? null };
   }
   serializeUrl(tree: { queryParams: Record<string, string>; fragment: string | null }): string {
     const fragment = tree.fragment === null ? '' : `#${tree.fragment}`;
@@ -1006,6 +1007,15 @@ describe('Conflict dossier page', () => {
     thenPageDoesNotMention('conflit');
   });
 
+  it('should return to the tab and the filters the automatic end was opened from', async () => {
+    givenAnAutomaticEnd();
+    givenTheDossierWasOpenedFromTheList({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF-12', page: '3' });
+
+    await whenRendering();
+
+    thenTheReturnLinkTargets({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF-12', page: '3' });
+  });
+
   it('should show the due activity with its start, its automatic end and its received duration', async () => {
     givenAnAutomaticEnd();
 
@@ -1231,6 +1241,10 @@ describe('Conflict dossier page', () => {
   const whenRenderingWithoutWaiting = (): void => {
     fixture = TestBed.createComponent(DossierAnomaliePage);
     fixture.detectChanges();
+  };
+
+  const givenTheDossierWasOpenedFromTheList = (liste: Record<string, string>): void => {
+    route.queryParamMap.next(convertToParamMap({ pointage: 'fin-17', ...liste }));
   };
 
   const givenAnAutomaticEnd = (saisie: SaisieActe = finARegulariserFixture()): void => {
@@ -1471,6 +1485,10 @@ describe('Conflict dossier page', () => {
     expect(new URL(requiredFixture(link.getAttribute('href'), 'diagnostic link'), 'https://fixture').hash).toBe(`#pointage-${pointage}`);
     expect(link.textContent.replace(/\s+/g, ' ').trim()).toBe(label);
     expect(receivedFact(pointage).id).toBe(`pointage-${pointage}`);
+  };
+  const thenTheReturnLinkTargets = (expected: Record<string, string>): void => {
+    const href = requiredFixture(element('anomalie-retour').getAttribute('href'), 'return link');
+    expect(Object.fromEntries(new URL(href, 'https://fixture').searchParams)).toEqual(expected);
   };
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);

@@ -15,6 +15,7 @@ import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
 
 const ligneFixture: components['schemas']['RestConflitEnListe'] = {
+  nature: 'CONFLIT',
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
   revision: 7,
   elementId: 'moule-42',
@@ -52,23 +53,24 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   });
 
   it('should reject and report an incomplete required page instead of displaying partial conflict data', async () => {
-    const lecture = port.list({ operateur: 'Camille', element: 'M-042', page: 2 }).catch((failure: unknown) => failure);
+    const lecture = port.list({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 2 }).catch((failure: unknown) => failure);
 
     whenPageAnswers([ligneFixture], false);
     const failure = await lecture;
 
-    expect(failure).toEqual(new Error('Lecture des conflits incomplète.'));
+    expect(failure).toEqual(new Error('Lecture des anomalies incomplète.'));
     expect(errors.errors).toEqual([failure]);
   });
 
   it('should acquire one filtered page while preserving the server total and exact first timestamp', async () => {
-    const filtre = { operateur: 'Camille', element: 'M-042', page: 2 };
+    const filtre = { nature: 'CONFLIT' as const, operateur: 'Camille', element: 'M-042', page: 2 };
 
     const lecture = port.list(filtre);
     whenPageAnswers();
     const page = await lecture;
 
     expect(page).toMatchObject({
+      nature: 'CONFLIT',
       lignes: [
         {
           adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') },
@@ -89,7 +91,7 @@ describe('Beyond the contract: HTTP conflict reading', () => {
   it('should preserve raw operator and workstation identities when their references cannot be resolved', async () => {
     const ligne = givenUnresolvedReferences();
 
-    const lecture = port.list({ operateur: 'Camille', element: 'M-042', page: 2 });
+    const lecture = port.list({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 2 });
     whenPageAnswers([ligne]);
     const page = await lecture;
 

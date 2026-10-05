@@ -90,7 +90,7 @@ describe('Real conflict resolution composition', () => {
   it('should use the same-origin API for reading, previewing and confirming through the public ports', async () => {
     const resultat = await whenUsingThePublicResolutionPorts();
 
-    expect(resultat.lecture).toEqual({ lignes: [], total: 0, complete: true });
+    expect(resultat.lecture).toEqual({ nature: 'CONFLIT', lignes: [], total: 0, complete: true });
     expect(resultat.apercu).toEqual({ kind: 'REFUS', raison: 'Proposition invalide' });
     expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
   });
@@ -194,7 +194,7 @@ describe('Real conflict resolution composition', () => {
 
   const whenUsingThePublicResolutionPorts = async () => {
     const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
-    const lecture = TestBed.inject(AnomaliesReadPort).list({ operateur: '', element: '', page: 1 });
+    const lecture = TestBed.inject(AnomaliesReadPort).list({ nature: 'CONFLIT', operateur: '', element: '', page: 1 });
     server
       .expectOne('/api/atelier/anomalies?nature=CONFLIT&operateur=&element=&page=0&size=5')
       .flush({ lignes: [], total: 0, complete: true, page: 0, size: 5 });

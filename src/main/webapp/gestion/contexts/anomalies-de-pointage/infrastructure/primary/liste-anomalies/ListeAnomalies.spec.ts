@@ -5,15 +5,16 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { FiltreAnomalies, LectureDossier, LigneConflit, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
+import { FiltreAnomalies, LectureDossier, LigneConflit, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
 import { ListeAnomalies } from './ListeAnomalies';
 
 class AnomaliesReadFixture extends AnomaliesReadPort {
-  page: PageAnomalies = { lignes: [], total: 0, complete: true };
+  page: PageAnomalies = { nature: 'CONFLIT', lignes: [], total: 0, complete: true };
   failure: Error | undefined;
   readonly demandes: FiltreAnomalies[] = [];
   private notifyArrival = (): void => undefined;
@@ -91,6 +92,18 @@ const ligneFixture = (): LigneConflit => ({
   nombrePointages: 3,
 });
 
+const finAutomatiqueFixture = (): LigneFinAutomatique => ({
+  adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-camille') },
+  activite: new ActiviteAnomalieId('travail-camille'),
+  element: new ElementAnomalieId('of-m24-0655'),
+  designation: 'OF M24-0655',
+  operateur: 'Camille Martin',
+  operateurId: 'op-camille',
+  poste: 'Fraiseuse 1',
+  debut: new Date(2026, 0, 1, 9, 26).toISOString(),
+  echeance: new Date(2026, 0, 1, 22, 26).toISOString(),
+});
+
 describe('Conflict list', () => {
   let componentFixture: ComponentFixture<ListeAnomalies>;
   let portFixture: AnomaliesReadFixture;
@@ -136,6 +149,7 @@ describe('Conflict list', () => {
 
   it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
     portFixture.page = {
+      nature: 'CONFLIT',
       lignes: [{ ...ligneFixture(), operateur: '', operateurId: 'op-absent', poste: '', posteId: 'poste-supprime' }],
       total: 1,
       complete: true,
@@ -148,7 +162,7 @@ describe('Conflict list', () => {
   });
 
   it('should distinguish work clocked without a workstation from an unresolved workstation reference', async () => {
-    portFixture.page = { lignes: [{ ...ligneFixture(), poste: '' }], total: 1, complete: true };
+    portFixture.page = { nature: 'CONFLIT', lignes: [{ ...ligneFixture(), poste: '' }], total: 1, complete: true };
 
     await whenTheListIsRendered();
 
@@ -157,7 +171,7 @@ describe('Conflict list', () => {
   });
 
   it('should identify a conflicting sequence when the API supplies no presentation explanation', async () => {
-    portFixture.page = { lignes: [{ ...ligneFixture(), explication: '' }], total: 1, complete: true };
+    portFixture.page = { nature: 'CONFLIT', lignes: [{ ...ligneFixture(), explication: '' }], total: 1, complete: true };
 
     await whenTheListIsRendered();
 
@@ -171,7 +185,7 @@ describe('Conflict list', () => {
 
     expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
     expect(present('anomalies-vide')).toBe(false);
-    expect(portFixture.demandes).toEqual([{ operateur: 'Camille', element: 'M-042', page: 2 }]);
+    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 2 }]);
     expect(inputValue('anomalies-filtre-operateur')).toBe('Camille');
     expect(inputValue('anomalies-filtre-element')).toBe('M-042');
   });
@@ -186,7 +200,7 @@ describe('Conflict list', () => {
 
     await whenFiltering(' Camille ', ' M-042 ');
 
-    expect(routerFixture.navigations).toEqual([{ operateur: 'Camille', element: 'M-042', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 1 }]);
   });
 
   it('should explain an acquisition failure without showing an empty list', async () => {
@@ -209,13 +223,13 @@ describe('Conflict list', () => {
     expect(present('anomalies-erreur')).toBe(false);
     expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
     expect(portFixture.demandes).toEqual([
-      { operateur: 'Camille', element: '', page: 2 },
-      { operateur: 'Camille', element: '', page: 2 },
+      { nature: 'CONFLIT', operateur: 'Camille', element: '', page: 2 },
+      { nature: 'CONFLIT', operateur: 'Camille', element: '', page: 2 },
     ]);
   });
 
   it('should never describe an empty partial acquisition as a complete global list', async () => {
-    portFixture.page = { lignes: [], total: 0, complete: false };
+    portFixture.page = { nature: 'CONFLIT', lignes: [], total: 0, complete: false };
 
     await whenTheListIsRendered();
 
@@ -226,7 +240,7 @@ describe('Conflict list', () => {
 
   it('should show the second and last acquired page with only the previous page enabled', async () => {
     givenAnAddress({ operateur: 'Camille', page: '2' });
-    portFixture.page = { lignes: [ligneFixture()], total: 6, complete: true };
+    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 6, complete: true };
 
     await whenTheListIsRendered();
 
@@ -257,7 +271,7 @@ describe('Conflict list', () => {
 
   it('should distinguish a page emptied by resolutions from a list with no remaining conflicts', async () => {
     givenAnAddress({ page: '3' });
-    portFixture.page = { lignes: [], total: 6, complete: true };
+    portFixture.page = { nature: 'CONFLIT', lignes: [], total: 6, complete: true };
 
     await whenTheListIsRendered();
 
@@ -267,7 +281,7 @@ describe('Conflict list', () => {
   });
 
   it('should retain the acquired list when filter navigation is cancelled', async () => {
-    portFixture.page = { lignes: [ligneFixture()], total: 1, complete: true };
+    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
     routerFixture.navigationResult = false;
     await whenTheListIsRendered();
 
@@ -280,7 +294,7 @@ describe('Conflict list', () => {
 
   it('should report a failed filter navigation once and retain the acquired list', async () => {
     const failure = new Error('Navigation indisponible');
-    portFixture.page = { lignes: [ligneFixture()], total: 1, complete: true };
+    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
     routerFixture.navigationFailure = failure;
     await whenTheListIsRendered();
 
@@ -300,6 +314,158 @@ describe('Conflict list', () => {
     expect(pending).toEqual({ loading: true, empty: false });
     expect(present('anomalies-chargement')).toBe(false);
     expect(textOf('anomalies-vide')).toContain('Aucun conflit');
+  });
+
+  it('should acquire the conflicts and mark their tab as the current one when the address names no nature', async () => {
+    await whenTheListIsRendered();
+
+    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
+    expect(currentTab()).toBe('Conflits');
+  });
+
+  it('should acquire the automatic ends and mark their tab as the current one when the address names them', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+
+    await whenTheListIsRendered();
+
+    expect(portFixture.demandes).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: '', element: '', page: 1 }]);
+    expect(currentTab()).toBe('Fins automatiques');
+  });
+
+  it('should refuse an unknown nature without acquiring a list and keep both tabs reachable', async () => {
+    givenAnAddress({ nature: 'CONFLITS' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-adresse-invalide')).toContain('Nature d’anomalie inconnue');
+    expect(portFixture.demandes).toEqual([]);
+    expect(currentTab()).toBe('');
+    expect(tabHrefs()).toHaveLength(2);
+  });
+
+  it('should keep the filters and return to the first page when the operator changes tab', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: '3' });
+
+    await whenTheListIsRendered();
+
+    expect(tabHrefs()).toEqual([
+      '/?nature=CONFLIT&operateur=Camille&element=M-042&page=1',
+      '/?nature=FIN_AUTOMATIQUE&operateur=Camille&element=M-042&page=1',
+    ]);
+  });
+
+  it('should keep the nature when the filters are submitted from the automatic ends tab', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '2' });
+    await whenTheListIsRendered();
+
+    await whenFiltering('Camille', 'OF');
+
+    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF', page: 1 }]);
+  });
+
+  it('should show an automatic end with its element, operator, workstation and the received start and automatic end', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [finAutomatiqueFixture()], total: 1, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('fin-automatique-ouvrir')).toBe('OF M24-0655');
+    expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
+    expect(textOf('fin-automatique-ligne')).toContain('Fraiseuse 1');
+    expect(textOf('fin-automatique-ligne')).toContain('Début jeu. 1 à 09:26 · fin automatique à 22:26');
+    expect(present('conflit-ligne')).toBe(false);
+  });
+
+  it('should name the day of an automatic end that falls after the start day', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    portFixture.page = {
+      nature: 'FIN_AUTOMATIQUE',
+      lignes: [
+        {
+          ...finAutomatiqueFixture(),
+          debut: new Date(2026, 0, 1, 15, 0).toISOString(),
+          echeance: new Date(2026, 0, 2, 4, 0).toISOString(),
+        },
+      ],
+      total: 1,
+      complete: true,
+    };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('fin-automatique-ligne')).toContain('Début jeu. 1 à 15:00 · fin automatique ven. 2 à 04:00');
+  });
+
+  it('should keep unresolved identities and work without workstation visible in the automatic ends', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    portFixture.page = {
+      nature: 'FIN_AUTOMATIQUE',
+      lignes: [
+        { ...finAutomatiqueFixture(), operateur: '', poste: '', posteId: 'poste-supprime' },
+        { ...finAutomatiqueFixture(), poste: '' },
+      ],
+      total: 2,
+      complete: true,
+    };
+
+    await whenTheListIsRendered();
+
+    expect(texts('fin-automatique-ligne')[0]).toContain('Opérateur non résolu · op-camille');
+    expect(texts('fin-automatique-ligne')[0]).toContain('Poste non résolu · poste-supprime');
+    expect(texts('fin-automatique-ligne')[1]).toContain('Sans poste');
+  });
+
+  it('should explain that no automatic end remains', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-vide')).toBe('Aucune fin automatique à traiter.');
+  });
+
+  it('should explain that no automatic end matches the filters', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille' });
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-vide-filtre')).toBe('Aucune fin automatique ne correspond à ces filtres.');
+  });
+
+  it('should word the emptied page of the automatic ends', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '3' });
+    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [], total: 6, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-page-vide')).toContain('D’autres fins automatiques restent dans la sélection.');
+  });
+
+  it('should word the partial acquisition of the automatic ends', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [], total: 0, complete: false };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-partiel')).toContain('toutes les fins automatiques');
+  });
+
+  it('should word the acquisition failure of the automatic ends', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    portFixture.failure = new Error('Acquisition indisponible');
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-erreur')).toContain('Impossible de charger les fins automatiques');
+  });
+
+  it('should paginate the automatic ends with their own wording', async () => {
+    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '2' });
+    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [finAutomatiqueFixture()], total: 6, complete: true };
+
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-pagination')).toContain('Page 2 sur 2');
+    expect(labelOf('anomalies-pagination')).toBe('Pages des fins automatiques');
   });
 
   const whenTheReadingStarts = async (): Promise<void> => {
@@ -359,6 +525,15 @@ describe('Conflict list', () => {
   };
   const inputValue = (selector: string): string => root().querySelector<HTMLInputElement>(dataSelector(selector))?.value ?? '';
   const headingText = (): string => root().querySelector('h1')?.textContent.trim() ?? '';
+  const texts = (selector: string): string[] =>
+    Array.from(root().querySelectorAll(dataSelector(selector)), element => element.textContent.trim());
+  const labelOf = (selector: string): string | null => requiredElement(selector).getAttribute('aria-label');
+  const tabs = (): HTMLElement[] => Array.from(requiredElement('anomalies-onglets').querySelectorAll<HTMLElement>('a'));
+  const currentTab = (): string =>
+    tabs()
+      .find(tab => tab.getAttribute('aria-current') === 'page')
+      ?.textContent.trim() ?? '';
+  const tabHrefs = (): (string | null)[] => tabs().map(tab => tab.getAttribute('href'));
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });

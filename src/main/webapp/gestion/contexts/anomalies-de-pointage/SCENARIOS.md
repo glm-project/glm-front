@@ -30,6 +30,14 @@ ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite
 annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
 sur une adresse annulée. Une activité sans poste n'en reçoit aucun.
 
+## Liste des anomalies
+
+La liste demande la nature de l'onglet courant : `CONFLIT` sans `nature` dans l'URL, `FIN_AUTOMATIQUE` à la
+demande. Une valeur inconnue n'émet aucune requête. Changer d'onglet conserve les filtres et remet `page=1`.
+Chaque onglet a son message vide, ses erreurs et sa pagination. Une ligne d'une autre nature que celle demandée
+rejette la lecture. Une fin automatique montre son début et son échéance reçus, sans calcul, et ouvre le
+dossier de son ouvrant actif ; « Retour aux anomalies » ramène à l'onglet, aux filtres et à la page d'origine.
+
 ## Frontières de vérification
 
 - Les specs de domaine passent par `SaisieActe` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
@@ -38,7 +46,7 @@ sur une adresse annulée. Une activité sans poste n'en reçoit aucun.
   tardives, l'obsolescence et la vérification d'une issue inconnue.
 - Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé
   incohérent avec son code (régularisation portant une heure, correction sans heure).
-- Les contrats HTTP contrôlent les requêtes REST (liste de la nature `CONFLIT`, dossier et aperçu sous
+- Les contrats HTTP contrôlent les requêtes REST (liste de chaque nature, dossier et aperçu sous
   `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
 - Les specs DOM et Cypress vérifient les faits reçus, les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

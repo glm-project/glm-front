@@ -46,6 +46,7 @@ export class DossierAnomaliePage {
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
   protected readonly retour = computed(() => ({
+    nature: this.parametres().get('nature'),
     operateur: this.parametres().get('operateur'),
     element: this.parametres().get('element'),
     page: this.parametres().get('page'),

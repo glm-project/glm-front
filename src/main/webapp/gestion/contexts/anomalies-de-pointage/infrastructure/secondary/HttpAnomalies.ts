@@ -15,7 +15,8 @@ import { InstantPointage } from '../../domain/acte/InstantPointage';
 import { PropositionResolution } from '../../domain/acte/ResolutionDeLAnomalie';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { AdresseDossier, FiltreAnomalies, LectureDossier, PAGE_SIZE_ANOMALIES, PageAnomalies } from '../../domain/dossier/DossierAnomalie';
-import { toDossier, toDossierDansPerimetre, toLigne, toPointage } from './DossierAnomalieHttp';
+import { toDossier, toDossierDansPerimetre, toPointage } from './DossierAnomalieHttp';
+import { toPageAnomalies } from './ListeAnomaliesHttp';
 
 const toRestFait = (fait: FaitPropose): components['schemas']['RestFaitDeResolution'] => ({
   type: fait.type,
@@ -183,15 +184,15 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
     try {
       const page = await this.api.read('/api/atelier/anomalies', {
         queryParams: {
-          nature: 'CONFLIT',
+          nature: filtre.nature,
           operateur: filtre.operateur,
           element: filtre.element,
           page: filtre.page - 1,
           size: PAGE_SIZE_ANOMALIES,
         },
       });
-      if (!page.complete) throw new Error('Lecture des conflits incomplète.');
-      return { lignes: page.lignes.map(toLigne), total: page.total, complete: page.complete };
+      if (!page.complete) throw new Error('Lecture des anomalies incomplète.');
+      return toPageAnomalies(filtre.nature, page);
     } catch (failure: unknown) {
       this.errors.handleError(failure);
       throw failure;

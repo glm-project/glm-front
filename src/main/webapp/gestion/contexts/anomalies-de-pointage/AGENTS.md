@@ -7,9 +7,8 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 ## Langage et invariants
 
 - **Anomalie de pointage** : ce que le gestionnaire doit trancher. Deux natures : `CONFLIT`, une séquence
-  en conflit, et `FIN_AUTOMATIQUE`, une activité terminée à son échéance faute de fin réelle. Le contexte
-  ne traite aujourd'hui que la nature `CONFLIT` ; la liste la demande explicitement
-  (`GET /api/atelier/anomalies?nature=CONFLIT`). Le coût de revient emploie déjà « anomalie » au sens large ;
+  en conflit, et `FIN_AUTOMATIQUE`, une activité terminée à son échéance faute de fin réelle. La liste
+  couvre les deux natures (`GET /api/atelier/anomalies?nature=…`, requise) et le dossier aussi. Le coût de revient emploie déjà « anomalie » au sens large ;
   les contextes restent isolés et ne partagent aucun type. « Séquence en conflit » garde son sens.
 - **Dossier** : projection d'une anomalie de pointage, adressée par suivi et pointage d'ancrage : une
   séquence en conflit (`EN_CONFLIT`) ou une fin automatique (`FIN_AUTOMATIQUE`, ancrée sur l'ouvrant actif
@@ -35,6 +34,17 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 
 Gestion expose la liste sous `/anomalies` et un dossier sous `/anomalies/:suivi?pointage=…`. L'ancienne
 route `/conflits` n'existe plus et ne redirige pas.
+
+La liste offre deux onglets accessibles, « Conflits » et « Fins automatiques », et garde la nature dans
+l'URL (`/anomalies?nature=CONFLIT|FIN_AUTOMATIQUE`, [ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)).
+Sans `nature`, l'onglet Conflits ; une valeur inconnue est une adresse refusée, sans requête. Changer d'onglet
+conserve les filtres et revient à `page=1` ; la pagination est propre à chaque onglet. Une ligne
+`LigneConflit` ou `LigneFinAutomatique` est traduite à la frontière HTTP, qui rejette la lecture dont une
+ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début
+et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
+sur l'ouvrant actif (`adresse.pointage`) ; l'activité visée est `activite`, jamais l'identifiant d'événement.
+Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
+ramène à l'onglet, aux filtres et à la page d'origine.
 
 Le domaine possède les identités, la saisie et la confirmation ; l'application protège les appels
 asynchrones et les doubles soumissions. Le primaire rend les faits et leur cible, conserve les filtres

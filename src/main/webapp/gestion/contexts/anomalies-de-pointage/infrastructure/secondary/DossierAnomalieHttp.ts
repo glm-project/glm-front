@@ -6,7 +6,7 @@ import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 
-export const toLigne = (ligne: components['schemas']['RestConflitEnListe']) => ({
+export const toLigne = (ligne: Omit<components['schemas']['RestConflitEnListe'], 'nature'>) => ({
   adresse: {
     suivi: new SuiviAnomalieId(ligne.adresse.suivi),
     pointage: new PointageAnomalieId(ligne.adresse.pointage),

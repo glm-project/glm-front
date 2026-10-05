@@ -16,6 +16,7 @@ export const correctionFixture: components['schemas']['RestActeCorrection'] = {
   fait: { type: 'FIN', intention: 'FIN', activiteVisee: ncFixture, operateur: operateurFixture, instant: instantCorrigeFixture },
 };
 export const ligneFixture: components['schemas']['RestConflitEnListe'] = {
+  nature: 'CONFLIT',
   adresse: { suivi: suiviFixture, pointage: finFixture },
   revision: 3,
   elementId: elementFixture,

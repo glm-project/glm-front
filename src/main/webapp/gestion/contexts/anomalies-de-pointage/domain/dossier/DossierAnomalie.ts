@@ -81,6 +81,19 @@ export interface LigneConflit {
 
 export type EtatDAdresseDossier = 'EN_CONFLIT' | 'INTROUVABLE' | 'ANCRE_ANNULEE' | 'SANS_ANOMALIE' | 'FIN_AUTOMATIQUE';
 
+export interface LigneFinAutomatique {
+  readonly adresse: AdresseDossier;
+  readonly activite: ActiviteAnomalieId;
+  readonly element: ElementAnomalieId;
+  readonly designation: string;
+  readonly operateur: string;
+  readonly operateurId: string;
+  readonly poste: string;
+  readonly posteId?: string;
+  readonly debut: string;
+  readonly echeance: string;
+}
+
 export interface DossierAnomalie {
   readonly etat: EtatDAdresseDossier;
   readonly ligne: LigneConflit;
@@ -102,13 +115,19 @@ export type LectureDossier =
   | { readonly kind: 'DOSSIER'; readonly dossier: DossierAnomalie }
   | { readonly kind: 'INTROUVABLE' | 'ANCRE_ANNULEE' | 'SANS_ANOMALIE'; readonly journal: readonly PointageAnomalie[] };
 
-export interface PageAnomalies {
-  readonly lignes: readonly LigneConflit[];
+export type NatureAnomalie = 'CONFLIT' | 'FIN_AUTOMATIQUE';
+
+interface PageDeLignes<Nature extends NatureAnomalie, Ligne> {
+  readonly nature: Nature;
+  readonly lignes: readonly Ligne[];
   readonly total: number;
   readonly complete: boolean;
 }
 
+export type PageAnomalies = PageDeLignes<'CONFLIT', LigneConflit> | PageDeLignes<'FIN_AUTOMATIQUE', LigneFinAutomatique>;
+
 export interface FiltreAnomalies {
+  readonly nature: NatureAnomalie;
   readonly operateur: string;
   readonly element: string;
   readonly page: number;
