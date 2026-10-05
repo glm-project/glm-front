@@ -180,7 +180,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   it('should preserve a precise arbitrary correction through preview and confirmation and refresh the authoritative list', () => {
     givenRealResolutionReplies();
 
-    whenOpeningTheRealDossier();
+    whenOpeningTheRealDossierFromTheConflicts();
     whenPreparingTheArbitraryCorrection();
     whenConfirmingTheRealPreview();
     whenReturningToTheRealList();
@@ -307,6 +307,10 @@ describe('HTTP conflict resolution in Gestion', () => {
 
   const whenOpeningTheRealDossier = (): void => {
     cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
+  };
+
+  const whenOpeningTheRealDossierFromTheConflicts = (): void => {
+    cy.visit(`/anomalies/${suiviFixture}?nature=CONFLIT&pointage=${finFixture}`);
   };
 
   const whenReloadingTheDossier = (): void => {
@@ -437,7 +441,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const whenVisitingRealConflicts = (): void => {
-    cy.visit('/anomalies');
+    cy.visit('/anomalies?nature=CONFLIT');
   };
 
   const thenTheRealConflictListIsVisible = (): void => {

@@ -128,6 +128,7 @@ describe('Anomalies list', () => {
   });
 
   it('should explain that the complete global list has no conflicts', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     await whenTheListIsRendered();
 
     expect(textOf('anomalies-vide')).toBe('Aucun conflit à résoudre.');
@@ -135,6 +136,7 @@ describe('Anomalies list', () => {
   });
 
   it('should display only conflict consultation controls', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     await whenTheListIsRendered();
 
     expect(present('anomalies-demo')).toBe(false);
@@ -142,6 +144,7 @@ describe('Anomalies list', () => {
   });
 
   it('should keep unresolved operator and workstation identities visible in the conflict list', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     portFixture.page = {
       nature: 'CONFLIT',
       lignes: [{ ...ligneFixture(), operateur: '', operateurId: 'op-absent', poste: '', posteId: 'poste-supprime' }],
@@ -156,6 +159,7 @@ describe('Anomalies list', () => {
   });
 
   it('should distinguish work clocked without a workstation from an unresolved workstation reference', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     portFixture.page = { nature: 'CONFLIT', lignes: [{ ...ligneFixture(), poste: '' }], total: 1, complete: true };
 
     await whenTheListIsRendered();
@@ -165,6 +169,7 @@ describe('Anomalies list', () => {
   });
 
   it('should identify a conflicting sequence when the API supplies no presentation explanation', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     portFixture.page = { nature: 'CONFLIT', lignes: [{ ...ligneFixture(), explication: '' }], total: 1, complete: true };
 
     await whenTheListIsRendered();
@@ -173,7 +178,7 @@ describe('Anomalies list', () => {
   });
 
   it('should distinguish no matching conflicts from an empty global list', async () => {
-    givenAnAddress({ operateur: 'Camille', element: 'M-042', page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: '2' });
 
     await whenTheListIsRendered();
 
@@ -189,7 +194,7 @@ describe('Anomalies list', () => {
   };
 
   it('should request the submitted filters on the first page', async () => {
-    givenAnAddress({ page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', page: '2' });
     await whenTheListIsRendered();
 
     await whenFiltering(' Camille ', ' M-042 ');
@@ -198,6 +203,7 @@ describe('Anomalies list', () => {
   });
 
   it('should explain an acquisition failure without showing an empty list', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     portFixture.failure = new Error('Acquisition indisponible');
 
     await whenTheListIsRendered();
@@ -208,7 +214,7 @@ describe('Anomalies list', () => {
   });
 
   it('should reacquire the current filters when the operator retries a failed read', async () => {
-    givenAnAddress({ operateur: 'Camille', page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', page: '2' });
     portFixture.failure = new Error('Acquisition indisponible');
     await whenTheListIsRendered();
 
@@ -223,6 +229,7 @@ describe('Anomalies list', () => {
   });
 
   it('should never describe an empty partial acquisition as a complete global list', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     portFixture.page = { nature: 'CONFLIT', lignes: [], total: 0, complete: false };
 
     await whenTheListIsRendered();
@@ -233,7 +240,7 @@ describe('Anomalies list', () => {
   });
 
   it('should show the second and last acquired page with only the previous page enabled', async () => {
-    givenAnAddress({ operateur: 'Camille', page: '2' });
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'Camille', page: '2' });
     portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 6, complete: true };
 
     await whenTheListIsRendered();
@@ -264,7 +271,7 @@ describe('Anomalies list', () => {
   });
 
   it('should distinguish a page emptied by resolutions from a list with no remaining conflicts', async () => {
-    givenAnAddress({ page: '3' });
+    givenAnAddress({ nature: 'CONFLIT', page: '3' });
     portFixture.page = { nature: 'CONFLIT', lignes: [], total: 6, complete: true };
 
     await whenTheListIsRendered();
@@ -275,6 +282,7 @@ describe('Anomalies list', () => {
   });
 
   it('should retain the acquired list when filter navigation is cancelled', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
     routerFixture.navigationResult = false;
     await whenTheListIsRendered();
@@ -287,6 +295,7 @@ describe('Anomalies list', () => {
   });
 
   it('should report a failed filter navigation once and retain the acquired list', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     const failure = new Error('Navigation indisponible');
     portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
     routerFixture.navigationFailure = failure;
@@ -300,6 +309,7 @@ describe('Anomalies list', () => {
   });
 
   it('should distinguish a pending acquisition from a complete empty list', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
     const release = portFixture.holdReading();
     await whenTheReadingStarts();
 
@@ -311,7 +321,7 @@ describe('Anomalies list', () => {
   });
 
   it.each([
-    { nature: undefined, attendu: 'Chargement des conflits…' },
+    { nature: undefined, attendu: 'Chargement des fins automatiques…' },
     { nature: 'CONFLIT', attendu: 'Chargement des conflits…' },
     { nature: 'FIN_AUTOMATIQUE', attendu: 'Chargement des fins automatiques…' },
   ])('should word the pending acquisition of the nature $nature as "$attendu"', async ({ nature, attendu }) => {
@@ -325,11 +335,26 @@ describe('Anomalies list', () => {
     expect(loading).toBe(attendu);
   });
 
-  it('should acquire the conflicts and mark their tab as the current one when the address names no nature', async () => {
+  it('should acquire the automatic ends and mark their tab as the current one when the address names no nature', async () => {
+    await whenTheListIsRendered();
+
+    expect(portFixture.demandes).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: '', element: '', page: 1 }]);
+    expect(currentTab()).toBe('anomalies-onglet-fins-automatiques');
+  });
+
+  it('should acquire the conflicts and mark their tab as the current one when the address names them', async () => {
+    givenAnAddress({ nature: 'CONFLIT' });
+
     await whenTheListIsRendered();
 
     expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
     expect(currentTab()).toBe('anomalies-onglet-conflits');
+  });
+
+  it('should offer the automatic ends tab before the conflicts tab', async () => {
+    await whenTheListIsRendered();
+
+    expect(tabOrder()).toEqual(['anomalies-onglet-fins-automatiques', 'anomalies-onglet-conflits']);
   });
 
   it('should acquire the automatic ends and mark their tab as the current one when the address names them', async () => {
@@ -527,6 +552,7 @@ describe('Anomalies list', () => {
     Array.from(root().querySelectorAll(dataSelector(selector)), element => element.textContent.trim());
   const labelOf = (selector: string): string | null => requiredElement(selector).getAttribute('aria-label');
   const tabs = (): HTMLElement[] => Array.from(requiredElement('anomalies-onglets').querySelectorAll<HTMLElement>('a'));
+  const tabOrder = (): string[] => tabs().map(tab => tab.getAttribute('data-selector') ?? '');
   const currentTab = (): string =>
     tabs()
       .find(tab => tab.getAttribute('aria-current') === 'page')

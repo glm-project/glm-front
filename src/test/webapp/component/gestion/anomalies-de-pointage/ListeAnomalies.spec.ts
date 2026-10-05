@@ -78,7 +78,7 @@ describe('Conflict list in Gestion', () => {
 
   const whenVisitingAt = (width: number): void => {
     cy.viewport(width, 900);
-    cy.visit('/anomalies');
+    cy.visit('/anomalies?nature=CONFLIT');
   };
 
   const thenTheTableOwnsItsHorizontalScroll = (): void => {

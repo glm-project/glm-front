@@ -16,8 +16,22 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     givenTheTwoNaturesOfAnomalies();
   });
 
-  it('should list the automatic ends of the filtered selection from the second tab, back on the first page', () => {
-    whenVisiting('/anomalies?operateur=Jean&element=OF&page=2');
+  it('should open on the automatic ends when the address names no nature', () => {
+    whenVisiting('/anomalies');
+
+    thenTheListIsRequested('finsAutomatiques', 'nature=FIN_AUTOMATIQUE&operateur=&element=&page=0&size=5');
+    thenTheTabIsCurrent('anomalies-onglet-fins-automatiques');
+    thenTheAutomaticEndIsListedWithItsPeriod();
+  });
+
+  it('should show the automatic ends tab on the left of the conflicts tab', () => {
+    whenVisiting('/anomalies');
+
+    thenTheTabsAreShownFromLeftToRight(['anomalies-onglet-fins-automatiques', 'anomalies-onglet-conflits']);
+  });
+
+  it('should list the automatic ends of the filtered selection from the conflicts tab, back on the first page', () => {
+    whenVisiting('/anomalies?nature=CONFLIT&operateur=Jean&element=OF&page=2');
     whenChoosingTheTab('anomalies-onglet-fins-automatiques');
 
     thenTheListIsRequested('finsAutomatiques', 'nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=0&size=5');
@@ -26,7 +40,7 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
 
-  it('should return to the conflicts with the same filters when the operator chooses the first tab again', () => {
+  it('should list the conflicts with the same filters when the operator chooses their tab', () => {
     whenVisiting('/anomalies?nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=1');
     whenChoosingTheTab('anomalies-onglet-conflits');
 
@@ -141,6 +155,18 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
         .its('request.url')
         .should('contain', `nature=FIN_AUTOMATIQUE&operateur=Jean&element=OF&page=${page}&size=5`);
     });
+  };
+
+  const thenTheTabsAreShownFromLeftToRight = (selectors: string[]): void => {
+    cy.get(dataSelector('anomalies-onglets'))
+      .find('a')
+      .should($tabs => {
+        const shown = $tabs
+          .toArray()
+          .sort((first, second) => first.getBoundingClientRect().left - second.getBoundingClientRect().left)
+          .map(tab => tab.getAttribute('data-selector'));
+        expect(shown).to.deep.equal(selectors);
+      });
   };
 
   const thenTheAddressIs = (search: string): void => {
