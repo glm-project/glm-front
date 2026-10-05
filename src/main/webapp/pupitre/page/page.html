@@ -9,8 +9,9 @@
     (reinitialisationRequested)="askReset()"
   />
 
-  @if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (designation.operateur()) { @if (ecranOperateur() === 'MES_POINTAGES') {
-  <glm-mes-pointages (retourRequested)="showPointage()" />
+  @if (enrolement.vue().kind === 'ENROLE_ET_PRET') { @if (designation.operateur(); as operateur) { @if (ecranOperateur() ===
+  'MES_POINTAGES') {
+  <glm-mes-pointages [operateur]="operateur.id" (retourRequested)="showPointage()" />
   } @else if (designation.pointage(); as vue) {
   <glm-pointage
     [vue]="vue"

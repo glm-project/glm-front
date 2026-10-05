@@ -23,6 +23,7 @@ import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/E
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
 import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { JournauxDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/JournauxDeLAtelierPort';
+import { PointagesDeLOperateurPort } from '@/pupitre/contexts/pointages-de-l-operateur/domain/PointagesDeLOperateurPort';
 import { DeviceEnrolmentPort } from '@/pupitre/shared/authentication/domain/DeviceEnrolmentPort';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { computed, signal } from '@angular/core';
@@ -33,6 +34,7 @@ import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/Atel
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
+import { PointagesDeLOperateurFixture } from '@test/unit/fixtures/pupitre/pointages-de-l-operateur/PointagesDeLOperateurFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { setTimeout as roundTrip } from 'node:timers';
@@ -149,6 +151,7 @@ describe('Pupitre page', () => {
         { provide: CurrentOperateurLifecycle, useValue: pupitre },
         { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: ErrorHandlerPort, useValue: errorHandler },
+        { provide: PointagesDeLOperateurPort, useValue: new PointagesDeLOperateurFixture() },
       ],
     });
     fixture = TestBed.createComponent(PupitrePage);

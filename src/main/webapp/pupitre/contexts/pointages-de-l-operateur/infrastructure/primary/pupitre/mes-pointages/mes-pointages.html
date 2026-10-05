@@ -1,5 +1,32 @@
-<main class="min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4">
-  <h1 class="text-title text-ink">{{ labels.titre }}</h1>
+<main class="mes-pointages min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4">
+  <h1 class="sr-only">{{ labels.titre }}</h1>
+  @if (pointages.hasValue()) { @let lue = pointages.value();
+  <section
+    class="semaine rounded-surface border border-border bg-surface px-6 py-5"
+    aria-labelledby="semaine-titre"
+    data-selector="semaine"
+  >
+    <div class="text-center">
+      <h2 id="semaine-titre" class="text-section text-ink">{{ labels.semaine(lue.semaine) }}</h2>
+      <p class="text-body-sm text-ink-muted" data-selector="semaine-dates">{{ labels.dates(lue.semaine) }}</p>
+    </div>
+    <p class="flex items-baseline justify-between gap-3 border-t border-border pt-3">
+      <span class="text-body-sm text-ink-muted">{{ labels.totalDeLaSemaine }}</span>
+      <span class="text-title text-ink tabular-nums" data-selector="total-semaine">{{ labels.duree(lue.total) }}</span>
+    </p>
+    <ul class="flex flex-col gap-2" data-selector="jours-pointes">
+      @for (jourPointe of lue.joursPointes(); track jourPointe.jour.value) {
+      <li
+        class="flex min-h-touch-lg items-center justify-between gap-3 rounded-control border-2 border-border px-4 text-body text-ink"
+        [attr.data-selector]="'jour-' + jourPointe.jour.value"
+      >
+        <span class="font-semibold">{{ labels.jour(jourPointe.jour, aujourdhui) }}</span>
+        <span class="tabular-nums" data-selector="total-jour">{{ labels.duree(jourPointe.total) }}</span>
+      </li>
+      }
+    </ul>
+  </section>
+  }
 </main>
 
 <nav class="flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actions">
