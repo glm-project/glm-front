@@ -8,6 +8,7 @@ import { PointagesDeLaSemaine } from '../../../../domain/PointagesDeLaSemaine';
 import { PointagesDeLOperateurPort } from '../../../../domain/PointagesDeLOperateurPort';
 import { JourCalendaire } from '../../../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../../../domain/semaine/SemaineISO';
+import { ChoixDeSemaine } from '../choix-de-semaine/choix-de-semaine';
 import { LIBELLES_MES_POINTAGES } from '../LibellesMesPointages';
 
 const deuxChiffres = (valeur: number): string => String(valeur).padStart(2, '0');
@@ -17,17 +18,17 @@ const jourLocal = (instant: Date): JourCalendaire =>
 
 @Component({
   selector: 'glm-mes-pointages',
-  host: { 'data-selector': 'mes-pointages', class: 'flex min-h-0 flex-1 flex-col' },
+  host: { 'data-selector': 'mes-pointages', class: 'relative flex min-h-0 flex-1 flex-col' },
   templateUrl: './mes-pointages.html',
   styleUrl: './mes-pointages.css',
-  imports: [Icon],
+  imports: [ChoixDeSemaine, Icon],
 })
 export class MesPointages {
   readonly operateur = input.required<string>();
   readonly retourRequested = output();
   private readonly port = inject(PointagesDeLOperateurPort);
   protected readonly aujourdhui = jourLocal(new Date());
-  private readonly periode = new PeriodeConsultable(this.aujourdhui);
+  protected readonly periode = new PeriodeConsultable(this.aujourdhui);
   protected readonly semaine = signal<SemaineISO>(this.periode.semaineCourante);
   protected readonly precedente = computed(() => this.periode.precedente(this.semaine()));
   protected readonly suivante = computed(() => this.periode.suivante(this.semaine()));
@@ -43,8 +44,23 @@ export class MesPointages {
   });
   protected readonly labels = LIBELLES_MES_POINTAGES;
 
+  protected readonly choixOuvert = signal(false);
+
   protected voir(semaine: SemaineISO): void {
     this.semaine.set(semaine);
+  }
+
+  protected ouvrirLeChoix(): void {
+    this.choixOuvert.set(true);
+  }
+
+  protected fermerLeChoix(): void {
+    this.choixOuvert.set(false);
+  }
+
+  protected voirLaSemaineChoisie(semaine: SemaineISO): void {
+    this.voir(semaine);
+    this.fermerLeChoix();
   }
 
   protected reessayer(): void {

@@ -1,5 +1,6 @@
 import { PeriodeConsultable } from './PeriodeConsultable';
 import { JourCalendaire } from './semaine/JourCalendaire';
+import { MoisCalendaire } from './semaine/MoisCalendaire';
 import { SemaineISO } from './semaine/SemaineISO';
 
 const periode = new PeriodeConsultable(new JourCalendaire('2026-10-08'));
@@ -36,5 +37,37 @@ describe('PeriodeConsultable', () => {
     const periodeDe2027 = new PeriodeConsultable(new JourCalendaire('2027-01-07'));
 
     expect(periodeDe2027.precedente(new SemaineISO(2027, 1))).toEqual(new SemaineISO(2026, 53));
+  });
+
+  it.each([
+    [new MoisCalendaire(2026, 9), [37, 38, 39, 40]],
+    [new MoisCalendaire(2026, 10), [41]],
+    [new MoisCalendaire(2025, 10), [41, 42, 43, 44]],
+    [new MoisCalendaire(2025, 9), []],
+    [new MoisCalendaire(2026, 11), []],
+  ])('should list from oldest to newest the consultable weeks starting in %o', (mois, numeros) => {
+    const semaines = periode.semainesDu(mois);
+
+    expect(semaines.map(semaine => semaine.numero)).toEqual(numeros);
+  });
+
+  it.each([
+    [new MoisCalendaire(2025, 10), true],
+    [new MoisCalendaire(2025, 9), false],
+    [new MoisCalendaire(2026, 11), false],
+  ])('should tell whether %o can be consulted', (mois, consultable) => {
+    const resultat = periode.estConsultable(mois);
+
+    expect(resultat).toBe(consultable);
+  });
+
+  it.each([
+    ['2026-10-08', [2025, 2026]],
+    ['2026-01-07', [2025, 2026]],
+    ['2026-12-31', [2025, 2026]],
+  ])('should offer from today %s the years holding a consultable week', (aujourdhui, annees) => {
+    const anneesConsultables = new PeriodeConsultable(new JourCalendaire(aujourdhui)).annees();
+
+    expect(anneesConsultables).toEqual(annees);
   });
 });

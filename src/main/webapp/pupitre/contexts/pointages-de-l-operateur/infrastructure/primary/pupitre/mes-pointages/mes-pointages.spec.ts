@@ -302,6 +302,29 @@ describe('Mes pointages screen', () => {
     thenTextOf('aucun-pointage-du-jour', ['Aucun pointage ce jour.']);
   });
 
+  it('should read and show the week chosen month by month', async () => {
+    givenTheWeek(new SemaineISO(2026, 40), semaineMardiFixture());
+    await whenShowingMyPointages();
+    whenChoosingDay('choisir-une-semaine');
+    whenChoosingDay('mois-2026-9');
+
+    await whenGoingTo('semaine-2026-40');
+
+    thenVisible('choix-de-semaine', false);
+    thenTextOf('semaine-titre', ['Semaine 40']);
+    thenTextOf('jour-titre', ['Mardi 29 septembre 2026']);
+  });
+
+  it('should keep the displayed week when the chooser is closed', async () => {
+    await whenShowingMyPointages();
+    whenChoosingDay('choisir-une-semaine');
+
+    whenChoosingDay('fermer-choix');
+
+    thenVisible('choix-de-semaine', false);
+    thenTheRequestedWeeksAre([new DemandeDePointages(new OperateurId('jean'), SEMAINE_EN_COURS)]);
+  });
+
   const givenTheServerIsUnreachable = (): void => {
     port.lectureFailure = new Error('Serveur injoignable');
   };
