@@ -470,6 +470,38 @@ describe('Anomalies list', () => {
     expect(portFixture.demandes).toHaveLength(1);
   });
 
+  it('should keep the focus on the retry button while the operators are read again', async () => {
+    givenTheOperatorsAreUnavailable();
+    await whenTheListIsRendered();
+
+    await whenRetryingTheOperatorsWhileTheyAreRead();
+
+    expect(document.activeElement).toBe(button('anomalies-referentiel-reessayer'));
+  });
+
+  it('should mark the retry of the operators as busy while they are read again', async () => {
+    givenTheOperatorsAreUnavailable();
+    await whenTheListIsRendered();
+
+    await whenRetryingTheOperatorsWhileTheyAreRead();
+
+    thenTheRetryIsBusy('anomalies-referentiel-reessayer');
+  });
+
+  it('should not point the operator label at a filter that is not rendered while the operators load', async () => {
+    givenTheOperatorsArePending();
+
+    await whenTheOperatorsAreRequested();
+
+    expect(labelElement('anomalies-operateur-label').hasAttribute('for')).toBe(false);
+  });
+
+  it('should point the operator label at the filter once the operators are read', async () => {
+    await whenTheListIsRendered();
+
+    thenTheLabelPointsAt('anomalies-operateur-label', 'anomalies-operateur');
+  });
+
   it('should read the elements for any reader to name the element filter', async () => {
     await whenTheListIsRendered();
 
@@ -650,6 +682,32 @@ describe('Anomalies list', () => {
     expect(portFixture.demandes).toHaveLength(1);
   });
 
+  it('should keep the focus on the retry button while the elements are read again', async () => {
+    portFixture.elementsFailure = new Error('Éléments indisponibles');
+    await whenTheListIsRendered();
+
+    await whenRetryingTheElementsWhileTheyAreRead();
+
+    expect(document.activeElement).toBe(button('anomalies-elements-reessayer'));
+  });
+
+  it('should mark the retry of the elements as busy while they are read again', async () => {
+    portFixture.elementsFailure = new Error('Éléments indisponibles');
+    await whenTheListIsRendered();
+
+    await whenRetryingTheElementsWhileTheyAreRead();
+
+    thenTheRetryIsBusy('anomalies-elements-reessayer');
+  });
+
+  it('should not point the element label at a filter that is not rendered while the elements load', async () => {
+    portFixture.holdElements();
+
+    await whenTheOperatorsAreRequested();
+
+    expect(labelElement('anomalies-element-label').hasAttribute('for')).toBe(false);
+  });
+
   const givenTheOperatorsAreUnavailable = (): void => {
     portFixture.operateursFailure = new Error('Opérateurs indisponibles');
   };
@@ -666,6 +724,40 @@ describe('Anomalies list', () => {
     componentFixture = TestBed.createComponent(ListeAnomalies);
     componentFixture.detectChanges();
     await Promise.resolve();
+  };
+
+  const whenRetryingTheOperatorsWhileTheyAreRead = async (): Promise<void> => {
+    releaseOperateurs = portFixture.holdOperateurs();
+    await whenRetrying('anomalies-referentiel-reessayer');
+  };
+
+  const whenRetryingTheElementsWhileTheyAreRead = async (): Promise<void> => {
+    portFixture.holdElements();
+    await whenRetrying('anomalies-elements-reessayer');
+  };
+
+  const whenRetrying = async (selector: string): Promise<void> => {
+    const retry = button(selector);
+    retry.focus();
+    retry.click();
+    componentFixture.detectChanges();
+    await Promise.resolve();
+  };
+
+  const thenTheRetryIsBusy = (selector: string): void => {
+    expect(button(selector).getAttribute('aria-busy')).toBe('true');
+  };
+
+  const thenTheLabelPointsAt = (label: string, target: string): void => {
+    expect(labelElement(label).getAttribute('for')).toBe(target);
+  };
+
+  const labelElement = (id: string): HTMLLabelElement => {
+    const label = root().querySelector<HTMLLabelElement>(`#${id}`);
+    if (label === null) {
+      throw new Error(`Missing label ${id}`);
+    }
+    return label;
   };
 
   const whenTheOperatorsArrive = async (): Promise<void> => {

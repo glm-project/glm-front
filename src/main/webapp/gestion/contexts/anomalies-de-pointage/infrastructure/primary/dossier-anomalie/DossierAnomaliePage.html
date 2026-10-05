@@ -266,14 +266,20 @@
             </option>
             }
           </select>
-          @if (referentiel.isLoading()) {
+          @if (etatReferentiel.premierChargement()) {
           <p class="mt-4 text-body-sm" role="status" data-selector="anomalie-referentiel-chargement">
             {{ libelles.chargementReferentiel }}
           </p>
-          } @else { @if (referentiel.error()) {
+          } @else { @if (etatReferentiel.enPanne()) {
           <div class="mt-4 text-body-sm text-danger" role="alert" data-selector="anomalie-referentiel-erreur">
             <p>{{ libelles.referentielIndisponible }}</p>
-            <button type="button" class="bouton mt-2" data-selector="anomalie-referentiel-retry" (click)="referentiel.reload()">
+            <button
+              type="button"
+              class="bouton mt-2"
+              data-selector="anomalie-referentiel-retry"
+              [attr.aria-busy]="etatReferentiel.relecture()"
+              (click)="referentiel.reload()"
+            >
               {{ libelles.reessayer }}
             </button>
           </div>
@@ -288,7 +294,7 @@
             selector="anomalie-operateur"
             [operateurs]="referentielLu().operateurs"
             [courant]="proposition.fait.operateur"
-            [disabled]="occupe() || referentiel.error() !== undefined"
+            [disabled]="occupe() || etatReferentiel.enPanne()"
             [describedBy]="preparation.resolution().saisie.errors().includes('OPERATEUR_REQUIS') ? 'operateur-acte-erreur' : null"
             (choisi)="choisirOperateur($event)"
           />
@@ -299,7 +305,7 @@
             class="champ mt-2"
             data-selector="anomalie-poste"
             [value]="proposition.fait.poste"
-            [disabled]="occupe() || referentiel.error() !== undefined"
+            [disabled]="occupe() || etatReferentiel.enPanne()"
             (change)="change({ fait: { poste: poste.value } })"
           >
             <option value="" [selected]="proposition.fait.poste === ''">{{ libelles.sansPoste }}</option>

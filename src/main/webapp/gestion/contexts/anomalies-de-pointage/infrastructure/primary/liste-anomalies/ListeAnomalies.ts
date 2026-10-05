@@ -9,6 +9,7 @@ import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { NATURE_ANOMALIE_PAR_DEFAUT, readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
+import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { operateurPresente, postePresente } from '../PresentationIdentites';
 import { SelecteurElementAnomalie } from '../selecteur-element/SelecteurElementAnomalie';
@@ -48,9 +49,11 @@ export class ListeAnomalies {
   });
 
   protected readonly operateursLus = resource({ loader: () => this.port.operateurs() });
+  protected readonly etatOperateurs = etatDeLecture(this.operateursLus);
   protected readonly operateurs = computed(() => (this.operateursLus.hasValue() ? this.operateursLus.value() : []));
   protected readonly operateurChoisi = linkedSignal(() => this.filtre().operateur);
   protected readonly elementsLus = resource({ loader: () => this.port.elements() });
+  protected readonly etatElements = etatDeLecture(this.elementsLus);
   protected readonly elements = computed(() => (this.elementsLus.hasValue() ? this.elementsLus.value() : []));
   protected readonly elementChoisi = linkedSignal(() => this.filtre().element);
 

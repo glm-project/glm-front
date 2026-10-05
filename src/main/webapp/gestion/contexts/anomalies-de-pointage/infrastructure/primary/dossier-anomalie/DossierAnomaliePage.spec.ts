@@ -1350,6 +1350,37 @@ describe('Anomaly dossier page', () => {
     expect(read.referentielDemandes).toBe(2);
   });
 
+  it('should keep the focus on the retry button while the referential is read again', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenRetryingTheReferentielWhileItIsRead();
+
+    expect(document.activeElement).toBe(element('anomalie-referentiel-retry'));
+  });
+
+  it('should mark the retry as busy while the referential is read again', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenRetryingTheReferentielWhileItIsRead();
+
+    thenTheRetryIsBusy();
+  });
+
+  it('should keep the operator and workstation fields in place while the referential is read again', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenRetryingTheReferentielWhileItIsRead();
+
+    thenAbsent('anomalie-referentiel-chargement');
+    thenPosteChoiceIs('poste-1', 'Poste non résolu (référence actuelle)');
+  });
+
   it.each([
     {
       cas: 'the referential',
@@ -2221,6 +2252,19 @@ describe('Anomaly dossier page', () => {
     const attente = new PendingResponseFixture<ReferentielAnomalies>();
     read.referentielPending = attente;
     return attente;
+  };
+
+  const thenTheRetryIsBusy = (): void => {
+    expect(element('anomalie-referentiel-retry').getAttribute('aria-busy')).toBe('true');
+  };
+
+  const whenRetryingTheReferentielWhileItIsRead = async (): Promise<void> => {
+    givenTheReferentielIsStillLoading();
+    const retry = element('anomalie-referentiel-retry');
+    retry.focus();
+    retry.click();
+    await roundTripFixture(() => undefined);
+    fixture.detectChanges();
   };
 
   const whenOpeningTheGuidedCorrectionWhileTheReferentielLoads = async (

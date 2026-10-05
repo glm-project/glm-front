@@ -88,6 +88,8 @@ valeur que le référentiel ne contient pas reste sélectionnée comme « … no
 Si le référentiel échoue, le formulaire affiche « Liste des opérateurs et des postes indisponible » avec « Réessayer », garde
 la saisie courante et désactive les deux champs. L'aperçu de l'acte nomme l'opérateur et le poste depuis le référentiel, puis
 depuis le journal, sinon « non résolu ».
+Une lecture de référentiel, d'opérateurs ou d'éléments que « Réessayer » relit ne démonte pas sa zone (`etatDeLecture` :
+seule la première lecture remplace le champ par « Chargement… ») : le bouton reste, `aria-busy`, et garde le focus.
 Un refus d'acte se traduit par code (`urn:glm:erreur:atelier:<code>`, [API](../../../../../../documentation/api.md)) :
 le port rend `{ kind: 'REFUS', code }` pour les quatorze codes connus (`CODES_REFUS_ACTE`) et ne transmet jamais le
 message du serveur, qui contient des identifiants ; le primaire rend `LIBELLES_ANOMALIES.refus[code]`, un libellé du

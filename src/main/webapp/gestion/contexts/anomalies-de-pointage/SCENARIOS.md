@@ -61,6 +61,10 @@ liste, pour tout lecteur, séparément des opérateurs : la liste dit « Chargem
 s'ils échouent, elle dit « Liste des éléments indisponible » avec son propre « Réessayer », désactive le filtre, qui garde
 l'élément de l'URL, sans toucher au filtre « Opérateur » ni à la liste. Le dossier ne les lit pas.
 
+Comme dans le dossier, « Réessayer » d'un filtre reste affiché, `aria-busy`, pendant la relecture : le focus y reste, et le
+filtre n'est remplacé par « Chargement… » qu'à la première lecture. Pendant ce chargement, l'étiquette du filtre ne désigne
+pas un champ absent.
+
 ## Opérateur et poste affichés
 
 La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, la chronologie, l'historique d'une adresse
@@ -78,7 +82,9 @@ dit « Choisissez l'opérateur » et l'aperçu reste indisponible. Choisir un op
 l'aperçu. Une référence que le référentiel ne contient pas reste sélectionnée comme « Opérateur non résolu (référence
 actuelle) » ou « Poste non résolu (référence actuelle) ». L'aperçu nomme l'opérateur et le poste de l'acte depuis le
 référentiel, puis depuis le journal, sinon « non résolu ». Si le référentiel est indisponible, le dossier le dit, propose
-« Réessayer » et conserve la saisie ; un consultant, qui ne peut rien appliquer, ne le lit pas.
+« Réessayer » et conserve la saisie ; un consultant, qui ne peut rien appliquer, ne le lit pas. Pendant la relecture,
+les champs restent en place et « Réessayer » reste affiché, `aria-busy`, si bien que le focus ne tombe pas sur le document
+(seule la première lecture remplace les champs par « Chargement… »).
 
 Un refus d'acte (aperçu, confirmation ou vérification du reçu) n'affiche pas non plus d'identifiant : le serveur
 nomme l'opérateur et le poste par leur UUID dans son message (« L'operateur … n'est pas habilite sur le poste de

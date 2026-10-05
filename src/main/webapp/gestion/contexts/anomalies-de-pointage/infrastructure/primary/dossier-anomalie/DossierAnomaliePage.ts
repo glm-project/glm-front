@@ -29,6 +29,7 @@ import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
+import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
@@ -90,6 +91,7 @@ export class DossierAnomaliePage {
     params: () => (this.droits.canApply() ? true : undefined),
     loader: () => this.port.referentiel(),
   });
+  protected readonly etatReferentiel = etatDeLecture(this.referentiel);
   protected readonly referentielLu = computed(() => (this.referentiel.hasValue() ? this.referentiel.value() : REFERENTIEL_VIDE));
   protected readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
   protected readonly dossier = computed(() => {

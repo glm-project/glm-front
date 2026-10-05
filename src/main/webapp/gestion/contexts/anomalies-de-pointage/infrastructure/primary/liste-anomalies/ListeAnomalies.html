@@ -23,8 +23,13 @@
     data-selector="anomalies-filtres"
   >
     <div class="grid min-w-0 content-start gap-2">
-      <label id="anomalies-operateur-label" class="text-label" for="anomalies-operateur">{{ libelles.operateur }}</label>
-      @if (operateursLus.isLoading()) {
+      <label
+        id="anomalies-operateur-label"
+        class="text-label"
+        [attr.for]="etatOperateurs.premierChargement() ? null : 'anomalies-operateur'"
+        >{{ libelles.operateur }}</label
+      >
+      @if (etatOperateurs.premierChargement()) {
       <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-referentiel-chargement">
         {{ libelles.chargementOperateurs }}
       </p>
@@ -36,17 +41,18 @@
         [avecTous]="true"
         [operateurs]="operateurs()"
         [courant]="operateurChoisi()"
-        [disabled]="operateursLus.error() !== undefined"
+        [disabled]="etatOperateurs.enPanne()"
         (choisi)="choisirOperateur($event)"
         (tousChoisis)="operateurChoisi.set('')"
       />
-      @if (operateursLus.error()) {
+      @if (etatOperateurs.enPanne()) {
       <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-referentiel-erreur">
         <p>{{ libelles.operateursIndisponibles }}</p>
         <button
           type="button"
           class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
           data-selector="anomalies-referentiel-reessayer"
+          [attr.aria-busy]="etatOperateurs.relecture()"
           (click)="operateursLus.reload()"
         >
           {{ libelles.reessayer }}
@@ -55,8 +61,10 @@
       } }
     </div>
     <div class="grid min-w-0 content-start gap-2">
-      <label id="anomalies-element-label" class="text-label" for="anomalies-element">{{ libelles.element }}</label>
-      @if (elementsLus.isLoading()) {
+      <label id="anomalies-element-label" class="text-label" [attr.for]="etatElements.premierChargement() ? null : 'anomalies-element'"
+        >{{ libelles.element }}</label
+      >
+      @if (etatElements.premierChargement()) {
       <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-elements-chargement">
         {{ libelles.chargementElements }}
       </p>
@@ -67,17 +75,18 @@
         selector="anomalies-filtre-element"
         [elements]="elements()"
         [courant]="elementChoisi()"
-        [disabled]="elementsLus.error() !== undefined"
+        [disabled]="etatElements.enPanne()"
         (choisi)="choisirElement($event)"
         (tousChoisis)="elementChoisi.set('')"
       />
-      @if (elementsLus.error()) {
+      @if (etatElements.enPanne()) {
       <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-elements-erreur">
         <p>{{ libelles.elementsIndisponibles }}</p>
         <button
           type="button"
           class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
           data-selector="anomalies-elements-reessayer"
+          [attr.aria-busy]="etatElements.relecture()"
           (click)="elementsLus.reload()"
         >
           {{ libelles.reessayer }}
