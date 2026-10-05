@@ -1,3 +1,5 @@
+import { CodeRefusActe } from '../../domain/acte/AnomaliesActesPorts';
+
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   ACTE_REQUIS: 'Choisissez un acte.',
   MOTIF_REQUIS: 'Renseignez un motif.',
@@ -9,6 +11,23 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   INTENTION_INCOMPATIBLE: 'Le type et l’intention ne sont pas compatibles.',
   TYPE_REQUIS: 'Choisissez le type du pointage.',
   INTENTION_REQUISE: 'Choisissez son intention.',
+};
+
+const REFUS_ACTE: Readonly<Record<CodeRefusActe, string>> = {
+  'proposition-invalide': 'La proposition n’est pas valide. Vérifiez la saisie, puis demandez un nouvel aperçu.',
+  'confirmation-reutilisee': 'Cette confirmation a déjà été utilisée. Vérifiez le journal avant toute nouvelle décision.',
+  'suivi-d-atelier-introuvable': 'Ce suivi d’atelier est introuvable.',
+  'suivi-d-atelier-cloture': 'Ce suivi d’atelier est clôturé : il n’accepte plus de décision.',
+  'evenement-d-atelier-introuvable': 'Le pointage visé est introuvable dans ce suivi.',
+  'operateur-introuvable': 'L’opérateur indiqué est introuvable.',
+  'poste-de-travail-introuvable': 'Le poste indiqué est introuvable.',
+  'activite-visee-introuvable': 'L’activité visée est introuvable.',
+  'operateur-non-habilite': 'L’opérateur indiqué n’est pas habilité sur ce poste.',
+  'activite-visee-incoherente': 'L’activité visée ne correspond pas à ce pointage.',
+  'evenement-deja-annule': 'Le pointage est déjà annulé.',
+  'evenement-anterieur-a-l-engagement': 'Le fait est antérieur à l’engagement de l’élément.',
+  'identifiant-evenement-reutilise': 'Le pointage à créer existe déjà. Demandez un nouvel aperçu.',
+  'date-de-survenue-future': 'La date et l’heure du fait ne peuvent pas être dans le futur.',
 };
 
 export const LIBELLES_ANOMALIES = {
@@ -91,6 +110,7 @@ export const LIBELLES_ANOMALIES = {
     REFUS: 'Acte refusé',
     APPLIQUE: 'Acte enregistré',
   },
+  refus: REFUS_ACTE,
   erreurs: ERREURS_SAISIE,
   retour: 'Retour aux anomalies',
   dossier: 'Dossier d’anomalie de pointage',

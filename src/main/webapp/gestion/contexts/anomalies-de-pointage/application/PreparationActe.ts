@@ -1,13 +1,19 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable, signal } from '@angular/core';
-import { ApplicationActePort, PrevisualisationAnomaliePort, ResultatApercu, ResultatApplication } from '../domain/acte/AnomaliesActesPorts';
+import {
+  ApplicationActePort,
+  PrevisualisationAnomaliePort,
+  RefusActe,
+  ResultatApercu,
+  ResultatApplication,
+} from '../domain/acte/AnomaliesActesPorts';
 import { PropositionResolution, ResolutionDeLAnomalie } from '../domain/acte/ResolutionDeLAnomalie';
 import { ChangementSaisie, SaisieActe } from '../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../domain/dossier/DossierAnomalie';
 
 export type EtatPreparationActe =
   | { readonly kind: 'REPOS' | 'PREVISUALISATION' | 'CONFIRMATION' | 'CONCURRENCE' | 'ISSUE_INCONNUE' | 'ERREUR' }
-  | { readonly kind: 'REFUS'; readonly raison: string }
+  | RefusActe
   | { readonly kind: 'APPLIQUE'; readonly dossier: DossierAnomalie };
 
 @Injectable()

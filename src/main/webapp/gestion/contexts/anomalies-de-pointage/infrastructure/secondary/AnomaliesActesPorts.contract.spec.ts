@@ -14,6 +14,8 @@ import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
 
 const adresseFixture: AdresseDossier = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+const messageAvecIdentifiants =
+  'L’operateur 10000000-0000-0000-0000-000000000001 n’est pas habilite sur le poste de travail 20000000-0000-0000-0000-000000000002';
 const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
 const propositionFixture: PropositionResolution = {
   adresse: adresseFixture,
@@ -182,7 +184,7 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
     whenRequestFails('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus', 'proposition-invalide', 400, 'Proposition invalide');
     const resultat = await demande;
 
-    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Proposition invalide' });
+    expect(resultat).toEqual({ kind: 'REFUS', code: 'proposition-invalide' });
   });
 
   it.each(['apercu-obsolete', 'saisie-concurrente'])(
@@ -198,6 +200,7 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
   );
 
   it.each([
+    'proposition-invalide',
     'confirmation-reutilisee',
     'suivi-d-atelier-introuvable',
     'suivi-d-atelier-cloture',
@@ -211,13 +214,13 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
     'evenement-anterieur-a-l-engagement',
     'identifiant-evenement-reutilise',
     'date-de-survenue-future',
-  ])('should preserve the known preview refusal %s and its message', async code => {
+  ])('should translate the known preview refusal %s into its code, without the server message', async code => {
     const demande = preview.preview(adresseFixture, 7, acteFixture).catch((failure: unknown) => failure);
 
-    whenRequestFails('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus', code, 409, 'Acte refusé par Atelier');
+    whenRequestFails('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus', code, 409, messageAvecIdentifiants);
     const resultat = await demande;
 
-    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Acte refusé par Atelier' });
+    expect(resultat).toEqual({ kind: 'REFUS', code });
   });
 
   it.each([
@@ -409,17 +412,17 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
   });
 
   it.each([
-    { code: 'proposition-invalide', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
-    { code: 'confirmation-reutilisee', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
+    { code: 'proposition-invalide', attendu: { kind: 'REFUS', code: 'proposition-invalide' } },
+    { code: 'confirmation-reutilisee', attendu: { kind: 'REFUS', code: 'confirmation-reutilisee' } },
     { code: 'apercu-obsolete', attendu: { kind: 'CONCURRENCE' } },
     { code: 'saisie-concurrente', attendu: { kind: 'CONCURRENCE' } },
-    { code: 'suivi-d-atelier-cloture', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
-    { code: 'operateur-non-habilite', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
-    { code: 'date-de-survenue-future', attendu: { kind: 'REFUS', raison: 'Confirmation refusée' } },
-  ])('should expose the known confirmation refusal $code without attesting a write', async ({ code, attendu }) => {
+    { code: 'suivi-d-atelier-cloture', attendu: { kind: 'REFUS', code: 'suivi-d-atelier-cloture' } },
+    { code: 'operateur-non-habilite', attendu: { kind: 'REFUS', code: 'operateur-non-habilite' } },
+    { code: 'date-de-survenue-future', attendu: { kind: 'REFUS', code: 'date-de-survenue-future' } },
+  ])('should translate the known confirmation refusal $code into its code without attesting a write', async ({ code, attendu }) => {
     const demande = application.apply(propositionFixture).catch((failure: unknown) => failure);
 
-    whenRequestFails('/api/atelier/suivis/suivi-camille/confirmations-de-resolution', code, 409, 'Confirmation refusée');
+    whenRequestFails('/api/atelier/suivis/suivi-camille/confirmations-de-resolution', code, 409, messageAvecIdentifiants);
     const resultat = await demande;
 
     expect(resultat).toEqual(attendu);
@@ -434,18 +437,18 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
     expect(resultat).toMatchObject({ kind: 'ATTESTE', dossier: { version: 9, enConflit: false, ligne: { adresse: adresseFixture } } });
   });
 
-  it('should retain the known inaccessible-follow-up refusal without attesting absence of a confirmation', async () => {
+  it('should translate the known inaccessible-follow-up refusal into its code without attesting absence of a confirmation', async () => {
     const demande = application.verify(propositionFixture).catch((failure: unknown) => failure);
 
     whenRequestFails(
       `/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${propositionFixture.commande}`,
       'suivi-d-atelier-introuvable',
       404,
-      'Suivi inaccessible',
+      messageAvecIdentifiants,
     );
     const resultat = await demande;
 
-    expect(resultat).toEqual({ kind: 'REFUS', raison: 'Suivi inaccessible' });
+    expect(resultat).toEqual({ kind: 'REFUS', code: 'suivi-d-atelier-introuvable' });
   });
 
   it.each(

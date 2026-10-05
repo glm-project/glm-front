@@ -102,7 +102,9 @@ The adapter preserves the received totals, rounding and category independence.
 that stable code, not HTTP status plus title. Each context translates the codes its ports can produce into
 its own refusal type.
 
-A known business refusal rejects the promise with the context refusal and original message. An unknown code
+A known business refusal rejects the promise with the context refusal and original message. A context whose users must
+never see what the message embeds, such as identifiers, keeps only the code and renders its own wording: the
+anomalies de pointage acts resolve `{ kind: 'REFUS', code }` and drop the message. An unknown code
 stays a technical failure: expanding the domain union is a deliberate change, and a forgotten code must fail
 loudly rather than take the wrong business branch.
 

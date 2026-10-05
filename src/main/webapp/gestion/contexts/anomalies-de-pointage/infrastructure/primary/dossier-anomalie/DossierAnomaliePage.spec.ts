@@ -104,7 +104,7 @@ class RepliesFixture<T> {
 class DossierPreviewFixture extends PrevisualisationAnomaliePort {
   readonly replies = new RepliesFixture<ResultatApercu>();
   readonly actes: ActeResolution[] = [];
-  result: ResultatApercu = { kind: 'REFUS', raison: 'Le pointage est déjà annulé.' };
+  result: ResultatApercu = { kind: 'REFUS', code: 'evenement-deja-annule' };
 
   preview(_adresse: AdresseDossier, _version: number, acte: ActeResolution): Promise<ResultatApercu> {
     this.actes.push(acte);
@@ -115,7 +115,7 @@ class DossierPreviewFixture extends PrevisualisationAnomaliePort {
 class DossierApplicationFixture extends ApplicationActePort {
   readonly replies = new RepliesFixture<ResultatApplication>();
   readonly receiptReplies = new RepliesFixture<ResultatVerification>();
-  result: ResultatApplication = { kind: 'REFUS', raison: 'Le pointage est déjà annulé.' };
+  result: ResultatApplication = { kind: 'REFUS', code: 'evenement-deja-annule' };
   verification: ResultatVerification = { kind: 'NON_ATTESTE' };
 
   apply(): Promise<ResultatApplication> {
@@ -826,6 +826,33 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-refus', 'Le pointage est déjà annulé.');
     thenFieldValueIs('anomalie-motif', 'Cible confirmée');
     thenAbsent('anomalie-apercu');
+  });
+
+  it.each([
+    { code: 'operateur-non-habilite', libelle: 'L’opérateur indiqué n’est pas habilité sur ce poste.' },
+    { code: 'operateur-introuvable', libelle: 'L’opérateur indiqué est introuvable.' },
+    { code: 'poste-de-travail-introuvable', libelle: 'Le poste indiqué est introuvable.' },
+  ] as const)('should explain the preview refusal $code without any identifier', async ({ code, libelle }) => {
+    preview.result = { kind: 'REFUS', code };
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-refus', libelle);
+    thenTextDoesNotContainAnIdentifier('anomalie-refus');
+  });
+
+  it('should explain the confirmation refusal operateur-non-habilite without any identifier and keep the proposition', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'REFUS', code: 'operateur-non-habilite' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenClicking('anomalie-confirmer');
+
+    thenTextContains('anomalie-refus', 'L’opérateur indiqué n’est pas habilité sur ce poste.');
+    thenTextDoesNotContainAnIdentifier('anomalie-refus');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
   });
 
   it('should retain the obsolete proposition through a failed reacquisition and require an explicit new preview after recovery', async () => {
@@ -1973,6 +2000,9 @@ describe('Anomaly dossier page', () => {
   };
   const thenTextDoesNotContain = (selector: string, expected: string): void => {
     expect(element(selector).textContent).not.toContain(expected);
+  };
+  const thenTextDoesNotContainAnIdentifier = (selector: string): void => {
+    expect(element(selector).textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/i);
   };
   const thenAbsent = (selector: string): void => {
     expect(present(selector)).toBe(false);

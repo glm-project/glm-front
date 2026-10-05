@@ -48,6 +48,12 @@ un pointage sans poste « Sans poste ». Le journal porte le nom et le libellé 
 du fait, vides lorsque la fiche manque ; une ligne de liste n'en garde que `posteId`, pour distinguer l'absence de
 poste d'un poste non résolu.
 
+Un refus d'acte (aperçu, confirmation ou vérification du reçu) n'affiche pas non plus d'identifiant : le serveur
+nomme l'opérateur et le poste par leur UUID dans son message (« L'operateur … n'est pas habilite sur le poste de
+travail … »), que le front ignore. Il traduit le code du refus (`operateur-non-habilite`, `operateur-introuvable`,
+`poste-de-travail-introuvable` et les autres codes connus) en un libellé du contexte. Un code inconnu n'est pas un refus
+métier : il échoue comme une erreur technique, sans afficher le message reçu.
+
 ## Dates affichées
 
 Le dossier et la liste n'affichent aucun instant ISO brut. Chaque instant reçu s'affiche en heure locale, en jour
@@ -82,6 +88,9 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
   incohérent avec son code (régularisation portant une heure, correction sans heure).
 - Les contrats HTTP contrôlent les requêtes REST (liste de chaque nature, dossier et aperçu sous
   `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
+- Les contrats HTTP vérifient que chaque refus connu d'un acte se traduit en son code sans le message du serveur, et
+  qu'un code inconnu reste une erreur technique ; les specs DOM et Cypress vérifient qu'aucun identifiant n'est affiché
+  dans `anomalie-refus`.
 - Les contrats HTTP vérifient que le journal porte les noms reçus, ou des noms vides sans fiche, et que les lignes de
   la liste ne portent plus l'identifiant de l'opérateur.
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties

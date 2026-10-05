@@ -1,12 +1,15 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
-import { ApiError, findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
+import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
 import { ActeResolution, FaitPropose } from '../../domain/acte/ActeResolution';
 import {
   ApplicationActePort,
+  CodeRefusActe,
+  CODES_REFUS_ACTE,
   PrevisualisationAnomaliePort,
+  RefusActe,
   ResultatApercu,
   ResultatApplication,
   ResultatVerification,
@@ -84,31 +87,16 @@ const canonicalReceiptMatchesProposition = (
 const isConcurrentRefusal = (urn: string | undefined): boolean =>
   urn === 'urn:glm:erreur:atelier:apercu-obsolete' || urn === 'urn:glm:erreur:atelier:saisie-concurrente';
 
-const knownActRefusals = new Set(
-  [
-    'proposition-invalide',
-    'confirmation-reutilisee',
-    'suivi-d-atelier-introuvable',
-    'suivi-d-atelier-cloture',
-    'evenement-d-atelier-introuvable',
-    'operateur-introuvable',
-    'poste-de-travail-introuvable',
-    'activite-visee-introuvable',
-    'operateur-non-habilite',
-    'activite-visee-incoherente',
-    'evenement-deja-annule',
-    'evenement-anterieur-a-l-engagement',
-    'identifiant-evenement-reutilise',
-    'date-de-survenue-future',
-  ].map(code => `urn:glm:erreur:atelier:${code}`),
-);
+const ACT_REFUSAL_URN_PREFIX = 'urn:glm:erreur:atelier:';
 
-const isKnownActRefusal = (erreur: ApiError | undefined): erreur is ApiError => erreur !== undefined && knownActRefusals.has(erreur.urn);
+const toKnownActRefusalCode = (urn: string | undefined): CodeRefusActe | undefined =>
+  CODES_REFUS_ACTE.find(code => `${ACT_REFUSAL_URN_PREFIX}${code}` === urn);
 
-const toActRefusal = (failure: unknown): { kind: 'CONCURRENCE' } | { kind: 'REFUS'; raison: string } => {
-  const erreur = findApiErrorIn(failure);
-  if (isConcurrentRefusal(erreur?.urn)) return { kind: 'CONCURRENCE' };
-  if (isKnownActRefusal(erreur)) return { kind: 'REFUS', raison: erreur.message };
+const toActRefusal = (failure: unknown): { kind: 'CONCURRENCE' } | RefusActe => {
+  const urn = findApiErrorIn(failure)?.urn;
+  if (isConcurrentRefusal(urn)) return { kind: 'CONCURRENCE' };
+  const code = toKnownActRefusalCode(urn);
+  if (code !== undefined) return { kind: 'REFUS', code };
   throw failure;
 };
 
@@ -147,8 +135,9 @@ export class HttpAnomalies extends AnomaliesReadPort implements Previsualisation
       if (!canonicalReceiptMatchesProposition(resultat, proposition)) throw new Error('Reçu de confirmation incohérent.');
       return { kind: 'ATTESTE', dossier: toDossierDansPerimetre(resultat.dossier) };
     } catch (failure: unknown) {
-      const erreur = findApiErrorIn(failure);
-      if (erreur?.urn === 'urn:glm:erreur:atelier:suivi-d-atelier-introuvable') return { kind: 'REFUS', raison: erreur.message };
+      if (findApiErrorIn(failure)?.urn === 'urn:glm:erreur:atelier:suivi-d-atelier-introuvable') {
+        return { kind: 'REFUS', code: 'suivi-d-atelier-introuvable' };
+      }
       throw failure;
     }
   }

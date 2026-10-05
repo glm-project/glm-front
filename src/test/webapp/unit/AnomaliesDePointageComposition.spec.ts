@@ -91,7 +91,7 @@ describe('Real conflict resolution composition', () => {
     const resultat = await whenUsingThePublicResolutionPorts();
 
     expect(resultat.lecture).toEqual({ nature: 'CONFLIT', lignes: [], total: 0, complete: true });
-    expect(resultat.apercu).toEqual({ kind: 'REFUS', raison: 'Proposition invalide' });
+    expect(resultat.apercu).toEqual({ kind: 'REFUS', code: 'proposition-invalide' });
     expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
   });
 

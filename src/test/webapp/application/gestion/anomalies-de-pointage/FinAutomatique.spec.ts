@@ -31,10 +31,28 @@ const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/
 const urlApercu = `${urlDossier}/apercus`;
 const urlConfirmation = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/confirmations-de-resolution`;
 
+const messageAvecIdentifiantsFixture =
+  'L’operateur 10000000-0000-0000-0000-000000000001 n’est pas habilite sur le poste de travail 20000000-0000-0000-0000-000000000002';
+
 const refusFixture = [
-  { statut: 409, code: 'suivi-d-atelier-cloture', message: 'Le suivi d’atelier est clôturé' },
-  { statut: 409, code: 'operateur-non-habilite', message: 'L’opérateur n’est plus habilité sur ce poste' },
-  { statut: 400, code: 'date-de-survenue-future', message: 'La date de survenue est dans le futur' },
+  {
+    statut: 409,
+    code: 'suivi-d-atelier-cloture',
+    message: 'Le suivi d’atelier 30000000-0000-0000-0000-000000000003 est clôturé',
+    libelle: 'Ce suivi d’atelier est clôturé : il n’accepte plus de décision.',
+  },
+  {
+    statut: 409,
+    code: 'operateur-non-habilite',
+    message: messageAvecIdentifiantsFixture,
+    libelle: 'L’opérateur indiqué n’est pas habilité sur ce poste.',
+  },
+  {
+    statut: 400,
+    code: 'date-de-survenue-future',
+    message: 'La date de survenue est dans le futur',
+    libelle: 'La date et l’heure du fait ne peuvent pas être dans le futur.',
+  },
 ];
 
 describe('Automatic end of an activity in Gestion', () => {
@@ -240,7 +258,7 @@ describe('Automatic end of an activity in Gestion', () => {
       .and('not.contain.text', 'Régulariser la fin');
   };
 
-  refusFixture.forEach(({ statut, code, message }) => {
+  refusFixture.forEach(({ statut, code, message, libelle }) => {
     it(`should keep the dated end and show the known refusal ${code} of the preview`, () => {
       givenAPreviewRefusedWith(statut, code, message);
 
@@ -249,7 +267,7 @@ describe('Automatic end of an activity in Gestion', () => {
       whenDatingTheEnd();
       whenRequestingTheRefusedPreview();
 
-      thenTheRefusalIsExplainedAndTheEndIsKept(message);
+      thenTheRefusalIsExplainedAndTheEndIsKept(libelle);
     });
   });
 
@@ -262,9 +280,11 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.get(dataSelector('anomalie-previsualiser')).click();
   };
 
-  const thenTheRefusalIsExplainedAndTheEndIsKept = (message: string): void => {
+  const thenTheRefusalIsExplainedAndTheEndIsKept = (libelle: string): void => {
     cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Acte refusé');
-    cy.get(dataSelector('anomalie-refus')).should('contain.text', message);
+    cy.get(dataSelector('anomalie-refus'))
+      .should('contain.text', libelle)
+      .and('not.match', /[0-9a-f]{8}-[0-9a-f]{4}-/i);
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
     thenTheInstantFieldsShow(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-fin-automatique')).should('be.visible');
