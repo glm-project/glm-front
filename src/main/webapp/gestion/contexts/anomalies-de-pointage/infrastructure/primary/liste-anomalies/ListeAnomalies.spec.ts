@@ -310,6 +310,21 @@ describe('Anomalies list', () => {
     expect(textOf('anomalies-vide')).toContain('Aucun conflit');
   });
 
+  it.each([
+    { nature: undefined, attendu: 'Chargement des conflits…' },
+    { nature: 'CONFLIT', attendu: 'Chargement des conflits…' },
+    { nature: 'FIN_AUTOMATIQUE', attendu: 'Chargement des fins automatiques…' },
+  ])('should word the pending acquisition of the nature $nature as "$attendu"', async ({ nature, attendu }) => {
+    givenAnAddress(nature === undefined ? {} : { nature });
+    const release = portFixture.holdReading();
+    await whenTheReadingStarts();
+
+    const loading = textOf('anomalies-chargement');
+    await whenTheReadingCompletes(release);
+
+    expect(loading).toBe(attendu);
+  });
+
   it('should acquire the conflicts and mark their tab as the current one when the address names no nature', async () => {
     await whenTheListIsRendered();
 

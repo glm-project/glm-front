@@ -1173,6 +1173,40 @@ describe('Anomaly dossier page', () => {
     },
   );
 
+  it.each(anomalieTraiteeFixture)(
+    'should not explain a conflict in the receipt when $etat has no conflict nor automatic end left',
+    async resultat => {
+      givenAnEndRegularisationLeaving(resultat);
+      await whenRendering();
+      await whenPreviewingTheDatedEnd();
+
+      await whenClicking('anomalie-confirmer');
+
+      thenAbsent('conflit-diagnostic');
+    },
+  );
+
+  it('should not explain a conflict on a dossier read with no conflict nor automatic end left', async () => {
+    const dossier = dossierAnomalieFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, etat: 'SANS_ANOMALIE', enConflit: false } };
+
+    await whenRendering();
+
+    thenAbsent('conflit-diagnostic');
+  });
+
+  it('should not explain a conflict in the receipt of a conflict that the act resolved', async () => {
+    application.result = { kind: 'APPLIQUE', dossier: { ...dossierAnomalieFixture(), version: 2, enConflit: false } };
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenClicking('anomalie-confirmer');
+
+    thenTextContains('anomalie-resultat', 'Anomalie traitée');
+    thenAbsent('conflit-diagnostic');
+  });
+
   const anomalieRestanteFixture = [
     { etat: 'ANCRE_ANNULEE' as const, enConflit: false, finAutomatique: true },
     { etat: 'FIN_AUTOMATIQUE' as const, enConflit: false, finAutomatique: true },

@@ -121,7 +121,6 @@ export const LIBELLES_ANOMALIES = {
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
   titre: 'Anomalies de pointage',
   sousTitre: 'Comprendre les faits, choisir une correction et vérifier ses conséquences avant de l’enregistrer.',
-  chargement: 'Chargement des conflits…',
   ouvrir: 'Examiner le dossier',
   element: 'Élément',
   operateur: 'Opérateur',

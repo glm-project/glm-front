@@ -8,6 +8,7 @@ import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { anomalieTraitee } from '../../../domain/dossier/AnomalieTraitee';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
+import { conflitAExpliquer } from '../../../domain/dossier/ConflitAExpliquer';
 import {
   ActiviteAnomalie,
   AdresseDossier,
@@ -41,6 +42,7 @@ export class DossierAnomaliePage {
   protected readonly droits = inject(AnomaliesRightsPort);
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly anomalieTraitee = anomalieTraitee;
+  protected readonly conflitAExpliquer = conflitAExpliquer;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly pointageConsulte = signal<string | undefined>(undefined);

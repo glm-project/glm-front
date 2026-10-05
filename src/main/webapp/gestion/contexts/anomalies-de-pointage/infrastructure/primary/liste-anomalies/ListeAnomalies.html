@@ -55,7 +55,7 @@
     {{ libelles.adresseInvalide }}
   </p>
   } @else if (liste.isLoading()) {
-  <p role="status" class="py-12 text-body text-ink-muted" data-selector="anomalies-chargement">{{ libelles.chargement }}</p>
+  <p role="status" class="py-12 text-body text-ink-muted" data-selector="anomalies-chargement">{{ libellesDeNature().chargement }}</p>
   } @else if (liste.status() === 'error') {
   <div class="gestion-carte p-6">
     <p role="alert" class="text-body text-danger" data-selector="anomalies-erreur">{{ libellesDeNature().erreur }}</p>

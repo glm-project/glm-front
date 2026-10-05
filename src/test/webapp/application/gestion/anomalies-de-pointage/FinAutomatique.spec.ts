@@ -91,6 +91,7 @@ describe('Automatic end of an activity in Gestion', () => {
   const thenTheAnomalyIsProcessedFromTheReceipt = (): void => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-fin-automatique')).should('not.exist');
+    cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 2);
     cy.get(dataSelector('anomalie-activite')).should('contain.text', 'Terminée · 9 h');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
@@ -187,6 +188,7 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const thenTheCorrectionIsProcessedFromTheReceipt = (): void => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
+    cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
     cy.get(dataSelector('anomalie-annulation')).should('have.length', 1).and('contain.text', motifFinAutomatiqueFixture);
     cy.wait('@apercu')

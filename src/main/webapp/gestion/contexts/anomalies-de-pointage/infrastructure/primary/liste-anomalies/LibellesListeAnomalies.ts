@@ -33,6 +33,7 @@ export const LIBELLES_LISTE_ANOMALIES = {
   ] as readonly { nature: NatureAnomalie; libelle: string; selecteur: string }[],
   natures: {
     CONFLIT: {
+      chargement: 'Chargement des conflits…',
       vide: 'Aucun conflit à résoudre.',
       videFiltre: 'Aucun conflit ne correspond à ces filtres.',
       erreur: 'Impossible de charger les conflits. Réessayez pour obtenir une liste complète.',
@@ -41,6 +42,7 @@ export const LIBELLES_LISTE_ANOMALIES = {
       pageVide: 'Cette page ne contient plus de dossier. D’autres conflits restent dans la sélection.',
     },
     FIN_AUTOMATIQUE: {
+      chargement: 'Chargement des fins automatiques…',
       vide: 'Aucune fin automatique à traiter.',
       videFiltre: 'Aucune fin automatique ne correspond à ces filtres.',
       erreur: 'Impossible de charger les fins automatiques. Réessayez pour obtenir une liste complète.',
