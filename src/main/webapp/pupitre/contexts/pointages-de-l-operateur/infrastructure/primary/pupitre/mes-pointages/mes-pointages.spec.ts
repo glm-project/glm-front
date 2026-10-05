@@ -24,6 +24,13 @@ const JEUDI = [
   }),
   ligneFixture({ element: '1250', debut: new Date(2026, 9, 8, 12, 45) }),
 ];
+const semaineMardiFixture = (): ReturnType<typeof semaineFixture> =>
+  semaineFixture(new SemaineISO(2026, 40), {
+    1: {
+      total: 'PT7H50M',
+      lignes: [ligneFixture({ element: '1231', debut: new Date(2026, 8, 29, 7), fin: new Date(2026, 8, 29, 14, 50) })],
+    },
+  });
 const semaineEnCoursFixture = (): ReturnType<typeof semaineFixture> =>
   semaineFixture(SEMAINE_EN_COURS, { 0: { total: 'PT7H45M', lignes: [LUNDI] }, 3: { total: 'PT3H13M', lignes: JEUDI } }, 'PT10H58M');
 
@@ -194,6 +201,62 @@ describe('Mes pointages screen', () => {
     thenClockedDaysAre([['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '— à vérifier']]);
   });
 
+  it('should read and show the previous week when going back', async () => {
+    await whenShowingMyPointages();
+
+    await whenGoingTo('semaine-precedente');
+
+    thenTheRequestedWeeksAre([
+      new DemandeDePointages(new OperateurId('jean'), SEMAINE_EN_COURS),
+      new DemandeDePointages(new OperateurId('jean'), new SemaineISO(2026, 40)),
+    ]);
+    thenTextOf('semaine-titre', ['Semaine 40']);
+    thenTextOf('semaine-dates', ['28 sept. – 4 oct. 2026']);
+    thenNavigationIs({ precedente: true, suivante: true, aujourdhui: true });
+  });
+
+  it('should keep the current week as the latest one', async () => {
+    await whenShowingMyPointages();
+
+    thenNavigationIs({ precedente: true, suivante: false, aujourdhui: false });
+  });
+
+  it('should stop going back one year before the current week', async () => {
+    await whenShowingMyPointages();
+
+    await whenGoingBackWeeks(52);
+
+    thenTextOf('semaine-titre', ['Semaine 41']);
+    thenTextOf('semaine-dates', ['6 oct. – 12 oct. 2025']);
+    thenNavigationIs({ precedente: false, suivante: true, aujourdhui: true });
+  });
+
+  it('should come back to the current week and detail today', async () => {
+    givenTheCurrentWeek(semaineEnCoursFixture());
+    givenTheWeek(new SemaineISO(2026, 40), semaineMardiFixture());
+    await whenShowingMyPointages();
+    await whenGoingTo('semaine-precedente');
+    whenChoosingDay('jour-2026-09-29');
+
+    await whenGoingTo('revenir-aujourdhui');
+
+    thenTextOf('semaine-titre', ['Semaine 41 · cette semaine']);
+    thenTextOf('jour-titre', ['Aujourd’hui — jeudi 8 octobre']);
+  });
+
+  it('should detail the first clocked day of a past week once shown', async () => {
+    givenTheWeek(new SemaineISO(2026, 40), semaineMardiFixture());
+    await whenShowingMyPointages();
+
+    await whenGoingTo('semaine-precedente');
+
+    thenTextOf('jour-titre', ['Mardi 29 septembre 2026']);
+    thenLinesAre([['1231', '', '07:00 → 14:50', '7 h 50']]);
+  });
+
+  const givenTheWeek = (semaine: SemaineISO, pointages: ReturnType<typeof semaineFixture>): void => {
+    port.seed(new DemandeDePointages(new OperateurId('jean'), semaine), pointages);
+  };
   const givenTheCurrentWeek = (pointages: ReturnType<typeof semaineFixture>): void => {
     port.seed(new DemandeDePointages(new OperateurId('jean'), SEMAINE_EN_COURS), pointages);
   };
@@ -201,6 +264,24 @@ describe('Mes pointages screen', () => {
     fixture = TestBed.createComponent(MesPointages);
     fixture.componentRef.setInput('operateur', 'jean');
     fixture.componentInstance.retourRequested.subscribe(() => (retours += 1));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+  const whenGoingTo = async (selector: string): Promise<void> => {
+    element(selector).click();
+    await whenTheWeekIsRead();
+  };
+  const whenGoingBackWeeks = async (semaines: number): Promise<void> => {
+    for (let rang = 0; rang < semaines; rang += 1) {
+      element('semaine-precedente').click();
+      fixture.detectChanges();
+    }
+    await whenTheWeekIsRead();
+  };
+  const whenTheWeekIsRead = async (): Promise<void> => {
     fixture.detectChanges();
     await fixture.whenStable();
     await new Promise(resolve => setTimeout(resolve));
@@ -240,6 +321,14 @@ describe('Mes pointages screen', () => {
     const lignes = Array.from(element('lignes').children);
     expect(lignes.map(ligne => Array.from(ligne.children).map(colonne => normalized(colonne.textContent)))).toEqual(expected);
   };
+  const thenNavigationIs = (expected: { precedente: boolean; suivante: boolean; aujourdhui: boolean }): void => {
+    expect({
+      precedente: !button('semaine-precedente').disabled,
+      suivante: !button('semaine-suivante').disabled,
+      aujourdhui: !button('revenir-aujourdhui').disabled,
+    }).toEqual(expected);
+  };
+  const button = (selector: string): HTMLButtonElement => element(selector) as HTMLButtonElement;
   const thenExplanationsAre = (expected: readonly string[]): void => {
     const explications = Array.from(element('jour-affiche').querySelectorAll(dataSelector('explication')));
     expect(explications.map(explication => normalized(explication.textContent))).toEqual(expected);

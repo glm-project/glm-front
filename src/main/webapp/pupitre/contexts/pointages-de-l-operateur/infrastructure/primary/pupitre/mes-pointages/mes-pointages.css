@@ -35,3 +35,26 @@
   border-color: var(--color-accent);
   background: var(--color-sunken);
 }
+
+.navigation-semaine {
+  display: grid;
+  grid-template-columns: var(--spacing-touch-lg) minmax(0, 1fr) var(--spacing-touch-lg);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navigation {
+  display: flex;
+  min-height: var(--spacing-touch-lg);
+  align-items: center;
+  justify-content: center;
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
+
+.navigation:disabled {
+  border-color: var(--color-border);
+  background: var(--color-sunken);
+  color: var(--color-ink-muted);
+}

@@ -33,16 +33,41 @@
       }
     </ul>
   </section>
-  } @if (pointages.hasValue()) { @let lue = pointages.value();
+  }
   <section
     class="semaine rounded-surface border border-border bg-surface px-6 py-5"
     aria-labelledby="semaine-titre"
     data-selector="semaine"
   >
-    <div class="text-center">
-      <h2 id="semaine-titre" class="text-section text-ink">{{ labels.semaine(lue.semaine) }}</h2>
-      <p class="text-body-sm text-ink-muted" data-selector="semaine-dates">{{ labels.dates(lue.semaine) }}</p>
+    <div class="navigation-semaine">
+      <button
+        type="button"
+        class="navigation rounded-control border-2 text-title"
+        [disabled]="!peutReculer()"
+        (click)="voir(precedente())"
+        [attr.aria-label]="labels.semainePrecedente"
+        data-selector="semaine-precedente"
+      >
+        <glm-icon name="chevronLeft" />
+      </button>
+      <div class="text-center">
+        <h2 id="semaine-titre" class="text-section text-ink" data-selector="semaine-titre">
+          {{ labels.semaine(semaine(), estLaSemaineCourante()) }}
+        </h2>
+        <p class="text-body-sm text-ink-muted" data-selector="semaine-dates">{{ labels.dates(semaine()) }}</p>
+      </div>
+      <button
+        type="button"
+        class="navigation rounded-control border-2 text-title"
+        [disabled]="!peutAvancer()"
+        (click)="voir(suivante())"
+        [attr.aria-label]="labels.semaineSuivante"
+        data-selector="semaine-suivante"
+      >
+        <glm-icon name="chevronRight" />
+      </button>
     </div>
+    @if (pointages.hasValue()) { @let lue = pointages.value();
     <p class="flex items-baseline justify-between gap-3 border-t border-border pt-3">
       <span class="text-body-sm text-ink-muted">{{ labels.totalDeLaSemaine }}</span>
       <span class="flex flex-col items-end">
@@ -74,8 +99,17 @@
       </li>
       }
     </ul>
+    }
+    <button
+      type="button"
+      class="min-h-touch-lg rounded-control border-2 border-border-strong bg-surface px-4 text-body text-ink disabled:opacity-50"
+      [disabled]="estLaSemaineCourante()"
+      (click)="voir(periodeCourante)"
+      data-selector="revenir-aujourdhui"
+    >
+      {{ labels.revenirAujourdhui }}
+    </button>
   </section>
-  }
 </main>
 
 <nav class="flex shrink-0 gap-3 border-t border-border bg-surface px-6 py-3" [attr.aria-label]="labels.actions">

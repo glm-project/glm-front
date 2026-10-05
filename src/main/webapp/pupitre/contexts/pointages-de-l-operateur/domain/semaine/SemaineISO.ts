@@ -57,6 +57,14 @@ export class SemaineISO {
     return Array.from({ length: JOURS_PAR_SEMAINE }, (_, rang) => lundi.plus(rang));
   }
 
+  precedente(): SemaineISO {
+    return SemaineISO.contenant(this.lundi().plus(-JOURS_PAR_SEMAINE));
+  }
+
+  suivante(): SemaineISO {
+    return SemaineISO.contenant(this.lundi().plus(JOURS_PAR_SEMAINE));
+  }
+
   estLaMeme(autre: SemaineISO): boolean {
     return this.annee === autre.annee && this.numero === autre.numero;
   }
