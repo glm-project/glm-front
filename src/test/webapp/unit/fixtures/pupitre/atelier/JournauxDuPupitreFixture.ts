@@ -112,6 +112,10 @@ export class JournauxDuPupitreFixture extends JournauxDuPupitrePort {
   seedJournal(entreprise: Entreprise, journal: JournalDuPupitre): void {
     this.entreprises.set(entreprise.toString(), structuredClone(journal));
   }
+  async eraseEveryJournal(): Promise<void> {
+    await answerOnNextTask();
+    this.entreprises.clear();
+  }
   answerReadsImmediately(): void {
     this.readsImmediately = true;
   }

@@ -2,6 +2,7 @@ import type { StaticResponse } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
 import {
   clearPupitreStorageFixture,
+  givenDurablePupitreFixture,
   givenEnrolledPupitreFixture,
   givenRetiredPupitreSessionFixture,
   pupitreTokenFixture,
@@ -15,6 +16,11 @@ const ONE_SECOND_BETWEEN_CLAIMS = 1;
 const VERIFICATION_URI = 'http://localhost:9080/realms/glmproject/device';
 const USER_CODE = 'WXYZ-ABCD';
 const ENTREPRISE = 'entreprise-a';
+const PENDING_GESTURE = {
+  id: '59ef737b-c3dd-47f8-8e63-4d5526a17df3',
+  dateDeSurvenue: '2026-09-05T00:00:00Z',
+  operateurId: 'jean',
+} as const;
 const OPERATEUR = {
   id: 'jean',
   nom: 'Dupont',
@@ -24,6 +30,8 @@ const OPERATEUR = {
 } as const;
 
 let authorizationsBeforeTheRecovery = 0;
+let pushesBeforeTheReset = 0;
+let pupitreClock: Cypress.Clock | undefined;
 
 describe('Pupitre enrolment', () => {
   beforeEach(() => {
@@ -188,6 +196,26 @@ describe('Pupitre enrolment', () => {
     thenThePupitreAsksForANewCodeAgain();
   });
 
+  it('should warn about the gestures that were not published before an explicit reset', () => {
+    givenAnEnrolledPupitreWithAnUnpublishedGesture();
+
+    whenHoldingTheLogo();
+
+    thenTheResetWarnsAboutTheUnpublishedGesture();
+  });
+
+  it('should not publish a gesture of the former enrolment after an explicit reset and a new enrolment', () => {
+    givenAnEnrolledPupitreWithAnUnpublishedGesture();
+
+    whenHoldingTheLogo();
+    whenConfirmingTheReset();
+    whenTheJournalsAreErasedAndTheNewCodeIsShown();
+    whenTheReplacementAuthorizationIsApproved();
+    whenTheKeypadReturns();
+
+    thenNoGestureWasPublishedAgain();
+  });
+
   it('should offer only reset actions while confirmation is pending', () => {
     givenAnEnrolledPupitre();
     whenHoldingTheLogo();
@@ -254,8 +282,14 @@ const givenAnUnreachableAuthorizationServer = (): void => {
   cy.intercept('POST', `${OPENID_CONNECT}/auth/device`, { forceNetworkError: true }).as('deviceAuthorization');
 };
 
+const givenAFrozenClock = (): void => {
+  cy.clock(Date.now()).then(clock => {
+    pupitreClock = clock;
+  });
+};
+
 const givenAnEnrolledPupitre = (): void => {
-  cy.clock(Date.now());
+  givenAFrozenClock();
   givenAnAuthorizationServerAnswering('authorization_pending');
   cy.visit('/');
   cy.wait('@deviceAuthorization');
@@ -264,6 +298,36 @@ const givenAnEnrolledPupitre = (): void => {
   cy.wait('@workshop');
   cy.tick(0);
   cy.get(dataSelector('designation')).should('be.visible');
+};
+
+const givenAnEnrolledPupitreWithAnUnpublishedGesture = (): void => {
+  givenAFrozenClock();
+  cy.intercept('POST', '/api/atelier/suivis/*/pointages', { forceNetworkError: true }).as('push');
+  givenAnAuthorizationServerAnswering('authorization_pending');
+  cy.visit('/');
+  cy.wait('@deviceAuthorization');
+  givenDurablePupitreFixture({ entreprise: ENTREPRISE, geste: PENDING_GESTURE });
+  cy.reload();
+  cy.wait('@push');
+  cy.tick(0);
+  cy.get(dataSelector('designation')).should('be.visible');
+};
+
+const whenTheKeypadReturns = (): void => {
+  cy.get(dataSelector('designation')).should($keypad => {
+    requiredFixture(pupitreClock, 'frozen clock').tick(0);
+    expect($keypad.is(':visible')).to.equal(true);
+  });
+};
+
+const whenTheJournalsAreErasedAndTheNewCodeIsShown = (): void => {
+  cy.get(dataSelector('user-code')).should($code => {
+    requiredFixture(pupitreClock, 'frozen clock').tick(0);
+    expect($code.is(':visible')).to.equal(true);
+  });
+  cy.get<unknown[]>('@push.all').then(requests => {
+    pushesBeforeTheReset = requests.length;
+  });
 };
 
 const givenARevokedRefreshCredential = (): void => {
@@ -348,6 +412,10 @@ const whenHoldingTheLogo = (): void => {
   cy.get(dataSelector('header-heading')).trigger('pointerdown');
   cy.tick(3_000);
   cy.tick(0);
+  cy.get(dataSelector('reset-confirm')).should($confirm => {
+    requiredFixture(pupitreClock, 'frozen clock').tick(0);
+    expect($confirm.prop('disabled')).to.equal(false);
+  });
 };
 
 const whenConfirmingTheReset = (): void => {
@@ -441,6 +509,20 @@ const thenThePupitreAsksForANewCodeAgain = (): void => {
   cy.wait('@logout');
   cy.get(dataSelector('enrolement')).should('be.visible');
   cy.get(dataSelector('designation')).should('not.exist');
+};
+
+const thenTheResetWarnsAboutTheUnpublishedGesture = (): void => {
+  cy.get(dataSelector('reset-pending-warning')).should(
+    'have.text',
+    "1 geste n'a pas encore été envoyé au serveur. Il sera définitivement perdu.",
+  );
+  cy.get(dataSelector('reset-confirm')).should('contain.text', 'Réinitialiser quand même').and('not.be.disabled');
+};
+
+const thenNoGestureWasPublishedAgain = (): void => {
+  cy.get<unknown[]>('@push.all').should(requests => {
+    expect(requests.length).to.equal(pushesBeforeTheReset);
+  });
 };
 
 const thenOnlyEnrolmentIsAvailable = (): void => {

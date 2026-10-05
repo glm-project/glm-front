@@ -157,6 +157,10 @@ export class EvenementsDuJournal {
     return this.evenements.find(evenement => evenement.etat === 'EN_ATTENTE');
   }
 
+  pendingCount(): number {
+    return this.evenements.filter(evenement => evenement.etat === 'EN_ATTENTE').length;
+  }
+
   records(gesteId: string): boolean {
     return this.evenements.some(evenement => evenement.geste.id === gesteId);
   }

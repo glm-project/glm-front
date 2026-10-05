@@ -125,3 +125,7 @@ something stays, with a status that says what died.
 - [0049 — Forget integrated gestures at reference activation](0049-forget-integrated-gestures-at-reference-activation.md) —
   accepted gestures dropped when a complete reference integrates them, except the last gesture and last pause of
   each operator; pending and refused ones kept, in the activation transaction
+
+- [0050 — Erase the workshop journals on an explicit reset](0050-erase-workshop-journals-on-explicit-reset.md) —
+  an explicit reset erases every company journal, pending gestures included, after a warning that counts them;
+  the automatic return to enrolment keeps them

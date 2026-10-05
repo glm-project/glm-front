@@ -1,4 +1,22 @@
-import { afterLocalCapture, EMPTY_JOURNAL_DU_PUPITRE, GesteDePointage, JournalDuPupitre, snapshotDuJournal } from './JournalDuPupitre';
+import {
+  afterLocalCapture,
+  EMPTY_JOURNAL_DU_PUPITRE,
+  EvenementDuJournal,
+  EvenementsDuJournal,
+  GesteDePointage,
+  JournalDuPupitre,
+  snapshotDuJournal,
+} from './JournalDuPupitre';
+
+const gesteFixture = (id: string): GesteDePointage => ({
+  nature: 'POINTAGE',
+  intention: 'OUVERTURE',
+  type: 'DEBUT',
+  id,
+  operateurId: 'jean',
+  suiviId: 'piece',
+  dateDeSurvenue: '2026-09-05T08:00:00Z',
+});
 
 describe('JournalDuPupitre', () => {
   it('should stop only the designated operator resumption while retaining every prior journal event', () => {
@@ -175,5 +193,26 @@ describe('JournalDuPupitre', () => {
     expect(snapshot).not.toBe(journal);
     expect(snapshot.referentiel?.operateurs[0]?.postes).not.toBe(journal.referentiel?.operateurs[0]?.postes);
     expect(snapshot.referentiel?.suivis[0]?.activites).not.toBe(journal.referentiel?.suivis[0]?.activites);
+  });
+});
+
+describe('EvenementsDuJournal pending count', () => {
+  it('should count nothing in an empty journal', () => {
+    const journal = new EvenementsDuJournal([]);
+
+    expect(journal.pendingCount()).toBe(0);
+  });
+
+  it('should count only the gestures still waiting to be published', () => {
+    const evenements: EvenementDuJournal[] = [
+      { geste: gesteFixture('en-attente-1'), etat: 'EN_ATTENTE' },
+      { geste: gesteFixture('accepte'), etat: 'ACCEPTE' },
+      { geste: gesteFixture('refuse'), etat: 'REFUSE', refus: { code: 'urn:refus', message: 'Refus' } },
+      { geste: gesteFixture('en-attente-2'), etat: 'EN_ATTENTE' },
+    ];
+
+    const journal = new EvenementsDuJournal(evenements);
+
+    expect(journal.pendingCount()).toBe(2);
   });
 });

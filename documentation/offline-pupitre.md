@@ -11,11 +11,20 @@ fallback that pretends to have captured work.
 
 `JournalDuPupitre` is the local consistency root for one company. `JournauxDuPupitrePort` exposes company reads,
 atomic gesture batches, reference activation and push outcomes.
-`IndexedDbJournauxDuPupitre` alone owns document keys and layout. Keep application code and tests on the port so a
-schema change stays local to that adapter.
+`IndexedDbJournauxDuPupitre` alone owns the document layout; the key format lives in `ClesDesJournaux.ts`, which
+only the local journal adapters share. Keep application code and tests on the port so a schema change stays local
+to those adapters. Erasing every company journal is a device-wide operation with its own port,
+`EffacementDesJournauxPort`: `IndexedDbEffacementDesJournaux` removes the documents under the journal prefix, and
+nothing else.
 
-Each tenant has an independent journal. Reenrolment selects another journal without deleting or pushing the
-former tenant's pending work. Immediate gestures receive their UUID and business timestamp when the screen
+Each tenant has an independent journal. Reenrolment after an automatic return selects another journal without
+deleting or pushing the former tenant's pending work. An explicit reset instead erases every journal, pending
+gestures included, as [ADR 0050](adr/0050-erase-workshop-journals-on-explicit-reset.md) records: its confirmation
+announces the pending gestures of the current tenant, `EffacementDesJournaux` waits for the captures already
+initiated and for the `synchronisation` lock before erasing, then empties the in-memory journal view so the
+pupitre cannot look ready on an erased disk.
+
+Immediate gestures receive their UUID and business timestamp when the screen
 declares the intention, before asynchronous capture begins; on the pointage, that is the deadline of the sustained
 press, not its start. A deferred global intention receives one UUID root and its business timestamp at that same
 declaration; once the updated window decides its batch, every gesture UUID is derived deterministically
@@ -240,8 +249,8 @@ projection disappears on closure while the retained model lets previously initia
 
 Under the permanent chrome, the page renders the enrolment screen until the device is enrolled and its first
 complete reference is active, and the workshop views afterwards. That switch reads the enrolment context's
-projected state, never the reference alone: an administration reset returns the pupitre to enrolment even
-though its last reference is still on disk. The header's own reset gesture opens a confirmation the page
+projected state, never the reference alone: an administration reset returns the pupitre to enrolment at once,
+before the erasure of the journals ends, so the keypad never waits for the disk. The header's own reset gesture opens a confirmation the page
 owns. The same chrome identifies a
 rejected pointage by its element number and a rejected gesture of a global command by the originating `PAUSE`,
 `REPRENDRE` or `TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local

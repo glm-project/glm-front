@@ -18,6 +18,9 @@ Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md
 forgotten once a complete reference that integrates it is activated, except the last gesture and last pause of
 each operator, so the journal no longer retains acknowledged events or grows with past activity; pending and
 refused gestures stay.
+Amended by [ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md): an explicit
+reset erases every company journal, pending gestures included, so the former queue is suspended intact only
+after the automatic return to enrolment.
 
 ## Context
 
@@ -51,8 +54,8 @@ outgoing gestures; the authentication port rereads the selected durable session 
 
 `AtelierCoordinator` coordinates capture; `PupitreSynchronization` coordinates exchange. Each company has
 its own `atelier-activites-v1:<tenant>` document containing the complete last reference, original gestures,
-outcomes, pause markers and the last push state. Reenrolment selects a different document. The former document remains intact and its pending
-queue is suspended. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. Targeted finishes and transitions keep their original
+outcomes, pause markers and the last push state. Reenrolment after an automatic return selects a different document. The former document remains intact and
+its pending queue is suspended; an explicit reset erases every document, pending queue included. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. Targeted finishes and transitions keep their original
 activity identity. A deferred global batch is decided from the updated window with deterministic identities
 and its initiation timestamp; an atomic stop invalidates resumption memory even for an empty batch.
 An unsuccessful local commit confirms nothing and changes no optimistic view.
@@ -107,7 +110,7 @@ inaccessible to injected same-origin code; this is the explicit trade required b
 - An enrolled pupitre keeps collecting through a network outage of any length, and a server that committed a
   gesture whose acknowledgement was lost returns 200 on the identical replay rather than duplicating it.
 - Company partitioning is structural: reenrolment selects another document, and the former queue is suspended
-  intact rather than merged or discarded.
+  intact rather than merged. Only an explicit reset discards it, after announcing how many gestures it holds.
 - Behavior is what the assertions hold. Moving or renaming an implementation file, a private helper or a CSS
   class does not invalidate them, so the document layout stays free to change.
 
