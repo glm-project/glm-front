@@ -313,18 +313,19 @@ const givenAnEnrolledPupitreWithAnUnpublishedGesture = (): void => {
   cy.get(dataSelector('designation')).should('be.visible');
 };
 
-const whenTheKeypadReturns = (): void => {
-  cy.get(dataSelector('designation')).should($keypad => {
+const untilVisibleUnderTheFrozenClock = (selector: string): void => {
+  cy.get(dataSelector(selector)).should($element => {
     requiredFixture(pupitreClock, 'frozen clock').tick(0);
-    expect($keypad.is(':visible')).to.equal(true);
+    expect($element.is(':visible')).to.equal(true);
   });
 };
 
+const whenTheKeypadReturns = (): void => {
+  untilVisibleUnderTheFrozenClock('designation');
+};
+
 const whenTheJournalsAreErasedAndTheNewCodeIsShown = (): void => {
-  cy.get(dataSelector('user-code')).should($code => {
-    requiredFixture(pupitreClock, 'frozen clock').tick(0);
-    expect($code.is(':visible')).to.equal(true);
-  });
+  untilVisibleUnderTheFrozenClock('user-code');
   cy.get<unknown[]>('@push.all').then(requests => {
     pushesBeforeTheReset = requests.length;
   });
@@ -370,26 +371,26 @@ const whenTheRestoredCredentialRenews = (): void => {
   cy.tick(5_000);
   cy.wait('@revokedRefresh');
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenTheNetworkReturns = (): void => {
   cy.window().then(window => window.dispatchEvent(new Event('online')));
   cy.wait('@refusedWorkshop');
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenSynchronizingAfterAnotherTabRetiredTheSession = (): void => {
   cy.window().then(window => window.dispatchEvent(new Event('online')));
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenRenewalDiscoversAnotherTabRetiredTheSession = (): void => {
   cy.tick(5_000);
   cy.wait('@deviceAuthorization');
-  cy.tick(0);
+  untilVisibleUnderTheFrozenClock('user-code');
 };
 
 const whenTheReplacementAuthorizationIsApproved = (): void => {
