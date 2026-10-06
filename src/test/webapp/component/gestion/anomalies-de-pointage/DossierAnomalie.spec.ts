@@ -164,11 +164,16 @@ describe('Conflict dossier in Gestion', () => {
       .and('not.contain.text', posteFixture);
     cy.get(dataSelector(`anomalie-apercu-fait-avant-${finFixture}`))
       .should('be.visible')
-      .and('contain.text', debutFixture)
+      .and('contain.text', `${operateurNomFixture} · `)
+      .and('contain.text', 'Vise l’activité Travail · ')
+      .and('not.contain.text', debutFixture)
+      .and('not.contain.text', operateurFixture)
       .and('not.contain.text', 'Pointage annulé');
     cy.get(dataSelector(`anomalie-apercu-fait-apres-${finFixture}`)).should('contain.text', 'Pointage annulé');
     cy.get(dataSelector(`anomalie-apercu-fait-apres-${remplacementFixture}`))
-      .should('contain.text', ncFixture)
+      .should('contain.text', 'Vise l’activité Non-conformité · ')
+      .and('not.contain.text', ncFixture)
+      .and('not.contain.text', debutFixture)
       .and('contain.text', `Remplace le pointage ${finFixture}`);
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
@@ -546,8 +551,8 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-adresse-obsolete')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('contain.text', `Remplace le pointage ${finFixture}`);
-    cy.get(dataSelector('anomalie-pointage')).should('contain.text', `Crée l’activité ${debutFixture}`);
-    cy.get(dataSelector('anomalie-pointage')).should('contain.text', ncFixture);
+    cy.get(dataSelector('anomalie-pointage')).should('contain.text', 'Crée l’activité Travail · ');
+    cy.get(dataSelector('anomalie-pointage')).should('not.contain.text', `Crée l’activité ${debutFixture}`);
     cy.get(dataSelector('anomalie-annulation')).should('have.length', 1).and('contain.text', 'La cible est la NC.');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 4);
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');

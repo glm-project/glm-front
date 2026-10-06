@@ -175,6 +175,7 @@ export const LIBELLES_ANOMALIES = {
   poste: 'Poste',
   sansPoste: 'Sans poste',
   operateurNonResolu: 'Opérateur non résolu',
+  activiteNonResolue: 'Activité non résolue',
   posteNonResolu: 'Poste non résolu',
   faits: 'Faits',
   diagnostic: 'Contradiction',
