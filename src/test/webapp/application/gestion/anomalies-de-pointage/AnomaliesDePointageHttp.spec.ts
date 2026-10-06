@@ -150,8 +150,9 @@ describe('HTTP conflict resolution in Gestion', () => {
       .within(() => {
         cy.get(dataSelector('anomalie-pointage-detail'))
           .should('have.prop', 'open', true)
-          .contains('p', `Crée l’activité ${ncFixture}`)
-          .should('be.visible');
+          .contains('p', 'Crée l’activité Non-conformité · ')
+          .should('be.visible')
+          .and('not.contain.text', ncFixture);
         cy.contains('p', `Remplace le pointage ${ncFixture}`).should('be.visible');
       });
   };

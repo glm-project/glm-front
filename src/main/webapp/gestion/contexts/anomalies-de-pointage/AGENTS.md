@@ -76,6 +76,11 @@ chronologie, l'historique d'adresse obsolète et les continuations, sans jamais 
 résolue s'affiche « Opérateur non résolu » ou « Poste non résolu », un pointage sans poste « Sans poste ». Le modèle
 garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de l'opérateur et du poste, qu'il envoie
 au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
+Les détails de traçabilité d'un pointage et les journaux avant/après de l'aperçu partagent un seul gabarit : la ligne
+d'en-tête est « Prénom Nom · instant » (jamais l'identifiant du pointage), et les activités visée ou créée se désignent
+par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (nature et instant),
+sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète, le diagnostic de conflit et
+l'option de cible du formulaire suivent la même règle (`labelForActivite`).
 Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le port de lecture
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et

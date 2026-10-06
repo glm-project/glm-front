@@ -86,6 +86,14 @@ un pointage sans poste « Sans poste ». Le journal porte le nom et le libellé 
 du fait, vides lorsque la fiche manque ; une ligne de liste n'en garde que `posteId`, pour distinguer l'absence de
 poste d'un poste non résolu.
 
+Le panneau « Voir les détails et l'enregistrement » de chaque pointage et les colonnes Avant et Après de « Comparer tous
+les pointages » commencent par « Prénom Nom · instant » (« Opérateur non résolu » sans fiche), jamais par l'identifiant du
+pointage. Les lignes « Vise l'activité » et « Crée l'activité » y désignent l'activité par son libellé (nature et début
+reçus du dossier), à défaut par le pointage qui l'a créée dans le même journal, sinon « Activité non résolue » : aucun
+identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète, le diagnostic de conflit ou la
+cible du formulaire. Les références à un autre pointage (« Remplace le pointage … », « Ouverte par … » sans le fait dans
+le journal, pointage corrigé de l'aperçu) restent des identifiants de pointage affichés.
+
 Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
 par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le
 prénom et le code ; le poste se choisit dans une liste qui commence par « Sans poste », puis les postes habilités de
@@ -145,6 +153,8 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
   dans `anomalie-refus`.
 - Les contrats HTTP vérifient que le journal porte les noms reçus, ou des noms vides sans fiche, et que les lignes de
   la liste ne portent plus l'identifiant de l'opérateur.
+- Les specs DOM du dossier vérifient l'en-tête nommé et les libellés d'activité des détails de traçabilité, des journaux
+  avant/après et de l'historique obsolète ; les specs Cypress vérifient qu'aucun UUID d'opérateur ou d'activité n'y reste.
 - Les contrats HTTP vérifient que le référentiel lit toutes les pages des opérateurs et des postes, et refuse une collection
   dont le total change, une page tronquée, une page autre que la demandée ou une identité dupliquée ; les opérateurs se lisent
   aussi seuls, sans aucune requête de postes, avec les mêmes refus ; la composition lit l'un et l'autre par les ports publics. Les specs DOM et Cypress vérifient qu'il n'est lu que pour un gestionnaire, que le choix se fait

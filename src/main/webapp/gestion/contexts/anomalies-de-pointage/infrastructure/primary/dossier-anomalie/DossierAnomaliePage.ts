@@ -6,6 +6,7 @@ import {
 } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
 import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
+import { NgTemplateOutlet } from '@angular/common';
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -35,6 +36,15 @@ import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 
+type VueDActivites = Readonly<{ journal: readonly PointageAnomalie[]; activites?: readonly ActiviteAnomalie[] }>;
+
+interface DetailPointage {
+  readonly entete: string;
+  readonly nature: string;
+  readonly cible?: string;
+  readonly creee?: string;
+}
+
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 
 @Component({
@@ -48,6 +58,7 @@ const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
     InstantTimeAndLongDayWithSecondsPipe,
     DateTimeField,
     SelecteurOperateurAnomalie,
+    NgTemplateOutlet,
   ],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',
@@ -202,13 +213,23 @@ export class DossierAnomaliePage {
     this.detail.set(choix.saisie.awaitsDating());
   }
 
-  protected labelForActivite(id: string, dossier: DossierAnomalie): string {
-    const activite = dossier.activites.find(activite => activite.id.activite === id);
+  protected labelForActivite(id: string, vue: VueDActivites): string {
+    const activite = vue.activites?.find(activite => activite.id.activite === id);
     if (activite !== undefined) return this.libelleActivite(activite);
-    const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
+    const origine = vue.journal.find(pointage => pointage.activiteCreee?.activite === id);
     if (origine !== undefined)
       return `${this.libelles.types[origine.fait.type]} · ${this.instantLongDayWithSeconds.transform(origine.fait.instant, this.now)}`;
-    return `Activité ${id}`;
+    return this.libelles.activiteNonResolue;
+  }
+
+  protected detailDuPointage(pointage: PointageAnomalie, vue: VueDActivites): DetailPointage {
+    const fait = pointage.fait;
+    return {
+      entete: `${operateurPresente(pointage.operateurNom)} · ${this.instantLongDayWithSeconds.transform(fait.instant, this.now)}`,
+      nature: `${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
+      ...(fait.activiteVisee ? { cible: this.labelForActivite(fait.activiteVisee, vue) } : {}),
+      ...(pointage.activiteCreee ? { creee: this.labelForActivite(pointage.activiteCreee.activite, vue) } : {}),
+    };
   }
 
   protected hrefForActivite(id: string, dossier: DossierAnomalie): string {
