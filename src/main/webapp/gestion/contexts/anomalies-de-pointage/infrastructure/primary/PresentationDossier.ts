@@ -1,6 +1,6 @@
 import { formatInstantTime, formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
-import { IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
+import { COMBINAISONS_VALIDES, IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
 import { ErreurSaisieActe, SaisieActe, SaisieFait } from '../../domain/acte/SaisieActe';
 import { ActionDirecte } from '../../domain/dossier/ActionsDirectes';
 import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
@@ -45,15 +45,7 @@ export interface SignalDuPointage {
   readonly libelle: string;
 }
 
-const GESTES_SIGNALABLES: readonly (readonly [TypePointage, IntentionPointage])[] = [
-  ['DEBUT', 'OUVERTURE'],
-  ['NON_CONFORMITE', 'OUVERTURE'],
-  ['NON_CONFORMITE', 'TRANSITION'],
-  ['DEBUT', 'TRANSITION'],
-  ['FIN', 'FIN'],
-];
-
-export const SIGNAUX_DU_POINTAGE: readonly SignalDuPointage[] = GESTES_SIGNALABLES.map(([type, intention]) => ({
+export const SIGNAUX_DU_POINTAGE: readonly SignalDuPointage[] = COMBINAISONS_VALIDES.map(({ type, intention }) => ({
   valeur: `${type}·${intention}`,
   type,
   intention,

@@ -1,4 +1,4 @@
-import { ActeResolution, FaitPropose, IntentionPointage, TypePointage } from './ActeResolution';
+import { ActeResolution, FaitPropose, IntentionPointage, TypePointage, combinaisonEstValide } from './ActeResolution';
 import { CadreDuFait } from './CadreDuFait';
 import { InstantPointage } from './InstantPointage';
 import { MotifActe } from './MotifActe';
@@ -163,6 +163,6 @@ export class SaisieActe {
   }
 
   private intentionIsCompatible(fait: SaisieFait): boolean {
-    return (fait.type === 'FIN') === (fait.intention === 'FIN');
+    return fait.type === '' || fait.intention === '' || combinaisonEstValide(fait);
   }
 }

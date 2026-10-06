@@ -52,6 +52,16 @@ describe('Preparation of a resolution acte', () => {
     expect(modifiee.command(cadreOuvert)).toBeUndefined();
     expect(modifiee.errors(cadreOuvert)).toContain('INTENTION_REQUISE');
   });
+  it.each([
+    [{ type: 'DEBUT' }, 'INTENTION_REQUISE'],
+    [{ intention: 'OUVERTURE' }, 'TYPE_REQUIS'],
+  ] as const)('should only ask for what is missing when the gesture is half chosen', (changement, erreur) => {
+    const saisie = SaisieActe.regularise().afterChange({
+      fait: { ...changement, operateur: 'operateur-1', instant: '2026-09-14T10:00:00Z' },
+    });
+
+    expect(saisie.errors(cadreOuvert)).toEqual([erreur]);
+  });
   it('should accept a motif of exactly two hundred and fifty five characters', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'x'.repeat(255) });
 
