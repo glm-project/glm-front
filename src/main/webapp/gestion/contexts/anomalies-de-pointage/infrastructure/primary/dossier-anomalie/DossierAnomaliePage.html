@@ -251,6 +251,7 @@
               class="bouton"
               data-selector="anomalie-identite-modifier"
               aria-describedby="identite-acte"
+              [attr.aria-label]="libelles.modifierIdentite"
               [attr.aria-expanded]="identiteDepliee()"
               (click)="identiteDeployee.update(deployee => !deployee)"
             >

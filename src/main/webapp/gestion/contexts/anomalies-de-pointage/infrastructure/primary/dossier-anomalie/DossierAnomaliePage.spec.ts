@@ -2510,6 +2510,15 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-poste');
   });
 
+  it('should name what the modify button changes while keeping its visible text in its accessible name', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenCorrecting('fin-17');
+
+    thenTheButtonReads('anomalie-identite-modifier', 'Modifier', 'Modifier l’opérateur et le poste');
+  });
+
   it('should unfold the operator and workstation fields when the manager asks to modify them', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
@@ -5165,6 +5174,10 @@ describe('Anomaly dossier page', () => {
         : child.textContent.trim(),
     );
 
+  const thenTheButtonReads = (selector: string, visibleText: string, accessibleName: string): void => {
+    expect(element(selector).textContent.trim()).toBe(visibleText);
+    expect(element(selector).getAttribute('aria-label')).toBe(accessibleName);
+  };
   const labelOf = (selector: string): string => {
     const label = (fixture.nativeElement as HTMLElement).querySelector<HTMLLabelElement>(`label[for="${element(selector).id}"]`);
     return requiredFixture(label, `label of ${selector}`).textContent.trim();

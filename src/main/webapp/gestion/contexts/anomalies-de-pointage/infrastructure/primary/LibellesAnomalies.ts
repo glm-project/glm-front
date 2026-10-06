@@ -132,6 +132,7 @@ export const LIBELLES_ANOMALIES = {
   verifier: 'Vérifier le reçu de confirmation',
   reprendreConfirmation: 'Reprendre la même confirmation',
   modifier: 'Modifier',
+  modifierIdentite: 'Modifier l’opérateur et le poste',
   modifierFait: 'Consulter ou modifier le fait proposé',
   decalerInstant: 'Décaler l’heure du fait',
   moinsCinqMinutes: '−5 min',
