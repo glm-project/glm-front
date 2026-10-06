@@ -259,7 +259,7 @@ describe('Frise of a dossier', () => {
 
   it.each([
     ['DEMARRAGE', '▶'],
-    ['DEMARRAGE_NC', '▶'],
+    ['DEMARRAGE_NC', '▷'],
     ['PASSAGE_NC', '◆'],
     ['RETOUR_BON', '◇'],
     ['ARRET', '■'],

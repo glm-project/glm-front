@@ -126,7 +126,8 @@ sous la rangée des pointages, titrée « Pointages » (`anomalie-frise-pointage
 repères, sans interaction, que la rangée de placement ne recouvre pas ; absente sans pointage). La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` en pointillés
 `warn` à sa fin automatique, `EN_COURS` et `A_RESOUDRE` (hachurée) ouvertes jusqu'au bord, `ANNULEE` et `REMPLACEE` atténuées
 (fin pleine si une fin est reçue) ; le front ne déduit aucune fin d'un pointage. Une activité sans période garde sa rangée
-et son libellé, sans barre. Un repère par pointage (symbole du geste, heure HH:MM, barré s'il est annulé, badge « R »
+et son libellé, sans barre. Un repère par pointage (symbole du geste, un par geste : ▶ Démarrage, ▷ Démarrage en NC, ◆ Passage en NC, ◇ Retour en bon,
+■ Arrêt ; heure HH:MM, barré s'il est annulé, badge « R »
 s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repères à moins de 44 px l'un de l'autre descendent d'une
 voie entière, la hauteur d'une cible de 44 px, tant que le précédent est trop proche ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
 vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans

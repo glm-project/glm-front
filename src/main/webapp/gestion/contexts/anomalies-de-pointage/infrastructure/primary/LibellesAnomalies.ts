@@ -49,7 +49,7 @@ const GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPoi
 
 const SYMBOLES_DES_GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPointage, string>>>>> = {
   DEBUT: { OUVERTURE: '▶', TRANSITION: '◇' },
-  NON_CONFORMITE: { OUVERTURE: '▶', TRANSITION: '◆' },
+  NON_CONFORMITE: { OUVERTURE: '▷', TRANSITION: '◆' },
   FIN: { FIN: '■' },
 };
 
