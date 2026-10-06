@@ -41,7 +41,9 @@ import {
   cibleAffichee,
   detailDuPointage,
   erreursALire,
-  faitDuSignal,
+  faitDuGeste,
+  gesteDuFait,
+  GESTES_PROPOSES,
   intituleDeLActivite,
   labelForActivite,
   libelleActivite,
@@ -51,8 +53,6 @@ import {
   referencePointage,
   remplacementDe,
   selectionInitiale,
-  signalDuFait,
-  SIGNAUX_DU_POINTAGE,
   tempsActivite,
 } from '../PresentationDossier';
 import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
@@ -124,8 +124,8 @@ export class DossierAnomaliePage {
   protected readonly identiteDeployee = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly propositionsFaites = signal(0);
-  protected readonly signaux = SIGNAUX_DU_POINTAGE;
-  protected readonly signalDuFait = signalDuFait;
+  protected readonly gestesProposes = GESTES_PROPOSES;
+  protected readonly gesteDuFait = gesteDuFait;
   protected readonly cibleAffichee = cibleAffichee;
   protected readonly erreursALire = erreursALire;
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
@@ -294,8 +294,8 @@ export class DossierAnomaliePage {
     return reference !== '' && !dossier.activites.some(activite => activite.id.activite === reference);
   }
 
-  protected choisirSignal(valeur: string): void {
-    this.change({ fait: faitDuSignal(valeur) });
+  protected choisirLeGeste(valeur: string): void {
+    this.change({ fait: faitDuGeste(valeur) });
   }
 
   protected choisirOperateur(operateur: OperateurAnomalieId): void {

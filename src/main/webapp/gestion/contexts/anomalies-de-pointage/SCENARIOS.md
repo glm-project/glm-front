@@ -305,7 +305,7 @@ traverse minuit et l'heure répétée graduée heure par heure.
   intercepte `/api/elements-de-fabrication` en données REST typées.
 - Les specs DOM du dossier vérifient le choix de ce que signale le pointage (options et ordre, option vide, une seule erreur,
   type et intention changés d'un coup), la cible visible tant qu'elle est posée, et l'opérateur et le poste repliés, dépliés par
-  « Modifier » ou d'office ; `PresentationDossier.spec.ts` fixe les règles pures de ce formulaire (signal, erreurs, opérateur manquant).
+  « Modifier » ou d'office ; `PresentationDossier.spec.ts` fixe les règles pures de ce formulaire (geste, erreurs, opérateur manquant).
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

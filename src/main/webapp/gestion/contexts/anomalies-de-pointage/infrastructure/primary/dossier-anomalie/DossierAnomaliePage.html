@@ -203,19 +203,19 @@
           <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="anomalie-champs-detail">
             {{ libelles.modifierFait }}
           </summary>
-          <label class="block text-body-sm font-semibold" for="signal-acte">{{ libelles.signal }}</label>
+          <label class="block text-body-sm font-semibold" for="geste-acte">{{ libelles.gesteSignale }}</label>
           <select
-            id="signal-acte"
-            #choixSignal
+            id="geste-acte"
+            #choixDuGeste
             class="champ mt-2"
             data-selector="anomalie-signal"
             [disabled]="occupe()"
-            (change)="choisirSignal(choixSignal.value)"
+            (change)="choisirLeGeste(choixDuGeste.value)"
           >
-            @let courant = signalDuFait(proposition.fait); @if (courant === '') {
-            <option value="" selected disabled>{{ libelles.signalAChoisir }}</option>
-            } @for (signal of signaux; track signal.valeur) {
-            <option [value]="signal.valeur" [selected]="courant === signal.valeur">{{ signal.libelle }}</option>
+            @let courant = gesteDuFait(proposition.fait); @if (courant === '') {
+            <option value="" selected disabled>{{ libelles.gesteAChoisir }}</option>
+            } @for (geste of gestesProposes; track geste.valeur) {
+            <option [value]="geste.valeur" [selected]="courant === geste.valeur">{{ geste.libelle }}</option>
             }
           </select>
           @if (cibleAffichee(proposition.fait)) {

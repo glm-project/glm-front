@@ -211,7 +211,7 @@ incompatibles : un fait vierge, ou un pointage reçu que le serveur ne produit p
 remplis, rien quand les deux sont vides. Les catégories d'activité (« Travail », « Non-conformité ») gardent leurs mots.
 Le formulaire du fait dit d'abord « Ce que signale le pointage » (`anomalie-signal`) : un `<select>` natif des cinq gestes
 ci-dessus, dans l'ordre Démarrage, Démarrage en NC, Passage en NC, Retour en bon, Arrêt, tel que le domaine les liste
-(`COMBINAISONS_VALIDES`, `domain/acte/`, d'où `SaisieActe` tire aussi sa compatibilité ; `SIGNAUX_DU_POINTAGE` les nomme). Il remplace
+(`COMBINAISONS_VALIDES`, `domain/acte/`, d'où `SaisieActe` tire aussi sa compatibilité ; `GESTES_PROPOSES` les nomme). Il remplace
 les groupes Type et Intention : choisir un geste change le type et l'intention en une seule saisie
 (`change({ fait: { type, intention } })`), si bien que la saisie ne peut plus former de type et d'intention incompatibles ;
 `INTENTION_INCOMPATIBLE` reste une règle du domaine, que l'écran ne produit plus. Un fait sans type ni intention (régularisation à

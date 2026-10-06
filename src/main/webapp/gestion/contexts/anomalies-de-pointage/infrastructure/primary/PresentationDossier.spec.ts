@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SaisieActe } from '../../domain/acte/SaisieActe';
-import { erreursALire, faitDuSignal, libelleDuGeste, operateurManque, selectionInitiale, signalDuFait } from './PresentationDossier';
+import { erreursALire, faitDuGeste, gesteDuFait, libelleDuGeste, operateurManque, selectionInitiale } from './PresentationDossier';
 
 describe('Initial selection of a dossier', () => {
   it('should select nothing while no dossier is read', () => {
@@ -10,21 +10,21 @@ describe('Initial selection of a dossier', () => {
 
 describe('Gesture a pointage signals', () => {
   it('should read back the type and the intention of the gesture it named', () => {
-    const valeur = signalDuFait({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
+    const valeur = gesteDuFait({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
 
-    expect(faitDuSignal(valeur)).toEqual({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
+    expect(faitDuGeste(valeur)).toEqual({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
   });
 
   it('should read no type and no intention from the empty choice', () => {
-    expect(faitDuSignal('')).toEqual({ type: '', intention: '' });
+    expect(faitDuGeste('')).toEqual({ type: '', intention: '' });
   });
 
   it('should signal nothing for a type and an intention that are not a gesture', () => {
-    expect(signalDuFait({ type: 'FIN', intention: 'OUVERTURE' })).toBe('');
+    expect(gesteDuFait({ type: 'FIN', intention: 'OUVERTURE' })).toBe('');
   });
 });
 
-describe('Name of a gesture received outside the five gestures', () => {
+describe('Name of a fact outside the five gestures', () => {
   it.each([
     { type: 'FIN', intention: 'OUVERTURE', libelle: 'Fin · Ouverture' },
     { type: 'DEBUT', intention: '', libelle: 'Travail' },

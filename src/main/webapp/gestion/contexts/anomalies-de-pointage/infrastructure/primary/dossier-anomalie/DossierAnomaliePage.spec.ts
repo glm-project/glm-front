@@ -2328,7 +2328,7 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
-    await whenChoosingTheSignal('Démarrage');
+    await whenChoosingTheGesture('Démarrage');
     await whenEntering('anomalie-cible', '');
     await whenEntering('anomalie-motif', 'Ouverture confirmée');
     await whenClicking('anomalie-previsualiser');
@@ -2385,7 +2385,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-regulariser');
 
     thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
-    thenSignalIs('Choisissez ce que signale le pointage');
+    thenGestureIs('Choisissez ce que signale le pointage');
     thenDetailedFactIsOpen();
     thenAbsent('anomalie-motif');
   });
@@ -2420,7 +2420,7 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-regulariser');
 
-    expect(signalChoices()).toEqual([
+    expect(gestureChoices()).toEqual([
       'Choisissez ce que signale le pointage',
       'Démarrage',
       'Démarrage en NC',
@@ -2428,8 +2428,8 @@ describe('Anomaly dossier page', () => {
       'Retour en bon',
       'Arrêt',
     ]);
-    thenSignalIs('Choisissez ce que signale le pointage');
-    expect(signalSelect().options[0]?.disabled).toBe(true);
+    thenGestureIs('Choisissez ce que signale le pointage');
+    expect(gestureSelect().options[0]?.disabled).toBe(true);
   });
 
   it('should show the gesture the pointage signals, without an empty choice, when a received pointage is corrected', async () => {
@@ -2438,8 +2438,8 @@ describe('Anomaly dossier page', () => {
 
     await whenCorrecting('fin-17');
 
-    expect(signalChoices()).toEqual(['Démarrage', 'Démarrage en NC', 'Passage en NC', 'Retour en bon', 'Arrêt']);
-    thenSignalIs('Arrêt');
+    expect(gestureChoices()).toEqual(['Démarrage', 'Démarrage en NC', 'Passage en NC', 'Retour en bon', 'Arrêt']);
+    thenGestureIs('Arrêt');
   });
 
   it.each(['Démarrage', 'Démarrage en NC', 'Passage en NC', 'Retour en bon', 'Arrêt'])(
@@ -2449,9 +2449,9 @@ describe('Anomaly dossier page', () => {
       await whenClicking('anomalie-detail');
       await whenCorrecting('fin-17');
 
-      await whenChoosingTheSignal(geste);
+      await whenChoosingTheGesture(geste);
 
-      thenSignalIs(geste);
+      thenGestureIs(geste);
       thenTextContains('anomalie-proposition-resume', `${geste} · lundi 14 septembre à 17:00:00`);
     },
   );
@@ -2461,7 +2461,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenClicking('anomalie-regulariser');
 
-    await whenChoosingTheSignal(geste);
+    await whenChoosingTheGesture(geste);
 
     thenAbsent('anomalie-cible');
   });
@@ -2471,7 +2471,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenClicking('anomalie-regulariser');
 
-    await whenChoosingTheSignal(geste);
+    await whenChoosingTheGesture(geste);
 
     thenTargetChoiceIs('', 'Aucune activité visée');
   });
@@ -2490,7 +2490,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
 
-    await whenChoosingTheSignal('Démarrage');
+    await whenChoosingTheGesture('Démarrage');
 
     thenTargetChoiceIs('travail-8', 'Travail ouvert à 8 h');
     thenTextContains('anomalie-validation', 'Une ouverture ne vise aucune activité');
@@ -2500,7 +2500,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
-    await whenChoosingTheSignal('Démarrage');
+    await whenChoosingTheGesture('Démarrage');
 
     await whenEntering('anomalie-cible', '');
 
@@ -2687,7 +2687,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenPreparingTheCorrection();
 
-    await whenChoosingTheSignal('Retour en bon');
+    await whenChoosingTheGesture('Retour en bon');
 
     thenAbsent('anomalie-apercu');
     thenAbsent('anomalie-confirmer');
@@ -2697,7 +2697,7 @@ describe('Anomaly dossier page', () => {
     givenASuccessfulPreview();
     await whenRendering();
     await whenPreparingTheCorrection();
-    await whenChoosingTheSignal('Retour en bon');
+    await whenChoosingTheGesture('Retour en bon');
 
     await whenClicking('anomalie-previsualiser');
 
@@ -3756,7 +3756,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenClicking('anomalie-choix');
 
-      await whenChoosingTheSignal('Démarrage');
+      await whenChoosingTheGesture('Démarrage');
 
       thenAbsent('anomalie-poignee');
     });
@@ -3851,7 +3851,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenClicking('anomalie-choix');
 
-      await whenChoosingTheSignal('Passage en NC');
+      await whenChoosingTheGesture('Passage en NC');
 
       thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.');
     });
@@ -3919,7 +3919,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenClicking('anomalie-choix');
 
-      await whenChoosingTheSignal('Démarrage');
+      await whenChoosingTheGesture('Démarrage');
 
       thenAbsent('anomalie-frise-placement');
     });
@@ -5111,21 +5111,21 @@ describe('Anomaly dossier page', () => {
     return select;
   };
 
-  const signalSelect = (): HTMLSelectElement => {
+  const gestureSelect = (): HTMLSelectElement => {
     const select = field('anomalie-signal');
-    if (!(select instanceof HTMLSelectElement)) throw new Error('Expected a signal choice');
+    if (!(select instanceof HTMLSelectElement)) throw new Error('Expected a gesture choice');
     return select;
   };
 
-  const signalChoices = (): string[] => [...signalSelect().options].map(option => option.textContent.trim());
+  const gestureChoices = (): string[] => [...gestureSelect().options].map(option => option.textContent.trim());
 
-  const whenChoosingTheSignal = async (libelle: string): Promise<void> => {
-    const option = [...signalSelect().options].find(candidate => candidate.textContent.trim() === libelle);
-    await whenEntering('anomalie-signal', requiredFixture(option, `signal ${libelle}`).value);
+  const whenChoosingTheGesture = async (libelle: string): Promise<void> => {
+    const option = [...gestureSelect().options].find(candidate => candidate.textContent.trim() === libelle);
+    await whenEntering('anomalie-signal', requiredFixture(option, `gesture ${libelle}`).value);
   };
 
-  const thenSignalIs = (libelle: string): void => {
-    expect(signalSelect().selectedOptions[0]?.textContent.trim()).toBe(libelle);
+  const thenGestureIs = (libelle: string): void => {
+    expect(gestureSelect().selectedOptions[0]?.textContent.trim()).toBe(libelle);
   };
 
   const posteChoices = (): string[] =>

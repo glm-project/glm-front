@@ -38,28 +38,28 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
   return [...type, ...intention].join(' · ');
 };
 
-export interface SignalDuPointage {
+export interface GesteProposable {
   readonly valeur: string;
   readonly type: TypePointage;
   readonly intention: IntentionPointage;
   readonly libelle: string;
 }
 
-export const SIGNAUX_DU_POINTAGE: readonly SignalDuPointage[] = COMBINAISONS_VALIDES.map(({ type, intention }) => ({
+export const GESTES_PROPOSES: readonly GesteProposable[] = COMBINAISONS_VALIDES.map(({ type, intention }) => ({
   valeur: `${type}·${intention}`,
   type,
   intention,
   libelle: libelleDuGeste({ type, intention }),
 }));
 
-export const signalDuFait = (fait: Pick<SaisieFait, 'type' | 'intention'>): string =>
-  SIGNAUX_DU_POINTAGE.find(signal => signal.type === fait.type && signal.intention === fait.intention)?.valeur ?? '';
+export const gesteDuFait = (fait: Pick<SaisieFait, 'type' | 'intention'>): string =>
+  GESTES_PROPOSES.find(geste => geste.type === fait.type && geste.intention === fait.intention)?.valeur ?? '';
 
-const SANS_SIGNAL: Pick<SaisieFait, 'type' | 'intention'> = { type: '', intention: '' };
+const SANS_GESTE: Pick<SaisieFait, 'type' | 'intention'> = { type: '', intention: '' };
 
-export const faitDuSignal = (valeur: string): Pick<SaisieFait, 'type' | 'intention'> => {
-  const signal = SIGNAUX_DU_POINTAGE.find(candidat => candidat.valeur === valeur);
-  return signal === undefined ? SANS_SIGNAL : { type: signal.type, intention: signal.intention };
+export const faitDuGeste = (valeur: string): Pick<SaisieFait, 'type' | 'intention'> => {
+  const geste = GESTES_PROPOSES.find(candidat => candidat.valeur === valeur);
+  return geste === undefined ? SANS_GESTE : { type: geste.type, intention: geste.intention };
 };
 
 export const erreursALire = (erreurs: readonly ErreurSaisieActe[]): readonly ErreurSaisieActe[] =>
