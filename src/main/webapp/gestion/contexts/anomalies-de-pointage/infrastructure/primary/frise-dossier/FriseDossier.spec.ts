@@ -512,6 +512,31 @@ describe('Frise of a dossier', () => {
     thenTheBarSpans('a-1', { gauche: 25, largeur: 75 });
   });
 
+  it('should stop the bar of an expired activity at the automatic end received, short of the edge of the scale', async () => {
+    const dossier = {
+      journal: [pointageFixture('p-1', 'ARRET', '14:00')],
+      activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheBarEndsAt('a-1', 62.5);
+  });
+
+  it.each(['EN_COURS', 'A_RESOUDRE'] as const)(
+    'should run the bar of an activity %s to the edge of the scale even when an end is received',
+    async etat => {
+      const dossier = {
+        journal: [pointageFixture('p-1', 'ARRET', '14:00')],
+        activites: [activiteFixture('a-1', etat, '08:00', '10:00')],
+      };
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheBarEndsAt('a-1', 100);
+    },
+  );
+
   it('should show the day at midnight when the sequence spans several days', async () => {
     const dossier = {
       journal: [
@@ -1469,8 +1494,8 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
 
-    expect(topOf(stateAfterTheAct())).toBe(topOf(bar('nc-9')) + 44 + 8);
-    thenTheStateAfterTheActIsLaidOut({ markers: { 'fin-12': 28 }, bars: { 'travail-8': 80, 'nc-9': 132 } });
+    thenTheStateAfterTheActStandsBelow('nc-9');
+    thenTheRowsAfterTheActAreStacked(['fin-12'], ['travail-8', 'nc-9']);
   });
 
   it('should be tall enough for the last bar after the act', async () => {
@@ -1524,7 +1549,8 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
 
-    thenTheStateAfterTheActIsLaidOut({ markers: { 'p-1': 28, 'p-2': 72 }, bars: { 'travail-8': 124 } });
+    thenTheMarkersAfterTheActAreOffsetByALane('p-1', 'p-2');
+    thenTheRowsAfterTheActAreStacked(['p-1', 'p-2'], ['travail-8']);
   });
 
   it('should leave the markers and the bars after the act out of the tab order and out of the selection', async () => {
@@ -1551,7 +1577,7 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
 
-    expect(stateAfterTheAct().style.height).toBe('124px');
+    thenTheStateAfterTheActEndsWithItsLowestElement(['fin-12'], ['travail-8']);
   });
 
   const whenRenderingTheFrise = async (
@@ -1793,6 +1819,11 @@ describe('Frise of a dossier', () => {
     });
   };
 
+  const thenTheBarEndsAt = (activite: string, expected: number): void => {
+    const style = bar(activite).style;
+    expect(Number.parseFloat(style.left) + Number.parseFloat(style.width)).toBeCloseTo(expected);
+  };
+
   const thenTheNumberOfGraduationsIs = (expected: number): void => {
     expect((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector('anomalie-frise-graduation'))).toHaveLength(expected);
   };
@@ -1936,14 +1967,29 @@ describe('Frise of a dossier', () => {
       'state after the act',
     );
 
-  const thenTheStateAfterTheActIsLaidOut = (expected: {
-    markers: Readonly<Record<string, number>>;
-    bars: Readonly<Record<string, number>>;
-  }): void => {
-    expect({
-      markers: Object.fromEntries(Object.keys(expected.markers).map(pointage => [pointage, topOf(markerAfterTheAct(pointage))])),
-      bars: Object.fromEntries(Object.keys(expected.bars).map(activite => [activite, topOf(barAfterTheAct(activite))])),
-    }).toEqual(expected);
+  const thenTheStateAfterTheActStandsBelow = (activite: string): void => {
+    expect(topOf(stateAfterTheAct())).toBeGreaterThanOrEqual(topOf(bar(activite)) + 44);
+  };
+
+  const thenTheRowsAfterTheActAreStacked = (pointages: readonly string[], activites: readonly string[]): void => {
+    const markerTops = pointages.map(pointage => topOf(markerAfterTheAct(pointage)));
+    const barTops = activites.map(activite => topOf(barAfterTheAct(activite)));
+    const gaps = barTops.slice(1).map((top, rang) => top - requiredFixture(barTops[rang], 'previous bar'));
+    expect(Math.min(...markerTops)).toBeGreaterThan(0);
+    expect(Math.min(...barTops)).toBeGreaterThanOrEqual(Math.max(...markerTops) + 44);
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(44);
+  };
+
+  const thenTheMarkersAfterTheActAreOffsetByALane = (first: string, second: string): void => {
+    expect(topOf(markerAfterTheAct(second))).toBe(topOf(markerAfterTheAct(first)) + 44);
+  };
+
+  const thenTheStateAfterTheActEndsWithItsLowestElement = (pointages: readonly string[], activites: readonly string[]): void => {
+    const tops = [
+      ...pointages.map(pointage => topOf(markerAfterTheAct(pointage))),
+      ...activites.map(activite => topOf(barAfterTheAct(activite))),
+    ];
+    expect(Number.parseFloat(stateAfterTheAct().style.height)).toBe(Math.max(...tops) + 44);
   };
 
   const thenTheMarkersAre = (expected: readonly string[]): void => {

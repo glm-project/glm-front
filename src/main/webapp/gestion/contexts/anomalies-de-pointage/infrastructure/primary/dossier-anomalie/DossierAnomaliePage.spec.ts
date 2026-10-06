@@ -1952,6 +1952,7 @@ describe('Anomaly dossier page', () => {
 
     await whenPreparingTheCorrection();
 
+    thenTextContains('anomalie-apercu', 'Après cet acte : conflit levé · fin automatique restante');
     thenAbsent('anomalie-fin-automatique-restante');
   });
 
@@ -3099,6 +3100,17 @@ describe('Anomaly dossier page', () => {
       await whenPressingOnTheHandle('ArrowRight');
 
       thenTheInstantFieldsShow('14/09/2026', '23:01:00');
+    });
+
+    it('should move the handle and strike the received time on its marker when the manager types an hour in the field', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEntering('anomalie-instant-heure', '22:30');
+
+      thenTheHandleReads('22:30');
+      thenTheMarkerFlagIs('fin-23', 'data-deplace', 'true');
     });
 
     it('should withdraw the preview when the handle moves', async () => {

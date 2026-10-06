@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
+import { abscisseDeLHeureLueSurLesGraduations } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
 import {
   apercuFixture,
   dossierApresCorrectionFixture,
@@ -66,8 +67,6 @@ const whenOpeningTheDossierAndChoosing = (): void => {
 
 describe('Late end handle on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
-  const echelleDebutHeure = 7;
-  const echelleDureeHeures = 19;
 
   beforeEach(() => {
     cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
@@ -165,10 +164,12 @@ describe('Late end handle on the frise in Gestion', () => {
   const whenDraggingTheHandleTo = (hour: number): void => {
     cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
       const { left, width } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
-      const clientX = left + (width * (hour - echelleDebutHeure)) / echelleDureeHeures;
-      cy.get(dataSelector('anomalie-poignee')).trigger('pointerdown', { pointerId: 1, buttons: 1 });
-      cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
-      cy.get(dataSelector('anomalie-poignee')).trigger('pointerup', { pointerId: 1, clientX });
+      abscisseDeLHeureLueSurLesGraduations(hour, width).then(abscisse => {
+        const clientX = left + abscisse;
+        cy.get(dataSelector('anomalie-poignee')).trigger('pointerdown', { pointerId: 1, buttons: 1 });
+        cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
+        cy.get(dataSelector('anomalie-poignee')).trigger('pointerup', { pointerId: 1, clientX });
+      });
     });
   };
 
@@ -179,8 +180,6 @@ describe('Late end handle on the frise in Gestion', () => {
 
 describe('End placement on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
-  const echelleDebutHeure = 7;
-  const echelleDureeHeures = 17;
 
   beforeEach(() => {
     cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
@@ -221,7 +220,9 @@ describe('End placement on the frise in Gestion', () => {
   const whenClickingThePointagesRowAt = (hour: number): void => {
     cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
       const { width } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
-      cy.get(dataSelector('anomalie-frise-placement')).click((width * (hour - echelleDebutHeure)) / echelleDureeHeures, 20);
+      abscisseDeLHeureLueSurLesGraduations(hour, width).then(abscisse => {
+        cy.get(dataSelector('anomalie-frise-placement')).click(abscisse, 20);
+      });
     });
   };
 
