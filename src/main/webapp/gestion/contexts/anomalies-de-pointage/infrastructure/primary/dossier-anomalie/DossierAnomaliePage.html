@@ -240,13 +240,12 @@
             </option>
             }
           </select>
-          } @if (!saisie().operateurManque()) {
+          } @if (!saisie().operateurManque() && !identiteForcee()) {
           <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p id="identite-acte" class="text-body-sm" data-selector="anomalie-identite">
               {{ operateurDeLActe(proposition.fait.operateur, dossier.journal) }} · {{ posteDeLActe(proposition.fait.poste, dossier.journal)
               }}
             </p>
-            @if (!identiteForcee()) {
             <button
               type="button"
               class="bouton"
@@ -257,7 +256,6 @@
             >
               {{ libelles.modifier }}
             </button>
-            }
           </div>
           } @if (identiteDepliee()) { @if (etatReferentiel.premierChargement()) {
           <p class="mt-4 text-body-sm" role="status" data-selector="anomalie-referentiel-chargement">

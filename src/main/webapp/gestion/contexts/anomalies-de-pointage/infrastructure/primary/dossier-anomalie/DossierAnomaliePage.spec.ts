@@ -2865,6 +2865,34 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-identite-modifier');
   });
 
+  it('should show no line about the operator while the referential is unavailable, the fields already saying it', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenAbsent('anomalie-identite');
+  });
+
+  it('should show no line about the operator while the referential loads, the fields already saying it', async () => {
+    const attente = givenTheReferentielIsStillLoading();
+
+    await whenOpeningTheGuidedCorrectionWhileTheReferentielLoads(attente);
+
+    thenAbsent('anomalie-identite');
+  });
+
+  it('should keep the line about the operator and its button above the fields the manager unfolded by modifying', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+
+    await whenClicking('anomalie-identite-modifier');
+
+    thenTextContains('anomalie-identite', 'Camille Martin · DMU 50');
+    thenTheIdentityIsUnfolded(true);
+  });
+
   it('should let the manager preview the current choices while the referential is unavailable', async () => {
     read.referentielFailure = new Error('Référentiel indisponible');
     await whenRendering();
