@@ -98,7 +98,6 @@ export class DossierAnomaliePage {
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly origine = signal<DossierAnomalie | undefined>(undefined);
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLAnomalie.depuis(origine, apres);
   protected readonly problemes = phrasesDuProbleme;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
@@ -304,7 +303,6 @@ export class DossierAnomaliePage {
   private refreshAfterConfirmation(): void {
     const resultat = this.preparation.operation();
     if (resultat.kind === 'APPLIQUE') {
-      this.origine.set(this.dossier());
       this.lecture.value.set({ kind: 'DOSSIER', dossier: resultat.dossier });
     }
     this.refreshAfterConcurrency();

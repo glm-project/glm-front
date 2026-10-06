@@ -8,14 +8,19 @@ import {
   ResultatApplication,
 } from '../domain/acte/AnomaliesActesPorts';
 import { CadreDuFait } from '../domain/acte/CadreDuFait';
-import { PropositionResolution, ResolutionDeLAnomalie } from '../domain/acte/ResolutionDeLAnomalie';
+import { propositionDe, PropositionResolution, ResolutionDeLAnomalie } from '../domain/acte/ResolutionDeLAnomalie';
 import { ChangementSaisie, SaisieActe } from '../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../domain/dossier/DossierAnomalie';
 
 export type EtatPreparationActe =
   | { readonly kind: 'REPOS' | 'PREVISUALISATION' | 'CONFIRMATION' | 'CONCURRENCE' | 'ISSUE_INCONNUE' | 'ERREUR' }
   | RefusActe
-  | { readonly kind: 'APPLIQUE'; readonly dossier: DossierAnomalie };
+  | { readonly kind: 'APPLIQUE'; readonly dossier: DossierAnomalie; readonly origine: DossierAnomalie };
+
+interface ConfirmationEnAttente {
+  readonly proposition: PropositionResolution;
+  readonly origine: DossierAnomalie;
+}
 
 @Injectable()
 export class PreparationActe {
@@ -27,7 +32,7 @@ export class PreparationActe {
   readonly resolution = this.actuelle.asReadonly();
   readonly operation = this.operationActuelle.asReadonly();
   private demande = Symbol('demande');
-  private propositionEnAttente: PropositionResolution | undefined;
+  private confirmationEnAttente: ConfirmationEnAttente | undefined;
 
   choose(saisie: SaisieActe): void {
     if (this.confirmationOutcomeIsPending()) return;
@@ -51,7 +56,7 @@ export class PreparationActe {
     this.demande = Symbol('réinitialisation');
     this.actuelle.set(ResolutionDeLAnomalie.prepare(SaisieActe.empty()));
     this.operationActuelle.set({ kind: 'REPOS' });
-    this.propositionEnAttente = undefined;
+    this.confirmationEnAttente = undefined;
   }
 
   contextChanged(): void {
@@ -59,14 +64,14 @@ export class PreparationActe {
   }
 
   async verify(): Promise<void> {
-    const proposition = this.propositionEnAttente;
-    if (proposition === undefined) return;
+    const enAttente = this.confirmationEnAttente;
+    if (enAttente === undefined) return;
     const demande = this.demande;
     try {
-      const resultat = await this.application.verify(proposition);
+      const resultat = await this.application.verify(enAttente.proposition);
       if (this.demande !== demande) return;
       if (resultat.kind === 'ATTESTE') {
-        this.showApplicationResult({ kind: 'APPLIQUE', dossier: resultat.dossier });
+        this.showApplicationResult({ kind: 'APPLIQUE', dossier: resultat.dossier }, enAttente.origine);
         this.actuelle.set(ResolutionDeLAnomalie.prepare(SaisieActe.empty()));
       }
     } catch (failure: unknown) {
@@ -105,39 +110,39 @@ export class PreparationActe {
 
   async confirm(): Promise<void> {
     if (this.operationActuelle().kind === 'CONFIRMATION') return;
-    const apercu = this.actuelle().confirmation();
+    const apercu = this.actuelle().apercu;
     if (apercu === undefined) return;
-    await this.confirmProposition(apercu);
+    await this.confirmProposition({ proposition: propositionDe(apercu), origine: apercu.avant });
   }
 
   async retryConfirmation(): Promise<void> {
-    const proposition = this.propositionEnAttente;
-    if (proposition === undefined) return;
+    const enAttente = this.confirmationEnAttente;
+    if (enAttente === undefined) return;
     if (this.operationActuelle().kind !== 'ISSUE_INCONNUE') return;
-    await this.confirmProposition(proposition);
+    await this.confirmProposition(enAttente);
   }
 
-  private async confirmProposition(apercu: PropositionResolution): Promise<void> {
-    this.propositionEnAttente = apercu;
+  private async confirmProposition(enAttente: ConfirmationEnAttente): Promise<void> {
+    this.confirmationEnAttente = enAttente;
     this.operationActuelle.set({ kind: 'CONFIRMATION' });
     const demande = Symbol('confirmation');
     this.demande = demande;
     try {
-      const resultat = await this.application.apply(apercu);
+      const resultat = await this.application.apply(enAttente.proposition);
       if (this.demande !== demande) return;
-      this.showApplicationResult(resultat);
+      this.showApplicationResult(resultat, enAttente.origine);
     } catch (failure: unknown) {
       this.erreurs.handleError(failure);
       if (this.demande !== demande) return;
-      this.showApplicationResult({ kind: 'ISSUE_INCONNUE' });
+      this.showApplicationResult({ kind: 'ISSUE_INCONNUE' }, enAttente.origine);
     }
   }
 
-  private showApplicationResult(resultat: ResultatApplication): void {
+  private showApplicationResult(resultat: ResultatApplication, origine: DossierAnomalie): void {
     if (this.shouldInvalidatePreview(resultat)) {
       this.actuelle.update(resolution => ResolutionDeLAnomalie.prepare(resolution.saisie));
     }
-    this.operationActuelle.set(resultat);
+    this.operationActuelle.set(resultat.kind === 'APPLIQUE' ? { ...resultat, origine } : resultat);
   }
 
   private shouldInvalidatePreview(resultat: ResultatApplication): boolean {

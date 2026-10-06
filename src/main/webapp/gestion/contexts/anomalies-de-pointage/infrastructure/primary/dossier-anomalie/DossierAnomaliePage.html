@@ -355,7 +355,7 @@
           {{ libelles.reprendreConfirmation }}
         </button>
       </div>
-      } } @if (operation.kind === 'APPLIQUE' && origine(); as origine) { @let issue = issueDe(origine, operation.dossier);
+      } } @if (operation.kind === 'APPLIQUE') { @let issue = issueDe(operation.origine, operation.dossier);
       <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">{{ libelles.issue.recu[issue.kind] }}</p>
       @for (adresse of issue.finsAutomatiquesRestantes; track adresse.pointage.pointage; let indice = $index) {
       <a

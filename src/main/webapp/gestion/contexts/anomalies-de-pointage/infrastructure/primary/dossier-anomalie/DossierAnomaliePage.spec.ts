@@ -1956,6 +1956,20 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-fin-automatique-restante');
   });
 
+  it('should announce the outcome of the conflict in the receipt when two verifications of the receipt come back one after the other', async () => {
+    const apres = givenALiftedConflictLeavingExpiredActivities(['debut-8']);
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    const [premiere, seconde] = await whenAskingTwiceToVerifyTheReceipt();
+    await whenResponseArrives(premiere, { kind: 'ATTESTE', dossier: apres });
+    await whenResponseArrives(seconde, { kind: 'ATTESTE', dossier: apres });
+
+    thenTextContains('anomalie-resultat', 'Conflit levé · fin automatique restante');
+  });
+
   it('should preserve the detailed proposition when the preview is refused', async () => {
     await whenRendering();
 
@@ -3765,7 +3779,7 @@ describe('Anomaly dossier page', () => {
     givenALiftedConflictLeavingExpiredActivities(['debut-8']);
   };
 
-  const givenALiftedConflictLeavingExpiredActivities = (ouvrants: readonly string[]): void => {
+  const givenALiftedConflictLeavingExpiredActivities = (ouvrants: readonly string[]): DossierAnomalie => {
     const dossier = dossierAnomalieFixture();
     const modele = requiredFixture(dossier.activites[0], 'conflict fixture activity');
     const echues = ouvrants.map(ouvrant => ({
@@ -3777,6 +3791,7 @@ describe('Anomaly dossier page', () => {
     const apres = { ...dossier, version: 2, enConflit: false, finAutomatique: true, activites: echues };
     givenASuccessfulPreview(apres);
     application.result = { kind: 'APPLIQUE', dossier: apres };
+    return apres;
   };
 
   const givenAConflictActLeaving = (resultat: Pick<DossierAnomalie, 'enConflit' | 'finAutomatique'>): void => {
@@ -3790,6 +3805,20 @@ describe('Anomaly dossier page', () => {
     const apres = { ...dossierFinAutomatiqueFixture(), ...resultat };
     givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'), dossierFinAutomatiqueFixture());
     application.result = { kind: 'APPLIQUE', dossier: apres };
+  };
+
+  const whenAskingTwiceToVerifyTheReceipt = async (): Promise<
+    [PendingResponseFixture<ResultatVerification>, PendingResponseFixture<ResultatVerification>]
+  > => {
+    const premiere = new PendingResponseFixture<ResultatVerification>();
+    application.receiptReplies.pending = premiere;
+    whenStartingClick('anomalie-verifier');
+    await premiere.arrival;
+    const seconde = new PendingResponseFixture<ResultatVerification>();
+    application.receiptReplies.pending = seconde;
+    whenStartingClick('anomalie-verifier');
+    await seconde.arrival;
+    return [premiere, seconde];
   };
 
   const whenPreviewingTheDatedEnd = async (): Promise<void> => {

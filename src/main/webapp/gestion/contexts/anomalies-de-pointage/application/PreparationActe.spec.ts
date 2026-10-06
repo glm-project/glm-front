@@ -18,7 +18,7 @@ import { ActiviteAnomalie, AdresseDossier, DossierAnomalie } from '../domain/dos
 import { ElementAnomalieId } from '../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../domain/dossier/SuiviAnomalieId';
-import { PreparationActe } from './PreparationActe';
+import { EtatPreparationActe, PreparationActe } from './PreparationActe';
 
 const cadreOuvert = CadreDuFait.depuis([], '2026-09-15T00:00:00Z');
 const dossierFixture: DossierAnomalie = {
@@ -215,8 +215,34 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     expect(pendingState).toBe('CONFIRMATION');
     expect(applications.requests).toHaveLength(1);
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+    expect(preparation.operation()).toEqual({
+      kind: 'APPLIQUE',
+      dossier: { ...dossierFixture, version: 2, enConflit: false },
+      origine: dossierFixture,
+    });
     expect(preparation.resolution().confirmation()).toBeUndefined();
+  });
+
+  it('should deliver with the applied result the dossier the confirmed preview was drawn from', async () => {
+    await givenValidPreview();
+    const attente = givenApplicationWaits();
+    attente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+
+    await preparation.confirm();
+
+    expect(theAppliedResult().origine).toEqual(dossierFixture);
+  });
+
+  it('should deliver the same origin with every verification of the receipt, whatever the dossier the result replaced', async () => {
+    await givenUnknownOutcome();
+    applications.verification = { kind: 'ATTESTE', dossier: { ...dossierFixture, version: 2, enConflit: false } };
+
+    await preparation.verify();
+    const premiere = theAppliedResult().origine;
+    applications.verification = { kind: 'ATTESTE', dossier: { ...dossierFixture, version: 3, enConflit: false } };
+    await preparation.verify();
+
+    expect([premiere, theAppliedResult().origine]).toEqual([dossierFixture, dossierFixture]);
   });
 
   it('should preserve an edited proposition without showing the old preview failure', async () => {
@@ -301,7 +327,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     expect(acteEnAttente).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(previews.requests).toHaveLength(1);
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
+    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 }, origine: dossierFixture });
   });
 
   it('should invalidate the preview after a concurrent write and retain the proposition for rereading', async () => {
@@ -458,7 +484,11 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     await preparation.verify();
 
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+    expect(preparation.operation()).toEqual({
+      kind: 'APPLIQUE',
+      dossier: { ...dossierFixture, version: 2, enConflit: false },
+      origine: dossierFixture,
+    });
     expect(applications.requests).toHaveLength(1);
   });
 
@@ -486,7 +516,11 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(2);
     expect(applications.requests[1]).toEqual(applications.requests[0]);
     expect(previews.requests).toHaveLength(1);
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 3, enConflit: false } });
+    expect(preparation.operation()).toEqual({
+      kind: 'APPLIQUE',
+      dossier: { ...dossierFixture, version: 3, enConflit: false },
+      origine: dossierFixture,
+    });
   });
 
   it('should refuse retrying a confirmation whose canonical receipt has already settled the uncertainty', async () => {
@@ -498,7 +532,11 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.retryConfirmation();
 
     expect(applications.requests).toHaveLength(1);
-    expect(preparation.operation()).toEqual({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2, enConflit: false } });
+    expect(preparation.operation()).toEqual({
+      kind: 'APPLIQUE',
+      dossier: { ...dossierFixture, version: 2, enConflit: false },
+      origine: dossierFixture,
+    });
   });
 
   it('should leave an unsubmitted proposition untouched when retrying without an uncertain confirmation', async () => {
@@ -681,6 +719,12 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await pending.arrival;
     pending.release({ kind: 'APERCU', apercu: previewFixture(saisie) });
     await operation;
+  };
+
+  const theAppliedResult = (): Extract<EtatPreparationActe, { kind: 'APPLIQUE' }> => {
+    const operation = preparation.operation();
+    if (operation.kind !== 'APPLIQUE') throw new Error(`The operation is ${operation.kind}, not an applied result.`);
+    return operation;
   };
 
   const givenUnknownOutcome = async (): Promise<void> => {
