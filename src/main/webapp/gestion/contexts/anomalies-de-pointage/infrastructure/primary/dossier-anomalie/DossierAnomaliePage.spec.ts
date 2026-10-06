@@ -3330,6 +3330,41 @@ describe('Anomaly dossier page', () => {
 
       thenAbsent('anomalie-poignee');
     });
+
+    it.each([
+      {
+        cas: 'before the start of the activity it ends',
+        jour: '14/09/2026',
+        heure: '07:00',
+        erreur: 'Le fait ne peut pas précéder le début de l’activité qu’il termine.',
+      },
+      {
+        cas: 'far in the future',
+        jour: '14/09/2062',
+        heure: '10:00',
+        erreur: 'La date et l’heure du fait ne peuvent pas être dans le futur.',
+      },
+    ])('should draw no handle for an hour typed $cas and say why in the field', async ({ jour, heure, erreur }) => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEnteringTheInstant(jour, heure);
+
+      thenAbsent('anomalie-poignee');
+      thenTextContains('anomalie-validation', erreur);
+    });
+
+    it('should draw the handle again once the manager types an hour within the bounds of the fact', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEnteringTheInstant('14/09/2062', '10:00');
+
+      await whenEnteringTheInstant('14/09/2026', '22:00');
+
+      thenTheHandleReads('22:00');
+    });
   });
 
   describe('placement of the real end on the frise', () => {

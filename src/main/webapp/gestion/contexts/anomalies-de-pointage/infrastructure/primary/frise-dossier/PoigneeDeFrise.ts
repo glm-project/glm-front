@@ -79,6 +79,7 @@ const poigneeDeLaProposition = (
   if (!new InstantPointage(fait.instant).isValid()) return undefined;
   const { min, max } = cadre.bornes(fait);
   if (min === undefined) return undefined;
+  if (cadre.depassements(fait).length > 0) return undefined;
   return {
     instant: fait.instant,
     ...(proposition.kind === 'CORRECTION' ? { origine: proposition.pointage } : {}),

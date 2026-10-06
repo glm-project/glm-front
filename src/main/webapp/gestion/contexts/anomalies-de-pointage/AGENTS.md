@@ -132,7 +132,7 @@ vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec seco
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
 `data-annule`, `data-voie`, `data-deplace`), jamais leurs classes.
 Une proposition de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
-avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
+avec une borne basse (`CadreDuFait.bornes`) et un instant valide dans ces bornes, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ
 date et heure. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
 indisponible tant qu'elle manque. Pendant cette proposition (fait terminant une activité avec une borne basse, instant vide ou illisible,
@@ -152,8 +152,10 @@ avoir lu l'heure à l'action : en minutes entières, entre la borne basse du `Ca
 fraction et l'aperçu disparaissent comme pour une saisie dans le champ, qui affiche la nouvelle valeur. « −5 min » et « +5 min »
 de « Votre décision » font la même demande et se désactivent à une borne. La poignée et ses boutons sont désactivés tant
 qu'une opération est en cours. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu, sans dépasser
-l'heure courante des bornes (jamais en deçà de l'échelle normale), et couvre toujours l'instant proposé, avec la marge d'une
-heure de l'échelle normale, même saisi au champ bien après ou avant les instants reçus : la poignée ne sort jamais de la frise. L'heure d'origine du
+l'heure courante des bornes (jamais en deçà de l'échelle normale), et couvre l'instant proposé, avec la marge d'une heure de
+l'échelle normale. La poignée n'existe que pour un instant dans les bornes du fait (`CadreDuFait.depassements` vide) : hors
+bornes, ni poignée ni ses boutons « −5 min » et « +5 min », l'échelle reste normale et le champ dit pourquoi
+(`INSTANT_AVANT_CIBLE`, `INSTANT_FUTUR`) ; la correction se fait au champ, la rangée de placement ne revient pas. L'heure d'origine du
 pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
 Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sous ses rangées actuelles, un groupe
 « Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages et les activités de l'après :

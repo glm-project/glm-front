@@ -229,7 +229,9 @@ l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans s
 flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
 décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, heure courante lue à
 l'action, en minutes entières) ; un bouton est désactivé à la borne. Chaque déplacement transmet l'instant avec l'offset local
-et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure dans le champ déplace la poignée. Un fait
+et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure dans les bornes au champ déplace la poignée. Une heure
+saisie hors des bornes (avant le début de l'activité visée, ou dans le futur) n'a pas de poignée, ni ses boutons « −5 min » et
+« +5 min » : le champ dit pourquoi, l'aperçu reste indisponible, et la poignée revient dès qu'une heure dans les bornes est saisie. Un fait
 sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée ; la régularisation d'une fin sans heure la reçoit au clic sur la rangée
 des pointages (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
