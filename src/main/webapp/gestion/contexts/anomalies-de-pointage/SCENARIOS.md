@@ -95,6 +95,25 @@ voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend
 un élément absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé ne
 bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
 
+## Actions directes
+
+« Votre décision » présente, dans cet ordre, les propositions du serveur (toutes, de même rang, aucune présélectionnée), les
+actions directes sur les pointages en cause, puis « Autres corrections ». Les actions directes viennent d'une politique du
+domaine (`ActionsDirectes`) qui lit les diagnostics d'un conflit : annuler le pointage en cause, quelle que soit la raison ;
+annuler aussi le terminant pour `CIBLE_DEJA_TERMINEE` ; corriger l'heure du pointage en cause pour `GESTE_AVANT_OUVERTURE` ;
+rien de plus pour `OUVRANT_ANNULE`. Chaque action porte sa saisie d'acte, et le primaire ne reconstruit aucune commande. Une action
+que le serveur propose déjà (même acte, même pointage) n'est pas répétée ; deux diagnostics sur le même pointage n'en donnent
+qu'une ; un pointage absent du journal ou déjà annulé n'en reçoit aucune ; l'ordre suit les diagnostics reçus, le pointage en
+cause avant son terminant. Un dossier qui n'est plus en conflit, ou sans diagnostic, n'en propose aucune.
+
+Chaque action est nommée par le geste et l'heure du pointage visé (« Annuler l'arrêt de 17:00 », « Corriger l'heure de l'arrêt de
+07:00 »), avec les secondes quand un autre pointage du journal tombe dans la même minute. La choisir prépare la saisie attendue
+(annulation ou correction, motif à saisir), met le focus sur la proposition, ouvre le champ heure pour une correction et se
+comporte comme une proposition du serveur : une seule solution est pressée à la fois. La section n'apparaît que s'il y a une
+action. Le consultant et une opération en cours les voient désactivées, avec le message des droits. « Autres corrections »
+remplace le repli « Un pointage manque sur la frise ? » : il rappelle que Corriger et Annuler du pointage sélectionné sont
+dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation).
+
 ## Liste des anomalies
 
 La liste demande la nature de l'onglet courant : `FIN_AUTOMATIQUE` sans `nature` dans l'URL, `CONFLIT` à la
@@ -208,7 +227,7 @@ avec l'offset local et sans fraction de seconde. Une date sans heure, ou l'inver
 l'aperçu et affiche « Renseignez la date et l'heure du fait. ». Au changement d'heure, une heure inexistante est refusée
 (« Cette heure n'existe pas ce jour-là, à cause du changement d'heure. ») et une heure répétée prend sa première
 occurrence, y compris le jour même du changement d'heure, que l'horloge de la page soit ce jour-là ou que l'instant reçu
-en soit. Une nouvelle proposition (un choix, même identique, ou « Régulariser ») repart d'un champ neuf : la date ou
+en soit. Une nouvelle proposition (un choix, même identique, ou « Ajouter un pointage manquant ») repart d'un champ neuf : la date ou
 l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les specs unitaires fixent `America/Sao_Paulo`
 (sans changement d'heure) ; les cas de changement d'heure rebasculent `TZ` en `Europe/Paris` et placent l'horloge le
 29 mars le temps du test. Cypress saisit une date au clavier et choisit un jour et une heure à la souris.
@@ -244,8 +263,9 @@ traverse minuit et l'heure répétée graduée heure par heure.
 
 ## Frontières de vérification
 
-- Les specs de domaine passent par `SaisieActe`, `CadreDuFait` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
-  le choix explicite, la précision des instants, les bornes du fait et l'invalidation d'un aperçu.
+- Les specs de domaine passent par `SaisieActe`, `CadreDuFait`, `ResolutionDeLAnomalie` et `ActionsDirectes` ; elles vérifient
+  les motifs, le choix explicite, la précision des instants, les bornes du fait, l'invalidation d'un aperçu et les actions
+  directes par raison (dédoublonnage, pointage absent ou annulé, ordre).
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
 - Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé

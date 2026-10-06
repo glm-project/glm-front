@@ -887,6 +887,159 @@ describe('Anomaly dossier page', () => {
     ]);
   });
 
+  it('should offer to cancel the pointage at fault and the one that already stopped the activity, named by their gesture and time', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 17:00', 'Annuler l’arrêt de 12:00']);
+  });
+
+  it('should preselect no direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenNoDirectActionIsPressed();
+  });
+
+  it('should prepare the cancellation of the pointage at fault when the manager chooses its direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('ANNULER', 'fin-17');
+
+    thenTextContains('anomalie-acte', 'Annulation du pointage');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
+    thenOnlyTheDirectActionIsPressed('ANNULER', 'fin-17');
+  });
+
+  it('should prepare the cancellation of the terminating pointage when the manager chooses its direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('ANNULER', 'fin-12');
+
+    thenTextContains('anomalie-acte', 'Annulation du pointage');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 12:00:00');
+    thenOnlyTheDirectActionIsPressed('ANNULER', 'fin-12');
+  });
+
+  it('should name the direct actions on a passage by its gesture, with the article of its gender', async () => {
+    givenAPassageBeforeTheOpeningOfItsActivity();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler le passage en NC de 07:00', 'Corriger l’heure du passage en NC de 07:00']);
+  });
+
+  it('should move the focus to the proposition when the manager chooses a direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('ANNULER', 'fin-17');
+
+    expect(document.activeElement).toBe(element('anomalie-proposition-titre'));
+  });
+
+  it('should press only the proposition of the server when the manager chooses it after a direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+    await whenChoosingTheDirectAction('ANNULER', 'fin-17');
+
+    await whenClicking('anomalie-choix');
+
+    thenInterpretationIsSelected();
+    thenNoDirectActionIsPressed();
+  });
+
+  it('should offer to cancel or to correct the time of a pointage made before the opening of its activity', async () => {
+    givenAStopBeforeTheOpeningOfItsActivity();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 07:00', 'Corriger l’heure de l’arrêt de 07:00']);
+  });
+
+  it('should prepare the correction of the time of the pointage and open its fact when the manager chooses its direct action', async () => {
+    givenAStopBeforeTheOpeningOfItsActivity();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('CORRIGER_L_HEURE', 'fin-7');
+
+    thenTextContains('anomalie-acte', 'Correction du pointage');
+    thenTheInstantFieldsShow('14/09/2026', '07:00:00');
+    thenDetailedFactIsOpen();
+    thenOnlyTheDirectActionIsPressed('CORRIGER_L_HEURE', 'fin-7');
+  });
+
+  it('should give the seconds of a pointage in its direct action when another pointage of the dossier falls in the same minute', async () => {
+    givenAnEndAtFaultInTheSameMinuteAsAnotherPointage();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 17:00:40']);
+  });
+
+  it('should leave out the seconds of a pointage in its direct action when the other pointages of the dossier fall in other minutes', async () => {
+    givenAnEndAtFaultInAnotherMinuteThanAnotherPointage();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 17:00']);
+  });
+
+  it('should show no direct action section when the dossier has nothing to propose', async () => {
+    await whenRendering();
+
+    thenAbsent('anomalie-actions-directes');
+  });
+
+  it('should show no direct action section for an automatic end', async () => {
+    givenAnAutomaticEnd();
+
+    await whenRendering();
+
+    thenAbsent('anomalie-actions-directes');
+  });
+
+  it('should show the direct actions of a consultant disabled, with the reason', async () => {
+    givenAConsultantWhoCannotApplyDecisions();
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenTheDirectActionsAreDisabled();
+    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
+  });
+
+  it('should disable the direct actions while a write has an unknown outcome', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    givenASuccessfulPreview(undefined, acteCorrectionFixture, dossierAtFixture('fin-17', ''));
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    thenTheDirectActionsAreDisabled();
+  });
+
+  it('should gather the manual corrections under Autres corrections instead of asking whether a pointage is missing', async () => {
+    await whenRendering();
+
+    thenTextContains('anomalie-detail', 'Autres corrections');
+    thenTextContains('anomalie-regulariser', 'Ajouter un pointage manquant');
+  });
+
+  it('should remind the manager that correcting or cancelling a pointage is done from the selection panel', async () => {
+    await whenRendering();
+
+    thenTextContains(
+      'anomalie-autres-corrections-aide',
+      'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
+    );
+  });
+
   it('should keep the received explanation when the conflict comes with no diagnostic', async () => {
     await whenRendering();
 
@@ -2767,10 +2920,9 @@ describe('Anomaly dossier page', () => {
     thenPageDoesNotMention('pointages et rattachements');
   });
 
-  it('should offer to regularise a missing pointage by the frise, not by a chronology the page no longer shows', async () => {
+  it('should not refer to a chronology the page no longer shows', async () => {
     await whenRendering();
 
-    thenTextContains('anomalie-detail', 'Un pointage manque sur la frise ?');
     thenPageDoesNotMention('chronologie');
   });
 
@@ -4365,6 +4517,99 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const givenAnActivityAlreadyStoppedBeforeTheEndAtFault = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('fin-17', ARRET_17, 'travail-8'), pointageCiteFixture('fin-12', ARRET_12, 'travail-8')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-17'),
+            raison: 'CIBLE_DEJA_TERMINEE',
+            cible: { activite: new ActiviteAnomalieId('travail-8'), termineePar: new PointageAnomalieId('fin-12') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAStopBeforeTheOpeningOfItsActivity = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('fin-7', ARRET_7, 'travail-8'), pointageCiteFixture('debut-8', DEMARRAGE_8, '')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-7'),
+            raison: 'GESTE_AVANT_OUVERTURE',
+            cible: { activite: new ActiviteAnomalieId('travail-8'), ouvrant: new PointageAnomalieId('debut-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAPassageBeforeTheOpeningOfItsActivity = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('nc-7', { geste: 'PASSAGE_NC', heure: '07:00' }, 'travail-8')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('nc-7'),
+            raison: 'GESTE_AVANT_OUVERTURE',
+            cible: { activite: new ActiviteAnomalieId('travail-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAnEndAtFaultAndAnotherPointageAt = (autre: Date): void => {
+    const dossier = dossierAnomalieFixture();
+    const arret = pointageCiteFixture('fin-17', ARRET_17, 'travail-8');
+    const demarrage = pointageCiteFixture('debut-8', DEMARRAGE_8, '');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [
+          { ...arret, fait: { ...arret.fait, instant: instantLocalFixture(new Date(2026, 8, 14, 17, 0, 40)) } },
+          { ...demarrage, fait: { ...demarrage.fait, instant: instantLocalFixture(autre) } },
+        ],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteAnomalieId('travail-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAnEndAtFaultInTheSameMinuteAsAnotherPointage = (): void => {
+    givenAnEndAtFaultAndAnotherPointageAt(new Date(2026, 8, 14, 17, 0, 10));
+  };
+
+  const givenAnEndAtFaultInAnotherMinuteThanAnotherPointage = (): void => {
+    givenAnEndAtFaultAndAnotherPointageAt(new Date(2026, 8, 14, 17, 1, 10));
+  };
+
   const givenTwoDiagnostics = (): void => {
     read.result = { kind: 'DOSSIER', dossier: dossierDiagnosedOn(['fin-17', 'debut-8']) };
   };
@@ -4818,6 +5063,34 @@ describe('Anomaly dossier page', () => {
   };
   const thenTheSelectionShowsTheGesture = (expected: string): void => {
     expect(element('anomalie-selection-geste').textContent.trim()).toBe(expected);
+  };
+  const thenTheDirectActionsAre = (expected: readonly string[]): void => {
+    const actions = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-action-directe'))];
+    expect(actions.map(action => action.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
+  };
+  const directActions = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-action-directe')),
+  ];
+  const directAction = (sorte: string, pointage: string): HTMLElement =>
+    requiredFixture(
+      directActions().find(candidate => candidate.dataset['sorte'] === sorte && candidate.dataset['pointage'] === pointage),
+      `direct action ${sorte} of ${pointage}`,
+    );
+  const whenChoosingTheDirectAction = async (sorte: string, pointage: string): Promise<void> => {
+    directAction(sorte, pointage).click();
+    await fixture.whenStable();
+  };
+  const thenTheDirectActionsAreDisabled = (): void => {
+    const disabled = directActions().map(action => action instanceof HTMLButtonElement && action.disabled);
+    expect(disabled).toEqual([true, true]);
+  };
+  const thenNoDirectActionIsPressed = (): void => {
+    expect(directActions().map(action => action.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
+  };
+  const thenOnlyTheDirectActionIsPressed = (sorte: string, pointage: string): void => {
+    expect(directAction(sorte, pointage).getAttribute('aria-pressed')).toBe('true');
+    expect(directActions().filter(action => action.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+    thenNoInterpretationIsSelected();
   };
   const thenTheProblemReads = (expected: string): void => {
     expect(element('anomalie-probleme').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);

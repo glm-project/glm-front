@@ -25,6 +25,7 @@ import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
 import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
+import { ActionDirecte, ActionsDirectes } from '../../../domain/dossier/ActionsDirectes';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
@@ -42,6 +43,7 @@ import {
   intituleDeLActivite,
   labelForActivite,
   libelleActivite,
+  libelleDeLAction,
   libelleDuGeste,
   referencePointage,
   remplacementDe,
@@ -102,11 +104,13 @@ export class DossierAnomaliePage {
   protected readonly posteDe = postePresente;
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
   protected readonly problemes = phrasesDuProbleme;
+  protected readonly actionsDirectes = (dossier: DossierAnomalie) => ActionsDirectes.depuis(dossier).actions;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
   protected readonly libelleActivite = libelleActivite;
   protected readonly intituleDeLActivite = intituleDeLActivite;
   protected readonly libelleDuGeste = libelleDuGeste;
+  protected readonly libelleDeLAction = libelleDeLAction;
   protected readonly labelForActivite = labelForActivite;
   protected readonly remplacementDe = remplacementDe;
   protected readonly detailDuPointage = detailDuPointage;
@@ -224,6 +228,15 @@ export class DossierAnomaliePage {
   protected chooseGuide(choix: ChoixGuide): void {
     this.choose(choix.saisie, choix.id);
     this.detail.set(choix.saisie.awaitsDating());
+  }
+
+  protected identifiantDeLAction(action: ActionDirecte): string {
+    return `${action.sorte}:${action.pointage.id.pointage}`;
+  }
+
+  protected chooseAction(action: ActionDirecte): void {
+    this.choose(action.saisie, this.identifiantDeLAction(action));
+    this.detail.set(action.sorte === 'CORRIGER_L_HEURE');
   }
 
   protected correct(pointage: PointageAnomalie): void {

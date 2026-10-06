@@ -642,6 +642,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-droits')).should('contain.text', 'gestionnaires');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
     cy.get(dataSelector('anomalie-choix')).should('be.disabled');
+    cy.get(dataSelector('anomalie-action-directe')).should('have.length', 1).and('be.disabled');
     cy.get(dataSelector('anomalie-corriger')).should('be.disabled');
     cy.get(dataSelector('anomalie-annuler')).should('be.disabled');
     cy.get(dataSelector('anomalie-regulariser')).should('be.disabled');

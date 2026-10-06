@@ -1,6 +1,7 @@
-import { formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { formatInstantTime, formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { SaisieFait } from '../../domain/acte/SaisieActe';
+import { ActionDirecte } from '../../domain/dossier/ActionsDirectes';
 import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
@@ -38,7 +39,11 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
 
 export const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
 
-export const defini = (geste: string): string => (/^[aeiou]/i.test(geste) ? `l’${minuscule(geste)}` : `le ${minuscule(geste)}`);
+const commenceParUneVoyelle = (geste: string): boolean => /^[aeiou]/i.test(geste);
+
+export const defini = (geste: string): string => (commenceParUneVoyelle(geste) ? `l’${minuscule(geste)}` : `le ${minuscule(geste)}`);
+
+const deDefini = (geste: string): string => (commenceParUneVoyelle(geste) ? `de l’${minuscule(geste)}` : `du ${minuscule(geste)}`);
 
 export const gesteDuPointage = (pointage: PointageAnomalie): string =>
   pointage.regularisation ? `${libelleDuGeste(pointage.fait)} ${LIBELLES_ANOMALIES.problemes.regularise}` : libelleDuGeste(pointage.fait);
@@ -120,4 +125,22 @@ export const selectionInitiale = (dossier: DossierAnomalie | undefined): Selecti
   if (pointage !== undefined) return { kind: 'POINTAGE', id: pointage };
   const activite = activiteEchueDUneFinAutomatique(dossier);
   return activite === undefined ? undefined : { kind: 'ACTIVITE', id: activite };
+};
+
+const MILLISECONDES_PAR_MINUTE = 60_000;
+
+const minuteDe = (pointage: PointageAnomalie): number => Math.floor(Date.parse(pointage.fait.instant) / MILLISECONDES_PAR_MINUTE);
+
+const partageSaMinute = (pointage: PointageAnomalie, journal: readonly PointageAnomalie[]): boolean =>
+  journal.some(autre => !autre.id.equals(pointage.id) && minuteDe(autre) === minuteDe(pointage));
+
+const heureDuPointage = (pointage: PointageAnomalie, journal: readonly PointageAnomalie[]): string =>
+  partageSaMinute(pointage, journal) ? formatInstantTimeWithSeconds(new Date(pointage.fait.instant)) : heureDe(pointage.fait.instant);
+
+export const libelleDeLAction = (action: ActionDirecte, journal: readonly PointageAnomalie[]): string => {
+  const geste = gesteDuPointage(action.pointage);
+  const heure = heureDuPointage(action.pointage, journal);
+  return action.sorte === 'ANNULER'
+    ? LIBELLES_ANOMALIES.actionsDirectes.annuler(`${defini(geste)} de ${heure}`)
+    : LIBELLES_ANOMALIES.actionsDirectes.corrigerLHeure(`${deDefini(geste)} de ${heure}`);
 };

@@ -111,13 +111,22 @@ const PROBLEMES = {
   },
 } as const;
 
+const ACTIONS_DIRECTES = {
+  titre: 'Actions directes',
+  annuler: (pointage: string) => `Annuler ${pointage}`,
+  corrigerLHeure: (pointage: string) => `Corriger l’heure ${pointage}`,
+} as const;
+
 export const LIBELLES_ANOMALIES = {
-  detail: 'Un pointage manque sur la frise ?',
+  actionsDirectes: ACTIONS_DIRECTES,
+  autresCorrections: 'Autres corrections',
+  autresCorrectionsAide:
+    'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
   fin: 'Fin',
   corriger: 'Corriger ce pointage',
-  regulariser: 'Régulariser un fait manquant',
+  regulariser: 'Ajouter un pointage manquant',
   annuler: 'Annuler ce pointage',
   verifier: 'Vérifier le reçu de confirmation',
   reprendreConfirmation: 'Reprendre la même confirmation',

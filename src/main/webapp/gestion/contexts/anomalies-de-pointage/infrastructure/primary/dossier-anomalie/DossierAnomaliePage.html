@@ -123,11 +123,35 @@
         <span class="text-body font-semibold">{{ libelleChoix(choix) }}</span>
         <span class="mt-1 block text-body-sm text-ink-muted">{{ explicationChoix(choix) }}</span>
       </button>
+      } @let actions = actionsDirectes(dossier); @if (actions.length > 0) {
+      <section class="mt-6" aria-labelledby="actions-directes-heading" data-selector="anomalie-actions-directes">
+        <h3 id="actions-directes-heading" class="text-body font-semibold">{{ libelles.actionsDirectes.titre }}</h3>
+        @for (action of actions; track action.pointage.id.pointage + action.sorte) {
+        <button
+          class="choix"
+          type="button"
+          data-selector="anomalie-action-directe"
+          [attr.data-sorte]="action.sorte"
+          [attr.data-pointage]="action.pointage.id.pointage"
+          [attr.aria-pressed]="choixAffiche() === identifiantDeLAction(action)"
+          [class.choix-selectionne]="choixAffiche() === identifiantDeLAction(action)"
+          [disabled]="occupe() || !droits.canApply()"
+          (click)="chooseAction(action)"
+        >
+          <span class="text-body font-semibold">{{ libelleDeLAction(action, dossier.journal) }}</span>
+        </button>
+        }
+      </section>
       } @if (!droits.canApply()) {
       <p class="mt-4 text-body-sm" data-selector="anomalie-droits">{{ libelles.droits }}</p>
       }
       <details class="mt-4">
-        <summary class="min-h-touch cursor-pointer py-3 font-semibold" data-selector="anomalie-detail">{{ libelles.detail }}</summary>
+        <summary class="min-h-touch cursor-pointer py-3 font-semibold" data-selector="anomalie-detail">
+          {{ libelles.autresCorrections }}
+        </summary>
+        <p class="mt-1 text-body-sm text-ink-muted" data-selector="anomalie-autres-corrections-aide">
+          {{ libelles.autresCorrectionsAide }}
+        </p>
         <button
           type="button"
           class="bouton mt-3"

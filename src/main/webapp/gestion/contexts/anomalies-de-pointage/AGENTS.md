@@ -49,6 +49,11 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLActe`).
 - **Fin automatique restante** : une activité `ECHUE` du dossier d'après, ailleurs que l'adresse d'origine ; le reçu y mène par
   un lien.
+- **Solutions** : « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur (`dossier.choix`,
+  de même rang, aucune présélectionnée), les actions directes, puis les autres corrections.
+- **Action directe** : annulation d'un pointage en cause, ou correction de son heure, que le front propose sans proposition
+  du serveur (`ActionsDirectes`, `domain/dossier/`) ; elle porte sa `SaisieActe` et le pointage visé, comme un `ChoixGuide`
+  porte la sienne. Ce n'est ni un geste ni une proposition du serveur : un acte, choisi par le gestionnaire.
 - **Pointage tardif** : pointage que le serveur désigne, dans un choix `CORRIGER_FIN_TARDIVE` ou `CORRIGER_TRANSITION_TARDIVE`,
   comme posé après l'échéance ; le front le lit, il ne le déduit pas.
 
@@ -106,6 +111,21 @@ du formulaire suivent la même règle (`labelForActivite`).
 Un autre pointage (remplacé, pointage de l'acte en aperçu) se désigne par une seule règle, `referencePointage` :
 « instant · Geste » depuis le journal disponible. Quand il manque, la phrase porte le déterminant (« Remplace un
 pointage non résolu »), jamais l'identifiant.
+La décision (`ActionsDirectes.depuis(dossier)`, `domain/dossier/`) propose, depuis les diagnostics d'un conflit à expliquer
+(`conflitAExpliquer`), des actions sur les seuls pointages en cause, chacune avec sa `SaisieActe` (`SaisieActe.cancel`,
+`SaisieActe.correct` avec le fait reçu) : annuler le pointage en cause pour toute raison ; en plus, annuler le terminant
+(`cible.termineePar`) pour `CIBLE_DEJA_TERMINEE`, et corriger l'heure du pointage en cause pour `GESTE_AVANT_OUVERTURE`.
+`OUVRANT_ANNULE` n'offre que l'annulation du pointage en cause : l'ouvrant est déjà annulé. L'ordre est celui des diagnostics
+reçus, le pointage en cause avant son terminant, et une même sorte d'action sur un même pointage n'apparaît qu'une fois. Une
+action que le serveur propose déjà (même acte, même pointage, lu dans `dossier.choix[].saisie.proposition`) n'est pas
+répétée, et un pointage absent du journal ou déjà annulé n'en reçoit aucune. Le primaire nomme chaque action par le geste et
+l'heure du pointage visé (`libelleDeLAction` : « Annuler l'arrêt de 17:00 », « Corriger l'heure de l'arrêt de 07:00 », article
+élidé et geste qualifié comme les phrases) ; l'heure porte ses secondes quand un autre pointage du journal tombe dans la même
+minute. Choisir une action se comporte comme choisir une proposition (`aria-pressed`, focus sur la proposition, champ heure
+ouvert pour une correction) ; elle est désactivée pour le consultant et pendant une opération, avec le message des droits, et
+la section est absente sans action. Sous les actions, « Autres corrections » (repli, `anomalie-detail`) rappelle que Corriger
+et Annuler du pointage sélectionné sont dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation,
+`anomalie-regulariser`).
 Une phrase du problème suit sa propre règle : le pointage en cause nommé par son geste et son heure (« L'arrêt de 17:00 »,
 « Le passage en NC régularisé de 18:00 » ; « Un pointage non résolu » quand le journal ne le tient pas), « vise », l'activité
 visée (« le travail », « la non-conformité », « l'activité » quand le dossier ne la tient pas ou sans période, accordée en
@@ -236,7 +256,7 @@ compare sans bornes et sans heure. `CadreDuFait.bornes(fait)` rend `{ min?, max 
 Le domaine ne lit jamais l'horloge. Il y a deux horloges : `now`, lue une fois à la construction de la page, ne sert qu'à
 l'affichage des dates ; `maintenant`, qui sert aux bornes, est relue à chaque action (choisir, modifier, déplacer, placer) et par
 `PreparationActe.preview` au moment d'appeler le port, jamais figée pour toute la page ; `preview` refuse un fait hors bornes sans appeler le port. Chaque nouvelle proposition
-(un choix, même identique, ou « Régulariser ») recrée le champ : une saisie partielle ne lui survit pas.
+(un choix, même identique, ou « Ajouter un pointage manquant ») recrée le champ : une saisie partielle ne lui survit pas.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
 

@@ -25,6 +25,7 @@ import {
   formatInstantTimeAndLongDayWithSeconds,
   formatInstantTimeUnambiguous,
   formatInstantTimeWithOffset,
+  formatInstantTimeWithSeconds,
   formatInstantWeekdayDay,
   localCalendarDay,
   toHtmlDatetime,
@@ -62,6 +63,14 @@ describe('DateFormats', () => {
     const text = formatInstantTime(instant);
 
     expect(text).toBe('00:05');
+  });
+
+  it('should write the local time of an instant with its seconds', () => {
+    const instant = new Date(2026, 8, 14, 8, 2, 7);
+
+    const text = formatInstantTimeWithSeconds(instant);
+
+    expect(text).toBe('08:02:07');
   });
 
   it('should format an instant as its local day and month', () => {

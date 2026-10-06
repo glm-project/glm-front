@@ -11,6 +11,7 @@ import {
   givenTheElements,
   givenTheReferentiel,
   instantCorrigeLocalFixture,
+  instantNonConformiteFixture,
   journalFixture,
   ligneFixture,
   motifFixture,
@@ -180,6 +181,117 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.location('search').should('equal', `?pointage=${finFixture}`);
     cy.location('hash').should('equal', '');
     thenActivityIsSelected(debutFixture);
+  };
+
+  it('should cancel the earlier stop of an activity already stopped through its direct action, with a reason, a preview and a confirmation', () => {
+    givenAnActivityAlreadyStoppedByAnEarlierStop();
+
+    whenOpeningTheRealDossier();
+    whenChoosingTheDirectAction(`Annuler l’arrêt de 12:00`);
+    whenPreviewingTheCancellationWithItsReason();
+    whenConfirmingTheCancellation();
+
+    thenTheEarlierStopIsCancelledWithItsReason();
+  });
+
+  const arretDeMidiFixture = ncFixture;
+  const annulationDeLArretDeMidiFixture: components['schemas']['RestActeAnnulation'] = {
+    kind: 'ANNULATION',
+    pointage: arretDeMidiFixture,
+    motif: motifFixture,
+  };
+
+  const arretDeMidiRecuFixture: components['schemas']['RestEvenementDAtelier'] = {
+    id: arretDeMidiFixture,
+    type: 'FIN',
+    intention: 'FIN',
+    cible: debutFixture,
+    dateDeSurvenue: instantNonConformiteFixture,
+    operateurId: operateurFixture,
+    auteur: 'camille',
+    dateDEnregistrement: '2026-09-15T08:01:00Z',
+    estUneRegularisation: false,
+  };
+
+  const givenAnActivityAlreadyStoppedByAnEarlierStop = (): void => {
+    const dossier = dossierFixture();
+    const avant = {
+      ...dossier,
+      suivi: {
+        ...dossier.suivi,
+        journal: journalFixture.map(fait => (fait.id === arretDeMidiFixture ? arretDeMidiRecuFixture : fait)),
+      },
+      activites: activitesFixture(false).filter(activite => activite.activite === debutFixture),
+      diagnostics: [
+        {
+          pointage: finFixture,
+          raison: 'CIBLE_DEJA_TERMINEE',
+          cible: { activite: debutFixture, ouvrant: debutFixture, termineePar: arretDeMidiFixture },
+        },
+      ],
+      choix: [],
+    } satisfies components['schemas']['RestDossierAnomalie'];
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: avant });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}/apercus`, request => {
+      const body = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: {
+          commande: body.commande,
+          adresse: ligneFixture.adresse,
+          revision: 3,
+          evaluation: '2026-10-04T10:00:00Z',
+          empreinteConsequences: 'empreinte-annulation',
+          acte: annulationDeLArretDeMidiFixture,
+          avant,
+          apres: dossierFixture(true),
+        } satisfies components['schemas']['RestApercuDeResolution'],
+      });
+    }).as('apercuAnnulation');
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, request => {
+      const body = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      const confirmation = confirmationFixture(body.commande);
+      request.reply({
+        body: {
+          ...confirmation,
+          recu: {
+            commande: body.commande,
+            adresse: ligneFixture.adresse,
+            acte: annulationDeLArretDeMidiFixture,
+            revisionDeDepart: 3,
+            revisionEnregistree: 4,
+            enregistreLe: '2026-10-04T10:00:00Z',
+            evenementsTouches: [arretDeMidiFixture],
+          },
+        } satisfies components['schemas']['RestConfirmationEnregistree'],
+      });
+    }).as('confirmationAnnulation');
+  };
+
+  const whenChoosingTheDirectAction = (libelle: string): void => {
+    cy.get(dataSelector('anomalie-action-directe')).should('have.length', 2);
+    cy.get(dataSelector('anomalie-action-directe'))
+      .eq(0)
+      .should('have.text', 'Annuler l’arrêt de 17:00')
+      .and('have.attr', 'aria-pressed', 'false');
+    cy.contains(dataSelector('anomalie-action-directe'), libelle).click();
+    cy.contains(dataSelector('anomalie-action-directe'), libelle).should('have.attr', 'aria-pressed', 'true');
+  };
+
+  const whenPreviewingTheCancellationWithItsReason = (): void => {
+    cy.get(dataSelector('anomalie-acte')).should('contain.text', 'Annulation du pointage');
+    cy.get(dataSelector('anomalie-motif')).type(motifFixture);
+    cy.get(dataSelector('anomalie-previsualiser')).click();
+    cy.get(dataSelector('anomalie-apercu')).should('be.visible');
+  };
+
+  const whenConfirmingTheCancellation = (): void => {
+    cy.get(dataSelector('anomalie-confirmer')).click();
+  };
+
+  const thenTheEarlierStopIsCancelledWithItsReason = (): void => {
+    cy.wait('@apercuAnnulation').its('request.body.acte').should('deep.equal', annulationDeLArretDeMidiFixture);
+    cy.wait('@confirmationAnnulation').its('request.body').should('deep.include', { acte: annulationDeLArretDeMidiFixture });
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
   };
 
   it('should preserve a precise arbitrary correction through preview and confirmation and refresh the authoritative list', () => {
