@@ -3620,8 +3620,7 @@ describe('Anomaly dossier page', () => {
     });
 
     it('should take the first occurrence of an hour the clock repeats', async () => {
-      givenAnAutomaticEndStartedOn(instantLocalFixture(new Date(2025, 9, 20, 8, 0)));
-      givenASuccessfulPreview(undefined, acteFinRegulariseeFixture('poste-1', '2025-10-26T02:30:00+02:00'));
+      givenAnAutomaticEndOverTheAutumnChangeOfHour(acteFinRegulariseeFixture('poste-1', '2025-10-26T02:30:00+02:00'));
       await whenRendering();
       await whenClicking('anomalie-choix');
       await whenEnteringTheInstant('26/10/2025', '02:30');
@@ -3911,16 +3910,19 @@ describe('Anomaly dossier page', () => {
     read.result = { kind: 'DOSSIER', dossier: { ...dossier, choix: dossier.choix.map(choix => ({ ...choix, code })) } };
   };
 
-  const givenAnAutomaticEndStartedOn = (debut: string): void => {
+  const givenAnAutomaticEndOverTheAutumnChangeOfHour = (acte: ActeResolution): void => {
+    const debut = instantLocalFixture(new Date(2025, 9, 25, 20, 0));
+    const echeance = instantLocalFixture(new Date(2025, 9, 26, 8, 0));
     const dossier = dossierFinAutomatiqueFixture();
+    const ouvrant = requiredFixture(dossier.journal[0], 'automatic end fixture opening');
     const activite = requiredFixture(dossier.activites[0], 'automatic end fixture activity');
-    read.result = {
-      kind: 'DOSSIER',
-      dossier: {
-        ...dossier,
-        activites: [{ ...activite, periode: { categorie: 'TRAVAIL', debut, fin: INSTANT_ECHEANCE, duree: 'PT13H' } }],
-      },
+    const nuit: DossierAnomalie = {
+      ...dossier,
+      journal: [{ ...ouvrant, fait: { ...ouvrant.fait, instant: debut }, enregistre: debut }],
+      activites: [{ ...activite, periode: { categorie: 'TRAVAIL', debut, fin: echeance, duree: 'PT13H' } }],
     };
+    read.result = { kind: 'DOSSIER', dossier: nuit };
+    givenASuccessfulPreview(nuit, acte, nuit);
   };
 
   const givenAnAutomaticEndBesideAnActivityStartedAtNoon = (): void => {
