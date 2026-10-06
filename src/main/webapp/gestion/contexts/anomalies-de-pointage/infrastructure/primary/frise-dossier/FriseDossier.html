@@ -87,28 +87,28 @@
       <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
       }
     </button>
-    } } } @if (disposition().poignee; as poignee) {
+    } @case ('POIGNEE') {
     <div
       role="slider"
       tabindex="0"
       data-selector="anomalie-poignee"
-      [style.left.%]="poignee.gauche"
-      [style.top.px]="poignee.haut"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
       [attr.aria-label]="libelles.frise.poignee"
-      [attr.aria-valuemin]="poignee.min"
-      [attr.aria-valuemax]="poignee.max"
-      [attr.aria-valuenow]="poignee.valeur"
-      [attr.aria-valuetext]="poignee.texte"
-      [attr.aria-disabled]="poignee.desactivee"
-      (keydown)="touche($event, poignee)"
-      (pointerdown)="saisit($event, plan, poignee)"
-      (pointermove)="glisse($event, plan, poignee)"
+      [attr.aria-valuemin]="element.min"
+      [attr.aria-valuemax]="element.max"
+      [attr.aria-valuenow]="element.valeur"
+      [attr.aria-valuetext]="element.texte"
+      [attr.aria-disabled]="element.desactivee"
+      (keydown)="touche($event, element)"
+      (pointerdown)="saisit($event, plan, element)"
+      (pointermove)="glisse($event, plan, element)"
       (pointerup)="relache()"
       (pointercancel)="relache()"
     >
-      {{ poignee.texte }}
+      {{ element.texte }}
     </div>
-    } @if (disposition().apres; as apres) {
+    } } } @if (disposition().apres; as apres) {
     <div
       role="group"
       data-selector="anomalie-frise-apres"

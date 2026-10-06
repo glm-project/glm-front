@@ -136,7 +136,7 @@ l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-acti
 Une proposition de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ
-date et heure. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
+date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
 indisponible tant qu'elle manque. Pendant cette proposition (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
 qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page

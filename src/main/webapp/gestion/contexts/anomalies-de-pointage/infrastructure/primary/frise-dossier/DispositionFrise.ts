@@ -64,7 +64,7 @@ export interface RepereFrise {
   readonly faitDeLActe: boolean;
 }
 
-export type ElementFrise = BarreFrise | RepereFrise;
+export type ElementFrise = BarreFrise | RepereFrise | PositionDePoignee;
 
 export interface FlecheFrise {
   readonly cle: string;
@@ -77,6 +77,9 @@ export interface FlecheFrise {
 }
 
 export interface PositionDePoignee {
+  readonly kind: 'POIGNEE';
+  readonly cle: string;
+  readonly instant: number;
   readonly gauche: number;
   readonly haut: number;
   readonly min: number;
@@ -107,7 +110,6 @@ export interface DispositionFrise {
   readonly intituleDesPointages: IntituleDeRangee | undefined;
   readonly fleches: readonly FlecheFrise[];
   readonly elements: readonly ElementFrise[];
-  readonly poignee: PositionDePoignee | undefined;
   readonly rangeeDePlacement: RangeeDePlacement | undefined;
   readonly apres: DispositionApres | undefined;
 }
@@ -300,6 +302,9 @@ const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number 
   );
 
 const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number): PositionDePoignee => ({
+  kind: 'POIGNEE',
+  cle: 'poignee',
+  instant: instantTenuSur(poignee, echelle),
   gauche: positionSur(echelle, instantTenuSur(poignee, echelle)),
   haut,
   min: Date.parse(poignee.bornes.min),
@@ -406,7 +411,8 @@ export const dispositionDeFrise = (
   const barres = parDebut(vue.activites).map((activite, rang) =>
     barreDe(activite, hautDesActivites + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX), contexte),
   );
-  const elements = [...barres, ...reperes].sort((gauche, droite) => gauche.instant - droite.instant);
+  const positionDePoignee = poignee === undefined ? [] : [positionDeLaPoignee(poignee, echelle, hautDeLaPoignee)];
+  const elements = [...barres, ...reperes, ...positionDePoignee].sort((gauche, droite) => gauche.instant - droite.instant);
   const apres =
     apercu === undefined
       ? undefined
@@ -424,7 +430,6 @@ export const dispositionDeFrise = (
     intituleDesPointages: intitule,
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,
-    poignee: poignee === undefined ? undefined : positionDeLaPoignee(poignee, echelle, hautDeLaPoignee),
     rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes, hautDesReperes),
     apres,
   };

@@ -432,6 +432,22 @@ describe('Frise of a dossier', () => {
     ]);
   });
 
+  it('should place the handle in the tab order at the time it stands at', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
+
+    thenTheFocusOrderIs([
+      'Travail · lundi 14 septembre à 08:00 · À résoudre',
+      '08:00:00 · Démarrage',
+      'Heure proposée du fait',
+      '12:00:00 · Arrêt',
+    ]);
+  });
+
   it('should give an activity without period its row and its label but no bar', async () => {
     const sansPeriode: ActiviteAnomalie = {
       id: new ActiviteAnomalieId('a-1'),
@@ -1877,6 +1893,11 @@ describe('Frise of a dossier', () => {
   const thenTheTabOrderIs = (expected: readonly string[]): void => {
     const buttons = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')];
     expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual(expected);
+  };
+
+  const thenTheFocusOrderIs = (expected: readonly string[]): void => {
+    const focusables = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button, [role="slider"]')];
+    expect(focusables.map(focusable => focusable.getAttribute('aria-label'))).toEqual(expected);
   };
 
   const thenTheGraduationsAre = (expected: readonly string[]): void => {
