@@ -317,7 +317,7 @@ describe('Bounds of the instant of a fact', () => {
     expect(saisie.command(cadreFixture)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
   });
 
-  it('should still match the preview of a fact the clock has since passed, whatever the time', () => {
+  it('should match the preview of a fact beyond the clock, since matching ignores the bounds of the fact', () => {
     const saisie = SaisieActe.regularise({ ...faitFixture, instant: '2099-01-01T00:00:00-03:00' });
 
     expect(saisie.matches({ kind: 'REGULARISATION', fait: { ...faitFixture, instant: '2099-01-01T00:00:00-03:00' } })).toBe(true);

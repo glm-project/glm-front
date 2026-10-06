@@ -13,9 +13,9 @@ describe('Outcome of an act', () => {
   });
 
   it.each([
-    { enConflit: true, finAutomatique: false },
-    { enConflit: true, finAutomatique: true },
-  ])('should leave a conflict when it is $enConflit and the automatic end is $finAutomatique', apres => {
+    { cas: 'a conflict alone', apres: { enConflit: true, finAutomatique: false } },
+    { cas: 'a conflict beside an automatic end', apres: { enConflit: true, finAutomatique: true } },
+  ])('should leave the conflict when the act on a conflict leaves $cas', ({ apres }) => {
     const issue = IssueDeLActe.depuis(unConflit(), unDossierApres(apres));
 
     expect(issue.kind).toBe('CONFLIT_RESTANT');
@@ -34,20 +34,32 @@ describe('Outcome of an act', () => {
   });
 
   it.each([
-    { enConflit: false, finAutomatique: true },
-    { enConflit: true, finAutomatique: false },
-    { enConflit: true, finAutomatique: true },
-  ])('should leave the anomaly when it is $enConflit and the automatic end is $finAutomatique, never as a conflict', apres => {
+    { cas: 'the automatic end', apres: { enConflit: false, finAutomatique: true } },
+    { cas: 'a conflict', apres: { enConflit: true, finAutomatique: false } },
+    { cas: 'a conflict beside the automatic end', apres: { enConflit: true, finAutomatique: true } },
+  ])('should leave the anomaly, never as a conflict, when the act on an automatic end leaves $cas', ({ apres }) => {
     const issue = IssueDeLActe.depuis(uneFinAutomatique(), unDossierApres(apres));
 
     expect(issue.kind).toBe('ANOMALIE_RESTANTE');
   });
 
   it.each([
-    { origine: { etat: 'ANCRE_ANNULEE' as const, enConflit: true }, attendue: 'CONFLIT_RESTANT' },
-    { origine: { etat: 'FIN_AUTOMATIQUE' as const, enConflit: true }, attendue: 'ANOMALIE_RESTANTE' },
-    { origine: { etat: 'EN_CONFLIT' as const, enConflit: false }, attendue: 'ANOMALIE_RESTANTE' },
-  ])('should read the nature of an origin that is $origine.etat with a conflict of $origine.enConflit', ({ origine, attendue }) => {
+    {
+      cas: 'a cancelled anchor still in conflict as a conflict',
+      origine: { etat: 'ANCRE_ANNULEE' as const, enConflit: true },
+      attendue: 'CONFLIT_RESTANT',
+    },
+    {
+      cas: 'an automatic end whose perimeter is in conflict as an automatic end',
+      origine: { etat: 'FIN_AUTOMATIQUE' as const, enConflit: true },
+      attendue: 'ANOMALIE_RESTANTE',
+    },
+    {
+      cas: 'a conflict address no longer in conflict as an automatic end',
+      origine: { etat: 'EN_CONFLIT' as const, enConflit: false },
+      attendue: 'ANOMALIE_RESTANTE',
+    },
+  ])('should read the origin of $cas', ({ origine, attendue }) => {
     const issue = IssueDeLActe.depuis(
       { ...origine, ligne: uneLigneAdressee('fin-17') },
       unDossierApres({ enConflit: true, finAutomatique: true }),
