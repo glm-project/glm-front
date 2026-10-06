@@ -1,25 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { erreursALire, faitDuGeste, gesteDuFait, libelleDuGeste, selectionInitiale } from './PresentationDossier';
+import { faitDuGeste, libelleDuGeste, selectionInitiale } from './PresentationDossier';
 
 describe('Initial selection of a dossier', () => {
   it('should select nothing while no dossier is read', () => {
     expect(selectionInitiale(undefined)).toBeUndefined();
-  });
-});
-
-describe('Gesture a pointage signals', () => {
-  it('should read back the type and the intention of the gesture it named', () => {
-    const valeur = gesteDuFait({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
-
-    expect(faitDuGeste(valeur)).toEqual({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
-  });
-
-  it('should read no type and no intention from the empty choice', () => {
-    expect(faitDuGeste('')).toEqual({ type: '', intention: '' });
-  });
-
-  it('should signal nothing for a type and an intention that are not a gesture', () => {
-    expect(gesteDuFait({ type: 'FIN', intention: 'OUVERTURE' })).toBe('');
   });
 });
 
@@ -34,12 +18,8 @@ describe('Name of a fact outside the five gestures', () => {
   });
 });
 
-describe('Errors of an entry to read', () => {
-  it('should read the missing gesture once when neither the type nor the intention is known', () => {
-    expect(erreursALire(['TYPE_REQUIS', 'INTENTION_REQUISE', 'OPERATEUR_REQUIS'])).toEqual(['TYPE_REQUIS', 'OPERATEUR_REQUIS']);
-  });
-
-  it('should keep a missing intention that the type does not already announce', () => {
-    expect(erreursALire(['INTENTION_REQUISE'])).toEqual(['INTENTION_REQUISE']);
+describe('Gesture read from a choice', () => {
+  it('should read no type and no intention from a choice that names none of the five gestures', () => {
+    expect(faitDuGeste('')).toEqual({ type: '', intention: '' });
   });
 });

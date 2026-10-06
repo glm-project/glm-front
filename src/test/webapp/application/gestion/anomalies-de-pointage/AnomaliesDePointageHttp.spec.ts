@@ -183,11 +183,28 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenActivityIsSelected(debutFixture);
   };
 
+  it('should offer to cancel each of the two stops of an activity already stopped through a direct action', () => {
+    givenAnActivityAlreadyStoppedByAnEarlierStop();
+
+    whenOpeningTheRealDossier();
+
+    thenTheTwoStopsCanBeCancelledThroughTheirDirectAction();
+  });
+
+  it('should press only the direct action the manager chose', () => {
+    givenAnActivityAlreadyStoppedByAnEarlierStop();
+    whenOpeningTheRealDossier();
+
+    whenChoosingTheDirectAction('ANNULATION', arretDeMidiFixture);
+
+    thenOnlyTheEarlierStopCancellationIsChosen();
+  });
+
   it('should cancel the earlier stop of an activity already stopped through its direct action, with a reason, a preview and a confirmation', () => {
     givenAnActivityAlreadyStoppedByAnEarlierStop();
 
     whenOpeningTheRealDossier();
-    whenChoosingTheDirectAction(`Annuler l’arrêt de 12:00`);
+    whenChoosingTheDirectAction('ANNULATION', arretDeMidiFixture);
     whenPreviewingTheCancellationWithItsReason();
     whenConfirmingTheCancellation();
 
@@ -267,14 +284,26 @@ describe('HTTP conflict resolution in Gestion', () => {
     }).as('confirmationAnnulation');
   };
 
-  const whenChoosingTheDirectAction = (libelle: string): void => {
+  const directActionSelector = (acte: string, pointage: string): string =>
+    `[data-selector="anomalie-action-directe"][data-acte="${acte}"][data-pointage="${pointage}"]`;
+
+  const thenTheTwoStopsCanBeCancelledThroughTheirDirectAction = (): void => {
     cy.get(dataSelector('anomalie-action-directe')).should('have.length', 2);
-    cy.get(dataSelector('anomalie-action-directe'))
-      .eq(0)
+    cy.get(directActionSelector('ANNULATION', finFixture))
       .should('have.text', 'Annuler l’arrêt de 17:00')
       .and('have.attr', 'aria-pressed', 'false');
-    cy.contains(dataSelector('anomalie-action-directe'), libelle).click();
-    cy.contains(dataSelector('anomalie-action-directe'), libelle).should('have.attr', 'aria-pressed', 'true');
+    cy.get(directActionSelector('ANNULATION', arretDeMidiFixture))
+      .should('have.text', 'Annuler l’arrêt de 12:00')
+      .and('have.attr', 'aria-pressed', 'false');
+  };
+
+  const whenChoosingTheDirectAction = (acte: string, pointage: string): void => {
+    cy.get(directActionSelector(acte, pointage)).click();
+  };
+
+  const thenOnlyTheEarlierStopCancellationIsChosen = (): void => {
+    cy.get(directActionSelector('ANNULATION', arretDeMidiFixture)).should('have.attr', 'aria-pressed', 'true');
+    cy.get(directActionSelector('ANNULATION', finFixture)).should('have.attr', 'aria-pressed', 'false');
   };
 
   const whenPreviewingTheCancellationWithItsReason = (): void => {

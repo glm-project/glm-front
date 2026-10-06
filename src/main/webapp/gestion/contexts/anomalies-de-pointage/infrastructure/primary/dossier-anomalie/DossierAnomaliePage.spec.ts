@@ -903,6 +903,22 @@ describe('Anomaly dossier page', () => {
     thenNoDirectActionIsPressed();
   });
 
+  it('should list the propositions of the server, then the direct actions, then the other corrections', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenThePropositionsComeBeforeTheDirectActionsAndTheOtherCorrections();
+  });
+
+  it('should name the direct action on a regularised pointage as regularised', async () => {
+    givenARegularisedPassageAtFault();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler le passage en NC régularisé de 18:00']);
+  });
+
   it('should prepare the cancellation of the pointage at fault when the manager chooses its direct action', async () => {
     givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
     await whenRendering();
@@ -2389,30 +2405,6 @@ describe('Anomaly dossier page', () => {
     thenDetailedFactIsOpen();
     thenAbsent('anomalie-motif');
   });
-
-  it.each(['anomalie-type-DEBUT', 'anomalie-type-NON_CONFORMITE', 'anomalie-type-FIN'])(
-    'should not offer the type "%s" apart from what the pointage signals',
-    async selector => {
-      await whenRendering();
-      await whenClicking('anomalie-detail');
-
-      await whenClicking('anomalie-regulariser');
-
-      thenAbsent(selector);
-    },
-  );
-
-  it.each(['anomalie-intention-OUVERTURE', 'anomalie-intention-TRANSITION', 'anomalie-intention-FIN'])(
-    'should not offer the intention "%s" apart from what the pointage signals',
-    async selector => {
-      await whenRendering();
-      await whenClicking('anomalie-detail');
-
-      await whenClicking('anomalie-regulariser');
-
-      thenAbsent(selector);
-    },
-  );
 
   it('should offer the five gestures a pointage can signal, after an empty choice, when a missing fact is regularised from scratch', async () => {
     await whenRendering();
@@ -4787,6 +4779,16 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const givenARegularisedPassageAtFault = (): void => {
+    givenAConflictDiagnosedAs({
+      cas: 'a regularised passage at fault',
+      raison: 'CONTRADICTION_REGULARISATION',
+      enCause: { geste: 'PASSAGE_NC', heure: '18:00', regularisation: true },
+      activite: TRAVAIL_8,
+      phrase: '',
+    });
+  };
+
   const givenAStopBeforeTheOpeningOfItsActivity = (): void => {
     const dossier = dossierAnomalieFixture();
     read.result = {
@@ -5319,6 +5321,11 @@ describe('Anomaly dossier page', () => {
     const following = Node.DOCUMENT_POSITION_FOLLOWING;
     expect(frise().compareDocumentPosition(element('anomalie-selection')) & following).toBe(following);
     expect(element('anomalie-selection').compareDocumentPosition(element('anomalie-decision')) & following).toBe(following);
+  };
+  const thenThePropositionsComeBeforeTheDirectActionsAndTheOtherCorrections = (): void => {
+    const following = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(element('anomalie-choix').compareDocumentPosition(element('anomalie-actions-directes')) & following).toBe(following);
+    expect(element('anomalie-actions-directes').compareDocumentPosition(element('anomalie-detail')) & following).toBe(following);
   };
   const thenTheSelectionTimeIs = (expected: string): void => {
     const time = requiredFixture(element('anomalie-selection').querySelector<HTMLElement>('time'), 'selection time');

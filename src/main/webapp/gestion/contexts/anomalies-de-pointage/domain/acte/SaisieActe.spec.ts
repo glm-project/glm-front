@@ -62,6 +62,16 @@ describe('Preparation of a resolution acte', () => {
 
     expect(saisie.errors(cadreOuvert)).toEqual([erreur]);
   });
+  it.each([
+    [{ type: 'FIN' }, 'INTENTION_REQUISE'],
+    [{ intention: 'FIN', activiteVisee: 'travail-8' }, 'TYPE_REQUIS'],
+  ] as const)('should not call a half chosen stop incompatible, only ask for what is missing', (changement, erreur) => {
+    const saisie = SaisieActe.regularise().afterChange({
+      fait: { ...changement, operateur: 'operateur-1', instant: '2026-09-14T10:00:00Z' },
+    });
+
+    expect(saisie.errors(cadreOuvert)).toEqual([erreur]);
+  });
   it('should accept a motif of exactly two hundred and fifty five characters', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'x'.repeat(255) });
 
