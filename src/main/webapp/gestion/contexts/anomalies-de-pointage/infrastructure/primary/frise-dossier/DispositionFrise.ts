@@ -357,10 +357,10 @@ export const dispositionDeFrise = (
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
   const pointages = pointagesLisibles(vue.journal);
   const pointagesApres = apercu === undefined ? [] : pointagesLisibles(apercu.apres.journal);
-  const bornesDuGeste = (poignee ?? placement)?.bornes;
+  const bornesDeLaPoignee = (poignee ?? placement)?.bornes;
   const echelle = echelleDe(
     instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
-    bornesDuGeste && Date.parse(bornesDuGeste.max),
+    bornesDeLaPoignee && Date.parse(bornesDeLaPoignee.max),
   );
   const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>() };

@@ -29,8 +29,8 @@
         [placement]="placement()"
         [apercu]="apercu()"
         (selectionDemandee)="selection.set($event)"
-        (deplacementDemande)="deplacer($event)"
-        (placementDemande)="placer($event)"
+        (deplacementDemande)="deplacer(dossier, $event)"
+        (placementDemande)="placer(dossier, $event)"
       />
       @if (placement()) {
       <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-frise-aide">{{ libelles.frise.placerLaFin }}</p>
@@ -160,7 +160,7 @@
             class="bouton"
             data-selector="anomalie-instant-moins-5"
             [disabled]="!peutDeplacer(-5, poignee)"
-            (click)="deplacer({ demande: { kind: 'DE', minutes: -5 }, poignee })"
+            (click)="deplacer(dossier, { demande: { kind: 'DE', minutes: -5 }, poignee })"
           >
             {{ libelles.moinsCinqMinutes }}
           </button>
@@ -169,7 +169,7 @@
             class="bouton"
             data-selector="anomalie-instant-plus-5"
             [disabled]="!peutDeplacer(5, poignee)"
-            (click)="deplacer({ demande: { kind: 'DE', minutes: 5 }, poignee })"
+            (click)="deplacer(dossier, { demande: { kind: 'DE', minutes: 5 }, poignee })"
           >
             {{ libelles.plusCinqMinutes }}
           </button>

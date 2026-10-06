@@ -60,6 +60,7 @@ const diagnosticSur = (pointage: string, activite = 'travail-8'): DiagnosticConf
 
 const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
   instant: instantAt(heure),
+  activiteVisee: 'travail-8',
   bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) },
   desactivee: false,
   ...surcharge,
@@ -87,6 +88,7 @@ const correctionTardiveFixture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANS
   );
 
 const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): PlacementDeLInstant => ({
+  activiteVisee: 'travail-8',
   bornes: { min: instantAt('08:00'), max: instantAt('13:00') },
   desactivee: false,
   ...surcharge,

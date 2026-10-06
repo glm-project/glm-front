@@ -53,7 +53,13 @@ import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
 import { FriseDossier } from '../frise-dossier/FriseDossier';
-import { DeplacementDemande, PlacementDemande, placementDuDossier, poigneeDuDossier } from '../frise-dossier/PoigneeDeFrise';
+import {
+  bornesDuDeplacement,
+  DeplacementDemande,
+  PlacementDemande,
+  placementDuDossier,
+  poigneeDuDossier,
+} from '../frise-dossier/PoigneeDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
@@ -233,16 +239,16 @@ export class DossierAnomaliePage {
     if (this.preparation.resolution().saisie.changesGuidedFact(changement)) this.choixSelectionne.set(undefined);
   }
 
-  protected deplacer({ demande, poignee }: DeplacementDemande): void {
+  protected deplacer(dossier: DossierAnomalie, { demande, poignee }: DeplacementDemande): void {
     this.lireLHorloge();
-    this.change({ fait: { instant: instantDeplace(demande, poignee.instant, { min: poignee.bornes.min, max: this.maintenant() }) } });
+    this.change({ fait: { instant: instantDeplace(demande, poignee.instant, bornesDuDeplacement(this.cadreDe(dossier), poignee)) } });
   }
 
-  protected placer({ instant, placement }: PlacementDemande): void {
+  protected placer(dossier: DossierAnomalie, { instant, placement }: PlacementDemande): void {
     this.lireLHorloge();
     this.change({
       fait: {
-        instant: instantDeplace({ kind: 'VERS', instant }, this.maintenant(), { min: placement.bornes.min, max: this.maintenant() }),
+        instant: instantDeplace({ kind: 'VERS', instant }, this.maintenant(), bornesDuDeplacement(this.cadreDe(dossier), placement)),
       },
     });
   }

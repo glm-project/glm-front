@@ -15,6 +15,7 @@ export type DemandeDeDeplacement =
   | { readonly kind: 'VERS'; readonly instant: number };
 
 export interface PlacementDeLInstant {
+  readonly activiteVisee: string;
   readonly bornes: BornesDePoignee;
   readonly desactivee: boolean;
 }
@@ -27,9 +28,15 @@ export interface PlacementDemande {
 export interface PoigneeDeFrise {
   readonly instant: string;
   readonly origine?: string;
+  readonly activiteVisee: string;
   readonly bornes: BornesDePoignee;
   readonly desactivee: boolean;
 }
+
+export const bornesDuDeplacement = (cadre: CadreDuFait, visant: Pick<PoigneeDeFrise, 'activiteVisee' | 'bornes'>): BornesDePoignee => ({
+  min: visant.bornes.min,
+  max: cadre.bornes(visant).max,
+});
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
 
@@ -75,6 +82,7 @@ const poigneeDeLaProposition = (
   return {
     instant: fait.instant,
     ...(proposition.kind === 'CORRECTION' ? { origine: proposition.pointage } : {}),
+    activiteVisee: fait.activiteVisee,
     bornes: { min, max },
     desactivee,
   };
@@ -96,7 +104,7 @@ const placementDeLaProposition = (
   if (!proposeUnFaitQuiTermine(proposition)) return undefined;
   if (new InstantPointage(proposition.fait.instant).isValid()) return undefined;
   const { min, max } = cadre.bornes(proposition.fait);
-  return min === undefined ? undefined : { bornes: { min, max }, desactivee };
+  return min === undefined ? undefined : { activiteVisee: proposition.fait.activiteVisee, bornes: { min, max }, desactivee };
 };
 
 export const placementDuDossier = (

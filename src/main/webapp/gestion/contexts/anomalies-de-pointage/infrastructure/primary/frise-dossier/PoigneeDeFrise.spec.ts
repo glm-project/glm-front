@@ -45,7 +45,7 @@ describe('Handle of the proposed instant', () => {
 
       const placement = placementDuDossier({ activites }, finARegulariser, maintenant, desactivee);
 
-      expect(placement).toEqual({ bornes: { min: debut, max: maintenant }, desactivee });
+      expect(placement).toEqual({ activiteVisee: 'travail-8', bornes: { min: debut, max: maintenant }, desactivee });
     },
   );
 
