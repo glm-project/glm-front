@@ -29,6 +29,7 @@ export class IssueDeLActe {
   }
 
   private static finsAutomatiquesRestantesAilleursQue(adresse: AdresseDossier, apres: Apres): readonly AdresseDossier[] {
+    if (!apres.finAutomatique) return [];
     return apres.activites
       .filter(activite => activite.etat === 'ECHUE')
       .map(activite => ({ suivi: apres.ligne.adresse.suivi, pointage: activite.ouvrant }))

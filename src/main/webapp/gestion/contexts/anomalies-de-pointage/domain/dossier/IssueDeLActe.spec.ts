@@ -129,6 +129,17 @@ describe('Outcome of an act', () => {
     expect(issue.finsAutomatiquesRestantes).toEqual([]);
   });
 
+  it('should address no automatic end when the dossier after the act carries none, even beside an expired activity', () => {
+    const apres = {
+      ...unDossierApres({ enConflit: false, finAutomatique: false }),
+      activites: [uneActivite('travail-8', 'ECHUE', 'debut-8')],
+    };
+
+    const issue = IssueDeLActe.depuis(unConflit(), apres);
+
+    expect(issue).toMatchObject({ kind: 'TRAITEE', finsAutomatiquesRestantes: [] });
+  });
+
   const unConflit = (): Pick<DossierAnomalie, 'etat' | 'enConflit' | 'ligne'> => ({
     etat: 'EN_CONFLIT',
     enConflit: true,

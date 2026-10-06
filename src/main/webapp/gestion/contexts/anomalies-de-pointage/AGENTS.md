@@ -246,7 +246,8 @@ l'ouvrant corrigé est encore échu). Elle dépend de la nature du dossier d'ori
 conflit (`etat` autre que `FIN_AUTOMATIQUE` et `enConflit`) a trois issues, `TRAITEE`,
 `CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE` et `CONFLIT_RESTANT` ; une fin automatique (tout autre dossier) en a deux,
 `TRAITEE` et `ANOMALIE_RESTANTE`, et ne se présente jamais comme un conflit. Elle rend aussi l'adresse de chaque fin
-automatique restante, une par activité `ECHUE` du dossier d'après, sauf celle dont l'adresse est l'adresse d'origine (le lien mènerait à la page
+automatique restante, une par activité `ECHUE` du dossier d'après quand celui-ci porte `finAutomatique` (sans quoi aucune, comme
+l'issue n'en annonce aucune), sauf celle dont l'adresse est l'adresse d'origine (le lien mènerait à la page
 affichée) : `{ suivi, pointage: activite.ouvrant }`, l'`ouvrant` étant l'`evenement` reçu de l'activité. L'aperçu lit son origine dans `apercu.avant` et dit la phrase sans lien ; le
 reçu la dit avec un lien `anomalie-fin-automatique-restante` par fin restante vers `/anomalies/{suivi}?pointage={ouvrant}`,
 qui garde `nature`, `operateur`, `element` et `page`. L'origine est le dossier `avant` de l'aperçu confirmé :
