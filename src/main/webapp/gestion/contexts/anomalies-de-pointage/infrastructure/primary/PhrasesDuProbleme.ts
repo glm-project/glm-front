@@ -2,6 +2,7 @@ import { TypePointage } from '../../domain/acte/ActeResolution';
 import { conflitAExpliquer } from '../../domain/dossier/ConflitAExpliquer';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
+import { gestesTardifs } from './GestesTardifs';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 import { heureDe, libelleDuGeste } from './PresentationDossier';
 
@@ -22,7 +23,6 @@ const CATEGORIE_DU_TYPE: Readonly<Partial<Record<TypePointage, CategorieActivite
   DEBUT: 'TRAVAIL',
   NON_CONFORMITE: 'NON_CONFORMITE',
 };
-const CODES_TARDIFS = ['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'];
 
 const majuscule = (texte: string): string => texte.charAt(0).toUpperCase() + texte.slice(1);
 const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
@@ -119,16 +119,8 @@ const phrasesDeConflit = (dossier: DossierAnomalie): readonly string[] =>
   dossier.diagnostics?.length ? dossier.diagnostics.map(diagnostic => phraseDeConflit(dossier, diagnostic)) : [dossier.ligne.explication];
 
 const pointageTardifDe = (dossier: DossierAnomalie, activite: ActiviteAnomalie): PointageAnomalieId | undefined => {
-  for (const choix of dossier.choix) {
-    const proposition = choix.saisie.proposition;
-    const tardif =
-      choix.code !== undefined
-      && CODES_TARDIFS.includes(choix.code)
-      && proposition?.kind === 'CORRECTION'
-      && proposition.fait.activiteVisee === activite.id.activite;
-    if (tardif) return new PointageAnomalieId(proposition.pointage);
-  }
-  return undefined;
+  const tardif = gestesTardifs(dossier.choix).find(geste => geste.activite === activite.id.activite);
+  return tardif === undefined ? undefined : new PointageAnomalieId(tardif.pointage);
 };
 
 const phraseDeFinAutomatique = (dossier: DossierAnomalie, activite: ActiviteAnomalie, periode: PeriodeEchue): string => {
