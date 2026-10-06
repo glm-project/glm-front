@@ -1,7 +1,7 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
-import { PropositionActe } from '../../../domain/acte/SaisieActe';
+import { PropositionActe, termineUneActivite } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
 
 export interface BornesDePoignee {
@@ -63,11 +63,9 @@ export const demandeDeLaTouche = (touche: Pick<KeyboardEvent, 'key' | 'shiftKey'
 const proposeUnFait = (proposition: PropositionActe | undefined): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> =>
   proposition !== undefined && proposition.kind !== 'ANNULATION';
 
-const terminaUneActivite = (fait: { readonly intention: string }): boolean => fait.intention === 'FIN' || fait.intention === 'TRANSITION';
-
 const proposeUnFaitQuiTermine = (
   proposition: PropositionActe | undefined,
-): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> => proposeUnFait(proposition) && terminaUneActivite(proposition.fait);
+): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> => proposeUnFait(proposition) && termineUneActivite(proposition.fait);
 
 const poigneeDeLaProposition = (
   proposition: PropositionActe | undefined,

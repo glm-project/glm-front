@@ -17,6 +17,9 @@ export interface SaisieFait {
   readonly instant: string;
 }
 
+export const termineUneActivite = (fait: Pick<SaisieFait, 'intention'>): boolean =>
+  fait.intention === 'FIN' || fait.intention === 'TRANSITION';
+
 export interface ChangementSaisie {
   readonly motif?: string;
   readonly fait?: Partial<SaisieFait>;
@@ -141,7 +144,7 @@ export class SaisieActe {
   }
 
   private targetIsMissing(fait: SaisieFait): boolean {
-    return (fait.intention === 'FIN' || fait.intention === 'TRANSITION') && fait.activiteVisee.trim() === '';
+    return termineUneActivite(fait) && fait.activiteVisee.trim() === '';
   }
 
   private sameFact(left: FaitPropose, right: FaitPropose): boolean {
