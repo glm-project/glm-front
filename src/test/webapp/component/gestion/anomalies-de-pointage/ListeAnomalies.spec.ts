@@ -1,9 +1,22 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
-import { ligneFixture } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+import {
+  autreElementFixture,
+  autreElementNomFixture,
+  autreOperateurFixture,
+  autreOperateurNomFixture,
+  elementFixture,
+  elementNomFixture,
+  elementReferenceFixture,
+  givenTheElements,
+  givenTheReferentiel,
+  ligneFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 
 describe('Conflict list in Gestion', () => {
   beforeEach(() => {
+    givenTheReferentiel();
+    givenTheElements();
     cy.intercept('GET', '/api/atelier/anomalies*', {
       body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
     });
@@ -15,19 +28,93 @@ describe('Conflict list in Gestion', () => {
     thenThePageDoesNotOverflow();
   });
 
-  it('should explain an unmatched operator when filters are submitted with Enter', () => {
+  it('should explain an unmatched selection when the chosen operator and element are applied', () => {
     whenVisitingAt(1280);
-    whenFilteringWithEnter();
+    whenApplyingTheChosenOperatorAndElement();
 
     thenNoConflictMatchesTheFilters();
   });
 
-  const whenFilteringWithEnter = (): void => {
-    cy.intercept('GET', '/api/atelier/anomalies?nature=CONFLIT&operateur=Op%C3%A9rateur%20absent&element=M-042&page=0&size=5', {
-      body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
-    });
-    cy.get(dataSelector('anomalies-filtre-operateur')).type('Opérateur absent');
-    cy.get(dataSelector('anomalies-filtre-element')).type('M-042{enter}');
+  it('should choose the element by its designation with the picker, without showing its identifier', () => {
+    whenVisitingAt(1280);
+    whenChoosingTheElement(autreElementNomFixture);
+
+    thenTheElementFilterNames(autreElementNomFixture);
+    thenTheFiltersNeverShow(autreElementFixture);
+  });
+
+  it('should find an element by its reference and name it with that reference', () => {
+    whenVisitingAt(1280);
+    whenSearchingTheElement('m-042');
+
+    thenOnlyTheElementIsProposed(`${elementNomFixture} · ${elementReferenceFixture}`);
+  });
+
+  it('should name all the elements once the manager chooses that entry', () => {
+    whenVisitingAt(1280);
+    whenChoosingTheElement(autreElementNomFixture);
+    whenChoosingTheElement('Tous les éléments');
+
+    thenTheElementFilterNames('Tous les éléments');
+  });
+
+  it('should choose the operator by name with the picker', () => {
+    whenVisitingAt(1280);
+    whenChoosingTheOperator(autreOperateurNomFixture);
+
+    thenTheOperatorFilterNames(autreOperateurNomFixture);
+  });
+
+  it('should name all the operators once the manager chooses that entry', () => {
+    whenVisitingAt(1280);
+    whenChoosingTheOperator(autreOperateurNomFixture);
+    whenChoosingTheOperator('Tous les opérateurs');
+
+    thenTheOperatorFilterNames('Tous les opérateurs');
+  });
+
+  const whenApplyingTheChosenOperatorAndElement = (): void => {
+    cy.intercept(
+      'GET',
+      `/api/atelier/anomalies?nature=CONFLIT&operateur=${autreOperateurFixture}&element=${elementFixture}&page=0&size=5`,
+      {
+        body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
+      },
+    );
+    whenChoosingTheOperator(autreOperateurNomFixture);
+    whenChoosingTheElement(`${elementNomFixture} · ${elementReferenceFixture}`);
+    cy.get(dataSelector('anomalies-filtrer')).click();
+  };
+
+  const whenChoosingTheElement = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-element')).click();
+    cy.get(dataSelector('anomalies-filtre-element-proposition')).contains(libelle).click();
+  };
+
+  const whenSearchingTheElement = (recherche: string): void => {
+    cy.get(dataSelector('anomalies-filtre-element')).click();
+    cy.get(dataSelector('anomalies-filtre-element-recherche')).type(recherche);
+  };
+
+  const thenOnlyTheElementIsProposed = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-element-proposition')).should('have.length', 1).and('have.text', libelle);
+  };
+
+  const thenTheElementFilterNames = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-element')).should('have.text', libelle);
+  };
+
+  const thenTheFiltersNeverShow = (identifier: string): void => {
+    cy.get(dataSelector('anomalies-filtres')).should('not.contain.text', identifier);
+  };
+
+  const whenChoosingTheOperator = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-operateur')).click();
+    cy.get(dataSelector('anomalies-filtre-operateur-proposition')).contains(libelle).click();
+  };
+
+  const thenTheOperatorFilterNames = (libelle: string): void => {
+    cy.get(dataSelector('anomalies-filtre-operateur')).should('have.text', libelle);
   };
 
   const thenNoConflictMatchesTheFilters = (): void => {
@@ -38,6 +125,7 @@ describe('Conflict list in Gestion', () => {
 
   const focusControls = [
     { selector: 'anomalies-filtre-operateur', description: 'operator filter' },
+    { selector: 'anomalies-filtre-element', description: 'element filter' },
     { selector: 'anomalies-filtrer', description: 'filtering action' },
     { selector: 'conflit-ouvrir', description: 'dossier link' },
   ];

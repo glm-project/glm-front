@@ -19,27 +19,83 @@
 
   <form
     class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end"
-    (submit)="filter($event, operateur.value, element.value)"
+    (submit)="filter($event)"
     data-selector="anomalies-filtres"
   >
-    <label class="grid gap-2 text-label">
-      {{ libelles.operateur }}
-      <input
-        #operateur
-        class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
-        [value]="filtre().operateur"
-        data-selector="anomalies-filtre-operateur"
+    <div class="grid min-w-0 content-start gap-2">
+      <label
+        id="anomalies-operateur-label"
+        class="text-label"
+        [attr.for]="etatOperateurs.premierChargement() ? null : 'anomalies-operateur'"
+        >{{ libelles.operateur }}</label
+      >
+      @if (etatOperateurs.premierChargement()) {
+      <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-referentiel-chargement">
+        {{ libelles.chargementOperateurs }}
+      </p>
+      } @else {
+      <glm-selecteur-operateur-anomalie
+        triggerId="anomalies-operateur"
+        labelId="anomalies-operateur-label"
+        selector="anomalies-filtre-operateur"
+        [avecTous]="true"
+        [operateurs]="operateurs()"
+        [courant]="operateurChoisi()"
+        [disabled]="etatOperateurs.indisponible()"
+        [indisponible]="etatOperateurs.indisponible()"
+        (choisi)="choisirOperateur($event)"
+        (tousChoisis)="operateurChoisi.set('')"
       />
-    </label>
-    <label class="grid gap-2 text-label">
-      {{ libelles.element }}
-      <input
-        #element
-        class="min-h-touch min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body"
-        [value]="filtre().element"
-        data-selector="anomalies-filtre-element"
+      @if (etatOperateurs.enPanne()) {
+      <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-referentiel-erreur">
+        <p>{{ libelles.operateursIndisponibles }}</p>
+        <button
+          type="button"
+          class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
+          data-selector="anomalies-referentiel-reessayer"
+          [attr.aria-busy]="etatOperateurs.relecture()"
+          (click)="operateursLus.reload()"
+        >
+          {{ libelles.reessayer }}
+        </button>
+      </div>
+      } }
+    </div>
+    <div class="grid min-w-0 content-start gap-2">
+      <label id="anomalies-element-label" class="text-label" [attr.for]="etatElements.premierChargement() ? null : 'anomalies-element'"
+        >{{ libelles.element }}</label
+      >
+      @if (etatElements.premierChargement()) {
+      <p role="status" class="min-h-touch text-body-sm text-ink-muted" data-selector="anomalies-elements-chargement">
+        {{ libelles.chargementElements }}
+      </p>
+      } @else {
+      <glm-selecteur-element-anomalie
+        triggerId="anomalies-element"
+        labelId="anomalies-element-label"
+        selector="anomalies-filtre-element"
+        [elements]="elements()"
+        [courant]="elementChoisi()"
+        [disabled]="etatElements.indisponible()"
+        [indisponible]="etatElements.indisponible()"
+        (choisi)="choisirElement($event)"
+        (tousChoisis)="elementChoisi.set('')"
       />
-    </label>
+      @if (etatElements.enPanne()) {
+      <div class="text-body-sm text-danger" role="alert" data-selector="anomalies-elements-erreur">
+        <p>{{ libelles.elementsIndisponibles }}</p>
+        <button
+          type="button"
+          class="mt-2 min-h-touch rounded-control border border-border-strong px-4 text-label"
+          data-selector="anomalies-elements-reessayer"
+          [attr.aria-busy]="etatElements.relecture()"
+          (click)="elementsLus.reload()"
+        >
+          {{ libelles.reessayer }}
+        </button>
+      </div>
+      } }
+    </div>
     <button class="min-h-touch rounded-control bg-accent px-4 text-label text-on-accent" type="submit" data-selector="anomalies-filtrer">
       {{ libelles.filtrer }}
     </button>
@@ -118,7 +174,9 @@
                 >{{ ligne.designation }}</a
               >
             </td>
-            <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
+            <td class="p-4">
+              {{ operateurDe(ligne.operateur) }}<br /><span class="text-ink-muted">{{ posteDe(ligne.poste, ligne.posteId) }}</span>
+            </td>
             <td class="max-w-md p-4">{{ ligne.explication || libelles.sequenceEnConflit }}</td>
             <td class="p-4 tabular-nums">{{ ligne.date | instantLongDay: now }}<br />{{ ligne.nombrePointages }} pointages</td>
           </tr>
@@ -134,7 +192,9 @@
                 >{{ ligne.designation }}</a
               >
             </td>
-            <td class="p-4">{{ operateurDe(ligne) }}<br /><span class="text-ink-muted">{{ posteDe(ligne) }}</span></td>
+            <td class="p-4">
+              {{ operateurDe(ligne.operateur) }}<br /><span class="text-ink-muted">{{ posteDe(ligne.poste, ligne.posteId) }}</span>
+            </td>
             <td class="p-4 tabular-nums">{{ libelles.periodeFinAutomatique(ligne.debut, ligne.echeance) }}</td>
           </tr>
           } }

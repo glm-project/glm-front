@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpRequest, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -10,7 +10,10 @@ import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { DossierAnomalie, LectureDossier } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
+import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
+import { PosteAnomalieId } from '../../domain/dossier/PosteAnomalieId';
+import { OperateurAnomalie } from '../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
 
@@ -27,6 +30,29 @@ const ligneFixture: components['schemas']['RestConflitEnListe'] = {
   datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
   nombrePointages: 3,
 };
+
+const restOperateurFixture = (
+  id: string,
+  extra: Partial<components['schemas']['RestOperateur']> = {},
+): components['schemas']['RestOperateur'] => ({
+  id,
+  prenom: 'Camille',
+  nom: 'Martin',
+  natures: [],
+  postes: [],
+  ...extra,
+});
+
+const restPosteFixture = (id: string, libelle: string): components['schemas']['RestPosteDeTravail'] => ({
+  id,
+  libelle,
+  nature: 'tournage',
+});
+
+const restElementFixture = (
+  id: string,
+  extra: Partial<components['schemas']['RestElementDeFabrication']> = {},
+): components['schemas']['RestElementDeFabrication'] => ({ id, nom: 'Bielle', type: 'PRODUIT', ...extra });
 
 describe('Beyond the contract: HTTP anomaly dossier reading', () => {
   let port: AnomaliesReadPort;
@@ -88,14 +114,15 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     });
   });
 
-  it('should preserve raw operator and workstation identities when their references cannot be resolved', async () => {
+  it('should present neither name nor operator identity when the operator and workstation references cannot be resolved', async () => {
     const ligne = givenUnresolvedReferences();
 
     const lecture = port.list({ nature: 'CONFLIT', operateur: 'Camille', element: 'M-042', page: 2 });
     whenPageAnswers([ligne]);
     const page = await lecture;
 
-    expect(page.lignes[0]).toMatchObject({ operateur: '', operateurId: 'op-camille', poste: '', posteId: 'poste-dmu' });
+    expect(page.lignes[0]).toMatchObject({ operateur: '', poste: '', posteId: 'poste-dmu' });
+    expect(page.lignes[0]).not.toHaveProperty('operateurId');
   });
 
   it('should retain the journal of a cancelled anchor instead of opening another sequence', async () => {
@@ -118,12 +145,39 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
             poste: '',
             instant: '2026-09-14T17:00:00.123456789+02:00',
           },
+          operateurNom: '',
+          posteLibelle: '',
           annulation: { motif: 'Double pression confirmée', auteur: 'gestionnaire', instant: '2026-09-15T08:00:00Z' },
           auteur: 'camille',
           enregistre: '2026-09-15T07:00:00Z',
           regularisation: false,
         },
       ],
+    });
+  });
+
+  it('should carry the operator name and the workstation label of each journal fact beside the received identities', async () => {
+    const dossier = dossierAnnuleFixture();
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenCancelledDossierAnswers({
+      ...dossier,
+      suivi: {
+        ...dossier.suivi,
+        journal: dossier.suivi.journal.map(pointage => ({
+          ...pointage,
+          operateur: { id: 'op-camille', nom: 'Martin', prenom: 'Camille' },
+          posteId: 'poste-dmu',
+          poste: { id: 'poste-dmu', libelle: 'DMU 50' },
+        })),
+      },
+    });
+    const resultat = await lecture;
+
+    expect(resultat).toMatchObject({
+      kind: 'ANCRE_ANNULEE',
+      journal: [{ fait: { operateur: 'op-camille', poste: 'poste-dmu' }, operateurNom: 'Camille Martin', posteLibelle: 'DMU 50' }],
     });
   });
 
@@ -200,7 +254,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         enConflit: false,
         finAutomatique: true,
         cloture: false,
-        ligne: { adresse: { suivi: adresse.suivi, pointage: adresse.pointage }, nombrePointages: 1, operateurId: 'op-camille' },
+        ligne: { adresse: { suivi: adresse.suivi, pointage: adresse.pointage }, nombrePointages: 1 },
         activites: [
           {
             id: new ActiviteAnomalieId('travail-8'),
@@ -460,7 +514,6 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
           adresse,
           nombrePointages: 3,
           date: '2026-09-14T08:00:00.123456789+02:00',
-          operateurId: 'op-camille',
           posteId: 'poste-dmu',
         },
         activites: [
@@ -588,7 +641,6 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-corrigee') },
         nombrePointages: 2,
         operateur: '',
-        operateurId: 'op-camille',
         poste: '',
         posteId: 'poste-dmu',
         date: '2026-09-14T08:00:00.123456789+02:00',
@@ -748,6 +800,358 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
   const dossierFromReading = (lecture: LectureDossier): DossierAnomalie => {
     if (lecture.kind !== 'DOSSIER') throw new Error('Missing dossier fixture');
     return lecture.dossier;
+  };
+
+  it('should read the whole operator and workstation referential across server pages into the anomaly vocabulary', async () => {
+    const operateurs = Array.from({ length: 125 }, (_, index) => restOperateurFixture(`op-${index}`, { nom: `Nom ${index}` }));
+    operateurs[1] = restOperateurFixture('op-camille', {
+      prenom: 'Camille',
+      nom: 'Martin',
+      identifiant: '007',
+      postes: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+    });
+    const postes = [restPosteFixture('poste-fraiseuse', 'Fraiseuse 1'), restPosteFixture('poste-tour', 'Tour 1')];
+
+    const lecture = port.referentiel();
+    await Promise.all([answerPages('/api/operateurs', operateurs), answerPages('/api/postes-de-travail', postes)]);
+    const referentiel = await lecture;
+
+    expect(referentiel.operateurs).toHaveLength(125);
+    expect(referentiel.operateurs[1]).toEqual({
+      id: new OperateurAnomalieId('op-camille'),
+      nom: 'Camille Martin',
+      code: '007',
+      postesHabilites: [new PosteAnomalieId('poste-tour')],
+    });
+    expect(referentiel.operateurs[2]).toEqual({
+      id: new OperateurAnomalieId('op-2'),
+      nom: 'Camille Nom 2',
+      postesHabilites: [],
+    });
+    expect(referentiel.operateurs[2]).not.toHaveProperty('code');
+    expect(referentiel.postes).toEqual([
+      { id: new PosteAnomalieId('poste-fraiseuse'), libelle: 'Fraiseuse 1' },
+      { id: new PosteAnomalieId('poste-tour'), libelle: 'Tour 1' },
+    ]);
+    expect(errors.errors).toEqual([]);
+  });
+
+  it.each<{ collection: string; incoherence: string; attendu: string; pages: { taille: number; total: number; page?: number }[] }>([
+    {
+      collection: 'operator',
+      incoherence: 'a changing total',
+      attendu: 'Le nombre des entrées est incohérent pendant la lecture.',
+      pages: [
+        { taille: 100, total: 101 },
+        { taille: 1, total: 102 },
+      ],
+    },
+    {
+      collection: 'operator',
+      incoherence: 'a truncated page',
+      attendu: 'Le référentiel reçu est tronqué.',
+      pages: [{ taille: 99, total: 100 }],
+    },
+    {
+      collection: 'operator',
+      incoherence: 'a page other than the requested one',
+      attendu: 'La page reçue ne correspond pas à la page demandée.',
+      pages: [{ taille: 1, total: 1, page: 3 }],
+    },
+    {
+      collection: 'workstation',
+      incoherence: 'a changing total',
+      attendu: 'Le nombre des entrées est incohérent pendant la lecture.',
+      pages: [
+        { taille: 100, total: 101 },
+        { taille: 1, total: 102 },
+      ],
+    },
+    {
+      collection: 'workstation',
+      incoherence: 'a truncated page',
+      attendu: 'Le référentiel reçu est tronqué.',
+      pages: [{ taille: 99, total: 100 }],
+    },
+    {
+      collection: 'workstation',
+      incoherence: 'a page other than the requested one',
+      attendu: 'La page reçue ne correspond pas à la page demandée.',
+      pages: [{ taille: 1, total: 1, page: 3 }],
+    },
+  ])('should refuse and report the $collection collection of the referential with $incoherence', async ({ collection, attendu, pages }) => {
+    const incoherent = collection === 'operator' ? '/api/operateurs' : '/api/postes-de-travail';
+    const sain = collection === 'operator' ? '/api/postes-de-travail' : '/api/operateurs';
+    const contenu = collection === 'operator' ? restOperateurFixture : (id: string) => restPosteFixture(id, id);
+
+    const lecture = port.referentiel().catch((failure: unknown) => failure);
+    await Promise.all([
+      answerPages(sain, []),
+      (async () => {
+        for (const [index, page] of pages.entries()) {
+          await flushPage(
+            incoherent,
+            index,
+            Array.from({ length: page.taille }, (_, element) => contenu(`id-${index}-${element}`)),
+            page.total,
+            page.page,
+          );
+        }
+      })(),
+    ]);
+    const failure = await lecture;
+
+    expect(failure).toEqual(new Error(attendu));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it.each([
+    { collection: 'operator', url: '/api/operateurs', contenu: restOperateurFixture },
+    { collection: 'workstation', url: '/api/postes-de-travail', contenu: (id: string) => restPosteFixture(id, id) },
+  ])('should refuse and report a referential whose $collection collection repeats an identity', async ({ url, contenu }) => {
+    const sain = url === '/api/operateurs' ? '/api/postes-de-travail' : '/api/operateurs';
+
+    const lecture = port.referentiel().catch((failure: unknown) => failure);
+    await Promise.all([answerPages(sain, []), answerPages(url, [contenu('doublon'), contenu('doublon')])]);
+    const failure = await lecture;
+
+    expect(failure).toEqual(new Error('Le référentiel contient une identité dupliquée.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should report a failed referential read once and reject instead of offering a partial list', async () => {
+    const lecture = port.referentiel().catch((failure: unknown) => failure);
+    await Promise.all([
+      answerPages('/api/operateurs', [restOperateurFixture('op-camille')]),
+      whenReferentialFails('/api/postes-de-travail?page=0&size=100'),
+    ]);
+    const failure = await lecture;
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should read the operators alone across server pages, without asking for any workstation', async () => {
+    const operateurs = Array.from({ length: 125 }, (_, index) => restOperateurFixture(`op-${index}`, { nom: `Nom ${index}` }));
+    operateurs[1] = restOperateurFixture('op-camille', {
+      identifiant: '007',
+      postes: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+    });
+
+    const lus = await whenReadingTheOperatorsAnsweredWith(operateurs);
+
+    expect(lus).toHaveLength(125);
+    expect(lus[1]).toEqual({
+      id: new OperateurAnomalieId('op-camille'),
+      nom: 'Camille Martin',
+      code: '007',
+      postesHabilites: [new PosteAnomalieId('poste-tour')],
+    });
+    thenNoWorkstationWasAsked();
+    expect(errors.errors).toEqual([]);
+  });
+
+  it.each<{ incoherence: string; attendu: string; pages: { taille: number; total: number; page?: number }[] }>([
+    {
+      incoherence: 'a changing total',
+      attendu: 'Le nombre des entrées est incohérent pendant la lecture.',
+      pages: [
+        { taille: 100, total: 101 },
+        { taille: 1, total: 102 },
+      ],
+    },
+    { incoherence: 'a truncated page', attendu: 'Le référentiel reçu est tronqué.', pages: [{ taille: 99, total: 100 }] },
+    {
+      incoherence: 'a page other than the requested one',
+      attendu: 'La page reçue ne correspond pas à la page demandée.',
+      pages: [{ taille: 1, total: 1, page: 3 }],
+    },
+  ])('should refuse and report an operator list with $incoherence', async ({ attendu, pages }) => {
+    const failure = await whenReadingTheOperatorsWhilePagesAnswer(pages);
+
+    expect(failure).toEqual(new Error(attendu));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should refuse and report an operator list that repeats an identity', async () => {
+    const failure = await whenReadingTheOperatorsAnsweredWith([restOperateurFixture('doublon'), restOperateurFixture('doublon')]).catch(
+      (failure: unknown) => failure,
+    );
+
+    expect(failure).toEqual(new Error('Le référentiel contient une identité dupliquée.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should report a failed operator read once and reject', async () => {
+    const lecture = port.operateurs().catch((failure: unknown) => failure);
+    await whenReferentialFails('/api/operateurs?page=0&size=100');
+    const failure = await lecture;
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  const whenReadingTheOperatorsAnsweredWith = async (operateurs: readonly unknown[]): Promise<readonly OperateurAnomalie[]> => {
+    const lecture = port.operateurs();
+    lecture.catch(() => undefined);
+    await answerPages('/api/operateurs', operateurs);
+    return lecture;
+  };
+
+  const whenReadingTheOperatorsWhilePagesAnswer = async (pages: { taille: number; total: number; page?: number }[]): Promise<unknown> => {
+    const lecture = port.operateurs().catch((failure: unknown) => failure);
+    for (const [index, page] of pages.entries()) {
+      await flushPage(
+        '/api/operateurs',
+        index,
+        Array.from({ length: page.taille }, (_, operateur) => restOperateurFixture(`id-${index}-${operateur}`)),
+        page.total,
+        page.page,
+      );
+    }
+    return lecture;
+  };
+
+  const thenNoWorkstationWasAsked = (): void => {
+    server.expectNone('/api/postes-de-travail?page=0&size=100');
+  };
+
+  it('should read the whole element referential across server pages, over the whole period, into the anomaly vocabulary', async () => {
+    const elements = Array.from({ length: 125 }, (_, index) => restElementFixture(`element-${index}`, { nom: `Pièce ${index}` }));
+    elements[1] = restElementFixture('element-of', { nom: 'Bielle', reference: 'OF M24-0655' });
+
+    const lecture = port.elements();
+    await answerElementPages(elements);
+    const lus = await lecture;
+
+    expect(lus).toHaveLength(125);
+    expect(lus[1]).toEqual({ id: new ElementAnomalieId('element-of'), nom: 'Bielle', reference: 'OF M24-0655' });
+    expect(lus[2]).toEqual({ id: new ElementAnomalieId('element-2'), nom: 'Pièce 2' });
+    expect(lus[2]).not.toHaveProperty('reference');
+    expect(errors.errors).toEqual([]);
+  });
+
+  it('should ask the elements of every period, since the filter looks for an element whatever its dates', async () => {
+    const demande = await whenReadingTheElementsOfAnEmptyServer();
+
+    expect(demande.params.get('debut')).toBe('1970-01-01T00:00:00Z');
+    expect(demande.params.get('fin')).toBe('2999-12-31T23:59:59Z');
+  });
+
+  it.each<{ incoherence: string; attendu: string; pages: { taille: number; total: number; page?: number }[] }>([
+    {
+      incoherence: 'a changing total',
+      attendu: 'Le nombre des entrées est incohérent pendant la lecture.',
+      pages: [
+        { taille: 100, total: 101 },
+        { taille: 1, total: 102 },
+      ],
+    },
+    { incoherence: 'a truncated page', attendu: 'Le référentiel reçu est tronqué.', pages: [{ taille: 99, total: 100 }] },
+    {
+      incoherence: 'a page other than the requested one',
+      attendu: 'La page reçue ne correspond pas à la page demandée.',
+      pages: [{ taille: 1, total: 1, page: 3 }],
+    },
+  ])('should refuse and report an element referential with $incoherence', async ({ attendu, pages }) => {
+    const failure = await whenReadingTheElementsWhilePagesAnswer(pages);
+
+    expect(failure).toEqual(new Error(attendu));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should refuse and report an element referential that repeats an identity', async () => {
+    const failure = await whenReadingTheElementsAnsweredWith([restElementFixture('doublon'), restElementFixture('doublon')]);
+
+    expect(failure).toEqual(new Error('Le référentiel contient une identité dupliquée.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it.each<{ champ: string; element: components['schemas']['RestElementDeFabrication'] }>([
+    { champ: 'element.id', element: { nom: 'Bielle' } },
+    { champ: 'element.nom', element: { id: 'element-sans-nom' } },
+  ])('should refuse and report an element received without its $champ', async ({ champ, element }) => {
+    const failure = await whenReadingTheElementsAnsweredWith([element]);
+
+    expect(failure).toEqual(new Error(`${champ} manque dans la réponse du serveur`));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  it('should report a failed element read once and reject instead of offering a partial list', async () => {
+    const failure = await whenTheElementReadFails();
+
+    expect(failure).toBeInstanceOf(HttpErrorResponse);
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  const whenReadingTheElementsOfAnEmptyServer = async (): Promise<HttpRequest<unknown>> => {
+    const lecture = port.elements();
+    await new Promise(resolve => setTimeout(resolve));
+    const demande = server.expectOne(request => request.url === '/api/elements-de-fabrication');
+    demande.flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
+    await lecture;
+    return demande.request;
+  };
+
+  const whenReadingTheElementsWhilePagesAnswer = async (pages: { taille: number; total: number; page?: number }[]): Promise<unknown> => {
+    const lecture = port.elements().catch((failure: unknown) => failure);
+    for (const [index, page] of pages.entries()) {
+      await flushElementsPage(
+        index,
+        Array.from({ length: page.taille }, (_, element) => restElementFixture(`id-${index}-${element}`)),
+        page.total,
+        page.page,
+      );
+    }
+    return lecture;
+  };
+
+  const whenReadingTheElementsAnsweredWith = async (elements: readonly unknown[]): Promise<unknown> => {
+    const lecture = port.elements().catch((failure: unknown) => failure);
+    await answerElementPages(elements);
+    return lecture;
+  };
+
+  const whenTheElementReadFails = async (): Promise<unknown> => {
+    const lecture = port.elements().catch((failure: unknown) => failure);
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(request => request.url === '/api/elements-de-fabrication').flush({}, { status: 500, statusText: 'Failure' });
+    return lecture;
+  };
+
+  const flushElementsPage = async (page: number, content: unknown[], total: number, answeredPage = page): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server
+      .expectOne(request => request.url === '/api/elements-de-fabrication' && request.params.get('page') === String(page))
+      .flush({ content, currentPage: answeredPage, pageSize: 100, totalElementsCount: total });
+  };
+
+  const answerElementPages = async (elements: readonly unknown[]): Promise<void> => {
+    let page = 0;
+    do {
+      await flushElementsPage(page, elements.slice(page * 100, (page + 1) * 100), elements.length);
+      page += 1;
+    } while (page * 100 < elements.length);
+  };
+
+  const flushPage = async (url: string, page: number, content: unknown[], total: number, answeredPage = page): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server
+      .expectOne(`${url}?page=${page}&size=100`)
+      .flush({ content, currentPage: answeredPage, pageSize: 100, totalElementsCount: total });
+  };
+
+  const answerPages = async (url: string, elements: readonly unknown[]): Promise<void> => {
+    let page = 0;
+    do {
+      await flushPage(url, page, elements.slice(page * 100, (page + 1) * 100), elements.length);
+      page += 1;
+    } while (page * 100 < elements.length);
+  };
+
+  const whenReferentialFails = async (url: string): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(url).flush({}, { status: 500, statusText: 'Failure' });
   };
 
   it.each([

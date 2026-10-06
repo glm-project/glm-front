@@ -37,12 +37,32 @@ route `/conflits` n'existe plus et ne redirige pas.
 
 La liste offre deux onglets accessibles, « Fins automatiques » à gauche puis « Conflits », et garde la nature dans
 l'URL (`/anomalies?nature=CONFLIT|FIN_AUTOMATIQUE`, [ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)).
-Sans `nature`, l'onglet Fins automatiques, le premier ; une valeur inconnue est une adresse refusée, sans requête. Changer d'onglet
+Sans `nature`, l'onglet Fins automatiques, le premier ; une valeur inconnue (nature, page) est une adresse refusée, sans aucune requête : ni la liste, ni les opérateurs, ni
+les éléments ne sont lus, et les deux filtres, désactivés, gardent la valeur de l'URL (« Opérateur actuel conservé »). Changer d'onglet
 conserve les filtres et revient à `page=1` ; la pagination est propre à chaque onglet. Une ligne
 `LigneConflit` ou `LigneFinAutomatique` est traduite à la frontière HTTP, qui rejette la lecture dont une
 ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début
 et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
 sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
+Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entrée « Tous les opérateurs » par
+`avecTous`), alimenté par `operateurs()` que la liste lit pour tout lecteur, consultant compris, à chaque ouverture, sans cache.
+L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que
+les opérateurs ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Des opérateurs indisponibles
+affichent « Liste des opérateurs indisponible » et « Réessayer », désactivent le filtre sans toucher à la liste, et le
+champ ne prétend pas que la valeur de l'URL est « non résolue » : il dit « Opérateur actuel conservé ».
+Le filtre « Élément » est le `SelecteurElementAnomalie` (même `SelecteurRecherchable` que l'opérateur, entrée « Tous les
+éléments »). Il choisit un élément par sa désignation, « nom · référence » (`ElementAnomalie { id, nom, reference? }`, par
+ordre alphabétique du nom ; recherche sans accents sur le nom et la référence). Le port de lecture expose
+`elements()`, lu en entier par `GET /api/elements-de-fabrication` (`collectAllPages`, page demandée vérifiée, aucune
+collection tronquée ni identité dupliquée, sur toute période : la liste cherche un élément quelle que soit sa date de
+création). `elements()` est distinct de `referentiel()` : le dossier, qui n'a pas besoin des éléments, ne paie pas leur
+lecture complète, et la liste les charge à part des opérateurs, si bien que l'échec ou la lenteur de l'un ne retient pas
+l'autre. L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Élément non résolu (référence actuelle) » celui que
+les éléments ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer » ; des éléments indisponibles affichent
+« Liste des éléments indisponible » et leur propre « Réessayer », désactivent ce seul filtre, qui dit « Élément actuel
+conservé » au lieu de « non résolu ».
+Le `SelecteurRecherchable` ne dit « ne correspond à cette recherche » que si quelque chose est saisi : une liste vide sans
+recherche dit « Aucun opérateur disponible » (« Aucun élément disponible »).
 Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
 ramène à l'onglet, aux filtres et à la page d'origine.
 
@@ -51,7 +71,36 @@ asynchrones et les doubles soumissions. Le primaire rend les faits et leur cible
 dans l'URL et utilise les surfaces de Gestion. Trois ports séparent lecture, aperçu et application.
 La composition normale de Gestion relie ces trois ports au même adapter HTTP et à `ApiClient`.
 Le serveur fournit états, intervalles, durées ISO, diagnostics, choix et continuations. Le primaire
-possède leurs libellés ; il conserve les identités brutes lorsque les fiches ne sont pas résolues.
+possède leurs libellés. Il nomme l'opérateur (« Prénom Nom ») et le poste (libellé) reçus avec la liste, l'en-tête, la
+chronologie, l'historique d'adresse obsolète et les continuations, sans jamais en afficher l'identifiant : une fiche non
+résolue s'affiche « Opérateur non résolu » ou « Poste non résolu », un pointage sans poste « Sans poste ». Le modèle
+garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de l'opérateur et du poste, qu'il envoie
+au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
+Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le port de lecture
+expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
+`PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et
+`GET /api/postes-de-travail` (`collectAllPages`, page demandée vérifiée, aucune collection tronquée ni identité dupliquée).
+`operateurs()` en est la première moitié, lue seule : la liste, qui n'emploie pas les postes, ne paie pas leur lecture et
+ne tombe pas avec eux ; seul le dossier lit le référentiel entier.
+`nom` est « Prénom Nom » ; `code` est le code pupitre facultatif (`RestOperateur.identifiant`), pas un UUID. Les identités
+du référentiel suivent `ElementAnomalieId` (`OperateurAnomalieId`, `PosteAnomalieId`) ; `FaitPropose` et `SaisieFait`
+gardent des `string`, que le serveur reçoit tels quels, et le primaire emballe l'identité à la frontière. Le dossier ne lit
+le référentiel que si `droits.canApply()` (le consultant ne le lit pas), à chaque ouverture, sans cache. L'opérateur se choisit
+dans `SelecteurOperateurAnomalie` (le `SearchPicker` de Gestion : recherche sans accents sur le nom, le prénom et le code,
+options « Prénom Nom · code »), le bouton disant « Choisissez l'opérateur » tant que la saisie est vide ; le poste est un
+`<select>` natif qui commence par « Sans poste », puis les postes habilités de l'opérateur choisi, puis les autres. Une
+valeur que le référentiel ne contient pas reste sélectionnée comme « … non résolu (référence actuelle) », sans identifiant.
+Si le référentiel échoue, le formulaire affiche « Liste des opérateurs et des postes indisponible » avec « Réessayer », garde
+la saisie courante et désactive les deux champs, qui disent « Opérateur actuel conservé » et « Poste actuel conservé » : un
+référentiel qu'on n'a pas lu ne rend aucune valeur « non résolue ». L'aperçu de l'acte nomme l'opérateur et le poste depuis le
+référentiel, puis depuis le journal, sinon « non résolu » (« actuel conservé » tant que le référentiel n'est pas lu).
+Une lecture de référentiel, d'opérateurs ou d'éléments que « Réessayer » relit ne démonte pas sa zone (`etatDeLecture` :
+seule la première lecture remplace le champ par « Chargement… ») : le bouton reste, `aria-busy`, et garde le focus.
+Un refus d'acte se traduit par code (`urn:glm:erreur:atelier:<code>`, [API](../../../../../../documentation/api.md)) :
+le port rend `{ kind: 'REFUS', code }` pour les quatorze codes connus (`CODES_REFUS_ACTE`) et ne transmet jamais le
+message du serveur, qui contient des identifiants ; le primaire rend `LIBELLES_ANOMALIES.refus[code]`, un libellé du
+contexte sans identifiant. Un code inconnu reste une défaillance technique (« L'opération a échoué. Votre saisie est
+conservée. »), jamais un refus au message brut.
 Le domaine garde chaque instant reçu en texte ISO ; le primaire l'affiche en heure locale par les formats
 et les pipes de `app/shared/date-format` : jour long (« jeudi 1 octobre à 09:41 »), année ajoutée quand elle diffère
 de celle de la page, secondes réservées à l'instant d'un fait pointé (« à 09:41:22 »), heure en gras puis jour long dans

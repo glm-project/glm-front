@@ -167,7 +167,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     const second = preparation.preview(dossierFixture);
     await courante.arrival;
 
-    ancienne.release({ kind: 'REFUS', raison: 'Ancienne cible' });
+    ancienne.release({ kind: 'REFUS', code: 'activite-visee-introuvable' });
     await premier;
     const etatPendantLeNouvelApercu = preparation.operation().kind;
     courante.release({ kind: 'APERCU', apercu: previewFixture(nouvelleSaisie) });
@@ -185,7 +185,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await attente.arrival;
 
     preparation.contextChanged();
-    attente.release({ kind: 'REFUS', raison: 'Ancien dossier' });
+    attente.release({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
     await lecture;
 
     expect(preparation.operation().kind).toBe('REPOS');
@@ -265,11 +265,11 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     await preparation.confirm();
     const demandesPendantLAttente = applications.requests.length;
-    attente.release({ kind: 'REFUS', raison: 'Événement annulé' });
+    attente.release({ kind: 'REFUS', code: 'evenement-deja-annule' });
     await miseAJour;
 
     expect(demandesPendantLAttente).toBe(0);
-    expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Événement annulé' });
+    expect(preparation.operation()).toEqual({ kind: 'REFUS', code: 'evenement-deja-annule' });
     expect(preparation.resolution().confirmation()).toBeUndefined();
   });
 
@@ -313,10 +313,10 @@ describe('Preparation of an acte through asynchronous ports', () => {
     const confirmation = preparation.confirm();
     await attente.arrival;
 
-    attente.release({ kind: 'REFUS', raison: 'Confirmation refusée' });
+    attente.release({ kind: 'REFUS', code: 'confirmation-reutilisee' });
     await confirmation;
 
-    expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Confirmation refusée' });
+    expect(preparation.operation()).toEqual({ kind: 'REFUS', code: 'confirmation-reutilisee' });
     expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
     expect(applications.requests).toHaveLength(1);
@@ -350,7 +350,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(applications.requests).toHaveLength(0);
   });
 
-  it.each([{ kind: 'REFUS', raison: 'Événement annulé' }, { kind: 'CONCURRENCE' }] satisfies readonly ResultatApercu[])(
+  it.each([{ kind: 'REFUS', code: 'evenement-deja-annule' }, { kind: 'CONCURRENCE' }] satisfies readonly ResultatApercu[])(
     'should retain the proposal when previewing returns $kind',
     async resultat => {
       const attente = givenPreviewWaits();
@@ -570,7 +570,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     const demande = preparation.preview({ ...dossierFinAutomatiqueFixture, version: 4 });
     await attente.arrival;
-    attente.release({ kind: 'REFUS', raison: 'Suivi clôturé' });
+    attente.release({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
     await demande;
 
     expect(previews.requests).toEqual([
@@ -590,7 +590,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
         },
       },
     ]);
-    expect(preparation.operation()).toEqual({ kind: 'REFUS', raison: 'Suivi clôturé' });
+    expect(preparation.operation()).toEqual({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
   });
 
   const givenPreviewWaits = (): PendingIoFixture<ResultatApercu> => {

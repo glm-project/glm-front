@@ -2,16 +2,25 @@ import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 import {
+  autreOperateurFixture,
+  autreOperateurNomFixture,
+  autrePosteFixture,
+  autrePosteLibelleFixture,
   confirmationFixture,
   debutFixture,
   dossierFixture,
   finFixture,
+  givenTheReferentiel,
   instantFinFixture,
   instantFinLocalFixture,
   journalFixture,
   ligneFixture,
   ncFixture,
+  operateurCodeFixture,
   operateurFixture,
+  operateurNomFixture,
+  posteFixture,
+  posteLibelleFixture,
   remplacementFixture,
   suiviFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
@@ -19,14 +28,21 @@ import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../..
 import { instantLocalFixture, instantLocalWithOffsetFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import type {} from '../../../utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider';
 
-const posteFixture = '70000000-0000-0000-0000-000000000008';
 const motifCorrectionFixture = 'La cible est la NC.';
 
 const dossierRecuFixture = (): components['schemas']['RestDossierAnomalie'] => {
   const dossier = dossierFixture();
   return {
     ...dossier,
-    suivi: { ...dossier.suivi, journal: journalFixture.map(fait => ({ ...fait, posteId: posteFixture })) },
+    suivi: {
+      ...dossier.suivi,
+      journal: journalFixture.map(fait => ({
+        ...fait,
+        operateur: { id: operateurFixture, prenom: 'Camille', nom: 'Martin' },
+        posteId: posteFixture,
+        poste: { id: posteFixture, libelle: posteLibelleFixture },
+      })),
+    },
     choix: [...dossier.choix, { code: 'ANNULER_TRANSITION', kind: 'ANNULATION', pointage: ncFixture }],
   };
 };
@@ -56,6 +72,7 @@ const dossierApresFixture = (): components['schemas']['RestDossierAnomalie'] => 
 describe('Conflict dossier in Gestion', () => {
   beforeEach(() => {
     givenTheClockOnAFixedDay();
+    givenTheReferentiel();
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierRecuFixture() }).as('dossier');
     cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}/apercus`, request => {
       const body = request.body as components['schemas']['RestDemandeDApercu'];
@@ -139,7 +156,12 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
-    cy.get(dataSelector('anomalie-apercu-acte')).should('contain.text', finFixture).and('contain.text', 'La cible est la NC.');
+    cy.get(dataSelector('anomalie-apercu-acte'))
+      .should('contain.text', finFixture)
+      .and('contain.text', 'La cible est la NC.')
+      .and('contain.text', `Opérateur : ${operateurNomFixture} · Poste : Sans poste`)
+      .and('not.contain.text', operateurFixture)
+      .and('not.contain.text', posteFixture);
     cy.get(dataSelector(`anomalie-apercu-fait-avant-${finFixture}`))
       .should('be.visible')
       .and('contain.text', debutFixture)
@@ -175,7 +197,7 @@ describe('Conflict dossier in Gestion', () => {
     });
   };
 
-  it('should identify the operator and workstation of every received fact', () => {
+  it('should name the operator and workstation of every received fact without showing their identifiers', () => {
     whenOpeningTheDossier();
 
     thenEveryFactIdentifiesItsOperatorAndWorkstation();
@@ -183,7 +205,11 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenEveryFactIdentifiesItsOperatorAndWorkstation = (): void => {
     cy.get(dataSelector('anomalie-pointage')).each(pointage => {
-      cy.wrap(pointage).should('contain.text', `Opérateur : ${operateurFixture}`).and('contain.text', `Poste : ${posteFixture}`);
+      cy.wrap(pointage)
+        .should('contain.text', `Opérateur : ${operateurNomFixture}`)
+        .and('contain.text', `Poste : ${posteLibelleFixture}`)
+        .and('not.contain.text', operateurFixture)
+        .and('not.contain.text', posteFixture);
     });
   };
 
@@ -305,6 +331,68 @@ describe('Conflict dossier in Gestion', () => {
     thenTheMissingFactRequiresAnExplicitDecision();
   });
 
+  it('should choose the operator by a search on its name and the workstation by its label, and preview their identities', () => {
+    whenOpeningTheDossier();
+    whenCorrectingTheEnd();
+    whenChoosingTheOperatorBySearching('durand', autreOperateurNomFixture);
+    whenChoosingTheWorkstation(autrePosteLibelleFixture);
+    whenGivingTheReason();
+    whenRequestingThePreview();
+
+    thenThePreviewedActNames(autreOperateurFixture, autrePosteFixture);
+  });
+
+  const whenChoosingTheOperatorBySearching = (search: string, name: string): void => {
+    cy.get(dataSelector('anomalie-operateur')).click();
+    cy.get(dataSelector('anomalie-operateur-recherche')).type(search);
+    cy.get(dataSelector('anomalie-operateur-proposition')).should('have.length', 1).and('have.text', name).click();
+    cy.get(dataSelector('anomalie-operateur')).should('contain.text', name).and('have.focus');
+  };
+
+  const whenChoosingTheWorkstation = (libelle: string): void => {
+    cy.get(dataSelector('anomalie-poste')).select(libelle);
+  };
+
+  const thenThePreviewedActNames = (operateur: string, poste: string): void => {
+    cy.wait('@apercu').its('request.body.acte.fait').should('include', { operateur, poste });
+  };
+
+  it('should offer the workstations the chosen operator is qualified on before the others', () => {
+    whenOpeningTheDossier();
+    whenCorrectingTheEnd();
+    whenChoosingTheOperatorBySearching('durand', autreOperateurNomFixture);
+
+    thenTheWorkstationsAreGroupedByQualification();
+  });
+
+  const thenTheWorkstationsAreGroupedByQualification = (): void => {
+    cy.get(dataSelector('anomalie-poste')).find('optgroup').should('have.length', 2);
+    cy.get(dataSelector('anomalie-poste'))
+      .find('optgroup')
+      .first()
+      .should('have.attr', 'label', 'Postes habilités')
+      .and('contain.text', autrePosteLibelleFixture);
+    cy.get(dataSelector('anomalie-poste'))
+      .find('optgroup')
+      .last()
+      .should('have.attr', 'label', 'Autres postes')
+      .and('contain.text', posteLibelleFixture);
+  };
+
+  it('should ask to choose the operator when a missing fact is regularised, and refuse the preview until one is chosen', () => {
+    whenOpeningTheDossier();
+    whenRegularisingAMissingFact();
+
+    thenTheOperatorMustBeChosen();
+  });
+
+  const thenTheOperatorMustBeChosen = (): void => {
+    cy.get(dataSelector('anomalie-operateur')).should('contain.text', 'Choisissez l’opérateur');
+    cy.get(dataSelector('anomalie-validation')).should('contain.text', 'Choisissez l’opérateur.');
+    cy.get(dataSelector('anomalie-operateur')).should('have.attr', 'aria-describedby', 'operateur-acte-erreur');
+    cy.get(dataSelector('anomalie-poste')).find('option:selected').should('have.text', 'Sans poste');
+  };
+
   it('should require a reason for a deliberate cancellation without asking to alter the original fact', () => {
     whenOpeningTheDossier();
     whenCancellingTheEnd();
@@ -419,6 +507,8 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-corriger')).should('be.disabled');
     cy.get(dataSelector('anomalie-annuler')).should('be.disabled');
     cy.get(dataSelector('anomalie-regulariser')).should('be.disabled');
+    cy.get('@operateurs.all').should('have.length', 0);
+    cy.get('@postes.all').should('have.length', 0);
   };
 
   const givenAnObsoleteConfirmation = (): void => {
@@ -540,7 +630,12 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenTheDetailedFactPreservesTheReceivedValues = (): void => {
     thenTheInstantFieldsShow(instantFinLocalFixture);
-    cy.get(dataSelector('anomalie-operateur')).should('have.value', operateurFixture);
+    cy.get(dataSelector('anomalie-operateur')).should('contain.text', `${operateurNomFixture} · ${operateurCodeFixture}`);
+    cy.get(dataSelector('anomalie-poste'))
+      .should('have.value', posteFixture)
+      .find('option:selected')
+      .should('have.text', posteLibelleFixture);
+    cy.get(dataSelector('anomalie-champs-detail')).parent().should('not.contain.text', operateurFixture);
     cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');

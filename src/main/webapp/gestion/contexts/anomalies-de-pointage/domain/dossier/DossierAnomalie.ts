@@ -15,6 +15,8 @@ export interface AdresseDossier {
 export interface PointageAnomalie {
   readonly id: PointageAnomalieId;
   readonly fait: FaitPropose;
+  readonly operateurNom: string;
+  readonly posteLibelle: string;
   readonly activiteCreee?: ActiviteAnomalieId;
   readonly auteur: string;
   readonly enregistre: string;
@@ -71,7 +73,6 @@ export interface LigneConflit {
   readonly element: ElementAnomalieId;
   readonly designation: string;
   readonly operateur: string;
-  readonly operateurId?: string;
   readonly poste: string;
   readonly posteId?: string;
   readonly date: string;
@@ -86,7 +87,6 @@ export interface LigneFinAutomatique {
   readonly element: ElementAnomalieId;
   readonly designation: string;
   readonly operateur: string;
-  readonly operateurId: string;
   readonly poste: string;
   readonly posteId?: string;
   readonly debut: string;

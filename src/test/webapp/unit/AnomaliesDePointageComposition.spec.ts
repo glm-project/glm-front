@@ -12,7 +12,12 @@ import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte
 import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
+import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
+import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
+import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
+import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
+import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -91,9 +96,96 @@ describe('Real conflict resolution composition', () => {
     const resultat = await whenUsingThePublicResolutionPorts();
 
     expect(resultat.lecture).toEqual({ nature: 'CONFLIT', lignes: [], total: 0, complete: true });
-    expect(resultat.apercu).toEqual({ kind: 'REFUS', raison: 'Proposition invalide' });
+    expect(resultat.apercu).toEqual({ kind: 'REFUS', code: 'proposition-invalide' });
     expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
   });
+
+  it('should read the operator and workstation referential through the public read port on the same-origin API', async () => {
+    const lecture = whenReadingTheReferential();
+    whenTheReferentielAnswers();
+
+    const referentiel = await lecture;
+
+    expect(referentiel.operateurs).toEqual([
+      {
+        id: new OperateurAnomalieId('op-camille'),
+        nom: 'Camille Martin',
+        code: '007',
+        postesHabilites: [new PosteAnomalieId('poste-tour')],
+      },
+    ]);
+    expect(referentiel.postes).toEqual([{ id: new PosteAnomalieId('poste-tour'), libelle: 'Tour 1' }]);
+  });
+
+  it('should read the operators alone through the public read port on the same-origin API, without asking for the workstations', async () => {
+    const lecture = whenReadingTheOperators();
+    whenTheOperatorsAnswer();
+
+    const operateurs = await lecture;
+
+    expect(operateurs).toEqual([
+      {
+        id: new OperateurAnomalieId('op-camille'),
+        nom: 'Camille Martin',
+        code: '007',
+        postesHabilites: [new PosteAnomalieId('poste-tour')],
+      },
+    ]);
+  });
+
+  const whenReadingTheOperators = (): Promise<readonly OperateurAnomalie[]> => TestBed.inject(AnomaliesReadPort).operateurs();
+
+  const whenReadingTheReferential = (): Promise<ReferentielAnomalies> => TestBed.inject(AnomaliesReadPort).referentiel();
+
+  const whenTheOperatorsAnswer = (): void => {
+    server.expectOne('/api/operateurs?page=0&size=100').flush({
+      content: [
+        {
+          id: 'op-camille',
+          identifiant: '007',
+          prenom: 'Camille',
+          nom: 'Martin',
+          natures: ['tournage'],
+          postes: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+        },
+      ],
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 1,
+    } satisfies components['schemas']['PageRestOperateur']);
+  };
+
+  const whenTheReferentielAnswers = (): void => {
+    whenTheOperatorsAnswer();
+    server.expectOne('/api/postes-de-travail?page=0&size=100').flush({
+      content: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
+      currentPage: 0,
+      pageSize: 100,
+      totalElementsCount: 1,
+    } satisfies components['schemas']['PageRestPosteDeTravail']);
+  };
+
+  it('should read the element referential through the public read port on the same-origin API', async () => {
+    const lecture = whenReadingTheElements();
+    whenTheElementsAnswer();
+
+    const elements = await lecture;
+
+    expect(elements).toEqual([{ id: new ElementAnomalieId('element-bielle'), nom: 'Bielle', reference: 'OF M24-0655' }]);
+  });
+
+  const whenReadingTheElements = (): Promise<readonly ElementAnomalie[]> => TestBed.inject(AnomaliesReadPort).elements();
+
+  const whenTheElementsAnswer = (): void => {
+    server
+      .expectOne(request => request.url === '/api/elements-de-fabrication' && request.params.get('page') === '0')
+      .flush({
+        content: [{ id: 'element-bielle', nom: 'Bielle', reference: 'OF M24-0655', type: 'PRODUIT' }],
+        currentPage: 0,
+        pageSize: 100,
+        totalElementsCount: 1,
+      } satisfies components['schemas']['PageRestElementDeFabrication']);
+  };
 
   it('should keep a thirty-second confirmation timeout unknown and retry only its original public command', async () => {
     const { preparation, commande } = await givenAPreparedCancellation();

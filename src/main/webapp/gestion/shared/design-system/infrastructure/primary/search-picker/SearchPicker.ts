@@ -12,6 +12,7 @@ export class SearchPicker {
   readonly triggerId = input<string>();
   readonly triggerSelector = input.required<string>();
   readonly labelledBy = input.required<string>();
+  readonly describedBy = input<string | null>(null);
   readonly panelId = input.required<string>();
   readonly panelLabel = input.required<string>();
   readonly panelRole = input<'region' | 'dialog'>('region');

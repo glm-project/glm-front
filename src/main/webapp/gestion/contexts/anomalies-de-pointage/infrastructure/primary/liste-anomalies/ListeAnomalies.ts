@@ -5,14 +5,20 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, NatureAnomalie, PAGE_SIZE_ANOMALIES } from '../../../domain/dossier/DossierAnomalie';
+import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { NATURE_ANOMALIE_PAR_DEFAUT, readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
+import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
+import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { operateurPresente, postePresente } from '../PresentationIdentites';
+import { SelecteurElementAnomalie } from '../selecteur-element/SelecteurElementAnomalie';
+import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
 
 @Component({
   selector: 'glm-liste-anomalies',
-  imports: [RouterLink, InstantLongDayPipe],
+  imports: [RouterLink, InstantLongDayPipe, SelecteurOperateurAnomalie, SelecteurElementAnomalie],
   templateUrl: './ListeAnomalies.html',
   styleUrl: './ListeAnomalies.css',
 })
@@ -34,17 +40,43 @@ export class ListeAnomalies {
   }));
   protected readonly filtreActif = computed(() => this.filtre().operateur !== '' || this.filtre().element !== '');
   protected readonly libelles = { ...LIBELLES_ANOMALIES, ...LIBELLES_LISTE_ANOMALIES };
+  protected readonly operateurDe = operateurPresente;
+  protected readonly posteDe = postePresente;
   protected readonly libellesDeNature = computed(() => LIBELLES_LISTE_ANOMALIES.natures[this.filtre().nature]);
+  private readonly adresseValide = computed(() => this.pageDemandee() !== undefined && this.natureDemandee() !== undefined);
   protected readonly liste = resource({
-    params: () => (this.pageDemandee() === undefined || this.natureDemandee() === undefined ? undefined : this.filtre()),
+    params: () => (this.adresseValide() ? this.filtre() : undefined),
     loader: ({ params }) => this.port.list(params),
   });
 
-  protected async filter(event: Event, operateur: string, element: string): Promise<void> {
+  protected readonly operateursLus = resource({
+    params: () => (this.adresseValide() ? true : undefined),
+    loader: () => this.port.operateurs(),
+  });
+  protected readonly etatOperateurs = etatDeLecture(this.operateursLus);
+  protected readonly operateurs = computed(() => (this.operateursLus.hasValue() ? this.operateursLus.value() : []));
+  protected readonly operateurChoisi = linkedSignal(() => this.filtre().operateur);
+  protected readonly elementsLus = resource({
+    params: () => (this.adresseValide() ? true : undefined),
+    loader: () => this.port.elements(),
+  });
+  protected readonly etatElements = etatDeLecture(this.elementsLus);
+  protected readonly elements = computed(() => (this.elementsLus.hasValue() ? this.elementsLus.value() : []));
+  protected readonly elementChoisi = linkedSignal(() => this.filtre().element);
+
+  protected choisirOperateur(operateur: OperateurAnomalieId): void {
+    this.operateurChoisi.set(operateur.operateur);
+  }
+
+  protected choisirElement(element: ElementAnomalieId): void {
+    this.elementChoisi.set(element.element);
+  }
+
+  protected async filter(event: Event): Promise<void> {
     event.preventDefault();
     try {
       const navigue = await this.router.navigate(['/anomalies'], {
-        queryParams: { nature: this.filtre().nature, operateur: operateur.trim(), element: element.trim(), page: 1 },
+        queryParams: { nature: this.filtre().nature, operateur: this.operateurChoisi(), element: this.elementChoisi(), page: 1 },
       });
       this.echecNavigation.set(!navigue);
     } catch (failure: unknown) {
@@ -63,14 +95,6 @@ export class ListeAnomalies {
 
   protected ongletParams(nature: NatureAnomalie): FiltreAnomalies {
     return { ...this.filtre(), nature, page: 1 };
-  }
-
-  protected operateurDe(ligne: { operateur: string; operateurId?: string }): string {
-    return ligne.operateur || [this.libelles.operateurNonResolu, ligne.operateurId].join(' · ');
-  }
-
-  protected posteDe(ligne: { poste: string; posteId?: string }): string {
-    return ligne.poste || (ligne.posteId ? this.libelles.posteNonResolu + ' · ' + ligne.posteId : this.libelles.sansPoste);
   }
 
   protected pageParams(page: number): FiltreAnomalies {

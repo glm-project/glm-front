@@ -6,6 +6,8 @@ import {
   debutFixture,
   dossierFixture,
   finFixture,
+  givenTheElements,
+  givenTheReferentiel,
   instantCorrigeLocalFixture,
   journalFixture,
   ligneFixture,
@@ -23,6 +25,8 @@ const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8
 describe('HTTP conflict resolution in Gestion', () => {
   beforeEach(() => {
     givenTheClockOnAFixedDay();
+    givenTheReferentiel();
+    givenTheElements();
   });
 
   it('should abandon an unconfirmed proposal when the page is reloaded', () => {
@@ -458,7 +462,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.wait('@conflitsReels');
     cy.get(dataSelector('anomalies-demo')).should('not.exist');
     cy.get(dataSelector('conflit-ligne')).should('have.length', 1).and('contain.text', 'M-042 réel');
-    cy.get(dataSelector('conflit-ligne')).should('contain.text', 'Opérateur non résolu').and('contain.text', operateurFixture);
+    cy.get(dataSelector('conflit-ligne')).should('contain.text', 'Opérateur non résolu').and('not.contain.text', operateurFixture);
   };
 
   const givenTheClockOnAFixedDay = (): void => {

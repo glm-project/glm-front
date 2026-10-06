@@ -1,0 +1,14 @@
+<glm-selecteur-recherchable
+  [choix]="choix()"
+  [courant]="courant()"
+  [disabled]="disabled()"
+  [indisponible]="indisponible()"
+  [describedBy]="describedBy()"
+  [triggerId]="triggerId()"
+  [labelId]="labelId()"
+  [selector]="selector()"
+  [avecTous]="avecTous()"
+  [libelles]="libelles"
+  (choisi)="choisir($event)"
+  (tousChoisis)="tousChoisis.emit()"
+/>

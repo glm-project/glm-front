@@ -1,0 +1,63 @@
+<glm-search-picker
+  #picker
+  [triggerId]="triggerId()"
+  [triggerSelector]="selector()"
+  [labelledBy]="labelId() + ' ' + triggerId() + '-identite'"
+  [describedBy]="describedBy()"
+  [panelId]="selector() + '-panneau'"
+  panelWidth="360px"
+  panelMaxHeight="calc(100dvh - 32px)"
+  [panelLabel]="libelles().choisir"
+  [searchLabel]="libelles().rechercher"
+  [searchSelector]="selector() + '-recherche'"
+  [disabled]="disabled()"
+  [focusAfterRender]="true"
+  [(search)]="saisie"
+  (detached)="picker.opened.set(false)"
+>
+  <span pickerIdentity class="identite" [id]="triggerId() + '-identite'">{{ identite() }}</span>
+  @if (propositions().length === 0) {
+  <p role="status" class="py-3 text-body-sm text-ink-muted" [attr.data-selector]="selector() + '-sans-resultat'">
+    {{ saisie() === '' ? libelles().aucun : libelles().aucunResultat }}
+  </p>
+  }
+  <ul>
+    @if (avecTous() && saisie() === '') {
+    <li>
+      <button
+        type="button"
+        class="min-h-touch text-body text-ink"
+        [attr.aria-current]="tousEstCourant() ? 'true' : null"
+        [attr.data-selector]="selector() + '-proposition'"
+        (click)="chooseAll(picker)"
+      >
+        <span class="nom">{{ libelles().tous }}</span>
+      </button>
+    </li>
+    } @if (nonResolu() && saisie() === '') {
+    <li>
+      <button
+        type="button"
+        class="min-h-touch text-body text-ink"
+        aria-current="true"
+        [attr.data-selector]="selector() + '-proposition'"
+        (click)="picker.close()"
+      >
+        <span class="nom">{{ libelles().nonResolu }}</span>
+      </button>
+    </li>
+    } @for (proposition of propositions(); track proposition.id) {
+    <li>
+      <button
+        type="button"
+        class="min-h-touch text-body text-ink"
+        [attr.aria-current]="proposition.id === courant() ? 'true' : null"
+        [attr.data-selector]="selector() + '-proposition'"
+        (click)="choose(proposition.id, picker)"
+      >
+        <span class="nom">{{ proposition.libelle }}</span>
+      </button>
+    </li>
+    }
+  </ul>
+</glm-search-picker>

@@ -1,8 +1,14 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { pageFinsAutomatiquesFixture } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
+import {
+  givenTheElementsFinsAutomatiques,
+  givenTheReferentielFinsAutomatiques,
+  pageFinsAutomatiquesFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 
 describe('Automatic end tab of the anomalies list', () => {
   beforeEach(() => {
+    givenTheReferentielFinsAutomatiques();
+    givenTheElementsFinsAutomatiques();
     givenOneAutomaticEnd();
   });
 
