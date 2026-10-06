@@ -268,6 +268,8 @@ export const LIBELLES_ANOMALIES = {
     enCause: 'en cause',
     tardif: 'pointé après l’échéance',
     heureRemplacee: 'heure remplacée',
+    modifiee: 'modifiée',
+    faitDeLActe: 'posé par cet acte',
     poignee: 'Heure proposée du fait',
     placerLaFin: 'Cliquez sur la frise pour placer la fin, ou saisissez l’heure.',
     badgeRegularise: 'R',

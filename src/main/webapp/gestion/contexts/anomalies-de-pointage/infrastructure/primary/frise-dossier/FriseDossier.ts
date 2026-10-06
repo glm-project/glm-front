@@ -1,7 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { memeSelection, SelectionDuDossier } from '../SelectionDuDossier';
-import { dispositionDeFrise, PositionDePoignee, RangeeDePlacement, VueDeFrise } from './DispositionFrise';
+import { ApercuDeFrise, dispositionDeFrise, PositionDePoignee, RangeeDePlacement, VueDeFrise } from './DispositionFrise';
 import { instantSousLePointeur } from './EchelleFrise';
 import { demandeDeLaTouche, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
@@ -16,13 +16,16 @@ export class FriseDossier {
   readonly selection = input<SelectionDuDossier | undefined>(undefined);
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
+  readonly apercu = input<ApercuDeFrise | undefined>(undefined);
   readonly selectionDemandee = output<SelectionDuDossier>();
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly estSelectionne = (selection: SelectionDuDossier): boolean => memeSelection(selection, this.selection());
   private prise: { readonly decalage: number } | undefined;
-  protected readonly disposition = computed(() => dispositionDeFrise(this.dossier(), this.now(), this.poignee(), this.placement()));
+  protected readonly disposition = computed(() =>
+    dispositionDeFrise(this.dossier(), this.now(), this.poignee(), this.placement(), this.apercu()),
+  );
 
   protected saisit(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {
     if (poignee.desactivee) return;

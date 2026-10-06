@@ -60,6 +60,15 @@ le jour à minuit ; elle défile horizontalement sur un écran étroit, sans fai
 boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
 catégorie, la période et l'état.
 
+Quand un aperçu est disponible, des rangées « Après cet acte » s'ajoutent sous la frise sur la même échelle, qui couvre aussi les
+instants de l'après : les pointages de l'après, puis une barre par activité de l'après, avec les fins reçues seulement. Elles
+ne se sélectionnent pas et ne changent pas la sélection du dossier. Une activité dont l'état, le début, la fin ou la durée
+reçus changent entre l'avant et l'après, ou qui est nouvelle, est mise en évidence et se dit « modifiée » dans son nom ; le
+fait que l'acte corrige ou crée est vert (« posé par cet acte ») ; un pointage annulé par l'acte est barré. La poignée reste
+affichée avec l'aperçu ; toute modification de la saisie, un déplacement de la poignée compris, retire l'aperçu et ces rangées.
+La section d'aperçu garde l'acte, l'issue, l'enregistrement, les conséquences textuelles reçues et, repliée, la comparaison
+de tous les pointages avant et après.
+
 Le panneau « Sélection », avant « Votre décision », montre le pointage choisi : geste, instant avec ses secondes, opérateur et
 poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
 et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours

@@ -99,6 +99,36 @@ describe('Late end handle on the frise in Gestion', () => {
     thenNoPreviewIsShown();
   });
 
+  it('should keep the handle while the previewed state is drawn under the frise', () => {
+    givenAPreviewOfTheLateEndCorrection();
+
+    whenOpeningTheLateEndCorrection();
+    whenPreviewingTheCorrection();
+
+    thenTheHandleStaysWithTheStateAfterTheAct();
+  });
+
+  it('should withdraw the previewed state drawn under the frise as soon as the handle moves', () => {
+    givenAPreviewOfTheLateEndCorrection();
+
+    whenOpeningTheLateEndCorrection();
+    whenPreviewingTheCorrection();
+    whenDraggingTheHandleTo(22);
+
+    thenNoStateAfterTheActIsDrawn();
+  });
+
+  const thenTheHandleStaysWithTheStateAfterTheAct = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).should('exist');
+    cy.get(dataSelector('anomalie-frise-apres')).should('exist');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.attr', 'data-etat', 'TERMINEE');
+  };
+
+  const thenNoStateAfterTheActIsDrawn = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).should('exist');
+    cy.get(dataSelector('anomalie-frise-apres')).should('not.exist');
+  };
+
   it('should keep the received time struck on its marker once the handle left it, and keep the handle out of the scroll gestures', () => {
     whenOpeningTheLateEndCorrection();
     whenDraggingTheHandleTo(22);

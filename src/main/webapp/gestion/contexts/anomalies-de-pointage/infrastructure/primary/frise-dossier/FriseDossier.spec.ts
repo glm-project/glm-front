@@ -7,7 +7,7 @@ import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie, ChoixGuide, DiagnosticConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { SelectionDuDossier } from '../SelectionDuDossier';
-import { VueDeFrise } from './DispositionFrise';
+import { ApercuDeFrise, VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
 import { DemandeDeDeplacement, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
@@ -1137,13 +1137,420 @@ describe('Frise of a dossier', () => {
     thenTheHandleIsNamedAndShows('Heure proposée du fait', '10:05');
   });
 
+  it('should draw the state after the act under the frise with a title of its own', async () => {
+    const dossier = { journal: [], activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')] };
+    const apres = { journal: [], activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')] };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheStateAfterTheActIsTitled('Après cet acte');
+  });
+
+  it('should draw no state after the act while no preview is available', async () => {
+    const dossier = { journal: [], activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')] };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenNoStateAfterTheActIsDrawn();
+  });
+
+  it('should draw one bar per activity of the state after the act, in the order of their start', async () => {
+    const dossier = { journal: [], activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')] };
+    const apres = {
+      journal: [],
+      activites: [
+        activiteFixture('nc-12', 'EN_COURS', '12:00', undefined, 'NON_CONFORMITE'),
+        activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'),
+      ],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheBarsAfterTheActAre(['travail-8', 'nc-12']);
+  });
+
+  it.each([
+    {
+      etat: 'TERMINEE',
+      fin: '12:00',
+      duree: 'PT4H',
+      temps: '',
+      nom: 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 12:00 · Terminée · 4 h',
+    },
+    {
+      etat: 'EN_COURS',
+      fin: undefined,
+      duree: undefined,
+      temps: '',
+      nom: 'Travail · lundi 14 septembre à 08:00 · En cours · Temps non définitif',
+    },
+    {
+      etat: 'TERMINEE',
+      fin: '12:00',
+      duree: undefined,
+      temps: '',
+      nom: 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 12:00 · Terminée',
+    },
+  ] as const)(
+    'should name the bar after the act of an activity $etat by its category, period, state and received time',
+    async ({ etat, fin, duree, temps, nom }) => {
+      const recue = activiteFixture('travail-8', etat, '08:00', fin);
+      const apres = {
+        journal: [],
+        activites: [
+          { ...recue, temps, periode: { ...requiredFixture(recue.periode, 'period'), ...(duree === undefined ? {} : { duree }) } },
+        ],
+      };
+
+      await whenRenderingTheFrise(apres, undefined, undefined, undefined, { avant: apres, apres });
+
+      thenTheBarAfterTheActIsNamed('travail-8', nom);
+    },
+  );
+
+  it('should write on the bar after the act its category, its state and its received time', async () => {
+    const dossier = { journal: [], activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')] };
+    const terminee = activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00');
+    const apres = { journal: [], activites: [{ ...terminee, periode: { ...requiredFixture(terminee.periode, 'period'), duree: 'PT4H' } }] };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheBarAfterTheActReads('travail-8', 'Travail · Terminée · 4 h');
+  });
+
+  it.each([
+    { etat: 'TERMINEE', fin: '12:00', attendu: 'RECUE' },
+    { etat: 'ECHUE', fin: '18:00', attendu: 'AUTOMATIQUE' },
+    { etat: 'EN_COURS', fin: undefined, attendu: 'OUVERTE' },
+    { etat: 'A_RESOUDRE', fin: '12:00', attendu: 'OUVERTE' },
+  ] as const)(
+    'should tell by attributes the category, the state and the end $attendu of the bar after the act of an activity $etat',
+    async ({ etat, fin, attendu }) => {
+      const dossier = { journal: [], activites: [activiteFixture('nc-9', 'A_RESOUDRE', '09:00', undefined, 'NON_CONFORMITE')] };
+      const apres = { journal: [], activites: [activiteFixture('nc-9', etat, '09:00', fin, 'NON_CONFORMITE')] };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+      thenTheBarAfterTheActHas('nc-9', { 'data-categorie': 'NON_CONFORMITE', 'data-etat': etat, 'data-fin': attendu });
+    },
+  );
+
+  const withDuration = (activite: ActiviteAnomalie, duree: string): ActiviteAnomalie => ({
+    ...activite,
+    periode: { ...requiredFixture(activite.periode, 'period'), duree },
+  });
+
+  it.each<{ cas: string; avant: ActiviteAnomalie[]; apres: ActiviteAnomalie[]; attendu: 'true' | 'false' }>([
+    {
+      cas: 'an activity whose received state, start, end and duration stay the same',
+      avant: [withDuration(activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'), 'PT4H')],
+      apres: [withDuration(activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'), 'PT4H')],
+      attendu: 'false',
+    },
+    {
+      cas: 'an activity whose state changes',
+      avant: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
+      apres: [activiteFixture('travail-8', 'EN_COURS', '08:00')],
+      attendu: 'true',
+    },
+    {
+      cas: 'an activity whose start changes',
+      avant: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
+      apres: [activiteFixture('travail-8', 'TERMINEE', '09:00', '12:00')],
+      attendu: 'true',
+    },
+    {
+      cas: 'an activity whose end changes',
+      avant: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
+      apres: [activiteFixture('travail-8', 'TERMINEE', '08:00', '13:00')],
+      attendu: 'true',
+    },
+    {
+      cas: 'an activity that gets an end',
+      avant: [activiteFixture('travail-8', 'TERMINEE', '08:00')],
+      apres: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
+      attendu: 'true',
+    },
+    {
+      cas: 'an activity whose duration changes',
+      avant: [withDuration(activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'), 'PT4H')],
+      apres: [withDuration(activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'), 'PT3H')],
+      attendu: 'true',
+    },
+    {
+      cas: 'an activity the dossier did not hold',
+      avant: [activiteFixture('nc-12', 'A_RESOUDRE', '12:00')],
+      apres: [activiteFixture('travail-8', 'EN_COURS', '08:00')],
+      attendu: 'true',
+    },
+  ])('should flag as changed the bar after the act of $cas: $attendu', async ({ avant, apres, attendu }) => {
+    const dossier = { journal: [], activites: avant };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres: { journal: [], activites: apres } });
+
+    thenTheBarAfterTheActHas('travail-8', { 'data-modifiee': attendu });
+  });
+
+  it('should say in the name of a changed bar after the act that the act changes it, and say nothing of an unchanged one', async () => {
+    const dossier = {
+      journal: [],
+      activites: [
+        activiteFixture('travail-8', 'A_RESOUDRE', '08:00'),
+        activiteFixture('nc-12', 'EN_COURS', '12:00', undefined, 'NON_CONFORMITE'),
+      ],
+    };
+    const apres = {
+      journal: [],
+      activites: [
+        activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'),
+        activiteFixture('nc-12', 'EN_COURS', '12:00', undefined, 'NON_CONFORMITE'),
+      ],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheBarAfterTheActIsNamed('travail-8', 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 12:00 · Terminée · modifiée');
+    thenTheBarAfterTheActIsNamed('nc-12', 'Non-conformité · lundi 14 septembre à 12:00 · En cours · Temps non définitif');
+  });
+
+  it('should draw a marker per pointage of the journal after the act, in chronological order, named like the markers above', async () => {
+    const dossier = { journal: [pointageFixture('fin-17', 'ARRET', '17:00')], activites: [] };
+    const apres = {
+      journal: [
+        pointageFixture('remplacement-16', 'ARRET', '16:00'),
+        pointageFixture('fin-17', 'ARRET', '17:00', {
+          annulation: { motif: 'Doublon', auteur: 'gestionnaire', instant: instantAt('18:00') },
+        }),
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheMarkersAfterTheActAre(['remplacement-16', 'fin-17']);
+    thenTheMarkerAfterTheActIsNamed('remplacement-16', '16:00:00 · Arrêt · posé par cet acte');
+    thenTheMarkerAfterTheActIsNamed('fin-17', '17:00:00 · Arrêt · annulé');
+  });
+
+  it('should flag a cancelled, a non-conformity and a regularised marker after the act as the ones above', async () => {
+    const apres = {
+      journal: [
+        pointageFixture('fin-17', 'ARRET', '17:00', {
+          annulation: { motif: 'Doublon', auteur: 'gestionnaire', instant: instantAt('18:00') },
+        }),
+        pointageFixture('nc-12', 'PASSAGE_NC', '12:00'),
+        pointageFixture('reg-19', 'ARRET', '19:00', { regularisation: true }),
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(apres, undefined, undefined, undefined, { avant: apres, apres });
+
+    thenTheMarkerAfterTheActHas('fin-17', { 'data-annule': 'true', 'data-non-conformite': 'false' });
+    thenTheMarkerAfterTheActHas('nc-12', { 'data-annule': 'false', 'data-non-conformite': 'true' });
+    thenTheMarkerAfterTheActHas('reg-19', { 'data-annule': 'false' });
+    thenTheMarkerAfterTheActIsNamed('reg-19', '19:00:00 · Arrêt · régularisé');
+    thenTheMarkerAfterTheActShows('reg-19', 'R');
+    thenTheMarkerAfterTheActShows('fin-17', '■17:00');
+  });
+
+  it('should not carry over to the markers after the act the fault, the late flag or the replaced time of the markers above', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
+      activites: [],
+      diagnostics: [diagnosticSur('fin-23')],
+      choix: [correctionTardiveFixture('CORRIGER_FIN_TARDIVE', 'fin-23')],
+    };
+    const apres = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('22:00', { origine: 'fin-23' }), undefined, { avant: dossier, apres });
+
+    thenTheMarkerAfterTheActIsNamed('fin-23', '23:00:00 · Arrêt');
+  });
+
+  it('should mark in green and name as made by the act only the marker after the act that the journal did not hold', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-17', 'ARRET', '17:00')],
+      activites: [],
+    };
+    const apres = {
+      journal: [
+        pointageFixture('debut-8', 'DEMARRAGE', '08:00'),
+        pointageFixture('fin-17', 'ARRET', '17:00', {
+          annulation: { motif: 'Doublon', auteur: 'gestionnaire', instant: instantAt('18:00') },
+        }),
+        pointageFixture('remplacement-16', 'ARRET', '16:00'),
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheMarkerAfterTheActHas('remplacement-16', { 'data-ok': 'true' });
+    thenTheMarkerAfterTheActHas('fin-17', { 'data-ok': 'false' });
+    thenTheMarkerAfterTheActHas('debut-8', { 'data-ok': 'false' });
+    thenTheMarkerAfterTheActIsNamed('remplacement-16', '16:00:00 · Arrêt · posé par cet acte');
+  });
+
+  it('should mark no marker after the act in green when the act only cancels a pointage', async () => {
+    const dossier = { journal: [pointageFixture('fin-17', 'ARRET', '17:00')], activites: [] };
+    const apres = {
+      journal: [
+        pointageFixture('fin-17', 'ARRET', '17:00', {
+          annulation: { motif: 'Doublon', auteur: 'gestionnaire', instant: instantAt('18:00') },
+        }),
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheMarkerAfterTheActHas('fin-17', { 'data-ok': 'false', 'data-annule': 'true' });
+  });
+
+  it('should stretch the scale to the pointages and the activities of the state after the act', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:30')],
+      activites: [activiteFixture('travail-8', 'EN_COURS', '08:30')],
+    };
+    const apres = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:30'), pointageFixture('fin-6', 'ARRET', '06:15')],
+      activites: [activiteFixture('travail-8', 'TERMINEE', '08:30', '10:45')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheGraduationsAre(['05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
+  });
+
+  it('should stand a marker and a bar after the act at the same place as the ones above when they hold the same instants', async () => {
+    const dossier = {
+      journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres: dossier });
+
+    expect(markerAfterTheAct('fin-12').style.left).toBe(marker('fin-12').style.left);
+    expect(barAfterTheAct('travail-8').style.left).toBe(bar('travail-8').style.left);
+    expect(barAfterTheAct('travail-8').style.width).toBe(bar('travail-8').style.width);
+  });
+
+  it('should stand the state after the act below the rows of the activities received, with its title first', async () => {
+    const dossier = {
+      journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [
+        activiteFixture('travail-8', 'A_RESOUDRE', '08:00'),
+        activiteFixture('nc-9', 'A_RESOUDRE', '09:00', undefined, 'NON_CONFORMITE'),
+      ],
+    };
+    const apres = {
+      journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [
+        activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00'),
+        activiteFixture('nc-9', 'TERMINEE', '09:00', '12:00', 'NON_CONFORMITE'),
+      ],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    expect(topOf(stateAfterTheAct())).toBe(topOf(bar('nc-9')) + 44 + 8);
+    thenTheStateAfterTheActIsLaidOut({ markers: { 'fin-12': 28 }, bars: { 'travail-8': 80, 'nc-9': 132 } });
+  });
+
+  it('should be tall enough for the last bar after the act', async () => {
+    const dossier = {
+      journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
+    };
+    const apres = { journal: dossier.journal, activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')] };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    expect(Number.parseFloat(thePlan().style.height)).toBeGreaterThanOrEqual(
+      topOf(stateAfterTheAct()) + topOf(barAfterTheAct('travail-8')) + 44,
+    );
+  });
+
+  it('should keep the handle below the markers and above the bars while the state after the act is drawn under them', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
+    };
+    const apres = { journal: dossier.journal, activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '10:00')] };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'), undefined, { avant: dossier, apres });
+
+    thenTheHandleStandsBelow(['debut-8', 'fin-12'], 'travail-8');
+    expect(topOf(stateAfterTheAct())).toBeGreaterThanOrEqual(topOf(bar('travail-8')) + 44);
+  });
+
+  it('should keep the scale extended by the handle and stretched by the state after the act', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    const apres = {
+      journal: [...dossier.journal, pointageFixture('fin-13', 'ARRET', '13:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'), undefined, { avant: dossier, apres });
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00']);
+  });
+
+  it('should offset by one lane the markers after the act that are closer than a touch target, and push the bars below them', async () => {
+    const dossier = { journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00')], activites: [] };
+    const apres = {
+      journal: [pointageFixture('p-1', 'ARRET', '12:00'), pointageFixture('p-2', 'ARRET', '12:05')],
+      activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheStateAfterTheActIsLaidOut({ markers: { 'p-1': 28, 'p-2': 72 }, bars: { 'travail-8': 124 } });
+  });
+
+  it('should leave the markers and the bars after the act out of the tab order and out of the selection', async () => {
+    const dossier = {
+      journal: [pointageFixture('fin-17', 'ARRET', '17:00')],
+      activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
+    };
+    const apres = { journal: dossier.journal, activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '17:00')] };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+    whenPressing(markerAfterTheAct('fin-17'));
+    whenPressing(barAfterTheAct('travail-8'));
+
+    thenTheTabOrderIs(['Travail · lundi 14 septembre à 08:00 · À résoudre', '17:00:00 · Arrêt']);
+    expect(requestedSelections).toEqual([]);
+  });
+
+  it('should give the state after the act the height of its title, its markers and its bars', async () => {
+    const dossier = { journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00')], activites: [] };
+    const apres = {
+      journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    expect(stateAfterTheAct().style.height).toBe('124px');
+  });
+
   const whenRenderingTheFrise = async (
     dossier: VueDeFrise,
     selection?: SelectionDuDossier,
     poignee?: PoigneeDeFrise,
     placement?: PlacementDeLInstant,
+    apercu?: ApercuDeFrise,
   ): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
+    fixture.componentRef.setInput('apercu', apercu);
     fixture.componentRef.setInput('dossier', dossier);
     fixture.componentRef.setInput('poignee', poignee);
     fixture.componentRef.setInput('placement', placement);
@@ -1447,6 +1854,88 @@ describe('Frise of a dossier', () => {
   const thenTheDaysShownAre = (expected: readonly string[]): void => {
     const jours = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-jour'))];
     expect(jours.map(jour => jour.textContent.trim())).toEqual(expected);
+  };
+
+  const thenTheStateAfterTheActIsTitled = (expected: string): void => {
+    const titre = requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-apres-titre')),
+      'title of the state after the act',
+    );
+    expect(titre.textContent.trim()).toBe(expected);
+  };
+
+  const thenNoStateAfterTheActIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise-apres'))).toBeNull();
+  };
+
+  const barsAfterTheAct = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-apercu-activite-apres')),
+  ];
+
+  const thenTheBarsAfterTheActAre = (expected: readonly string[]): void => {
+    expect(barsAfterTheAct().map(bar => bar.dataset['activite'])).toEqual(expected);
+  };
+
+  const barAfterTheAct = (activite: string): HTMLElement =>
+    requiredFixture(
+      barsAfterTheAct().find(candidate => candidate.dataset['activite'] === activite),
+      `bar after the act of ${activite}`,
+    );
+
+  const thenTheBarAfterTheActIsNamed = (activite: string, expected: string): void => {
+    expect(barAfterTheAct(activite).getAttribute('aria-label')).toBe(expected);
+  };
+
+  const thenTheBarAfterTheActReads = (activite: string, expected: string): void => {
+    expect(barAfterTheAct(activite).textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+
+  const thenTheBarAfterTheActHas = (activite: string, expected: Readonly<Record<string, string>>): void => {
+    const bar = barAfterTheAct(activite);
+    expect(Object.fromEntries(Object.keys(expected).map(attribut => [attribut, bar.getAttribute(attribut)]))).toEqual(expected);
+  };
+
+  const markersAfterTheAct = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-apres-pointage')),
+  ];
+
+  const thenTheMarkersAfterTheActAre = (expected: readonly string[]): void => {
+    expect(markersAfterTheAct().map(marker => marker.dataset['pointage'])).toEqual(expected);
+  };
+
+  const markerAfterTheAct = (pointage: string): HTMLElement =>
+    requiredFixture(
+      markersAfterTheAct().find(candidate => candidate.dataset['pointage'] === pointage),
+      `marker after the act of ${pointage}`,
+    );
+
+  const thenTheMarkerAfterTheActIsNamed = (pointage: string, expected: string): void => {
+    expect(markerAfterTheAct(pointage).getAttribute('aria-label')).toBe(expected);
+  };
+
+  const thenTheMarkerAfterTheActHas = (pointage: string, expected: Readonly<Record<string, string>>): void => {
+    const marker = markerAfterTheAct(pointage);
+    expect(Object.fromEntries(Object.keys(expected).map(attribut => [attribut, marker.getAttribute(attribut)]))).toEqual(expected);
+  };
+
+  const thenTheMarkerAfterTheActShows = (pointage: string, expected: string): void => {
+    expect(markerAfterTheAct(pointage).textContent.replace(/\s+/g, ' ')).toContain(expected);
+  };
+
+  const stateAfterTheAct = (): HTMLElement =>
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-apres')),
+      'state after the act',
+    );
+
+  const thenTheStateAfterTheActIsLaidOut = (expected: {
+    markers: Readonly<Record<string, number>>;
+    bars: Readonly<Record<string, number>>;
+  }): void => {
+    expect({
+      markers: Object.fromEntries(Object.keys(expected.markers).map(pointage => [pointage, topOf(markerAfterTheAct(pointage))])),
+      bars: Object.fromEntries(Object.keys(expected.bars).map(activite => [activite, topOf(barAfterTheAct(activite))])),
+    }).toEqual(expected);
   };
 
   const thenTheMarkersAre = (expected: readonly string[]): void => {

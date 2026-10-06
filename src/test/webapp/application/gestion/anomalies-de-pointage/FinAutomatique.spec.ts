@@ -165,9 +165,8 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenPreviewingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu'))
-      .should('contain.text', 'Terminée · 9 h')
-      .and('contain.text', 'Anomalie traitée après enregistrement');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.attr', 'aria-label').and('contain', 'Terminée · 9 h');
+    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Anomalie traitée après enregistrement');
   };
 
   const whenConfirmingTheEndRegularisation = (): void => {
@@ -283,7 +282,7 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenPreviewingTheCorrection = (): void => {
     cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Terminée · 15 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.attr', 'aria-label').and('contain', 'Terminée · 15 h');
   };
 
   const thenTheCorrectionIsProcessedFromTheReceipt = (): void => {

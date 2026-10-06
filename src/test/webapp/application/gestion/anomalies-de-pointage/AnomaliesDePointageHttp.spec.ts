@@ -395,7 +395,9 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('anomalie-champs-detail')).click();
     whenTypingTheInstant(instantCorrigeLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu')).should('contain.text', '4 h').and('contain.text', '5 h 1 min');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.length', 2);
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).first().should('have.attr', 'aria-label').and('contain', '4 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).last().should('have.attr', 'aria-label').and('contain', '5 h 1 min');
   };
 
   const whenConfirmingTheRealPreview = (): void => {

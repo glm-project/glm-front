@@ -27,6 +27,7 @@
         [selection]="selection()"
         [poignee]="poignee()"
         [placement]="placement()"
+        [apercu]="apercu()"
         (selectionDemandee)="selection.set($event)"
         (deplacementDemande)="deplacer($event)"
         (placementDemande)="placer($event)"
@@ -394,24 +395,14 @@
         </p>
         }
       </div>
-      <div class="comparaison mt-4">
-        <div>
-          <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
-          @for (activite of apercu.avant.activites; track activite.id.activite) {
-          <p class="mt-2 text-body-sm">{{ libelleActivite(activite, now) }} · {{ tempsActivite(activite) }}</p>
-          }
-        </div>
-        <div data-selector="anomalie-apercu-consequences">
-          <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
-          @for (activite of apercu.apres.activites; track activite.id.activite) {
-          <p class="mt-2 text-body-sm" data-selector="anomalie-apercu-activite-apres">
-            {{ libelleActivite(activite, now) }} · {{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}
-          </p>
-          } @for (consequence of apercu.apres.consequences; track consequence) {
-          <p class="mt-2 text-body-sm">{{ consequence }}</p>
-          }
-        </div>
+      @if (apercu.apres.consequences.length > 0) {
+      <div class="mt-4" data-selector="anomalie-apercu-consequences">
+        <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
+        @for (consequence of apercu.apres.consequences; track consequence) {
+        <p class="mt-2 text-body-sm">{{ consequence }}</p>
+        }
       </div>
+      }
       <p class="mt-4 text-body font-semibold">{{ anomalieTraitee(apercu.apres) ? libelles.apercuResolu : libelles.apercuRestant }}</p>
       <button
         type="button"

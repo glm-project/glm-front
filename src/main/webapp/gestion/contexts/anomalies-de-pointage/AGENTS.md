@@ -131,6 +131,17 @@ de « Votre décision » font la même demande et se désactivent à une borne. 
 qu'une opération est en cours. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu, sans dépasser
 l'heure courante des bornes (jamais en deçà de l'échelle normale) ; au-delà, le champ reste l'accès. L'heure d'origine du
 pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
+Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sous ses rangées actuelles, un groupe
+« Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages et les activités de l'après :
+une rangée de repères (`anomalie-apres-pointage`) puis une barre par activité (`anomalie-apercu-activite-apres`), selon la
+grammaire des rangées actuelles (fins reçues seulement, rien n'est inventé). Ces éléments sont des images (`role="img"`),
+sans tabulation ni sélection ; le nom d'une barre porte la catégorie, la période, l'état et le temps reçus. La comparaison est
+de la présentation (`ComparaisonDApercu.ts`) : une activité dont l'état, le début, la fin ou la durée reçus changent entre
+`avant` et `apres`, ou que l'avant ne portait pas, est mise en évidence (`data-modifiee`, mot « modifiée » dans son nom) ; le
+pointage que l'après tient et que l'avant ne tenait pas, fait corrigé ou créé par l'acte, est en `ok` (`data-ok`, « posé par
+cet acte »). Un pointage annulé par l'acte est barré. Une poignée active reste affichée avec l'aperçu ; la déplacer retire
+l'aperçu, donc ces rangées. La section d'aperçu garde l'acte, la phrase d'issue, l'enregistrement, les conséquences textuelles
+reçues (seulement s'il y en a) et la comparaison repliée de tous les pointages.
 La sélection est un pointage ou une activité (`SelectionDuDossier`). Le panneau « Sélection », en tête de la colonne de droite,
 porte le pointage choisi : geste, instant avec ses secondes, opérateur, poste, régularisation, annulation (motif, auteur,
 instant), remplacement, traçabilité (activités visée et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un

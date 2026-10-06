@@ -1672,7 +1672,7 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-retry');
   });
 
-  it('should show ongoing work in the proposed result without presenting a definitive duration', async () => {
+  it('should name on the frise the ongoing work in the proposed result without presenting a definitive duration', async () => {
     givenASuccessfulPreview({
       ...dossierAnomalieFixture(),
       enConflit: false,
@@ -1684,7 +1684,97 @@ describe('Anomaly dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenTextContains('anomalie-apercu-activite-apres', 'Travail commencé à 8 h · En cours · Temps non définitif');
+    thenTheActivityAfterTheActIsNamed('travail-8', 'Travail commencé à 8 h · En cours · Temps non définitif · modifiée');
+  });
+
+  it('should draw no state after the act under the frise before any preview', async () => {
+    givenASuccessfulPreview();
+
+    await whenRendering();
+
+    thenAbsent('anomalie-frise-apres');
+  });
+
+  it('should draw the state after the act under the frise once the preview is shown', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-frise-apres-titre', 'Après cet acte');
+  });
+
+  it('should flag as changed the activities of the state after the act that the act changes or creates, and no other', async () => {
+    const dossier = dossierAnomalieFixture();
+    const inchangee = {
+      id: new ActiviteAnomalieId('travail-8'),
+      libelle: 'Travail ouvert à 8 h',
+      etat: 'A_RESOUDRE',
+      temps: 'À résoudre',
+    } as const;
+    givenASuccessfulPreview({
+      ...dossier,
+      enConflit: false,
+      activites: [inchangee, { id: new ActiviteAnomalieId('nc-12'), libelle: 'NC ouverte à 12 h', etat: 'EN_COURS', temps: '' }],
+    });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTheActivityAfterTheActIsFlagged('travail-8', 'false');
+    thenTheActivityAfterTheActIsFlagged('nc-12', 'true');
+  });
+
+  it('should show in green the fact the act creates and strike the pointage it cancels, in the state after the act', async () => {
+    const dossier = dossierAnomalieFixture();
+    const origine = pointageDeLaFinFixture();
+    givenASuccessfulPreview({
+      ...dossier,
+      enConflit: false,
+      journal: [
+        { ...origine, annulation: { motif: 'La cible est la NC.', auteur: 'gestionnaire', instant: INSTANT_ENREGISTREMENT } },
+        {
+          ...origine,
+          id: new PointageAnomalieId('remplacement'),
+          fait: { ...origine.fait, activiteVisee: 'nc-12', instant: INSTANT_FIN_DE_TRAVAIL },
+          remplace: origine.id,
+        },
+      ],
+    });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTheMarkerAfterTheActIs('remplacement', { 'data-ok': 'true', 'data-annule': 'false' });
+    thenTheMarkerAfterTheActIs('fin-17', { 'data-ok': 'false', 'data-annule': 'true' });
+  });
+
+  it('should withdraw the state after the act when the manager changes the reason', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenEntering('anomalie-motif', 'Motif précisé');
+
+    thenAbsent('anomalie-frise-apres');
+  });
+
+  it('should keep the received textual consequences of the act, and show none when it has none', async () => {
+    givenASuccessfulPreview({ ...dossierAnomalieFixture(), enConflit: false, consequences: ['Une heure de travail de plus.'] });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-consequences', 'Une heure de travail de plus.');
+  });
+
+  it('should draw no textual consequences block when the act has none', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenAbsent('anomalie-apercu-consequences');
   });
 
   it('should keep new decisions blocked when the confirmation receipt is not attested', async () => {
@@ -2908,6 +2998,22 @@ describe('Anomaly dossier page', () => {
       thenAbsent('anomalie-apercu');
     });
 
+    it('should keep the handle while the state after the act is drawn', async () => {
+      await givenAPreviewOfTheLateEndCorrection();
+
+      thenTheHandleReads('23:00');
+      thenTextContains('anomalie-frise-apres-titre', 'Après cet acte');
+    });
+
+    it('should withdraw the state after the act when the handle moves', async () => {
+      await givenAPreviewOfTheLateEndCorrection();
+
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      thenTheHandleReads('22:59');
+      thenAbsent('anomalie-frise-apres');
+    });
+
     it('should preview the instant the handle moved to, without the fraction of a second of the received one', async () => {
       givenALateEnd(instantLocalFixture(new Date(2026, 8, 14, 23, 0), '123456789'));
       givenASuccessfulPreview(undefined, acteFinTardiveFixture('2026-09-14T23:01:00-03:00'));
@@ -3539,6 +3645,15 @@ describe('Anomaly dossier page', () => {
 
   const givenALateEnd = (instant = INSTANT_FIN_TARDIVE): void => {
     read.result = { kind: 'DOSSIER', dossier: dossierFinTardiveFixture(instant) };
+  };
+
+  const givenAPreviewOfTheLateEndCorrection = async (): Promise<void> => {
+    givenALateEnd();
+    givenASuccessfulPreview(undefined, acteFinTardiveFixture(INSTANT_FIN_TARDIVE));
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-motif', 'Fin tardive confirmée');
+    await whenClicking('anomalie-previsualiser');
   };
 
   const givenALateGestureCorrectedBy = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
@@ -4336,6 +4451,32 @@ describe('Anomaly dossier page', () => {
     const problemes = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-probleme'))];
     expect(problemes.map(probleme => probleme.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
   };
+  const thenTheActivityAfterTheActIsNamed = (activite: string, expected: string): void => {
+    const barre = requiredFixture(
+      [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-apercu-activite-apres'))].find(
+        candidate => candidate.dataset['activite'] === activite,
+      ),
+      `bar after the act of ${activite}`,
+    );
+    expect(barre.getAttribute('aria-label')).toBe(expected);
+  };
+  const afterTheAct = (selector: string, attribut: string, identifiant: string): HTMLElement =>
+    requiredFixture(
+      [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector(selector))].find(
+        candidate => candidate.dataset[attribut] === identifiant,
+      ),
+      `${selector} of ${identifiant}`,
+    );
+
+  const thenTheActivityAfterTheActIsFlagged = (activite: string, expected: string): void => {
+    expect(afterTheAct('anomalie-apercu-activite-apres', 'activite', activite).getAttribute('data-modifiee')).toBe(expected);
+  };
+
+  const thenTheMarkerAfterTheActIs = (pointage: string, expected: Readonly<Record<string, string>>): void => {
+    const marker = afterTheAct('anomalie-apres-pointage', 'pointage', pointage);
+    expect(Object.fromEntries(Object.keys(expected).map(attribut => [attribut, marker.getAttribute(attribut)]))).toEqual(expected);
+  };
+
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
   };

@@ -3,12 +3,18 @@ import { ChronologiePointages } from '../../../domain/dossier/ChronologiePointag
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { pointagesTardifs } from '../GestesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste } from '../PresentationDossier';
+import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste, tempsActivite } from '../PresentationDossier';
 import { SelectionDuDossier } from '../SelectionDuDossier';
+import { activitesModifiees, faitsDeLActe } from './ComparaisonDApercu';
 import { echelleDe, EchelleFrise, Graduation, graduationsDe, largeurMinimaleDe, positionSur, surVoies } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
 
 export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'> & { readonly choix?: DossierAnomalie['choix'] };
+
+export interface ApercuDeFrise {
+  readonly avant: VueDeFrise;
+  readonly apres: VueDeFrise;
+}
 
 export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
 
@@ -46,6 +52,7 @@ export interface RepereFrise {
   readonly enCause: boolean;
   readonly deplace: boolean;
   readonly tardif: boolean;
+  readonly ok: boolean;
 }
 
 export type ElementFrise = BarreFrise | RepereFrise;
@@ -87,6 +94,16 @@ export interface DispositionFrise {
   readonly elements: readonly ElementFrise[];
   readonly poignee: PositionDePoignee | undefined;
   readonly rangeeDePlacement: RangeeDePlacement | undefined;
+  readonly apres: DispositionApres | undefined;
+}
+
+export type BarreApres = BarreFrise & { readonly modifiee: boolean };
+
+export interface DispositionApres {
+  readonly haut: number;
+  readonly hauteur: number;
+  readonly reperes: readonly RepereFrise[];
+  readonly barres: readonly BarreApres[];
 }
 
 type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
@@ -95,12 +112,14 @@ type CategorieDeBarre = PeriodeActivite['categorie'];
 interface ContexteDeFrise {
   readonly now: Date;
   readonly tardifs: ReadonlySet<string>;
+  readonly faitsDeLActe: ReadonlySet<string>;
   readonly echelle: EchelleFrise;
   readonly poignee: PoigneeDeFrise | undefined;
 }
 
 const POSITION_DU_BORD = 100;
 const HAUTEUR_DE_L_AXE_PX = 28;
+const HAUTEUR_DU_TITRE_PX = 28;
 const HAUTEUR_D_UN_ELEMENT_PX = 44;
 const ESPACE_ENTRE_RANGEES_PX = 8;
 const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', 'A_RESOUDRE'];
@@ -112,6 +131,7 @@ interface DrapeauxDuRepere {
   readonly enCause: boolean;
   readonly deplace: boolean;
   readonly tardif: boolean;
+  readonly ok: boolean;
 }
 
 const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now: Date): string =>
@@ -122,6 +142,7 @@ const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now
     ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
     ...(drapeaux.enCause ? [QUALIFICATIFS.enCause] : []),
     ...(drapeaux.tardif ? [QUALIFICATIFS.tardif] : []),
+    ...(drapeaux.ok ? [QUALIFICATIFS.faitDeLActe] : []),
     ...(drapeaux.deplace ? [QUALIFICATIFS.heureRemplacee] : []),
   ].join(' · ');
 
@@ -134,6 +155,7 @@ const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefi
 const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, contexte: ContexteDeFrise): RepereFrise => {
   const deplace = estDeplace(pointage, contexte.poignee);
   const tardif = contexte.tardifs.has(pointage.id.pointage);
+  const ok = contexte.faitsDeLActe.has(pointage.id.pointage);
   return {
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
@@ -142,7 +164,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     voie,
     cle: `pointage:${pointage.id.pointage}`,
     pointage: pointage.id.pointage,
-    nom: nomDuRepere(pointage, { enCause, deplace, tardif }, contexte.now),
+    nom: nomDuRepere(pointage, { enCause, deplace, tardif, ok }, contexte.now),
     selection: { kind: 'POINTAGE', id: pointage.id.pointage },
     heure: heureDe(pointage.fait.instant),
     symbole: symboleDuGeste(pointage.fait),
@@ -152,6 +174,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     enCause,
     deplace,
     tardif,
+    ok,
   };
 };
 
@@ -269,18 +292,78 @@ const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly Rep
 
 const estLisible = (pointage: PointageAnomalie): boolean => Number.isFinite(Date.parse(pointage.fait.instant));
 
+const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {
+  const barre = barreDe(activite, haut, contexte);
+  const temps = tempsActivite(activite);
+  return {
+    ...barre,
+    modifiee,
+    nom: [barre.nom, temps, modifiee ? QUALIFICATIFS.modifiee : ''].filter(Boolean).join(' · '),
+    texte: [barre.texte, temps].filter(Boolean).join(' · '),
+  };
+};
+
+const pointagesLisibles = (journal: readonly PointageAnomalie[]): readonly PointageAnomalie[] =>
+  new ChronologiePointages(journal.filter(estLisible)).pointages;
+
+const dispositionApres = (
+  apercu: ApercuDeFrise,
+  pointages: readonly PointageAnomalie[],
+  haut: number,
+  contexte: ContexteDeFrise,
+): DispositionApres => {
+  const modifiees = activitesModifiees(apercu.avant.activites, apercu.apres.activites);
+  const poses = faitsDeLActe(apercu.avant.journal, apercu.apres.journal);
+  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) => ({
+    ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
+    haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
+  }));
+  const hautDesBarres = HAUTEUR_DU_TITRE_PX + hauteurDesReperes(reperes) + ESPACE_ENTRE_RANGEES_PX;
+  const barres = parDebut(apercu.apres.activites).map((activite, rang) =>
+    barreApresDe(
+      activite,
+      hautDesBarres + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX),
+      modifiees.has(activite.id.activite),
+      contexte,
+    ),
+  );
+  return {
+    haut,
+    hauteur: Math.max(HAUTEUR_DU_TITRE_PX, ...[...reperes, ...barres].map(element => element.haut + HAUTEUR_D_UN_ELEMENT_PX)),
+    reperes,
+    barres,
+  };
+};
+
+const hauteurDeLaFrise = (
+  elements: readonly ElementFrise[],
+  hautDeLaPoignee: number | undefined,
+  apres: DispositionApres | undefined,
+): number =>
+  Math.max(
+    Math.max(...elements.map(element => element.haut), ...(hautDeLaPoignee === undefined ? [] : [hautDeLaPoignee]))
+      + HAUTEUR_D_UN_ELEMENT_PX
+      + ESPACE_ENTRE_RANGEES_PX,
+    ...(apres === undefined ? [] : [apres.haut + apres.hauteur + ESPACE_ENTRE_RANGEES_PX]),
+  );
+
 export const dispositionDeFrise = (
   vue: VueDeFrise,
   now: Date,
   poignee?: PoigneeDeFrise,
   placement?: PlacementDeLInstant,
+  apercu?: ApercuDeFrise,
 ): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  const pointages = new ChronologiePointages(vue.journal.filter(estLisible)).pointages;
+  const pointages = pointagesLisibles(vue.journal);
+  const pointagesApres = apercu === undefined ? [] : pointagesLisibles(apercu.apres.journal);
   const bornesDuGeste = (poignee ?? placement)?.bornes;
-  const echelle = echelleDe(instantsDeLEchelle(pointages, vue.activites, now), bornesDuGeste && Date.parse(bornesDuGeste.max));
+  const echelle = echelleDe(
+    instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
+    bornesDuGeste && Date.parse(bornesDuGeste.max),
+  );
   const tardifs = pointagesTardifs(vue.choix ?? []);
-  const contexte = { now, echelle, poignee, tardifs };
+  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>() };
   const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) =>
     repereDe(element, enCause.has(element.id.pointage), voie, contexte),
   );
@@ -290,17 +373,24 @@ export const dispositionDeFrise = (
     barreDe(activite, hautDesActivites + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX), contexte),
   );
   const elements = [...barres, ...reperes].sort((gauche, droite) => gauche.instant - droite.instant);
+  const apres =
+    apercu === undefined
+      ? undefined
+      : dispositionApres(
+          apercu,
+          pointagesApres,
+          hautDesActivites + barres.length * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX),
+          contexte,
+        );
   return {
     echelle,
     largeurMinimale: largeurMinimaleDe(echelle),
-    hauteur:
-      Math.max(...elements.map(element => element.haut), ...(poignee === undefined ? [] : [hautDeLaPoignee]))
-      + HAUTEUR_D_UN_ELEMENT_PX
-      + ESPACE_ENTRE_RANGEES_PX,
+    hauteur: hauteurDeLaFrise(elements, poignee === undefined ? undefined : hautDeLaPoignee, apres),
     graduations: graduationsDe(echelle),
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,
     poignee: poignee === undefined ? undefined : positionDeLaPoignee(poignee, echelle, hautDeLaPoignee),
     rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes),
+    apres,
   };
 };

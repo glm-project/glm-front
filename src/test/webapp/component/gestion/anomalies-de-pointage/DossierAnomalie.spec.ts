@@ -168,7 +168,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-choix')).last().should('have.attr', 'aria-pressed', 'false');
   };
 
-  it('should show the consequences before the optional journal comparison on a narrow screen', () => {
+  it('should draw the consequences on the frise without opening the optional journal comparison on a narrow screen', () => {
     whenOpeningTheDossierAt(320);
     whenPreparingTheGuidedCorrection();
 
@@ -176,20 +176,40 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenTheConsequencesAreVisibleWithoutOpeningTheJournal = (): void => {
-    cy.get(dataSelector('anomalie-apercu-consequences'))
-      .should('be.visible')
-      .and('contain.text', 'Terminée · 4 h')
-      .and('contain.text', 'Terminée · 5 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.length', 2);
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).first().should('have.attr', 'aria-label').and('contain', 'Terminée · 4 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).last().should('have.attr', 'aria-label').and('contain', 'Terminée · 5 h');
     cy.get(dataSelector('anomalie-apercu-journal')).should('not.have.attr', 'open');
     cy.get(dataSelector(`anomalie-apercu-fait-avant-${finFixture}`)).should(fait => {
       expect(fait[0]?.checkVisibility()).to.equal(false);
     });
-    cy.get(dataSelector('anomalie-apercu-consequences')).then(consequences => {
-      cy.get(dataSelector('anomalie-apercu-journal-ouvrir')).should(journal => {
-        expect(consequences[0]?.getBoundingClientRect().bottom).to.be.at.most(journal[0]?.getBoundingClientRect().top ?? 0);
-      });
-    });
     cy.get(dataSelector('anomalie-confirmer')).should('be.enabled');
+  };
+
+  it('should draw the state after the act under the frise, highlight what it changes and show the fact it creates in green', () => {
+    whenOpeningTheDossier();
+    whenPreparingTheGuidedCorrection();
+
+    thenTheFriseDrawsTheStateAfterTheAct();
+  });
+
+  const thenTheFriseDrawsTheStateAfterTheAct = (): void => {
+    cy.get(dataSelector('anomalie-frise-apres-titre')).should('have.text', 'Après cet acte');
+    cy.get(dataSelector('anomalie-apercu-activite-apres'))
+      .should('have.length', 2)
+      .and('have.attr', 'data-modifiee', 'true')
+      .and('have.attr', 'data-etat', 'TERMINEE');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).first().should('have.attr', 'aria-label').and('contain', 'modifiée');
+    cy.get(dataSelector('anomalie-apres-pointage')).should('have.length', 4);
+    cy.get(dataSelector('anomalie-apres-pointage'))
+      .filter(`[data-pointage="${remplacementFixture}"]`)
+      .should('have.attr', 'data-ok', 'true');
+    cy.get(dataSelector('anomalie-apres-pointage'))
+      .filter(`[data-pointage="${finFixture}"]`)
+      .should('have.attr', 'data-annule', 'true')
+      .find(dataSelector('anomalie-pointage-heure'))
+      .should('have.css', 'text-decoration-line', 'line-through');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 
   it('should compare the exact previewed act and its before and after facts before confirmation', () => {
@@ -666,6 +686,7 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenTheFormerPreviewCannotBeConfirmed = (): void => {
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
+    cy.get(dataSelector('anomalie-frise-apres')).should('not.exist');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
