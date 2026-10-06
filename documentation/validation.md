@@ -51,6 +51,11 @@ there are no active exceptions.
 [GHSA-x5fp-wj9c-mxmx](https://github.com/ljharb/qs/security/advisories/GHSA-x5fp-wj9c-mxmx).
 Remove this override when Stryker's compatible `typed-rest-client` release permits a corrected `qs`.
 
+`concurrently` and `npm-run-all2` pin `shell-quote` 1.9.0, which carries
+[GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-j6r4-53mv) (command injection in `quote()`). An
+npm override installs 1.12.0, the corrected release. Remove it when both tools depend on a corrected
+`shell-quote`.
+
 Angular 22 removes the former CLI dependency chain through `pacote`, `make-fetch-happen` and
 `http-cache-semantics`. The build tool also pins the corrected Piscina release directly, so neither an audit
 exception nor a Piscina override is needed.
