@@ -230,7 +230,9 @@ describe('End placement on the frise in Gestion', () => {
     thenTheInstantFieldsAreEmpty();
     cy.get(dataSelector('anomalie-poignee')).should('not.exist');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
-    cy.get(dataSelector('anomalie-frise-aide')).should('be.visible').and('contain.text', 'Cliquez sur la frise pour placer la fin');
+    cy.get(dataSelector('anomalie-frise-aide'))
+      .should('be.visible')
+      .and('contain.text', 'Cliquez sur la frise pour placer l’heure du fait');
   };
 
   const thenTheEndIsPlacedAt = (instant: Date): void => {

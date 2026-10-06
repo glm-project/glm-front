@@ -3357,13 +3357,24 @@ describe('Anomaly dossier page', () => {
       thenTheInstantFieldsShow('14/09/2026', heure);
     });
 
-    it('should tell the manager how to place the end while it has no hour', async () => {
+    it('should tell the manager how to place the hour of the fact while it has none', async () => {
       givenAnAutomaticEnd();
       await whenRendering();
 
       await whenClicking('anomalie-choix');
 
-      thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer la fin, ou saisissez l’heure.');
+      thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.');
+    });
+
+    it('should not call the fact an end in the help once the manager turns it into a passage', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClicking('anomalie-type-NON_CONFORMITE');
+      await whenClicking('anomalie-intention-TRANSITION');
+
+      thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.');
     });
 
     it('should give no help to place the end before any proposal is chosen', async () => {

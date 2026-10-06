@@ -43,6 +43,18 @@ svg marker path {
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
+[data-selector='anomalie-frise-pointages-intitule'] {
+  position: absolute;
+  left: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  line-height: 1.25rem;
+  pointer-events: none;
+}
 button,
 [data-selector='anomalie-apres-pointage'],
 [data-selector='anomalie-apercu-activite-apres'] {

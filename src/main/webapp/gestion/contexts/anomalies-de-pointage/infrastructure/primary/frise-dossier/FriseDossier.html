@@ -33,6 +33,10 @@
       <span data-selector="anomalie-frise-jour">{{ jour }}</span>
       }
     </span>
+    } @if (disposition().intituleDesPointages; as intitule) {
+    <p data-selector="anomalie-frise-pointages-intitule" [style.top.px]="intitule.haut" [style.height.px]="intitule.hauteur">
+      {{ libelles.frise.pointages }}
+    </p>
     } @if (disposition().rangeeDePlacement; as rangee) {
     <div
       aria-hidden="true"

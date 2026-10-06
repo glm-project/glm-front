@@ -85,11 +85,17 @@ export interface RangeeDePlacement {
   readonly source: PlacementDeLInstant;
 }
 
+export interface IntituleDeRangee {
+  readonly haut: number;
+  readonly hauteur: number;
+}
+
 export interface DispositionFrise {
   readonly echelle: EchelleFrise;
   readonly largeurMinimale: number;
   readonly hauteur: number;
   readonly graduations: readonly Graduation[];
+  readonly intituleDesPointages: IntituleDeRangee | undefined;
   readonly fleches: readonly FlecheFrise[];
   readonly elements: readonly ElementFrise[];
   readonly poignee: PositionDePoignee | undefined;
@@ -115,11 +121,13 @@ interface ContexteDeFrise {
   readonly faitsDeLActe: ReadonlySet<string>;
   readonly echelle: EchelleFrise;
   readonly poignee: PoigneeDeFrise | undefined;
+  readonly hautDesReperes: number;
 }
 
 const POSITION_DU_BORD = 100;
 const HAUTEUR_DE_L_AXE_PX = 28;
 const HAUTEUR_DU_TITRE_PX = 28;
+const HAUTEUR_DE_L_INTITULE_PX = 20;
 const HAUTEUR_D_UN_ELEMENT_PX = 44;
 const ESPACE_ENTRE_RANGEES_PX = 8;
 const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', 'A_RESOUDRE'];
@@ -160,7 +168,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
     gauche: positionSur(contexte.echelle, Date.parse(pointage.fait.instant)),
-    haut: HAUTEUR_DE_L_AXE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
+    haut: contexte.hautDesReperes + voie * HAUTEUR_D_UN_ELEMENT_PX,
     voie,
     cle: `pointage:${pointage.id.pointage}`,
     pointage: pointage.id.pointage,
@@ -292,8 +300,13 @@ const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, hau
   source: poignee,
 });
 
-const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly RepereFrise[]): RangeeDePlacement => ({
-  haut: HAUTEUR_DE_L_AXE_PX,
+const intituleDesPointages = (pointages: readonly PointageAnomalie[]): IntituleDeRangee | undefined =>
+  pointages.length === 0 ? undefined : { haut: HAUTEUR_DE_L_AXE_PX, hauteur: HAUTEUR_DE_L_INTITULE_PX };
+
+const hautDesReperesSous = (intitule: IntituleDeRangee | undefined): number => HAUTEUR_DE_L_AXE_PX + (intitule?.hauteur ?? 0);
+
+const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly RepereFrise[], hautDesReperes: number): RangeeDePlacement => ({
+  haut: hautDesReperes,
   hauteur: hauteurDesReperes(reperes),
   desactivee: placement.desactivee,
   source: placement,
@@ -372,11 +385,13 @@ export const dispositionDeFrise = (
     placement,
   );
   const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
-  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>() };
+  const intitule = intituleDesPointages(pointages);
+  const hautDesReperes = hautDesReperesSous(intitule);
+  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes };
   const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) =>
     repereDe(element, enCause.has(element.id.pointage), voie, contexte),
   );
-  const hautDeLaPoignee = HAUTEUR_DE_L_AXE_PX + hauteurDesReperes(reperes);
+  const hautDeLaPoignee = hautDesReperes + hauteurDesReperes(reperes);
   const hautDesActivites = hautDeLaPoignee + (poignee === undefined ? 0 : HAUTEUR_D_UN_ELEMENT_PX) + ESPACE_ENTRE_RANGEES_PX;
   const barres = parDebut(vue.activites).map((activite, rang) =>
     barreDe(activite, hautDesActivites + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX), contexte),
@@ -396,10 +411,11 @@ export const dispositionDeFrise = (
     largeurMinimale: largeurMinimaleDe(echelle),
     hauteur: hauteurDeLaFrise(elements, poignee === undefined ? undefined : hautDeLaPoignee, apres),
     graduations: graduationsDe(echelle),
+    intituleDesPointages: intitule,
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,
     poignee: poignee === undefined ? undefined : positionDeLaPoignee(poignee, echelle, hautDeLaPoignee),
-    rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes),
+    rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes, hautDesReperes),
     apres,
   };
 };

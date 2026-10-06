@@ -623,6 +623,37 @@ describe('Frise of a dossier', () => {
     expect(topOf(marker('p-2')) - topOf(marker('p-1'))).toBe(44);
   });
 
+  it('should title the row of the pointages and stand the title above their markers', async () => {
+    const dossier = {
+      journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'PASSAGE_NC', '08:20')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenThePointagesRowIsTitled('Pointages');
+    thenTheTitleOfThePointagesStandsAbove(['p-1', 'p-2']);
+  });
+
+  it('should draw no title for the pointages when the journal holds none', async () => {
+    const dossier = { journal: [], activites: [activiteFixture('a-1', 'A_RESOUDRE', '08:00')] };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenNoTitleIsDrawnForThePointages();
+  });
+
+  it('should start the placement row under the title of the pointages so that it covers only their markers', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture());
+
+    thenThePlacementRowStartsUnderTheTitleOfThePointages();
+  });
+
   it('should draw the frise of a dossier that holds a pointage', async () => {
     const dossier = { journal: [pointageFixture('p-1', 'ARRET', '17:00')], activites: [] };
 
@@ -1661,6 +1692,34 @@ describe('Frise of a dossier', () => {
     expect(topOf(row)).toBeLessThanOrEqual(Math.min(...pointages.map(pointage => topOf(marker(pointage)))));
     expect(bas).toBeGreaterThanOrEqual(Math.max(...pointages.map(pointage => topOf(marker(pointage)) + 44)));
     expect(bas).toBeLessThanOrEqual(topOf(bar(activite)));
+  };
+
+  const titleOfThePointages = (): HTMLElement | null =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-pointages-intitule'));
+
+  const thenThePointagesRowIsTitled = (expected: string): void => {
+    expect(requiredFixture(titleOfThePointages(), 'title of the pointages').textContent.trim()).toBe(expected);
+  };
+
+  const thenNoTitleIsDrawnForThePointages = (): void => {
+    expect(titleOfThePointages()).toBeNull();
+  };
+
+  const bottomOfTheTitleOfThePointages = (): number => {
+    const title = requiredFixture(titleOfThePointages(), 'title of the pointages');
+    return topOf(title) + Number.parseFloat(title.style.height);
+  };
+
+  const thenTheTitleOfThePointagesStandsAbove = (pointages: readonly string[]): void => {
+    expect(bottomOfTheTitleOfThePointages()).toBeLessThanOrEqual(Math.min(...pointages.map(pointage => topOf(marker(pointage)))));
+  };
+
+  const thenThePlacementRowStartsUnderTheTitleOfThePointages = (): void => {
+    const row = requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-placement')),
+      'placement row',
+    );
+    expect(topOf(row)).toBeGreaterThanOrEqual(bottomOfTheTitleOfThePointages());
   };
 
   const thenNoPlacementRowIsDrawn = (): void => {
