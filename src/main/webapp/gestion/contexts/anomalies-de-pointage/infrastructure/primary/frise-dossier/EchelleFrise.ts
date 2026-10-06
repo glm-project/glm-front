@@ -29,13 +29,15 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const echelleDe = (instants: readonly number[], plafondElargi?: number): EchelleFrise => {
+export const echelleDe = (instants: readonly number[], plafondElargi?: number, instantCouvert?: number): EchelleFrise => {
   const dernier = Math.max(...instants);
   const finNormale = heureEntiereApres(dernier + UNE_HEURE);
+  const finElargie =
+    plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(dernier + TROIS_HEURES, plafondElargi)));
+  const couverts = instantCouvert === undefined ? [] : [instantCouvert];
   return {
-    debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
-    fin:
-      plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(dernier + TROIS_HEURES, plafondElargi))),
+    debut: heureEntiereAvant(Math.min(...instants, ...couverts) - UNE_HEURE),
+    fin: Math.max(finElargie, ...couverts.map(instant => heureEntiereApres(instant + UNE_HEURE))),
   };
 };
 

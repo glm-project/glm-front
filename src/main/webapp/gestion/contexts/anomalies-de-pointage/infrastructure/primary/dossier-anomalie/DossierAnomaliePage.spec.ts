@@ -3190,6 +3190,26 @@ describe('Anomaly dossier page', () => {
       thenTheInstantFieldsShow('05/10/2026', '10:30:00');
     });
 
+    it('should keep the handle on the scale when the End key carries it to the clock, long after the received instants', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandle('End');
+
+      thenTheHandleStandsInsideTheScale();
+    });
+
+    it('should keep the handle on the scale when the manager types an hour long after the received instants', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEnteringTheInstant('04/10/2026', '10:00');
+
+      thenTheHandleStandsInsideTheScale();
+    });
+
     it.each([
       { bouton: 'anomalie-instant-plus-5', heure: '23:05:00' },
       { bouton: 'anomalie-instant-moins-5', heure: '22:55:00' },
@@ -4593,6 +4613,12 @@ describe('Anomaly dossier page', () => {
   const thenTheHandleIsLocked = (): void => {
     expect(element('anomalie-poignee').getAttribute('aria-disabled')).toBe('true');
   };
+  const thenTheHandleStandsInsideTheScale = (): void => {
+    const gauche = Number.parseFloat(element('anomalie-poignee').style.left);
+    expect(gauche).toBeGreaterThan(0);
+    expect(gauche).toBeLessThan(100);
+  };
+
   const thenTheHandleReads = (expected: string): void => {
     expect(element('anomalie-poignee').getAttribute('aria-valuetext')).toBe(expected);
   };

@@ -272,6 +272,15 @@ const instantsDeLEchelle = (
   return instants.length > 0 ? instants : [now.getTime()];
 };
 
+const echelleDeLaFrise = (
+  instants: readonly number[],
+  poignee: PoigneeDeFrise | undefined,
+  placement: PlacementDeLInstant | undefined,
+): EchelleFrise => {
+  const bornes = (poignee ?? placement)?.bornes;
+  return echelleDe(instants, bornes && Date.parse(bornes.max), poignee && Date.parse(poignee.instant));
+};
+
 const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number): PositionDePoignee => ({
   gauche: positionSur(echelle, Date.parse(poignee.instant)),
   haut,
@@ -357,10 +366,10 @@ export const dispositionDeFrise = (
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
   const pointages = pointagesLisibles(vue.journal);
   const pointagesApres = apercu === undefined ? [] : pointagesLisibles(apercu.apres.journal);
-  const bornesDeLaPoignee = (poignee ?? placement)?.bornes;
-  const echelle = echelleDe(
+  const echelle = echelleDeLaFrise(
     instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
-    bornesDeLaPoignee && Date.parse(bornesDeLaPoignee.max),
+    poignee,
+    placement,
   );
   const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>() };
