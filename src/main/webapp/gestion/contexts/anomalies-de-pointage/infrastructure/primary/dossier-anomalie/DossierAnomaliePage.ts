@@ -28,6 +28,7 @@ import {
   detailDuPointage,
   labelForActivite,
   libelleActivite,
+  libelleDuGeste,
   referencePointage,
   remplacementDe,
   tempsActivite,
@@ -75,6 +76,7 @@ export class DossierAnomaliePage {
   protected readonly anomalieTraitee = anomalieTraitee;
   protected readonly conflitAExpliquer = conflitAExpliquer;
   protected readonly libelleActivite = libelleActivite;
+  protected readonly libelleDuGeste = libelleDuGeste;
   protected readonly labelForActivite = labelForActivite;
   protected readonly remplacementDe = remplacementDe;
   protected readonly detailDuPointage = detailDuPointage;

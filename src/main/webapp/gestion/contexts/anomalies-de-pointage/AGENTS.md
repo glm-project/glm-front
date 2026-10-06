@@ -82,9 +82,15 @@ par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée
 sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète, le diagnostic de conflit et
 l'option de cible du formulaire suivent la même règle (`labelForActivite`).
 Un autre pointage (remplacé, ouvrant ou terminant d'un diagnostic, pointage de l'acte en aperçu) se désigne par une
-seule règle, `referencePointage` : « instant · Type · Intention » depuis le journal disponible. Quand il manque, la
+seule règle, `referencePointage` : « instant · Geste » depuis le journal disponible. Quand il manque, la
 phrase porte le déterminant (« Remplace un pointage non résolu », « Ouverte par un pointage non résolu »), jamais
 l'identifiant.
+Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
+`LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
+`NON_CONFORMITE·TRANSITION` « Passage en NC », `DEBUT·TRANSITION` « Retour en bon », `FIN·FIN` « Arrêt ». Un pointage
+régularisé garde son libellé et sa mention « Régularisation ». Un fait en cours de saisie peut sortir de la table (type
+ou intention vides, ou incompatibles) : le libellé retombe alors sur « Type · Intention » des champs remplis. Les
+catégories d'activité (« Travail », « Non-conformité ») et les groupes Type et Intention du formulaire gardent leurs mots.
 Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le port de lecture
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et

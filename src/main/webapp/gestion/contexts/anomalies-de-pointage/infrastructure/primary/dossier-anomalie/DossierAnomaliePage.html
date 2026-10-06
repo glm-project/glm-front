@@ -88,10 +88,9 @@
             >{{ horodatage.time }} <span class="text-body-sm text-ink-muted">· {{ horodatage.day }}</span></time
           >
           <p class="mt-2 text-body font-semibold">
-            <span class="gestion-type" [class.bg-nc]="pointage.fait.type === 'NON_CONFORMITE'"
-              >{{ libelles.types[pointage.fait.type] }}</span
+            <span class="gestion-type" data-selector="anomalie-pointage-geste" [class.bg-nc]="pointage.fait.type === 'NON_CONFORMITE'"
+              >{{ libelleDuGeste(pointage.fait) }}</span
             >
-            · {{ libelles.intentions[pointage.fait.intention] }}
           </p>
           @if (pointage.fait.activiteVisee) {
           <p class="mt-2 text-body-sm">
@@ -203,9 +202,9 @@
         <div class="mt-2 text-body-sm" data-selector="anomalie-proposition-resume">
           @if (proposition.kind === 'ANNULATION') { @for (pointage of dossier.journal; track pointage.id.pointage) { @if
           (pointage.id.pointage === proposition.pointage) {
-          <p>{{ libelles.types[pointage.fait.type] }} · {{ pointage.fait.instant | instantLongDayWithSeconds: now }}</p>
-          } } } @else { @if (proposition.fait.type) {
-          <p>{{ libelles.types[proposition.fait.type] }} · {{ proposition.fait.instant | instantLongDayWithSeconds: now }}</p>
+          <p>{{ libelleDuGeste(pointage.fait) }} · {{ pointage.fait.instant | instantLongDayWithSeconds: now }}</p>
+          } } } @else { @let geste = libelleDuGeste(proposition.fait); @if (geste) {
+          <p>{{ geste }} · {{ proposition.fait.instant | instantLongDayWithSeconds: now }}</p>
           } @if (proposition.fait.activiteVisee) {
           <p>{{ libelles.cible }} {{ labelForActivite(proposition.fait.activiteVisee, dossier, now) }}</p>
           } }
@@ -421,10 +420,7 @@
         @if (apercu.acte.kind !== 'REGULARISATION') {
         <p>{{ referencePointage(apercu.avant.journal, apercu.acte.pointage).libelle }} · {{ apercu.acte.motif }}</p>
         } @if (apercu.acte.kind !== 'ANNULATION') {
-        <p>
-          {{ libelles.types[apercu.acte.fait.type] }} · {{ libelles.intentions[apercu.acte.fait.intention] }} · {{ apercu.acte.fait.instant
-          | instantLongDayWithSeconds: now }}
-        </p>
+        <p>{{ libelleDuGeste(apercu.acte.fait) }} · {{ apercu.acte.fait.instant | instantLongDayWithSeconds: now }}</p>
         @if (apercu.acte.fait.activiteVisee) {
         <p>{{ libelles.cible }} {{ labelForActivite(apercu.acte.fait.activiteVisee, apercu.apres, now) }}</p>
         }
@@ -537,7 +533,7 @@
         <time class="text-body-sm" [attr.datetime]="pointage.fait.instant | instantDatetime"
           >{{ pointage.fait.instant | instantLongDayWithSeconds: now }}</time
         >
-        <p class="mt-2 font-semibold">{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
+        <p class="mt-2 font-semibold" data-selector="anomalie-pointage-geste">{{ libelleDuGeste(pointage.fait) }}</p>
         @if (pointage.fait.activiteVisee) {
         <p>{{ libelles.cible }} {{ labelForActivite(pointage.fait.activiteVisee, resultat, now) }}</p>
         } @if (pointage.activiteCreee; as activite) {

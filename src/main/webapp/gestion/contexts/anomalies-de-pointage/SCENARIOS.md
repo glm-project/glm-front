@@ -91,12 +91,19 @@ les pointages » commencent par « Prénom Nom · instant » (« Opérateur non 
 pointage. Les lignes « Vise l'activité » et « Crée l'activité » y désignent l'activité par son libellé (nature et début
 reçus du dossier), à défaut par le pointage qui l'a créée dans le même journal, sinon « Activité non résolue » : aucun
 identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète, le diagnostic de conflit ou la
-cible du formulaire. Un autre pointage se désigne de la même façon partout : « instant · Type · Intention » du pointage trouvé dans le
+cible du formulaire. Un autre pointage se désigne de la même façon partout : « instant · Geste » du pointage trouvé dans le
 journal disponible (dossier, avant ou après), dans la phrase « Remplace le pointage … », « Ouverte par le pointage … »,
 « Terminée par le pointage … » ou « Le pointage … vise l'activité … » ; sinon la phrase le dit sans l'identifier :
 « Remplace un pointage non résolu », « Ouverte par un pointage non résolu », « Un pointage non résolu vise … ». La ligne
-de l'acte en aperçu commence par « instant · Type · Intention » ou « Pointage non résolu » : aucun identifiant de pointage
+de l'acte en aperçu commence par « instant · Geste » ou « Pointage non résolu » : aucun identifiant de pointage
 n'est affiché.
+
+Un pointage se nomme par le geste de l'opérateur, dans la chronologie, les références, l'aperçu, la comparaison, l'historique
+d'adresse obsolète et le résumé de la proposition : « Démarrage » (`DEBUT·OUVERTURE`), « Démarrage en NC »
+(`NON_CONFORMITE·OUVERTURE`), « Passage en NC » (`NON_CONFORMITE·TRANSITION`), « Retour en bon » (`DEBUT·TRANSITION`),
+« Arrêt » (`FIN·FIN`). La chronologie met un geste de non-conformité en évidence. Un pointage régularisé garde son libellé et
+la mention « Régularisation ». Tant que la saisie ne forme pas un geste connu (type ou intention vides, ou incompatibles), le
+résumé de la proposition garde « Type · Intention » des champs remplis, sans rien afficher quand les deux sont vides.
 
 Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
 par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le

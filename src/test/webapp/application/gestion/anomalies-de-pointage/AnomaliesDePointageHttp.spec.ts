@@ -140,9 +140,9 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.location('hash').should('equal', `#pointage-${remplacementFixture}`);
     cy.get(dataSelector('conflit-diagnostic-terminaison'))
       .should('contain.text', 'lundi 14 septembre à 12:01:00')
-      .and('contain.text', 'Non-conformité · Transition');
-    cy.get(dataSelector('conflit-diagnostic-pointage')).should('contain.text', 'Fin · Fin ciblée');
-    cy.get(dataSelector('conflit-diagnostic-ouvrant')).should('contain.text', 'Travail · Ouverture');
+      .and('contain.text', 'Passage en NC');
+    cy.get(dataSelector('conflit-diagnostic-pointage')).should('contain.text', 'Arrêt');
+    cy.get(dataSelector('conflit-diagnostic-ouvrant')).should('contain.text', 'Démarrage');
     cy.get(dataSelector('anomalie-pointage'))
       .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
       .should('have.length', 1)
@@ -153,7 +153,7 @@ describe('HTTP conflict resolution in Gestion', () => {
           .contains('p', 'Crée l’activité Non-conformité · ')
           .should('be.visible')
           .and('not.contain.text', ncFixture);
-        cy.contains('p', /^Remplace le pointage .+ · Non-conformité · Transition$/)
+        cy.contains('p', /^Remplace le pointage .+ · Passage en NC$/)
           .should('be.visible')
           .and('not.contain.text', ncFixture);
       });
@@ -444,7 +444,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get('@journalCanonique')
       .should('contain', 'lundi 14 septembre à 17:01:00')
       .and('contain', 'Pointage annulé')
-      .and('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée')
+      .and('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
       .and('not.contain', `Remplace le pointage ${finFixture}`);
     cy.get('@dureesCanoniques').should('contain', '4 h').and('contain', '5 h 1 min');
     cy.wait('@listeApresResolution');

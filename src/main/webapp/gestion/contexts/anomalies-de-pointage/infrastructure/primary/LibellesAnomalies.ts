@@ -1,3 +1,4 @@
+import { IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
 import { CodeRefusActe } from '../../domain/acte/AnomaliesActesPorts';
 
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
@@ -28,6 +29,12 @@ const REFUS_ACTE: Readonly<Record<CodeRefusActe, string>> = {
   'evenement-anterieur-a-l-engagement': 'Le fait est antérieur à l’engagement de l’élément.',
   'identifiant-evenement-reutilise': 'Le pointage à créer existe déjà. Demandez un nouvel aperçu.',
   'date-de-survenue-future': 'La date et l’heure du fait ne peuvent pas être dans le futur.',
+};
+
+const GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPointage, string>>>>> = {
+  DEBUT: { OUVERTURE: 'Démarrage', TRANSITION: 'Retour en bon' },
+  NON_CONFORMITE: { OUVERTURE: 'Démarrage en NC', TRANSITION: 'Passage en NC' },
+  FIN: { FIN: 'Arrêt' },
 };
 
 export const LIBELLES_ANOMALIES = {
@@ -166,6 +173,7 @@ export const LIBELLES_ANOMALIES = {
       explication: 'La transition pointée après l’échéance est reprise avec son heure. Renseignez un motif, puis vérifiez l’aperçu.',
     },
   },
+  gestes: GESTES,
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' },
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
   titre: 'Anomalies de pointage',

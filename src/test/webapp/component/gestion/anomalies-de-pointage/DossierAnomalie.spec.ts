@@ -157,7 +157,7 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
     cy.get(dataSelector('anomalie-apercu-acte'))
-      .should('contain.text', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée · La cible est la NC.')
+      .should('contain.text', 'lundi 14 septembre à 17:00:00 · Arrêt · La cible est la NC.')
       .and('not.contain.text', finFixture)
       .and('contain.text', `Opérateur : ${operateurNomFixture} · Poste : Sans poste`)
       .and('not.contain.text', operateurFixture)
@@ -174,7 +174,7 @@ describe('Conflict dossier in Gestion', () => {
       .should('contain.text', 'Vise l’activité Non-conformité · ')
       .and('not.contain.text', ncFixture)
       .and('not.contain.text', debutFixture)
-      .and('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+      .and('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 
@@ -551,7 +551,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-adresse-obsolete')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage'))
-      .should('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée')
+      .should('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
       .and('not.contain.text', `Remplace le pointage ${finFixture}`);
     cy.get(dataSelector('anomalie-pointage')).should('contain.text', 'Crée l’activité Travail · ');
     cy.get(dataSelector('anomalie-pointage')).should('not.contain.text', `Crée l’activité ${debutFixture}`);

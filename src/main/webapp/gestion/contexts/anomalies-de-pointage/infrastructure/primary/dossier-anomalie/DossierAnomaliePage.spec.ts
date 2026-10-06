@@ -371,7 +371,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Arrêt');
     thenTextContains('conflit-diagnostic', 'vise l’activité Travail ouvert à 8 h, remplacée.');
     thenTextDoesNotContain('conflit-diagnostic', 'travail-8');
     thenTextContains('conflit-diagnostic', 'Ouverte par un pointage non résolu.');
@@ -389,9 +389,9 @@ describe('Anomaly dossier page', () => {
     thenDiagnosticReferencesTheReceivedFact(
       'conflit-diagnostic-terminaison',
       '90000000-0000-0000-0000-000000000001',
-      'lundi 14 septembre à 12:01:00 · Non-conformité · Transition',
+      'lundi 14 septembre à 12:01:00 · Passage en NC',
     );
-    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité Non-conformité · lundi 14 septembre à 12:01:00');
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité Passage en NC · lundi 14 septembre à 12:01:00');
     thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace un pointage non résolu');
     thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
@@ -432,10 +432,10 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', 'lundi 14 septembre à 08:00:00 · Travail · Ouverture');
-    thenTextContains('conflit-diagnostic', 'Le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée vise');
-    thenTextContains('conflit-diagnostic', 'Ouverte par le pointage lundi 14 septembre à 08:00:00 · Travail · Ouverture.');
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Arrêt');
+    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', 'lundi 14 septembre à 08:00:00 · Démarrage');
+    thenTextContains('conflit-diagnostic', 'Le pointage lundi 14 septembre à 17:00:00 · Arrêt vise');
+    thenTextContains('conflit-diagnostic', 'Ouverte par le pointage lundi 14 septembre à 08:00:00 · Démarrage.');
   });
 
   it('should speak of an unresolved pointage when the diagnostic challenges one the journal does not hold', async () => {
@@ -445,6 +445,62 @@ describe('Anomaly dossier page', () => {
 
     thenTextReads('conflit-diagnostic', 'Un pointage non résolu vise l’activité Travail ouvert à 8 h, remplacée.');
     thenTextDoesNotContain('conflit-diagnostic', 'fin-absent');
+  });
+
+  it.each([
+    ['DEBUT', 'OUVERTURE', 'Démarrage'],
+    ['NON_CONFORMITE', 'OUVERTURE', 'Démarrage en NC'],
+    ['NON_CONFORMITE', 'TRANSITION', 'Passage en NC'],
+    ['DEBUT', 'TRANSITION', 'Retour en bon'],
+    ['FIN', 'FIN', 'Arrêt'],
+  ] as const)('should name a received %s %s pointage by the operator gesture %s in the chronology', async (type, intention, geste) => {
+    givenAReceivedGesture(type, intention);
+
+    await whenRendering();
+
+    thenReceivedGestureIs('fin-17', geste);
+  });
+
+  it.each([
+    ['DEBUT', 'OUVERTURE', false],
+    ['NON_CONFORMITE', 'OUVERTURE', true],
+    ['NON_CONFORMITE', 'TRANSITION', true],
+    ['DEBUT', 'TRANSITION', false],
+    ['FIN', 'FIN', false],
+  ] as const)(
+    'should highlight a %s %s gesture in the chronology only when it is a non-conformity: %s',
+    async (type, intention, highlighted) => {
+      givenAReceivedGesture(type, intention);
+
+      await whenRendering();
+
+      thenReceivedGestureIsHighlighted('fin-17', highlighted);
+    },
+  );
+
+  it('should keep the gesture label and the regularisation mention of a regularised pointage', async () => {
+    givenACorrectedTerminatingFact();
+
+    await whenRendering();
+
+    thenReceivedGestureIs('90000000-0000-0000-0000-000000000001', 'Passage en NC');
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Régularisation');
+  });
+
+  it('should name each pointage of an obsolete address history by its gesture instead of its type and intention', async () => {
+    read.result = {
+      kind: 'ANCRE_ANNULEE',
+      journal: [
+        {
+          ...pointageDeLaFinFixture(),
+          fait: { ...faitConflitFixture(), type: 'NON_CONFORMITE', intention: 'OUVERTURE', activiteVisee: '' },
+        },
+      ],
+    };
+
+    await whenRendering();
+
+    thenReceivedGestureIs('fin-17', 'Démarrage en NC');
   });
 
   it('should show the engagement of the workshop in the header as a long day and local time', async () => {
@@ -504,7 +560,7 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-choix');
 
-    thenTextContains('anomalie-proposition-resume', 'Fin · lundi 14 septembre à 17:00:00');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
   });
 
   it('should show the instant of the pointage to cancel with its seconds', async () => {
@@ -513,7 +569,48 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-annuler');
 
-    thenTextContains('anomalie-proposition-resume', 'Fin · lundi 14 septembre à 17:00:00');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should keep the proposition summary readable with the type and intention entered when they are not a known gesture', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-corriger');
+
+    await whenClicking('anomalie-intention-OUVERTURE');
+
+    thenTextContains('anomalie-proposition-resume', 'Fin · Ouverture · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should keep the proposition summary readable when only the type of the fact is entered', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+
+    await whenClicking('anomalie-type-DEBUT');
+    await whenEnteringTheInstant('14/09/2026', '17:00:00');
+
+    thenTextContains('anomalie-proposition-resume', 'Travail · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should keep the proposition summary readable when only the intention of the fact is entered', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+
+    await whenClicking('anomalie-intention-OUVERTURE');
+    await whenEnteringTheInstant('14/09/2026', '17:00:00');
+
+    thenTextContains('anomalie-proposition-resume', 'Ouverture · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should show no fact line in the proposition summary while neither type nor intention is entered', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-regulariser');
+
+    thenSummaryIsEmpty();
   });
 
   it('should show the instant of the previewed act and of the compared journals with their seconds', async () => {
@@ -526,6 +623,27 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-apercu-journal', 'Camille Martin · lundi 14 septembre à 17:00:00');
     thenTextContains('anomalie-apercu-fait-avant-fin-17', 'lundi 14 septembre à 17:00:00');
     thenTextContains('anomalie-apercu-fait-apres-fin-17', 'lundi 14 septembre à 17:00:00');
+  });
+
+  it('should name the pointages compared before and after the act by their gesture', async () => {
+    givenAPreviewTurningTheEndIntoAnNcPassage();
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenComparedFactContains('avant', 'fin-17', 'Arrêt');
+    thenComparedFactContains('apres', 'fin-17', 'Passage en NC');
+    thenComparedFactDoesNotContain('apres', 'fin-17', 'Transition');
+  });
+
+  it('should name the fact of the previewed act by its gesture instead of its type and intention', async () => {
+    givenAGuidedCorrectionOf({ type: 'NON_CONFORMITE', intention: 'TRANSITION' });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', 'Passage en NC · lundi 14 septembre à 17:00:00');
+    thenTextDoesNotContain('anomalie-apercu-acte', 'Transition');
   });
 
   it('should name the operator of every compared pointage instead of its identifier, before and after', async () => {
@@ -546,7 +664,7 @@ describe('Anomaly dossier page', () => {
     await whenPreparingTheCorrection();
 
     thenComparedFactContains('apres', 'fin-18', 'Vise l’activité Travail ouvert à 8 h');
-    thenComparedFactContains('apres', 'fin-18', 'Crée l’activité Fin · lundi 14 septembre à 17:00:00');
+    thenComparedFactContains('apres', 'fin-18', 'Crée l’activité Arrêt · lundi 14 septembre à 17:00:00');
     thenComparedFactContains('apres', 'fin-19', 'Vise l’activité Activité non résolue');
     thenComparedFactsShowNoIdentifier(['travail-8', 'nc-12', 'nc-99']);
   });
@@ -558,7 +676,7 @@ describe('Anomaly dossier page', () => {
 
     thenReceivedTraceContains('debut-9', 'Camille Martin · lundi 14 septembre à 08:00:00');
     thenReceivedTraceContains('debut-9', 'Vise l’activité Travail ouvert à 8 h');
-    thenReceivedTraceContains('debut-9', 'Crée l’activité Travail · lundi 14 septembre à 08:00:00');
+    thenReceivedTraceContains('debut-9', 'Crée l’activité Démarrage · lundi 14 septembre à 08:00:00');
     thenReceivedTraceShowsNoIdentifier('debut-9', ['debut-9', 'travail-8', 'travail-9']);
   });
 
@@ -586,8 +704,8 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenReceivedFactContains('debut-9', 'Crée l’activité Fin · lundi 14 septembre à 17:00:00');
-    thenReceivedFactContains('fin-9', 'Vise l’activité Fin · lundi 14 septembre à 17:00:00');
+    thenReceivedFactContains('debut-9', 'Crée l’activité Arrêt · lundi 14 septembre à 17:00:00');
+    thenReceivedFactContains('fin-9', 'Vise l’activité Arrêt · lundi 14 septembre à 17:00:00');
     thenReceivedFactContains('fin-10', 'Vise l’activité Activité non résolue');
     thenReceivedFactsShowNoActivityIdentifier(['debut-9', 'fin-9', 'fin-10']);
   });
@@ -597,7 +715,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenReceivedFactContains('fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenReceivedFactContains('fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt');
     thenReceivedFactDoesNotContain('fin-18', 'Remplace le pointage fin-17');
   });
 
@@ -607,7 +725,7 @@ describe('Anomaly dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenComparedFactContains('apres', 'fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenComparedFactContains('apres', 'fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt');
     thenComparedFactsShowNoIdentifier(['fin-17 ·', 'pointage fin-17']);
   });
 
@@ -623,7 +741,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenReceivedFactContains('fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenReceivedFactContains('fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt');
     thenReceivedFactContains('fin-19', 'Remplace un pointage non résolu');
     thenReceivedFactDoesNotContain('fin-19', 'fin-absent');
   });
@@ -634,7 +752,7 @@ describe('Anomaly dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenTextContains('anomalie-apercu-acte', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée · Cible confirmée');
+    thenTextContains('anomalie-apercu-acte', 'lundi 14 septembre à 17:00:00 · Arrêt · Cible confirmée');
     thenTextDoesNotContain('anomalie-apercu-acte', 'fin-17');
   });
 
@@ -1219,7 +1337,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenClicking('anomalie-corriger');
 
-    thenTargetChoiceIs('travail-8', 'Travail · lundi 14 septembre à 08:00:00');
+    thenTargetChoiceIs('travail-8', 'Démarrage · lundi 14 septembre à 08:00:00');
     thenAbsent('anomalie-activite');
   });
 
@@ -2172,7 +2290,7 @@ describe('Anomaly dossier page', () => {
     };
   };
 
-  const givenAGuidedCorrectionOf = (fait: Pick<FaitPropose, 'operateur' | 'poste'>): ActeResolution => {
+  const givenAGuidedCorrectionOf = (fait: Partial<Pick<FaitPropose, 'operateur' | 'poste' | 'type' | 'intention'>>): ActeResolution => {
     const dossier = dossierAnomalieFixture();
     const corrige = { ...faitConflitFixture(), activiteVisee: 'nc-12', ...fait };
     read.result = {
@@ -2201,6 +2319,27 @@ describe('Anomaly dossier page', () => {
         avant: dossier,
         apres: apres ?? { ...dossier, enConflit: false },
         acte,
+      },
+    };
+  };
+
+  const givenAPreviewTurningTheEndIntoAnNcPassage = (): void => {
+    const dossier = dossierAnomalieFixture();
+    const pointage = pointageDeLaFinFixture();
+    givenASuccessfulPreview({
+      ...dossier,
+      enConflit: false,
+      journal: [{ ...pointage, fait: { ...pointage.fait, type: 'NON_CONFORMITE', intention: 'TRANSITION' } }],
+    });
+  };
+
+  const givenAReceivedGesture = (type: FaitPropose['type'], intention: FaitPropose['intention']): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: dossier.journal.map(pointage => ({ ...pointage, fait: { ...pointage.fait, type, intention } })),
       },
     };
   };
@@ -2637,6 +2776,9 @@ describe('Anomaly dossier page', () => {
   const thenComparedFactContains = (cote: 'avant' | 'apres', pointage: string, expected: string): void => {
     expect(comparedFact(cote, pointage).textContent.replace(/\s+/g, ' ')).toContain(expected);
   };
+  const thenComparedFactDoesNotContain = (cote: 'avant' | 'apres', pointage: string, unexpected: string): void => {
+    expect(comparedFact(cote, pointage).textContent).not.toContain(unexpected);
+  };
   const thenComparedFactsShowNoIdentifier = (identifiers: readonly string[]): void => {
     for (const identifier of identifiers) expect(element('anomalie-apercu-journal').textContent).not.toContain(identifier);
   };
@@ -2651,6 +2793,17 @@ describe('Anomaly dossier page', () => {
     expect(new URL(requiredFixture(link.getAttribute('href'), 'diagnostic link'), 'https://fixture').hash).toBe(`#pointage-${pointage}`);
     expect(link.textContent.replace(/\s+/g, ' ').trim()).toBe(label);
     expect(receivedFact(pointage).id).toBe(`pointage-${pointage}`);
+  };
+  const gestureOf = (pointage: string): HTMLElement =>
+    requiredFixture(receivedFact(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-geste')), 'received fact gesture');
+  const thenReceivedGestureIs = (pointage: string, expected: string): void => {
+    expect(gestureOf(pointage).textContent.trim()).toBe(expected);
+  };
+  const thenReceivedGestureIsHighlighted = (pointage: string, expected: boolean): void => {
+    expect(gestureOf(pointage).classList.contains('bg-nc')).toBe(expected);
+  };
+  const thenSummaryIsEmpty = (): void => {
+    expect(element('anomalie-proposition-resume').textContent.trim()).toBe('');
   };
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);
