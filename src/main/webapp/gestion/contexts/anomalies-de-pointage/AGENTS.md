@@ -46,7 +46,7 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
   autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
 - **Issue de l'acte** : ce que l'aperçu et le reçu annoncent après l'acte (traitée, conflit levé · fin automatique restante,
-  restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLAnomalie`).
+  restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLActe`).
 - **Fin automatique restante** : une activité `ECHUE` du dossier d'après, ailleurs que l'adresse d'origine ; le reçu y mène par
   un lien.
 - **Pointage tardif** : pointage que le serveur désigne, dans un choix `CORRIGER_FIN_TARDIVE` ou `CORRIGER_TRANSITION_TARDIVE`,
@@ -237,7 +237,7 @@ l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit 
 
 Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le
 modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. L'issue d'un acte est la projection
-`IssueDeLAnomalie.depuis` (`domain/dossier/`), que l'aperçu et le reçu appellent : « traitée » signifie ni `enConflit` ni
+`IssueDeLActe.depuis` (`domain/dossier/`), que l'aperçu et le reçu appellent : « traitée » signifie ni `enConflit` ni
 `finAutomatique`, quel que soit l'état d'adresse (une adresse `ANCRE_ANNULEE` peut rester en fin automatique lorsque
 l'ouvrant corrigé est encore échu). Elle dépend de la nature du dossier d'origine, celui affiché avant l'acte : un
 conflit (`etat` autre que `FIN_AUTOMATIQUE` et `enConflit`) a trois issues, `TRAITEE`,
@@ -252,7 +252,10 @@ confirmation, reprise et vérifications du reçu, même concurrentes, annoncent 
 dossier qu'elle remplace. Les phrases vivent dans `LIBELLES_ANOMALIES.issue`. L'en-tête du dossier dit le problème en une phrase
 (`anomalie-probleme`, `phrasesDuProbleme` du primaire, modèles dans `LIBELLES_ANOMALIES.problemes`) : une par
 diagnostic d'un conflit à expliquer (`conflitAExpliquer`, soit `enConflit` ; sans diagnostic reçu, l'explication de
-la ligne), une par activité échue d'une fin automatique. Elle disparaît dès que le périmètre ne porte plus le problème, y
+la ligne), une par activité échue d'une fin automatique. Les deux lectures diffèrent à dessein : la nature du dossier
+(`IssueDeLActe`) classe l'adresse d'origine pour annoncer l'issue, tandis que les phrases disent tout ce que le périmètre
+porte encore ; une fin automatique dont le périmètre reste `enConflit` dit donc aussi le conflit, sans devenir un dossier
+de conflit. Elle disparaît dès que le périmètre ne porte plus le problème, y
 compris après le reçu d'une fin automatique ou d'un conflit résolu.
 Le dossier montre l'activité échue sur la frise, sélectionnée à l'ouverture, avec son début, sa fin automatique et sa
 durée reçus dans le panneau Sélection, et la clôture dans l'en-tête, sans les calculer ; il ne se présente jamais comme

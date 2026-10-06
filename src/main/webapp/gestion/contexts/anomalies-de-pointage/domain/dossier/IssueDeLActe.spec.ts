@@ -1,13 +1,13 @@
 import { ActiviteAnomalieId } from './ActiviteAnomalieId';
 import { ActiviteAnomalie, DossierAnomalie } from './DossierAnomalie';
 import { ElementAnomalieId } from './ElementAnomalieId';
-import { IssueDeLAnomalie } from './IssueDeLAnomalie';
+import { IssueDeLActe } from './IssueDeLActe';
 import { PointageAnomalieId } from './PointageAnomalieId';
 import { SuiviAnomalieId } from './SuiviAnomalieId';
 
-describe('Outcome of an anomaly after an act', () => {
+describe('Outcome of an act', () => {
   it('should be processed when a conflict leaves neither a conflict nor an automatic end', () => {
-    const issue = IssueDeLAnomalie.depuis(unConflit(), unDossierApres({ enConflit: false, finAutomatique: false }));
+    const issue = IssueDeLActe.depuis(unConflit(), unDossierApres({ enConflit: false, finAutomatique: false }));
 
     expect(issue.kind).toBe('TRAITEE');
   });
@@ -16,19 +16,19 @@ describe('Outcome of an anomaly after an act', () => {
     { enConflit: true, finAutomatique: false },
     { enConflit: true, finAutomatique: true },
   ])('should leave a conflict when it is $enConflit and the automatic end is $finAutomatique', apres => {
-    const issue = IssueDeLAnomalie.depuis(unConflit(), unDossierApres(apres));
+    const issue = IssueDeLActe.depuis(unConflit(), unDossierApres(apres));
 
     expect(issue.kind).toBe('CONFLIT_RESTANT');
   });
 
   it('should lift the conflict but keep the automatic end when only the automatic end remains', () => {
-    const issue = IssueDeLAnomalie.depuis(unConflit(), unDossierApres({ enConflit: false, finAutomatique: true }));
+    const issue = IssueDeLActe.depuis(unConflit(), unDossierApres({ enConflit: false, finAutomatique: true }));
 
     expect(issue.kind).toBe('CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE');
   });
 
   it('should be processed when an automatic end leaves neither a conflict nor an automatic end', () => {
-    const issue = IssueDeLAnomalie.depuis(uneFinAutomatique(), unDossierApres({ enConflit: false, finAutomatique: false }));
+    const issue = IssueDeLActe.depuis(uneFinAutomatique(), unDossierApres({ enConflit: false, finAutomatique: false }));
 
     expect(issue.kind).toBe('TRAITEE');
   });
@@ -38,7 +38,7 @@ describe('Outcome of an anomaly after an act', () => {
     { enConflit: true, finAutomatique: false },
     { enConflit: true, finAutomatique: true },
   ])('should leave the anomaly when it is $enConflit and the automatic end is $finAutomatique, never as a conflict', apres => {
-    const issue = IssueDeLAnomalie.depuis(uneFinAutomatique(), unDossierApres(apres));
+    const issue = IssueDeLActe.depuis(uneFinAutomatique(), unDossierApres(apres));
 
     expect(issue.kind).toBe('ANOMALIE_RESTANTE');
   });
@@ -48,7 +48,7 @@ describe('Outcome of an anomaly after an act', () => {
     { origine: { etat: 'FIN_AUTOMATIQUE' as const, enConflit: true }, attendue: 'ANOMALIE_RESTANTE' },
     { origine: { etat: 'EN_CONFLIT' as const, enConflit: false }, attendue: 'ANOMALIE_RESTANTE' },
   ])('should read the nature of an origin that is $origine.etat with a conflict of $origine.enConflit', ({ origine, attendue }) => {
-    const issue = IssueDeLAnomalie.depuis(
+    const issue = IssueDeLActe.depuis(
       { ...origine, ligne: uneLigneAdressee('fin-17') },
       unDossierApres({ enConflit: true, finAutomatique: true }),
     );
@@ -62,7 +62,7 @@ describe('Outcome of an anomaly after an act', () => {
       activites: [uneActivite('travail-8', 'ECHUE', 'debut-8')],
     };
 
-    const issue = IssueDeLAnomalie.depuis(unConflit(), apres);
+    const issue = IssueDeLActe.depuis(unConflit(), apres);
 
     expect(issue.finsAutomatiquesRestantes).toEqual([
       { suivi: new SuiviAnomalieId('suivi-1'), pointage: new PointageAnomalieId('debut-8') },
@@ -80,7 +80,7 @@ describe('Outcome of an anomaly after an act', () => {
       ],
     };
 
-    const issue = IssueDeLAnomalie.depuis(unConflit(), apres);
+    const issue = IssueDeLActe.depuis(unConflit(), apres);
 
     expect(issue.finsAutomatiquesRestantes.map(adresse => adresse.pointage.pointage)).toEqual(['debut-8', 'debut-10']);
   });
@@ -91,7 +91,7 @@ describe('Outcome of an anomaly after an act', () => {
       activites: [uneActivite('travail-8', 'ECHUE', 'debut-8'), uneActivite('travail-10', 'ECHUE', 'debut-10')],
     };
 
-    const issue = IssueDeLAnomalie.depuis(uneFinAutomatiqueAdressee('debut-8'), apres);
+    const issue = IssueDeLActe.depuis(uneFinAutomatiqueAdressee('debut-8'), apres);
 
     expect(issue.finsAutomatiquesRestantes.map(adresse => adresse.pointage.pointage)).toEqual(['debut-10']);
   });
@@ -102,7 +102,7 @@ describe('Outcome of an anomaly after an act', () => {
       activites: [uneActivite('travail-8', 'ECHUE', 'debut-8')],
     };
 
-    const issue = IssueDeLAnomalie.depuis(uneFinAutomatiqueAdressee('debut-8'), apres);
+    const issue = IssueDeLActe.depuis(uneFinAutomatiqueAdressee('debut-8'), apres);
 
     expect(issue.finsAutomatiquesRestantes).toEqual([]);
   });
@@ -113,7 +113,7 @@ describe('Outcome of an anomaly after an act', () => {
       activites: [uneActivite('travail-8', 'ECHUE', 'debut-8')],
     };
 
-    const issue = IssueDeLAnomalie.depuis(uneFinAutomatiqueAdressee('debut-8', 'suivi-autre'), apres);
+    const issue = IssueDeLActe.depuis(uneFinAutomatiqueAdressee('debut-8', 'suivi-autre'), apres);
 
     expect(issue.finsAutomatiquesRestantes.map(adresse => adresse.pointage.pointage)).toEqual(['debut-8']);
   });
@@ -124,7 +124,7 @@ describe('Outcome of an anomaly after an act', () => {
       activites: [uneActivite('travail-8', 'TERMINEE', 'debut-8')],
     };
 
-    const issue = IssueDeLAnomalie.depuis(unConflit(), apres);
+    const issue = IssueDeLActe.depuis(unConflit(), apres);
 
     expect(issue.finsAutomatiquesRestantes).toEqual([]);
   });

@@ -29,7 +29,7 @@ import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { IssueDeLAnomalie } from '../../../domain/dossier/IssueDeLAnomalie';
+import { IssueDeLActe } from '../../../domain/dossier/IssueDeLActe';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
@@ -98,7 +98,7 @@ export class DossierAnomaliePage {
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLAnomalie.depuis(origine, apres);
+  protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
   protected readonly problemes = phrasesDuProbleme;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
