@@ -132,7 +132,8 @@ s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repère
 voie entière, la hauteur d'une cible de 44 px, tant que le précédent est trop proche ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
 vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
-`data-annule`, `data-voie`, `data-deplace`), jamais leurs classes.
+`data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
+rendue des graduations (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
 Une proposition de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ

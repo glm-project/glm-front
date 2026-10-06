@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
-import { abscisseDeLHeureLueSurLesGraduations } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
+import { abscisseDeLHeure } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
 import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
@@ -112,9 +112,9 @@ describe('Automatic end of an activity in Gestion', () => {
   const whenClickingThePointagesRowAt = (instant: Date): void => {
     const heures = instant.getHours() + instant.getMinutes() / 60;
     cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
-      const { width } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
-      abscisseDeLHeureLueSurLesGraduations(heures, width).then(abscisse => {
-        cy.get(dataSelector('anomalie-frise-placement')).click(abscisse, 20);
+      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+      abscisseDeLHeure(heures).then(clientX => {
+        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
       });
     });
   };

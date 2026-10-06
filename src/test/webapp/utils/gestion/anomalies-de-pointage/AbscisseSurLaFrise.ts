@@ -6,7 +6,7 @@ const UNE_HEURE_PAR_GRADUATION = 1;
 const graduationAt = (graduations: JQuery<HTMLElement>, rang: number): HTMLElement =>
   requiredFixture(graduations[rang], `graduation ${rang} of the frise`);
 
-const gaucheEnPourcentage = (graduation: HTMLElement): number => Number.parseFloat(graduation.style.left);
+const traitDe = (graduation: HTMLElement): number => graduation.getBoundingClientRect().left;
 
 const heureLueSur = (graduation: HTMLElement): number =>
   Number.parseInt(
@@ -14,12 +14,21 @@ const heureLueSur = (graduation: HTMLElement): number =>
     10,
   );
 
-export const abscisseDeLHeureLueSurLesGraduations = (heures: number, largeur: number): Cypress.Chainable<number> =>
-  cy.get(dataSelector('anomalie-frise-graduation')).then(graduations => {
-    const premiere = graduationAt(graduations, 0);
-    const ecart = (heures - heureLueSur(premiere)) / UNE_HEURE_PAR_GRADUATION;
-    const rang = Math.floor(ecart);
-    const avant = gaucheEnPourcentage(graduationAt(graduations, rang));
-    const apres = gaucheEnPourcentage(graduationAt(graduations, rang + 1));
-    return (largeur * (avant + (ecart - rang) * (apres - avant))) / 100;
-  });
+const entreDeuxTraits = (graduations: JQuery<HTMLElement>, ecart: number): number => {
+  const rang = Math.floor(ecart);
+  const avant = traitDe(graduationAt(graduations, rang));
+  return rang === ecart ? avant : avant + (ecart - rang) * (traitDe(graduationAt(graduations, rang + 1)) - avant);
+};
+
+export const abscisseDeLHeure = (heures: number): Cypress.Chainable<number> =>
+  cy
+    .get(dataSelector('anomalie-frise-graduation'))
+    .then(graduations => entreDeuxTraits(graduations, (heures - heureLueSur(graduationAt(graduations, 0))) / UNE_HEURE_PAR_GRADUATION));
+
+export const abscisseDuDernierTrait = (): Cypress.Chainable<number> =>
+  cy.get(dataSelector('anomalie-frise-graduation')).then(graduations => traitDe(graduationAt(graduations, graduations.length - 1)));
+
+export const centreDe = (element: HTMLElement): number => {
+  const { left, width } = element.getBoundingClientRect();
+  return left + width / 2;
+};

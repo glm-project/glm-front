@@ -3243,7 +3243,7 @@ describe('Anomaly dossier page', () => {
       await whenPressingOnTheHandle('End');
 
       thenTheInstantFieldsShow('15/09/2026', '02:00:00');
-      thenTheHandleStandsOnTheScale();
+      thenTheHandleHoldsAt(new Date(2026, 8, 15, 2, 0));
     });
 
     it('should hold the handle at the edge of the scale when the manager types an hour long after the received instants', async () => {
@@ -4759,12 +4759,6 @@ describe('Anomaly dossier page', () => {
   const thenTheHandleIsLocked = (): void => {
     expect(element('anomalie-poignee').getAttribute('aria-disabled')).toBe('true');
   };
-  const thenTheHandleStandsOnTheScale = (): void => {
-    const gauche = Number.parseFloat(element('anomalie-poignee').style.left);
-    expect(gauche).toBeGreaterThanOrEqual(0);
-    expect(gauche).toBeLessThanOrEqual(100);
-  };
-
   const thenTheHandleHoldsAt = (expected: Date): void => {
     expect(Number(element('anomalie-poignee').getAttribute('aria-valuenow'))).toBe(expected.getTime());
   };

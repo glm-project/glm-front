@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
+import { centreDe } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
 import {
   autreOperateurFixture,
   autreOperateurNomFixture,
@@ -131,6 +132,31 @@ describe('Conflict dossier in Gestion', () => {
       .and('not.contain.text', finFixture)
       .and('not.contain.text', debutFixture)
       .and('not.contain.text', ncFixture);
+  };
+
+  it('should make the arrow leave the marker at fault and reach the start of the activity it aims at', () => {
+    whenOpeningTheDossier();
+
+    thenTheArrowRunsFromTheStartOfTheActivityToTheMarkerAtFault();
+  });
+
+  const thenTheArrowRunsFromTheStartOfTheActivityToTheMarkerAtFault = (): void => {
+    markerOf(finFixture).then(repere => {
+      cy.get(dataSelector('anomalie-frise'))
+        .find(dataSelector('anomalie-activite'))
+        .filter(`[data-activite="${debutFixture}"]`)
+        .then(barre => {
+          cy.get(dataSelector('anomalie-frise-fleche')).should(fleche => {
+            const trace = requiredFixture(fleche[0], 'flèche').getBoundingClientRect();
+            const cible = requiredFixture(barre[0], 'barre').getBoundingClientRect();
+            const depart = requiredFixture(repere[0], 'repère');
+            expect(trace.left).to.be.closeTo(cible.left, 2);
+            expect(trace.right).to.be.closeTo(centreDe(depart), 2);
+            expect(trace.top).to.be.closeTo(depart.getBoundingClientRect().bottom, 2);
+            expect(trace.bottom).to.be.closeTo(cible.top, 2);
+          });
+        });
+    });
   };
 
   it('should select the pointage at fault of the conflict when the dossier opens', () => {

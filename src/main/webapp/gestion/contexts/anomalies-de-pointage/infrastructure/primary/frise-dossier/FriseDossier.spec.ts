@@ -500,59 +500,6 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsAre(['05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00']);
   });
 
-  it('should place each marker at the share of the scale its instant stands at', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '10:00')], activites: [] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerStandsAt('p-1', 25);
-    thenTheMarkerStandsAt('p-2', 75);
-  });
-
-  it('should lay a bar from its start to its received end on the scale', async () => {
-    const dossier = {
-      journal: [pointageFixture('p-1', 'ARRET', '12:00')],
-      activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '10:00')],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarSpans('a-1', { gauche: 16.667, largeur: 33.333 });
-  });
-
-  it('should open a bar that has no end to the edge of the scale', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'ARRET', '10:00')], activites: [activiteFixture('a-1', 'A_RESOUDRE', '08:00')] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarSpans('a-1', { gauche: 25, largeur: 75 });
-  });
-
-  it('should stop the bar of an expired activity at the automatic end received, short of the edge of the scale', async () => {
-    const dossier = {
-      journal: [pointageFixture('p-1', 'ARRET', '14:00')],
-      activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarEndsAt('a-1', 62.5);
-  });
-
-  it.each(['EN_COURS', 'A_RESOUDRE'] as const)(
-    'should run the bar of an activity %s to the edge of the scale even when an end is received',
-    async etat => {
-      const dossier = {
-        journal: [pointageFixture('p-1', 'ARRET', '14:00')],
-        activites: [activiteFixture('a-1', etat, '08:00', '10:00')],
-      };
-
-      await whenRenderingTheFrise(dossier);
-
-      thenTheBarEndsAt('a-1', 100);
-    },
-  );
-
   it('should show the day at midnight when the sequence spans several days', async () => {
     const dossier = {
       journal: [
@@ -591,7 +538,7 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier);
 
-    thenTheMarkerLanesAre({ 'p-1': '0', 'p-2': '1', 'p-3': '0' });
+    thenTheMarkersStandOnRows([['p-1', 'p-3'], ['p-2']]);
   });
 
   it('should keep a marker on the first lane once the previous one is far enough', async () => {
@@ -599,7 +546,7 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier);
 
-    thenTheMarkerLanesAre({ 'p-1': '0', 'p-2': '0' });
+    thenTheMarkersStandOnRows([['p-1', 'p-2']]);
   });
 
   it('should open a further lane for a marker that every lane in use keeps too close', async () => {
@@ -614,7 +561,7 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier);
 
-    thenTheMarkerLanesAre({ 'p-1': '0', 'p-2': '1', 'p-3': '2' });
+    thenTheMarkersStandOnRows([['p-1'], ['p-2'], ['p-3']]);
   });
 
   it('should give each activity its own row, below the pointages, in the order of their start', async () => {
@@ -725,18 +672,6 @@ describe('Frise of a dossier', () => {
     thenTheArrowsAre([{ pointage: 'fin-17', activite: 'travail-8' }]);
   });
 
-  it('should make the arrow leave the marker at fault and reach the start of the activity aimed at, going down', async () => {
-    const dossier = {
-      journal: [pointageFixture('fin-17', 'ARRET', '17:00')],
-      activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
-      diagnostics: [diagnosticSur('fin-17', 'travail-8')],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheArrowLeaves(marker('fin-17'), bar('travail-8'));
-  });
-
   it('should keep the arrow out of the way of assistive technology', async () => {
     const dossier = {
       journal: [pointageFixture('fin-17', 'ARRET', '17:00')],
@@ -790,14 +725,6 @@ describe('Frise of a dossier', () => {
     await whenRenderingTheFrise(dossier);
 
     expect(Number.parseFloat(thePlan().style.height)).toBeGreaterThanOrEqual(topOf(bar('a-2')) + 44);
-  });
-
-  it('should stretch the graduations from the left edge to the right edge of the frise', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '10:00')], activites: [] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheGraduationsStandAt([0, 25, 50, 75, 100]);
   });
 
   it('should ask to place the instant where the pointages row is clicked', async () => {
@@ -905,21 +832,6 @@ describe('Frise of a dossier', () => {
     thenTheHandleIsASlider();
   });
 
-  it('should stand the handle at the proposed instant on the scale', async () => {
-    const dossier = {
-      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
-      activites: [],
-    };
-
-    await whenRenderingTheFrise(
-      dossier,
-      undefined,
-      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
-    );
-
-    thenTheHandleStandsAt(50);
-  });
-
   it('should extend the scale to three hours after the last received instant while a handle is active', async () => {
     const dossier = {
       journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
@@ -929,7 +841,6 @@ describe('Frise of a dossier', () => {
     await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
-    thenTheHandleStandsAt(37.5);
   });
 
   it('should keep the normal scale when the clock stands before the last received instant', async () => {
@@ -963,18 +874,21 @@ describe('Frise of a dossier', () => {
   });
 
   it.each([
-    { cas: 'after', instant: new Date(2026, 8, 20, 10, 0) },
-    { cas: 'before', instant: new Date(2026, 8, 10, 10, 0) },
-  ])('should hold the handle on the scale when it stands $cas every received instant', async ({ instant }) => {
-    const dossier = {
-      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
-      activites: [],
-    };
+    { cas: 'after', instant: new Date(2026, 8, 20, 10, 0), tenue: new Date(2026, 8, 14, 15, 0) },
+    { cas: 'before', instant: new Date(2026, 8, 10, 10, 0), tenue: new Date(2026, 8, 14, 8, 0) },
+  ])(
+    'should hold the handle at the nearest end of its range on the scale when it stands $cas every received instant',
+    async ({ instant, tenue }) => {
+      const dossier = {
+        journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+        activites: [],
+      };
 
-    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { instant: instantLocalFixture(instant) }));
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { instant: instantLocalFixture(instant) }));
 
-    thenTheHandleStandsOnTheScale();
-  });
+      thenTheHandleHoldsAt(tenue);
+    },
+  );
 
   it('should give the handle a range, a value and a readable time within its bounds', async () => {
     const dossier = {
@@ -1524,19 +1438,6 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsAre(['05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
   });
 
-  it('should stand a marker and a bar after the act at the same place as the ones above when they hold the same instants', async () => {
-    const dossier = {
-      journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
-      activites: [activiteFixture('travail-8', 'TERMINEE', '08:00', '12:00')],
-    };
-
-    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres: dossier });
-
-    expect(markerAfterTheAct('fin-12').style.left).toBe(marker('fin-12').style.left);
-    expect(barAfterTheAct('travail-8').style.left).toBe(bar('travail-8').style.left);
-    expect(barAfterTheAct('travail-8').style.width).toBe(bar('travail-8').style.width);
-  });
-
   it('should stand the state after the act below the rows of the activities received, with its title first', async () => {
     const dossier = {
       journal: [pointageFixture('fin-12', 'ARRET', '12:00')],
@@ -1796,14 +1697,8 @@ describe('Frise of a dossier', () => {
     expect(handle().textContent.trim()).toBe(time);
   };
 
-  const thenTheHandleStandsOnTheScale = (): void => {
-    const gauche = Number.parseFloat(handle().style.left);
-    expect(gauche).toBeGreaterThanOrEqual(0);
-    expect(gauche).toBeLessThanOrEqual(100);
-  };
-
-  const thenTheHandleStandsAt = (expected: number): void => {
-    expect(Number.parseFloat(handle().style.left)).toBeCloseTo(expected);
+  const thenTheHandleHoldsAt = (expected: Date): void => {
+    expect(Number(handle().getAttribute('aria-valuenow'))).toBe(expected.getTime());
   };
 
   const markers = (): HTMLElement[] => [
@@ -1907,31 +1802,16 @@ describe('Frise of a dossier', () => {
     expect(graduations.map(graduation => graduation.textContent.trim())).toEqual(expected);
   };
 
-  const thenTheMarkerStandsAt = (pointage: string, expected: number): void => {
-    expect(Number.parseFloat(marker(pointage).style.left)).toBeCloseTo(expected);
-  };
-
-  const thenTheBarSpans = (activite: string, expected: { gauche: number; largeur: number }): void => {
-    const style = bar(activite).style;
-    expect({ gauche: Number.parseFloat(style.left), largeur: Number.parseFloat(style.width) }).toEqual({
-      gauche: expect.closeTo(expected.gauche) as number,
-      largeur: expect.closeTo(expected.largeur) as number,
-    });
-  };
-
-  const thenTheBarEndsAt = (activite: string, expected: number): void => {
-    const style = bar(activite).style;
-    expect(Number.parseFloat(style.left) + Number.parseFloat(style.width)).toBeCloseTo(expected);
-  };
-
   const thenTheNumberOfGraduationsIs = (expected: number): void => {
     expect((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector('anomalie-frise-graduation'))).toHaveLength(expected);
   };
 
-  const thenTheMarkerLanesAre = (expected: Readonly<Record<string, string>>): void => {
-    const lanes: Record<string, string | undefined> = {};
-    for (const candidate of markers()) lanes[candidate.dataset['pointage'] ?? ''] = candidate.dataset['voie'];
-    expect(lanes).toEqual(expected);
+  const thenTheMarkersStandOnRows = (rows: readonly (readonly string[])[]): void => {
+    const tops = rows.map(row => row.map(pointage => topOf(marker(pointage))));
+    expect(tops.map(row => new Set(row).size)).toEqual(tops.map(() => 1));
+    const firsts = tops.map(row => row[0] ?? Number.NaN);
+    expect(firsts).toEqual([...firsts].sort((first, second) => first - second));
+    expect(new Set(firsts).size).toBe(firsts.length);
   };
 
   const topOf = (element: HTMLElement): number => Number.parseFloat(element.style.top);
@@ -1960,15 +1840,6 @@ describe('Frise of a dossier', () => {
     expect(arrows().map(arrow => ({ pointage: arrow.dataset['pointage'], activite: arrow.dataset['activite'] }))).toEqual(expected);
   };
 
-  const thenTheArrowLeaves = (depart: HTMLElement, arrivee: HTMLElement): void => {
-    const [arrow] = arrows();
-    const fleche = requiredFixture(arrow, 'arrow');
-    expect(Number.parseFloat(fleche.getAttribute('x1') ?? '')).toBeCloseTo(Number.parseFloat(depart.style.left));
-    expect(Number.parseFloat(fleche.getAttribute('x2') ?? '')).toBeCloseTo(Number.parseFloat(arrivee.style.left));
-    expect(Number.parseFloat(fleche.getAttribute('y1') ?? '')).toBe(topOf(depart) + 44);
-    expect(Number.parseFloat(fleche.getAttribute('y2') ?? '')).toBe(topOf(arrivee));
-  };
-
   const thenTheArrowsAreDecorative = (): void => {
     const [arrow] = arrows();
     expect(requiredFixture(arrow, 'arrow').closest('svg')?.getAttribute('aria-hidden')).toBe('true');
@@ -1976,15 +1847,6 @@ describe('Frise of a dossier', () => {
 
   const thePlan = (): HTMLElement =>
     requiredFixture((fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-plan')), 'frise plan');
-
-  const thenTheGraduationsStandAt = (expected: readonly number[]): void => {
-    const graduations = [
-      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-graduation')),
-    ];
-    expect(graduations.map(graduation => Number.parseFloat(graduation.style.left))).toEqual(
-      expected.map(position => expect.closeTo(position) as number),
-    );
-  };
 
   const thenTheDaysShownCountIs = (expected: number): void => {
     expect((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector('anomalie-frise-jour'))).toHaveLength(expected);
