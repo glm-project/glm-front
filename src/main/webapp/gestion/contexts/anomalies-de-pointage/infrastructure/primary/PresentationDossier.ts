@@ -11,7 +11,7 @@ export type VueDActivites = Readonly<{ journal: readonly PointageAnomalie[]; act
 
 export interface DetailPointage {
   readonly entete: string;
-  readonly nature: string;
+  readonly geste: string;
   readonly cible?: string;
   readonly creee?: string;
 }
@@ -77,7 +77,7 @@ export const detailDuPointage = (pointage: PointageAnomalie, vue: VueDActivites,
   const fait = pointage.fait;
   return {
     entete: `${operateurPresente(pointage.operateurNom)} · ${instantLongDayWithSeconds.transform(fait.instant, now)}`,
-    nature: libelleDuGeste(fait),
+    geste: libelleDuGeste(fait),
     ...(fait.activiteVisee ? { cible: labelForActivite(fait.activiteVisee, vue, now) } : {}),
     ...(pointage.activiteCreee ? { creee: labelForActivite(pointage.activiteCreee.activite, vue, now) } : {}),
   };

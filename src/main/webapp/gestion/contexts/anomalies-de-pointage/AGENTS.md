@@ -100,7 +100,7 @@ garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de
 au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
 Les détails de traçabilité du pointage sélectionné et les journaux avant/après de l'aperçu partagent un seul gabarit : la ligne
 d'en-tête est « Prénom Nom · instant » (jamais l'identifiant du pointage), et les activités visée ou créée se désignent
-par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (nature et instant),
+par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (« Geste · instant »),
 sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète et l'option de cible
 du formulaire suivent la même règle (`labelForActivite`).
 Un autre pointage (remplacé, pointage de l'acte en aperçu) se désigne par une seule règle, `referencePointage` :

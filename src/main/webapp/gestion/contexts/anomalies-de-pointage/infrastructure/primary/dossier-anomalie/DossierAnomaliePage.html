@@ -522,7 +522,7 @@
 <ng-template #detailPointage let-detail let-entete="entete" let-ligne="ligne" let-avecType="avecType">
   <p [class]="entete">{{ detail.entete }}</p>
   @if (avecType) {
-  <p>{{ detail.nature }}</p>
+  <p>{{ detail.geste }}</p>
   } @if (detail.cible) {
   <p [class]="ligne">{{ libelles.cible }} {{ detail.cible }}</p>
   } @if (detail.creee) {
