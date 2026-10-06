@@ -1668,10 +1668,6 @@ describe('Frise of a dossier', () => {
     expect(handle().getAttribute('aria-valuetext')).toBe(expected);
   };
 
-  const thenTheHandleIsReadWithoutOffset = (): void => {
-    expect(handle().getAttribute('aria-valuetext')).not.toContain('UTC');
-  };
-
   const thenTheHandleStandsBelow = (pointages: readonly string[], activite: string): void => {
     const haut = topOf(handle());
     expect(haut).toBeGreaterThanOrEqual(Math.max(...pointages.map(pointage => topOf(marker(pointage)) + 44)));
@@ -2027,30 +2023,6 @@ describe('Frise of a dossier', () => {
       await whenRenderingTheFrise(dossier, undefined, poigneeFixture('00:00', { instant: instant.toISOString(), bornes }));
 
       thenTheHandleIsReadAs(texte);
-    });
-
-    it('should read the time of the handle without offset once the hour is no longer repeated', async () => {
-      const dossier = {
-        journal: [
-          {
-            ...pointageFixture('p-1', 'DEMARRAGE', '00:00'),
-            fait: { ...pointageFixture('p-1', 'DEMARRAGE', '00:00').fait, instant: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString() },
-          },
-        ],
-        activites: [],
-      };
-      const bornes = {
-        min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
-        max: new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString(),
-      };
-
-      await whenRenderingTheFrise(
-        dossier,
-        undefined,
-        poigneeFixture('00:00', { instant: new Date(Date.UTC(2026, 9, 25, 2, 30)).toISOString(), bornes }),
-      );
-
-      thenTheHandleIsReadWithoutOffset();
     });
   });
 });

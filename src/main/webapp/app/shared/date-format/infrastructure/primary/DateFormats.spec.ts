@@ -23,6 +23,7 @@ import {
   formatInstantShortWeekdayDayMonth,
   formatInstantTime,
   formatInstantTimeAndLongDayWithSeconds,
+  formatInstantTimeUnambiguous,
   formatInstantTimeWithOffset,
   formatInstantWeekdayDay,
   localCalendarDay,
@@ -372,6 +373,14 @@ describe('DateFormats', () => {
     expect(text).toBe('08:02 UTC-03:00');
   });
 
+  it('should write only the local hour and minute of an instant whose hour the clock does not repeat', () => {
+    const instant = new Date(2026, 8, 14, 8, 2);
+
+    const text = formatInstantTimeUnambiguous(instant);
+
+    expect(text).toBe('08:02');
+  });
+
   it('should join the local day of a date and the local time of another into one instant', () => {
     const day = new Date(2026, 9, 5);
     const time = new Date(2030, 0, 1, 17, 1, 9, 500);
@@ -414,6 +423,20 @@ describe('DateFormats', () => {
       { occurrence: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), text: '02:30 UTC+01:00' },
     ])('should tell the $occurrence occurrence of an ambiguous hour apart by its offset', ({ instant, text }) => {
       expect(formatInstantTimeWithOffset(instant)).toBe(text);
+    });
+
+    it.each([
+      { occurrence: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), text: '02:30 UTC+02:00' },
+      { occurrence: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), text: '02:30 UTC+01:00' },
+    ])('should add the offset to the $occurrence occurrence of an hour the clock repeats', ({ instant, text }) => {
+      expect(formatInstantTimeUnambiguous(instant)).toBe(text);
+    });
+
+    it.each([
+      { cas: 'once the hour went back', instant: new Date(Date.UTC(2026, 9, 25, 2, 30)) },
+      { cas: 'before the hour is repeated', instant: new Date(Date.UTC(2026, 9, 24, 21, 0)) },
+    ])('should write only the hour and minute of an instant $cas', ({ instant }) => {
+      expect(formatInstantTimeUnambiguous(instant)).toMatch(/^\d{2}:\d{2}$/);
     });
 
     it('should join a day and an ambiguous hour into the first occurrence', () => {

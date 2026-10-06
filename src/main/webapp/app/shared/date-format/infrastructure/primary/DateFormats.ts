@@ -142,6 +142,21 @@ const offsetOf = (date: Date): string => {
 export const formatInstantTimeWithOffset = (instant: Date): string =>
   `${twoDigits(instant.getHours())}:${twoDigits(instant.getMinutes())} UTC${offsetOf(instant)}`;
 
+const ONE_HOUR = 3_600_000;
+
+const isRepeatedByTheClock = (instant: Date): boolean =>
+  [-ONE_HOUR, ONE_HOUR].some(shift => {
+    const other = new Date(instant.getTime() + shift);
+    return (
+      other.getTimezoneOffset() !== instant.getTimezoneOffset()
+      && other.getHours() === instant.getHours()
+      && other.getMinutes() === instant.getMinutes()
+    );
+  });
+
+export const formatInstantTimeUnambiguous = (instant: Date): string =>
+  isRepeatedByTheClock(instant) ? formatInstantTimeWithOffset(instant) : TIME.format(instant);
+
 export const toOffsetIsoString = (date: Date): string =>
   `${localCalendarDay(date)}T${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}${offsetOf(date)}`;
 

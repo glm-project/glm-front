@@ -1,11 +1,8 @@
-import { formatInstantTimeWithOffset } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { PropositionActe } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { heureDe } from '../PresentationDossier';
-
-const UNE_HEURE = 3_600_000;
 
 export interface BornesDePoignee {
   readonly min: string;
@@ -34,20 +31,7 @@ export interface PoigneeDeFrise {
   readonly desactivee: boolean;
 }
 
-const heureRepetee = (instant: Date): boolean =>
-  [-UNE_HEURE, UNE_HEURE].some(ecart => {
-    const autre = new Date(instant.getTime() + ecart);
-    return (
-      autre.getTimezoneOffset() !== instant.getTimezoneOffset()
-      && autre.getHours() === instant.getHours()
-      && autre.getMinutes() === instant.getMinutes()
-    );
-  });
-
-export const texteDeLHeure = (instant: string): string => {
-  const date = new Date(instant);
-  return heureRepetee(date) ? formatInstantTimeWithOffset(date) : heureDe(instant);
-};
+export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
 
 const MINUTES_PAR_FLECHE = 1;
 const MINUTES_PAR_FLECHE_AVEC_MAJ = 15;
