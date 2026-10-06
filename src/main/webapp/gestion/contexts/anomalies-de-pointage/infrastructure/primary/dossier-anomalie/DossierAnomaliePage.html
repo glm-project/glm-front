@@ -49,7 +49,7 @@
       </p>
       @if (pointage.regularisation) {
       <p class="mt-2 text-body-sm font-semibold">{{ libelles.regularisation }}</p>
-      } @if (pointagesTardifs(dossier.choix).has(pointage.id.pointage)) {
+      } @if (identifiantsDesPointagesTardifs(dossier.choix).has(pointage.id.pointage)) {
       <p class="mt-2 text-body-sm font-semibold" data-selector="anomalie-selection-tardif">{{ libelles.pointeApresLEcheance }}</p>
       } @if (pointage.annulation; as annulation) {
       <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-annulation">

@@ -2,8 +2,8 @@ import { TypePointage } from '../../domain/acte/ActeResolution';
 import { conflitAExpliquer } from '../../domain/dossier/ConflitAExpliquer';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
-import { gestesTardifs } from './GestesTardifs';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
+import { pointagesTardifs } from './PointagesTardifs';
 import { heureDe, libelleDuGeste } from './PresentationDossier';
 
 type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
@@ -119,7 +119,7 @@ const phrasesDeConflit = (dossier: DossierAnomalie): readonly string[] =>
   dossier.diagnostics?.length ? dossier.diagnostics.map(diagnostic => phraseDeConflit(dossier, diagnostic)) : [dossier.ligne.explication];
 
 const pointageTardifDe = (dossier: DossierAnomalie, activite: ActiviteAnomalie): PointageAnomalieId | undefined => {
-  const tardif = gestesTardifs(dossier.choix).find(geste => geste.activite === activite.id.activite);
+  const tardif = pointagesTardifs(dossier.choix).find(candidat => candidat.activite === activite.id.activite);
   return tardif === undefined ? undefined : new PointageAnomalieId(tardif.pointage);
 };
 

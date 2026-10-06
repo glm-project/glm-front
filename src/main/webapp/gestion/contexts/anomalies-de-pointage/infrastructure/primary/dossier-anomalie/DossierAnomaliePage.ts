@@ -34,9 +34,9 @@ import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { etatDeLecture } from '../EtatDeLecture';
-import { pointagesTardifs } from '../GestesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
+import { identifiantsDesPointagesTardifs } from '../PointagesTardifs';
 import {
   detailDuPointage,
   intituleDeLActivite,
@@ -95,7 +95,7 @@ export class DossierAnomaliePage {
   protected readonly origine = signal<DossierAnomalie | undefined>(undefined);
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLAnomalie.depuis(origine, apres);
   protected readonly problemes = phrasesDuProbleme;
-  protected readonly pointagesTardifs = pointagesTardifs;
+  protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
   protected readonly libelleActivite = libelleActivite;
   protected readonly intituleDeLActivite = intituleDeLActivite;

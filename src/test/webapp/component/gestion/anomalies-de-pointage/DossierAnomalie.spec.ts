@@ -203,7 +203,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-apres-pointage')).should('have.length', 4);
     cy.get(dataSelector('anomalie-apres-pointage'))
       .filter(`[data-pointage="${remplacementFixture}"]`)
-      .should('have.attr', 'data-ok', 'true');
+      .should('have.attr', 'data-fait-de-l-acte', 'true');
     cy.get(dataSelector('anomalie-apres-pointage'))
       .filter(`[data-pointage="${finFixture}"]`)
       .should('have.attr', 'data-annule', 'true')

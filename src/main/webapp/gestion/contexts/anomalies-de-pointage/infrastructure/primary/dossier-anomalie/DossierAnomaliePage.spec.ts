@@ -1787,8 +1787,8 @@ describe('Anomaly dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenTheMarkerAfterTheActIs('remplacement', { 'data-ok': 'true', 'data-annule': 'false' });
-    thenTheMarkerAfterTheActIs('fin-17', { 'data-ok': 'false', 'data-annule': 'true' });
+    thenTheMarkerAfterTheActIs('remplacement', { 'data-fait-de-l-acte': 'true', 'data-annule': 'false' });
+    thenTheMarkerAfterTheActIs('fin-17', { 'data-fait-de-l-acte': 'false', 'data-annule': 'true' });
   });
 
   it('should withdraw the state after the act when the manager changes the reason', async () => {

@@ -91,8 +91,8 @@ genre), puis le fait contradictoire et son heure (HH:MM) quand le dossier le por
 l'activité). Chaque modèle couvre l'absence de ces champs facultatifs : un pointage cité mais absent du journal compte
 comme absent ; pour une transition de même catégorie, une activité sans période prend la catégorie du geste (« un travail
 déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
-`CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le geste tardif ; sinon l'activité n'a
-jamais été arrêtée. Le front ne déduit jamais qu'un geste est tardif : `gestesTardifs` (`GestesTardifs.ts`) le lit dans ces choix, et le pointage
+`CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le pointage tardif ; sinon l'activité n'a
+jamais été arrêtée. Le front ne déduit jamais qu'un pointage est tardif : `pointagesTardifs` (`PointagesTardifs.ts`) le lit dans ces choix, et le pointage
 désigné est marqué « pointé après l'échéance » sur la frise (badge « ! », `data-tardif`, nom accessible) et dans le panneau Sélection.
 Les pointages et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
@@ -138,7 +138,7 @@ grammaire des rangées actuelles (fins reçues seulement, rien n'est inventé). 
 sans tabulation ni sélection ; le nom d'une barre porte la catégorie, la période, l'état et le temps reçus. La comparaison est
 de la présentation (`ComparaisonDApercu.ts`) : une activité dont l'état, le début, la fin ou la durée reçus changent entre
 `avant` et `apres`, ou que l'avant ne portait pas, est mise en évidence (`data-modifiee`, mot « modifiée » dans son nom) ; le
-pointage que l'après tient et que l'avant ne tenait pas, fait corrigé ou créé par l'acte, est en `ok` (`data-ok`, « posé par
+pointage que l'après tient et que l'avant ne tenait pas, fait corrigé ou créé par l'acte, est le fait de l'acte (`data-fait-de-l-acte`, « posé par
 cet acte »). Un pointage annulé par l'acte est barré. Une poignée active reste affichée avec l'aperçu ; la déplacer retire
 l'aperçu, donc ces rangées. La section d'aperçu garde l'acte, la phrase d'issue, l'enregistrement, les conséquences textuelles
 reçues (seulement s'il y en a) et la comparaison repliée de tous les pointages.

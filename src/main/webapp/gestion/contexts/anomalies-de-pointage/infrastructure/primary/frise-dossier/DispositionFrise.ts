@@ -1,8 +1,8 @@
 import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ChronologiePointages } from '../../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { pointagesTardifs } from '../GestesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { identifiantsDesPointagesTardifs } from '../PointagesTardifs';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste, tempsActivite } from '../PresentationDossier';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { activitesModifiees, faitsDeLActe } from './ComparaisonDApercu';
@@ -52,7 +52,7 @@ export interface RepereFrise {
   readonly enCause: boolean;
   readonly deplace: boolean;
   readonly tardif: boolean;
-  readonly ok: boolean;
+  readonly faitDeLActe: boolean;
 }
 
 export type ElementFrise = BarreFrise | RepereFrise;
@@ -131,7 +131,7 @@ interface DrapeauxDuRepere {
   readonly enCause: boolean;
   readonly deplace: boolean;
   readonly tardif: boolean;
-  readonly ok: boolean;
+  readonly faitDeLActe: boolean;
 }
 
 const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now: Date): string =>
@@ -142,7 +142,7 @@ const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now
     ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
     ...(drapeaux.enCause ? [QUALIFICATIFS.enCause] : []),
     ...(drapeaux.tardif ? [QUALIFICATIFS.tardif] : []),
-    ...(drapeaux.ok ? [QUALIFICATIFS.faitDeLActe] : []),
+    ...(drapeaux.faitDeLActe ? [QUALIFICATIFS.faitDeLActe] : []),
     ...(drapeaux.deplace ? [QUALIFICATIFS.heureRemplacee] : []),
   ].join(' · ');
 
@@ -155,7 +155,7 @@ const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefi
 const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, contexte: ContexteDeFrise): RepereFrise => {
   const deplace = estDeplace(pointage, contexte.poignee);
   const tardif = contexte.tardifs.has(pointage.id.pointage);
-  const ok = contexte.faitsDeLActe.has(pointage.id.pointage);
+  const faitDeLActe = contexte.faitsDeLActe.has(pointage.id.pointage);
   return {
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
@@ -164,7 +164,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     voie,
     cle: `pointage:${pointage.id.pointage}`,
     pointage: pointage.id.pointage,
-    nom: nomDuRepere(pointage, { enCause, deplace, tardif, ok }, contexte.now),
+    nom: nomDuRepere(pointage, { enCause, deplace, tardif, faitDeLActe }, contexte.now),
     selection: { kind: 'POINTAGE', id: pointage.id.pointage },
     heure: heureDe(pointage.fait.instant),
     symbole: symboleDuGeste(pointage.fait),
@@ -174,7 +174,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     enCause,
     deplace,
     tardif,
-    ok,
+    faitDeLActe,
   };
 };
 
@@ -362,7 +362,7 @@ export const dispositionDeFrise = (
     instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
     bornesDuGeste && Date.parse(bornesDuGeste.max),
   );
-  const tardifs = pointagesTardifs(vue.choix ?? []);
+  const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>() };
   const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) =>
     repereDe(element, enCause.has(element.id.pointage), voie, contexte),

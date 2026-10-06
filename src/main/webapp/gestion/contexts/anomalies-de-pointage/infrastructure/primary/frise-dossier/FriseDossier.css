@@ -256,11 +256,11 @@ button[aria-pressed='true'] {
 [data-selector='anomalie-apercu-activite-apres'] {
   cursor: default;
 }
-[data-selector='anomalie-apres-pointage'][data-ok='true'] {
+[data-selector='anomalie-apres-pointage'][data-fait-de-l-acte='true'] {
   border: 2px solid var(--color-ok);
   background: color-mix(in srgb, var(--color-ok) 18%, var(--color-surface));
 }
-[data-selector='anomalie-apres-pointage'][data-ok='true'][data-non-conformite='true'] {
+[data-selector='anomalie-apres-pointage'][data-fait-de-l-acte='true'][data-non-conformite='true'] {
   background: var(--color-nc);
 }
 [data-selector='anomalie-apercu-activite-apres'][data-modifiee='true'] {

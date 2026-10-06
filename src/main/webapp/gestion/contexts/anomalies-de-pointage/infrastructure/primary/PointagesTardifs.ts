@@ -1,13 +1,13 @@
 import { ChoixGuide } from '../../domain/dossier/DossierAnomalie';
 
-export interface GesteTardif {
+export interface PointageTardif {
   readonly pointage: string;
   readonly activite: string;
 }
 
 const CODES_TARDIFS: readonly ChoixGuide['code'][] = ['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'];
 
-export const gestesTardifs = (choix: readonly ChoixGuide[]): readonly GesteTardif[] =>
+export const pointagesTardifs = (choix: readonly ChoixGuide[]): readonly PointageTardif[] =>
   choix.flatMap(candidat => {
     const proposition = candidat.saisie.proposition;
     return CODES_TARDIFS.includes(candidat.code) && proposition?.kind === 'CORRECTION'
@@ -15,5 +15,5 @@ export const gestesTardifs = (choix: readonly ChoixGuide[]): readonly GesteTardi
       : [];
   });
 
-export const pointagesTardifs = (choix: readonly ChoixGuide[]): ReadonlySet<string> =>
-  new Set(gestesTardifs(choix).map(geste => geste.pointage));
+export const identifiantsDesPointagesTardifs = (choix: readonly ChoixGuide[]): ReadonlySet<string> =>
+  new Set(pointagesTardifs(choix).map(tardif => tardif.pointage));

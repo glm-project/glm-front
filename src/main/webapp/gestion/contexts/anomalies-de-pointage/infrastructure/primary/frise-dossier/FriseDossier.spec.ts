@@ -1399,9 +1399,9 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
 
-    thenTheMarkerAfterTheActHas('remplacement-16', { 'data-ok': 'true' });
-    thenTheMarkerAfterTheActHas('fin-17', { 'data-ok': 'false' });
-    thenTheMarkerAfterTheActHas('debut-8', { 'data-ok': 'false' });
+    thenTheMarkerAfterTheActHas('remplacement-16', { 'data-fait-de-l-acte': 'true' });
+    thenTheMarkerAfterTheActHas('fin-17', { 'data-fait-de-l-acte': 'false' });
+    thenTheMarkerAfterTheActHas('debut-8', { 'data-fait-de-l-acte': 'false' });
     thenTheMarkerAfterTheActIsNamed('remplacement-16', '16:00:00 · Arrêt · posé par cet acte');
   });
 
@@ -1418,7 +1418,7 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
 
-    thenTheMarkerAfterTheActHas('fin-17', { 'data-ok': 'false', 'data-annule': 'true' });
+    thenTheMarkerAfterTheActHas('fin-17', { 'data-fait-de-l-acte': 'false', 'data-annule': 'true' });
   });
 
   it('should stretch the scale to the pointages and the activities of the state after the act', async () => {
