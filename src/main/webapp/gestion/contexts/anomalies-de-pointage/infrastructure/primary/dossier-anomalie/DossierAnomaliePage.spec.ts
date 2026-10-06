@@ -2606,6 +2606,76 @@ describe('Anomaly dossier page', () => {
     ]);
   });
 
+  it('should refuse a fact in the future and keep the preview unavailable', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEnteringTheInstant('05/10/2026', '10:01');
+
+    thenTextContains('anomalie-validation', 'La date et l’heure du fait ne peuvent pas être dans le futur.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should refuse a fact that precedes the start of the activity it ends', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEnteringTheInstant('14/09/2026', '07:59');
+
+    thenTextContains('anomalie-validation', 'Le fait ne peut pas précéder le début de l’activité qu’il termine.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should accept a fact at exactly the start of the activity it ends', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    await whenEnteringTheInstant('14/09/2026', '08:00');
+
+    thenTextDoesNotContain('anomalie-validation', 'précéder');
+    thenEnabled('anomalie-previsualiser');
+  });
+
+  it('should bound the fact by the activity the manager now aims at', async () => {
+    givenAnAutomaticEndBesideAnActivityStartedAtNoon();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEnteringTheInstant('14/09/2026', '10:00');
+
+    await whenEntering('anomalie-cible', 'nc-12');
+
+    thenTextContains('anomalie-validation', 'Le fait ne peut pas précéder le début de l’activité qu’il termine.');
+    thenDisabled('anomalie-previsualiser');
+  });
+
+  it('should accept an hour that became past while the tab stayed open', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    whenTheClockIs(new Date(2026, 9, 5, 10, 30));
+    await whenClicking('anomalie-choix');
+
+    await whenEnteringTheInstant('05/10/2026', '10:15');
+
+    thenTextDoesNotContain('anomalie-validation', 'futur');
+    thenEnabled('anomalie-previsualiser');
+  });
+
+  it('should accept at the next gesture an hour that was still in the future at the previous one', async () => {
+    givenAnAutomaticEnd();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEnteringTheInstant('05/10/2026', '10:15');
+    whenTheClockIs(new Date(2026, 9, 5, 10, 30));
+
+    await whenEntering('anomalie-instant-heure', '10:16');
+
+    thenTextDoesNotContain('anomalie-validation', 'futur');
+    thenEnabled('anomalie-previsualiser');
+  });
+
   it('should stop presenting the end regularisation as chosen once the manager changes its target', async () => {
     givenAnAutomaticEnd();
     await whenRendering();
@@ -2827,15 +2897,15 @@ describe('Anomaly dossier page', () => {
     });
 
     it('should take the first occurrence of an hour the clock repeats', async () => {
-      givenAnAutomaticEnd();
-      givenASuccessfulPreview(undefined, acteFinRegulariseeFixture('poste-1', '2026-10-25T02:30:00+02:00'));
+      givenAnAutomaticEndStartedOn(instantLocalFixture(new Date(2025, 9, 20, 8, 0)));
+      givenASuccessfulPreview(undefined, acteFinRegulariseeFixture('poste-1', '2025-10-26T02:30:00+02:00'));
       await whenRendering();
       await whenClicking('anomalie-choix');
-      await whenEnteringTheInstant('25/10/2026', '02:30');
+      await whenEnteringTheInstant('26/10/2025', '02:30');
 
       await whenClicking('anomalie-previsualiser');
 
-      expect(preview.actes).toEqual([acteFinRegulariseeFixture('poste-1', '2026-10-25T02:30:00+02:00')]);
+      expect(preview.actes).toEqual([acteFinRegulariseeFixture('poste-1', '2025-10-26T02:30:00+02:00')]);
     });
   });
 
@@ -3032,6 +3102,31 @@ describe('Anomaly dossier page', () => {
       kind: 'DOSSIER',
       dossier: { ...dossier, choix: dossier.choix.map(choix => ({ ...choix, saisie })) },
     };
+  };
+
+  const givenAnAutomaticEndStartedOn = (debut: string): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const activite = requiredFixture(dossier.activites[0], 'automatic end fixture activity');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [{ ...activite, periode: { categorie: 'TRAVAIL', debut, fin: INSTANT_ECHEANCE, duree: 'PT13H' } }],
+      },
+    };
+  };
+
+  const givenAnAutomaticEndBesideAnActivityStartedAtNoon = (): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const travail = requiredFixture(dossier.activites[0], 'automatic end fixture activity');
+    const nonConformite: ActiviteAnomalie = {
+      id: new ActiviteAnomalieId('nc-12'),
+      libelle: '',
+      etat: 'TERMINEE',
+      temps: '',
+      periode: { categorie: 'NON_CONFORMITE', debut: instantLocalFixture(new Date(2026, 8, 14, 12, 0)), fin: INSTANT_ECHEANCE },
+    };
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, activites: [travail, nonConformite] } };
   };
 
   const givenAGuidedCorrectionOf = (fait: Partial<Pick<FaitPropose, 'operateur' | 'poste' | 'type' | 'intention'>>): ActeResolution => {
@@ -3598,6 +3693,10 @@ describe('Anomaly dossier page', () => {
     await whenEntering('anomalie-instant-heure', time);
   };
 
+  const whenTheClockIs = (instant: Date): void => {
+    vi.setSystemTime(instant);
+  };
+
   const whenEntering = async (selector: string, value: string): Promise<void> => {
     const input = field(selector);
     input.value = value;
@@ -3881,6 +3980,11 @@ describe('Anomaly dossier page', () => {
     const button = element(selector);
     if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button');
     expect(button.disabled).toBe(true);
+  };
+  const thenEnabled = (selector: string): void => {
+    const button = element(selector);
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button');
+    expect(button.disabled).toBe(false);
   };
   const thenInputIsDisabled = (selector: string): void => {
     expect(field(selector).disabled).toBe(true);

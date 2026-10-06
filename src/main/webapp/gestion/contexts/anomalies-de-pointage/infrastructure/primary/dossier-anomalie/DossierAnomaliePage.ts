@@ -23,6 +23,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
+import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { anomalieTraitee } from '../../../domain/dossier/AnomalieTraitee';
@@ -135,6 +136,7 @@ export class DossierAnomaliePage {
     const selection = this.selection();
     return selection?.kind === 'ACTIVITE' ? this.dossier()?.activites.find(activite => activite.id.activite === selection.id) : undefined;
   });
+  private readonly maintenant = signal(new Date().toISOString());
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
@@ -181,7 +183,16 @@ export class DossierAnomaliePage {
     this.choixSelectionne.set(undefined);
   }
 
+  protected cadreDe(dossier: DossierAnomalie): CadreDuFait {
+    return CadreDuFait.depuis(dossier.activites, this.maintenant());
+  }
+
+  private lireLHorloge(): void {
+    this.maintenant.set(new Date().toISOString());
+  }
+
   protected choose(saisie: SaisieActe, choix?: string): void {
+    this.lireLHorloge();
     this.preparation.choose(saisie);
     this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
@@ -209,6 +220,7 @@ export class DossierAnomaliePage {
   }
 
   protected change(changement: ChangementSaisie): void {
+    this.lireLHorloge();
     this.preparation.change(changement);
     if (this.preparation.resolution().saisie.changesGuidedFact(changement)) this.choixSelectionne.set(undefined);
   }

@@ -1,4 +1,5 @@
 import { ActeResolution, FaitPropose, IntentionPointage, TypePointage } from './ActeResolution';
+import { CadreDuFait } from './CadreDuFait';
 import { InstantPointage } from './InstantPointage';
 import { MotifActe } from './MotifActe';
 
@@ -30,6 +31,8 @@ export type ErreurSaisieActe =
   | 'CIBLE_INTERDITE'
   | 'INTENTION_INCOMPATIBLE'
   | 'INSTANT_INVALIDE'
+  | 'INSTANT_AVANT_CIBLE'
+  | 'INSTANT_FUTUR'
   | 'TYPE_REQUIS'
   | 'INTENTION_REQUISE';
 
@@ -74,19 +77,23 @@ export class SaisieActe {
     return !(this.awaitsDating() && champs.length === 1 && champs[0] === 'instant');
   }
 
-  command(): ActeResolution | undefined {
+  command(cadre: CadreDuFait): ActeResolution | undefined {
+    return this.commandWithin(cadre);
+  }
+
+  private commandWithin(cadre?: CadreDuFait): ActeResolution | undefined {
     const proposition = this.proposition;
     if (proposition === undefined) return undefined;
-    if (proposition.kind === 'ANNULATION') return this.errors().length > 0 ? undefined : proposition;
+    if (proposition.kind === 'ANNULATION') return this.errorsWithin(cadre).length > 0 ? undefined : proposition;
     const fait = proposition.fait;
     if (fait.type === '') return undefined;
     if (fait.intention === '') return undefined;
-    if (this.errors().length > 0) return undefined;
+    if (this.errorsWithin(cadre).length > 0) return undefined;
     return { ...proposition, fait: { ...fait, type: fait.type, intention: fait.intention } };
   }
 
   matches(acte: ActeResolution): boolean {
-    const command = this.command();
+    const command = this.commandWithin();
     if (command === undefined) return false;
     switch (command.kind) {
       case 'ANNULATION':
@@ -103,16 +110,20 @@ export class SaisieActe {
     }
   }
 
-  errors(): readonly ErreurSaisieActe[] {
+  errors(cadre: CadreDuFait): readonly ErreurSaisieActe[] {
+    return this.errorsWithin(cadre);
+  }
+
+  private errorsWithin(cadre?: CadreDuFait): readonly ErreurSaisieActe[] {
     const proposition = this.proposition;
     if (proposition === undefined) return ['ACTE_REQUIS'];
     if (proposition.kind === 'ANNULATION') return new MotifActe(proposition.motif).errors();
-    const erreurs = this.factErrors(proposition.fait);
+    const erreurs = this.factErrors(proposition.fait, cadre);
     if (proposition.kind === 'CORRECTION') erreurs.push(...new MotifActe(proposition.motif).errors());
     return erreurs;
   }
 
-  private factErrors(fait: SaisieFait): ErreurSaisieActe[] {
+  private factErrors(fait: SaisieFait, cadre?: CadreDuFait): ErreurSaisieActe[] {
     const erreurs: ErreurSaisieActe[] = [];
     if (fait.type === '') erreurs.push('TYPE_REQUIS');
     if (fait.intention === '') erreurs.push('INTENTION_REQUISE');
@@ -120,8 +131,13 @@ export class SaisieActe {
     if (this.targetIsMissing(fait)) erreurs.push('CIBLE_REQUISE');
     if (this.targetIsForbidden(fait)) erreurs.push('CIBLE_INTERDITE');
     if (!this.intentionIsCompatible(fait)) erreurs.push('INTENTION_INCOMPATIBLE');
-    if (!new InstantPointage(fait.instant).isValid()) erreurs.push('INSTANT_INVALIDE');
+    erreurs.push(...this.instantErrors(fait, cadre));
     return erreurs;
+  }
+
+  private instantErrors(fait: SaisieFait, cadre?: CadreDuFait): readonly ErreurSaisieActe[] {
+    if (!new InstantPointage(fait.instant).isValid()) return ['INSTANT_INVALIDE'];
+    return cadre?.depassements(fait) ?? [];
   }
 
   private targetIsMissing(fait: SaisieFait): boolean {

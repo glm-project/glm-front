@@ -10,14 +10,17 @@ import {
   ResultatApplication,
   ResultatVerification,
 } from '../domain/acte/AnomaliesActesPorts';
+import { CadreDuFait } from '../domain/acte/CadreDuFait';
 import { PropositionResolution } from '../domain/acte/ResolutionDeLAnomalie';
 import { SaisieActe } from '../domain/acte/SaisieActe';
-import { AdresseDossier, DossierAnomalie } from '../domain/dossier/DossierAnomalie';
+import { ActiviteAnomalieId } from '../domain/dossier/ActiviteAnomalieId';
+import { ActiviteAnomalie, AdresseDossier, DossierAnomalie } from '../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../domain/dossier/SuiviAnomalieId';
 import { PreparationActe } from './PreparationActe';
 
+const cadreOuvert = CadreDuFait.depuis([], '2026-09-15T00:00:00Z');
 const dossierFixture: DossierAnomalie = {
   etat: 'EN_CONFLIT',
   ligne: {
@@ -62,7 +65,7 @@ const previewFixture = (saisie: SaisieActe): ApercuAnomalie => ({
   commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
-  acte: requiredFixture(saisie.command(), 'chosen acte'),
+  acte: requiredFixture(saisie.command(cadreOuvert), 'chosen acte'),
   avant: dossierFixture,
   apres: { ...dossierFixture, enConflit: false },
 });
@@ -72,7 +75,7 @@ const propositionFixture = (saisie: SaisieActe): PropositionResolution => ({
   commande: 'commande-1',
   version: 1,
   adresse: dossierFixture.ligne.adresse,
-  acte: requiredFixture(saisie.command(), 'chosen acte'),
+  acte: requiredFixture(saisie.command(cadreOuvert), 'chosen acte'),
 });
 
 class PendingIoFixture<T> {
@@ -142,6 +145,8 @@ describe('Preparation of an acte through asynchronous ports', () => {
   let errors: ErrorsFixture;
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-14T18:00:00Z'));
     previews = new PrevisualisationFixture();
     applications = new ApplicationFixture();
     errors = new ErrorsFixture();
@@ -154,6 +159,10 @@ describe('Preparation of an acte through asynchronous ports', () => {
       ],
     });
     preparation = TestBed.inject(PreparationActe);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should ignore a refusal from an older proposition while the new preview is still pending', async () => {
@@ -189,7 +198,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await lecture;
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.command()).toBeUndefined();
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should apply an explicitly confirmed preview only once despite repeated confirmations', async () => {
@@ -221,7 +230,11 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await ancienne;
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Autre décision' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({
+      kind: 'ANNULATION',
+      pointage: 'fin-17',
+      motif: 'Autre décision',
+    });
     expect(preparation.resolution().confirmation()).toBeUndefined();
   });
 
@@ -236,7 +249,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await confirmation;
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.command()).toBeUndefined();
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should block any blind replay when the confirmed acte has an unknown outcome', async () => {
@@ -282,7 +295,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     preparation.choose(cancellationFixture('autre-fin'));
     preparation.change({ motif: 'Nouvelle décision' });
     await preparation.preview(dossierFixture);
-    const acteEnAttente = preparation.resolution().saisie.command();
+    const acteEnAttente = preparation.resolution().saisie.command(cadreOuvert);
     attente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
     await confirmation;
 
@@ -303,7 +316,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     expect(preparation.operation().kind).toBe('CONCURRENCE');
     expect(preparation.resolution().confirmation()).toBeUndefined();
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(applications.requests).toHaveLength(1);
   });
 
@@ -317,7 +330,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await confirmation;
 
     expect(preparation.operation()).toEqual({ kind: 'REFUS', code: 'confirmation-reutilisee' });
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(preparation.resolution().confirmation()).toEqual(propositionFixture(cancellationFixture()));
     expect(applications.requests).toHaveLength(1);
   });
@@ -362,7 +375,11 @@ describe('Preparation of an acte through asynchronous ports', () => {
       await previsualisation;
 
       expect(preparation.operation()).toEqual(resultat);
-      expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+      expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({
+        kind: 'ANNULATION',
+        pointage: 'fin-17',
+        motif: 'Double appui',
+      });
       expect(preparation.resolution().confirmation()).toBeUndefined();
     },
   );
@@ -378,7 +395,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await previsualisation;
 
     expect(preparation.operation().kind).toBe('ERREUR');
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(preparation.resolution().confirmation()).toBeUndefined();
     expect(errors.failures).toEqual([panne]);
   });
@@ -394,7 +411,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await confirmation;
 
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.command()).toBeUndefined();
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should expose an error when the preview describes a dossier version different from the request', async () => {
@@ -409,7 +426,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     expect(preparation.operation().kind).toBe('ERREUR');
     expect(preparation.resolution().confirmation()).toBeUndefined();
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
   });
 
   it('should keep a new choice blocked until the unknown outcome has been checked by rereading', async () => {
@@ -420,7 +437,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
     expect(previews.requests).toHaveLength(1);
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
   });
 
   it('should retain the uncertain proposition while its canonical receipt is not attested', async () => {
@@ -431,7 +448,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await preparation.preview(dossierFixture);
 
     expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
-    expect(preparation.resolution().saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
+    expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
     expect(preparation.resolution().confirmation()).toBeUndefined();
     expect(previews.requests).toHaveLength(1);
   });
@@ -560,7 +577,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     expect(previews.requests).toEqual([]);
     expect(preparation.operation().kind).toBe('REPOS');
-    expect(preparation.resolution().saisie.errors()).toEqual(['INSTANT_INVALIDE']);
+    expect(preparation.resolution().saisie.errors(cadreOuvert)).toEqual(['INSTANT_INVALIDE']);
   });
 
   it('should preview the end regularisation at the instant entered by the manager against the received version', async () => {
@@ -592,6 +609,56 @@ describe('Preparation of an acte through asynchronous ports', () => {
     ]);
     expect(preparation.operation()).toEqual({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
   });
+
+  it('should not preview an instant the dossier does not allow, even when called around the screen', async () => {
+    preparation.choose(
+      SaisieActe.regularise({
+        type: 'FIN',
+        intention: 'FIN',
+        activiteVisee: 'travail-8',
+        operateur: 'op-camille',
+        poste: '',
+        instant: '2026-09-14T19:00:00Z',
+      }),
+    );
+
+    await preparation.preview(dossierFinAutomatiqueFixture);
+
+    expect(previews.requests).toEqual([]);
+    expect(preparation.operation().kind).toBe('REPOS');
+  });
+
+  it('should not preview a fact that precedes the start of the activity it ends', async () => {
+    const travail: ActiviteAnomalie = {
+      id: new ActiviteAnomalieId('travail-8'),
+      libelle: 'Travail',
+      etat: 'ECHUE',
+      temps: 'PT1H',
+      periode: { categorie: 'TRAVAIL', debut: '2026-09-14T11:00:00Z' },
+    };
+    preparation.choose(finARegulariserFixture.afterChange({ fait: { instant: '2026-09-14T10:59:59Z' } }));
+
+    await preparation.preview({ ...dossierFinAutomatiqueFixture, activites: [travail] });
+
+    expect(previews.requests).toEqual([]);
+  });
+
+  it('should read the clock when previewing, not when the instant was chosen', async () => {
+    const attente = givenPreviewWaits();
+    preparation.choose(finARegulariserFixture.afterChange({ fait: { instant: '2026-09-14T18:30:00Z' } }));
+    whenTheClockIs('2026-09-14T18:30:00Z');
+
+    const demande = preparation.preview(dossierFinAutomatiqueFixture);
+    await attente.arrival;
+    attente.release({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
+    await demande;
+
+    expect(previews.requests).toHaveLength(1);
+  });
+
+  const whenTheClockIs = (instant: string): void => {
+    vi.setSystemTime(new Date(instant));
+  };
 
   const givenPreviewWaits = (): PendingIoFixture<ResultatApercu> => {
     const pending = new PendingIoFixture<ResultatApercu>();

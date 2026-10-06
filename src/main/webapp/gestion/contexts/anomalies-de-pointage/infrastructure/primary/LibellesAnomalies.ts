@@ -7,6 +7,8 @@ export interface ActiviteDansUnePhrase {
   readonly accord: string;
 }
 
+const FAIT_DANS_LE_FUTUR = 'La date et l’heure du fait ne peuvent pas être dans le futur.';
+
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   ACTE_REQUIS: 'Choisissez un acte.',
   MOTIF_REQUIS: 'Renseignez un motif.',
@@ -15,6 +17,8 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   CIBLE_REQUISE: 'Choisissez l’activité visée.',
   CIBLE_INTERDITE: 'Une ouverture ne vise aucune activité ; effacez explicitement la cible.',
   INSTANT_INVALIDE: 'Renseignez la date et l’heure du fait.',
+  INSTANT_AVANT_CIBLE: 'Le fait ne peut pas précéder le début de l’activité qu’il termine.',
+  INSTANT_FUTUR: FAIT_DANS_LE_FUTUR,
   INTENTION_INCOMPATIBLE: 'Le type et l’intention ne sont pas compatibles.',
   TYPE_REQUIS: 'Choisissez le type du pointage.',
   INTENTION_REQUISE: 'Choisissez son intention.',
@@ -34,7 +38,7 @@ const REFUS_ACTE: Readonly<Record<CodeRefusActe, string>> = {
   'evenement-deja-annule': 'Le pointage est déjà annulé.',
   'evenement-anterieur-a-l-engagement': 'Le fait est antérieur à l’engagement de l’élément.',
   'identifiant-evenement-reutilise': 'Le pointage à créer existe déjà. Demandez un nouvel aperçu.',
-  'date-de-survenue-future': 'La date et l’heure du fait ne peuvent pas être dans le futur.',
+  'date-de-survenue-future': FAIT_DANS_LE_FUTUR,
 };
 
 const GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPointage, string>>>>> = {

@@ -7,6 +7,7 @@ import {
   ResultatApercu,
   ResultatApplication,
 } from '../domain/acte/AnomaliesActesPorts';
+import { CadreDuFait } from '../domain/acte/CadreDuFait';
 import { PropositionResolution, ResolutionDeLAnomalie } from '../domain/acte/ResolutionDeLAnomalie';
 import { ChangementSaisie, SaisieActe } from '../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../domain/dossier/DossierAnomalie';
@@ -76,7 +77,7 @@ export class PreparationActe {
   async preview(dossier: DossierAnomalie): Promise<void> {
     if (this.confirmationOutcomeIsPending()) return;
     const saisie = this.actuelle().saisie;
-    const acte = saisie.command();
+    const acte = saisie.command(CadreDuFait.depuis(dossier.activites, new Date().toISOString()));
     if (acte === undefined) return;
     this.actuelle.set(ResolutionDeLAnomalie.prepare(saisie));
     this.operationActuelle.set({ kind: 'PREVISUALISATION' });

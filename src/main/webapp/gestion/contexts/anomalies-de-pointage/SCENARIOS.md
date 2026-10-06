@@ -185,10 +185,21 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
 (sans changement d'heure) ; les cas de changement d'heure rebasculent `TZ` en `Europe/Paris` et placent l'horloge le
 29 mars le temps du test. Cypress saisit une date au clavier et choisit un jour et une heure à la souris.
 
+Le fait proposé reste dans des bornes (`CadreDuFait`). Il ne précède pas le début reçu de l'activité qu'il vise
+(« Le fait ne peut pas précéder le début de l'activité qu'il termine. » ; l'égalité est permise), et il ne dépasse
+jamais l'heure courante (« La date et l'heure du fait ne peuvent pas être dans le futur. »), à la seconde et à la
+nanoseconde près, quel que soit l'offset de l'instant. L'échéance n'est pas une borne. Sans activité visée, ou si
+elle est absente du dossier ou sans période, il n'y a pas de borne basse. Changer l'activité visée change la borne.
+Un instant illisible reste seul sur `INSTANT_INVALIDE`. Une borne franchie désactive l'aperçu comme toute erreur de
+saisie ; un appel direct à `PreparationActe.preview` ne prévisualise pas non plus un fait hors bornes. L'heure courante
+est lue au geste du gestionnaire (choisir, modifier) et au moment de prévisualiser, jamais figée à l'ouverture de la
+page : une heure devenue passée pendant que l'onglet reste ouvert est acceptée. `matches()` compare sans bornes. Le refus
+serveur `date-de-survenue-future` reste l'autorité.
+
 ## Frontières de vérification
 
-- Les specs de domaine passent par `SaisieActe` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
-  le choix explicite, la précision des instants et l'invalidation d'un aperçu.
+- Les specs de domaine passent par `SaisieActe`, `CadreDuFait` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
+  le choix explicite, la précision des instants, les bornes du fait et l'invalidation d'un aperçu.
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
 - Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé

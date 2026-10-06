@@ -6,6 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
+import { CadreDuFait } from '../../domain/acte/CadreDuFait';
 import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
 import { DossierAnomalie, LectureDossier } from '../../domain/dossier/DossierAnomalie';
@@ -17,6 +18,7 @@ import { OperateurAnomalie } from '../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
 
+const cadreOuvert = CadreDuFait.depuis([], '2100-01-01T00:00:00Z');
 const ligneFixture: components['schemas']['RestConflitEnListe'] = {
   nature: 'CONFLIT',
   adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
@@ -322,7 +324,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
       kind: 'REGULARISATION',
       fait: { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', poste: 'poste-dmu', instant: '' },
     });
-    expect(choix.saisie.command()).toBeUndefined();
+    expect(choix.saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should prefill the guided end regularisation of an activity without workstation', async () => {
@@ -366,7 +368,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
       motif: '',
       fait: { ...fait, activiteVisee: 'travail-8', operateur: 'op-camille', poste: '' },
     });
-    expect(choix.saisie.command()).toBeUndefined();
+    expect(choix.saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should reject a guided end regularisation missing its fact', async () => {
@@ -570,7 +572,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     const choix = requiredFixture(dossierFromReading(resultat).choix[0], 'guided cancellation');
     expect(choix.id).toBe('ANNULER_TRANSITION:nc-12');
     expect(choix.saisie.proposition).toEqual({ kind: 'ANNULATION', pointage: 'nc-12', motif: '' });
-    expect(choix.saisie.command()).toBeUndefined();
+    expect(choix.saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should acquire the exact guided replacement fact without inventing a motive or workstation', async () => {
@@ -609,7 +611,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         instant: '2026-09-14T17:00:00.123456789+02:00',
       },
     });
-    expect(choix.saisie.command()).toBeUndefined();
+    expect(choix.saisie.command(cadreOuvert)).toBeUndefined();
   });
 
   it('should reject a dossier missing its required sequence instead of reconstructing it from the journal', async () => {

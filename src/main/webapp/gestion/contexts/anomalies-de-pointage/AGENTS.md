@@ -161,7 +161,14 @@ garde ses nanosecondes. Modifier la date ou l'heure d'un instant reçu abandonne
 heure absente, mal saisie ou impossible laisse le champ en l'état et transmet `instant: ''` : le domaine répond
 `INSTANT_INVALIDE` (« Renseignez la date et l'heure du fait. »). Le domaine valide et ordonne les instants ; il ne lit
 jamais le fuseau ambiant. Au changement d'heure, une heure que l'horloge saute (printemps) est refusée avec son message
-propre, une heure répétée (automne) prend sa première occurrence, même le jour du changement. Chaque nouvelle proposition
+propre, une heure répétée (automne) prend sa première occurrence, même le jour du changement. Le fait reste dans les
+bornes de `CadreDuFait` (Value Object du domaine, qui porte le début reçu de chaque activité du dossier et l'heure
+courante, comparés par `InstantPointage.compareTo`) : `INSTANT_AVANT_CIBLE` s'il précède le début de l'activité visée (l'égalité
+est permise ; pas de borne basse sans activité visée, absente du dossier ou sans période), `INSTANT_FUTUR` s'il dépasse
+l'heure courante. L'échéance n'est pas une borne. `command()` et `errors()` de `SaisieActe` reçoivent le cadre ; `matches()`
+compare sans bornes et sans heure. `CadreDuFait.bornes(fait)` rend `{ min?, max }`, que la frise lira sans les recalculer.
+Le domaine ne lit jamais l'horloge : la page lit l'heure à chaque geste (choisir, modifier) et `PreparationActe.preview` au
+moment d'appeler le port, jamais une fois pour toute la page ; `preview` refuse un fait hors bornes sans appeler le port. Chaque nouvelle proposition
 (un choix, même identique, ou « Régulariser ») recrée le champ : une saisie partielle ne lui survit pas.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
