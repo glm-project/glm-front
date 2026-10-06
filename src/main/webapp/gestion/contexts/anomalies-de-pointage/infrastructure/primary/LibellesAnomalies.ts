@@ -43,6 +43,12 @@ const GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPoi
   FIN: { FIN: 'Arrêt' },
 };
 
+const SYMBOLES_DES_GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPointage, string>>>>> = {
+  DEBUT: { OUVERTURE: '▶', TRANSITION: '◇' },
+  NON_CONFORMITE: { OUVERTURE: '▶', TRANSITION: '◆' },
+  FIN: { FIN: '■' },
+};
+
 const ACTIVITES_DE_PHRASE = {
   TRAVAIL: { defini: 'le travail', indefini: 'un travail', accord: '' },
   NON_CONFORMITE: { defini: 'la non-conformité', indefini: 'une non-conformité', accord: 'e' },
@@ -103,7 +109,7 @@ export const LIBELLES_ANOMALIES = {
   detail: 'Un pointage manque dans la chronologie ?',
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
-  duree: 'Durée',
+  fin: 'Fin',
   corriger: 'Corriger ce pointage',
   regulariser: 'Régulariser un fait manquant',
   annuler: 'Annuler ce pointage',
@@ -204,10 +210,10 @@ export const LIBELLES_ANOMALIES = {
   cible: 'Vise l’activité',
   creee: 'Crée l’activité',
   enregistrement: 'Enregistré le',
-  activites: 'Activités concernées',
   decision: 'Votre décision',
   selection: 'Sélection',
-  selectionVide: 'Sélectionnez un pointage pour voir ses détails et le corriger.',
+  selectionVide: 'Sélectionnez un pointage ou une activité sur la frise pour voir ses détails.',
+  pointagesEtActivites: 'Pointages et activités',
   choisir:
     'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',
   choix: {
@@ -248,5 +254,13 @@ export const LIBELLES_ANOMALIES = {
   posteNonResolu: 'Poste non résolu',
   faits: 'Faits',
   diagnostic: 'Contradiction',
+  frise: {
+    annule: 'annulé',
+    regularise: 'régularisé',
+    enCause: 'en cause',
+    badgeRegularise: 'R',
+    symboles: SYMBOLES_DES_GESTES,
+    symboleInconnu: '•',
+  },
   problemes: PROBLEMES,
 } as const;

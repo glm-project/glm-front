@@ -33,6 +33,8 @@ const SHORT_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month:
 
 const SHORT_WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric' });
 
+const SHORT_WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
+
 const WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric' });
 
 const TIME_WITH_SECONDS = new Intl.DateTimeFormat(LOCALE, TIME_INPUT_OPTIONS);
@@ -86,6 +88,8 @@ export const formatInstantShortDateTime = (instant: Date): string => SHORT_DATE_
 export const formatInstantShortDayMonth = (instant: Date): string => SHORT_DAY_MONTH.format(instant);
 
 export const formatInstantShortWeekdayDay = (instant: Date): string => SHORT_WEEKDAY_DAY.format(instant);
+
+export const formatInstantShortWeekdayDayMonth = (instant: Date): string => SHORT_WEEKDAY_DAY_MONTH.format(instant);
 
 export const formatInstantWeekdayDay = (instant: Date): string => WEEKDAY_DAY.format(instant);
 

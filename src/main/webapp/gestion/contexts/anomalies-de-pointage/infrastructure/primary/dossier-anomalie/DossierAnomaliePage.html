@@ -16,63 +16,12 @@
     </p>
     @for (phrase of problemes(dossier); track $index) {
     <p class="mt-4 text-body" data-selector="anomalie-probleme">{{ phrase }}</p>
-    } @if (dossier.finAutomatique) { @for (activite of dossier.activites; track activite.id.activite) { @if (activite.etat === 'ECHUE' &&
-    activite.periode; as periode) {
-    <p class="mt-2 text-body-sm" data-selector="anomalie-fin-automatique-activite">
-      {{ periode.categorie === 'TRAVAIL' ? libelles.types.DEBUT : libelles.types.NON_CONFORMITE }} · {{ libelles.debut }} {{ periode.debut |
-      instantLongDay: now }} · {{ libelles.finAutomatiqueA }} {{ (periode.fin ?? '') | instantLongDay: now }} · {{ libelles.duree }} {{
-      tempsActivite(activite) }}
-    </p>
-    } } }
+    }
   </header>
   <div class="dossier-grille">
-    <section class="dossier-chronologie" aria-labelledby="chronologie-heading">
-      <h2 id="chronologie-heading" class="mb-4 text-section">{{ libelles.chronologie }}</h2>
-      <ol class="chronologie">
-        @for (pointage of dossier.journal | chronologiePointages; track pointage.id.pointage) {
-        <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="anomalie-pointage">
-          @let horodatage = pointage.fait.instant | instantTimeAndLongDayWithSeconds: now;
-          <button
-            type="button"
-            class="pointage-selection"
-            data-selector="anomalie-pointage-selectionner"
-            [attr.aria-pressed]="selection() === pointage.id.pointage"
-            [class.pointage-selectionne]="selection() === pointage.id.pointage"
-            (click)="selection.set(pointage.id.pointage)"
-          >
-            <time class="text-body tabular-nums font-semibold" [attr.datetime]="pointage.fait.instant | instantDatetime"
-              >{{ horodatage.time }} <span class="text-body-sm text-ink-muted">· {{ horodatage.day }}</span></time
-            >
-            <span class="mt-2 block text-body font-semibold">
-              <span class="gestion-type" data-selector="anomalie-pointage-geste" [class.bg-nc]="pointage.fait.type === 'NON_CONFORMITE'"
-                >{{ libelleDuGeste(pointage.fait) }}</span
-              >
-            </span>
-          </button>
-          @if (pointage.fait.activiteVisee) {
-          <p class="mt-2 text-body-sm">
-            {{ libelles.cible }}
-            <a class="text-accent underline underline-offset-4" [href]="hrefForActivite(pointage.fait.activiteVisee, dossier)"
-              >{{ labelForActivite(pointage.fait.activiteVisee, dossier, now) }}</a
-            >
-          </p>
-          } @if (pointage.regularisation) {
-          <p class="mt-2 text-body-sm font-semibold">{{ libelles.regularisation }}</p>
-          } @if (pointage.annulation) {
-          <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-pointage-annule">{{ libelles.annule }}</p>
-          } @if (pointage.remplace; as original) {
-          <p class="mt-2 text-body-sm">{{ remplacementDe(dossier.journal, original.pointage, now) }}</p>
-          }
-        </li>
-        }
-      </ol>
-      <h2 class="mb-3 mt-6 text-section">{{ libelles.activites }}</h2>
-      @for (activite of dossier.activites; track activite.id.activite) {
-      <div class="border-t border-border py-4" [id]="'activite-' + activite.id.activite" data-selector="anomalie-activite">
-        <p class="text-body font-semibold">{{ libelleActivite(activite, now) }}</p>
-        <p class="mt-1 text-body-sm">{{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}</p>
-      </div>
-      }
+    <section class="dossier-frise" aria-labelledby="frise-heading">
+      <h2 id="frise-heading" class="mb-3 text-section">{{ libelles.pointagesEtActivites }}</h2>
+      <glm-frise-dossier [dossier]="dossier" [now]="now" [selection]="selection()" (selectionDemandee)="selection.set($event)" />
     </section>
     <section class="panneau-selection" aria-labelledby="selection-heading" data-selector="anomalie-selection">
       <h2 id="selection-heading" class="text-section">{{ libelles.selection }}</h2>
@@ -126,11 +75,24 @@
           {{ libelles.annuler }}
         </button>
       </div>
-      } } @else {
+      } } @else if (activiteSelectionnee(); as activite) {
+      <p class="mt-2 text-body font-semibold" data-selector="anomalie-selection-activite">{{ intituleDeLActivite(activite) }}</p>
+      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-etat">
+        {{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}
+      </p>
+      @if (activite.periode; as periode) {
+      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-debut">
+        {{ libelles.debut }} {{ periode.debut | instantLongDay: now }}
+      </p>
+      @if (periode.fin; as fin) {
+      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-fin">
+        {{ activite.etat === 'ECHUE' ? libelles.finAutomatiqueA : libelles.fin }} {{ fin | instantLongDay: now }}
+      </p>
+      } } } @else {
       <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-selection-vide">{{ libelles.selectionVide }}</p>
       }
     </section>
-    <aside class="panneau-correction" aria-labelledby="correction-heading">
+    <aside class="panneau-correction" aria-labelledby="correction-heading" data-selector="anomalie-decision">
       <h2 id="correction-heading" class="text-section">{{ libelles.decision }}</h2>
       <p class="mb-4 mt-2 text-body-sm text-ink-muted">{{ libelles.choisir }}</p>
       @for (choix of dossier.choix; track choix.id) {
@@ -496,7 +458,7 @@
     <h2 id="historique-heading" class="mb-4 text-section">{{ libelles.chronologie }}</h2>
     <ol class="chronologie">
       @for (pointage of resultat.journal | chronologiePointages; track pointage.id.pointage) {
-      <li class="pointage" [id]="'pointage-' + pointage.id.pointage" data-selector="anomalie-pointage">
+      <li class="pointage" [attr.data-pointage]="pointage.id.pointage" data-selector="anomalie-pointage">
         <time class="text-body-sm" [attr.datetime]="pointage.fait.instant | instantDatetime"
           >{{ pointage.fait.instant | instantLongDayWithSeconds: now }}</time
         >

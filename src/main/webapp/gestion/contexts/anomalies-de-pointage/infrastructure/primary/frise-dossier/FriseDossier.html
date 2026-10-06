@@ -1,0 +1,76 @@
+@if (disposition().elements.length > 0) {
+<div class="frise" data-selector="anomalie-frise">
+  <div
+    class="frise-plan"
+    data-selector="anomalie-frise-plan"
+    [style.min-width.px]="disposition().largeurMinimale"
+    [style.height.px]="disposition().hauteur"
+  >
+    <svg aria-hidden="true" focusable="false">
+      <defs>
+        <marker id="frise-pointe" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" />
+        </marker>
+      </defs>
+      @for (fleche of disposition().fleches; track fleche.cle) {
+      <line
+        data-selector="anomalie-frise-fleche"
+        marker-end="url(#frise-pointe)"
+        [attr.data-pointage]="fleche.pointage"
+        [attr.data-activite]="fleche.activite"
+        [attr.x1]="fleche.departGauche + '%'"
+        [attr.y1]="fleche.departHaut"
+        [attr.x2]="fleche.arriveeGauche + '%'"
+        [attr.y2]="fleche.arriveeHaut"
+      />
+      }
+    </svg>
+    @for (graduation of disposition().graduations; track graduation.instant) {
+    <span class="frise-graduation" data-selector="anomalie-frise-graduation" aria-hidden="true" [style.left.%]="graduation.gauche">
+      <span data-selector="anomalie-frise-graduation-heure">{{ graduation.heure }}</span>
+      @if (graduation.jour; as jour) {
+      <span data-selector="anomalie-frise-jour">{{ jour }}</span>
+      }
+    </span>
+    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
+    <button
+      type="button"
+      data-selector="anomalie-activite"
+      [attr.data-activite]="element.activite"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [style.width.%]="element.largeur"
+      [attr.aria-label]="element.nom"
+      [attr.data-categorie]="element.categorie"
+      [attr.data-etat]="element.etat"
+      [attr.data-fin]="element.fin"
+      [attr.aria-pressed]="estSelectionne(element.selection)"
+      (click)="selectionDemandee.emit(element.selection)"
+    >
+      {{ element.texte }}
+    </button>
+    } @case ('REPERE') {
+    <button
+      type="button"
+      data-selector="anomalie-pointage"
+      [attr.data-pointage]="element.pointage"
+      [attr.data-voie]="element.voie"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="element.nom"
+      [attr.data-en-cause]="element.enCause"
+      [attr.data-annule]="element.annule"
+      [attr.data-non-conformite]="element.nonConformite"
+      [attr.aria-pressed]="estSelectionne(element.selection)"
+      (click)="selectionDemandee.emit(element.selection)"
+    >
+      <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
+      <time data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
+      @if (element.regularise) {
+      <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
+      }
+    </button>
+    } } }
+  </div>
+</div>
+}

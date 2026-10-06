@@ -20,6 +20,7 @@ import {
   formatInstantShortDateTime,
   formatInstantShortDayMonth,
   formatInstantShortWeekdayDay,
+  formatInstantShortWeekdayDayMonth,
   formatInstantTime,
   formatInstantTimeAndLongDayWithSeconds,
   formatInstantWeekdayDay,
@@ -215,6 +216,22 @@ describe('DateFormats', () => {
     const text = formatInstantShortWeekdayDay(instant);
 
     expect(text).toBe('jeu. 1');
+  });
+
+  it('should format an instant as its local abbreviated weekday, day and abbreviated month', () => {
+    const instant = new Date(2026, 9, 6, 0, 0);
+
+    const text = formatInstantShortWeekdayDayMonth(instant);
+
+    expect(text).toBe('mar. 6 oct.');
+  });
+
+  it('should keep the local abbreviated weekday, day and month of an instant whose UTC day is the next one', () => {
+    const instant = new Date(Date.UTC(2026, 9, 7, 1, 30));
+
+    const text = formatInstantShortWeekdayDayMonth(instant);
+
+    expect(text).toBe('mar. 6 oct.');
   });
 
   it('should format an instant as its long day and local time without the year during the current year', () => {

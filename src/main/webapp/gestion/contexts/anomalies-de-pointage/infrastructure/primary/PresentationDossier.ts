@@ -5,6 +5,7 @@ import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages'
 import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 import { operateurPresente } from './PresentationIdentites';
+import { SelectionDuDossier } from './SelectionDuDossier';
 
 export type VueDActivites = Readonly<{ journal: readonly PointageAnomalie[]; activites?: readonly ActiviteAnomalie[] }>;
 
@@ -14,6 +15,8 @@ export interface DetailPointage {
   readonly cible?: string;
   readonly creee?: string;
 }
+
+type CategorieActivite = NonNullable<ActiviteAnomalie['periode']>['categorie'];
 
 export type ReferencePointage = Readonly<{ libelle: string; pointage?: PointageAnomalie }>;
 
@@ -33,10 +36,16 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
   return [...type, ...intention].join(' · ');
 };
 
+export const libelleCategorie = (categorie: CategorieActivite): string =>
+  categorie === 'TRAVAIL' ? LIBELLES_ANOMALIES.types.DEBUT : LIBELLES_ANOMALIES.types.NON_CONFORMITE;
+
+export const intituleDeLActivite = (activite: ActiviteAnomalie): string =>
+  activite.periode === undefined ? activite.libelle : libelleCategorie(activite.periode.categorie);
+
 export const libelleActivite = (activite: ActiviteAnomalie, now: Date): string => {
   const periode = activite.periode;
   if (periode === undefined) return activite.libelle;
-  const categorie = periode.categorie === 'TRAVAIL' ? LIBELLES_ANOMALIES.types.DEBUT : LIBELLES_ANOMALIES.types.NON_CONFORMITE;
+  const categorie = libelleCategorie(periode.categorie);
   const fin = periode.fin === undefined ? '' : ` → ${instantLongDay.transform(periode.fin, now)}`;
   return `${categorie} · ${instantLongDay.transform(periode.debut, now)}${fin}`;
 };
@@ -90,7 +99,18 @@ export const tempsActivite = (activite: ActiviteAnomalie): string => {
     .join(' ');
 };
 
-export const pointageInitial = (dossier: DossierAnomalie | undefined): string | undefined => {
-  const enCause = new Set(dossier?.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  return new ChronologiePointages(dossier?.journal ?? []).pointages.find(pointage => enCause.has(pointage.id.pointage))?.id.pointage;
+const premierPointageEnCause = (dossier: DossierAnomalie): string | undefined => {
+  const enCause = new Set(dossier.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
+  return new ChronologiePointages(dossier.journal).pointages.find(pointage => enCause.has(pointage.id.pointage))?.id.pointage;
+};
+
+const activiteEchueDUneFinAutomatique = (dossier: DossierAnomalie): string | undefined =>
+  dossier.finAutomatique ? dossier.activites.find(activite => activite.etat === 'ECHUE')?.id.activite : undefined;
+
+export const selectionInitiale = (dossier: DossierAnomalie | undefined): SelectionDuDossier | undefined => {
+  if (dossier === undefined) return undefined;
+  const pointage = premierPointageEnCause(dossier);
+  if (pointage !== undefined) return { kind: 'POINTAGE', id: pointage };
+  const activite = activiteEchueDUneFinAutomatique(dossier);
+  return activite === undefined ? undefined : { kind: 'ACTIVITE', id: activite };
 };

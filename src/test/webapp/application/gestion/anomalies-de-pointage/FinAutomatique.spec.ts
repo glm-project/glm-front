@@ -27,7 +27,11 @@ import {
   thenTheInstantFieldsShow,
   whenTypingTheInstant,
 } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
-import { whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
+import {
+  thenActivityIsSelected,
+  whenSelectingActivity,
+  whenSelectingPointage,
+} from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const urlApercu = `${urlDossier}/apercus`;
@@ -71,6 +75,7 @@ describe('Automatic end of an activity in Gestion', () => {
     whenDatingTheEnd();
     whenPreviewingTheEndRegularisation();
     whenConfirmingTheEndRegularisation();
+    whenSelectingActivity(activiteFinAutomatiqueFixture);
 
     thenTheAnomalyIsProcessedFromTheReceipt();
   });
@@ -94,10 +99,11 @@ describe('Automatic end of an activity in Gestion', () => {
   };
 
   const whenChoosingTheEndRegularisation = (): void => {
-    cy.get(dataSelector('anomalie-fin-automatique-activite'))
+    cy.get(dataSelector('anomalie-selection'))
       .should('contain.text', 'Début lundi 14 septembre à 08:00')
       .and('contain.text', 'Fin automatique lundi 14 septembre à 21:00')
-      .and('contain.text', 'Durée 13 h');
+      .and('contain.text', 'Échue · 13 h');
+    thenActivityIsSelected(activiteFinAutomatiqueFixture);
     cy.get(dataSelector('anomalie-probleme'))
       .should('have.length', 1)
       .and('have.text', 'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 21:00.');
@@ -127,9 +133,8 @@ describe('Automatic end of an activity in Gestion', () => {
   const thenTheAnomalyIsProcessedFromTheReceipt = (): void => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-probleme')).should('not.exist');
-    cy.get(dataSelector('anomalie-fin-automatique-activite')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 2);
-    cy.get(dataSelector('anomalie-activite')).should('contain.text', 'Terminée · 9 h');
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Terminée · 9 h');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
     cy.wait('@apercu')
       .its('request.body.acte')

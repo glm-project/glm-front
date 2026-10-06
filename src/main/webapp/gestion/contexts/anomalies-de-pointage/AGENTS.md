@@ -93,17 +93,30 @@ comme absent ; pour une transition de même catégorie, une activité sans péri
 déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
 `CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le geste tardif ; sinon l'activité n'a
 jamais été arrêtée.
-Chaque pointage de la chronologie est un bouton de sélection (`aria-pressed`, nom accessible : heure avec ses secondes et
-geste) ; la chronologie reste sobre (heure, jour, geste, cible, mentions courtes « Régularisation », « Pointage annulé »,
-remplacement). Le panneau « Sélection », en tête de la colonne de droite, porte le pointage choisi : geste, instant avec ses
-secondes, opérateur, poste, régularisation, annulation (motif, auteur, instant), remplacement, traçabilité (activités visée
-et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un pointage annulé, désactivés pour le consultant
-et pendant une opération. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau
-dossier (autre adresse, relecture, reçu), elle revient à la sélection initiale (`pointageInitial`), le plus ancien pointage
-en cause d'un diagnostic que le journal contient ; une fin automatique, ou un conflit sans pointage en cause lisible, ne
-sélectionne rien et le panneau invite à choisir. Une sélection absente du dossier courant ne s'affiche jamais. Sélectionner
-ne choisit aucun acte : la proposition, l'aperçu et le choix guidé restent inchangés. L'historique d'adresse obsolète garde
-sa liste, sans sélection.
+Les pointages et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
+l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
+présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,
+pointages) avec une heure de marge arrondie à l'heure locale, graduations horaires, le jour affiché à minuit, une largeur
+minimale de 64 px par heure et un défilement horizontal de la frise seule. Une rangée par activité, dans l'ordre de leur début,
+sous la rangée des pointages. La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` en pointillés
+`warn` à sa fin automatique, `EN_COURS` et `A_RESOUDRE` (hachurée) ouvertes jusqu'au bord, `ANNULEE` et `REMPLACEE` atténuées
+(fin pleine si une fin est reçue) ; le front ne déduit aucune fin d'un pointage. Une activité sans période garde sa rangée
+et son libellé, sans barre. Un repère par pointage (symbole du geste, heure HH:MM, barré s'il est annulé, badge « R »
+s'il est régularisé, `danger` s'il est en cause d'un diagnostic), décalé sur une voie plus basse tant que le précédent est à
+moins de 44 px ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
+vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans
+l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
+`data-annule`, `data-voie`), jamais leurs classes.
+La sélection est un pointage ou une activité (`SelectionDuDossier`). Le panneau « Sélection », en tête de la colonne de droite,
+porte le pointage choisi : geste, instant avec ses secondes, opérateur, poste, régularisation, annulation (motif, auteur,
+instant), remplacement, traçabilité (activités visée et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un
+pointage annulé, désactivés pour le consultant et pendant une opération. Pour une activité il dit sa catégorie, son état et son
+temps reçus (`tempsActivite`), son début et sa fin reçus, « Fin automatique » pour une activité échue ; il n'a ni Corriger
+ni Annuler. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau dossier (autre
+adresse, relecture, reçu), elle revient à la sélection initiale (`selectionInitiale`) : le plus ancien pointage en cause d'un
+diagnostic que le journal contient, sinon la première activité échue d'une fin automatique, sinon rien et le panneau invite à
+choisir. Une sélection absente du dossier courant ne s'affiche jamais. Sélectionner ne choisit aucun acte : la proposition,
+l'aperçu et le choix guidé restent inchangés. L'historique d'adresse obsolète garde sa liste, sans sélection.
 Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
 `LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
 `NON_CONFORMITE·TRANSITION` « Passage en NC », `DEBUT·TRANSITION` « Retour en bon », `FIN·FIN` « Arrêt ». Un pointage
@@ -138,7 +151,7 @@ conservée. »), jamais un refus au message brut.
 Le domaine garde chaque instant reçu en texte ISO ; le primaire l'affiche en heure locale par les formats
 et les pipes de `app/shared/date-format` : jour long (« jeudi 1 octobre à 09:41 »), année ajoutée quand elle diffère
 de celle de la page, secondes réservées à l'instant d'un fait pointé (« à 09:41:22 »), heure en gras puis jour long dans
-la chronologie. La page lit l'horloge une fois et la passe aux pipes ; l'attribut `datetime` n'a jamais plus de trois
+le panneau Sélection. La page lit l'horloge une fois et la passe aux pipes ; l'attribut `datetime` n'a jamais plus de trois
 décimales.
 Le gestionnaire choisit la date et l'heure du fait avec `glm-date-time-field`, le `datepicker` et le `timepicker` de
 Material en français (adapter et locale fournis par `provideGestionDateAdapter()` sur la page du dossier, chargée à la demande). Le champ
@@ -162,8 +175,8 @@ en fin automatique lorsque l'ouvrant corrigé est encore échu. Le domaine la po
 diagnostic d'un conflit à expliquer (`conflitAExpliquer`, soit `enConflit` ; sans diagnostic reçu, l'explication de
 la ligne), une par activité échue d'une fin automatique. Elle disparaît dès que le périmètre ne porte plus le problème, y
 compris après le reçu d'une fin automatique ou d'un conflit résolu.
-Le dossier affiche l'activité échue, son
-début, sa fin automatique, sa durée et la clôture reçus, sans les calculer, et ne se présente jamais comme
+Le dossier montre l'activité échue sur la frise, sélectionnée à l'ouverture, avec son début, sa fin automatique et sa
+durée reçus dans le panneau Sélection, et la clôture dans l'en-tête, sans les calculer ; il ne se présente jamais comme
 un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :
 `REGULARISER_FIN` prérempli sans heure, que le gestionnaire saisit (aucune heure n'est inventée) ;
 `CORRIGER_FIN_TARDIVE` et `CORRIGER_TRANSITION_TARDIVE` reprenant l'heure du pointage tardif, le motif

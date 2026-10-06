@@ -20,7 +20,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
@@ -37,16 +37,19 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
   detailDuPointage,
+  intituleDeLActivite,
   labelForActivite,
   libelleActivite,
   libelleDuGeste,
-  pointageInitial,
   referencePointage,
   remplacementDe,
+  selectionInitiale,
   tempsActivite,
 } from '../PresentationDossier';
 import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
+import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
+import { FriseDossier } from '../frise-dossier/FriseDossier';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
@@ -63,6 +66,7 @@ const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
     DateTimeField,
     SelecteurOperateurAnomalie,
     NgTemplateOutlet,
+    FriseDossier,
   ],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',
@@ -70,7 +74,6 @@ const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
   private readonly propositionHeading = viewChild<ElementRef<HTMLHeadingElement>>('propositionHeading');
@@ -88,6 +91,7 @@ export class DossierAnomaliePage {
   protected readonly anomalieTraitee = anomalieTraitee;
   protected readonly problemes = phrasesDuProbleme;
   protected readonly libelleActivite = libelleActivite;
+  protected readonly intituleDeLActivite = intituleDeLActivite;
   protected readonly libelleDuGeste = libelleDuGeste;
   protected readonly labelForActivite = labelForActivite;
   protected readonly remplacementDe = remplacementDe;
@@ -119,13 +123,18 @@ export class DossierAnomaliePage {
     const lecture = this.resultatLecture();
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
-  protected readonly selection = linkedSignal<DossierAnomalie | undefined, string | undefined>({
+  protected readonly selection = linkedSignal<DossierAnomalie | undefined, SelectionDuDossier | undefined>({
     source: this.dossier,
-    computation: pointageInitial,
+    computation: selectionInitiale,
   });
-  protected readonly pointageSelectionne = computed(() =>
-    this.dossier()?.journal.find(pointage => pointage.id.pointage === this.selection()),
-  );
+  protected readonly pointageSelectionne = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'POINTAGE' ? this.dossier()?.journal.find(pointage => pointage.id.pointage === selection.id) : undefined;
+  });
+  protected readonly activiteSelectionnee = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'ACTIVITE' ? this.dossier()?.activites.find(activite => activite.id.activite === selection.id) : undefined;
+  });
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
@@ -150,16 +159,6 @@ export class DossierAnomaliePage {
 
   protected libelleDuPointage(journal: readonly PointageAnomalie[], identifiant: string): string {
     return referencePointage(journal, identifiant, this.now).libelle;
-  }
-
-  private hrefForRepere(repere: string): string {
-    return this.router.serializeUrl(
-      this.router.createUrlTree([], {
-        relativeTo: this.route,
-        queryParamsHandling: 'preserve',
-        fragment: repere,
-      }),
-    );
   }
 
   private read(adresse: AdresseDossier | undefined) {
@@ -193,11 +192,6 @@ export class DossierAnomaliePage {
   protected chooseGuide(choix: ChoixGuide): void {
     this.choose(choix.saisie, choix.id);
     this.detail.set(choix.saisie.awaitsDating());
-  }
-
-  protected hrefForActivite(id: string, dossier: DossierAnomalie): string {
-    const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
-    return this.hrefForRepere(origine === undefined ? `activite-${id}` : `pointage-${origine.id.pointage}`);
   }
 
   protected correct(pointage: PointageAnomalie): void {

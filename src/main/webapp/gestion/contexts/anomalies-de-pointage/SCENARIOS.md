@@ -21,7 +21,7 @@ Une ancre annulée reste consultable et les continuations désignent les autres 
 ## Fin automatique
 
 Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
-conflit. Il affiche l'activité échue, son début, sa fin automatique et sa durée telles que reçues. Le
+conflit. Il montre l'activité échue sur la frise, son début, sa fin automatique et sa durée tels que reçus dans le panneau Sélection. Le
 gestionnaire régularise la fin avec une heure qu'il saisit : le choix guidé arrive sans heure et l'aperçu
 reste indisponible tant qu'elle manque. Une fin ou une transition pointée après l'échéance se corrige avec
 l'heure de ce pointage et un motif. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
@@ -40,21 +40,32 @@ en NC. » ; sans le fait contradictoire, « L'arrêt de 17:00 vise un travail qu
 reçu, l'explication de la ligne tient lieu de phrase. Une fin automatique en a une par activité échue : « Le travail
 démarré à 08:00 n'a jamais été arrêté : fin automatique à 18:00. » ; quand un choix de correction tardive est reçu, elle
 nomme le geste tardif (« L'arrêt de 19:30 vise le travail, déjà terminé automatiquement à 18:00. »). Les faits de
-l'activité échue (début, fin automatique, durée) restent affichés à côté. Aucune phrase ne porte d'identifiant, ni de
+l'activité échue (début, fin automatique, durée) sont dans le panneau Sélection, l'activité étant sélectionnée à l'ouverture. Aucune phrase ne porte d'identifiant, ni de
 lien : un pointage absent du journal se dit « Un pointage non résolu ».
 
-## Sélection d'un pointage
+## Frise et sélection
 
-Chaque pointage de la chronologie est un bouton de sélection (`aria-pressed`, nom : heure avec ses secondes et geste) ;
-l'élément reste sobre et ne porte ni bouton d'acte ni repli. Le panneau « Sélection », avant « Votre décision », montre le
-pointage choisi : geste, instant avec ses secondes, opérateur et poste, régularisation, annulation (motif, auteur, instant),
-remplacement, activités visée et créée, enregistrement (instant et auteur), puis Corriger et Annuler. Un pointage annulé n'a
-ni l'un ni l'autre ; le consultant et une opération en cours les voient désactivés, avec le message des droits. À
-l'ouverture d'un conflit, le plus ancien pointage en cause que le journal contient est sélectionné ; une fin automatique, ou
-un conflit sans pointage en cause lisible, ne sélectionne rien et le panneau dit « Sélectionnez un pointage pour voir ses
-détails et le corriger. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier,
-jamais un pointage absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé
-ne bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
+Les pointages et les activités du dossier se lisent sur une frise sous l'en-tête, à la place de la chronologie en liste et
+de « Activités concernées ». Chaque activité a sa rangée, dans l'ordre de leur début : une barre `accent` pour le travail,
+`nc` pour la non-conformité, finie à la fin reçue (`TERMINEE`), en pointillés `warn` à la fin automatique (`ECHUE`), ou
+ouverte jusqu'au bord (`EN_COURS`, `A_RESOUDRE` hachurée « À résoudre ») ; la frise n'invente aucune fin. Chaque pointage est
+un repère (symbole du geste, heure HH:MM, barré s'il est annulé, « R » s'il est régularisé, rouge s'il est en cause), décalé
+quand deux repères sont à moins de 44 px ; une flèche pointillée relie le pointage en cause au début de l'activité que son
+diagnostic vise. L'échelle va d'une heure avant le premier instant reçu à une heure après le dernier, par heures entières, avec
+le jour à minuit ; elle défile horizontalement sur un écran étroit, sans faire défiler la page. Repères et barres sont des
+boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
+catégorie, la période et l'état.
+
+Le panneau « Sélection », avant « Votre décision », montre le pointage choisi : geste, instant avec ses secondes, opérateur et
+poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
+et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours
+les voient désactivés, avec le message des droits. Pour une activité, il dit sa catégorie, son état et son temps reçus, son
+début et sa fin reçus (« Fin automatique » pour une activité échue), sans bouton d'acte. À l'ouverture d'un conflit, le plus
+ancien pointage en cause que le journal contient est sélectionné ; à l'ouverture d'une fin automatique, l'activité échue ; si
+les deux sont portés, le pointage en cause ; sinon le panneau dit « Sélectionnez un pointage ou une activité sur la frise pour
+voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier, jamais
+un élément absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé ne
+bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
 
 ## Liste des anomalies
 
@@ -123,10 +134,10 @@ résolu ». La ligne
 de l'acte en aperçu commence par « instant · Geste » ou « Pointage non résolu » : aucun identifiant de pointage
 n'est affiché.
 
-Un pointage se nomme par le geste de l'opérateur, dans la chronologie, les références, l'aperçu, la comparaison, l'historique
+Un pointage se nomme par le geste de l'opérateur, sur la frise, les références, l'aperçu, la comparaison, l'historique
 d'adresse obsolète et le résumé de la proposition : « Démarrage » (`DEBUT·OUVERTURE`), « Démarrage en NC »
 (`NON_CONFORMITE·OUVERTURE`), « Passage en NC » (`NON_CONFORMITE·TRANSITION`), « Retour en bon » (`DEBUT·TRANSITION`),
-« Arrêt » (`FIN·FIN`). La chronologie met un geste de non-conformité en évidence. Un pointage régularisé garde son libellé et
+« Arrêt » (`FIN·FIN`). La frise met un geste de non-conformité en évidence (repère `nc`). Un pointage régularisé garde son libellé et
 la mention « Régularisation ». Tant que la saisie ne forme pas un geste connu (type ou intention vides, ou incompatibles), le
 résumé de la proposition garde « Type · Intention » des champs remplis, sans rien afficher quand les deux sont vides.
 
@@ -154,7 +165,7 @@ métier : il échoue comme une erreur technique, sans afficher le message reçu.
 
 Le dossier et la liste n'affichent aucun instant ISO brut. Chaque instant reçu s'affiche en heure locale, en jour
 long (« jeudi 1 octobre à 09:41 ») avec l'année quand elle diffère de celle de la page. L'instant d'un fait pointé
-porte ses secondes (« à 09:41:22 ») : chronologie (heure en gras, puis jour long), références,
+porte ses secondes (« à 09:41:22 ») : panneau Sélection (heure en gras, puis jour long), références,
 détails de traçabilité, proposition, aperçu et journaux avant/après. L'engagement, la clôture, le début et la fin
 d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la liste restent à la minute. L'attribut
 `datetime` des heures porte un instant valide, de trois décimales au plus, sans perdre l'ordre du journal.

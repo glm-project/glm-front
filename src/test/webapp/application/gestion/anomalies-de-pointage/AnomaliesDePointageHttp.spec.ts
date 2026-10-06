@@ -19,7 +19,11 @@ import {
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
-import { whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
+import {
+  thenActivityIsSelected,
+  whenSelectingActivity,
+  whenSelectingPointage,
+} from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 1), '123456789');
 
@@ -141,29 +145,28 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheRealConflictListIsVisible();
   });
 
-  it('should retain the dossier route and anchor while following the named activity opening', () => {
+  it('should draw on the frise an arrow from the end at fault to the activity it aims at, within the current dossier route', () => {
     givenRealResolutionReplies();
 
     whenOpeningTheRealDossier();
-    whenFollowingTheReceivedActivityOpening();
+    whenSelectingTheReceivedActivityOpening();
 
-    thenTheOpeningRemainsWithinTheCurrentDossier();
+    thenTheArrowReachesTheActivityWithinTheCurrentDossier();
   });
 
-  const whenFollowingTheReceivedActivityOpening = (): void => {
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${finFixture}`)
-      .contains('a', 'Travail · lundi 14 septembre à 08:00')
-      .click();
+  const whenSelectingTheReceivedActivityOpening = (): void => {
+    whenSelectingActivity(debutFixture);
   };
 
-  const thenTheOpeningRemainsWithinTheCurrentDossier = (): void => {
+  const thenTheArrowReachesTheActivityWithinTheCurrentDossier = (): void => {
+    cy.get(dataSelector('anomalie-frise-fleche'))
+      .should('have.length', 1)
+      .and('have.attr', 'data-pointage', finFixture)
+      .and('have.attr', 'data-activite', debutFixture);
     cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
     cy.location('search').should('equal', `?pointage=${finFixture}`);
-    cy.location('hash').should('equal', `#pointage-${debutFixture}`);
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${debutFixture}`)
-      .should('be.visible');
+    cy.location('hash').should('equal', '');
+    thenActivityIsSelected(debutFixture);
   };
 
   it('should preserve a precise arbitrary correction through preview and confirmation and refresh the authoritative list', () => {
@@ -398,8 +401,20 @@ describe('HTTP conflict resolution in Gestion', () => {
   const whenConfirmingTheRealPreview = (): void => {
     cy.get(dataSelector('anomalie-confirmer')).click();
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
-    cy.get(dataSelector('anomalie-pointage')).invoke('text').as('journalCanonique', { type: 'static' });
-    cy.get(dataSelector('anomalie-activite')).invoke('text').as('dureesCanoniques', { type: 'static' });
+    cy.get(dataSelector('anomalie-pointage'))
+      .then(markers =>
+        markers
+          .toArray()
+          .map(marker => marker.getAttribute('aria-label'))
+          .join(' | '),
+      )
+      .as('journalCanonique', { type: 'static' });
+    whenSelectingPointage(remplacementFixture);
+    cy.get(dataSelector('anomalie-selection')).invoke('text').as('remplacantCanonique', { type: 'static' });
+    cy.get(dataSelector('anomalie-activite')).eq(0).click();
+    cy.get(dataSelector('anomalie-selection')).invoke('text').as('dureeDuTravail', { type: 'static' });
+    cy.get(dataSelector('anomalie-activite')).eq(1).click();
+    cy.get(dataSelector('anomalie-selection')).invoke('text').as('dureeDeLaNonConformite', { type: 'static' });
   };
 
   const whenReturningToTheRealList = (): void => {
@@ -415,12 +430,12 @@ describe('HTTP conflict resolution in Gestion', () => {
       empreinteConsequences: 'empreinte-correction',
       evenement: remplacementFixture,
     });
-    cy.get('@journalCanonique')
-      .should('contain', '17:01:00 · lundi 14 septembre')
-      .and('contain', 'Pointage annulé')
-      .and('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
+    cy.get('@journalCanonique').should('contain', '17:01:00 · Arrêt · régularisé').and('contain', 'annulé');
+    cy.get('@remplacantCanonique')
+      .should('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
       .and('not.contain', `Remplace le pointage ${finFixture}`);
-    cy.get('@dureesCanoniques').should('contain', '4 h').and('contain', '5 h 1 min');
+    cy.get('@dureeDuTravail').should('contain', '4 h');
+    cy.get('@dureeDeLaNonConformite').should('contain', '5 h 1 min');
     cy.wait('@listeApresResolution');
     cy.get(dataSelector('anomalies-vide')).should('contain.text', 'Aucun conflit');
     cy.get(dataSelector('anomalies-demo')).should('not.exist');

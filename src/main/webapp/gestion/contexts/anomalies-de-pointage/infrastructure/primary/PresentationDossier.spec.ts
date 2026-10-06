@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { pointageInitial } from './PresentationDossier';
+import { selectionInitiale } from './PresentationDossier';
 
 describe('Initial selection of a dossier', () => {
-  it('should select no pointage while no dossier is read', () => {
-    expect(pointageInitial(undefined)).toBeUndefined();
+  it('should select nothing while no dossier is read', () => {
+    expect(selectionInitiale(undefined)).toBeUndefined();
   });
 });
