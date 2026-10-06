@@ -33,6 +33,8 @@ const SHORT_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month:
 
 const SHORT_WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric' });
 
+const SHORT_WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
+
 const WEEKDAY_DAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric' });
 
 const TIME_WITH_SECONDS = new Intl.DateTimeFormat(LOCALE, TIME_INPUT_OPTIONS);
@@ -87,6 +89,8 @@ export const formatInstantShortDayMonth = (instant: Date): string => SHORT_DAY_M
 
 export const formatInstantShortWeekdayDay = (instant: Date): string => SHORT_WEEKDAY_DAY.format(instant);
 
+export const formatInstantShortWeekdayDayMonth = (instant: Date): string => SHORT_WEEKDAY_DAY_MONTH.format(instant);
+
 export const formatInstantWeekdayDay = (instant: Date): string => WEEKDAY_DAY.format(instant);
 
 const longDayOf = (instant: Date, now: Date): string =>
@@ -134,6 +138,24 @@ const offsetOf = (date: Date): string => {
   const sign = minutes < 0 ? '-' : '+';
   return `${sign}${twoDigits(Math.floor(Math.abs(minutes) / 60))}:${twoDigits(Math.abs(minutes) % 60)}`;
 };
+
+export const formatInstantTimeWithOffset = (instant: Date): string =>
+  `${twoDigits(instant.getHours())}:${twoDigits(instant.getMinutes())} UTC${offsetOf(instant)}`;
+
+const ONE_HOUR = 3_600_000;
+
+const isRepeatedByTheClock = (instant: Date): boolean =>
+  [-ONE_HOUR, ONE_HOUR].some(shift => {
+    const other = new Date(instant.getTime() + shift);
+    return (
+      other.getTimezoneOffset() !== instant.getTimezoneOffset()
+      && other.getHours() === instant.getHours()
+      && other.getMinutes() === instant.getMinutes()
+    );
+  });
+
+export const formatInstantTimeUnambiguous = (instant: Date): string =>
+  isRepeatedByTheClock(instant) ? formatInstantTimeWithOffset(instant) : TIME.format(instant);
 
 export const toOffsetIsoString = (date: Date): string =>
   `${localCalendarDay(date)}T${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}${offsetOf(date)}`;

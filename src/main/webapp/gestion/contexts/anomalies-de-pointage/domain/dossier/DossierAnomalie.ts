@@ -30,6 +30,7 @@ export interface ActiviteAnomalie {
   readonly libelle: string;
   readonly etat: 'A_RESOUDRE' | 'EN_COURS' | 'TERMINEE' | 'ANNULEE' | 'REMPLACEE' | 'ECHUE';
   readonly temps: string;
+  readonly ouvrant: PointageAnomalieId;
   readonly periode?: {
     readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
     readonly debut: string;

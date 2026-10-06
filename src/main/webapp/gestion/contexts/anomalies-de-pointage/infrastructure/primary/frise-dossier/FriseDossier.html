@@ -1,0 +1,158 @@
+@if (disposition().elements.length > 0) {
+<div class="frise" data-selector="anomalie-frise">
+  <div
+    #plan
+    class="frise-plan"
+    data-selector="anomalie-frise-plan"
+    [style.min-width.px]="disposition().largeurMinimale"
+    [style.height.px]="disposition().hauteur"
+  >
+    <svg aria-hidden="true" focusable="false">
+      <defs>
+        <marker id="frise-pointe" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" />
+        </marker>
+      </defs>
+      @for (fleche of disposition().fleches; track fleche.cle) {
+      <line
+        data-selector="anomalie-frise-fleche"
+        marker-end="url(#frise-pointe)"
+        [attr.data-pointage]="fleche.pointage"
+        [attr.data-activite]="fleche.activite"
+        [attr.x1]="fleche.departGauche + '%'"
+        [attr.y1]="fleche.departHaut"
+        [attr.x2]="fleche.arriveeGauche + '%'"
+        [attr.y2]="fleche.arriveeHaut"
+      />
+      }
+    </svg>
+    @for (graduation of disposition().graduations; track graduation.instant) {
+    <span class="frise-graduation" data-selector="anomalie-frise-graduation" aria-hidden="true" [style.left.%]="graduation.gauche">
+      <span data-selector="anomalie-frise-graduation-heure">{{ graduation.heure }}</span>
+      @if (graduation.jour; as jour) {
+      <span data-selector="anomalie-frise-jour">{{ jour }}</span>
+      }
+    </span>
+    } @if (disposition().intituleDesPointages; as intitule) {
+    <p data-selector="anomalie-frise-pointages-intitule" [style.top.px]="intitule.haut" [style.height.px]="intitule.hauteur">
+      {{ libelles.frise.pointages }}
+    </p>
+    } @if (disposition().rangeeDePlacement; as rangee) {
+    <div
+      aria-hidden="true"
+      data-selector="anomalie-frise-placement"
+      [style.top.px]="rangee.haut"
+      [style.height.px]="rangee.hauteur"
+      (click)="place($event, plan, rangee)"
+    ></div>
+    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
+    <button
+      type="button"
+      data-selector="anomalie-activite"
+      [attr.data-activite]="element.activite"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [style.width.%]="element.largeur"
+      [attr.aria-label]="element.nom"
+      [attr.data-categorie]="element.categorie"
+      [attr.data-etat]="element.etat"
+      [attr.data-fin]="element.fin"
+      [attr.aria-pressed]="estSelectionne(element.selection)"
+      (click)="selectionDemandee.emit(element.selection)"
+    >
+      {{ element.texte }}
+    </button>
+    } @case ('REPERE') {
+    <button
+      type="button"
+      data-selector="anomalie-pointage"
+      [attr.data-pointage]="element.pointage"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="element.nom"
+      [attr.data-en-cause]="element.enCause"
+      [attr.data-annule]="element.annule"
+      [attr.data-tardif]="element.tardif"
+      [attr.data-deplace]="element.deplace"
+      [attr.data-non-conformite]="element.nonConformite"
+      [attr.aria-pressed]="estSelectionne(element.selection)"
+      (click)="selectionDemandee.emit(element.selection)"
+    >
+      <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
+      <time data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
+      @if (element.tardif) {
+      <span data-selector="anomalie-pointage-tardif">{{ libelles.frise.badgeTardif }}</span>
+      } @if (element.regularise) {
+      <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
+      }
+    </button>
+    } @case ('POIGNEE') {
+    <div
+      role="slider"
+      tabindex="0"
+      data-selector="anomalie-poignee"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="libelles.frise.poignee"
+      [attr.aria-valuemin]="element.min"
+      [attr.aria-valuemax]="element.max"
+      [attr.aria-valuenow]="element.valeur"
+      [attr.aria-valuetext]="element.texte"
+      [attr.aria-disabled]="element.desactivee"
+      (keydown)="touche($event, element)"
+      (pointerdown)="saisit($event, plan, element)"
+      (pointermove)="glisse($event, plan, element)"
+      (pointerup)="relache()"
+      (pointercancel)="relache()"
+    >
+      {{ element.texte }}
+    </div>
+    } } } @if (disposition().apres; as apres) {
+    <div
+      role="group"
+      data-selector="anomalie-frise-apres"
+      [style.top.px]="apres.haut"
+      [style.height.px]="apres.hauteur"
+      [attr.aria-label]="libelles.apres"
+    >
+      <p data-selector="anomalie-frise-apres-titre">{{ libelles.apres }}</p>
+      @for (repere of apres.reperes; track repere.cle) {
+      <div
+        role="img"
+        data-selector="anomalie-apres-pointage"
+        [attr.data-pointage]="repere.pointage"
+        [style.left.%]="repere.gauche"
+        [style.top.px]="repere.haut"
+        [attr.aria-label]="repere.nom"
+        [attr.data-annule]="repere.annule"
+        [attr.data-non-conformite]="repere.nonConformite"
+        [attr.data-fait-de-l-acte]="repere.faitDeLActe"
+      >
+        <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ repere.symbole }}</span>
+        <time data-selector="anomalie-pointage-heure">{{ repere.heure }}</time>
+        @if (repere.regularise) {
+        <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
+        }
+      </div>
+      } @for (barre of apres.barres; track barre.cle) {
+      <div
+        role="img"
+        data-selector="anomalie-apercu-activite-apres"
+        [attr.data-activite]="barre.activite"
+        [style.left.%]="barre.gauche"
+        [style.top.px]="barre.haut"
+        [style.width.%]="barre.largeur"
+        [attr.aria-label]="barre.nom"
+        [attr.data-categorie]="barre.categorie"
+        [attr.data-etat]="barre.etat"
+        [attr.data-fin]="barre.fin"
+        [attr.data-modifiee]="barre.modifiee"
+      >
+        {{ barre.texte }}
+      </div>
+      }
+    </div>
+    }
+  </div>
+</div>
+}

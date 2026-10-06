@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
+import { centreDe } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
 import {
   autreOperateurFixture,
   autreOperateurNomFixture,
@@ -26,6 +27,13 @@ import {
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture, instantLocalWithOffsetFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import {
+  markerOf,
+  thenPointageIsSelected,
+  whenCancellingPointage,
+  whenCorrectingPointage,
+  whenSelectingPointage,
+} from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 import type {} from '../../../utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider';
 
 const motifCorrectionFixture = 'La cible est la NC.';
@@ -99,7 +107,7 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const whenCorrectingTheReceivedEnd = (): void => {
-    cy.get(dataSelector('anomalie-pointage')).last().find(dataSelector('anomalie-corriger')).click();
+    whenCorrectingPointage(finFixture);
   };
 
   const thenTheReceivedEndIsReadyToEdit = (): void => {
@@ -109,6 +117,69 @@ describe('Conflict dossier in Gestion', () => {
       .and('contain.text', 'Travail · lundi 14 septembre à 08:00');
     thenTheInstantFieldsShow(instantFinLocalFixture);
     cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
+  };
+
+  it('should say the problem of the conflict in one sentence naming its pointages by their gesture', () => {
+    whenOpeningTheDossier();
+
+    thenTheConflictIsSaidInOneSentence();
+  });
+
+  const thenTheConflictIsSaidInOneSentence = (): void => {
+    cy.get(dataSelector('anomalie-probleme'))
+      .should('have.length', 1)
+      .and('have.text', 'L’arrêt de 17:00 vise le travail, remplacé à 12:00 par un passage en NC.')
+      .and('not.contain.text', finFixture)
+      .and('not.contain.text', debutFixture)
+      .and('not.contain.text', ncFixture);
+  };
+
+  it('should make the arrow leave the marker at fault and reach the start of the activity it aims at', () => {
+    whenOpeningTheDossier();
+
+    thenTheArrowRunsFromTheStartOfTheActivityToTheMarkerAtFault();
+  });
+
+  const thenTheArrowRunsFromTheStartOfTheActivityToTheMarkerAtFault = (): void => {
+    markerOf(finFixture).then(repere => {
+      cy.get(dataSelector('anomalie-frise'))
+        .find(dataSelector('anomalie-activite'))
+        .filter(`[data-activite="${debutFixture}"]`)
+        .then(barre => {
+          cy.get(dataSelector('anomalie-frise-fleche')).should(fleche => {
+            const trace = requiredFixture(fleche[0], 'flèche').getBoundingClientRect();
+            const cible = requiredFixture(barre[0], 'barre').getBoundingClientRect();
+            const depart = requiredFixture(repere[0], 'repère');
+            expect(trace.left).to.be.closeTo(cible.left, 2);
+            expect(trace.right).to.be.closeTo(centreDe(depart), 2);
+            expect(trace.top).to.be.closeTo(depart.getBoundingClientRect().bottom, 2);
+            expect(trace.bottom).to.be.closeTo(cible.top, 2);
+          });
+        });
+    });
+  };
+
+  it('should select the pointage at fault of the conflict when the dossier opens', () => {
+    whenOpeningTheDossier();
+
+    thenTheSelectionShows('Arrêt', finFixture);
+  });
+
+  it('should show another pointage in the selection when the manager selects it, without choosing any act', () => {
+    whenOpeningTheDossier();
+    whenSelectingPointage(debutFixture);
+
+    thenTheSelectionShows('Démarrage', debutFixture);
+    thenNoActIsChosen();
+  });
+
+  const thenNoActIsChosen = (): void => {
+    cy.get(dataSelector('anomalie-acte')).should('not.exist');
+  };
+
+  const thenTheSelectionShows = (geste: string, pointage: string): void => {
+    cy.get(dataSelector('anomalie-selection-geste')).should('have.text', geste);
+    thenPointageIsSelected(pointage);
   };
 
   it('should identify the chosen interpretation while its reason is being entered', () => {
@@ -123,7 +194,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-choix')).last().should('have.attr', 'aria-pressed', 'false');
   };
 
-  it('should show the consequences before the optional journal comparison on a narrow screen', () => {
+  it('should draw the consequences on the frise without opening the optional journal comparison on a narrow screen', () => {
     whenOpeningTheDossierAt(320);
     whenPreparingTheGuidedCorrection();
 
@@ -131,20 +202,40 @@ describe('Conflict dossier in Gestion', () => {
   });
 
   const thenTheConsequencesAreVisibleWithoutOpeningTheJournal = (): void => {
-    cy.get(dataSelector('anomalie-apercu-consequences'))
-      .should('be.visible')
-      .and('contain.text', 'Terminée · 4 h')
-      .and('contain.text', 'Terminée · 5 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.length', 2);
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).first().should('have.attr', 'aria-label').and('contain', 'Terminée · 4 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).last().should('have.attr', 'aria-label').and('contain', 'Terminée · 5 h');
     cy.get(dataSelector('anomalie-apercu-journal')).should('not.have.attr', 'open');
     cy.get(dataSelector(`anomalie-apercu-fait-avant-${finFixture}`)).should(fait => {
       expect(fait[0]?.checkVisibility()).to.equal(false);
     });
-    cy.get(dataSelector('anomalie-apercu-consequences')).then(consequences => {
-      cy.get(dataSelector('anomalie-apercu-journal-ouvrir')).should(journal => {
-        expect(consequences[0]?.getBoundingClientRect().bottom).to.be.at.most(journal[0]?.getBoundingClientRect().top ?? 0);
-      });
-    });
     cy.get(dataSelector('anomalie-confirmer')).should('be.enabled');
+  };
+
+  it('should draw the state after the act under the frise, highlight what it changes and show the fact it creates in green', () => {
+    whenOpeningTheDossier();
+    whenPreparingTheGuidedCorrection();
+
+    thenTheFriseDrawsTheStateAfterTheAct();
+  });
+
+  const thenTheFriseDrawsTheStateAfterTheAct = (): void => {
+    cy.get(dataSelector('anomalie-frise-apres-titre')).should('have.text', 'Après cet acte');
+    cy.get(dataSelector('anomalie-apercu-activite-apres'))
+      .should('have.length', 2)
+      .and('have.attr', 'data-modifiee', 'true')
+      .and('have.attr', 'data-etat', 'TERMINEE');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).first().should('have.attr', 'aria-label').and('contain', 'modifiée');
+    cy.get(dataSelector('anomalie-apres-pointage')).should('have.length', 4);
+    cy.get(dataSelector('anomalie-apres-pointage'))
+      .filter(`[data-pointage="${remplacementFixture}"]`)
+      .should('have.attr', 'data-fait-de-l-acte', 'true');
+    cy.get(dataSelector('anomalie-apres-pointage'))
+      .filter(`[data-pointage="${finFixture}"]`)
+      .should('have.attr', 'data-annule', 'true')
+      .find(dataSelector('anomalie-pointage-heure'))
+      .should('have.css', 'text-decoration-line', 'line-through');
+    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 
   it('should compare the exact previewed act and its before and after facts before confirmation', () => {
@@ -157,7 +248,7 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenThePreviewComparesTheOriginalFactWithItsReplacement = (): void => {
     cy.get(dataSelector('anomalie-apercu-acte'))
-      .should('contain.text', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée · La cible est la NC.')
+      .should('contain.text', 'lundi 14 septembre à 17:00:00 · Arrêt · La cible est la NC.')
       .and('not.contain.text', finFixture)
       .and('contain.text', `Opérateur : ${operateurNomFixture} · Poste : Sans poste`)
       .and('not.contain.text', operateurFixture)
@@ -174,7 +265,7 @@ describe('Conflict dossier in Gestion', () => {
       .should('contain.text', 'Vise l’activité Non-conformité · ')
       .and('not.contain.text', ncFixture)
       .and('not.contain.text', debutFixture)
-      .and('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+      .and('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
 
@@ -184,6 +275,7 @@ describe('Conflict dossier in Gestion', () => {
 
   it('should identify an absent workstation while showing the received instant to the second', () => {
     whenOpeningTheDossierWithoutAWorkstation();
+    whenSelectingPointage(debutFixture);
 
     thenTheFactsShowTheirSecondsAndNameTheAbsentWorkstation();
   });
@@ -195,27 +287,31 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const thenTheFactsShowTheirSecondsAndNameTheAbsentWorkstation = (): void => {
-    cy.get(dataSelector('anomalie-pointage')).should('contain.text', '08:00:00 · lundi 14 septembre');
-    cy.get(dataSelector('anomalie-pointage')).should('contain.text', 'lundi 14 septembre à 08:00:00');
-    cy.get(dataSelector('anomalie-pointage')).each(pointage => {
-      cy.wrap(pointage).should('contain.text', 'Poste : Sans poste');
-    });
+    markerOf(debutFixture).should('have.attr', 'aria-label', '08:00:00 · Démarrage');
+    cy.get(dataSelector('anomalie-selection'))
+      .should('contain.text', 'lundi 14 septembre à 08:00:00')
+      .and('contain.text', 'Poste : Sans poste');
   };
 
-  it('should name the operator and workstation of every received fact without showing their identifiers', () => {
-    whenOpeningTheDossier();
+  [
+    ['opening', debutFixture],
+    ['transition', ncFixture],
+    ['end', finFixture],
+  ].forEach(([geste, pointage]) => {
+    it(`should name the operator and workstation of the selected ${geste} without showing their identifiers`, () => {
+      whenOpeningTheDossier();
+      whenSelectingPointage(requiredFixture(pointage, 'pointage fixture'));
 
-    thenEveryFactIdentifiesItsOperatorAndWorkstation();
+      thenTheSelectionIdentifiesItsOperatorAndWorkstation();
+    });
   });
 
-  const thenEveryFactIdentifiesItsOperatorAndWorkstation = (): void => {
-    cy.get(dataSelector('anomalie-pointage')).each(pointage => {
-      cy.wrap(pointage)
-        .should('contain.text', `Opérateur : ${operateurNomFixture}`)
-        .and('contain.text', `Poste : ${posteLibelleFixture}`)
-        .and('not.contain.text', operateurFixture)
-        .and('not.contain.text', posteFixture);
-    });
+  const thenTheSelectionIdentifiesItsOperatorAndWorkstation = (): void => {
+    cy.get(dataSelector('anomalie-selection'))
+      .should('contain.text', `Opérateur : ${operateurNomFixture}`)
+      .and('contain.text', `Poste : ${posteLibelleFixture}`)
+      .and('not.contain.text', operateurFixture)
+      .and('not.contain.text', posteFixture);
   };
 
   it('should display received facts in chronological order while keeping equal instants separate', () => {
@@ -258,9 +354,18 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenTheReceivedFactsFollowTheirOccurrenceTime = (): void => {
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 6);
-    cy.get(dataSelector('anomalie-pointage')).eq(1).should('contain.text', 'lundi 14 septembre à 09:00:00');
-    cy.get(dataSelector('anomalie-pointage')).eq(2).should('contain.text', 'lundi 14 septembre à 10:00:00');
-    cy.get(dataSelector('anomalie-pointage')).eq(3).should('contain.text', 'lundi 14 septembre à 10:00:00');
+    cy.get(dataSelector('anomalie-pointage'))
+      .eq(1)
+      .invoke('attr', 'aria-label')
+      .should('match', /^09:00:00/);
+    cy.get(dataSelector('anomalie-pointage'))
+      .eq(2)
+      .invoke('attr', 'aria-label')
+      .should('match', /^10:00:00/);
+    cy.get(dataSelector('anomalie-pointage'))
+      .eq(3)
+      .invoke('attr', 'aria-label')
+      .should('match', /^10:00:00/);
   };
 
   it('should offer an explicit detailed correction and preserve the received precision', () => {
@@ -448,8 +553,36 @@ describe('Conflict dossier in Gestion', () => {
     givenALostConfirmation();
     whenConfirmingTheAct();
     whenVerifyingTheJournal();
+    whenSelectingPointage(remplacementFixture);
 
     thenTheWrittenActRemainsVisibleInHistory();
+  });
+
+  it('should trace the activity created by the opening in the selection after verifying the written journal', () => {
+    whenOpeningTheDossier();
+    whenPreparingTheGuidedCorrection();
+    givenALostConfirmation();
+    whenConfirmingTheAct();
+    whenVerifyingTheJournal();
+    whenSelectingPointage(debutFixture);
+
+    thenTheOpeningTracesItsActivity();
+  });
+
+  const thenTheOpeningTracesItsActivity = (): void => {
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Crée l’activité Travail · ');
+    cy.get(dataSelector('anomalie-selection')).should('not.contain.text', `Crée l’activité ${debutFixture}`);
+  };
+
+  it('should give the reason of the cancelled end in the selection after verifying the written journal', () => {
+    whenOpeningTheDossier();
+    whenPreparingTheGuidedCorrection();
+    givenALostConfirmation();
+    whenConfirmingTheAct();
+    whenVerifyingTheJournal();
+    whenSelectingPointage(finFixture);
+
+    thenTheCancelledEndGivesItsReason();
   });
 
   it('should allow consultation while reserving all decisions to managers', () => {
@@ -550,14 +683,15 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-operation')).should('contain.text', 'Acte enregistré');
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
     cy.get(dataSelector('anomalie-adresse-obsolete')).should('not.exist');
-    cy.get(dataSelector('anomalie-pointage'))
-      .should('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée')
+    cy.get(dataSelector('anomalie-selection'))
+      .should('contain.text', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
       .and('not.contain.text', `Remplace le pointage ${finFixture}`);
-    cy.get(dataSelector('anomalie-pointage')).should('contain.text', 'Crée l’activité Travail · ');
-    cy.get(dataSelector('anomalie-pointage')).should('not.contain.text', `Crée l’activité ${debutFixture}`);
-    cy.get(dataSelector('anomalie-annulation')).should('have.length', 1).and('contain.text', 'La cible est la NC.');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 4);
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
+  };
+
+  const thenTheCancelledEndGivesItsReason = (): void => {
+    cy.get(dataSelector('anomalie-annulation')).should('have.length', 1).and('contain.text', 'La cible est la NC.');
   };
 
   const thenTheConcurrentDossierIsReloadedWithTheProposal = (): void => {
@@ -578,6 +712,7 @@ describe('Conflict dossier in Gestion', () => {
 
   const thenTheFormerPreviewCannotBeConfirmed = (): void => {
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
+    cy.get(dataSelector('anomalie-frise-apres')).should('not.exist');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   };
@@ -606,7 +741,7 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenCorrectingTheEnd = (): void => {
-    cy.get(dataSelector('anomalie-corriger')).last().click();
+    whenCorrectingPointage(finFixture);
   };
 
   const whenRegularisingAMissingFact = (): void => {
@@ -615,7 +750,7 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const whenCancellingTheEnd = (): void => {
-    cy.get(dataSelector('anomalie-annuler')).last().click();
+    whenCancellingPointage(finFixture);
   };
 
   const thenTheCancellationOnlyRequiresAReason = (): void => {

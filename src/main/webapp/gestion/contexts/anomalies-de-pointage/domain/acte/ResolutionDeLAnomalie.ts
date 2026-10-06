@@ -12,6 +12,15 @@ export interface PropositionResolution {
   readonly evenement?: string;
 }
 
+export const propositionDe = (apercu: ApercuAnomalie): PropositionResolution => ({
+  adresse: apercu.adresse,
+  commande: apercu.commande,
+  version: apercu.version,
+  acte: apercu.acte,
+  empreinteConsequences: apercu.empreinteConsequences,
+  ...(apercu.evenement === undefined ? {} : { evenement: apercu.evenement }),
+});
+
 export class ResolutionDeLAnomalie {
   private constructor(
     readonly saisie: SaisieActe,
@@ -55,15 +64,6 @@ export class ResolutionDeLAnomalie {
   }
 
   confirmation(): PropositionResolution | undefined {
-    const apercu = this.apercu;
-    if (apercu === undefined) return undefined;
-    return {
-      adresse: apercu.adresse,
-      commande: apercu.commande,
-      version: apercu.version,
-      acte: apercu.acte,
-      empreinteConsequences: apercu.empreinteConsequences,
-      ...(apercu.evenement === undefined ? {} : { evenement: apercu.evenement }),
-    };
+    return this.apercu === undefined ? undefined : propositionDe(this.apercu);
   }
 }

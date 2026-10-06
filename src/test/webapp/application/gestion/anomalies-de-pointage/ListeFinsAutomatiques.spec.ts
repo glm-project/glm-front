@@ -431,7 +431,7 @@ describe('Automatic end tab of the anomalies list in Gestion', () => {
   };
 
   const thenTheAutomaticEndDossierIsShown = (): void => {
-    cy.get(dataSelector('anomalie-fin-automatique')).should('contain.text', 'Fin automatique');
+    cy.get(dataSelector('anomalie-probleme')).should('contain.text', 'fin automatique à 21:00');
   };
 
   const thenTheEmptyListIsExplained = (): void => {

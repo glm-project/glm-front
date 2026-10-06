@@ -7,42 +7,62 @@ import {
 import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
 import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
 import { NgTemplateOutlet } from '@angular/common';
-import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  linkedSignal,
+  resource,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
 import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
+import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
-import { anomalieTraitee } from '../../../domain/dossier/AnomalieTraitee';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
-import { conflitAExpliquer } from '../../../domain/dossier/ConflitAExpliquer';
-import {
-  ActiviteAnomalie,
-  AdresseDossier,
-  ChoixGuide,
-  DossierAnomalie,
-  LigneConflit,
-  PointageAnomalie,
-} from '../../../domain/dossier/DossierAnomalie';
+import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { IssueDeLActe } from '../../../domain/dossier/IssueDeLActe';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
+import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { phrasesDuProbleme } from '../PhrasesDuProbleme';
+import {
+  detailDuPointage,
+  intituleDeLActivite,
+  labelForActivite,
+  libelleActivite,
+  libelleDuGeste,
+  referencePointage,
+  remplacementDe,
+  selectionInitiale,
+  tempsActivite,
+} from '../PresentationDossier';
 import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
+import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
+import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
+import { FriseDossier } from '../frise-dossier/FriseDossier';
+import {
+  bornesDuDeplacement,
+  DeplacementDemande,
+  PlacementDeLInstant,
+  PlacementDemande,
+  placementDuDossier,
+  PoigneeDeFrise,
+  poigneeDuDossier,
+} from '../frise-dossier/PoigneeDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
-
-type VueDActivites = Readonly<{ journal: readonly PointageAnomalie[]; activites?: readonly ActiviteAnomalie[] }>;
-
-interface DetailPointage {
-  readonly entete: string;
-  readonly nature: string;
-  readonly cible?: string;
-  readonly creee?: string;
-}
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 
@@ -58,6 +78,7 @@ const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
     DateTimeField,
     SelecteurOperateurAnomalie,
     NgTemplateOutlet,
+    FriseDossier,
   ],
   templateUrl: './DossierAnomaliePage.html',
   styleUrl: './DossierAnomaliePage.css',
@@ -65,7 +86,6 @@ const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
   private readonly propositionHeading = viewChild<ElementRef<HTMLHeadingElement>>('propositionHeading');
@@ -73,7 +93,6 @@ export class DossierAnomaliePage {
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
   private readonly instantLongDay = new InstantLongDayPipe();
-  private readonly instantLongDayWithSeconds = new InstantLongDayWithSecondsPipe();
   private precedente: AdresseDossier | undefined;
   protected readonly now = new Date();
   protected readonly preparation = inject(PreparationActe);
@@ -81,12 +100,20 @@ export class DossierAnomaliePage {
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly anomalieTraitee = anomalieTraitee;
-  protected readonly conflitAExpliquer = conflitAExpliquer;
+  protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
+  protected readonly problemes = phrasesDuProbleme;
+  protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
+  protected readonly peutDeplacer = peutDeplacer;
+  protected readonly libelleActivite = libelleActivite;
+  protected readonly intituleDeLActivite = intituleDeLActivite;
+  protected readonly libelleDuGeste = libelleDuGeste;
+  protected readonly labelForActivite = labelForActivite;
+  protected readonly remplacementDe = remplacementDe;
+  protected readonly detailDuPointage = detailDuPointage;
+  protected readonly tempsActivite = tempsActivite;
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly propositionsFaites = signal(0);
-  protected readonly pointageConsulte = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
@@ -110,20 +137,25 @@ export class DossierAnomaliePage {
     const lecture = this.resultatLecture();
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
+  protected readonly selection = linkedSignal<DossierAnomalie | undefined, SelectionDuDossier | undefined>({
+    source: this.dossier,
+    computation: selectionInitiale,
+  });
+  protected readonly pointageSelectionne = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'POINTAGE' ? this.dossier()?.journal.find(pointage => pointage.id.pointage === selection.id) : undefined;
+  });
+  protected readonly activiteSelectionnee = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'ACTIVITE' ? this.dossier()?.activites.find(activite => activite.id.activite === selection.id) : undefined;
+  });
+  private readonly maintenant = signal(new Date().toISOString());
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
   );
-
-  protected libelleActivite(activite: ActiviteAnomalie): string {
-    const periode = activite.periode;
-    if (periode === undefined) return activite.libelle;
-    const categorie = periode.categorie === 'TRAVAIL' ? this.libelles.types.DEBUT : this.libelles.types.NON_CONFORMITE;
-    const fin = periode.fin === undefined ? '' : ` → ${this.instantLongDay.transform(periode.fin, this.now)}`;
-    return `${categorie} · ${this.instantLongDay.transform(periode.debut, this.now)}${fin}`;
-  }
 
   protected libelleChoix(choix: ChoixGuide): string {
     return choix.code === undefined ? choix.libelle : this.libelles.choix[choix.code].libelle;
@@ -140,45 +172,8 @@ export class DossierAnomaliePage {
     );
   }
 
-  protected referencePointage(journal: readonly PointageAnomalie[], identifiant: string): Readonly<{ libelle: string; lien?: string }> {
-    const pointage = journal.find(pointage => pointage.id.pointage === identifiant);
-    if (pointage === undefined) return { libelle: this.libelles.pointageNonResolu };
-    const fait = pointage.fait;
-    return {
-      libelle: `${this.instantLongDayWithSeconds.transform(fait.instant, this.now)} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
-      lien: this.hrefForRepere(`pointage-${pointage.id.pointage}`),
-    };
-  }
-
-  protected remplacementDe(journal: readonly PointageAnomalie[], identifiant: string): string {
-    const reference = this.referencePointage(journal, identifiant);
-    return reference.lien === undefined ? this.libelles.remplaceNonResolu : `${this.libelles.remplace} ${reference.libelle}`;
-  }
-
-  private hrefForRepere(repere: string): string {
-    return this.router.serializeUrl(
-      this.router.createUrlTree([], {
-        relativeTo: this.route,
-        queryParamsHandling: 'preserve',
-        fragment: repere,
-      }),
-    );
-  }
-
-  protected tempsActivite(activite: ActiviteAnomalie): string {
-    if (activite.etat === 'EN_COURS') return 'Temps non définitif';
-    if (activite.etat === 'A_RESOUDRE') return activite.temps || 'Temps à résoudre';
-    const duree = activite.periode?.duree;
-    if (duree === undefined) return activite.temps;
-    const composants = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(duree);
-    if (composants === null) return duree;
-    return [
-      composants[1] && `${composants[1]} h`,
-      composants[2] && `${composants[2]} min`,
-      composants[3] && `${composants[3].replace('.', ',')} s`,
-    ]
-      .filter(Boolean)
-      .join(' ');
+  protected libelleDuPointage(journal: readonly PointageAnomalie[], identifiant: string): string {
+    return referencePointage(journal, identifiant, this.now).libelle;
   }
 
   private read(adresse: AdresseDossier | undefined) {
@@ -201,7 +196,24 @@ export class DossierAnomaliePage {
     this.choixSelectionne.set(undefined);
   }
 
+  protected poigneeDe(dossier: DossierAnomalie): PoigneeDeFrise | undefined {
+    return poigneeDuDossier(dossier, this.proposition(), this.maintenant(), this.occupe());
+  }
+
+  protected placementDe(dossier: DossierAnomalie): PlacementDeLInstant | undefined {
+    return placementDuDossier(dossier, this.proposition(), this.maintenant(), this.occupe());
+  }
+
+  protected cadreDe(dossier: DossierAnomalie): CadreDuFait {
+    return CadreDuFait.depuis(dossier.activites, this.maintenant());
+  }
+
+  private lireLHorloge(): void {
+    this.maintenant.set(new Date().toISOString());
+  }
+
   protected choose(saisie: SaisieActe, choix?: string): void {
+    this.lireLHorloge();
     this.preparation.choose(saisie);
     this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
@@ -212,35 +224,6 @@ export class DossierAnomaliePage {
   protected chooseGuide(choix: ChoixGuide): void {
     this.choose(choix.saisie, choix.id);
     this.detail.set(choix.saisie.awaitsDating());
-  }
-
-  protected labelForActivite(id: string, vue: VueDActivites): string {
-    const activite = vue.activites?.find(activite => activite.id.activite === id);
-    if (activite !== undefined) return this.libelleActivite(activite);
-    const origine = vue.journal.find(pointage => pointage.activiteCreee?.activite === id);
-    if (origine !== undefined)
-      return `${this.libelles.types[origine.fait.type]} · ${this.instantLongDayWithSeconds.transform(origine.fait.instant, this.now)}`;
-    return this.libelles.activiteNonResolue;
-  }
-
-  protected detailDuPointage(pointage: PointageAnomalie, vue: VueDActivites): DetailPointage {
-    const fait = pointage.fait;
-    return {
-      entete: `${operateurPresente(pointage.operateurNom)} · ${this.instantLongDayWithSeconds.transform(fait.instant, this.now)}`,
-      nature: `${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
-      ...(fait.activiteVisee ? { cible: this.labelForActivite(fait.activiteVisee, vue) } : {}),
-      ...(pointage.activiteCreee ? { creee: this.labelForActivite(pointage.activiteCreee.activite, vue) } : {}),
-    };
-  }
-
-  protected hrefForActivite(id: string, dossier: DossierAnomalie): string {
-    const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
-    return this.hrefForRepere(origine === undefined ? `activite-${id}` : `pointage-${origine.id.pointage}`);
-  }
-
-  protected traceToggled(pointage: string, ouverte: boolean): void {
-    const consultationFermee = !ouverte && this.pointageConsulte() === pointage;
-    if (consultationFermee) this.pointageConsulte.set(undefined);
   }
 
   protected correct(pointage: PointageAnomalie): void {
@@ -258,8 +241,29 @@ export class DossierAnomaliePage {
   }
 
   protected change(changement: ChangementSaisie): void {
+    this.lireLHorloge();
     this.preparation.change(changement);
     if (this.preparation.resolution().saisie.changesGuidedFact(changement)) this.choixSelectionne.set(undefined);
+  }
+
+  protected deplacer(dossier: DossierAnomalie, { demande, poignee }: DeplacementDemande): void {
+    this.lireLHorloge();
+    this.change({
+      fait: { instant: instantDeplace(demande, poignee.instant, bornesDuDeplacement(this.cadreDe(dossier), dossier, poignee)) },
+    });
+  }
+
+  protected placer(dossier: DossierAnomalie, { instant, placement }: PlacementDemande): void {
+    this.lireLHorloge();
+    this.change({
+      fait: {
+        instant: instantDeplace(
+          { kind: 'VERS', instant },
+          this.maintenant(),
+          bornesDuDeplacement(this.cadreDe(dossier), dossier, placement),
+        ),
+      },
+    });
   }
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {

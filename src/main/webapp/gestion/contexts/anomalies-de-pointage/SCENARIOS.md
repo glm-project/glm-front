@@ -18,18 +18,82 @@ La reprise explicite transmet la proposition initiale immuable. Un reçu ne conc
 la commande, l'adresse, la révision de départ, l'acte et l'événement créé correspondent exactement.
 Une ancre annulée reste consultable et les continuations désignent les autres conflits explicitement.
 
+## Issue d'un acte
+
+L'aperçu et le reçu annoncent la même issue, qui dépend de la nature du dossier d'origine, celui affiché avant l'acte. Un
+conflit s'achève par « anomalie traitée » (aperçu « Après cet acte : anomalie traitée », reçu « Anomalie traitée »), « conflit
+levé · fin automatique restante » ou « conflit restant » (reçu « Acte enregistré, conflit restant »). Une fin automatique
+s'achève par « anomalie traitée » ou « anomalie restante » (reçu « Acte enregistré, anomalie restante ») : elle ne se présente
+jamais comme un conflit, même si l'après porte un conflit. Une adresse annulée ou remplacée reste « traitée » quand ni conflit
+ni fin automatique ne subsistent. L'aperçu dit l'issue sans lien. Le reçu ajoute un lien « Traiter la fin automatique
+restante » (numéroté « (1 sur 2) » s'il y en a plusieurs) par activité échue du dossier d'après, sauf celle de la page affichée (adresse d'origine), vers
+`/anomalies/{suivi}?pointage={ouvrant}`, avec les paramètres de retour vers la liste (`nature`, `operateur`, `element`,
+`page`) ; sans autre activité échue, aucun lien. L'origine est le dossier « avant » de l'aperçu confirmé, gardé avec la confirmation :
+deux vérifications du reçu qui reviennent l'une après l'autre annoncent la même issue. Le front lit l'ouvrant dans `evenement` de l'activité reçue, il ne le déduit pas.
+
 ## Fin automatique
 
 Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
-conflit. Il affiche l'activité échue, son début, sa fin automatique et sa durée telles que reçues. Le
-gestionnaire régularise la fin avec une heure qu'il saisit : le choix guidé arrive sans heure et l'aperçu
-reste indisponible tant qu'elle manque. Une fin ou une transition pointée après l'échéance se corrige avec
-l'heure de ce pointage et un motif. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
+conflit. Il montre l'activité échue sur la frise, son début, sa fin automatique et sa durée tels que reçus dans le panneau Sélection. Le
+gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée des pointages de la frise : le
+choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic place la
+poignée à l'heure cliquée, arrondie à 5 minutes et ramenée à la borne la plus proche si elle sort du début de l'activité ou de
+l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est
+inactif sans proposition de ce genre, et pendant une opération ; un clic sur un repère ou une barre sélectionne. Une fin ou une transition pointée après l'échéance se corrige avec
+l'heure de ce pointage et un motif. Le pointage que le choix désigne est marqué « pointé après
+l'échéance » sur la frise et dans le panneau Sélection ; le front le lit dans le choix reçu, il ne le déduit pas. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
 ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
 `date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
-annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
-sur une adresse annulée, et n'affiche alors plus le diagnostic « Pourquoi ces pointages sont incohérents »,
-réservé au périmètre qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
+annonce l'issue de l'acte (voir « Issue d'un acte ») ; « Anomalie traitée » seulement si ni `enConflit` ni
+`finAutomatique` ne subsistent, y compris sur une adresse annulée, et il n'affiche alors plus de phrase de conflit,
+réservée au périmètre qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
+
+## Phrase du problème
+
+L'en-tête du dossier dit le problème en une phrase, sous l'élément, l'opérateur · poste, la date et la clôture ; elle
+remplace les blocs « Pourquoi ces pointages sont incohérents » et « Fin automatique ». Un conflit en a une par
+diagnostic, dans l'ordre reçu, selon sa raison : « L'arrêt de 17:00 vise le travail, remplacé à 12:00 par un passage
+en NC. » ; sans le fait contradictoire, « L'arrêt de 17:00 vise un travail qui n'est plus en cours. » Sans diagnostic
+reçu, l'explication de la ligne tient lieu de phrase. Une fin automatique en a une par activité échue : quand un choix de
+correction tardive est reçu, elle nomme le pointage tardif (« L'arrêt de 19:30 vise le travail, déjà terminé automatiquement
+à 18:00. ») ; sinon, quand un choix de régularisation de fin vise l'activité, « Le travail démarré à 08:00 n'a jamais été
+arrêté : fin automatique à 18:00. » ; sans l'un ni l'autre, « Le travail démarré à 08:00 a été terminé automatiquement à
+18:00. », qui n'affirme rien de ses pointages. Les faits de
+l'activité échue (début, fin automatique, durée) sont dans le panneau Sélection, l'activité étant sélectionnée à l'ouverture. Aucune phrase ne porte d'identifiant, ni de
+lien : un pointage absent du journal se dit « Un pointage non résolu ».
+
+## Frise et sélection
+
+Les pointages et les activités du dossier se lisent sur une frise sous l'en-tête, à la place de la chronologie en liste et
+de « Activités concernées ». Chaque activité a sa rangée, dans l'ordre de leur début : une barre `accent` pour le travail,
+`nc` pour la non-conformité, finie à la fin reçue (`TERMINEE`), en pointillés `warn` à la fin automatique (`ECHUE`), ou
+ouverte jusqu'au bord (`EN_COURS`, `A_RESOUDRE` hachurée « À résoudre ») ; la frise n'invente aucune fin. Chaque pointage est
+un repère (symbole du geste, heure HH:MM, barré s'il est annulé, « R » s'il est régularisé, rouge s'il est en cause), décalé
+d'une voie entière (44 px) quand deux repères sont à moins de 44 px, sur une rangée titrée « Pointages » ; une flèche pointillée relie le pointage en cause au début de l'activité que son
+diagnostic vise. L'échelle va d'une heure avant le premier instant reçu à une heure après le dernier, par heures entières, avec
+le jour à minuit, et couvre l'heure proposée quand une poignée est posée ; elle défile horizontalement sur un écran étroit, sans faire défiler la page. Repères et barres sont des
+boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
+catégorie, la période et l'état.
+
+Quand un aperçu est disponible, des rangées « Après cet acte » s'ajoutent sous la frise sur la même échelle, qui couvre aussi les
+instants de l'après : les pointages de l'après, puis une barre par activité de l'après, avec les fins reçues seulement. Elles
+ne se sélectionnent pas et ne changent pas la sélection du dossier. Une activité dont l'état, le début, la fin ou la durée
+reçus changent entre l'avant et l'après, ou qui est nouvelle, est mise en évidence et se dit « modifiée » dans son nom ; le
+fait que l'acte corrige ou crée est vert (« posé par cet acte ») ; un pointage annulé par l'acte est barré. La poignée reste
+affichée avec l'aperçu ; toute modification de la saisie, un déplacement de la poignée compris, retire l'aperçu et ces rangées.
+La section d'aperçu garde l'acte, l'issue, l'enregistrement, les conséquences textuelles reçues et, repliée, la comparaison
+de tous les pointages avant et après.
+
+Le panneau « Sélection », avant « Votre décision », montre le pointage choisi : geste, instant avec ses secondes, opérateur et
+poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
+et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours
+les voient désactivés, avec le message des droits. Pour une activité, il dit sa catégorie, son état et son temps reçus, son
+début et sa fin reçus (« Fin automatique » pour une activité échue), sans bouton d'acte. À l'ouverture d'un conflit, le plus
+ancien pointage en cause que le journal contient est sélectionné ; à l'ouverture d'une fin automatique, l'activité échue ; si
+les deux sont portés, le pointage en cause ; sinon le panneau dit « Sélectionnez un pointage ou une activité sur la frise pour
+voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier, jamais
+un élément absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé ne
+bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
 
 ## Liste des anomalies
 
@@ -79,24 +143,31 @@ pas un champ absent.
 
 ## Opérateur et poste affichés
 
-La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, la chronologie, l'historique d'une adresse
+La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, le panneau Sélection, l'historique d'une adresse
 obsolète et les continuations nomment l'opérateur (« Prénom Nom ») et le poste (libellé) reçus. Aucun identifiant
 d'opérateur ou de poste n'y est affiché : une fiche non résolue donne « Opérateur non résolu » ou « Poste non résolu »,
 un pointage sans poste « Sans poste ». Le journal porte le nom et le libellé de chaque pointage à côté des identités
 du fait, vides lorsque la fiche manque ; une ligne de liste n'en garde que `posteId`, pour distinguer l'absence de
 poste d'un poste non résolu.
 
-Le panneau « Voir les détails et l'enregistrement » de chaque pointage et les colonnes Avant et Après de « Comparer tous
+La traçabilité du pointage sélectionné (panneau Sélection) et les colonnes Avant et Après de « Comparer tous
 les pointages » commencent par « Prénom Nom · instant » (« Opérateur non résolu » sans fiche), jamais par l'identifiant du
 pointage. Les lignes « Vise l'activité » et « Crée l'activité » y désignent l'activité par son libellé (nature et début
 reçus du dossier), à défaut par le pointage qui l'a créée dans le même journal, sinon « Activité non résolue » : aucun
-identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète, le diagnostic de conflit ou la
-cible du formulaire. Un autre pointage se désigne de la même façon partout : « instant · Type · Intention » du pointage trouvé dans le
-journal disponible (dossier, avant ou après), dans la phrase « Remplace le pointage … », « Ouverte par le pointage … »,
-« Terminée par le pointage … » ou « Le pointage … vise l'activité … » ; sinon la phrase le dit sans l'identifier :
-« Remplace un pointage non résolu », « Ouverte par un pointage non résolu », « Un pointage non résolu vise … ». La ligne
-de l'acte en aperçu commence par « instant · Type · Intention » ou « Pointage non résolu » : aucun identifiant de pointage
+identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète ou la cible du formulaire. Un autre
+pointage se désigne de la même façon partout : « instant · Geste » du pointage trouvé dans le journal disponible
+(dossier, avant ou après), dans la phrase « Remplace le pointage … » ; sinon la phrase le dit sans l'identifier :
+« Remplace un pointage non résolu ». Les phrases du problème le nomment par son geste et son heure, ou « Un pointage non
+résolu ». La ligne
+de l'acte en aperçu commence par « instant · Geste » ou « Pointage non résolu » : aucun identifiant de pointage
 n'est affiché.
+
+Un pointage se nomme par le geste de l'opérateur, sur la frise, les références, l'aperçu, la comparaison, l'historique
+d'adresse obsolète et le résumé de la proposition : « Démarrage » (`DEBUT·OUVERTURE`), « Démarrage en NC »
+(`NON_CONFORMITE·OUVERTURE`), « Passage en NC » (`NON_CONFORMITE·TRANSITION`), « Retour en bon » (`DEBUT·TRANSITION`),
+« Arrêt » (`FIN·FIN`). La frise met un geste de non-conformité en évidence (repère `nc`). Un pointage régularisé garde son libellé et
+la mention « Régularisation ». Tant que la saisie ne forme pas un geste connu (type ou intention vides, ou incompatibles), le
+résumé de la proposition garde « Type · Intention » des champs remplis, sans rien afficher quand les deux sont vides.
 
 Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
 par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le
@@ -122,7 +193,7 @@ métier : il échoue comme une erreur technique, sans afficher le message reçu.
 
 Le dossier et la liste n'affichent aucun instant ISO brut. Chaque instant reçu s'affiche en heure locale, en jour
 long (« jeudi 1 octobre à 09:41 ») avec l'année quand elle diffère de celle de la page. L'instant d'un fait pointé
-porte ses secondes (« à 09:41:22 ») : chronologie (heure en gras, puis jour long), références des diagnostics,
+porte ses secondes (« à 09:41:22 ») : panneau Sélection (heure en gras, puis jour long), références,
 détails de traçabilité, proposition, aperçu et journaux avant/après. L'engagement, la clôture, le début et la fin
 d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la liste restent à la minute. L'attribut
 `datetime` des heures porte un instant valide, de trois décimales au plus, sans perdre l'ordre du journal.
@@ -132,7 +203,7 @@ d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la li
 La date et l'heure se choisissent avec le `datepicker` et le `timepicker` de Material, en français, la semaine
 commençant le lundi, au clavier comme au calendrier et à la liste des heures. Une date se tape `JJ/MM/AAAA` ; une
 date impossible (`31/02/2026`) est refusée, jamais relue en mois d'abord. Une heure se tape `HH:MM` ou `HH:MM:SS`.
-Tant que le gestionnaire ne touche à rien, l'instant reçu part inchangé, nanosecondes comprises. Après un geste, il part
+Tant que le gestionnaire ne touche à rien, l'instant reçu part inchangé, nanosecondes comprises. Après une saisie, il part
 avec l'offset local et sans fraction de seconde. Une date sans heure, ou l'inverse, garde ce qui est saisi, bloque
 l'aperçu et affiche « Renseignez la date et l'heure du fait. ». Au changement d'heure, une heure inexistante est refusée
 (« Cette heure n'existe pas ce jour-là, à cause du changement d'heure. ») et une heure répétée prend sa première
@@ -142,10 +213,39 @@ l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les spe
 (sans changement d'heure) ; les cas de changement d'heure rebasculent `TZ` en `Europe/Paris` et placent l'horloge le
 29 mars le temps du test. Cypress saisit une date au clavier et choisit un jour et une heure à la souris.
 
+Le fait proposé reste dans des bornes (`CadreDuFait`). Il ne précède pas le début reçu de l'activité qu'il vise
+(« Le fait ne peut pas précéder le début de l'activité qu'il termine. » ; l'égalité est permise), et il ne dépasse
+jamais l'heure courante (« La date et l'heure du fait ne peuvent pas être dans le futur. »), à la seconde et à la
+nanoseconde près, quel que soit l'offset de l'instant. L'échéance n'est pas une borne. Sans activité visée, ou si
+elle est absente du dossier ou sans période, il n'y a pas de borne basse. Changer l'activité visée change la borne.
+Un instant illisible reste seul sur `INSTANT_INVALIDE`. Une borne franchie désactive l'aperçu comme toute erreur de
+saisie ; un appel direct à `PreparationActe.preview` ne prévisualise pas non plus un fait hors bornes. L'heure courante
+est lue à chaque action du gestionnaire (choisir, modifier, déplacer) et au moment de prévisualiser, jamais figée à l'ouverture de la
+page : une heure devenue passée pendant que l'onglet reste ouvert est acceptée. `matches()` compare sans bornes. Le refus
+serveur `date-de-survenue-future` reste l'autorité : ces bornes sont des pré-contrôles de saisie, et `INSTANT_AVANT_CIBLE` une règle
+de Gestion sans refus serveur connu.
+
+Le champ n'est pas la seule saisie qui émet un instant : pour une correction ou une régularisation dont le fait est un
+passage ou un arrêt avec une activité visée qui donne une borne basse, la frise porte une poignée (rôle `slider`) sur
+l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans sauter sous le doigt ; au clavier, les
+flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
+décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, et la plus proche de l'heure
+courante lue à l'action et de trois heures après le dernier instant reçu, en minutes entières à la nanoseconde près) ; un bouton
+est désactivé à la borne. L'échelle ne va pas au-delà de ces trois heures : une heure plus lointaine se saisit au champ. Chaque
+déplacement transmet l'instant avec l'offset local et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure au
+champ déplace la poignée. Une heure saisie hors des bornes (avant le début de l'activité visée, dans le futur ou au-delà de la
+portée) garde sa poignée, tenue à la borne la plus proche : le champ dit pourquoi, l'aperçu reste indisponible, et le premier
+déplacement ramène l'heure dans les bornes. Un fait
+sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée ; la régularisation d'une fin sans heure la reçoit au clic sur la rangée
+des pointages (« Fin automatique »). L'heure reçue du
+pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
+qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
+traverse minuit et l'heure répétée graduée heure par heure.
+
 ## Frontières de vérification
 
-- Les specs de domaine passent par `SaisieActe` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
-  le choix explicite, la précision des instants et l'invalidation d'un aperçu.
+- Les specs de domaine passent par `SaisieActe`, `CadreDuFait` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
+  le choix explicite, la précision des instants, les bornes du fait et l'invalidation d'un aperçu.
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
 - Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé

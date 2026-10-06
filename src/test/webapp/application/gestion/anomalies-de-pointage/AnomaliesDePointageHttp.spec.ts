@@ -1,10 +1,12 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import {
+  activitesFixture,
   confirmationFixture,
   correctionFixture,
   debutFixture,
   dossierFixture,
+  elementFixture,
   finFixture,
   givenTheElements,
   givenTheReferentiel,
@@ -19,6 +21,11 @@ import {
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import {
+  thenActivityIsSelected,
+  whenSelectingActivity,
+  whenSelectingPointage,
+} from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 1), '123456789');
 
@@ -51,6 +58,17 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheClosedElementShowsTheExplicitRemainingConflict();
   });
 
+  it('should follow the automatic end left by a lifted conflict and keep the way back to the list', () => {
+    givenACanonicalResultLeavingAnAutomaticEnd();
+
+    whenOpeningTheRealDossierFromTheList();
+    whenPreparingTheArbitraryCorrection();
+    whenConfirmingThePreviewLeavingAnAutomaticEnd();
+    whenOpeningTheRemainingAutomaticEnd();
+
+    thenTheAutomaticEndIsOpenedWithTheWayBackToTheList();
+  });
+
   it('should reacquire changed data after an obsolete confirmation and retain the exact proposal for an explicit new preview', () => {
     givenRealResolutionReplies();
     givenAConfirmationWhoseConsequencesBecameObsolete();
@@ -62,24 +80,14 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal();
   });
 
-  it('should locate the corrected terminating fact from its diagnostic while retaining the original activity identity', () => {
+  it('should say the conflict in one sentence and keep the corrected terminating fact traceable under its original activity identity', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
     whenOpeningTheRealDossier();
-    whenFollowingTheCorrectedTermination();
+    whenSelectingPointage(remplacementFixture);
 
-    thenTheCorrectedTerminatingFactIsReachable();
-  });
-
-  it('should reopen the same received fact after its trace was manually closed', () => {
-    givenAConflictWhoseTerminationWasCorrected();
-
-    whenOpeningTheRealDossier();
-    whenFollowingTheCorrectedTermination();
-    whenClosingTheCorrectedFactTrace();
-    whenFollowingTheCorrectedTermination();
-
-    thenTheCorrectedTerminatingFactIsReachable();
+    thenTheConflictIsSaidInOneSentenceNamingTheCorrectedTermination();
+    thenTheCorrectedTerminatingFactIsTraceable();
   });
 
   const givenAConflictWhoseTerminationWasCorrected = (): void => {
@@ -122,38 +130,21 @@ describe('HTTP conflict resolution in Gestion', () => {
     });
   };
 
-  const whenFollowingTheCorrectedTermination = (): void => {
-    cy.get(dataSelector('conflit-diagnostic-terminaison')).click();
-  };
-
-  const whenClosingTheCorrectedFactTrace = (): void => {
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
-      .find(dataSelector('anomalie-pointage-detail'))
-      .find('summary')
-      .click();
-  };
-
-  const thenTheCorrectedTerminatingFactIsReachable = (): void => {
-    cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
-    cy.location('search').should('equal', `?pointage=${finFixture}`);
-    cy.location('hash').should('equal', `#pointage-${remplacementFixture}`);
-    cy.get(dataSelector('conflit-diagnostic-terminaison'))
-      .should('contain.text', 'lundi 14 septembre à 12:01:00')
-      .and('contain.text', 'Non-conformité · Transition');
-    cy.get(dataSelector('conflit-diagnostic-pointage')).should('contain.text', 'Fin · Fin ciblée');
-    cy.get(dataSelector('conflit-diagnostic-ouvrant')).should('contain.text', 'Travail · Ouverture');
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
+  const thenTheConflictIsSaidInOneSentenceNamingTheCorrectedTermination = (): void => {
+    cy.get(dataSelector('anomalie-probleme'))
       .should('have.length', 1)
-      .and('be.visible')
+      .and('have.text', 'L’arrêt de 17:00 vise le travail, remplacé à 12:01 par un passage en NC.');
+  };
+
+  const thenTheCorrectedTerminatingFactIsTraceable = (): void => {
+    cy.get(dataSelector('anomalie-selection'))
+      .should('be.visible')
       .within(() => {
         cy.get(dataSelector('anomalie-pointage-detail'))
-          .should('have.prop', 'open', true)
           .contains('p', 'Crée l’activité Non-conformité · ')
           .should('be.visible')
           .and('not.contain.text', ncFixture);
-        cy.contains('p', /^Remplace le pointage .+ · Non-conformité · Transition$/)
+        cy.contains('p', /^Remplace le pointage .+ · Passage en NC$/)
           .should('be.visible')
           .and('not.contain.text', ncFixture);
       });
@@ -167,29 +158,28 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheRealConflictListIsVisible();
   });
 
-  it('should retain the dossier route and anchor while following the named activity opening', () => {
+  it('should draw on the frise an arrow from the end at fault to the activity it aims at, within the current dossier route', () => {
     givenRealResolutionReplies();
 
     whenOpeningTheRealDossier();
-    whenFollowingTheReceivedActivityOpening();
+    whenSelectingTheReceivedActivityOpening();
 
-    thenTheOpeningRemainsWithinTheCurrentDossier();
+    thenTheArrowReachesTheActivityWithinTheCurrentDossier();
   });
 
-  const whenFollowingTheReceivedActivityOpening = (): void => {
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${finFixture}`)
-      .contains('a', 'Travail · lundi 14 septembre à 08:00')
-      .click();
+  const whenSelectingTheReceivedActivityOpening = (): void => {
+    whenSelectingActivity(debutFixture);
   };
 
-  const thenTheOpeningRemainsWithinTheCurrentDossier = (): void => {
+  const thenTheArrowReachesTheActivityWithinTheCurrentDossier = (): void => {
+    cy.get(dataSelector('anomalie-frise-fleche'))
+      .should('have.length', 1)
+      .and('have.attr', 'data-pointage', finFixture)
+      .and('have.attr', 'data-activite', debutFixture);
     cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
     cy.location('search').should('equal', `?pointage=${finFixture}`);
-    cy.location('hash').should('equal', `#pointage-${debutFixture}`);
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${debutFixture}`)
-      .should('be.visible');
+    cy.location('hash').should('equal', '');
+    thenActivityIsSelected(debutFixture);
   };
 
   it('should preserve a precise arbitrary correction through preview and confirmation and refresh the authoritative list', () => {
@@ -327,6 +317,12 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
   };
 
+  const whenOpeningTheRealDossierFromTheList = (): void => {
+    cy.visit(
+      `/anomalies/${suiviFixture}?nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=2&pointage=${finFixture}`,
+    );
+  };
+
   const whenOpeningTheRealDossierFromTheConflicts = (): void => {
     cy.visit(`/anomalies/${suiviFixture}?nature=CONFLIT&pointage=${finFixture}`);
   };
@@ -394,9 +390,72 @@ describe('HTTP conflict resolution in Gestion', () => {
     });
   };
 
+  const givenACanonicalResultLeavingAnAutomaticEnd = (): void => {
+    const apres = {
+      ...dossierFixture(true),
+      finAutomatique: true,
+      activites: activitesFixture(true).map(activite =>
+        activite.activite === ncFixture ? { ...activite, etat: 'ECHUE' as const } : activite,
+      ),
+    } satisfies components['schemas']['RestDossierAnomalie'];
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierFixture() });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}/apercus`, request => {
+      const body = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: {
+          commande: body.commande,
+          adresse: ligneFixture.adresse,
+          revision: 3,
+          evaluation: '2026-10-04T10:00:00Z',
+          empreinteConsequences: 'empreinte-correction',
+          evenement: remplacementFixture,
+          acte: correctionFixture,
+          avant: dossierFixture(),
+          apres,
+        } satisfies components['schemas']['RestApercuDeResolution'],
+      });
+    });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, request => {
+      const body = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      request.reply({
+        body: { ...confirmationFixture(body.commande), dossier: apres } satisfies components['schemas']['RestConfirmationEnregistree'],
+      });
+    });
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${ncFixture}`, {
+      body: {
+        ...apres,
+        kind: 'FIN_AUTOMATIQUE',
+        adresse: { suivi: suiviFixture, pointage: ncFixture },
+        revision: 4,
+      } satisfies components['schemas']['RestDossierAnomalie'],
+    });
+  };
+
+  const whenConfirmingThePreviewLeavingAnAutomaticEnd = (): void => {
+    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Après cet acte : conflit levé · fin automatique restante');
+    cy.get(dataSelector('anomalie-fin-automatique-restante')).should('not.exist');
+    cy.get(dataSelector('anomalie-confirmer')).click();
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Conflit levé · fin automatique restante');
+  };
+
+  const whenOpeningTheRemainingAutomaticEnd = (): void => {
+    cy.get(dataSelector('anomalie-fin-automatique-restante')).should('have.length', 1).click();
+  };
+
+  const thenTheAutomaticEndIsOpenedWithTheWayBackToTheList = (): void => {
+    cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
+    cy.location('search').should(
+      'equal',
+      `?nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=2&pointage=${ncFixture}`,
+    );
+    cy.get(dataSelector('anomalie-resultat')).should('not.exist');
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Échue');
+    cy.get(dataSelector('anomalie-retour')).should('have.attr', 'href').and('contain', 'nature=CONFLIT').and('contain', 'page=2');
+  };
+
   const whenConfirmingThePreviewWithARemainingConflict = (): void => {
     cy.get(dataSelector('anomalie-confirmer')).click();
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Acte enregistré, anomalie restante');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Acte enregistré, conflit restant');
   };
 
   const whenOpeningTheRemainingConflict = (): void => {
@@ -405,7 +464,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const thenTheClosedElementShowsTheExplicitRemainingConflict = (): void => {
-    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, anomalie restante');
+    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, conflit restant');
     cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
     cy.location('search').should('equal', `?pointage=${ncFixture}`);
     cy.get(dataSelector('anomalie-cloture')).should('contain.text', 'Clôturé');
@@ -418,14 +477,28 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get(dataSelector('anomalie-champs-detail')).click();
     whenTypingTheInstant(instantCorrigeLocalFixture);
     cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu')).should('contain.text', '4 h').and('contain.text', '5 h 1 min');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.length', 2);
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).first().should('have.attr', 'aria-label').and('contain', '4 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).last().should('have.attr', 'aria-label').and('contain', '5 h 1 min');
   };
 
   const whenConfirmingTheRealPreview = (): void => {
     cy.get(dataSelector('anomalie-confirmer')).click();
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
-    cy.get(dataSelector('anomalie-pointage')).invoke('text').as('journalCanonique', { type: 'static' });
-    cy.get(dataSelector('anomalie-activite')).invoke('text').as('dureesCanoniques', { type: 'static' });
+    cy.get(dataSelector('anomalie-pointage'))
+      .then(markers =>
+        markers
+          .toArray()
+          .map(marker => marker.getAttribute('aria-label'))
+          .join(' | '),
+      )
+      .as('journalCanonique', { type: 'static' });
+    whenSelectingPointage(remplacementFixture);
+    cy.get(dataSelector('anomalie-selection')).invoke('text').as('remplacantCanonique', { type: 'static' });
+    cy.get(dataSelector('anomalie-activite')).eq(0).click();
+    cy.get(dataSelector('anomalie-selection')).invoke('text').as('dureeDuTravail', { type: 'static' });
+    cy.get(dataSelector('anomalie-activite')).eq(1).click();
+    cy.get(dataSelector('anomalie-selection')).invoke('text').as('dureeDeLaNonConformite', { type: 'static' });
   };
 
   const whenReturningToTheRealList = (): void => {
@@ -441,12 +514,12 @@ describe('HTTP conflict resolution in Gestion', () => {
       empreinteConsequences: 'empreinte-correction',
       evenement: remplacementFixture,
     });
-    cy.get('@journalCanonique')
-      .should('contain', 'lundi 14 septembre à 17:01:00')
-      .and('contain', 'Pointage annulé')
-      .and('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée')
+    cy.get('@journalCanonique').should('contain', '17:01:00 · Arrêt · régularisé').and('contain', 'annulé');
+    cy.get('@remplacantCanonique')
+      .should('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
       .and('not.contain', `Remplace le pointage ${finFixture}`);
-    cy.get('@dureesCanoniques').should('contain', '4 h').and('contain', '5 h 1 min');
+    cy.get('@dureeDuTravail').should('contain', '4 h');
+    cy.get('@dureeDeLaNonConformite').should('contain', '5 h 1 min');
     cy.wait('@listeApresResolution');
     cy.get(dataSelector('anomalies-vide')).should('contain.text', 'Aucun conflit');
     cy.get(dataSelector('anomalies-demo')).should('not.exist');

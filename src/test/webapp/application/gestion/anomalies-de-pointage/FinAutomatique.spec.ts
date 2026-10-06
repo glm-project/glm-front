@@ -1,5 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
+import { abscisseDeLHeure } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
 import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
@@ -27,6 +29,11 @@ import {
   thenTheInstantFieldsShow,
   whenTypingTheInstant,
 } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import {
+  thenActivityIsSelected,
+  whenSelectingActivity,
+  whenSelectingPointage,
+} from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const urlApercu = `${urlDossier}/apercus`;
@@ -70,9 +77,53 @@ describe('Automatic end of an activity in Gestion', () => {
     whenDatingTheEnd();
     whenPreviewingTheEndRegularisation();
     whenConfirmingTheEndRegularisation();
+    whenSelectingActivity(activiteFinAutomatiqueFixture);
 
     thenTheAnomalyIsProcessedFromTheReceipt();
   });
+
+  it('should invent no hour and keep the preview unavailable until the manager places the end on the frise', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+
+    whenOpeningTheAutomaticEnd();
+    whenChoosingTheEndRegularisation();
+
+    thenNoHourIsInventedAndThePreviewIsUnavailable();
+  });
+
+  it('should regularise an automatic end by placing its real end on the frise', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+
+    whenOpeningTheAutomaticEnd();
+    whenChoosingTheEndRegularisation();
+    whenClickingThePointagesRowAt(instantRegulariseLocalFixture);
+    whenPreviewingTheEndRegularisation();
+
+    thenThePreviewWasAskedForTheClickedHour();
+  });
+
+  const thenNoHourIsInventedAndThePreviewIsUnavailable = (): void => {
+    thenTheInstantFieldsAreEmpty();
+    cy.get(dataSelector('anomalie-poignee')).should('not.exist');
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-frise-aide')).should('be.visible');
+  };
+
+  const whenClickingThePointagesRowAt = (instant: Date): void => {
+    const heures = instant.getHours() + instant.getMinutes() / 60;
+    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
+      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+      abscisseDeLHeure(heures).then(clientX => {
+        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
+      });
+    });
+  };
+
+  const thenThePreviewWasAskedForTheClickedHour = (): void => {
+    thenTheInstantFieldsShow(instantRegulariseLocalFixture);
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
+    cy.wait('@apercu').its('request.body.acte.fait.instant').should('eq', instantRegulariseSaisiFixture);
+  };
 
   const givenAnAutomaticEndRegularisedByTheBackend = (): void => {
     cy.intercept('GET', urlDossier, { body: dossierFinAutomatiqueFixture() }).as('dossier');
@@ -93,11 +144,14 @@ describe('Automatic end of an activity in Gestion', () => {
   };
 
   const whenChoosingTheEndRegularisation = (): void => {
-    cy.get(dataSelector('anomalie-fin-automatique-activite'))
+    cy.get(dataSelector('anomalie-selection'))
       .should('contain.text', 'Début lundi 14 septembre à 08:00')
       .and('contain.text', 'Fin automatique lundi 14 septembre à 21:00')
-      .and('contain.text', 'Durée 13 h');
-    cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
+      .and('contain.text', 'Échue · 13 h');
+    thenActivityIsSelected(activiteFinAutomatiqueFixture);
+    cy.get(dataSelector('anomalie-probleme'))
+      .should('have.length', 1)
+      .and('have.text', 'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 21:00.');
     cy.get(dataSelector('anomalie-choix')).should('have.length', 1).and('contain.text', 'Régulariser la fin').click();
   };
 
@@ -112,9 +166,8 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenPreviewingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu'))
-      .should('contain.text', 'Terminée · 9 h')
-      .and('contain.text', 'Anomalie traitée après enregistrement');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.attr', 'aria-label').and('contain', 'Terminée · 9 h');
+    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Après cet acte : anomalie traitée');
   };
 
   const whenConfirmingTheEndRegularisation = (): void => {
@@ -123,10 +176,9 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const thenTheAnomalyIsProcessedFromTheReceipt = (): void => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
-    cy.get(dataSelector('anomalie-fin-automatique')).should('not.exist');
-    cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
+    cy.get(dataSelector('anomalie-probleme')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 2);
-    cy.get(dataSelector('anomalie-activite')).should('contain.text', 'Terminée · 9 h');
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Terminée · 9 h');
     cy.get(dataSelector('anomalie-confirmer')).should('not.exist');
     cy.wait('@apercu')
       .its('request.body.acte')
@@ -186,8 +238,17 @@ describe('Automatic end of an activity in Gestion', () => {
     whenGivingTheReasonOfTheCorrection();
     whenPreviewingTheCorrection();
     whenConfirmingTheEndRegularisation();
+    whenSelectingPointage(finTardiveFixture);
 
     thenTheCorrectionIsProcessedFromTheReceipt();
+  });
+
+  it('should say in one sentence which pointage came after the due time', () => {
+    givenALateEndCorrectedByTheBackend();
+
+    whenOpeningTheAutomaticEnd();
+
+    thenTheLateEndIsSaid();
   });
 
   const givenALateEndCorrectedByTheBackend = (): void => {
@@ -204,6 +265,12 @@ describe('Automatic end of an activity in Gestion', () => {
     }).as('confirmation');
   };
 
+  const thenTheLateEndIsSaid = (): void => {
+    cy.get(dataSelector('anomalie-probleme'))
+      .should('have.length', 1)
+      .and('have.text', 'L’arrêt de 23:00 vise le travail, déjà terminé automatiquement à 21:00.');
+  };
+
   const whenChoosingTheLateEndCorrection = (): void => {
     cy.get(dataSelector('anomalie-choix')).should('contain.text', 'Corriger la fin pointée après l’échéance').click();
     thenTheInstantFieldsShow(instantTardifLocalFixture);
@@ -216,12 +283,12 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenPreviewingTheCorrection = (): void => {
     cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Terminée · 15 h');
+    cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.attr', 'aria-label').and('contain', 'Terminée · 15 h');
   };
 
   const thenTheCorrectionIsProcessedFromTheReceipt = (): void => {
     cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
-    cy.get(dataSelector('conflit-diagnostic')).should('not.exist');
+    cy.get(dataSelector('anomalie-probleme')).should('not.exist');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
     cy.get(dataSelector('anomalie-annulation')).should('have.length', 1).and('contain.text', motifFinAutomatiqueFixture);
     cy.wait('@apercu')
@@ -289,7 +356,7 @@ describe('Automatic end of an activity in Gestion', () => {
       .and('not.match', /[0-9a-f]{8}-[0-9a-f]{4}-/i);
     cy.get(dataSelector('anomalie-apercu')).should('not.exist');
     thenTheInstantFieldsShow(instantRegulariseLocalFixture);
-    cy.get(dataSelector('anomalie-fin-automatique')).should('be.visible');
+    cy.get(dataSelector('anomalie-probleme')).should('be.visible');
   };
 
   it('should reacquire the dossier after an obsolete confirmation and require a new preview of the same end', () => {

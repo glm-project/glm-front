@@ -5,9 +5,11 @@ import { PointageAnomalieId } from '../dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../dossier/SuiviAnomalieId';
 import { ActeResolution, FaitPropose } from './ActeResolution';
 import { ApercuAnomalie } from './AnomaliesActesPorts';
+import { CadreDuFait } from './CadreDuFait';
 import { ResolutionDeLAnomalie } from './ResolutionDeLAnomalie';
 import { SaisieActe } from './SaisieActe';
 
+const cadreOuvert = CadreDuFait.depuis([], '2026-09-15T00:00:00Z');
 const dossierFixture: DossierAnomalie = {
   etat: 'EN_CONFLIT',
   ligne: {
@@ -24,7 +26,15 @@ const dossierFixture: DossierAnomalie = {
   cloture: false,
   engagement: '2026-09-14T08:00:00+02:00',
   journal: [],
-  activites: [{ id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail', etat: 'A_RESOUDRE', temps: 'À résoudre' }],
+  activites: [
+    {
+      id: new ActiviteAnomalieId('travail-8'),
+      libelle: 'Travail',
+      etat: 'A_RESOUDRE',
+      temps: 'À résoudre',
+      ouvrant: new PointageAnomalieId('debut-8'),
+    },
+  ],
   choix: [],
   enConflit: true,
   finAutomatique: false,
@@ -236,6 +246,6 @@ describe('Explicit confirmation of a resolution', () => {
     const modifiee = resolution.afterChange({ motif: 'Autre décision' });
 
     expect(modifiee.confirmation()).toBeUndefined();
-    expect(modifiee.saisie.command()).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Autre décision' });
+    expect(modifiee.saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Autre décision' });
   });
 });

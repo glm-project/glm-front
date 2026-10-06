@@ -1,4 +1,13 @@
+import { IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
 import { CodeRefusActe } from '../../domain/acte/AnomaliesActesPorts';
+
+export interface ActiviteDansUnePhrase {
+  readonly defini: string;
+  readonly indefini: string;
+  readonly accord: string;
+}
+
+const FAIT_DANS_LE_FUTUR = 'La date et l’heure du fait ne peuvent pas être dans le futur.';
 
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   ACTE_REQUIS: 'Choisissez un acte.',
@@ -8,6 +17,8 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   CIBLE_REQUISE: 'Choisissez l’activité visée.',
   CIBLE_INTERDITE: 'Une ouverture ne vise aucune activité ; effacez explicitement la cible.',
   INSTANT_INVALIDE: 'Renseignez la date et l’heure du fait.',
+  INSTANT_AVANT_CIBLE: 'Le fait ne peut pas précéder le début de l’activité qu’il termine.',
+  INSTANT_FUTUR: FAIT_DANS_LE_FUTUR,
   INTENTION_INCOMPATIBLE: 'Le type et l’intention ne sont pas compatibles.',
   TYPE_REQUIS: 'Choisissez le type du pointage.',
   INTENTION_REQUISE: 'Choisissez son intention.',
@@ -27,29 +38,112 @@ const REFUS_ACTE: Readonly<Record<CodeRefusActe, string>> = {
   'evenement-deja-annule': 'Le pointage est déjà annulé.',
   'evenement-anterieur-a-l-engagement': 'Le fait est antérieur à l’engagement de l’élément.',
   'identifiant-evenement-reutilise': 'Le pointage à créer existe déjà. Demandez un nouvel aperçu.',
-  'date-de-survenue-future': 'La date et l’heure du fait ne peuvent pas être dans le futur.',
+  'date-de-survenue-future': FAIT_DANS_LE_FUTUR,
 };
 
+const GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPointage, string>>>>> = {
+  DEBUT: { OUVERTURE: 'Démarrage', TRANSITION: 'Retour en bon' },
+  NON_CONFORMITE: { OUVERTURE: 'Démarrage en NC', TRANSITION: 'Passage en NC' },
+  FIN: { FIN: 'Arrêt' },
+};
+
+const SYMBOLES_DES_GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPointage, string>>>>> = {
+  DEBUT: { OUVERTURE: '▶', TRANSITION: '◇' },
+  NON_CONFORMITE: { OUVERTURE: '▷', TRANSITION: '◆' },
+  FIN: { FIN: '■' },
+};
+
+const ACTIVITES_DE_PHRASE = {
+  TRAVAIL: { defini: 'le travail', indefini: 'un travail', accord: '' },
+  NON_CONFORMITE: { defini: 'la non-conformité', indefini: 'une non-conformité', accord: 'e' },
+  INCONNUE: { defini: 'l’activité', indefini: 'une activité', accord: 'e' },
+} as const satisfies Readonly<Record<string, ActiviteDansUnePhrase>>;
+
+type Activite = ActiviteDansUnePhrase;
+
+const PROBLEMES = {
+  activites: ACTIVITES_DE_PHRASE,
+  pointageNonResolu: 'Un pointage non résolu',
+  regularise: 'régularisé',
+  memeCategorie: 'de même catégorie',
+  categories: { TRAVAIL: 'en bon', NON_CONFORMITE: 'en NC' },
+  conflit: {
+    CIBLE_REMPLACEE: {
+      avec: (sujet: string, cible: Activite, heure: string, terminant: string) =>
+        `${sujet} vise ${cible.defini}, remplacé${cible.accord} à ${heure} par ${terminant}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} qui n’est plus en cours.`,
+    },
+    CIBLE_DEJA_TERMINEE: {
+      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.defini}, déjà arrêté${cible.accord} à ${heure}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord}.`,
+    },
+    GESTE_AVANT_OUVERTURE: {
+      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} démarré${cible.accord} à ${heure}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} pas encore démarré${cible.accord}.`,
+    },
+    OUVRANT_ANNULE: {
+      avec: (sujet: string, cible: Activite, ouvrant: string) => `${sujet} vise ${cible.indefini} dont ${ouvrant} est annulé.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} dont le démarrage est annulé.`,
+    },
+    TRANSITION_MEME_CATEGORIE: {
+      avec: (sujet: string, cible: Activite, heure: string, categorie: string) =>
+        `${sujet} vise ${cible.defini} démarré${cible.accord} à ${heure}, déjà ${categorie}.`,
+      sans: (sujet: string, cible: Activite, categorie: string) => `${sujet} vise ${cible.indefini} déjà ${categorie}.`,
+    },
+    CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: {
+      avec: (sujet: string, cible: Activite, heure: string) =>
+        `${sujet} vise ${cible.defini} de ${heure}, déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+      sans: (sujet: string, cible: Activite) =>
+        `${sujet} vise ${cible.indefini} déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+    },
+    CONTRADICTION_REGULARISATION: {
+      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord} à ${heure}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} prolongé${cible.accord} par une régularisation.`,
+    },
+  },
+  finAutomatique: {
+    pointageTardif: (sujet: string, cible: Activite, fin: string) =>
+      `${sujet} vise ${cible.defini}, déjà terminé${cible.accord} automatiquement à ${fin}.`,
+    sansFin: (cible: Activite, debut: string, fin: string) =>
+      `${cible.defini} démarré${cible.accord} à ${debut} n’a jamais été arrêté${cible.accord} : fin automatique à ${fin}.`,
+    terminee: (cible: Activite, debut: string, fin: string) =>
+      `${cible.defini} démarré${cible.accord} à ${debut} a été terminé${cible.accord} automatiquement à ${fin}.`,
+  },
+} as const;
+
 export const LIBELLES_ANOMALIES = {
-  detail: 'Un pointage manque dans la chronologie ?',
-  pourquoi: 'Pourquoi ces pointages sont incohérents',
-  finAutomatique: 'Fin automatique',
-  finAutomatiqueExplication:
-    'Aucune fin réelle n’a terminé cette activité : elle a été terminée automatiquement à son échéance. Indiquez l’heure réelle de fin ou corrigez le pointage tardif.',
+  detail: 'Un pointage manque sur la frise ?',
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
-  duree: 'Durée',
-  tracabilite: 'Voir les détails et l’enregistrement',
+  fin: 'Fin',
   corriger: 'Corriger ce pointage',
   regulariser: 'Régulariser un fait manquant',
   annuler: 'Annuler ce pointage',
   verifier: 'Vérifier le reçu de confirmation',
   reprendreConfirmation: 'Reprendre la même confirmation',
   modifierFait: 'Consulter ou modifier le fait proposé',
+  decalerInstant: 'Décaler l’heure du fait',
+  moinsCinqMinutes: '−5 min',
+  plusCinqMinutes: '+5 min',
   cloture: 'Clôturé',
   ouvert: 'Ouvert',
   continuation: 'Autres conflits du suivi',
-  apercuRestant: 'Après cet acte : anomalie restante',
+  traiterLaFinAutomatiqueRestante: (rang: number, total: number) =>
+    total === 1 ? 'Traiter la fin automatique restante' : `Traiter la fin automatique restante (${rang} sur ${total})`,
+  issue: {
+    apercu: {
+      TRAITEE: 'Après cet acte : anomalie traitée',
+      CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'Après cet acte : conflit levé · fin automatique restante',
+      CONFLIT_RESTANT: 'Après cet acte : conflit restant',
+      ANOMALIE_RESTANTE: 'Après cet acte : anomalie restante',
+    },
+    recu: {
+      TRAITEE: 'Anomalie traitée',
+      CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'Conflit levé · fin automatique restante',
+      CONFLIT_RESTANT: 'Acte enregistré, conflit restant',
+      ANOMALIE_RESTANTE: 'Acte enregistré, anomalie restante',
+    },
+  },
   etats: {
     A_RESOUDRE: 'À résoudre',
     EN_COURS: 'En cours',
@@ -103,15 +197,13 @@ export const LIBELLES_ANOMALIES = {
   confirmer: 'Enregistrer cette décision',
   apercu: 'Vérifier avant d’enregistrer',
   comparerJournal: 'Comparer tous les pointages avant et après',
-  apercuResolu: 'Anomalie traitée après enregistrement de cette décision.',
   avant: 'Avant',
   apres: 'Après cet acte',
-  restant: 'Acte enregistré, anomalie restante',
-  resolu: 'Anomalie traitée',
   annule: 'Pointage annulé',
   remplace: 'Remplace le pointage',
   remplaceNonResolu: 'Remplace un pointage non résolu',
   regularisation: 'Régularisation',
+  pointeApresLEcheance: 'Pointé après l’échéance',
   droits: 'La correction est réservée aux gestionnaires. Vous pouvez consulter les faits.',
   erreurLecture: 'Le dossier n’a pas pu être chargé.',
   reessayer: 'Réessayer',
@@ -140,8 +232,10 @@ export const LIBELLES_ANOMALIES = {
   cible: 'Vise l’activité',
   creee: 'Crée l’activité',
   enregistrement: 'Enregistré le',
-  activites: 'Activités concernées',
   decision: 'Votre décision',
+  selection: 'Sélection',
+  selectionVide: 'Sélectionnez un pointage ou une activité sur la frise pour voir ses détails.',
+  pointagesEtActivites: 'Pointages et activités',
   choisir:
     'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',
   choix: {
@@ -166,6 +260,7 @@ export const LIBELLES_ANOMALIES = {
       explication: 'La transition pointée après l’échéance est reprise avec son heure. Renseignez un motif, puis vérifiez l’aperçu.',
     },
   },
+  gestes: GESTES,
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' },
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
   titre: 'Anomalies de pointage',
@@ -181,20 +276,21 @@ export const LIBELLES_ANOMALIES = {
   posteNonResolu: 'Poste non résolu',
   faits: 'Faits',
   diagnostic: 'Contradiction',
-  raisons: {
-    CIBLE_REMPLACEE: 'remplacée',
-    CIBLE_DEJA_TERMINEE: 'déjà terminée',
-    GESTE_AVANT_OUVERTURE: 'non encore ouverte à l’instant du geste',
-    OUVRANT_ANNULE: 'dont le pointage d’ouverture est annulé',
-    TRANSITION_MEME_CATEGORIE: 'dans une transition de même catégorie',
-    CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: 'échue avec une autre activité présente',
-    CONTRADICTION_REGULARISATION: 'dans une contradiction de régularisation',
+  frise: {
+    annule: 'annulé',
+    regularise: 'régularisé',
+    enCause: 'en cause',
+    tardif: 'pointé après l’échéance',
+    heureRemplacee: 'heure remplacée',
+    modifiee: 'modifiée',
+    faitDeLActe: 'posé par cet acte',
+    pointages: 'Pointages',
+    poignee: 'Heure proposée du fait',
+    placerLHeure: 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.',
+    badgeRegularise: 'R',
+    badgeTardif: '!',
+    symboles: SYMBOLES_DES_GESTES,
+    symboleInconnu: '•',
   },
-  diagnosticPointage: 'Le pointage',
-  diagnosticPointageNonResolu: 'Un pointage non résolu',
-  diagnosticCible: 'vise l’activité',
-  diagnosticOuvrant: 'Ouverte par le pointage',
-  diagnosticOuvrantNonResolu: 'Ouverte par un pointage non résolu',
-  diagnosticTerminaison: 'Terminée par le pointage',
-  diagnosticTerminaisonNonResolu: 'Terminée par un pointage non résolu',
+  problemes: PROBLEMES,
 } as const;

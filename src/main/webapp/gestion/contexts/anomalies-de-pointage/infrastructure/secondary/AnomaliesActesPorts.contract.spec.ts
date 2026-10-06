@@ -91,6 +91,25 @@ const dossierFixture = (
   },
 });
 
+const dossierAvecUneActiviteEchue = (
+  kind: 'ANCRE_ANNULEE' | 'FIN_AUTOMATIQUE',
+  revision: number,
+): components['schemas']['RestDossierAnomalie'] => ({
+  ...dossierFixture(kind, revision),
+  activites: [
+    {
+      evenement: 'debut-8',
+      activite: 'travail-8',
+      operateurId: 'op-camille',
+      categorie: 'TRAVAIL',
+      debut: '2026-09-14T08:00:00.123456789+02:00',
+      fin: '2026-09-14T21:00:00.123456789+02:00',
+      duree: 'PT13H',
+      etat: 'ECHUE',
+    },
+  ],
+});
+
 describe('Beyond the contract: HTTP anomaly actes', () => {
   let preview: PrevisualisationAnomaliePort;
   let application: ApplicationActePort;
@@ -377,6 +396,26 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
     const resultat = await apercu;
 
     expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { apres: { etat: 'ANCRE_ANNULEE', finAutomatique: true } } });
+  });
+
+  it('should read the opening pointage of each activity of the previewed dossier', async () => {
+    const apercu = preview.preview(adresseFixture, 7, finRegulariseeFixture);
+
+    whenPreviewAnswers(finRegulariseeRecueFixture, { apres: dossierAvecUneActiviteEchue('ANCRE_ANNULEE', 8) });
+    const resultat = await apercu;
+
+    expect(resultat).toMatchObject({ kind: 'APERCU', apercu: { apres: { activites: [{ ouvrant: new PointageAnomalieId('debut-8') }] } } });
+  });
+
+  it('should read the opening pointage of each activity of the received dossier', async () => {
+    const recu = confirmationFixture();
+    recu.dossier = dossierAvecUneActiviteEchue('ANCRE_ANNULEE', 9);
+
+    const confirmation = application.apply(propositionFixture);
+    whenConfirmationAnswers(recu);
+    const resultat = await confirmation;
+
+    expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { activites: [{ ouvrant: new PointageAnomalieId('debut-8') }] } });
   });
 
   it('should confirm an end regularisation and receive the canonical dossier without anomaly', async () => {

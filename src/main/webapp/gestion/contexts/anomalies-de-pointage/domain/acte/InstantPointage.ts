@@ -1,3 +1,5 @@
+const UNE_MINUTE = 60_000;
+
 export class InstantPointage {
   constructor(readonly value: string) {}
 
@@ -13,6 +15,15 @@ export class InstantPointage {
 
   compareTo(other: InstantPointage): number {
     return Date.parse(this.value) - Date.parse(other.value) || this.fractionSeconde() - other.fractionSeconde();
+  }
+
+  firstWholeMinute(): number {
+    const minute = Math.ceil(Date.parse(this.value) / UNE_MINUTE) * UNE_MINUTE;
+    return new InstantPointage(new Date(minute).toISOString()).compareTo(this) < 0 ? minute + UNE_MINUTE : minute;
+  }
+
+  lastWholeMinute(): number {
+    return Math.floor(Date.parse(this.value) / UNE_MINUTE) * UNE_MINUTE;
   }
 
   private fractionSeconde(): number {
