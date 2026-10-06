@@ -1,5 +1,6 @@
 import { SaisieActe } from '../../../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
+import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { placementDuDossier, poigneeDuDossier } from './PoigneeDeFrise';
 
 describe('Handle of the proposed instant', () => {
@@ -37,6 +38,7 @@ describe('Handle of the proposed instant', () => {
           libelle: '',
           etat: 'ECHUE' as const,
           temps: '',
+          ouvrant: new PointageAnomalieId('debut-8'),
           periode: { categorie: 'TRAVAIL' as const, debut },
         },
       ];

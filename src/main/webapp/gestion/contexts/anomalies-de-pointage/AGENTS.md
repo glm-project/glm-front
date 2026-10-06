@@ -209,10 +209,18 @@ Une activité en cours reste sans temps définitif ; une activité terminée ou 
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
 
 Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le
-modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. « Anomalie traitée » signifie ni
-`enConflit` ni `finAutomatique`, quel que soit l'état d'adresse : une adresse `ANCRE_ANNULEE` peut rester
-en fin automatique lorsque l'ouvrant corrigé est encore échu. Le domaine la pose en question nommée
-(`anomalieTraitee`), que l'aperçu et le reçu appellent. L'en-tête du dossier dit le problème en une phrase
+modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. L'issue d'un acte est la projection
+`IssueDeLAnomalie.depuis` (`domain/dossier/`), que l'aperçu et le reçu appellent : « traitée » signifie ni `enConflit` ni
+`finAutomatique`, quel que soit l'état d'adresse (une adresse `ANCRE_ANNULEE` peut rester en fin automatique lorsque
+l'ouvrant corrigé est encore échu). Elle dépend de la nature du dossier d'origine, celui affiché avant l'acte : un
+conflit (`etat` autre que `FIN_AUTOMATIQUE` et `enConflit`) a trois issues, `TRAITEE`,
+`CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE` et `CONFLIT_RESTANT` ; une fin automatique (tout autre dossier) en a deux,
+`TRAITEE` et `ANOMALIE_RESTANTE`, et ne se présente jamais comme un conflit. Elle rend aussi l'adresse de chaque fin
+automatique restante, une par activité `ECHUE` du dossier d'après : `{ suivi, pointage: activite.ouvrant }`, l'`ouvrant`
+étant l'`evenement` reçu de l'activité. L'aperçu lit son origine dans `apercu.avant` et dit la phrase sans lien ; le
+reçu la dit avec un lien `anomalie-fin-automatique-restante` par fin restante vers `/anomalies/{suivi}?pointage={ouvrant}`,
+qui garde `nature`, `operateur`, `element` et `page`. La page retient le dossier d'origine avant de le remplacer par
+celui du reçu (confirmation, reprise ou vérification). Les phrases vivent dans `LIBELLES_ANOMALIES.issue`. L'en-tête du dossier dit le problème en une phrase
 (`anomalie-probleme`, `phrasesDuProbleme` du primaire, modèles dans `LIBELLES_ANOMALIES.problemes`) : une par
 diagnostic d'un conflit à expliquer (`conflitAExpliquer`, soit `enConflit` ; sans diagnostic reçu, l'explication de
 la ligne), une par activité échue d'une fin automatique. Elle disparaît dès que le périmètre ne porte plus le problème, y

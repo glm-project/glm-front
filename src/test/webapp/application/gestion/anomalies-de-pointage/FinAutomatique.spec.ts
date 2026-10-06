@@ -166,7 +166,7 @@ describe('Automatic end of an activity in Gestion', () => {
   const whenPreviewingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-previsualiser')).click();
     cy.get(dataSelector('anomalie-apercu-activite-apres')).should('have.attr', 'aria-label').and('contain', 'Terminée · 9 h');
-    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Anomalie traitée après enregistrement');
+    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Après cet acte : anomalie traitée');
   };
 
   const whenConfirmingTheEndRegularisation = (): void => {

@@ -260,6 +260,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         activites: [
           {
             id: new ActiviteAnomalieId('travail-8'),
+            ouvrant: new PointageAnomalieId('debut-8'),
             etat: 'ECHUE',
             periode: {
               categorie: 'TRAVAIL',

@@ -634,6 +634,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
       libelle: 'Travail',
       etat: 'ECHUE',
       temps: 'PT1H',
+      ouvrant: new PointageAnomalieId('debut-8'),
       periode: { categorie: 'TRAVAIL', debut: '2026-09-14T11:00:00Z' },
     };
     preparation.choose(finARegulariserFixture.afterChange({ fait: { instant: '2026-09-14T10:59:59Z' } }));

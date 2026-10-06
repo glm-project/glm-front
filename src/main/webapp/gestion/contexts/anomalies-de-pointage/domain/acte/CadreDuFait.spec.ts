@@ -1,5 +1,6 @@
 import { ActiviteAnomalieId } from '../dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie } from '../dossier/DossierAnomalie';
+import { PointageAnomalieId } from '../dossier/PointageAnomalieId';
 import { CadreDuFait } from './CadreDuFait';
 
 const MAINTENANT = '2026-09-14T15:00:00-03:00';
@@ -9,6 +10,7 @@ const activite = (id: string, debut?: string): ActiviteAnomalie => ({
   libelle: 'Travail',
   etat: 'TERMINEE',
   temps: 'PT1H',
+  ouvrant: new PointageAnomalieId(`debut-${id}`),
   ...(debut === undefined ? {} : { periode: { categorie: 'TRAVAIL', debut } }),
 });
 

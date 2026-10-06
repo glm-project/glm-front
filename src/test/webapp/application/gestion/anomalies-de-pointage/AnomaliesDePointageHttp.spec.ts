@@ -1,10 +1,12 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import {
+  activitesFixture,
   confirmationFixture,
   correctionFixture,
   debutFixture,
   dossierFixture,
+  elementFixture,
   finFixture,
   givenTheElements,
   givenTheReferentiel,
@@ -54,6 +56,17 @@ describe('HTTP conflict resolution in Gestion', () => {
     whenOpeningTheRemainingConflict();
 
     thenTheClosedElementShowsTheExplicitRemainingConflict();
+  });
+
+  it('should follow the automatic end left by a lifted conflict and keep the way back to the list', () => {
+    givenACanonicalResultLeavingAnAutomaticEnd();
+
+    whenOpeningTheRealDossierFromTheList();
+    whenPreparingTheArbitraryCorrection();
+    whenConfirmingThePreviewLeavingAnAutomaticEnd();
+    whenOpeningTheRemainingAutomaticEnd();
+
+    thenTheAutomaticEndIsOpenedWithTheWayBackToTheList();
   });
 
   it('should reacquire changed data after an obsolete confirmation and retain the exact proposal for an explicit new preview', () => {
@@ -304,6 +317,12 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
   };
 
+  const whenOpeningTheRealDossierFromTheList = (): void => {
+    cy.visit(
+      `/anomalies/${suiviFixture}?nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=2&pointage=${finFixture}`,
+    );
+  };
+
   const whenOpeningTheRealDossierFromTheConflicts = (): void => {
     cy.visit(`/anomalies/${suiviFixture}?nature=CONFLIT&pointage=${finFixture}`);
   };
@@ -371,9 +390,72 @@ describe('HTTP conflict resolution in Gestion', () => {
     });
   };
 
+  const givenACanonicalResultLeavingAnAutomaticEnd = (): void => {
+    const apres = {
+      ...dossierFixture(true),
+      finAutomatique: true,
+      activites: activitesFixture(true).map(activite =>
+        activite.activite === ncFixture ? { ...activite, etat: 'ECHUE' as const } : activite,
+      ),
+    } satisfies components['schemas']['RestDossierAnomalie'];
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierFixture() });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}/apercus`, request => {
+      const body = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: {
+          commande: body.commande,
+          adresse: ligneFixture.adresse,
+          revision: 3,
+          evaluation: '2026-10-04T10:00:00Z',
+          empreinteConsequences: 'empreinte-correction',
+          evenement: remplacementFixture,
+          acte: correctionFixture,
+          avant: dossierFixture(),
+          apres,
+        } satisfies components['schemas']['RestApercuDeResolution'],
+      });
+    });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFixture}/confirmations-de-resolution`, request => {
+      const body = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      request.reply({
+        body: { ...confirmationFixture(body.commande), dossier: apres } satisfies components['schemas']['RestConfirmationEnregistree'],
+      });
+    });
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${ncFixture}`, {
+      body: {
+        ...apres,
+        kind: 'FIN_AUTOMATIQUE',
+        adresse: { suivi: suiviFixture, pointage: ncFixture },
+        revision: 4,
+      } satisfies components['schemas']['RestDossierAnomalie'],
+    });
+  };
+
+  const whenConfirmingThePreviewLeavingAnAutomaticEnd = (): void => {
+    cy.get(dataSelector('anomalie-apercu')).should('contain.text', 'Après cet acte : conflit levé · fin automatique restante');
+    cy.get(dataSelector('anomalie-fin-automatique-restante')).should('not.exist');
+    cy.get(dataSelector('anomalie-confirmer')).click();
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Conflit levé · fin automatique restante');
+  };
+
+  const whenOpeningTheRemainingAutomaticEnd = (): void => {
+    cy.get(dataSelector('anomalie-fin-automatique-restante')).should('have.length', 1).click();
+  };
+
+  const thenTheAutomaticEndIsOpenedWithTheWayBackToTheList = (): void => {
+    cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
+    cy.location('search').should(
+      'equal',
+      `?nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=2&pointage=${ncFixture}`,
+    );
+    cy.get(dataSelector('anomalie-resultat')).should('not.exist');
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Échue');
+    cy.get(dataSelector('anomalie-retour')).should('have.attr', 'href').and('contain', 'nature=CONFLIT').and('contain', 'page=2');
+  };
+
   const whenConfirmingThePreviewWithARemainingConflict = (): void => {
     cy.get(dataSelector('anomalie-confirmer')).click();
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Acte enregistré, anomalie restante');
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Acte enregistré, conflit restant');
   };
 
   const whenOpeningTheRemainingConflict = (): void => {
@@ -382,7 +464,7 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const thenTheClosedElementShowsTheExplicitRemainingConflict = (): void => {
-    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, anomalie restante');
+    cy.get('@resultatAvecContinuation').should('contain', 'Acte enregistré, conflit restant');
     cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
     cy.location('search').should('equal', `?pointage=${ncFixture}`);
     cy.get(dataSelector('anomalie-cloture')).should('contain.text', 'Clôturé');

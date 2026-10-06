@@ -355,11 +355,17 @@
           {{ libelles.reprendreConfirmation }}
         </button>
       </div>
-      } } @if (operation.kind === 'APPLIQUE') {
-      <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">
-        {{ anomalieTraitee(operation.dossier) ? libelles.resolu : libelles.restant }}
-      </p>
-      } } @if (dossier.continuations.length > 0) {
+      } } @if (operation.kind === 'APPLIQUE' && origine(); as origine) { @let issue = issueDe(origine, operation.dossier);
+      <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">{{ libelles.issue.recu[issue.kind] }}</p>
+      @for (adresse of issue.finsAutomatiquesRestantes; track adresse.pointage.pointage; let indice = $index) {
+      <a
+        class="bouton mt-2 text-accent underline"
+        data-selector="anomalie-fin-automatique-restante"
+        [routerLink]="['/anomalies', adresse.suivi.suivi]"
+        [queryParams]="{ ...retour(), pointage: adresse.pointage.pointage }"
+        >{{ libelles.traiterLaFinAutomatiqueRestante(indice + 1, issue.finsAutomatiquesRestantes.length) }}</a
+      >
+      } } } @if (dossier.continuations.length > 0) {
       <nav class="mt-5 border-t border-border pt-4" [attr.aria-label]="libelles.continuation">
         <p class="mb-2 text-body-sm font-semibold">{{ libelles.continuation }}</p>
         @for (suite of dossier.continuations; track suite.adresse.pointage.pointage) {
@@ -403,7 +409,7 @@
         }
       </div>
       }
-      <p class="mt-4 text-body font-semibold">{{ anomalieTraitee(apercu.apres) ? libelles.apercuResolu : libelles.apercuRestant }}</p>
+      <p class="mt-4 text-body font-semibold">{{ libelles.issue.apercu[issueDe(apercu.avant, apercu.apres).kind] }}</p>
       <button
         type="button"
         class="bouton bouton-principal mt-4"

@@ -26,7 +26,15 @@ const dossierFixture: DossierAnomalie = {
   cloture: false,
   engagement: '2026-09-14T08:00:00+02:00',
   journal: [],
-  activites: [{ id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail', etat: 'A_RESOUDRE', temps: 'À résoudre' }],
+  activites: [
+    {
+      id: new ActiviteAnomalieId('travail-8'),
+      libelle: 'Travail',
+      etat: 'A_RESOUDRE',
+      temps: 'À résoudre',
+      ouvrant: new PointageAnomalieId('debut-8'),
+    },
+  ],
   choix: [],
   enConflit: true,
   finAutomatique: false,

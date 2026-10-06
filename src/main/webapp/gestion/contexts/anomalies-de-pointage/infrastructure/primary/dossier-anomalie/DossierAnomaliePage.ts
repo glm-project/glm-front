@@ -26,10 +26,10 @@ import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolu
 import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
-import { anomalieTraitee } from '../../../domain/dossier/AnomalieTraitee';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { IssueDeLAnomalie } from '../../../domain/dossier/IssueDeLAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
@@ -92,7 +92,8 @@ export class DossierAnomaliePage {
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly anomalieTraitee = anomalieTraitee;
+  protected readonly origine = signal<DossierAnomalie | undefined>(undefined);
+  protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLAnomalie.depuis(origine, apres);
   protected readonly problemes = phrasesDuProbleme;
   protected readonly pointagesTardifs = pointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
@@ -297,6 +298,7 @@ export class DossierAnomaliePage {
   private refreshAfterConfirmation(): void {
     const resultat = this.preparation.operation();
     if (resultat.kind === 'APPLIQUE') {
+      this.origine.set(this.dossier());
       this.lecture.value.set({ kind: 'DOSSIER', dossier: resultat.dossier });
     }
     this.refreshAfterConcurrency();

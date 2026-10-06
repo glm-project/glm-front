@@ -186,13 +186,13 @@ class RouteFixture {
 
 class RouterFixture {
   readonly events = EMPTY;
-  createUrlTree(_commands: unknown[], extras?: { queryParams?: Record<string, string | null | undefined>; fragment?: string | null }) {
+  createUrlTree(commands: unknown[], extras?: { queryParams?: Record<string, string | null | undefined>; fragment?: string | null }) {
     const queryParams = Object.entries(extras?.queryParams ?? {}).filter(([, value]) => value !== null && value !== undefined);
-    return { queryParams: Object.fromEntries(queryParams), fragment: extras?.fragment ?? null };
+    return { commands, queryParams: Object.fromEntries(queryParams), fragment: extras?.fragment ?? null };
   }
-  serializeUrl(tree: { queryParams: Record<string, string>; fragment: string | null }): string {
+  serializeUrl(tree: { commands: unknown[]; queryParams: Record<string, string>; fragment: string | null }): string {
     const fragment = tree.fragment === null ? '' : `#${tree.fragment}`;
-    return `/?${new URLSearchParams(tree.queryParams).toString()}${fragment}`;
+    return `${tree.commands.join('/')}?${new URLSearchParams(tree.queryParams).toString()}${fragment}`;
   }
 }
 
@@ -231,7 +231,15 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
       regularisation: false,
     },
   ],
-  activites: [{ id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail ouvert à 8 h', etat: 'A_RESOUDRE', temps: 'À résoudre' }],
+  activites: [
+    {
+      id: new ActiviteAnomalieId('travail-8'),
+      libelle: 'Travail ouvert à 8 h',
+      etat: 'A_RESOUDRE',
+      temps: 'À résoudre',
+      ouvrant: new PointageAnomalieId('debut-8'),
+    },
+  ],
   choix: [
     {
       id: 'rattacher',
@@ -302,6 +310,7 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
         libelle: '',
         etat: 'ECHUE',
         temps: '',
+        ouvrant: new PointageAnomalieId('debut-8'),
         periode: { categorie: 'TRAVAIL', debut: INSTANT_DEBUT, fin: INSTANT_ECHEANCE, duree: 'PT13H' },
       },
     ],
@@ -1557,7 +1566,13 @@ describe('Anomaly dossier page', () => {
         ...dossierAnomalieFixture(),
         enConflit: false,
         activites: [
-          { id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail commencé à 8 h', etat: 'EN_COURS', temps: 'Temps non définitif' },
+          {
+            id: new ActiviteAnomalieId('travail-8'),
+            libelle: 'Travail commencé à 8 h',
+            etat: 'EN_COURS',
+            temps: 'Temps non définitif',
+            ouvrant: new PointageAnomalieId('debut-8'),
+          },
         ],
       },
     };
@@ -1608,7 +1623,18 @@ describe('Anomaly dossier page', () => {
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
-      dossier: { ...dossier, activites: [{ id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail', etat: 'TERMINEE', temps: '4 h' }] },
+      dossier: {
+        ...dossier,
+        activites: [
+          {
+            id: new ActiviteAnomalieId('travail-8'),
+            libelle: 'Travail',
+            etat: 'TERMINEE',
+            temps: '4 h',
+            ouvrant: new PointageAnomalieId('debut-8'),
+          },
+        ],
+      },
     };
 
     await whenRendering();
@@ -1677,7 +1703,13 @@ describe('Anomaly dossier page', () => {
       ...dossierAnomalieFixture(),
       enConflit: false,
       activites: [
-        { id: new ActiviteAnomalieId('travail-8'), libelle: 'Travail commencé à 8 h', etat: 'EN_COURS', temps: 'Temps non définitif' },
+        {
+          id: new ActiviteAnomalieId('travail-8'),
+          libelle: 'Travail commencé à 8 h',
+          etat: 'EN_COURS',
+          temps: 'Temps non définitif',
+          ouvrant: new PointageAnomalieId('debut-8'),
+        },
       ],
     });
     await whenRendering();
@@ -1711,11 +1743,21 @@ describe('Anomaly dossier page', () => {
       libelle: 'Travail ouvert à 8 h',
       etat: 'A_RESOUDRE',
       temps: 'À résoudre',
+      ouvrant: new PointageAnomalieId('debut-8'),
     } as const;
     givenASuccessfulPreview({
       ...dossier,
       enConflit: false,
-      activites: [inchangee, { id: new ActiviteAnomalieId('nc-12'), libelle: 'NC ouverte à 12 h', etat: 'EN_COURS', temps: '' }],
+      activites: [
+        inchangee,
+        {
+          id: new ActiviteAnomalieId('nc-12'),
+          libelle: 'NC ouverte à 12 h',
+          etat: 'EN_COURS',
+          temps: '',
+          ouvrant: new PointageAnomalieId('debut-12'),
+        },
+      ],
     });
     await whenRendering();
 
@@ -1841,8 +1883,76 @@ describe('Anomaly dossier page', () => {
 
     thenTheProblemReads('Reprise encore à rattacher.');
     thenTextContains('anomalie-cloture', 'Clôturé');
-    thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
+    thenTextContains('anomalie-resultat', 'Acte enregistré, conflit restant');
     thenAbsent('anomalie-apercu');
+  });
+
+  it.each([
+    { enConflit: false, finAutomatique: true, attendu: 'Conflit levé · fin automatique restante' },
+    { enConflit: true, finAutomatique: false, attendu: 'Acte enregistré, conflit restant' },
+    { enConflit: true, finAutomatique: true, attendu: 'Acte enregistré, conflit restant' },
+  ])(
+    'should announce in the receipt of a conflict act "$attendu" when the conflict is $enConflit and the automatic end $finAutomatique',
+    async ({ enConflit, finAutomatique, attendu }) => {
+      givenAConflictActLeaving({ enConflit, finAutomatique });
+      await whenRendering();
+
+      await whenPreparingTheCorrection();
+      await whenClicking('anomalie-confirmer');
+
+      thenTextContains('anomalie-resultat', attendu);
+    },
+  );
+
+  it('should link the receipt of a lifted conflict to the remaining automatic end and keep the way back to the list', async () => {
+    givenALiftedConflictLeavingAnExpiredActivity();
+    route.queryParamMap.next(
+      convertToParamMap({ pointage: 'fin-17', nature: 'CONFLIT', operateur: 'op-camille', element: 'moule-42', page: '2' }),
+    );
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    thenTheLinkTargets('anomalie-fin-automatique-restante', '/anomalies/suivi-camille', {
+      pointage: 'debut-8',
+      nature: 'CONFLIT',
+      operateur: 'op-camille',
+      element: 'moule-42',
+      page: '2',
+    });
+  });
+
+  it('should number the links when several automatic ends remain', async () => {
+    givenALiftedConflictLeavingExpiredActivities(['debut-8', 'debut-9']);
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    thenTheTextsAre('anomalie-fin-automatique-restante', [
+      'Traiter la fin automatique restante (1 sur 2)',
+      'Traiter la fin automatique restante (2 sur 2)',
+    ]);
+  });
+
+  it('should link no automatic end in the receipt when none remains', async () => {
+    givenAConflictActLeaving({ enConflit: false, finAutomatique: false });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    thenAbsent('anomalie-fin-automatique-restante');
+  });
+
+  it('should announce the remaining automatic end in the preview without linking it', async () => {
+    givenALiftedConflictLeavingExpiredActivities(['debut-8']);
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenAbsent('anomalie-fin-automatique-restante');
   });
 
   it('should preserve the detailed proposition when the preview is refused', async () => {
@@ -2003,7 +2113,13 @@ describe('Anomaly dossier page', () => {
         ...dossier,
         activites: [
           ...dossier.activites,
-          { id: new ActiviteAnomalieId('nc-12'), libelle: 'Non-conformité ouverte à 12 h', etat: 'TERMINEE', temps: '5 h' },
+          {
+            id: new ActiviteAnomalieId('nc-12'),
+            libelle: 'Non-conformité ouverte à 12 h',
+            etat: 'TERMINEE',
+            temps: '5 h',
+            ouvrant: new PointageAnomalieId('debut-12'),
+          },
         ],
       },
     };
@@ -3509,7 +3625,7 @@ describe('Anomaly dossier page', () => {
 
       await whenPreviewingTheDatedEnd();
 
-      thenTextContains('anomalie-apercu', 'Anomalie traitée après enregistrement de cette décision.');
+      thenTextContains('anomalie-apercu', 'Après cet acte : anomalie traitée');
     },
   );
 
@@ -3567,6 +3683,22 @@ describe('Anomaly dossier page', () => {
     { etat: 'EN_CONFLIT' as const, enConflit: true, finAutomatique: true },
   ];
 
+  it.each([
+    { enConflit: false, finAutomatique: true, attendu: 'Après cet acte : conflit levé · fin automatique restante' },
+    { enConflit: true, finAutomatique: false, attendu: 'Après cet acte : conflit restant' },
+    { enConflit: true, finAutomatique: true, attendu: 'Après cet acte : conflit restant' },
+  ])(
+    'should announce in the preview of a conflict act "$attendu" when the conflict is $enConflit and the automatic end $finAutomatique',
+    async ({ enConflit, finAutomatique, attendu }) => {
+      givenASuccessfulPreview({ ...dossierAnomalieFixture(), enConflit, finAutomatique });
+      await whenRendering();
+
+      await whenPreparingTheCorrection();
+
+      thenTextContains('anomalie-apercu', attendu);
+    },
+  );
+
   it.each(anomalieRestanteFixture)(
     'should keep the anomaly open in the preview when $etat has conflict $enConflit and automatic end $finAutomatique',
     async resultat => {
@@ -3617,10 +3749,34 @@ describe('Anomaly dossier page', () => {
     read.pending = new PendingResponseFixture<LectureDossier>();
   };
 
+  const givenALiftedConflictLeavingAnExpiredActivity = (): void => {
+    givenALiftedConflictLeavingExpiredActivities(['debut-8']);
+  };
+
+  const givenALiftedConflictLeavingExpiredActivities = (ouvrants: readonly string[]): void => {
+    const dossier = dossierAnomalieFixture();
+    const modele = requiredFixture(dossier.activites[0], 'conflict fixture activity');
+    const echues = ouvrants.map(ouvrant => ({
+      ...modele,
+      id: new ActiviteAnomalieId(`travail-${ouvrant}`),
+      etat: 'ECHUE' as const,
+      ouvrant: new PointageAnomalieId(ouvrant),
+    }));
+    const apres = { ...dossier, version: 2, enConflit: false, finAutomatique: true, activites: echues };
+    givenASuccessfulPreview(apres);
+    application.result = { kind: 'APPLIQUE', dossier: apres };
+  };
+
+  const givenAConflictActLeaving = (resultat: Pick<DossierAnomalie, 'enConflit' | 'finAutomatique'>): void => {
+    const apres = { ...dossierAnomalieFixture(), version: 2, ...resultat };
+    givenASuccessfulPreview(apres);
+    application.result = { kind: 'APPLIQUE', dossier: apres };
+  };
+
   const givenAnEndRegularisationLeaving = (resultat: Pick<DossierAnomalie, 'etat' | 'enConflit' | 'finAutomatique'>): void => {
     givenAnAutomaticEnd();
     const apres = { ...dossierFinAutomatiqueFixture(), ...resultat };
-    givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'));
+    givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'), dossierFinAutomatiqueFixture());
     application.result = { kind: 'APPLIQUE', dossier: apres };
   };
 
@@ -3681,6 +3837,7 @@ describe('Anomaly dossier page', () => {
       libelle: '',
       etat: 'TERMINEE',
       temps: '',
+      ouvrant: new PointageAnomalieId('debut-12'),
       periode: { categorie: 'NON_CONFORMITE', debut: instantLocalFixture(new Date(2026, 8, 14, 12, 0)), fin: INSTANT_ECHEANCE },
     };
     read.result = { kind: 'DOSSIER', dossier: { ...dossier, activites: [travail, nonConformite] } };
@@ -3701,8 +3858,11 @@ describe('Anomaly dossier page', () => {
     return acte;
   };
 
-  const givenASuccessfulPreview = (apres?: DossierAnomalie, acte: ActeResolution = acteCorrectionFixture): void => {
-    const dossier = dossierAnomalieFixture();
+  const givenASuccessfulPreview = (
+    apres?: DossierAnomalie,
+    acte: ActeResolution = acteCorrectionFixture,
+    dossier: DossierAnomalie = dossierAnomalieFixture(),
+  ): void => {
     preview.result = {
       kind: 'APERCU',
       apercu: {
@@ -3881,6 +4041,7 @@ describe('Anomaly dossier page', () => {
     libelle: 'Travail ouvert à 8 h',
     etat: 'A_RESOUDRE',
     temps: 'À résoudre',
+    ouvrant: new PointageAnomalieId('debut-8'),
     ...(cite.categorie === undefined ? {} : { periode: { categorie: cite.categorie, debut: instantAt(cite.debut ?? '08:00') } }),
   });
 
@@ -3889,6 +4050,7 @@ describe('Anomaly dossier page', () => {
     libelle: '',
     etat: 'ECHUE',
     temps: '',
+    ouvrant: new PointageAnomalieId(`debut-${id}`),
     periode: { categorie, debut: instantAt(debut), fin: instantAt(fin), duree: 'PT10H' },
   });
 
@@ -3970,6 +4132,7 @@ describe('Anomaly dossier page', () => {
             id: new ActiviteAnomalieId('travail-8'),
             libelle: '',
             temps: '',
+            ouvrant: new PointageAnomalieId('debut-8'),
             etat,
             ...(periode === undefined
               ? {}
@@ -4078,6 +4241,7 @@ describe('Anomaly dossier page', () => {
             id: new ActiviteAnomalieId('travail-8'),
             libelle: '',
             temps: '',
+            ouvrant: new PointageAnomalieId('debut-8'),
             etat,
             periode: {
               categorie,
@@ -4477,6 +4641,17 @@ describe('Anomaly dossier page', () => {
     expect(Object.fromEntries(Object.keys(expected).map(attribut => [attribut, marker.getAttribute(attribut)]))).toEqual(expected);
   };
 
+  const thenTheTextsAre = (selector: string, expected: readonly string[]): void => {
+    const textes = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector(selector)), found =>
+      found.textContent.trim(),
+    );
+    expect(textes).toEqual(expected);
+  };
+  const thenTheLinkTargets = (selector: string, path: string, params: Record<string, string>): void => {
+    const cible = new URL(requiredFixture(element(selector).getAttribute('href'), 'link target'), 'http://glm.test');
+    expect(cible.pathname).toBe(path);
+    expect(Object.fromEntries(cible.searchParams)).toEqual(params);
+  };
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
   };

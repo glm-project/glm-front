@@ -18,6 +18,18 @@ La reprise explicite transmet la proposition initiale immuable. Un reçu ne conc
 la commande, l'adresse, la révision de départ, l'acte et l'événement créé correspondent exactement.
 Une ancre annulée reste consultable et les continuations désignent les autres conflits explicitement.
 
+## Issue d'un acte
+
+L'aperçu et le reçu annoncent la même issue, qui dépend de la nature du dossier d'origine, celui affiché avant l'acte. Un
+conflit s'achève par « anomalie traitée » (aperçu « Après cet acte : anomalie traitée », reçu « Anomalie traitée »), « conflit
+levé · fin automatique restante » ou « conflit restant » (reçu « Acte enregistré, conflit restant »). Une fin automatique
+s'achève par « anomalie traitée » ou « anomalie restante » (reçu « Acte enregistré, anomalie restante ») : elle ne se présente
+jamais comme un conflit, même si l'après porte un conflit. Une adresse annulée ou remplacée reste « traitée » quand ni conflit
+ni fin automatique ne subsistent. L'aperçu dit l'issue sans lien. Le reçu ajoute un lien « Traiter la fin automatique
+restante » (numéroté « (1 sur 2) » s'il y en a plusieurs) par activité échue du dossier d'après, vers
+`/anomalies/{suivi}?pointage={ouvrant}`, avec les paramètres de retour vers la liste (`nature`, `operateur`, `element`,
+`page`) ; sans activité échue, aucun lien. Le front lit l'ouvrant dans `evenement` de l'activité reçue, il ne le déduit pas.
+
 ## Fin automatique
 
 Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
@@ -31,9 +43,9 @@ l'heure de ce pointage et un motif. Le pointage que le choix désigne est marqu�
 l'échéance » sur la frise et dans le panneau Sélection ; le front le lit dans le choix reçu, il ne le déduit pas. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
 ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
 `date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
-annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
-sur une adresse annulée, et n'affiche alors plus de phrase de conflit, réservée au périmètre qui porte encore un
-conflit. Une activité sans poste n'en reçoit aucun.
+annonce l'issue de l'acte (voir « Issue d'un acte ») ; « Anomalie traitée » seulement si ni `enConflit` ni
+`finAutomatique` ne subsistent, y compris sur une adresse annulée, et il n'affiche alors plus de phrase de conflit,
+réservée au périmètre qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
 
 ## Phrase du problème
 

@@ -1,5 +1,6 @@
 import { ActiviteAnomalieId } from '../dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie } from '../dossier/DossierAnomalie';
+import { PointageAnomalieId } from '../dossier/PointageAnomalieId';
 import { CadreDuFait } from './CadreDuFait';
 import { SaisieActe } from './SaisieActe';
 
@@ -223,6 +224,7 @@ const travail: ActiviteAnomalie = {
   libelle: 'Travail',
   etat: 'TERMINEE',
   temps: 'PT1H',
+  ouvrant: new PointageAnomalieId('debut-8'),
   periode: { categorie: 'TRAVAIL', debut: DEBUT_DU_TRAVAIL },
 };
 const cadreFixture = CadreDuFait.depuis([travail], MAINTENANT);

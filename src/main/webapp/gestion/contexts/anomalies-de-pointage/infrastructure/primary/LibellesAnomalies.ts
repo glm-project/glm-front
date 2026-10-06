@@ -126,7 +126,22 @@ export const LIBELLES_ANOMALIES = {
   cloture: 'Clôturé',
   ouvert: 'Ouvert',
   continuation: 'Autres conflits du suivi',
-  apercuRestant: 'Après cet acte : anomalie restante',
+  traiterLaFinAutomatiqueRestante: (rang: number, total: number) =>
+    total === 1 ? 'Traiter la fin automatique restante' : `Traiter la fin automatique restante (${rang} sur ${total})`,
+  issue: {
+    apercu: {
+      TRAITEE: 'Après cet acte : anomalie traitée',
+      CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'Après cet acte : conflit levé · fin automatique restante',
+      CONFLIT_RESTANT: 'Après cet acte : conflit restant',
+      ANOMALIE_RESTANTE: 'Après cet acte : anomalie restante',
+    },
+    recu: {
+      TRAITEE: 'Anomalie traitée',
+      CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'Conflit levé · fin automatique restante',
+      CONFLIT_RESTANT: 'Acte enregistré, conflit restant',
+      ANOMALIE_RESTANTE: 'Acte enregistré, anomalie restante',
+    },
+  },
   etats: {
     A_RESOUDRE: 'À résoudre',
     EN_COURS: 'En cours',
@@ -180,11 +195,8 @@ export const LIBELLES_ANOMALIES = {
   confirmer: 'Enregistrer cette décision',
   apercu: 'Vérifier avant d’enregistrer',
   comparerJournal: 'Comparer tous les pointages avant et après',
-  apercuResolu: 'Anomalie traitée après enregistrement de cette décision.',
   avant: 'Avant',
   apres: 'Après cet acte',
-  restant: 'Acte enregistré, anomalie restante',
-  resolu: 'Anomalie traitée',
   annule: 'Pointage annulé',
   remplace: 'Remplace le pointage',
   remplaceNonResolu: 'Remplace un pointage non résolu',

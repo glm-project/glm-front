@@ -48,6 +48,7 @@ const activiteFixture = (
   libelle: `Activité ${id}`,
   etat,
   temps: '',
+  ouvrant: new PointageAnomalieId(`debut-${id}`),
   periode: { categorie, debut: instantAt(debut), ...(fin === undefined ? {} : { fin: instantAt(fin) }) },
 });
 
@@ -435,6 +436,7 @@ describe('Frise of a dossier', () => {
       libelle: 'Travail ouvert à 8 h',
       etat: 'A_RESOUDRE',
       temps: '',
+      ouvrant: new PointageAnomalieId('debut-a-1'),
     };
     const dossier = { journal: [pointageFixture('fin-17', 'ARRET', '17:00')], activites: [sansPeriode] };
 
@@ -450,6 +452,7 @@ describe('Frise of a dossier', () => {
       libelle: 'Travail ouvert à 8 h',
       etat: 'A_RESOUDRE',
       temps: '',
+      ouvrant: new PointageAnomalieId('debut-a-1'),
     };
     const dossier = { journal: [pointageFixture('fin-17', 'ARRET', '17:00')], activites: [sansPeriode] };
     await whenRenderingTheFrise(dossier);
@@ -615,6 +618,7 @@ describe('Frise of a dossier', () => {
       libelle: 'Travail ouvert à 8 h',
       etat: 'A_RESOUDRE',
       temps: '',
+      ouvrant: new PointageAnomalieId('debut-a-1'),
     };
 
     await whenRenderingTheFrise({ journal: [], activites: [sansPeriode] });
@@ -677,7 +681,13 @@ describe('Frise of a dossier', () => {
     { cas: 'a diagnostic on a pointage the journal does not hold', diagnostics: [diagnosticSur('absent', 'travail-8')] },
     { cas: 'a diagnostic aiming at an activity without period', diagnostics: [diagnosticSur('fin-17', 'sans-periode')] },
   ])('should draw no arrow for $cas', async ({ diagnostics }) => {
-    const sansPeriode: ActiviteAnomalie = { id: new ActiviteAnomalieId('sans-periode'), libelle: 'Travail', etat: 'A_RESOUDRE', temps: '' };
+    const sansPeriode: ActiviteAnomalie = {
+      id: new ActiviteAnomalieId('sans-periode'),
+      libelle: 'Travail',
+      etat: 'A_RESOUDRE',
+      temps: '',
+      ouvrant: new PointageAnomalieId('debut-sans-periode'),
+    };
     const dossier = {
       journal: [pointageFixture('fin-17', 'ARRET', '17:00')],
       activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00'), sansPeriode],

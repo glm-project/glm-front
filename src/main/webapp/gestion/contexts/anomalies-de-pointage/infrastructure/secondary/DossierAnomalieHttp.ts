@@ -59,6 +59,7 @@ const toActivite = (activite: components['schemas']['RestActiviteDuDossier']): A
     libelle: '',
     etat: activite.etat,
     temps: '',
+    ouvrant: new PointageAnomalieId(activite.evenement),
     periode: {
       categorie: activite.categorie,
       debut: activite.debut,
