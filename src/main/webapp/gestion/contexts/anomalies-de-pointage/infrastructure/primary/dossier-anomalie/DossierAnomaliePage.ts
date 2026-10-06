@@ -38,7 +38,6 @@ import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
-  cibleAffichee,
   detailDuPointage,
   erreursALire,
   faitDuGeste,
@@ -49,7 +48,6 @@ import {
   libelleActivite,
   libelleDeLAction,
   libelleDuGeste,
-  operateurManque,
   referencePointage,
   remplacementDe,
   selectionInitiale,
@@ -126,7 +124,6 @@ export class DossierAnomaliePage {
   protected readonly propositionsFaites = signal(0);
   protected readonly gestesProposes = GESTES_PROPOSES;
   protected readonly gesteDuFait = gesteDuFait;
-  protected readonly cibleAffichee = cibleAffichee;
   protected readonly erreursALire = erreursALire;
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
   protected readonly retour = computed(() => ({
@@ -164,7 +161,8 @@ export class DossierAnomaliePage {
     return selection?.kind === 'ACTIVITE' ? this.dossier()?.activites.find(activite => activite.id.activite === selection.id) : undefined;
   });
   private readonly maintenant = signal(new Date().toISOString());
-  protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
+  protected readonly saisie = computed(() => this.preparation.resolution().saisie);
+  protected readonly proposition = computed(() => this.saisie().proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
@@ -229,7 +227,7 @@ export class DossierAnomaliePage {
   protected choose(saisie: SaisieActe, choix?: string): void {
     this.lireLHorloge();
     this.preparation.choose(saisie);
-    this.identiteDeployee.set(operateurManque(saisie));
+    this.identiteDeployee.set(saisie.operateurManque());
     this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
     this.choixSelectionne.set(choix);

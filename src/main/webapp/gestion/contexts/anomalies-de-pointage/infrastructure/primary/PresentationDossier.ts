@@ -1,7 +1,7 @@
 import { formatInstantTime, formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { COMBINAISONS_VALIDES, IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
-import { ErreurSaisieActe, SaisieActe, SaisieFait } from '../../domain/acte/SaisieActe';
+import { ErreurSaisieActe, SaisieFait } from '../../domain/acte/SaisieActe';
 import { ActionDirecte } from '../../domain/dossier/ActionsDirectes';
 import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
@@ -64,14 +64,6 @@ export const faitDuGeste = (valeur: string): Pick<SaisieFait, 'type' | 'intentio
 
 export const erreursALire = (erreurs: readonly ErreurSaisieActe[]): readonly ErreurSaisieActe[] =>
   erreurs.filter(erreur => erreur !== 'INTENTION_REQUISE' || !erreurs.includes('TYPE_REQUIS'));
-
-export const cibleAffichee = (fait: Pick<SaisieFait, 'intention' | 'activiteVisee'>): boolean =>
-  fait.intention === 'FIN' || fait.intention === 'TRANSITION' || fait.activiteVisee !== '';
-
-export const operateurManque = (saisie: SaisieActe): boolean => {
-  const proposition = saisie.proposition;
-  return proposition !== undefined && proposition.kind !== 'ANNULATION' && proposition.fait.operateur === '';
-};
 
 export const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
 

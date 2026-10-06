@@ -333,3 +333,36 @@ describe('Bounds of the instant of a fact', () => {
     expect(saisie.matches({ kind: 'REGULARISATION', fait: { ...faitFixture, instant: '2099-01-01T00:00:00-03:00' } })).toBe(true);
   });
 });
+
+describe('Operator missing from an entry', () => {
+  it.each([
+    { saisie: SaisieActe.regularise(), manque: true },
+    { saisie: SaisieActe.regularise({ ...faitFixture, operateur: 'op-camille' }), manque: false },
+    { saisie: SaisieActe.regularise({ ...faitFixture, operateur: '   ' }), manque: true },
+    { saisie: SaisieActe.correct('fin-17', { ...faitFixture, operateur: '' }), manque: true },
+    { saisie: SaisieActe.cancel('fin-17'), manque: false },
+    { saisie: SaisieActe.empty(), manque: false },
+  ])('should say whether the operator is missing, $manque', ({ saisie, manque }) => {
+    expect(saisie.operateurManque()).toBe(manque);
+  });
+});
+
+describe('Target that applies to an entry', () => {
+  it.each([
+    { saisie: SaisieActe.regularise({ ...faitFixture, type: 'DEBUT', intention: 'OUVERTURE', activiteVisee: '' }), applicable: false },
+    {
+      saisie: SaisieActe.regularise({ ...faitFixture, type: 'DEBUT', intention: 'OUVERTURE', activiteVisee: 'travail-8' }),
+      applicable: true,
+    },
+    {
+      saisie: SaisieActe.regularise({ ...faitFixture, type: 'NON_CONFORMITE', intention: 'TRANSITION', activiteVisee: '' }),
+      applicable: true,
+    },
+    { saisie: SaisieActe.regularise({ ...faitFixture, type: 'FIN', intention: 'FIN', activiteVisee: '' }), applicable: true },
+    { saisie: SaisieActe.regularise(), applicable: false },
+    { saisie: SaisieActe.cancel('fin-17'), applicable: false },
+    { saisie: SaisieActe.empty(), applicable: false },
+  ])('should say whether a target applies, $applicable', ({ saisie, applicable }) => {
+    expect(saisie.cibleApplicable()).toBe(applicable);
+  });
+});

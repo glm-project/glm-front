@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SaisieActe } from '../../domain/acte/SaisieActe';
-import { erreursALire, faitDuGeste, gesteDuFait, libelleDuGeste, operateurManque, selectionInitiale } from './PresentationDossier';
+import { erreursALire, faitDuGeste, gesteDuFait, libelleDuGeste, selectionInitiale } from './PresentationDossier';
 
 describe('Initial selection of a dossier', () => {
   it('should select nothing while no dossier is read', () => {
@@ -42,19 +41,5 @@ describe('Errors of an entry to read', () => {
 
   it('should keep a missing intention that the type does not already announce', () => {
     expect(erreursALire(['INTENTION_REQUISE'])).toEqual(['INTENTION_REQUISE']);
-  });
-});
-
-describe('Operator missing from an entry', () => {
-  const fait = { type: 'FIN', intention: 'FIN', activiteVisee: 'travail-8', operateur: 'op-camille', poste: '', instant: '' } as const;
-
-  it.each([
-    { saisie: SaisieActe.regularise(), manque: true },
-    { saisie: SaisieActe.regularise({ ...fait, operateur: 'op-camille' }), manque: false },
-    { saisie: SaisieActe.correct('fin-17', { ...fait, operateur: '' }), manque: true },
-    { saisie: SaisieActe.cancel('fin-17'), manque: false },
-    { saisie: SaisieActe.empty(), manque: false },
-  ])('should say whether the operator is missing, $manque', ({ saisie, manque }) => {
-    expect(operateurManque(saisie)).toBe(manque);
   });
 });

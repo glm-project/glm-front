@@ -218,7 +218,7 @@
             <option [value]="geste.valeur" [selected]="courant === geste.valeur">{{ geste.libelle }}</option>
             }
           </select>
-          @if (cibleAffichee(proposition.fait)) {
+          @if (saisie().cibleApplicable()) {
           <label class="mt-4 block text-body-sm font-semibold" for="cible-acte">{{ libelles.activiteTerminee }}</label>
           <select
             id="cible-acte"
@@ -240,7 +240,7 @@
             </option>
             }
           </select>
-          } @if (proposition.fait.operateur !== '') {
+          } @if (!saisie().operateurManque()) {
           <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p id="identite-acte" class="text-body-sm" data-selector="anomalie-identite">
               {{ operateurDeLActe(proposition.fait.operateur, dossier.journal) }} · {{ posteDeLActe(proposition.fait.poste, dossier.journal)

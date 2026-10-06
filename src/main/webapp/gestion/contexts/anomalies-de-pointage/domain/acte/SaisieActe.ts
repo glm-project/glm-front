@@ -74,6 +74,16 @@ export class SaisieActe {
     return this.proposition?.kind === 'REGULARISATION';
   }
 
+  operateurManque(): boolean {
+    const fait = this.fait();
+    return fait !== undefined && this.operatorIsMissing(fait);
+  }
+
+  cibleApplicable(): boolean {
+    const fait = this.fait();
+    return fait !== undefined && (termineUneActivite(fait) || fait.activiteVisee !== '');
+  }
+
   changesGuidedFact(changement: ChangementSaisie): boolean {
     if (changement.fait === undefined) return false;
     const champs = Object.keys(changement.fait);
@@ -130,7 +140,7 @@ export class SaisieActe {
     const erreurs: ErreurSaisieActe[] = [];
     if (fait.type === '') erreurs.push('TYPE_REQUIS');
     if (fait.intention === '') erreurs.push('INTENTION_REQUISE');
-    if (fait.operateur.trim() === '') erreurs.push('OPERATEUR_REQUIS');
+    if (this.operatorIsMissing(fait)) erreurs.push('OPERATEUR_REQUIS');
     if (this.targetIsMissing(fait)) erreurs.push('CIBLE_REQUISE');
     if (this.targetIsForbidden(fait)) erreurs.push('CIBLE_INTERDITE');
     if (!this.intentionIsCompatible(fait)) erreurs.push('INTENTION_INCOMPATIBLE');
@@ -141,6 +151,15 @@ export class SaisieActe {
   private instantErrors(fait: SaisieFait, cadre?: CadreDuFait): readonly ErreurSaisieActe[] {
     if (!new InstantPointage(fait.instant).isValid()) return ['INSTANT_INVALIDE'];
     return cadre?.depassements(fait) ?? [];
+  }
+
+  private fait(): SaisieFait | undefined {
+    const proposition = this.proposition;
+    return proposition === undefined || proposition.kind === 'ANNULATION' ? undefined : proposition.fait;
+  }
+
+  private operatorIsMissing(fait: SaisieFait): boolean {
+    return fait.operateur.trim() === '';
   }
 
   private targetIsMissing(fait: SaisieFait): boolean {

@@ -217,13 +217,13 @@ les groupes Type et Intention : choisir un geste change le type et l'intention e
 `INTENTION_INCOMPATIBLE` reste une règle du domaine, que l'écran ne produit plus. Un fait sans type ni intention (régularisation à
 partir de rien) montre une option vide « Choisissez ce que signale le pointage », sélectionnée et non choisissable, et une seule
 erreur lisible (`erreursALire` : « Choisissez ce que signale le pointage. », jamais le type puis l'intention). « Activité qu'il
-termine » (`anomalie-cible`) ne s'affiche que pour un passage ou un arrêt, et tant qu'une cible est posée : un démarrage qui garde
+termine » (`anomalie-cible`, `SaisieActe.cibleApplicable()`) ne s'affiche que pour un passage ou un arrêt, et tant qu'une cible est posée : un démarrage qui garde
 sa cible laisse `CIBLE_INTERDITE` que le gestionnaire doit pouvoir effacer, et le champ disparaît une fois la cible effacée.
 Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le formulaire les replie en
 une ligne « Camille Martin · Fraiseuse 1 » (`anomalie-identite`, mêmes règles que l'aperçu : « Opérateur non résolu »,
 « Sans poste ») avec « Modifier » (`aria-expanded`), qui déplie ou replie les champs ci-dessous ; une nouvelle proposition repart
 repliée. Les champs sont dépliés d'office, sans « Modifier », tant que le référentiel charge ou est en panne, et pour un fait sans
-opérateur (régularisation à partir de rien : ni ligne ni « Modifier » avant le choix de l'opérateur). Le port de lecture
+opérateur (`SaisieActe.operateurManque()`, régularisation à partir de rien : ni ligne ni « Modifier » avant le choix de l'opérateur). Le port de lecture
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et
 `GET /api/postes-de-travail` (`collectAllPages`, page demandée vérifiée, aucune collection tronquée ni identité dupliquée).
