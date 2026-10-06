@@ -7,7 +7,18 @@ import {
 import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
 import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
 import { NgTemplateOutlet } from '@angular/common';
-import { afterNextRender, Component, computed, ElementRef, inject, Injector, resource, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  linkedSignal,
+  resource,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
@@ -29,6 +40,7 @@ import {
   labelForActivite,
   libelleActivite,
   libelleDuGeste,
+  pointageInitial,
   referencePointage,
   remplacementDe,
   tempsActivite,
@@ -107,6 +119,13 @@ export class DossierAnomaliePage {
     const lecture = this.resultatLecture();
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
+  protected readonly selection = linkedSignal<DossierAnomalie | undefined, string | undefined>({
+    source: this.dossier,
+    computation: pointageInitial,
+  });
+  protected readonly pointageSelectionne = computed(() =>
+    this.dossier()?.journal.find(pointage => pointage.id.pointage === this.selection()),
+  );
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);

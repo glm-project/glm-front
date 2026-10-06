@@ -71,12 +71,12 @@ asynchrones et les doubles soumissions. Le primaire rend les faits et leur cible
 dans l'URL et utilise les surfaces de Gestion. Trois ports séparent lecture, aperçu et application.
 La composition normale de Gestion relie ces trois ports au même adapter HTTP et à `ApiClient`.
 Le serveur fournit états, intervalles, durées ISO, diagnostics, choix et continuations. Le primaire
-possède leurs libellés. Il nomme l'opérateur (« Prénom Nom ») et le poste (libellé) reçus avec la liste, l'en-tête, la
-chronologie, l'historique d'adresse obsolète et les continuations, sans jamais en afficher l'identifiant : une fiche non
+possède leurs libellés. Il nomme l'opérateur (« Prénom Nom ») et le poste (libellé) reçus avec la liste, l'en-tête, le
+panneau Sélection, l'historique d'adresse obsolète et les continuations, sans jamais en afficher l'identifiant : une fiche non
 résolue s'affiche « Opérateur non résolu » ou « Poste non résolu », un pointage sans poste « Sans poste ». Le modèle
 garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de l'opérateur et du poste, qu'il envoie
 au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
-Les détails de traçabilité d'un pointage et les journaux avant/après de l'aperçu partagent un seul gabarit : la ligne
+Les détails de traçabilité du pointage sélectionné et les journaux avant/après de l'aperçu partagent un seul gabarit : la ligne
 d'en-tête est « Prénom Nom · instant » (jamais l'identifiant du pointage), et les activités visée ou créée se désignent
 par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (nature et instant),
 sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète et l'option de cible
@@ -93,6 +93,17 @@ comme absent ; pour une transition de même catégorie, une activité sans péri
 déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
 `CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le geste tardif ; sinon l'activité n'a
 jamais été arrêtée.
+Chaque pointage de la chronologie est un bouton de sélection (`aria-pressed`, nom accessible : heure avec ses secondes et
+geste) ; la chronologie reste sobre (heure, jour, geste, cible, mentions courtes « Régularisation », « Pointage annulé »,
+remplacement). Le panneau « Sélection », en tête de la colonne de droite, porte le pointage choisi : geste, instant avec ses
+secondes, opérateur, poste, régularisation, annulation (motif, auteur, instant), remplacement, traçabilité (activités visée
+et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un pointage annulé, désactivés pour le consultant
+et pendant une opération. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau
+dossier (autre adresse, relecture, reçu), elle revient à la sélection initiale (`pointageInitial`), le plus ancien pointage
+en cause d'un diagnostic que le journal contient ; une fin automatique, ou un conflit sans pointage en cause lisible, ne
+sélectionne rien et le panneau invite à choisir. Une sélection absente du dossier courant ne s'affiche jamais. Sélectionner
+ne choisit aucun acte : la proposition, l'aperçu et le choix guidé restent inchangés. L'historique d'adresse obsolète garde
+sa liste, sans sélection.
 Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
 `LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
 `NON_CONFORMITE·TRANSITION` « Passage en NC », `DEBUT·TRANSITION` « Retour en bon », `FIN·FIN` « Arrêt ». Un pointage

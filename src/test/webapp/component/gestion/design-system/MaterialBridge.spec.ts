@@ -1,5 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { dossierFixture, finFixture, suiviFixture } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+import { whenCorrectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 
 describe('Material bridge', () => {
@@ -43,7 +44,7 @@ interface SurfaceColoursFixture {
 const whenOpeningTheInstantField = (): Cypress.Chainable<SurfaceColoursFixture> => {
   cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierFixture() });
   cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`);
-  cy.get(dataSelector('anomalie-corriger')).last().click();
+  whenCorrectingPointage(finFixture);
   return cy.window().then(window => ({
     surface: givenTheBrowsersBackgroundOf(window, '--color-surface'),
     accent: givenTheBrowsersBackgroundOf(window, '--color-accent'),

@@ -1,6 +1,7 @@
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { SaisieFait } from '../../domain/acte/SaisieActe';
-import { ActiviteAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
+import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 import { operateurPresente } from './PresentationIdentites';
 
@@ -81,4 +82,9 @@ export const tempsActivite = (activite: ActiviteAnomalie): string => {
   ]
     .filter(Boolean)
     .join(' ');
+};
+
+export const pointageInitial = (dossier: DossierAnomalie | undefined): string | undefined => {
+  const enCause = new Set(dossier?.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
+  return new ChronologiePointages(dossier?.journal ?? []).pointages.find(pointage => enCause.has(pointage.id.pointage))?.id.pointage;
 };

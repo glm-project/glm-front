@@ -104,7 +104,6 @@ export const LIBELLES_ANOMALIES = {
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
   duree: 'Durée',
-  tracabilite: 'Voir les détails et l’enregistrement',
   corriger: 'Corriger ce pointage',
   regulariser: 'Régulariser un fait manquant',
   annuler: 'Annuler ce pointage',
@@ -207,6 +206,8 @@ export const LIBELLES_ANOMALIES = {
   enregistrement: 'Enregistré le',
   activites: 'Activités concernées',
   decision: 'Votre décision',
+  selection: 'Sélection',
+  selectionVide: 'Sélectionnez un pointage pour voir ses détails et le corriger.',
   choisir:
     'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',
   choix: {

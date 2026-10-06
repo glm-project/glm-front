@@ -19,6 +19,7 @@ import {
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import { whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const instantCorrectionTerminaisonFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 1), '123456789');
 
@@ -66,7 +67,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
     whenOpeningTheRealDossier();
-    whenOpeningTheTraceOfTheCorrectedTermination();
+    whenSelectingPointage(remplacementFixture);
 
     thenTheConflictIsSaidInOneSentenceNamingTheCorrectedTermination();
     thenTheCorrectedTerminatingFactIsTraceable();
@@ -112,14 +113,6 @@ describe('HTTP conflict resolution in Gestion', () => {
     });
   };
 
-  const whenOpeningTheTraceOfTheCorrectedTermination = (): void => {
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
-      .find(dataSelector('anomalie-pointage-detail'))
-      .find('summary')
-      .click();
-  };
-
   const thenTheConflictIsSaidInOneSentenceNamingTheCorrectedTermination = (): void => {
     cy.get(dataSelector('anomalie-probleme'))
       .should('have.length', 1)
@@ -127,10 +120,8 @@ describe('HTTP conflict resolution in Gestion', () => {
   };
 
   const thenTheCorrectedTerminatingFactIsTraceable = (): void => {
-    cy.get(dataSelector('anomalie-pointage'))
-      .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
-      .should('have.length', 1)
-      .and('be.visible')
+    cy.get(dataSelector('anomalie-selection'))
+      .should('be.visible')
       .within(() => {
         cy.get(dataSelector('anomalie-pointage-detail'))
           .contains('p', 'Crée l’activité Non-conformité · ')
@@ -425,7 +416,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       evenement: remplacementFixture,
     });
     cy.get('@journalCanonique')
-      .should('contain', 'lundi 14 septembre à 17:01:00')
+      .should('contain', '17:01:00 · lundi 14 septembre')
       .and('contain', 'Pointage annulé')
       .and('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt')
       .and('not.contain', `Remplace le pointage ${finFixture}`);

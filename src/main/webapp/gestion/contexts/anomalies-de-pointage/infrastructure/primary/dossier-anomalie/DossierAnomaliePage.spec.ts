@@ -819,15 +819,75 @@ describe('Anomaly dossier page', () => {
     thenTheProblemReads('La fin vise le travail remplacé.');
   });
 
-  it('should name the activity created and the pointage replaced by a corrected terminating fact in its trace', async () => {
-    givenACorrectedTerminatingFact();
+  it('should select the pointage at fault of a conflict and show its gesture in the selection panel', async () => {
+    givenAStructuredDiagnostic();
 
     await whenRendering();
 
-    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité Passage en NC · lundi 14 septembre à 12:01:00');
-    thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
-    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace un pointage non résolu');
-    thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
+    thenTheSelectionShowsTheGesture('Arrêt');
+  });
+
+  it('should select nothing when the only pointage at fault is not in the journal', async () => {
+    givenDiagnosticsOn(['fin-absent']);
+
+    await whenRendering();
+
+    thenTheSelectionReads('Sélectionnez un pointage pour voir ses détails et le corriger.');
+  });
+
+  it('should select the first pointage at fault the journal holds when an earlier diagnostic cites one it does not', async () => {
+    givenDiagnosticsOn(['fin-absent', 'fin-17']);
+
+    await whenRendering();
+
+    thenTheSelectionShowsTheGesture('Arrêt');
+  });
+
+  it('should select the oldest pointage at fault in the chronology, whatever the order of the diagnostics', async () => {
+    givenTwoDiagnostics();
+
+    await whenRendering();
+
+    thenTheSelectionShowsTheGesture('Démarrage');
+  });
+
+  it('should show the selection of another pointage when the manager selects it in the chronology', async () => {
+    givenTwoDiagnostics();
+    await whenRendering();
+
+    await whenSelecting('fin-17');
+
+    thenTheSelectionShowsTheGesture('Arrêt');
+  });
+
+  it('should press only the selection button of the selected pointage', async () => {
+    givenTwoDiagnostics();
+    await whenRendering();
+
+    await whenSelecting('fin-17');
+
+    thenOnlyThePointageIsPressed('fin-17', ['debut-8']);
+  });
+
+  it('should name each selection button by the time of its pointage with its seconds and its gesture', async () => {
+    givenTwoDiagnostics();
+
+    await whenRendering();
+
+    thenTheSelectionButtonIsNamed('fin-17', ['17:00:00', 'Arrêt']);
+    thenTheSelectionButtonIsNamed('debut-8', ['08:00:00', 'Démarrage']);
+  });
+
+  it('should name the activity created and the pointage replaced by a selected corrected terminating fact', async () => {
+    givenACorrectedTerminatingFact();
+    await whenRendering();
+
+    await whenSelecting('90000000-0000-0000-0000-000000000001');
+
+    thenTheSelectionContains('Crée l’activité Passage en NC · lundi 14 septembre à 12:01:00');
+    thenTheSelectionDoesNotContain('Crée l’activité nc-12');
+    thenTheSelectionContains('Remplace un pointage non résolu');
+    thenTheSelectionDoesNotContain('Remplace le pointage nc-12');
   });
 
   it('should keep an instant it cannot read as received when it names a pointage in a problem', async () => {
@@ -926,24 +986,172 @@ describe('Anomaly dossier page', () => {
     thenReceivedFactDatetimeIs('fin-17', new Date(2026, 8, 14, 17, 0, 0, 123).toISOString());
   });
 
-  it('should show the registration of a received fact as a long day and local time without seconds', async () => {
+  it('should correct the selected pointage from the selection panel', async () => {
     await whenRendering();
+    await whenSelecting('fin-17');
 
-    thenReceivedFactContains('fin-17', 'Enregistré le mardi 15 septembre à 08:00');
+    await whenClickingInTheSelection('anomalie-corriger');
+
+    thenTextContains('anomalie-acte', 'Correction du pointage');
+    thenTheInstantFieldsShow('14/09/2026', '17:00:00');
   });
 
-  it('should show the time of a received fact with its seconds in its traceability details', async () => {
+  it('should leave the actions and the traceability to the selection panel and keep the chronology sober', async () => {
+    givenTwoDiagnostics();
+
     await whenRendering();
 
-    thenReceivedTraceContains('fin-17', 'Camille Martin · lundi 14 septembre à 17:00:00');
+    thenTheChronologyOffersNoActionNorTraceability(['fin-17', 'debut-8']);
+  });
+
+  it('should offer neither correction nor cancellation of a cancelled pointage', async () => {
+    givenACancelledOpeningTargetedByTheRemainingEnd();
+    await whenRendering();
+
+    await whenSelecting('debut-8');
+
+    thenTheSelectionOffersNoAction();
+  });
+
+  it('should offer a consultant the actions of the selection disabled, with the reason', async () => {
+    givenAConsultantWhoCannotApplyDecisions();
+    givenDiagnosticsOn(['fin-17']);
+
+    await whenRendering();
+
+    thenTheSelectionActionsAreDisabled();
+    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
+  });
+
+  it('should disable the actions of the selection while a write has an unknown outcome', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    await whenSelecting('fin-17');
+
+    thenTheSelectionActionsAreDisabled();
+  });
+
+  it('should cancel the selected pointage from the selection panel', async () => {
+    await whenRendering();
+    await whenSelecting('fin-17');
+
+    await whenClickingInTheSelection('anomalie-annuler');
+
+    thenTextContains('anomalie-acte', 'Annulation du pointage');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
+  });
+
+  it('should return to the initial selection of the dossier a receipt replaces the displayed one with', async () => {
+    givenTwoDiagnostics();
+    givenAReceiptWhoseOnlyFaultIs('fin-17');
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenClicking('anomalie-confirmer');
+
+    thenTheSelectionShowsTheGesture('Arrêt');
+  });
+
+  it('should return to the initial selection of another address the manager opens', async () => {
+    givenTwoDiagnostics();
+    await whenRendering();
+    await whenSelecting('fin-17');
+    read.result = { kind: 'DOSSIER', dossier: { ...dossierDiagnosedOn(['fin-17', 'debut-8']), version: 2 } };
+
+    await whenAddressChanges('debut-8');
+
+    thenTheSelectionShowsTheGesture('Démarrage');
+  });
+
+  it('should return to the initial selection when the dossier is read again after a concurrent change', async () => {
+    preview.result = { kind: 'CONCURRENCE' };
+    givenTwoDiagnostics();
+    await whenRendering();
+    await whenSelecting('fin-17');
+    read.result = { kind: 'DOSSIER', dossier: { ...dossierDiagnosedOn(['debut-8']), version: 2 } };
+
+    await whenPreparingTheCorrection();
+
+    thenTheSelectionShowsTheGesture('Démarrage');
+  });
+
+  it('should keep the proposition in progress when the manager selects another pointage', async () => {
+    givenTwoDiagnostics();
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    await whenEntering('anomalie-motif', 'Cible confirmée');
+
+    await whenSelecting('fin-17');
+
+    thenInterpretationIsSelected();
+    thenTextContains('anomalie-acte', 'Correction du pointage');
+    thenFieldValueIs('anomalie-motif', 'Cible confirmée');
+  });
+
+  it('should show the time of the selected pointage with its seconds, then its long day, in the selection', async () => {
+    await whenRendering();
+
+    await whenSelecting('fin-17');
+
+    thenTheSelectionTimeIs('17:00:00 · lundi 14 septembre');
+  });
+
+  it('should show the regularisation mention of the selected pointage', async () => {
+    givenACorrectedTerminatingFact();
+    await whenRendering();
+
+    await whenSelecting('90000000-0000-0000-0000-000000000001');
+
+    thenTheSelectionContains('Régularisation');
+  });
+
+  it('should designate the pointage replaced by the selected pointage by its nature and instant', async () => {
+    givenAReplacementOfTheEndRecordedInTheDossier();
+    await whenRendering();
+
+    await whenSelecting('fin-18');
+
+    thenTheSelectionContains('Remplace le pointage lundi 14 septembre à 17:00:00 · Arrêt');
+  });
+
+  it('should only say in the chronology that a pointage is cancelled, and give its reason in the selection', async () => {
+    givenACancelledOpeningTargetedByTheRemainingEnd();
+    await whenRendering();
+
+    await whenSelecting('debut-8');
+
+    thenReceivedFactContains('debut-8', 'Pointage annulé');
+    thenReceivedFactDoesNotContain('debut-8', 'Début annulé · gestionnaire');
+    thenTheSelectionContains('Début annulé · gestionnaire');
+  });
+
+  it('should show the registration of the selected pointage as a long day and local time without seconds', async () => {
+    await whenRendering();
+
+    await whenSelecting('fin-17');
+
+    thenTheTraceContains('Enregistré le mardi 15 septembre à 08:00 · camille');
+  });
+
+  it('should show the time of the selected pointage with its seconds in its traceability', async () => {
+    await whenRendering();
+
+    await whenSelecting('fin-17');
+
+    thenTheTraceContains('Camille Martin · lundi 14 septembre à 17:00:00');
   });
 
   it('should show when a cancelled pointage was cancelled as a long day and local time without seconds', async () => {
     givenACancelledOpeningTargetedByTheRemainingEnd();
-
     await whenRendering();
 
-    thenTextContains('anomalie-annulation', 'Début annulé · gestionnaire · mardi 15 septembre à 08:00');
+    await whenSelecting('debut-8');
+
+    thenTheSelectionContains('Début annulé · gestionnaire · mardi 15 septembre à 08:00');
   });
 
   it('should show the instant of the proposed fact with its seconds', async () => {
@@ -958,7 +1166,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
 
-    await whenClicking('anomalie-annuler');
+    await whenCancelling('fin-17');
 
     thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
   });
@@ -966,7 +1174,7 @@ describe('Anomaly dossier page', () => {
   it('should keep the proposition summary readable with the type and intention entered when they are not a known gesture', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     await whenClicking('anomalie-intention-OUVERTURE');
 
@@ -1060,23 +1268,25 @@ describe('Anomaly dossier page', () => {
     thenComparedFactsShowNoIdentifier(['travail-8', 'nc-12', 'nc-99']);
   });
 
-  it('should designate the activities of a received pointage trace by their label, never by their identifier', async () => {
+  it('should designate the activities of a selected pointage trace by their label, never by their identifier', async () => {
     givenAPointageCreatingAnActivityAbsentFromTheDossier();
-
     await whenRendering();
 
-    thenReceivedTraceContains('debut-9', 'Camille Martin · lundi 14 septembre à 08:00:00');
-    thenReceivedTraceContains('debut-9', 'Vise l’activité Travail ouvert à 8 h');
-    thenReceivedTraceContains('debut-9', 'Crée l’activité Démarrage · lundi 14 septembre à 08:00:00');
-    thenReceivedTraceShowsNoIdentifier('debut-9', ['debut-9', 'travail-8', 'travail-9']);
+    await whenSelecting('debut-9');
+
+    thenTheTraceContains('Camille Martin · lundi 14 septembre à 08:00:00');
+    thenTheTraceContains('Vise l’activité Travail ouvert à 8 h');
+    thenTheTraceContains('Crée l’activité Démarrage · lundi 14 septembre à 08:00:00');
+    thenTheTraceShowsNoIdentifier(['debut-9', 'travail-8', 'travail-9']);
   });
 
-  it('should name the operator in the received trace and say an unresolved record without showing its identifier', async () => {
+  it('should name the operator in the selected trace and say an unresolved record without showing its identifier', async () => {
     givenAPointageCreatingAnActivityAbsentFromTheDossier({ operateurNom: '' });
-
     await whenRendering();
 
-    thenReceivedTraceContains('debut-9', 'Opérateur non résolu · lundi 14 septembre à 08:00:00');
+    await whenSelecting('debut-9');
+
+    thenTheTraceContains('Opérateur non résolu · lundi 14 septembre à 08:00:00');
   });
 
   it('should designate the activities of an obsolete address history by their label, never by their identifier', async () => {
@@ -1185,15 +1395,17 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-choix');
   });
 
-  it('should name the operator and the workstation of each pointage in the chronology without any identifier', async () => {
+  it('should name the operator and the workstation of the selected pointage without any identifier', async () => {
     await whenRendering();
 
-    thenReceivedFactContains('fin-17', 'Opérateur : Camille Martin · Poste : DMU 50');
-    thenReceivedFactDoesNotContain('fin-17', 'op-camille');
-    thenReceivedFactDoesNotContain('fin-17', 'poste-1');
+    await whenSelecting('fin-17');
+
+    thenTheSelectionContains('Opérateur : Camille Martin · Poste : DMU 50');
+    thenTheSelectionDoesNotContain('op-camille');
+    thenTheSelectionDoesNotContain('poste-1');
   });
 
-  it('should present an unresolved operator and workstation of a pointage without any identifier', async () => {
+  it('should present an unresolved operator and workstation of the selected pointage without any identifier', async () => {
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
@@ -1202,12 +1414,14 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenReceivedFactContains('fin-17', 'Opérateur : Opérateur non résolu · Poste : Poste non résolu');
-    thenReceivedFactDoesNotContain('fin-17', 'op-camille');
-    thenReceivedFactDoesNotContain('fin-17', 'poste-1');
+    await whenSelecting('fin-17');
+
+    thenTheSelectionContains('Opérateur : Opérateur non résolu · Poste : Poste non résolu');
+    thenTheSelectionDoesNotContain('op-camille');
+    thenTheSelectionDoesNotContain('poste-1');
   });
 
-  it('should distinguish a pointage without workstation from an unresolved workstation in the chronology', async () => {
+  it('should distinguish a selected pointage without workstation from an unresolved workstation', async () => {
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
@@ -1219,7 +1433,9 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenReceivedFactContains('fin-17', 'Poste : Sans poste');
+    await whenSelecting('fin-17');
+
+    thenTheSelectionContains('Poste : Sans poste');
   });
 
   it('should name the operator and the workstation in an obsolete address history without any identifier', async () => {
@@ -1640,7 +1856,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     thenTextContains('anomalie-acte', 'Correction du pointage');
     thenFieldValueIs('anomalie-cible', 'travail-8');
@@ -1653,7 +1869,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     const libelle = 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 17:00';
     thenTextContains('anomalie-pointage', libelle);
@@ -1675,7 +1891,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
     await whenEntering('anomalie-cible', 'nc-12');
     await whenEntering('anomalie-motif', 'Cible confirmée');
     await whenClicking('anomalie-previsualiser');
@@ -1703,7 +1919,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
     await whenClicking('anomalie-type-DEBUT');
     await whenClicking('anomalie-intention-OUVERTURE');
     await whenEntering('anomalie-cible', '');
@@ -1726,7 +1942,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     thenTargetChoiceIs('travail-8', 'Démarrage · lundi 14 septembre à 08:00:00');
     thenAbsent('anomalie-activite');
@@ -1747,10 +1963,10 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-annuler');
+    await whenCancelling('fin-17');
 
     thenTextContains('anomalie-acte', 'Annulation du pointage');
-    thenTextContains('anomalie-pointage', 'lundi 14 septembre à 17:00:00');
+    thenReceivedFactTimeIs('fin-17', '17:00:00 · lundi 14 septembre');
     thenAbsent('anomalie-cible');
     thenFieldValueIs('anomalie-motif', '');
   });
@@ -1777,7 +1993,7 @@ describe('Anomaly dossier page', () => {
   it('should offer the operators of the referential by name and pupitre code when the fact is edited', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     await whenOpeningTheOperatorChoice();
 
@@ -1811,7 +2027,7 @@ describe('Anomaly dossier page', () => {
   it('should label the operator and workstation fields by their role, never by an identifier', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     expect(labelOf('anomalie-operateur')).toBe('Opérateur concerné');
     expect(labelOf('anomalie-poste')).toBe('Poste (facultatif)');
@@ -1820,7 +2036,7 @@ describe('Anomaly dossier page', () => {
   it('should find the operator the manager looks for by its pupitre code and put it in the proposition', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     await whenChoosingTheOperator('Zoé Évrard · 012', '012');
     await whenEntering('anomalie-motif', 'Opérateur corrigé');
@@ -1869,7 +2085,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
 
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     expect(posteChoices()).toEqual(['Sans poste', 'Postes habilités: DMU 50', 'Autres postes: Tour 1, Scie 1']);
   });
@@ -1877,7 +2093,7 @@ describe('Anomaly dossier page', () => {
   it('should regroup the workstations when the manager chooses an operator with other qualifications', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     await whenChoosingTheOperator('Alex Durand');
 
@@ -1887,7 +2103,7 @@ describe('Anomaly dossier page', () => {
   it('should offer every workstation as another one when the operator chosen is qualified on none', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     await whenChoosingTheOperator('Zoé Évrard · 012');
 
@@ -2173,6 +2389,15 @@ describe('Anomaly dossier page', () => {
     thenPageDoesNotMention('conflit');
   });
 
+  it('should select no pointage on an automatic end and invite to select one', async () => {
+    givenAnAutomaticEnd();
+
+    await whenRendering();
+
+    thenTheSelectionReads('Sélectionnez un pointage pour voir ses détails et le corriger.');
+    thenAbsent('anomalie-selection-geste');
+  });
+
   it('should keep showing the due activity with its start, its automatic end and its received duration beside the problem', async () => {
     givenAnAutomaticEnd();
 
@@ -2302,7 +2527,7 @@ describe('Anomaly dossier page', () => {
   it('should preview the received instant untouched, nanoseconds included, when the manager changes something else', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     await whenEntering('anomalie-motif', 'Cible confirmée');
     await whenClicking('anomalie-previsualiser');
@@ -2421,7 +2646,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     thenTheInstantFieldsShow('14/09/2026', '17:15:30');
   });
@@ -2429,7 +2654,7 @@ describe('Anomaly dossier page', () => {
   it('should name the buttons that open the calendar and the time list in French', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
 
     thenTheButtonInsideIsNamed('anomalie-instant-calendrier', 'Ouvrir le calendrier');
     thenTheButtonInsideIsNamed('anomalie-instant-horloge', 'Ouvrir la liste des heures');
@@ -2477,7 +2702,7 @@ describe('Anomaly dossier page', () => {
       givenACorrectionReceivedWithAnOffset('2026-03-29T04:00:00+02:00');
       await whenRendering();
       await whenClicking('anomalie-detail');
-      await whenClicking('anomalie-corriger');
+      await whenCorrecting('fin-17');
 
       await whenEntering('anomalie-instant-heure', '02:30');
 
@@ -2831,6 +3056,21 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const givenDiagnosticsOn = (pointages: readonly string[]): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        diagnostics: pointages.map(pointage => ({
+          pointage: new PointageAnomalieId(pointage),
+          raison: 'CIBLE_REMPLACEE' as const,
+          cible: { activite: new ActiviteAnomalieId('travail-8') },
+        })),
+      },
+    };
+  };
+
   const givenAStructuredDiagnostic = (pointage = 'fin-17'): void => {
     const dossier = dossierAnomalieFixture();
     read.result = {
@@ -2972,22 +3212,28 @@ describe('Anomaly dossier page', () => {
     };
   };
 
-  const givenTwoDiagnostics = (): void => {
+  const dossierDiagnosedOn = (pointages: readonly string[]): DossierAnomalie => {
     const dossier = dossierAnomalieFixture();
-    read.result = {
-      kind: 'DOSSIER',
-      dossier: {
-        ...dossier,
-        ligne: { ...dossier.ligne, explication: '' },
-        journal: [pointageCiteFixture('fin-17', ARRET_17, 'travail-8'), pointageCiteFixture('debut-8', DEMARRAGE_8, '')],
-        activites: [activiteCiteFixture(TRAVAIL_8)],
-        diagnostics: ['fin-17', 'debut-8'].map(pointage => ({
-          pointage: new PointageAnomalieId(pointage),
-          raison: 'CIBLE_REMPLACEE' as const,
-          cible: { activite: new ActiviteAnomalieId('travail-8') },
-        })),
-      },
+    return {
+      ...dossier,
+      ligne: { ...dossier.ligne, explication: '' },
+      journal: [pointageCiteFixture('fin-17', ARRET_17, 'travail-8'), pointageCiteFixture('debut-8', DEMARRAGE_8, '')],
+      activites: [activiteCiteFixture(TRAVAIL_8)],
+      diagnostics: pointages.map(pointage => ({
+        pointage: new PointageAnomalieId(pointage),
+        raison: 'CIBLE_REMPLACEE' as const,
+        cible: { activite: new ActiviteAnomalieId('travail-8') },
+      })),
     };
+  };
+
+  const givenTwoDiagnostics = (): void => {
+    read.result = { kind: 'DOSSIER', dossier: dossierDiagnosedOn(['fin-17', 'debut-8']) };
+  };
+
+  const givenAReceiptWhoseOnlyFaultIs = (pointage: string): void => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'APPLIQUE', dossier: { ...dossierDiagnosedOn([pointage]), version: 2 } };
   };
 
   const givenAChallengedPointageWithAnUnreadableInstant = (): void => {
@@ -3131,7 +3377,7 @@ describe('Anomaly dossier page', () => {
   const givenACorrectionOfTheReceivedEndWithItsReason = async (): Promise<void> => {
     await whenRendering();
     await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-corriger');
+    await whenCorrecting('fin-17');
     await whenEntering('anomalie-motif', 'Cible confirmée');
   };
 
@@ -3269,6 +3515,31 @@ describe('Anomaly dossier page', () => {
     await fixture.whenStable();
   };
 
+  const whenSelecting = async (pointage: string): Promise<void> => {
+    selectionButton(pointage).click();
+    await fixture.whenStable();
+  };
+
+  const selectionButton = (pointage: string): HTMLElement =>
+    requiredFixture(receivedFact(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-selectionner')), 'selection button');
+
+  const whenCorrecting = async (pointage: string): Promise<void> => {
+    await whenSelecting(pointage);
+    await whenClickingInTheSelection('anomalie-corriger');
+  };
+
+  const whenCancelling = async (pointage: string): Promise<void> => {
+    await whenSelecting(pointage);
+    await whenClickingInTheSelection('anomalie-annuler');
+  };
+
+  const whenClickingInTheSelection = async (selector: string): Promise<void> => {
+    requiredFixture(
+      element('anomalie-selection').querySelector<HTMLElement>(dataSelector(selector)),
+      `${selector} of the selection`,
+    ).click();
+    await fixture.whenStable();
+  };
   const whenClicking = async (selector: string): Promise<void> => {
     element(selector).click();
     await Promise.allSettled([
@@ -3300,6 +3571,47 @@ describe('Anomaly dossier page', () => {
     element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
 
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
+  const thenTheSelectionReads = (expected: string): void => {
+    expect(element('anomalie-selection-vide').textContent.trim()).toBe(expected);
+  };
+  const thenOnlyThePointageIsPressed = (pressed: string, others: readonly string[]): void => {
+    expect(selectionButton(pressed).getAttribute('aria-pressed')).toBe('true');
+    for (const other of others) expect(selectionButton(other).getAttribute('aria-pressed')).toBe('false');
+  };
+  const thenTheSelectionButtonIsNamed = (pointage: string, expected: readonly string[]): void => {
+    for (const part of expected) expect(selectionButton(pointage).textContent).toContain(part);
+  };
+  const thenTheSelectionContains = (expected: string): void => {
+    expect(element('anomalie-selection').textContent.replace(/\s+/g, ' ')).toContain(expected);
+  };
+  const thenTheSelectionDoesNotContain = (unexpected: string): void => {
+    expect(element('anomalie-selection').textContent).not.toContain(unexpected);
+  };
+  const thenTheSelectionTimeIs = (expected: string): void => {
+    const time = requiredFixture(element('anomalie-selection').querySelector<HTMLElement>('time'), 'selection time');
+    expect(time.textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+  const thenTheChronologyOffersNoActionNorTraceability = (pointages: readonly string[]): void => {
+    for (const pointage of pointages) {
+      const fait = receivedFact(pointage);
+      expect(fait.querySelector(dataSelector('anomalie-corriger'))).toBeNull();
+      expect(fait.querySelector(dataSelector('anomalie-annuler'))).toBeNull();
+      expect(fait.querySelector('details')).toBeNull();
+    }
+  };
+  const thenTheSelectionOffersNoAction = (): void => {
+    expect(element('anomalie-selection').querySelector(dataSelector('anomalie-corriger'))).toBeNull();
+    expect(element('anomalie-selection').querySelector(dataSelector('anomalie-annuler'))).toBeNull();
+  };
+  const thenTheSelectionActionsAreDisabled = (): void => {
+    for (const selector of ['anomalie-corriger', 'anomalie-annuler']) {
+      const action = element('anomalie-selection').querySelector<HTMLButtonElement>(dataSelector(selector));
+      expect(requiredFixture(action, `${selector} of the selection`).disabled).toBe(true);
+    }
+  };
+  const thenTheSelectionShowsTheGesture = (expected: string): void => {
+    expect(element('anomalie-selection-geste').textContent.trim()).toBe(expected);
+  };
   const thenTheProblemReads = (expected: string): void => {
     expect(element('anomalie-probleme').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
   };
@@ -3327,8 +3639,13 @@ describe('Anomaly dossier page', () => {
   const thenReceivedFactsShowNoActivityIdentifier = (pointages: readonly string[]): void => {
     for (const pointage of pointages) thenReceivedFactDoesNotContain(pointage, 'travail-');
   };
-  const thenReceivedTraceShowsNoIdentifier = (pointage: string, identifiers: readonly string[]): void => {
-    for (const identifier of identifiers) thenReceivedTraceDoesNotContain(pointage, identifier);
+  const selectionTrace = (): HTMLElement =>
+    requiredFixture(element('anomalie-selection').querySelector<HTMLElement>(dataSelector('anomalie-pointage-detail')), 'selection trace');
+  const thenTheTraceShowsNoIdentifier = (identifiers: readonly string[]): void => {
+    for (const identifier of identifiers) expect(selectionTrace().textContent).not.toContain(identifier);
+  };
+  const thenTheTraceContains = (expected: string): void => {
+    expect(selectionTrace().textContent.replace(/\s+/g, ' ')).toContain(expected);
   };
   const gestureOf = (pointage: string): HTMLElement =>
     requiredFixture(receivedFact(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-geste')), 'received fact gesture');
@@ -3343,14 +3660,6 @@ describe('Anomaly dossier page', () => {
   };
   const thenReceivedFactContains = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).toContain(expected);
-  };
-  const receivedTrace = (pointage: string): HTMLElement =>
-    requiredFixture(receivedFact(pointage).querySelector<HTMLElement>('details'), 'received trace');
-  const thenReceivedTraceContains = (pointage: string, expected: string): void => {
-    expect(receivedTrace(pointage).textContent.replace(/\s+/g, ' ')).toContain(expected);
-  };
-  const thenReceivedTraceDoesNotContain = (pointage: string, unexpected: string): void => {
-    expect(receivedTrace(pointage).textContent).not.toContain(unexpected);
   };
   const thenReceivedFactDoesNotContain = (pointage: string, expected: string): void => {
     expect(receivedFact(pointage).textContent).not.toContain(expected);

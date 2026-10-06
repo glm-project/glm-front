@@ -43,6 +43,19 @@ nomme le geste tardif (« L'arrêt de 19:30 vise le travail, déjà terminé aut
 l'activité échue (début, fin automatique, durée) restent affichés à côté. Aucune phrase ne porte d'identifiant, ni de
 lien : un pointage absent du journal se dit « Un pointage non résolu ».
 
+## Sélection d'un pointage
+
+Chaque pointage de la chronologie est un bouton de sélection (`aria-pressed`, nom : heure avec ses secondes et geste) ;
+l'élément reste sobre et ne porte ni bouton d'acte ni repli. Le panneau « Sélection », avant « Votre décision », montre le
+pointage choisi : geste, instant avec ses secondes, opérateur et poste, régularisation, annulation (motif, auteur, instant),
+remplacement, activités visée et créée, enregistrement (instant et auteur), puis Corriger et Annuler. Un pointage annulé n'a
+ni l'un ni l'autre ; le consultant et une opération en cours les voient désactivés, avec le message des droits. À
+l'ouverture d'un conflit, le plus ancien pointage en cause que le journal contient est sélectionné ; une fin automatique, ou
+un conflit sans pointage en cause lisible, ne sélectionne rien et le panneau dit « Sélectionnez un pointage pour voir ses
+détails et le corriger. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier,
+jamais un pointage absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé
+ne bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
+
 ## Liste des anomalies
 
 La liste demande la nature de l'onglet courant : `FIN_AUTOMATIQUE` sans `nature` dans l'URL, `CONFLIT` à la
@@ -91,14 +104,14 @@ pas un champ absent.
 
 ## Opérateur et poste affichés
 
-La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, la chronologie, l'historique d'une adresse
+La liste (onglets Conflits et Fins automatiques), l'en-tête du dossier, le panneau Sélection, l'historique d'une adresse
 obsolète et les continuations nomment l'opérateur (« Prénom Nom ») et le poste (libellé) reçus. Aucun identifiant
 d'opérateur ou de poste n'y est affiché : une fiche non résolue donne « Opérateur non résolu » ou « Poste non résolu »,
 un pointage sans poste « Sans poste ». Le journal porte le nom et le libellé de chaque pointage à côté des identités
 du fait, vides lorsque la fiche manque ; une ligne de liste n'en garde que `posteId`, pour distinguer l'absence de
 poste d'un poste non résolu.
 
-Le panneau « Voir les détails et l'enregistrement » de chaque pointage et les colonnes Avant et Après de « Comparer tous
+La traçabilité du pointage sélectionné (panneau Sélection) et les colonnes Avant et Après de « Comparer tous
 les pointages » commencent par « Prénom Nom · instant » (« Opérateur non résolu » sans fiche), jamais par l'identifiant du
 pointage. Les lignes « Vise l'activité » et « Crée l'activité » y désignent l'activité par son libellé (nature et début
 reçus du dossier), à défaut par le pointage qui l'a créée dans le même journal, sinon « Activité non résolue » : aucun

@@ -27,6 +27,7 @@ import {
   thenTheInstantFieldsShow,
   whenTypingTheInstant,
 } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import { whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const urlApercu = `${urlDossier}/apercus`;
@@ -188,6 +189,7 @@ describe('Automatic end of an activity in Gestion', () => {
     whenGivingTheReasonOfTheCorrection();
     whenPreviewingTheCorrection();
     whenConfirmingTheEndRegularisation();
+    whenSelectingPointage(finTardiveFixture);
 
     thenTheCorrectionIsProcessedFromTheReceipt();
   });

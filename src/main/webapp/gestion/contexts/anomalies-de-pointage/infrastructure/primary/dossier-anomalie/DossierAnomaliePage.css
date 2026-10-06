@@ -1,8 +1,12 @@
 .dossier-grille {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   gap: 2rem;
   align-items: start;
+}
+.dossier-chronologie {
+  grid-row: 1 / span 2;
 }
 .chronologie {
   margin: 0;
@@ -36,6 +40,29 @@ h3[tabindex]:focus-visible {
   background: var(--color-ink-muted);
   content: '';
 }
+.pointage-selection {
+  display: block;
+  width: 100%;
+  min-height: var(--spacing-touch);
+  padding: 0.25rem 0.75rem;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.pointage-selection:hover {
+  background: var(--color-sunken);
+}
+.pointage-selectionne {
+  border-color: var(--color-accent);
+  background: var(--color-sunken);
+  outline: 1px solid var(--color-accent);
+}
+.pointage-selection:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.panneau-selection,
 .panneau-correction {
   padding: 1.5rem;
   border: 1px solid var(--color-border);
@@ -131,7 +158,12 @@ h3[tabindex]:focus-visible {
   }
   .dossier-grille {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
   }
+  .dossier-chronologie {
+    grid-row: auto;
+  }
+  .panneau-selection,
   .panneau-correction,
   .apercu-resolution {
     padding: 1rem;
