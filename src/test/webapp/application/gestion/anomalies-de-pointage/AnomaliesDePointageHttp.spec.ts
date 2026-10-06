@@ -150,9 +150,12 @@ describe('HTTP conflict resolution in Gestion', () => {
       .within(() => {
         cy.get(dataSelector('anomalie-pointage-detail'))
           .should('have.prop', 'open', true)
-          .contains('p', `Crée l’activité ${ncFixture}`)
-          .should('be.visible');
-        cy.contains('p', `Remplace le pointage ${ncFixture}`).should('be.visible');
+          .contains('p', 'Crée l’activité Non-conformité · ')
+          .should('be.visible')
+          .and('not.contain.text', ncFixture);
+        cy.contains('p', /^Remplace le pointage .+ · Non-conformité · Transition$/)
+          .should('be.visible')
+          .and('not.contain.text', ncFixture);
       });
   };
 
@@ -441,7 +444,8 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.get('@journalCanonique')
       .should('contain', 'lundi 14 septembre à 17:01:00')
       .and('contain', 'Pointage annulé')
-      .and('contain', 'Remplace le pointage');
+      .and('contain', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée')
+      .and('not.contain', `Remplace le pointage ${finFixture}`);
     cy.get('@dureesCanoniques').should('contain', '4 h').and('contain', '5 h 1 min');
     cy.wait('@listeApresResolution');
     cy.get(dataSelector('anomalies-vide')).should('contain.text', 'Aucun conflit');
