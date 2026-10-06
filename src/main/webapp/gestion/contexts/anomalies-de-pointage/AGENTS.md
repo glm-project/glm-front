@@ -81,6 +81,10 @@ d'en-tête est « Prénom Nom · instant » (jamais l'identifiant du pointage), 
 par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (nature et instant),
 sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète, le diagnostic de conflit et
 l'option de cible du formulaire suivent la même règle (`labelForActivite`).
+Un autre pointage (remplacé, ouvrant ou terminant d'un diagnostic, pointage de l'acte en aperçu) se désigne par une
+seule règle, `referencePointage` : « instant · Type · Intention » depuis le journal disponible. Quand il manque, la
+phrase porte le déterminant (« Remplace un pointage non résolu », « Ouverte par un pointage non résolu »), jamais
+l'identifiant.
 Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le port de lecture
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et

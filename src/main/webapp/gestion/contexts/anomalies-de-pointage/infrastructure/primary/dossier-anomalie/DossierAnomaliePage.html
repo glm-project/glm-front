@@ -30,9 +30,9 @@
     <div class="mt-4 rounded-control border border-danger bg-surface p-4" data-selector="conflit-diagnostic">
       <h3 class="text-body font-semibold">{{ libelles.pourquoi }}</h3>
       @if (dossier.diagnostics?.length) { @for (diagnostic of dossier.diagnostics; track diagnostic.pointage.pointage) { @let pointage =
-      referencePointage(dossier.journal, diagnostic.pointage);
+      referencePointage(dossier.journal, diagnostic.pointage.pointage);
       <p class="mt-2 text-body">
-        {{ libelles.diagnosticPointage }} @if (pointage.lien) {
+        @if (pointage.lien) { {{ libelles.diagnosticPointage }}
         <a
           class="text-accent underline underline-offset-4"
           [href]="pointage.lien"
@@ -40,10 +40,11 @@
           (click)="pointageConsulte.set(diagnostic.pointage.pointage)"
           >{{ pointage.libelle }}</a
         >
-        } @else { <span>{{ pointage.libelle }}</span> } {{ libelles.diagnosticCible }} {{
+        } @else { {{ libelles.diagnosticPointageNonResolu }} } {{ libelles.diagnosticCible }} {{
         labelForActivite(diagnostic.cible.activite.activite, dossier) }}, {{ libelles.raisons[diagnostic.raison] }}.
       </p>
-      @if (diagnostic.cible.ouvrant; as ouvrant) { @let reference = referencePointage(dossier.journal, ouvrant); @if (reference.lien) {
+      @if (diagnostic.cible.ouvrant; as ouvrant) { @let reference = referencePointage(dossier.journal, ouvrant.pointage); @if
+      (reference.lien) {
       <p>
         {{ libelles.diagnosticOuvrant }}
         <a
@@ -55,8 +56,9 @@
         >.
       </p>
       } @else {
-      <p>{{ libelles.diagnosticOuvrant }} {{ reference.libelle }}.</p>
-      } } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin); @if (reference.lien) {
+      <p>{{ libelles.diagnosticOuvrantNonResolu }}.</p>
+      } } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin.pointage); @if
+      (reference.lien) {
       <p>
         {{ libelles.diagnosticTerminaison }}
         <a
@@ -68,7 +70,7 @@
         >.
       </p>
       } @else {
-      <p>{{ libelles.diagnosticTerminaison }} {{ reference.libelle }}.</p>
+      <p>{{ libelles.diagnosticTerminaisonNonResolu }}.</p>
       } } } } @else {
       <p class="mt-2 text-body">{{ dossier.ligne.explication }}</p>
       }
@@ -105,7 +107,7 @@
             {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}
           </p>
           } @if (pointage.remplace; as original) {
-          <p class="mt-2 text-body-sm">{{ libelles.remplace }} {{ original.pointage }}</p>
+          <p class="mt-2 text-body-sm">{{ remplacementDe(dossier.journal, original.pointage) }}</p>
           }
           <p class="mt-2 text-body-sm">
             {{ libelles.operateur }} : {{ operateurDe(pointage.operateurNom) }} · {{ libelles.poste }} : {{ posteDe(pointage.posteLibelle,
@@ -417,7 +419,7 @@
       <div class="mt-4 text-body-sm" data-selector="anomalie-apercu-acte">
         <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
         @if (apercu.acte.kind !== 'REGULARISATION') {
-        <p>{{ apercu.acte.pointage }} · {{ apercu.acte.motif }}</p>
+        <p>{{ referencePointage(apercu.avant.journal, apercu.acte.pointage).libelle }} · {{ apercu.acte.motif }}</p>
         } @if (apercu.acte.kind !== 'ANNULATION') {
         <p>
           {{ libelles.types[apercu.acte.fait.type] }} · {{ libelles.intentions[apercu.acte.fait.intention] }} · {{ apercu.acte.fait.instant
@@ -505,7 +507,7 @@
                 @if (pointage.annulation; as annulation) {
                 <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
                 } @if (pointage.remplace; as original) {
-                <p>{{ libelles.remplace }} {{ original.pointage }}</p>
+                <p>{{ remplacementDe(apercu.apres.journal, original.pointage) }}</p>
                 } @if (pointage.regularisation) {
                 <p>{{ libelles.regularisation }}</p>
                 }
@@ -547,7 +549,7 @@
           {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}
         </p>
         } @if (pointage.remplace; as original) {
-        <p>{{ libelles.remplace }} {{ original.pointage }}</p>
+        <p>{{ remplacementDe(resultat.journal, original.pointage) }}</p>
         }
         <p class="text-body-sm">
           {{ libelles.operateur }} : {{ operateurDe(pointage.operateurNom) }} · {{ libelles.poste }} : {{ posteDe(pointage.posteLibelle,

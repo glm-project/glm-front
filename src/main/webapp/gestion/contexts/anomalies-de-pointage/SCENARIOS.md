@@ -91,8 +91,12 @@ les pointages » commencent par « Prénom Nom · instant » (« Opérateur non 
 pointage. Les lignes « Vise l'activité » et « Crée l'activité » y désignent l'activité par son libellé (nature et début
 reçus du dossier), à défaut par le pointage qui l'a créée dans le même journal, sinon « Activité non résolue » : aucun
 identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète, le diagnostic de conflit ou la
-cible du formulaire. Les références à un autre pointage (« Remplace le pointage … », « Ouverte par … » sans le fait dans
-le journal, pointage corrigé de l'aperçu) restent des identifiants de pointage affichés.
+cible du formulaire. Un autre pointage se désigne de la même façon partout : « instant · Type · Intention » du pointage trouvé dans le
+journal disponible (dossier, avant ou après), dans la phrase « Remplace le pointage … », « Ouverte par le pointage … »,
+« Terminée par le pointage … » ou « Le pointage … vise l'activité … » ; sinon la phrase le dit sans l'identifier :
+« Remplace un pointage non résolu », « Ouverte par un pointage non résolu », « Un pointage non résolu vise … ». La ligne
+de l'acte en aperçu commence par « instant · Type · Intention » ou « Pointage non résolu » : aucun identifiant de pointage
+n'est affiché.
 
 Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
 par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le
