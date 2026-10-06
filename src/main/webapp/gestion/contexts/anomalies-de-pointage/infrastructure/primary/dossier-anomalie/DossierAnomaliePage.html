@@ -41,7 +41,7 @@
           >{{ pointage.libelle }}</a
         >
         } @else { {{ libelles.diagnosticPointageNonResolu }} } {{ libelles.diagnosticCible }} {{
-        labelForActivite(diagnostic.cible.activite.activite, dossier) }}, {{ libelles.raisons[diagnostic.raison] }}.
+        labelForActivite(diagnostic.cible.activite.activite, dossier, now) }}, {{ libelles.raisons[diagnostic.raison] }}.
       </p>
       @if (diagnostic.cible.ouvrant; as ouvrant) { @let reference = referencePointage(dossier.journal, ouvrant.pointage); @if
       (reference.lien) {
@@ -97,7 +97,7 @@
           <p class="mt-2 text-body-sm">
             {{ libelles.cible }}
             <a class="text-accent underline underline-offset-4" [href]="hrefForActivite(pointage.fait.activiteVisee, dossier)"
-              >{{ labelForActivite(pointage.fait.activiteVisee, dossier) }}</a
+              >{{ labelForActivite(pointage.fait.activiteVisee, dossier, now) }}</a
             >
           </p>
           } @if (pointage.regularisation) {
@@ -107,7 +107,7 @@
             {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}
           </p>
           } @if (pointage.remplace; as original) {
-          <p class="mt-2 text-body-sm">{{ remplacementDe(dossier.journal, original.pointage) }}</p>
+          <p class="mt-2 text-body-sm">{{ remplacementDe(dossier.journal, original.pointage, now) }}</p>
           }
           <p class="mt-2 text-body-sm">
             {{ libelles.operateur }} : {{ operateurDe(pointage.operateurNom) }} · {{ libelles.poste }} : {{ posteDe(pointage.posteLibelle,
@@ -146,7 +146,7 @@
             <ng-container
               *ngTemplateOutlet="
                 detailPointage;
-                context: { $implicit: detailDuPointage(pointage, dossier), entete: 'text-body-sm', ligne: 'text-body-sm', avecType: false }
+                context: { $implicit: detailDuPointage(pointage, dossier, now), entete: 'text-body-sm', ligne: 'text-body-sm', avecType: false }
               "
             />
             <p class="mt-2 text-body-sm text-ink-muted">
@@ -159,7 +159,7 @@
       <h2 class="mb-3 mt-6 text-section">{{ libelles.activites }}</h2>
       @for (activite of dossier.activites; track activite.id.activite) {
       <div class="border-t border-border py-4" [id]="'activite-' + activite.id.activite" data-selector="anomalie-activite">
-        <p class="text-body font-semibold">{{ libelleActivite(activite) }}</p>
+        <p class="text-body font-semibold">{{ libelleActivite(activite, now) }}</p>
         <p class="mt-1 text-body-sm">{{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}</p>
       </div>
       }
@@ -207,7 +207,7 @@
           } } } @else { @if (proposition.fait.type) {
           <p>{{ libelles.types[proposition.fait.type] }} · {{ proposition.fait.instant | instantLongDayWithSeconds: now }}</p>
           } @if (proposition.fait.activiteVisee) {
-          <p>{{ libelles.cible }} {{ labelForActivite(proposition.fait.activiteVisee, dossier) }}</p>
+          <p>{{ libelles.cible }} {{ labelForActivite(proposition.fait.activiteVisee, dossier, now) }}</p>
           } }
         </div>
         @if (proposition.kind !== 'ANNULATION') {
@@ -260,11 +260,11 @@
             <option value="" [selected]="proposition.fait.activiteVisee === ''">Aucune activité visée</option>
             @if (targetIsAbsent(dossier, proposition.fait.activiteVisee)) {
             <option [value]="proposition.fait.activiteVisee" selected>
-              {{ labelForActivite(proposition.fait.activiteVisee, dossier) }} (référence actuelle)
+              {{ labelForActivite(proposition.fait.activiteVisee, dossier, now) }} (référence actuelle)
             </option>
             } @for (activite of dossier.activites; track activite.id.activite) {
             <option [value]="activite.id.activite" [selected]="proposition.fait.activiteVisee === activite.id.activite">
-              {{ libelleActivite(activite) }}
+              {{ libelleActivite(activite, now) }}
             </option>
             }
           </select>
@@ -426,7 +426,7 @@
           | instantLongDayWithSeconds: now }}
         </p>
         @if (apercu.acte.fait.activiteVisee) {
-        <p>{{ libelles.cible }} {{ labelForActivite(apercu.acte.fait.activiteVisee, apercu.apres) }}</p>
+        <p>{{ libelles.cible }} {{ labelForActivite(apercu.acte.fait.activiteVisee, apercu.apres, now) }}</p>
         }
         <p>
           {{ libelles.operateur }} : {{ operateurDeLActe(apercu.acte.fait.operateur, apercu.apres.journal) }} · {{ libelles.poste }} : {{
@@ -438,14 +438,14 @@
         <div>
           <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
           @for (activite of apercu.avant.activites; track activite.id.activite) {
-          <p class="mt-2 text-body-sm">{{ libelleActivite(activite) }} · {{ tempsActivite(activite) }}</p>
+          <p class="mt-2 text-body-sm">{{ libelleActivite(activite, now) }} · {{ tempsActivite(activite) }}</p>
           }
         </div>
         <div data-selector="anomalie-apercu-consequences">
           <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
           @for (activite of apercu.apres.activites; track activite.id.activite) {
           <p class="mt-2 text-body-sm" data-selector="anomalie-apercu-activite-apres">
-            {{ libelleActivite(activite) }} · {{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}
+            {{ libelleActivite(activite, now) }} · {{ libelles.etats[activite.etat] }} · {{ tempsActivite(activite) }}
           </p>
           } @for (consequence of apercu.apres.consequences; track consequence) {
           <p class="mt-2 text-body-sm">{{ consequence }}</p>
@@ -478,7 +478,7 @@
                 <ng-container
                   *ngTemplateOutlet="
                     detailPointage;
-                    context: { $implicit: detailDuPointage(pointage, apercu.avant), entete: 'font-semibold', ligne: '', avecType: true }
+                    context: { $implicit: detailDuPointage(pointage, apercu.avant, now), entete: 'font-semibold', ligne: '', avecType: true }
                   "
                 />
                 @if (pointage.annulation; as annulation) {
@@ -501,13 +501,13 @@
                 <ng-container
                   *ngTemplateOutlet="
                     detailPointage;
-                    context: { $implicit: detailDuPointage(pointage, apercu.apres), entete: 'font-semibold', ligne: '', avecType: true }
+                    context: { $implicit: detailDuPointage(pointage, apercu.apres, now), entete: 'font-semibold', ligne: '', avecType: true }
                   "
                 />
                 @if (pointage.annulation; as annulation) {
                 <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
                 } @if (pointage.remplace; as original) {
-                <p>{{ remplacementDe(apercu.apres.journal, original.pointage) }}</p>
+                <p>{{ remplacementDe(apercu.apres.journal, original.pointage, now) }}</p>
                 } @if (pointage.regularisation) {
                 <p>{{ libelles.regularisation }}</p>
                 }
@@ -539,9 +539,9 @@
         >
         <p class="mt-2 font-semibold">{{ libelles.types[pointage.fait.type] }} · {{ libelles.intentions[pointage.fait.intention] }}</p>
         @if (pointage.fait.activiteVisee) {
-        <p>{{ libelles.cible }} {{ labelForActivite(pointage.fait.activiteVisee, resultat) }}</p>
+        <p>{{ libelles.cible }} {{ labelForActivite(pointage.fait.activiteVisee, resultat, now) }}</p>
         } @if (pointage.activiteCreee; as activite) {
-        <p>{{ libelles.creee }} {{ labelForActivite(activite.activite, resultat) }}</p>
+        <p>{{ libelles.creee }} {{ labelForActivite(activite.activite, resultat, now) }}</p>
         } @if (pointage.regularisation) {
         <p>{{ libelles.regularisation }}</p>
         } @if (pointage.annulation; as annulation) {
@@ -549,7 +549,7 @@
           {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}
         </p>
         } @if (pointage.remplace; as original) {
-        <p>{{ remplacementDe(resultat.journal, original.pointage) }}</p>
+        <p>{{ remplacementDe(resultat.journal, original.pointage, now) }}</p>
         }
         <p class="text-body-sm">
           {{ libelles.operateur }} : {{ operateurDe(pointage.operateurNom) }} · {{ libelles.poste }} : {{ posteDe(pointage.posteLibelle,
