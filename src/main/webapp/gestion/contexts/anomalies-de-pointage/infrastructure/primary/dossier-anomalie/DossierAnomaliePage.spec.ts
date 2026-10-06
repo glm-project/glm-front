@@ -309,6 +309,45 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
   };
 };
 
+const INSTANT_FIN_TARDIVE = instantLocalFixture(new Date(2026, 8, 14, 23, 0));
+
+const faitFinTardiveFixture = (instant = INSTANT_FIN_TARDIVE): FaitPropose => ({ ...faitConflitFixture(), instant });
+
+const acteFinTardiveFixture = (instant: string): ActeResolution => ({
+  kind: 'CORRECTION',
+  pointage: 'fin-23',
+  motif: 'Fin tardive confirmée',
+  fait: { ...faitFinTardiveFixture(), instant },
+});
+
+const dossierFinTardiveFixture = (instant = INSTANT_FIN_TARDIVE): DossierAnomalie => {
+  const dossier = dossierFinAutomatiqueFixture();
+  return {
+    ...dossier,
+    journal: [
+      ...dossier.journal,
+      {
+        id: new PointageAnomalieId('fin-23'),
+        fait: faitFinTardiveFixture(instant),
+        operateurNom: 'Camille Martin',
+        posteLibelle: 'DMU 50',
+        auteur: 'camille',
+        enregistre: instant,
+        regularisation: false,
+      },
+    ],
+    choix: [
+      {
+        id: 'CORRIGER_FIN_TARDIVE:fin-23',
+        code: 'CORRIGER_FIN_TARDIVE',
+        libelle: '',
+        explication: '',
+        saisie: SaisieActe.correct('fin-23', faitFinTardiveFixture(instant)),
+      },
+    ],
+  };
+};
+
 const dossierAtFixture = (pointage: string, explication: string): DossierAnomalie => {
   const dossier = dossierAnomalieFixture();
   return {
@@ -2836,6 +2875,184 @@ describe('Anomaly dossier page', () => {
     thenTheButtonInsideIsDisabled('anomalie-instant-horloge');
   });
 
+  describe('handle of the proposed instant on the frise', () => {
+    it('should draw a handle on the proposed end once the manager chooses the late end correction', async () => {
+      givenALateEnd();
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenTheHandleReads('23:00');
+    });
+
+    it('should move the proposed end by one minute when the right arrow is pressed on the handle', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandle('ArrowRight');
+
+      thenTheInstantFieldsShow('14/09/2026', '23:01:00');
+    });
+
+    it('should withdraw the preview when the handle moves', async () => {
+      givenALateEnd();
+      givenASuccessfulPreview(undefined, acteFinTardiveFixture(INSTANT_FIN_TARDIVE));
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEntering('anomalie-motif', 'Fin tardive confirmée');
+      await whenClicking('anomalie-previsualiser');
+
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      thenAbsent('anomalie-apercu');
+    });
+
+    it('should preview the instant the handle moved to, without the fraction of a second of the received one', async () => {
+      givenALateEnd(instantLocalFixture(new Date(2026, 8, 14, 23, 0), '123456789'));
+      givenASuccessfulPreview(undefined, acteFinTardiveFixture('2026-09-14T23:01:00-03:00'));
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEntering('anomalie-motif', 'Fin tardive confirmée');
+
+      await whenPressingOnTheHandle('ArrowRight');
+      await whenClicking('anomalie-previsualiser');
+
+      expect(preview.actes).toEqual([acteFinTardiveFixture('2026-09-14T23:01:00-03:00')]);
+    });
+
+    it('should stop the handle at the start of the activity the fact ends', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandle('Home');
+
+      thenTheInstantFieldsShow('14/09/2026', '08:00:00');
+    });
+
+    it('should stop the handle at the clock read when the key is pressed, not at the clock of the previous gesture', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      whenTheClockIs(new Date(2026, 9, 5, 10, 30, 12));
+
+      await whenPressingOnTheHandle('End');
+
+      thenTheInstantFieldsShow('05/10/2026', '10:30:00');
+    });
+
+    it.each([
+      { bouton: 'anomalie-instant-plus-5', heure: '23:05:00' },
+      { bouton: 'anomalie-instant-moins-5', heure: '22:55:00' },
+    ])('should move the proposed end five minutes with the button $bouton', async ({ bouton, heure }) => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClicking(bouton);
+
+      thenTheInstantFieldsShow('14/09/2026', heure);
+    });
+
+    it.each([
+      { borne: 'Home', desactive: 'anomalie-instant-moins-5', actif: 'anomalie-instant-plus-5' },
+      { borne: 'End', desactive: 'anomalie-instant-plus-5', actif: 'anomalie-instant-moins-5' },
+    ])('should disable the button that goes past the bound the handle reached with $borne', async ({ borne, desactive, actif }) => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandle(borne);
+
+      thenDisabled(desactive);
+      thenEnabled(actif);
+    });
+
+    it('should lock the handle and its buttons while the outcome of a write is unknown', async () => {
+      givenALateEnd();
+      givenASuccessfulPreview(undefined, acteFinTardiveFixture(INSTANT_FIN_TARDIVE));
+      application.result = { kind: 'ISSUE_INCONNUE' };
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+      await whenEntering('anomalie-motif', 'Fin tardive confirmée');
+      await whenClicking('anomalie-previsualiser');
+
+      await whenClicking('anomalie-confirmer');
+
+      thenTheHandleIsLocked();
+      thenDisabled('anomalie-instant-moins-5');
+      thenDisabled('anomalie-instant-plus-5');
+    });
+
+    it('should strike the received time on the marker of the pointage the handle corrects once it moved away', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      thenTheMarkerFlagIs('fin-23', 'data-deplace', 'true');
+    });
+
+    it('should strike no marker while the handle places an end that corrects no pointage', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEnteringTheInstant('14/09/2026', '17:00');
+
+      thenTheMarkerFlagIs('debut-8', 'data-deplace', 'false');
+    });
+
+    it('should draw no handle before any proposal is chosen', async () => {
+      givenALateEnd();
+
+      await whenRendering();
+
+      thenAbsent('anomalie-poignee');
+    });
+
+    it('should draw no handle for the end regularisation, which comes without an hour', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenAbsent('anomalie-poignee');
+    });
+
+    it('should draw no handle for the cancellation of a pointage', async () => {
+      givenALateEnd();
+      await whenRendering();
+
+      await whenCancelling('fin-23');
+
+      thenAbsent('anomalie-poignee');
+    });
+
+    it('should draw no handle once the manager turns the fact into a start, which ends no activity', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClicking('anomalie-type-DEBUT');
+      await whenClicking('anomalie-intention-OUVERTURE');
+
+      thenAbsent('anomalie-poignee');
+    });
+
+    it('should draw no handle while the fact aims at no activity, which gives it no lower bound', async () => {
+      givenALateEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEntering('anomalie-cible', '');
+
+      thenAbsent('anomalie-poignee');
+    });
+  });
+
   describe('in a time zone that changes hour', () => {
     const original = process.env['TZ'];
 
@@ -2894,6 +3111,27 @@ describe('Anomaly dossier page', () => {
 
       thenTextDoesNotContain('anomalie-instant-erreur', 'Cette heure');
       thenTextDoesNotContain('anomalie-validation', 'Renseignez la date et l’heure du fait.');
+    });
+
+    it('should read the handle on the first occurrence of an hour the clock repeats with its summer offset', async () => {
+      givenALateEnd('2026-10-25T00:30:00.000Z');
+      whenTheClockIs(new Date(2026, 9, 25, 12, 0));
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenTheHandleReads('02:30 UTC+02:00');
+    });
+
+    it('should tell the second occurrence of the repeated hour from the first once the handle crosses an hour of the clock', async () => {
+      givenALateEnd('2026-10-25T00:30:00.000Z');
+      whenTheClockIs(new Date(2026, 9, 25, 12, 0));
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandleFourTimes('ArrowRight', true);
+
+      thenTheHandleReads('02:30 UTC+01:00');
     });
 
     it('should take the first occurrence of an hour the clock repeats', async () => {
@@ -3102,6 +3340,10 @@ describe('Anomaly dossier page', () => {
       kind: 'DOSSIER',
       dossier: { ...dossier, choix: dossier.choix.map(choix => ({ ...choix, saisie })) },
     };
+  };
+
+  const givenALateEnd = (instant = INSTANT_FIN_TARDIVE): void => {
+    read.result = { kind: 'DOSSIER', dossier: dossierFinTardiveFixture(instant) };
   };
 
   const givenAnAutomaticEndStartedOn = (debut: string): void => {
@@ -3693,6 +3935,15 @@ describe('Anomaly dossier page', () => {
     await whenEntering('anomalie-instant-heure', time);
   };
 
+  const whenPressingOnTheHandle = async (key: string, shiftKey = false): Promise<void> => {
+    element('anomalie-poignee').dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+  };
+
+  const whenPressingOnTheHandleFourTimes = async (key: string, shiftKey: boolean): Promise<void> => {
+    for (let fois = 0; fois < 4; fois += 1) await whenPressingOnTheHandle(key, shiftKey);
+  };
+
   const whenTheClockIs = (instant: Date): void => {
     vi.setSystemTime(instant);
   };
@@ -3810,6 +4061,12 @@ describe('Anomaly dossier page', () => {
   const thenOnlyThePointageIsPressed = (pressed: string, others: readonly string[]): void => {
     expect(marker(pressed).getAttribute('aria-pressed')).toBe('true');
     for (const other of others) expect(marker(other).getAttribute('aria-pressed')).toBe('false');
+  };
+  const thenTheHandleIsLocked = (): void => {
+    expect(element('anomalie-poignee').getAttribute('aria-disabled')).toBe('true');
+  };
+  const thenTheHandleReads = (expected: string): void => {
+    expect(element('anomalie-poignee').getAttribute('aria-valuetext')).toBe(expected);
   };
   const thenTheMarkerIsNamed = (pointage: string, expected: string): void => {
     expect(marker(pointage).getAttribute('aria-label')).toBe(expected);

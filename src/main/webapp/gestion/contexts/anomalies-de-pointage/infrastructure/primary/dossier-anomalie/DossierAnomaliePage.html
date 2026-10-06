@@ -21,7 +21,14 @@
   <div class="dossier-grille">
     <section class="dossier-frise" aria-labelledby="frise-heading">
       <h2 id="frise-heading" class="mb-3 text-section">{{ libelles.pointagesEtActivites }}</h2>
-      <glm-frise-dossier [dossier]="dossier" [now]="now" [selection]="selection()" (selectionDemandee)="selection.set($event)" />
+      <glm-frise-dossier
+        [dossier]="dossier"
+        [now]="now"
+        [selection]="selection()"
+        [poignee]="poignee()"
+        (selectionDemandee)="selection.set($event)"
+        (deplacementDemande)="deplacer($event)"
+      />
     </section>
     <section class="panneau-selection" aria-labelledby="selection-heading" data-selector="anomalie-selection">
       <h2 id="selection-heading" class="text-section">{{ libelles.selection }}</h2>
@@ -138,7 +145,28 @@
           <p>{{ libelles.cible }} {{ labelForActivite(proposition.fait.activiteVisee, dossier, now) }}</p>
           } }
         </div>
-        @if (proposition.kind !== 'ANNULATION') {
+        @if (poignee(); as poignee) {
+        <div class="mt-3 flex flex-wrap gap-2" role="group" [attr.aria-label]="libelles.decalerInstant">
+          <button
+            type="button"
+            class="bouton"
+            data-selector="anomalie-instant-moins-5"
+            [disabled]="!peutDeplacer(-5, poignee)"
+            (click)="deplacer({ demande: { kind: 'DE', minutes: -5 }, poignee })"
+          >
+            {{ libelles.moinsCinqMinutes }}
+          </button>
+          <button
+            type="button"
+            class="bouton"
+            data-selector="anomalie-instant-plus-5"
+            [disabled]="!peutDeplacer(5, poignee)"
+            (click)="deplacer({ demande: { kind: 'DE', minutes: 5 }, poignee })"
+          >
+            {{ libelles.plusCinqMinutes }}
+          </button>
+        </div>
+        } @if (proposition.kind !== 'ANNULATION') {
         <details class="mt-3" [open]="detail()" data-selector="anomalie-fait-propose">
           <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="anomalie-champs-detail">
             {{ libelles.modifierFait }}

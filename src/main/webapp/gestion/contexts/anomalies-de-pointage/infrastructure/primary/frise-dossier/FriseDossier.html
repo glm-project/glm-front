@@ -1,6 +1,7 @@
 @if (disposition().elements.length > 0) {
 <div class="frise" data-selector="anomalie-frise">
   <div
+    #plan
     class="frise-plan"
     data-selector="anomalie-frise-plan"
     [style.min-width.px]="disposition().largeurMinimale"
@@ -60,6 +61,7 @@
       [attr.aria-label]="element.nom"
       [attr.data-en-cause]="element.enCause"
       [attr.data-annule]="element.annule"
+      [attr.data-deplace]="element.deplace"
       [attr.data-non-conformite]="element.nonConformite"
       [attr.aria-pressed]="estSelectionne(element.selection)"
       (click)="selectionDemandee.emit(element.selection)"
@@ -70,7 +72,28 @@
       <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
       }
     </button>
-    } } }
+    } } } @if (disposition().poignee; as poignee) {
+    <div
+      role="slider"
+      tabindex="0"
+      data-selector="anomalie-poignee"
+      [style.left.%]="poignee.gauche"
+      [style.top.px]="poignee.haut"
+      [attr.aria-label]="libelles.frise.poignee"
+      [attr.aria-valuemin]="poignee.min"
+      [attr.aria-valuemax]="poignee.max"
+      [attr.aria-valuenow]="poignee.valeur"
+      [attr.aria-valuetext]="poignee.texte"
+      [attr.aria-disabled]="poignee.desactivee"
+      (keydown)="touche($event, poignee)"
+      (pointerdown)="saisit($event, plan, poignee)"
+      (pointermove)="glisse($event, plan, poignee)"
+      (pointerup)="relache()"
+      (pointercancel)="relache()"
+    >
+      {{ poignee.texte }}
+    </div>
+    }
   </div>
 </div>
 }

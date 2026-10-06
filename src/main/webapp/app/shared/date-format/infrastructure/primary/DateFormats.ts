@@ -139,6 +139,9 @@ const offsetOf = (date: Date): string => {
   return `${sign}${twoDigits(Math.floor(Math.abs(minutes) / 60))}:${twoDigits(Math.abs(minutes) % 60)}`;
 };
 
+export const formatInstantTimeWithOffset = (instant: Date): string =>
+  `${twoDigits(instant.getHours())}:${twoDigits(instant.getMinutes())} UTC${offsetOf(instant)}`;
+
 export const toOffsetIsoString = (date: Date): string =>
   `${localCalendarDay(date)}T${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}${offsetOf(date)}`;
 

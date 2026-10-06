@@ -50,7 +50,9 @@ import {
 import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
+import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
 import { FriseDossier } from '../frise-dossier/FriseDossier';
+import { DeplacementDemande, poigneeDuDossier } from '../frise-dossier/PoigneeDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
@@ -91,6 +93,7 @@ export class DossierAnomaliePage {
   protected readonly posteDe = postePresente;
   protected readonly anomalieTraitee = anomalieTraitee;
   protected readonly problemes = phrasesDuProbleme;
+  protected readonly peutDeplacer = peutDeplacer;
   protected readonly libelleActivite = libelleActivite;
   protected readonly intituleDeLActivite = intituleDeLActivite;
   protected readonly libelleDuGeste = libelleDuGeste;
@@ -139,6 +142,7 @@ export class DossierAnomaliePage {
   private readonly maintenant = signal(new Date().toISOString());
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
+  protected readonly poignee = computed(() => poigneeDuDossier(this.dossier(), this.proposition(), this.maintenant(), this.occupe()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
@@ -223,6 +227,11 @@ export class DossierAnomaliePage {
     this.lireLHorloge();
     this.preparation.change(changement);
     if (this.preparation.resolution().saisie.changesGuidedFact(changement)) this.choixSelectionne.set(undefined);
+  }
+
+  protected deplacer({ demande, poignee }: DeplacementDemande): void {
+    this.lireLHorloge();
+    this.change({ fait: { instant: instantDeplace(demande, poignee.instant, { min: poignee.bornes.min, max: this.maintenant() }) } });
   }
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {

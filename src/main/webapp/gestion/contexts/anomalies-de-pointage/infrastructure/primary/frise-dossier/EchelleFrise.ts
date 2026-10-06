@@ -1,6 +1,9 @@
 import { formatInstantShortWeekdayDayMonth, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 
+const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
+const TROIS_HEURES = 3 * UNE_HEURE;
+const CINQ_MINUTES = 300_000;
 const LARGEUR_MINIMALE_PAR_HEURE_PX = 64;
 const LARGEUR_D_UN_REPERE_PX = 44;
 
@@ -18,8 +21,7 @@ export interface Graduation {
 
 const heureEntiereAvant = (instant: number): number => {
   const date = new Date(instant);
-  date.setMinutes(0, 0, 0);
-  return date.getTime();
+  return instant - date.getMinutes() * UNE_MINUTE - date.getSeconds() * 1000 - date.getMilliseconds();
 };
 
 const heureEntiereApres = (instant: number): number => {
@@ -27,16 +29,30 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const echelleDe = (instants: readonly number[]): EchelleFrise => ({
-  debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
-  fin: heureEntiereApres(Math.max(...instants) + UNE_HEURE),
-});
+export const echelleDe = (instants: readonly number[], plafondElargi?: number): EchelleFrise => {
+  const dernier = Math.max(...instants);
+  const finNormale = heureEntiereApres(dernier + UNE_HEURE);
+  return {
+    debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
+    fin:
+      plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(dernier + TROIS_HEURES, plafondElargi))),
+  };
+};
 
 export const largeurMinimaleDe = (echelle: EchelleFrise): number =>
   ((echelle.fin - echelle.debut) / UNE_HEURE) * LARGEUR_MINIMALE_PAR_HEURE_PX;
 
 export const positionSur = (echelle: EchelleFrise, instant: number): number =>
   ((instant - echelle.debut) / (echelle.fin - echelle.debut)) * 100;
+
+export const instantSousLePointeur = (
+  echelle: EchelleFrise,
+  plan: { readonly left: number; readonly width: number },
+  abscisse: number,
+): number => {
+  const instant = echelle.debut + ((abscisse - plan.left) / plan.width) * (echelle.fin - echelle.debut);
+  return Math.round(instant / CINQ_MINUTES) * CINQ_MINUTES;
+};
 
 export const graduationsDe = (echelle: EchelleFrise): readonly Graduation[] =>
   Array.from({ length: Math.ceil((echelle.fin - echelle.debut) / UNE_HEURE) + 1 }, (_, rang) => {

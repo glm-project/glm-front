@@ -23,6 +23,7 @@ import {
   formatInstantShortWeekdayDayMonth,
   formatInstantTime,
   formatInstantTimeAndLongDayWithSeconds,
+  formatInstantTimeWithOffset,
   formatInstantWeekdayDay,
   localCalendarDay,
   toHtmlDatetime,
@@ -363,6 +364,14 @@ describe('DateFormats', () => {
     expect(text).toBe('2026-01-02T00:05:09-03:00');
   });
 
+  it('should write the local hour and minute of an instant followed by its local offset from UTC', () => {
+    const instant = new Date(2026, 8, 14, 8, 2);
+
+    const text = formatInstantTimeWithOffset(instant);
+
+    expect(text).toBe('08:02 UTC-03:00');
+  });
+
   it('should join the local day of a date and the local time of another into one instant', () => {
     const day = new Date(2026, 9, 5);
     const time = new Date(2030, 0, 1, 17, 1, 9, 500);
@@ -398,6 +407,13 @@ describe('DateFormats', () => {
       const text = toOffsetIsoString(after);
 
       expect(text).toBe('2026-10-25T03:30:00+01:00');
+    });
+
+    it.each([
+      { occurrence: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), text: '02:30 UTC+02:00' },
+      { occurrence: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), text: '02:30 UTC+01:00' },
+    ])('should tell the $occurrence occurrence of an ambiguous hour apart by its offset', ({ instant, text }) => {
+      expect(formatInstantTimeWithOffset(instant)).toBe(text);
     });
 
     it('should join a day and an ambiguous hour into the first occurrence', () => {

@@ -8,6 +8,7 @@ import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
+import { DemandeDeDeplacement, DeplacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
 const GESTES = {
   DEMARRAGE: { type: 'DEBUT', intention: 'OUVERTURE' },
@@ -55,12 +56,24 @@ const diagnosticSur = (pointage: string, activite = 'travail-8'): DiagnosticConf
   cible: { activite: new ActiviteAnomalieId(activite) },
 });
 
+const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
+  instant: instantAt(heure),
+  bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) },
+  desactivee: false,
+  ...surcharge,
+});
+
+const PLAN_WIDTH = 1000;
+
 describe('Frise of a dossier', () => {
   let fixture: ComponentFixture<FriseDossier>;
   let requestedSelections: SelectionDuDossier[];
+  let requestedMoves: DeplacementDemande[];
 
   beforeEach(() => {
     requestedSelections = [];
+    requestedMoves = [];
+    HTMLElement.prototype.setPointerCapture = () => undefined;
   });
 
   it('should draw one marker per pointage of the journal', async () => {
@@ -624,17 +637,430 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsStandAt([0, 25, 50, 75, 100]);
   });
 
-  const whenRenderingTheFrise = async (dossier: VueDeFrise, selection?: SelectionDuDossier): Promise<void> => {
+  it('should draw the handle of the proposed instant as a slider', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-17', 'ARRET', '17:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('12:00'));
+
+    thenTheHandleIsASlider();
+  });
+
+  it('should stand the handle at the proposed instant on the scale', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    thenTheHandleStandsAt(50);
+  });
+
+  it('should extend the scale to three hours after the last received instant while a handle is active', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+    thenTheHandleStandsAt(37.5);
+  });
+
+  it('should keep the normal scale when the clock stands before the last received instant', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('10:00') } }),
+    );
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it('should extend the scale only up to the hour that follows the clock', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }),
+    );
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+  });
+
+  it('should give the handle a range, a value and a readable time within its bounds', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:05', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    thenTheHandleReads({
+      min: new Date(2026, 8, 14, 8, 0).getTime(),
+      max: new Date(2026, 8, 14, 13, 0).getTime(),
+      now: new Date(2026, 8, 14, 10, 5).getTime(),
+      text: '10:05',
+    });
+  });
+
+  it.each([
+    { cas: 'disabled while an operation is under way', desactivee: true, expected: 'true' },
+    { cas: 'enabled otherwise', desactivee: false, expected: 'false' },
+  ])('should tell assistive technology that the handle is $cas', async ({ desactivee, expected }) => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { desactivee }));
+
+    thenTheHandleIsAriaDisabled(expected);
+  });
+
+  it.each<{ touche: string; maj: boolean; demande: DemandeDeDeplacement }>([
+    { touche: 'ArrowRight', maj: false, demande: { kind: 'DE', minutes: 1 } },
+    { touche: 'ArrowUp', maj: false, demande: { kind: 'DE', minutes: 1 } },
+    { touche: 'ArrowLeft', maj: false, demande: { kind: 'DE', minutes: -1 } },
+    { touche: 'ArrowDown', maj: false, demande: { kind: 'DE', minutes: -1 } },
+    { touche: 'ArrowRight', maj: true, demande: { kind: 'DE', minutes: 15 } },
+    { touche: 'ArrowUp', maj: true, demande: { kind: 'DE', minutes: 15 } },
+    { touche: 'ArrowLeft', maj: true, demande: { kind: 'DE', minutes: -15 } },
+    { touche: 'ArrowDown', maj: true, demande: { kind: 'DE', minutes: -15 } },
+    { touche: 'Home', maj: false, demande: { kind: 'BORNE', borne: 'MIN' } },
+    { touche: 'End', maj: false, demande: { kind: 'BORNE', borne: 'MAX' } },
+  ])('should ask $demande.kind the handle when $touche is pressed (shift: $maj)', async ({ touche, maj, demande }) => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
+
+    whenPressingKeyOnTheHandle(touche, maj);
+
+    thenTheMovesAsked([demande]);
+  });
+
+  it('should leave the other keys to the browser so that the tab key still leaves the handle', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
+
+    const touche = whenPressingKeyOnTheHandle('Tab');
+
+    thenTheMovesAsked([]);
+    thenTheKeyIsLeftToTheBrowser(touche);
+  });
+
+  it('should not move a disabled handle by keyboard', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { desactivee: true }));
+
+    whenPressingKeyOnTheHandle('ArrowRight');
+
+    thenTheMovesAsked([]);
+  });
+
+  it('should ask to move the handle to the instant under the pointer dragging it', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it.each([
+    { cas: 'down to the nearest five minutes', to: 756, heure: new Date(2026, 8, 14, 11, 30) },
+    { cas: 'up to the nearest five minutes', to: 762, heure: new Date(2026, 8, 14, 11, 35) },
+  ])('should round the instant under the pointer $cas', async ({ to, heure }) => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 500, to });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: heure.getTime() }]);
+  });
+
+  it('should keep the point of the handle that was grabbed under the pointer instead of jumping to its centre', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 520, to: 770 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it('should ignore a pointer that moves over the handle without having pressed it', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenMovingThePointerOverTheHandleTo(750);
+
+    thenTheMovesAsked([]);
+  });
+
+  it.each(['pointerup', 'pointercancel'])('should stop following the pointer once it ends with %s', async fin => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    whenTheGestureEndsWith(fin);
+    whenMovingThePointerOverTheHandleTo(900);
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it('should not follow the pointer on a disabled handle', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { desactivee: true, bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    thenTheMovesAsked([]);
+  });
+
+  it('should capture the pointer that presses the handle so that the drag goes on outside of it', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    const captured = givenTheBrowserCapturesPointers();
+
+    whenPressingTheHandleAt(500, 7);
+
+    expect(captured).toEqual([7]);
+  });
+
+  it('should give the handle its own row below the markers and above the bars', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '08:10')],
+      activites: [activiteFixture('travail-8', 'A_RESOUDRE', '08:00')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
+
+    thenTheHandleStandsBelow(['debut-8', 'fin-12'], 'travail-8');
+  });
+
+  it('should be tall enough for the handle when no bar lies below it', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00'));
+
+    expect(Number.parseFloat(thePlan().style.height)).toBeGreaterThanOrEqual(topOf(handle()) + 44);
+  });
+
+  it.each([
+    { cas: 'the handle leaves the instant it corrects', instant: '10:00', expected: 'true' },
+    { cas: 'the handle stands back on the instant it corrects', instant: '12:00', expected: 'false' },
+  ])('should flag the time of the corrected marker as replaced when $cas', async ({ instant, expected }) => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture(instant, { origine: 'fin-12' }));
+
+    thenTheMarkerFlagIs('fin-12', 'data-deplace', expected);
+    thenTheMarkerFlagIs('debut-8', 'data-deplace', 'false');
+  });
+
+  it('should say in the name of the corrected marker that its time is replaced', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { origine: 'fin-12' }));
+
+    thenTheMarkerIsNamed('fin-12', '12:00:00 · Arrêt · heure remplacée');
+  });
+
+  it('should name the handle and show the time it stands at', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:05'));
+
+    thenTheHandleIsNamedAndShows('Heure proposée du fait', '10:05');
+  });
+
+  const whenRenderingTheFrise = async (dossier: VueDeFrise, selection?: SelectionDuDossier, poignee?: PoigneeDeFrise): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
     fixture.componentRef.setInput('dossier', dossier);
+    fixture.componentRef.setInput('poignee', poignee);
     fixture.componentRef.setInput('now', new Date(2026, 9, 5, 10, 0));
     fixture.componentRef.setInput('selection', selection);
     fixture.componentInstance.selectionDemandee.subscribe(demandee => requestedSelections.push(demandee));
+    fixture.componentInstance.deplacementDemande.subscribe(demande => requestedMoves.push(demande));
     await fixture.whenStable();
   };
 
   const whenPressing = (element: HTMLElement): void => {
     element.click();
+  };
+
+  const handle = (): HTMLElement =>
+    requiredFixture((fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-poignee')), 'handle');
+
+  const givenTheBrowserCapturesPointers = (): number[] => {
+    const captured: number[] = [];
+    handle().setPointerCapture = (pointerId: number) => {
+      captured.push(pointerId);
+    };
+    return captured;
+  };
+
+  const whenDraggingTheHandle = ({ from, to }: { from: number; to: number }): void => {
+    whenPressingTheHandleAt(from);
+    whenMovingThePointerOverTheHandleTo(to);
+  };
+
+  const whenPressingTheHandleAt = (clientX: number, pointerId = 1): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    handle().dispatchEvent(new PointerEvent('pointerdown', { pointerId, clientX, bubbles: true }));
+  };
+
+  const whenMovingThePointerOverTheHandleTo = (clientX: number, pointerId = 1): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    handle().dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX, bubbles: true }));
+  };
+
+  const whenTheGestureEndsWith = (type: string, pointerId = 1): void => {
+    handle().dispatchEvent(new PointerEvent(type, { pointerId, bubbles: true }));
+  };
+
+  const whenPressingKeyOnTheHandle = (key: string, shiftKey = false): KeyboardEvent => {
+    const touche = new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true });
+    handle().dispatchEvent(touche);
+    return touche;
+  };
+
+  const thenTheHandleIsAriaDisabled = (expected: string): void => {
+    expect(handle().getAttribute('aria-disabled')).toBe(expected);
+  };
+
+  const thenTheKeyIsLeftToTheBrowser = (touche: KeyboardEvent): void => {
+    expect(touche.defaultPrevented).toBe(false);
+  };
+
+  const thenTheMovesAsked = (expected: readonly DemandeDeDeplacement[]): void => {
+    expect(requestedMoves.map(deplacement => deplacement.demande)).toEqual(expected);
+  };
+
+  const thenTheHandleIsASlider = (): void => {
+    expect(handle().getAttribute('role')).toBe('slider');
+  };
+
+  const thenTheHandleReads = (expected: { min: number; max: number; now: number; text: string }): void => {
+    expect({
+      min: Number(handle().getAttribute('aria-valuemin')),
+      max: Number(handle().getAttribute('aria-valuemax')),
+      now: Number(handle().getAttribute('aria-valuenow')),
+      text: handle().getAttribute('aria-valuetext'),
+    }).toEqual(expected);
+  };
+
+  const thenTheHandleIsReadAs = (expected: string): void => {
+    expect(handle().getAttribute('aria-valuetext')).toBe(expected);
+  };
+
+  const thenTheHandleIsReadWithoutOffset = (): void => {
+    expect(handle().getAttribute('aria-valuetext')).not.toContain('UTC');
+  };
+
+  const thenTheHandleStandsBelow = (pointages: readonly string[], activite: string): void => {
+    const haut = topOf(handle());
+    expect(haut).toBeGreaterThanOrEqual(Math.max(...pointages.map(pointage => topOf(marker(pointage)) + 44)));
+    expect(topOf(bar(activite))).toBeGreaterThanOrEqual(haut + 44);
+  };
+
+  const thenTheHandleIsNamedAndShows = (name: string, time: string): void => {
+    expect(handle().getAttribute('aria-label')).toBe(name);
+    expect(handle().textContent.trim()).toBe(time);
+  };
+
+  const thenTheHandleStandsAt = (expected: number): void => {
+    expect(Number.parseFloat(handle().style.left)).toBeCloseTo(expected);
   };
 
   const markers = (): HTMLElement[] => [
@@ -796,6 +1222,10 @@ describe('Frise of a dossier', () => {
     );
   };
 
+  const thenTheDaysShownCountIs = (expected: number): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector('anomalie-frise-jour'))).toHaveLength(expected);
+  };
+
   const thenTheDaysShownAre = (expected: readonly string[]): void => {
     const jours = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-jour'))];
     expect(jours.map(jour => jour.textContent.trim())).toEqual(expected);
@@ -833,6 +1263,77 @@ describe('Frise of a dossier', () => {
       await whenRenderingTheFrise(dossier);
 
       thenTheNumberOfGraduationsIs(6);
+    });
+
+    it('should graduate the extended scale hour by hour across midnight and the hour the clock repeats', async () => {
+      const pointage = (id: string, instant: Date): PointageAnomalie => ({
+        ...pointageFixture(id, 'DEMARRAGE', '00:00'),
+        fait: { ...pointageFixture(id, 'DEMARRAGE', '00:00').fait, instant: instant.toISOString() },
+      });
+      const dossier = {
+        journal: [pointage('p-1', new Date(Date.UTC(2026, 9, 24, 21, 0))), pointage('p-2', new Date(Date.UTC(2026, 9, 24, 22, 30)))],
+        activites: [],
+      };
+      const bornes = {
+        min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
+        max: new Date(Date.UTC(2026, 9, 25, 12, 0)).toISOString(),
+      };
+
+      await whenRenderingTheFrise(
+        dossier,
+        undefined,
+        poigneeFixture('00:00', { instant: new Date(Date.UTC(2026, 9, 24, 22, 30)).toISOString(), bornes }),
+      );
+
+      thenTheNumberOfGraduationsIs(7);
+      thenTheDaysShownCountIs(1);
+    });
+
+    it.each([
+      { cas: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), texte: '02:30 UTC+02:00' },
+      { cas: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), texte: '02:30 UTC+01:00' },
+    ])('should tell the $cas occurrence of the hour the clock repeats apart in the time of the handle', async ({ instant, texte }) => {
+      const dossier = {
+        journal: [
+          {
+            ...pointageFixture('p-1', 'DEMARRAGE', '00:00'),
+            fait: { ...pointageFixture('p-1', 'DEMARRAGE', '00:00').fait, instant: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString() },
+          },
+        ],
+        activites: [],
+      };
+      const bornes = {
+        min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
+        max: new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString(),
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('00:00', { instant: instant.toISOString(), bornes }));
+
+      thenTheHandleIsReadAs(texte);
+    });
+
+    it('should read the time of the handle without offset once the hour is no longer repeated', async () => {
+      const dossier = {
+        journal: [
+          {
+            ...pointageFixture('p-1', 'DEMARRAGE', '00:00'),
+            fait: { ...pointageFixture('p-1', 'DEMARRAGE', '00:00').fait, instant: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString() },
+          },
+        ],
+        activites: [],
+      };
+      const bornes = {
+        min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
+        max: new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString(),
+      };
+
+      await whenRenderingTheFrise(
+        dossier,
+        undefined,
+        poigneeFixture('00:00', { instant: new Date(Date.UTC(2026, 9, 25, 2, 30)).toISOString(), bornes }),
+      );
+
+      thenTheHandleIsReadWithoutOffset();
     });
   });
 });

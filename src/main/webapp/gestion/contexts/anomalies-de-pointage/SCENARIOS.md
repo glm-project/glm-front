@@ -196,6 +196,18 @@ est lue au geste du gestionnaire (choisir, modifier) et au moment de prévisuali
 page : une heure devenue passée pendant que l'onglet reste ouvert est acceptée. `matches()` compare sans bornes. Le refus
 serveur `date-de-survenue-future` reste l'autorité.
 
+Le champ n'est pas le seul geste qui émet un instant : pour une correction ou une régularisation dont le fait est un
+passage ou un arrêt avec une activité visée qui donne une borne basse, la frise porte une poignée (rôle `slider`) sur
+l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans sauter sous le doigt ; au clavier, les
+flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
+décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, heure courante lue au
+geste, en minutes entières) ; un bouton est désactivé à la borne. Chaque déplacement transmet l'instant avec l'offset local
+et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure dans le champ déplace la poignée. Un fait
+sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée. L'heure reçue du
+pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
+qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
+traverse minuit et l'heure répétée graduée heure par heure.
+
 ## Frontières de vérification
 
 - Les specs de domaine passent par `SaisieActe`, `CadreDuFait` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,

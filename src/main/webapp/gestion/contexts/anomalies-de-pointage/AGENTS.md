@@ -106,7 +106,22 @@ s'il est régularisé, `danger` s'il est en cause d'un diagnostic), décalé sur
 moins de 44 px ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
 vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
-`data-annule`, `data-voie`), jamais leurs classes.
+`data-annule`, `data-voie`, `data-deplace`), jamais leurs classes.
+Une proposition de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
+avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
+`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est un second geste qui émet un instant, avec le champ
+date et heure. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas. La poignée est un `slider` : le pointeur la
+capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
+(Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
+changement d'heure d'automne). La frise ne décide pas de l'instant : elle émet une demande (`DemandeDeDeplacement` : `DE`
+minutes, `VERS` instant, `BORNE`) avec la poignée lue, que la page résout (`instantDeplace`, `DeplacementDeLaPoignee.ts`) après
+avoir lu l'heure au geste : en minutes entières, entre la borne basse du `CadreDuFait` et cette heure, puis transmet par
+`change({ fait: { instant } })`, secondes à zéro : la
+fraction et l'aperçu disparaissent comme pour un geste dans le champ, qui affiche la nouvelle valeur. « −5 min » et « +5 min »
+de « Votre décision » font la même demande et se désactivent à une borne. La poignée et ses boutons sont désactivés tant
+qu'une opération est en cours. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu, sans dépasser
+l'heure courante des bornes (jamais en deçà de l'échelle normale) ; au-delà, le champ reste l'accès. L'heure d'origine du
+pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
 La sélection est un pointage ou une activité (`SelectionDuDossier`). Le panneau « Sélection », en tête de la colonne de droite,
 porte le pointage choisi : geste, instant avec ses secondes, opérateur, poste, régularisation, annulation (motif, auteur,
 instant), remplacement, traçabilité (activités visée et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un
