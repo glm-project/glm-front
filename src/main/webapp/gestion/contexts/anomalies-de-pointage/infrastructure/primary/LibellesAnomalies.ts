@@ -112,7 +112,7 @@ const PROBLEMES = {
 } as const;
 
 export const LIBELLES_ANOMALIES = {
-  detail: 'Un pointage manque dans la chronologie ?',
+  detail: 'Un pointage manque sur la frise ?',
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
   fin: 'Fin',

@@ -2767,6 +2767,13 @@ describe('Anomaly dossier page', () => {
     thenPageDoesNotMention('pointages et rattachements');
   });
 
+  it('should offer to regularise a missing pointage by the frise, not by a chronology the page no longer shows', async () => {
+    await whenRendering();
+
+    thenTextContains('anomalie-detail', 'Un pointage manque sur la frise ?');
+    thenPageDoesNotMention('chronologie');
+  });
+
   it('should select the due activity of an automatic end at the opening of the dossier', async () => {
     givenAnAutomaticEnd();
 
