@@ -2,8 +2,8 @@ import { TypePointage } from '../../domain/acte/ActeResolution';
 import { conflitAExpliquer } from '../../domain/dossier/ConflitAExpliquer';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
+import { pointagesTardifs } from '../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
-import { pointagesTardifs } from './PointagesTardifs';
 import { heureDe, libelleDuGeste } from './PresentationDossier';
 
 type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;

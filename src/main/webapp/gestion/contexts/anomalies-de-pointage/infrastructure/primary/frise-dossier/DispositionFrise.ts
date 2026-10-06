@@ -1,8 +1,8 @@
 import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ChronologiePointages } from '../../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { identifiantsDesPointagesTardifs } from '../PointagesTardifs';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste, tempsActivite } from '../PresentationDossier';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { activitesModifiees, faitsDeLActe } from './ComparaisonDApercu';

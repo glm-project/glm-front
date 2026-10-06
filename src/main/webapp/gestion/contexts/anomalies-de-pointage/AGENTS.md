@@ -114,7 +114,7 @@ l'activité). Chaque modèle couvre l'absence de ces champs facultatifs : un poi
 comme absent ; pour une transition de même catégorie, une activité sans période prend la catégorie du geste (« un travail
 déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
 `CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le pointage tardif ; sinon l'activité n'a
-jamais été arrêtée. Le front ne déduit jamais qu'un pointage est tardif : `pointagesTardifs` (`PointagesTardifs.ts`) le lit dans ces choix, et le pointage
+jamais été arrêtée. Le front ne déduit jamais qu'un pointage est tardif : `pointagesTardifs` (`domain/dossier/PointagesTardifs.ts`) le lit dans ces choix, et le pointage
 désigné est marqué « pointé après l'échéance » sur la frise (badge « ! », `data-tardif`, nom accessible) et dans le panneau Sélection.
 Les pointages et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la

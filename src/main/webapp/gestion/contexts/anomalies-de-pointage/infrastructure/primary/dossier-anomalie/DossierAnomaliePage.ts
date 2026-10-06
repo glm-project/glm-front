@@ -31,12 +31,12 @@ import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort
 import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { IssueDeLAnomalie } from '../../../domain/dossier/IssueDeLAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
+import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
-import { identifiantsDesPointagesTardifs } from '../PointagesTardifs';
 import {
   detailDuPointage,
   intituleDeLActivite,

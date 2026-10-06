@@ -1,4 +1,4 @@
-import { ChoixGuide } from '../../domain/dossier/DossierAnomalie';
+import { ChoixGuide } from './DossierAnomalie';
 
 export interface PointageTardif {
   readonly pointage: string;
