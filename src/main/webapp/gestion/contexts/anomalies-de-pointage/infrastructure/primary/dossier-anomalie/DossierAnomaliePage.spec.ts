@@ -907,22 +907,22 @@ describe('Anomaly dossier page', () => {
     givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
     await whenRendering();
 
-    await whenChoosingTheDirectAction('ANNULER', 'fin-17');
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-17');
 
     thenTextContains('anomalie-acte', 'Annulation du pointage');
     thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
-    thenOnlyTheDirectActionIsPressed('ANNULER', 'fin-17');
+    thenOnlyTheDirectActionIsPressed('ANNULATION', 'fin-17');
   });
 
   it('should prepare the cancellation of the terminating pointage when the manager chooses its direct action', async () => {
     givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
     await whenRendering();
 
-    await whenChoosingTheDirectAction('ANNULER', 'fin-12');
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-12');
 
     thenTextContains('anomalie-acte', 'Annulation du pointage');
     thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 12:00:00');
-    thenOnlyTheDirectActionIsPressed('ANNULER', 'fin-12');
+    thenOnlyTheDirectActionIsPressed('ANNULATION', 'fin-12');
   });
 
   it('should name the direct actions on a passage by its gesture, with the article of its gender', async () => {
@@ -937,7 +937,7 @@ describe('Anomaly dossier page', () => {
     givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
     await whenRendering();
 
-    await whenChoosingTheDirectAction('ANNULER', 'fin-17');
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-17');
 
     expect(document.activeElement).toBe(element('anomalie-proposition-titre'));
   });
@@ -945,7 +945,7 @@ describe('Anomaly dossier page', () => {
   it('should press only the proposition of the server when the manager chooses it after a direct action', async () => {
     givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
     await whenRendering();
-    await whenChoosingTheDirectAction('ANNULER', 'fin-17');
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-17');
 
     await whenClicking('anomalie-choix');
 
@@ -965,12 +965,12 @@ describe('Anomaly dossier page', () => {
     givenAStopBeforeTheOpeningOfItsActivity();
     await whenRendering();
 
-    await whenChoosingTheDirectAction('CORRIGER_L_HEURE', 'fin-7');
+    await whenChoosingTheDirectAction('CORRECTION', 'fin-7');
 
     thenTextContains('anomalie-acte', 'Correction du pointage');
     thenTheInstantFieldsShow('14/09/2026', '07:00:00');
     thenDetailedFactIsOpen();
-    thenOnlyTheDirectActionIsPressed('CORRIGER_L_HEURE', 'fin-7');
+    thenOnlyTheDirectActionIsPressed('CORRECTION', 'fin-7');
   });
 
   it('should give the seconds of a pointage in its direct action when another pointage of the dossier falls in the same minute', async () => {
@@ -5350,13 +5350,13 @@ describe('Anomaly dossier page', () => {
   const directActions = (): HTMLElement[] => [
     ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-action-directe')),
   ];
-  const directAction = (sorte: string, pointage: string): HTMLElement =>
+  const directAction = (acte: string, pointage: string): HTMLElement =>
     requiredFixture(
-      directActions().find(candidate => candidate.dataset['sorte'] === sorte && candidate.dataset['pointage'] === pointage),
-      `direct action ${sorte} of ${pointage}`,
+      directActions().find(candidate => candidate.dataset['acte'] === acte && candidate.dataset['pointage'] === pointage),
+      `direct action ${acte} of ${pointage}`,
     );
-  const whenChoosingTheDirectAction = async (sorte: string, pointage: string): Promise<void> => {
-    directAction(sorte, pointage).click();
+  const whenChoosingTheDirectAction = async (acte: string, pointage: string): Promise<void> => {
+    directAction(acte, pointage).click();
     await fixture.whenStable();
   };
   const thenTheDirectActionsAreDisabled = (): void => {
@@ -5366,8 +5366,8 @@ describe('Anomaly dossier page', () => {
   const thenNoDirectActionIsPressed = (): void => {
     expect(directActions().map(action => action.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
   };
-  const thenOnlyTheDirectActionIsPressed = (sorte: string, pointage: string): void => {
-    expect(directAction(sorte, pointage).getAttribute('aria-pressed')).toBe('true');
+  const thenOnlyTheDirectActionIsPressed = (acte: string, pointage: string): void => {
+    expect(directAction(acte, pointage).getAttribute('aria-pressed')).toBe('true');
     expect(directActions().filter(action => action.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
     thenNoInterpretationIsSelected();
   };

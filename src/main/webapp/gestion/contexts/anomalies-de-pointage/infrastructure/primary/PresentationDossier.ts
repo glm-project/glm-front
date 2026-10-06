@@ -168,7 +168,7 @@ const heureDuPointage = (pointage: PointageAnomalie, journal: readonly PointageA
 export const libelleDeLAction = (action: ActionDirecte, journal: readonly PointageAnomalie[]): string => {
   const geste = gesteDuPointage(action.pointage);
   const heure = heureDuPointage(action.pointage, journal);
-  return action.sorte === 'ANNULER'
+  return action.saisie.acte() === 'ANNULATION'
     ? LIBELLES_ANOMALIES.actionsDirectes.annuler(`${defini(geste)} de ${heure}`)
     : LIBELLES_ANOMALIES.actionsDirectes.corrigerLHeure(`${deDefini(geste)} de ${heure}`);
 };

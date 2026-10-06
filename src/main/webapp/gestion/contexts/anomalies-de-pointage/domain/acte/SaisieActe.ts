@@ -74,6 +74,10 @@ export class SaisieActe {
     return this.proposition?.kind === 'REGULARISATION';
   }
 
+  acte(): PropositionActe['kind'] | undefined {
+    return this.proposition?.kind;
+  }
+
   operateurManque(): boolean {
     const fait = this.fait();
     return fait !== undefined && this.operatorIsMissing(fait);

@@ -12,7 +12,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => [action.sorte, action.pointage.id.pointage])).toEqual([['ANNULER', 'fin-17']]);
+    expect(actions.map(action => [action.saisie.acte(), action.pointage.id.pointage])).toEqual([['ANNULATION', 'fin-17']]);
   });
 
   it('should carry the cancellation of the pointage at fault as its input, without a reason yet', () => {
@@ -43,9 +43,9 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => [action.sorte, action.pointage.id.pointage])).toEqual([
-      ['ANNULER', 'fin-17'],
-      ['ANNULER', 'fin-12'],
+    expect(actions.map(action => [action.saisie.acte(), action.pointage.id.pointage])).toEqual([
+      ['ANNULATION', 'fin-17'],
+      ['ANNULATION', 'fin-12'],
     ]);
   });
 
@@ -86,7 +86,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.filter(action => action.sorte === 'ANNULER').map(action => action.pointage.id.pointage)).toEqual(['fin-17']);
+    expect(actions.filter(action => action.saisie.acte() === 'ANNULATION').map(action => action.pointage.id.pointage)).toEqual(['fin-17']);
   });
 
   it.each([
@@ -101,7 +101,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => action.sorte)).toEqual(['ANNULER']);
+    expect(actions.map(action => action.saisie.acte())).toEqual(['ANNULATION']);
   });
 
   it('should offer to correct the time of a pointage made before the opening of its activity, after cancelling it', () => {
@@ -110,9 +110,9 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => [action.sorte, action.saisie.proposition])).toEqual([
-      ['ANNULER', { kind: 'ANNULATION', pointage: 'fin-7', motif: '' }],
-      ['CORRIGER_L_HEURE', { kind: 'CORRECTION', pointage: 'fin-7', motif: '', fait: arret.fait }],
+    expect(actions.map(action => [action.saisie.acte(), action.saisie.proposition])).toEqual([
+      ['ANNULATION', { kind: 'ANNULATION', pointage: 'fin-7', motif: '' }],
+      ['CORRECTION', { kind: 'CORRECTION', pointage: 'fin-7', motif: '', fait: arret.fait }],
     ]);
   });
 
@@ -136,7 +136,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => action.sorte)).toEqual(['ANNULER']);
+    expect(actions.map(action => action.saisie.acte())).toEqual(['ANNULATION']);
   });
 
   it('should not repeat a correction the server already proposes for the same pointage, but keep the cancellation', () => {
@@ -149,7 +149,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => action.sorte)).toEqual(['ANNULER']);
+    expect(actions.map(action => action.saisie.acte())).toEqual(['ANNULATION']);
   });
 
   it('should keep proposing a cancellation when the server proposes a regularisation', () => {
@@ -161,7 +161,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => action.sorte)).toEqual(['ANNULER']);
+    expect(actions.map(action => action.saisie.acte())).toEqual(['ANNULATION']);
   });
 
   it('should keep proposing a cancellation when a server proposal carries no act yet', () => {
@@ -173,7 +173,7 @@ describe('Direct actions on the pointages at fault', () => {
 
     const actions = ActionsDirectes.depuis(dossier).actions;
 
-    expect(actions.map(action => action.sorte)).toEqual(['ANNULER']);
+    expect(actions.map(action => action.saisie.acte())).toEqual(['ANNULATION']);
   });
 
   it('should keep proposing a cancellation when the server proposes the same act on another pointage', () => {

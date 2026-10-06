@@ -240,12 +240,12 @@ export class DossierAnomaliePage {
   }
 
   protected identifiantDeLAction(action: ActionDirecte): string {
-    return `${action.sorte}:${action.pointage.id.pointage}`;
+    return `${action.saisie.acte()}:${action.pointage.id.pointage}`;
   }
 
   protected chooseAction(action: ActionDirecte): void {
     this.choose(action.saisie, this.identifiantDeLAction(action));
-    this.detail.set(action.sorte === 'CORRIGER_L_HEURE');
+    this.detail.set(action.saisie.acte() === 'CORRECTION');
   }
 
   protected correct(pointage: PointageAnomalie): void {

@@ -366,3 +366,14 @@ describe('Target that applies to an entry', () => {
     expect(saisie.cibleApplicable()).toBe(applicable);
   });
 });
+
+describe('Acte of an entry', () => {
+  it.each([
+    { saisie: SaisieActe.cancel('fin-17'), acte: 'ANNULATION' },
+    { saisie: SaisieActe.correct('fin-17', faitFixture), acte: 'CORRECTION' },
+    { saisie: SaisieActe.regularise(), acte: 'REGULARISATION' },
+    { saisie: SaisieActe.empty(), acte: undefined },
+  ])('should name the acte the manager chose, $acte', ({ saisie, acte }) => {
+    expect(saisie.acte()).toBe(acte);
+  });
+});

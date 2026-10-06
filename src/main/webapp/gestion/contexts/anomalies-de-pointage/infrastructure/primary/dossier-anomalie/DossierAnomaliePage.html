@@ -126,12 +126,12 @@
       } @let actions = actionsDirectes(dossier); @if (actions.length > 0) {
       <section class="mt-6" aria-labelledby="actions-directes-heading" data-selector="anomalie-actions-directes">
         <h3 id="actions-directes-heading" class="text-body font-semibold">{{ libelles.actionsDirectes.titre }}</h3>
-        @for (action of actions; track action.pointage.id.pointage + action.sorte) {
+        @for (action of actions; track identifiantDeLAction(action)) {
         <button
           class="choix"
           type="button"
           data-selector="anomalie-action-directe"
-          [attr.data-sorte]="action.sorte"
+          [attr.data-acte]="action.saisie.acte()"
           [attr.data-pointage]="action.pointage.id.pointage"
           [attr.aria-pressed]="choixAffiche() === identifiantDeLAction(action)"
           [class.choix-selectionne]="choixAffiche() === identifiantDeLAction(action)"

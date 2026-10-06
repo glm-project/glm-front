@@ -3,10 +3,9 @@ import { conflitAExpliquer } from './ConflitAExpliquer';
 import { ChoixGuide, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from './DossierAnomalie';
 import { PointageAnomalieId } from './PointageAnomalieId';
 
-type Sorte = 'ANNULER' | 'CORRIGER_L_HEURE';
+type ActeDirect = Exclude<PropositionActe['kind'], 'REGULARISATION'>;
 
 export interface ActionDirecte {
-  readonly sorte: Sorte;
   readonly pointage: PointageAnomalie;
   readonly saisie: SaisieActe;
 }
@@ -14,23 +13,18 @@ export interface ActionDirecte {
 type Dossier = Pick<DossierAnomalie, 'enConflit' | 'journal' | 'diagnostics' | 'choix'>;
 
 interface Candidat {
-  readonly sorte: Sorte;
+  readonly acte: ActeDirect;
   readonly pointage: PointageAnomalieId;
 }
 
-interface RegleDeSorte {
-  readonly acte: Exclude<PropositionActe['kind'], 'REGULARISATION'>;
-  readonly saisie: (pointage: PointageAnomalie) => SaisieActe;
-}
-
-const REGLES_DE_SORTE: Readonly<Record<Sorte, RegleDeSorte>> = {
-  ANNULER: { acte: 'ANNULATION', saisie: pointage => SaisieActe.cancel(pointage.id.pointage) },
-  CORRIGER_L_HEURE: { acte: 'CORRECTION', saisie: pointage => SaisieActe.correct(pointage.id.pointage, pointage.fait) },
+const SAISIE_DE_L_ACTE: Readonly<Record<ActeDirect, (pointage: PointageAnomalie) => SaisieActe>> = {
+  ANNULATION: pointage => SaisieActe.cancel(pointage.id.pointage),
+  CORRECTION: pointage => SaisieActe.correct(pointage.id.pointage, pointage.fait),
 };
 
-const annuler = (pointage: PointageAnomalieId): Candidat => ({ sorte: 'ANNULER', pointage });
+const annuler = (pointage: PointageAnomalieId): Candidat => ({ acte: 'ANNULATION', pointage });
 
-const corrigerLHeure = (pointage: PointageAnomalieId): Candidat => ({ sorte: 'CORRIGER_L_HEURE', pointage });
+const corrigerLHeure = (pointage: PointageAnomalieId): Candidat => ({ acte: 'CORRECTION', pointage });
 
 const annulerLeTerminant = (diagnostic: DiagnosticConflit): readonly Candidat[] =>
   diagnostic.cible.termineePar === undefined ? [] : [annuler(diagnostic.cible.termineePar)];
@@ -46,7 +40,7 @@ const CANDIDATS_PAR_RAISON: Readonly<Record<DiagnosticConflit['raison'], (diagno
 };
 
 const memeCandidat = (gauche: Candidat, droite: Candidat): boolean =>
-  gauche.sorte === droite.sorte && gauche.pointage.equals(droite.pointage);
+  gauche.acte === droite.acte && gauche.pointage.equals(droite.pointage);
 
 const estLaPremiereOccurrence = (candidat: Candidat, rang: number, candidats: readonly Candidat[]): boolean =>
   candidats.findIndex(autre => memeCandidat(autre, candidat)) === rang;
@@ -54,7 +48,7 @@ const estLaPremiereOccurrence = (candidat: Candidat, rang: number, candidats: re
 const proposeParLeServeur = (choix: readonly ChoixGuide[], candidat: Candidat): boolean =>
   choix.some(({ saisie }) => {
     const acte = saisie.proposition;
-    return acte !== undefined && acte.kind === REGLES_DE_SORTE[candidat.sorte].acte && acte.pointage === candidat.pointage.pointage;
+    return acte !== undefined && acte.kind === candidat.acte && acte.pointage === candidat.pointage.pointage;
   });
 
 const pointageActif = (journal: readonly PointageAnomalie[], identifiant: PointageAnomalieId): PointageAnomalie | undefined =>
@@ -71,9 +65,7 @@ export class ActionsDirectes {
       .filter(candidat => !proposeParLeServeur(dossier.choix, candidat))
       .flatMap(candidat => {
         const pointage = pointageActif(dossier.journal, candidat.pointage);
-        return pointage === undefined
-          ? []
-          : [{ sorte: candidat.sorte, pointage, saisie: REGLES_DE_SORTE[candidat.sorte].saisie(pointage) }];
+        return pointage === undefined ? [] : [{ pointage, saisie: SAISIE_DE_L_ACTE[candidat.acte](pointage) }];
       });
     return new ActionsDirectes(actions);
   }
