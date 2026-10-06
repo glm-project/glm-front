@@ -36,6 +36,13 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
   return [...type, ...intention].join(' · ');
 };
 
+export const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
+
+export const defini = (geste: string): string => (/^[aeiou]/i.test(geste) ? `l’${minuscule(geste)}` : `le ${minuscule(geste)}`);
+
+export const gesteDuPointage = (pointage: PointageAnomalie): string =>
+  pointage.regularisation ? `${libelleDuGeste(pointage.fait)} ${LIBELLES_ANOMALIES.problemes.regularise}` : libelleDuGeste(pointage.fait);
+
 export const libelleCategorie = (categorie: CategorieActivite): string =>
   categorie === 'TRAVAIL' ? LIBELLES_ANOMALIES.types.DEBUT : LIBELLES_ANOMALIES.types.NON_CONFORMITE;
 
