@@ -1,5 +1,5 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
+import { BornesDuFait, CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { PropositionActe, termineUneActivite } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
@@ -36,11 +36,9 @@ export interface PoigneeDeFrise {
 
 type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
 
-const plafondDansLaPortee = (dossier: DossierDeLaFrise, maintenant: string): string => {
-  const instants = instantsRecus(dossier.journal, dossier.activites);
-  if (instants.length === 0) return maintenant;
-  const portee = finDeLaPortee(instants);
-  return Date.parse(maintenant) <= portee ? maintenant : new Date(portee).toISOString();
+const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: Required<BornesDuFait>): string => {
+  const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(dossier.journal, dossier.activites)]);
+  return Date.parse(bornes.max) <= portee ? bornes.max : new Date(portee).toISOString();
 };
 
 export const bornesDuDeplacement = (
@@ -49,7 +47,7 @@ export const bornesDuDeplacement = (
   visant: Pick<PoigneeDeFrise, 'activiteVisee' | 'bornes'>,
 ): BornesDePoignee => ({
   min: visant.bornes.min,
-  max: plafondDansLaPortee(dossier, cadre.bornes(visant).max),
+  max: plafondDansLaPortee(dossier, { min: visant.bornes.min, max: cadre.bornes(visant).max }),
 });
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
@@ -87,10 +85,10 @@ const bornesDuFait = (
   maintenant: string,
 ): BornesDePoignee | undefined => {
   const { min, max } = CadreDuFait.depuis(dossier.activites, maintenant).bornes(fait);
-  return min === undefined ? undefined : { min, max: plafondDansLaPortee(dossier, max) };
+  return min === undefined ? undefined : { min, max: plafondDansLaPortee(dossier, { min, max }) };
 };
 
-const poigneeDeLaProposition = (
+export const poigneeDuDossier = (
   dossier: DossierDeLaFrise,
   proposition: PropositionActe | undefined,
   maintenant: string,
@@ -110,14 +108,7 @@ const poigneeDeLaProposition = (
   };
 };
 
-export const poigneeDuDossier = (
-  dossier: DossierDeLaFrise | undefined,
-  proposition: PropositionActe | undefined,
-  maintenant: string,
-  desactivee: boolean,
-): PoigneeDeFrise | undefined => (dossier === undefined ? undefined : poigneeDeLaProposition(dossier, proposition, maintenant, desactivee));
-
-const placementDeLaProposition = (
+export const placementDuDossier = (
   dossier: DossierDeLaFrise,
   proposition: PropositionActe | undefined,
   maintenant: string,
@@ -128,14 +119,6 @@ const placementDeLaProposition = (
   const bornes = bornesDuFait(dossier, proposition.fait, maintenant);
   return bornes === undefined ? undefined : { activiteVisee: proposition.fait.activiteVisee, bornes, desactivee };
 };
-
-export const placementDuDossier = (
-  dossier: DossierDeLaFrise | undefined,
-  proposition: PropositionActe | undefined,
-  maintenant: string,
-  desactivee: boolean,
-): PlacementDeLInstant | undefined =>
-  dossier === undefined ? undefined : placementDeLaProposition(dossier, proposition, maintenant, desactivee);
 
 export interface DeplacementDemande {
   readonly demande: DemandeDeDeplacement;

@@ -56,8 +56,10 @@ import { FriseDossier } from '../frise-dossier/FriseDossier';
 import {
   bornesDuDeplacement,
   DeplacementDemande,
+  PlacementDeLInstant,
   PlacementDemande,
   placementDuDossier,
+  PoigneeDeFrise,
   poigneeDuDossier,
 } from '../frise-dossier/PoigneeDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
@@ -150,8 +152,6 @@ export class DossierAnomaliePage {
   private readonly maintenant = signal(new Date().toISOString());
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
-  protected readonly poignee = computed(() => poigneeDuDossier(this.dossier(), this.proposition(), this.maintenant(), this.occupe()));
-  protected readonly placement = computed(() => placementDuDossier(this.dossier(), this.proposition(), this.maintenant(), this.occupe()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
@@ -194,6 +194,14 @@ export class DossierAnomaliePage {
   private contextChanged(): void {
     this.preparation.contextChanged();
     this.choixSelectionne.set(undefined);
+  }
+
+  protected poigneeDe(dossier: DossierAnomalie): PoigneeDeFrise | undefined {
+    return poigneeDuDossier(dossier, this.proposition(), this.maintenant(), this.occupe());
+  }
+
+  protected placementDe(dossier: DossierAnomalie): PlacementDeLInstant | undefined {
+    return placementDuDossier(dossier, this.proposition(), this.maintenant(), this.occupe());
   }
 
   protected cadreDe(dossier: DossierAnomalie): CadreDuFait {

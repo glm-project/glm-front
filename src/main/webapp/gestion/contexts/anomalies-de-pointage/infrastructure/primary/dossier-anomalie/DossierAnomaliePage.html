@@ -3,7 +3,7 @@
   <h1 id="dossier-heading" class="mt-2 text-title">{{ libelles.dossier }}</h1>
   @if (lecture.isLoading()) {
   <p role="status" data-selector="anomalie-chargement">{{ libelles.chargementDossier }}</p>
-  } @if (dossier(); as dossier) {
+  } @if (dossier(); as dossier) { @let poignee = poigneeDe(dossier); @let placement = placementDe(dossier);
   <header class="mb-6">
     <h2 class="text-section">{{ dossier.ligne.designation }}</h2>
     <p class="mt-1 text-body-sm text-ink-muted">
@@ -25,14 +25,14 @@
         [dossier]="dossier"
         [now]="now"
         [selection]="selection()"
-        [poignee]="poignee()"
-        [placement]="placement()"
+        [poignee]="poignee"
+        [placement]="placement"
         [apercu]="apercu()"
         (selectionDemandee)="selection.set($event)"
         (deplacementDemande)="deplacer(dossier, $event)"
         (placementDemande)="placer(dossier, $event)"
       />
-      @if (placement()) {
+      @if (placement) {
       <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-frise-aide">{{ libelles.frise.placerLHeure }}</p>
       }
     </section>
@@ -153,7 +153,7 @@
           <p>{{ libelles.cible }} {{ labelForActivite(proposition.fait.activiteVisee, dossier, now) }}</p>
           } }
         </div>
-        @if (poignee(); as poignee) {
+        @if (poignee) {
         <div class="mt-3 flex flex-wrap gap-2" role="group" [attr.aria-label]="libelles.decalerInstant">
           <button
             type="button"
