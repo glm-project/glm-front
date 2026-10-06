@@ -1,11 +1,10 @@
 import { toOffsetIsoString } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { BornesDePoignee, DemandeDeDeplacement, PoigneeDeFrise } from './PoigneeDeFrise';
 
 const UNE_MINUTE = 60_000;
 
 const aLaMinute = (instant: number): number => Math.floor(instant / UNE_MINUTE) * UNE_MINUTE;
-
-const apresLaMinute = (instant: number): number => Math.ceil(instant / UNE_MINUTE) * UNE_MINUTE;
 
 const cibleDe = (demande: DemandeDeDeplacement, courant: string, plancher: number, plafond: number): number => {
   switch (demande.kind) {
@@ -19,8 +18,8 @@ const cibleDe = (demande: DemandeDeDeplacement, courant: string, plancher: numbe
 };
 
 export const instantDeplace = (demande: DemandeDeDeplacement, courant: string, bornes: BornesDePoignee): string => {
-  const plancher = apresLaMinute(Date.parse(bornes.min));
-  const plafond = aLaMinute(Date.parse(bornes.max));
+  const plancher = new InstantPointage(bornes.min).firstWholeMinute();
+  const plafond = new InstantPointage(bornes.max).lastWholeMinute();
   if (plancher > plafond) return toOffsetIsoString(new Date(courant));
   const cible = cibleDe(demande, courant, plancher, plafond);
   return toOffsetIsoString(new Date(Math.min(Math.max(cible, plancher), plafond)));

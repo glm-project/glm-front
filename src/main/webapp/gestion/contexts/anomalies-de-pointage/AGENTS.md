@@ -147,7 +147,8 @@ capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage
 (Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
 changement d'heure d'automne). La frise ne décide pas de l'instant : elle émet une demande (`DemandeDeDeplacement` : `DE`
 minutes, `VERS` instant, `BORNE`) avec la poignée lue, que la page résout (`instantDeplace`, `DeplacementDeLaPoignee.ts`) après
-avoir lu l'heure à l'action : en minutes entières, entre la borne basse du `CadreDuFait` et cette heure, puis transmet par
+avoir lu l'heure à l'action : en minutes entières, entre la borne basse du `CadreDuFait` et cette heure, comparées à la
+nanoseconde (`InstantPointage.firstWholeMinute` et `lastWholeMinute`), puis transmet par
 `change({ fait: { instant } })`, secondes à zéro : la
 fraction et l'aperçu disparaissent comme pour une saisie dans le champ, qui affiche la nouvelle valeur. « −5 min » et « +5 min »
 de « Votre décision » font la même demande et se désactivent à une borne. La poignée et ses boutons sont désactivés tant

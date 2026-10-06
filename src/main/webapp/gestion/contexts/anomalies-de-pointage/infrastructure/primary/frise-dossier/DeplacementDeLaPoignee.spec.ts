@@ -54,6 +54,13 @@ describe('Move of the handle of the proposed instant', () => {
       expected: '2026-09-14T08:01:00-03:00',
     },
     {
+      cas: 'the first whole minute after a lower bound that carries only nanoseconds',
+      demande: { kind: 'BORNE', borne: 'MIN' },
+      courant: instantAt('10:00'),
+      bornes: { min: '2026-09-14T11:00:00.000000500Z', max: instantAt('13:00') },
+      expected: '2026-09-14T08:01:00-03:00',
+    },
+    {
       cas: 'the whole minute before an upper bound that carries seconds and a fraction',
       demande: { kind: 'BORNE', borne: 'MAX' },
       courant: instantAt('10:00'),
