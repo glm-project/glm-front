@@ -222,7 +222,7 @@ sa cible laisse `CIBLE_INTERDITE` que le gestionnaire doit pouvoir effacer, et l
 Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le formulaire les replie en
 une ligne « Camille Martin · Fraiseuse 1 » (`anomalie-identite`, mêmes règles que l'aperçu : « Opérateur non résolu »,
 « Sans poste ») avec « Modifier » (`aria-expanded`), qui déplie ou replie les champs ci-dessous ; une nouvelle proposition repart
-repliée. Les champs sont dépliés d'office, sans « Modifier », tant que le référentiel charge ou est en panne, et pour un fait sans
+repliée (`identiteDeployee`, un `linkedSignal` sur les propositions faites, que « Modifier » seul écrit, ADR 0043). Les champs sont dépliés d'office, sans « Modifier », tant que le référentiel charge ou est en panne, et pour un fait sans
 opérateur (`SaisieActe.operateurManque()`, régularisation à partir de rien : ni ligne ni « Modifier » avant le choix de l'opérateur). Le port de lecture
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et

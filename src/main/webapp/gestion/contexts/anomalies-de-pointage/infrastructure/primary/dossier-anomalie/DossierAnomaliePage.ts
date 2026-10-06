@@ -17,6 +17,7 @@ import {
   linkedSignal,
   resource,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -119,9 +120,12 @@ export class DossierAnomaliePage {
   protected readonly detailDuPointage = detailDuPointage;
   protected readonly tempsActivite = tempsActivite;
   protected readonly detail = signal(false);
-  protected readonly identiteDeployee = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly propositionsFaites = signal(0);
+  protected readonly identiteDeployee = linkedSignal({
+    source: this.propositionsFaites,
+    computation: () => untracked(() => this.saisie().operateurManque()),
+  });
   protected readonly gestesProposes = GESTES_PROPOSES;
   protected readonly gesteDuFait = gesteDuFait;
   protected readonly erreursALire = erreursALire;
@@ -227,7 +231,6 @@ export class DossierAnomaliePage {
   protected choose(saisie: SaisieActe, choix?: string): void {
     this.lireLHorloge();
     this.preparation.choose(saisie);
-    this.identiteDeployee.set(saisie.operateurManque());
     this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
     this.choixSelectionne.set(choix);
