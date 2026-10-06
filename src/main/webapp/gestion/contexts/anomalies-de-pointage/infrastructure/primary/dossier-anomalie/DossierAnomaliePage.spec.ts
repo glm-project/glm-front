@@ -722,6 +722,7 @@ interface CasDeFinAutomatiqueFixture {
     readonly activiteVisee?: string;
     readonly sansCorrection?: true;
   };
+  readonly regularisation?: 'AUCUNE' | 'AILLEURS';
   readonly phrase: string;
 }
 
@@ -738,6 +739,31 @@ const CAS_DE_FIN_AUTOMATIQUE: readonly CasDeFinAutomatiqueFixture[] = [
     cas: 'a non-conformity never stopped',
     categorie: 'NON_CONFORMITE',
     phrase: 'La non-conformité démarrée à 08:00 n’a jamais été arrêtée : fin automatique à 18:00.',
+  },
+  {
+    cas: 'a work the server offers neither to regularise nor to correct',
+    categorie: 'TRAVAIL',
+    regularisation: 'AUCUNE',
+    phrase: 'Le travail démarré à 08:00 a été terminé automatiquement à 18:00.',
+  },
+  {
+    cas: 'a non-conformity the server offers neither to regularise nor to correct',
+    categorie: 'NON_CONFORMITE',
+    regularisation: 'AUCUNE',
+    phrase: 'La non-conformité démarrée à 08:00 a été terminée automatiquement à 18:00.',
+  },
+  {
+    cas: 'a work whose end regularisation aims at another activity',
+    categorie: 'TRAVAIL',
+    regularisation: 'AILLEURS',
+    phrase: 'Le travail démarré à 08:00 a été terminé automatiquement à 18:00.',
+  },
+  {
+    cas: 'a late choice that carries a regularisation but is no end regularisation',
+    categorie: 'TRAVAIL',
+    tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: ARRET_19_30, sansCorrection: true },
+    regularisation: 'AUCUNE',
+    phrase: 'Le travail démarré à 08:00 a été terminé automatiquement à 18:00.',
   },
   {
     cas: 'a work stopped after its due time',
@@ -4193,6 +4219,24 @@ describe('Anomaly dossier page', () => {
     periode: { categorie, debut: instantAt(debut), fin: instantAt(fin), duree: 'PT10H' },
   });
 
+  const regularisationsFixture = (cas: CasDeFinAutomatiqueFixture, choix: readonly ChoixGuide[]): readonly ChoixGuide[] => {
+    if (cas.regularisation === 'AUCUNE') return [];
+    if (cas.regularisation === 'AILLEURS') {
+      return choix.map(candidat => ({
+        ...candidat,
+        saisie: SaisieActe.regularise({
+          type: 'FIN',
+          intention: 'FIN',
+          activiteVisee: 'travail-9',
+          operateur: 'op-camille',
+          poste: 'poste-1',
+          instant: '',
+        }),
+      }));
+    }
+    return choix;
+  };
+
   const lateChoiceFixture = (tardif: NonNullable<CasDeFinAutomatiqueFixture['tardif']>): ChoixGuide => ({
     id: `${tardif.code}:tardif-30`,
     code: tardif.code,
@@ -4218,7 +4262,7 @@ describe('Anomaly dossier page', () => {
         ...dossier,
         journal: [...dossier.journal, ...(dansLeJournal ? [pointageCiteFixture('tardif-30', tardif.pointage, 'travail-8')] : [])],
         activites: [dueActivityFixture('travail-8', cas.categorie, '08:00', '18:00')],
-        choix: [...dossier.choix, ...(tardif === undefined ? [] : [lateChoiceFixture(tardif)])],
+        choix: [...regularisationsFixture(cas, dossier.choix), ...(tardif === undefined ? [] : [lateChoiceFixture(tardif)])],
       },
     };
   };
@@ -4255,6 +4299,23 @@ describe('Anomaly dossier page', () => {
         activites: [
           dueActivityFixture('travail-8', 'TRAVAIL', '08:00', '18:00'),
           dueActivityFixture('nc-9', 'NON_CONFORMITE', '09:00', '19:00'),
+        ],
+        choix: [
+          ...dossier.choix,
+          {
+            id: 'REGULARISER_FIN:debut-nc-9',
+            code: 'REGULARISER_FIN',
+            libelle: '',
+            explication: '',
+            saisie: SaisieActe.regularise({
+              type: 'FIN',
+              intention: 'FIN',
+              activiteVisee: 'nc-9',
+              operateur: 'op-camille',
+              poste: 'poste-1',
+              instant: '',
+            }),
+          },
         ],
       },
     };

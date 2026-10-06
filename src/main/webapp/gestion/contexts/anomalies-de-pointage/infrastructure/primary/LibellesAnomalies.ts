@@ -106,6 +106,8 @@ const PROBLEMES = {
       `${sujet} vise ${cible.defini}, déjà terminé${cible.accord} automatiquement à ${fin}.`,
     sansFin: (cible: Activite, debut: string, fin: string) =>
       `${cible.defini} démarré${cible.accord} à ${debut} n’a jamais été arrêté${cible.accord} : fin automatique à ${fin}.`,
+    terminee: (cible: Activite, debut: string, fin: string) =>
+      `${cible.defini} démarré${cible.accord} à ${debut} a été terminé${cible.accord} automatiquement à ${fin}.`,
   },
 } as const;
 

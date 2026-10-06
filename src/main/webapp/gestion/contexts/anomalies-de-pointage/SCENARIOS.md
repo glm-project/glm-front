@@ -54,9 +54,11 @@ L'en-tête du dossier dit le problème en une phrase, sous l'élément, l'opéra
 remplace les blocs « Pourquoi ces pointages sont incohérents » et « Fin automatique ». Un conflit en a une par
 diagnostic, dans l'ordre reçu, selon sa raison : « L'arrêt de 17:00 vise le travail, remplacé à 12:00 par un passage
 en NC. » ; sans le fait contradictoire, « L'arrêt de 17:00 vise un travail qui n'est plus en cours. » Sans diagnostic
-reçu, l'explication de la ligne tient lieu de phrase. Une fin automatique en a une par activité échue : « Le travail
-démarré à 08:00 n'a jamais été arrêté : fin automatique à 18:00. » ; quand un choix de correction tardive est reçu, elle
-nomme le pointage tardif (« L'arrêt de 19:30 vise le travail, déjà terminé automatiquement à 18:00. »). Les faits de
+reçu, l'explication de la ligne tient lieu de phrase. Une fin automatique en a une par activité échue : quand un choix de
+correction tardive est reçu, elle nomme le pointage tardif (« L'arrêt de 19:30 vise le travail, déjà terminé automatiquement
+à 18:00. ») ; sinon, quand un choix de régularisation de fin vise l'activité, « Le travail démarré à 08:00 n'a jamais été
+arrêté : fin automatique à 18:00. » ; sans l'un ni l'autre, « Le travail démarré à 08:00 a été terminé automatiquement à
+18:00. », qui n'affirme rien de ses pointages. Les faits de
 l'activité échue (début, fin automatique, durée) sont dans le panneau Sélection, l'activité étant sélectionnée à l'ouverture. Aucune phrase ne porte d'identifiant, ni de
 lien : un pointage absent du journal se dit « Un pointage non résolu ».
 

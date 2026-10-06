@@ -1,6 +1,7 @@
 import { TypePointage } from '../../domain/acte/ActeResolution';
 import { conflitAExpliquer } from '../../domain/dossier/ConflitAExpliquer';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { finARegulariser } from '../../domain/dossier/FinsARegulariser';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { pointagesTardifs } from '../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
@@ -123,13 +124,23 @@ const pointageTardifDe = (dossier: DossierAnomalie, activite: ActiviteAnomalie):
   return tardif === undefined ? undefined : new PointageAnomalieId(tardif.pointage);
 };
 
-const phraseDeFinAutomatique = (dossier: DossierAnomalie, activite: ActiviteAnomalie, periode: PeriodeEchue): string => {
+const phraseSansPointageTardif = (dossier: DossierAnomalie, activite: ActiviteAnomalie, periode: PeriodeEchue): string => {
   const cible = activiteDite(periode.categorie);
-  const fin = heureDe(periode.fin);
+  const modele = finARegulariser(dossier.choix, activite.id.activite)
+    ? PROBLEMES.finAutomatique.sansFin
+    : PROBLEMES.finAutomatique.terminee;
+  return majuscule(modele(cible, heureDe(periode.debut), heureDe(periode.fin)));
+};
+
+const phraseDeFinAutomatique = (dossier: DossierAnomalie, activite: ActiviteAnomalie, periode: PeriodeEchue): string => {
   const tardif = pointageTardifDe(dossier, activite);
   return tardif === undefined
-    ? majuscule(PROBLEMES.finAutomatique.sansFin(cible, heureDe(periode.debut), fin))
-    : PROBLEMES.finAutomatique.pointageTardif(sujetDe(pointageDu(dossier.journal, tardif)), cible, fin);
+    ? phraseSansPointageTardif(dossier, activite, periode)
+    : PROBLEMES.finAutomatique.pointageTardif(
+        sujetDe(pointageDu(dossier.journal, tardif)),
+        activiteDite(periode.categorie),
+        heureDe(periode.fin),
+      );
 };
 
 const phrasesDeFinAutomatique = (dossier: DossierAnomalie): readonly string[] =>
