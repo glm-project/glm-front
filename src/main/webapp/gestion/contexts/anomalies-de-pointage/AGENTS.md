@@ -32,8 +32,10 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
 - **Geste** : le nom d'un pointage d'après le bouton que l'opérateur a pressé au pupitre (DÉMARRER, NC, BON, ARRÊTER) :
   « Démarrage », « Démarrage en NC », « Passage en NC », « Retour en bon », « Arrêt ». Gestion en possède les libellés et les
-  aligne à la main sur le pupitre, qu'elle n'importe pas. Une action du gestionnaire (choisir, saisir, déplacer, prévisualiser)
-  n'est pas un geste : on dit « action » ou « saisie ».
+  aligne à la main sur le pupitre, qu'elle n'importe pas. Le formulaire demande « Ce que signale le pointage » : c'est le geste,
+  dont le type et l'intention sont envoyés au serveur ; il n'y a pas de second terme. Ce que fait le gestionnaire (choisir,
+  modifier, déplacer, placer, prévisualiser) n'est pas un geste : c'est une **saisie** (« relue à chaque saisie »). « Action »
+  n'a qu'un sens, l'action directe.
 - **Phrase du problème** : la ligne de l'en-tête qui dit ce qui est en cause (pointage nommé par son geste et son heure, « vise »,
   l'activité, le fait contradictoire), une par diagnostic ou par activité échue.
 - **Frise** : la représentation, en présentation seule, des pointages et des activités du dossier sur une échelle de temps ;
@@ -49,11 +51,16 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLActe`).
 - **Fin automatique restante** : une activité `ECHUE` du dossier d'après, ailleurs que l'adresse d'origine ; le reçu y mène par
   un lien.
-- **Solutions** : « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur (`dossier.choix`,
-  de même rang, aucune présélectionnée), les actions directes, puis les autres corrections.
-- **Action directe** : annulation d'un pointage en cause, ou correction de son heure, que le front propose sans proposition
-  du serveur (`ActionsDirectes`, `domain/dossier/`) ; elle porte sa `SaisieActe` et le pointage visé, comme un `ChoixGuide`
-  porte la sienne. Ce n'est ni un geste ni une proposition du serveur : un acte, choisi par le gestionnaire.
+- **Solutions** : « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur, les actions
+  directes, puis les autres corrections. Une **proposition du serveur** est un choix guidé (`ChoixGuide`, `dossier.choix`), toutes
+  de même rang, aucune présélectionnée. « Proposition » ne dit jamais le `PropositionActe` que `SaisieActe` prépare : on dit
+  « saisie d'acte ».
+- **Action directe** : une saisie d'acte de départ, comme un choix guidé, que le gestionnaire choisit puis complète (motif, heure) :
+  pas encore un acte. Elle annule un pointage en cause ou corrige son heure, et le front la propose depuis les diagnostics, sans
+  proposition du serveur (`ActionsDirectes`, `domain/dossier/`) ; elle porte sa `SaisieActe` et le pointage visé, comme un
+  `ChoixGuide` porte la sienne, et son acte se lit de sa saisie (`SaisieActe.acte()`). Elle se distingue de Corriger et Annuler du
+  pointage sélectionné, que le gestionnaire choisit lui-même sur la frise : celles-ci ne viennent d'aucun diagnostic. Ce n'est
+  ni un geste ni une proposition du serveur.
 - **Pointage tardif** : pointage que le serveur désigne, dans un choix `CORRIGER_FIN_TARDIVE` ou `CORRIGER_TRANSITION_TARDIVE`,
   comme posé après l'échéance ; le front le lit, il ne le déduit pas.
 
@@ -121,7 +128,7 @@ action que le serveur propose déjà (même acte, même pointage, lu dans `dossi
 répétée, et un pointage absent du journal ou déjà annulé n'en reçoit aucune. Le primaire nomme chaque action par le geste et
 l'heure du pointage visé (`libelleDeLAction` : « Annuler l'arrêt de 17:00 », « Corriger l'heure de l'arrêt de 07:00 », article
 élidé et geste qualifié comme les phrases) ; l'heure porte ses secondes quand un autre pointage du journal tombe dans la même
-minute. Choisir une action se comporte comme choisir une proposition (`aria-pressed`, `data-acte`, focus sur la proposition, champ heure
+minute. Choisir une action directe se comporte comme choisir une proposition du serveur (`aria-pressed`, `data-acte`, focus sur la saisie d'acte, champ heure
 ouvert pour une correction ; une action n'a qu'une identité, l'acte et le pointage) ; elle est désactivée pour le consultant et pendant une opération, avec le message des droits, et
 la section est absente sans action. Sous les actions, « Autres corrections » (repli, `anomalie-detail`) rappelle que Corriger
 et Annuler du pointage sélectionné sont dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation,
@@ -154,11 +161,11 @@ vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec seco
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
 `data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
 rendue des graduations (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
-Une proposition de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
+Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ
 date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
-indisponible tant qu'elle manque. Pendant cette proposition (fait terminant une activité avec une borne basse, instant vide ou illisible,
+indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
 qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
 résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'action, bornes du `CadreDuFait`, un clic hors bornes se
@@ -201,7 +208,7 @@ temps reçus (`tempsActivite`), son début et sa fin reçus, « Fin automatique 
 ni Annuler. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau dossier (autre
 adresse, relecture, reçu), elle revient à la sélection initiale (`selectionInitiale`) : le plus ancien pointage en cause d'un
 diagnostic que le journal contient, sinon la première activité échue d'une fin automatique, sinon rien et le panneau invite à
-choisir. Une sélection absente du dossier courant ne s'affiche jamais. Sélectionner ne choisit aucun acte : la proposition,
+choisir. Une sélection absente du dossier courant ne s'affiche jamais. Sélectionner ne choisit aucun acte : la saisie d'acte,
 l'aperçu et le choix guidé restent inchangés. L'historique d'adresse obsolète garde sa liste, sans sélection.
 Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
 `LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
@@ -211,19 +218,24 @@ incompatibles : un fait vierge, ou un pointage reçu que le serveur ne produit p
 remplis, rien quand les deux sont vides. Les catégories d'activité (« Travail », « Non-conformité ») gardent leurs mots.
 Le formulaire du fait dit d'abord « Ce que signale le pointage » (`anomalie-signal`) : un `<select>` natif des cinq gestes
 ci-dessus, dans l'ordre Démarrage, Démarrage en NC, Passage en NC, Retour en bon, Arrêt, tel que le domaine les liste
-(`COMBINAISONS_VALIDES`, `domain/acte/`, d'où `SaisieActe` tire aussi sa compatibilité ; `GESTES_PROPOSES` les nomme). Il remplace
-les groupes Type et Intention : choisir un geste change le type et l'intention en une seule saisie
-(`change({ fait: { type, intention } })`), si bien que la saisie ne peut plus former de type et d'intention incompatibles ;
-`INTENTION_INCOMPATIBLE` reste une règle du domaine, que l'écran ne produit plus. Un fait sans type ni intention (régularisation à
+(`COMBINAISONS_VALIDES`, `domain/acte/` : le domaine possède les combinaisons valides, `SaisieActe` en tire sa compatibilité et
+le primaire ne fait que les nommer, `GESTES_PROPOSES`). Il remplace les groupes Type et Intention : choisir un geste change le
+type et l'intention en une seule saisie (`change({ fait: { type, intention } })`), si bien que la saisie ne peut plus former de
+type et d'intention incompatibles ; `INTENTION_INCOMPATIBLE` reste une règle du domaine, que l'écran ne produit plus, et elle ne
+concerne qu'un couple complet : un geste à moitié choisi (type sans intention, intention sans type) ne demande que ce qui manque. Un fait sans type ni intention (régularisation à
 partir de rien) montre une option vide « Choisissez ce que signale le pointage », sélectionnée et non choisissable, et une seule
 erreur lisible (`erreursALire` : « Choisissez ce que signale le pointage. », jamais le type puis l'intention). « Activité qu'il
 termine » (`anomalie-cible`, `SaisieActe.cibleApplicable()`) ne s'affiche que pour un passage ou un arrêt, et tant qu'une cible est posée : un démarrage qui garde
 sa cible laisse `CIBLE_INTERDITE` que le gestionnaire doit pouvoir effacer, et le champ disparaît une fois la cible effacée.
 Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le formulaire les replie en
 une ligne « Camille Martin · Fraiseuse 1 » (`anomalie-identite`, mêmes règles que l'aperçu : « Opérateur non résolu »,
-« Sans poste ») avec « Modifier » (`aria-expanded`), qui déplie ou replie les champs ci-dessous ; une nouvelle proposition repart
-repliée (`identiteDeployee`, un `linkedSignal` sur les propositions faites, que « Modifier » seul écrit, ADR 0043). Les champs sont dépliés d'office, sans « Modifier », tant que le référentiel charge ou est en panne, et pour un fait sans
-opérateur (`SaisieActe.operateurManque()`, régularisation à partir de rien : ni ligne ni « Modifier » avant le choix de l'opérateur). Le port de lecture
+« Sans poste ») avec « Modifier » (`aria-expanded`, texte visible « Modifier », nom accessible « Modifier l'opérateur et le poste »),
+qui déplie ou replie les champs ci-dessous ; la ligne et son bouton sont le motif de divulgation, donc ils n'existent que pour
+ouvrir ou fermer les champs. Une nouvelle saisie d'acte repart repliée (`identiteDeployee`, un `linkedSignal` sur
+`propositionsFaites`, que « Modifier » seul écrit, ADR 0043). Les champs sont dépliés d'office quand le référentiel charge ou
+est en panne (`identiteForcee`), et pour un fait sans opérateur (`SaisieActe.operateurManque()`, régularisation à partir de rien) :
+dans ces cas la ligne est masquée, les champs disant déjà « Opérateur actuel conservé » ou « Choisissez l'opérateur ». Une fois
+l'opérateur choisi pour un fait sans opérateur, la ligne et son bouton apparaissent au-dessus des champs, qui restent dépliés. Le port de lecture
 expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
 `PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et
 `GET /api/postes-de-travail` (`collectAllPages`, page demandée vérifiée, aucune collection tronquée ni identité dupliquée).
@@ -269,7 +281,7 @@ l'heure courante. L'échéance n'est pas une borne. `command()` et `errors()` de
 compare sans bornes et sans heure. `CadreDuFait.bornes(fait)` rend `{ min?, max }`, que la frise lira sans les recalculer.
 Le domaine ne lit jamais l'horloge. Il y a deux horloges : `now`, lue une fois à la construction de la page, ne sert qu'à
 l'affichage des dates ; `maintenant`, qui sert aux bornes, est relue à chaque action (choisir, modifier, déplacer, placer) et par
-`PreparationActe.preview` au moment d'appeler le port, jamais figée pour toute la page ; `preview` refuse un fait hors bornes sans appeler le port. Chaque nouvelle proposition
+`PreparationActe.preview` au moment d'appeler le port, jamais figée pour toute la page ; `preview` refuse un fait hors bornes sans appeler le port. Chaque nouvelle saisie d'acte
 (un choix, même identique, ou « Ajouter un pointage manquant ») recrée le champ : une saisie partielle ne lui survit pas.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
