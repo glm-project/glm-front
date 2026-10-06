@@ -22,9 +22,13 @@ Une ancre annulée reste consultable et les continuations désignent les autres 
 
 Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
 conflit. Il montre l'activité échue sur la frise, son début, sa fin automatique et sa durée tels que reçus dans le panneau Sélection. Le
-gestionnaire régularise la fin avec une heure qu'il saisit : le choix guidé arrive sans heure et l'aperçu
-reste indisponible tant qu'elle manque. Une fin ou une transition pointée après l'échéance se corrige avec
-l'heure de ce pointage et un motif. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
+gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée des pointages de la frise : le
+choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic place la
+poignée à l'heure cliquée, arrondie à 5 minutes et ramenée à la borne la plus proche si elle sort du début de l'activité ou de
+l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise ou de saisir l'heure ; le clic est
+inactif sans proposition de ce genre, et pendant une opération ; un clic sur un repère ou une barre sélectionne. Une fin ou une transition pointée après l'échéance se corrige avec
+l'heure de ce pointage et un motif. Le pointage que le choix désigne est marqué « pointé après
+l'échéance » sur la frise et dans le panneau Sélection ; le front le lit dans le choix reçu, il ne le déduit pas. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
 ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
 `date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
 annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
@@ -203,7 +207,8 @@ flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux b
 décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, heure courante lue au
 geste, en minutes entières) ; un bouton est désactivé à la borne. Chaque déplacement transmet l'instant avec l'offset local
 et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure dans le champ déplace la poignée. Un fait
-sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée. L'heure reçue du
+sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée ; la régularisation d'une fin sans heure la reçoit au clic sur la rangée
+des pointages (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
 qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
 traverse minuit et l'heure répétée graduée heure par heure.

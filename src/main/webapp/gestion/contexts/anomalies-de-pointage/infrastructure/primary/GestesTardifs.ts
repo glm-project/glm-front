@@ -14,3 +14,6 @@ export const gestesTardifs = (choix: readonly ChoixGuide[]): readonly GesteTardi
       ? [{ pointage: proposition.pointage, activite: proposition.fait.activiteVisee }]
       : [];
   });
+
+export const pointagesTardifs = (choix: readonly ChoixGuide[]): ReadonlySet<string> =>
+  new Set(gestesTardifs(choix).map(geste => geste.pointage));

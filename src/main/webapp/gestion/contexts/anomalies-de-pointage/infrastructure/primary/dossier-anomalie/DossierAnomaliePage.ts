@@ -34,6 +34,7 @@ import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { etatDeLecture } from '../EtatDeLecture';
+import { pointagesTardifs } from '../GestesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
@@ -52,7 +53,7 @@ import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
 import { FriseDossier } from '../frise-dossier/FriseDossier';
-import { DeplacementDemande, poigneeDuDossier } from '../frise-dossier/PoigneeDeFrise';
+import { DeplacementDemande, PlacementDemande, placementDuDossier, poigneeDuDossier } from '../frise-dossier/PoigneeDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
@@ -93,6 +94,7 @@ export class DossierAnomaliePage {
   protected readonly posteDe = postePresente;
   protected readonly anomalieTraitee = anomalieTraitee;
   protected readonly problemes = phrasesDuProbleme;
+  protected readonly pointagesTardifs = pointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
   protected readonly libelleActivite = libelleActivite;
   protected readonly intituleDeLActivite = intituleDeLActivite;
@@ -143,6 +145,7 @@ export class DossierAnomaliePage {
   protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly poignee = computed(() => poigneeDuDossier(this.dossier(), this.proposition(), this.maintenant(), this.occupe()));
+  protected readonly placement = computed(() => placementDuDossier(this.dossier(), this.proposition(), this.maintenant(), this.occupe()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
@@ -232,6 +235,15 @@ export class DossierAnomaliePage {
   protected deplacer({ demande, poignee }: DeplacementDemande): void {
     this.lireLHorloge();
     this.change({ fait: { instant: instantDeplace(demande, poignee.instant, { min: poignee.bornes.min, max: this.maintenant() }) } });
+  }
+
+  protected placer({ instant, placement }: PlacementDemande): void {
+    this.lireLHorloge();
+    this.change({
+      fait: {
+        instant: instantDeplace({ kind: 'VERS', instant }, this.maintenant(), { min: placement.bornes.min, max: this.maintenant() }),
+      },
+    });
   }
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {

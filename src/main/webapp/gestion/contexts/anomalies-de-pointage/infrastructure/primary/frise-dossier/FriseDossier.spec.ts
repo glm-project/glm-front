@@ -2,13 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import { SaisieActe } from '../../../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
-import { ActiviteAnomalie, DiagnosticConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteAnomalie, ChoixGuide, DiagnosticConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
-import { DemandeDeDeplacement, DeplacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
+import { DemandeDeDeplacement, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
 const GESTES = {
   DEMARRAGE: { type: 'DEBUT', intention: 'OUVERTURE' },
@@ -63,16 +64,45 @@ const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}):
   ...surcharge,
 });
 
+const choixFixture = (code: NonNullable<ChoixGuide['code']>, saisie: SaisieActe): ChoixGuide => ({
+  id: `${code}:choix`,
+  code,
+  libelle: '',
+  explication: '',
+  saisie,
+});
+
+const correctionTardiveFixture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE', pointage: string): ChoixGuide =>
+  choixFixture(
+    code,
+    SaisieActe.correct(pointage, {
+      type: 'FIN',
+      intention: 'FIN',
+      activiteVisee: 'travail-8',
+      operateur: 'op-camille',
+      poste: 'poste-1',
+      instant: instantAt('23:00'),
+    }),
+  );
+
+const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): PlacementDeLInstant => ({
+  bornes: { min: instantAt('08:00'), max: instantAt('13:00') },
+  desactivee: false,
+  ...surcharge,
+});
+
 const PLAN_WIDTH = 1000;
 
 describe('Frise of a dossier', () => {
   let fixture: ComponentFixture<FriseDossier>;
   let requestedSelections: SelectionDuDossier[];
   let requestedMoves: DeplacementDemande[];
+  let requestedPlacements: PlacementDemande[];
 
   beforeEach(() => {
     requestedSelections = [];
     requestedMoves = [];
+    requestedPlacements = [];
     HTMLElement.prototype.setPointerCapture = () => undefined;
   });
 
@@ -108,6 +138,55 @@ describe('Frise of a dossier', () => {
 
     thenTheMarkerIsNamed('fin-17', '17:00:00 · Arrêt');
     thenTheMarkerIsNamed('debut-8', '08:00:00 · Démarrage');
+  });
+
+  it('should name the marker of the late pointage a choice corrects as pointed after the deadline', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
+      activites: [],
+      choix: [correctionTardiveFixture('CORRIGER_FIN_TARDIVE', 'fin-23')],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkerIsNamed('fin-23', '23:00:00 · Arrêt · pointé après l’échéance');
+    thenTheMarkerIsNamed('debut-8', '08:00:00 · Démarrage');
+  });
+
+  it.each(['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'] as const)(
+    'should mark with a visible badge only the marker of the pointage the %s choice corrects',
+    async code => {
+      const dossier = {
+        journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
+        activites: [],
+        choix: [correctionTardiveFixture(code, 'fin-23')],
+      };
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkerFlagIs('fin-23', 'data-tardif', 'true');
+      thenTheMarkerFlagIs('debut-8', 'data-tardif', 'false');
+      thenTheLateBadgeIsDrawnOn('fin-23');
+      thenNoLateBadgeIsDrawnOn('debut-8');
+    },
+  );
+
+  it.each([
+    { cas: 'a cancellation', choix: choixFixture('ANNULER_TRANSITION', SaisieActe.cancel('fin-23')) },
+    {
+      cas: 'an end regularisation',
+      choix: choixFixture('REGULARISER_FIN', SaisieActe.regularise()),
+    },
+  ])('should mark no pointage as late when the only choice is $cas', async ({ choix }) => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
+      activites: [],
+      choix: [choix],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkerFlagIs('fin-23', 'data-tardif', 'false');
   });
 
   it.each<{ cas: string; surcharge: Partial<PointageAnomalie>; diagnostics: readonly string[]; nom: string }>([
@@ -637,6 +716,100 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsStandAt([0, 25, 50, 75, 100]);
   });
 
+  it('should ask to place the instant where the pointages row is clicked', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture());
+
+    whenClickingThePointagesRowAt(500);
+
+    thenThePlacementsAsked([new Date(2026, 8, 14, 10, 0).getTime()]);
+  });
+
+  it.each([
+    { cas: 'down to the nearest five minutes', clientX: 504, heure: new Date(2026, 8, 14, 10, 0) },
+    { cas: 'up to the nearest five minutes', clientX: 513, heure: new Date(2026, 8, 14, 10, 5) },
+  ])('should round the instant of the click $cas', async ({ clientX, heure }) => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture());
+
+    whenClickingThePointagesRowAt(clientX);
+
+    thenThePlacementsAsked([heure.getTime()]);
+  });
+
+  it('should ask for nothing when the click lands while the placement is disabled', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture({ desactivee: true }));
+
+    whenClickingThePointagesRowAt(500);
+
+    thenThePlacementsAsked([]);
+  });
+
+  it('should draw no placement row while no instant waits to be placed', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenNoPlacementRowIsDrawn();
+  });
+
+  it('should select the pointage of a marker pressed on the placement row without asking to place anything', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture());
+
+    whenPressing(marker('debut-8'));
+
+    thenThePlacementsAsked([]);
+    expect(requestedSelections).toEqual([{ kind: 'POINTAGE', id: 'debut-8' }]);
+  });
+
+  it('should extend the scale to three hours after the last received instant while an instant waits to be placed', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      undefined,
+      placementFixture({ bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } }),
+    );
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+  });
+
+  it('should stretch the placement row over the rows of the markers and stop above the bars', async () => {
+    const dossier = {
+      journal: [
+        pointageFixture('p-1', 'DEMARRAGE', '08:00'),
+        pointageFixture('p-2', 'PASSAGE_NC', '08:20'),
+        pointageFixture('p-3', 'ARRET', '12:00'),
+      ],
+      activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture());
+
+    thenThePlacementRowCovers(['p-1', 'p-2', 'p-3'], 'a-1');
+  });
+
   it('should draw the handle of the proposed instant as a slider', async () => {
     const dossier = {
       journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-17', 'ARRET', '17:00')],
@@ -964,14 +1137,21 @@ describe('Frise of a dossier', () => {
     thenTheHandleIsNamedAndShows('Heure proposée du fait', '10:05');
   });
 
-  const whenRenderingTheFrise = async (dossier: VueDeFrise, selection?: SelectionDuDossier, poignee?: PoigneeDeFrise): Promise<void> => {
+  const whenRenderingTheFrise = async (
+    dossier: VueDeFrise,
+    selection?: SelectionDuDossier,
+    poignee?: PoigneeDeFrise,
+    placement?: PlacementDeLInstant,
+  ): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
     fixture.componentRef.setInput('dossier', dossier);
     fixture.componentRef.setInput('poignee', poignee);
+    fixture.componentRef.setInput('placement', placement);
     fixture.componentRef.setInput('now', new Date(2026, 9, 5, 10, 0));
     fixture.componentRef.setInput('selection', selection);
     fixture.componentInstance.selectionDemandee.subscribe(demandee => requestedSelections.push(demandee));
     fixture.componentInstance.deplacementDemande.subscribe(demande => requestedMoves.push(demande));
+    fixture.componentInstance.placementDemande.subscribe(demande => requestedPlacements.push(demande));
     await fixture.whenStable();
   };
 
@@ -1003,6 +1183,33 @@ describe('Frise of a dossier', () => {
   const whenMovingThePointerOverTheHandleTo = (clientX: number, pointerId = 1): void => {
     thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
     handle().dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX, bubbles: true }));
+  };
+
+  const whenClickingThePointagesRowAt = (clientX: number): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-placement')),
+      'placement row',
+    ).dispatchEvent(new MouseEvent('click', { clientX, bubbles: true }));
+  };
+
+  const thenThePlacementRowCovers = (pointages: readonly string[], activite: string): void => {
+    const row = requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-placement')),
+      'placement row',
+    );
+    const bas = topOf(row) + Number.parseFloat(row.style.height);
+    expect(topOf(row)).toBeLessThanOrEqual(Math.min(...pointages.map(pointage => topOf(marker(pointage)))));
+    expect(bas).toBeGreaterThanOrEqual(Math.max(...pointages.map(pointage => topOf(marker(pointage)) + 44)));
+    expect(bas).toBeLessThanOrEqual(topOf(bar(activite)));
+  };
+
+  const thenNoPlacementRowIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise-placement'))).toBeNull();
+  };
+
+  const thenThePlacementsAsked = (expected: readonly number[]): void => {
+    expect(requestedPlacements.map(demande => demande.instant)).toEqual(expected);
   };
 
   const whenTheGestureEndsWith = (type: string, pointerId = 1): void => {
@@ -1087,6 +1294,17 @@ describe('Frise of a dossier', () => {
   const thenTheMarkerBadgeIs = (pointage: string, expected: string): void => {
     expect(badgeOf(pointage)?.textContent.trim()).toBe(expected);
   };
+
+  const thenTheLateBadgeIsDrawnOn = (pointage: string): void => {
+    expect(lateBadgeOf(pointage)).not.toBeNull();
+  };
+
+  const thenNoLateBadgeIsDrawnOn = (pointage: string): void => {
+    expect(lateBadgeOf(pointage)).toBeNull();
+  };
+
+  const lateBadgeOf = (pointage: string): HTMLElement | null =>
+    marker(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-tardif'));
 
   const thenTheMarkerHasNoBadge = (pointage: string): void => {
     expect(badgeOf(pointage)).toBeNull();

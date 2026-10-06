@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
+import { requiredFixture } from '../../../utils/RequiredFixture';
 import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
@@ -33,6 +34,8 @@ import {
   whenSelectingPointage,
 } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
+const echelleDebutHeure = 7;
+const echelleDureeHeures = 17;
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const urlApercu = `${urlDossier}/apercus`;
 const urlConfirmation = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/confirmations-de-resolution`;
@@ -79,6 +82,47 @@ describe('Automatic end of an activity in Gestion', () => {
 
     thenTheAnomalyIsProcessedFromTheReceipt();
   });
+
+  it('should invent no hour and keep the preview unavailable until the manager places the end on the frise', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+
+    whenOpeningTheAutomaticEnd();
+    whenChoosingTheEndRegularisation();
+
+    thenNoHourIsInventedAndThePreviewIsUnavailable();
+  });
+
+  it('should regularise an automatic end by placing its real end on the frise', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+
+    whenOpeningTheAutomaticEnd();
+    whenChoosingTheEndRegularisation();
+    whenClickingThePointagesRowAt(instantRegulariseLocalFixture);
+    whenPreviewingTheEndRegularisation();
+
+    thenThePreviewWasAskedForTheClickedHour();
+  });
+
+  const thenNoHourIsInventedAndThePreviewIsUnavailable = (): void => {
+    thenTheInstantFieldsAreEmpty();
+    cy.get(dataSelector('anomalie-poignee')).should('not.exist');
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-frise-aide')).should('be.visible');
+  };
+
+  const whenClickingThePointagesRowAt = (instant: Date): void => {
+    const heures = instant.getHours() + instant.getMinutes() / 60;
+    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
+      const { width } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+      cy.get(dataSelector('anomalie-frise-placement')).click((width * (heures - echelleDebutHeure)) / echelleDureeHeures, 20);
+    });
+  };
+
+  const thenThePreviewWasAskedForTheClickedHour = (): void => {
+    thenTheInstantFieldsShow(instantRegulariseLocalFixture);
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
+    cy.wait('@apercu').its('request.body.acte.fait.instant').should('eq', instantRegulariseSaisiFixture);
+  };
 
   const givenAnAutomaticEndRegularisedByTheBackend = (): void => {
     cy.intercept('GET', urlDossier, { body: dossierFinAutomatiqueFixture() }).as('dossier');

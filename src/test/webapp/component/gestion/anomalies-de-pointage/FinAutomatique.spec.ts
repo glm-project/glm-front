@@ -13,8 +13,8 @@ import {
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
-import { thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
-import { markerOf } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
+import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import { markerOf, thenPointageIsSelected, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 describe('Automatic end dossier in Gestion', () => {
   beforeEach(() => {
@@ -57,6 +57,12 @@ describe('Automatic end dossier in Gestion', () => {
     });
   };
 });
+
+const whenOpeningTheDossierAndChoosing = (): void => {
+  cy.viewport(1280, 900);
+  cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  cy.get(dataSelector('anomalie-choix')).click();
+};
 
 describe('Late end handle on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
@@ -124,11 +130,7 @@ describe('Late end handle on the frise in Gestion', () => {
     cy.get(dataSelector('anomalie-poignee')).should('have.css', 'touch-action', 'none');
   };
 
-  const whenOpeningTheLateEndCorrection = (): void => {
-    cy.viewport(1280, 900);
-    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-    cy.get(dataSelector('anomalie-choix')).click();
-  };
+  const whenOpeningTheLateEndCorrection = whenOpeningTheDossierAndChoosing;
 
   const whenDraggingTheHandleTo = (hour: number): void => {
     cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
@@ -142,5 +144,117 @@ describe('Late end handle on the frise in Gestion', () => {
 
   const thenTheTimeFieldShows = (instant: Date): void => {
     thenTheInstantFieldsShow(instant);
+  };
+});
+
+describe('End placement on the frise in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+  const echelleDebutHeure = 7;
+  const echelleDureeHeures = 17;
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+    cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
+  });
+
+  it('should invent no hour while the manager has not placed the end, and say how to place it', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+
+    thenNoHourIsInventedAndTheEndCanBePlaced();
+  });
+
+  it('should place the handle and the hour at the time clicked on the pointages row, rounded to five minutes', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+    whenClickingThePointagesRowAt(17 + 2 / 60);
+
+    thenTheEndIsPlacedAt(new Date(2026, 8, 14, 17, 0));
+  });
+
+  it('should bring a click before the start of the activity back to its start', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+    whenClickingThePointagesRowAt(7.5);
+
+    thenTheEndIsPlacedAt(new Date(2026, 8, 14, 8, 0));
+  });
+
+  it('should select the pointage of a marker clicked on the pointages row instead of placing the end', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+    whenSelectingPointage(ouvrantFinAutomatiqueFixture);
+
+    thenPointageIsSelected(ouvrantFinAutomatiqueFixture);
+    thenTheInstantFieldsAreEmpty();
+  });
+
+  const whenOpeningTheAutomaticEndRegularisation = whenOpeningTheDossierAndChoosing;
+
+  const whenClickingThePointagesRowAt = (hour: number): void => {
+    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
+      const { width } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+      cy.get(dataSelector('anomalie-frise-placement')).click((width * (hour - echelleDebutHeure)) / echelleDureeHeures, 20);
+    });
+  };
+
+  const thenNoHourIsInventedAndTheEndCanBePlaced = (): void => {
+    thenTheInstantFieldsAreEmpty();
+    cy.get(dataSelector('anomalie-poignee')).should('not.exist');
+    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-frise-aide')).should('be.visible').and('contain.text', 'Cliquez sur la frise pour placer la fin');
+  };
+
+  const thenTheEndIsPlacedAt = (instant: Date): void => {
+    thenTheInstantFieldsShow(instant);
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
+    cy.get(dataSelector('anomalie-frise-placement')).should('not.exist');
+    cy.get(dataSelector('anomalie-frise-aide')).should('not.exist');
+  };
+});
+
+describe('Pointage pointed after the deadline on the frise in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+
+  beforeEach(() => {
+    givenTheReferentielFinAutomatique();
+  });
+
+  (['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'] as const).forEach(code => {
+    it(`should mark on the frise the pointage the ${code} choice corrects`, () => {
+      givenALateGestureCorrectedBy(code);
+
+      whenOpeningTheLateGesture();
+
+      thenOnlyTheLatePointageIsMarkedOnTheFrise();
+    });
+
+    it(`should say in the selection that the pointage the ${code} choice corrects was pointed after the deadline`, () => {
+      givenALateGestureCorrectedBy(code);
+
+      whenOpeningTheLateGesture();
+      whenSelectingPointage(finTardiveFixture);
+
+      thenTheSelectionSaysTheGestureWasPointedAfterTheDeadline();
+    });
+  });
+
+  const thenTheSelectionSaysTheGestureWasPointedAfterTheDeadline = (): void => {
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Pointé après l’échéance');
+  };
+
+  const givenALateGestureCorrectedBy = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
+    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveFixture(code) });
+  };
+
+  const whenOpeningTheLateGesture = (): void => {
+    cy.viewport(1280, 900);
+    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  };
+
+  const thenOnlyTheLatePointageIsMarkedOnTheFrise = (): void => {
+    markerOf(finTardiveFixture)
+      .should('have.attr', 'data-tardif', 'true')
+      .and('have.attr', 'aria-label')
+      .and('contain', 'pointé après l’échéance');
+    markerOf(finTardiveFixture).find(dataSelector('anomalie-pointage-tardif')).should('be.visible');
+    markerOf(ouvrantFinAutomatiqueFixture).should('have.attr', 'data-tardif', 'false');
   };
 });

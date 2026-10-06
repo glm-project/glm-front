@@ -3053,6 +3053,201 @@ describe('Anomaly dossier page', () => {
     });
   });
 
+  describe('placement of the real end on the frise', () => {
+    it('should place the end at the hour clicked on the pointages row, rounded to five minutes', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClickingThePointagesRowAt(504);
+
+      thenTheInstantFieldsShow('14/09/2026', '15:35:00');
+    });
+
+    it.each([
+      { cas: 'before the start of the activity the end closes', clientX: 0, heure: '08:00:00' },
+      { cas: 'after the clock', clientX: 1000, heure: '12:30:00' },
+    ])('should bring a click $cas back to the nearest bound', async ({ clientX, heure }) => {
+      givenAnAutomaticEnd();
+      whenTheClockIs(new Date(2026, 8, 14, 12, 30, 40));
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClickingThePointagesRowAt(clientX);
+
+      thenTheInstantFieldsShow('14/09/2026', heure);
+    });
+
+    it('should tell the manager how to place the end while it has no hour', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer la fin, ou saisissez l’heure.');
+    });
+
+    it('should give no help to place the end before any proposal is chosen', async () => {
+      givenAnAutomaticEnd();
+
+      await whenRendering();
+
+      thenAbsent('anomalie-frise-aide');
+    });
+
+    it('should give no help to place the end once it is placed', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClickingThePointagesRowAt(504);
+
+      thenAbsent('anomalie-frise-aide');
+    });
+
+    it('should invent no hour and keep the preview unavailable until the end is placed', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenTheInstantFieldsShow('', '');
+      thenAbsent('anomalie-poignee');
+      thenDisabled('anomalie-previsualiser');
+    });
+
+    it('should make the preview available once the end is placed', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClickingThePointagesRowAt(504);
+
+      thenEnabled('anomalie-previsualiser');
+    });
+
+    it('should draw the handle at the hour placed so that the manager goes on dragging it', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClickingThePointagesRowAt(504);
+
+      thenTheHandleReads('15:35');
+    });
+
+    it('should offer no placement row for a late end that comes with its hour', async () => {
+      givenALateEnd();
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenAbsent('anomalie-frise-placement');
+    });
+
+    it('should offer no placement row once the manager turns the fact into a start, which ends no activity', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClicking('anomalie-type-DEBUT');
+      await whenClicking('anomalie-intention-OUVERTURE');
+
+      thenAbsent('anomalie-frise-placement');
+    });
+
+    it('should offer no placement row while the fact aims at no activity, which gives it no lower bound', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenEntering('anomalie-cible', '');
+
+      thenAbsent('anomalie-frise-placement');
+    });
+
+    it('should offer no placement row for the cancellation of a pointage', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+
+      await whenCancelling('debut-8');
+
+      thenAbsent('anomalie-frise-placement');
+    });
+
+    it('should offer no placement row to a consultant, who cannot choose the regularisation', async () => {
+      givenAnAutomaticEnd();
+      givenAConsultantWhoCannotApplyDecisions();
+      await whenRendering();
+
+      await whenClicking('anomalie-choix');
+
+      thenAbsent('anomalie-frise-placement');
+    });
+
+    it('should offer no placement row before any proposal is chosen', async () => {
+      givenAnAutomaticEnd();
+
+      await whenRendering();
+
+      thenAbsent('anomalie-frise-placement');
+    });
+
+    it('should offer no placement row once the end is placed, the handle taking over', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenClickingThePointagesRowAt(504);
+
+      thenAbsent('anomalie-frise-placement');
+    });
+  });
+
+  describe('pointage pointed after the deadline', () => {
+    it.each(['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'] as const)(
+      'should mark on the frise the pointage the %s choice corrects',
+      async code => {
+        givenALateGestureCorrectedBy(code);
+
+        await whenRendering();
+
+        thenTheMarkerFlagIs('fin-23', 'data-tardif', 'true');
+        thenTheMarkerFlagIs('debut-8', 'data-tardif', 'false');
+      },
+    );
+
+    it.each(['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'] as const)(
+      'should say in the selection that the pointage the %s choice corrects was pointed after the deadline',
+      async code => {
+        givenALateGestureCorrectedBy(code);
+        await whenRendering();
+
+        await whenSelecting('fin-23');
+
+        thenTheSelectionContains('Pointé après l’échéance');
+      },
+    );
+
+    it('should not say it of a pointage the late choice does not correct', async () => {
+      givenALateGestureCorrectedBy('CORRIGER_FIN_TARDIVE');
+      await whenRendering();
+
+      await whenSelecting('debut-8');
+
+      thenTheSelectionDoesNotContain('Pointé après l’échéance');
+    });
+
+    it('should not say it when the dossier holds no late choice', async () => {
+      givenAnAutomaticEnd();
+      await whenRendering();
+
+      await whenSelecting('debut-8');
+
+      thenTheSelectionDoesNotContain('Pointé après l’échéance');
+    });
+  });
+
   describe('in a time zone that changes hour', () => {
     const original = process.env['TZ'];
 
@@ -3344,6 +3539,11 @@ describe('Anomaly dossier page', () => {
 
   const givenALateEnd = (instant = INSTANT_FIN_TARDIVE): void => {
     read.result = { kind: 'DOSSIER', dossier: dossierFinTardiveFixture(instant) };
+  };
+
+  const givenALateGestureCorrectedBy = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
+    const dossier = dossierFinTardiveFixture();
+    read.result = { kind: 'DOSSIER', dossier: { ...dossier, choix: dossier.choix.map(choix => ({ ...choix, code })) } };
   };
 
   const givenAnAutomaticEndStartedOn = (debut: string): void => {
@@ -3942,6 +4142,14 @@ describe('Anomaly dossier page', () => {
 
   const whenPressingOnTheHandleFourTimes = async (key: string, shiftKey: boolean): Promise<void> => {
     for (let fois = 0; fois < 4; fois += 1) await whenPressingOnTheHandle(key, shiftKey);
+  };
+
+  const whenClickingThePointagesRowAt = async (clientX: number): Promise<void> => {
+    friseElements('anomalie-frise-plan').forEach(plan => {
+      plan.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 200);
+    });
+    element('anomalie-frise-placement').dispatchEvent(new MouseEvent('click', { clientX, bubbles: true }));
+    await fixture.whenStable();
   };
 
   const whenTheClockIs = (instant: Date): void => {

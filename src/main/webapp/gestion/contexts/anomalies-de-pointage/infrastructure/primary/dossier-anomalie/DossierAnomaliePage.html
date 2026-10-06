@@ -26,9 +26,14 @@
         [now]="now"
         [selection]="selection()"
         [poignee]="poignee()"
+        [placement]="placement()"
         (selectionDemandee)="selection.set($event)"
         (deplacementDemande)="deplacer($event)"
+        (placementDemande)="placer($event)"
       />
+      @if (placement()) {
+      <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-frise-aide">{{ libelles.frise.placerLaFin }}</p>
+      }
     </section>
     <section class="panneau-selection" aria-labelledby="selection-heading" data-selector="anomalie-selection">
       <h2 id="selection-heading" class="text-section">{{ libelles.selection }}</h2>
@@ -43,6 +48,8 @@
       </p>
       @if (pointage.regularisation) {
       <p class="mt-2 text-body-sm font-semibold">{{ libelles.regularisation }}</p>
+      } @if (pointagesTardifs(dossier.choix).has(pointage.id.pointage)) {
+      <p class="mt-2 text-body-sm font-semibold" data-selector="anomalie-selection-tardif">{{ libelles.pointeApresLEcheance }}</p>
       } @if (pointage.annulation; as annulation) {
       <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-annulation">
         {{ libelles.annule }} · {{ annulation.motif }} · {{ annulation.auteur }} · {{ annulation.instant | instantLongDay: now }}

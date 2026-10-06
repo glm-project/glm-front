@@ -1,13 +1,14 @@
 import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ChronologiePointages } from '../../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { pointagesTardifs } from '../GestesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste } from '../PresentationDossier';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { echelleDe, EchelleFrise, Graduation, graduationsDe, largeurMinimaleDe, positionSur, surVoies } from './EchelleFrise';
-import { PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
+import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'>;
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'> & { readonly choix?: DossierAnomalie['choix'] };
 
 export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
 
@@ -44,6 +45,7 @@ export interface RepereFrise {
   readonly regularise: boolean;
   readonly enCause: boolean;
   readonly deplace: boolean;
+  readonly tardif: boolean;
 }
 
 export type ElementFrise = BarreFrise | RepereFrise;
@@ -69,6 +71,13 @@ export interface PositionDePoignee {
   readonly source: PoigneeDeFrise;
 }
 
+export interface RangeeDePlacement {
+  readonly haut: number;
+  readonly hauteur: number;
+  readonly desactivee: boolean;
+  readonly source: PlacementDeLInstant;
+}
+
 export interface DispositionFrise {
   readonly echelle: EchelleFrise;
   readonly largeurMinimale: number;
@@ -77,6 +86,7 @@ export interface DispositionFrise {
   readonly fleches: readonly FlecheFrise[];
   readonly elements: readonly ElementFrise[];
   readonly poignee: PositionDePoignee | undefined;
+  readonly rangeeDePlacement: RangeeDePlacement | undefined;
 }
 
 type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
@@ -84,6 +94,7 @@ type CategorieDeBarre = PeriodeActivite['categorie'];
 
 interface ContexteDeFrise {
   readonly now: Date;
+  readonly tardifs: ReadonlySet<string>;
   readonly echelle: EchelleFrise;
   readonly poignee: PoigneeDeFrise | undefined;
 }
@@ -97,14 +108,21 @@ const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', '
 const instantAvecSecondes = new InstantTimeAndLongDayWithSecondsPipe();
 const QUALIFICATIFS = LIBELLES_ANOMALIES.frise;
 
-const nomDuRepere = (pointage: PointageAnomalie, enCause: boolean, deplace: boolean, now: Date): string =>
+interface DrapeauxDuRepere {
+  readonly enCause: boolean;
+  readonly deplace: boolean;
+  readonly tardif: boolean;
+}
+
+const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now: Date): string =>
   [
     instantAvecSecondes.transform(pointage.fait.instant, now).time,
     libelleDuGeste(pointage.fait),
     ...(pointage.annulation ? [QUALIFICATIFS.annule] : []),
     ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
-    ...(enCause ? [QUALIFICATIFS.enCause] : []),
-    ...(deplace ? [QUALIFICATIFS.heureRemplacee] : []),
+    ...(drapeaux.enCause ? [QUALIFICATIFS.enCause] : []),
+    ...(drapeaux.tardif ? [QUALIFICATIFS.tardif] : []),
+    ...(drapeaux.deplace ? [QUALIFICATIFS.heureRemplacee] : []),
   ].join(' · ');
 
 const symboleDuGeste = (fait: PointageAnomalie['fait']): string =>
@@ -115,6 +133,7 @@ const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefi
 
 const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, contexte: ContexteDeFrise): RepereFrise => {
   const deplace = estDeplace(pointage, contexte.poignee);
+  const tardif = contexte.tardifs.has(pointage.id.pointage);
   return {
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
@@ -123,7 +142,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     voie,
     cle: `pointage:${pointage.id.pointage}`,
     pointage: pointage.id.pointage,
-    nom: nomDuRepere(pointage, enCause, deplace, contexte.now),
+    nom: nomDuRepere(pointage, { enCause, deplace, tardif }, contexte.now),
     selection: { kind: 'POINTAGE', id: pointage.id.pointage },
     heure: heureDe(pointage.fait.instant),
     symbole: symboleDuGeste(pointage.fait),
@@ -132,6 +151,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
     regularise: pointage.regularisation,
     enCause,
     deplace,
+    tardif,
   };
 };
 
@@ -240,13 +260,27 @@ const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, hau
   source: poignee,
 });
 
+const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly RepereFrise[]): RangeeDePlacement => ({
+  haut: HAUTEUR_DE_L_AXE_PX,
+  hauteur: hauteurDesReperes(reperes),
+  desactivee: placement.desactivee,
+  source: placement,
+});
+
 const estLisible = (pointage: PointageAnomalie): boolean => Number.isFinite(Date.parse(pointage.fait.instant));
 
-export const dispositionDeFrise = (vue: VueDeFrise, now: Date, poignee?: PoigneeDeFrise): DispositionFrise => {
+export const dispositionDeFrise = (
+  vue: VueDeFrise,
+  now: Date,
+  poignee?: PoigneeDeFrise,
+  placement?: PlacementDeLInstant,
+): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
   const pointages = new ChronologiePointages(vue.journal.filter(estLisible)).pointages;
-  const echelle = echelleDe(instantsDeLEchelle(pointages, vue.activites, now), poignee && Date.parse(poignee.bornes.max));
-  const contexte = { now, echelle, poignee };
+  const bornesDuGeste = (poignee ?? placement)?.bornes;
+  const echelle = echelleDe(instantsDeLEchelle(pointages, vue.activites, now), bornesDuGeste && Date.parse(bornesDuGeste.max));
+  const tardifs = pointagesTardifs(vue.choix ?? []);
+  const contexte = { now, echelle, poignee, tardifs };
   const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) =>
     repereDe(element, enCause.has(element.id.pointage), voie, contexte),
   );
@@ -267,5 +301,6 @@ export const dispositionDeFrise = (vue: VueDeFrise, now: Date, poignee?: Poignee
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,
     poignee: poignee === undefined ? undefined : positionDeLaPoignee(poignee, echelle, hautDeLaPoignee),
+    rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes),
   };
 };

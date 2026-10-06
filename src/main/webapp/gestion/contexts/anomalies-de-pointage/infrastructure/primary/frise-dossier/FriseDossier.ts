@@ -1,9 +1,9 @@
 import { Component, computed, input, output } from '@angular/core';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { memeSelection, SelectionDuDossier } from '../SelectionDuDossier';
-import { dispositionDeFrise, PositionDePoignee, VueDeFrise } from './DispositionFrise';
+import { dispositionDeFrise, PositionDePoignee, RangeeDePlacement, VueDeFrise } from './DispositionFrise';
 import { instantSousLePointeur } from './EchelleFrise';
-import { demandeDeLaTouche, DeplacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
+import { demandeDeLaTouche, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
 @Component({
   selector: 'glm-frise-dossier',
@@ -15,12 +15,14 @@ export class FriseDossier {
   readonly now = input.required<Date>();
   readonly selection = input<SelectionDuDossier | undefined>(undefined);
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
+  readonly placement = input<PlacementDeLInstant | undefined>(undefined);
   readonly selectionDemandee = output<SelectionDuDossier>();
   readonly deplacementDemande = output<DeplacementDemande>();
+  readonly placementDemande = output<PlacementDemande>();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly estSelectionne = (selection: SelectionDuDossier): boolean => memeSelection(selection, this.selection());
   private prise: { readonly decalage: number } | undefined;
-  protected readonly disposition = computed(() => dispositionDeFrise(this.dossier(), this.now(), this.poignee()));
+  protected readonly disposition = computed(() => dispositionDeFrise(this.dossier(), this.now(), this.poignee(), this.placement()));
 
   protected saisit(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {
     if (poignee.desactivee) return;
@@ -37,6 +39,12 @@ export class FriseDossier {
 
   protected relache(): void {
     this.prise = undefined;
+  }
+
+  protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {
+    if (rangee.desactivee) return;
+    const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
+    this.placementDemande.emit({ instant, placement: rangee.source });
   }
 
   protected touche(touche: KeyboardEvent, poignee: PositionDePoignee): void {

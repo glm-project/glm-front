@@ -33,6 +33,14 @@
       <span data-selector="anomalie-frise-jour">{{ jour }}</span>
       }
     </span>
+    } @if (disposition().rangeeDePlacement; as rangee) {
+    <div
+      aria-hidden="true"
+      data-selector="anomalie-frise-placement"
+      [style.top.px]="rangee.haut"
+      [style.height.px]="rangee.hauteur"
+      (click)="place($event, plan, rangee)"
+    ></div>
     } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
     <button
       type="button"
@@ -61,6 +69,7 @@
       [attr.aria-label]="element.nom"
       [attr.data-en-cause]="element.enCause"
       [attr.data-annule]="element.annule"
+      [attr.data-tardif]="element.tardif"
       [attr.data-deplace]="element.deplace"
       [attr.data-non-conformite]="element.nonConformite"
       [attr.aria-pressed]="estSelectionne(element.selection)"
@@ -68,7 +77,9 @@
     >
       <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
       <time data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
-      @if (element.regularise) {
+      @if (element.tardif) {
+      <span data-selector="anomalie-pointage-tardif">{{ libelles.frise.badgeTardif }}</span>
+      } @if (element.regularise) {
       <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
       }
     </button>

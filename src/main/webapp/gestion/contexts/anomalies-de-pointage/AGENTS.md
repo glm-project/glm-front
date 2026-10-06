@@ -92,7 +92,8 @@ l'activité). Chaque modèle couvre l'absence de ces champs facultatifs : un poi
 comme absent ; pour une transition de même catégorie, une activité sans période prend la catégorie du geste (« un travail
 déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
 `CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le geste tardif ; sinon l'activité n'a
-jamais été arrêtée.
+jamais été arrêtée. Le front ne déduit jamais qu'un geste est tardif : `gestesTardifs` (`GestesTardifs.ts`) le lit dans ces choix, et le pointage
+désigné est marqué « pointé après l'échéance » sur la frise (badge « ! », `data-tardif`, nom accessible) et dans le panneau Sélection.
 Les pointages et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
 présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,
@@ -110,7 +111,15 @@ l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-acti
 Une proposition de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est un second geste qui émet un instant, avec le champ
-date et heure. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas. La poignée est un `slider` : le pointeur la
+date et heure. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
+indisponible tant qu'elle manque. Pendant cette proposition (fait terminant une activité avec une borne basse, instant vide ou illisible,
+`placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
+qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
+résout comme un déplacement (`placer`, `instantDeplace` : horloge relue au geste, bornes du `CadreDuFait`, un clic hors bornes se
+ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
+comme pour la poignée, pour que le clic et la poignée partagent la même. Une aide visible (`anomalie-frise-aide`) dit de cliquer sur
+la frise ou de saisir l'heure ; le champ reste l'accès au clavier, la rangée n'a pas de placement au clavier. Elle est inactive
+pendant une opération. La poignée est un `slider` : le pointeur la
 capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
 (Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
 changement d'heure d'automne). La frise ne décide pas de l'instant : elle émet une demande (`DemandeDeDeplacement` : `DE`
