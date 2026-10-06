@@ -374,8 +374,11 @@ describe('Anomaly dossier page', () => {
     thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
     thenTextContains('conflit-diagnostic', 'vise l’activité Travail ouvert à 8 h, remplacée.');
     thenTextDoesNotContain('conflit-diagnostic', 'travail-8');
-    thenTextContains('conflit-diagnostic', 'Ouverte par debut-8.');
-    thenTextContains('conflit-diagnostic', 'Terminée par nc-12.');
+    thenTextContains('conflit-diagnostic', 'Ouverte par un pointage non résolu.');
+    thenTextContains('conflit-diagnostic', 'Terminée par un pointage non résolu.');
+    thenTextDoesNotContain('conflit-diagnostic', 'Pointage non résolu');
+    thenTextDoesNotContain('conflit-diagnostic', 'debut-8');
+    thenTextDoesNotContain('conflit-diagnostic', 'nc-12');
   });
 
   it('should link a diagnostic to its corrected terminating fact independently of the preserved activity identity', async () => {
@@ -390,7 +393,8 @@ describe('Anomaly dossier page', () => {
     );
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité Non-conformité · lundi 14 septembre à 12:01:00');
     thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
-    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
+    thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace un pointage non résolu');
+    thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
   });
 
   it('should disclose the received terminating fact when following its diagnostic reference', async () => {
@@ -430,6 +434,17 @@ describe('Anomaly dossier page', () => {
 
     thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
     thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', 'lundi 14 septembre à 08:00:00 · Travail · Ouverture');
+    thenTextContains('conflit-diagnostic', 'Le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée vise');
+    thenTextContains('conflit-diagnostic', 'Ouverte par le pointage lundi 14 septembre à 08:00:00 · Travail · Ouverture.');
+  });
+
+  it('should speak of an unresolved pointage when the diagnostic challenges one the journal does not hold', async () => {
+    givenAStructuredDiagnostic('fin-absent');
+
+    await whenRendering();
+
+    thenTextReads('conflit-diagnostic', 'Un pointage non résolu vise l’activité Travail ouvert à 8 h, remplacée.');
+    thenTextDoesNotContain('conflit-diagnostic', 'fin-absent');
   });
 
   it('should show the engagement of the workshop in the header as a long day and local time', async () => {
@@ -575,6 +590,62 @@ describe('Anomaly dossier page', () => {
     thenReceivedFactContains('fin-9', 'Vise l’activité Fin · lundi 14 septembre à 17:00:00');
     thenReceivedFactContains('fin-10', 'Vise l’activité Activité non résolue');
     thenReceivedFactsShowNoActivityIdentifier(['debut-9', 'fin-9', 'fin-10']);
+  });
+
+  it('should designate the replaced pointage by its nature and instant in the journal that holds it', async () => {
+    givenAReplacementOfTheEndRecordedInTheDossier();
+
+    await whenRendering();
+
+    thenReceivedFactContains('fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenReceivedFactDoesNotContain('fin-18', 'Remplace le pointage fin-17');
+  });
+
+  it('should designate the replaced pointage of the pointages compared after the act, never by its identifier', async () => {
+    givenAPreviewComparingNamedAndUnnamedOperators({ remplace: 'fin-17' });
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenComparedFactContains('apres', 'fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenComparedFactsShowNoIdentifier(['fin-17 ·', 'pointage fin-17']);
+  });
+
+  it('should designate the replaced pointage of an obsolete address history by its nature and instant', async () => {
+    read.result = {
+      kind: 'ANCRE_ANNULEE',
+      journal: [
+        pointageDeLaFinFixture(),
+        { ...pointageDeLaFinFixture(), id: new PointageAnomalieId('fin-18'), remplace: new PointageAnomalieId('fin-17') },
+        { ...pointageDeLaFinFixture(), id: new PointageAnomalieId('fin-19'), remplace: new PointageAnomalieId('fin-absent') },
+      ],
+    };
+
+    await whenRendering();
+
+    thenReceivedFactContains('fin-18', 'Remplace le pointage lundi 14 septembre à 17:00:00 · Fin · Fin ciblée');
+    thenReceivedFactContains('fin-19', 'Remplace un pointage non résolu');
+    thenReceivedFactDoesNotContain('fin-19', 'fin-absent');
+  });
+
+  it('should designate the pointage of the previewed act by its nature and instant instead of its identifier', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', 'lundi 14 septembre à 17:00:00 · Fin · Fin ciblée · Cible confirmée');
+    thenTextDoesNotContain('anomalie-apercu-acte', 'fin-17');
+  });
+
+  it('should say the pointage of the previewed act is unresolved when the compared journal does not hold it', async () => {
+    givenAPreviewWhoseJournalBeforeTheActIsEmpty();
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTextContains('anomalie-apercu-acte', 'Pointage non résolu · Cible confirmée');
+    thenTextDoesNotContain('anomalie-apercu-acte', 'fin-17');
   });
 
   it('should describe the instant of an obsolete address history to the browser with at most three decimals', async () => {
@@ -2134,7 +2205,28 @@ describe('Anomaly dossier page', () => {
     };
   };
 
-  const givenAPreviewComparingNamedAndUnnamedOperators = (): void => {
+  const givenAPreviewWhoseJournalBeforeTheActIsEmpty = (): void => {
+    givenASuccessfulPreview();
+    if (preview.result.kind !== 'APERCU') throw new Error('Expected a successful preview.');
+    const apercu = preview.result.apercu;
+    preview.result = { kind: 'APERCU', apercu: { ...apercu, avant: { ...apercu.avant, journal: [] } } };
+  };
+
+  const givenAReplacementOfTheEndRecordedInTheDossier = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [
+          ...dossier.journal,
+          { ...pointageDeLaFinFixture(), id: new PointageAnomalieId('fin-18'), remplace: new PointageAnomalieId('fin-17') },
+        ],
+      },
+    };
+  };
+
+  const givenAPreviewComparingNamedAndUnnamedOperators = (remplacement: { remplace?: string } = {}): void => {
     const dossier = dossierAnomalieFixture();
     const pointage = pointageDeLaFinFixture();
     givenASuccessfulPreview({
@@ -2147,6 +2239,7 @@ describe('Anomaly dossier page', () => {
           id: new PointageAnomalieId('fin-18'),
           operateurNom: '',
           activiteCreee: new ActiviteAnomalieId('nc-12'),
+          ...(remplacement.remplace === undefined ? {} : { remplace: new PointageAnomalieId(remplacement.remplace) }),
         },
         { ...pointage, id: new PointageAnomalieId('fin-19'), fait: { ...pointage.fait, activiteVisee: 'nc-99' } },
       ],
@@ -2173,7 +2266,7 @@ describe('Anomaly dossier page', () => {
     };
   };
 
-  const givenAStructuredDiagnostic = (): void => {
+  const givenAStructuredDiagnostic = (pointage = 'fin-17'): void => {
     const dossier = dossierAnomalieFixture();
     read.result = {
       kind: 'DOSSIER',
@@ -2182,7 +2275,7 @@ describe('Anomaly dossier page', () => {
         ligne: { ...dossier.ligne, explication: '' },
         diagnostics: [
           {
-            pointage: new PointageAnomalieId('fin-17'),
+            pointage: new PointageAnomalieId(pointage),
             raison: 'CIBLE_REMPLACEE',
             cible: {
               activite: new ActiviteAnomalieId('travail-8'),
@@ -2530,6 +2623,9 @@ describe('Anomaly dossier page', () => {
     element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
 
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
+  const thenTextReads = (selector: string, expected: string): void => {
+    expect(element(selector).textContent.replace(/\s+/g, ' ')).toContain(expected);
+  };
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
   };

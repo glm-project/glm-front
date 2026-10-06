@@ -27,7 +27,6 @@ import {
   PointageAnomalie,
 } from '../../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
-import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { etatDeLecture } from '../EtatDeLecture';
@@ -141,17 +140,19 @@ export class DossierAnomaliePage {
     );
   }
 
-  protected referencePointage(
-    journal: readonly PointageAnomalie[],
-    identifiant: PointageAnomalieId,
-  ): Readonly<{ libelle: string; lien?: string }> {
-    const pointage = journal.find(pointage => pointage.id.pointage === identifiant.pointage);
-    if (pointage === undefined) return { libelle: identifiant.pointage };
+  protected referencePointage(journal: readonly PointageAnomalie[], identifiant: string): Readonly<{ libelle: string; lien?: string }> {
+    const pointage = journal.find(pointage => pointage.id.pointage === identifiant);
+    if (pointage === undefined) return { libelle: this.libelles.pointageNonResolu };
     const fait = pointage.fait;
     return {
       libelle: `${this.instantLongDayWithSeconds.transform(fait.instant, this.now)} · ${this.libelles.types[fait.type]} · ${this.libelles.intentions[fait.intention]}`,
       lien: this.hrefForRepere(`pointage-${pointage.id.pointage}`),
     };
+  }
+
+  protected remplacementDe(journal: readonly PointageAnomalie[], identifiant: string): string {
+    const reference = this.referencePointage(journal, identifiant);
+    return reference.lien === undefined ? this.libelles.remplaceNonResolu : `${this.libelles.remplace} ${reference.libelle}`;
   }
 
   private hrefForRepere(repere: string): string {
