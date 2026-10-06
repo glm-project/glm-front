@@ -7,6 +7,7 @@ export interface ActiviteDansUnePhrase {
   readonly accord: string;
 }
 
+const SIGNAL_A_CHOISIR = 'Choisissez ce que signale le pointage.';
 const FAIT_DANS_LE_FUTUR = 'La date et l’heure du fait ne peuvent pas être dans le futur.';
 
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
@@ -20,8 +21,8 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   INSTANT_AVANT_CIBLE: 'Le fait ne peut pas précéder le début de l’activité qu’il termine.',
   INSTANT_FUTUR: FAIT_DANS_LE_FUTUR,
   INTENTION_INCOMPATIBLE: 'Le type et l’intention ne sont pas compatibles.',
-  TYPE_REQUIS: 'Choisissez le type du pointage.',
-  INTENTION_REQUISE: 'Choisissez son intention.',
+  TYPE_REQUIS: SIGNAL_A_CHOISIR,
+  INTENTION_REQUISE: SIGNAL_A_CHOISIR,
 };
 
 const REFUS_ACTE: Readonly<Record<CodeRefusActe, string>> = {
@@ -130,6 +131,7 @@ export const LIBELLES_ANOMALIES = {
   annuler: 'Annuler ce pointage',
   verifier: 'Vérifier le reçu de confirmation',
   reprendreConfirmation: 'Reprendre la même confirmation',
+  modifier: 'Modifier',
   modifierFait: 'Consulter ou modifier le fait proposé',
   decalerInstant: 'Décaler l’heure du fait',
   moinsCinqMinutes: '−5 min',
@@ -166,8 +168,9 @@ export const LIBELLES_ANOMALIES = {
     ANNULATION: 'Annulation du pointage',
     REGULARISATION: 'Régularisation d’un fait manquant',
   },
-  type: 'Type du pointage',
-  intention: 'Intention réelle',
+  signal: 'Ce que signale le pointage',
+  activiteTerminee: 'Activité qu’il termine',
+  signalAChoisir: 'Choisissez ce que signale le pointage',
   operateurConcerne: 'Opérateur concerné',
   posteConcerne: 'Poste (facultatif)',
   choisirOperateur: 'Choisissez l’opérateur',

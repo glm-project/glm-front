@@ -185,10 +185,23 @@ Un pointage se nomme par le geste de l'opérateur, sur la frise, les référence
 d'adresse obsolète et le résumé de la proposition : « Démarrage » (`DEBUT·OUVERTURE`), « Démarrage en NC »
 (`NON_CONFORMITE·OUVERTURE`), « Passage en NC » (`NON_CONFORMITE·TRANSITION`), « Retour en bon » (`DEBUT·TRANSITION`),
 « Arrêt » (`FIN·FIN`). La frise met un geste de non-conformité en évidence (repère `nc`). Un pointage régularisé garde son libellé et
-la mention « Régularisation ». Tant que la saisie ne forme pas un geste connu (type ou intention vides, ou incompatibles), le
-résumé de la proposition garde « Type · Intention » des champs remplis, sans rien afficher quand les deux sont vides.
+la mention « Régularisation ». Un fait hors de ces cinq gestes (type ou intention vides, ou incompatibles) garde « Type ·
+Intention » des champs remplis dans le résumé de la proposition, sans rien afficher quand les deux sont vides : l'écran ne peut
+plus saisir un type seul, une intention seule ou une combinaison incompatible, les pointages reçus restent couverts par les specs
+du libellé.
 
-Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
+Le formulaire de correction et de régularisation dit ce que signale le pointage par un seul choix (`anomalie-signal`, un
+`<select>` natif) : Démarrage, Démarrage en NC, Passage en NC, Retour en bon, Arrêt, dans cet ordre. Il remplace les groupes
+Type et Intention ; choisir un geste change le type et l'intention d'un coup, retire l'aperçu et reste verrouillé pendant une
+opération. Une régularisation à partir de rien montre l'option vide « Choisissez ce que signale le pointage », sélectionnée et
+non choisissable, et une seule erreur lisible, jamais le type puis l'intention. « Activité qu'il termine » (`anomalie-cible`)
+n'apparaît que pour un passage ou un arrêt, et tant qu'une cible est posée : un démarrage qui la garde la montre encore avec
+« Une ouverture ne vise aucune activité ; effacez explicitement la cible. », et le champ disparaît quand le gestionnaire l'a
+effacée. Le formulaire et l'aperçu de l'acte n'affichent aucun identifiant. L'opérateur et le poste se replient en une ligne
+« Camille Martin · Fraiseuse 1 » (« Opérateur non résolu », « Poste non résolu », « Sans poste » selon les règles de l'aperçu)
+avec « Modifier », qui déplie ou replie leurs champs ; une nouvelle proposition repart repliée. Ils sont dépliés d'office, sans
+« Modifier », pendant le chargement initial du référentiel ou sa panne, et pour une régularisation à partir de rien, qui n'a ni
+ligne ni « Modifier » avant qu'un opérateur soit choisi. L'opérateur se choisit
 par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le
 prénom et le code ; le poste se choisit dans une liste qui commence par « Sans poste », puis les postes habilités de
 l'opérateur choisi, puis les autres. Tant que la saisie n'a pas d'opérateur (régularisation d'un fait manquant), le bouton
@@ -290,6 +303,9 @@ traverse minuit et l'heure répétée graduée heure par heure.
   vérifient que le dossier ne les lit pas, que le filtre « Élément » de la liste se choisit par désignation sans jamais
   montrer l'identifiant, que son chargement et son échec se réessaient sans toucher au filtre « Opérateur » ; Cypress
   intercepte `/api/elements-de-fabrication` en données REST typées.
+- Les specs DOM du dossier vérifient le choix de ce que signale le pointage (options et ordre, option vide, une seule erreur,
+  type et intention changés d'un coup), la cible visible tant qu'elle est posée, et l'opérateur et le poste repliés, dépliés par
+  « Modifier » ou d'office ; `PresentationDossier.spec.ts` fixe les règles pures de ce formulaire (signal, erreurs, opérateur manquant).
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

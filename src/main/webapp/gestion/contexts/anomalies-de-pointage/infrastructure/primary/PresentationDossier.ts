@@ -1,6 +1,7 @@
 import { formatInstantTime, formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
-import { SaisieFait } from '../../domain/acte/SaisieActe';
+import { IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
+import { ErreurSaisieActe, SaisieActe, SaisieFait } from '../../domain/acte/SaisieActe';
 import { ActionDirecte } from '../../domain/dossier/ActionsDirectes';
 import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
@@ -35,6 +36,49 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
   const type = fait.type === '' ? [] : [LIBELLES_ANOMALIES.types[fait.type]];
   const intention = fait.intention === '' ? [] : [LIBELLES_ANOMALIES.intentions[fait.intention]];
   return [...type, ...intention].join(' · ');
+};
+
+export interface SignalDuPointage {
+  readonly valeur: string;
+  readonly type: TypePointage;
+  readonly intention: IntentionPointage;
+  readonly libelle: string;
+}
+
+const GESTES_SIGNALABLES: readonly (readonly [TypePointage, IntentionPointage])[] = [
+  ['DEBUT', 'OUVERTURE'],
+  ['NON_CONFORMITE', 'OUVERTURE'],
+  ['NON_CONFORMITE', 'TRANSITION'],
+  ['DEBUT', 'TRANSITION'],
+  ['FIN', 'FIN'],
+];
+
+export const SIGNAUX_DU_POINTAGE: readonly SignalDuPointage[] = GESTES_SIGNALABLES.map(([type, intention]) => ({
+  valeur: `${type}·${intention}`,
+  type,
+  intention,
+  libelle: libelleDuGeste({ type, intention }),
+}));
+
+export const signalDuFait = (fait: Pick<SaisieFait, 'type' | 'intention'>): string =>
+  SIGNAUX_DU_POINTAGE.find(signal => signal.type === fait.type && signal.intention === fait.intention)?.valeur ?? '';
+
+const SANS_SIGNAL: Pick<SaisieFait, 'type' | 'intention'> = { type: '', intention: '' };
+
+export const faitDuSignal = (valeur: string): Pick<SaisieFait, 'type' | 'intention'> => {
+  const signal = SIGNAUX_DU_POINTAGE.find(candidat => candidat.valeur === valeur);
+  return signal === undefined ? SANS_SIGNAL : { type: signal.type, intention: signal.intention };
+};
+
+export const erreursALire = (erreurs: readonly ErreurSaisieActe[]): readonly ErreurSaisieActe[] =>
+  erreurs.filter(erreur => erreur !== 'INTENTION_REQUISE' || !erreurs.includes('TYPE_REQUIS'));
+
+export const cibleAffichee = (fait: Pick<SaisieFait, 'intention' | 'activiteVisee'>): boolean =>
+  fait.intention === 'FIN' || fait.intention === 'TRANSITION' || fait.activiteVisee !== '';
+
+export const operateurManque = (saisie: SaisieActe): boolean => {
+  const proposition = saisie.proposition;
+  return proposition !== undefined && proposition.kind !== 'ANNULATION' && proposition.fait.operateur === '';
 };
 
 export const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
