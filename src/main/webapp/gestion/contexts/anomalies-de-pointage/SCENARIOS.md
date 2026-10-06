@@ -26,9 +26,10 @@ levé · fin automatique restante » ou « conflit restant » (reçu « Acte enr
 s'achève par « anomalie traitée » ou « anomalie restante » (reçu « Acte enregistré, anomalie restante ») : elle ne se présente
 jamais comme un conflit, même si l'après porte un conflit. Une adresse annulée ou remplacée reste « traitée » quand ni conflit
 ni fin automatique ne subsistent. L'aperçu dit l'issue sans lien. Le reçu ajoute un lien « Traiter la fin automatique
-restante » (numéroté « (1 sur 2) » s'il y en a plusieurs) par activité échue du dossier d'après, vers
+restante » (numéroté « (1 sur 2) » s'il y en a plusieurs) par activité échue du dossier d'après, sauf celle de la page affichée (adresse d'origine), vers
 `/anomalies/{suivi}?pointage={ouvrant}`, avec les paramètres de retour vers la liste (`nature`, `operateur`, `element`,
-`page`) ; sans activité échue, aucun lien. Le front lit l'ouvrant dans `evenement` de l'activité reçue, il ne le déduit pas.
+`page`) ; sans autre activité échue, aucun lien. L'origine est le dossier « avant » de l'aperçu confirmé, gardé avec la confirmation :
+deux vérifications du reçu qui reviennent l'une après l'autre annoncent la même issue. Le front lit l'ouvrant dans `evenement` de l'activité reçue, il ne le déduit pas.
 
 ## Fin automatique
 
@@ -37,7 +38,7 @@ conflit. Il montre l'activité échue sur la frise, son début, sa fin automatiq
 gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée des pointages de la frise : le
 choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic place la
 poignée à l'heure cliquée, arrondie à 5 minutes et ramenée à la borne la plus proche si elle sort du début de l'activité ou de
-l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise ou de saisir l'heure ; le clic est
+l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est
 inactif sans proposition de ce genre, et pendant une opération ; un clic sur un repère ou une barre sélectionne. Une fin ou une transition pointée après l'échéance se corrige avec
 l'heure de ce pointage et un motif. Le pointage que le choix désigne est marqué « pointé après
 l'échéance » sur la frise et dans le panneau Sélection ; le front le lit dans le choix reçu, il ne le déduit pas. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
@@ -66,9 +67,9 @@ de « Activités concernées ». Chaque activité a sa rangée, dans l'ordre de 
 `nc` pour la non-conformité, finie à la fin reçue (`TERMINEE`), en pointillés `warn` à la fin automatique (`ECHUE`), ou
 ouverte jusqu'au bord (`EN_COURS`, `A_RESOUDRE` hachurée « À résoudre ») ; la frise n'invente aucune fin. Chaque pointage est
 un repère (symbole du geste, heure HH:MM, barré s'il est annulé, « R » s'il est régularisé, rouge s'il est en cause), décalé
-quand deux repères sont à moins de 44 px ; une flèche pointillée relie le pointage en cause au début de l'activité que son
+d'une voie entière (44 px) quand deux repères sont à moins de 44 px, sur une rangée titrée « Pointages » ; une flèche pointillée relie le pointage en cause au début de l'activité que son
 diagnostic vise. L'échelle va d'une heure avant le premier instant reçu à une heure après le dernier, par heures entières, avec
-le jour à minuit ; elle défile horizontalement sur un écran étroit, sans faire défiler la page. Repères et barres sont des
+le jour à minuit, et couvre l'heure proposée quand une poignée est posée ; elle défile horizontalement sur un écran étroit, sans faire défiler la page. Repères et barres sont des
 boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
 catégorie, la période et l'état.
 
@@ -200,7 +201,7 @@ d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la li
 La date et l'heure se choisissent avec le `datepicker` et le `timepicker` de Material, en français, la semaine
 commençant le lundi, au clavier comme au calendrier et à la liste des heures. Une date se tape `JJ/MM/AAAA` ; une
 date impossible (`31/02/2026`) est refusée, jamais relue en mois d'abord. Une heure se tape `HH:MM` ou `HH:MM:SS`.
-Tant que le gestionnaire ne touche à rien, l'instant reçu part inchangé, nanosecondes comprises. Après un geste, il part
+Tant que le gestionnaire ne touche à rien, l'instant reçu part inchangé, nanosecondes comprises. Après une saisie, il part
 avec l'offset local et sans fraction de seconde. Une date sans heure, ou l'inverse, garde ce qui est saisi, bloque
 l'aperçu et affiche « Renseignez la date et l'heure du fait. ». Au changement d'heure, une heure inexistante est refusée
 (« Cette heure n'existe pas ce jour-là, à cause du changement d'heure. ») et une heure répétée prend sa première
@@ -217,16 +218,17 @@ nanoseconde près, quel que soit l'offset de l'instant. L'échéance n'est pas u
 elle est absente du dossier ou sans période, il n'y a pas de borne basse. Changer l'activité visée change la borne.
 Un instant illisible reste seul sur `INSTANT_INVALIDE`. Une borne franchie désactive l'aperçu comme toute erreur de
 saisie ; un appel direct à `PreparationActe.preview` ne prévisualise pas non plus un fait hors bornes. L'heure courante
-est lue au geste du gestionnaire (choisir, modifier) et au moment de prévisualiser, jamais figée à l'ouverture de la
+est lue à chaque action du gestionnaire (choisir, modifier, déplacer) et au moment de prévisualiser, jamais figée à l'ouverture de la
 page : une heure devenue passée pendant que l'onglet reste ouvert est acceptée. `matches()` compare sans bornes. Le refus
-serveur `date-de-survenue-future` reste l'autorité.
+serveur `date-de-survenue-future` reste l'autorité : ces bornes sont des pré-contrôles de saisie, et `INSTANT_AVANT_CIBLE` une règle
+de Gestion sans refus serveur connu.
 
-Le champ n'est pas le seul geste qui émet un instant : pour une correction ou une régularisation dont le fait est un
+Le champ n'est pas la seule saisie qui émet un instant : pour une correction ou une régularisation dont le fait est un
 passage ou un arrêt avec une activité visée qui donne une borne basse, la frise porte une poignée (rôle `slider`) sur
 l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans sauter sous le doigt ; au clavier, les
 flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
-décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, heure courante lue au
-geste, en minutes entières) ; un bouton est désactivé à la borne. Chaque déplacement transmet l'instant avec l'offset local
+décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, heure courante lue à
+l'action, en minutes entières) ; un bouton est désactivé à la borne. Chaque déplacement transmet l'instant avec l'offset local
 et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure dans le champ déplace la poignée. Un fait
 sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée ; la régularisation d'une fin sans heure la reçoit au clic sur la rangée
 des pointages (« Fin automatique »). L'heure reçue du
