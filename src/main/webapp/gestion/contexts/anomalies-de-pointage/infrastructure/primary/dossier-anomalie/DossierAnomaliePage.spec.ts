@@ -3192,33 +3192,36 @@ describe('Anomaly dossier page', () => {
 
     it('should stop the handle at the clock read when the key is pressed, not at the clock of the previous gesture', async () => {
       givenALateEnd();
+      whenTheClockIs(new Date(2026, 8, 14, 23, 20));
       await whenRendering();
       await whenClicking('anomalie-choix');
-      whenTheClockIs(new Date(2026, 9, 5, 10, 30, 12));
+      whenTheClockIs(new Date(2026, 8, 14, 23, 40, 12));
 
       await whenPressingOnTheHandle('End');
 
-      thenTheInstantFieldsShow('05/10/2026', '10:30:00');
+      thenTheInstantFieldsShow('14/09/2026', '23:40:00');
     });
 
-    it('should keep the handle on the scale when the End key carries it to the clock, long after the received instants', async () => {
+    it('should stop the handle at the edge of the scale, three hours after the last received instant, long before the clock', async () => {
       givenALateEnd();
       await whenRendering();
       await whenClicking('anomalie-choix');
 
       await whenPressingOnTheHandle('End');
 
-      thenTheHandleStandsInsideTheScale();
+      thenTheInstantFieldsShow('15/09/2026', '02:00:00');
+      thenTheHandleStandsOnTheScale();
     });
 
-    it('should keep the handle on the scale when the manager types an hour long after the received instants', async () => {
+    it('should hold the handle at the edge of the scale when the manager types an hour long after the received instants', async () => {
       givenALateEnd();
       await whenRendering();
       await whenClicking('anomalie-choix');
 
       await whenEnteringTheInstant('04/10/2026', '10:00');
 
-      thenTheHandleStandsInsideTheScale();
+      thenTheHandleHoldsAt(new Date(2026, 8, 15, 2, 0));
+      thenTheHandleReads('10:00');
     });
 
     it.each([
@@ -3336,34 +3339,39 @@ describe('Anomaly dossier page', () => {
         cas: 'before the start of the activity it ends',
         jour: '14/09/2026',
         heure: '07:00',
+        borne: new Date(2026, 8, 14, 8, 0),
         erreur: 'Le fait ne peut pas précéder le début de l’activité qu’il termine.',
       },
       {
         cas: 'far in the future',
         jour: '14/09/2062',
         heure: '10:00',
+        borne: new Date(2026, 8, 15, 2, 0),
         erreur: 'La date et l’heure du fait ne peuvent pas être dans le futur.',
       },
-    ])('should draw no handle for an hour typed $cas and say why in the field', async ({ jour, heure, erreur }) => {
+    ])(
+      'should hold the handle at its nearest bound for an hour typed $cas and say why in the field',
+      async ({ jour, heure, borne, erreur }) => {
+        givenALateEnd();
+        await whenRendering();
+        await whenClicking('anomalie-choix');
+
+        await whenEnteringTheInstant(jour, heure);
+
+        thenTheHandleHoldsAt(borne);
+        thenTextContains('anomalie-validation', erreur);
+      },
+    );
+
+    it('should bring the proposed end back within its bounds with the first move of the handle', async () => {
       givenALateEnd();
       await whenRendering();
       await whenClicking('anomalie-choix');
+      await whenEnteringTheInstant('14/09/2026', '07:00');
 
-      await whenEnteringTheInstant(jour, heure);
+      await whenPressingOnTheHandle('ArrowRight');
 
-      thenAbsent('anomalie-poignee');
-      thenTextContains('anomalie-validation', erreur);
-    });
-
-    it('should draw the handle again once the manager types an hour within the bounds of the fact', async () => {
-      givenALateEnd();
-      await whenRendering();
-      await whenClicking('anomalie-choix');
-      await whenEnteringTheInstant('14/09/2062', '10:00');
-
-      await whenEnteringTheInstant('14/09/2026', '22:00');
-
-      thenTheHandleReads('22:00');
+      thenTheInstantFieldsShow('14/09/2026', '08:00:00');
     });
   });
 
@@ -4683,10 +4691,14 @@ describe('Anomaly dossier page', () => {
   const thenTheHandleIsLocked = (): void => {
     expect(element('anomalie-poignee').getAttribute('aria-disabled')).toBe('true');
   };
-  const thenTheHandleStandsInsideTheScale = (): void => {
+  const thenTheHandleStandsOnTheScale = (): void => {
     const gauche = Number.parseFloat(element('anomalie-poignee').style.left);
-    expect(gauche).toBeGreaterThan(0);
-    expect(gauche).toBeLessThan(100);
+    expect(gauche).toBeGreaterThanOrEqual(0);
+    expect(gauche).toBeLessThanOrEqual(100);
+  };
+
+  const thenTheHandleHoldsAt = (expected: Date): void => {
+    expect(Number(element('anomalie-poignee').getAttribute('aria-valuenow'))).toBe(expected.getTime());
   };
 
   const thenTheHandleReads = (expected: string): void => {

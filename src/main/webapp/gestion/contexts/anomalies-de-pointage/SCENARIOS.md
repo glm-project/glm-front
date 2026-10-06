@@ -227,11 +227,13 @@ Le champ n'est pas la seule saisie qui émet un instant : pour une correction ou
 passage ou un arrêt avec une activité visée qui donne une borne basse, la frise porte une poignée (rôle `slider`) sur
 l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans sauter sous le doigt ; au clavier, les
 flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
-décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, heure courante lue à
-l'action, en minutes entières) ; un bouton est désactivé à la borne. Chaque déplacement transmet l'instant avec l'offset local
-et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure dans les bornes au champ déplace la poignée. Une heure
-saisie hors des bornes (avant le début de l'activité visée, ou dans le futur) n'a pas de poignée, ni ses boutons « −5 min » et
-« +5 min » : le champ dit pourquoi, l'aperçu reste indisponible, et la poignée revient dès qu'une heure dans les bornes est saisie. Un fait
+décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, et la plus proche de l'heure
+courante lue à l'action et de trois heures après le dernier instant reçu, en minutes entières à la nanoseconde près) ; un bouton
+est désactivé à la borne. L'échelle ne va pas au-delà de ces trois heures : une heure plus lointaine se saisit au champ. Chaque
+déplacement transmet l'instant avec l'offset local et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure au
+champ déplace la poignée. Une heure saisie hors des bornes (avant le début de l'activité visée, dans le futur ou au-delà de la
+portée) garde sa poignée, tenue à la borne la plus proche : le champ dit pourquoi, l'aperçu reste indisponible, et le premier
+déplacement ramène l'heure dans les bornes. Un fait
 sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée ; la régularisation d'une fin sans heure la reçoit au clic sur la rangée
 des pointages (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant

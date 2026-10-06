@@ -240,14 +240,20 @@ export class DossierAnomaliePage {
 
   protected deplacer(dossier: DossierAnomalie, { demande, poignee }: DeplacementDemande): void {
     this.lireLHorloge();
-    this.change({ fait: { instant: instantDeplace(demande, poignee.instant, bornesDuDeplacement(this.cadreDe(dossier), poignee)) } });
+    this.change({
+      fait: { instant: instantDeplace(demande, poignee.instant, bornesDuDeplacement(this.cadreDe(dossier), dossier, poignee)) },
+    });
   }
 
   protected placer(dossier: DossierAnomalie, { instant, placement }: PlacementDemande): void {
     this.lireLHorloge();
     this.change({
       fait: {
-        instant: instantDeplace({ kind: 'VERS', instant }, this.maintenant(), bornesDuDeplacement(this.cadreDe(dossier), placement)),
+        instant: instantDeplace(
+          { kind: 'VERS', instant },
+          this.maintenant(),
+          bornesDuDeplacement(this.cadreDe(dossier), dossier, placement),
+        ),
       },
     });
   }

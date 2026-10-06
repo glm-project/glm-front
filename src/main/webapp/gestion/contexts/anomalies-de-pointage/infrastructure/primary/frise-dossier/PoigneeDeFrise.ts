@@ -3,6 +3,7 @@ import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { PropositionActe, termineUneActivite } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { finDeLaPortee, instantsRecus } from './EchelleFrise';
 
 export interface BornesDePoignee {
   readonly min: string;
@@ -33,9 +34,22 @@ export interface PoigneeDeFrise {
   readonly desactivee: boolean;
 }
 
-export const bornesDuDeplacement = (cadre: CadreDuFait, visant: Pick<PoigneeDeFrise, 'activiteVisee' | 'bornes'>): BornesDePoignee => ({
+type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
+
+const plafondDansLaPortee = (dossier: DossierDeLaFrise, maintenant: string): string => {
+  const instants = instantsRecus(dossier.journal, dossier.activites);
+  if (instants.length === 0) return maintenant;
+  const portee = finDeLaPortee(instants);
+  return Date.parse(maintenant) <= portee ? maintenant : new Date(portee).toISOString();
+};
+
+export const bornesDuDeplacement = (
+  cadre: CadreDuFait,
+  dossier: DossierDeLaFrise,
+  visant: Pick<PoigneeDeFrise, 'activiteVisee' | 'bornes'>,
+): BornesDePoignee => ({
   min: visant.bornes.min,
-  max: cadre.bornes(visant).max,
+  max: plafondDansLaPortee(dossier, cadre.bornes(visant).max),
 });
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
@@ -67,52 +81,61 @@ const proposeUnFaitQuiTermine = (
   proposition: PropositionActe | undefined,
 ): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> => proposeUnFait(proposition) && termineUneActivite(proposition.fait);
 
+const bornesDuFait = (
+  dossier: DossierDeLaFrise,
+  fait: { readonly activiteVisee: string },
+  maintenant: string,
+): BornesDePoignee | undefined => {
+  const { min, max } = CadreDuFait.depuis(dossier.activites, maintenant).bornes(fait);
+  return min === undefined ? undefined : { min, max: plafondDansLaPortee(dossier, max) };
+};
+
 const poigneeDeLaProposition = (
+  dossier: DossierDeLaFrise,
   proposition: PropositionActe | undefined,
-  cadre: CadreDuFait,
+  maintenant: string,
   desactivee: boolean,
 ): PoigneeDeFrise | undefined => {
   if (!proposeUnFaitQuiTermine(proposition)) return undefined;
   const fait = proposition.fait;
   if (!new InstantPointage(fait.instant).isValid()) return undefined;
-  const { min, max } = cadre.bornes(fait);
-  if (min === undefined) return undefined;
-  if (cadre.depassements(fait).length > 0) return undefined;
+  const bornes = bornesDuFait(dossier, fait, maintenant);
+  if (bornes === undefined) return undefined;
   return {
     instant: fait.instant,
     ...(proposition.kind === 'CORRECTION' ? { origine: proposition.pointage } : {}),
     activiteVisee: fait.activiteVisee,
-    bornes: { min, max },
+    bornes,
     desactivee,
   };
 };
 
 export const poigneeDuDossier = (
-  dossier: Pick<DossierAnomalie, 'activites'> | undefined,
+  dossier: DossierDeLaFrise | undefined,
   proposition: PropositionActe | undefined,
   maintenant: string,
   desactivee: boolean,
-): PoigneeDeFrise | undefined =>
-  dossier === undefined ? undefined : poigneeDeLaProposition(proposition, CadreDuFait.depuis(dossier.activites, maintenant), desactivee);
+): PoigneeDeFrise | undefined => (dossier === undefined ? undefined : poigneeDeLaProposition(dossier, proposition, maintenant, desactivee));
 
 const placementDeLaProposition = (
+  dossier: DossierDeLaFrise,
   proposition: PropositionActe | undefined,
-  cadre: CadreDuFait,
+  maintenant: string,
   desactivee: boolean,
 ): PlacementDeLInstant | undefined => {
   if (!proposeUnFaitQuiTermine(proposition)) return undefined;
   if (new InstantPointage(proposition.fait.instant).isValid()) return undefined;
-  const { min, max } = cadre.bornes(proposition.fait);
-  return min === undefined ? undefined : { activiteVisee: proposition.fait.activiteVisee, bornes: { min, max }, desactivee };
+  const bornes = bornesDuFait(dossier, proposition.fait, maintenant);
+  return bornes === undefined ? undefined : { activiteVisee: proposition.fait.activiteVisee, bornes, desactivee };
 };
 
 export const placementDuDossier = (
-  dossier: Pick<DossierAnomalie, 'activites'> | undefined,
+  dossier: DossierDeLaFrise | undefined,
   proposition: PropositionActe | undefined,
   maintenant: string,
   desactivee: boolean,
 ): PlacementDeLInstant | undefined =>
-  dossier === undefined ? undefined : placementDeLaProposition(proposition, CadreDuFait.depuis(dossier.activites, maintenant), desactivee);
+  dossier === undefined ? undefined : placementDeLaProposition(dossier, proposition, maintenant, desactivee);
 
 export interface DeplacementDemande {
   readonly demande: DemandeDeDeplacement;

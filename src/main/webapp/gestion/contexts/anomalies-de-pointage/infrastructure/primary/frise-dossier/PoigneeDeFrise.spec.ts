@@ -20,7 +20,7 @@ describe('Handle of the proposed instant', () => {
   });
 
   it.each([{ desactivee: true }, { desactivee: false }])(
-    'should give the end without hour a placement bounded by the start of its activity and the clock, disabled: $desactivee',
+    'should give the end without hour a placement bounded by the start of its activity and three hours after it, disabled: $desactivee',
     ({ desactivee }) => {
       const debut = new Date(2026, 8, 14, 8, 0).toISOString();
       const maintenant = new Date(2026, 9, 5, 10, 0).toISOString();
@@ -43,9 +43,13 @@ describe('Handle of the proposed instant', () => {
         },
       ];
 
-      const placement = placementDuDossier({ activites }, finARegulariser, maintenant, desactivee);
+      const placement = placementDuDossier({ journal: [], activites }, finARegulariser, maintenant, desactivee);
 
-      expect(placement).toEqual({ activiteVisee: 'travail-8', bornes: { min: debut, max: maintenant }, desactivee });
+      expect(placement).toEqual({
+        activiteVisee: 'travail-8',
+        bornes: { min: debut, max: new Date(2026, 8, 14, 11, 0).toISOString() },
+        desactivee,
+      });
     },
   );
 

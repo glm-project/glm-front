@@ -949,7 +949,7 @@ describe('Frise of a dossier', () => {
   it.each([
     { cas: 'after', instant: new Date(2026, 8, 20, 10, 0) },
     { cas: 'before', instant: new Date(2026, 8, 10, 10, 0) },
-  ])('should keep the handle strictly inside the scale when it stands $cas every received instant', async ({ instant }) => {
+  ])('should hold the handle on the scale when it stands $cas every received instant', async ({ instant }) => {
     const dossier = {
       journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
       activites: [],
@@ -957,7 +957,7 @@ describe('Frise of a dossier', () => {
 
     await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { instant: instantLocalFixture(instant) }));
 
-    thenTheHandleStandsInsideTheScale();
+    thenTheHandleStandsOnTheScale();
   });
 
   it('should give the handle a range, a value and a readable time within its bounds', async () => {
@@ -1780,10 +1780,10 @@ describe('Frise of a dossier', () => {
     expect(handle().textContent.trim()).toBe(time);
   };
 
-  const thenTheHandleStandsInsideTheScale = (): void => {
+  const thenTheHandleStandsOnTheScale = (): void => {
     const gauche = Number.parseFloat(handle().style.left);
-    expect(gauche).toBeGreaterThan(0);
-    expect(gauche).toBeLessThan(100);
+    expect(gauche).toBeGreaterThanOrEqual(0);
+    expect(gauche).toBeLessThanOrEqual(100);
   };
 
   const thenTheHandleStandsAt = (expected: number): void => {

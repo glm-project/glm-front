@@ -6,7 +6,16 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste, tempsActivite } from '../PresentationDossier';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { activitesModifiees, faitsDeLActe } from './ComparaisonDApercu';
-import { echelleDe, EchelleFrise, Graduation, graduationsDe, largeurMinimaleDe, positionSur, surVoies } from './EchelleFrise';
+import {
+  echelleDe,
+  EchelleFrise,
+  Graduation,
+  graduationsDe,
+  instantsRecus,
+  largeurMinimaleDe,
+  positionSur,
+  surVoies,
+} from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
 
 export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'> & { readonly choix?: DossierAnomalie['choix'] };
@@ -265,18 +274,12 @@ const flechesDe = (
         ];
   });
 
-const instantsDesActivites = (activites: readonly ActiviteAnomalie[]): readonly number[] =>
-  activites
-    .flatMap(activite => [activite.periode?.debut, activite.periode?.fin])
-    .flatMap(instant => (instant === undefined ? [] : [Date.parse(instant)]))
-    .filter(Number.isFinite);
-
 const instantsDeLEchelle = (
   pointages: readonly PointageAnomalie[],
   activites: readonly ActiviteAnomalie[],
   now: Date,
 ): readonly number[] => {
-  const instants = [...pointages.map(pointage => Date.parse(pointage.fait.instant)), ...instantsDesActivites(activites)];
+  const instants = instantsRecus(pointages, activites);
   return instants.length > 0 ? instants : [now.getTime()];
 };
 
@@ -286,15 +289,22 @@ const echelleDeLaFrise = (
   placement: PlacementDeLInstant | undefined,
 ): EchelleFrise => {
   const bornes = (poignee ?? placement)?.bornes;
-  return echelleDe(instants, bornes && Date.parse(bornes.max), poignee && Date.parse(poignee.instant));
+  return echelleDe(instants, bornes && Date.parse(bornes.max));
 };
 
+const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number =>
+  Math.min(
+    Math.max(Date.parse(poignee.instant), Date.parse(poignee.bornes.min), echelle.debut),
+    Date.parse(poignee.bornes.max),
+    echelle.fin,
+  );
+
 const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number): PositionDePoignee => ({
-  gauche: positionSur(echelle, Date.parse(poignee.instant)),
+  gauche: positionSur(echelle, instantTenuSur(poignee, echelle)),
   haut,
   min: Date.parse(poignee.bornes.min),
   max: Date.parse(poignee.bornes.max),
-  valeur: Date.parse(poignee.instant),
+  valeur: instantTenuSur(poignee, echelle),
   texte: texteDeLHeure(poignee.instant),
   desactivee: poignee.desactivee,
   source: poignee,

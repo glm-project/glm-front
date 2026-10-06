@@ -1,4 +1,5 @@
 import { formatInstantShortWeekdayDayMonth, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 
 const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
@@ -29,15 +30,19 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const echelleDe = (instants: readonly number[], plafondElargi?: number, instantCouvert?: number): EchelleFrise => {
-  const dernier = Math.max(...instants);
-  const finNormale = heureEntiereApres(dernier + UNE_HEURE);
-  const finElargie =
-    plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(dernier + TROIS_HEURES, plafondElargi)));
-  const couverts = instantCouvert === undefined ? [] : [instantCouvert];
+export const instantsRecus = (journal: readonly PointageAnomalie[], activites: readonly ActiviteAnomalie[]): readonly number[] =>
+  [...journal.map(pointage => pointage.fait.instant), ...activites.flatMap(activite => [activite.periode?.debut, activite.periode?.fin])]
+    .flatMap(instant => (instant === undefined ? [] : [Date.parse(instant)]))
+    .filter(Number.isFinite);
+
+export const finDeLaPortee = (instants: readonly number[]): number => Math.max(...instants) + TROIS_HEURES;
+
+export const echelleDe = (instants: readonly number[], plafondElargi?: number): EchelleFrise => {
+  const finNormale = heureEntiereApres(Math.max(...instants) + UNE_HEURE);
   return {
-    debut: heureEntiereAvant(Math.min(...instants, ...couverts) - UNE_HEURE),
-    fin: Math.max(finElargie, ...couverts.map(instant => heureEntiereApres(instant + UNE_HEURE))),
+    debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
+    fin:
+      plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(finDeLaPortee(instants), plafondElargi))),
   };
 };
 
