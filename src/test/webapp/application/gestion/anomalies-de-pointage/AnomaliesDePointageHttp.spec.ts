@@ -62,24 +62,14 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal();
   });
 
-  it('should locate the corrected terminating fact from its diagnostic while retaining the original activity identity', () => {
+  it('should say the conflict in one sentence and keep the corrected terminating fact traceable under its original activity identity', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
     whenOpeningTheRealDossier();
-    whenFollowingTheCorrectedTermination();
+    whenOpeningTheTraceOfTheCorrectedTermination();
 
-    thenTheCorrectedTerminatingFactIsReachable();
-  });
-
-  it('should reopen the same received fact after its trace was manually closed', () => {
-    givenAConflictWhoseTerminationWasCorrected();
-
-    whenOpeningTheRealDossier();
-    whenFollowingTheCorrectedTermination();
-    whenClosingTheCorrectedFactTrace();
-    whenFollowingTheCorrectedTermination();
-
-    thenTheCorrectedTerminatingFactIsReachable();
+    thenTheConflictIsSaidInOneSentenceNamingTheCorrectedTermination();
+    thenTheCorrectedTerminatingFactIsTraceable();
   });
 
   const givenAConflictWhoseTerminationWasCorrected = (): void => {
@@ -122,11 +112,7 @@ describe('HTTP conflict resolution in Gestion', () => {
     });
   };
 
-  const whenFollowingTheCorrectedTermination = (): void => {
-    cy.get(dataSelector('conflit-diagnostic-terminaison')).click();
-  };
-
-  const whenClosingTheCorrectedFactTrace = (): void => {
+  const whenOpeningTheTraceOfTheCorrectedTermination = (): void => {
     cy.get(dataSelector('anomalie-pointage'))
       .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
       .find(dataSelector('anomalie-pointage-detail'))
@@ -134,22 +120,19 @@ describe('HTTP conflict resolution in Gestion', () => {
       .click();
   };
 
-  const thenTheCorrectedTerminatingFactIsReachable = (): void => {
-    cy.location('pathname').should('equal', `/anomalies/${suiviFixture}`);
-    cy.location('search').should('equal', `?pointage=${finFixture}`);
-    cy.location('hash').should('equal', `#pointage-${remplacementFixture}`);
-    cy.get(dataSelector('conflit-diagnostic-terminaison'))
-      .should('contain.text', 'lundi 14 septembre à 12:01:00')
-      .and('contain.text', 'Passage en NC');
-    cy.get(dataSelector('conflit-diagnostic-pointage')).should('contain.text', 'Arrêt');
-    cy.get(dataSelector('conflit-diagnostic-ouvrant')).should('contain.text', 'Démarrage');
+  const thenTheConflictIsSaidInOneSentenceNamingTheCorrectedTermination = (): void => {
+    cy.get(dataSelector('anomalie-probleme'))
+      .should('have.length', 1)
+      .and('have.text', 'L’arrêt de 17:00 vise le travail, remplacé à 12:01 par un passage en NC.');
+  };
+
+  const thenTheCorrectedTerminatingFactIsTraceable = (): void => {
     cy.get(dataSelector('anomalie-pointage'))
       .filter((_index, fact) => fact.id === `pointage-${remplacementFixture}`)
       .should('have.length', 1)
       .and('be.visible')
       .within(() => {
         cy.get(dataSelector('anomalie-pointage-detail'))
-          .should('have.prop', 'open', true)
           .contains('p', 'Crée l’activité Non-conformité · ')
           .should('be.visible')
           .and('not.contain.text', ncFixture);

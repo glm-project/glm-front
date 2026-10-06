@@ -28,8 +28,20 @@ l'heure de ce pointage et un motif. L'aperçu, la confirmation, le reçu, la rep
 ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
 `date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
 annonce « Anomalie traitée » seulement si ni `enConflit` ni `finAutomatique` ne subsistent, y compris
-sur une adresse annulée, et n'affiche alors plus le diagnostic « Pourquoi ces pointages sont incohérents »,
-réservé au périmètre qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
+sur une adresse annulée, et n'affiche alors plus de phrase de conflit, réservée au périmètre qui porte encore un
+conflit. Une activité sans poste n'en reçoit aucun.
+
+## Phrase du problème
+
+L'en-tête du dossier dit le problème en une phrase, sous l'élément, l'opérateur · poste, la date et la clôture ; elle
+remplace les blocs « Pourquoi ces pointages sont incohérents » et « Fin automatique ». Un conflit en a une par
+diagnostic, dans l'ordre reçu, selon sa raison : « L'arrêt de 17:00 vise le travail, remplacé à 12:00 par un passage
+en NC. » ; sans le fait contradictoire, « L'arrêt de 17:00 vise un travail qui n'est plus en cours. » Sans diagnostic
+reçu, l'explication de la ligne tient lieu de phrase. Une fin automatique en a une par activité échue : « Le travail
+démarré à 08:00 n'a jamais été arrêté : fin automatique à 18:00. » ; quand un choix de correction tardive est reçu, elle
+nomme le geste tardif (« L'arrêt de 19:30 vise le travail, déjà terminé automatiquement à 18:00. »). Les faits de
+l'activité échue (début, fin automatique, durée) restent affichés à côté. Aucune phrase ne porte d'identifiant, ni de
+lien : un pointage absent du journal se dit « Un pointage non résolu ».
 
 ## Liste des anomalies
 
@@ -90,11 +102,11 @@ Le panneau « Voir les détails et l'enregistrement » de chaque pointage et les
 les pointages » commencent par « Prénom Nom · instant » (« Opérateur non résolu » sans fiche), jamais par l'identifiant du
 pointage. Les lignes « Vise l'activité » et « Crée l'activité » y désignent l'activité par son libellé (nature et début
 reçus du dossier), à défaut par le pointage qui l'a créée dans le même journal, sinon « Activité non résolue » : aucun
-identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète, le diagnostic de conflit ou la
-cible du formulaire. Un autre pointage se désigne de la même façon partout : « instant · Geste » du pointage trouvé dans le
-journal disponible (dossier, avant ou après), dans la phrase « Remplace le pointage … », « Ouverte par le pointage … »,
-« Terminée par le pointage … » ou « Le pointage … vise l'activité … » ; sinon la phrase le dit sans l'identifier :
-« Remplace un pointage non résolu », « Ouverte par un pointage non résolu », « Un pointage non résolu vise … ». La ligne
+identifiant d'activité n'est affiché, pas plus dans l'historique d'adresse obsolète ou la cible du formulaire. Un autre
+pointage se désigne de la même façon partout : « instant · Geste » du pointage trouvé dans le journal disponible
+(dossier, avant ou après), dans la phrase « Remplace le pointage … » ; sinon la phrase le dit sans l'identifier :
+« Remplace un pointage non résolu ». Les phrases du problème le nomment par son geste et son heure, ou « Un pointage non
+résolu ». La ligne
 de l'acte en aperçu commence par « instant · Geste » ou « Pointage non résolu » : aucun identifiant de pointage
 n'est affiché.
 
@@ -129,7 +141,7 @@ métier : il échoue comme une erreur technique, sans afficher le message reçu.
 
 Le dossier et la liste n'affichent aucun instant ISO brut. Chaque instant reçu s'affiche en heure locale, en jour
 long (« jeudi 1 octobre à 09:41 ») avec l'année quand elle diffère de celle de la page. L'instant d'un fait pointé
-porte ses secondes (« à 09:41:22 ») : chronologie (heure en gras, puis jour long), références des diagnostics,
+porte ses secondes (« à 09:41:22 ») : chronologie (heure en gras, puis jour long), références,
 détails de traçabilité, proposition, aperçu et journaux avant/après. L'engagement, la clôture, le début et la fin
 d'une activité, l'enregistrement, l'annulation et la date d'un conflit de la liste restent à la minute. L'attribut
 `datetime` des heures porte un instant valide, de trois décimales au plus, sans perdre l'ordre du journal.

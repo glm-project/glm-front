@@ -14,68 +14,16 @@
       {{ dossier.cloture ? libelles.cloture : libelles.ouvert }} @if (dossier.finCloture) { · {{ dossier.finCloture | instantLongDay: now }}
       } · {{ dossier.engagement | instantLongDay: now }}
     </p>
-    @if (dossier.finAutomatique) {
-    <div class="mt-4 rounded-control border border-border-strong bg-surface p-4" data-selector="anomalie-fin-automatique">
-      <h3 class="text-body font-semibold">{{ libelles.finAutomatique }}</h3>
-      <p class="mt-2 text-body-sm">{{ libelles.finAutomatiqueExplication }}</p>
-      @for (activite of dossier.activites; track activite.id.activite) { @if (activite.etat === 'ECHUE' && activite.periode; as periode) {
-      <p class="mt-2 text-body" data-selector="anomalie-fin-automatique-activite">
-        {{ periode.categorie === 'TRAVAIL' ? libelles.types.DEBUT : libelles.types.NON_CONFORMITE }} · {{ libelles.debut }} {{ periode.debut
-        | instantLongDay: now }} · {{ libelles.finAutomatiqueA }} {{ (periode.fin ?? '') | instantLongDay: now }} · {{ libelles.duree }} {{
-        tempsActivite(activite) }}
-      </p>
-      } }
-    </div>
-    } @if (conflitAExpliquer(dossier)) {
-    <div class="mt-4 rounded-control border border-danger bg-surface p-4" data-selector="conflit-diagnostic">
-      <h3 class="text-body font-semibold">{{ libelles.pourquoi }}</h3>
-      @if (dossier.diagnostics?.length) { @for (diagnostic of dossier.diagnostics; track diagnostic.pointage.pointage) { @let pointage =
-      referencePointage(dossier.journal, diagnostic.pointage.pointage);
-      <p class="mt-2 text-body">
-        @if (pointage.lien) { {{ libelles.diagnosticPointage }}
-        <a
-          class="text-accent underline underline-offset-4"
-          [href]="pointage.lien"
-          data-selector="conflit-diagnostic-pointage"
-          (click)="pointageConsulte.set(diagnostic.pointage.pointage)"
-          >{{ pointage.libelle }}</a
-        >
-        } @else { {{ libelles.diagnosticPointageNonResolu }} } {{ libelles.diagnosticCible }} {{
-        labelForActivite(diagnostic.cible.activite.activite, dossier, now) }}, {{ libelles.raisons[diagnostic.raison] }}.
-      </p>
-      @if (diagnostic.cible.ouvrant; as ouvrant) { @let reference = referencePointage(dossier.journal, ouvrant.pointage); @if
-      (reference.lien) {
-      <p>
-        {{ libelles.diagnosticOuvrant }}
-        <a
-          class="text-accent underline underline-offset-4"
-          [href]="reference.lien"
-          data-selector="conflit-diagnostic-ouvrant"
-          (click)="pointageConsulte.set(ouvrant.pointage)"
-          >{{ reference.libelle }}</a
-        >.
-      </p>
-      } @else {
-      <p>{{ libelles.diagnosticOuvrantNonResolu }}.</p>
-      } } @if (diagnostic.cible.termineePar; as fin) { @let reference = referencePointage(dossier.journal, fin.pointage); @if
-      (reference.lien) {
-      <p>
-        {{ libelles.diagnosticTerminaison }}
-        <a
-          class="text-accent underline underline-offset-4"
-          [href]="reference.lien"
-          data-selector="conflit-diagnostic-terminaison"
-          (click)="pointageConsulte.set(fin.pointage)"
-          >{{ reference.libelle }}</a
-        >.
-      </p>
-      } @else {
-      <p>{{ libelles.diagnosticTerminaisonNonResolu }}.</p>
-      } } } } @else {
-      <p class="mt-2 text-body">{{ dossier.ligne.explication }}</p>
-      }
-    </div>
-    }
+    @for (phrase of problemes(dossier); track $index) {
+    <p class="mt-4 text-body" data-selector="anomalie-probleme">{{ phrase }}</p>
+    } @if (dossier.finAutomatique) { @for (activite of dossier.activites; track activite.id.activite) { @if (activite.etat === 'ECHUE' &&
+    activite.periode; as periode) {
+    <p class="mt-2 text-body-sm" data-selector="anomalie-fin-automatique-activite">
+      {{ periode.categorie === 'TRAVAIL' ? libelles.types.DEBUT : libelles.types.NON_CONFORMITE }} · {{ libelles.debut }} {{ periode.debut |
+      instantLongDay: now }} · {{ libelles.finAutomatiqueA }} {{ (periode.fin ?? '') | instantLongDay: now }} · {{ libelles.duree }} {{
+      tempsActivite(activite) }}
+    </p>
+    } } }
   </header>
   <div class="dossier-grille">
     <section aria-labelledby="chronologie-heading">
@@ -134,13 +82,7 @@
             </button>
           </div>
           }
-          <details
-            #trace
-            class="mt-2"
-            data-selector="anomalie-pointage-detail"
-            [open]="pointageConsulte() === pointage.id.pointage"
-            (toggle)="traceToggled(pointage.id.pointage, trace.open)"
-          >
+          <details class="mt-2" data-selector="anomalie-pointage-detail">
             <summary class="min-h-touch cursor-pointer py-3 text-body-sm text-ink-muted">{{ libelles.tracabilite }}</summary>
             <ng-container
               *ngTemplateOutlet="
@@ -418,7 +360,7 @@
       <div class="mt-4 text-body-sm" data-selector="anomalie-apercu-acte">
         <p class="font-semibold">{{ libelles.actes[apercu.acte.kind] }}</p>
         @if (apercu.acte.kind !== 'REGULARISATION') {
-        <p>{{ referencePointage(apercu.avant.journal, apercu.acte.pointage).libelle }} · {{ apercu.acte.motif }}</p>
+        <p>{{ libelleDuPointage(apercu.avant.journal, apercu.acte.pointage) }} · {{ apercu.acte.motif }}</p>
         } @if (apercu.acte.kind !== 'ANNULATION') {
         <p>{{ libelleDuGeste(apercu.acte.fait) }} · {{ apercu.acte.fait.instant | instantLongDayWithSeconds: now }}</p>
         @if (apercu.acte.fait.activiteVisee) {

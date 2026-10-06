@@ -111,6 +111,21 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-cible')).should('have.value', debutFixture);
   };
 
+  it('should say the problem of the conflict in one sentence naming its pointages by their gesture', () => {
+    whenOpeningTheDossier();
+
+    thenTheConflictIsSaidInOneSentence();
+  });
+
+  const thenTheConflictIsSaidInOneSentence = (): void => {
+    cy.get(dataSelector('anomalie-probleme'))
+      .should('have.length', 1)
+      .and('have.text', 'L’arrêt de 17:00 vise le travail, remplacé à 12:00 par un passage en NC.')
+      .and('not.contain.text', finFixture)
+      .and('not.contain.text', debutFixture)
+      .and('not.contain.text', ncFixture);
+  };
+
   it('should identify the chosen interpretation while its reason is being entered', () => {
     whenOpeningTheDossier();
     whenChoosingTheGuidedCorrection();

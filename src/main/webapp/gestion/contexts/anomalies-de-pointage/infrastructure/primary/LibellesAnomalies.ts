@@ -1,6 +1,12 @@
 import { IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
 import { CodeRefusActe } from '../../domain/acte/AnomaliesActesPorts';
 
+export interface ActiviteDansUnePhrase {
+  readonly defini: string;
+  readonly indefini: string;
+  readonly accord: string;
+}
+
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   ACTE_REQUIS: 'Choisissez un acte.',
   MOTIF_REQUIS: 'Renseignez un motif.',
@@ -37,12 +43,64 @@ const GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record<IntentionPoi
   FIN: { FIN: 'Arrêt' },
 };
 
+const ACTIVITES_DE_PHRASE = {
+  TRAVAIL: { defini: 'le travail', indefini: 'un travail', accord: '' },
+  NON_CONFORMITE: { defini: 'la non-conformité', indefini: 'une non-conformité', accord: 'e' },
+  INCONNUE: { defini: 'l’activité', indefini: 'une activité', accord: 'e' },
+} as const satisfies Readonly<Record<string, ActiviteDansUnePhrase>>;
+
+type Activite = ActiviteDansUnePhrase;
+
+const PROBLEMES = {
+  activites: ACTIVITES_DE_PHRASE,
+  pointageNonResolu: 'Un pointage non résolu',
+  regularise: 'régularisé',
+  memeCategorie: 'de même catégorie',
+  categories: { TRAVAIL: 'en bon', NON_CONFORMITE: 'en NC' },
+  conflit: {
+    CIBLE_REMPLACEE: {
+      avec: (sujet: string, cible: Activite, heure: string, terminant: string) =>
+        `${sujet} vise ${cible.defini}, remplacé${cible.accord} à ${heure} par ${terminant}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} qui n’est plus en cours.`,
+    },
+    CIBLE_DEJA_TERMINEE: {
+      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.defini}, déjà arrêté${cible.accord} à ${heure}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord}.`,
+    },
+    GESTE_AVANT_OUVERTURE: {
+      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} démarré${cible.accord} à ${heure}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} pas encore démarré${cible.accord}.`,
+    },
+    OUVRANT_ANNULE: {
+      avec: (sujet: string, cible: Activite, ouvrant: string) => `${sujet} vise ${cible.indefini} dont ${ouvrant} est annulé.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} dont le démarrage est annulé.`,
+    },
+    TRANSITION_MEME_CATEGORIE: {
+      avec: (sujet: string, cible: Activite, heure: string, categorie: string) =>
+        `${sujet} vise ${cible.defini} démarré${cible.accord} à ${heure}, déjà ${categorie}.`,
+      sans: (sujet: string, cible: Activite, categorie: string) => `${sujet} vise ${cible.indefini} déjà ${categorie}.`,
+    },
+    CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: {
+      avec: (sujet: string, cible: Activite, heure: string) =>
+        `${sujet} vise ${cible.defini} de ${heure}, déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+      sans: (sujet: string, cible: Activite) =>
+        `${sujet} vise ${cible.indefini} déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+    },
+    CONTRADICTION_REGULARISATION: {
+      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord} à ${heure}.`,
+      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} prolongé${cible.accord} par une régularisation.`,
+    },
+  },
+  finAutomatique: {
+    pointageTardif: (sujet: string, cible: Activite, fin: string) =>
+      `${sujet} vise ${cible.defini}, déjà terminé${cible.accord} automatiquement à ${fin}.`,
+    sansFin: (cible: Activite, debut: string, fin: string) =>
+      `${cible.defini} démarré${cible.accord} à ${debut} n’a jamais été arrêté${cible.accord} : fin automatique à ${fin}.`,
+  },
+} as const;
+
 export const LIBELLES_ANOMALIES = {
   detail: 'Un pointage manque dans la chronologie ?',
-  pourquoi: 'Pourquoi ces pointages sont incohérents',
-  finAutomatique: 'Fin automatique',
-  finAutomatiqueExplication:
-    'Aucune fin réelle n’a terminé cette activité : elle a été terminée automatiquement à son échéance. Indiquez l’heure réelle de fin ou corrigez le pointage tardif.',
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
   duree: 'Durée',
@@ -189,20 +247,5 @@ export const LIBELLES_ANOMALIES = {
   posteNonResolu: 'Poste non résolu',
   faits: 'Faits',
   diagnostic: 'Contradiction',
-  raisons: {
-    CIBLE_REMPLACEE: 'remplacée',
-    CIBLE_DEJA_TERMINEE: 'déjà terminée',
-    GESTE_AVANT_OUVERTURE: 'non encore ouverte à l’instant du geste',
-    OUVRANT_ANNULE: 'dont le pointage d’ouverture est annulé',
-    TRANSITION_MEME_CATEGORIE: 'dans une transition de même catégorie',
-    CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: 'échue avec une autre activité présente',
-    CONTRADICTION_REGULARISATION: 'dans une contradiction de régularisation',
-  },
-  diagnosticPointage: 'Le pointage',
-  diagnosticPointageNonResolu: 'Un pointage non résolu',
-  diagnosticCible: 'vise l’activité',
-  diagnosticOuvrant: 'Ouverte par le pointage',
-  diagnosticOuvrantNonResolu: 'Ouverte par un pointage non résolu',
-  diagnosticTerminaison: 'Terminée par le pointage',
-  diagnosticTerminaisonNonResolu: 'Terminée par un pointage non résolu',
+  problemes: PROBLEMES,
 } as const;

@@ -30,7 +30,7 @@ describe('Automatic end dossier in Gestion', () => {
   };
 
   const whenChoosingTheEndRegularisation = (): void => {
-    cy.get(dataSelector('anomalie-fin-automatique')).should('be.visible');
+    cy.get(dataSelector('anomalie-probleme')).should('be.visible');
     cy.get(dataSelector('anomalie-choix')).click();
   };
 

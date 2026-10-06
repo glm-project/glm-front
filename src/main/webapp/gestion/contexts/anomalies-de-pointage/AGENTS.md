@@ -79,12 +79,20 @@ au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `po
 Les détails de traçabilité d'un pointage et les journaux avant/après de l'aperçu partagent un seul gabarit : la ligne
 d'en-tête est « Prénom Nom · instant » (jamais l'identifiant du pointage), et les activités visée ou créée se désignent
 par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (nature et instant),
-sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète, le diagnostic de conflit et
-l'option de cible du formulaire suivent la même règle (`labelForActivite`).
-Un autre pointage (remplacé, ouvrant ou terminant d'un diagnostic, pointage de l'acte en aperçu) se désigne par une
-seule règle, `referencePointage` : « instant · Geste » depuis le journal disponible. Quand il manque, la
-phrase porte le déterminant (« Remplace un pointage non résolu », « Ouverte par un pointage non résolu »), jamais
-l'identifiant.
+sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète et l'option de cible
+du formulaire suivent la même règle (`labelForActivite`).
+Un autre pointage (remplacé, pointage de l'acte en aperçu) se désigne par une seule règle, `referencePointage` :
+« instant · Geste » depuis le journal disponible. Quand il manque, la phrase porte le déterminant (« Remplace un
+pointage non résolu »), jamais l'identifiant.
+Une phrase du problème suit sa propre règle : le pointage en cause nommé par son geste et son heure (« L'arrêt de 17:00 »,
+« Le passage en NC régularisé de 18:00 » ; « Un pointage non résolu » quand le journal ne le tient pas), « vise », l'activité
+visée (« le travail », « la non-conformité », « l'activité » quand le dossier ne la tient pas ou sans période, accordée en
+genre), puis le fait contradictoire et son heure (HH:MM) quand le dossier le porte (terminant, ouvrant ou début reçu de
+l'activité). Chaque modèle couvre l'absence de ces champs facultatifs : un pointage cité mais absent du journal compte
+comme absent ; pour une transition de même catégorie, une activité sans période prend la catégorie du geste (« un travail
+déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
+`CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le geste tardif ; sinon l'activité n'a
+jamais été arrêtée.
 Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
 `LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
 `NON_CONFORMITE·TRANSITION` « Passage en NC », `DEBUT·TRANSITION` « Retour en bon », `FIN·FIN` « Arrêt ». Un pointage
@@ -138,9 +146,11 @@ Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetr
 modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. « Anomalie traitée » signifie ni
 `enConflit` ni `finAutomatique`, quel que soit l'état d'adresse : une adresse `ANCRE_ANNULEE` peut rester
 en fin automatique lorsque l'ouvrant corrigé est encore échu. Le domaine la pose en question nommée
-(`anomalieTraitee`), que l'aperçu et le reçu appellent. Le diagnostic « Pourquoi ces pointages sont
-incohérents » n'existe que pour un conflit à expliquer (`conflitAExpliquer`, soit `enConflit`) : il disparaît
-dès que le périmètre n'en porte plus, y compris après le reçu d'une fin automatique ou d'un conflit résolu.
+(`anomalieTraitee`), que l'aperçu et le reçu appellent. L'en-tête du dossier dit le problème en une phrase
+(`anomalie-probleme`, `phrasesDuProbleme` du primaire, modèles dans `LIBELLES_ANOMALIES.problemes`) : une par
+diagnostic d'un conflit à expliquer (`conflitAExpliquer`, soit `enConflit` ; sans diagnostic reçu, l'explication de
+la ligne), une par activité échue d'une fin automatique. Elle disparaît dès que le périmètre ne porte plus le problème, y
+compris après le reçu d'une fin automatique ou d'un conflit résolu.
 Le dossier affiche l'activité échue, son
 début, sa fin automatique, sa durée et la clôture reçus, sans les calculer, et ne se présente jamais comme
 un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :

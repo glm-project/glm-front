@@ -1,7 +1,7 @@
 import { ActeResolution, FaitPropose } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/ActeResolution';
 import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
-import { DossierAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
+import { DiagnosticConflit, DossierAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
@@ -26,7 +26,14 @@ import {
 } from '../../../domain/acte/AnomaliesActesPorts';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
-import { AdresseDossier, LectureDossier, PageAnomalies, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import {
+  ActiviteAnomalie,
+  AdresseDossier,
+  ChoixGuide,
+  LectureDossier,
+  PageAnomalies,
+  PointageAnomalie,
+} from '../../../domain/dossier/DossierAnomalie';
 import { DossierAnomaliePage } from './DossierAnomaliePage';
 
 const INSTANT_FIN = instantLocalFixture(new Date(2026, 8, 14, 17, 0), '123456789');
@@ -314,6 +321,414 @@ const dossierAtFixture = (pointage: string, explication: string): DossierAnomali
   };
 };
 
+const GESTES_FIXTURE = {
+  DEMARRAGE: { type: 'DEBUT', intention: 'OUVERTURE' },
+  DEMARRAGE_NC: { type: 'NON_CONFORMITE', intention: 'OUVERTURE' },
+  PASSAGE_NC: { type: 'NON_CONFORMITE', intention: 'TRANSITION' },
+  RETOUR_BON: { type: 'DEBUT', intention: 'TRANSITION' },
+  ARRET: { type: 'FIN', intention: 'FIN' },
+} as const;
+
+type GesteFixture = keyof typeof GESTES_FIXTURE;
+
+interface PointageCiteFixture {
+  readonly geste: GesteFixture;
+  readonly heure: string;
+  readonly regularisation?: true;
+  readonly absentDuJournal?: true;
+}
+
+interface ActiviteCiteFixture {
+  readonly categorie?: 'TRAVAIL' | 'NON_CONFORMITE';
+  readonly debut?: string;
+}
+
+interface CasDeConflitFixture {
+  readonly cas: string;
+  readonly raison: DiagnosticConflit['raison'];
+  readonly enCause: PointageCiteFixture;
+  readonly activite?: ActiviteCiteFixture;
+  readonly ouvrant?: PointageCiteFixture;
+  readonly termineePar?: PointageCiteFixture;
+  readonly phrase: string;
+}
+
+const instantAt = (heure: string): string => {
+  const [heures = 0, minutes = 0] = heure.split(':').map(Number);
+  return instantLocalFixture(new Date(2026, 8, 14, heures, minutes));
+};
+
+const ARRET_17: PointageCiteFixture = { geste: 'ARRET', heure: '17:00' };
+const ARRET_12: PointageCiteFixture = { geste: 'ARRET', heure: '12:00' };
+const ARRET_7: PointageCiteFixture = { geste: 'ARRET', heure: '07:00' };
+const PASSAGE_NC_17: PointageCiteFixture = { geste: 'PASSAGE_NC', heure: '17:00' };
+const PASSAGE_NC_12: PointageCiteFixture = { geste: 'PASSAGE_NC', heure: '12:00' };
+const RETOUR_BON_12: PointageCiteFixture = { geste: 'RETOUR_BON', heure: '12:00' };
+const DEMARRAGE_8: PointageCiteFixture = { geste: 'DEMARRAGE', heure: '08:00' };
+const DEMARRAGE_NC_8: PointageCiteFixture = { geste: 'DEMARRAGE_NC', heure: '08:00' };
+const TRAVAIL_8: ActiviteCiteFixture = { categorie: 'TRAVAIL', debut: '08:00' };
+const NC_8: ActiviteCiteFixture = { categorie: 'NON_CONFORMITE', debut: '08:00' };
+const SANS_PERIODE: ActiviteCiteFixture = {};
+const ABSENT = { absentDuJournal: true } as const;
+
+const CAS_DE_CONFLIT: readonly CasDeConflitFixture[] = [
+  {
+    cas: 'a replaced work with its terminating pointage',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    termineePar: PASSAGE_NC_12,
+    phrase: 'L’arrêt de 17:00 vise le travail, remplacé à 12:00 par un passage en NC.',
+  },
+  {
+    cas: 'a replaced non-conformity, agreed in the feminine',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: NC_8,
+    termineePar: PASSAGE_NC_12,
+    phrase: 'L’arrêt de 17:00 vise la non-conformité, remplacée à 12:00 par un passage en NC.',
+  },
+  {
+    cas: 'a replaced activity absent from the dossier',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    termineePar: PASSAGE_NC_12,
+    phrase: 'L’arrêt de 17:00 vise l’activité, remplacée à 12:00 par un passage en NC.',
+  },
+  {
+    cas: 'a replacement by a stop',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    termineePar: ARRET_12,
+    phrase: 'L’arrêt de 17:00 vise le travail, remplacé à 12:00 par un arrêt.',
+  },
+  {
+    cas: 'a replacement by a return to good',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    termineePar: RETOUR_BON_12,
+    phrase: 'L’arrêt de 17:00 vise le travail, remplacé à 12:00 par un retour en bon.',
+  },
+  {
+    cas: 'a replacement by a start',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    termineePar: DEMARRAGE_8,
+    phrase: 'L’arrêt de 17:00 vise le travail, remplacé à 08:00 par un démarrage.',
+  },
+  {
+    cas: 'a replaced work without terminating pointage',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    phrase: 'L’arrêt de 17:00 vise un travail qui n’est plus en cours.',
+  },
+  {
+    cas: 'a replaced non-conformity without terminating pointage',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: NC_8,
+    phrase: 'L’arrêt de 17:00 vise une non-conformité qui n’est plus en cours.',
+  },
+  {
+    cas: 'a replaced activity absent from the dossier without terminating pointage',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    phrase: 'L’arrêt de 17:00 vise une activité qui n’est plus en cours.',
+  },
+  {
+    cas: 'a terminating pointage the journal does not hold',
+    raison: 'CIBLE_REMPLACEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    termineePar: { ...PASSAGE_NC_12, ...ABSENT },
+    phrase: 'L’arrêt de 17:00 vise un travail qui n’est plus en cours.',
+  },
+  {
+    cas: 'a work already stopped',
+    raison: 'CIBLE_DEJA_TERMINEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    termineePar: ARRET_12,
+    phrase: 'L’arrêt de 17:00 vise le travail, déjà arrêté à 12:00.',
+  },
+  {
+    cas: 'a non-conformity already stopped',
+    raison: 'CIBLE_DEJA_TERMINEE',
+    enCause: ARRET_17,
+    activite: NC_8,
+    termineePar: ARRET_12,
+    phrase: 'L’arrêt de 17:00 vise la non-conformité, déjà arrêtée à 12:00.',
+  },
+  {
+    cas: 'an activity absent from the dossier already stopped',
+    raison: 'CIBLE_DEJA_TERMINEE',
+    enCause: ARRET_17,
+    termineePar: ARRET_12,
+    phrase: 'L’arrêt de 17:00 vise l’activité, déjà arrêtée à 12:00.',
+  },
+  {
+    cas: 'a work already stopped by an unknown pointage',
+    raison: 'CIBLE_DEJA_TERMINEE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    phrase: 'L’arrêt de 17:00 vise un travail déjà arrêté.',
+  },
+  {
+    cas: 'a non-conformity already stopped by an unknown pointage',
+    raison: 'CIBLE_DEJA_TERMINEE',
+    enCause: ARRET_17,
+    activite: NC_8,
+    phrase: 'L’arrêt de 17:00 vise une non-conformité déjà arrêtée.',
+  },
+  {
+    cas: 'a challenged pointage the journal does not hold',
+    raison: 'CIBLE_DEJA_TERMINEE',
+    enCause: { ...ARRET_17, ...ABSENT },
+    activite: TRAVAIL_8,
+    termineePar: ARRET_12,
+    phrase: 'Un pointage non résolu vise le travail, déjà arrêté à 12:00.',
+  },
+  {
+    cas: 'a stop before the opening received, which wins over the start received on the activity',
+    raison: 'GESTE_AVANT_OUVERTURE',
+    enCause: ARRET_7,
+    activite: { ...TRAVAIL_8, debut: '08:30' },
+    ouvrant: DEMARRAGE_8,
+    phrase: 'L’arrêt de 07:00 vise un travail démarré à 08:00.',
+  },
+  {
+    cas: 'a stop before the start received on the activity',
+    raison: 'GESTE_AVANT_OUVERTURE',
+    enCause: ARRET_7,
+    activite: { ...TRAVAIL_8, debut: '08:30' },
+    phrase: 'L’arrêt de 07:00 vise un travail démarré à 08:30.',
+  },
+  {
+    cas: 'a stop before the opening of a non-conformity',
+    raison: 'GESTE_AVANT_OUVERTURE',
+    enCause: ARRET_7,
+    activite: NC_8,
+    ouvrant: DEMARRAGE_NC_8,
+    phrase: 'L’arrêt de 07:00 vise une non-conformité démarrée à 08:00.',
+  },
+  {
+    cas: 'an opening the journal does not hold',
+    raison: 'GESTE_AVANT_OUVERTURE',
+    enCause: ARRET_7,
+    activite: { ...TRAVAIL_8, debut: '08:30' },
+    ouvrant: { ...DEMARRAGE_8, ...ABSENT },
+    phrase: 'L’arrêt de 07:00 vise un travail démarré à 08:30.',
+  },
+  {
+    cas: 'an activity with neither opening nor period',
+    raison: 'GESTE_AVANT_OUVERTURE',
+    enCause: ARRET_7,
+    activite: SANS_PERIODE,
+    phrase: 'L’arrêt de 07:00 vise une activité pas encore démarrée.',
+  },
+  {
+    cas: 'a cancelled start',
+    raison: 'OUVRANT_ANNULE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    ouvrant: DEMARRAGE_8,
+    phrase: 'L’arrêt de 17:00 vise un travail dont le démarrage de 08:00 est annulé.',
+  },
+  {
+    cas: 'a cancelled start of a non-conformity',
+    raison: 'OUVRANT_ANNULE',
+    enCause: ARRET_17,
+    activite: NC_8,
+    ouvrant: DEMARRAGE_NC_8,
+    phrase: 'L’arrêt de 17:00 vise une non-conformité dont le démarrage en NC de 08:00 est annulé.',
+  },
+  {
+    cas: 'a cancelled start without opening pointage',
+    raison: 'OUVRANT_ANNULE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    phrase: 'L’arrêt de 17:00 vise un travail dont le démarrage est annulé.',
+  },
+  {
+    cas: 'a cancelled start the journal does not hold',
+    raison: 'OUVRANT_ANNULE',
+    enCause: ARRET_17,
+    activite: TRAVAIL_8,
+    ouvrant: { ...DEMARRAGE_8, ...ABSENT },
+    phrase: 'L’arrêt de 17:00 vise un travail dont le démarrage est annulé.',
+  },
+  {
+    cas: 'a return to good on a work already good',
+    raison: 'TRANSITION_MEME_CATEGORIE',
+    enCause: RETOUR_BON_12,
+    activite: TRAVAIL_8,
+    ouvrant: DEMARRAGE_8,
+    phrase: 'Le retour en bon de 12:00 vise le travail démarré à 08:00, déjà en bon.',
+  },
+  {
+    cas: 'a passage in non-conformity on a non-conformity',
+    raison: 'TRANSITION_MEME_CATEGORIE',
+    enCause: PASSAGE_NC_12,
+    activite: NC_8,
+    ouvrant: DEMARRAGE_NC_8,
+    phrase: 'Le passage en NC de 12:00 vise la non-conformité démarrée à 08:00, déjà en NC.',
+  },
+  {
+    cas: 'a transition whose start is read from the activity',
+    raison: 'TRANSITION_MEME_CATEGORIE',
+    enCause: RETOUR_BON_12,
+    activite: TRAVAIL_8,
+    phrase: 'Le retour en bon de 12:00 vise le travail démarré à 08:00, déjà en bon.',
+  },
+  {
+    cas: 'a return to good on an activity without period',
+    raison: 'TRANSITION_MEME_CATEGORIE',
+    enCause: RETOUR_BON_12,
+    activite: SANS_PERIODE,
+    phrase: 'Le retour en bon de 12:00 vise un travail déjà en bon.',
+  },
+  {
+    cas: 'a passage in non-conformity on an activity without period',
+    raison: 'TRANSITION_MEME_CATEGORIE',
+    enCause: PASSAGE_NC_12,
+    activite: SANS_PERIODE,
+    phrase: 'Le passage en NC de 12:00 vise une non-conformité déjà en NC.',
+  },
+  {
+    cas: 'a transition whose pointage and activity are both unknown',
+    raison: 'TRANSITION_MEME_CATEGORIE',
+    enCause: { ...RETOUR_BON_12, ...ABSENT },
+    activite: SANS_PERIODE,
+    phrase: 'Un pointage non résolu vise une activité déjà de même catégorie.',
+  },
+  {
+    cas: 'a due work while another activity is running',
+    raison: 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE',
+    enCause: PASSAGE_NC_17,
+    activite: { ...TRAVAIL_8, debut: '06:00' },
+    phrase: 'Le passage en NC de 17:00 vise le travail de 06:00, déjà échu, alors qu’une autre activité est en cours.',
+  },
+  {
+    cas: 'a due non-conformity while another activity is running',
+    raison: 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE',
+    enCause: PASSAGE_NC_17,
+    activite: { ...NC_8, debut: '06:00' },
+    phrase: 'Le passage en NC de 17:00 vise la non-conformité de 06:00, déjà échue, alors qu’une autre activité est en cours.',
+  },
+  {
+    cas: 'a due activity without period',
+    raison: 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE',
+    enCause: PASSAGE_NC_17,
+    activite: SANS_PERIODE,
+    phrase: 'Le passage en NC de 17:00 vise une activité déjà échue, alors qu’une autre activité est en cours.',
+  },
+  {
+    cas: 'a regularised stop on a work already stopped',
+    raison: 'CONTRADICTION_REGULARISATION',
+    enCause: { geste: 'ARRET', heure: '19:00', regularisation: true },
+    activite: TRAVAIL_8,
+    termineePar: { geste: 'ARRET', heure: '18:00' },
+    phrase: 'L’arrêt régularisé de 19:00 vise un travail déjà arrêté à 18:00.',
+  },
+  {
+    cas: 'a regularised stop on a non-conformity already stopped',
+    raison: 'CONTRADICTION_REGULARISATION',
+    enCause: { geste: 'ARRET', heure: '19:00', regularisation: true },
+    activite: NC_8,
+    termineePar: { geste: 'ARRET', heure: '18:00' },
+    phrase: 'L’arrêt régularisé de 19:00 vise une non-conformité déjà arrêtée à 18:00.',
+  },
+  {
+    cas: 'a passage on a work extended by a regularisation',
+    raison: 'CONTRADICTION_REGULARISATION',
+    enCause: { geste: 'PASSAGE_NC', heure: '18:00' },
+    activite: TRAVAIL_8,
+    phrase: 'Le passage en NC de 18:00 vise un travail prolongé par une régularisation.',
+  },
+  {
+    cas: 'a passage on a non-conformity extended by a regularisation',
+    raison: 'CONTRADICTION_REGULARISATION',
+    enCause: { geste: 'PASSAGE_NC', heure: '18:00' },
+    activite: NC_8,
+    phrase: 'Le passage en NC de 18:00 vise une non-conformité prolongée par une régularisation.',
+  },
+  {
+    cas: 'a regularised passage on a work extended by a regularisation',
+    raison: 'CONTRADICTION_REGULARISATION',
+    enCause: { geste: 'PASSAGE_NC', heure: '18:00', regularisation: true },
+    activite: TRAVAIL_8,
+    phrase: 'Le passage en NC régularisé de 18:00 vise un travail prolongé par une régularisation.',
+  },
+];
+
+interface CasDeFinAutomatiqueFixture {
+  readonly cas: string;
+  readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
+  readonly tardif?: {
+    readonly code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE';
+    readonly pointage: PointageCiteFixture;
+    readonly activiteVisee?: string;
+    readonly sansCorrection?: true;
+  };
+  readonly phrase: string;
+}
+
+const ARRET_19_30: PointageCiteFixture = { geste: 'ARRET', heure: '19:30' };
+const PASSAGE_NC_19_30: PointageCiteFixture = { geste: 'PASSAGE_NC', heure: '19:30' };
+
+const CAS_DE_FIN_AUTOMATIQUE: readonly CasDeFinAutomatiqueFixture[] = [
+  {
+    cas: 'a work never stopped',
+    categorie: 'TRAVAIL',
+    phrase: 'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 18:00.',
+  },
+  {
+    cas: 'a non-conformity never stopped',
+    categorie: 'NON_CONFORMITE',
+    phrase: 'La non-conformité démarrée à 08:00 n’a jamais été arrêtée : fin automatique à 18:00.',
+  },
+  {
+    cas: 'a work stopped after its due time',
+    categorie: 'TRAVAIL',
+    tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: ARRET_19_30 },
+    phrase: 'L’arrêt de 19:30 vise le travail, déjà terminé automatiquement à 18:00.',
+  },
+  {
+    cas: 'a non-conformity stopped after its due time',
+    categorie: 'NON_CONFORMITE',
+    tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: ARRET_19_30 },
+    phrase: 'L’arrêt de 19:30 vise la non-conformité, déjà terminée automatiquement à 18:00.',
+  },
+  {
+    cas: 'a work with a passage pointed after its due time',
+    categorie: 'TRAVAIL',
+    tardif: { code: 'CORRIGER_TRANSITION_TARDIVE', pointage: PASSAGE_NC_19_30 },
+    phrase: 'Le passage en NC de 19:30 vise le travail, déjà terminé automatiquement à 18:00.',
+  },
+  {
+    cas: 'a late pointage the journal does not hold',
+    categorie: 'TRAVAIL',
+    tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: { ...ARRET_19_30, ...ABSENT } },
+    phrase: 'Un pointage non résolu vise le travail, déjà terminé automatiquement à 18:00.',
+  },
+  {
+    cas: 'a late choice aimed at another activity',
+    categorie: 'TRAVAIL',
+    tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: ARRET_19_30, activiteVisee: 'travail-9' },
+    phrase: 'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 18:00.',
+  },
+  {
+    cas: 'a late choice that carries no correction',
+    categorie: 'TRAVAIL',
+    tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: ARRET_19_30, sansCorrection: true },
+    phrase: 'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 18:00.',
+  },
+];
+
 describe('Anomaly dossier page', () => {
   let fixture: ComponentFixture<DossierAnomaliePage>;
   let read: DossierReadFixture;
@@ -351,7 +766,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     thenTextContains('anomalie-retry', 'Réessayer');
-    thenAbsent('conflit-diagnostic');
+    thenAbsent('anomalie-probleme');
   });
 
   it('should reacquire the dossier after the manager explicitly retries an unavailable reading', async () => {
@@ -361,90 +776,66 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-retry');
 
-    thenTextContains('conflit-diagnostic', 'La fin vise le travail remplacé.');
+    thenTheProblemReads('La fin vise le travail remplacé.');
     thenAbsent('anomalie-retry');
     expect(read.demandes).toHaveLength(2);
   });
 
-  it('should explain the explicit target and termination supplied by the conflict diagnostic', async () => {
-    givenAStructuredDiagnostic();
+  it.each(CAS_DE_CONFLIT)('should say the problem of $cas', async cas => {
+    givenAConflictDiagnosedAs(cas);
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Arrêt');
-    thenTextContains('conflit-diagnostic', 'vise l’activité Travail ouvert à 8 h, remplacée.');
-    thenTextDoesNotContain('conflit-diagnostic', 'travail-8');
-    thenTextContains('conflit-diagnostic', 'Ouverte par un pointage non résolu.');
-    thenTextContains('conflit-diagnostic', 'Terminée par un pointage non résolu.');
-    thenTextDoesNotContain('conflit-diagnostic', 'Pointage non résolu');
-    thenTextDoesNotContain('conflit-diagnostic', 'debut-8');
-    thenTextDoesNotContain('conflit-diagnostic', 'nc-12');
+    thenTheProblemReads(cas.phrase);
   });
 
-  it('should link a diagnostic to its corrected terminating fact independently of the preserved activity identity', async () => {
+  it('should say nothing of the activity, the pointages or their identifiers a diagnostic cites but the dossier does not hold', async () => {
+    givenAStructuredDiagnostic('fin-absent');
+
+    await whenRendering();
+
+    thenTheProblemReads('Un pointage non résolu vise une activité qui n’est plus en cours.');
+    thenTextDoesNotContainAnIdentifier('anomalie-probleme');
+    thenTextDoesNotContain('anomalie-probleme', 'fin-absent');
+    thenTextDoesNotContain('anomalie-probleme', 'travail-8');
+    thenTextDoesNotContain('anomalie-probleme', 'debut-8');
+    thenTextDoesNotContain('anomalie-probleme', 'nc-12');
+  });
+
+  it('should say one problem per diagnostic, in the order received', async () => {
+    givenTwoDiagnostics();
+
+    await whenRendering();
+
+    thenTheProblemsRead([
+      'L’arrêt de 17:00 vise un travail qui n’est plus en cours.',
+      'Le démarrage de 08:00 vise un travail qui n’est plus en cours.',
+    ]);
+  });
+
+  it('should keep the received explanation when the conflict comes with no diagnostic', async () => {
+    await whenRendering();
+
+    thenTheProblemReads('La fin vise le travail remplacé.');
+  });
+
+  it('should name the activity created and the pointage replaced by a corrected terminating fact in its trace', async () => {
     givenACorrectedTerminatingFact();
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact(
-      'conflit-diagnostic-terminaison',
-      '90000000-0000-0000-0000-000000000001',
-      'lundi 14 septembre à 12:01:00 · Passage en NC',
-    );
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Crée l’activité Passage en NC · lundi 14 septembre à 12:01:00');
     thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Crée l’activité nc-12');
     thenReceivedFactContains('90000000-0000-0000-0000-000000000001', 'Remplace un pointage non résolu');
     thenReceivedFactDoesNotContain('90000000-0000-0000-0000-000000000001', 'Remplace le pointage nc-12');
   });
 
-  it('should disclose the received terminating fact when following its diagnostic reference', async () => {
-    givenACorrectedTerminatingFact();
-    await whenRendering();
-
-    await whenClicking('conflit-diagnostic-terminaison');
-
-    thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
-  });
-
-  it('should reopen the same received trace after the manager closes it', async () => {
-    givenACorrectedTerminatingFact();
-    await whenRendering();
-
-    await whenFollowingTheDiagnosticReference('conflit-diagnostic-terminaison');
-    await whenClosingTheReceivedTrace('90000000-0000-0000-0000-000000000001');
-    await whenFollowingTheDiagnosticReference('conflit-diagnostic-terminaison');
-
-    thenReceivedFactDetailsAreOpen('90000000-0000-0000-0000-000000000001');
-  });
-
-  it('should keep the newly requested fact trace open when the previously consulted trace closes', async () => {
-    givenTheOpeningFactReferencedByTheDiagnostic();
-    await whenRendering();
-
-    await whenFollowingTheDiagnosticReference('conflit-diagnostic-ouvrant');
-    await whenFollowingTheDiagnosticReference('conflit-diagnostic-pointage');
-
-    thenReceivedFactDetailsAreOpen('fin-17');
-  });
-
-  it('should locate the challenged and opening facts identified by the received diagnostic', async () => {
-    givenTheOpeningFactReferencedByTheDiagnostic();
+  it('should keep an instant it cannot read as received when it names a pointage in a problem', async () => {
+    givenAChallengedPointageWithAnUnreadableInstant();
 
     await whenRendering();
 
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-pointage', 'fin-17', 'lundi 14 septembre à 17:00:00 · Arrêt');
-    thenDiagnosticReferencesTheReceivedFact('conflit-diagnostic-ouvrant', 'debut-8', 'lundi 14 septembre à 08:00:00 · Démarrage');
-    thenTextContains('conflit-diagnostic', 'Le pointage lundi 14 septembre à 17:00:00 · Arrêt vise');
-    thenTextContains('conflit-diagnostic', 'Ouverte par le pointage lundi 14 septembre à 08:00:00 · Démarrage.');
-  });
-
-  it('should speak of an unresolved pointage when the diagnostic challenges one the journal does not hold', async () => {
-    givenAStructuredDiagnostic('fin-absent');
-
-    await whenRendering();
-
-    thenTextReads('conflit-diagnostic', 'Un pointage non résolu vise l’activité Travail ouvert à 8 h, remplacée.');
-    thenTextDoesNotContain('conflit-diagnostic', 'fin-absent');
+    thenTheProblemReads('L’arrêt de illisible vise un travail qui n’est plus en cours.');
   });
 
   it.each([
@@ -780,7 +1171,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     thenTextContains('anomalie-adresse-invalide', 'L’adresse doit préciser');
-    thenAbsent('conflit-diagnostic');
+    thenAbsent('anomalie-probleme');
     expect(read.demandes).toHaveLength(0);
   });
 
@@ -1113,7 +1504,7 @@ describe('Anomaly dossier page', () => {
     await whenPreparingTheCorrection();
     await whenClicking('anomalie-confirmer');
 
-    thenTextContains('conflit-diagnostic', 'Reprise encore à rattacher.');
+    thenTheProblemReads('Reprise encore à rattacher.');
     thenTextContains('anomalie-cloture', 'Clôturé');
     thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
     thenAbsent('anomalie-apercu');
@@ -1193,7 +1584,7 @@ describe('Anomaly dossier page', () => {
 
     await whenPreparingTheCorrection();
 
-    thenTextContains('conflit-diagnostic', 'Le journal a été actualisé.');
+    thenTheProblemReads('Le journal a été actualisé.');
     thenTextContains('anomalie-operation', 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.');
     thenFieldValueIs('anomalie-motif', 'Cible confirmée');
     thenAbsent('anomalie-apercu');
@@ -1239,7 +1630,7 @@ describe('Anomaly dossier page', () => {
 
     await whenAddressChanges('fin-18');
 
-    thenTextContains('conflit-diagnostic', 'Autre contradiction.');
+    thenTheProblemReads('Autre contradiction.');
     thenAbsent('anomalie-acte');
     thenAbsent('anomalie-apercu');
     expect(read.demandes).toHaveLength(2);
@@ -1721,7 +2112,7 @@ describe('Anomaly dossier page', () => {
     await whenAddressChanges('fin-18');
     await whenResponseArrives(attente, ancienneReponse);
 
-    thenTextContains('conflit-diagnostic', 'Autre contradiction.');
+    thenTheProblemReads('Autre contradiction.');
     thenAbsent('anomalie-acte');
     thenAbsent('anomalie-apercu');
     thenAbsent('anomalie-operation');
@@ -1766,7 +2157,7 @@ describe('Anomaly dossier page', () => {
     await whenAddressBecomesIncomplete();
     await whenResponseArrives(attente, { kind: 'APPLIQUE', dossier: { ...dossierAnomalieFixture(), version: 2, enConflit: false } });
 
-    thenAbsent('conflit-diagnostic');
+    thenAbsent('anomalie-probleme');
     thenAbsent('anomalie-acte');
     thenTextContains('anomalie-adresse-invalide', 'L’adresse doit préciser');
   });
@@ -1778,20 +2169,50 @@ describe('Anomaly dossier page', () => {
 
     thenHeadingOfThePageIs('Dossier d’anomalie de pointage');
     thenTextContains('anomalie-retour', 'Retour aux anomalies');
-    thenAbsent('conflit-diagnostic');
+    thenTheProblemReads('Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 21:00.');
     thenPageDoesNotMention('conflit');
   });
 
-  it('should show the due activity with its start, its automatic end and its received duration', async () => {
+  it('should keep showing the due activity with its start, its automatic end and its received duration beside the problem', async () => {
     givenAnAutomaticEnd();
 
     await whenRendering();
 
-    thenTextContains('anomalie-fin-automatique', 'Fin automatique');
     thenTextContains('anomalie-fin-automatique-activite', 'Travail');
     thenTextContains('anomalie-fin-automatique-activite', 'Début lundi 14 septembre à 08:00');
     thenTextContains('anomalie-fin-automatique-activite', 'Fin automatique lundi 14 septembre à 21:00');
     thenTextContains('anomalie-fin-automatique-activite', 'Durée 13 h');
+  });
+
+  it.each(CAS_DE_FIN_AUTOMATIQUE)('should say the problem of $cas', async cas => {
+    givenAnAutomaticEndDiagnosedAs(cas);
+
+    await whenRendering();
+
+    thenTheProblemsRead([cas.phrase]);
+  });
+
+  it('should say one problem per due activity of the dossier', async () => {
+    givenTwoDueActivities();
+
+    await whenRendering();
+
+    thenTheProblemsRead([
+      'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 18:00.',
+      'La non-conformité démarrée à 09:00 n’a jamais été arrêtée : fin automatique à 19:00.',
+    ]);
+  });
+
+  it.each([
+    { cas: 'an activity that is not due', etat: 'TERMINEE' as const, periode: { fin: INSTANT_FIN_DE_TRAVAIL } },
+    { cas: 'a due activity without period', etat: 'ECHUE' as const },
+    { cas: 'a due activity whose end was not received', etat: 'ECHUE' as const, periode: {} },
+  ])('should say nothing of $cas on an automatic end', async ({ etat, periode }) => {
+    givenAnAutomaticEndWhoseActivityIs(etat, periode);
+
+    await whenRendering();
+
+    thenAbsent('anomalie-probleme');
   });
 
   it('should keep the closure of the workshop visible on an automatic end', async () => {
@@ -1806,20 +2227,25 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-cloture', 'lundi 14 septembre à 23:00');
   });
 
-  it('should not present the automatic end block on a conflict dossier', async () => {
+  it('should not show the facts of an automatic end on a conflict dossier', async () => {
     await whenRendering();
 
-    thenAbsent('anomalie-fin-automatique');
+    thenAbsent('anomalie-fin-automatique-activite');
   });
 
-  it('should keep both the conflict and the automatic end visible when the perimeter still carries both', async () => {
+  it('should say both the automatic end and the conflict when the perimeter still carries both', async () => {
     const dossier = dossierFinAutomatiqueFixture();
-    read.result = { kind: 'DOSSIER', dossier: { ...dossier, enConflit: true } };
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: { ...dossier, enConflit: true, ligne: { ...dossier.ligne, explication: 'Une fin vise le travail remplacé.' } },
+    };
 
     await whenRendering();
 
-    thenTextContains('anomalie-fin-automatique', 'Fin automatique');
-    thenTextContains('conflit-diagnostic', 'Pourquoi ces pointages sont incohérents');
+    thenTheProblemsRead([
+      'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 21:00.',
+      'Une fin vise le travail remplacé.',
+    ]);
   });
 
   it('should offer the guided end regularisation with its fact open and no time proposed', async () => {
@@ -2183,7 +2609,7 @@ describe('Anomaly dossier page', () => {
 
       await whenClicking('anomalie-confirmer');
 
-      thenAbsent('conflit-diagnostic');
+      thenAbsent('anomalie-probleme');
     },
   );
 
@@ -2193,7 +2619,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenAbsent('conflit-diagnostic');
+    thenAbsent('anomalie-probleme');
   });
 
   it('should not explain a conflict in the receipt of a conflict that the act resolved', async () => {
@@ -2205,7 +2631,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-confirmer');
 
     thenTextContains('anomalie-resultat', 'Anomalie traitée');
-    thenAbsent('conflit-diagnostic');
+    thenAbsent('anomalie-probleme');
   });
 
   const anomalieRestanteFixture = [
@@ -2427,6 +2853,165 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const pointageCiteFixture = (id: string, cite: PointageCiteFixture, activiteVisee: string): PointageAnomalie => ({
+    ...pointageDeLaFinFixture(),
+    id: new PointageAnomalieId(id),
+    fait: { ...faitConflitFixture(), ...GESTES_FIXTURE[cite.geste], activiteVisee, instant: instantAt(cite.heure) },
+    regularisation: cite.regularisation === true,
+  });
+
+  const givenAConflictDiagnosedAs = (cas: CasDeConflitFixture): void => {
+    const dossier = dossierAnomalieFixture();
+    const cites = [
+      { id: 'fin-17', cite: cas.enCause },
+      ...(cas.ouvrant === undefined ? [] : [{ id: 'debut-8', cite: cas.ouvrant }]),
+      ...(cas.termineePar === undefined ? [] : [{ id: 'nc-12', cite: cas.termineePar }]),
+    ];
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: cites
+          .filter(({ cite }) => cite.absentDuJournal !== true)
+          .map(({ id, cite }) => pointageCiteFixture(id, cite, 'travail-8')),
+        activites: cas.activite === undefined ? [] : [activiteCiteFixture(cas.activite)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-17'),
+            raison: cas.raison,
+            cible: {
+              activite: new ActiviteAnomalieId('travail-8'),
+              ...(cas.ouvrant === undefined ? {} : { ouvrant: new PointageAnomalieId('debut-8') }),
+              ...(cas.termineePar === undefined ? {} : { termineePar: new PointageAnomalieId('nc-12') }),
+            },
+          },
+        ],
+      },
+    };
+  };
+
+  const activiteCiteFixture = (cite: ActiviteCiteFixture): ActiviteAnomalie => ({
+    id: new ActiviteAnomalieId('travail-8'),
+    libelle: 'Travail ouvert à 8 h',
+    etat: 'A_RESOUDRE',
+    temps: 'À résoudre',
+    ...(cite.categorie === undefined ? {} : { periode: { categorie: cite.categorie, debut: instantAt(cite.debut ?? '08:00') } }),
+  });
+
+  const dueActivityFixture = (id: string, categorie: 'TRAVAIL' | 'NON_CONFORMITE', debut: string, fin: string): ActiviteAnomalie => ({
+    id: new ActiviteAnomalieId(id),
+    libelle: '',
+    etat: 'ECHUE',
+    temps: '',
+    periode: { categorie, debut: instantAt(debut), fin: instantAt(fin), duree: 'PT10H' },
+  });
+
+  const lateChoiceFixture = (tardif: NonNullable<CasDeFinAutomatiqueFixture['tardif']>): ChoixGuide => ({
+    id: `${tardif.code}:tardif-30`,
+    code: tardif.code,
+    libelle: '',
+    explication: '',
+    saisie:
+      tardif.sansCorrection === true
+        ? finARegulariserFixture()
+        : SaisieActe.correct('tardif-30', {
+            ...faitConflitFixture(),
+            activiteVisee: tardif.activiteVisee ?? 'travail-8',
+            instant: instantAt(tardif.pointage.heure),
+          }),
+  });
+
+  const givenAnAutomaticEndDiagnosedAs = (cas: CasDeFinAutomatiqueFixture): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const tardif = cas.tardif;
+    const dansLeJournal = tardif !== undefined && tardif.pointage.absentDuJournal !== true;
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [...dossier.journal, ...(dansLeJournal ? [pointageCiteFixture('tardif-30', tardif.pointage, 'travail-8')] : [])],
+        activites: [dueActivityFixture('travail-8', cas.categorie, '08:00', '18:00')],
+        choix: [...dossier.choix, ...(tardif === undefined ? [] : [lateChoiceFixture(tardif)])],
+      },
+    };
+  };
+
+  const givenTwoDueActivities = (): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [
+          dueActivityFixture('travail-8', 'TRAVAIL', '08:00', '18:00'),
+          dueActivityFixture('nc-9', 'NON_CONFORMITE', '09:00', '19:00'),
+        ],
+      },
+    };
+  };
+
+  const givenAnAutomaticEndWhoseActivityIs = (etat: ActiviteAnomalie['etat'], periode?: { fin?: string }): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [
+          {
+            id: new ActiviteAnomalieId('travail-8'),
+            libelle: '',
+            temps: '',
+            etat,
+            ...(periode === undefined
+              ? {}
+              : { periode: { categorie: 'TRAVAIL' as const, debut: INSTANT_DEBUT, duree: 'PT9H', ...periode } }),
+          },
+        ],
+      },
+    };
+  };
+
+  const givenTwoDiagnostics = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('fin-17', ARRET_17, 'travail-8'), pointageCiteFixture('debut-8', DEMARRAGE_8, '')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: ['fin-17', 'debut-8'].map(pointage => ({
+          pointage: new PointageAnomalieId(pointage),
+          raison: 'CIBLE_REMPLACEE' as const,
+          cible: { activite: new ActiviteAnomalieId('travail-8') },
+        })),
+      },
+    };
+  };
+
+  const givenAChallengedPointageWithAnUnreadableInstant = (): void => {
+    const dossier = dossierAnomalieFixture();
+    const [pointage] = dossier.journal;
+    if (pointage === undefined) throw new Error('Expected a challenged pointage');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [{ ...pointage, fait: { ...pointage.fait, instant: 'illisible' } }],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteAnomalieId('travail-8') },
+          },
+        ],
+      },
+    };
+  };
+
   const givenACorrectedTerminatingFact = (): void => {
     const dossier = dossierAnomalieFixture();
     const corrected = new PointageAnomalieId('90000000-0000-0000-0000-000000000001');
@@ -2458,41 +3043,6 @@ describe('Anomaly dossier page', () => {
             pointage: new PointageAnomalieId('fin-17'),
             raison: 'CIBLE_REMPLACEE',
             cible: { activite: new ActiviteAnomalieId('travail-8'), termineePar: corrected },
-          },
-        ],
-      },
-    };
-  };
-
-  const givenTheOpeningFactReferencedByTheDiagnostic = (): void => {
-    const dossier = dossierAnomalieFixture();
-    read.result = {
-      kind: 'DOSSIER',
-      dossier: {
-        ...dossier,
-        journal: [
-          ...dossier.journal,
-          {
-            id: new PointageAnomalieId('debut-8'),
-            fait: {
-              ...faitConflitFixture(),
-              type: 'DEBUT',
-              intention: 'OUVERTURE',
-              activiteVisee: '',
-              instant: INSTANT_DEBUT,
-            },
-            operateurNom: 'Camille Martin',
-            posteLibelle: 'DMU 50',
-            auteur: 'camille',
-            enregistre: INSTANT_ENREGISTREMENT,
-            regularisation: false,
-          },
-        ],
-        diagnostics: [
-          {
-            pointage: new PointageAnomalieId('fin-17'),
-            raison: 'CIBLE_REMPLACEE',
-            cible: { activite: new ActiviteAnomalieId('travail-8'), ouvrant: new PointageAnomalieId('debut-8') },
           },
         ],
       },
@@ -2729,18 +3279,6 @@ describe('Anomaly dossier page', () => {
     await fixture.whenStable();
   };
 
-  const whenFollowingTheDiagnosticReference = async (selector: string): Promise<void> => {
-    await whenClicking(selector);
-    await roundTripFixture(() => undefined);
-    await fixture.whenStable();
-  };
-
-  const whenClosingTheReceivedTrace = async (pointage: string): Promise<void> => {
-    requiredFixture(receivedFact(pointage).querySelector('summary'), 'received trace summary').click();
-    await roundTripFixture(() => undefined);
-    await fixture.whenStable();
-  };
-
   const whenRendering = async (): Promise<void> => {
     fixture = TestBed.createComponent(DossierAnomaliePage);
     await fixture.whenStable();
@@ -2762,8 +3300,12 @@ describe('Anomaly dossier page', () => {
     element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
 
   const present = (selector: string): boolean => (fixture.nativeElement as HTMLElement).querySelector(dataSelector(selector)) !== null;
-  const thenTextReads = (selector: string, expected: string): void => {
-    expect(element(selector).textContent.replace(/\s+/g, ' ')).toContain(expected);
+  const thenTheProblemReads = (expected: string): void => {
+    expect(element('anomalie-probleme').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+  const thenTheProblemsRead = (expected: readonly string[]): void => {
+    const problemes = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-probleme'))];
+    expect(problemes.map(probleme => probleme.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
   };
   const thenTextContains = (selector: string, expected: string): void => {
     expect(element(selector).textContent).toContain(expected);
@@ -2787,12 +3329,6 @@ describe('Anomaly dossier page', () => {
   };
   const thenReceivedTraceShowsNoIdentifier = (pointage: string, identifiers: readonly string[]): void => {
     for (const identifier of identifiers) thenReceivedTraceDoesNotContain(pointage, identifier);
-  };
-  const thenDiagnosticReferencesTheReceivedFact = (selector: string, pointage: string, label: string): void => {
-    const link = element(selector);
-    expect(new URL(requiredFixture(link.getAttribute('href'), 'diagnostic link'), 'https://fixture').hash).toBe(`#pointage-${pointage}`);
-    expect(link.textContent.replace(/\s+/g, ' ').trim()).toBe(label);
-    expect(receivedFact(pointage).id).toBe(`pointage-${pointage}`);
   };
   const gestureOf = (pointage: string): HTMLElement =>
     requiredFixture(receivedFact(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-geste')), 'received fact gesture');
@@ -2827,9 +3363,6 @@ describe('Anomaly dossier page', () => {
   };
   const receivedFactTime = (pointage: string): HTMLElement =>
     requiredFixture(receivedFact(pointage).querySelector<HTMLElement>('time'), 'received fact time');
-  const thenReceivedFactDetailsAreOpen = (pointage: string): void => {
-    expect(receivedFact(pointage).querySelector<HTMLDetailsElement>('details')?.open).toBe(true);
-  };
   const receivedFact = (pointage: string): HTMLElement => {
     const journal = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-pointage'))];
     return requiredFixture(

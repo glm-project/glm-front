@@ -17,13 +17,13 @@ import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { anomalieTraitee } from '../../../domain/dossier/AnomalieTraitee';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
-import { conflitAExpliquer } from '../../../domain/dossier/ConflitAExpliquer';
 import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
   detailDuPointage,
   labelForActivite,
@@ -74,7 +74,7 @@ export class DossierAnomaliePage {
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
   protected readonly anomalieTraitee = anomalieTraitee;
-  protected readonly conflitAExpliquer = conflitAExpliquer;
+  protected readonly problemes = phrasesDuProbleme;
   protected readonly libelleActivite = libelleActivite;
   protected readonly libelleDuGeste = libelleDuGeste;
   protected readonly labelForActivite = labelForActivite;
@@ -84,7 +84,6 @@ export class DossierAnomaliePage {
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly propositionsFaites = signal(0);
-  protected readonly pointageConsulte = signal<string | undefined>(undefined);
   protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
   protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
@@ -130,10 +129,8 @@ export class DossierAnomaliePage {
     );
   }
 
-  protected referencePointage(journal: readonly PointageAnomalie[], identifiant: string): Readonly<{ libelle: string; lien?: string }> {
-    const reference = referencePointage(journal, identifiant, this.now);
-    if (reference.pointage === undefined) return { libelle: reference.libelle };
-    return { libelle: reference.libelle, lien: this.hrefForRepere(`pointage-${reference.pointage.id.pointage}`) };
+  protected libelleDuPointage(journal: readonly PointageAnomalie[], identifiant: string): string {
+    return referencePointage(journal, identifiant, this.now).libelle;
   }
 
   private hrefForRepere(repere: string): string {
@@ -182,11 +179,6 @@ export class DossierAnomaliePage {
   protected hrefForActivite(id: string, dossier: DossierAnomalie): string {
     const origine = dossier.journal.find(pointage => pointage.activiteCreee?.activite === id);
     return this.hrefForRepere(origine === undefined ? `activite-${id}` : `pointage-${origine.id.pointage}`);
-  }
-
-  protected traceToggled(pointage: string, ouverte: boolean): void {
-    const consultationFermee = !ouverte && this.pointageConsulte() === pointage;
-    if (consultationFermee) this.pointageConsulte.set(undefined);
   }
 
   protected correct(pointage: PointageAnomalie): void {
