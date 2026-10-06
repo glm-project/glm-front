@@ -1946,6 +1946,17 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-fin-automatique-restante');
   });
 
+  it('should link no automatic end in the receipt of an automatic end that is still the one the manager is on', async () => {
+    givenAnAutomaticEndStillExpiredAfterItsRegularisation();
+    await whenRendering();
+
+    await whenPreviewingTheDatedEnd();
+    await whenClicking('anomalie-confirmer');
+
+    thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
+    thenAbsent('anomalie-fin-automatique-restante');
+  });
+
   it('should announce the remaining automatic end in the preview without linking it', async () => {
     givenALiftedConflictLeavingExpiredActivities(['debut-8']);
     await whenRendering();
@@ -3825,6 +3836,17 @@ describe('Anomaly dossier page', () => {
     const apres = { ...dossierFinAutomatiqueFixture(), ...resultat };
     givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'), dossierFinAutomatiqueFixture());
     application.result = { kind: 'APPLIQUE', dossier: apres };
+  };
+
+  const givenAnAutomaticEndStillExpiredAfterItsRegularisation = (): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const adressee = {
+      ...dossier,
+      ligne: { ...dossier.ligne, adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') } },
+    };
+    read.result = { kind: 'DOSSIER', dossier: adressee };
+    givenASuccessfulPreview(adressee, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'), adressee);
+    application.result = { kind: 'APPLIQUE', dossier: adressee };
   };
 
   const whenAskingTwiceToVerifyTheReceipt = async (): Promise<

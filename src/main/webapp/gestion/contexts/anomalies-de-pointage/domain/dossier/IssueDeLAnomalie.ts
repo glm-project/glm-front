@@ -1,6 +1,6 @@
 import { AdresseDossier, DossierAnomalie } from './DossierAnomalie';
 
-type Origine = Pick<DossierAnomalie, 'etat' | 'enConflit'>;
+type Origine = Pick<DossierAnomalie, 'etat' | 'enConflit'> & { readonly ligne: Pick<DossierAnomalie['ligne'], 'adresse'> };
 type Apres = Pick<DossierAnomalie, 'enConflit' | 'finAutomatique' | 'ligne' | 'activites'>;
 
 export class IssueDeLAnomalie {
@@ -13,7 +13,7 @@ export class IssueDeLAnomalie {
     const kind = IssueDeLAnomalie.estUnConflit(origine)
       ? IssueDeLAnomalie.issueDUnConflit(apres)
       : IssueDeLAnomalie.issueDUneFinAutomatique(apres);
-    return new IssueDeLAnomalie(kind, IssueDeLAnomalie.finsAutomatiquesRestantes(apres));
+    return new IssueDeLAnomalie(kind, IssueDeLAnomalie.finsAutomatiquesRestantesAilleursQue(origine.ligne.adresse, apres));
   }
 
   private static estUnConflit(origine: Origine): boolean {
@@ -29,9 +29,10 @@ export class IssueDeLAnomalie {
     return apres.enConflit || apres.finAutomatique ? 'ANOMALIE_RESTANTE' : 'TRAITEE';
   }
 
-  private static finsAutomatiquesRestantes(apres: Apres): readonly AdresseDossier[] {
+  private static finsAutomatiquesRestantesAilleursQue(adresse: AdresseDossier, apres: Apres): readonly AdresseDossier[] {
     return apres.activites
       .filter(activite => activite.etat === 'ECHUE')
-      .map(activite => ({ suivi: apres.ligne.adresse.suivi, pointage: activite.ouvrant }));
+      .map(activite => ({ suivi: apres.ligne.adresse.suivi, pointage: activite.ouvrant }))
+      .filter(restante => !(restante.suivi.equals(adresse.suivi) && restante.pointage.equals(adresse.pointage)));
   }
 }

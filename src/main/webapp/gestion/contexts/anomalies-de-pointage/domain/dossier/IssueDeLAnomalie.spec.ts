@@ -48,7 +48,10 @@ describe('Outcome of an anomaly after an act', () => {
     { origine: { etat: 'FIN_AUTOMATIQUE' as const, enConflit: true }, attendue: 'ANOMALIE_RESTANTE' },
     { origine: { etat: 'EN_CONFLIT' as const, enConflit: false }, attendue: 'ANOMALIE_RESTANTE' },
   ])('should read the nature of an origin that is $origine.etat with a conflict of $origine.enConflit', ({ origine, attendue }) => {
-    const issue = IssueDeLAnomalie.depuis(origine, unDossierApres({ enConflit: true, finAutomatique: true }));
+    const issue = IssueDeLAnomalie.depuis(
+      { ...origine, ligne: uneLigneAdressee('fin-17') },
+      unDossierApres({ enConflit: true, finAutomatique: true }),
+    );
 
     expect(issue.kind).toBe(attendue);
   });
@@ -82,6 +85,39 @@ describe('Outcome of an anomaly after an act', () => {
     expect(issue.finsAutomatiquesRestantes.map(adresse => adresse.pointage.pointage)).toEqual(['debut-8', 'debut-10']);
   });
 
+  it('should not address the automatic end of the dossier the manager is on, only the ones elsewhere', () => {
+    const apres = {
+      ...unDossierApres({ enConflit: false, finAutomatique: true }),
+      activites: [uneActivite('travail-8', 'ECHUE', 'debut-8'), uneActivite('travail-10', 'ECHUE', 'debut-10')],
+    };
+
+    const issue = IssueDeLAnomalie.depuis(uneFinAutomatiqueAdressee('debut-8'), apres);
+
+    expect(issue.finsAutomatiquesRestantes.map(adresse => adresse.pointage.pointage)).toEqual(['debut-10']);
+  });
+
+  it('should address no automatic end when the only one remaining is the one of the dossier the manager is on', () => {
+    const apres = {
+      ...unDossierApres({ enConflit: false, finAutomatique: true }),
+      activites: [uneActivite('travail-8', 'ECHUE', 'debut-8')],
+    };
+
+    const issue = IssueDeLAnomalie.depuis(uneFinAutomatiqueAdressee('debut-8'), apres);
+
+    expect(issue.finsAutomatiquesRestantes).toEqual([]);
+  });
+
+  it('should address the automatic end of another follow-up even when its opening pointage bears the same name', () => {
+    const apres = {
+      ...unDossierApres({ enConflit: false, finAutomatique: true }),
+      activites: [uneActivite('travail-8', 'ECHUE', 'debut-8')],
+    };
+
+    const issue = IssueDeLAnomalie.depuis(uneFinAutomatiqueAdressee('debut-8', 'suivi-autre'), apres);
+
+    expect(issue.finsAutomatiquesRestantes.map(adresse => adresse.pointage.pointage)).toEqual(['debut-8']);
+  });
+
   it('should address no automatic end when no activity is expired', () => {
     const apres = {
       ...unDossierApres({ enConflit: false, finAutomatique: false }),
@@ -93,9 +129,27 @@ describe('Outcome of an anomaly after an act', () => {
     expect(issue.finsAutomatiquesRestantes).toEqual([]);
   });
 
-  const unConflit = (): Pick<DossierAnomalie, 'etat' | 'enConflit'> => ({ etat: 'EN_CONFLIT', enConflit: true });
+  const unConflit = (): Pick<DossierAnomalie, 'etat' | 'enConflit' | 'ligne'> => ({
+    etat: 'EN_CONFLIT',
+    enConflit: true,
+    ligne: uneLigneAdressee('fin-17'),
+  });
 
-  const uneFinAutomatique = (): Pick<DossierAnomalie, 'etat' | 'enConflit'> => ({ etat: 'FIN_AUTOMATIQUE', enConflit: false });
+  const uneFinAutomatique = (): Pick<DossierAnomalie, 'etat' | 'enConflit' | 'ligne'> => ({
+    etat: 'FIN_AUTOMATIQUE',
+    enConflit: false,
+    ligne: uneLigneAdressee('debut-1'),
+  });
+
+  const uneFinAutomatiqueAdressee = (pointage: string, suivi?: string): ReturnType<typeof uneFinAutomatique> => ({
+    ...uneFinAutomatique(),
+    ligne: uneLigneAdressee(pointage, suivi),
+  });
+
+  const uneLigneAdressee = (pointage: string, suivi = 'suivi-1'): DossierAnomalie['ligne'] => ({
+    ...unDossierApres({ enConflit: false, finAutomatique: false }).ligne,
+    adresse: { suivi: new SuiviAnomalieId(suivi), pointage: new PointageAnomalieId(pointage) },
+  });
 
   const uneActivite = (id: string, etat: ActiviteAnomalie['etat'], ouvrant: string): ActiviteAnomalie => ({
     id: new ActiviteAnomalieId(id),
