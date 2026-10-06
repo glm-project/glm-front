@@ -81,6 +81,8 @@ export const formatInstantNumericDateTime = (instant: Date): string => NUMERIC_D
 
 export const formatInstantTime = (instant: Date): string => TIME.format(instant);
 
+export const formatInstantTimeWithSeconds = (instant: Date): string => TIME_WITH_SECONDS.format(instant);
+
 export const formatInstantNumericDayMonth = (instant: Date): string => NUMERIC_DAY_MONTH.format(instant);
 
 export const formatInstantShortDateTime = (instant: Date): string => SHORT_DATE_TIME.format(instant);

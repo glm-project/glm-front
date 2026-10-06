@@ -371,9 +371,24 @@ describe('Conflict dossier in Gestion', () => {
   it('should offer an explicit detailed correction and preserve the received precision', () => {
     whenOpeningTheDossier();
     whenCorrectingTheEnd();
+    whenUnfoldingTheOperatorAndTheWorkstation();
 
     thenTheDetailedFactPreservesTheReceivedValues();
   });
+
+  it('should fold the operator and the workstation of a corrected pointage into one line by their names', () => {
+    whenOpeningTheDossier();
+
+    whenCorrectingTheEnd();
+
+    thenTheOperatorAndTheWorkstationAreFoldedIntoOneLine();
+  });
+
+  const thenTheOperatorAndTheWorkstationAreFoldedIntoOneLine = (): void => {
+    cy.get(dataSelector('anomalie-identite')).should('contain.text', `${operateurNomFixture} · ${posteLibelleFixture}`);
+    cy.get(dataSelector('anomalie-operateur')).should('not.exist');
+    cy.get(dataSelector('anomalie-poste')).should('not.exist');
+  };
 
   it('should send the received instant untouched, nanoseconds included, when only the reason is entered', () => {
     whenOpeningTheDossier();
@@ -434,7 +449,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.wait('@apercu').its('request.body.acte.fait.instant').should('equal', instant);
   };
 
-  it('should ask for the missing fact without choosing a type or intention or requesting a reason', () => {
+  it('should ask for the missing fact without choosing what the pointage signals or requesting a reason', () => {
     whenOpeningTheDossier();
     whenRegularisingAMissingFact();
 
@@ -452,7 +467,12 @@ describe('Conflict dossier in Gestion', () => {
     thenThePreviewedActNames(autreOperateurFixture, autrePosteFixture);
   });
 
+  const whenUnfoldingTheOperatorAndTheWorkstation = (): void => {
+    cy.get(dataSelector('anomalie-identite-modifier')).click();
+  };
+
   const whenChoosingTheOperatorBySearching = (search: string, name: string): void => {
+    whenUnfoldingTheOperatorAndTheWorkstation();
     cy.get(dataSelector('anomalie-operateur')).click();
     cy.get(dataSelector('anomalie-operateur-recherche')).type(search);
     cy.get(dataSelector('anomalie-operateur-proposition')).should('have.length', 1).and('have.text', name).click();
@@ -642,6 +662,7 @@ describe('Conflict dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-droits')).should('contain.text', 'gestionnaires');
     cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
     cy.get(dataSelector('anomalie-choix')).should('be.disabled');
+    cy.get(dataSelector('anomalie-action-directe')).should('have.length', 1).and('be.disabled');
     cy.get(dataSelector('anomalie-corriger')).should('be.disabled');
     cy.get(dataSelector('anomalie-annuler')).should('be.disabled');
     cy.get(dataSelector('anomalie-regulariser')).should('be.disabled');
@@ -762,16 +783,16 @@ describe('Conflict dossier in Gestion', () => {
   };
 
   const thenTheMissingFactRequiresAnExplicitDecision = (): void => {
-    cy.get('input[name="type-acte"]:checked').should('not.exist');
-    cy.get('input[name="intention-acte"]:checked').should('not.exist');
+    cy.get(dataSelector('anomalie-signal')).find('option:selected').should('have.text', 'Choisissez ce que signale le pointage');
     thenTheInstantFieldsAreEmpty();
     cy.get(dataSelector('anomalie-motif')).should('not.exist');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
-    cy.get(dataSelector('anomalie-validation')).should('contain.text', 'Choisissez le type');
+    cy.get(dataSelector('anomalie-validation')).should('contain.text', 'Choisissez ce que signale le pointage');
   };
 
   const thenTheDetailedFactPreservesTheReceivedValues = (): void => {
     thenTheInstantFieldsShow(instantFinLocalFixture);
+    cy.get(dataSelector('anomalie-signal')).find('option:selected').should('have.text', 'Arrêt');
     cy.get(dataSelector('anomalie-operateur')).should('contain.text', `${operateurNomFixture} · ${operateurCodeFixture}`);
     cy.get(dataSelector('anomalie-poste'))
       .should('have.value', posteFixture)

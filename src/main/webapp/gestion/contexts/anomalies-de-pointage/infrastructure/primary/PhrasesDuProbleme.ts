@@ -5,7 +5,7 @@ import { finARegulariser } from '../../domain/dossier/FinsARegulariser';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { pointagesTardifs } from '../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
-import { heureDe, libelleDuGeste } from './PresentationDossier';
+import { defini, gesteDuPointage, heureDe, libelleDuGeste, minuscule } from './PresentationDossier';
 
 type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
 type CategorieActivite = PeriodeActivite['categorie'];
@@ -26,15 +26,12 @@ const CATEGORIE_DU_TYPE: Readonly<Partial<Record<TypePointage, CategorieActivite
 };
 
 const majuscule = (texte: string): string => texte.charAt(0).toUpperCase() + texte.slice(1);
-const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
-const defini = (geste: string): string => (/^[aeiou]/i.test(geste) ? `l’${minuscule(geste)}` : `le ${minuscule(geste)}`);
 const indefini = (geste: string): string => `un ${minuscule(geste)}`;
 
-const geste = (pointage: PointageAnomalie): string =>
-  pointage.regularisation ? `${libelleDuGeste(pointage.fait)} ${PROBLEMES.regularise}` : libelleDuGeste(pointage.fait);
-
 const sujetDe = (pointage: PointageAnomalie | undefined): string =>
-  pointage === undefined ? PROBLEMES.pointageNonResolu : majuscule(`${defini(geste(pointage))} de ${heureDe(pointage.fait.instant)}`);
+  pointage === undefined
+    ? PROBLEMES.pointageNonResolu
+    : majuscule(`${defini(gesteDuPointage(pointage))} de ${heureDe(pointage.fait.instant)}`);
 
 const pointageDu = (journal: readonly PointageAnomalie[], identifiant: PointageAnomalieId | undefined): PointageAnomalie | undefined =>
   identifiant === undefined ? undefined : journal.find(pointage => pointage.id.equals(identifiant));

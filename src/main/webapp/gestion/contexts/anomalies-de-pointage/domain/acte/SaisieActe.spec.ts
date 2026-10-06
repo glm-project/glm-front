@@ -52,6 +52,26 @@ describe('Preparation of a resolution acte', () => {
     expect(modifiee.command(cadreOuvert)).toBeUndefined();
     expect(modifiee.errors(cadreOuvert)).toContain('INTENTION_REQUISE');
   });
+  it.each([
+    [{ type: 'DEBUT' }, 'INTENTION_REQUISE'],
+    [{ intention: 'OUVERTURE' }, 'TYPE_REQUIS'],
+  ] as const)('should only ask for what is missing when the gesture is half chosen', (changement, erreur) => {
+    const saisie = SaisieActe.regularise().afterChange({
+      fait: { ...changement, operateur: 'operateur-1', instant: '2026-09-14T10:00:00Z' },
+    });
+
+    expect(saisie.errors(cadreOuvert)).toEqual([erreur]);
+  });
+  it.each([
+    [{ type: 'FIN' }, 'INTENTION_REQUISE'],
+    [{ intention: 'FIN', activiteVisee: 'travail-8' }, 'TYPE_REQUIS'],
+  ] as const)('should not call a half chosen stop incompatible, only ask for what is missing', (changement, erreur) => {
+    const saisie = SaisieActe.regularise().afterChange({
+      fait: { ...changement, operateur: 'operateur-1', instant: '2026-09-14T10:00:00Z' },
+    });
+
+    expect(saisie.errors(cadreOuvert)).toEqual([erreur]);
+  });
   it('should accept a motif of exactly two hundred and fifty five characters', () => {
     const saisie = SaisieActe.cancel('fin-17').afterChange({ motif: 'x'.repeat(255) });
 
@@ -321,5 +341,49 @@ describe('Bounds of the instant of a fact', () => {
     const saisie = SaisieActe.regularise({ ...faitFixture, instant: '2099-01-01T00:00:00-03:00' });
 
     expect(saisie.matches({ kind: 'REGULARISATION', fait: { ...faitFixture, instant: '2099-01-01T00:00:00-03:00' } })).toBe(true);
+  });
+});
+
+describe('Operator missing from an entry', () => {
+  it.each([
+    { saisie: SaisieActe.regularise(), manque: true },
+    { saisie: SaisieActe.regularise({ ...faitFixture, operateur: 'op-camille' }), manque: false },
+    { saisie: SaisieActe.regularise({ ...faitFixture, operateur: '   ' }), manque: true },
+    { saisie: SaisieActe.correct('fin-17', { ...faitFixture, operateur: '' }), manque: true },
+    { saisie: SaisieActe.cancel('fin-17'), manque: false },
+    { saisie: SaisieActe.empty(), manque: false },
+  ])('should say whether the operator is missing, $manque', ({ saisie, manque }) => {
+    expect(saisie.operateurManque()).toBe(manque);
+  });
+});
+
+describe('Target that applies to an entry', () => {
+  it.each([
+    { saisie: SaisieActe.regularise({ ...faitFixture, type: 'DEBUT', intention: 'OUVERTURE', activiteVisee: '' }), applicable: false },
+    {
+      saisie: SaisieActe.regularise({ ...faitFixture, type: 'DEBUT', intention: 'OUVERTURE', activiteVisee: 'travail-8' }),
+      applicable: true,
+    },
+    {
+      saisie: SaisieActe.regularise({ ...faitFixture, type: 'NON_CONFORMITE', intention: 'TRANSITION', activiteVisee: '' }),
+      applicable: true,
+    },
+    { saisie: SaisieActe.regularise({ ...faitFixture, type: 'FIN', intention: 'FIN', activiteVisee: '' }), applicable: true },
+    { saisie: SaisieActe.regularise(), applicable: false },
+    { saisie: SaisieActe.cancel('fin-17'), applicable: false },
+    { saisie: SaisieActe.empty(), applicable: false },
+  ])('should say whether a target applies, $applicable', ({ saisie, applicable }) => {
+    expect(saisie.cibleApplicable()).toBe(applicable);
+  });
+});
+
+describe('Acte of an entry', () => {
+  it.each([
+    { saisie: SaisieActe.cancel('fin-17'), acte: 'ANNULATION' },
+    { saisie: SaisieActe.correct('fin-17', faitFixture), acte: 'CORRECTION' },
+    { saisie: SaisieActe.regularise(), acte: 'REGULARISATION' },
+    { saisie: SaisieActe.empty(), acte: undefined },
+  ])('should name the acte the manager chose, $acte', ({ saisie, acte }) => {
+    expect(saisie.acte()).toBe(acte);
   });
 });

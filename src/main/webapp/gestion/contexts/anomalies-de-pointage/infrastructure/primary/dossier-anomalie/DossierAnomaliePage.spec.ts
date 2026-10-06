@@ -887,6 +887,175 @@ describe('Anomaly dossier page', () => {
     ]);
   });
 
+  it('should offer to cancel the pointage at fault and the one that already stopped the activity, named by their gesture and time', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 17:00', 'Annuler l’arrêt de 12:00']);
+  });
+
+  it('should preselect no direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenNoDirectActionIsPressed();
+  });
+
+  it('should list the propositions of the server, then the direct actions, then the other corrections', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenThePropositionsComeBeforeTheDirectActionsAndTheOtherCorrections();
+  });
+
+  it('should name the direct action on a regularised pointage as regularised', async () => {
+    givenARegularisedPassageAtFault();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler le passage en NC régularisé de 18:00']);
+  });
+
+  it('should prepare the cancellation of the pointage at fault when the manager chooses its direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-17');
+
+    thenTextContains('anomalie-acte', 'Annulation du pointage');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
+    thenOnlyTheDirectActionIsPressed('ANNULATION', 'fin-17');
+  });
+
+  it('should prepare the cancellation of the terminating pointage when the manager chooses its direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-12');
+
+    thenTextContains('anomalie-acte', 'Annulation du pointage');
+    thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 12:00:00');
+    thenOnlyTheDirectActionIsPressed('ANNULATION', 'fin-12');
+  });
+
+  it('should name the direct actions on a passage by its gesture, with the article of its gender', async () => {
+    givenAPassageBeforeTheOpeningOfItsActivity();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler le passage en NC de 07:00', 'Corriger l’heure du passage en NC de 07:00']);
+  });
+
+  it('should move the focus to the proposition when the manager chooses a direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-17');
+
+    expect(document.activeElement).toBe(element('anomalie-proposition-titre'));
+  });
+
+  it('should press only the proposition of the server when the manager chooses it after a direct action', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    await whenRendering();
+    await whenChoosingTheDirectAction('ANNULATION', 'fin-17');
+
+    await whenClicking('anomalie-choix');
+
+    thenInterpretationIsSelected();
+    thenNoDirectActionIsPressed();
+  });
+
+  it('should offer to cancel or to correct the time of a pointage made before the opening of its activity', async () => {
+    givenAStopBeforeTheOpeningOfItsActivity();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 07:00', 'Corriger l’heure de l’arrêt de 07:00']);
+  });
+
+  it('should prepare the correction of the time of the pointage and open its fact when the manager chooses its direct action', async () => {
+    givenAStopBeforeTheOpeningOfItsActivity();
+    await whenRendering();
+
+    await whenChoosingTheDirectAction('CORRECTION', 'fin-7');
+
+    thenTextContains('anomalie-acte', 'Correction du pointage');
+    thenTheInstantFieldsShow('14/09/2026', '07:00:00');
+    thenDetailedFactIsOpen();
+    thenOnlyTheDirectActionIsPressed('CORRECTION', 'fin-7');
+  });
+
+  it('should give the seconds of a pointage in its direct action when another pointage of the dossier falls in the same minute', async () => {
+    givenAnEndAtFaultInTheSameMinuteAsAnotherPointage();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 17:00:40']);
+  });
+
+  it('should leave out the seconds of a pointage in its direct action when the other pointages of the dossier fall in other minutes', async () => {
+    givenAnEndAtFaultInAnotherMinuteThanAnotherPointage();
+
+    await whenRendering();
+
+    thenTheDirectActionsAre(['Annuler l’arrêt de 17:00']);
+  });
+
+  it('should show no direct action section when the dossier has nothing to propose', async () => {
+    await whenRendering();
+
+    thenAbsent('anomalie-actions-directes');
+  });
+
+  it('should show no direct action section for an automatic end', async () => {
+    givenAnAutomaticEnd();
+
+    await whenRendering();
+
+    thenAbsent('anomalie-actions-directes');
+  });
+
+  it('should show the direct actions of a consultant disabled, with the reason', async () => {
+    givenAConsultantWhoCannotApplyDecisions();
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+
+    await whenRendering();
+
+    thenTheDirectActionsAreDisabled();
+    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
+  });
+
+  it('should disable the direct actions while a write has an unknown outcome', async () => {
+    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
+    givenASuccessfulPreview(undefined, acteCorrectionFixture, dossierAtFixture('fin-17', ''));
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenClicking('anomalie-confirmer');
+
+    thenTheDirectActionsAreDisabled();
+  });
+
+  it('should gather the manual corrections under Autres corrections instead of asking whether a pointage is missing', async () => {
+    await whenRendering();
+
+    thenTextContains('anomalie-detail', 'Autres corrections');
+    thenTextContains('anomalie-regulariser', 'Ajouter un pointage manquant');
+  });
+
+  it('should remind the manager that correcting or cancelling a pointage is done from the selection panel', async () => {
+    await whenRendering();
+
+    thenTextContains(
+      'anomalie-autres-corrections-aide',
+      'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
+    );
+  });
+
   it('should keep the received explanation when the conflict comes with no diagnostic', async () => {
     await whenRendering();
 
@@ -1236,38 +1405,6 @@ describe('Anomaly dossier page', () => {
     await whenCancelling('fin-17');
 
     thenTextContains('anomalie-proposition-resume', 'Arrêt · lundi 14 septembre à 17:00:00');
-  });
-
-  it('should keep the proposition summary readable with the type and intention entered when they are not a known gesture', async () => {
-    await whenRendering();
-    await whenClicking('anomalie-detail');
-    await whenCorrecting('fin-17');
-
-    await whenClicking('anomalie-intention-OUVERTURE');
-
-    thenTextContains('anomalie-proposition-resume', 'Fin · Ouverture · lundi 14 septembre à 17:00:00');
-  });
-
-  it('should keep the proposition summary readable when only the type of the fact is entered', async () => {
-    await whenRendering();
-    await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-regulariser');
-
-    await whenClicking('anomalie-type-DEBUT');
-    await whenEnteringTheInstant('14/09/2026', '17:00:00');
-
-    thenTextContains('anomalie-proposition-resume', 'Travail · lundi 14 septembre à 17:00:00');
-  });
-
-  it('should keep the proposition summary readable when only the intention of the fact is entered', async () => {
-    await whenRendering();
-    await whenClicking('anomalie-detail');
-    await whenClicking('anomalie-regulariser');
-
-    await whenClicking('anomalie-intention-OUVERTURE');
-    await whenEnteringTheInstant('14/09/2026', '17:00:00');
-
-    thenTextContains('anomalie-proposition-resume', 'Ouverture · lundi 14 septembre à 17:00:00');
   });
 
   it('should show no fact line in the proposition summary while neither type nor intention is entered', async () => {
@@ -2207,13 +2344,12 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
-    await whenClicking('anomalie-type-DEBUT');
-    await whenClicking('anomalie-intention-OUVERTURE');
+    await whenChoosingTheGesture('Démarrage');
     await whenEntering('anomalie-cible', '');
     await whenEntering('anomalie-motif', 'Ouverture confirmée');
     await whenClicking('anomalie-previsualiser');
 
-    thenTargetChoiceIs('', 'Aucune activité visée');
+    thenAbsent('anomalie-cible');
     expect(preview.actes).toEqual([
       {
         kind: 'CORRECTION',
@@ -2258,23 +2394,196 @@ describe('Anomaly dossier page', () => {
     thenFieldValueIs('anomalie-motif', '');
   });
 
-  it('should open detailed regularisation without any selected type or intention', async () => {
+  it('should open detailed regularisation without any chosen gesture', async () => {
     await whenRendering();
 
     await whenClicking('anomalie-detail');
     await whenClicking('anomalie-regulariser');
 
     thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
-    thenNothingIsChosen([
-      'anomalie-type-DEBUT',
-      'anomalie-type-NON_CONFORMITE',
-      'anomalie-type-FIN',
-      'anomalie-intention-OUVERTURE',
-      'anomalie-intention-TRANSITION',
-      'anomalie-intention-FIN',
-    ]);
+    thenGestureIs('Choisissez ce que signale le pointage');
     thenDetailedFactIsOpen();
     thenAbsent('anomalie-motif');
+  });
+
+  it('should offer the five gestures a pointage can signal, after an empty choice, when a missing fact is regularised from scratch', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-regulariser');
+
+    expect(gestureChoices()).toEqual([
+      'Choisissez ce que signale le pointage',
+      'Démarrage',
+      'Démarrage en NC',
+      'Passage en NC',
+      'Retour en bon',
+      'Arrêt',
+    ]);
+    thenGestureIs('Choisissez ce que signale le pointage');
+    expect(gestureSelect().options[0]?.disabled).toBe(true);
+  });
+
+  it('should show the gesture the pointage signals, without an empty choice, when a received pointage is corrected', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenCorrecting('fin-17');
+
+    expect(gestureChoices()).toEqual(['Démarrage', 'Démarrage en NC', 'Passage en NC', 'Retour en bon', 'Arrêt']);
+    thenGestureIs('Arrêt');
+  });
+
+  it.each(['Démarrage', 'Démarrage en NC', 'Passage en NC', 'Retour en bon', 'Arrêt'])(
+    'should propose the gesture "%s" the manager chooses for the pointage',
+    async geste => {
+      await whenRendering();
+      await whenClicking('anomalie-detail');
+      await whenCorrecting('fin-17');
+
+      await whenChoosingTheGesture(geste);
+
+      thenGestureIs(geste);
+      thenTextContains('anomalie-proposition-resume', `${geste} · lundi 14 septembre à 17:00:00`);
+    },
+  );
+
+  it.each(['Démarrage', 'Démarrage en NC'])('should not ask for the activity the gesture "%s" ends, as it ends none', async geste => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+
+    await whenChoosingTheGesture(geste);
+
+    thenAbsent('anomalie-cible');
+  });
+
+  it.each(['Passage en NC', 'Retour en bon', 'Arrêt'])('should ask for the activity the gesture "%s" ends', async geste => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+
+    await whenChoosingTheGesture(geste);
+
+    thenTargetChoiceIs('', 'Aucune activité visée');
+  });
+
+  it('should not ask for an activity before the manager says what the pointage signals', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-regulariser');
+
+    thenAbsent('anomalie-cible');
+  });
+
+  it('should keep the activity a start still aims at, so that the manager can clear it', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+
+    await whenChoosingTheGesture('Démarrage');
+
+    thenTargetChoiceIs('travail-8', 'Travail ouvert à 8 h');
+    thenTextContains('anomalie-validation', 'Une ouverture ne vise aucune activité');
+  });
+
+  it('should stop asking for the activity once the manager has cleared the one a start aimed at', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+    await whenChoosingTheGesture('Démarrage');
+
+    await whenEntering('anomalie-cible', '');
+
+    thenAbsent('anomalie-cible');
+  });
+
+  it('should fold the operator and the workstation of a corrected pointage into one line, by their names', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenCorrecting('fin-17');
+
+    thenTextContains('anomalie-identite', 'Camille Martin · DMU 50');
+    thenAbsent('anomalie-operateur');
+    thenAbsent('anomalie-poste');
+  });
+
+  it('should name what the modify button changes while keeping its visible text in its accessible name', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenCorrecting('fin-17');
+
+    thenTheButtonReads('anomalie-identite-modifier', 'Modifier', 'Modifier l’opérateur et le poste');
+  });
+
+  it('should unfold the operator and workstation fields when the manager asks to modify them', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+
+    await whenClicking('anomalie-identite-modifier');
+
+    thenOperatorIs('Camille Martin · 007');
+    thenPosteChoiceIs('poste-1', 'DMU 50');
+    thenTheIdentityIsUnfolded(true);
+  });
+
+  it('should fold the operator and workstation fields again when the manager asks to modify them twice', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+    await whenClicking('anomalie-identite-modifier');
+
+    await whenClicking('anomalie-identite-modifier');
+
+    thenAbsent('anomalie-operateur');
+    thenAbsent('anomalie-poste');
+    thenTheIdentityIsUnfolded(false);
+  });
+
+  it('should fold the operator and workstation fields again when the manager starts another proposition', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+    await whenClicking('anomalie-identite-modifier');
+
+    await whenClicking('anomalie-choix');
+
+    thenAbsent('anomalie-operateur');
+    thenTheIdentityIsUnfolded(false);
+  });
+
+  it('should name the operator the manager chose in the folded line', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+    await whenClicking('anomalie-identite-modifier');
+    await whenChoosingTheOperator('Alex Durand');
+
+    await whenClicking('anomalie-identite-modifier');
+
+    thenTextContains('anomalie-identite', 'Alex Durand · DMU 50');
+  });
+
+  it('should name an operator and a workstation the referential does not hold as unresolved in the folded line', async () => {
+    givenAnAutomaticEnd(finARegulariserFixture('poste-supprime', 'op-supprime'));
+
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    thenTextContains('anomalie-identite', 'Opérateur non résolu · Poste non résolu');
+  });
+
+  it('should say that no workstation is chosen in the folded line', async () => {
+    givenAnAutomaticEnd(finARegulariserFixture(''));
+
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+
+    thenTextContains('anomalie-identite', 'Camille Martin · Sans poste');
   });
 
   it('should offer the operators of the referential by name and pupitre code when the fact is edited', async () => {
@@ -2282,10 +2591,20 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
 
+    await whenClicking('anomalie-identite-modifier');
     await whenOpeningTheOperatorChoice();
 
     expect(operatorOptions()).toEqual(['Camille Martin · 007', 'Alex Durand', 'Zoé Évrard · 012']);
     thenTextDoesNotContainAnIdentifier('anomalie-fait-propose');
+  });
+
+  it('should say once what is missing about the gesture when a missing fact is regularised from scratch', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-regulariser');
+
+    thenTheValidationReads(['Choisissez ce que signale le pointage.', 'Choisissez l’opérateur.', 'Renseignez la date et l’heure du fait.']);
   });
 
   it('should ask to choose the operator, and say why the act cannot be previewed, when a missing fact is regularised from scratch', async () => {
@@ -2300,6 +2619,26 @@ describe('Anomaly dossier page', () => {
     thenPosteChoiceIs('', 'Sans poste');
   });
 
+  it('should show no line about the operator while a missing fact has none yet', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+
+    await whenClicking('anomalie-regulariser');
+
+    thenAbsent('anomalie-identite');
+    thenAbsent('anomalie-identite-modifier');
+  });
+
+  it('should name the operator in a line once the manager has chosen one for a missing fact', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenClicking('anomalie-regulariser');
+
+    await whenChoosingTheOperator('Zoé Évrard · 012');
+
+    thenTextContains('anomalie-identite', 'Zoé Évrard · Sans poste');
+  });
+
   it('should stop describing the operator control by an error once an operator is chosen', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
@@ -2311,11 +2650,21 @@ describe('Anomaly dossier page', () => {
     thenTheOperatorChoiceIsNoLongerDescribedByAnError();
   });
 
+  it('should label the gesture and the activity fields by what they decide', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+
+    expect(labelOf('anomalie-signal')).toBe('Ce que signale le pointage');
+    expect(labelOf('anomalie-cible')).toBe('Activité qu’il termine');
+  });
+
   it('should label the operator and workstation fields by their role, never by an identifier', async () => {
     await whenRendering();
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
 
+    await whenClicking('anomalie-identite-modifier');
     expect(labelOf('anomalie-operateur')).toBe('Opérateur concerné');
     expect(labelOf('anomalie-poste')).toBe('Poste (facultatif)');
   });
@@ -2325,6 +2674,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
 
+    await whenClicking('anomalie-identite-modifier');
     await whenChoosingTheOperator('Zoé Évrard · 012', '012');
     await whenEntering('anomalie-motif', 'Opérateur corrigé');
     await whenClicking('anomalie-previsualiser');
@@ -2333,11 +2683,34 @@ describe('Anomaly dossier page', () => {
     expect(preview.actes).toMatchObject([{ kind: 'CORRECTION', fait: { operateur: 'op-zoe' } }]);
   });
 
+  it('should withdraw the preview when the manager chooses another gesture', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenChoosingTheGesture('Retour en bon');
+
+    thenAbsent('anomalie-apercu');
+    thenAbsent('anomalie-confirmer');
+  });
+
+  it('should preview the type and intention of the gesture chosen after a former preview was withdrawn', async () => {
+    givenASuccessfulPreview();
+    await whenRendering();
+    await whenPreparingTheCorrection();
+    await whenChoosingTheGesture('Retour en bon');
+
+    await whenClicking('anomalie-previsualiser');
+
+    expect(preview.actes[1]).toMatchObject({ fait: { type: 'DEBUT', intention: 'TRANSITION' } });
+  });
+
   it('should withdraw the preview when the manager chooses another operator', async () => {
     givenASuccessfulPreview();
     await whenRendering();
     await whenPreparingTheCorrection();
 
+    await whenClicking('anomalie-identite-modifier');
     await whenChoosingTheOperator('Alex Durand');
 
     thenAbsent('anomalie-apercu');
@@ -2348,6 +2721,7 @@ describe('Anomaly dossier page', () => {
     givenASuccessfulPreview();
     await whenRendering();
     await whenPreparingTheCorrection();
+    await whenClicking('anomalie-identite-modifier');
     await whenChoosingTheOperator('Alex Durand');
 
     await whenClicking('anomalie-previsualiser');
@@ -2362,6 +2736,7 @@ describe('Anomaly dossier page', () => {
 
     await whenClicking('anomalie-choix');
 
+    await whenClicking('anomalie-identite-modifier');
     thenOperatorIs('Opérateur non résolu (référence actuelle)');
     thenPosteChoiceIs('poste-supprime', 'Poste non résolu (référence actuelle)');
     thenTextDoesNotContain('anomalie-fait-propose', 'op-supprime');
@@ -2374,6 +2749,7 @@ describe('Anomaly dossier page', () => {
 
     await whenCorrecting('fin-17');
 
+    await whenClicking('anomalie-identite-modifier');
     expect(posteChoices()).toEqual(['Sans poste', 'Postes habilités: DMU 50', 'Autres postes: Tour 1, Scie 1']);
   });
 
@@ -2382,6 +2758,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
 
+    await whenClicking('anomalie-identite-modifier');
     await whenChoosingTheOperator('Alex Durand');
 
     expect(posteChoices()).toEqual(['Sans poste', 'Postes habilités: Tour 1, Scie 1', 'Autres postes: DMU 50']);
@@ -2392,6 +2769,7 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-detail');
     await whenCorrecting('fin-17');
 
+    await whenClicking('anomalie-identite-modifier');
     await whenChoosingTheOperator('Zoé Évrard · 012');
 
     expect(posteChoices()).toEqual(['Sans poste', 'Autres postes: DMU 50, Tour 1, Scie 1']);
@@ -2402,6 +2780,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenPreparingTheCorrection();
 
+    await whenClicking('anomalie-identite-modifier');
     await whenEntering('anomalie-poste', 'poste-2');
 
     thenAbsent('anomalie-apercu');
@@ -2415,6 +2794,7 @@ describe('Anomaly dossier page', () => {
     givenASuccessfulPreview();
     await whenRendering();
     await whenPreparingTheCorrection();
+    await whenClicking('anomalie-identite-modifier');
     await whenEntering('anomalie-poste', choix);
 
     await whenClicking('anomalie-previsualiser');
@@ -2453,14 +2833,15 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-poste');
   });
 
-  it('should offer the operator and workstation fields once the referential has arrived', async () => {
+  it('should fold the operator and workstation fields into their line once the referential has arrived', async () => {
     const attente = givenTheReferentielIsStillLoading();
     await whenOpeningTheGuidedCorrectionWhileTheReferentielLoads(attente);
 
     await whenResponseArrives(attente, referentielFixture());
 
     thenAbsent('anomalie-referentiel-chargement');
-    thenOperatorIs('Camille Martin · 007');
+    thenAbsent('anomalie-operateur');
+    thenTextContains('anomalie-identite', 'Camille Martin · DMU 50');
   });
 
   it('should say that the referential is unavailable and keep the current choices, which can no longer be changed', async () => {
@@ -2476,6 +2857,51 @@ describe('Anomaly dossier page', () => {
     thenInputIsDisabled('anomalie-poste');
   });
 
+  it('should leave the unavailable referential open, with no way to fold it away', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenAbsent('anomalie-identite-modifier');
+  });
+
+  it('should leave the loading referential open, with no way to fold it away', async () => {
+    const attente = givenTheReferentielIsStillLoading();
+
+    await whenOpeningTheGuidedCorrectionWhileTheReferentielLoads(attente);
+
+    thenAbsent('anomalie-identite-modifier');
+  });
+
+  it('should show no line about the operator while the referential is unavailable, the fields already saying it', async () => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+
+    await whenClicking('anomalie-choix');
+
+    thenAbsent('anomalie-identite');
+  });
+
+  it('should show no line about the operator while the referential loads, the fields already saying it', async () => {
+    const attente = givenTheReferentielIsStillLoading();
+
+    await whenOpeningTheGuidedCorrectionWhileTheReferentielLoads(attente);
+
+    thenAbsent('anomalie-identite');
+  });
+
+  it('should keep the line about the operator and its button above the fields the manager unfolded by modifying', async () => {
+    await whenRendering();
+    await whenClicking('anomalie-detail');
+    await whenCorrecting('fin-17');
+
+    await whenClicking('anomalie-identite-modifier');
+
+    thenTextContains('anomalie-identite', 'Camille Martin · DMU 50');
+    thenTheIdentityIsUnfolded(true);
+  });
+
   it('should let the manager preview the current choices while the referential is unavailable', async () => {
     read.referentielFailure = new Error('Référentiel indisponible');
     await whenRendering();
@@ -2488,12 +2914,9 @@ describe('Anomaly dossier page', () => {
   });
 
   it('should offer the operators and workstations again once the manager retries an unavailable referential', async () => {
-    read.referentielFailure = new Error('Référentiel indisponible');
-    await whenRendering();
-    await whenClicking('anomalie-choix');
-    read.referentielFailure = undefined;
+    await givenAnUnavailableReferentielRetried();
 
-    await whenClicking('anomalie-referentiel-retry');
+    await whenClicking('anomalie-identite-modifier');
 
     thenAbsent('anomalie-referentiel-erreur');
     thenOperatorIs('Camille Martin · 007');
@@ -2767,10 +3190,9 @@ describe('Anomaly dossier page', () => {
     thenPageDoesNotMention('pointages et rattachements');
   });
 
-  it('should offer to regularise a missing pointage by the frise, not by a chronology the page no longer shows', async () => {
+  it('should not refer to a chronology the page no longer shows', async () => {
     await whenRendering();
 
-    thenTextContains('anomalie-detail', 'Un pointage manque sur la frise ?');
     thenPageDoesNotMention('chronologie');
   });
 
@@ -2879,7 +3301,7 @@ describe('Anomaly dossier page', () => {
     thenTextContains('anomalie-acte', 'Régularisation d’un fait manquant');
     thenTheInstantFieldsShow('', '');
     thenFieldValueIs('anomalie-cible', 'travail-8');
-    thenOperatorIs('Camille Martin · 007');
+    thenTextContains('anomalie-identite', 'Camille Martin · DMU 50');
     thenTextContains('anomalie-validation', 'Renseignez la date et l’heure du fait.');
     thenDetailedFactIsOpen();
     thenAbsent('anomalie-motif');
@@ -2985,6 +3407,7 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
     await whenClicking('anomalie-choix');
 
+    await whenClicking('anomalie-identite-modifier');
     await whenChoosingTheOperator('Alex Durand');
 
     thenNoInterpretationIsSelected();
@@ -3138,6 +3561,17 @@ describe('Anomaly dossier page', () => {
     thenInputIsDisabled('anomalie-instant-heure');
     thenTheButtonInsideIsDisabled('anomalie-instant-calendrier');
     thenTheButtonInsideIsDisabled('anomalie-instant-horloge');
+  });
+
+  it('should lock the choice of what the pointage signals while the outcome of a write is unknown', async () => {
+    givenASuccessfulPreview();
+    application.result = { kind: 'ISSUE_INCONNUE' };
+    await whenRendering();
+    await whenPreparingTheCorrection();
+
+    await whenClicking('anomalie-confirmer');
+
+    thenInputIsDisabled('anomalie-signal');
   });
 
   describe('handle of the proposed instant on the frise', () => {
@@ -3351,8 +3785,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenClicking('anomalie-choix');
 
-      await whenClicking('anomalie-type-DEBUT');
-      await whenClicking('anomalie-intention-OUVERTURE');
+      await whenChoosingTheGesture('Démarrage');
 
       thenAbsent('anomalie-poignee');
     });
@@ -3447,8 +3880,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenClicking('anomalie-choix');
 
-      await whenClicking('anomalie-type-NON_CONFORMITE');
-      await whenClicking('anomalie-intention-TRANSITION');
+      await whenChoosingTheGesture('Passage en NC');
 
       thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.');
     });
@@ -3516,8 +3948,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenClicking('anomalie-choix');
 
-      await whenClicking('anomalie-type-DEBUT');
-      await whenClicking('anomalie-intention-OUVERTURE');
+      await whenChoosingTheGesture('Démarrage');
 
       thenAbsent('anomalie-frise-placement');
     });
@@ -4365,6 +4796,109 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const givenAnActivityAlreadyStoppedBeforeTheEndAtFault = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('fin-17', ARRET_17, 'travail-8'), pointageCiteFixture('fin-12', ARRET_12, 'travail-8')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-17'),
+            raison: 'CIBLE_DEJA_TERMINEE',
+            cible: { activite: new ActiviteAnomalieId('travail-8'), termineePar: new PointageAnomalieId('fin-12') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenARegularisedPassageAtFault = (): void => {
+    givenAConflictDiagnosedAs({
+      cas: 'a regularised passage at fault',
+      raison: 'CONTRADICTION_REGULARISATION',
+      enCause: { geste: 'PASSAGE_NC', heure: '18:00', regularisation: true },
+      activite: TRAVAIL_8,
+      phrase: '',
+    });
+  };
+
+  const givenAStopBeforeTheOpeningOfItsActivity = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('fin-7', ARRET_7, 'travail-8'), pointageCiteFixture('debut-8', DEMARRAGE_8, '')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-7'),
+            raison: 'GESTE_AVANT_OUVERTURE',
+            cible: { activite: new ActiviteAnomalieId('travail-8'), ouvrant: new PointageAnomalieId('debut-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAPassageBeforeTheOpeningOfItsActivity = (): void => {
+    const dossier = dossierAnomalieFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [pointageCiteFixture('nc-7', { geste: 'PASSAGE_NC', heure: '07:00' }, 'travail-8')],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('nc-7'),
+            raison: 'GESTE_AVANT_OUVERTURE',
+            cible: { activite: new ActiviteAnomalieId('travail-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAnEndAtFaultAndAnotherPointageAt = (autre: Date): void => {
+    const dossier = dossierAnomalieFixture();
+    const arret = pointageCiteFixture('fin-17', ARRET_17, 'travail-8');
+    const demarrage = pointageCiteFixture('debut-8', DEMARRAGE_8, '');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, explication: '' },
+        journal: [
+          { ...arret, fait: { ...arret.fait, instant: instantLocalFixture(new Date(2026, 8, 14, 17, 0, 40)) } },
+          { ...demarrage, fait: { ...demarrage.fait, instant: instantLocalFixture(autre) } },
+        ],
+        activites: [activiteCiteFixture(TRAVAIL_8)],
+        diagnostics: [
+          {
+            pointage: new PointageAnomalieId('fin-17'),
+            raison: 'CIBLE_REMPLACEE',
+            cible: { activite: new ActiviteAnomalieId('travail-8') },
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAnEndAtFaultInTheSameMinuteAsAnotherPointage = (): void => {
+    givenAnEndAtFaultAndAnotherPointageAt(new Date(2026, 8, 14, 17, 0, 10));
+  };
+
+  const givenAnEndAtFaultInAnotherMinuteThanAnotherPointage = (): void => {
+    givenAnEndAtFaultAndAnotherPointageAt(new Date(2026, 8, 14, 17, 1, 10));
+  };
+
   const givenTwoDiagnostics = (): void => {
     read.result = { kind: 'DOSSIER', dossier: dossierDiagnosedOn(['fin-17', 'debut-8']) };
   };
@@ -4538,6 +5072,18 @@ describe('Anomaly dossier page', () => {
     return attente;
   };
 
+  const givenAnUnavailableReferentielRetried = async (): Promise<void> => {
+    read.referentielFailure = new Error('Référentiel indisponible');
+    await whenRendering();
+    await whenClicking('anomalie-choix');
+    read.referentielFailure = undefined;
+    await whenClicking('anomalie-referentiel-retry');
+  };
+
+  const thenTheIdentityIsUnfolded = (unfolded: boolean): void => {
+    expect(element('anomalie-identite-modifier').getAttribute('aria-expanded')).toBe(String(unfolded));
+  };
+
   const thenTheRetryIsBusy = (): void => {
     expect(element('anomalie-referentiel-retry').getAttribute('aria-busy')).toBe('true');
   };
@@ -4604,6 +5150,23 @@ describe('Anomaly dossier page', () => {
     return select;
   };
 
+  const gestureSelect = (): HTMLSelectElement => {
+    const select = field('anomalie-signal');
+    if (!(select instanceof HTMLSelectElement)) throw new Error('Expected a gesture choice');
+    return select;
+  };
+
+  const gestureChoices = (): string[] => [...gestureSelect().options].map(option => option.textContent.trim());
+
+  const whenChoosingTheGesture = async (libelle: string): Promise<void> => {
+    const option = [...gestureSelect().options].find(candidate => candidate.textContent.trim() === libelle);
+    await whenEntering('anomalie-signal', requiredFixture(option, `gesture ${libelle}`).value);
+  };
+
+  const thenGestureIs = (libelle: string): void => {
+    expect(gestureSelect().selectedOptions[0]?.textContent.trim()).toBe(libelle);
+  };
+
   const posteChoices = (): string[] =>
     [...posteSelect().children].map(child =>
       child instanceof HTMLOptGroupElement
@@ -4611,6 +5174,10 @@ describe('Anomaly dossier page', () => {
         : child.textContent.trim(),
     );
 
+  const thenTheButtonReads = (selector: string, visibleText: string, accessibleName: string): void => {
+    expect(element(selector).textContent.trim()).toBe(visibleText);
+    expect(element(selector).getAttribute('aria-label')).toBe(accessibleName);
+  };
   const labelOf = (selector: string): string => {
     const label = (fixture.nativeElement as HTMLElement).querySelector<HTMLLabelElement>(`label[for="${element(selector).id}"]`);
     return requiredFixture(label, `label of ${selector}`).textContent.trim();
@@ -4796,6 +5363,11 @@ describe('Anomaly dossier page', () => {
     expect(frise().compareDocumentPosition(element('anomalie-selection')) & following).toBe(following);
     expect(element('anomalie-selection').compareDocumentPosition(element('anomalie-decision')) & following).toBe(following);
   };
+  const thenThePropositionsComeBeforeTheDirectActionsAndTheOtherCorrections = (): void => {
+    const following = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(element('anomalie-choix').compareDocumentPosition(element('anomalie-actions-directes')) & following).toBe(following);
+    expect(element('anomalie-actions-directes').compareDocumentPosition(element('anomalie-detail')) & following).toBe(following);
+  };
   const thenTheSelectionTimeIs = (expected: string): void => {
     const time = requiredFixture(element('anomalie-selection').querySelector<HTMLElement>('time'), 'selection time');
     expect(time.textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
@@ -4818,6 +5390,34 @@ describe('Anomaly dossier page', () => {
   };
   const thenTheSelectionShowsTheGesture = (expected: string): void => {
     expect(element('anomalie-selection-geste').textContent.trim()).toBe(expected);
+  };
+  const thenTheDirectActionsAre = (expected: readonly string[]): void => {
+    const actions = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-action-directe'))];
+    expect(actions.map(action => action.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
+  };
+  const directActions = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-action-directe')),
+  ];
+  const directAction = (acte: string, pointage: string): HTMLElement =>
+    requiredFixture(
+      directActions().find(candidate => candidate.dataset['acte'] === acte && candidate.dataset['pointage'] === pointage),
+      `direct action ${acte} of ${pointage}`,
+    );
+  const whenChoosingTheDirectAction = async (acte: string, pointage: string): Promise<void> => {
+    directAction(acte, pointage).click();
+    await fixture.whenStable();
+  };
+  const thenTheDirectActionsAreDisabled = (): void => {
+    const disabled = directActions().map(action => action instanceof HTMLButtonElement && action.disabled);
+    expect(disabled).toEqual([true, true]);
+  };
+  const thenNoDirectActionIsPressed = (): void => {
+    expect(directActions().map(action => action.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
+  };
+  const thenOnlyTheDirectActionIsPressed = (acte: string, pointage: string): void => {
+    expect(directAction(acte, pointage).getAttribute('aria-pressed')).toBe('true');
+    expect(directActions().filter(action => action.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+    thenNoInterpretationIsSelected();
   };
   const thenTheProblemReads = (expected: string): void => {
     expect(element('anomalie-probleme').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
@@ -4901,6 +5501,10 @@ describe('Anomaly dossier page', () => {
   };
   const thenTheMarkerFlagIs = (pointage: string, attribut: string, expected: string): void => {
     expect(marker(pointage).getAttribute(attribut)).toBe(expected);
+  };
+  const thenTheValidationReads = (expected: readonly string[]): void => {
+    const erreurs = [...element('anomalie-validation').querySelectorAll('li')].map(erreur => erreur.textContent.trim());
+    expect(erreurs).toEqual(expected);
   };
   const thenSummaryIsEmpty = (): void => {
     expect(element('anomalie-proposition-resume').textContent.trim()).toBe('');
@@ -4994,12 +5598,5 @@ describe('Anomaly dossier page', () => {
     const detail = element('anomalie-champs-detail').parentElement;
     if (!(detail instanceof HTMLDetailsElement)) throw new Error('Expected detailed fact');
     expect(detail.open).toBe(true);
-  };
-  const thenNothingIsChosen = (selectors: readonly string[]): void => {
-    for (const selector of selectors) {
-      const radio = field(selector);
-      if (!(radio instanceof HTMLInputElement)) throw new Error('Expected a radio');
-      expect(radio.checked).toBe(false);
-    }
   };
 });

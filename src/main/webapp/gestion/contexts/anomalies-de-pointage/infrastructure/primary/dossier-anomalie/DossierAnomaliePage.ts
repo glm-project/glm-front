@@ -17,14 +17,15 @@ import {
   linkedSignal,
   resource,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
-import { IntentionPointage, TypePointage } from '../../../domain/acte/ActeResolution';
 import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
+import { ActionDirecte, ActionsDirectes } from '../../../domain/dossier/ActionsDirectes';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
@@ -39,9 +40,14 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
   detailDuPointage,
+  erreursALire,
+  faitDuGeste,
+  gesteDuFait,
+  GESTES_PROPOSES,
   intituleDeLActivite,
   labelForActivite,
   libelleActivite,
+  libelleDeLAction,
   libelleDuGeste,
   referencePointage,
   remplacementDe,
@@ -102,11 +108,13 @@ export class DossierAnomaliePage {
   protected readonly posteDe = postePresente;
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
   protected readonly problemes = phrasesDuProbleme;
+  protected readonly actionsDirectes = (dossier: DossierAnomalie) => ActionsDirectes.depuis(dossier).actions;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
   protected readonly libelleActivite = libelleActivite;
   protected readonly intituleDeLActivite = intituleDeLActivite;
   protected readonly libelleDuGeste = libelleDuGeste;
+  protected readonly libelleDeLAction = libelleDeLAction;
   protected readonly labelForActivite = labelForActivite;
   protected readonly remplacementDe = remplacementDe;
   protected readonly detailDuPointage = detailDuPointage;
@@ -114,8 +122,13 @@ export class DossierAnomaliePage {
   protected readonly detail = signal(false);
   protected readonly choixSelectionne = signal<string | undefined>(undefined);
   protected readonly propositionsFaites = signal(0);
-  protected readonly types: readonly TypePointage[] = ['DEBUT', 'NON_CONFORMITE', 'FIN'];
-  protected readonly intentions: readonly IntentionPointage[] = ['OUVERTURE', 'TRANSITION', 'FIN'];
+  protected readonly identiteDeployee = linkedSignal({
+    source: this.propositionsFaites,
+    computation: () => untracked(() => this.saisie().operateurManque()),
+  });
+  protected readonly gestesProposes = GESTES_PROPOSES;
+  protected readonly gesteDuFait = gesteDuFait;
+  protected readonly erreursALire = erreursALire;
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
   protected readonly retour = computed(() => ({
     nature: this.parametres().get('nature'),
@@ -129,6 +142,8 @@ export class DossierAnomaliePage {
     loader: () => this.port.referentiel(),
   });
   protected readonly etatReferentiel = etatDeLecture(this.referentiel);
+  protected readonly identiteForcee = computed(() => this.etatReferentiel.premierChargement() || this.etatReferentiel.enPanne());
+  protected readonly identiteDepliee = computed(() => this.identiteDeployee() || this.identiteForcee());
   private readonly referentielConnu = computed(() => (this.referentiel.hasValue() ? this.referentiel.value() : undefined));
   protected readonly referentielLu = computed(() => this.referentielConnu() ?? REFERENTIEL_VIDE);
   protected readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
@@ -150,7 +165,8 @@ export class DossierAnomaliePage {
     return selection?.kind === 'ACTIVITE' ? this.dossier()?.activites.find(activite => activite.id.activite === selection.id) : undefined;
   });
   private readonly maintenant = signal(new Date().toISOString());
-  protected readonly proposition = computed(() => this.preparation.resolution().saisie.proposition);
+  protected readonly saisie = computed(() => this.preparation.resolution().saisie);
+  protected readonly proposition = computed(() => this.saisie().proposition);
   protected readonly choixAffiche = computed(() => (this.proposition() === undefined ? undefined : this.choixSelectionne()));
   protected readonly apercu = computed(() => this.preparation.resolution().apercu);
   protected readonly occupe = computed(() =>
@@ -226,6 +242,15 @@ export class DossierAnomaliePage {
     this.detail.set(choix.saisie.awaitsDating());
   }
 
+  protected identifiantDeLAction(action: ActionDirecte): string {
+    return `${action.saisie.acte()}:${action.pointage.id.pointage}`;
+  }
+
+  protected chooseAction(action: ActionDirecte): void {
+    this.choose(action.saisie, this.identifiantDeLAction(action));
+    this.detail.set(action.saisie.acte() === 'CORRECTION');
+  }
+
   protected correct(pointage: PointageAnomalie): void {
     this.choose(SaisieActe.correct(pointage.id.pointage, pointage.fait));
     this.detail.set(true);
@@ -268,6 +293,10 @@ export class DossierAnomaliePage {
 
   protected targetIsAbsent(dossier: DossierAnomalie, reference: string): boolean {
     return reference !== '' && !dossier.activites.some(activite => activite.id.activite === reference);
+  }
+
+  protected choisirLeGeste(valeur: string): void {
+    this.change({ fait: faitDuGeste(valeur) });
   }
 
   protected choisirOperateur(operateur: OperateurAnomalieId): void {

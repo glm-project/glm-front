@@ -95,6 +95,28 @@ voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend
 un élément absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé ne
 bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
 
+## Actions directes
+
+« Votre décision » présente, dans cet ordre, les propositions du serveur (les choix guidés reçus, tous de même rang, aucun
+présélectionné), les actions directes sur les pointages en cause, puis « Autres corrections ». Une action directe est une saisie
+d'acte de départ, que le gestionnaire choisit puis complète : elle vient du front, depuis les diagnostics, alors que Corriger et
+Annuler du pointage sélectionné se choisissent sur la frise. Les actions directes viennent d'une politique du
+domaine (`ActionsDirectes`) qui lit les diagnostics d'un conflit : annuler le pointage en cause, quelle que soit la raison ;
+annuler aussi le terminant pour `CIBLE_DEJA_TERMINEE` ; corriger l'heure du pointage en cause pour `GESTE_AVANT_OUVERTURE` ;
+rien de plus pour `OUVRANT_ANNULE`. Chaque action porte sa saisie d'acte, et le primaire ne reconstruit aucune commande. Une action
+que le serveur propose déjà (même acte, même pointage) n'est pas répétée ; deux diagnostics sur le même pointage n'en donnent
+qu'une ; un pointage absent du journal ou déjà annulé n'en reçoit aucune ; l'ordre suit les diagnostics reçus, le pointage en
+cause avant son terminant. Un dossier qui n'est plus en conflit, ou sans diagnostic, n'en propose aucune.
+
+Chaque action est nommée par le geste et l'heure du pointage visé (« Annuler l'arrêt de 17:00 », « Corriger l'heure de l'arrêt de
+07:00 », « Annuler le passage en NC régularisé de 18:00 » quand le pointage l'est), avec les secondes quand un autre pointage du
+journal tombe dans la même minute. La choisir prépare la saisie attendue
+(annulation ou correction, motif à saisir), met le focus sur la proposition, ouvre le champ heure pour une correction et se
+comporte comme une proposition du serveur : une seule solution est pressée à la fois. La section n'apparaît que s'il y a une
+action. Le consultant et une opération en cours les voient désactivées, avec le message des droits. « Autres corrections »
+remplace le repli « Un pointage manque sur la frise ? » : il rappelle que Corriger et Annuler du pointage sélectionné sont
+dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation).
+
 ## Liste des anomalies
 
 La liste demande la nature de l'onglet courant : `FIN_AUTOMATIQUE` sans `nature` dans l'URL, `CONFLIT` à la
@@ -166,10 +188,24 @@ Un pointage se nomme par le geste de l'opérateur, sur la frise, les référence
 d'adresse obsolète et le résumé de la proposition : « Démarrage » (`DEBUT·OUVERTURE`), « Démarrage en NC »
 (`NON_CONFORMITE·OUVERTURE`), « Passage en NC » (`NON_CONFORMITE·TRANSITION`), « Retour en bon » (`DEBUT·TRANSITION`),
 « Arrêt » (`FIN·FIN`). La frise met un geste de non-conformité en évidence (repère `nc`). Un pointage régularisé garde son libellé et
-la mention « Régularisation ». Tant que la saisie ne forme pas un geste connu (type ou intention vides, ou incompatibles), le
-résumé de la proposition garde « Type · Intention » des champs remplis, sans rien afficher quand les deux sont vides.
+la mention « Régularisation ». Un fait hors de ces cinq gestes (type ou intention vides, ou incompatibles) garde « Type ·
+Intention » des champs remplis dans le résumé de la proposition, sans rien afficher quand les deux sont vides : l'écran ne peut
+plus saisir un type seul, une intention seule ou une combinaison incompatible, les pointages reçus restent couverts par les specs
+du libellé.
 
-Le formulaire de correction et de régularisation et l'aperçu de l'acte n'en affichent pas davantage. L'opérateur se choisit
+Le formulaire de correction et de régularisation dit ce que signale le pointage par un seul choix (`anomalie-signal`, un
+`<select>` natif) : Démarrage, Démarrage en NC, Passage en NC, Retour en bon, Arrêt, dans cet ordre. Il remplace les groupes
+Type et Intention ; choisir un geste change le type et l'intention d'un coup, retire l'aperçu et reste verrouillé pendant une
+opération. Le domaine possède les combinaisons valides ; un geste à moitié choisi ne demande que ce qui manque (jamais « incompatible »). Une régularisation à partir de rien montre l'option vide « Choisissez ce que signale le pointage », sélectionnée et
+non choisissable, et une seule erreur lisible, jamais le type puis l'intention. « Activité qu'il termine » (`anomalie-cible`)
+n'apparaît que pour un passage ou un arrêt, et tant qu'une cible est posée : un démarrage qui la garde la montre encore avec
+« Une ouverture ne vise aucune activité ; effacez explicitement la cible. », et le champ disparaît quand le gestionnaire l'a
+effacée. Le formulaire et l'aperçu de l'acte n'affichent aucun identifiant. L'opérateur et le poste se replient en une ligne
+« Camille Martin · Fraiseuse 1 » (« Opérateur non résolu », « Poste non résolu », « Sans poste » selon les règles de l'aperçu)
+avec « Modifier » (nom accessible « Modifier l'opérateur et le poste »), qui déplie ou replie leurs champs ; une nouvelle saisie
+d'acte repart repliée. Ils sont dépliés d'office pendant le chargement initial du référentiel ou sa panne, et pour une
+régularisation à partir de rien : la ligne et « Modifier » sont alors masqués, les champs disant déjà « Opérateur actuel conservé »
+ou « Choisissez l'opérateur », et ils n'apparaissent qu'une fois l'opérateur choisi, au-dessus des champs restés dépliés. L'opérateur se choisit
 par son nom (« Prénom Nom », suivi de son code pupitre quand il en a un) dans une recherche sans accents sur le nom, le
 prénom et le code ; le poste se choisit dans une liste qui commence par « Sans poste », puis les postes habilités de
 l'opérateur choisi, puis les autres. Tant que la saisie n'a pas d'opérateur (régularisation d'un fait manquant), le bouton
@@ -208,7 +244,7 @@ avec l'offset local et sans fraction de seconde. Une date sans heure, ou l'inver
 l'aperçu et affiche « Renseignez la date et l'heure du fait. ». Au changement d'heure, une heure inexistante est refusée
 (« Cette heure n'existe pas ce jour-là, à cause du changement d'heure. ») et une heure répétée prend sa première
 occurrence, y compris le jour même du changement d'heure, que l'horloge de la page soit ce jour-là ou que l'instant reçu
-en soit. Une nouvelle proposition (un choix, même identique, ou « Régulariser ») repart d'un champ neuf : la date ou
+en soit. Une nouvelle proposition (un choix, même identique, ou « Ajouter un pointage manquant ») repart d'un champ neuf : la date ou
 l'heure saisie seule et le message d'heure inexistante ne survivent pas. Les specs unitaires fixent `America/Sao_Paulo`
 (sans changement d'heure) ; les cas de changement d'heure rebasculent `TZ` en `Europe/Paris` et placent l'horloge le
 29 mars le temps du test. Cypress saisit une date au clavier et choisit un jour et une heure à la souris.
@@ -244,8 +280,10 @@ traverse minuit et l'heure répétée graduée heure par heure.
 
 ## Frontières de vérification
 
-- Les specs de domaine passent par `SaisieActe`, `CadreDuFait` et `ResolutionDeLAnomalie` ; elles vérifient les motifs,
-  le choix explicite, la précision des instants, les bornes du fait et l'invalidation d'un aperçu.
+- Les specs de domaine passent par `SaisieActe`, `CadreDuFait`, `ResolutionDeLAnomalie` et `ActionsDirectes` ; elles vérifient
+  les motifs, le choix explicite, la précision des instants, les bornes du fait, l'invalidation d'un aperçu et les actions
+  directes par raison (dédoublonnage, pointage absent ou annulé, ordre) ; les specs DOM prouvent l'ordre des trois sortes de
+  solutions et la ligne d'identité masquée quand les champs sont dépliés d'office.
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
 - Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé
@@ -270,6 +308,9 @@ traverse minuit et l'heure répétée graduée heure par heure.
   vérifient que le dossier ne les lit pas, que le filtre « Élément » de la liste se choisit par désignation sans jamais
   montrer l'identifiant, que son chargement et son échec se réessaient sans toucher au filtre « Opérateur » ; Cypress
   intercepte `/api/elements-de-fabrication` en données REST typées.
+- Les specs DOM du dossier vérifient le choix de ce que signale le pointage (options et ordre, option vide, une seule erreur,
+  type et intention changés d'un coup), la cible visible tant qu'elle est posée, et l'opérateur et le poste repliés, dépliés par
+  « Modifier » ou d'office ; `PresentationDossier.spec.ts` ne garde que ce que le DOM n'atteint pas (repli du libellé d'un fait hors des cinq gestes, geste lu d'un choix inconnu) ; `SaisieActe.spec.ts` fixe `operateurManque()` et `cibleApplicable()`, que la page consomme, et la règle du geste à moitié choisi.
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
   les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des

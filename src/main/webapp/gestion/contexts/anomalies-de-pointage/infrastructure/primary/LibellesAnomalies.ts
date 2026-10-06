@@ -7,6 +7,7 @@ export interface ActiviteDansUnePhrase {
   readonly accord: string;
 }
 
+const GESTE_A_CHOISIR = 'Choisissez ce que signale le pointage.';
 const FAIT_DANS_LE_FUTUR = 'La date et l’heure du fait ne peuvent pas être dans le futur.';
 
 const ERREURS_SAISIE: Readonly<Record<string, string>> = {
@@ -20,8 +21,8 @@ const ERREURS_SAISIE: Readonly<Record<string, string>> = {
   INSTANT_AVANT_CIBLE: 'Le fait ne peut pas précéder le début de l’activité qu’il termine.',
   INSTANT_FUTUR: FAIT_DANS_LE_FUTUR,
   INTENTION_INCOMPATIBLE: 'Le type et l’intention ne sont pas compatibles.',
-  TYPE_REQUIS: 'Choisissez le type du pointage.',
-  INTENTION_REQUISE: 'Choisissez son intention.',
+  TYPE_REQUIS: GESTE_A_CHOISIR,
+  INTENTION_REQUISE: GESTE_A_CHOISIR,
 };
 
 const REFUS_ACTE: Readonly<Record<CodeRefusActe, string>> = {
@@ -111,16 +112,27 @@ const PROBLEMES = {
   },
 } as const;
 
+const ACTIONS_DIRECTES = {
+  titre: 'Actions directes',
+  annuler: (pointage: string) => `Annuler ${pointage}`,
+  corrigerLHeure: (pointage: string) => `Corriger l’heure ${pointage}`,
+} as const;
+
 export const LIBELLES_ANOMALIES = {
-  detail: 'Un pointage manque sur la frise ?',
+  actionsDirectes: ACTIONS_DIRECTES,
+  autresCorrections: 'Autres corrections',
+  autresCorrectionsAide:
+    'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
   debut: 'Début',
   finAutomatiqueA: 'Fin automatique',
   fin: 'Fin',
   corriger: 'Corriger ce pointage',
-  regulariser: 'Régulariser un fait manquant',
+  regulariser: 'Ajouter un pointage manquant',
   annuler: 'Annuler ce pointage',
   verifier: 'Vérifier le reçu de confirmation',
   reprendreConfirmation: 'Reprendre la même confirmation',
+  modifier: 'Modifier',
+  modifierIdentite: 'Modifier l’opérateur et le poste',
   modifierFait: 'Consulter ou modifier le fait proposé',
   decalerInstant: 'Décaler l’heure du fait',
   moinsCinqMinutes: '−5 min',
@@ -157,8 +169,9 @@ export const LIBELLES_ANOMALIES = {
     ANNULATION: 'Annulation du pointage',
     REGULARISATION: 'Régularisation d’un fait manquant',
   },
-  type: 'Type du pointage',
-  intention: 'Intention réelle',
+  gesteSignale: 'Ce que signale le pointage',
+  activiteTerminee: 'Activité qu’il termine',
+  gesteAChoisir: 'Choisissez ce que signale le pointage',
   operateurConcerne: 'Opérateur concerné',
   posteConcerne: 'Poste (facultatif)',
   choisirOperateur: 'Choisissez l’opérateur',
