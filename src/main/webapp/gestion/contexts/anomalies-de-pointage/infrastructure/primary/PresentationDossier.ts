@@ -1,3 +1,4 @@
+import { formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { SaisieFait } from '../../domain/acte/SaisieActe';
 import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
@@ -18,6 +19,11 @@ export type ReferencePointage = Readonly<{ libelle: string; pointage?: PointageA
 
 const instantLongDay = new InstantLongDayPipe();
 const instantLongDayWithSeconds = new InstantLongDayWithSecondsPipe();
+
+export const heureDe = (instant: string): string => {
+  const date = new Date(instant);
+  return Number.isNaN(date.getTime()) ? instant : formatInstantTime(date);
+};
 
 export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): string => {
   const geste = fait.type === '' || fait.intention === '' ? undefined : LIBELLES_ANOMALIES.gestes[fait.type][fait.intention];

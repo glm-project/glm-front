@@ -1,10 +1,9 @@
-import { formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { TypePointage } from '../../domain/acte/ActeResolution';
 import { conflitAExpliquer } from '../../domain/dossier/ConflitAExpliquer';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
-import { libelleDuGeste } from './PresentationDossier';
+import { heureDe, libelleDuGeste } from './PresentationDossier';
 
 type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
 type CategorieActivite = PeriodeActivite['categorie'];
@@ -24,11 +23,6 @@ const CATEGORIE_DU_TYPE: Readonly<Partial<Record<TypePointage, CategorieActivite
   NON_CONFORMITE: 'NON_CONFORMITE',
 };
 const CODES_TARDIFS = ['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'];
-
-const heureDe = (instant: string): string => {
-  const date = new Date(instant);
-  return Number.isNaN(date.getTime()) ? instant : formatInstantTime(date);
-};
 
 const majuscule = (texte: string): string => texte.charAt(0).toUpperCase() + texte.slice(1);
 const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
