@@ -225,8 +225,8 @@
         } }
       </div>
     </div>
-    <div class="pied">
-      <ul class="legende">
+    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border bg-canvas px-6 py-3.5">
+      <ul class="legende flex flex-wrap gap-x-5 gap-y-2 text-ink-muted *:inline-flex *:items-center *:gap-2">
         <li data-selector="synthese-legende" data-legende="travail">
           <i class="pastille pastille-travail" aria-hidden="true"></i>{{ libelles.legende.travail }}
         </li>
@@ -254,7 +254,7 @@
     <div>
       @if (vue.frise.detail; as detail) {
       <section class="gestion-carte detail-jour" aria-labelledby="detail-jour-titre" data-selector="synthese-detail-jour">
-        <div class="detail-titre">
+        <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 px-5 py-4">
           <h2 id="detail-jour-titre" class="text-section">{{ libelles.detailDuJour }} · {{ detail.jour.libelle }}</h2>
           <p class="text-body-sm text-ink-muted">
             {{ libelles.operationnel }} : <strong class="text-ink">{{ detail.jour.operationnel }}</strong>
@@ -301,15 +301,19 @@
       <glm-journal [journal]="journal" (choisi)="choisir($event)" />
       }
     </div>
-    <aside class="gestion-carte verification" aria-labelledby="verification-titre" data-selector="synthese-verification">
+    <aside class="gestion-carte p-5" aria-labelledby="verification-titre" data-selector="synthese-verification">
       <h2 id="verification-titre" class="text-section">{{ libelles.aVerifier }}</h2>
       @if (vue.frise.alertes.length === 0 && vue.frise.conflits.length === 0) {
-      <p class="text-body-sm text-ink-muted">{{ libelles.sansAnomalie }}</p>
+      <p class="mt-3 text-body-sm text-ink-muted">{{ libelles.sansAnomalie }}</p>
       }
-      <ul class="alertes">
+      <ul class="alertes mt-3">
         @for (alerte of vue.frise.alertes; track $index) {
         <li>
-          <a [routerLink]="[]" [queryParams]="parametresDuJour(vue.semaine, alerte.jour)">
+          <a
+            class="flex min-h-touch flex-col justify-center gap-1 py-3 text-inherit no-underline"
+            [routerLink]="[]"
+            [queryParams]="parametresDuJour(vue.semaine, alerte.jour)"
+          >
             <span class="text-body-sm font-semibold">{{ alerte.element }}</span>
             <span class="text-body-sm text-ink-muted">{{ alerte.jourLibelle }} · {{ alerte.etat }}</span>
             <span class="text-body-sm text-accent underline">{{ libelles.voirLesPointages }}</span>
