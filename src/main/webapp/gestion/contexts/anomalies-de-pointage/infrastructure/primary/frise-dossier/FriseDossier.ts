@@ -24,7 +24,13 @@ export class FriseDossier {
   protected readonly estSelectionne = (selection: SelectionDuDossier): boolean => memeSelection(selection, this.selection());
   private prise: { readonly decalage: number } | undefined;
   protected readonly disposition = computed(() =>
-    dispositionDeFrise(this.dossier(), this.now(), this.poignee(), this.placement(), this.apercu()),
+    dispositionDeFrise({
+      vue: this.dossier(),
+      maintenant: this.now(),
+      poignee: this.poignee(),
+      placement: this.placement(),
+      apercu: this.apercu(),
+    }),
   );
 
   protected saisit(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {

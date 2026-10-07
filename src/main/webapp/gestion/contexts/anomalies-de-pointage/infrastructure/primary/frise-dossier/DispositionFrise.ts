@@ -26,6 +26,14 @@ export interface ApercuDeFrise {
   readonly apres: VueDeFrise;
 }
 
+export interface EntreesDeFrise {
+  readonly vue: VueDeFrise;
+  readonly maintenant: Date;
+  readonly poignee: PoigneeDeFrise | undefined;
+  readonly placement: PlacementDeLInstant | undefined;
+  readonly apercu: ApercuDeFrise | undefined;
+}
+
 export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
 
 export interface BarreFrise {
@@ -382,13 +390,7 @@ const hauteurDeLaFrise = (
     ...(apres === undefined ? [] : [apres.haut + apres.hauteur + ESPACE_ENTRE_RANGEES_PX]),
   );
 
-export const dispositionDeFrise = (
-  vue: VueDeFrise,
-  now: Date,
-  poignee?: PoigneeDeFrise,
-  placement?: PlacementDeLInstant,
-  apercu?: ApercuDeFrise,
-): DispositionFrise => {
+export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, apercu }: EntreesDeFrise): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
   const pointages = pointagesDeLaFrise(vue);
   const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
