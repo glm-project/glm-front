@@ -222,19 +222,30 @@ gardé), sans aucune durée calculée (ADR 0047). Poignée avant la fin reçue, 
 hachure `warn`, bordure pointillée, `aria-hidden`) ; après, la barre s'allonge, sans portion retirée. Pour une activité échue visée, sa fin
 automatique reste tracée tant que la poignée existe (`anomalie-frise-fin-recue`, trait pointillé `warn`, `aria-hidden`, titré « Fin
 automatique HH:MM ») ; pour une autre, aucun trait. Corriger un passage ouvrant pose la poignée au bout de la barre précédente, le repère du
-passage gardant son heure barrée au début de la suivante. Seule la rangée de placement (et une poignée qui ne vise aucune activité du dossier)
-garde, en ligne, une rangée fixe d'une cible, de 44 px, entre l'axe et les barres ; le groupe « Après cet acte » reste celui des rangées.
+passage gardant son heure barrée au début de la suivante. En ligne, ni poignée ni placement n'ont de rangée propre : un fait dont l'activité visée n'est pas dans le dossier n'y a ni poignée
+ni rangée de placement (le champ date et heure reste l'accès) ; le groupe « Après cet acte » reste celui des rangées.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
 date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
 indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
-qui gardent leur sélection ; en ligne, la rangée fixe d'une cible sous l'axe) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
+qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
 résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'action, bornes du `CadreDuFait`, un clic hors bornes se
 ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
-comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. Une aide visible (`anomalie-frise-aide`) dit de cliquer sur
-la frise pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt comme pour un passage ; le champ reste l'accès au clavier, la rangée n'a pas de placement au clavier. Elle est inactive
+comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. En ligne, la rangée de placement est
+celle de la barre visée (`surLaBarreDe`), sans rangée propre, et trois gestes placent l'heure. **Poignée sans heure** : si la barre visée a
+une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, décorative (`aria-hidden`, `tabindex="-1"`, ni
+`aria-valuenow` ni `aria-valuetext`) et marquée `data-sans-heure` ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
+poignée, si bien que le nœud, donc la capture du pointeur, survit au premier mouvement qui donne une heure au fait. Appuyer puis glisser
+émet un `PlacementDemande` au premier mouvement (instant sous le pointeur, arrondi à 5 minutes), puis des déplacements `VERS` une fois
+l'heure posée ; un appui relâché sans mouvement n'émet rien ; elle est désactivée avec `placement.desactivee` et n'a aucun clavier (le
+champ). Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
+ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
+l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
+(`selectionInitiale`) ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
+tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
+comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
 pendant une opération. La poignée est un `slider` : le pointeur la
 capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
 (Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au

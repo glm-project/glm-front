@@ -106,6 +106,9 @@ const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): Placeme
   ...surcharge,
 });
 
+const placementDeLaFixture = (activite: string): PlacementDeLInstant =>
+  placementFixture({ activiteVisee: activite, bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } });
+
 const PLAN_WIDTH = 1000;
 
 type VueDeTest = Omit<VueDeFrise, 'perimetre' | 'enConflit'> & {
@@ -2020,7 +2023,7 @@ describe('Frise of a dossier', () => {
       thenTheMarkerFlagIs('debut-a-2', 'data-deplace', 'true');
     });
 
-    it('should keep a row of one touch target for a handle that terminates no activity of the dossier', async () => {
+    it('should draw no handle for an hour that terminates no activity of the dossier', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
         activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')],
@@ -2029,12 +2032,12 @@ describe('Frise of a dossier', () => {
 
       await whenRenderingTheFrise(dossier, undefined, poigneeFixture('17:00', { activiteVisee: 'ailleurs' }));
 
-      expect(topOf(handle())).toBe(28);
-      thenTheBarsStandOnRowsAt([80]);
+      thenNoHandleIsDrawn();
+      thenTheBarsStandOnRowsAt([36]);
       thenTheBarAttributeIs('a-1', 'data-fin', 'AUTOMATIQUE');
     });
 
-    it('should give the placement row the row of one touch target between the axis and the bars', async () => {
+    it('should lay the placement row on the row of the bar the instant will terminate, without a row of its own', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
         activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')],
@@ -2043,8 +2046,193 @@ describe('Frise of a dossier', () => {
 
       await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture({ activiteVisee: 'a-1' }));
 
-      thenThePlacementRowStandsAt({ top: 28, height: 44 });
-      thenTheBarsStandOnRowsAt([80]);
+      thenThePlacementRowStandsAt({ top: 36, height: 44 });
+      thenTheBarsStandOnRowsAt([36]);
+    });
+
+    it('should stand an hourless handle at the received end of the bar it will terminate, out of the tab order and with no value', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      thenTheHandleStandsAt({ left: '62.5%', onTheRowOf: 'a-1' });
+      thenTheHandleIsHourless('Heure ?');
+      thenTheHandleIsOutOfTheTabOrder();
+      thenTheHandleHoldsNoValue();
+    });
+
+    it('should ask to place the instant where the hourless handle is dragged to', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenDraggingTheHandle({ from: 625, to: 750 });
+
+      thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
+      thenTheMovesAsked([]);
+    });
+
+    it('should ask for nothing when the hourless handle is pressed and released without moving', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenPressingTheHandleAt(625);
+      whenTheGestureEndsWith('pointerup');
+
+      thenThePlacementsAsked([]);
+      thenTheMovesAsked([]);
+    });
+
+    it('should ask for nothing when a key is pressed on the hourless handle, the field being the access by keyboard', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenPressingKeyOnTheHandle('ArrowRight');
+
+      thenThePlacementsAsked([]);
+      thenTheMovesAsked([]);
+    });
+
+    it('should keep the same element for the handle once its first move gave the fact an hour', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+      const hourlessHandle = handle();
+
+      await whenTheFactGetsItsHour(poigneeFixture('13:00', { activiteVisee: 'a-1', bornes: placementDeLaFixture('a-1').bornes }));
+
+      expect(handle()).toBe(hourlessHandle);
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 13, 0));
+    });
+
+    it('should go on moving the handle within the same gesture once the first move gave the fact an hour', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+      whenDraggingTheHandle({ from: 625, to: 750 });
+      await whenTheFactGetsItsHour(poigneeFixture('13:00', { activiteVisee: 'a-1', bornes: placementDeLaFixture('a-1').bornes }));
+
+      whenMovingThePointerOverTheHandleTo(875);
+
+      thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 14, 0).getTime() }]);
+    });
+
+    it('should not move a disabled hourless handle', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, { ...placementDeLaFixture('a-1'), desactivee: true });
+
+      whenDraggingTheHandle({ from: 625, to: 750 });
+
+      thenThePlacementsAsked([]);
+      thenTheHandleIsAriaDisabled('true');
+    });
+
+    it('should ask to place the instant where the aimed bar is clicked with a pointer', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenClickingWithAPointerAt(bar('a-1'), 500);
+
+      thenThePlacementsAsked([new Date(2026, 8, 14, 11, 0).getTime()]);
+      expect(requestedSelections).toEqual([]);
+    });
+
+    it('should ask to place the instant where the row of the aimed bar is clicked beyond the bar', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenClickingThePointagesRowAt(750);
+
+      thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
+    });
+
+    it('should select the aimed bar activated from the keyboard instead of placing the instant', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenPressing(bar('a-1'));
+
+      expect(requestedSelections).toEqual([{ kind: 'ACTIVITE', id: 'a-1' }]);
+      thenThePlacementsAsked([]);
+    });
+
+    it.each([
+      { cible: 'another bar', element: () => bar('a-2'), selection: { kind: 'ACTIVITE', id: 'a-2' } },
+      { cible: 'a marker', element: () => marker('debut-a-1'), selection: { kind: 'POINTAGE', id: 'debut-a-1' } },
+    ])('should keep selecting $cible clicked while the instant waits to be placed', async ({ element, selection }) => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '09:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00'), activiteFixture('a-2', 'TERMINEE', '09:00', '10:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      whenClickingWithAPointerAt(element(), 500);
+
+      expect(requestedSelections).toEqual([selection]);
+      thenThePlacementsAsked([]);
+    });
+
+    it('should stand no hourless handle on a bar that holds no received end', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'EN_COURS', '08:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+      thenNoHandleIsDrawn();
+    });
+
+    it('should stand no hourless handle for an hour that waits to terminate no activity of the dossier', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('ailleurs'));
+
+      thenNoHandleIsDrawn();
+      thenNoPlacementRowIsDrawn();
     });
 
     it('should end the bar the handle terminates at the time the handle stands at', async () => {
@@ -2235,6 +2423,12 @@ describe('Frise of a dossier', () => {
     await fixture.whenStable();
   };
 
+  const whenTheFactGetsItsHour = async (poignee: PoigneeDeFrise): Promise<void> => {
+    fixture.componentRef.setInput('placement', undefined);
+    fixture.componentRef.setInput('poignee', poignee);
+    await fixture.whenStable();
+  };
+
   const whenTheFriseIsMeasured = async (width: number): Promise<void> => {
     resizeObserver.announce(width);
     await fixture.whenStable();
@@ -2272,6 +2466,11 @@ describe('Frise of a dossier', () => {
   const whenMovingThePointerOverTheHandleTo = (clientX: number, pointerId = 1): void => {
     thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
     handle().dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX, bubbles: true }));
+  };
+
+  const whenClickingWithAPointerAt = (element: HTMLElement, clientX: number): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    element.dispatchEvent(new MouseEvent('click', { clientX, detail: 1, bubbles: true }));
   };
 
   const whenClickingThePointagesRowAt = (clientX: number): void => {
@@ -2349,6 +2548,32 @@ describe('Frise of a dossier', () => {
 
   const thenTheMovesAsked = (expected: readonly DemandeDeDeplacement[]): void => {
     expect(requestedMoves.map(deplacement => deplacement.demande)).toEqual(expected);
+  };
+
+  const thenNoHandleIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-poignee'))).toBeNull();
+  };
+
+  const thenTheHandleStandsAt = (expected: { left: string; onTheRowOf: string }): void => {
+    expect({ left: handle().style.left, top: handle().style.top }).toEqual({
+      left: expected.left,
+      top: bar(expected.onTheRowOf).style.top,
+    });
+  };
+
+  const thenTheHandleIsHourless = (expectedText: string): void => {
+    expect(handle().hasAttribute('data-sans-heure')).toBe(true);
+    expect(handle().getAttribute('aria-hidden')).toBe('true');
+    expect(handle().textContent.trim()).toBe(expectedText);
+  };
+
+  const thenTheHandleIsOutOfTheTabOrder = (): void => {
+    expect(handle().getAttribute('tabindex')).toBe('-1');
+  };
+
+  const thenTheHandleHoldsNoValue = (): void => {
+    expect(handle().hasAttribute('aria-valuenow')).toBe(false);
+    expect(handle().hasAttribute('aria-valuetext')).toBe(false);
   };
 
   const thenTheHandleIsASlider = (): void => {

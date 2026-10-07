@@ -282,18 +282,33 @@ describe('End placement on the frise in Gestion', () => {
     thenNoHourIsInventedAndTheEndCanBePlaced();
   });
 
-  it('should place the handle and the hour at the time clicked on the pointages row, rounded to five minutes', () => {
+  it('should place the handle and the hour at the time clicked on the bar, rounded to five minutes', () => {
     whenOpeningTheAutomaticEndRegularisation();
-    whenClickingThePointagesRowAt(17 + 2 / 60);
+    whenClickingTheBarAt(17 + 2 / 60);
 
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 17, 0));
   });
 
   it('should bring a click before the start of the activity back to its start', () => {
     whenOpeningTheAutomaticEndRegularisation();
-    whenClickingThePointagesRowAt(7.5);
+    whenClickingTheRowOfTheBarAt(7.5);
 
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 8, 0));
+  });
+
+  it('should place the hour at the first move of the handle of the received end dragged without being released', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+    whenDraggingTheHourlessHandleTo(15);
+
+    thenTheEndIsPlacedAt(new Date(2026, 8, 14, 15, 0));
+  });
+
+  it('should go on moving the hour while the handle dragged from the received end is still not released', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+    whenDraggingTheHourlessHandleTo(15);
+    whenGoingOnDraggingTheHandleTo(16);
+
+    thenTheEndIsPlacedAt(new Date(2026, 8, 14, 16, 0));
   });
 
   it('should select the pointage of the start marker clicked on its bar instead of placing the end', () => {
@@ -306,7 +321,16 @@ describe('End placement on the frise in Gestion', () => {
 
   const whenOpeningTheAutomaticEndRegularisation = whenOpeningTheDossierAndChoosing;
 
-  const whenClickingThePointagesRowAt = (hour: number): void => {
+  const whenClickingTheBarAt = (hour: number): void => {
+    barreDeLActivite().then(barre => {
+      const { left } = requiredFixture(barre[0], 'barre').getBoundingClientRect();
+      abscisseDeLHeure(hour).then(clientX => {
+        barreDeLActivite().click(clientX - left, 20);
+      });
+    });
+  };
+
+  const whenClickingTheRowOfTheBarAt = (hour: number): void => {
     cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
       const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
       abscisseDeLHeure(hour).then(clientX => {
@@ -315,13 +339,30 @@ describe('End placement on the frise in Gestion', () => {
     });
   };
 
+  const whenDraggingTheHourlessHandleTo = (hour: number): void => {
+    abscisseDeLHeure(hour).then(clientX => {
+      cy.get(dataSelector('anomalie-poignee')).trigger('pointerdown', { pointerId: 1, buttons: 1 });
+      cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
+    });
+  };
+
+  const whenGoingOnDraggingTheHandleTo = (hour: number): void => {
+    abscisseDeLHeure(hour).then(clientX => {
+      cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
+    });
+  };
+
   const thenNoHourIsInventedAndTheEndCanBePlaced = (): void => {
     thenTheInstantFieldsAreEmpty();
-    cy.get(dataSelector('anomalie-poignee')).should('not.exist');
+    cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
+    cy.get(dataSelector('anomalie-poignee')).should('not.have.attr', 'aria-valuenow');
+    cy.get(dataSelector('anomalie-poignee'))
+      .invoke('text')
+      .should('match', /^\s*Heure \?\s*$/);
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
     cy.get(dataSelector('anomalie-frise-aide'))
       .should('be.visible')
-      .and('contain.text', 'Cliquez sur la frise pour placer l’heure du fait');
+      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait');
   };
 
   const thenTheEndIsPlacedAt = (instant: Date): void => {
@@ -389,13 +430,13 @@ describe('Automatic end read on one line in Gestion', () => {
 
   const whenPlacingTheEndAt = (hour: number): void => {
     cy.get(dataSelector('anomalie-choix')).click();
-    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
-      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+    barreDeLActivite().then(barre => {
+      const { left } = requiredFixture(barre[0], 'barre').getBoundingClientRect();
       abscisseDeLHeure(hour).then(clientX => {
-        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
+        barreDeLActivite().click(clientX - left, 20);
       });
     });
-    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
   };
 
   const thenTheBarEndsOnTheHour = (hour: number): void => {

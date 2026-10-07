@@ -203,10 +203,30 @@ export const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFri
   haut,
   min: Date.parse(poignee.bornes.min),
   max: Date.parse(poignee.bornes.max),
-  valeur: instantTenuSur(poignee, echelle),
-  texte: texteDeLHeure(poignee.instant),
+  etiquette: texteDeLHeure(poignee.instant),
+  lecture: { valeur: instantTenuSur(poignee, echelle), texte: texteDeLHeure(poignee.instant) },
+  sansHeure: false,
   desactivee: poignee.desactivee,
   source: poignee,
+});
+
+export const positionDeLaPoigneeSansHeure = (
+  placement: PlacementDeLInstant,
+  finRecue: string,
+  echelle: EchelleFrise,
+  haut: number,
+  largeur: number,
+): PositionDePoignee => ({
+  ...positionDeLaPoignee(
+    { instant: finRecue, activiteVisee: placement.activiteVisee, bornes: placement.bornes, desactivee: placement.desactivee },
+    echelle,
+    haut,
+    largeur,
+  ),
+  etiquette: LIBELLES_ANOMALIES.frise.heureInconnue,
+  lecture: undefined,
+  sansHeure: true,
+  source: placement,
 });
 
 const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {

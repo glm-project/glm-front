@@ -102,7 +102,7 @@ describe('Automatic end of an activity in Gestion', () => {
 
     whenOpeningTheAutomaticEnd();
     whenChoosingTheEndRegularisation();
-    whenClickingThePointagesRowAt(instantRegulariseLocalFixture);
+    whenClickingTheBarAt(instantRegulariseLocalFixture);
     whenPreviewingTheEndRegularisation();
 
     thenThePreviewWasAskedForTheClickedHour();
@@ -110,24 +110,26 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const thenNoHourIsInventedAndThePreviewIsUnavailable = (): void => {
     thenTheInstantFieldsAreEmpty();
-    cy.get(dataSelector('anomalie-poignee')).should('not.exist');
+    cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
     cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
     cy.get(dataSelector('anomalie-frise-aide')).should('be.visible');
   };
 
-  const whenClickingThePointagesRowAt = (instant: Date): void => {
+  const whenClickingTheBarAt = (instant: Date): void => {
     const heures = instant.getHours() + instant.getMinutes() / 60;
-    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
-      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+    const barre = (): Cypress.Chainable<JQuery<HTMLElement>> =>
+      cy.get(dataSelector('anomalie-activite')).filter(`[data-activite="${activiteFinAutomatiqueFixture}"]`);
+    barre().then(elements => {
+      const { left } = requiredFixture(elements[0], 'barre').getBoundingClientRect();
       abscisseDeLHeure(heures).then(clientX => {
-        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
+        barre().click(clientX - left, 20);
       });
     });
   };
 
   const thenThePreviewWasAskedForTheClickedHour = (): void => {
     thenTheInstantFieldsShow(instantRegulariseLocalFixture);
-    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
     cy.wait('@apercu').its('request.body.acte.fait.instant').should('eq', instantRegulariseSaisiFixture);
   };
 

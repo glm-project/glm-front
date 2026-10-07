@@ -90,6 +90,11 @@ export interface FlecheFrise {
   readonly arriveeHaut: number;
 }
 
+export interface LectureDePoignee {
+  readonly valeur: number;
+  readonly texte: string;
+}
+
 export interface PositionDePoignee {
   readonly kind: 'POIGNEE';
   readonly cle: string;
@@ -98,8 +103,9 @@ export interface PositionDePoignee {
   readonly haut: number;
   readonly min: number;
   readonly max: number;
-  readonly valeur: number;
-  readonly texte: string;
+  readonly etiquette: string;
+  readonly lecture: LectureDePoignee | undefined;
+  readonly sansHeure: boolean;
   readonly desactivee: boolean;
   readonly source: PoigneeDeFrise | PlacementDeLInstant;
 }
@@ -109,6 +115,7 @@ export interface RangeeDePlacement {
   readonly hauteur: number;
   readonly desactivee: boolean;
   readonly source: PlacementDeLInstant;
+  readonly surLaBarreDe: string | undefined;
 }
 
 export interface IntituleDeRangee {
@@ -187,6 +194,7 @@ const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly Rep
   hauteur: hauteurDesReperes(reperes),
   desactivee: placement.desactivee,
   source: placement,
+  surLaBarreDe: undefined,
 });
 
 const dispositionEnRangees = (entrees: EntreesDeFrise): DispositionFrise => {

@@ -138,6 +138,7 @@ button[aria-pressed='true'] {
   font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  white-space: nowrap;
   z-index: 2;
   cursor: grab;
   touch-action: none;
@@ -146,6 +147,11 @@ button[aria-pressed='true'] {
 [data-selector='anomalie-poignee']:focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
+}
+[data-selector='anomalie-poignee'][data-sans-heure] {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
 [data-selector='anomalie-poignee'][aria-disabled='true'] {
   cursor: not-allowed;
