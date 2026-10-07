@@ -103,7 +103,10 @@ const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): Placeme
 
 const PLAN_WIDTH = 1000;
 
-type VueDeTest = Omit<VueDeFrise, 'perimetre'> & { readonly perimetre?: PerimetreDuDossier };
+type VueDeTest = Omit<VueDeFrise, 'perimetre' | 'enConflit'> & {
+  readonly perimetre?: PerimetreDuDossier;
+  readonly enConflit?: boolean;
+};
 
 const perimetreDe = (...pointages: readonly string[]): PerimetreDuDossier =>
   new PerimetreDuDossier(pointages.map(pointage => new PointageAnomalieId(pointage)));
@@ -111,6 +114,7 @@ const perimetreDe = (...pointages: readonly string[]): PerimetreDuDossier =>
 const vueDe = (vue: VueDeTest): VueDeFrise => ({
   ...vue,
   perimetre: vue.perimetre ?? new PerimetreDuDossier(vue.journal.map(pointage => pointage.id)),
+  enConflit: vue.enConflit ?? true,
 });
 
 describe('Frise of a dossier', () => {
