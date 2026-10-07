@@ -1982,6 +1982,27 @@ describe('Frise of a dossier', () => {
       thenTheMarkersAre(['debut-a-1', 'debut-sans-periode']);
     });
 
+    it.each([
+      { cas: 'without aiming at it', activiteVisee: '' },
+      { cas: 'aiming at another activity', activiteVisee: 'a-2' },
+    ])('should keep the pointages row when a pointage lands on the received end of a bar $cas', async ({ activiteVisee }) => {
+      const arret = pointageFixture('arret-a-1', 'ARRET', '11:00');
+      const dossier = {
+        journal: [
+          pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'),
+          { ...arret, fait: { ...arret.fait, activiteVisee } },
+          pointageFixture('debut-a-2', 'DEMARRAGE', '12:00'),
+        ],
+        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'), activiteFixture('a-2', 'ECHUE', '12:00', '21:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier);
+
+      thenThePointagesRowIsTitled('Pointages');
+      thenTheMarkersAre(['debut-a-1', 'arret-a-1', 'debut-a-2']);
+    });
+
     it('should keep the pointages row when a pointage of the anomaly is cancelled', async () => {
       const cancelled = {
         ...arretDe('arret-a-1', 'a-1', '11:00'),
@@ -2054,6 +2075,8 @@ describe('Frise of a dossier', () => {
       await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1', origine: 'debut-a-2' }));
 
       expect(topOf(handle())).toBe(36);
+      thenTheBarSpans('a-1', { left: '5.88235294117647%', width: '11.764705882352942%' });
+      thenTheHandleStandsAt({ left: '17.647058823529413%', onTheRowOf: 'a-1' });
       thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
       thenTheBarAttributeIs('a-2', 'data-fin', 'AUTOMATIQUE');
       thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-2', 'a-2');
@@ -2100,6 +2123,8 @@ describe('Frise of a dossier', () => {
       thenTheHandleIsHourless('Heure ?');
       thenTheHandleIsOutOfTheTabOrder();
       thenTheHandleHoldsNoValue();
+      thenTheAutomaticEndsDrawnAre([]);
+      thenNoPartIsRemoved();
     });
 
     it('should ask to place the instant where the hourless handle is dragged to', async () => {
@@ -2153,11 +2178,14 @@ describe('Frise of a dossier', () => {
       };
       await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
       const hourlessHandle = handle();
+      const touchedNodes = givenTheNodesOfThePlanAreWatched();
 
       await whenTheFactGetsItsHour(poigneeFixture('13:00', { activiteVisee: 'a-1', bornes: placementDeLaFixture('a-1').bornes }));
 
       expect(handle()).toBe(hourlessHandle);
+      expect(touchedNodes()).not.toContain(hourlessHandle);
       thenTheHandleHoldsAt(new Date(2026, 8, 14, 13, 0));
+      thenTheHandleIsASliderInTheTabOrder();
     });
 
     it('should go on moving the handle within the same gesture once the first move gave the fact an hour', async () => {
@@ -2296,6 +2324,7 @@ describe('Frise of a dossier', () => {
       await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
 
       thenTheBarSpans('a-1', { left: '12.5%', width: '25%' });
+      thenTheHandleStandsAt({ left: '37.5%', onTheRowOf: 'a-1' });
       thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
       thenTheBarIsNamed(
         'a-1',
@@ -2381,7 +2410,7 @@ describe('Frise of a dossier', () => {
       thenTheAutomaticEndsDrawnAre([]);
     });
 
-    it('should keep the pointages row when the anomaly holds no pointage', async () => {
+    it('should keep the frise in rows, the placement row empty above the bars, when the anomaly holds no pointage', async () => {
       const dossier = { journal: [], activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')], enConflit: false };
 
       await whenRenderingTheFrise(dossier, undefined, undefined, placementFixture({ activiteVisee: 'a-1' }));
@@ -2508,7 +2537,7 @@ describe('Frise of a dossier', () => {
       thenTheBarAttributeIs('a-1', 'data-modifiee', null);
     });
 
-    it('should withdraw the received state from the bar as soon as the handle moves', async () => {
+    it('should read the bar as it was received again once the handle has moved and the preview is withdrawn', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
         activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
@@ -2749,6 +2778,23 @@ describe('Frise of a dossier', () => {
     expect(handle().getAttribute('tabindex')).toBe('-1');
   };
 
+  const givenTheNodesOfThePlanAreWatched = (): (() => readonly Node[]) => {
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver(batch => records.push(...batch));
+    observer.observe(thePlan(), { childList: true, subtree: true });
+    return () => {
+      records.push(...observer.takeRecords());
+      observer.disconnect();
+      return records.flatMap(record => [...record.addedNodes, ...record.removedNodes]);
+    };
+  };
+
+  const thenTheHandleIsASliderInTheTabOrder = (): void => {
+    expect(handle().hasAttribute('data-sans-heure')).toBe(false);
+    expect(handle().hasAttribute('aria-hidden')).toBe(false);
+    expect(handle().getAttribute('tabindex')).toBe('0');
+  };
+
   const thenTheHandleHoldsNoValue = (): void => {
     expect(handle().hasAttribute('aria-valuenow')).toBe(false);
     expect(handle().hasAttribute('aria-valuetext')).toBe(false);
@@ -2859,6 +2905,10 @@ describe('Frise of a dossier', () => {
 
   const thenTheBarAttributeIs = (activite: string, attribut: string, expected: string | null): void => {
     expect(bar(activite).getAttribute(attribut)).toBe(expected);
+  };
+
+  const thenTheBarNameEndsWith = (activite: string, expected: string): void => {
+    expect(bar(activite).getAttribute('aria-label')?.slice(-expected.length)).toBe(expected);
   };
 
   const thenTheBarIsNamed = (activite: string, expected: string): void => {
@@ -3206,6 +3256,39 @@ describe('Frise of a dossier', () => {
 
       thenTheHandleIsReadAs(texte);
     });
+
+    it.each([
+      { cas: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), proposee: 'heure proposée 02:30 UTC+02:00' },
+      { cas: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), proposee: 'heure proposée 02:30 UTC+01:00' },
+    ])(
+      'should tell the $cas occurrence of the hour the clock repeats apart in the name of the bar it ends',
+      async ({ instant, proposee }) => {
+        const debut = new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString();
+        const fin = new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString();
+        const activite: ActiviteAnomalie = {
+          ...activiteFixture('a-1', 'ECHUE', '00:00'),
+          periode: { categorie: 'TRAVAIL', debut, fin },
+        };
+        const dossier = {
+          journal: [
+            {
+              ...pointageFixture('debut-a-1', 'DEMARRAGE', '00:00'),
+              fait: { ...pointageFixture('x', 'DEMARRAGE', '00:00').fait, instant: debut },
+            },
+          ],
+          activites: [activite],
+          enConflit: false,
+        };
+
+        await whenRenderingTheFrise(
+          dossier,
+          undefined,
+          poigneeFixture('00:00', { instant: instant.toISOString(), activiteVisee: 'a-1', bornes: { min: debut, max: fin } }),
+        );
+
+        thenTheBarNameEndsWith('a-1', ` · ${proposee}`);
+      },
+    );
 
     it('should graduate every two hours the day the clock repeats an hour, without two graduations closer than 64 pixels', async () => {
       const dossier = {
