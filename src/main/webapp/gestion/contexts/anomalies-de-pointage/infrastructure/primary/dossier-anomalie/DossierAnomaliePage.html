@@ -100,9 +100,7 @@
         {{ libelles.debut }} {{ periode.debut | instantLongDay: now }}
       </p>
       @if (periode.fin; as fin) {
-      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-fin">
-        {{ activite.etat === 'ECHUE' ? libelles.finAutomatiqueA : libelles.fin }} {{ fin | instantLongDay: now }}
-      </p>
+      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-fin">{{ libelles.fin }} {{ fin | instantLongDay: now }}</p>
       } } } @else {
       <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-selection-vide">{{ libelles.selectionVide }}</p>
       }

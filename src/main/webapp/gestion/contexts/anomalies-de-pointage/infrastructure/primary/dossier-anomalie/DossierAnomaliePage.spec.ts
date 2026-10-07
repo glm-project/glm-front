@@ -658,21 +658,22 @@ const CAS_DE_CONFLIT: readonly CasDeConflitFixture[] = [
     raison: 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE',
     enCause: PASSAGE_NC_17,
     activite: { ...TRAVAIL_8, debut: '06:00' },
-    phrase: 'Le passage en NC de 17:00 vise le travail de 06:00, déjà échu, alors qu’une autre activité est en cours.',
+    phrase: 'Le passage en NC de 17:00 vise le travail de 06:00, déjà terminé automatiquement, alors qu’une autre activité est en cours.',
   },
   {
     cas: 'a due non-conformity while another activity is running',
     raison: 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE',
     enCause: PASSAGE_NC_17,
     activite: { ...NC_8, debut: '06:00' },
-    phrase: 'Le passage en NC de 17:00 vise la non-conformité de 06:00, déjà échue, alors qu’une autre activité est en cours.',
+    phrase:
+      'Le passage en NC de 17:00 vise la non-conformité de 06:00, déjà terminée automatiquement, alors qu’une autre activité est en cours.',
   },
   {
     cas: 'a due activity without period',
     raison: 'CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE',
     enCause: PASSAGE_NC_17,
     activite: SANS_PERIODE,
-    phrase: 'Le passage en NC de 17:00 vise une activité déjà échue, alors qu’une autre activité est en cours.',
+    phrase: 'Le passage en NC de 17:00 vise une activité déjà terminée automatiquement, alors qu’une autre activité est en cours.',
   },
   {
     cas: 'a regularised stop on a work already stopped',
@@ -3213,8 +3214,8 @@ describe('Anomaly dossier page', () => {
 
     thenTheSelectionContains('Travail');
     thenTheSelectionContains('Début lundi 14 septembre à 08:00');
-    thenTheSelectionContains('Fin automatique lundi 14 septembre à 21:00');
-    thenTheSelectionContains('Échue · 13 h');
+    thenTheSelectionContains('Fin lundi 14 septembre à 21:00');
+    thenTheSelectionContains('Fin automatique · 13 h');
   });
 
   it('should keep the facts of the due activity out of the heading of an automatic end', async () => {
@@ -3222,7 +3223,7 @@ describe('Anomaly dossier page', () => {
 
     await whenRendering();
 
-    thenHeadingDoesNotContain('Fin automatique lundi 14 septembre à 21:00');
+    thenHeadingDoesNotContain('Fin lundi 14 septembre à 21:00');
     thenAbsent('anomalie-fin-automatique-activite');
   });
 
@@ -4299,7 +4300,7 @@ describe('Anomaly dossier page', () => {
   );
 
   it.each([
-    { etat: 'ECHUE' as const, attendu: 'Échue · 13 h' },
+    { etat: 'ECHUE' as const, attendu: 'Fin automatique · 13 h' },
     { etat: 'TERMINEE' as const, attendu: 'Terminée · 13 h' },
   ])('should show the selected $etat activity of an automatic end with its received duration', async ({ etat, attendu }) => {
     const dossier = dossierFinAutomatiqueFixture();

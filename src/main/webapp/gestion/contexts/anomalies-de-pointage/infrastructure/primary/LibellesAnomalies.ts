@@ -93,9 +93,9 @@ const PROBLEMES = {
     },
     CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: {
       avec: (sujet: string, cible: Activite, heure: string) =>
-        `${sujet} vise ${cible.defini} de ${heure}, déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+        `${sujet} vise ${cible.defini} de ${heure}, déjà terminé${cible.accord} automatiquement, alors qu’une autre activité est en cours.`,
       sans: (sujet: string, cible: Activite) =>
-        `${sujet} vise ${cible.indefini} déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+        `${sujet} vise ${cible.indefini} déjà terminé${cible.accord} automatiquement, alors qu’une autre activité est en cours.`,
     },
     CONTRADICTION_REGULARISATION: {
       avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord} à ${heure}.`,
@@ -124,7 +124,6 @@ export const LIBELLES_ANOMALIES = {
   autresCorrectionsAide:
     'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
   debut: 'Début',
-  finAutomatiqueA: 'Fin automatique',
   fin: 'Fin',
   corriger: 'Corriger ce pointage',
   regulariser: 'Ajouter un pointage manquant',
@@ -162,7 +161,7 @@ export const LIBELLES_ANOMALIES = {
     TERMINEE: 'Terminée',
     ANNULEE: 'Annulée',
     REMPLACEE: 'Remplacée',
-    ECHUE: 'Échue',
+    ECHUE: 'Fin automatique',
   },
   actes: {
     CORRECTION: 'Correction du pointage',

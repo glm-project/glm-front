@@ -320,7 +320,7 @@ describe('Frise of a dossier', () => {
   it.each([
     ['TRAVAIL', 'TERMINEE', 'Travail · Terminée'],
     ['TRAVAIL', 'A_RESOUDRE', 'Travail · À résoudre'],
-    ['TRAVAIL', 'ECHUE', 'Travail · Échue'],
+    ['TRAVAIL', 'ECHUE', 'Travail · Fin automatique'],
     ['NON_CONFORMITE', 'EN_COURS', 'Non-conformité · En cours'],
   ] as const)('should write on the bar of a %s activity %s its category and its state: %s', async (categorie, etat, texte) => {
     const dossier = { journal: [], activites: [activiteFixture('a-1', etat, '08:00', undefined, categorie)] };

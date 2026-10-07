@@ -590,7 +590,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       `?nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=2&pointage=${ncFixture}`,
     );
     cy.get(dataSelector('anomalie-resultat')).should('not.exist');
-    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Échue');
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Fin automatique');
     cy.get(dataSelector('anomalie-retour')).should('have.attr', 'href').and('contain', 'nature=CONFLIT').and('contain', 'page=2');
   };
 

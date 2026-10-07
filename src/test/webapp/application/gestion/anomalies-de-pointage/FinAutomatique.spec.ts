@@ -146,8 +146,8 @@ describe('Automatic end of an activity in Gestion', () => {
   const whenChoosingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-selection'))
       .should('contain.text', 'Début lundi 14 septembre à 08:00')
-      .and('contain.text', 'Fin automatique lundi 14 septembre à 21:00')
-      .and('contain.text', 'Échue · 13 h');
+      .and('contain.text', 'Fin lundi 14 septembre à 21:00')
+      .and('contain.text', 'Fin automatique · 13 h');
     thenActivityIsSelected(activiteFinAutomatiqueFixture);
     cy.get(dataSelector('anomalie-probleme'))
       .should('have.length', 1)

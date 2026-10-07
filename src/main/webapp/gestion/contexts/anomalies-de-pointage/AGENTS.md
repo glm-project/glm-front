@@ -204,7 +204,7 @@ La sélection est un pointage ou une activité (`SelectionDuDossier`). Le pannea
 porte le pointage choisi : geste, instant avec ses secondes, opérateur, poste, régularisation, annulation (motif, auteur,
 instant), remplacement, traçabilité (activités visée et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un
 pointage annulé, désactivés pour le consultant et pendant une opération. Pour une activité il dit sa catégorie, son état et son
-temps reçus (`tempsActivite`), son début et sa fin reçus, « Fin automatique » pour une activité échue ; il n'a ni Corriger
+temps reçus (`tempsActivite`), son début et sa fin reçus (« Fin ») ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue » ; il n'a ni Corriger
 ni Annuler. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau dossier (autre
 adresse, relecture, reçu), elle revient à la sélection initiale (`selectionInitiale`) : le plus ancien pointage en cause d'un
 diagnostic que le journal contient, sinon la première activité échue d'une fin automatique, sinon rien et le panneau invite à

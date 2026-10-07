@@ -88,7 +88,7 @@ Le panneau « Sélection », avant « Votre décision », montre le pointage cho
 poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
 et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours
 les voient désactivés, avec le message des droits. Pour une activité, il dit sa catégorie, son état et son temps reçus, son
-début et sa fin reçus (« Fin automatique » pour une activité échue), sans bouton d'acte. À l'ouverture d'un conflit, le plus
+début et sa fin reçus (« Fin »), sans bouton d'acte ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue ». À l'ouverture d'un conflit, le plus
 ancien pointage en cause que le journal contient est sélectionné ; à l'ouverture d'une fin automatique, l'activité échue ; si
 les deux sont portés, le pointage en cause ; sinon le panneau dit « Sélectionnez un pointage ou une activité sur la frise pour
 voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier, jamais
