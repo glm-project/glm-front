@@ -403,8 +403,16 @@
   text-align: right;
 }
 
-.barre.automatique {
-  border: 2px dashed var(--color-warn);
+.embout-automatique {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  width: 0.75rem;
+  max-width: 100%;
+  border-left: 2px dashed var(--color-warn);
+  background: repeating-linear-gradient(90deg, transparent 0 4px, color-mix(in srgb, var(--color-warn) 55%, transparent) 4px 8px);
 }
 
 .barre.a-resoudre {

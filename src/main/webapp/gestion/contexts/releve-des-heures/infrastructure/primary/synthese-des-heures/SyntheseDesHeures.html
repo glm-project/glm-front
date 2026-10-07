@@ -341,14 +341,18 @@
     @for (barre of cellule.barres; track $index) {
     <span
       [class]="'barre ' + barre.style"
-      [class.automatique]="barre.automatique"
       [style.left.%]="barre.gauche"
       [style.width.%]="barre.largeur"
       [title]="barre.enonce"
       [attr.data-selector]="detail ? 'synthese-detail-barre' : 'synthese-barre'"
       [attr.data-style]="barre.style"
       [attr.data-automatique]="barre.automatique"
-      ><span class="sr-only">{{ barre.enonce }}</span></span
+      ><span class="sr-only">{{ barre.enonce }}</span>@if (barre.automatique) {<span
+        class="embout-automatique"
+        aria-hidden="true"
+        data-selector="synthese-fin-automatique"
+      ></span
+      >}</span
     >
     @if (barre.etat; as etat) { @if (detail) {
     <span class="etat-activite" [style.width.%]="barre.fin" data-selector="synthese-detail-etat">{{ etat }}</span>

@@ -341,6 +341,13 @@ describe('Operational time report in gestion', () => {
     thenTheMentionEndsUnderItsBar('synthese-detail-barre', 'synthese-detail-etat');
   });
 
+  it('should cap the end of an automatically ended bar', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheAutomaticEndCapsItsBar('synthese-barre');
+  });
+
   it('should keep an early automatic end inside its day in the week', () => {
     givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
     whenVisiting(ADRESSE);
@@ -495,6 +502,17 @@ describe('Operational time report in gestion', () => {
       expect(mesures[0]?.lignes).to.equal(1);
       expect(mesures[0]?.emprise.left).to.be.at.least((mesures[0]?.jour?.left ?? 0) - 0.5);
       expect(mesures[0]?.emprise.right).to.be.at.most((mesures[0]?.jour?.right ?? 0) + 0.5);
+    });
+  };
+
+  const thenTheAutomaticEndCapsItsBar = (barre: string): void => {
+    cy.get(dataSelector(barre)).should($barre => {
+      const contour = $barre[0]?.getBoundingClientRect();
+      const embouts = [...$barre.find(dataSelector('synthese-fin-automatique'))].map(embout => embout.getBoundingClientRect());
+      expect(embouts).to.have.length(1);
+      expect(embouts[0]?.width).to.be.greaterThan(0);
+      expect(embouts[0]?.left).to.be.at.least((contour?.left ?? 0) - 0.5);
+      expect(embouts[0]?.right).to.be.within((contour?.right ?? 0) - 1.5, (contour?.right ?? 0) + 0.5);
     });
   };
 
