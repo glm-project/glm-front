@@ -1,5 +1,4 @@
 import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
-import { ChronologiePointages } from '../../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
@@ -17,6 +16,7 @@ import {
   surVoies,
 } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
+import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'> & { readonly choix?: DossierAnomalie['choix'] };
 
@@ -327,8 +327,6 @@ const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly Rep
   source: placement,
 });
 
-const estLisible = (pointage: PointageAnomalie): boolean => Number.isFinite(Date.parse(pointage.fait.instant));
-
 const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {
   const barre = barreDe(activite, haut, contexte);
   const temps = tempsActivite(activite);
@@ -339,9 +337,6 @@ const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolea
     texte: [barre.texte, temps].filter(Boolean).join(' · '),
   };
 };
-
-const pointagesLisibles = (journal: readonly PointageAnomalie[]): readonly PointageAnomalie[] =>
-  new ChronologiePointages(journal.filter(estLisible)).pointages;
 
 const dispositionApres = (
   apercu: ApercuDeFrise,
@@ -392,8 +387,8 @@ export const dispositionDeFrise = (
   apercu?: ApercuDeFrise,
 ): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  const pointages = pointagesLisibles(vue.journal);
-  const pointagesApres = apercu === undefined ? [] : pointagesLisibles(apercu.apres.journal);
+  const pointages = pointagesDeLaFrise(vue);
+  const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
   const echelle = echelleDeLaFrise(
     instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
     poignee,

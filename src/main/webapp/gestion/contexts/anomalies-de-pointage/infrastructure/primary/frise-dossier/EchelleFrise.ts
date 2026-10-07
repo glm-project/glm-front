@@ -30,8 +30,8 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const instantsRecus = (journal: readonly PointageAnomalie[], activites: readonly ActiviteAnomalie[]): readonly number[] =>
-  [...journal.map(pointage => pointage.fait.instant), ...activites.flatMap(activite => [activite.periode?.debut, activite.periode?.fin])]
+export const instantsRecus = (pointages: readonly PointageAnomalie[], activites: readonly ActiviteAnomalie[]): readonly number[] =>
+  [...pointages.map(pointage => pointage.fait.instant), ...activites.flatMap(activite => [activite.periode?.debut, activite.periode?.fin])]
     .flatMap(instant => (instant === undefined ? [] : [Date.parse(instant)]))
     .filter(Number.isFinite);
 
