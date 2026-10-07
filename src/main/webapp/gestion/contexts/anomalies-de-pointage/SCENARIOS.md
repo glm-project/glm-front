@@ -89,6 +89,13 @@ jusqu'au … », ou « les autres jours » quand ils sont des deux côtés). La 
 jour est nommé. L'année s'ajoute quand elle diffère de l'année en cours. Sans nom résolu, la phrase dit « l'opérateur » ; sans pointage
 de l'opérateur hors de l'anomalie, il n'y a pas de phrase.
 
+À droite du titre de la frise, un lien (`anomalie-frise-journee`) « Voir la journée de Camille Martin » (« … de l'opérateur » sans nom
+résolu) mène au relevé des heures de l'opérateur de l'anomalie, `/operateurs/{id}/heures?jour=AAAA-MM-JJ`, qui ouvre la semaine
+contenant ce jour, ce jour ouvert. Le jour est le jour local du pointage qui pose problème : le plus ancien pointage tardif d'une fin
+automatique (le lendemain, c'est le jour de l'arrêt tardif) ; sinon le plus ancien pointage en cause d'un diagnostic, celui de la
+sélection initiale ; sinon le jour local du début de la période de l'anomalie. Un jour local proche de minuit reste celui de l'horloge
+locale, non celui d'UTC. Sans pointage ni activité pour dater la période, il n'y a pas de lien.
+
 Quand un aperçu est disponible, des rangées « Après cet acte » s'ajoutent sous la frise sur la même échelle, qui couvre aussi les
 instants de l'après : les pointages de l'après, puis une barre par activité de l'après, avec les fins reçues seulement. Elles
 ne se sélectionnent pas et ne changent pas la sélection du dossier. Une activité dont l'état, le début, la fin ou la durée

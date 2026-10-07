@@ -171,6 +171,13 @@ dans un jour local ; sur deux jours, le jour est nommé (« plus tôt le lundi 1
 d'aujourd'hui. Le premier groupe porte le nom (« 1 pointage », « 2 pointages »). Aucune phrase sans pointage hors de l'anomalie. Le
 nom est celui de la séquence, sinon celui du référentiel ou des pointages du journal ; sans nom, « l'opérateur ». Le jour local et
 les heures sont de la présentation : le domaine ne lit pas le fuseau.
+À droite de ce titre, un lien `anomalie-frise-journee` (`JourneeDeLOperateur.ts`, libellé `LIBELLES_ANOMALIES.voirLaJournee`) dit « Voir la
+journée de Camille Martin » (« de l'opérateur » sans nom résolu) et mène à `['/operateurs', operateur, 'heures']` avec le seul paramètre
+`jour` (`AAAA-MM-JJ`) : le relevé des heures possède cette adresse et ouvre la semaine ISO qui contient ce jour, ce jour ouvert. Ce
+contexte ne calcule aucune semaine et n'importe rien du relevé. Le jour est le jour local (`jourLocalDe`, présentation) du pointage qui
+pose problème : le plus ancien pointage tardif du dossier (`pointagesTardifs`), sinon le plus ancien pointage en cause (celui de la
+sélection initiale), sinon le début de la période de l'anomalie (`PeriodeDeLAnomalie.ts`, partagée avec la phrase de contexte) ; sans
+période, pas de lien.
 Les pointages de l'anomalie et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
 présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,

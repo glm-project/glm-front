@@ -247,6 +247,7 @@ export const LIBELLES_ANOMALIES = {
   decision: 'Votre décision',
   selection: 'Sélection',
   selectionVide: 'Sélectionnez un pointage ou une activité sur la frise pour voir ses détails.',
+  voirLaJournee: (operateur: string) => `Voir la journée de ${operateur}`,
   pointagesEtActivites: 'Pointages et activités',
   choisir:
     'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',

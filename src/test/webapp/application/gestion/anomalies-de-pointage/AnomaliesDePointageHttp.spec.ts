@@ -29,6 +29,11 @@ import {
   thenTheOperatorsOtherPointagesAreSummarized,
 } from '../../../utils/gestion/anomalies-de-pointage/JournalDebordantHttp.fixture';
 import {
+  givenTheHoursOfTheOperator,
+  thenTheHoursOpenOnTheDay,
+  whenFollowingTheLinkToTheDayOfTheOperator,
+} from '../../../utils/gestion/anomalies-de-pointage/JourneeDeLOperateur';
+import {
   thenActivityIsSelected,
   whenSelectingActivity,
   whenSelectingPointage,
@@ -101,6 +106,16 @@ describe('HTTP conflict resolution in Gestion', () => {
     whenOpeningTheRealDossier();
 
     thenTheOperatorsOtherPointagesAreSummarized();
+  });
+
+  it('should open the hours of the operator on the day of the pointage at fault when the journal of the follow-up holds other days', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+    const synthese = givenTheHoursOfTheOperator();
+
+    whenOpeningTheRealDossier();
+    whenFollowingTheLinkToTheDayOfTheOperator();
+
+    thenTheHoursOpenOnTheDay(synthese, { annee: '2026', semaine: '38' }, 'lun. 14');
   });
 
   const givenAJournalThatOverflowsTheAnomaly = (): void => {

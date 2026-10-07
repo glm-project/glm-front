@@ -4323,6 +4323,107 @@ describe('Anomaly dossier page', () => {
     });
   });
 
+  describe('link to the day of the operator', () => {
+    it('should name the operator in the link to the day', async () => {
+      await whenRendering();
+
+      thenTextContains('anomalie-frise-journee', 'Voir la journée de Camille Martin');
+    });
+
+    it('should say the operator in the link to the day when no name is resolved', async () => {
+      read.referentielResult = new ReferentielAnomalies([], []);
+      givenAnAnomalyOnADayWith(new Date(2026, 8, 14, 8, 0), new Date(2026, 8, 14, 17, 0), [], { ligne: '', journal: '' });
+
+      await whenRendering();
+
+      thenTextContains('anomalie-frise-journee', 'Voir la journée de l’opérateur');
+    });
+
+    it('should lead to the day of the operator on the hours of the operator', async () => {
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+
+    it('should lead to the day of the pointage pointed after the deadline when it falls on the following day', async () => {
+      givenALateEnd(instantLocalFixture(new Date(2026, 8, 15, 10, 0)));
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-15' });
+    });
+
+    it('should lead to the day of the oldest pointage pointed after the deadline', async () => {
+      givenTwoPointagesPointedAfterTheDeadline();
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-15' });
+    });
+
+    it('should lead to the day of the oldest pointage at fault of a conflict', async () => {
+      givenAConflictWhoseFaultIsPointedAt(new Date(2026, 8, 16, 9, 0), new Date(2026, 8, 15, 9, 0));
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-15' });
+    });
+
+    it('should tell the day of a pointage at fault by the local clock near midnight', async () => {
+      givenAConflictWhoseFaultIsPointedAt(new Date(2026, 8, 15, 0, 10), new Date(2026, 8, 14, 23, 50));
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+
+    it('should tell the day of a pointage pointed after the deadline by the local clock near midnight', async () => {
+      givenALateEnd(instantLocalFixture(new Date(2026, 8, 14, 23, 50)));
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+
+    it('should tell the day the period starts by the local clock near midnight', async () => {
+      givenAnAnomalyOnADayWith(new Date(2026, 8, 14, 23, 50), new Date(2026, 8, 15, 8, 0), []);
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+
+    it('should offer no link to the day when the anomaly shows no pointage and no activity to tell the day from', async () => {
+      givenAnAnomalyThatShowsNothing();
+
+      await whenRendering();
+
+      thenAbsent('anomalie-frise-journee');
+    });
+
+    it('should lead to the day the period starts when the pointage pointed after the deadline is not in the journal', async () => {
+      givenAnAutomaticEndDiagnosedAs({
+        cas: 'late pointage missing',
+        categorie: 'TRAVAIL',
+        regularisation: 'AUCUNE',
+        tardif: { code: 'CORRIGER_FIN_TARDIVE', pointage: { geste: 'ARRET', heure: '23:00', absentDuJournal: true } },
+        phrase: '',
+      });
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+
+    it('should lead to the day the period of an automatic end starts when no pointage was pointed after the deadline', async () => {
+      givenAnAutomaticEnd();
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+  });
+
   describe('in a time zone that changes hour', () => {
     const original = process.env['TZ'];
 
@@ -4715,6 +4816,46 @@ describe('Anomaly dossier page', () => {
 
   const givenALateEndInAJournalBeyondTheAnomaly = (): void => {
     read.result = { kind: 'DOSSIER', dossier: lateEndInAJournalBeyondTheAnomaly() };
+  };
+
+  const givenTwoPointagesPointedAfterTheDeadline = (): void => {
+    const dossier = dossierFinTardiveFixture(instantLocalFixture(new Date(2026, 8, 16, 10, 0)));
+    const tardifLe15 = pointageAilleursFixture('fin-15', instantLocalFixture(new Date(2026, 8, 15, 10, 0)));
+    const [choixLe16] = dossier.choix;
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal: [...dossier.journal, tardifLe15],
+        choix: [
+          ...dossier.choix,
+          {
+            ...requiredFixture(choixLe16, 'late choice'),
+            id: 'CORRIGER_FIN_TARDIVE:fin-15',
+            saisie: SaisieActe.correct('fin-15', tardifLe15.fait),
+          },
+        ],
+      },
+    };
+  };
+
+  const givenAConflictWhoseFaultIsPointedAt = (...instants: readonly Date[]): void => {
+    const dossier = dossierAnomalieFixture();
+    const enCause = instants.map((instant, rang) => pointageAilleursFixture(`fin-${rang}`, instantLocalFixture(instant)));
+    const journal = [pointageAilleursFixture('ouvrant-13', instantLocalFixture(new Date(2026, 8, 13, 22, 0))), ...enCause];
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        journal,
+        perimetre: new PerimetreDuDossier(journal.map(pointage => pointage.id)),
+        diagnostics: enCause.map(pointage => ({
+          pointage: pointage.id,
+          raison: 'CIBLE_REMPLACEE',
+          cible: { activite: new ActiviteAnomalieId('travail-8') },
+        })),
+      },
+    };
   };
 
   const givenALateEnd = (instant = INSTANT_FIN_TARDIVE): void => {

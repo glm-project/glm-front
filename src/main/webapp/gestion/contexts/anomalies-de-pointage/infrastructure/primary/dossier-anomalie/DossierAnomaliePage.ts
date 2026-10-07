@@ -37,6 +37,7 @@ import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { contexteDuSuivi } from '../ContexteDuSuivi';
 import { etatDeLecture } from '../EtatDeLecture';
+import { jourDeLaJournee } from '../JourneeDeLOperateur';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
@@ -108,6 +109,7 @@ export class DossierAnomaliePage {
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
+  protected readonly jourDeLaJournee = jourDeLaJournee;
   protected readonly problemes = phrasesDuProbleme;
   protected readonly actionsDirectes = (dossier: DossierAnomalie) => ActionsDirectes.depuis(dossier).actions;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
@@ -179,6 +181,12 @@ export class DossierAnomaliePage {
 
   protected contexte(dossier: DossierAnomalie): string | undefined {
     return contexteDuSuivi(dossier, this.now, operateurDuDossier(dossier, this.referentielConnu()));
+  }
+
+  protected libelleDeLaJournee(dossier: DossierAnomalie): string {
+    return this.libelles.voirLaJournee(
+      operateurDuDossier(dossier, this.referentielConnu()) ?? this.libelles.frise.contexte.operateurInconnu,
+    );
   }
 
   protected libelleChoix(choix: ChoixGuide): string {
