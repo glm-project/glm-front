@@ -334,6 +334,13 @@ describe('Operational time report in gestion', () => {
     thenTheMentionEndsUnderItsBar('synthese-barre', 'synthese-etat-court');
   });
 
+  it('should keep an early automatic end inside its day in the week', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
+    whenVisiting(ADRESSE);
+
+    thenTheMentionStaysInsideItsDay();
+  });
+
   const whenTheReadingResumes = (resume: () => void): void => {
     cy.get(dataSelector('synthese-loading')).then(() => {
       resume();
@@ -440,6 +447,23 @@ describe('Operational time report in gestion', () => {
       expect(Math.abs((mentions[0]?.right ?? 0) - (bout?.right ?? 0))).to.be.lessThan(1);
       expect(mentions[0]?.top).to.be.at.least(bout?.bottom ?? 0);
     });
+  };
+
+  const thenTheMentionStaysInsideItsDay = (): void => {
+    cy.get(dataSelector('synthese-element-jour'))
+      .eq(0)
+      .should($cellule => {
+        const colonne = $cellule[0]?.getBoundingClientRect();
+        const textes = [...$cellule.find(dataSelector('synthese-etat-court'))].map(mention => {
+          const texte = mention.ownerDocument.createRange();
+          texte.selectNodeContents(mention);
+          return texte.getBoundingClientRect();
+        });
+        expect(textes).to.have.length(1);
+        expect(textes[0]?.width).to.be.greaterThan(0);
+        expect(textes[0]?.left).to.be.at.least((colonne?.left ?? 0) - 0.5);
+        expect(textes[0]?.right).to.be.at.most((colonne?.right ?? 0) + 0.5);
+      });
   };
 
   const thenTheFriseDoesNotScroll = (): void => {
