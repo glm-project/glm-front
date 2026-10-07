@@ -348,6 +348,13 @@ describe('Operational time report in gestion', () => {
     thenTheAutomaticEndCapsItsBar('synthese-barre');
   });
 
+  it('should keep the cap of a one-hour automatic end inside its bar', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
+    whenVisiting(ADRESSE);
+
+    thenTheAutomaticEndCapsItsBar('synthese-barre');
+  });
+
   it('should keep an early automatic end inside its day in the week', () => {
     givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
     whenVisiting(ADRESSE);
