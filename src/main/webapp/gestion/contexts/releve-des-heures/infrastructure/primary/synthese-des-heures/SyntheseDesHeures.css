@@ -1,4 +1,5 @@
 :host {
+  --hachure-fin-automatique: repeating-linear-gradient(45deg, var(--color-warn) 0 2px, var(--color-surface) 2px 4px);
   display: block;
 }
 
@@ -392,10 +393,6 @@
   background: var(--color-ink-muted);
 }
 
-.pastille-fin-automatique {
-  background-color: var(--color-accent);
-}
-
 .etat-activite {
   display: block;
   box-sizing: border-box;
@@ -415,12 +412,12 @@
   box-sizing: border-box;
   width: 0.75rem;
   max-width: 100%;
+  border-radius: 0 2px 2px 0;
+  background-image: var(--hachure-fin-automatique);
 }
 
-.embout-automatique,
 .pastille-fin-automatique {
-  border-left: 2px dashed var(--color-warn);
-  background-image: repeating-linear-gradient(90deg, transparent 0 4px, color-mix(in srgb, var(--color-warn) 55%, transparent) 4px 8px);
+  background-image: linear-gradient(90deg, var(--color-accent) 0 8px, transparent 8px), var(--hachure-fin-automatique);
 }
 
 .barre.a-resoudre {
