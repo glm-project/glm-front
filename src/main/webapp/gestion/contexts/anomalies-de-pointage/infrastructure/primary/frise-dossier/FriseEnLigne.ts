@@ -39,7 +39,8 @@ import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 const LARGEUR_DE_DEUX_CIBLES_PX = 2 * HAUTEUR_D_UN_ELEMENT_PX;
 
-const ouvre = (activite: ActiviteAnomalie, pointage: PointageAnomalie): boolean => activite.ouvrant.pointage === pointage.id.pointage;
+const ouvre = (activite: ActiviteAnomalie, pointage: PointageAnomalie): boolean =>
+  activite.periode !== undefined && activite.ouvrant.pointage === pointage.id.pointage;
 
 const termineAuBout = (activite: ActiviteAnomalie, pointage: PointageAnomalie): boolean => {
   const fin = finRecueDe(activite.etat, activite.periode?.fin);

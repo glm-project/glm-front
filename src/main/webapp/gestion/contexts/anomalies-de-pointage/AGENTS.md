@@ -207,7 +207,7 @@ l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-acti
 `data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
 rendue des graduations, lue sur deux traits et extrapolée aux bords (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
 La frise se lit **en ligne** (`seLitEnLigne`, `FriseEnLigne.ts`) quand le dossier n'est pas un conflit à expliquer (`conflitAExpliquer`),
-que la frise lit au moins un pointage et que chacun, non annulé, est soit l'ouvrant d'une activité du dossier (`activite.ouvrant`),
+que la frise lit au moins un pointage et que chacun, non annulé, est soit l'ouvrant d'une activité du dossier qui a une période (`activite.ouvrant`),
 soit le terminant au bout de sa barre : son fait vise l'activité (`activiteVisee`), qui a une fin reçue, à cet instant exactement
 (`InstantPointage`). C'est la fin automatique jamais arrêtée et son reçu ; un conflit, un pointage tardif (posé après l'échéance, donc
 ailleurs qu'au bout de la barre échue) ou un pointage hors de ces deux cas gardent la frise en rangées décrite ici. En ligne,

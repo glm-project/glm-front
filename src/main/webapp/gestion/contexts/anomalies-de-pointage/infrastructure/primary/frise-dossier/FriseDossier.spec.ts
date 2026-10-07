@@ -1962,6 +1962,26 @@ describe('Frise of a dossier', () => {
       thenTheMarkersAre(['debut-a-1', 'fin-tardive']);
     });
 
+    it('should keep the pointages row when a pointage opens an activity without a period', async () => {
+      const sansPeriode: ActiviteAnomalie = {
+        id: new ActiviteAnomalieId('sans-periode'),
+        libelle: 'Travail',
+        etat: 'A_RESOUDRE',
+        temps: '',
+        ouvrant: new PointageAnomalieId('debut-sans-periode'),
+      };
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-sans-periode', 'DEMARRAGE', '09:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00'), sansPeriode],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier);
+
+      thenThePointagesRowIsTitled('Pointages');
+      thenTheMarkersAre(['debut-a-1', 'debut-sans-periode']);
+    });
+
     it('should keep the pointages row when a pointage of the anomaly is cancelled', async () => {
       const cancelled = {
         ...arretDe('arret-a-1', 'a-1', '11:00'),
