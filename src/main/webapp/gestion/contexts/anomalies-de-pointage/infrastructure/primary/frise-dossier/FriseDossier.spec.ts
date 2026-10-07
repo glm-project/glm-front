@@ -1918,6 +1918,23 @@ describe('Frise of a dossier', () => {
       thenTheEndMarkerStandsOnTheEndOfItsBar('arret-a-1', 'a-1', '80%');
     });
 
+    it('should stand a passage that ends a bar and opens the next one once, on the start of the bar it opens', async () => {
+      const passage = pointageFixture('pnc', 'PASSAGE_NC', '11:00');
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), { ...passage, fait: { ...passage.fait, activiteVisee: 'a-1' } }],
+        activites: [
+          activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'),
+          { ...activiteFixture('a-2', 'ECHUE', '11:00', '21:00', 'NON_CONFORMITE'), ouvrant: new PointageAnomalieId('pnc') },
+        ],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1', 'pnc']);
+      thenTheStartMarkerStandsOnTheStartOfItsBar('pnc', 'a-2');
+    });
+
     it('should keep the pointages row for a conflict to explain', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],

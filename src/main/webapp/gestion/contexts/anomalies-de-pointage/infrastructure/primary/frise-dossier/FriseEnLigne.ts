@@ -162,18 +162,18 @@ export const dispositionEnLigne = (entrees: EntreesDeFrise): DispositionFrise =>
   const visee = rangees.find(({ activite }) => activite === cible);
   const surSaBarre = poignee === undefined || visee === undefined ? undefined : { ...visee, poignee };
   const barres = rangees.map(({ barre }) => barre);
-  const reperes = rangees.flatMap(({ activite, barre }) =>
-    pointages.flatMap((pointage): readonly RepereFrise[] => {
-      const repere = repereDe(pointage, enCause.has(pointage.id.pointage), 0, contexte);
-      if (ouvre(activite, pointage)) return [{ ...repere, gauche: barre.gauche, haut: barre.haut, ancrage: 'GAUCHE' }];
-      if (termineAuBout(activite, pointage)) {
+  const reperes = pointages.flatMap((pointage): readonly RepereFrise[] => {
+    const repere = repereDe(pointage, enCause.has(pointage.id.pointage), 0, contexte);
+    const ouvertes = rangees.filter(({ activite }) => ouvre(activite, pointage));
+    if (ouvertes.length > 0) return ouvertes.map(({ barre }) => ({ ...repere, gauche: barre.gauche, haut: barre.haut, ancrage: 'GAUCHE' }));
+    return rangees
+      .filter(({ activite }) => termineAuBout(activite, pointage))
+      .map(({ barre }) => {
         const gauche = positionSur(echelle, repere.instant);
         const barreEtroite = ((gauche - barre.gauche) / POSITION_DU_BORD) * largeur < LARGEUR_DE_DEUX_CIBLES_PX;
-        return [{ ...repere, gauche, haut: barre.haut, ancrage: barreEtroite ? 'GAUCHE' : 'DROITE' }];
-      }
-      return [];
-    }),
-  );
+        return { ...repere, gauche, haut: barre.haut, ancrage: barreEtroite ? 'GAUCHE' : 'DROITE' };
+      });
+  });
   const positionDePoignee = positionsDePoignee(entrees, visee, echelle, largeur);
   const apres =
     apercu === undefined || recu !== undefined
