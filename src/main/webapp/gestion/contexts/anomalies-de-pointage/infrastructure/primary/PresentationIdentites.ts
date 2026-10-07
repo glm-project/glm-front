@@ -20,16 +20,19 @@ const operateurSansNom = (referentiel: ReferentielAnomalies | undefined): string
 const posteSansLibelle = (poste: string, referentiel: ReferentielAnomalies | undefined): string =>
   referentiel === undefined && poste !== '' ? LIBELLES_ANOMALIES.posteActuelConserve : postePresente('', poste);
 
+const nomConnuDeLOperateur = (
+  operateur: string,
+  referentiel: ReferentielAnomalies | undefined,
+  journal: readonly PointageAnomalie[],
+): string | undefined =>
+  referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
+  ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
+
 export const operateurDeLActe = (
   operateur: string,
   referentiel: ReferentielAnomalies | undefined,
   journal: readonly PointageAnomalie[],
-): string => {
-  const nom =
-    referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
-    ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
-  return nom ?? operateurSansNom(referentiel);
-};
+): string => nomConnuDeLOperateur(operateur, referentiel, journal) ?? operateurSansNom(referentiel);
 
 export const posteDeLActe = (
   poste: string,
