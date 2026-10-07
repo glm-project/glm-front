@@ -11,6 +11,7 @@ import {
   Graduation,
   graduationsDe,
   instantsRecus,
+  LARGEUR_MINIMALE_PAR_HEURE_PX,
   largeurMinimaleDe,
   positionSur,
   surVoies,
@@ -346,10 +347,12 @@ const dispositionApres = (
 ): DispositionApres => {
   const modifiees = activitesModifiees(apercu.avant.activites, apercu.apres.activites);
   const poses = faitsDeLActe(apercu.avant.journal, apercu.apres.journal);
-  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) => ({
-    ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
-    haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
-  }));
+  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant), LARGEUR_MINIMALE_PAR_HEURE_PX).map(
+    ({ element, voie }) => ({
+      ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
+      haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
+    }),
+  );
   const hautDesBarres = HAUTEUR_DU_TITRE_PX + hauteurDesReperes(reperes) + ESPACE_ENTRE_RANGEES_PX;
   const barres = parDebut(apercu.apres.activites).map((activite, rang) =>
     barreApresDe(
@@ -398,8 +401,8 @@ export const dispositionDeFrise = (
   const intitule = intituleDesPointages(pointages);
   const hautDesReperes = hautDesReperesSous(intitule);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes };
-  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) =>
-    repereDe(element, enCause.has(element.id.pointage), voie, contexte),
+  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant), LARGEUR_MINIMALE_PAR_HEURE_PX).map(
+    ({ element, voie }) => repereDe(element, enCause.has(element.id.pointage), voie, contexte),
   );
   const hautDeLaPoignee = hautDesReperes + hauteurDesReperes(reperes);
   const hautDesActivites = hautDeLaPoignee + (poignee === undefined ? 0 : HAUTEUR_D_UN_ELEMENT_PX) + ESPACE_ENTRE_RANGEES_PX;

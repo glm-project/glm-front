@@ -5,7 +5,7 @@ const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
 const TROIS_HEURES = 3 * UNE_HEURE;
 const CINQ_MINUTES = 300_000;
-const LARGEUR_MINIMALE_PAR_HEURE_PX = 64;
+export const LARGEUR_MINIMALE_PAR_HEURE_PX = 64;
 const LARGEUR_D_UN_REPERE_PX = 44;
 
 export interface EchelleFrise {
@@ -73,7 +73,8 @@ export const graduationsDe = (echelle: EchelleFrise): readonly Graduation[] =>
     };
   });
 
-const ecartEnPixels = (premier: number, second: number): number => (Math.abs(second - premier) / UNE_HEURE) * LARGEUR_MINIMALE_PAR_HEURE_PX;
+const ecartEnPixels = (premier: number, second: number, pixelsParHeure: number): number =>
+  (Math.abs(second - premier) / UNE_HEURE) * pixelsParHeure;
 
 export interface SurUneVoie<Element> {
   readonly element: Element;
@@ -83,11 +84,12 @@ export interface SurUneVoie<Element> {
 export const surVoies = <Element>(
   elements: readonly Element[],
   instantDe: (element: Element) => number,
+  pixelsParHeure: number,
 ): readonly SurUneVoie<Element>[] => {
   const dernierParVoie: number[] = [];
   return elements.map(element => {
     const instant = instantDe(element);
-    const libre = dernierParVoie.findIndex(dernier => ecartEnPixels(dernier, instant) >= LARGEUR_D_UN_REPERE_PX);
+    const libre = dernierParVoie.findIndex(dernier => ecartEnPixels(dernier, instant, pixelsParHeure) >= LARGEUR_D_UN_REPERE_PX);
     const voie = libre === -1 ? dernierParVoie.length : libre;
     dernierParVoie[voie] = instant;
     return { element, voie };
