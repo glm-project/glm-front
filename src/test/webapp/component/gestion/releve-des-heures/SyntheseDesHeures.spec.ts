@@ -327,6 +327,13 @@ describe('Operational time report in gestion', () => {
     thenTheMarkerSitsOnTheMiddleOfItsBar('synthese-detail-barre', 'synthese-detail-marque');
   });
 
+  it('should write the automatic end under the end of its bar in the week', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMentionEndsUnderItsBar('synthese-barre', 'synthese-etat-court');
+  });
+
   const whenTheReadingResumes = (resume: () => void): void => {
     cy.get(dataSelector('synthese-loading')).then(() => {
       resume();
@@ -422,6 +429,16 @@ describe('Operational time report in gestion', () => {
       const marques = [...Cypress.$(dataSelector(marque))];
       expect(marques).to.have.length(1);
       expect(Math.abs(milieu(marques[0]) - milieu($barre[0]))).to.be.lessThan(1);
+    });
+  };
+
+  const thenTheMentionEndsUnderItsBar = (barre: string, mention: string): void => {
+    cy.get(dataSelector(barre)).should($barre => {
+      const bout = $barre[0]?.getBoundingClientRect();
+      const mentions = [...Cypress.$(dataSelector(mention))].map(element => element.getBoundingClientRect());
+      expect(mentions).to.have.length(1);
+      expect(Math.abs((mentions[0]?.right ?? 0) - (bout?.right ?? 0))).to.be.lessThan(1);
+      expect(mentions[0]?.top).to.be.at.least(bout?.bottom ?? 0);
     });
   };
 

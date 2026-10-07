@@ -354,7 +354,7 @@
     <span class="etat-activite" data-selector="synthese-detail-etat">{{ etat }}</span>
     } @else {
     <span class="sr-only" data-selector="synthese-activite-etat">{{ etat }}</span>
-    <span class="etat-court" [title]="etat" data-selector="synthese-etat-court"
+    <span class="etat-court" [style.width.%]="barre.fin" [title]="etat" data-selector="synthese-etat-court"
       >{{ barre.automatique ? libelles.finAutomatiqueCourte : barre.style === 'en-cours' ? libelles.legende.enCours :
       libelles.legende.aResoudre }}</span
     >
