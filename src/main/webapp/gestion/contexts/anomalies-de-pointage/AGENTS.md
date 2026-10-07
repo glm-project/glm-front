@@ -59,11 +59,12 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 - **Phrase du problème** : la ligne de l'en-tête qui dit ce qui est en cause (pointage nommé par son geste et son heure, « vise »,
   l'activité, le fait contradictoire), une par diagnostic ou par activité échue.
 - **Frise** : la représentation, en présentation seule, des pointages de l'anomalie et des activités du dossier sur une échelle de temps ;
-  elle n'invente aucune fin ni aucune heure.
+  elle n'invente aucune fin ni aucune heure (la fin proposée est la saisie du gestionnaire, pas une déduction).
 - **Sélection** : le pointage ou l'activité choisi sur la frise, détaillé dans le panneau du même nom ; sélectionner n'est pas
   choisir un acte.
 - **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie de
-  plus, qui émet un instant comme le champ date et heure.
+  plus, qui émet un instant comme le champ date et heure. En ligne, avant toute heure, elle se tient « sans heure » (« Heure ? ») sur
+  la fin reçue de la barre : elle ne porte alors aucune heure et n'est pas un `slider`.
 - **Cadre du fait** : Value Object du domaine (`CadreDuFait`) qui porte le début reçu de chaque activité et l'heure courante,
   et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
   autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
@@ -234,8 +235,8 @@ des rangées, inchangé. Déplacer la poignée retire l'aperçu, donc l'état re
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
-date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
-indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
+date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
+n'invente aucune heure et l'aperçu reste indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
 qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
 résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'action, bornes du `CadreDuFait`, un clic hors bornes se
