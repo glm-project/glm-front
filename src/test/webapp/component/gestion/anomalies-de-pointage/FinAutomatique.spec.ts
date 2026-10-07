@@ -1,13 +1,14 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
-import { abscisseDeLHeure, abscisseDuDernierTrait, centreDe } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
+import { abscisseDeLHeure, centreDe } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
 import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
   dossierApresCorrectionFixture,
   dossierFinAutomatiqueFixture,
   dossierFinTardiveFixture,
+  dossierFinTardiveLeLendemainFixture,
   finCorrigeeFixture,
   finTardiveFixture,
   givenTheReferentielFinAutomatique,
@@ -18,6 +19,8 @@ import {
 import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { markerOf, thenPointageIsSelected, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
+
+const MARGE_DES_REPERES_PX = 22;
 
 describe('Automatic end dossier in Gestion', () => {
   beforeEach(() => {
@@ -136,12 +139,12 @@ describe('Late end handle on the frise in Gestion', () => {
     thenTheHandleStandsOnTheHour(23);
   });
 
-  it('should hold the handle on the last graduation when End carries it three hours after the last received instant', () => {
+  it('should hold the handle 22 pixels from the right edge of the scale when End carries it three hours after the last received instant', () => {
     whenOpeningTheLateEndCorrection();
     whenPressingEndOnTheHandle();
 
     thenTheTimeFieldShows(new Date(2026, 8, 15, 2, 0));
-    thenTheHandleStandsOnTheLastGraduation();
+    thenTheHandleIsHeldAtTheRightEdgeOfTheScale();
   });
 
   it('should stand the markers and the bar after the act under the ones above that hold the same instants', () => {
@@ -166,10 +169,11 @@ describe('Late end handle on the frise in Gestion', () => {
     });
   };
 
-  const thenTheHandleStandsOnTheLastGraduation = (): void => {
-    abscisseDuDernierTrait().then(abscisse => {
+  const thenTheHandleIsHeldAtTheRightEdgeOfTheScale = (): void => {
+    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+      const { right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
       cy.get(dataSelector('anomalie-poignee')).should(poignee => {
-        expect(centreDe(requiredFixture(poignee[0], 'poignée'))).to.be.closeTo(abscisse, 1);
+        expect(centreDe(requiredFixture(poignee[0], 'poignée'))).to.be.closeTo(right - MARGE_DES_REPERES_PX, 1);
       });
     });
   };
@@ -476,7 +480,7 @@ describe('Geometry of the frise in Gestion', () => {
       abscisseDeLHeure(7).should(abscisse => {
         expect(abscisse).to.be.closeTo(left, 1);
       });
-      abscisseDuDernierTrait().should(abscisse => {
+      abscisseDeLHeure(24).should(abscisse => {
         expect(abscisse).to.be.closeTo(right, 1);
       });
     });
@@ -529,6 +533,71 @@ describe('Geometry of the frise in Gestion', () => {
           requiredFixture(gauche[0], 'repère').getBoundingClientRect().top,
           1,
         );
+      });
+    });
+  };
+});
+
+describe('Frise of a dossier spanning 26 hours in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 12, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveLeLendemainFixture() });
+  });
+
+  [1280, 768, 390].forEach(width => {
+    it(`should fit the page and the frise in ${width} pixels, with the late pointage of the next day on the frise`, () => {
+      whenOpeningTheFriseAt(width);
+
+      thenNeitherThePageNorTheFriseOverflows();
+      thenTheLatePointageStandsOnTheFrise();
+    });
+  });
+
+  it('should hold the earliest and the latest markers 22 pixels away from the edges of the plan of a narrow frise', () => {
+    whenOpeningTheFriseAt(390);
+
+    thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan([ouvrantFinAutomatiqueFixture, finTardiveFixture]);
+  });
+
+  const whenOpeningTheFriseAt = (width: number): void => {
+    cy.viewport(width, 900);
+    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+    cy.get(dataSelector('anomalie-frise')).should('be.visible');
+  };
+
+  const thenNeitherThePageNorTheFriseOverflows = (): void => {
+    cy.document().should(document => {
+      expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
+    });
+    cy.get(dataSelector('anomalie-frise')).should(frise => {
+      const element = requiredFixture(frise[0], 'frise');
+      expect(element.scrollWidth).to.equal(element.clientWidth);
+    });
+  };
+
+  const thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan = (pointages: readonly string[]): void => {
+    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+      const { left, right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
+      pointages.forEach(pointage => {
+        markerOf(pointage).should(repere => {
+          const centre = centreDe(requiredFixture(repere[0], 'repère'));
+          expect(centre - left).to.be.at.least(MARGE_DES_REPERES_PX - 1);
+          expect(right - centre).to.be.at.least(MARGE_DES_REPERES_PX - 1);
+        });
+      });
+    });
+  };
+
+  const thenTheLatePointageStandsOnTheFrise = (): void => {
+    cy.get(dataSelector('anomalie-frise')).then(frise => {
+      const { left, right } = requiredFixture(frise[0], 'frise').getBoundingClientRect();
+      markerOf(finTardiveFixture).should(repere => {
+        const rect = requiredFixture(repere[0], 'repère tardif').getBoundingClientRect();
+        expect(rect.left).to.be.at.least(left);
+        expect(rect.right).to.be.at.most(right);
       });
     });
   };

@@ -141,7 +141,8 @@ export const tempsActivite = (activite: ActiviteAnomalie): string => {
 
 const premierPointageEnCause = (dossier: DossierAnomalie): string | undefined => {
   const enCause = new Set(dossier.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  return new ChronologiePointages(dossier.journal).pointages.find(pointage => enCause.has(pointage.id.pointage))?.id.pointage;
+  return new ChronologiePointages(dossier.perimetre.pointagesDe(dossier)).pointages.find(pointage => enCause.has(pointage.id.pointage))?.id
+    .pointage;
 };
 
 const activiteEchueDUneFinAutomatique = (dossier: DossierAnomalie): string | undefined =>

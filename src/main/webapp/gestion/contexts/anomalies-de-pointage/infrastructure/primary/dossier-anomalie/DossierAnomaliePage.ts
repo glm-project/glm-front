@@ -35,7 +35,9 @@ import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
+import { contexteDuSuivi } from '../ContexteDuSuivi';
 import { etatDeLecture } from '../EtatDeLecture';
+import { jourDeLaJournee } from '../JourneeDeLOperateur';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
@@ -54,7 +56,7 @@ import {
   selectionInitiale,
   tempsActivite,
 } from '../PresentationDossier';
-import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
+import { operateurDeLActe, operateurDuDossier, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
@@ -107,6 +109,7 @@ export class DossierAnomaliePage {
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
+  protected readonly jourDeLaJournee = jourDeLaJournee;
   protected readonly problemes = phrasesDuProbleme;
   protected readonly actionsDirectes = (dossier: DossierAnomalie) => ActionsDirectes.depuis(dossier).actions;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
@@ -158,7 +161,10 @@ export class DossierAnomaliePage {
   });
   protected readonly pointageSelectionne = computed(() => {
     const selection = this.selection();
-    return selection?.kind === 'POINTAGE' ? this.dossier()?.journal.find(pointage => pointage.id.pointage === selection.id) : undefined;
+    const dossier = this.dossier();
+    return selection?.kind === 'POINTAGE'
+      ? dossier?.perimetre.pointagesDe(dossier).find(pointage => pointage.id.pointage === selection.id)
+      : undefined;
   });
   protected readonly activiteSelectionnee = computed(() => {
     const selection = this.selection();
@@ -172,6 +178,16 @@ export class DossierAnomaliePage {
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
   );
+
+  protected contexte(dossier: DossierAnomalie): string | undefined {
+    return contexteDuSuivi(dossier, this.now, operateurDuDossier(dossier, this.referentielConnu()));
+  }
+
+  protected libelleDeLaJournee(dossier: DossierAnomalie): string {
+    return this.libelles.voirLaJournee(
+      operateurDuDossier(dossier, this.referentielConnu()) ?? this.libelles.frise.contexte.operateurInconnu,
+    );
+  }
 
   protected libelleChoix(choix: ChoixGuide): string {
     return choix.code === undefined ? choix.libelle : this.libelles.choix[choix.code].libelle;

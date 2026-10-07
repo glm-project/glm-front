@@ -10,6 +10,7 @@ import {
   dossierApresRegularisationFixture,
   dossierFinAutomatiqueFixture,
   dossierFinTardiveFixture,
+  dossierFinTardiveLeLendemainFixture,
   finCorrigeeFixture,
   finRegulariseeFixture,
   finTardiveFixture,
@@ -29,6 +30,11 @@ import {
   thenTheInstantFieldsShow,
   whenTypingTheInstant,
 } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import {
+  givenTheHoursOfTheOperator,
+  thenTheHoursOpenOnTheDay,
+  whenFollowingTheLinkToTheDayOfTheOperator,
+} from '../../../utils/gestion/anomalies-de-pointage/JourneeDeLOperateur';
 import {
   thenActivityIsSelected,
   whenSelectingActivity,
@@ -146,8 +152,8 @@ describe('Automatic end of an activity in Gestion', () => {
   const whenChoosingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-selection'))
       .should('contain.text', 'Début lundi 14 septembre à 08:00')
-      .and('contain.text', 'Fin automatique lundi 14 septembre à 21:00')
-      .and('contain.text', 'Échue · 13 h');
+      .and('contain.text', 'Fin lundi 14 septembre à 21:00')
+      .and('contain.text', 'Fin automatique · 13 h');
     thenActivityIsSelected(activiteFinAutomatiqueFixture);
     cy.get(dataSelector('anomalie-probleme'))
       .should('have.length', 1)
@@ -250,6 +256,20 @@ describe('Automatic end of an activity in Gestion', () => {
 
     thenTheLateEndIsSaid();
   });
+
+  it('should open the hours of the operator on the day of the pointage pointed after the due time, the next day', () => {
+    givenALateEndPointedTheNextDay();
+    const synthese = givenTheHoursOfTheOperator();
+
+    whenOpeningTheAutomaticEnd();
+    whenFollowingTheLinkToTheDayOfTheOperator();
+
+    thenTheHoursOpenOnTheDay(synthese, { annee: '2026', semaine: '38' }, 'mar. 15');
+  });
+
+  const givenALateEndPointedTheNextDay = (): void => {
+    cy.intercept('GET', urlDossier, { body: dossierFinTardiveLeLendemainFixture() });
+  };
 
   const givenALateEndCorrectedByTheBackend = (): void => {
     cy.intercept('GET', urlDossier, { body: dossierFinTardiveFixture() });

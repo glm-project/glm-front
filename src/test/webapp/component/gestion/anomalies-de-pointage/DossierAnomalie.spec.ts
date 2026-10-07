@@ -28,6 +28,12 @@ import {
 import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture, instantLocalWithOffsetFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import {
+  dossierAuJournalDebordantFixture,
+  pointagesDeLAnomalieFixture,
+  thenOnlyThePointagesOfTheAnomalyAreDrawn,
+  thenTheOperatorsOtherPointagesAreSummarized,
+} from '../../../utils/gestion/anomalies-de-pointage/JournalDebordantHttp.fixture';
+import {
   markerOf,
   thenPointageIsSelected,
   whenCancellingPointage,
@@ -37,6 +43,11 @@ import {
 import type {} from '../../../utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider';
 
 const motifCorrectionFixture = 'La cible est la NC.';
+const IDS_DES_POINTAGES_AJOUTES = [
+  '70000000-0000-0000-0000-000000000011',
+  '70000000-0000-0000-0000-000000000012',
+  '70000000-0000-0000-0000-000000000013',
+] as const;
 
 const dossierRecuFixture = (): components['schemas']['RestDossierAnomalie'] => {
   const dossier = dossierFixture();
@@ -314,6 +325,26 @@ describe('Conflict dossier in Gestion', () => {
       .and('not.contain.text', posteFixture);
   };
 
+  it('should draw only the pointages of the anomaly when the journal of the follow-up holds more', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheDossier();
+
+    thenOnlyThePointagesOfTheAnomalyAreDrawn();
+  });
+
+  it('should summarize what the operator pointed on the element beyond the anomaly, leaving out the cancelled and the other operators', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheDossier();
+
+    thenTheOperatorsOtherPointagesAreSummarized();
+  });
+
+  const givenAJournalThatOverflowsTheAnomaly = (): void => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierAuJournalDebordantFixture() });
+  };
+
   it('should display received facts in chronological order while keeping equal instants separate', () => {
     whenOpeningTheDossierWithEqualInstants();
 
@@ -326,23 +357,27 @@ describe('Conflict dossier in Gestion', () => {
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, {
       body: {
         ...dossier,
+        perimetre: {
+          ...requiredFixture(dossier.perimetre, 'périmètre HTTP de résolution'),
+          pointages: [...pointagesDeLAnomalieFixture, ...IDS_DES_POINTAGES_AJOUTES],
+        },
         suivi: {
           ...dossier.suivi,
           journal: [
             ...dossier.suivi.journal,
             {
               ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
-              id: '70000000-0000-0000-0000-000000000011',
+              id: IDS_DES_POINTAGES_AJOUTES[0],
               dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 9, 0)),
             },
             {
               ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
-              id: '70000000-0000-0000-0000-000000000012',
+              id: IDS_DES_POINTAGES_AJOUTES[1],
               dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 10, 0)),
             },
             {
               ...requiredFixture(journalFixture[2], 'donnée HTTP de résolution'),
-              id: '70000000-0000-0000-0000-000000000013',
+              id: IDS_DES_POINTAGES_AJOUTES[2],
               dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 10, 0)),
             },
           ],

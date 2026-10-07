@@ -4,6 +4,7 @@ import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { PropositionActe, termineUneActivite } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { finDeLaPortee, instantsRecus } from './EchelleFrise';
+import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 export interface BornesDePoignee {
   readonly min: string;
@@ -34,10 +35,10 @@ export interface PoigneeDeFrise {
   readonly desactivee: boolean;
 }
 
-type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
+type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
 
 const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: Required<BornesDuFait>): string => {
-  const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(dossier.journal, dossier.activites)]);
+  const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(pointagesDeLaFrise(dossier), dossier.activites)]);
   return Date.parse(bornes.max) <= portee ? bornes.max : new Date(portee).toISOString();
 };
 

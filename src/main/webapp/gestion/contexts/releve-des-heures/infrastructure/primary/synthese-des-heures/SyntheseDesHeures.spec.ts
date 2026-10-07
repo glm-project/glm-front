@@ -1683,15 +1683,35 @@ describe('Synthese des heures component', () => {
 
   it.each([
     [{ annee: '2026', semaine: '38', jour: '2026-09-21' }],
-    [{ jour: '2026-09-21' }],
     [{ annee: '2026', semaine: '38', jour: 'abc' }],
     [{ annee: '2026', semaine: '38', jour: '' }],
+    [{ annee: '2026', jour: '2026-09-21' }],
+    [{ semaine: '39', jour: '2026-09-21' }],
+    [{ jour: 'abc' }],
+    [{ jour: '' }],
+    [{ jour: '2026-02-30' }],
+    [{ jour: '1999-12-31' }],
+    [{ jour: '2000-01-01' }],
+    [{ jour: '2999-12-31' }],
+    [{ jour: '0100-01-01' }],
   ])('should refuse the day named by %o, out of the week or unreadable, and ask the server for nothing', async parametres => {
     routeFixture.demandeBrute(parametres);
 
     await whenEcranAffiche();
 
     expect([present('synthese-adresse-invalide'), portFixture.demandes]).toEqual([true, []]);
+  });
+
+  it('should open the week holding the day the address names alone, with that day open', async () => {
+    givenSemaineSemee(new SemaineISO(2026, 39));
+    routeFixture.demandeBrute({ jour: '2026-09-21' });
+
+    await whenEcranAffiche();
+
+    expect([portFixture.demandes.map(demande => [demande.semaine.annee, demande.semaine.numero]), joursOuverts()]).toEqual([
+      [[2026, 39]],
+      ['lun. 21'],
+    ]);
   });
 
   it('should refuse an address naming no operator and ask the server for nothing', async () => {

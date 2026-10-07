@@ -20,7 +20,21 @@
   </header>
   <div class="dossier-grille">
     <section class="dossier-frise" aria-labelledby="frise-heading">
-      <h2 id="frise-heading" class="mb-3 text-section">{{ libelles.pointagesEtActivites }}</h2>
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-x-4">
+        <h2 id="frise-heading" class="text-section">{{ libelles.pointagesEtActivites }}</h2>
+        @if (jourDeLaJournee(dossier); as jour) {
+        <a
+          class="lien-journee"
+          [routerLink]="['/operateurs', dossier.operateur.operateur, 'heures']"
+          [queryParams]="{ jour }"
+          data-selector="anomalie-frise-journee"
+          >{{ libelleDeLaJournee(dossier) }}</a
+        >
+        }
+      </div>
+      @if (contexte(dossier); as contexte) {
+      <p class="mb-3 text-body-sm text-ink-muted" data-selector="anomalie-frise-contexte">{{ contexte }}</p>
+      }
       <glm-frise-dossier
         [dossier]="dossier"
         [now]="now"
@@ -100,9 +114,7 @@
         {{ libelles.debut }} {{ periode.debut | instantLongDay: now }}
       </p>
       @if (periode.fin; as fin) {
-      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-fin">
-        {{ activite.etat === 'ECHUE' ? libelles.finAutomatiqueA : libelles.fin }} {{ fin | instantLongDay: now }}
-      </p>
+      <p class="mt-1 text-body-sm" data-selector="anomalie-selection-fin">{{ libelles.fin }} {{ fin | instantLongDay: now }}</p>
       } } } @else {
       <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-selection-vide">{{ libelles.selectionVide }}</p>
       }

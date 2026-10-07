@@ -1,5 +1,4 @@
 import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
-import { ChronologiePointages } from '../../../domain/dossier/ChronologiePointages';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
@@ -12,17 +11,29 @@ import {
   Graduation,
   graduationsDe,
   instantsRecus,
-  largeurMinimaleDe,
   positionSur,
+  positionTenueAuxBords,
   surVoies,
 } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
+import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'> & { readonly choix?: DossierAnomalie['choix'] };
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'> & {
+  readonly choix?: DossierAnomalie['choix'];
+};
 
 export interface ApercuDeFrise {
   readonly avant: VueDeFrise;
   readonly apres: VueDeFrise;
+}
+
+export interface EntreesDeFrise {
+  readonly vue: VueDeFrise;
+  readonly maintenant: Date;
+  readonly poignee: PoigneeDeFrise | undefined;
+  readonly placement: PlacementDeLInstant | undefined;
+  readonly apercu: ApercuDeFrise | undefined;
+  readonly largeur: number;
 }
 
 export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
@@ -104,7 +115,6 @@ export interface IntituleDeRangee {
 
 export interface DispositionFrise {
   readonly echelle: EchelleFrise;
-  readonly largeurMinimale: number;
   readonly hauteur: number;
   readonly graduations: readonly Graduation[];
   readonly intituleDesPointages: IntituleDeRangee | undefined;
@@ -133,6 +143,7 @@ interface ContexteDeFrise {
   readonly echelle: EchelleFrise;
   readonly poignee: PoigneeDeFrise | undefined;
   readonly hautDesReperes: number;
+  readonly largeur: number;
 }
 
 const POSITION_DU_BORD = 100;
@@ -171,6 +182,12 @@ const symboleDuGeste = (fait: PointageAnomalie['fait']): string =>
 const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefined): boolean =>
   poignee?.origine === pointage.id.pointage && Date.parse(poignee.instant) !== Date.parse(pointage.fait.instant);
 
+const gaucheDuRepere = (instant: number, contexte: ContexteDeFrise): number =>
+  positionTenueAuxBords(positionSur(contexte.echelle, instant), contexte.largeur);
+
+const abscisseEnPixelsDuRepere = (pointage: PointageAnomalie, contexte: ContexteDeFrise): number =>
+  (gaucheDuRepere(Date.parse(pointage.fait.instant), contexte) / POSITION_DU_BORD) * contexte.largeur;
+
 const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, contexte: ContexteDeFrise): RepereFrise => {
   const deplace = estDeplace(pointage, contexte.poignee);
   const tardif = contexte.tardifs.has(pointage.id.pointage);
@@ -178,7 +195,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
   return {
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
-    gauche: positionSur(contexte.echelle, Date.parse(pointage.fait.instant)),
+    gauche: gaucheDuRepere(Date.parse(pointage.fait.instant), contexte),
     haut: contexte.hautDesReperes + voie * HAUTEUR_D_UN_ELEMENT_PX,
     voie,
     cle: `pointage:${pointage.id.pointage}`,
@@ -301,11 +318,11 @@ const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number 
     echelle.fin,
   );
 
-const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number): PositionDePoignee => ({
+const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number, largeur: number): PositionDePoignee => ({
   kind: 'POIGNEE',
   cle: 'poignee',
   instant: instantTenuSur(poignee, echelle),
-  gauche: positionSur(echelle, instantTenuSur(poignee, echelle)),
+  gauche: positionTenueAuxBords(positionSur(echelle, instantTenuSur(poignee, echelle)), largeur),
   haut,
   min: Date.parse(poignee.bornes.min),
   max: Date.parse(poignee.bornes.max),
@@ -327,8 +344,6 @@ const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly Rep
   source: placement,
 });
 
-const estLisible = (pointage: PointageAnomalie): boolean => Number.isFinite(Date.parse(pointage.fait.instant));
-
 const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {
   const barre = barreDe(activite, haut, contexte);
   const temps = tempsActivite(activite);
@@ -340,9 +355,6 @@ const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolea
   };
 };
 
-const pointagesLisibles = (journal: readonly PointageAnomalie[]): readonly PointageAnomalie[] =>
-  new ChronologiePointages(journal.filter(estLisible)).pointages;
-
 const dispositionApres = (
   apercu: ApercuDeFrise,
   pointages: readonly PointageAnomalie[],
@@ -351,7 +363,7 @@ const dispositionApres = (
 ): DispositionApres => {
   const modifiees = activitesModifiees(apercu.avant.activites, apercu.apres.activites);
   const poses = faitsDeLActe(apercu.avant.journal, apercu.apres.journal);
-  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) => ({
+  const reperes = surVoies(pointages, pointage => abscisseEnPixelsDuRepere(pointage, contexte)).map(({ element, voie }) => ({
     ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
     haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
   }));
@@ -384,16 +396,10 @@ const hauteurDeLaFrise = (
     ...(apres === undefined ? [] : [apres.haut + apres.hauteur + ESPACE_ENTRE_RANGEES_PX]),
   );
 
-export const dispositionDeFrise = (
-  vue: VueDeFrise,
-  now: Date,
-  poignee?: PoigneeDeFrise,
-  placement?: PlacementDeLInstant,
-  apercu?: ApercuDeFrise,
-): DispositionFrise => {
+export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, apercu, largeur }: EntreesDeFrise): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  const pointages = pointagesLisibles(vue.journal);
-  const pointagesApres = apercu === undefined ? [] : pointagesLisibles(apercu.apres.journal);
+  const pointages = pointagesDeLaFrise(vue);
+  const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
   const echelle = echelleDeLaFrise(
     instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
     poignee,
@@ -402,8 +408,8 @@ export const dispositionDeFrise = (
   const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
   const intitule = intituleDesPointages(pointages);
   const hautDesReperes = hautDesReperesSous(intitule);
-  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes };
-  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant)).map(({ element, voie }) =>
+  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes, largeur };
+  const reperes = surVoies(pointages, pointage => abscisseEnPixelsDuRepere(pointage, contexte)).map(({ element, voie }) =>
     repereDe(element, enCause.has(element.id.pointage), voie, contexte),
   );
   const hautDeLaPoignee = hautDesReperes + hauteurDesReperes(reperes);
@@ -411,7 +417,7 @@ export const dispositionDeFrise = (
   const barres = parDebut(vue.activites).map((activite, rang) =>
     barreDe(activite, hautDesActivites + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX), contexte),
   );
-  const positionDePoignee = poignee === undefined ? [] : [positionDeLaPoignee(poignee, echelle, hautDeLaPoignee)];
+  const positionDePoignee = poignee === undefined ? [] : [positionDeLaPoignee(poignee, echelle, hautDeLaPoignee, largeur)];
   const elements = [...barres, ...reperes, ...positionDePoignee].sort((gauche, droite) => gauche.instant - droite.instant);
   const apres =
     apercu === undefined
@@ -424,9 +430,8 @@ export const dispositionDeFrise = (
         );
   return {
     echelle,
-    largeurMinimale: largeurMinimaleDe(echelle),
     hauteur: hauteurDeLaFrise(elements, poignee === undefined ? undefined : hautDeLaPoignee, apres),
-    graduations: graduationsDe(echelle),
+    graduations: graduationsDe(echelle, largeur),
     intituleDesPointages: intitule,
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,

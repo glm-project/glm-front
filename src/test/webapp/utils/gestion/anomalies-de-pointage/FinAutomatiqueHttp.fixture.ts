@@ -18,6 +18,7 @@ export const instantRegulariseFixture = instantLocalFixture(instantRegulariseLoc
 export const instantRegulariseSaisiFixture = instantLocalWithOffsetFixture(instantRegulariseLocalFixture);
 export const instantTardifLocalFixture = new Date(2026, 8, 14, 23, 0);
 export const instantTardifFixture = instantLocalFixture(instantTardifLocalFixture);
+export const instantTardifLendemainFixture = instantLocalFixture(new Date(2026, 8, 15, 10, 0));
 export const motifFinAutomatiqueFixture = 'Fin tardive confirmée avec l’opérateur';
 
 const adresseFixture = { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture };
@@ -116,6 +117,7 @@ export const dossierFinAutomatiqueFixture = (sansPoste = false): components['sch
 
 export const dossierFinTardiveFixture = (
   code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE' = 'CORRIGER_FIN_TARDIVE',
+  instantTardif = instantTardifFixture,
 ): components['schemas']['RestDossierAnomalie'] => {
   const transition = code === 'CORRIGER_TRANSITION_TARDIVE';
   const type = transition ? 'NON_CONFORMITE' : 'FIN';
@@ -123,7 +125,7 @@ export const dossierFinTardiveFixture = (
   return {
     ...dossierFinAutomatiqueFixture(),
     perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture, finTardiveFixture]),
-    suivi: suiviFixture([ouvertureFixture(), { ...finTardiveRecueFixture, type, intention }]),
+    suivi: suiviFixture([ouvertureFixture(), { ...finTardiveRecueFixture, dateDeSurvenue: instantTardif, type, intention }]),
     choix: [
       {
         code,
@@ -135,12 +137,15 @@ export const dossierFinTardiveFixture = (
           activiteVisee: activiteFinAutomatiqueFixture,
           operateur: operateurFinAutomatiqueFixture,
           poste: posteFinAutomatiqueFixture,
-          instant: instantTardifFixture,
+          instant: instantTardif,
         },
       },
     ],
   };
 };
+
+export const dossierFinTardiveLeLendemainFixture = (): components['schemas']['RestDossierAnomalie'] =>
+  dossierFinTardiveFixture('CORRIGER_FIN_TARDIVE', instantTardifLendemainFixture);
 
 export const dossierApresRegularisationFixture = (sansPoste = false): components['schemas']['RestDossierAnomalie'] => {
   const regularisation: components['schemas']['RestEvenementDAtelier'] = {

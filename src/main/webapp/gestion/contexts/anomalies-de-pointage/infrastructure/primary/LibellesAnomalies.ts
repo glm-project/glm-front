@@ -93,9 +93,9 @@ const PROBLEMES = {
     },
     CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: {
       avec: (sujet: string, cible: Activite, heure: string) =>
-        `${sujet} vise ${cible.defini} de ${heure}, déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+        `${sujet} vise ${cible.defini} de ${heure}, déjà terminé${cible.accord} automatiquement, alors qu’une autre activité est en cours.`,
       sans: (sujet: string, cible: Activite) =>
-        `${sujet} vise ${cible.indefini} déjà échu${cible.accord}, alors qu’une autre activité est en cours.`,
+        `${sujet} vise ${cible.indefini} déjà terminé${cible.accord} automatiquement, alors qu’une autre activité est en cours.`,
     },
     CONTRADICTION_REGULARISATION: {
       avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord} à ${heure}.`,
@@ -122,9 +122,8 @@ export const LIBELLES_ANOMALIES = {
   actionsDirectes: ACTIONS_DIRECTES,
   autresCorrections: 'Autres corrections',
   autresCorrectionsAide:
-    'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
+    'Pour corriger ou annuler un autre pointage de cette anomalie, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
   debut: 'Début',
-  finAutomatiqueA: 'Fin automatique',
   fin: 'Fin',
   corriger: 'Corriger ce pointage',
   regulariser: 'Ajouter un pointage manquant',
@@ -162,7 +161,7 @@ export const LIBELLES_ANOMALIES = {
     TERMINEE: 'Terminée',
     ANNULEE: 'Annulée',
     REMPLACEE: 'Remplacée',
-    ECHUE: 'Échue',
+    ECHUE: 'Fin automatique',
   },
   actes: {
     CORRECTION: 'Correction du pointage',
@@ -248,6 +247,7 @@ export const LIBELLES_ANOMALIES = {
   decision: 'Votre décision',
   selection: 'Sélection',
   selectionVide: 'Sélectionnez un pointage ou une activité sur la frise pour voir ses détails.',
+  voirLaJournee: (operateur: string) => `Voir la journée de ${operateur}`,
   pointagesEtActivites: 'Pointages et activités',
   choisir:
     'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',
@@ -304,6 +304,21 @@ export const LIBELLES_ANOMALIES = {
     badgeTardif: '!',
     symboles: SYMBOLES_DES_GESTES,
     symboleInconnu: '•',
+    contexte: {
+      operateurInconnu: 'l’opérateur',
+      phrase: (operateur: string, groupes: string) => `Hors de cette anomalie, ${operateur} compte sur cet élément ${groupes}.`,
+      pointages: (nombre: number) => (nombre === 1 ? '1 pointage' : `${nombre} pointages`),
+      ceJourLa: 'ce jour-là',
+      le: (jour: string) => `le ${jour}`,
+      plusTot: (quand: string, heure: string) => `plus tôt ${quand} (dès ${heure})`,
+      pendant: 'pendant cette période',
+      plusTard: (quand: string, heure: string) => `plus tard ${quand} (jusqu’à ${heure})`,
+      precedents: (jour: string) => `les jours précédents, depuis le ${jour}`,
+      suivants: (jour: string) => `les jours suivants, jusqu’au ${jour}`,
+      autresJours: 'les autres jours',
+      et: ' et ',
+      virgule: ', ',
+    },
   },
   problemes: PROBLEMES,
 } as const;

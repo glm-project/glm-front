@@ -6,9 +6,16 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ActeResolution } from '../../domain/acte/ActeResolution';
-import { ApplicationActePort, PrevisualisationAnomaliePort } from '../../domain/acte/AnomaliesActesPorts';
+import {
+  ApercuAnomalie,
+  ApplicationActePort,
+  PrevisualisationAnomaliePort,
+  ResultatApercu,
+  ResultatApplication,
+} from '../../domain/acte/AnomaliesActesPorts';
 import { PropositionResolution } from '../../domain/acte/ResolutionDeLAnomalie';
-import { AdresseDossier } from '../../domain/dossier/DossierAnomalie';
+import { AdresseDossier, DossierAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
@@ -90,6 +97,49 @@ const dossierFixture = (
     journal: [],
   },
 });
+
+const apercuLu = (resultat: ResultatApercu): ApercuAnomalie => {
+  if (resultat.kind !== 'APERCU') throw new Error('Missing preview fixture');
+  return resultat.apercu;
+};
+
+const dossierAppliqueLu = (resultat: ResultatApplication): DossierAnomalie => {
+  if (resultat.kind !== 'APPLIQUE') throw new Error('Missing confirmation fixture');
+  return resultat.dossier;
+};
+
+const dossierAvecUnJournalDebordant = (
+  kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE',
+  revision: number,
+  pointagesDuPerimetre: readonly string[],
+): components['schemas']['RestDossierAnomalie'] => {
+  const dossier = dossierFixture(kind, revision);
+  const fait = (id: string): components['schemas']['RestEvenementDAtelier'] => ({
+    id,
+    type: 'DEBUT',
+    intention: 'OUVERTURE',
+    operateurId: 'op-camille',
+    auteur: 'camille',
+    dateDeSurvenue: '2026-09-14T08:00:00Z',
+    dateDEnregistrement: '2026-09-14T08:00:01Z',
+    estUneRegularisation: false,
+  });
+  return {
+    ...dossier,
+    ...(dossier.sequence === undefined ? {} : { sequence: { ...dossier.sequence, pointages: [] } }),
+    perimetre: { ...perimetreFixture, pointages: [...pointagesDuPerimetre] },
+    suivi: { ...dossier.suivi, journal: ['debut-8', 'fin-17', 'ailleurs-30'].map(fait) },
+  };
+};
+
+const dossierDeLOperateur = (
+  kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE',
+  revision: number,
+  operateur: string,
+): components['schemas']['RestDossierAnomalie'] => {
+  const dossier = dossierFixture(kind, revision);
+  return { ...dossier, perimetre: { ...perimetreFixture, operateurId: operateur } };
+};
 
 const dossierAvecUneActiviteEchue = (
   kind: 'ANCRE_ANNULEE' | 'FIN_AUTOMATIQUE',
@@ -416,6 +466,56 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
     const resultat = await confirmation;
 
     expect(resultat).toMatchObject({ kind: 'APPLIQUE', dossier: { activites: [{ ouvrant: new PointageAnomalieId('debut-8') }] } });
+  });
+
+  it('should read the perimeter of the dossier before and after the previewed act, each with its own pointages', async () => {
+    const apercu = preview.preview(adresseFixture, 7, acteFixture);
+
+    whenPreviewAnswers(acteFixture, {
+      avant: dossierAvecUnJournalDebordant('EN_CONFLIT', 7, ['debut-8']),
+      apres: dossierAvecUnJournalDebordant('ANCRE_ANNULEE', 8, ['debut-8', 'fin-17']),
+    });
+    const resultat = await apercu;
+
+    const { avant, apres } = apercuLu(resultat);
+    expect(avant.perimetre.pointagesDe(avant).map(pointage => pointage.id.pointage)).toEqual(['debut-8']);
+    expect(apres.perimetre.pointagesDe(apres).map(pointage => pointage.id.pointage)).toEqual(['debut-8', 'fin-17']);
+  });
+
+  it('should read the operator of the dossier before and after the previewed act from its perimeter', async () => {
+    const apercu = preview.preview(adresseFixture, 7, acteFixture);
+
+    whenPreviewAnswers(acteFixture, {
+      avant: dossierDeLOperateur('EN_CONFLIT', 7, 'op-camille'),
+      apres: dossierDeLOperateur('ANCRE_ANNULEE', 8, 'op-alex'),
+    });
+    const resultat = await apercu;
+
+    const { avant, apres } = apercuLu(resultat);
+    expect([avant.operateur, apres.operateur]).toEqual([new OperateurAnomalieId('op-camille'), new OperateurAnomalieId('op-alex')]);
+  });
+
+  it('should read the operator of the dossier received with the canonical receipt from its perimeter', async () => {
+    const recu = confirmationFixture();
+    recu.dossier = dossierDeLOperateur('ANCRE_ANNULEE', 9, 'op-alex');
+
+    const confirmation = application.apply(propositionFixture);
+    whenConfirmationAnswers(recu);
+    const resultat = await confirmation;
+
+    expect(dossierAppliqueLu(resultat).operateur).toEqual(new OperateurAnomalieId('op-alex'));
+  });
+
+  it('should read the perimeter of the dossier received with the canonical receipt', async () => {
+    const recu = confirmationFixture();
+    recu.dossier = dossierAvecUnJournalDebordant('ANCRE_ANNULEE', 9, ['fin-17']);
+
+    const confirmation = application.apply(propositionFixture);
+    whenConfirmationAnswers(recu);
+    const resultat = await confirmation;
+
+    const dossier = dossierAppliqueLu(resultat);
+    expect(dossier.perimetre.pointagesDe(dossier).map(pointage => pointage.id.pointage)).toEqual(['fin-17']);
   });
 
   it('should confirm an end regularisation and receive the canonical dossier without anomaly', async () => {

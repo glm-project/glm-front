@@ -1,4 +1,4 @@
-import { PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PosteAnomalieId } from '../../domain/dossier/PosteAnomalieId';
 import { OperateurAnomalie, ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
@@ -20,16 +20,22 @@ const operateurSansNom = (referentiel: ReferentielAnomalies | undefined): string
 const posteSansLibelle = (poste: string, referentiel: ReferentielAnomalies | undefined): string =>
   referentiel === undefined && poste !== '' ? LIBELLES_ANOMALIES.posteActuelConserve : postePresente('', poste);
 
+const nomConnuDeLOperateur = (
+  operateur: string,
+  referentiel: ReferentielAnomalies | undefined,
+  journal: readonly PointageAnomalie[],
+): string | undefined =>
+  referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
+  ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
+
 export const operateurDeLActe = (
   operateur: string,
   referentiel: ReferentielAnomalies | undefined,
   journal: readonly PointageAnomalie[],
-): string => {
-  const nom =
-    referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
-    ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
-  return nom ?? operateurSansNom(referentiel);
-};
+): string => nomConnuDeLOperateur(operateur, referentiel, journal) ?? operateurSansNom(referentiel);
+
+export const operateurDuDossier = (dossier: DossierAnomalie, referentiel: ReferentielAnomalies | undefined): string | undefined =>
+  dossier.ligne.operateur || nomConnuDeLOperateur(dossier.operateur.operateur, referentiel, dossier.journal);
 
 export const posteDeLActe = (
   poste: string,

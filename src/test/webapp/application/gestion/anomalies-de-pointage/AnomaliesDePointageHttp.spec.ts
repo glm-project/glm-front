@@ -17,11 +17,22 @@ import {
   motifFixture,
   ncFixture,
   operateurFixture,
+  perimetreFixture,
   remplacementFixture,
   suiviFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import {
+  dossierAuJournalDebordantFixture,
+  thenOnlyThePointagesOfTheAnomalyAreDrawn,
+  thenTheOperatorsOtherPointagesAreSummarized,
+} from '../../../utils/gestion/anomalies-de-pointage/JournalDebordantHttp.fixture';
+import {
+  givenTheHoursOfTheOperator,
+  thenTheHoursOpenOnTheDay,
+  whenFollowingTheLinkToTheDayOfTheOperator,
+} from '../../../utils/gestion/anomalies-de-pointage/JourneeDeLOperateur';
 import {
   thenActivityIsSelected,
   whenSelectingActivity,
@@ -81,6 +92,36 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal();
   });
 
+  it('should draw only the pointages of the anomaly when the journal of the follow-up holds other days and another operator', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheRealDossier();
+
+    thenOnlyThePointagesOfTheAnomalyAreDrawn();
+  });
+
+  it('should summarize what the operator pointed beyond the anomaly when the journal of the follow-up holds other days and another operator', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheRealDossier();
+
+    thenTheOperatorsOtherPointagesAreSummarized();
+  });
+
+  it('should open the hours of the operator on the day of the pointage at fault when the journal of the follow-up holds other days', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+    const synthese = givenTheHoursOfTheOperator();
+
+    whenOpeningTheRealDossier();
+    whenFollowingTheLinkToTheDayOfTheOperator();
+
+    thenTheHoursOpenOnTheDay(synthese, { annee: '2026', semaine: '38' }, 'lun. 14');
+  });
+
+  const givenAJournalThatOverflowsTheAnomaly = (): void => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierAuJournalDebordantFixture() });
+  };
+
   it('should say the conflict in one sentence and keep the corrected terminating fact traceable under its original activity identity', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
@@ -109,6 +150,8 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, {
       body: {
         ...dossier,
+        perimetre: perimetreFixture(true),
+        sequence: perimetreFixture(true),
         suivi: {
           ...dossier.suivi,
           journal: [
@@ -590,7 +633,7 @@ describe('HTTP conflict resolution in Gestion', () => {
       `?nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=2&pointage=${ncFixture}`,
     );
     cy.get(dataSelector('anomalie-resultat')).should('not.exist');
-    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Échue');
+    cy.get(dataSelector('anomalie-selection')).should('contain.text', 'Fin automatique');
     cy.get(dataSelector('anomalie-retour')).should('have.attr', 'href').and('contain', 'nature=CONFLIT').and('contain', 'page=2');
   };
 

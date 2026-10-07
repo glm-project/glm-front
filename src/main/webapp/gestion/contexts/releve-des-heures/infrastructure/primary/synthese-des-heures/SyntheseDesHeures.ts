@@ -72,7 +72,11 @@ export class SyntheseDesHeures {
 
   private readonly demandee = computed(() =>
     semaineDemandee(
-      { annee: this.parametres().get('annee') ?? undefined, semaine: this.parametres().get('semaine') ?? undefined },
+      {
+        annee: this.parametres().get('annee') ?? undefined,
+        semaine: this.parametres().get('semaine') ?? undefined,
+        jour: this.parametres().get('jour') ?? undefined,
+      },
       jourCourant(),
     ),
   );
