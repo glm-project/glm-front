@@ -105,6 +105,12 @@ affichée avec l'aperçu ; toute modification de la saisie, un déplacement de l
 La section d'aperçu garde l'acte, l'issue, l'enregistrement, les conséquences textuelles reçues et, repliée, la comparaison
 de tous les pointages avant et après.
 
+Sur la frise d'une fin automatique lue en ligne, une poignée vise une activité : si l'après contient cette activité et ne change
+aucune autre, il n'y a pas de rangées « Après cet acte » ; la barre visée dit l'état et le temps que l'aperçu reçoit pour elle
+(« Terminée · 9 h », dans son texte et son nom, mise en évidence), et le pointage posé par l'acte n'est plus dessiné à part. Sans
+cela (annulation, activité absente de l'après, autre activité changée), les rangées « Après cet acte » restent celles ci-dessus.
+Déplacer la poignée retire l'aperçu, donc cet état de la barre.
+
 Le panneau « Sélection », avant « Votre décision », montre le pointage choisi : geste, instant avec ses secondes, opérateur et
 poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
 et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours

@@ -428,6 +428,15 @@ describe('Automatic end read on one line in Gestion', () => {
     thenTheHandleIsHeldOnItsBar();
   });
 
+  it('should say on the bar the state and the time the preview receives, and draw no state after the act', () => {
+    whenOpeningTheFriseAt(1280);
+    whenPlacingTheEndAt(17);
+    whenPreviewingTheEnd();
+
+    thenTheBarSaysTheStateAndTheTimeTheActReceives();
+    thenNoStateAfterTheActIsDrawn();
+  });
+
   const whenPlacingTheEndAt = (hour: number): void => {
     cy.get(dataSelector('anomalie-choix')).click();
     barreDeLActivite().then(barre => {
@@ -437,6 +446,20 @@ describe('Automatic end read on one line in Gestion', () => {
       });
     });
     cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
+  };
+
+  const whenPreviewingTheEnd = (): void => {
+    cy.get(dataSelector('anomalie-previsualiser')).click();
+    cy.get(dataSelector('anomalie-apercu')).should('be.visible');
+  };
+
+  const thenTheBarSaysTheStateAndTheTimeTheActReceives = (): void => {
+    barreDeLActivite().should('contain.text', 'Terminée · 9 h').and('have.attr', 'data-modifiee', 'true');
+    barreDeLActivite().should('have.attr', 'aria-label').and('contain', 'Terminée · 9 h');
+  };
+
+  const thenNoStateAfterTheActIsDrawn = (): void => {
+    cy.get(dataSelector('anomalie-frise-apres')).should('not.exist');
   };
 
   const thenTheBarEndsOnTheHour = (hour: number): void => {

@@ -223,7 +223,14 @@ hachure `warn`, bordure pointillée, `aria-hidden`) ; après, la barre s'allonge
 automatique reste tracée tant que la poignée existe (`anomalie-frise-fin-recue`, trait pointillé `warn`, `aria-hidden`, titré « Fin
 automatique HH:MM ») ; pour une autre, aucun trait. Corriger un passage ouvrant pose la poignée au bout de la barre précédente, le repère du
 passage gardant son heure barrée au début de la suivante. En ligne, ni poignée ni placement n'ont de rangée propre : un fait dont l'activité visée n'est pas dans le dossier n'y a ni poignée
-ni rangée de placement (le champ date et heure reste l'accès) ; le groupe « Après cet acte » reste celui des rangées.
+ni rangée de placement (le champ date et heure reste l'accès). Quand un aperçu est disponible et qu'une poignée vise une activité, la barre
+visée dit l'état et le temps que l'aperçu reçoit pour elle (`etatRecuPourLaBarre`, `FriseEnLigne.ts`) si `apercu.apres` contient cette
+activité et que `activitesModifiees` n'en retient aucune autre : texte et nom de la barre portent l'état et le temps de l'après (« Terminée · 9 h » ;
+`LIBELLES_ANOMALIES.etats`, `tempsActivite`, jamais calculé par le front), le nom garde « heure proposée », et la barre porte
+`data-modifiee` si l'activité change ; il n'y a alors pas de groupe « Après cet acte » (`apres` indéfini), donc plus de repère « posé par
+cet acte » : la section d'aperçu garde l'issue, les conséquences et la comparaison des journaux. Sans cela (annulation, correction d'un
+ouvrant, activité absente de l'après, autre activité modifiée, aucune poignée qui vise une activité), le groupe « Après cet acte » reste celui
+des rangées, inchangé. Déplacer la poignée retire l'aperçu, donc l'état reçu de la barre.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
@@ -263,7 +270,7 @@ l'heure se saisit au champ. Une heure saisie hors des bornes du fait (`INSTANT_A
 sa poignée, tenue à la borne la plus proche sur l'échelle (`aria-valuenow`), avec l'heure saisie pour texte ; le champ dit
 pourquoi, et le premier déplacement ramène l'heure dans les bornes. L'heure d'origine du
 pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
-Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sous ses rangées actuelles, un groupe
+Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sauf pour la barre qui dit l'état reçu (en ligne, plus haut), sous ses rangées actuelles, un groupe
 « Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages de l'anomalie et les activités de
 l'après : une rangée de repères (`anomalie-apres-pointage`) puis une barre par activité (`anomalie-apercu-activite-apres`), selon la
 grammaire des rangées actuelles (fins reçues seulement, rien n'est inventé). Ces éléments sont des images (`role="img"`),

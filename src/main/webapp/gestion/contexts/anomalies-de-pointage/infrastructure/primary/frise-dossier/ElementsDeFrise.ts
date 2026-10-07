@@ -229,7 +229,7 @@ export const positionDeLaPoigneeSansHeure = (
   source: placement,
 });
 
-const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {
+export const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {
   const barre = barreDe(activite, haut, contexte);
   const temps = tempsActivite(activite);
   return {

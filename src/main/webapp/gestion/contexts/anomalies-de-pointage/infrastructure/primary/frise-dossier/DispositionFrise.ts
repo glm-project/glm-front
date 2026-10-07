@@ -54,6 +54,7 @@ export interface BarreFrise {
   readonly categorie: CategorieDeBarre | undefined;
   readonly etat: ActiviteAnomalie['etat'];
   readonly fin: FinDeBarre | undefined;
+  readonly modifiee?: boolean;
 }
 
 export interface RepereFrise {

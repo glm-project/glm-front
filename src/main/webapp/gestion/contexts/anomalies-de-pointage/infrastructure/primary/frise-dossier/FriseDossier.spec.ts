@@ -2359,6 +2359,127 @@ describe('Frise of a dossier', () => {
       thenTheBarsAfterTheActAre(['a-1']);
     });
 
+    it('should write on the aimed bar the state and time the preview receives for it, and draw no state after the act', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      const apres = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), arretDe('arret-a-1', 'a-1', '10:00')],
+        activites: [withDuration(activiteFixture('a-1', 'TERMINEE', '08:00', '10:00'), 'PT2H')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }), undefined, {
+        avant: dossier,
+        apres,
+      });
+
+      thenNoStateAfterTheActIsDrawn();
+      thenTheBarReads('a-1', 'Travail · Terminée · 2 h');
+      thenTheBarIsNamed(
+        'a-1',
+        'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 10:00 · Terminée · 2 h · modifiée · heure proposée 10:00',
+      );
+      thenTheBarAttributeIs('a-1', 'data-modifiee', 'true');
+    });
+
+    it('should fall back to the state after the act when the preview does not hold the aimed activity', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      const apres = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-2', 'TERMINEE', '08:00', '10:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }), undefined, {
+        avant: dossier,
+        apres,
+      });
+
+      thenTheStateAfterTheActIsTitled('Après cet acte');
+      thenTheBarsAfterTheActAre(['a-2']);
+      thenTheBarReads('a-1', 'Travail · Fin automatique');
+      thenTheBarAttributeIs('a-1', 'data-modifiee', null);
+    });
+
+    it('should fall back to the state after the act when the act changes another activity', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '09:00')],
+        activites: [
+          activiteFixture('a-1', 'ECHUE', '08:00', '12:00'),
+          activiteFixture('a-2', 'EN_COURS', '09:00', undefined, 'NON_CONFORMITE'),
+        ],
+        enConflit: false,
+      };
+      const apres = {
+        journal: dossier.journal,
+        activites: [
+          activiteFixture('a-1', 'TERMINEE', '08:00', '10:00'),
+          activiteFixture('a-2', 'TERMINEE', '09:00', '10:00', 'NON_CONFORMITE'),
+        ],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }), undefined, {
+        avant: dossier,
+        apres,
+      });
+
+      thenTheStateAfterTheActIsTitled('Après cet acte');
+      thenTheBarsAfterTheActAre(['a-1', 'a-2']);
+      thenTheBarReads('a-1', 'Travail · Fin automatique');
+      thenTheBarAttributeIs('a-1', 'data-modifiee', null);
+    });
+
+    it('should fall back to the state after the act when no handle aims at an activity', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      const apres = {
+        journal: dossier.journal,
+        activites: [withDuration(activiteFixture('a-1', 'TERMINEE', '08:00', '10:00'), 'PT2H')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+      thenTheStateAfterTheActIsTitled('Après cet acte');
+      thenTheBarsAfterTheActAre(['a-1']);
+      thenTheBarReads('a-1', 'Travail · Fin automatique');
+      thenTheBarAttributeIs('a-1', 'data-modifiee', null);
+    });
+
+    it('should withdraw the received state from the bar as soon as the handle moves', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      const apres = {
+        journal: dossier.journal,
+        activites: [withDuration(activiteFixture('a-1', 'TERMINEE', '08:00', '10:00'), 'PT2H')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }), undefined, {
+        avant: dossier,
+        apres,
+      });
+
+      await whenTheHandleMovesAndThePreviewIsWithdrawn(poigneeFixture('10:05', { activiteVisee: 'a-1' }));
+
+      thenNoStateAfterTheActIsDrawn();
+      thenTheBarReads('a-1', 'Travail · Fin automatique');
+      thenTheBarAttributeIs('a-1', 'data-modifiee', null);
+    });
+
     it('should follow the time in the tab order, a bar before the markers laid on it', async () => {
       const dossier = {
         journal: [
@@ -2425,6 +2546,12 @@ describe('Frise of a dossier', () => {
 
   const whenTheFactGetsItsHour = async (poignee: PoigneeDeFrise): Promise<void> => {
     fixture.componentRef.setInput('placement', undefined);
+    fixture.componentRef.setInput('poignee', poignee);
+    await fixture.whenStable();
+  };
+
+  const whenTheHandleMovesAndThePreviewIsWithdrawn = async (poignee: PoigneeDeFrise): Promise<void> => {
+    fixture.componentRef.setInput('apercu', undefined);
     fixture.componentRef.setInput('poignee', poignee);
     await fixture.whenStable();
   };

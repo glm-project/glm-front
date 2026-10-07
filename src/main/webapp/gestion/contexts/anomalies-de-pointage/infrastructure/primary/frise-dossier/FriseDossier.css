@@ -322,6 +322,7 @@ button[aria-pressed='true'] {
 [data-selector='anomalie-apres-pointage'][data-fait-de-l-acte='true'][data-non-conformite='true'] {
   background: var(--color-nc);
 }
+[data-selector='anomalie-activite'][data-modifiee='true'],
 [data-selector='anomalie-apercu-activite-apres'][data-modifiee='true'] {
   box-shadow:
     0 0 0 2px var(--color-surface),
