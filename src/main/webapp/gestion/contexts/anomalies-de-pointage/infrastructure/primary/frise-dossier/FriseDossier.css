@@ -236,8 +236,7 @@ button[aria-pressed='true'] {
   right: 0;
   bottom: 0;
   width: 1.75rem;
-  border-left: 2px dashed var(--color-warn);
-  background: repeating-linear-gradient(90deg, transparent 0 4px, color-mix(in srgb, var(--color-warn) 55%, transparent) 4px 8px);
+  background: var(--gestion-hachure-fin-automatique);
   content: '';
 }
 [data-selector='anomalie-activite'][data-fin='OUVERTE'],
