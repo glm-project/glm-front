@@ -38,7 +38,7 @@ conflit. Il montre l'activité échue sur la frise, son début, sa fin automatiq
 gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée de placement de la frise (la fin automatique se lit en ligne : repère ouvrant sur le début de sa barre, repère terminant sur son bout) : le
 choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic place la
 poignée à l'heure cliquée, arrondie à 5 minutes et ramenée à la borne la plus proche si elle sort du début de l'activité ou de
-l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est
+l'heure courante ; la poignée se glisse ensuite (en ligne, elle est le bout de sa barre : la barre finit à l'heure proposée, la portion retirée se dessine jusqu'à la fin reçue, et la fin automatique reste tracée). Une aide dit de cliquer sur la frise pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est
 inactif sans proposition de ce genre, et pendant une opération ; un clic sur un repère ou une barre sélectionne. Une fin ou une transition pointée après l'échéance se corrige avec
 l'heure de ce pointage et un motif. Le pointage que le choix désigne est marqué « pointé après
 l'échéance » sur la frise et dans le panneau Sélection ; le front le lit dans le choix reçu, il ne le déduit pas. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont

@@ -188,7 +188,7 @@ export const lectureDeLaFrise = ({ vue, maintenant, poignee, placement, apercu }
   };
 };
 
-const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number =>
+export const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number =>
   Math.min(
     Math.max(Date.parse(poignee.instant), Date.parse(poignee.bornes.min), echelle.debut),
     Date.parse(poignee.bornes.max),

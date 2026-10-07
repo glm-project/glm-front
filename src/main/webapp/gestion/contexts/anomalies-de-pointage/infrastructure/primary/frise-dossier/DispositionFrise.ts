@@ -38,7 +38,7 @@ export interface EntreesDeFrise {
   readonly largeur: number;
 }
 
-export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
+export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE' | 'PROPOSEE';
 
 export interface BarreFrise {
   readonly kind: 'BARRE';
@@ -116,6 +116,18 @@ export interface IntituleDeRangee {
   readonly hauteur: number;
 }
 
+export interface RetraitDeFrise {
+  readonly gauche: number;
+  readonly largeur: number;
+  readonly haut: number;
+}
+
+export interface FinRecueDeFrise {
+  readonly gauche: number;
+  readonly haut: number;
+  readonly texte: string;
+}
+
 export interface DispositionFrise {
   readonly enLigne: boolean;
   readonly echelle: EchelleFrise;
@@ -125,6 +137,8 @@ export interface DispositionFrise {
   readonly fleches: readonly FlecheFrise[];
   readonly elements: readonly ElementFrise[];
   readonly rangeeDePlacement: RangeeDePlacement | undefined;
+  readonly retrait: RetraitDeFrise | undefined;
+  readonly finRecue: FinRecueDeFrise | undefined;
   readonly apres: DispositionApres | undefined;
 }
 
@@ -209,6 +223,8 @@ const dispositionEnRangees = (entrees: EntreesDeFrise): DispositionFrise => {
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,
     rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes, hautDesReperes),
+    retrait: undefined,
+    finRecue: undefined,
     apres,
   };
 };

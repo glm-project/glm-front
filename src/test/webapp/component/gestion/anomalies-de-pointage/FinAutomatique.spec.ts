@@ -90,6 +90,19 @@ const whenOpeningTheDossierAndChoosing = (): void => {
   cy.get(dataSelector('anomalie-choix')).click();
 };
 
+const whenDraggingTheHandleTo = (hour: number): void => {
+  abscisseDeLHeure(hour).then(clientX => {
+    cy.get(dataSelector('anomalie-poignee')).trigger('pointerdown', { pointerId: 1, buttons: 1 });
+    cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
+    cy.get(dataSelector('anomalie-poignee')).trigger('pointerup', { pointerId: 1, clientX });
+  });
+};
+
+const whenPressingEndOnTheHandle = (): void => {
+  cy.get(dataSelector('anomalie-poignee')).focus();
+  cy.get(dataSelector('anomalie-poignee')).trigger('keydown', { key: 'End' });
+};
+
 describe('Late end handle on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 
@@ -176,11 +189,6 @@ describe('Late end handle on the frise in Gestion', () => {
     thenTheStateAfterTheActStandsUnderTheOneAbove();
   });
 
-  const whenPressingEndOnTheHandle = (): void => {
-    cy.get(dataSelector('anomalie-poignee')).focus();
-    cy.get(dataSelector('anomalie-poignee')).trigger('keydown', { key: 'End' });
-  };
-
   const thenTheHandleStandsOnTheHour = (hour: number): void => {
     abscisseDeLHeure(hour).then(abscisse => {
       cy.get(dataSelector('anomalie-poignee')).should(poignee => {
@@ -253,14 +261,6 @@ describe('Late end handle on the frise in Gestion', () => {
   };
 
   const whenOpeningTheLateEndCorrection = whenOpeningTheDossierAndChoosing;
-
-  const whenDraggingTheHandleTo = (hour: number): void => {
-    abscisseDeLHeure(hour).then(clientX => {
-      cy.get(dataSelector('anomalie-poignee')).trigger('pointerdown', { pointerId: 1, buttons: 1 });
-      cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
-      cy.get(dataSelector('anomalie-poignee')).trigger('pointerup', { pointerId: 1, clientX });
-    });
-  };
 
   const thenTheTimeFieldShows = (instant: Date): void => {
     thenTheInstantFieldsShow(instant);
@@ -366,6 +366,65 @@ describe('Automatic end read on one line in Gestion', () => {
       thenTheStopEndsOnTheHourAndOnTheRightEdgeOfItsBar(finRegulariseeFixture, 17);
     });
   });
+
+  [15, 18].forEach(hour => {
+    it(`should move the proposed hour and the width of the bar to ${hour}:00 when the end of the bar is dragged there`, () => {
+      whenOpeningTheFriseAt(1280);
+      whenPlacingTheEndAt(17);
+      whenDraggingTheHandleTo(hour);
+
+      thenTheInstantFieldsShow(new Date(2026, 8, 14, hour, 0));
+      thenTheBarEndsOnTheHour(hour);
+      thenTheBarIsNamedWithTheProposedHour(`${hour}:00`);
+    });
+  });
+
+  it('should hold the handle 22 pixels from the edge, on its bar, when End carries it to the last hour of the scale', () => {
+    whenOpeningTheFriseAt(1280);
+    whenPlacingTheEndAt(17);
+    whenPressingEndOnTheHandle();
+
+    thenTheHandleIsHeldOnItsBar();
+  });
+
+  const whenPlacingTheEndAt = (hour: number): void => {
+    cy.get(dataSelector('anomalie-choix')).click();
+    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
+      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+      abscisseDeLHeure(hour).then(clientX => {
+        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
+      });
+    });
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
+  };
+
+  const thenTheBarEndsOnTheHour = (hour: number): void => {
+    abscisseDeLHeure(hour).then(abscisse => {
+      barreDeLActivite().should(barre => {
+        expect(requiredFixture(barre[0], 'barre').getBoundingClientRect().right).to.be.closeTo(abscisse, 1);
+      });
+    });
+    barreDeLActivite().should('have.attr', 'data-fin', 'PROPOSEE');
+  };
+
+  const thenTheBarIsNamedWithTheProposedHour = (hour: string): void => {
+    barreDeLActivite().should('have.attr', 'aria-label').and('contain', `heure proposée ${hour}`);
+  };
+
+  const thenTheHandleIsHeldOnItsBar = (): void => {
+    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+      const { right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
+      barreDeLActivite().then(barre => {
+        cy.get(dataSelector('anomalie-poignee')).should(poignee => {
+          const handle = requiredFixture(poignee[0], 'poignée');
+          const bar = requiredFixture(barre[0], 'barre');
+          expect(centreDe(handle)).to.be.closeTo(right - MARGE_DES_REPERES_PX, 1);
+          expect(handle.getBoundingClientRect().top).to.be.closeTo(bar.getBoundingClientRect().top, 1);
+          expect(centreDe(handle)).to.be.within(bar.getBoundingClientRect().left, bar.getBoundingClientRect().right);
+        });
+      });
+    });
+  };
 
   const whenRegularisingTheEndAndReadingTheReceipt = (): void => {
     cy.get(dataSelector('anomalie-choix')).click();

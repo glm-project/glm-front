@@ -45,6 +45,18 @@
       [style.height.px]="rangee.hauteur"
       (click)="place($event, plan, rangee)"
     ></div>
+    } @if (disposition().retrait; as retrait) {
+    <div
+      aria-hidden="true"
+      data-selector="anomalie-frise-retrait"
+      [style.left.%]="retrait.gauche"
+      [style.width.%]="retrait.largeur"
+      [style.top.px]="retrait.haut"
+    ></div>
+    } @if (disposition().finRecue; as finRecue) {
+    <div aria-hidden="true" data-selector="anomalie-frise-fin-recue" [style.left.%]="finRecue.gauche" [style.top.px]="finRecue.haut">
+      <span>{{ finRecue.texte }}</span>
+    </div>
     } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
     <button
       type="button"

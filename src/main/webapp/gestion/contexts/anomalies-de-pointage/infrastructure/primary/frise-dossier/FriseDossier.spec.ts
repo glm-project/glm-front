@@ -1988,17 +1988,50 @@ describe('Frise of a dossier', () => {
       expect(marker('arret-a-1').dataset['ancrage']).toBe(ancrage);
     });
 
-    it('should keep a row of one touch target for the handle between the axis and the bars', async () => {
+    it('should stand the handle on the row of the bar it terminates, without a row of its own', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '12:00')],
+        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'), activiteFixture('a-2', 'ECHUE', '12:00', '21:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('17:00', { activiteVisee: 'a-2' }));
+
+      expect(topOf(handle())).toBe(88);
+      thenTheBarsStandOnRowsAt([36, 88]);
+    });
+
+    it('should put the handle at the end of the previous bar when an opening passage is corrected, keeping its hour struck on the next bar', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'PASSAGE_NC', '11:00')],
+        activites: [
+          activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'),
+          activiteFixture('a-2', 'ECHUE', '11:00', '21:00', 'NON_CONFORMITE'),
+        ],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1', origine: 'debut-a-2' }));
+
+      expect(topOf(handle())).toBe(36);
+      thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
+      thenTheBarAttributeIs('a-2', 'data-fin', 'AUTOMATIQUE');
+      thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-2', 'a-2');
+      thenTheMarkerFlagIs('debut-a-2', 'data-deplace', 'true');
+    });
+
+    it('should keep a row of one touch target for a handle that terminates no activity of the dossier', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
         activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')],
         enConflit: false,
       };
 
-      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('17:00', { activiteVisee: 'a-1' }));
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('17:00', { activiteVisee: 'ailleurs' }));
 
       expect(topOf(handle())).toBe(28);
       thenTheBarsStandOnRowsAt([80]);
+      thenTheBarAttributeIs('a-1', 'data-fin', 'AUTOMATIQUE');
     });
 
     it('should give the placement row the row of one touch target between the axis and the bars', async () => {
@@ -2012,6 +2045,101 @@ describe('Frise of a dossier', () => {
 
       thenThePlacementRowStandsAt({ top: 28, height: 44 });
       thenTheBarsStandOnRowsAt([80]);
+    });
+
+    it('should end the bar the handle terminates at the time the handle stands at', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+
+      thenTheBarSpans('a-1', { left: '12.5%', width: '25%' });
+      thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
+      thenTheBarIsNamed(
+        'a-1',
+        'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 12:00 · Fin automatique · heure proposée 10:00',
+      );
+    });
+
+    it('should draw the part the handle removes up to the received end', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+
+      thenTheRemovedPartSpans({ left: '37.5%', width: '25%' });
+      thenTheRemovedPartStandsOnTheRowOf('a-1');
+      thenTheRemovedPartIsDecorative();
+    });
+
+    it('should lengthen the bar past its received end when the handle stands after it, with nothing removed', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('14:00', { activiteVisee: 'a-1' }));
+
+      thenTheBarSpans('a-1', { left: '12.5%', width: '75%' });
+      thenNoPartIsRemoved();
+    });
+
+    it('should remove nothing from a bar that is still open', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'EN_COURS', '08:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+
+      thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
+      thenNoPartIsRemoved();
+    });
+
+    it('should draw the automatic end of an expired aimed activity while the handle is active, and none for another one', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '08:30')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00'), activiteFixture('a-2', 'ECHUE', '08:30', '11:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+
+      thenTheAutomaticEndsDrawnAre(['Fin automatique 12:00']);
+      thenTheAutomaticEndStands({ left: '62.5%', onTheRowOf: 'a-1' });
+      thenTheAutomaticEndIsDecorative();
+    });
+
+    it('should draw no automatic end for an aimed activity that was not ended automatically', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), arretDe('arret-a-1', 'a-1', '12:00')],
+        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+
+      thenTheAutomaticEndsDrawnAre([]);
+    });
+
+    it('should draw no automatic end while no handle is active', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheAutomaticEndsDrawnAre([]);
     });
 
     it('should keep the pointages row when the anomaly holds no pointage', async () => {
@@ -2535,6 +2663,46 @@ describe('Frise of a dossier', () => {
     expect(marker(pointage).style.left).toBe(bar(activite).style.left);
     expect(marker(pointage).style.top).toBe(bar(activite).style.top);
     expect(marker(pointage).dataset['ancrage']).toBe('GAUCHE');
+  };
+
+  const removedPart = (): HTMLElement | null =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-retrait'));
+
+  const thenTheRemovedPartSpans = (expected: { left: string; width: string }): void => {
+    const part = requiredFixture(removedPart(), 'removed part');
+    expect({ left: part.style.left, width: part.style.width }).toEqual(expected);
+  };
+
+  const thenTheRemovedPartStandsOnTheRowOf = (activite: string): void => {
+    expect(requiredFixture(removedPart(), 'removed part').style.top).toBe(bar(activite).style.top);
+  };
+
+  const thenNoPartIsRemoved = (): void => {
+    expect(removedPart()).toBeNull();
+  };
+
+  const automaticEnds = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-fin-recue')),
+  ];
+
+  const thenTheAutomaticEndsDrawnAre = (expected: readonly string[]): void => {
+    expect(automaticEnds().map(end => end.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
+  };
+
+  const thenTheAutomaticEndStands = (expected: { left: string; onTheRowOf: string }): void => {
+    const [end] = automaticEnds();
+    expect({ left: requiredFixture(end, 'automatic end').style.left, top: requiredFixture(end, 'automatic end').style.top }).toEqual({
+      left: expected.left,
+      top: bar(expected.onTheRowOf).style.top,
+    });
+  };
+
+  const thenTheAutomaticEndIsDecorative = (): void => {
+    expect(requiredFixture(automaticEnds()[0], 'automatic end').getAttribute('aria-hidden')).toBe('true');
+  };
+
+  const thenTheRemovedPartIsDecorative = (): void => {
+    expect(requiredFixture(removedPart(), 'removed part').getAttribute('aria-hidden')).toBe('true');
   };
 
   const thenTheBarSpans = (activite: string, expected: { left: string; width: string }): void => {

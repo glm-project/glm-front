@@ -215,11 +215,18 @@ ailleurs qu'au bout de la barre échue) ou un pointage hors de ces deux cas gard
 ouvrant se pose sur le début de sa barre (aligné à gauche, `data-ancrage="GAUCHE"`), le repère terminant sur son bout (aligné à droite,
 `DROITE` ; quand la barre est plus étroite que deux cibles, 88 px, aligné à gauche sur le bout, hors de la barre). Les repères restent
 des boutons distincts de la barre, avec tout ce qui les définit, et l'ordre de tabulation reste celui du temps ; `data-en-ligne` sur
-`anomalie-frise-plan` sert au dessin seul (la barre réserve la place de ses repères). Poignée et rangée de placement gardent une rangée
-fixe d'une cible, de 44 px, entre l'axe et les barres ; le groupe « Après cet acte » reste celui des rangées.
+`anomalie-frise-plan` sert au dessin seul (la barre réserve la place de ses repères). En ligne, la poignée est le bout de la barre qu'elle termine : elle se
+tient sur la rangée de l'activité qu'elle vise (`activiteVisee`), à la hauteur de sa barre, sans rangée propre ; la barre finit à l'instant
+qu'elle tient (`instantTenuSur`), prend `data-fin="PROPOSEE"` et son nom dit « heure proposée HH:MM » (offset de l'heure répétée
+gardé), sans aucune durée calculée (ADR 0047). Poignée avant la fin reçue, la portion retirée se dessine jusqu'à elle (`anomalie-frise-retrait`,
+hachure `warn`, bordure pointillée, `aria-hidden`) ; après, la barre s'allonge, sans portion retirée. Pour une activité échue visée, sa fin
+automatique reste tracée tant que la poignée existe (`anomalie-frise-fin-recue`, trait pointillé `warn`, `aria-hidden`, titré « Fin
+automatique HH:MM ») ; pour une autre, aucun trait. Corriger un passage ouvrant pose la poignée au bout de la barre précédente, le repère du
+passage gardant son heure barrée au début de la suivante. Seule la rangée de placement (et une poignée qui ne vise aucune activité du dossier)
+garde, en ligne, une rangée fixe d'une cible, de 44 px, entre l'axe et les barres ; le groupe « Après cet acte » reste celui des rangées.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
-`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ
+`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
 date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
 indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères

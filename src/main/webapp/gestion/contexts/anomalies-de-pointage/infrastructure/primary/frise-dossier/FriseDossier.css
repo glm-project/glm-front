@@ -138,6 +138,7 @@ button[aria-pressed='true'] {
   font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  z-index: 2;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -201,6 +202,36 @@ button[aria-pressed='true'] {
 }
 [data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='RECUE'] {
   padding-right: calc(var(--spacing-touch) + 0.5rem);
+}
+[data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='PROPOSEE'] {
+  padding-right: calc(var(--spacing-touch) / 2 + 0.5rem);
+}
+[data-selector='anomalie-frise-retrait'] {
+  position: absolute;
+  box-sizing: border-box;
+  height: var(--spacing-touch);
+  border: 2px dashed var(--color-warn);
+  border-radius: var(--radius-control);
+  background: var(--gestion-hachure-fin-automatique);
+  pointer-events: none;
+}
+[data-selector='anomalie-frise-fin-recue'] {
+  position: absolute;
+  width: 0;
+  height: var(--spacing-touch);
+  border-left: 2px dashed var(--color-warn);
+  pointer-events: none;
+}
+[data-selector='anomalie-frise-fin-recue'] span {
+  position: absolute;
+  top: 0;
+  right: 0.25rem;
+  padding: 0 0.25rem;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-label);
+  line-height: 1.25rem;
+  white-space: nowrap;
 }
 [data-selector='anomalie-activite'][data-categorie='TRAVAIL'],
 [data-selector='anomalie-apercu-activite-apres'][data-categorie='TRAVAIL'] {
