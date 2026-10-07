@@ -91,7 +91,7 @@ export class FriseDossier {
 
   private rangeeQuiPlaceSur(barre: BarreFrise, clic: MouseEvent): RangeeDePlacement | undefined {
     const rangee = this.disposition().rangeeDePlacement;
-    return rangee?.surLaBarreDe === barre.activite && clic.detail > 0 ? rangee : undefined;
+    return rangee?.surLaBarreDe === barre.activite && clic.detail > 0 && !rangee.desactivee ? rangee : undefined;
   }
 
   protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {

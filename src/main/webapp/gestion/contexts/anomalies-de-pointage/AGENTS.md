@@ -250,7 +250,7 @@ l'heure posée ; un appui relâché sans mouvement n'émet rien ; elle est désa
 champ). Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
 ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
 l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
-(`selectionInitiale`) ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
+(`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
 tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
 comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
 pendant une opération. La poignée est un `slider` : le pointeur la

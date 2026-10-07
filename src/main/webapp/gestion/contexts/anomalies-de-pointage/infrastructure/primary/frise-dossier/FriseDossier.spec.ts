@@ -2216,6 +2216,20 @@ describe('Frise of a dossier', () => {
       thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
     });
 
+    it('should select the aimed bar clicked with a pointer while the placement is disabled, placing nothing', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, { ...placementDeLaFixture('a-1'), desactivee: true });
+
+      whenClickingWithAPointerAt(bar('a-1'), 500);
+
+      expect(requestedSelections).toEqual([{ kind: 'ACTIVITE', id: 'a-1' }]);
+      thenThePlacementsAsked([]);
+    });
+
     it('should select the aimed bar activated from the keyboard instead of placing the instant', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
