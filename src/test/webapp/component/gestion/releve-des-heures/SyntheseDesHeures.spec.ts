@@ -126,6 +126,45 @@ const semaineIncompleteFixture = (): SemaineSemee => {
     },
   };
 };
+const semaineAFinAutomatiqueFixture = (debut: number, fin: number): SemaineSemee => {
+  const base = semaineDeJourFixture();
+  const duree = total(`PT${fin - debut}H`);
+  return {
+    synthese: {
+      ...base.synthese,
+      dureeOperationnelleTotale: duree,
+      elements: [{ ...requiredFixture(base.synthese.elements[0]), duree }],
+      jours: requiredFixture(base.synthese.jours).map((jour, rang) =>
+        rang === 0
+          ? {
+              ...jour,
+              dureeOperationnelle: duree,
+              pointages: [{ id: 'a', type: 'DEBUT', intention: 'OUVERTURE', element: 'element-1', dateDeSurvenue: heure(14, debut) }],
+            }
+          : jour,
+      ),
+    },
+    feuille: {
+      ...base.feuille,
+      jours: requiredFixture(base.feuille.jours).map((jour, rang) =>
+        rang === 0
+          ? {
+              ...jour,
+              activites: [
+                {
+                  element: 'element-1',
+                  categorie: 'TRAVAIL',
+                  debut: heure(14, debut),
+                  fin: heure(14, fin),
+                  activite: { id: 'a', debut: heure(14, debut), fin: heure(14, fin), etat: 'TERMINEE_AUTOMATIQUEMENT' },
+                },
+              ],
+            }
+          : jour,
+      ),
+    },
+  };
+};
 
 const requiredFixture = <T>(value: T | undefined): T => {
   if (value === undefined) {
@@ -268,42 +307,7 @@ describe('Operational time report in gestion', () => {
   });
 
   it('should show the received automatic end and its anomaly without manufacturing a raw end', () => {
-    const base = semaineDeJourFixture();
-    givenAWeek({
-      synthese: {
-        ...base.synthese,
-        dureeOperationnelleTotale: total('PT13H'),
-        elements: [{ ...requiredFixture(base.synthese.elements[0]), duree: total('PT13H') }],
-        jours: requiredFixture(base.synthese.jours).map((jour, rang) =>
-          rang === 0
-            ? {
-                ...jour,
-                dureeOperationnelle: total('PT13H'),
-                pointages: [{ id: 'a', type: 'DEBUT', intention: 'OUVERTURE', element: 'element-1', dateDeSurvenue: heure(14, 8) }],
-              }
-            : jour,
-        ),
-      },
-      feuille: {
-        ...base.feuille,
-        jours: requiredFixture(base.feuille.jours).map((jour, rang) =>
-          rang === 0
-            ? {
-                ...jour,
-                activites: [
-                  {
-                    element: 'element-1',
-                    categorie: 'TRAVAIL',
-                    debut: heure(14, 8),
-                    fin: heure(14, 21),
-                    activite: { id: 'a', debut: heure(14, 8), fin: heure(14, 21), etat: 'TERMINEE_AUTOMATIQUEMENT' },
-                  },
-                ],
-              }
-            : jour,
-        ),
-      },
-    });
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
     whenVisiting(ADRESSE);
 
     thenShowTheReceivedAutomaticEndAndItsAnomalyWithoutManufacturingARawEnd();
