@@ -23,8 +23,7 @@ const numeroHorsBornes = (annee: number, numero: number): boolean =>
 
 const anneeDuJour = (jour: JourCalendaire): number => Number(jour.value.slice(0, 4));
 
-const jourDansLesAnneesServies = (jour: JourCalendaire): boolean =>
-  anneeDuJour(jour) >= PREMIERE_ANNEE && anneeDuJour(jour) <= DERNIERE_ANNEE;
+const precedeLesAnneesServies = (jour: JourCalendaire): boolean => anneeDuJour(jour) < PREMIERE_ANNEE;
 
 const semaineDuJour = (jour: JourCalendaire): { readonly annee: number; readonly numero: number } => {
   const jeudi = jour.plus(JEUDI - jour.jourDeLaSemaine());
@@ -65,7 +64,7 @@ export class SemaineISO {
   }
 
   static lireContenant(jour: JourCalendaire): SemaineISO | undefined {
-    if (!jourDansLesAnneesServies(jour)) {
+    if (precedeLesAnneesServies(jour)) {
       return undefined;
     }
     const { annee, numero } = semaineDuJour(jour);
