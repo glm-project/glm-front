@@ -101,7 +101,7 @@ export interface PositionDePoignee {
   readonly valeur: number;
   readonly texte: string;
   readonly desactivee: boolean;
-  readonly source: PoigneeDeFrise;
+  readonly source: PoigneeDeFrise | PlacementDeLInstant;
 }
 
 export interface RangeeDePlacement {

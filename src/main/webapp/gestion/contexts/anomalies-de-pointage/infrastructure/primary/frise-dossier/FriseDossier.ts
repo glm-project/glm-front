@@ -3,7 +3,15 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { memeSelection, SelectionDuDossier } from '../SelectionDuDossier';
 import { ApercuDeFrise, dispositionDeFrise, PositionDePoignee, RangeeDePlacement, VueDeFrise } from './DispositionFrise';
 import { instantSousLePointeur, positionSur } from './EchelleFrise';
-import { demandeDeLaTouche, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
+import {
+  DemandeDeDeplacement,
+  demandeDeLaTouche,
+  DeplacementDemande,
+  estUnePoignee,
+  PlacementDeLInstant,
+  PlacementDemande,
+  PoigneeDeFrise,
+} from './PoigneeDeFrise';
 
 const LARGEUR_DE_REFERENCE_PX = 1214;
 
@@ -61,7 +69,7 @@ export class FriseDossier {
   protected glisse(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {
     if (this.prise === undefined) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
-    this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: poignee.source });
+    this.demandeLeDeplacement({ kind: 'VERS', instant }, poignee);
   }
 
   private mesure(largeur: number): void {
@@ -83,6 +91,12 @@ export class FriseDossier {
     const demande = demandeDeLaTouche(touche);
     if (demande === undefined) return;
     touche.preventDefault();
-    this.deplacementDemande.emit({ demande, poignee: poignee.source });
+    this.demandeLeDeplacement(demande, poignee);
+  }
+
+  private demandeLeDeplacement(demande: DemandeDeDeplacement, { source }: PositionDePoignee): void {
+    [source].filter(estUnePoignee).forEach(poignee => {
+      this.deplacementDemande.emit({ demande, poignee });
+    });
   }
 }
