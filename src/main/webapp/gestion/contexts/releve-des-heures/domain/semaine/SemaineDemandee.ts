@@ -6,6 +6,7 @@ const ENTIER = /^\d{1,4}$/;
 export interface ParametresDeSemaine {
   readonly annee: string | undefined;
   readonly semaine: string | undefined;
+  readonly jour: string | undefined;
 }
 
 export type SemaineDemandee = { readonly estConnue: true; readonly semaine: SemaineISO } | { readonly estConnue: false };
@@ -15,14 +16,21 @@ const refusee: SemaineDemandee = { estConnue: false };
 
 const nombreDe = (valeur: string): number | undefined => (ENTIER.test(valeur) ? Number(valeur) : undefined);
 
-const neNommeRien = (parametres: ParametresDeSemaine): boolean => parametres.annee === undefined && parametres.semaine === undefined;
+const neNommeAucuneSemaine = (parametres: ParametresDeSemaine): boolean =>
+  parametres.annee === undefined && parametres.semaine === undefined;
+
+const contenantLeJour = (texte: string): SemaineDemandee => {
+  const jour = JourCalendaire.lire(texte);
+  const semaine = jour === undefined ? undefined : SemaineISO.lireContenant(jour);
+  return semaine === undefined ? refusee : connue(semaine);
+};
 
 const depuisLesNombres = (annee: number, numero: number): SemaineDemandee =>
   SemaineISO.erreur(annee, numero) === undefined ? connue(new SemaineISO(annee, numero)) : refusee;
 
 export const semaineDemandee = (parametres: ParametresDeSemaine, jourCourant: JourCalendaire): SemaineDemandee => {
-  if (neNommeRien(parametres)) {
-    return connue(SemaineISO.contenant(jourCourant));
+  if (neNommeAucuneSemaine(parametres)) {
+    return parametres.jour === undefined ? connue(SemaineISO.contenant(jourCourant)) : contenantLeJour(parametres.jour);
   }
   const { annee, semaine } = parametres;
   if (annee === undefined) {

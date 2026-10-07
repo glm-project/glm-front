@@ -131,6 +131,22 @@ describe('Weekly hours report of an operator', () => {
     thenTheAddressIsRefusedWithoutAnyRead();
   });
 
+  it('should read the week holding the day an address names alone, and open that day', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDayAlone('2026-09-08');
+
+    thenTheServerWasAskedFor('2026', '37');
+    thenTheOpenDayIs('mar. 8');
+    thenTheAddressNamesTheDay('2026-09-08');
+  });
+
+  it('should refuse a day alone that no supported week holds, without asking the server', () => {
+    givenReferentialAndReports();
+    whenVisitingTheDayAlone('2000-01-01');
+
+    thenTheAddressIsRefusedWithoutAnyRead();
+  });
+
   it('should reuse the same acquired reports when selecting a clocking, changing only the day and going back', () => {
     givenReferentialAndReports();
     whenVisitingTheDay('2026-09-14');
@@ -175,6 +191,12 @@ describe('Weekly hours report of an operator', () => {
     cy.viewport(1280, 900);
     cy.clock(HORLOGE, ['Date']);
     cy.visit(`/operateurs/op-1/heures?annee=2026&semaine=38&jour=${jour}`);
+  };
+
+  const whenVisitingTheDayAlone = (jour: string): void => {
+    cy.viewport(1280, 900);
+    cy.clock(HORLOGE, ['Date']);
+    cy.visit(`/operateurs/op-1/heures?jour=${jour}`);
   };
 
   const whenVisitingTheDayOfTheWeek = (annee: number, semaine: number, jour: string): void => {

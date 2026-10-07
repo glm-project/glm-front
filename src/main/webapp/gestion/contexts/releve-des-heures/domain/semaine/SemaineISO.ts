@@ -21,6 +21,19 @@ const anneeHorsBornes = (annee: number): boolean => !Number.isInteger(annee) || 
 const numeroHorsBornes = (annee: number, numero: number): boolean =>
   !Number.isInteger(numero) || numero < PREMIERE_SEMAINE || numero > SemaineISO.nombreDeSemaines(annee);
 
+const anneeDuJour = (jour: JourCalendaire): number => Number(jour.value.slice(0, 4));
+
+const jourDansLesAnneesServies = (jour: JourCalendaire): boolean =>
+  anneeDuJour(jour) >= PREMIERE_ANNEE && anneeDuJour(jour) <= DERNIERE_ANNEE;
+
+const semaineDuJour = (jour: JourCalendaire): { readonly annee: number; readonly numero: number } => {
+  const jeudi = jour.plus(JEUDI - jour.jourDeLaSemaine());
+  const annee = Number(jeudi.value.slice(0, 4));
+  const lundi = jeudi.plus(LUNDI - JEUDI);
+  const numero = (lundi.jourEpoque - lundiDeLaPremiereSemaine(annee).jourEpoque) / JOURS_PAR_SEMAINE + 1;
+  return { annee, numero };
+};
+
 export class SemaineISO {
   constructor(
     readonly annee: number,
@@ -47,11 +60,16 @@ export class SemaineISO {
   }
 
   static contenant(jour: JourCalendaire): SemaineISO {
-    const jeudi = jour.plus(JEUDI - jour.jourDeLaSemaine());
-    const annee = Number(jeudi.value.slice(0, 4));
-    const lundi = jeudi.plus(LUNDI - JEUDI);
-    const numero = (lundi.jourEpoque - lundiDeLaPremiereSemaine(annee).jourEpoque) / JOURS_PAR_SEMAINE + 1;
+    const { annee, numero } = semaineDuJour(jour);
     return new SemaineISO(annee, numero);
+  }
+
+  static lireContenant(jour: JourCalendaire): SemaineISO | undefined {
+    if (!jourDansLesAnneesServies(jour)) {
+      return undefined;
+    }
+    const { annee, numero } = semaineDuJour(jour);
+    return SemaineISO.erreur(annee, numero) === undefined ? new SemaineISO(annee, numero) : undefined;
   }
 
   lundi(): JourCalendaire {

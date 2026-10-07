@@ -109,6 +109,23 @@ describe('SemaineISO', () => {
   });
 
   it.each([
+    ['2026-09-21', 2026, 39],
+    ['2000-01-03', 2000, 1],
+    ['2999-12-26', 2999, 52],
+  ])('should read %s as week %i of %i', (jour, annee, numero) => {
+    const semaine = SemaineISO.lireContenant(new JourCalendaire(jour));
+
+    expect(semaine).toMatchObject({ annee, numero });
+  });
+
+  it.each(['0100-01-01', '1999-12-27', '1999-12-31', '2000-01-01', '2999-12-31', '3000-01-01', '3000-06-01', '9999-12-31'])(
+    'should read nothing for %s, held by a week outside the calendar this front serves',
+    jour => {
+      expect(SemaineISO.lireContenant(new JourCalendaire(jour))).toBeUndefined();
+    },
+  );
+
+  it.each([
     [2026, 39, 2026, 38, true],
     [2026, 38, 2026, 38, false],
     [2026, 37, 2026, 38, false],
