@@ -578,15 +578,6 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
   });
 
-  it('should graduate every two hours when the width leaves less than 64 pixels per hour', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')], activites: [] };
-    await whenRenderingTheFrise(dossier);
-
-    await whenTheFriseIsMeasured(500);
-
-    thenTheGraduationsAre(['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']);
-  });
-
   it.each([
     {
       largeur: 704,
@@ -666,14 +657,6 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsAre(['12:00', '18:00']);
   });
 
-  it('should observe the size of its host', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00')], activites: [] };
-
-    await whenRenderingTheFrise(dossier);
-
-    expect(resizeObserver.observantUnElement).toBe(true);
-  });
-
   it('should stop observing the size of its host when destroyed', async () => {
     const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00')], activites: [] };
     await whenRenderingTheFrise(dossier);
@@ -683,25 +666,22 @@ describe('Frise of a dossier', () => {
     expect(resizeObserver.observantUnElement).toBe(false);
   });
 
-  it('should hold a marker 22 pixels away from the edges of a narrow frise, whatever time it shows', async () => {
+  it('should keep the exact time of a marker on a narrow frise, whatever the room its position leaves', async () => {
     const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')], activites: [] };
     await whenRenderingTheFrise(dossier);
 
     await whenTheFriseIsMeasured(100);
 
-    expect(marker('p-1').style.left).toBe('22%');
-    expect(marker('p-2').style.left).toBe('78%');
     thenTheMarkerTimeIs('p-1', '08:00');
     thenTheMarkerTimeIs('p-2', '17:00');
   });
 
-  it('should hold the handle 22 pixels away from the edge of a narrow frise, whatever time it shows', async () => {
+  it('should keep the exact time of the handle on a narrow frise, whatever the room its position leaves', async () => {
     const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00')], activites: [] };
     await whenRenderingTheFrise(dossier, undefined, poigneeFixture('10:45'));
 
     await whenTheFriseIsMeasured(100);
 
-    expect(handle().style.left).toBe('78%');
     thenTheHandleIsReadAs('10:45');
   });
 

@@ -556,6 +556,12 @@ describe('Frise of a dossier spanning 26 hours in Gestion', () => {
     });
   });
 
+  it('should hold the earliest and the latest markers 22 pixels away from the edges of the plan of a narrow frise', () => {
+    whenOpeningTheFriseAt(390);
+
+    thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan([ouvrantFinAutomatiqueFixture, finTardiveFixture]);
+  });
+
   const whenOpeningTheFriseAt = (width: number): void => {
     cy.viewport(width, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
@@ -569,6 +575,19 @@ describe('Frise of a dossier spanning 26 hours in Gestion', () => {
     cy.get(dataSelector('anomalie-frise')).should(frise => {
       const element = requiredFixture(frise[0], 'frise');
       expect(element.scrollWidth).to.equal(element.clientWidth);
+    });
+  };
+
+  const thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan = (pointages: readonly string[]): void => {
+    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+      const { left, right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
+      pointages.forEach(pointage => {
+        markerOf(pointage).should(repere => {
+          const centre = centreDe(requiredFixture(repere[0], 'repère'));
+          expect(centre - left).to.be.at.least(MARGE_DES_REPERES_PX - 1);
+          expect(right - centre).to.be.at.least(MARGE_DES_REPERES_PX - 1);
+        });
+      });
     });
   };
 
