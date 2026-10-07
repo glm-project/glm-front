@@ -10,7 +10,7 @@ export class PerimetreDuDossier {
     return dossier.journal.filter(pointage => retenus.has(pointage.id.pointage));
   }
 
-  horsDe(dossier: Pick<DossierAnomalie, 'journal' | 'diagnostics' | 'operateur'>): readonly PointageAnomalie[] {
+  autresPointagesDeLOperateur(dossier: Pick<DossierAnomalie, 'journal' | 'diagnostics' | 'operateur'>): readonly PointageAnomalie[] {
     const dansLAnomalie = new Set(this.pointagesDe(dossier).map(pointage => pointage.id.pointage));
     return dossier.journal.filter(
       pointage => !dansLAnomalie.has(pointage.id.pointage) && estDe(dossier.operateur, pointage) && pointage.annulation === undefined,

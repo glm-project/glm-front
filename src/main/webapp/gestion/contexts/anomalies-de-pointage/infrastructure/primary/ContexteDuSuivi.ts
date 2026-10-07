@@ -83,7 +83,7 @@ const joints = (groupes: readonly string[]): string => {
 export const contexteDuSuivi = (dossier: DossierAnomalie, maintenant: Date, operateur: string | undefined): string | undefined => {
   const periode = periodeDeLAnomalie(dossier);
   const instants = dossier.perimetre
-    .horsDe(dossier)
+    .autresPointagesDeLOperateur(dossier)
     .map(pointage => Date.parse(pointage.fait.instant))
     .filter(Number.isFinite);
   const groupes = periode === undefined ? [] : groupesDe(instants, { ...periode, maintenant });

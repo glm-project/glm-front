@@ -79,15 +79,15 @@ horizontal ni de la frise ni de la page : les graduations s'espacent selon la la
 boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
 catégorie, la période et l'état.
 
-Sous le titre de la frise, une phrase résume ce que l'opérateur de l'anomalie a pointé sur l'élément hors de l'anomalie : « Hors de
+Sous le titre de la frise, une phrase résume ce que l'opérateur de l'anomalie a pointé d'autre sur l'élément : « Hors de
 cette anomalie, Camille Martin compte sur cet élément 1 pointage plus tôt ce jour-là (dès 06:00), 1 pendant cette période et 21 les jours
 précédents, depuis le jeudi 10 septembre. » Seuls comptent les pointages de cet opérateur, annulés exclus ; ceux d'un autre opérateur
 sont ignorés. La période de référence est celle de l'anomalie, pas l'échelle : la phrase ne change pas quand la poignée élargit
 l'échelle ni quand un aperçu s'affiche. Les groupes sont : plus tôt le jour local du début (« dès HH:MM »), pendant la période, plus
 tard le jour local de la fin (« jusqu'à HH:MM »), et les autres jours (« les jours précédents, depuis le … », « les jours suivants,
 jusqu'au … », ou « les autres jours » quand ils sont des deux côtés). La période tient dans un jour : « ce jour-là » ; sur deux jours, le
-jour est nommé. L'année s'ajoute quand elle diffère de l'année en cours. Sans nom résolu, la phrase dit « l'opérateur » ; sans pointage
-de l'opérateur hors de l'anomalie, il n'y a pas de phrase.
+jour est nommé. L'année s'ajoute quand elle diffère de l'année en cours. Sans nom résolu, la phrase dit « l'opérateur » ; sans autre
+pointage de l'opérateur sur l'élément, il n'y a pas de phrase.
 
 À droite du titre de la frise, un lien (`anomalie-frise-journee`) « Voir la journée de Camille Martin » (« … de l'opérateur » sans nom
 résolu) mène au relevé des heures de l'opérateur de l'anomalie, `/operateurs/{id}/heures?jour=AAAA-MM-JJ`, qui ouvre la semaine

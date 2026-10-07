@@ -40,9 +40,12 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 - **Opérateur de l'anomalie** : `DossierAnomalie.operateur` (un `OperateurAnomalieId`), lu dans `toDossier` sur `operateurId` de
   la séquence en conflit ou du périmètre ; la ligne de liste ne le porte pas (le contrat de lecture le vérifie). On traite
   opérateur par opérateur : on ne regarde pas ce qu'ont fait les autres opérateurs de l'élément.
-- **Hors de l'anomalie** : `perimetre.horsDe(dossier)` : les pointages du journal qui ne sont pas des pointages de l'anomalie,
-  de l'opérateur de l'anomalie seulement (`fait.operateur`) et sans les pointages annulés, dans l'ordre du journal. Le domaine
-  possède ce filtre : traiter opérateur par opérateur est une règle métier.
+- **Hors de l'anomalie** : le complément simple des pointages de l'anomalie : tout pointage du journal qui n'en est pas un, de
+  n'importe quel opérateur et annulé ou non. Un tel pointage ne se corrige ni ne s'annule depuis le dossier.
+- **Autres pointages de l'opérateur** : `perimetre.autresPointagesDeLOperateur(dossier)` : ceux des pointages hors de l'anomalie qui
+  sont de l'opérateur de l'anomalie seulement (`fait.operateur`) et sans les pointages annulés, dans l'ordre du journal. Ce
+  filtre est une partie de « hors de l'anomalie », pas son synonyme : le domaine le possède, car traiter opérateur par opérateur
+  est une règle métier. La phrase de contexte de la frise les compte.
 - **Continuation** : lien explicite vers un pointage actif d'une séquence restante après correction
   de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
 - **Geste** : le nom d'un pointage d'après le bouton que l'opérateur a pressé au pupitre (DÉMARRER, NC, BON, ARRÊTER) :
@@ -160,15 +163,15 @@ déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction :
 sans l'un ni l'autre, la phrase dit seulement qu'elle a été terminée automatiquement, sans rien affirmer de ses pointages. Le front ne déduit jamais qu'un pointage est tardif : `pointagesTardifs` (`domain/dossier/PointagesTardifs.ts`) le lit dans ces choix, et le pointage
 désigné est marqué « pointé après l'échéance » sur la frise (badge « ! », `data-tardif`, nom accessible) et dans le panneau Sélection.
 Sous le titre « Pointages et activités », une phrase (`anomalie-frise-contexte`, `ContexteDuSuivi.ts`, modèles dans
-`LIBELLES_ANOMALIES.frise.contexte`) résume ce que l'opérateur de l'anomalie a pointé sur l'élément hors d'elle : « Hors de cette
+`LIBELLES_ANOMALIES.frise.contexte`) résume ce que l'opérateur de l'anomalie a pointé d'autre sur l'élément : « Hors de cette
 anomalie, Camille Martin compte sur cet élément 1 pointage plus tôt ce jour-là (dès 06:00), 1 pendant cette période et 21 les jours
-précédents, depuis le jeudi 10 septembre. » Elle compte `perimetre.horsDe(dossier)` en quatre groupes, selon la période de
+précédents, depuis le jeudi 10 septembre. » Elle compte les autres pointages de l'opérateur (`perimetre.autresPointagesDeLOperateur(dossier)`) en quatre groupes, selon la période de
 l'anomalie (premier et dernier instant des pointages de l'anomalie et des activités, pas l'échelle : la phrase ne bouge ni quand la
 poignée élargit l'échelle ni quand un aperçu s'affiche) : plus tôt le jour local du début (« dès HH:MM », le premier), pendant la
 période, plus tard le jour local de la fin (« jusqu'à HH:MM », le dernier), et les autres jours (« les jours précédents, depuis le … »,
 « les jours suivants, jusqu'au … », ou « les autres jours » quand ils sont avant et après). « ce jour-là » vaut quand la période tient
 dans un jour local ; sur deux jours, le jour est nommé (« plus tôt le lundi 14 septembre »), avec l'année quand elle diffère de celle
-d'aujourd'hui. Le premier groupe porte le nom (« 1 pointage », « 2 pointages »). Aucune phrase sans pointage hors de l'anomalie. Le
+d'aujourd'hui. Le premier groupe porte le nom (« 1 pointage », « 2 pointages »). Aucune phrase sans autre pointage de l'opérateur. Le
 nom est celui de la séquence, sinon celui du référentiel ou des pointages du journal ; sans nom, « l'opérateur ». Le jour local et
 les heures sont de la présentation : le domaine ne lit pas le fuseau.
 À droite de ce titre, un lien `anomalie-frise-journee` (`JourneeDeLOperateur.ts`, libellé `LIBELLES_ANOMALIES.voirLaJournee`) dit « Voir la

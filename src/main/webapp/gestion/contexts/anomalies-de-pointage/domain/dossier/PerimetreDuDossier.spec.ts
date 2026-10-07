@@ -91,13 +91,13 @@ describe('Perimeter of a dossier', () => {
     expect(identifiants(pointages)).toEqual(['debut', 'fin']);
   });
 
-  describe('beyond the anomaly', () => {
-    it('should give the pointages of the journal that the anomaly does not hold, in the order of the journal', () => {
+  describe('the other pointages of the operator', () => {
+    it('should give the active pointages of the operator that the anomaly does not hold, in the order of the journal', () => {
       const journal = [pointageFixture('apres'), pointageFixture('debut'), pointageFixture('avant')];
 
-      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [], operateur: CAMILLE });
+      const autres = perimetreDe('debut').autresPointagesDeLOperateur({ journal, diagnostics: [], operateur: CAMILLE });
 
-      expect(identifiants(horsDe)).toEqual(['apres', 'avant']);
+      expect(identifiants(autres)).toEqual(['apres', 'avant']);
     });
 
     it('should leave out the pointages of another operator', () => {
@@ -107,31 +107,35 @@ describe('Perimeter of a dossier', () => {
         pointageFixture('d-alex', { operateur: 'alex' }),
       ];
 
-      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [], operateur: CAMILLE });
+      const autres = perimetreDe('debut').autresPointagesDeLOperateur({ journal, diagnostics: [], operateur: CAMILLE });
 
-      expect(identifiants(horsDe)).toEqual(['de-camille']);
+      expect(identifiants(autres)).toEqual(['de-camille']);
     });
 
     it('should leave out the cancelled pointages', () => {
       const journal = [pointageFixture('debut'), pointageFixture('annule', { annule: true }), pointageFixture('actif')];
 
-      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [], operateur: CAMILLE });
+      const autres = perimetreDe('debut').autresPointagesDeLOperateur({ journal, diagnostics: [], operateur: CAMILLE });
 
-      expect(identifiants(horsDe)).toEqual(['actif']);
+      expect(identifiants(autres)).toEqual(['actif']);
     });
 
     it('should leave out the pointages a diagnostic cites', () => {
       const journal = [pointageFixture('debut'), pointageFixture('cite'), pointageFixture('autre')];
 
-      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [diagnosticFixture('cite')], operateur: CAMILLE });
+      const autres = perimetreDe('debut').autresPointagesDeLOperateur({
+        journal,
+        diagnostics: [diagnosticFixture('cite')],
+        operateur: CAMILLE,
+      });
 
-      expect(identifiants(horsDe)).toEqual(['autre']);
+      expect(identifiants(autres)).toEqual(['autre']);
     });
 
-    it('should give no pointage when the anomaly holds the whole journal', () => {
+    it('should give no pointage when the anomaly holds the whole journal of the operator', () => {
       const journal = [pointageFixture('debut'), pointageFixture('fin')];
 
-      expect(perimetreDe('debut', 'fin').horsDe({ journal, diagnostics: [], operateur: CAMILLE })).toEqual([]);
+      expect(perimetreDe('debut', 'fin').autresPointagesDeLOperateur({ journal, diagnostics: [], operateur: CAMILLE })).toEqual([]);
     });
   });
 });
