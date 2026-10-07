@@ -156,20 +156,26 @@ désigné est marqué « pointé après l'échéance » sur la frise (badge « !
 Les pointages de l'anomalie et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
 présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,
-pointages de l'anomalie, lus en un seul endroit par `pointagesDeLaFrise`, lisibles et en ordre chronologique) avec une heure de marge arrondie à l'heure locale, graduations horaires, le jour affiché à minuit, une largeur
-minimale de 64 px par heure et un défilement horizontal de la frise seule. Une rangée par activité, dans l'ordre de leur début,
+pointages de l'anomalie, lus en un seul endroit par `pointagesDeLaFrise`, lisibles et en ordre chronologique) avec une heure de marge arrondie à l'heure locale. La frise tient dans la largeur de son hôte, sans défilement : `FriseDossier` mesure
+son hôte par un `ResizeObserver` créé dans `afterNextRender` (largeur de référence de 1 214 px avant la première mesure, largeur nulle
+ignorée) et `dispositionDeFrise` reçoit cette `largeur`. Les graduations suivent la largeur : le pas est le plus petit de 1, 2, 3, 4, 6, 12 h
+puis 1, 2, 3, 7 jours qui laisse au moins 64 px par pas ; on garde les traits horaires dont l'heure locale est un multiple du pas
+(minuit d'un jour multiple du pas, compté depuis le début de l'échelle, pour un pas en jours) à au moins 64 px du trait gardé
+précédent, un trait de minuit passant avant le précédent ; le jour s'affiche à chaque minuit gradué, et minuit n'est pas toujours
+gradué. Les bords de l'échelle ne portent pas forcément de trait. Repères et poignée restent à 22 px au moins des bords (leur heure et
+leur nom restent exacts). Une rangée par activité, dans l'ordre de leur début,
 sous la rangée des pointages, titrée « Pointages » (`anomalie-frise-pointages-intitule`, une ligne de 20 px au-dessus des
 repères, sans interaction, que la rangée de placement ne recouvre pas ; absente sans pointage). La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` en pointillés
 `warn` à sa fin automatique, `EN_COURS` et `A_RESOUDRE` (hachurée) ouvertes jusqu'au bord, `ANNULEE` et `REMPLACEE` atténuées
 (fin pleine si une fin est reçue) ; le front ne déduit aucune fin d'un pointage. Une activité sans période garde sa rangée
 et son libellé, sans barre. Un repère par pointage (symbole du geste, un par geste : ▶ Démarrage, ▷ Démarrage en NC, ◆ Passage en NC, ◇ Retour en bon,
 ■ Arrêt ; heure HH:MM, barré s'il est annulé, badge « R »
-s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repères à moins de 44 px l'un de l'autre descendent d'une
+s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repères à moins de 44 px l'un de l'autre, à la largeur mesurée, descendent d'une
 voie entière, la hauteur d'une cible de 44 px, tant que le précédent est trop proche ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
 vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
 `data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
-rendue des graduations (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
+rendue des graduations, lue sur deux traits et extrapolée aux bords (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ

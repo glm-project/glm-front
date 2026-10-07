@@ -11,9 +11,9 @@ import {
   Graduation,
   graduationsDe,
   instantsRecus,
-  LARGEUR_MINIMALE_PAR_HEURE_PX,
-  largeurMinimaleDe,
+  pixelsParHeureDe,
   positionSur,
+  positionTenueAuxBords,
   surVoies,
 } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
@@ -34,6 +34,7 @@ export interface EntreesDeFrise {
   readonly poignee: PoigneeDeFrise | undefined;
   readonly placement: PlacementDeLInstant | undefined;
   readonly apercu: ApercuDeFrise | undefined;
+  readonly largeur: number;
 }
 
 export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
@@ -115,7 +116,6 @@ export interface IntituleDeRangee {
 
 export interface DispositionFrise {
   readonly echelle: EchelleFrise;
-  readonly largeurMinimale: number;
   readonly hauteur: number;
   readonly graduations: readonly Graduation[];
   readonly intituleDesPointages: IntituleDeRangee | undefined;
@@ -144,6 +144,7 @@ interface ContexteDeFrise {
   readonly echelle: EchelleFrise;
   readonly poignee: PoigneeDeFrise | undefined;
   readonly hautDesReperes: number;
+  readonly largeur: number;
 }
 
 const POSITION_DU_BORD = 100;
@@ -189,7 +190,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
   return {
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
-    gauche: positionSur(contexte.echelle, Date.parse(pointage.fait.instant)),
+    gauche: positionTenueAuxBords(positionSur(contexte.echelle, Date.parse(pointage.fait.instant)), contexte.largeur),
     haut: contexte.hautDesReperes + voie * HAUTEUR_D_UN_ELEMENT_PX,
     voie,
     cle: `pointage:${pointage.id.pointage}`,
@@ -312,11 +313,11 @@ const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number 
     echelle.fin,
   );
 
-const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number): PositionDePoignee => ({
+const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number, largeur: number): PositionDePoignee => ({
   kind: 'POIGNEE',
   cle: 'poignee',
   instant: instantTenuSur(poignee, echelle),
-  gauche: positionSur(echelle, instantTenuSur(poignee, echelle)),
+  gauche: positionTenueAuxBords(positionSur(echelle, instantTenuSur(poignee, echelle)), largeur),
   haut,
   min: Date.parse(poignee.bornes.min),
   max: Date.parse(poignee.bornes.max),
@@ -357,12 +358,14 @@ const dispositionApres = (
 ): DispositionApres => {
   const modifiees = activitesModifiees(apercu.avant.activites, apercu.apres.activites);
   const poses = faitsDeLActe(apercu.avant.journal, apercu.apres.journal);
-  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant), LARGEUR_MINIMALE_PAR_HEURE_PX).map(
-    ({ element, voie }) => ({
-      ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
-      haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
-    }),
-  );
+  const reperes = surVoies(
+    pointages,
+    pointage => Date.parse(pointage.fait.instant),
+    pixelsParHeureDe(contexte.echelle, contexte.largeur),
+  ).map(({ element, voie }) => ({
+    ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
+    haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
+  }));
   const hautDesBarres = HAUTEUR_DU_TITRE_PX + hauteurDesReperes(reperes) + ESPACE_ENTRE_RANGEES_PX;
   const barres = parDebut(apercu.apres.activites).map((activite, rang) =>
     barreApresDe(
@@ -392,7 +395,7 @@ const hauteurDeLaFrise = (
     ...(apres === undefined ? [] : [apres.haut + apres.hauteur + ESPACE_ENTRE_RANGEES_PX]),
   );
 
-export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, apercu }: EntreesDeFrise): DispositionFrise => {
+export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, apercu, largeur }: EntreesDeFrise): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
   const pointages = pointagesDeLaFrise(vue);
   const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
@@ -404,16 +407,18 @@ export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, a
   const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
   const intitule = intituleDesPointages(pointages);
   const hautDesReperes = hautDesReperesSous(intitule);
-  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes };
-  const reperes = surVoies(pointages, pointage => Date.parse(pointage.fait.instant), LARGEUR_MINIMALE_PAR_HEURE_PX).map(
-    ({ element, voie }) => repereDe(element, enCause.has(element.id.pointage), voie, contexte),
-  );
+  const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes, largeur };
+  const reperes = surVoies(
+    pointages,
+    pointage => Date.parse(pointage.fait.instant),
+    pixelsParHeureDe(contexte.echelle, contexte.largeur),
+  ).map(({ element, voie }) => repereDe(element, enCause.has(element.id.pointage), voie, contexte));
   const hautDeLaPoignee = hautDesReperes + hauteurDesReperes(reperes);
   const hautDesActivites = hautDeLaPoignee + (poignee === undefined ? 0 : HAUTEUR_D_UN_ELEMENT_PX) + ESPACE_ENTRE_RANGEES_PX;
   const barres = parDebut(vue.activites).map((activite, rang) =>
     barreDe(activite, hautDesActivites + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX), contexte),
   );
-  const positionDePoignee = poignee === undefined ? [] : [positionDeLaPoignee(poignee, echelle, hautDeLaPoignee)];
+  const positionDePoignee = poignee === undefined ? [] : [positionDeLaPoignee(poignee, echelle, hautDeLaPoignee, largeur)];
   const elements = [...barres, ...reperes, ...positionDePoignee].sort((gauche, droite) => gauche.instant - droite.instant);
   const apres =
     apercu === undefined
@@ -426,9 +431,8 @@ export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, a
         );
   return {
     echelle,
-    largeurMinimale: largeurMinimaleDe(echelle),
     hauteur: hauteurDeLaFrise(elements, poignee === undefined ? undefined : hautDeLaPoignee, apres),
-    graduations: graduationsDe(echelle),
+    graduations: graduationsDe(echelle, largeur),
     intituleDesPointages: intitule,
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,

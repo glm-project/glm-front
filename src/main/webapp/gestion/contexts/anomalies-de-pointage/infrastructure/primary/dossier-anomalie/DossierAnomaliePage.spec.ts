@@ -14,6 +14,7 @@ import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
+import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/anomalies-de-pointage/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -840,8 +841,10 @@ describe('Anomaly dossier page', () => {
   let route: RouteFixture;
   let preview: DossierPreviewFixture;
   let application: DossierApplicationFixture;
+  let resizeObserver: ResizeObserverFixture;
 
   beforeEach(() => {
+    resizeObserver = new ResizeObserverFixture();
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
     read = new DossierReadFixture();
@@ -863,6 +866,7 @@ describe('Anomaly dossier page', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    resizeObserver.restore();
   });
 
   it('should offer a retry when reading fails without showing a misleading dossier', async () => {
@@ -1085,6 +1089,14 @@ describe('Anomaly dossier page', () => {
       'anomalie-autres-corrections-aide',
       'Pour corriger ou annuler un autre pointage de cette anomalie, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
     );
+  });
+
+  it('should graduate the frise by the width its host announces', async () => {
+    await whenRendering();
+
+    await whenTheFriseIsMeasured(80);
+
+    thenTheFriseGraduationsAre(['18:00']);
   });
 
   it('should draw on the frise only the pointages of the anomaly', async () => {
@@ -5369,6 +5381,15 @@ describe('Anomaly dossier page', () => {
       friseElements('anomalie-pointage').find(candidate => candidate.dataset['pointage'] === pointage),
       `marker of ${pointage}`,
     );
+
+  const whenTheFriseIsMeasured = async (width: number): Promise<void> => {
+    resizeObserver.announce(width);
+    await fixture.whenStable();
+  };
+
+  const thenTheFriseGraduationsAre = (expected: readonly string[]): void => {
+    expect(friseElements('anomalie-frise-graduation-heure').map(graduation => graduation.textContent.trim())).toEqual(expected);
+  };
 
   const thenTheFriseMarkersAre = (expected: readonly string[]): void => {
     expect(friseElements('anomalie-pointage').map(candidate => candidate.dataset['pointage'])).toEqual(expected);

@@ -73,8 +73,9 @@ d'une voie entière (44 px) quand deux repères sont à moins de 44 px, sur une 
 diagnostic vise. Le journal du suivi peut couvrir d'autres jours et d'autres opérateurs : la frise n'en montre que les pointages de
 l'anomalie (le périmètre reçu, la séquence en conflit, et les pointages que les diagnostics citent, dont le démarrage annulé
 d'un `OUVRANT_ANNULE` et les arrêts qui le visent). L'échelle va d'une heure avant le premier instant reçu de ces pointages et
-des activités à une heure après le dernier, par heures entières, avec
-le jour à minuit, et couvre l'heure proposée quand une poignée est posée ; elle défile horizontalement sur un écran étroit, sans faire défiler la page. Repères et barres sont des
+des activités à une heure après le dernier, par heures entières, et couvre l'heure proposée quand une poignée est posée. Elle tient dans la largeur de l'écran, sans défilement
+horizontal ni de la frise ni de la page : les graduations s'espacent selon la largeur (pas de 1 à 12 h, puis en jours, jamais deux traits
+à moins de 64 px), le jour s'affiche à chaque minuit gradué, et les repères comme la poignée restent à 22 px des bords. Repères et barres sont des
 boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
 catégorie, la période et l'état.
 
@@ -280,7 +281,7 @@ sans activité visée, un démarrage, une annulation ou une régularisation sans
 des pointages (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
 qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
-traverse minuit et l'heure répétée graduée heure par heure.
+traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 64 px.
 
 ## Frontières de vérification
 
