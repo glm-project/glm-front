@@ -351,6 +351,7 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
 };
 
 const INSTANT_FIN_TARDIVE = instantLocalFixture(new Date(2026, 8, 14, 23, 0));
+const UN_INSTANT_ILLISIBLE = 'pas un instant';
 
 const faitFinTardiveFixture = (instant = INSTANT_FIN_TARDIVE): FaitPropose => ({ ...faitConflitFixture(), instant });
 
@@ -4401,6 +4402,30 @@ describe('Anomaly dossier page', () => {
       thenAbsent('anomalie-frise-journee');
     });
 
+    it('should lead to the day of the readable pointage pointed after the deadline when another one has no readable instant', async () => {
+      givenTwoPointagesPointedAfterTheDeadline(UN_INSTANT_ILLISIBLE);
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-15' });
+    });
+
+    it('should lead to the day the period starts when the only pointage pointed after the deadline has no readable instant', async () => {
+      givenALateEnd(UN_INSTANT_ILLISIBLE);
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-14' });
+    });
+
+    it('should lead to the day the period starts when the pointage at fault of a conflict has no readable instant', async () => {
+      givenAConflictWhoseFaultIsPointedAt(UN_INSTANT_ILLISIBLE);
+
+      await whenRendering();
+
+      thenTheLinkTargets('anomalie-frise-journee', '/operateurs/op-camille/heures', { jour: '2026-09-13' });
+    });
+
     it('should lead to the day the period starts when the pointage pointed after the deadline is not in the journal', async () => {
       givenAnAutomaticEndDiagnosedAs({
         cas: 'late pointage missing',
@@ -4818,8 +4843,8 @@ describe('Anomaly dossier page', () => {
     read.result = { kind: 'DOSSIER', dossier: lateEndInAJournalBeyondTheAnomaly() };
   };
 
-  const givenTwoPointagesPointedAfterTheDeadline = (): void => {
-    const dossier = dossierFinTardiveFixture(instantLocalFixture(new Date(2026, 8, 16, 10, 0)));
+  const givenTwoPointagesPointedAfterTheDeadline = (instantDuPlusTardif = instantLocalFixture(new Date(2026, 8, 16, 10, 0))): void => {
+    const dossier = dossierFinTardiveFixture(instantDuPlusTardif);
     const tardifLe15 = pointageAilleursFixture('fin-15', instantLocalFixture(new Date(2026, 8, 15, 10, 0)));
     const [choixLe16] = dossier.choix;
     read.result = {
@@ -4839,9 +4864,11 @@ describe('Anomaly dossier page', () => {
     };
   };
 
-  const givenAConflictWhoseFaultIsPointedAt = (...instants: readonly Date[]): void => {
+  const givenAConflictWhoseFaultIsPointedAt = (...instants: readonly (Date | string)[]): void => {
     const dossier = dossierAnomalieFixture();
-    const enCause = instants.map((instant, rang) => pointageAilleursFixture(`fin-${rang}`, instantLocalFixture(instant)));
+    const enCause = instants.map((instant, rang) =>
+      pointageAilleursFixture(`fin-${rang}`, typeof instant === 'string' ? instant : instantLocalFixture(instant)),
+    );
     const journal = [pointageAilleursFixture('ouvrant-13', instantLocalFixture(new Date(2026, 8, 13, 22, 0))), ...enCause];
     read.result = {
       kind: 'DOSSIER',

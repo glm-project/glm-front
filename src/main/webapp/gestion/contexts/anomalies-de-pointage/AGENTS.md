@@ -182,7 +182,7 @@ journée de Camille Martin » (« de l'opérateur » sans nom résolu) et mène 
 contexte ne calcule aucune semaine et n'importe rien du relevé. Le jour est le jour local (`jourLocalDe`, présentation) du pointage qui
 pose problème : le plus ancien pointage tardif du dossier (`pointagesTardifs`), sinon le plus ancien pointage en cause (celui de la
 sélection initiale), sinon le début de la période de l'anomalie (`PeriodeDeLAnomalie.ts`, partagée avec la phrase de contexte) ; sans
-période, pas de lien.
+période, pas de lien. Un pointage dont l'instant est illisible n'est jamais retenu : le niveau suivant prend la relève.
 Les pointages de l'anomalie et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
 présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,

@@ -6,7 +6,8 @@ import { selectionInitiale } from './PresentationDossier';
 const plusAncienInstant = (dossier: DossierAnomalie, identifiants: ReadonlySet<string>): number | undefined => {
   const instants = dossier.journal
     .filter(pointage => identifiants.has(pointage.id.pointage))
-    .map(pointage => Date.parse(pointage.fait.instant));
+    .map(pointage => Date.parse(pointage.fait.instant))
+    .filter(Number.isFinite);
   return instants.length === 0 ? undefined : Math.min(...instants);
 };
 
