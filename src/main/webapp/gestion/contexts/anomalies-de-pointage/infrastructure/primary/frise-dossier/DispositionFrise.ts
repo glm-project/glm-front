@@ -96,7 +96,7 @@ export interface LectureDePoignee {
   readonly texte: string;
 }
 
-export interface PositionDePoignee {
+export interface EmplacementDePoignee {
   readonly kind: 'POIGNEE';
   readonly cle: string;
   readonly instant: number;
@@ -105,11 +105,21 @@ export interface PositionDePoignee {
   readonly min: number;
   readonly max: number;
   readonly etiquette: string;
-  readonly lecture: LectureDePoignee | undefined;
-  readonly sansHeure: boolean;
   readonly desactivee: boolean;
-  readonly source: PoigneeDeFrise | PlacementDeLInstant;
 }
+
+export interface PositionAvecHeure extends EmplacementDePoignee {
+  readonly heure: 'AVEC_HEURE';
+  readonly lecture: LectureDePoignee;
+  readonly source: PoigneeDeFrise;
+}
+
+export interface PositionSansHeure extends EmplacementDePoignee {
+  readonly heure: 'SANS_HEURE';
+  readonly source: PlacementDeLInstant;
+}
+
+export type PositionDePoignee = PositionAvecHeure | PositionSansHeure;
 
 export interface RangeeDePlacement {
   readonly haut: number;

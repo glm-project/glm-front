@@ -10,10 +10,12 @@ import {
   BarreFrise,
   DispositionApres,
   ElementFrise,
+  EmplacementDePoignee,
   EntreesDeFrise,
   FinDeBarre,
   PeriodeActivite,
-  PositionDePoignee,
+  PositionAvecHeure,
+  PositionSansHeure,
   RepereFrise,
 } from './DispositionFrise';
 import { echelleDe, EchelleFrise, instantsRecus, positionSur, positionTenueAuxBords, surVoies } from './EchelleFrise';
@@ -188,27 +190,40 @@ export const lectureDeLaFrise = ({ vue, maintenant, poignee, placement, apercu }
   };
 };
 
-export const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number =>
+export const instantTenuSur = (poignee: Pick<PoigneeDeFrise, 'instant' | 'bornes'>, echelle: EchelleFrise): number =>
   Math.min(
     Math.max(Date.parse(poignee.instant), Date.parse(poignee.bornes.min), echelle.debut),
     Date.parse(poignee.bornes.max),
     echelle.fin,
   );
 
-export const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number, largeur: number): PositionDePoignee => ({
-  kind: 'POIGNEE',
-  cle: 'poignee',
-  instant: instantTenuSur(poignee, echelle),
-  gauche: positionTenueAuxBords(positionSur(echelle, instantTenuSur(poignee, echelle)), largeur),
-  haut,
-  min: Date.parse(poignee.bornes.min),
-  max: Date.parse(poignee.bornes.max),
-  etiquette: texteDeLHeure(poignee.instant),
-  lecture: { valeur: instantTenuSur(poignee, echelle), texte: texteDeLHeure(poignee.instant) },
-  sansHeure: false,
-  desactivee: poignee.desactivee,
-  source: poignee,
-});
+const emplacementDeLaPoignee = (
+  instant: string,
+  cadre: Pick<PoigneeDeFrise, 'bornes' | 'desactivee'>,
+  etiquette: string,
+  echelle: EchelleFrise,
+  haut: number,
+  largeur: number,
+): EmplacementDePoignee => {
+  const instantTenu = instantTenuSur({ instant, bornes: cadre.bornes }, echelle);
+  return {
+    kind: 'POIGNEE',
+    cle: 'poignee',
+    instant: instantTenu,
+    gauche: positionTenueAuxBords(positionSur(echelle, instantTenu), largeur),
+    haut,
+    min: Date.parse(cadre.bornes.min),
+    max: Date.parse(cadre.bornes.max),
+    etiquette,
+    desactivee: cadre.desactivee,
+  };
+};
+
+export const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number, largeur: number): PositionAvecHeure => {
+  const texte = texteDeLHeure(poignee.instant);
+  const emplacement = emplacementDeLaPoignee(poignee.instant, poignee, texte, echelle, haut, largeur);
+  return { ...emplacement, heure: 'AVEC_HEURE', lecture: { valeur: emplacement.instant, texte }, source: poignee };
+};
 
 export const positionDeLaPoigneeSansHeure = (
   placement: PlacementDeLInstant,
@@ -216,16 +231,9 @@ export const positionDeLaPoigneeSansHeure = (
   echelle: EchelleFrise,
   haut: number,
   largeur: number,
-): PositionDePoignee => ({
-  ...positionDeLaPoignee(
-    { instant: finRecue, activiteVisee: placement.activiteVisee, bornes: placement.bornes, desactivee: placement.desactivee },
-    echelle,
-    haut,
-    largeur,
-  ),
-  etiquette: LIBELLES_ANOMALIES.frise.heureInconnue,
-  lecture: undefined,
-  sansHeure: true,
+): PositionSansHeure => ({
+  ...emplacementDeLaPoignee(finRecue, placement, LIBELLES_ANOMALIES.frise.heureInconnue, echelle, haut, largeur),
+  heure: 'SANS_HEURE',
   source: placement,
 });
 

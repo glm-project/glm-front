@@ -35,8 +35,6 @@ export interface PoigneeDeFrise {
   readonly desactivee: boolean;
 }
 
-export const estUnePoignee = (source: PoigneeDeFrise | PlacementDeLInstant): source is PoigneeDeFrise => 'instant' in source;
-
 type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
 
 const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: Required<BornesDuFait>): string => {

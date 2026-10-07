@@ -100,20 +100,20 @@
       <span data-selector="anomalie-pointage-regularise">{{ libelles.frise.badgeRegularise }}</span>
       }
     </button>
-    } @case ('POIGNEE') {
+    } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
     <div
       role="slider"
       data-selector="anomalie-poignee"
-      [attr.tabindex]="element.sansHeure ? -1 : 0"
-      [attr.aria-hidden]="element.sansHeure || null"
-      [attr.data-sans-heure]="element.sansHeure || null"
+      [attr.tabindex]="sansHeure ? -1 : 0"
+      [attr.aria-hidden]="sansHeure || null"
+      [attr.data-sans-heure]="sansHeure || null"
       [style.left.%]="element.gauche"
       [style.top.px]="element.haut"
       [attr.aria-label]="libelles.frise.poignee"
       [attr.aria-valuemin]="element.min"
       [attr.aria-valuemax]="element.max"
-      [attr.aria-valuenow]="element.lecture?.valeur"
-      [attr.aria-valuetext]="element.lecture?.texte"
+      [attr.aria-valuenow]="element.heure === 'AVEC_HEURE' ? element.lecture.valeur : null"
+      [attr.aria-valuetext]="element.heure === 'AVEC_HEURE' ? element.lecture.texte : null"
       [attr.aria-disabled]="element.desactivee"
       (keydown)="touche($event, element)"
       (pointerdown)="saisit($event, plan, element)"
