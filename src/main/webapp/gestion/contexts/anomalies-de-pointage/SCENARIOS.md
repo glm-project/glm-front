@@ -35,7 +35,7 @@ deux vérifications du reçu qui reviennent l'une après l'autre annoncent la m�
 
 Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
 conflit. Il montre l'activité échue sur la frise, son début, sa fin automatique et sa durée tels que reçus dans le panneau Sélection. Le
-gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée des pointages de la frise : le
+gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée de placement de la frise (la fin automatique se lit en ligne : repère ouvrant sur le début de sa barre, repère terminant sur son bout) : le
 choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic place la
 poignée à l'heure cliquée, arrondie à 5 minutes et ramenée à la borne la plus proche si elle sort du début de l'activité ou de
 l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est

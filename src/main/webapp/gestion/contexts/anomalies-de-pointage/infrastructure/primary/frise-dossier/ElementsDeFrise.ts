@@ -1,5 +1,6 @@
 import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste, tempsActivite } from '../PresentationDossier';
 import { activitesModifiees, faitsDeLActe } from './ComparaisonDApercu';
@@ -9,6 +10,7 @@ import {
   BarreFrise,
   DispositionApres,
   ElementFrise,
+  EntreesDeFrise,
   FinDeBarre,
   PeriodeActivite,
   PositionDePoignee,
@@ -16,6 +18,7 @@ import {
 } from './DispositionFrise';
 import { echelleDe, EchelleFrise, instantsRecus, positionSur, positionTenueAuxBords, surVoies } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
+import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 export interface ContexteDeFrise {
   readonly now: Date;
@@ -91,10 +94,11 @@ export const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: num
     deplace,
     tardif,
     faitDeLActe,
+    ancrage: 'CENTRE',
   };
 };
 
-const finRecueDe = (etat: ActiviteAnomalie['etat'], fin: string | undefined): string | undefined =>
+export const finRecueDe = (etat: ActiviteAnomalie['etat'], fin: string | undefined): string | undefined =>
   ETATS_SANS_FIN_RECUE.includes(etat) ? undefined : fin;
 
 const finDeLaBarre = (etat: ActiviteAnomalie['etat'], fin: string | undefined): FinDeBarre => {
@@ -150,7 +154,7 @@ export const parDebut = (activites: readonly ActiviteAnomalie[]): readonly Activ
 export const hauteurDesReperes = (reperes: readonly RepereFrise[]): number =>
   (Math.max(-1, ...reperes.map(repere => repere.voie)) + 1) * HAUTEUR_D_UN_ELEMENT_PX;
 
-export const instantsDeLEchelle = (
+const instantsDeLEchelle = (
   pointages: readonly PointageAnomalie[],
   activites: readonly ActiviteAnomalie[],
   now: Date,
@@ -159,13 +163,29 @@ export const instantsDeLEchelle = (
   return instants.length > 0 ? instants : [now.getTime()];
 };
 
-export const echelleDeLaFrise = (
+const echelleDeLaFrise = (
   instants: readonly number[],
   poignee: PoigneeDeFrise | undefined,
   placement: PlacementDeLInstant | undefined,
 ): EchelleFrise => {
   const bornes = (poignee ?? placement)?.bornes;
   return echelleDe(instants, bornes && Date.parse(bornes.max));
+};
+
+export const lectureDeLaFrise = ({ vue, maintenant, poignee, placement, apercu }: EntreesDeFrise) => {
+  const pointages = pointagesDeLaFrise(vue);
+  const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
+  return {
+    enCause: new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage)),
+    pointages,
+    pointagesApres,
+    echelle: echelleDeLaFrise(
+      instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], maintenant),
+      poignee,
+      placement,
+    ),
+    tardifs: identifiantsDesPointagesTardifs(vue.choix ?? []),
+  };
 };
 
 const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number =>

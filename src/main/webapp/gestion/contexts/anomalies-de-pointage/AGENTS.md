@@ -206,13 +206,24 @@ vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec seco
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
 `data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
 rendue des graduations, lue sur deux traits et extrapolée aux bords (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
+La frise se lit **en ligne** (`seLitEnLigne`, `FriseEnLigne.ts`) quand le dossier n'est pas un conflit à expliquer (`conflitAExpliquer`),
+que la frise lit au moins un pointage et que chacun, non annulé, est soit l'ouvrant d'une activité du dossier (`activite.ouvrant`),
+soit le terminant au bout de sa barre : son fait vise l'activité (`activiteVisee`), qui a une fin reçue, à cet instant exactement
+(`InstantPointage`). C'est la fin automatique jamais arrêtée et son reçu ; un conflit, un pointage tardif (posé après l'échéance, donc
+ailleurs qu'au bout de la barre échue) ou un pointage hors de ces deux cas gardent la frise en rangées décrite ici. En ligne,
+`dispositionEnLigne` n'a ni intitulé « Pointages » ni rangée de repères : chaque activité a sa rangée dès sous l'axe, le repère
+ouvrant se pose sur le début de sa barre (aligné à gauche, `data-ancrage="GAUCHE"`), le repère terminant sur son bout (aligné à droite,
+`DROITE` ; quand la barre est plus étroite que deux cibles, 88 px, aligné à gauche sur le bout, hors de la barre). Les repères restent
+des boutons distincts de la barre, avec tout ce qui les définit, et l'ordre de tabulation reste celui du temps ; `data-en-ligne` sur
+`anomalie-frise-plan` sert au dessin seul (la barre réserve la place de ses repères). Poignée et rangée de placement gardent une rangée
+fixe d'une cible, de 44 px, entre l'axe et les barres ; le groupe « Après cet acte » reste celui des rangées.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
 `PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ
 date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
 indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
-qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
+qui gardent leur sélection ; en ligne, la rangée fixe d'une cible sous l'axe) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
 résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'action, bornes du `CadreDuFait`, un clic hors bornes se
 ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
 comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. Une aide visible (`anomalie-frise-aide`) dit de cliquer sur

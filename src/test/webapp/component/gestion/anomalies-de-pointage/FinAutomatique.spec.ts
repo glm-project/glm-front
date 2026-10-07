@@ -5,22 +5,42 @@ import { abscisseDeLHeure, centreDe } from '../../../utils/gestion/anomalies-de-
 import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
+  confirmationFinAutomatiqueFixture,
   dossierApresCorrectionFixture,
+  dossierApresRegularisationFixture,
   dossierFinAutomatiqueFixture,
   dossierFinTardiveFixture,
   dossierFinTardiveLeLendemainFixture,
   finCorrigeeFixture,
+  finRegulariseeFixture,
   finTardiveFixture,
   givenTheReferentielFinAutomatique,
+  instantRegulariseLocalFixture,
   motifFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
-import { thenTheInstantFieldsAreEmpty, thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import {
+  thenTheInstantFieldsAreEmpty,
+  thenTheInstantFieldsShow,
+  whenTypingTheInstant,
+} from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { markerOf, thenPointageIsSelected, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const MARGE_DES_REPERES_PX = 22;
+
+const whenOpeningTheFriseAt = (width: number): void => {
+  cy.viewport(width, 900);
+  cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  cy.get(dataSelector('anomalie-frise')).should('be.visible');
+};
+
+const barreDeLActivite = () =>
+  cy
+    .get(dataSelector('anomalie-frise'))
+    .find(dataSelector('anomalie-activite'))
+    .filter(`[data-activite="${activiteFinAutomatiqueFixture}"]`);
 
 describe('Automatic end dossier in Gestion', () => {
   beforeEach(() => {
@@ -276,7 +296,7 @@ describe('End placement on the frise in Gestion', () => {
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 8, 0));
   });
 
-  it('should select the pointage of a marker clicked on the pointages row instead of placing the end', () => {
+  it('should select the pointage of the start marker clicked on its bar instead of placing the end', () => {
     whenOpeningTheAutomaticEndRegularisation();
     whenSelectingPointage(ouvrantFinAutomatiqueFixture);
 
@@ -309,6 +329,79 @@ describe('End placement on the frise in Gestion', () => {
     cy.get(dataSelector('anomalie-poignee')).should('be.visible');
     cy.get(dataSelector('anomalie-frise-placement')).should('not.exist');
     cy.get(dataSelector('anomalie-frise-aide')).should('not.exist');
+  };
+});
+
+describe('Automatic end read on one line in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+    cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
+    cy.intercept('POST', `${suiviUrl}/apercus`, request => {
+      const demande = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: apercuFixture(demande, dossierFinAutomatiqueFixture(), dossierApresRegularisationFixture(), finRegulariseeFixture),
+      });
+    });
+    cy.intercept('POST', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/confirmations-de-resolution`, request => {
+      const demande = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      request.reply({ body: confirmationFinAutomatiqueFixture(demande, dossierApresRegularisationFixture()) });
+    });
+  });
+
+  [1280, 390].forEach(width => {
+    it(`should begin the start marker on the graduation of its hour and on the left edge of its bar at ${width} pixels`, () => {
+      whenOpeningTheFriseAt(width);
+
+      thenNoTitleIsDrawnForThePointages();
+      thenTheStartMarkerBeginsOnTheHourAndOnTheLeftEdgeOfItsBar(ouvrantFinAutomatiqueFixture, 8);
+    });
+
+    it(`should end the regularised stop at the end of its bar at ${width} pixels`, () => {
+      whenOpeningTheFriseAt(width);
+      whenRegularisingTheEndAndReadingTheReceipt();
+
+      thenTheStopEndsOnTheHourAndOnTheRightEdgeOfItsBar(finRegulariseeFixture, 17);
+    });
+  });
+
+  const whenRegularisingTheEndAndReadingTheReceipt = (): void => {
+    cy.get(dataSelector('anomalie-choix')).click();
+    whenTypingTheInstant(instantRegulariseLocalFixture);
+    cy.get(dataSelector('anomalie-previsualiser')).click();
+    cy.get(dataSelector('anomalie-confirmer')).click();
+    cy.get(dataSelector('anomalie-resultat')).should('be.visible');
+    markerOf(finRegulariseeFixture).should('exist');
+  };
+
+  const thenNoTitleIsDrawnForThePointages = (): void => {
+    cy.get(dataSelector('anomalie-frise-pointages-intitule')).should('not.exist');
+  };
+
+  const thenTheStartMarkerBeginsOnTheHourAndOnTheLeftEdgeOfItsBar = (pointage: string, hour: number): void => {
+    abscisseDeLHeure(hour).then(abscisse => {
+      barreDeLActivite().then(barre => {
+        markerOf(pointage).should(repere => {
+          const { left } = requiredFixture(repere[0], 'repère').getBoundingClientRect();
+          expect(left).to.be.closeTo(abscisse, 1);
+          expect(left).to.be.closeTo(requiredFixture(barre[0], 'barre').getBoundingClientRect().left, 1);
+        });
+      });
+    });
+  };
+
+  const thenTheStopEndsOnTheHourAndOnTheRightEdgeOfItsBar = (pointage: string, hour: number): void => {
+    abscisseDeLHeure(hour).then(abscisse => {
+      barreDeLActivite().then(barre => {
+        markerOf(pointage).should(repere => {
+          const { right } = requiredFixture(repere[0], 'repère').getBoundingClientRect();
+          expect(right).to.be.closeTo(abscisse, 1);
+          expect(right).to.be.closeTo(requiredFixture(barre[0], 'barre').getBoundingClientRect().right, 1);
+        });
+      });
+    });
   };
 });
 
@@ -460,11 +553,7 @@ describe('Geometry of the frise in Gestion', () => {
 
   const plan = () => cy.get(dataSelector('anomalie-frise-plan'));
 
-  const barre = () =>
-    cy
-      .get(dataSelector('anomalie-frise'))
-      .find(dataSelector('anomalie-activite'))
-      .filter(`[data-activite="${activiteFinAutomatiqueFixture}"]`);
+  const barre = barreDeLActivite;
 
   const thenTheMarkerStandsOnTheHour = (pointage: string, hour: number): void => {
     abscisseDeLHeure(hour).then(abscisse => {
@@ -561,12 +650,6 @@ describe('Frise of a dossier spanning 26 hours in Gestion', () => {
 
     thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan([ouvrantFinAutomatiqueFixture, finTardiveFixture]);
   });
-
-  const whenOpeningTheFriseAt = (width: number): void => {
-    cy.viewport(width, 900);
-    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-    cy.get(dataSelector('anomalie-frise')).should('be.visible');
-  };
 
   const thenNeitherThePageNorTheFriseOverflows = (): void => {
     cy.document().should(document => {

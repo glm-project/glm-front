@@ -94,6 +94,12 @@ button[aria-pressed='true'] {
   font-size: var(--text-label);
   font-variant-numeric: tabular-nums;
 }
+[data-selector='anomalie-pointage'][data-ancrage='GAUCHE'] {
+  transform: none;
+}
+[data-selector='anomalie-pointage'][data-ancrage='DROITE'] {
+  transform: translateX(-100%);
+}
 [data-selector='anomalie-pointage'][data-non-conformite='true'],
 [data-selector='anomalie-apres-pointage'][data-non-conformite='true'] {
   border-color: var(--color-ink);
@@ -189,6 +195,12 @@ button[aria-pressed='true'] {
   text-overflow: ellipsis;
   border-width: 2px;
   font-weight: 600;
+}
+[data-en-ligne='true'] [data-selector='anomalie-activite'] {
+  padding-left: calc(var(--spacing-touch) + 0.5rem);
+}
+[data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='RECUE'] {
+  padding-right: calc(var(--spacing-touch) + 0.5rem);
 }
 [data-selector='anomalie-activite'][data-categorie='TRAVAIL'],
 [data-selector='anomalie-apercu-activite-apres'][data-categorie='TRAVAIL'] {

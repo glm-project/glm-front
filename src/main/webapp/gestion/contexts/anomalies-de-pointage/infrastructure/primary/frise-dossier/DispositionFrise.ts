@@ -1,24 +1,22 @@
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { EchelleFrise, Graduation, graduationsDe, surVoies } from './EchelleFrise';
 import {
   abscisseEnPixelsDuRepere,
   barreDe,
   dispositionApres,
-  echelleDeLaFrise,
   ESPACE_ENTRE_RANGEES_PX,
   HAUTEUR_D_UN_ELEMENT_PX,
   HAUTEUR_DE_L_AXE_PX,
   hauteurDeLaFrise,
   hauteurDesReperes,
-  instantsDeLEchelle,
+  lectureDeLaFrise,
   parDebut,
   positionDeLaPoignee,
   repereDe,
 } from './ElementsDeFrise';
+import { dispositionEnLigne, seLitEnLigne } from './FriseEnLigne';
 import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
-import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 const HAUTEUR_DE_L_INTITULE_PX = 20;
 
@@ -77,6 +75,7 @@ export interface RepereFrise {
   readonly deplace: boolean;
   readonly tardif: boolean;
   readonly faitDeLActe: boolean;
+  readonly ancrage: 'CENTRE' | 'GAUCHE' | 'DROITE';
 }
 
 export type ElementFrise = BarreFrise | RepereFrise | PositionDePoignee;
@@ -118,6 +117,7 @@ export interface IntituleDeRangee {
 }
 
 export interface DispositionFrise {
+  readonly enLigne: boolean;
   readonly echelle: EchelleFrise;
   readonly hauteur: number;
   readonly graduations: readonly Graduation[];
@@ -175,16 +175,9 @@ const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly Rep
   source: placement,
 });
 
-const dispositionEnRangees = ({ vue, maintenant: now, poignee, placement, apercu, largeur }: EntreesDeFrise): DispositionFrise => {
-  const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  const pointages = pointagesDeLaFrise(vue);
-  const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
-  const echelle = echelleDeLaFrise(
-    instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
-    poignee,
-    placement,
-  );
-  const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
+const dispositionEnRangees = (entrees: EntreesDeFrise): DispositionFrise => {
+  const { vue, maintenant: now, poignee, placement, apercu, largeur } = entrees;
+  const { enCause, pointages, pointagesApres, echelle, tardifs } = lectureDeLaFrise(entrees);
   const intitule = intituleDesPointages(pointages);
   const hautDesReperes = hautDesReperesSous(intitule);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes, largeur };
@@ -208,6 +201,7 @@ const dispositionEnRangees = ({ vue, maintenant: now, poignee, placement, apercu
           contexte,
         );
   return {
+    enLigne: false,
     echelle,
     hauteur: hauteurDeLaFrise(elements, poignee === undefined ? undefined : hautDeLaPoignee, apres),
     graduations: graduationsDe(echelle, largeur),
@@ -219,4 +213,5 @@ const dispositionEnRangees = ({ vue, maintenant: now, poignee, placement, apercu
   };
 };
 
-export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => dispositionEnRangees(entrees);
+export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
+  seLitEnLigne(entrees.vue) ? dispositionEnLigne(entrees) : dispositionEnRangees(entrees);
