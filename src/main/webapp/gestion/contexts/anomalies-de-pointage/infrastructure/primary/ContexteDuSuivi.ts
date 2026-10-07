@@ -2,25 +2,16 @@ import {
   formatCalendarDayFull,
   formatCalendarDayFullWithYear,
   formatInstantTime,
-  localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DossierAnomalie } from '../../domain/dossier/DossierAnomalie';
-import { instantsRecus } from './frise-dossier/EchelleFrise';
-import { pointagesDeLaFrise } from './frise-dossier/PointagesDeLaFrise';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
+import { jourLocalDe, PeriodeDeLAnomalie, periodeDeLAnomalie } from './PeriodeDeLAnomalie';
 
 const CONTEXTE = LIBELLES_ANOMALIES.frise.contexte;
 
 type Quand = 'PLUS_TOT' | 'PENDANT' | 'PLUS_TARD' | 'JOURS_PRECEDENTS' | 'JOURS_SUIVANTS';
 
-interface Periode {
-  readonly debut: number;
-  readonly fin: number;
-  readonly jourDebut: string;
-  readonly jourFin: string;
-}
-
-interface Cadre extends Periode {
+interface Cadre extends PeriodeDeLAnomalie {
   readonly maintenant: Date;
 }
 
@@ -29,8 +20,6 @@ interface Groupe {
   readonly texte: () => string;
 }
 
-const jourLocalDe = (instant: number): string => localCalendarDay(new Date(instant));
-
 const heureDe = (instant: number): string => formatInstantTime(new Date(instant));
 
 const jourDit = (instant: number, maintenant: Date): string => {
@@ -38,13 +27,7 @@ const jourDit = (instant: number, maintenant: Date): string => {
   return new Date(instant).getFullYear() === maintenant.getFullYear() ? formatCalendarDayFull(jour) : formatCalendarDayFullWithYear(jour);
 };
 
-const periodeDe = (recus: readonly number[]): Periode => {
-  const debut = Math.min(...recus);
-  const fin = Math.max(...recus);
-  return { debut, fin, jourDebut: jourLocalDe(debut), jourFin: jourLocalDe(fin) };
-};
-
-const quandDe = (instant: number, periode: Periode): Quand => {
+const quandDe = (instant: number, periode: PeriodeDeLAnomalie): Quand => {
   if (instant < periode.debut) return jourLocalDe(instant) === periode.jourDebut ? 'PLUS_TOT' : 'JOURS_PRECEDENTS';
   if (instant <= periode.fin) return 'PENDANT';
   return jourLocalDe(instant) === periode.jourFin ? 'PLUS_TARD' : 'JOURS_SUIVANTS';
@@ -62,7 +45,7 @@ const autresJours = (precedents: readonly number[], suivants: readonly number[],
     : CONTEXTE.precedents(jourDit(Math.min(...precedents), maintenant));
 };
 
-const parQuand = (instants: readonly number[], periode: Periode): Readonly<Record<Quand, readonly number[]>> => ({
+const parQuand = (instants: readonly number[], periode: PeriodeDeLAnomalie): Readonly<Record<Quand, readonly number[]>> => ({
   PLUS_TOT: instants.filter(instant => quandDe(instant, periode) === 'PLUS_TOT'),
   PENDANT: instants.filter(instant => quandDe(instant, periode) === 'PENDANT'),
   PLUS_TARD: instants.filter(instant => quandDe(instant, periode) === 'PLUS_TARD'),
@@ -98,12 +81,12 @@ const joints = (groupes: readonly string[]): string => {
 };
 
 export const contexteDuSuivi = (dossier: DossierAnomalie, maintenant: Date, operateur: string | undefined): string | undefined => {
-  const recus = instantsRecus(pointagesDeLaFrise(dossier), dossier.activites);
+  const periode = periodeDeLAnomalie(dossier);
   const instants = dossier.perimetre
     .horsDe(dossier)
     .map(pointage => Date.parse(pointage.fait.instant))
     .filter(Number.isFinite);
-  const groupes = recus.length === 0 ? [] : groupesDe(instants, { ...periodeDe(recus), maintenant });
+  const groupes = periode === undefined ? [] : groupesDe(instants, { ...periode, maintenant });
   if (groupes.length === 0) return undefined;
   return CONTEXTE.phrase(operateur ?? CONTEXTE.operateurInconnu, joints(groupes.map((groupe, rang) => dit(groupe, rang === 0))));
 };
