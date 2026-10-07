@@ -396,7 +396,7 @@ const hauteurDeLaFrise = (
     ...(apres === undefined ? [] : [apres.haut + apres.hauteur + ESPACE_ENTRE_RANGEES_PX]),
   );
 
-export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, apercu, largeur }: EntreesDeFrise): DispositionFrise => {
+const dispositionEnRangees = ({ vue, maintenant: now, poignee, placement, apercu, largeur }: EntreesDeFrise): DispositionFrise => {
   const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
   const pointages = pointagesDeLaFrise(vue);
   const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
@@ -439,3 +439,5 @@ export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, a
     apres,
   };
 };
+
+export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => dispositionEnRangees(entrees);
