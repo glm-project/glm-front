@@ -5,6 +5,7 @@ import { DiagnosticConflit, DossierAnomalie } from '@/gestion/contexts/anomalies
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
+import { PerimetreDuDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
 import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
 import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
@@ -88,6 +89,34 @@ const referentielFixture = (): ReferentielAnomalies => {
   );
 };
 
+const JOURNAL_ENTIER_EN_PERIMETRE = new PerimetreDuDossier([]);
+
+const avecLePerimetreDuJournal = (dossier: DossierAnomalie): DossierAnomalie =>
+  dossier.perimetre === JOURNAL_ENTIER_EN_PERIMETRE
+    ? { ...dossier, perimetre: new PerimetreDuDossier(dossier.journal.map(pointage => pointage.id)) }
+    : dossier;
+
+const lectureAvecLePerimetreDuJournal = (lecture: LectureDossier): LectureDossier =>
+  lecture.kind === 'DOSSIER' ? { kind: 'DOSSIER', dossier: avecLePerimetreDuJournal(lecture.dossier) } : lecture;
+
+const apercuAvecLePerimetreDuJournal = (resultat: ResultatApercu): ResultatApercu =>
+  resultat.kind === 'APERCU'
+    ? {
+        kind: 'APERCU',
+        apercu: {
+          ...resultat.apercu,
+          avant: avecLePerimetreDuJournal(resultat.apercu.avant),
+          apres: avecLePerimetreDuJournal(resultat.apercu.apres),
+        },
+      }
+    : resultat;
+
+const applicationAvecLePerimetreDuJournal = (resultat: ResultatApplication): ResultatApplication =>
+  resultat.kind === 'APPLIQUE' ? { kind: 'APPLIQUE', dossier: avecLePerimetreDuJournal(resultat.dossier) } : resultat;
+
+const verificationAvecLePerimetreDuJournal = (resultat: ResultatVerification): ResultatVerification =>
+  resultat.kind === 'ATTESTE' ? { kind: 'ATTESTE', dossier: avecLePerimetreDuJournal(resultat.dossier) } : resultat;
+
 class DossierReadFixture extends AnomaliesReadPort {
   failure: Error | undefined;
   result: LectureDossier = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
@@ -127,7 +156,7 @@ class DossierReadFixture extends AnomaliesReadPort {
     this.pending = undefined;
     if (pending !== undefined) return pending.arrive();
     const failure = this.failure;
-    const result = this.result;
+    const result = lectureAvecLePerimetreDuJournal(this.result);
     return roundTripFixture(() => {
       if (failure !== undefined) throw failure;
       return result;
@@ -160,7 +189,7 @@ class DossierPreviewFixture extends PrevisualisationAnomaliePort {
 
   preview(_adresse: AdresseDossier, _version: number, acte: ActeResolution): Promise<ResultatApercu> {
     this.actes.push(acte);
-    return this.replies.answer(this.result);
+    return this.replies.answer(apercuAvecLePerimetreDuJournal(this.result));
   }
 }
 
@@ -171,11 +200,11 @@ class DossierApplicationFixture extends ApplicationActePort {
   verification: ResultatVerification = { kind: 'NON_ATTESTE' };
 
   apply(): Promise<ResultatApplication> {
-    return this.replies.answer(this.result);
+    return this.replies.answer(applicationAvecLePerimetreDuJournal(this.result));
   }
 
   verify(): Promise<ResultatVerification> {
-    return this.receiptReplies.answer(this.verification);
+    return this.receiptReplies.answer(verificationAvecLePerimetreDuJournal(this.verification));
   }
 }
 
@@ -231,6 +260,7 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
       regularisation: false,
     },
   ],
+  perimetre: JOURNAL_ENTIER_EN_PERIMETRE,
   activites: [
     {
       id: new ActiviteAnomalieId('travail-8'),
@@ -1053,8 +1083,36 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains(
       'anomalie-autres-corrections-aide',
-      'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
+      'Pour corriger ou annuler un autre pointage de cette anomalie, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
     );
+  });
+
+  it('should draw on the frise only the pointages of the anomaly', async () => {
+    givenAJournalBeyondTheAnomaly();
+
+    await whenRendering();
+
+    thenTheFriseMarkersAre(['fin-17']);
+  });
+
+  it('should compare the whole journal before and after the act although the frise shows only the anomaly', async () => {
+    givenAJournalBeyondTheAnomaly();
+    givenASuccessfulPreview(undefined, acteCorrectionFixture, journalBeyondTheAnomaly());
+    await whenRendering();
+
+    await whenPreparingTheCorrection();
+
+    thenTheFriseMarkersAre(['fin-17']);
+    thenTextContains('anomalie-apercu-fait-avant-autre-30', 'mercredi 16 septembre à 09:00:00');
+    thenTextContains('anomalie-apercu-fait-apres-autre-30', 'mercredi 16 septembre à 09:00:00');
+  });
+
+  it('should keep the pointage at fault selected when the journal holds pointages beyond the anomaly', async () => {
+    givenAJournalBeyondTheAnomaly();
+
+    await whenRendering();
+
+    thenTheSelectionShowsTheGesture('Arrêt');
   });
 
   it('should keep the received explanation when the conflict comes with no diagnostic', async () => {
@@ -3681,6 +3739,16 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsAt(new Date(2026, 8, 15, 2, 0));
     });
 
+    it('should stop the handle three hours after the last pointage of the anomaly, not after a later pointage of the journal', async () => {
+      givenALateEndInAJournalBeyondTheAnomaly();
+      await whenRendering();
+      await whenClicking('anomalie-choix');
+
+      await whenPressingOnTheHandle('End');
+
+      thenTheHandleHoldsAt(new Date(2026, 8, 15, 2, 0));
+    });
+
     it('should hold the handle at the edge of the scale when the manager types an hour long after the received instants', async () => {
       givenALateEnd();
       await whenRendering();
@@ -4397,6 +4465,45 @@ describe('Anomaly dossier page', () => {
     read.result = {
       kind: 'DOSSIER',
       dossier: { ...dossier, choix: dossier.choix.map(choix => ({ ...choix, saisie })) },
+    };
+  };
+
+  const pointageAilleursFixture = (id: string, instant: string): PointageAnomalie => ({
+    ...pointageDeLaFinFixture(),
+    id: new PointageAnomalieId(id),
+    fait: { ...faitConflitFixture(), activiteVisee: 'travail-ailleurs', instant },
+    enregistre: instant,
+  });
+
+  const journalBeyondTheAnomaly = (): DossierAnomalie => {
+    const dossier = dossierAnomalieFixture();
+    return {
+      ...dossier,
+      journal: [...dossier.journal, pointageAilleursFixture('autre-30', instantLocalFixture(new Date(2026, 8, 16, 9, 0)))],
+      perimetre: new PerimetreDuDossier([new PointageAnomalieId('fin-17')]),
+      diagnostics: [
+        {
+          pointage: new PointageAnomalieId('fin-17'),
+          raison: 'CIBLE_REMPLACEE',
+          cible: { activite: new ActiviteAnomalieId('travail-8') },
+        },
+      ],
+    };
+  };
+
+  const givenAJournalBeyondTheAnomaly = (): void => {
+    read.result = { kind: 'DOSSIER', dossier: journalBeyondTheAnomaly() };
+  };
+
+  const givenALateEndInAJournalBeyondTheAnomaly = (): void => {
+    const dossier = dossierFinTardiveFixture();
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        perimetre: new PerimetreDuDossier(dossier.journal.map(pointage => pointage.id)),
+        journal: [...dossier.journal, pointageAilleursFixture('autre-40', instantLocalFixture(new Date(2026, 8, 15, 10, 0)))],
+      },
     };
   };
 
@@ -5262,6 +5369,10 @@ describe('Anomaly dossier page', () => {
       friseElements('anomalie-pointage').find(candidate => candidate.dataset['pointage'] === pointage),
       `marker of ${pointage}`,
     );
+
+  const thenTheFriseMarkersAre = (expected: readonly string[]): void => {
+    expect(friseElements('anomalie-pointage').map(candidate => candidate.dataset['pointage'])).toEqual(expected);
+  };
 
   const bar = (activite: string): HTMLElement =>
     requiredFixture(

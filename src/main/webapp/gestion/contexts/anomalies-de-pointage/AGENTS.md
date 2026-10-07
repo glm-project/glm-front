@@ -27,7 +27,16 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   en mémoire dans la page ; un rechargement abandonne la saisie. La saisie conserve les nanosecondes,
   avec comparaison des instants équivalents indépendamment de leur fuseau.
 - **Journal** : faits d'origine, annulations et remplacements conservés. Une contradiction restante
-  est un résultat accepté, distinct d'un refus métier.
+  est un résultat accepté, distinct d'un refus métier. Le `journal` du dossier reste complet : le serveur envoie
+  tous les jours et tous les opérateurs de l'élément.
+- **Périmètre** : Value Object `PerimetreDuDossier` (`domain/dossier/`, champ `perimetre` de `DossierAnomalie`) qui garde
+  les pointages que le serveur rattache à l'anomalie : ceux du périmètre reçu, réunis à ceux de la séquence en conflit
+  quand elle est reçue.
+- **Pointages de l'anomalie** : `perimetre.pointagesDe(dossier)` : ceux du périmètre, plus ceux que les diagnostics citent
+  (`pointage`, `cible.ouvrant`, `cible.termineePar`), dans l'ordre du journal. Le démarrage annulé d'un `OUVRANT_ANNULE` et
+  les arrêts qui le visent en font partie, bien que le périmètre reçu se réduise alors à l'ancre. Seuls ces pointages se
+  lisent sur la frise, se sélectionnent et bornent la poignée ; le journal complet sert aux libellés, aux références et à la
+  comparaison avant et après.
 - **Continuation** : lien explicite vers un pointage actif d'une séquence restante après correction
   de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
 - **Geste** : le nom d'un pointage d'après le bouton que l'opérateur a pressé au pupitre (DÉMARRER, NC, BON, ARRÊTER) :
@@ -38,7 +47,7 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   n'a qu'un sens, l'action directe.
 - **Phrase du problème** : la ligne de l'en-tête qui dit ce qui est en cause (pointage nommé par son geste et son heure, « vise »,
   l'activité, le fait contradictoire), une par diagnostic ou par activité échue.
-- **Frise** : la représentation, en présentation seule, des pointages et des activités du dossier sur une échelle de temps ;
+- **Frise** : la représentation, en présentation seule, des pointages de l'anomalie et des activités du dossier sur une échelle de temps ;
   elle n'invente aucune fin ni aucune heure.
 - **Sélection** : le pointage ou l'activité choisi sur la frise, détaillé dans le panneau du même nom ; sélectionner n'est pas
   choisir un acte.
@@ -144,10 +153,10 @@ déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction :
 `REGULARISER_FIN` visant cette activité dit qu'elle n'a jamais été arrêtée (`finARegulariser`, `domain/dossier/FinsARegulariser.ts`) ;
 sans l'un ni l'autre, la phrase dit seulement qu'elle a été terminée automatiquement, sans rien affirmer de ses pointages. Le front ne déduit jamais qu'un pointage est tardif : `pointagesTardifs` (`domain/dossier/PointagesTardifs.ts`) le lit dans ces choix, et le pointage
 désigné est marqué « pointé après l'échéance » sur la frise (badge « ! », `data-tardif`, nom accessible) et dans le panneau Sélection.
-Les pointages et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
+Les pointages de l'anomalie et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
 l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
 présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,
-pointages) avec une heure de marge arrondie à l'heure locale, graduations horaires, le jour affiché à minuit, une largeur
+pointages de l'anomalie, lus en un seul endroit par `pointagesDeLaFrise`, lisibles et en ordre chronologique) avec une heure de marge arrondie à l'heure locale, graduations horaires, le jour affiché à minuit, une largeur
 minimale de 64 px par heure et un défilement horizontal de la frise seule. Une rangée par activité, dans l'ordre de leur début,
 sous la rangée des pointages, titrée « Pointages » (`anomalie-frise-pointages-intitule`, une ligne de 20 px au-dessus des
 repères, sans interaction, que la rangée de placement ne recouvre pas ; absente sans pointage). La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` en pointillés
@@ -190,13 +199,14 @@ sa poignée, tenue à la borne la plus proche sur l'échelle (`aria-valuenow`), 
 pourquoi, et le premier déplacement ramène l'heure dans les bornes. L'heure d'origine du
 pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
 Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sous ses rangées actuelles, un groupe
-« Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages et les activités de l'après :
-une rangée de repères (`anomalie-apres-pointage`) puis une barre par activité (`anomalie-apercu-activite-apres`), selon la
+« Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages de l'anomalie et les activités de
+l'après : une rangée de repères (`anomalie-apres-pointage`) puis une barre par activité (`anomalie-apercu-activite-apres`), selon la
 grammaire des rangées actuelles (fins reçues seulement, rien n'est inventé). Ces éléments sont des images (`role="img"`),
 sans tabulation ni sélection ; le nom d'une barre porte la catégorie, la période, l'état et le temps reçus. La comparaison est
 de la présentation (`ComparaisonDApercu.ts`) : une activité dont l'état, le début, la fin ou la durée reçus changent entre
 `avant` et `apres`, ou que l'avant ne portait pas, est mise en évidence (`data-modifiee`, mot « modifiée » dans son nom) ; le
-pointage que l'après tient et que l'avant ne tenait pas, fait corrigé ou créé par l'acte, est le fait de l'acte (`data-fait-de-l-acte`, « posé par
+pointage que le journal d'après tient et que celui d'avant ne tenait pas (journaux complets, pour qu'un pointage déjà connu mais
+entré dans l'anomalie par l'acte ne passe pas pour posé), fait corrigé ou créé par l'acte, est le fait de l'acte (`data-fait-de-l-acte`, « posé par
 cet acte »). Un pointage annulé par l'acte est barré. Une poignée active reste affichée avec l'aperçu ; la déplacer retire
 l'aperçu, donc ces rangées. La section d'aperçu garde l'acte, la phrase d'issue, l'enregistrement, les conséquences textuelles
 reçues (seulement s'il y en a) et la comparaison repliée de tous les pointages.
@@ -207,8 +217,9 @@ pointage annulé, désactivés pour le consultant et pendant une opération. Pou
 temps reçus (`tempsActivite`), son début et sa fin reçus (« Fin ») ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue » ; il n'a ni Corriger
 ni Annuler. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau dossier (autre
 adresse, relecture, reçu), elle revient à la sélection initiale (`selectionInitiale`) : le plus ancien pointage en cause d'un
-diagnostic que le journal contient, sinon la première activité échue d'une fin automatique, sinon rien et le panneau invite à
-choisir. Une sélection absente du dossier courant ne s'affiche jamais. Sélectionner ne choisit aucun acte : la saisie d'acte,
+diagnostic parmi les pointages de l'anomalie, sinon la première activité échue d'une fin automatique, sinon rien et le panneau invite à
+choisir. Une sélection absente du dossier courant, ou hors des pointages de l'anomalie, ne s'affiche jamais : un pointage
+du journal hors de l'anomalie ne se corrige ni ne s'annule depuis ce dossier (« Ajouter un pointage manquant » reste). Sélectionner ne choisit aucun acte : la saisie d'acte,
 l'aperçu et le choix guidé restent inchangés. L'historique d'adresse obsolète garde sa liste, sans sélection.
 Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
 `LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
@@ -286,7 +297,9 @@ l'affichage des dates ; `maintenant`, qui sert aux bornes, est relue à chaque a
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
 l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
 
-Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le
+Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le périmètre du dossier
+est traduit dans toutes les lectures (dossier, aperçu `avant` et `apres`, reçu) depuis `perimetre.pointages`, réunis à
+`sequence.pointages` quand la séquence est reçue ; un `perimetre` absent rejette l'acquisition. Le
 modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. L'issue d'un acte est la projection
 `IssueDeLActe.depuis` (`domain/dossier/`), que l'aperçu et le reçu appellent : « traitée » signifie ni `enConflit` ni
 `finAutomatique`, quel que soit l'état d'adresse (une adresse `ANCRE_ANNULEE` peut rester en fin automatique lorsque

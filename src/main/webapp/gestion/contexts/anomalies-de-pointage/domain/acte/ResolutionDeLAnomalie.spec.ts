@@ -1,6 +1,7 @@
 import { ActiviteAnomalieId } from '../dossier/ActiviteAnomalieId';
 import { DossierAnomalie } from '../dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../dossier/ElementAnomalieId';
+import { PerimetreDuDossier } from '../dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '../dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../dossier/SuiviAnomalieId';
 import { ActeResolution, FaitPropose } from './ActeResolution';
@@ -26,6 +27,7 @@ const dossierFixture: DossierAnomalie = {
   cloture: false,
   engagement: '2026-09-14T08:00:00+02:00',
   journal: [],
+  perimetre: new PerimetreDuDossier([]),
   activites: [
     {
       id: new ActiviteAnomalieId('travail-8'),

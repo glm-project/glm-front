@@ -19,7 +19,9 @@ import {
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
 import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites' | 'diagnostics'> & { readonly choix?: DossierAnomalie['choix'] };
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'> & {
+  readonly choix?: DossierAnomalie['choix'];
+};
 
 export interface ApercuDeFrise {
   readonly avant: VueDeFrise;

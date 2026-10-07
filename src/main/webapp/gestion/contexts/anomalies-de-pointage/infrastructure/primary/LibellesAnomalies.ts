@@ -122,7 +122,7 @@ export const LIBELLES_ANOMALIES = {
   actionsDirectes: ACTIONS_DIRECTES,
   autresCorrections: 'Autres corrections',
   autresCorrectionsAide:
-    'Pour corriger ou annuler un autre pointage, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
+    'Pour corriger ou annuler un autre pointage de cette anomalie, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
   debut: 'Début',
   fin: 'Fin',
   corriger: 'Corriger ce pointage',

@@ -64,13 +64,16 @@ lien : un pointage absent du journal se dit « Un pointage non résolu ».
 
 ## Frise et sélection
 
-Les pointages et les activités du dossier se lisent sur une frise sous l'en-tête, à la place de la chronologie en liste et
+Les pointages de l'anomalie et les activités du dossier se lisent sur une frise sous l'en-tête, à la place de la chronologie en liste et
 de « Activités concernées ». Chaque activité a sa rangée, dans l'ordre de leur début : une barre `accent` pour le travail,
 `nc` pour la non-conformité, finie à la fin reçue (`TERMINEE`), en pointillés `warn` à la fin automatique (`ECHUE`), ou
 ouverte jusqu'au bord (`EN_COURS`, `A_RESOUDRE` hachurée « À résoudre ») ; la frise n'invente aucune fin. Chaque pointage est
 un repère (symbole du geste, heure HH:MM, barré s'il est annulé, « R » s'il est régularisé, rouge s'il est en cause), décalé
 d'une voie entière (44 px) quand deux repères sont à moins de 44 px, sur une rangée titrée « Pointages » ; une flèche pointillée relie le pointage en cause au début de l'activité que son
-diagnostic vise. L'échelle va d'une heure avant le premier instant reçu à une heure après le dernier, par heures entières, avec
+diagnostic vise. Le journal du suivi peut couvrir d'autres jours et d'autres opérateurs : la frise n'en montre que les pointages de
+l'anomalie (le périmètre reçu, la séquence en conflit, et les pointages que les diagnostics citent, dont le démarrage annulé
+d'un `OUVRANT_ANNULE` et les arrêts qui le visent). L'échelle va d'une heure avant le premier instant reçu de ces pointages et
+des activités à une heure après le dernier, par heures entières, avec
 le jour à minuit, et couvre l'heure proposée quand une poignée est posée ; elle défile horizontalement sur un écran étroit, sans faire défiler la page. Repères et barres sont des
 boutons (`aria-pressed`) qui suivent l'ordre du temps ; leur nom porte l'heure avec ses secondes et le geste, ou la
 catégorie, la période et l'état.
@@ -88,8 +91,9 @@ Le panneau « Sélection », avant « Votre décision », montre le pointage cho
 poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
 et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours
 les voient désactivés, avec le message des droits. Pour une activité, il dit sa catégorie, son état et son temps reçus, son
-début et sa fin reçus (« Fin »), sans bouton d'acte ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue ». À l'ouverture d'un conflit, le plus
-ancien pointage en cause que le journal contient est sélectionné ; à l'ouverture d'une fin automatique, l'activité échue ; si
+début et sa fin reçus (« Fin »), sans bouton d'acte ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue ». Un pointage du journal hors de l'anomalie ne s'y
+affiche pas, ne se corrige ni ne s'annule depuis ce dossier (« Ajouter un pointage manquant » reste). À l'ouverture d'un conflit,
+le plus ancien pointage en cause parmi ceux de l'anomalie est sélectionné ; à l'ouverture d'une fin automatique, l'activité échue ; si
 les deux sont portés, le pointage en cause ; sinon le panneau dit « Sélectionnez un pointage ou une activité sur la frise pour
 voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier, jamais
 un élément absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé ne
@@ -288,6 +292,10 @@ traverse minuit et l'heure répétée graduée heure par heure.
   tardives, l'obsolescence et la vérification d'une issue inconnue.
 - Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé
   incohérent avec son code (régularisation portant une heure, correction sans heure).
+- Les contrats HTTP traduisent le périmètre de tout dossier (lecture, aperçu avant et après, reçu), réuni à la séquence
+  quand elle est reçue, et rejettent un dossier sans périmètre. Les specs DOM vérifient qu'un journal plus large que
+  l'anomalie ne dessine, ne sélectionne et ne borne que les pointages de l'anomalie, et que la comparaison avant et après
+  garde le journal complet.
 - Les contrats HTTP contrôlent les requêtes REST (liste de chaque nature, dossier et aperçu sous
   `/anomalies`), l'acquisition autoritaire, les refus et les reçus incohérents ; ils utilisent `HttpTestingController`.
 - Les contrats HTTP vérifient que chaque refus connu d'un acte se traduit en son code sans le message du serveur, et

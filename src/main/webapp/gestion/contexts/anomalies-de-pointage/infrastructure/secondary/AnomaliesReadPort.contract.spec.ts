@@ -615,6 +615,63 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     expect(choix.saisie.command(cadreOuvert)).toBeUndefined();
   });
 
+  it('should unite the pointages of the perimeter and of the sequence of a conflict into the perimeter of the dossier', async () => {
+    const dossier = givenAConflictWhoseJournalExceedsItsScope();
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    const lu = dossierFromReading(resultat);
+    expect(lu.perimetre.pointagesDe(lu).map(pointage => pointage.id.pointage)).toEqual(['debut-8', 'nc-12', 'fin-17']);
+    expect(lu.journal.map(pointage => pointage.id.pointage)).toEqual(['debut-8', 'nc-12', 'fin-17', 'ailleurs-30']);
+  });
+
+  it('should read the perimeter of an automatic end from the pointages of its perimeter alone', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    dossier.suivi = { ...dossier.suivi, journal: [journalFact('debut-8'), journalFact('ailleurs-30')] };
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    const lu = dossierFromReading(resultat);
+    expect(lu.perimetre.pointagesDe(lu).map(pointage => pointage.id.pointage)).toEqual(['debut-8']);
+  });
+
+  it('should reject a conflict missing its perimeter instead of reading only its sequence', async () => {
+    const dossier = dossierAnomalieFixture();
+    delete dossier.perimetre;
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+
+    const lecture = port.read(adresse).catch((failure: unknown) => failure);
+    whenConflictDossierAnswers(dossier);
+    const failure = await lecture;
+
+    expect(failure).toEqual(new Error('Périmètre du dossier absent.'));
+    expect(errors.errors).toEqual([failure]);
+  });
+
+  const journalFact = (id: string): components['schemas']['RestEvenementDAtelier'] => ({
+    ...requiredFixture(dossierAnnuleFixture().suivi.journal[0], 'journal fact'),
+    id,
+  });
+
+  const givenAConflictWhoseJournalExceedsItsScope = (): components['schemas']['RestDossierAnomalie'] => {
+    const dossier = dossierAnomalieFixture();
+    return {
+      ...dossier,
+      sequence: { ...requiredFixture(dossier.sequence, 'sequence'), pointages: ['nc-12', 'fin-17'] },
+      perimetre: { ...requiredFixture(dossier.perimetre, 'perimeter'), pointages: ['debut-8'] },
+      suivi: {
+        ...dossier.suivi,
+        journal: ['debut-8', 'nc-12', 'fin-17', 'ailleurs-30'].map(journalFact),
+      },
+    };
+  };
+
   it('should reject a dossier missing its required sequence instead of reconstructing it from the journal', async () => {
     const dossier = dossierAnomalieFixture();
     delete dossier.sequence;
@@ -772,6 +829,14 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
       enConflit: true,
       finAutomatique: false,
       sequence: {
+        operateurId: 'op-camille',
+        posteId: 'poste-dmu',
+        activites: ['travail-8', 'nc-12'],
+        pointages: ['debut-8', 'nc-12', 'fin-17'],
+        datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
+        nombrePointages: 3,
+      },
+      perimetre: {
         operateurId: 'op-camille',
         posteId: 'poste-dmu',
         activites: ['travail-8', 'nc-12'],

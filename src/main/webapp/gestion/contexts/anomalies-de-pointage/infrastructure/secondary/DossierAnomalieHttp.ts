@@ -3,6 +3,7 @@ import { SaisieActe } from '../../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie, ChoixGuide, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
+import { PerimetreDuDossier } from '../../domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 
@@ -125,6 +126,14 @@ const toChoix = (choix: components['schemas']['RestChoixDeResolution']): ChoixGu
   saisie: toSaisie(choix),
 });
 
+const toPerimetre = (dossier: components['schemas']['RestDossierAnomalie']): PerimetreDuDossier => {
+  const perimetre = dossier.perimetre;
+  if (perimetre === undefined) throw new Error('Périmètre du dossier absent.');
+  return new PerimetreDuDossier(
+    [...perimetre.pointages, ...(dossier.sequence?.pointages ?? [])].map(pointage => new PointageAnomalieId(pointage)),
+  );
+};
+
 export const toDossier = (
   dossier: components['schemas']['RestDossierAnomalie'],
   sequence: components['schemas']['RestSequenceDuDossier'] | undefined = dossier.kind === 'FIN_AUTOMATIQUE'
@@ -149,6 +158,7 @@ export const toDossier = (
     ...(dossier.suivi.clotureLe === undefined ? {} : { finCloture: dossier.suivi.clotureLe }),
     engagement: dossier.suivi.engageLe,
     journal: dossier.suivi.journal.map(toPointage),
+    perimetre: toPerimetre(dossier),
     activites: dossier.activites.map(toActivite),
     diagnostics: dossier.diagnostics.map(toDiagnostic),
     choix: dossier.choix.map(toChoix),

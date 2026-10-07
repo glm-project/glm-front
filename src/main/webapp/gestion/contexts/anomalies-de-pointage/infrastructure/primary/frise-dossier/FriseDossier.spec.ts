@@ -5,9 +5,10 @@ import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/I
 import { SaisieActe } from '../../../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie, ChoixGuide, DiagnosticConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { PerimetreDuDossier } from '../../../domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { SelectionDuDossier } from '../SelectionDuDossier';
-import { ApercuDeFrise, VueDeFrise } from './DispositionFrise';
+import { VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
 import { DemandeDeDeplacement, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
@@ -96,6 +97,16 @@ const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): Placeme
 
 const PLAN_WIDTH = 1000;
 
+type VueDeTest = Omit<VueDeFrise, 'perimetre'> & { readonly perimetre?: PerimetreDuDossier };
+
+const perimetreDe = (...pointages: readonly string[]): PerimetreDuDossier =>
+  new PerimetreDuDossier(pointages.map(pointage => new PointageAnomalieId(pointage)));
+
+const vueDe = (vue: VueDeTest): VueDeFrise => ({
+  ...vue,
+  perimetre: vue.perimetre ?? new PerimetreDuDossier(vue.journal.map(pointage => pointage.id)),
+});
+
 describe('Frise of a dossier', () => {
   let fixture: ComponentFixture<FriseDossier>;
   let requestedSelections: SelectionDuDossier[];
@@ -118,6 +129,72 @@ describe('Frise of a dossier', () => {
     await whenRenderingTheFrise(dossier);
 
     thenTheMarkersAre(['debut-8', 'fin-17']);
+  });
+
+  it('should draw only the pointages of the anomaly when the journal holds more', async () => {
+    const dossier = {
+      journal: [
+        pointageFixture('debut-8', 'DEMARRAGE', '08:00'),
+        pointageFixture('autre-10', 'PASSAGE_NC', '10:00'),
+        pointageFixture('fin-17', 'ARRET', '17:00'),
+      ],
+      perimetre: perimetreDe('debut-8', 'fin-17'),
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkersAre(['debut-8', 'fin-17']);
+  });
+
+  it('should keep the scale on the anomaly when the journal holds pointages of other days', async () => {
+    const dossier = {
+      journal: [
+        {
+          ...pointageFixture('veille-9', 'DEMARRAGE', '09:00'),
+          fait: { ...pointageFixture('x', 'DEMARRAGE', '09:00').fait, instant: instantAt('09:00', 10) },
+        },
+        pointageFixture('debut-8', 'DEMARRAGE', '08:00'),
+        pointageFixture('fin-11', 'ARRET', '11:00'),
+      ],
+      perimetre: perimetreDe('debut-8', 'fin-11'),
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
+  });
+
+  it('should draw the cancelled opening and both stops that target it although the perimeter holds only the anchor', async () => {
+    const dossier = {
+      journal: [
+        pointageFixture('ouvrant-annule', 'DEMARRAGE', '08:00', {
+          annulation: { motif: 'Erreur', auteur: 'gestionnaire', instant: instantAt('09:00') },
+        }),
+        pointageFixture('arret-un', 'ARRET', '10:00'),
+        pointageFixture('arret-deux', 'ARRET', '11:00'),
+        pointageFixture('autre-12', 'PASSAGE_NC', '12:00'),
+      ],
+      perimetre: perimetreDe('arret-un'),
+      diagnostics: [
+        {
+          ...diagnosticSur('arret-un'),
+          raison: 'OUVRANT_ANNULE' as const,
+          cible: { activite: new ActiviteAnomalieId('travail-8'), ouvrant: new PointageAnomalieId('ouvrant-annule') },
+        },
+        {
+          ...diagnosticSur('arret-deux'),
+          raison: 'OUVRANT_ANNULE' as const,
+          cible: { activite: new ActiviteAnomalieId('travail-8'), ouvrant: new PointageAnomalieId('ouvrant-annule') },
+        },
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkersAre(['ouvrant-annule', 'arret-un', 'arret-deux']);
   });
 
   it('should draw the markers in chronological order whatever the order of the journal', async () => {
@@ -1423,6 +1500,29 @@ describe('Frise of a dossier', () => {
     thenTheMarkerAfterTheActHas('fin-17', { 'data-fait-de-l-acte': 'false', 'data-annule': 'true' });
   });
 
+  it('should draw after the act only the pointages of the anomaly of the state after the act', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('autre-10', 'PASSAGE_NC', '10:00')],
+      perimetre: perimetreDe('debut-8'),
+      activites: [],
+    };
+    const apres = {
+      journal: [
+        pointageFixture('debut-8', 'DEMARRAGE', '08:00'),
+        pointageFixture('autre-10', 'PASSAGE_NC', '10:00'),
+        pointageFixture('fin-9', 'ARRET', '09:00'),
+      ],
+      perimetre: perimetreDe('debut-8', 'fin-9'),
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheMarkersAre(['debut-8']);
+    thenTheMarkersAfterTheActAre(['debut-8', 'fin-9']);
+    thenTheMarkerAfterTheActHas('fin-9', { 'data-fait-de-l-acte': 'true' });
+  });
+
   it('should stretch the scale to the pointages and the activities of the state after the act', async () => {
     const dossier = {
       journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:30')],
@@ -1543,15 +1643,15 @@ describe('Frise of a dossier', () => {
   });
 
   const whenRenderingTheFrise = async (
-    dossier: VueDeFrise,
+    dossier: VueDeTest,
     selection?: SelectionDuDossier,
     poignee?: PoigneeDeFrise,
     placement?: PlacementDeLInstant,
-    apercu?: ApercuDeFrise,
+    apercu?: { readonly avant: VueDeTest; readonly apres: VueDeTest },
   ): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
-    fixture.componentRef.setInput('apercu', apercu);
-    fixture.componentRef.setInput('dossier', dossier);
+    fixture.componentRef.setInput('apercu', apercu === undefined ? undefined : { avant: vueDe(apercu.avant), apres: vueDe(apercu.apres) });
+    fixture.componentRef.setInput('dossier', vueDe(dossier));
     fixture.componentRef.setInput('poignee', poignee);
     fixture.componentRef.setInput('placement', placement);
     fixture.componentRef.setInput('now', new Date(2026, 9, 5, 10, 0));

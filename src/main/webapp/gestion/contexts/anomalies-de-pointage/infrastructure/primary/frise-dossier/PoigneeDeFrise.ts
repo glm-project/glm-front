@@ -35,7 +35,7 @@ export interface PoigneeDeFrise {
   readonly desactivee: boolean;
 }
 
-type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
+type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
 
 const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: Required<BornesDuFait>): string => {
   const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(pointagesDeLaFrise(dossier), dossier.activites)]);

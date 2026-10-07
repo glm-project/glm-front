@@ -3,5 +3,5 @@ import { DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/Dossi
 
 const estLisible = (pointage: PointageAnomalie): boolean => Number.isFinite(Date.parse(pointage.fait.instant));
 
-export const pointagesDeLaFrise = (dossier: Pick<DossierAnomalie, 'journal'>): readonly PointageAnomalie[] =>
-  new ChronologiePointages(dossier.journal.filter(estLisible)).pointages;
+export const pointagesDeLaFrise = (dossier: Pick<DossierAnomalie, 'journal' | 'diagnostics' | 'perimetre'>): readonly PointageAnomalie[] =>
+  new ChronologiePointages(dossier.perimetre.pointagesDe(dossier).filter(estLisible)).pointages;

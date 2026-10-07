@@ -17,11 +17,16 @@ import {
   motifFixture,
   ncFixture,
   operateurFixture,
+  perimetreFixture,
   remplacementFixture,
   suiviFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
 import { thenTheInstantFieldsShow, whenTypingTheInstant } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import {
+  dossierAuJournalDebordantFixture,
+  thenOnlyThePointagesOfTheAnomalyAreDrawn,
+} from '../../../utils/gestion/anomalies-de-pointage/JournalDebordantHttp.fixture';
 import {
   thenActivityIsSelected,
   whenSelectingActivity,
@@ -81,6 +86,18 @@ describe('HTTP conflict resolution in Gestion', () => {
     thenTheCurrentDossierRequiresANewPreviewOfTheRetainedProposal();
   });
 
+  it('should draw only the pointages of the anomaly when the journal of the follow-up holds other days and another operator', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheRealDossier();
+
+    thenOnlyThePointagesOfTheAnomalyAreDrawn();
+  });
+
+  const givenAJournalThatOverflowsTheAnomaly = (): void => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierAuJournalDebordantFixture() });
+  };
+
   it('should say the conflict in one sentence and keep the corrected terminating fact traceable under its original activity identity', () => {
     givenAConflictWhoseTerminationWasCorrected();
 
@@ -109,6 +126,8 @@ describe('HTTP conflict resolution in Gestion', () => {
     cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, {
       body: {
         ...dossier,
+        perimetre: perimetreFixture(true),
+        sequence: perimetreFixture(true),
         suivi: {
           ...dossier.suivi,
           journal: [

@@ -158,7 +158,10 @@ export class DossierAnomaliePage {
   });
   protected readonly pointageSelectionne = computed(() => {
     const selection = this.selection();
-    return selection?.kind === 'POINTAGE' ? this.dossier()?.journal.find(pointage => pointage.id.pointage === selection.id) : undefined;
+    const dossier = this.dossier();
+    return selection?.kind === 'POINTAGE'
+      ? dossier?.perimetre.pointagesDe(dossier).find(pointage => pointage.id.pointage === selection.id)
+      : undefined;
   });
   protected readonly activiteSelectionnee = computed(() => {
     const selection = this.selection();
