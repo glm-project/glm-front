@@ -1713,6 +1713,29 @@ describe('Frise of a dossier', () => {
     thenTheMarkerAfterTheActHas('fin-9', { 'data-fait-de-l-acte': 'true' });
   });
 
+  it('should not name as made by the act a pointage the journal already held that the act brings into the anomaly', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('autre-10', 'PASSAGE_NC', '10:00')],
+      perimetre: perimetreDe('debut-8'),
+      activites: [],
+    };
+    const apres = {
+      journal: [
+        pointageFixture('debut-8', 'DEMARRAGE', '08:00'),
+        pointageFixture('autre-10', 'PASSAGE_NC', '10:00'),
+        pointageFixture('fin-9', 'ARRET', '09:00'),
+      ],
+      perimetre: perimetreDe('debut-8', 'fin-9', 'autre-10'),
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    thenTheMarkersAre(['debut-8']);
+    thenTheMarkerAfterTheActHas('fin-9', { 'data-fait-de-l-acte': 'true' });
+    thenTheMarkerAfterTheActHas('autre-10', { 'data-fait-de-l-acte': 'false' });
+  });
+
   it('should stretch the scale to the pointages and the activities of the state after the act', async () => {
     const dossier = {
       journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:30')],

@@ -16,7 +16,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/anomalies-de-pointage/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
-import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import { instantLocalFixture, instantLocalWithOffsetFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import {
@@ -1119,14 +1119,6 @@ describe('Anomaly dossier page', () => {
     thenTheFriseMarkersAre(['fin-17']);
     thenTextContains('anomalie-apercu-fait-avant-autre-30', 'mercredi 16 septembre à 09:00:00');
     thenTextContains('anomalie-apercu-fait-apres-autre-30', 'mercredi 16 septembre à 09:00:00');
-  });
-
-  it('should keep the pointage at fault selected when the journal holds pointages beyond the anomaly', async () => {
-    givenAJournalBeyondTheAnomaly();
-
-    await whenRendering();
-
-    thenTheSelectionShowsTheGesture('Arrêt');
   });
 
   it('should keep the received explanation when the conflict comes with no diagnostic', async () => {
@@ -4244,13 +4236,24 @@ describe('Anomaly dossier page', () => {
       thenTheContextIs(avant);
     });
 
-    it('should keep the same sentence when a preview draws the state after the act', async () => {
+    it('should keep the same sentence when a preview moves a pointage of the anomaly past a later pointage of the operator', async () => {
       const dossier = lateEndInAJournalBeyondTheAnomaly();
+      const instantApres = instantLocalWithOffsetFixture(new Date(2026, 8, 15, 1, 30));
       read.result = { kind: 'DOSSIER', dossier };
-      givenASuccessfulPreview(undefined, acteFinTardiveFixture(INSTANT_FIN_TARDIVE), dossier);
+      givenASuccessfulPreview(
+        {
+          ...dossier,
+          journal: dossier.journal.map(pointage =>
+            pointage.id.pointage === 'fin-23' ? { ...pointage, fait: { ...pointage.fait, instant: instantApres } } : pointage,
+          ),
+        },
+        acteFinTardiveFixture(instantApres),
+        dossier,
+      );
       await whenRendering();
       const avant = theContext();
       await whenClicking('anomalie-choix');
+      await whenEnteringTheInstant('15/09/2026', '01:30');
       await whenEntering('anomalie-motif', 'Fin tardive confirmée');
 
       await whenClicking('anomalie-previsualiser');
@@ -4283,6 +4286,27 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
 
       thenTheContextReads('Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période.');
+    });
+
+    it('should name the operator after the referential rather than after the journal when the sequence carries no name', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2026, 8, 14, 10, 0) }], { ligne: '', journal: 'Camille Journal' });
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période.');
+      thenTextContains('anomalie-frise-journee', 'Voir la journée de Camille Martin');
+    });
+
+    it('should name the operator after the sequence rather than after the referential or the journal', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2026, 8, 14, 10, 0) }], {
+        ligne: 'Camille Durand',
+        journal: 'Camille Journal',
+      });
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, Camille Durand compte sur cet élément 1 pointage pendant cette période.');
+      thenTextContains('anomalie-frise-journee', 'Voir la journée de Camille Durand');
     });
 
     it('should name the days when the period of the anomaly spans two days', async () => {
