@@ -688,6 +688,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     const dossier = dossierAnomalieFixture();
     return {
       ...dossier,
+      diagnostics: [],
       sequence: { ...requiredFixture(dossier.sequence, 'sequence'), pointages: ['nc-12', 'fin-17'] },
       perimetre: { ...requiredFixture(dossier.perimetre, 'perimeter'), pointages: ['debut-8'] },
       suivi: {
