@@ -59,11 +59,12 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 - **Phrase du problème** : la ligne de l'en-tête qui dit ce qui est en cause (pointage nommé par son geste et son heure, « vise »,
   l'activité, le fait contradictoire), une par diagnostic ou par activité échue.
 - **Frise** : la représentation, en présentation seule, des pointages de l'anomalie et des activités du dossier sur une échelle de temps ;
-  elle n'invente aucune fin ni aucune heure.
+  elle n'invente aucune fin ni aucune heure (la fin proposée est la saisie du gestionnaire, pas une déduction).
 - **Sélection** : le pointage ou l'activité choisi sur la frise, détaillé dans le panneau du même nom ; sélectionner n'est pas
   choisir un acte.
 - **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie de
-  plus, qui émet un instant comme le champ date et heure.
+  plus, qui émet un instant comme le champ date et heure. En ligne, avant toute heure, elle se tient « sans heure » (« Heure ? ») sur
+  la fin reçue de la barre : elle ne porte alors aucune heure et n'est pas un `slider`.
 - **Cadre du fait** : Value Object du domaine (`CadreDuFait`) qui porte le début reçu de chaque activité et l'heure courante,
   et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
   autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
@@ -206,17 +207,53 @@ vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec seco
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
 `data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
 rendue des graduations, lue sur deux traits et extrapolée aux bords (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
+La frise se lit **en ligne** (`seLitEnLigne`, `FriseEnLigne.ts`) quand le dossier n'est pas un conflit à expliquer (`conflitAExpliquer`),
+que la frise lit au moins un pointage et que chacun, non annulé, est soit l'ouvrant d'une activité du dossier qui a une période (`activite.ouvrant`),
+soit le terminant au bout de sa barre : son fait vise l'activité (`activiteVisee`), qui a une fin reçue, à cet instant exactement
+(`InstantPointage`). C'est la fin automatique jamais arrêtée et son reçu ; un conflit, un pointage tardif (posé après l'échéance, donc
+ailleurs qu'au bout de la barre échue) ou un pointage hors de ces deux cas gardent la frise en rangées décrite ici. En ligne,
+`dispositionEnLigne` n'a ni intitulé « Pointages » ni rangée de repères : chaque activité a sa rangée dès sous l'axe, le repère
+ouvrant se pose sur le début de sa barre (aligné à gauche, `data-ancrage="GAUCHE"`), le repère terminant sur son bout (aligné à droite,
+`DROITE` ; quand la barre est plus étroite que deux cibles, 88 px, aligné à gauche sur le bout, hors de la barre). Les repères restent
+des boutons distincts de la barre, avec tout ce qui les définit, et l'ordre de tabulation reste celui du temps ; `data-en-ligne` sur
+`anomalie-frise-plan` sert au dessin seul (la barre réserve la place de ses repères). En ligne, la poignée est le bout de la barre qu'elle termine : elle se
+tient sur la rangée de l'activité qu'elle vise (`activiteVisee`), à la hauteur de sa barre, sans rangée propre ; la barre finit à l'instant
+qu'elle tient (`instantTenuSur`), prend `data-fin="PROPOSEE"` et son nom dit « heure proposée HH:MM » (offset de l'heure répétée
+gardé), sans aucune durée calculée (ADR 0047). Poignée avant la fin reçue, la portion retirée se dessine jusqu'à elle (`anomalie-frise-retrait`,
+hachure `warn`, bordure pointillée, `aria-hidden`) ; après, la barre s'allonge, sans portion retirée. Pour une activité échue visée, sa fin
+automatique reste tracée tant que la poignée existe (`anomalie-frise-fin-recue`, trait pointillé `warn`, `aria-hidden`, titré « Fin
+automatique HH:MM ») ; pour une autre, aucun trait. Corriger un passage ouvrant pose la poignée au bout de la barre précédente, le repère du
+passage gardant son heure barrée au début de la suivante. En ligne, ni poignée ni placement n'ont de rangée propre : un fait dont l'activité visée n'est pas dans le dossier n'y a ni poignée
+ni rangée de placement (le champ date et heure reste l'accès). Quand un aperçu est disponible et qu'une poignée vise une activité, la barre
+visée dit l'état et le temps que l'aperçu reçoit pour elle (`etatRecuPourLaBarre`, `FriseEnLigne.ts`) si `apercu.apres` contient cette
+activité et que `activitesModifiees` n'en retient aucune autre : texte et nom de la barre portent l'état et le temps de l'après (« Terminée · 9 h » ;
+`LIBELLES_ANOMALIES.etats`, `tempsActivite`, jamais calculé par le front), le nom garde « heure proposée », et la barre porte
+`data-modifiee` si l'activité change ; il n'y a alors pas de groupe « Après cet acte » (`apres` indéfini), donc plus de repère « posé par
+cet acte » : la section d'aperçu garde l'issue, les conséquences et la comparaison des journaux. Sans cela (annulation, correction d'un
+ouvrant, activité absente de l'après, autre activité modifiée, aucune poignée qui vise une activité), le groupe « Après cet acte » reste celui
+des rangées, inchangé. Déplacer la poignée retire l'aperçu, donc l'état reçu de la barre.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
-`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères : c'est une seconde saisie qui émet un instant, avec le champ
-date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas : le front n'invente aucune heure et l'aperçu reste
-indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
+`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
+date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
+n'invente aucune heure et l'aperçu reste indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
 qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
 résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'action, bornes du `CadreDuFait`, un clic hors bornes se
 ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
-comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. Une aide visible (`anomalie-frise-aide`) dit de cliquer sur
-la frise pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt comme pour un passage ; le champ reste l'accès au clavier, la rangée n'a pas de placement au clavier. Elle est inactive
+comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. En ligne, la rangée de placement est
+celle de la barre visée (`surLaBarreDe`), sans rangée propre, et trois gestes placent l'heure. **Poignée sans heure** : si la barre visée a
+une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, décorative (`aria-hidden`, `tabindex="-1"`, ni
+`aria-valuenow` ni `aria-valuetext`) et marquée `data-sans-heure` ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
+poignée, si bien que le nœud, donc la capture du pointeur, survit au premier mouvement qui donne une heure au fait. Appuyer puis glisser
+émet un `PlacementDemande` au premier mouvement (instant sous le pointeur, arrondi à 5 minutes), puis des déplacements `VERS` une fois
+l'heure posée ; un appui relâché sans mouvement n'émet rien ; elle est désactivée avec `placement.desactivee` et n'a aucun clavier (le
+champ). Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
+ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
+l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
+(`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
+tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
+comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
 pendant une opération. La poignée est un `slider` : le pointeur la
 capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
 (Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
@@ -234,7 +271,7 @@ l'heure se saisit au champ. Une heure saisie hors des bornes du fait (`INSTANT_A
 sa poignée, tenue à la borne la plus proche sur l'échelle (`aria-valuenow`), avec l'heure saisie pour texte ; le champ dit
 pourquoi, et le premier déplacement ramène l'heure dans les bornes. L'heure d'origine du
 pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
-Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sous ses rangées actuelles, un groupe
+Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sauf pour la barre qui dit l'état reçu (en ligne, plus haut), sous ses rangées actuelles, un groupe
 « Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages de l'anomalie et les activités de
 l'après : une rangée de repères (`anomalie-apres-pointage`) puis une barre par activité (`anomalie-apercu-activite-apres`), selon la
 grammaire des rangées actuelles (fins reçues seulement, rien n'est inventé). Ces éléments sont des images (`role="img"`),

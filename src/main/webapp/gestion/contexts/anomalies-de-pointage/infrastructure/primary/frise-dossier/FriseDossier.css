@@ -2,64 +2,10 @@
   display: block;
   min-width: 0;
 }
-.frise {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-surface);
-  background: var(--color-surface);
-}
-.frise-plan {
-  position: relative;
-  width: 100%;
-  overflow-x: clip;
-}
-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-svg line {
-  stroke: var(--color-danger);
-  stroke-width: 2;
-  stroke-dasharray: 5 4;
-}
-svg marker path {
-  fill: var(--color-danger);
-}
-.frise-graduation {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0.25rem 0 0 0.25rem;
-  border-left: 1px solid var(--color-border);
-  color: var(--color-ink-muted);
-  font-size: var(--text-label);
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-[data-selector='anomalie-frise-pointages-intitule'] {
-  position: absolute;
-  left: 0;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0 0.5rem;
-  background: var(--color-surface);
-  color: var(--color-ink-muted);
-  font-size: var(--text-label);
-  line-height: 1.25rem;
-  pointer-events: none;
-}
-button,
-[data-selector='anomalie-apres-pointage'],
-[data-selector='anomalie-apercu-activite-apres'] {
+.barre,
+.repere {
   position: absolute;
   display: flex;
-  box-sizing: border-box;
   height: var(--spacing-touch);
   min-width: var(--spacing-touch);
   padding: 0 0.5rem;
@@ -68,9 +14,7 @@ button,
   border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-ink);
-  font: inherit;
   font-size: var(--text-body-sm);
-  cursor: pointer;
 }
 button:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -80,8 +24,7 @@ button[aria-pressed='true'] {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
-[data-selector='anomalie-pointage'],
-[data-selector='anomalie-apres-pointage'] {
+.repere {
   width: var(--spacing-touch);
   flex-direction: column;
   justify-content: center;
@@ -89,100 +32,48 @@ button[aria-pressed='true'] {
   transform: translateX(-50%);
   line-height: 1.1;
 }
-[data-selector='anomalie-pointage'] time,
-[data-selector='anomalie-apres-pointage'] time {
-  font-size: var(--text-label);
-  font-variant-numeric: tabular-nums;
+.repere[data-ancrage='GAUCHE'] {
+  transform: none;
 }
-[data-selector='anomalie-pointage'][data-non-conformite='true'],
-[data-selector='anomalie-apres-pointage'][data-non-conformite='true'] {
+.repere[data-ancrage='DROITE'] {
+  transform: translateX(-100%);
+}
+.repere[data-non-conformite='true'] {
   border-color: var(--color-ink);
   background: var(--color-nc);
 }
-[data-selector='anomalie-pointage'][data-en-cause='true'] {
+.repere[data-en-cause='true'] {
   border: 2px solid var(--color-danger);
   color: var(--color-danger);
 }
-[data-selector='anomalie-pointage'][data-en-cause='true'][data-non-conformite='true'] {
+.repere[data-en-cause='true'][data-non-conformite='true'] {
   color: var(--color-ink);
 }
-[data-selector='anomalie-pointage'][data-annule='true'] [data-selector='anomalie-pointage-symbole'],
-[data-selector='anomalie-pointage'][data-annule='true'] time,
-[data-selector='anomalie-apres-pointage'][data-annule='true'] [data-selector='anomalie-pointage-symbole'],
-[data-selector='anomalie-apres-pointage'][data-annule='true'] time {
-  text-decoration: line-through;
-}
-[data-selector='anomalie-pointage'][data-deplace='true'] time {
+.repere[data-annule='true'] :is([data-selector='anomalie-pointage-symbole'], time),
+.repere[data-deplace='true'] time {
   text-decoration: line-through;
 }
 [data-selector='anomalie-poignee'] {
-  position: absolute;
-  display: flex;
-  box-sizing: border-box;
-  height: var(--spacing-touch);
-  min-width: var(--spacing-touch);
-  padding: 0 0.5rem;
-  align-items: center;
-  justify-content: center;
   transform: translateX(-50%);
-  border: 2px solid var(--color-ink);
-  border-radius: var(--radius-control);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: var(--text-body-sm);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
 }
 [data-selector='anomalie-poignee']:focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
+[data-selector='anomalie-poignee'][data-sans-heure] {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
 [data-selector='anomalie-poignee'][aria-disabled='true'] {
   cursor: not-allowed;
   opacity: 0.55;
 }
-[data-selector='anomalie-pointage-regularise'] {
-  position: absolute;
-  top: -0.5rem;
-  right: -0.5rem;
-  display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-ink);
-  color: var(--color-surface);
-  font-size: var(--text-label);
-  font-weight: 700;
-}
-[data-selector='anomalie-pointage-tardif'] {
-  position: absolute;
-  right: -0.5rem;
-  bottom: -0.5rem;
-  display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
-  place-items: center;
-  border: 2px solid var(--color-warn);
-  border-radius: 50%;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: var(--text-label);
-  font-weight: 700;
-}
 [data-selector='anomalie-frise-placement'] {
-  position: absolute;
-  right: 0;
-  left: 0;
   border-block: 1px dashed var(--color-border-strong);
   background: color-mix(in srgb, var(--color-accent) 8%, transparent);
-  cursor: crosshair;
 }
-[data-selector='anomalie-activite'],
-[data-selector='anomalie-apercu-activite-apres'] {
+.barre {
   justify-content: flex-start;
   overflow: hidden;
   white-space: nowrap;
@@ -190,25 +81,33 @@ button[aria-pressed='true'] {
   border-width: 2px;
   font-weight: 600;
 }
-[data-selector='anomalie-activite'][data-categorie='TRAVAIL'],
-[data-selector='anomalie-apercu-activite-apres'][data-categorie='TRAVAIL'] {
+[data-en-ligne='true'] [data-selector='anomalie-activite'] {
+  padding-left: calc(var(--spacing-touch) + 0.5rem);
+}
+[data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='RECUE'] {
+  padding-right: calc(var(--spacing-touch) + 0.5rem);
+}
+[data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='PROPOSEE'] {
+  padding-right: calc(var(--spacing-touch) / 2 + 0.5rem);
+}
+[data-selector='anomalie-frise-fin-recue'] {
+  border-left: 2px dashed var(--color-warn);
+}
+.barre[data-categorie='TRAVAIL'] {
   border-color: var(--color-accent);
   background: var(--color-accent);
   color: var(--color-on-accent);
 }
-[data-selector='anomalie-activite'][data-categorie='NON_CONFORMITE'],
-[data-selector='anomalie-apercu-activite-apres'][data-categorie='NON_CONFORMITE'] {
+.barre[data-categorie='NON_CONFORMITE'] {
   border-color: var(--color-ink);
   background: var(--color-nc);
   color: var(--color-ink);
 }
-[data-selector='anomalie-activite']:not([data-categorie]),
-[data-selector='anomalie-apercu-activite-apres']:not([data-categorie]) {
+.barre:not([data-categorie]) {
   border-style: dashed;
   background: var(--color-sunken);
 }
-[data-selector='anomalie-activite'][data-etat='A_RESOUDRE'],
-[data-selector='anomalie-apercu-activite-apres'][data-etat='A_RESOUDRE'] {
+.barre[data-etat='A_RESOUDRE'] {
   background-color: var(--color-surface);
   background-image: repeating-linear-gradient(
     135deg,
@@ -217,20 +116,16 @@ button[aria-pressed='true'] {
   );
   color: var(--color-ink);
 }
-[data-selector='anomalie-activite'][data-etat='ANNULEE'],
-[data-selector='anomalie-activite'][data-etat='REMPLACEE'],
-[data-selector='anomalie-apercu-activite-apres'][data-etat='ANNULEE'],
-[data-selector='anomalie-apercu-activite-apres'][data-etat='REMPLACEE'] {
+.barre[data-etat='ANNULEE'],
+.barre[data-etat='REMPLACEE'] {
   opacity: 0.55;
 }
-[data-selector='anomalie-activite'][data-fin='RECUE'],
-[data-selector='anomalie-apercu-activite-apres'][data-fin='RECUE'] {
+.barre[data-fin='RECUE'] {
   border-right-width: 4px;
   border-right-style: solid;
   border-right-color: var(--color-ink);
 }
-[data-selector='anomalie-activite'][data-fin='AUTOMATIQUE']::after,
-[data-selector='anomalie-apercu-activite-apres'][data-fin='AUTOMATIQUE']::after {
+.barre[data-fin='AUTOMATIQUE']::after {
   position: absolute;
   top: 0;
   right: 0;
@@ -239,41 +134,28 @@ button[aria-pressed='true'] {
   background: var(--gestion-hachure-fin-automatique);
   content: '';
 }
-[data-selector='anomalie-activite'][data-fin='OUVERTE'],
-[data-selector='anomalie-apercu-activite-apres'][data-fin='OUVERTE'] {
+.barre[data-fin='OUVERTE'] {
   border-right-style: dotted;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
-
 [data-selector='anomalie-frise-apres'] {
-  position: absolute;
-  right: 0;
-  left: 0;
   border-top: 1px dashed var(--color-border-strong);
 }
 [data-selector='anomalie-frise-apres-titre'] {
-  position: absolute;
-  top: 0;
-  left: 0;
-  margin: 0;
   padding: 0.25rem 0.5rem;
   color: var(--color-ink);
   font-size: var(--text-label);
   font-weight: 600;
 }
-[data-selector='anomalie-apres-pointage'],
-[data-selector='anomalie-apercu-activite-apres'] {
-  cursor: default;
-}
-[data-selector='anomalie-apres-pointage'][data-fait-de-l-acte='true'] {
+.repere[data-fait-de-l-acte='true'] {
   border: 2px solid var(--color-ok);
   background: color-mix(in srgb, var(--color-ok) 18%, var(--color-surface));
 }
-[data-selector='anomalie-apres-pointage'][data-fait-de-l-acte='true'][data-non-conformite='true'] {
+.repere[data-fait-de-l-acte='true'][data-non-conformite='true'] {
   background: var(--color-nc);
 }
-[data-selector='anomalie-apercu-activite-apres'][data-modifiee='true'] {
+.barre[data-modifiee='true'] {
   box-shadow:
     0 0 0 2px var(--color-surface),
     0 0 0 4px var(--color-ink);

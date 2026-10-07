@@ -1,24 +1,26 @@
-import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ActiviteAnomalie, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
-import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste, tempsActivite } from '../PresentationDossier';
 import { SelectionDuDossier } from '../SelectionDuDossier';
-import { activitesModifiees, faitsDeLActe } from './ComparaisonDApercu';
+import { EchelleFrise, Graduation, graduationsDe, surVoies } from './EchelleFrise';
 import {
-  echelleDe,
-  EchelleFrise,
-  Graduation,
-  graduationsDe,
-  instantsRecus,
-  positionSur,
-  positionTenueAuxBords,
-  surVoies,
-} from './EchelleFrise';
-import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
-import { pointagesDeLaFrise } from './PointagesDeLaFrise';
+  abscisseEnPixelsDuRepere,
+  barreDe,
+  dispositionApres,
+  ESPACE_ENTRE_RANGEES_PX,
+  HAUTEUR_D_UN_ELEMENT_PX,
+  HAUTEUR_DE_L_AXE_PX,
+  hauteurDeLaFrise,
+  hauteurDesReperes,
+  lectureDeLaFrise,
+  parDebut,
+  positionDeLaPoignee,
+  repereDe,
+} from './ElementsDeFrise';
+import { dispositionEnLigne, seLitEnLigne } from './FriseEnLigne';
+import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'> & {
+const HAUTEUR_DE_L_INTITULE_PX = 20;
+
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics' | 'enConflit'> & {
   readonly choix?: DossierAnomalie['choix'];
 };
 
@@ -36,7 +38,7 @@ export interface EntreesDeFrise {
   readonly largeur: number;
 }
 
-export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE';
+export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE' | 'PROPOSEE';
 
 export interface BarreFrise {
   readonly kind: 'BARRE';
@@ -52,6 +54,7 @@ export interface BarreFrise {
   readonly categorie: CategorieDeBarre | undefined;
   readonly etat: ActiviteAnomalie['etat'];
   readonly fin: FinDeBarre | undefined;
+  readonly modifiee?: boolean;
 }
 
 export interface RepereFrise {
@@ -73,6 +76,7 @@ export interface RepereFrise {
   readonly deplace: boolean;
   readonly tardif: boolean;
   readonly faitDeLActe: boolean;
+  readonly ancrage: 'CENTRE' | 'GAUCHE' | 'DROITE';
 }
 
 export type ElementFrise = BarreFrise | RepereFrise | PositionDePoignee;
@@ -87,7 +91,12 @@ export interface FlecheFrise {
   readonly arriveeHaut: number;
 }
 
-export interface PositionDePoignee {
+export interface LectureDePoignee {
+  readonly valeur: number;
+  readonly texte: string;
+}
+
+export interface EmplacementDePoignee {
   readonly kind: 'POIGNEE';
   readonly cle: string;
   readonly instant: number;
@@ -95,17 +104,29 @@ export interface PositionDePoignee {
   readonly haut: number;
   readonly min: number;
   readonly max: number;
-  readonly valeur: number;
-  readonly texte: string;
+  readonly etiquette: string;
   readonly desactivee: boolean;
+}
+
+export interface PositionAvecHeure extends EmplacementDePoignee {
+  readonly heure: 'AVEC_HEURE';
+  readonly lecture: LectureDePoignee;
   readonly source: PoigneeDeFrise;
 }
+
+export interface PositionSansHeure extends EmplacementDePoignee {
+  readonly heure: 'SANS_HEURE';
+  readonly source: PlacementDeLInstant;
+}
+
+export type PositionDePoignee = PositionAvecHeure | PositionSansHeure;
 
 export interface RangeeDePlacement {
   readonly haut: number;
   readonly hauteur: number;
   readonly desactivee: boolean;
   readonly source: PlacementDeLInstant;
+  readonly surLaBarreDe: string | undefined;
 }
 
 export interface IntituleDeRangee {
@@ -113,7 +134,20 @@ export interface IntituleDeRangee {
   readonly hauteur: number;
 }
 
+export interface RetraitDeFrise {
+  readonly gauche: number;
+  readonly largeur: number;
+  readonly haut: number;
+}
+
+export interface FinRecueDeFrise {
+  readonly gauche: number;
+  readonly haut: number;
+  readonly texte: string;
+}
+
 export interface DispositionFrise {
+  readonly enLigne: boolean;
   readonly echelle: EchelleFrise;
   readonly hauteur: number;
   readonly graduations: readonly Graduation[];
@@ -121,6 +155,8 @@ export interface DispositionFrise {
   readonly fleches: readonly FlecheFrise[];
   readonly elements: readonly ElementFrise[];
   readonly rangeeDePlacement: RangeeDePlacement | undefined;
+  readonly retrait: RetraitDeFrise | undefined;
+  readonly finRecue: FinRecueDeFrise | undefined;
   readonly apres: DispositionApres | undefined;
 }
 
@@ -133,142 +169,8 @@ export interface DispositionApres {
   readonly barres: readonly BarreApres[];
 }
 
-type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
-type CategorieDeBarre = PeriodeActivite['categorie'];
-
-interface ContexteDeFrise {
-  readonly now: Date;
-  readonly tardifs: ReadonlySet<string>;
-  readonly faitsDeLActe: ReadonlySet<string>;
-  readonly echelle: EchelleFrise;
-  readonly poignee: PoigneeDeFrise | undefined;
-  readonly hautDesReperes: number;
-  readonly largeur: number;
-}
-
-const POSITION_DU_BORD = 100;
-const HAUTEUR_DE_L_AXE_PX = 28;
-const HAUTEUR_DU_TITRE_PX = 28;
-const HAUTEUR_DE_L_INTITULE_PX = 20;
-const HAUTEUR_D_UN_ELEMENT_PX = 44;
-const ESPACE_ENTRE_RANGEES_PX = 8;
-const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', 'A_RESOUDRE'];
-
-const instantAvecSecondes = new InstantTimeAndLongDayWithSecondsPipe();
-const QUALIFICATIFS = LIBELLES_ANOMALIES.frise;
-
-interface DrapeauxDuRepere {
-  readonly enCause: boolean;
-  readonly deplace: boolean;
-  readonly tardif: boolean;
-  readonly faitDeLActe: boolean;
-}
-
-const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now: Date): string =>
-  [
-    instantAvecSecondes.transform(pointage.fait.instant, now).time,
-    libelleDuGeste(pointage.fait),
-    ...(pointage.annulation ? [QUALIFICATIFS.annule] : []),
-    ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
-    ...(drapeaux.enCause ? [QUALIFICATIFS.enCause] : []),
-    ...(drapeaux.tardif ? [QUALIFICATIFS.tardif] : []),
-    ...(drapeaux.faitDeLActe ? [QUALIFICATIFS.faitDeLActe] : []),
-    ...(drapeaux.deplace ? [QUALIFICATIFS.heureRemplacee] : []),
-  ].join(' · ');
-
-const symboleDuGeste = (fait: PointageAnomalie['fait']): string =>
-  QUALIFICATIFS.symboles[fait.type][fait.intention] ?? QUALIFICATIFS.symboleInconnu;
-
-const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefined): boolean =>
-  poignee?.origine === pointage.id.pointage && Date.parse(poignee.instant) !== Date.parse(pointage.fait.instant);
-
-const gaucheDuRepere = (instant: number, contexte: ContexteDeFrise): number =>
-  positionTenueAuxBords(positionSur(contexte.echelle, instant), contexte.largeur);
-
-const abscisseEnPixelsDuRepere = (pointage: PointageAnomalie, contexte: ContexteDeFrise): number =>
-  (gaucheDuRepere(Date.parse(pointage.fait.instant), contexte) / POSITION_DU_BORD) * contexte.largeur;
-
-const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, contexte: ContexteDeFrise): RepereFrise => {
-  const deplace = estDeplace(pointage, contexte.poignee);
-  const tardif = contexte.tardifs.has(pointage.id.pointage);
-  const faitDeLActe = contexte.faitsDeLActe.has(pointage.id.pointage);
-  return {
-    kind: 'REPERE',
-    instant: Date.parse(pointage.fait.instant),
-    gauche: gaucheDuRepere(Date.parse(pointage.fait.instant), contexte),
-    haut: contexte.hautDesReperes + voie * HAUTEUR_D_UN_ELEMENT_PX,
-    voie,
-    cle: `pointage:${pointage.id.pointage}`,
-    pointage: pointage.id.pointage,
-    nom: nomDuRepere(pointage, { enCause, deplace, tardif, faitDeLActe }, contexte.now),
-    selection: { kind: 'POINTAGE', id: pointage.id.pointage },
-    heure: heureDe(pointage.fait.instant),
-    symbole: symboleDuGeste(pointage.fait),
-    nonConformite: pointage.fait.type === 'NON_CONFORMITE',
-    annule: pointage.annulation !== undefined,
-    regularise: pointage.regularisation,
-    enCause,
-    deplace,
-    tardif,
-    faitDeLActe,
-  };
-};
-
-const finRecueDe = (etat: ActiviteAnomalie['etat'], fin: string | undefined): string | undefined =>
-  ETATS_SANS_FIN_RECUE.includes(etat) ? undefined : fin;
-
-const finDeLaBarre = (etat: ActiviteAnomalie['etat'], fin: string | undefined): FinDeBarre => {
-  if (fin === undefined) return 'OUVERTE';
-  return etat === 'ECHUE' ? 'AUTOMATIQUE' : 'RECUE';
-};
-
-const barreCommune = (activite: ActiviteAnomalie, now: Date) => ({
-  kind: 'BARRE' as const,
-  cle: `activite:${activite.id.activite}`,
-  activite: activite.id.activite,
-  selection: { kind: 'ACTIVITE' as const, id: activite.id.activite },
-  nom: `${libelleActivite(activite, now)} · ${LIBELLES_ANOMALIES.etats[activite.etat]}`,
-  etat: activite.etat,
-});
-
-const barreAvecPeriode = (activite: ActiviteAnomalie, periode: PeriodeActivite, haut: number, contexte: ContexteDeFrise): BarreFrise => {
-  const fin = finRecueDe(activite.etat, periode.fin);
-  const gauche = positionSur(contexte.echelle, Date.parse(periode.debut));
-  return {
-    ...barreCommune(activite, contexte.now),
-    instant: Date.parse(periode.debut),
-    gauche,
-    haut,
-    largeur: (fin === undefined ? POSITION_DU_BORD : positionSur(contexte.echelle, Date.parse(fin))) - gauche,
-    texte: `${libelleCategorie(periode.categorie)} · ${LIBELLES_ANOMALIES.etats[activite.etat]}`,
-    categorie: periode.categorie,
-    fin: finDeLaBarre(activite.etat, fin),
-  };
-};
-
-const barreSansPeriode = (activite: ActiviteAnomalie, haut: number, now: Date): BarreFrise => ({
-  ...barreCommune(activite, now),
-  haut,
-  instant: Infinity,
-  gauche: 0,
-  largeur: undefined,
-  texte: activite.libelle,
-  categorie: undefined,
-  fin: undefined,
-});
-
-const barreDe = (activite: ActiviteAnomalie, haut: number, contexte: ContexteDeFrise): BarreFrise =>
-  activite.periode === undefined
-    ? barreSansPeriode(activite, haut, contexte.now)
-    : barreAvecPeriode(activite, activite.periode, haut, contexte);
-
-const debutDe = (activite: ActiviteAnomalie): number => (activite.periode === undefined ? Infinity : Date.parse(activite.periode.debut));
-
-const parDebut = (activites: readonly ActiviteAnomalie[]): readonly ActiviteAnomalie[] =>
-  [...activites].sort((premiere, seconde) => debutDe(premiere) - debutDe(seconde));
-
-const hauteurDesReperes = (reperes: readonly RepereFrise[]): number =>
-  (Math.max(-1, ...reperes.map(repere => repere.voie)) + 1) * HAUTEUR_D_UN_ELEMENT_PX;
+export type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
+export type CategorieDeBarre = PeriodeActivite['categorie'];
 
 const flechesDe = (
   diagnostics: readonly DiagnosticConflit[],
@@ -293,45 +195,6 @@ const flechesDe = (
         ];
   });
 
-const instantsDeLEchelle = (
-  pointages: readonly PointageAnomalie[],
-  activites: readonly ActiviteAnomalie[],
-  now: Date,
-): readonly number[] => {
-  const instants = instantsRecus(pointages, activites);
-  return instants.length > 0 ? instants : [now.getTime()];
-};
-
-const echelleDeLaFrise = (
-  instants: readonly number[],
-  poignee: PoigneeDeFrise | undefined,
-  placement: PlacementDeLInstant | undefined,
-): EchelleFrise => {
-  const bornes = (poignee ?? placement)?.bornes;
-  return echelleDe(instants, bornes && Date.parse(bornes.max));
-};
-
-const instantTenuSur = (poignee: PoigneeDeFrise, echelle: EchelleFrise): number =>
-  Math.min(
-    Math.max(Date.parse(poignee.instant), Date.parse(poignee.bornes.min), echelle.debut),
-    Date.parse(poignee.bornes.max),
-    echelle.fin,
-  );
-
-const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFrise, haut: number, largeur: number): PositionDePoignee => ({
-  kind: 'POIGNEE',
-  cle: 'poignee',
-  instant: instantTenuSur(poignee, echelle),
-  gauche: positionTenueAuxBords(positionSur(echelle, instantTenuSur(poignee, echelle)), largeur),
-  haut,
-  min: Date.parse(poignee.bornes.min),
-  max: Date.parse(poignee.bornes.max),
-  valeur: instantTenuSur(poignee, echelle),
-  texte: texteDeLHeure(poignee.instant),
-  desactivee: poignee.desactivee,
-  source: poignee,
-});
-
 const intituleDesPointages = (pointages: readonly PointageAnomalie[]): IntituleDeRangee | undefined =>
   pointages.length === 0 ? undefined : { haut: HAUTEUR_DE_L_AXE_PX, hauteur: HAUTEUR_DE_L_INTITULE_PX };
 
@@ -342,70 +205,12 @@ const rangeeDePlacement = (placement: PlacementDeLInstant, reperes: readonly Rep
   hauteur: hauteurDesReperes(reperes),
   desactivee: placement.desactivee,
   source: placement,
+  surLaBarreDe: undefined,
 });
 
-const barreApresDe = (activite: ActiviteAnomalie, haut: number, modifiee: boolean, contexte: ContexteDeFrise): BarreApres => {
-  const barre = barreDe(activite, haut, contexte);
-  const temps = tempsActivite(activite);
-  return {
-    ...barre,
-    modifiee,
-    nom: [barre.nom, temps, modifiee ? QUALIFICATIFS.modifiee : ''].filter(Boolean).join(' · '),
-    texte: [barre.texte, temps].filter(Boolean).join(' · '),
-  };
-};
-
-const dispositionApres = (
-  apercu: ApercuDeFrise,
-  pointages: readonly PointageAnomalie[],
-  haut: number,
-  contexte: ContexteDeFrise,
-): DispositionApres => {
-  const modifiees = activitesModifiees(apercu.avant.activites, apercu.apres.activites);
-  const poses = faitsDeLActe(apercu.avant.journal, apercu.apres.journal);
-  const reperes = surVoies(pointages, pointage => abscisseEnPixelsDuRepere(pointage, contexte)).map(({ element, voie }) => ({
-    ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
-    haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
-  }));
-  const hautDesBarres = HAUTEUR_DU_TITRE_PX + hauteurDesReperes(reperes) + ESPACE_ENTRE_RANGEES_PX;
-  const barres = parDebut(apercu.apres.activites).map((activite, rang) =>
-    barreApresDe(
-      activite,
-      hautDesBarres + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX),
-      modifiees.has(activite.id.activite),
-      contexte,
-    ),
-  );
-  return {
-    haut,
-    hauteur: Math.max(HAUTEUR_DU_TITRE_PX, ...[...reperes, ...barres].map(element => element.haut + HAUTEUR_D_UN_ELEMENT_PX)),
-    reperes,
-    barres,
-  };
-};
-
-const hauteurDeLaFrise = (
-  elements: readonly ElementFrise[],
-  hautDeLaPoignee: number | undefined,
-  apres: DispositionApres | undefined,
-): number =>
-  Math.max(
-    Math.max(...elements.map(element => element.haut), ...(hautDeLaPoignee === undefined ? [] : [hautDeLaPoignee]))
-      + HAUTEUR_D_UN_ELEMENT_PX
-      + ESPACE_ENTRE_RANGEES_PX,
-    ...(apres === undefined ? [] : [apres.haut + apres.hauteur + ESPACE_ENTRE_RANGEES_PX]),
-  );
-
-export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, apercu, largeur }: EntreesDeFrise): DispositionFrise => {
-  const enCause = new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  const pointages = pointagesDeLaFrise(vue);
-  const pointagesApres = apercu === undefined ? [] : pointagesDeLaFrise(apercu.apres);
-  const echelle = echelleDeLaFrise(
-    instantsDeLEchelle([...pointages, ...pointagesApres], [...vue.activites, ...(apercu?.apres.activites ?? [])], now),
-    poignee,
-    placement,
-  );
-  const tardifs = identifiantsDesPointagesTardifs(vue.choix ?? []);
+const dispositionEnRangees = (entrees: EntreesDeFrise): DispositionFrise => {
+  const { vue, maintenant: now, poignee, placement, apercu, largeur } = entrees;
+  const { enCause, pointages, pointagesApres, echelle, tardifs } = lectureDeLaFrise(entrees);
   const intitule = intituleDesPointages(pointages);
   const hautDesReperes = hautDesReperesSous(intitule);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes, largeur };
@@ -429,6 +234,7 @@ export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, a
           contexte,
         );
   return {
+    enLigne: false,
     echelle,
     hauteur: hauteurDeLaFrise(elements, poignee === undefined ? undefined : hautDeLaPoignee, apres),
     graduations: graduationsDe(echelle, largeur),
@@ -436,6 +242,11 @@ export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, a
     fleches: flechesDe(vue.diagnostics ?? [], reperes, barres),
     elements,
     rangeeDePlacement: placement === undefined ? undefined : rangeeDePlacement(placement, reperes, hautDesReperes),
+    retrait: undefined,
+    finRecue: undefined,
     apres,
   };
 };
+
+export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
+  seLitEnLigne(entrees.vue) ? dispositionEnLigne(entrees) : dispositionEnRangees(entrees);

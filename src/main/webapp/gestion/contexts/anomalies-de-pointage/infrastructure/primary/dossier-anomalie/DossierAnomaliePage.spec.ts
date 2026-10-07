@@ -3837,13 +3837,13 @@ describe('Anomaly dossier page', () => {
       thenAbsent('anomalie-poignee');
     });
 
-    it('should draw no handle for the end regularisation, which comes without an hour', async () => {
+    it('should draw a handle with no hour for the end regularisation, which comes without an hour', async () => {
       givenAnAutomaticEnd();
       await whenRendering();
 
       await whenClicking('anomalie-choix');
 
-      thenAbsent('anomalie-poignee');
+      thenTheHandleHoldsNoHour();
     });
 
     it('should draw no handle for the cancellation of a pointage', async () => {
@@ -3947,7 +3947,7 @@ describe('Anomaly dossier page', () => {
 
       await whenClicking('anomalie-choix');
 
-      thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.');
+      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait, ou saisissez-la.');
     });
 
     it('should not call the fact an end in the help once the manager turns it into a passage', async () => {
@@ -3957,7 +3957,7 @@ describe('Anomaly dossier page', () => {
 
       await whenChoosingTheGesture('Passage en NC');
 
-      thenTextContains('anomalie-frise-aide', 'Cliquez sur la frise pour placer l’heure du fait, ou saisissez-la.');
+      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait, ou saisissez-la.');
     });
 
     it('should give no help to place the end before any proposal is chosen', async () => {
@@ -3985,7 +3985,7 @@ describe('Anomaly dossier page', () => {
       await whenClicking('anomalie-choix');
 
       thenTheInstantFieldsShow('', '');
-      thenAbsent('anomalie-poignee');
+      thenTheHandleHoldsNoHour();
       thenDisabled('anomalie-previsualiser');
     });
 
@@ -5902,6 +5902,11 @@ describe('Anomaly dossier page', () => {
   };
   const thenTheHandleHoldsAt = (expected: Date): void => {
     expect(Number(element('anomalie-poignee').getAttribute('aria-valuenow'))).toBe(expected.getTime());
+  };
+
+  const thenTheHandleHoldsNoHour = (): void => {
+    expect(element('anomalie-poignee').hasAttribute('data-sans-heure')).toBe(true);
+    expect(element('anomalie-poignee').hasAttribute('aria-valuenow')).toBe(false);
   };
 
   const thenTheHandleReads = (expected: string): void => {

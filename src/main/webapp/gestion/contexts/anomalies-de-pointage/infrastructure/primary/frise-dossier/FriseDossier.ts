@@ -1,11 +1,22 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, output, signal } from '@angular/core';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { memeSelection, SelectionDuDossier } from '../SelectionDuDossier';
-import { ApercuDeFrise, dispositionDeFrise, PositionDePoignee, RangeeDePlacement, VueDeFrise } from './DispositionFrise';
+import {
+  ApercuDeFrise,
+  BarreFrise,
+  dispositionDeFrise,
+  PositionAvecHeure,
+  PositionDePoignee,
+  RangeeDePlacement,
+  VueDeFrise,
+} from './DispositionFrise';
 import { instantSousLePointeur, positionSur } from './EchelleFrise';
 import { demandeDeLaTouche, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
 
 const LARGEUR_DE_REFERENCE_PX = 1214;
+
+const sePlaceAuClavier = (position: PositionDePoignee): position is PositionAvecHeure =>
+  position.heure === 'AVEC_HEURE' && !position.desactivee;
 
 @Component({
   selector: 'glm-frise-dossier',
@@ -58,10 +69,11 @@ export class FriseDossier {
     this.prise = { decalage: pointeur.clientX - (left + (positionSur(this.disposition().echelle, poignee.instant) / 100) * width) };
   }
 
-  protected glisse(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {
+  protected glisse(pointeur: PointerEvent, plan: HTMLElement, position: PositionDePoignee): void {
     if (this.prise === undefined) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
-    this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: poignee.source });
+    if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: position.source });
+    else this.placementDemande.emit({ instant, placement: position.source });
   }
 
   private mesure(largeur: number): void {
@@ -72,17 +84,28 @@ export class FriseDossier {
     this.prise = undefined;
   }
 
+  protected clique(clic: MouseEvent, plan: HTMLElement, barre: BarreFrise): void {
+    const rangee = this.rangeeQuiPlaceSur(barre, clic);
+    if (rangee === undefined) this.selectionDemandee.emit(barre.selection);
+    else this.place(clic, plan, rangee);
+  }
+
+  private rangeeQuiPlaceSur(barre: BarreFrise, clic: MouseEvent): RangeeDePlacement | undefined {
+    const rangee = this.disposition().rangeeDePlacement;
+    return rangee?.surLaBarreDe === barre.activite && clic.detail > 0 && !rangee.desactivee ? rangee : undefined;
+  }
+
   protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {
     if (rangee.desactivee) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
     this.placementDemande.emit({ instant, placement: rangee.source });
   }
 
-  protected touche(touche: KeyboardEvent, poignee: PositionDePoignee): void {
-    if (poignee.desactivee) return;
+  protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
+    if (!sePlaceAuClavier(position)) return;
     const demande = demandeDeLaTouche(touche);
     if (demande === undefined) return;
     touche.preventDefault();
-    this.deplacementDemande.emit({ demande, poignee: poignee.source });
+    this.deplacementDemande.emit({ demande, poignee: position.source });
   }
 }

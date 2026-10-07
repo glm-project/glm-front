@@ -35,11 +35,11 @@ deux vérifications du reçu qui reviennent l'une après l'autre annoncent la m�
 
 Le dossier d'une activité terminée à son échéance faute de fin réelle n'est jamais présenté comme un
 conflit. Il montre l'activité échue sur la frise, son début, sa fin automatique et sa durée tels que reçus dans le panneau Sélection. Le
-gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place d'un clic sur la rangée des pointages de la frise : le
-choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic place la
+gestionnaire régularise la fin avec une heure qu'il saisit ou qu'il place en tirant le bout de la barre ou en cliquant dessus (la fin automatique se lit en ligne : repère ouvrant sur le début de sa barre, repère terminant sur son bout) : le
+choix guidé arrive sans heure, aucune n'est inventée et l'aperçu reste indisponible tant qu'elle manque. Le clic (ou le glissé de la poignée « Heure ? » posée sur la fin reçue de la barre) place la
 poignée à l'heure cliquée, arrondie à 5 minutes et ramenée à la borne la plus proche si elle sort du début de l'activité ou de
-l'heure courante ; la poignée se glisse ensuite. Une aide dit de cliquer sur la frise pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est
-inactif sans proposition de ce genre, et pendant une opération ; un clic sur un repère ou une barre sélectionne. Une fin ou une transition pointée après l'échéance se corrige avec
+l'heure courante ; la poignée se glisse ensuite (en ligne, elle est le bout de sa barre : la barre finit à l'heure proposée, la portion retirée se dessine jusqu'à la fin reçue, et la fin automatique reste tracée). Une aide dit de tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir (même mot pour un arrêt et un passage) ; le clic est
+inactif sans proposition de ce genre, et pendant une opération ; un clic sur un repère ou sur une autre barre sélectionne, comme l'activation au clavier de la barre visée. Une fin ou une transition pointée après l'échéance se corrige avec
 l'heure de ce pointage et un motif. Le pointage que le choix désigne est marqué « pointé après
 l'échéance » sur la frise et dans le panneau Sélection ; le front le lit dans le choix reçu, il ne le déduit pas. L'aperçu, la confirmation, le reçu, la reprise et l'obsolescence sont
 ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite`,
@@ -104,6 +104,12 @@ fait que l'acte corrige ou crée est vert (« posé par cet acte ») ; un pointa
 affichée avec l'aperçu ; toute modification de la saisie, un déplacement de la poignée compris, retire l'aperçu et ces rangées.
 La section d'aperçu garde l'acte, l'issue, l'enregistrement, les conséquences textuelles reçues et, repliée, la comparaison
 de tous les pointages avant et après.
+
+Sur la frise d'une fin automatique lue en ligne, une poignée vise une activité : si l'après contient cette activité et ne change
+aucune autre, il n'y a pas de rangées « Après cet acte » ; la barre visée dit l'état et le temps que l'aperçu reçoit pour elle
+(« Terminée · 9 h », dans son texte et son nom, mise en évidence), et le pointage posé par l'acte n'est plus dessiné à part. Sans
+cela (annulation, activité absente de l'après, autre activité changée), les rangées « Après cet acte » restent celles ci-dessus.
+Déplacer la poignée retire l'aperçu, donc cet état de la barre.
 
 Le panneau « Sélection », avant « Votre décision », montre le pointage choisi : geste, instant avec ses secondes, opérateur et
 poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
@@ -294,8 +300,9 @@ déplacement transmet l'instant avec l'offset local et sans seconde, retire l'ap
 champ déplace la poignée. Une heure saisie hors des bornes (avant le début de l'activité visée, dans le futur ou au-delà de la
 portée) garde sa poignée, tenue à la borne la plus proche : le champ dit pourquoi, l'aperçu reste indisponible, et le premier
 déplacement ramène l'heure dans les bornes. Un fait
-sans activité visée, un démarrage, une annulation ou une régularisation sans heure n'ont pas de poignée ; la régularisation d'une fin sans heure la reçoit au clic sur la rangée
-des pointages (« Fin automatique »). L'heure reçue du
+sans activité visée, un démarrage ou une annulation n'ont pas de poignée ; une régularisation sans heure n'en a pas en rangées, et en ligne
+n'a qu'une poignée « Heure ? » sans heure ni `slider` : la régularisation d'une fin sans heure reçoit son heure au clic sur la barre ou au
+glissé de cette poignée (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
 qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
 traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 64 px.
