@@ -334,6 +334,13 @@ describe('Operational time report in gestion', () => {
     thenTheMentionEndsUnderItsBar('synthese-barre', 'synthese-etat-court');
   });
 
+  it('should write the automatic end under the end of its bar in the day detail', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMentionEndsUnderItsBar('synthese-detail-barre', 'synthese-detail-etat');
+  });
+
   it('should keep an early automatic end inside its day in the week', () => {
     givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
     whenVisiting(ADRESSE);

@@ -394,10 +394,12 @@
 
 .etat-activite {
   display: block;
+  box-sizing: border-box;
   margin-top: 3.25rem;
   padding: 0.375rem;
   color: var(--color-ink);
   font-size: var(--text-body-sm);
+  text-align: right;
   overflow-wrap: anywhere;
 }
 

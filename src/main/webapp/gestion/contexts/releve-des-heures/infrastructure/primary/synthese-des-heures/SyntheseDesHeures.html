@@ -351,7 +351,7 @@
       ><span class="sr-only">{{ barre.enonce }}</span></span
     >
     @if (barre.etat; as etat) { @if (detail) {
-    <span class="etat-activite" data-selector="synthese-detail-etat">{{ etat }}</span>
+    <span class="etat-activite" [style.width.%]="barre.fin" data-selector="synthese-detail-etat">{{ etat }}</span>
     } @else {
     <span class="sr-only" data-selector="synthese-activite-etat">{{ etat }}</span>
     <span class="etat-court" [style.width.%]="barre.fin" [title]="etat" data-selector="synthese-etat-court"
