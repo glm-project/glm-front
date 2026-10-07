@@ -313,6 +313,20 @@ describe('Operational time report in gestion', () => {
     thenShowTheReceivedAutomaticEndAndItsAnomalyWithoutManufacturingARawEnd();
   });
 
+  it('should keep the clocked start on the middle of its bar in the week', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMarkerSitsOnTheMiddleOfItsBar('synthese-barre', 'synthese-marque');
+  });
+
+  it('should keep the clocked start on the middle of its bar in the day detail', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMarkerSitsOnTheMiddleOfItsBar('synthese-detail-barre', 'synthese-detail-marque');
+  });
+
   const whenTheReadingResumes = (resume: () => void): void => {
     cy.get(dataSelector('synthese-loading')).then(() => {
       resume();
@@ -397,6 +411,18 @@ describe('Operational time report in gestion', () => {
         expect(Math.min(...marques.map(marque => marque.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
         expect(Math.max(...marques.map(marque => marque.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
       });
+  };
+
+  const thenTheMarkerSitsOnTheMiddleOfItsBar = (barre: string, marque: string): void => {
+    cy.get(dataSelector(barre)).should($barre => {
+      const milieu = (element: HTMLElement | undefined): number => {
+        const rectangle = element?.getBoundingClientRect();
+        return (rectangle?.top ?? 0) + (rectangle?.height ?? 0) / 2;
+      };
+      const marques = [...Cypress.$(dataSelector(marque))];
+      expect(marques).to.have.length(1);
+      expect(Math.abs(milieu(marques[0]) - milieu($barre[0]))).to.be.lessThan(1);
+    });
   };
 
   const thenTheFriseDoesNotScroll = (): void => {
