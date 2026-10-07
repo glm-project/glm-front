@@ -3,6 +3,7 @@ import { SaisieActe } from '../../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie, ChoixGuide, DiagnosticConflit, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
+import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PerimetreDuDossier } from '../../domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
@@ -157,6 +158,7 @@ export const toDossier = (
     cloture: dossier.suivi.clotureLe !== undefined,
     ...(dossier.suivi.clotureLe === undefined ? {} : { finCloture: dossier.suivi.clotureLe }),
     engagement: dossier.suivi.engageLe,
+    operateur: new OperateurAnomalieId(sequence.operateurId),
     journal: dossier.suivi.journal.map(toPointage),
     perimetre: toPerimetre(dossier),
     activites: dossier.activites.map(toActivite),

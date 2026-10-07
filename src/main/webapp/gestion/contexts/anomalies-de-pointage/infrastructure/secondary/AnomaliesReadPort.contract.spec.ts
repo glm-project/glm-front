@@ -641,6 +641,31 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     expect(lu.perimetre.pointagesDe(lu).map(pointage => pointage.id.pointage)).toEqual(['debut-8']);
   });
 
+  it('should read the operator of a conflict from its sequence', async () => {
+    const dossier = dossierAnomalieFixture();
+    dossier.sequence = { ...requiredFixture(dossier.sequence, 'sequence'), operateurId: 'op-camille' };
+    dossier.perimetre = { ...requiredFixture(dossier.perimetre, 'perimeter'), operateurId: 'op-alex' };
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
+
+    const lecture = port.read(adresse);
+    whenConflictDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(dossierFromReading(resultat).operateur).toEqual(new OperateurAnomalieId('op-camille'));
+  });
+
+  it('should read the operator of an automatic end from its perimeter', async () => {
+    const dossier = dossierFinAutomatiqueFixture();
+    dossier.perimetre = { ...requiredFixture(dossier.perimetre, 'perimeter'), operateurId: 'op-alex' };
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+
+    const lecture = port.read(adresse);
+    whenAutomaticEndDossierAnswers(dossier);
+    const resultat = await lecture;
+
+    expect(dossierFromReading(resultat).operateur).toEqual(new OperateurAnomalieId('op-alex'));
+  });
+
   it('should reject a conflict missing its perimeter instead of reading only its sequence', async () => {
     const dossier = dossierAnomalieFixture();
     delete dossier.perimetre;

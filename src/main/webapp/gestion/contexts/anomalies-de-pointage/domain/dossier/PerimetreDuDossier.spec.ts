@@ -1,5 +1,6 @@
 import { ActiviteAnomalieId } from './ActiviteAnomalieId';
 import { DiagnosticConflit, PointageAnomalie } from './DossierAnomalie';
+import { OperateurAnomalieId } from './OperateurAnomalieId';
 import { PerimetreDuDossier } from './PerimetreDuDossier';
 import { PointageAnomalieId } from './PointageAnomalieId';
 
@@ -89,7 +90,53 @@ describe('Perimeter of a dossier', () => {
 
     expect(identifiants(pointages)).toEqual(['debut', 'fin']);
   });
+
+  describe('beyond the anomaly', () => {
+    it('should give the pointages of the journal that the anomaly does not hold, in the order of the journal', () => {
+      const journal = [pointageFixture('apres'), pointageFixture('debut'), pointageFixture('avant')];
+
+      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [], operateur: CAMILLE });
+
+      expect(identifiants(horsDe)).toEqual(['apres', 'avant']);
+    });
+
+    it('should leave out the pointages of another operator', () => {
+      const journal = [
+        pointageFixture('debut'),
+        pointageFixture('de-camille', { operateur: 'camille' }),
+        pointageFixture('d-alex', { operateur: 'alex' }),
+      ];
+
+      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [], operateur: CAMILLE });
+
+      expect(identifiants(horsDe)).toEqual(['de-camille']);
+    });
+
+    it('should leave out the cancelled pointages', () => {
+      const journal = [pointageFixture('debut'), pointageFixture('annule', { annule: true }), pointageFixture('actif')];
+
+      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [], operateur: CAMILLE });
+
+      expect(identifiants(horsDe)).toEqual(['actif']);
+    });
+
+    it('should leave out the pointages a diagnostic cites', () => {
+      const journal = [pointageFixture('debut'), pointageFixture('cite'), pointageFixture('autre')];
+
+      const horsDe = perimetreDe('debut').horsDe({ journal, diagnostics: [diagnosticFixture('cite')], operateur: CAMILLE });
+
+      expect(identifiants(horsDe)).toEqual(['autre']);
+    });
+
+    it('should give no pointage when the anomaly holds the whole journal', () => {
+      const journal = [pointageFixture('debut'), pointageFixture('fin')];
+
+      expect(perimetreDe('debut', 'fin').horsDe({ journal, diagnostics: [], operateur: CAMILLE })).toEqual([]);
+    });
+  });
 });
+
+const CAMILLE = new OperateurAnomalieId('camille');
 
 const perimetreDe = (...pointages: readonly string[]): PerimetreDuDossier =>
   new PerimetreDuDossier(pointages.map(pointage => new PointageAnomalieId(pointage)));
@@ -109,13 +156,13 @@ const diagnosticFixture = (
   },
 });
 
-const pointageFixture = (id: string): PointageAnomalie => ({
+const pointageFixture = (id: string, options: { readonly operateur?: string; readonly annule?: true } = {}): PointageAnomalie => ({
   id: new PointageAnomalieId(id),
   fait: {
     type: 'DEBUT',
     intention: 'OUVERTURE',
     activiteVisee: 'travail',
-    operateur: 'camille',
+    operateur: options.operateur ?? 'camille',
     poste: 'fraiseuse',
     instant: '2026-09-14T08:00:00Z',
   },
@@ -124,4 +171,5 @@ const pointageFixture = (id: string): PointageAnomalie => ({
   auteur: 'Camille Martin',
   enregistre: '2026-09-15T10:00:00Z',
   regularisation: false,
+  ...(options.annule === undefined ? {} : { annulation: { motif: 'Erreur', auteur: 'camille', instant: '2026-09-15T11:00:00Z' } }),
 });

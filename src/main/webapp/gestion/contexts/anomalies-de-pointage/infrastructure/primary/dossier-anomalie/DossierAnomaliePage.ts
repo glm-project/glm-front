@@ -35,6 +35,7 @@ import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
+import { contexteDuSuivi } from '../ContexteDuSuivi';
 import { etatDeLecture } from '../EtatDeLecture';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { phrasesDuProbleme } from '../PhrasesDuProbleme';
@@ -54,7 +55,7 @@ import {
   selectionInitiale,
   tempsActivite,
 } from '../PresentationDossier';
-import { operateurDeLActe, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
+import { operateurDeLActe, operateurDuDossier, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
 import { SelectionDuDossier } from '../SelectionDuDossier';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
 import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
@@ -175,6 +176,10 @@ export class DossierAnomaliePage {
   protected readonly occupe = computed(() =>
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
   );
+
+  protected contexte(dossier: DossierAnomalie): string | undefined {
+    return contexteDuSuivi(dossier, this.now, operateurDuDossier(dossier, this.referentielConnu()));
+  }
 
   protected libelleChoix(choix: ChoixGuide): string {
     return choix.code === undefined ? choix.libelle : this.libelles.choix[choix.code].libelle;

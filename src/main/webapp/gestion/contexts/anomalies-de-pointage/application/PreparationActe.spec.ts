@@ -16,6 +16,7 @@ import { SaisieActe } from '../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../domain/dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie, AdresseDossier, DossierAnomalie } from '../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../domain/dossier/ElementAnomalieId';
+import { OperateurAnomalieId } from '../domain/dossier/OperateurAnomalieId';
 import { PerimetreDuDossier } from '../domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../domain/dossier/SuiviAnomalieId';
@@ -37,6 +38,7 @@ const dossierFixture: DossierAnomalie = {
   version: 1,
   cloture: false,
   engagement: '2026-09-14T08:00:00+02:00',
+  operateur: new OperateurAnomalieId('op-camille'),
   journal: [],
   perimetre: new PerimetreDuDossier([]),
   activites: [],

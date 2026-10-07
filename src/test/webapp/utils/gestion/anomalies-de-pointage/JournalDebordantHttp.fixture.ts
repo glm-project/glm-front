@@ -62,3 +62,10 @@ export const thenOnlyThePointagesOfTheAnomalyAreDrawn = (): void => {
   for (const pointage of pointagesDeLAnomalieFixture) markerOf(pointage).should('exist');
   for (const pointage of pointagesHorsAnomalieFixture) markerOf(pointage.id).should('not.exist');
 };
+
+export const thenTheOperatorsOtherPointagesAreSummarized = (): void => {
+  cy.get(dataSelector('anomalie-frise-contexte')).should(
+    'have.text',
+    'Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage plus tôt ce jour-là (dès 06:00), 1 pendant cette période et 3 les autres jours.',
+  );
+};

@@ -1,4 +1,4 @@
-import { PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PosteAnomalieId } from '../../domain/dossier/PosteAnomalieId';
 import { OperateurAnomalie, ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
@@ -33,6 +33,9 @@ export const operateurDeLActe = (
   referentiel: ReferentielAnomalies | undefined,
   journal: readonly PointageAnomalie[],
 ): string => nomConnuDeLOperateur(operateur, referentiel, journal) ?? operateurSansNom(referentiel);
+
+export const operateurDuDossier = (dossier: DossierAnomalie, referentiel: ReferentielAnomalies | undefined): string | undefined =>
+  dossier.ligne.operateur || nomConnuDeLOperateur(dossier.operateur.operateur, referentiel, dossier.journal);
 
 export const posteDeLActe = (
   poste: string,

@@ -250,6 +250,7 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
   version: 1,
   cloture: false,
   engagement: INSTANT_ENGAGEMENT,
+  operateur: new OperateurAnomalieId('op-camille'),
   journal: [
     {
       id: new PointageAnomalieId('fin-17'),
@@ -4126,6 +4127,202 @@ describe('Anomaly dossier page', () => {
     });
   });
 
+  describe('summary of what the operator pointed on the element beyond the anomaly', () => {
+    const MATIN = new Date(2026, 8, 14, 8, 0);
+    const SOIR = new Date(2026, 8, 14, 17, 0);
+
+    it.each([
+      ['earlier on the day of the anomaly, from when', [new Date(2026, 8, 14, 6, 0)], '1 pointage plus tôt ce jour-là (dès 06:00)'],
+      ['during the period of the anomaly', [new Date(2026, 8, 14, 10, 0)], '1 pointage pendant cette période'],
+      ['later on the day of the anomaly, until when', [new Date(2026, 8, 14, 20, 0)], '1 pointage plus tard ce jour-là (jusqu’à 20:00)'],
+      [
+        'on the previous days, since which day',
+        [new Date(2026, 8, 11, 11, 0), new Date(2026, 8, 10, 9, 0), new Date(2026, 8, 10, 15, 0)],
+        '3 pointages les jours précédents, depuis le jeudi 10 septembre',
+      ],
+      [
+        'on the following days, until which day',
+        [new Date(2026, 8, 15, 9, 0), new Date(2026, 8, 16, 18, 0)],
+        '2 pointages les jours suivants, jusqu’au mercredi 16 septembre',
+      ],
+      [
+        'on other days when they are both before and after, without a day',
+        [new Date(2026, 8, 10, 9, 0), new Date(2026, 8, 15, 9, 0)],
+        '2 pointages les autres jours',
+      ],
+    ])('should say how many pointages the operator made %s', async (_groupe, instants, expected) => {
+      givenAnAnomalyOnADayWith(
+        MATIN,
+        SOIR,
+        instants.map(instant => ({ instant })),
+      );
+
+      await whenRendering();
+
+      thenTheContextReads(`Hors de cette anomalie, Camille Martin compte sur cet élément ${expected}.`);
+    });
+
+    it('should join the groups, name the pointages in the first one and tell the earliest and the latest hours', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [
+        { instant: new Date(2026, 8, 14, 7, 0) },
+        { instant: new Date(2026, 8, 14, 6, 0) },
+        { instant: new Date(2026, 8, 14, 10, 0) },
+        { instant: new Date(2026, 8, 14, 20, 0) },
+        { instant: new Date(2026, 8, 14, 21, 30) },
+        { instant: new Date(2026, 8, 10, 9, 0) },
+      ]);
+
+      await whenRendering();
+
+      thenTheContextReads(
+        'Hors de cette anomalie, Camille Martin compte sur cet élément 2 pointages plus tôt ce jour-là (dès 06:00), 1 pendant cette période, 2 plus tard ce jour-là (jusqu’à 21:30) et 1 les jours précédents, depuis le jeudi 10 septembre.',
+      );
+    });
+
+    it('should join two groups with and', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2026, 8, 14, 10, 0) }, { instant: new Date(2026, 8, 15, 9, 0) }]);
+
+      await whenRendering();
+
+      thenTheContextReads(
+        'Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période et 1 les jours suivants, jusqu’au mardi 15 septembre.',
+      );
+    });
+
+    it('should not count the cancelled pointages', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [
+        { instant: new Date(2026, 8, 14, 9, 30), annule: true },
+        { instant: new Date(2026, 8, 14, 10, 0) },
+      ]);
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période.');
+    });
+
+    it('should not count the pointages of another operator', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [
+        { instant: new Date(2026, 8, 14, 9, 0), operateur: 'op-alex' },
+        { instant: new Date(2026, 8, 14, 10, 0) },
+      ]);
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période.');
+    });
+
+    it.each([
+      ['holds no pointage beyond the anomaly', []],
+      ['holds only cancelled pointages beyond the anomaly', [{ instant: new Date(2026, 8, 14, 10, 0), annule: true as const }]],
+      ['holds only pointages of another operator beyond the anomaly', [{ instant: new Date(2026, 8, 14, 10, 0), operateur: 'op-alex' }]],
+    ])('should say nothing when the journal %s', async (_cas, horsDeLAnomalie) => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, horsDeLAnomalie);
+
+      await whenRendering();
+
+      thenAbsent('anomalie-frise-contexte');
+    });
+
+    it('should say nothing when the anomaly itself shows no pointage and no activity to measure the period from', async () => {
+      givenAnAnomalyThatShowsNothing();
+
+      await whenRendering();
+
+      thenAbsent('anomalie-frise-contexte');
+    });
+
+    it('should keep the same sentence when the handle widens the scale of the frise', async () => {
+      givenALateEndInAJournalBeyondTheAnomaly();
+      await whenRendering();
+      const avant = theContext();
+      await whenClicking('anomalie-choix');
+
+      await whenEnteringTheInstant('15/09/2026', '01:30');
+
+      thenTheHandleReads('01:30');
+      thenTheContextIs(avant);
+    });
+
+    it('should keep the same sentence when a preview draws the state after the act', async () => {
+      const dossier = lateEndInAJournalBeyondTheAnomaly();
+      read.result = { kind: 'DOSSIER', dossier };
+      givenASuccessfulPreview(undefined, acteFinTardiveFixture(INSTANT_FIN_TARDIVE), dossier);
+      await whenRendering();
+      const avant = theContext();
+      await whenClicking('anomalie-choix');
+      await whenEntering('anomalie-motif', 'Fin tardive confirmée');
+
+      await whenClicking('anomalie-previsualiser');
+
+      thenTextContains('anomalie-frise-apres-titre', 'Après cet acte');
+      thenTheContextIs(avant);
+    });
+
+    it('should say the operator when no name is resolved', async () => {
+      read.referentielResult = new ReferentielAnomalies([], []);
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2026, 8, 14, 10, 0) }], { ligne: '', journal: '' });
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, l’opérateur compte sur cet élément 1 pointage pendant cette période.');
+    });
+
+    it('should name the operator after the pointages of the journal when the sequence carries no name', async () => {
+      read.referentielResult = new ReferentielAnomalies([], []);
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2026, 8, 14, 10, 0) }], { ligne: '', journal: 'Camille Martin' });
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période.');
+    });
+
+    it('should name the operator after the referential when neither the sequence nor the journal carries a name', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2026, 8, 14, 10, 0) }], { ligne: '', journal: '' });
+
+      await whenRendering();
+
+      thenTheContextReads('Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage pendant cette période.');
+    });
+
+    it('should name the days when the period of the anomaly spans two days', async () => {
+      givenAnAnomalyOnADayWith(new Date(2026, 8, 14, 22, 0), new Date(2026, 8, 15, 2, 0), [
+        { instant: new Date(2026, 8, 14, 20, 0) },
+        { instant: new Date(2026, 8, 15, 4, 0) },
+      ]);
+
+      await whenRendering();
+
+      thenTheContextReads(
+        'Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage plus tôt le lundi 14 septembre (dès 20:00) et 1 plus tard le mardi 15 septembre (jusqu’à 04:00).',
+      );
+    });
+
+    it('should tell apart the days by the local clock near midnight', async () => {
+      givenAnAnomalyOnADayWith(new Date(2026, 8, 14, 0, 30), new Date(2026, 8, 14, 23, 30), [
+        { instant: new Date(2026, 8, 13, 23, 59) },
+        { instant: new Date(2026, 8, 14, 0, 10) },
+        { instant: new Date(2026, 8, 14, 23, 50) },
+        { instant: new Date(2026, 8, 15, 0, 1) },
+      ]);
+
+      await whenRendering();
+
+      thenTheContextReads(
+        'Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage plus tôt ce jour-là (dès 00:10), 1 plus tard ce jour-là (jusqu’à 23:50) et 2 les autres jours.',
+      );
+    });
+
+    it('should spell the year of a day that is not in the current year', async () => {
+      givenAnAnomalyOnADayWith(MATIN, SOIR, [{ instant: new Date(2025, 11, 30, 9, 0) }]);
+
+      await whenRendering();
+
+      thenTheContextReads(
+        'Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage les jours précédents, depuis le mardi 30 décembre 2025.',
+      );
+    });
+  });
+
   describe('in a time zone that changes hour', () => {
     const original = process.env['TZ'];
 
@@ -4507,16 +4704,17 @@ describe('Anomaly dossier page', () => {
     read.result = { kind: 'DOSSIER', dossier: journalBeyondTheAnomaly() };
   };
 
-  const givenALateEndInAJournalBeyondTheAnomaly = (): void => {
+  const lateEndInAJournalBeyondTheAnomaly = (): DossierAnomalie => {
     const dossier = dossierFinTardiveFixture();
-    read.result = {
-      kind: 'DOSSIER',
-      dossier: {
-        ...dossier,
-        perimetre: new PerimetreDuDossier(dossier.journal.map(pointage => pointage.id)),
-        journal: [...dossier.journal, pointageAilleursFixture('autre-40', instantLocalFixture(new Date(2026, 8, 15, 10, 0)))],
-      },
+    return {
+      ...dossier,
+      perimetre: new PerimetreDuDossier(dossier.journal.map(pointage => pointage.id)),
+      journal: [...dossier.journal, pointageAilleursFixture('autre-40', instantLocalFixture(new Date(2026, 8, 15, 10, 0)))],
     };
+  };
+
+  const givenALateEndInAJournalBeyondTheAnomaly = (): void => {
+    read.result = { kind: 'DOSSIER', dossier: lateEndInAJournalBeyondTheAnomaly() };
   };
 
   const givenALateEnd = (instant = INSTANT_FIN_TARDIVE): void => {
@@ -5426,6 +5624,57 @@ describe('Anomaly dossier page', () => {
       ...application.receiptReplies.automaticResponses,
     ]);
     await fixture.whenStable();
+  };
+
+  interface PointageHorsDeLAnomalieFixture {
+    readonly instant: Date;
+    readonly operateur?: string;
+    readonly annule?: true;
+  }
+
+  const givenAnAnomalyOnADayWith = (
+    debut: Date,
+    fin: Date,
+    horsDeLAnomalie: readonly PointageHorsDeLAnomalieFixture[],
+    noms: { readonly ligne?: string; readonly journal?: string } = {},
+  ): void => {
+    const dossier = dossierAnomalieFixture();
+    const modele = pointageDeLaFinFixture();
+    const pointage = (id: string, instant: Date, options: Partial<PointageHorsDeLAnomalieFixture> = {}): PointageAnomalie => ({
+      ...modele,
+      id: new PointageAnomalieId(id),
+      fait: { ...modele.fait, instant: instantLocalFixture(instant), operateur: options.operateur ?? 'op-camille' },
+      enregistre: instantLocalFixture(instant),
+      operateurNom: noms.journal ?? 'Camille Martin',
+      ...(options.annule === undefined ? {} : { annulation: { motif: 'Erreur', auteur: 'camille', instant: INSTANT_ENREGISTREMENT } }),
+    });
+    const dansLAnomalie = [pointage('debut-8', debut), pointage('fin-17', fin)];
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        ligne: { ...dossier.ligne, operateur: noms.ligne ?? 'Camille Martin' },
+        journal: [...dansLAnomalie, ...horsDeLAnomalie.map((hors, rang) => pointage(`hors-${rang}`, hors.instant, hors))],
+        perimetre: new PerimetreDuDossier(dansLAnomalie.map(dedans => dedans.id)),
+      },
+    };
+  };
+
+  const givenAnAnomalyThatShowsNothing = (): void => {
+    givenAnAnomalyOnADayWith(new Date(2026, 8, 14, 8, 0), new Date(2026, 8, 14, 17, 0), [{ instant: new Date(2026, 8, 14, 10, 0) }]);
+    const lecture = read.result;
+    if (lecture.kind !== 'DOSSIER') throw new Error('Missing dossier fixture');
+    read.result = { kind: 'DOSSIER', dossier: { ...lecture.dossier, perimetre: new PerimetreDuDossier([]), activites: [] } };
+  };
+
+  const theContext = (): string => element('anomalie-frise-contexte').textContent;
+
+  const thenTheContextIs = (expected: string): void => {
+    expect(theContext()).toBe(expected);
+  };
+
+  const thenTheContextReads = (expected: string): void => {
+    expect(element('anomalie-frise-contexte').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
   };
 
   const whenRendering = async (): Promise<void> => {

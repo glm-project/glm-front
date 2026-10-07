@@ -26,6 +26,7 @@ import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointag
 import {
   dossierAuJournalDebordantFixture,
   thenOnlyThePointagesOfTheAnomalyAreDrawn,
+  thenTheOperatorsOtherPointagesAreSummarized,
 } from '../../../utils/gestion/anomalies-de-pointage/JournalDebordantHttp.fixture';
 import {
   thenActivityIsSelected,
@@ -92,6 +93,14 @@ describe('HTTP conflict resolution in Gestion', () => {
     whenOpeningTheRealDossier();
 
     thenOnlyThePointagesOfTheAnomalyAreDrawn();
+  });
+
+  it('should summarize what the operator pointed beyond the anomaly when the journal of the follow-up holds other days and another operator', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheRealDossier();
+
+    thenTheOperatorsOtherPointagesAreSummarized();
   });
 
   const givenAJournalThatOverflowsTheAnomaly = (): void => {

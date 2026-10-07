@@ -15,6 +15,7 @@ import {
 } from '../../domain/acte/AnomaliesActesPorts';
 import { PropositionResolution } from '../../domain/acte/ResolutionDeLAnomalie';
 import { AdresseDossier, DossierAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
@@ -129,6 +130,15 @@ const dossierAvecUnJournalDebordant = (
     perimetre: { ...perimetreFixture, pointages: [...pointagesDuPerimetre] },
     suivi: { ...dossier.suivi, journal: ['debut-8', 'fin-17', 'ailleurs-30'].map(fait) },
   };
+};
+
+const dossierDeLOperateur = (
+  kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE',
+  revision: number,
+  operateur: string,
+): components['schemas']['RestDossierAnomalie'] => {
+  const dossier = dossierFixture(kind, revision);
+  return { ...dossier, perimetre: { ...perimetreFixture, operateurId: operateur } };
 };
 
 const dossierAvecUneActiviteEchue = (
@@ -470,6 +480,30 @@ describe('Beyond the contract: HTTP anomaly actes', () => {
     const { avant, apres } = apercuLu(resultat);
     expect(avant.perimetre.pointagesDe(avant).map(pointage => pointage.id.pointage)).toEqual(['debut-8']);
     expect(apres.perimetre.pointagesDe(apres).map(pointage => pointage.id.pointage)).toEqual(['debut-8', 'fin-17']);
+  });
+
+  it('should read the operator of the dossier before and after the previewed act from its perimeter', async () => {
+    const apercu = preview.preview(adresseFixture, 7, acteFixture);
+
+    whenPreviewAnswers(acteFixture, {
+      avant: dossierDeLOperateur('EN_CONFLIT', 7, 'op-camille'),
+      apres: dossierDeLOperateur('ANCRE_ANNULEE', 8, 'op-alex'),
+    });
+    const resultat = await apercu;
+
+    const { avant, apres } = apercuLu(resultat);
+    expect([avant.operateur, apres.operateur]).toEqual([new OperateurAnomalieId('op-camille'), new OperateurAnomalieId('op-alex')]);
+  });
+
+  it('should read the operator of the dossier received with the canonical receipt from its perimeter', async () => {
+    const recu = confirmationFixture();
+    recu.dossier = dossierDeLOperateur('ANCRE_ANNULEE', 9, 'op-alex');
+
+    const confirmation = application.apply(propositionFixture);
+    whenConfirmationAnswers(recu);
+    const resultat = await confirmation;
+
+    expect(dossierAppliqueLu(resultat).operateur).toEqual(new OperateurAnomalieId('op-alex'));
   });
 
   it('should read the perimeter of the dossier received with the canonical receipt', async () => {

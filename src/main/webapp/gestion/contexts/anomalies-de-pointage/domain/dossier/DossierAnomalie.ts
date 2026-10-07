@@ -2,6 +2,7 @@ import { FaitPropose } from '../acte/ActeResolution';
 import { SaisieActe } from '../acte/SaisieActe';
 import { ActiviteAnomalieId } from './ActiviteAnomalieId';
 import { ElementAnomalieId } from './ElementAnomalieId';
+import { OperateurAnomalieId } from './OperateurAnomalieId';
 import { PerimetreDuDossier } from './PerimetreDuDossier';
 import { PointageAnomalieId } from './PointageAnomalieId';
 import { SuiviAnomalieId } from './SuiviAnomalieId';
@@ -101,6 +102,7 @@ export interface DossierAnomalie {
   readonly version: number;
   readonly cloture: boolean;
   readonly engagement: string;
+  readonly operateur: OperateurAnomalieId;
   readonly finCloture?: string;
   readonly journal: readonly PointageAnomalie[];
   readonly perimetre: PerimetreDuDossier;

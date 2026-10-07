@@ -31,6 +31,7 @@ import {
   dossierAuJournalDebordantFixture,
   pointagesDeLAnomalieFixture,
   thenOnlyThePointagesOfTheAnomalyAreDrawn,
+  thenTheOperatorsOtherPointagesAreSummarized,
 } from '../../../utils/gestion/anomalies-de-pointage/JournalDebordantHttp.fixture';
 import {
   markerOf,
@@ -330,6 +331,14 @@ describe('Conflict dossier in Gestion', () => {
     whenOpeningTheDossier();
 
     thenOnlyThePointagesOfTheAnomalyAreDrawn();
+  });
+
+  it('should summarize what the operator pointed on the element beyond the anomaly, leaving out the cancelled and the other operators', () => {
+    givenAJournalThatOverflowsTheAnomaly();
+
+    whenOpeningTheDossier();
+
+    thenTheOperatorsOtherPointagesAreSummarized();
   });
 
   const givenAJournalThatOverflowsTheAnomaly = (): void => {
