@@ -392,6 +392,10 @@
   background: var(--color-ink-muted);
 }
 
+.pastille-fin-automatique {
+  background-color: var(--color-accent);
+}
+
 .etat-activite {
   display: block;
   box-sizing: border-box;
@@ -411,8 +415,12 @@
   box-sizing: border-box;
   width: 0.75rem;
   max-width: 100%;
+}
+
+.embout-automatique,
+.pastille-fin-automatique {
   border-left: 2px dashed var(--color-warn);
-  background: repeating-linear-gradient(90deg, transparent 0 4px, color-mix(in srgb, var(--color-warn) 55%, transparent) 4px 8px);
+  background-image: repeating-linear-gradient(90deg, transparent 0 4px, color-mix(in srgb, var(--color-warn) 55%, transparent) 4px 8px);
 }
 
 .barre.a-resoudre {

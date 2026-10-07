@@ -116,6 +116,7 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     nonConformite: 'Non-conformité',
     aResoudre: 'À résoudre',
     enCours: 'En cours',
+    finAutomatique: 'Fin automatique',
     debut: 'Début pointé',
     nonConformitePointee: 'Non-conformité pointée',
     fin: 'Fin pointée',

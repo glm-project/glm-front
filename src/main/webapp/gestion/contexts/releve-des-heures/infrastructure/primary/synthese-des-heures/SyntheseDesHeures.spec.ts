@@ -1529,6 +1529,20 @@ describe('Synthese des heures component', () => {
             pointagesDElement: [{ type: 'DEBUT', heure: [8, 0] }],
             intervalles: [{ debut: [8, 0] }],
           },
+          3: {
+            intervalles: [
+              {
+                debut: [8, 0],
+                fin: [21, 0],
+                activite: {
+                  id: new ActiviteReleveId('automatique'),
+                  debut: instantFixture(3, [8, 0]),
+                  fin: instantFixture(3, [21, 0]),
+                  etat: 'TERMINEE_AUTOMATIQUEMENT',
+                },
+              },
+            ],
+          },
         },
         {},
         [elementFixture({ postes: [['DMU 50', 'Fraisage']] }), elementFixture({ id: 'element-2' })],
@@ -2011,6 +2025,7 @@ describe('Synthese des heures component', () => {
         ...[...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-marque'))].map(
           marque => LEGENDE_D_UN_MARQUEUR[marque.dataset['type'] ?? ''] ?? '',
         ),
+        ...[...racine().querySelectorAll<HTMLElement>(dataSelector('synthese-fin-automatique'))].map(() => 'fin-automatique'),
       ]),
     ].sort((un, autre) => un.localeCompare(autre));
 
