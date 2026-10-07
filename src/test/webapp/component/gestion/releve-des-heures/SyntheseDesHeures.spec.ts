@@ -126,6 +126,45 @@ const semaineIncompleteFixture = (): SemaineSemee => {
     },
   };
 };
+const semaineAFinAutomatiqueFixture = (debut: number, fin: number): SemaineSemee => {
+  const base = semaineDeJourFixture();
+  const duree = total(`PT${fin - debut}H`);
+  return {
+    synthese: {
+      ...base.synthese,
+      dureeOperationnelleTotale: duree,
+      elements: [{ ...requiredFixture(base.synthese.elements[0]), duree }],
+      jours: requiredFixture(base.synthese.jours).map((jour, rang) =>
+        rang === 0
+          ? {
+              ...jour,
+              dureeOperationnelle: duree,
+              pointages: [{ id: 'a', type: 'DEBUT', intention: 'OUVERTURE', element: 'element-1', dateDeSurvenue: heure(14, debut) }],
+            }
+          : jour,
+      ),
+    },
+    feuille: {
+      ...base.feuille,
+      jours: requiredFixture(base.feuille.jours).map((jour, rang) =>
+        rang === 0
+          ? {
+              ...jour,
+              activites: [
+                {
+                  element: 'element-1',
+                  categorie: 'TRAVAIL',
+                  debut: heure(14, debut),
+                  fin: heure(14, fin),
+                  activite: { id: 'a', debut: heure(14, debut), fin: heure(14, fin), etat: 'TERMINEE_AUTOMATIQUEMENT' },
+                },
+              ],
+            }
+          : jour,
+      ),
+    },
+  };
+};
 
 const requiredFixture = <T>(value: T | undefined): T => {
   if (value === undefined) {
@@ -268,45 +307,66 @@ describe('Operational time report in gestion', () => {
   });
 
   it('should show the received automatic end and its anomaly without manufacturing a raw end', () => {
-    const base = semaineDeJourFixture();
-    givenAWeek({
-      synthese: {
-        ...base.synthese,
-        dureeOperationnelleTotale: total('PT13H'),
-        elements: [{ ...requiredFixture(base.synthese.elements[0]), duree: total('PT13H') }],
-        jours: requiredFixture(base.synthese.jours).map((jour, rang) =>
-          rang === 0
-            ? {
-                ...jour,
-                dureeOperationnelle: total('PT13H'),
-                pointages: [{ id: 'a', type: 'DEBUT', intention: 'OUVERTURE', element: 'element-1', dateDeSurvenue: heure(14, 8) }],
-              }
-            : jour,
-        ),
-      },
-      feuille: {
-        ...base.feuille,
-        jours: requiredFixture(base.feuille.jours).map((jour, rang) =>
-          rang === 0
-            ? {
-                ...jour,
-                activites: [
-                  {
-                    element: 'element-1',
-                    categorie: 'TRAVAIL',
-                    debut: heure(14, 8),
-                    fin: heure(14, 21),
-                    activite: { id: 'a', debut: heure(14, 8), fin: heure(14, 21), etat: 'TERMINEE_AUTOMATIQUEMENT' },
-                  },
-                ],
-              }
-            : jour,
-        ),
-      },
-    });
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
     whenVisiting(ADRESSE);
 
     thenShowTheReceivedAutomaticEndAndItsAnomalyWithoutManufacturingARawEnd();
+  });
+
+  it('should keep the clocked start on the middle of its bar in the week', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMarkerSitsOnTheMiddleOfItsBar('synthese-barre', 'synthese-marque');
+  });
+
+  it('should keep the clocked start on the middle of its bar in the day detail', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMarkerSitsOnTheMiddleOfItsBar('synthese-detail-barre', 'synthese-detail-marque');
+  });
+
+  it('should write the automatic end under the end of its bar in the week', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMentionEndsUnderItsBar('synthese-barre', 'synthese-etat-court');
+  });
+
+  it('should write the automatic end under the end of its bar in the day detail', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheMentionEndsUnderItsBar('synthese-detail-barre', 'synthese-detail-etat');
+  });
+
+  it('should cap the end of an automatically ended bar', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(8, 21));
+    whenVisiting(ADRESSE);
+
+    thenTheAutomaticEndCapsItsBar('synthese-barre');
+  });
+
+  it('should keep the cap of a one-hour automatic end inside its bar', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
+    whenVisiting(ADRESSE);
+
+    thenTheAutomaticEndCapsItsBar('synthese-barre');
+  });
+
+  it('should keep an early automatic end inside its day in the week', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
+    whenVisiting(ADRESSE);
+
+    thenTheMentionStaysInsideItsDay();
+  });
+
+  it('should keep an early automatic end on one line inside the day detail', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
+    whenVisiting(ADRESSE);
+
+    thenTheDetailMentionHoldsOnOneLineInsideTheDay();
   });
 
   const whenTheReadingResumes = (resume: () => void): void => {
@@ -393,6 +453,74 @@ describe('Operational time report in gestion', () => {
         expect(Math.min(...marques.map(marque => marque.left))).to.be.at.least((colonne?.left ?? 0) - 0.5);
         expect(Math.max(...marques.map(marque => marque.right))).to.be.at.most((colonne?.right ?? 0) + 0.5);
       });
+  };
+
+  const thenTheMarkerSitsOnTheMiddleOfItsBar = (barre: string, marque: string): void => {
+    cy.get(dataSelector(barre)).should($barre => {
+      const milieu = (element: HTMLElement | undefined): number => {
+        const rectangle = element?.getBoundingClientRect();
+        return (rectangle?.top ?? 0) + (rectangle?.height ?? 0) / 2;
+      };
+      const marques = [...Cypress.$(dataSelector(marque))];
+      expect(marques).to.have.length(1);
+      expect(Math.abs(milieu(marques[0]) - milieu($barre[0]))).to.be.lessThan(1);
+    });
+  };
+
+  const thenTheMentionEndsUnderItsBar = (barre: string, mention: string): void => {
+    cy.get(dataSelector(barre)).should($barre => {
+      const bout = $barre[0]?.getBoundingClientRect();
+      const mentions = [...Cypress.$(dataSelector(mention))].map(element => element.getBoundingClientRect());
+      expect(mentions).to.have.length(1);
+      expect(Math.abs((mentions[0]?.right ?? 0) - (bout?.right ?? 0))).to.be.lessThan(1);
+      expect(mentions[0]?.top).to.be.at.least(bout?.bottom ?? 0);
+    });
+  };
+
+  const thenTheMentionStaysInsideItsDay = (): void => {
+    cy.get(dataSelector('synthese-element-jour'))
+      .eq(0)
+      .should($cellule => {
+        const colonne = $cellule[0]?.getBoundingClientRect();
+        const textes = [...$cellule.find(dataSelector('synthese-etat-court'))].map(mention => {
+          const texte = mention.ownerDocument.createRange();
+          texte.selectNodeContents(mention);
+          return texte.getBoundingClientRect();
+        });
+        expect(textes).to.have.length(1);
+        expect(textes[0]?.width).to.be.greaterThan(0);
+        expect(textes[0]?.left).to.be.at.least((colonne?.left ?? 0) - 0.5);
+        expect(textes[0]?.right).to.be.at.most((colonne?.right ?? 0) + 0.5);
+      });
+  };
+
+  const thenTheDetailMentionHoldsOnOneLineInsideTheDay = (): void => {
+    cy.get(dataSelector('synthese-detail-etat')).should($mentions => {
+      const mesures = [...$mentions].map(mention => {
+        const texte = mention.ownerDocument.createRange();
+        texte.selectNodeContents(mention);
+        return {
+          jour: mention.parentElement?.getBoundingClientRect(),
+          lignes: new Set([...texte.getClientRects()].map(ligne => Math.round(ligne.top))).size,
+          emprise: texte.getBoundingClientRect(),
+        };
+      });
+      expect(mesures).to.have.length(1);
+      expect(mesures[0]?.lignes).to.equal(1);
+      expect(mesures[0]?.emprise.left).to.be.at.least((mesures[0]?.jour?.left ?? 0) - 0.5);
+      expect(mesures[0]?.emprise.right).to.be.at.most((mesures[0]?.jour?.right ?? 0) + 0.5);
+    });
+  };
+
+  const thenTheAutomaticEndCapsItsBar = (barre: string): void => {
+    cy.get(dataSelector(barre)).should($barre => {
+      const contour = $barre[0]?.getBoundingClientRect();
+      const embouts = [...$barre.find(dataSelector('synthese-fin-automatique'))].map(embout => embout.getBoundingClientRect());
+      expect(embouts).to.have.length(1);
+      expect(embouts[0]?.width).to.be.greaterThan(0);
+      expect(embouts[0]?.left).to.be.at.least((contour?.left ?? 0) - 0.5);
+      expect(embouts[0]?.right).to.be.within((contour?.right ?? 0) - 1.5, (contour?.right ?? 0) + 0.5);
+    });
   };
 
   const thenTheFriseDoesNotScroll = (): void => {

@@ -72,9 +72,9 @@ Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien de
 
 - Garder la frise de sept jours, une ligne par élément et un total unique par ligne. Travail en `accent`,
   NC hachurée avec les jetons existants ; aucune palette par élément.
-- Une activité terminée dessine sa portion fermée. L'état automatique reçu ajoute une mention visible
-  et une anomalie à la barre de sa catégorie. Une absence de FIN dans ce jour n'établit jamais cet état,
-  et aucun marqueur de FIN n'est inventé.
+- Une activité terminée dessine sa portion fermée. L'état automatique reçu termine la barre de sa catégorie
+  par un embout hachuré `warn`, nommé dans la légende, et aligne sa mention visible sous ce bout. Une absence
+  de FIN dans ce jour n'établit jamais cet état, et aucun marqueur de FIN n'est inventé.
 - Une activité en cours est une indication ponctuelle, sans barre étirée jusqu'à l'heure de lecture.
   Nommer son début d'origine, avec le jour lorsqu'il diffère du jour rendu : dimanche 22 h reste dimanche
   22 h dans la portion du lundi. Elle ne reçoit aucune durée comptabilisée par le front.

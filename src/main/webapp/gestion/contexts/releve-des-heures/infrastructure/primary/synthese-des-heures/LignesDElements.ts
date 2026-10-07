@@ -17,6 +17,7 @@ export interface BarreDActivite {
   readonly style: StyleDeBarreDActivite;
   readonly gauche: number;
   readonly largeur: number | undefined;
+  readonly fin: number | undefined;
   readonly enonce: string;
   readonly automatique: boolean;
   readonly etat: string | undefined;
@@ -67,6 +68,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
       style: 'a-resoudre',
       gauche,
       largeur: undefined,
+      fin: undefined,
       automatique: false,
       etat: LIBELLES.legende.aResoudre,
       enonce: LIBELLES.enonceDActiviteAResoudre({
@@ -88,6 +90,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
       style: 'en-cours',
       gauche,
       largeur: undefined,
+      fin: undefined,
       enonce,
       automatique: false,
       etat: LIBELLES.activiteEnCours(intervalle.activite.debut, jour.jour),
@@ -102,10 +105,12 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
     fin,
   });
   const etat = intervalle.activite.etat === 'TERMINEE_AUTOMATIQUEMENT' ? LIBELLES.finAutomatique(intervalle.activite.fin) : undefined;
+  const finSurLAxe = axe.pourcentDe(minutesDeFin(intervalle.debut, fin));
   return {
     style: STYLES_D_ACTIVITE[intervalle.categorie],
     gauche,
-    largeur: axe.pourcentDe(minutesDeFin(intervalle.debut, fin)) - gauche,
+    largeur: finSurLAxe - gauche,
+    fin: finSurLAxe,
     enonce: etat === undefined ? enonce : `${enonce}, ${etat}`,
     automatique: etat !== undefined,
     etat,

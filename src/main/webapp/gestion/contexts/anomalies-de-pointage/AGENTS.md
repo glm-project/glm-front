@@ -195,8 +195,8 @@ précédent, un trait de minuit passant avant le précédent ; le jour s'affiche
 gradué. Les bords de l'échelle ne portent pas forcément de trait. Repères et poignée restent à 22 px au moins des bords (leur heure et
 leur nom restent exacts). Une rangée par activité, dans l'ordre de leur début,
 sous la rangée des pointages, titrée « Pointages » (`anomalie-frise-pointages-intitule`, une ligne de 20 px au-dessus des
-repères, sans interaction, que la rangée de placement ne recouvre pas ; absente sans pointage). La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` en pointillés
-`warn` à sa fin automatique, `EN_COURS` et `A_RESOUDRE` (hachurée) ouvertes jusqu'au bord, `ANNULEE` et `REMPLACEE` atténuées
+repères, sans interaction, que la rangée de placement ne recouvre pas ; absente sans pointage). La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` par l'embout
+hachuré `warn` de Gestion (`--gestion-hachure-fin-automatique`) à sa fin automatique, `EN_COURS` et `A_RESOUDRE` (hachurée) ouvertes jusqu'au bord, `ANNULEE` et `REMPLACEE` atténuées
 (fin pleine si une fin est reçue) ; le front ne déduit aucune fin d'un pointage. Une activité sans période garde sa rangée
 et son libellé, sans barre. Un repère par pointage (symbole du geste, un par geste : ▶ Démarrage, ▷ Démarrage en NC, ◆ Passage en NC, ◇ Retour en bon,
 ■ Arrêt ; heure HH:MM, barré s'il est annulé, badge « R »

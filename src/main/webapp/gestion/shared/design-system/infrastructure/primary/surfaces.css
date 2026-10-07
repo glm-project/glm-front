@@ -1,3 +1,7 @@
+:root {
+  --gestion-hachure-fin-automatique: repeating-linear-gradient(45deg, var(--color-warn) 0 2px, var(--color-surface) 2px 4px);
+}
+
 .gestion-carte {
   overflow: hidden;
   border: 1px solid var(--color-border);
