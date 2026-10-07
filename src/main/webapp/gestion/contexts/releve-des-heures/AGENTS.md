@@ -107,7 +107,7 @@ d'un choix plus récent. Signaler un rejet technique une fois et afficher la pos
 Les liens de semaine précédente/suivante n'emportent pas le jour. Une adresse illisible ou hors calendrier
 est refusée sans acquisition. Le retour navigateur retrouve son jour.
 
-Une adresse sans semaine désigne la semaine en cours, sans réécriture de l'URL. Une adresse qui nomme
+Une adresse sans semaine ni jour désigne la semaine en cours, sans réécriture de l'URL. Une adresse qui nomme
 seulement un `jour` (`AAAA-MM-JJ`, sans `annee` ni `semaine`) ouvre la semaine ISO qui contient ce jour, ce
 jour ouvert, sans réécriture de l'URL : c'est le lien à construire pour mener à une journée précise. Un jour
 illisible, ou tenu par une semaine hors des années 2000 à 2999 (`1999-12-31` et `2000-01-01` appartiennent à la
