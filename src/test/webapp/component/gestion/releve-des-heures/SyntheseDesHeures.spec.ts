@@ -348,6 +348,13 @@ describe('Operational time report in gestion', () => {
     thenTheMentionStaysInsideItsDay();
   });
 
+  it('should keep an early automatic end on one line inside the day detail', () => {
+    givenAWeek(semaineAFinAutomatiqueFixture(1, 2));
+    whenVisiting(ADRESSE);
+
+    thenTheDetailMentionHoldsOnOneLineInsideTheDay();
+  });
+
   const whenTheReadingResumes = (resume: () => void): void => {
     cy.get(dataSelector('synthese-loading')).then(() => {
       resume();
@@ -471,6 +478,24 @@ describe('Operational time report in gestion', () => {
         expect(textes[0]?.left).to.be.at.least((colonne?.left ?? 0) - 0.5);
         expect(textes[0]?.right).to.be.at.most((colonne?.right ?? 0) + 0.5);
       });
+  };
+
+  const thenTheDetailMentionHoldsOnOneLineInsideTheDay = (): void => {
+    cy.get(dataSelector('synthese-detail-etat')).should($mentions => {
+      const mesures = [...$mentions].map(mention => {
+        const texte = mention.ownerDocument.createRange();
+        texte.selectNodeContents(mention);
+        return {
+          jour: mention.parentElement?.getBoundingClientRect(),
+          lignes: new Set([...texte.getClientRects()].map(ligne => Math.round(ligne.top))).size,
+          emprise: texte.getBoundingClientRect(),
+        };
+      });
+      expect(mesures).to.have.length(1);
+      expect(mesures[0]?.lignes).to.equal(1);
+      expect(mesures[0]?.emprise.left).to.be.at.least((mesures[0]?.jour?.left ?? 0) - 0.5);
+      expect(mesures[0]?.emprise.right).to.be.at.most((mesures[0]?.jour?.right ?? 0) + 0.5);
+    });
   };
 
   const thenTheFriseDoesNotScroll = (): void => {
