@@ -29,16 +29,18 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
 - **Journal** : faits d'origine, annulations et remplacements conservés. Une contradiction restante
   est un résultat accepté, distinct d'un refus métier. Le `journal` du dossier reste complet : le serveur envoie
   tous les jours et tous les opérateurs de l'élément.
-- **Périmètre** : Value Object `PerimetreDuDossier` (`domain/dossier/`, champ `perimetre` de `DossierAnomalie`) qui garde
-  les pointages que le serveur rattache à l'anomalie : ceux du périmètre reçu, réunis à ceux de la séquence en conflit
+- **Périmètre reçu** : le champ `perimetre` du dossier envoyé par le serveur, une séquence que le serveur rattache à l'anomalie
+  (pointages, `enConflit`, `operateurId`). Il fait autorité sur l'état de l'anomalie (`enConflit`, `finAutomatique`).
+- **Périmètre du dossier** : Value Object `PerimetreDuDossier` (`domain/dossier/`, champ `perimetre` de `DossierAnomalie`) qui
+  garde les pointages que le serveur rattache à l'anomalie : ceux du périmètre reçu, réunis à ceux de la séquence en conflit
   quand elle est reçue.
-- **Pointages de l'anomalie** : `perimetre.pointagesDe(dossier)` : ceux du périmètre, plus ceux que les diagnostics citent
+- **Pointages de l'anomalie** : `perimetre.pointagesDe(dossier)` : ceux du périmètre du dossier, plus ceux que les diagnostics citent
   (`pointage`, `cible.ouvrant`, `cible.termineePar`), dans l'ordre du journal. Le démarrage annulé d'un `OUVRANT_ANNULE` et
   les arrêts qui le visent en font partie, bien que le périmètre reçu se réduise alors à l'ancre. Seuls ces pointages se
   lisent sur la frise, se sélectionnent et bornent la poignée ; le journal complet sert aux libellés, aux références et à la
   comparaison avant et après.
 - **Opérateur de l'anomalie** : `DossierAnomalie.operateur` (un `OperateurAnomalieId`), lu dans `toDossier` sur `operateurId` de
-  la séquence en conflit ou du périmètre ; la ligne de liste ne le porte pas (le contrat de lecture le vérifie). On traite
+  la séquence en conflit ou du périmètre reçu ; la ligne de liste ne le porte pas (le contrat de lecture le vérifie). On traite
   opérateur par opérateur : on ne regarde pas ce qu'ont fait les autres opérateurs de l'élément.
 - **Hors de l'anomalie** : le complément simple des pointages de l'anomalie : tout pointage du journal qui n'en est pas un, de
   n'importe quel opérateur et annulé ou non. Un tel pointage ne se corrige ni ne s'annule depuis le dossier.
@@ -329,11 +331,11 @@ l'affichage des dates ; `maintenant`, qui sert aux bornes, est relue à chaque a
 `PreparationActe.preview` au moment d'appeler le port, jamais figée pour toute la page ; `preview` refuse un fait hors bornes sans appeler le port. Chaque nouvelle saisie d'acte
 (un choix, même identique, ou « Ajouter un pointage manquant ») recrée le champ : une saisie partielle ne lui survit pas.
 Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
-l'acquisition. `enConflit` concerne le périmètre autoritaire et ne se déduit pas du statut de l'ancrage.
+l'acquisition. `enConflit` concerne le périmètre reçu, qui fait autorité, et ne se déduit pas du statut de l'ancrage.
 
-Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis `perimetre`, comme le reçu. Le périmètre du dossier
-est traduit dans toutes les lectures (dossier, aperçu `avant` et `apres`, reçu) depuis `perimetre.pointages`, réunis à
-`sequence.pointages` quand la séquence est reçue ; un `perimetre` absent rejette l'acquisition. Le
+Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis le périmètre reçu, comme le reçu de l'acte. Le périmètre du dossier
+est traduit dans toutes les lectures (dossier, aperçu `avant` et `apres`, reçu) depuis les pointages du périmètre reçu, réunis à
+`sequence.pointages` quand la séquence est reçue ; un périmètre reçu absent rejette l'acquisition. Le
 modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. L'issue d'un acte est la projection
 `IssueDeLActe.depuis` (`domain/dossier/`), que l'aperçu et le reçu appellent : « traitée » signifie ni `enConflit` ni
 `finAutomatique`, quel que soit l'état d'adresse (une adresse `ANCRE_ANNULEE` peut rester en fin automatique lorsque
@@ -352,9 +354,9 @@ dossier qu'elle remplace. Les phrases vivent dans `LIBELLES_ANOMALIES.issue`. L'
 (`anomalie-probleme`, `phrasesDuProbleme` du primaire, modèles dans `LIBELLES_ANOMALIES.problemes`) : une par
 diagnostic d'un conflit à expliquer (`conflitAExpliquer`, soit `enConflit` ; sans diagnostic reçu, l'explication de
 la ligne), une par activité échue d'une fin automatique. Les deux lectures diffèrent à dessein : la nature du dossier
-(`IssueDeLActe`) classe l'adresse d'origine pour annoncer l'issue, tandis que les phrases disent tout ce que le périmètre
-porte encore ; une fin automatique dont le périmètre reste `enConflit` dit donc aussi le conflit, sans devenir un dossier
-de conflit. Elle disparaît dès que le périmètre ne porte plus le problème, y
+(`IssueDeLActe`) classe l'adresse d'origine pour annoncer l'issue, tandis que les phrases disent tout ce que le périmètre reçu
+porte encore ; une fin automatique dont le périmètre reçu reste `enConflit` dit donc aussi le conflit, sans devenir un dossier
+de conflit. Elle disparaît dès que le périmètre reçu ne porte plus le problème, y
 compris après le reçu d'une fin automatique ou d'un conflit résolu.
 Le dossier montre l'activité échue sur la frise, sélectionnée à l'ouverture, avec son début, sa fin automatique et sa
 durée reçus dans le panneau Sélection, et la clôture dans l'en-tête, sans les calculer ; il ne se présente jamais comme
@@ -364,7 +366,7 @@ un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d
 restant à saisir. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
 reprise et obsolescence restent ceux de toute saisie.
 
-Le reçu fournit le dossier canonique courant depuis `perimetre`, même à une ancre annulée. Une lecture
+Le reçu fournit le dossier canonique courant depuis le périmètre reçu, même à une ancre annulée. Une lecture
 ordinaire utilise `sequence` et conserve le résultat d'adresse obsolète. La vérification canonique
 fonctionne indépendamment de cette lecture. `NON_ATTESTE` et les erreurs techniques gardent l'issue
 inconnue : toute nouvelle décision reste bloquée. La reprise explicite réutilise la même commande et

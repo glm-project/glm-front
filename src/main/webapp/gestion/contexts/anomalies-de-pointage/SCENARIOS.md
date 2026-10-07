@@ -46,7 +46,7 @@ ceux de tout acte ; les refus `suivi-d-atelier-cloture`, `operateur-non-habilite
 `date-de-survenue-future` et `apercu-obsolete` s'y présentent sans écriture ni perte de saisie. Le reçu
 annonce l'issue de l'acte (voir « Issue d'un acte ») ; « Anomalie traitée » seulement si ni `enConflit` ni
 `finAutomatique` ne subsistent, y compris sur une adresse annulée, et il n'affiche alors plus de phrase de conflit,
-réservée au périmètre qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
+réservée au périmètre reçu qui porte encore un conflit. Une activité sans poste n'en reçoit aucun.
 
 ## Phrase du problème
 
@@ -71,7 +71,7 @@ ouverte jusqu'au bord (`EN_COURS`, `A_RESOUDRE` hachurée « À résoudre ») ; 
 un repère (symbole du geste, heure HH:MM, barré s'il est annulé, « R » s'il est régularisé, rouge s'il est en cause), décalé
 d'une voie entière (44 px) quand deux repères sont à moins de 44 px, sur une rangée titrée « Pointages » ; une flèche pointillée relie le pointage en cause au début de l'activité que son
 diagnostic vise. Le journal du suivi peut couvrir d'autres jours et d'autres opérateurs : la frise n'en montre que les pointages de
-l'anomalie (le périmètre reçu, la séquence en conflit, et les pointages que les diagnostics citent, dont le démarrage annulé
+l'anomalie (les pointages du périmètre reçu, ceux de la séquence en conflit, et les pointages que les diagnostics citent, dont le démarrage annulé
 d'un `OUVRANT_ANNULE` et les arrêts qui le visent). L'échelle va d'une heure avant le premier instant reçu de ces pointages et
 des activités à une heure après le dernier, par heures entières, et couvre l'heure proposée quand une poignée est posée. Elle tient dans la largeur de l'écran, sans défilement
 horizontal ni de la frise ni de la page : les graduations s'espacent selon la largeur (pas de 1 à 12 h, puis en jours, jamais deux traits
@@ -308,10 +308,10 @@ traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 
   solutions et la ligne d'identité masquée quand les champs sont dépliés d'office.
 - Les specs d'application passent par les ports publics et contrôlent les doubles envois, les réponses
   tardives, l'obsolescence et la vérification d'une issue inconnue.
-- Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre et rejettent un choix guidé
+- Les contrats HTTP lisent un dossier `FIN_AUTOMATIQUE` depuis son périmètre reçu et rejettent un choix guidé
   incohérent avec son code (régularisation portant une heure, correction sans heure).
-- Les contrats HTTP traduisent le périmètre de tout dossier (lecture, aperçu avant et après, reçu), réuni à la séquence
-  quand elle est reçue, et rejettent un dossier sans périmètre. Les specs DOM vérifient qu'un journal plus large que
+- Les contrats HTTP traduisent le périmètre reçu de tout dossier (lecture, aperçu avant et après, reçu) en périmètre du dossier,
+  réuni à la séquence quand elle est reçue, et rejettent un dossier sans périmètre reçu. Les specs DOM vérifient qu'un journal plus large que
   l'anomalie ne dessine, ne sélectionne et ne borne que les pointages de l'anomalie, et que la comparaison avant et après
   garde le journal complet.
 - Les contrats HTTP contrôlent les requêtes REST (liste de chaque nature, dossier et aperçu sous
