@@ -29,6 +29,7 @@ import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointag
 import { markerOf, thenPointageIsSelected, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const MARGE_DES_REPERES_PX = 22;
+const POINT_DE_PRISE_PX = 10;
 
 const whenOpeningTheFriseAt = (width: number): void => {
   cy.viewport(width, 900);
@@ -420,6 +421,34 @@ describe('Automatic end read on one line in Gestion', () => {
     });
   });
 
+  it('should move the hour placed by a click on the bar when its handle is then dragged earlier', () => {
+    whenOpeningTheFriseAt(1280);
+    whenPlacingTheEndAt(17);
+    whenDraggingTheHandleTo(12);
+
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0));
+    thenTheBarEndsOnTheHour(12);
+    thenTheBarIsNamedWithTheProposedHour('12:00');
+  });
+
+  it('should keep the grab offset when the handle placed by a click is grabbed off-centre and dragged earlier', () => {
+    whenOpeningTheFriseAt(1280);
+    whenPlacingTheEndAt(17);
+    whenDraggingTheHandleGrabbedOffCentreTo(12);
+
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0));
+    thenTheBarEndsOnTheHour(12);
+  });
+
+  it('should move the hour typed in the field when its handle is then dragged earlier', () => {
+    whenOpeningTheFriseAt(1280);
+    whenTypingTheEndAt(new Date(2026, 8, 14, 17, 0));
+    whenDraggingTheHandleTo(12);
+
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0));
+    thenTheBarEndsOnTheHour(12);
+  });
+
   it('should hold the handle 22 pixels from the edge, on its bar, when End carries it to the last hour of the scale', () => {
     whenOpeningTheFriseAt(1280);
     whenPlacingTheEndAt(17);
@@ -446,6 +475,28 @@ describe('Automatic end read on one line in Gestion', () => {
       });
     });
     cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
+  };
+
+  const whenTypingTheEndAt = (instant: Date): void => {
+    cy.get(dataSelector('anomalie-choix')).click();
+    whenTypingTheInstant(instant);
+    cy.get(dataSelector('anomalie-instant-heure')).blur();
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
+  };
+
+  const whenDraggingTheHandleGrabbedOffCentreTo = (hour: number): void => {
+    cy.get(dataSelector('anomalie-poignee')).then(poignee => {
+      const grabX = centreDe(requiredFixture(poignee[0], 'poignée')) + POINT_DE_PRISE_PX;
+      abscisseDeLHeure(hour).then(abscisse => {
+        cy.get(dataSelector('anomalie-poignee')).trigger('pointerdown', { pointerId: 1, buttons: 1, clientX: grabX });
+        cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', {
+          pointerId: 1,
+          buttons: 1,
+          clientX: abscisse + POINT_DE_PRISE_PX,
+        });
+        cy.get(dataSelector('anomalie-poignee')).trigger('pointerup', { pointerId: 1, clientX: abscisse + POINT_DE_PRISE_PX });
+      });
+    });
   };
 
   const whenPreviewingTheEnd = (): void => {
