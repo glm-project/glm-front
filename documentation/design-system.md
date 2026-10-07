@@ -61,8 +61,9 @@ test after changing any colour.
 
 `gestion/shared/design-system/infrastructure/primary/surfaces.css` owns what every gestion screen repeats:
 the card that carries a table and its paginator, the table scroller, the segmented filter, the state dot, the
-type tag, the row actions and the back link. Its classes are prefixed `gestion-` so they never meet a
-component's local class. A screen keeps only its own column widths and specific drawings.
+type tag, the row actions, the back link and the hatch that caps an automatic end
+(`--gestion-hachure-fin-automatique`). Its classes and properties are prefixed `gestion-` so they never meet a
+component's local name. A screen keeps only its own column widths and specific drawings.
 
 ## Gestion shares presentation contracts, not business workflows
 
