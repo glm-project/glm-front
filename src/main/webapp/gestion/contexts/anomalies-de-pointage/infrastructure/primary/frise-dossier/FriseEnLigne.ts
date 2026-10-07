@@ -1,4 +1,5 @@
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
+import { conflitAExpliquer } from '../../../domain/dossier/ConflitAExpliquer';
 import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { activitesModifiees } from './ComparaisonDApercu';
@@ -54,7 +55,7 @@ const tientSurUneBarre = (vue: VueDeFrise, pointage: PointageAnomalie): boolean 
 
 export const seLitEnLigne = (vue: VueDeFrise): boolean => {
   const pointages = pointagesDeLaFrise(vue);
-  return !vue.enConflit && pointages.length > 0 && pointages.every(pointage => tientSurUneBarre(vue, pointage));
+  return !conflitAExpliquer(vue) && pointages.length > 0 && pointages.every(pointage => tientSurUneBarre(vue, pointage));
 };
 
 interface RangeeDActivite {
