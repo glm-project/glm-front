@@ -69,7 +69,7 @@ de « Activités concernées ». Chaque activité a sa rangée, dans l'ordre de 
 `nc` pour la non-conformité, finie à la fin reçue (`TERMINEE`), en pointillés `warn` à la fin automatique (`ECHUE`), ou
 ouverte jusqu'au bord (`EN_COURS`, `A_RESOUDRE` hachurée « À résoudre ») ; la frise n'invente aucune fin. Chaque pointage est
 un repère (symbole du geste, heure HH:MM, barré s'il est annulé, « R » s'il est régularisé, rouge s'il est en cause), décalé
-d'une voie entière (44 px) quand deux repères sont à moins de 44 px, sur une rangée titrée « Pointages » ; une flèche pointillée relie le pointage en cause au début de l'activité que son
+d'une voie entière (44 px) quand deux repères sont à moins de 44 px sur leur position dessinée (recul aux bords compris), sur une rangée titrée « Pointages » ; une flèche pointillée relie le pointage en cause au début de l'activité que son
 diagnostic vise. Le journal du suivi peut couvrir d'autres jours et d'autres opérateurs : la frise n'en montre que les pointages de
 l'anomalie (les pointages du périmètre reçu, ceux de la séquence en conflit, et les pointages que les diagnostics citent, dont le démarrage annulé
 d'un `OUVRANT_ANNULE` et les arrêts qui le visent). L'échelle va d'une heure avant le premier instant reçu de ces pointages et

@@ -125,15 +125,14 @@ export interface SurUneVoie<Element> {
 
 export const surVoies = <Element>(
   elements: readonly Element[],
-  instantDe: (element: Element) => number,
-  pixelsParHeure: number,
+  abscisseEnPixelsDe: (element: Element) => number,
 ): readonly SurUneVoie<Element>[] => {
-  const dernierParVoie: number[] = [];
+  const derniereParVoie: number[] = [];
   return elements.map(element => {
-    const instant = instantDe(element);
-    const libre = dernierParVoie.findIndex(dernier => ecartEnPixels(dernier, instant, pixelsParHeure) >= LARGEUR_D_UN_REPERE_PX);
-    const voie = libre === -1 ? dernierParVoie.length : libre;
-    dernierParVoie[voie] = instant;
+    const abscisse = abscisseEnPixelsDe(element);
+    const libre = derniereParVoie.findIndex(derniere => Math.abs(abscisse - derniere) >= LARGEUR_D_UN_REPERE_PX);
+    const voie = libre === -1 ? derniereParVoie.length : libre;
+    derniereParVoie[voie] = abscisse;
     return { element, voie };
   });
 };

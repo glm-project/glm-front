@@ -791,6 +791,38 @@ describe('Frise of a dossier', () => {
     thenTheMarkersStandOnRows([['p-1'], ['p-2'], ['p-3']]);
   });
 
+  it('should offset by a lane a marker that the left edge pushes closer than a touch target to the previous one', async () => {
+    const dossier = {
+      journal: [
+        pointageLe('p-1', 'DEMARRAGE', 14, '08:00'),
+        pointageLe('p-2', 'PASSAGE_NC', 14, '11:30'),
+        pointageLe('p-3', 'ARRET', 15, '10:00'),
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+    await whenTheFriseIsMeasured(356);
+
+    thenTheMarkersStandOnRows([['p-1', 'p-3'], ['p-2']]);
+  });
+
+  it('should offset by a lane a marker that the right edge pushes closer than a touch target to the previous one', async () => {
+    const dossier = {
+      journal: [
+        pointageLe('p-1', 'DEMARRAGE', 14, '08:00'),
+        pointageLe('p-2', 'PASSAGE_NC', 15, '06:30'),
+        pointageLe('p-3', 'ARRET', 15, '10:00'),
+      ],
+      activites: [],
+    };
+
+    await whenRenderingTheFrise(dossier);
+    await whenTheFriseIsMeasured(356);
+
+    thenTheMarkersStandOnRows([['p-1', 'p-2'], ['p-3']]);
+  });
+
   it('should give each activity its own row, below the pointages, in the order of their start', async () => {
     const dossier = {
       journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'PASSAGE_NC', '08:20')],
@@ -1794,6 +1826,23 @@ describe('Frise of a dossier', () => {
     await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
 
     await whenTheFriseIsMeasured(390);
+
+    thenTheMarkersAfterTheActAreOffsetByALane('p-1', 'p-2');
+  });
+
+  it('should offset by a lane the markers after the act that the left edge pushes closer than a touch target', async () => {
+    const dossier = { journal: [pointageLe('debut-8', 'DEMARRAGE', 14, '08:00')], activites: [] };
+    const apres = {
+      journal: [
+        pointageLe('p-1', 'DEMARRAGE', 14, '08:00'),
+        pointageLe('p-2', 'PASSAGE_NC', 14, '11:30'),
+        pointageLe('p-3', 'ARRET', 15, '10:00'),
+      ],
+      activites: [],
+    };
+    await whenRenderingTheFrise(dossier, undefined, undefined, undefined, { avant: dossier, apres });
+
+    await whenTheFriseIsMeasured(356);
 
     thenTheMarkersAfterTheActAreOffsetByALane('p-1', 'p-2');
   });

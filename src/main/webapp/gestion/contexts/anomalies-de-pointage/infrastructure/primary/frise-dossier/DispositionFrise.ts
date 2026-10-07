@@ -11,7 +11,6 @@ import {
   Graduation,
   graduationsDe,
   instantsRecus,
-  pixelsParHeureDe,
   positionSur,
   positionTenueAuxBords,
   surVoies,
@@ -183,6 +182,12 @@ const symboleDuGeste = (fait: PointageAnomalie['fait']): string =>
 const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefined): boolean =>
   poignee?.origine === pointage.id.pointage && Date.parse(poignee.instant) !== Date.parse(pointage.fait.instant);
 
+const gaucheDuRepere = (instant: number, contexte: ContexteDeFrise): number =>
+  positionTenueAuxBords(positionSur(contexte.echelle, instant), contexte.largeur);
+
+const abscisseEnPixelsDuRepere = (pointage: PointageAnomalie, contexte: ContexteDeFrise): number =>
+  (gaucheDuRepere(Date.parse(pointage.fait.instant), contexte) / POSITION_DU_BORD) * contexte.largeur;
+
 const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, contexte: ContexteDeFrise): RepereFrise => {
   const deplace = estDeplace(pointage, contexte.poignee);
   const tardif = contexte.tardifs.has(pointage.id.pointage);
@@ -190,7 +195,7 @@ const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: number, co
   return {
     kind: 'REPERE',
     instant: Date.parse(pointage.fait.instant),
-    gauche: positionTenueAuxBords(positionSur(contexte.echelle, Date.parse(pointage.fait.instant)), contexte.largeur),
+    gauche: gaucheDuRepere(Date.parse(pointage.fait.instant), contexte),
     haut: contexte.hautDesReperes + voie * HAUTEUR_D_UN_ELEMENT_PX,
     voie,
     cle: `pointage:${pointage.id.pointage}`,
@@ -358,11 +363,7 @@ const dispositionApres = (
 ): DispositionApres => {
   const modifiees = activitesModifiees(apercu.avant.activites, apercu.apres.activites);
   const poses = faitsDeLActe(apercu.avant.journal, apercu.apres.journal);
-  const reperes = surVoies(
-    pointages,
-    pointage => Date.parse(pointage.fait.instant),
-    pixelsParHeureDe(contexte.echelle, contexte.largeur),
-  ).map(({ element, voie }) => ({
+  const reperes = surVoies(pointages, pointage => abscisseEnPixelsDuRepere(pointage, contexte)).map(({ element, voie }) => ({
     ...repereDe(element, false, voie, { ...contexte, poignee: undefined, tardifs: new Set(), faitsDeLActe: poses }),
     haut: HAUTEUR_DU_TITRE_PX + voie * HAUTEUR_D_UN_ELEMENT_PX,
   }));
@@ -408,11 +409,9 @@ export const dispositionDeFrise = ({ vue, maintenant: now, poignee, placement, a
   const intitule = intituleDesPointages(pointages);
   const hautDesReperes = hautDesReperesSous(intitule);
   const contexte = { now, echelle, poignee, tardifs, faitsDeLActe: new Set<string>(), hautDesReperes, largeur };
-  const reperes = surVoies(
-    pointages,
-    pointage => Date.parse(pointage.fait.instant),
-    pixelsParHeureDe(contexte.echelle, contexte.largeur),
-  ).map(({ element, voie }) => repereDe(element, enCause.has(element.id.pointage), voie, contexte));
+  const reperes = surVoies(pointages, pointage => abscisseEnPixelsDuRepere(pointage, contexte)).map(({ element, voie }) =>
+    repereDe(element, enCause.has(element.id.pointage), voie, contexte),
+  );
   const hautDeLaPoignee = hautDesReperes + hauteurDesReperes(reperes);
   const hautDesActivites = hautDeLaPoignee + (poignee === undefined ? 0 : HAUTEUR_D_UN_ELEMENT_PX) + ESPACE_ENTRE_RANGEES_PX;
   const barres = parDebut(vue.activites).map((activite, rang) =>

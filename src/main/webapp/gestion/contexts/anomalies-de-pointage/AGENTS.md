@@ -200,7 +200,7 @@ repères, sans interaction, que la rangée de placement ne recouvre pas ; absent
 (fin pleine si une fin est reçue) ; le front ne déduit aucune fin d'un pointage. Une activité sans période garde sa rangée
 et son libellé, sans barre. Un repère par pointage (symbole du geste, un par geste : ▶ Démarrage, ▷ Démarrage en NC, ◆ Passage en NC, ◇ Retour en bon,
 ■ Arrêt ; heure HH:MM, barré s'il est annulé, badge « R »
-s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repères à moins de 44 px l'un de l'autre, à la largeur mesurée, descendent d'une
+s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repères à moins de 44 px l'un de l'autre, mesurés sur leur position dessinée (à la largeur mesurée, après le recul aux bords), descendent d'une
 voie entière, la hauteur d'une cible de 44 px, tant que le précédent est trop proche ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
 vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans
 l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
