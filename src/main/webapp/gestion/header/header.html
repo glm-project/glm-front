@@ -20,7 +20,7 @@
       data-selector="gestion-navigation"
     >
       <ul class="navigation-liste">
-        @for (destination of destinations; track destination.route) {
+        @for (destination of destinations(); track destination.route) {
         <li>
           <a
             class="lien"

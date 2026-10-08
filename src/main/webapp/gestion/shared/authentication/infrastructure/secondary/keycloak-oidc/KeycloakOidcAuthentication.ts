@@ -1,12 +1,15 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { AwaitedRealmRoles } from '@/gestion/shared/authentication/domain/AwaitedRealmRoles';
+import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { inject, Injectable } from '@angular/core';
 import Keycloak from 'keycloak-js';
 
 const MIN_TOKEN_VALIDITY_SECONDS = 70;
 
 @Injectable()
-export class KeycloakOidcAuthentication extends AuthenticationPort {
+export class KeycloakOidcAuthentication extends AuthenticationPort implements RolesPort {
+  private readonly awaitedRoles = new AwaitedRealmRoles();
   private readonly keycloak: Keycloak = inject(Keycloak);
   private readonly errorHandler = inject(ErrorHandlerPort);
 
@@ -19,6 +22,11 @@ export class KeycloakOidcAuthentication extends AuthenticationPort {
     }
 
     await this.refreshToken();
+    this.awaitedRoles.grant(this.keycloak.realmAccess?.roles ?? []);
+  }
+
+  realmRoles(): Promise<readonly string[]> {
+    return this.awaitedRoles.promise;
   }
 
   override async synchronizeSession(): Promise<void> {

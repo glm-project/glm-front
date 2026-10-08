@@ -1,5 +1,7 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
+import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
+import { ROLE_GESTIONNAIRE } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
+import { InMemoryGestionAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/in-memory/InMemoryGestionAuthentication';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
@@ -7,28 +9,42 @@ import { provideRouter } from '@angular/router';
 import { dataSelector } from '@test/utils/DataSelector';
 import { GestionHeader } from './header';
 
+const configureHeaderOf = async (roles: readonly string[]): Promise<void> => {
+  await TestBed.configureTestingModule({
+    providers: [
+      provideRouter([{ path: '**', children: [] }]),
+      { provide: ComponentFixtureAutoDetect, useValue: true },
+      { provide: InMemoryGestionAuthentication, useFactory: () => new InMemoryGestionAuthentication(roles) },
+      { provide: AuthenticationPort, useExisting: InMemoryGestionAuthentication },
+      { provide: RolesPort, useExisting: InMemoryGestionAuthentication },
+    ],
+  }).compileComponents();
+};
+
+const showTheHeader = async (): Promise<ComponentFixture<GestionHeader>> => {
+  const shown = TestBed.createComponent(GestionHeader);
+  shown.componentRef.setInput('heading', 'glmfront');
+  await shown.whenStable();
+  return shown;
+};
+
+const openTheSession = async (shown: ComponentFixture<GestionHeader>): Promise<void> => {
+  await TestBed.inject(AuthenticationPort).authenticate();
+  await shown.whenStable();
+};
+
 describe('Gestion header', () => {
   let fixture: ComponentFixture<GestionHeader>;
   let authentication: AuthenticationPort;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      providers: [
-        provideRouter([{ path: '**', children: [] }]),
-        { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: AuthenticationPort, useClass: InMemoryAuthentication },
-      ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(GestionHeader);
-    fixture.componentRef.setInput('heading', 'glmfront');
-    await fixture.whenStable();
+    await configureHeaderOf([ROLE_GESTIONNAIRE]);
+    fixture = await showTheHeader();
     authentication = TestBed.inject(AuthenticationPort);
+    await openTheSession(fixture);
   });
 
-  it('should end the session on click on the logout button', async () => {
-    await givenAnOpenSession();
-
+  it('should end the session on click on the logout button', () => {
     whenClickingLogout();
 
     thenTheSessionIsOver();
@@ -117,8 +133,6 @@ describe('Gestion header', () => {
     expect(header.querySelector(dataSelector('header-heading'))?.textContent.trim()).toBe(heading);
   };
 
-  const givenAnOpenSession = (): Promise<void> => authentication.authenticate();
-
   const whenClickingLogout = (): void => {
     const logoutButton = fixture.debugElement.query(By.css(dataSelector('gestion-logout'))).nativeElement as HTMLElement;
     logoutButton.click();
@@ -126,5 +140,44 @@ describe('Gestion header', () => {
 
   const thenTheSessionIsOver = (): void => {
     expect(authentication.currentToken()).toBeUndefined();
+  };
+});
+
+describe('Gestion header, according to the realm roles', () => {
+  it('should offer the anomalies destination to a gestionnaire', async () => {
+    await configureHeaderOf([ROLE_GESTIONNAIRE]);
+    const header = await showTheHeader();
+
+    await openTheSession(header);
+
+    thenAnomaliesAreOffered(true);
+  });
+
+  it('should hide the anomalies destination from a consultant', async () => {
+    await configureHeaderOf(['ROLE_CONSULTANT']);
+    const header = await showTheHeader();
+
+    await openTheSession(header);
+
+    thenAnomaliesAreOffered(false);
+    thenTheOtherDestinationsAreOffered();
+  });
+
+  it('should hide the anomalies destination while the realm roles are unknown', async () => {
+    await configureHeaderOf([ROLE_GESTIONNAIRE]);
+
+    await showTheHeader();
+
+    thenAnomaliesAreOffered(false);
+    thenTheOtherDestinationsAreOffered();
+  });
+
+  const thenAnomaliesAreOffered = (offered: boolean): void => {
+    expect(document.querySelector(dataSelector('gestion-navigation-anomalies')) !== null).toBe(offered);
+  };
+
+  const thenTheOtherDestinationsAreOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-navigation-supervision')) !== null).toBe(true);
+    expect(document.querySelector(dataSelector('gestion-navigation-operateurs')) !== null).toBe(true);
   };
 });

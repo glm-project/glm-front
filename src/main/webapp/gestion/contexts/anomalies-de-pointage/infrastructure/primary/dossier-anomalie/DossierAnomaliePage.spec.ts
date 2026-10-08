@@ -27,7 +27,6 @@ import {
   ResultatVerification,
 } from '../../../domain/acte/AnomaliesActesPorts';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
 import {
   ActiviteAnomalie,
   AdresseDossier,
@@ -860,7 +859,6 @@ describe('Anomaly dossier page', () => {
         { provide: AnomaliesReadPort, useValue: read },
         { provide: PrevisualisationAnomaliePort, useValue: preview },
         { provide: ApplicationActePort, useValue: application },
-        { provide: AnomaliesRightsPort, useValue: { canApply: () => true } },
         { provide: ErrorHandlerPort, useValue: { handleError: () => undefined } },
       ],
     });
@@ -1054,16 +1052,6 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     thenAbsent('anomalie-actions-directes');
-  });
-
-  it('should show the direct actions of a consultant disabled, with the reason', async () => {
-    givenAConsultantWhoCannotApplyDecisions();
-    givenAnActivityAlreadyStoppedBeforeTheEndAtFault();
-
-    await whenRendering();
-
-    thenTheDirectActionsAreDisabled();
-    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
   });
 
   it('should disable the direct actions while a write has an unknown outcome', async () => {
@@ -1312,16 +1300,6 @@ describe('Anomaly dossier page', () => {
     await whenSelecting('debut-8');
 
     thenTheSelectionOffersNoAction();
-  });
-
-  it('should offer a consultant the actions of the selection disabled, with the reason', async () => {
-    givenAConsultantWhoCannotApplyDecisions();
-    givenDiagnosticsOn(['fin-17']);
-
-    await whenRendering();
-
-    thenTheSelectionActionsAreDisabled();
-    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
   });
 
   it('should disable the actions of the selection while a write has an unknown outcome', async () => {
@@ -2879,15 +2857,6 @@ describe('Anomaly dossier page', () => {
     expect(read.elementsDemandes).toBe(0);
   });
 
-  it('should not read the referential for a consultant who cannot apply decisions', async () => {
-    givenAConsultantWhoCannotApplyDecisions();
-
-    await whenRendering();
-
-    thenTextContains('anomalie-droits', 'La correction est réservée aux gestionnaires');
-    expect(read.referentielDemandes).toBe(0);
-  });
-
   it('should announce the loading of the referential in place of the operator and workstation fields', async () => {
     const attente = givenTheReferentielIsStillLoading();
 
@@ -4043,16 +4012,6 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
 
       await whenCancelling('debut-8');
-
-      thenAbsent('anomalie-frise-placement');
-    });
-
-    it('should offer no placement row to a consultant, who cannot choose the regularisation', async () => {
-      givenAnAutomaticEnd();
-      givenAConsultantWhoCannotApplyDecisions();
-      await whenRendering();
-
-      await whenClicking('anomalie-choix');
 
       thenAbsent('anomalie-frise-placement');
     });
@@ -5570,10 +5529,6 @@ describe('Anomaly dossier page', () => {
       kind: 'DOSSIER',
       dossier: { ...dossier, journal: dossier.journal.map(pointage => ({ ...pointage, fait: { ...pointage.fait, instant } })) },
     };
-  };
-
-  const givenAConsultantWhoCannotApplyDecisions = (): void => {
-    TestBed.overrideProvider(AnomaliesRightsPort, { useValue: { canApply: () => false } });
   };
 
   const givenTheReferentielIsStillLoading = (): PendingResponseFixture<ReferentielAnomalies> => {

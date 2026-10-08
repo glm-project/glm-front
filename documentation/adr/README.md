@@ -134,3 +134,7 @@ something stays, with a status that says what died.
   `app/shared/date-format` owns locale, hour cycle and named formats (instant in local time, calendar day in
   UTC), gestion's Material adapter parses strictly, skipped hours are refused, and lint closes `Intl`,
   `toLocale*String`, `DatePipe` and the `date` pipe elsewhere
+
+- [0052 — Réserver les anomalies au gestionnaire par les rôles de la session](0052-reserve-anomalies-to-the-gestionnaire.md) —
+  un `RolesPort` à promesse qui reste en attente si l'authentification échoue, un garde `canMatch` qui ne renvoie
+  jamais `false`, un menu filtré par les mêmes rôles figés pour la session

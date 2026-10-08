@@ -28,7 +28,6 @@ import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { ActionDirecte, ActionsDirectes } from '../../../domain/dossier/ActionsDirectes';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { AnomaliesRightsPort } from '../../../domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { IssueDeLActe } from '../../../domain/dossier/IssueDeLActe';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
@@ -104,7 +103,6 @@ export class DossierAnomaliePage {
   private precedente: AdresseDossier | undefined;
   protected readonly now = new Date();
   protected readonly preparation = inject(PreparationActe);
-  protected readonly droits = inject(AnomaliesRightsPort);
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
@@ -140,10 +138,7 @@ export class DossierAnomaliePage {
     page: this.parametres().get('page'),
   }));
   protected readonly lecture = resource({ params: () => ({ adresse: this.adresse() }), loader: ({ params }) => this.read(params.adresse) });
-  protected readonly referentiel = resource({
-    params: () => (this.droits.canApply() ? true : undefined),
-    loader: () => this.port.referentiel(),
-  });
+  protected readonly referentiel = resource({ loader: () => this.port.referentiel() });
   protected readonly etatReferentiel = etatDeLecture(this.referentiel);
   protected readonly identiteForcee = computed(() => this.etatReferentiel.premierChargement() || this.etatReferentiel.enPanne());
   protected readonly identiteDepliee = computed(() => this.identiteDeployee() || this.identiteForcee());

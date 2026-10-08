@@ -13,15 +13,44 @@ RxJS and browser-storage types outside its signature.
 A missing token or tenant is a normal state. Callers branch on the optional value; they do not manufacture a
 credential or reach into an adapter.
 
+## Gestion reads the realm roles through a second port
+
+`gestion/shared/authentication/domain/RolesPort.ts` exposes `realmRoles()`, a promise that settles once
+authentication has succeeded, with the realm roles of the session. It never rejects and never settles empty
+for a failure: when authentication fails or Keycloak opens no session (the window reloads), the promise stays
+pending, so no second error is reported and nothing redirects before the reload. Roles are read once, at the
+end of `authenticate()`; a role changed in Keycloak applies at the next sign-in, and the back stays the
+authority. The port holds no business word. `ROLE_GESTIONNAIRE` and the predicate `isReservedToGestionnaire`
+live once, in `gestion/shared/authentication/infrastructure/primary/gestionnaire.ts`, for every Gestion caller.
+
+`KeycloakOidcAuthentication` implements both ports on one object. The header turns `realmRoles()` into a signal
+and drops the « Anomalies » destination until it holds `ROLE_GESTIONNAIRE`, so the entry appears when
+authentication ends. Do not read this port through `resource()`: a promise that may stay pending would hold the
+application unstable. The decision and its alternatives are in
+[ADR 0052](adr/0052-reserve-anomalies-to-the-gestionnaire.md).
+
+The `anomalies` route reserves itself with `reservedToGestionnaire`, a `canMatch` guard in
+`gestion/shared/authentication/infrastructure/primary/`. It awaits `realmRoles()` and returns `true` for the
+gestionnaire, or the `UrlTree` of `/` for anyone else, so the reserved address simply does not match and the
+Supervision opens. It never returns `false`: the repository has no `**` route, so a refusal would raise NG04002
+towards `ErrorHandlerPort`. While authentication is pending, and for good if it fails, the guard stays pending
+with the promise: the address does not change and no error is added to the authentication failure. A unit
+spec runs the guard through `TestBed.runInInjectionContext`; the application tests hold, release or refuse
+authentication to cover the journeys. The redirection is not recorded for a consultant: in-app, the router never
+moved the URL to the reserved address, so it pushes `/` after the current page; on a load or a browser
+traversal it replaces the entry. Going back therefore returns to the previous page and never to the reserved
+address.
+
 ## Each front owns its wiring
 
-`gestion/auth.provider.ts` builds `keycloak-js` from the front environment and binds
-`KeycloakOidcAuthentication`. The Gestion shell mounts routed content only after `authenticate()` succeeds,
+`gestion/auth.provider.ts` builds `keycloak-js` from the front environment, binds
+`KeycloakOidcAuthentication`, and exposes it as `AuthenticationPort` and `RolesPort` with `useExisting`. The Gestion shell mounts routed content only after `authenticate()` succeeds,
 so the first API session synchronization cannot precede the authorization-code exchange. An authentication
 failure is reported through `ErrorHandlerPort` and keeps the routed content closed.
 
-The Cypress build replaces that provider file with a composition under `src/test/`. It uses the in-memory
-adapter by default and permits a fixture to retain or refuse authentication. Browser scenarios wait for
+The Cypress build replaces that provider file with a composition under `src/test/`. It binds one
+`InMemoryGestionAuthentication` to both ports, plays the gestionnaire by default, plays other realm roles
+through `window.gestionRolesFixture`, and permits a fixture to retain or refuse authentication. Browser scenarios wait for
 authentication to reach the port and for the shell to render before releasing or refusing it; they do not
 depend on routing completing while authentication is pending. Those fixture controls belong to the test
 build alone.

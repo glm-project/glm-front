@@ -100,7 +100,7 @@ ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément,
 et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
 sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
 Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entrée « Tous les opérateurs » par
-`avecTous`), alimenté par `operateurs()` que la liste lit pour tout lecteur, consultant compris, à chaque ouverture, sans cache.
+`avecTous`), alimenté par `operateurs()` que la liste lit à chaque ouverture, sans cache.
 L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que
 les opérateurs ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Des opérateurs indisponibles
 affichent « Liste des opérateurs indisponible » et « Réessayer », désactivent le filtre sans toucher à la liste, et le
@@ -150,7 +150,7 @@ répétée, et un pointage absent du journal ou déjà annulé n'en reçoit aucu
 l'heure du pointage visé (`libelleDeLAction` : « Annuler l'arrêt de 17:00 », « Corriger l'heure de l'arrêt de 07:00 », article
 élidé et geste qualifié comme les phrases) ; l'heure porte ses secondes quand un autre pointage du journal tombe dans la même
 minute. Choisir une action directe se comporte comme choisir une proposition du serveur (`aria-pressed`, `data-acte`, focus sur la saisie d'acte, champ heure
-ouvert pour une correction ; une action n'a qu'une identité, l'acte et le pointage) ; elle est désactivée pour le consultant et pendant une opération, avec le message des droits, et
+ouvert pour une correction ; une action n'a qu'une identité, l'acte et le pointage) ; elle est désactivée pendant une opération, et
 la section est absente sans action. Sous les actions, « Autres corrections » (repli, `anomalie-detail`) rappelle que Corriger
 et Annuler du pointage sélectionné sont dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation,
 `anomalie-regulariser`).
@@ -286,7 +286,7 @@ reçues (seulement s'il y en a) et la comparaison repliée de tous les pointages
 La sélection est un pointage ou une activité (`SelectionDuDossier`). Le panneau « Sélection », sous la frise et à gauche de « Votre décision »,
 porte le pointage choisi : geste, instant avec ses secondes, opérateur, poste, régularisation, annulation (motif, auteur,
 instant), remplacement, traçabilité (activités visée et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un
-pointage annulé, désactivés pour le consultant et pendant une opération. Pour une activité il dit sa catégorie, son état et son
+pointage annulé, désactivés pendant une opération. Pour une activité il dit sa catégorie, son état et son
 temps reçus (`tempsActivite`), son début et sa fin reçus (« Fin ») ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue » ; il n'a ni Corriger
 ni Annuler. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau dossier (autre
 adresse, relecture, reçu), elle revient à la sélection initiale (`selectionInitiale`) : le plus ancien pointage en cause d'un
@@ -327,8 +327,8 @@ expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, c
 ne tombe pas avec eux ; seul le dossier lit le référentiel entier.
 `nom` est « Prénom Nom » ; `code` est le code pupitre facultatif (`RestOperateur.identifiant`), pas un UUID. Les identités
 du référentiel suivent `ElementAnomalieId` (`OperateurAnomalieId`, `PosteAnomalieId`) ; `FaitPropose` et `SaisieFait`
-gardent des `string`, que le serveur reçoit tels quels, et le primaire emballe l'identité à la frontière. Le dossier ne lit
-le référentiel que si `droits.canApply()` (le consultant ne le lit pas), à chaque ouverture, sans cache. L'opérateur se choisit
+gardent des `string`, que le serveur reçoit tels quels, et le primaire emballe l'identité à la frontière. Le dossier lit
+le référentiel à chaque ouverture, sans cache. L'opérateur se choisit
 dans `SelecteurOperateurAnomalie` (le `SearchPicker` de Gestion : recherche sans accents sur le nom, le prénom et le code,
 options « Prénom Nom · code »), le bouton disant « Choisissez l'opérateur » tant que la saisie est vide ; le poste est un
 `<select>` natif qui commence par « Sans poste », puis les postes habilités de l'opérateur choisi, puis les autres. Une
@@ -414,7 +414,10 @@ aperçu avant toute confirmation. Une adresse devenue obsolète conserve son ré
 
 La composition utilise uniquement `HttpAnomalies`, y compris dans les parcours Cypress. Les réponses
 réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier
-et n'interprètent aucun acte. Les droits d'application restent `GESTIONNAIRE`.
+et n'interprètent aucun acte. La route `anomalies` est réservée au gestionnaire par un garde `canMatch` de Gestion
+(`reservedToGestionnaire`, voir [`authentication.md`](../../../../../../documentation/authentication.md)) : une
+personne sans le rôle est renvoyée vers `/` avant tout chargement du contexte. Les droits d'application restent
+`GESTIONNAIRE`.
 
 Les tests passent par la saisie et la résolution publiques, les contrats des ports, le DOM Cypress
 et les routes réelles. Leur liste et les garanties HTTP sont dans les [garanties de résolution](SCENARIOS.md).

@@ -1,6 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
+import { InMemoryGestionAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/in-memory/InMemoryGestionAuthentication';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
 import { DeviceGrantClient } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceGrantClient';
@@ -22,18 +24,22 @@ type LogoutOutcome = 'ends' | 'fails';
 
 interface KeycloakSession {
   opensSession?: boolean;
+  refusesToInitialize?: boolean;
   refresh?: RefreshOutcome;
   laterRefresh?: RefreshOutcome;
   logout?: LogoutOutcome;
+  realmRoles?: readonly string[];
 }
 
 const afterARoundTrip = <T>(outcome: () => Promise<T>): Promise<T> => new Promise<void>(resolve => setTimeout(resolve)).then(outcome);
 
 const keycloakSessionFixture = ({
   opensSession = true,
+  refusesToInitialize = false,
   refresh = 'keeps',
   laterRefresh = refresh,
   logout = 'ends',
+  realmRoles,
 }: KeycloakSession = {}): Keycloak => {
   let token: string | undefined;
   let refreshedAtBoot = false;
@@ -56,6 +62,7 @@ const keycloakSessionFixture = ({
   Object.assign(keycloak, {
     init: () =>
       afterARoundTrip(() => {
+        if (refusesToInitialize) return Promise.reject(new Error('login refused'));
         token = opensSession ? KEYCLOAK_TOKEN : undefined;
         return Promise.resolve(opensSession);
       }),
@@ -71,6 +78,10 @@ const keycloakSessionFixture = ({
   });
   Object.defineProperty(keycloak, 'token', {
     get: () => token,
+    configurable: true,
+  });
+  Object.defineProperty(keycloak, 'realmAccess', {
+    get: () => (token === undefined || realmRoles === undefined ? undefined : { roles: [...realmRoles] }),
     configurable: true,
   });
   return keycloak;
@@ -305,7 +316,10 @@ const anAuthorizationServerFixture = (behaviour: Partial<AuthorizationServerBeha
 const buildInMemoryAuthentication = (): AuthenticationPort =>
   Injector.create({ providers: [InMemoryAuthentication] }).get(InMemoryAuthentication);
 
-const buildKeycloakAuthentication = (keycloak: Keycloak, errorHandler: ErrorHandlerPort = new ErrorHandlerFixture()): AuthenticationPort =>
+const buildKeycloakAuthentication = (
+  keycloak: Keycloak,
+  errorHandler: ErrorHandlerPort = new ErrorHandlerFixture(),
+): KeycloakOidcAuthentication =>
   Injector.create({
     providers: [
       { provide: Keycloak, useValue: keycloak },
@@ -325,8 +339,15 @@ const buildDeviceAuthentication = (server: HttpBackend, errorHandler: ErrorHandl
     ],
   }).get(DeviceAuthentication);
 
+const REALM_ROLES = ['ROLE_ALPHA', 'ROLE_BETA'] as const;
+
+type AuthenticationWithRoles = AuthenticationPort & RolesPort;
+
+const buildInMemoryGestionAuthentication = (): AuthenticationWithRoles => new InMemoryGestionAuthentication(REALM_ROLES);
+
 const adapters: [string, () => AuthenticationPort, string][] = [
   ['in-memory', buildInMemoryAuthentication, IN_MEMORY_TOKEN],
+  ['in-memory-gestion', buildInMemoryGestionAuthentication, IN_MEMORY_TOKEN],
   ['keycloak-oidc', () => buildKeycloakAuthentication(keycloakSessionFixture()), KEYCLOAK_TOKEN],
   ['device', () => buildDeviceAuthentication(anAuthorizationServerFixture()), DEVICE_TOKEN],
 ];
@@ -348,6 +369,14 @@ describe.each(adapters)('AuthenticationPort contract, honoured by %s', (_adapter
     thenItHandsOver(sessionToken);
   });
 
+  it('should keep the open session usable when synchronized', async () => {
+    await givenAnOpenSession();
+
+    await whenSynchronizingTheSession();
+
+    thenItHandsOver(sessionToken);
+  });
+
   it('should hand over nothing again once the session is ended', async () => {
     await givenAnOpenSession();
 
@@ -359,9 +388,53 @@ describe.each(adapters)('AuthenticationPort contract, honoured by %s', (_adapter
   const givenAnOpenSession = (): Promise<void> => authentication.authenticate();
   const whenOpeningTheSession = (): Promise<void> => authentication.authenticate();
   const whenEndingTheSession = (): void => authentication.logout();
+  const whenSynchronizingTheSession = (): Promise<void> => authentication.synchronizeSession();
   const thenItHandsOver = (token: string): void => expect(authentication.currentToken()).toEqual(token);
   const thenItHasNoToken = (): void => expect(authentication.currentToken()).toBeUndefined();
 });
+
+const buildKeycloakAuthenticationWithRoles = (): AuthenticationWithRoles =>
+  buildKeycloakAuthentication(keycloakSessionFixture({ realmRoles: REALM_ROLES }));
+
+const rolesAdapters: [string, () => AuthenticationWithRoles][] = [
+  ['in-memory', buildInMemoryGestionAuthentication],
+  ['keycloak-oidc', buildKeycloakAuthenticationWithRoles],
+];
+
+describe.each(rolesAdapters)('RolesPort contract, honoured by %s', (_adapter, buildAuthentication) => {
+  let authentication: AuthenticationWithRoles;
+
+  beforeEach(() => {
+    authentication = buildAuthentication();
+  });
+
+  it('should keep the realm roles unknown before the session is opened', async () => {
+    const roles = whenAskingForTheRealmRoles();
+
+    await thenTheRealmRolesAreStillUnknown(roles);
+  });
+
+  it('should hand over the realm roles of the open session', async () => {
+    const roles = whenAskingForTheRealmRoles();
+
+    await whenOpeningTheSession();
+
+    await thenTheRealmRolesAre(roles, REALM_ROLES);
+  });
+
+  const whenAskingForTheRealmRoles = (): Promise<readonly string[]> => authentication.realmRoles();
+  const whenOpeningTheSession = (): Promise<void> => authentication.authenticate();
+  const thenTheRealmRolesAre = async (roles: Promise<readonly string[]>, expected: readonly string[]): Promise<void> => {
+    expect(await roles).toEqual(expected);
+  };
+});
+
+const thenTheRealmRolesAreStillUnknown = async (roles: Promise<readonly string[]>): Promise<void> => {
+  expect(await outcomeAfterARoundTrip(roles)).toEqual('unknown');
+};
+
+const outcomeAfterARoundTrip = (roles: Promise<readonly string[]>): Promise<'known' | 'unknown'> =>
+  Promise.race([roles.then(() => 'known' as const), afterARoundTrip(() => Promise.resolve('unknown' as const))]);
 
 describe('Authentication without a device company', () => {
   it('should expose no company before device enrolment', async () => {
@@ -421,6 +494,33 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     thenTheWindowReloads();
   });
 
+  it('should keep the realm roles unknown when Keycloak opens no session', async () => {
+    const authentication = givenKeycloakOpensNoSession();
+    const roles = authentication.realmRoles();
+
+    await whenAuthenticating(authentication);
+
+    await thenTheRealmRolesAreStillUnknown(roles);
+  });
+
+  it('should keep the realm roles unknown when Keycloak refuses to initialize', async () => {
+    const authentication = givenKeycloakRefusesToInitialize();
+    const roles = authentication.realmRoles();
+
+    await whenAuthenticatingFails(authentication);
+
+    await thenTheRealmRolesAreStillUnknown(roles);
+  });
+
+  it('should hand over no realm role when Keycloak names none', async () => {
+    const authentication = givenKeycloakNamesNoRealmRole();
+    const roles = authentication.realmRoles();
+
+    await whenAuthenticating(authentication);
+
+    expect(await roles).toEqual([]);
+  });
+
   it('should hand over the renewed token once the session has refreshed', async () => {
     const authentication = givenKeycloakRenewsTheSession();
 
@@ -469,8 +569,12 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
     buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'renews' }), errorHandler);
   const givenKeycloakCannotRefreshTheSessionAfterBoot = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ laterRefresh: 'fails' }), errorHandler);
-  const givenKeycloakOpensNoSession = (): AuthenticationPort =>
+  const givenKeycloakOpensNoSession = (): KeycloakOidcAuthentication =>
     buildKeycloakAuthentication(keycloakSessionFixture({ opensSession: false }), errorHandler);
+  const givenKeycloakRefusesToInitialize = (): KeycloakOidcAuthentication =>
+    buildKeycloakAuthentication(keycloakSessionFixture({ refusesToInitialize: true }), errorHandler);
+  const givenKeycloakNamesNoRealmRole = (): KeycloakOidcAuthentication =>
+    buildKeycloakAuthentication(keycloakSessionFixture(), errorHandler);
   const givenKeycloakRenewsTheSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ refresh: 'renews' }), errorHandler);
   const givenKeycloakCannotRefreshTheSession = (): AuthenticationPort =>
@@ -478,6 +582,11 @@ describe('Keycloak OIDC Authentication, beyond the contract', () => {
   const givenKeycloakCannotEndTheSession = (): AuthenticationPort =>
     buildKeycloakAuthentication(keycloakSessionFixture({ logout: 'fails' }), errorHandler);
   const whenAuthenticating = (authentication: AuthenticationPort): Promise<void> => authentication.authenticate();
+  const whenAuthenticatingFails = (authentication: AuthenticationPort): Promise<void> =>
+    authentication.authenticate().then(
+      () => undefined,
+      () => undefined,
+    );
   const whenSynchronizingTheSession = (authentication: AuthenticationPort): Promise<void> => authentication.synchronizeSession();
   const whenEndingTheSession = (authentication: AuthenticationPort): void => authentication.logout();
   const whenAKeycloakRoundTripCompletes = (): Promise<void> => new Promise(resolve => setTimeout(resolve));

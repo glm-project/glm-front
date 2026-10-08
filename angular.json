@@ -89,10 +89,6 @@
                 {
                   "replace": "src/main/webapp/gestion/auth.provider.ts",
                   "with": "src/test/webapp/utils/gestion/authentication/auth.provider.ts"
-                },
-                {
-                  "replace": "src/main/webapp/gestion/anomalies-de-pointage.provider.ts",
-                  "with": "src/test/webapp/utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider.ts"
                 }
               ]
             }

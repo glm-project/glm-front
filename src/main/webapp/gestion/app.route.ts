@@ -6,11 +6,13 @@ import { elementsDeFabricationProvider } from './elements-de-fabrication.provide
 import { operateursProvider } from './operateurs.provider';
 import { postesProvider } from './postes.provider';
 import { releveDesHeuresProvider } from './releve-des-heures.provider';
+import { reservedToGestionnaire } from './shared/authentication/infrastructure/primary/reserved-to-gestionnaire.guard';
 import { supervisionAtelierProvider } from './supervision-atelier.provider';
 
 export const routes: Routes = [
   {
     path: 'anomalies',
+    canMatch: [reservedToGestionnaire],
     providers: anomaliesDePointageProvider,
     children: [
       {

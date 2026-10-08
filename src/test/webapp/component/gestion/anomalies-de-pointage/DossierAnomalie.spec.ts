@@ -40,7 +40,6 @@ import {
   whenCorrectingPointage,
   whenSelectingPointage,
 } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
-import type {} from '../../../utils/gestion/anomalies-de-pointage/anomalies-de-pointage.provider';
 
 const motifCorrectionFixture = 'La cible est la NC.';
 const IDS_DES_POINTAGES_AJOUTES = [
@@ -640,13 +639,6 @@ describe('Conflict dossier in Gestion', () => {
     thenTheCancelledEndGivesItsReason();
   });
 
-  it('should allow consultation while reserving all decisions to managers', () => {
-    whenConsultingWithoutManagementRights();
-    whenOpeningTheDetailedControls();
-
-    thenTheDossierCanOnlyBeRead();
-  });
-
   [320, 1024, 1280].forEach(width => {
     it(`should keep the dossier and its controls reachable at ${width} pixels`, () => {
       whenOpeningTheDossierAt(width);
@@ -679,30 +671,6 @@ describe('Conflict dossier in Gestion', () => {
     cy.document().should(document => {
       expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
     });
-  };
-
-  const whenConsultingWithoutManagementRights = (): void => {
-    cy.visit(`/anomalies/${suiviFixture}?pointage=${finFixture}`, {
-      onBeforeLoad: win => {
-        win.gestionAnomaliesGestionnaire = false;
-      },
-    });
-  };
-
-  const whenOpeningTheDetailedControls = (): void => {
-    cy.get(dataSelector('anomalie-detail')).click();
-  };
-
-  const thenTheDossierCanOnlyBeRead = (): void => {
-    cy.get(dataSelector('anomalie-droits')).should('contain.text', 'gestionnaires');
-    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
-    cy.get(dataSelector('anomalie-choix')).should('be.disabled');
-    cy.get(dataSelector('anomalie-action-directe')).should('have.length', 1).and('be.disabled');
-    cy.get(dataSelector('anomalie-corriger')).should('be.disabled');
-    cy.get(dataSelector('anomalie-annuler')).should('be.disabled');
-    cy.get(dataSelector('anomalie-regulariser')).should('be.disabled');
-    cy.get('@operateurs.all').should('have.length', 0);
-    cy.get('@postes.all').should('have.length', 0);
   };
 
   const givenAnObsoleteConfirmation = (): void => {
