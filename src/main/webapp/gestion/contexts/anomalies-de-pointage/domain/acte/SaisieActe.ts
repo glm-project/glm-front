@@ -88,6 +88,14 @@ export class SaisieActe {
     return fait !== undefined && (termineUneActivite(fait) || fait.activiteVisee !== '');
   }
 
+  instantDuFait(): string {
+    return this.fait()?.instant ?? '';
+  }
+
+  heureDifferenteDe(depart: SaisieActe): boolean {
+    return this.fait()?.instant !== depart.fait()?.instant;
+  }
+
   changesGuidedFact(changement: ChangementSaisie): boolean {
     if (changement.fait === undefined) return false;
     const champs = Object.keys(changement.fait);

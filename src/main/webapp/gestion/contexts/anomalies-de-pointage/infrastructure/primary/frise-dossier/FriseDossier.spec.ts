@@ -130,6 +130,7 @@ describe('Frise of a dossier', () => {
   let requestedSelections: SelectionDuDossier[];
   let requestedMoves: DeplacementDemande[];
   let requestedPlacements: PlacementDemande[];
+  let handleReleases: number;
   let resizeObserver: ResizeObserverFixture;
 
   beforeEach(() => {
@@ -137,6 +138,7 @@ describe('Frise of a dossier', () => {
     requestedSelections = [];
     requestedMoves = [];
     requestedPlacements = [];
+    handleReleases = 0;
     HTMLElement.prototype.setPointerCapture = () => undefined;
   });
 
@@ -1314,6 +1316,56 @@ describe('Frise of a dossier', () => {
     whenMovingThePointerOverTheHandleTo(900);
 
     thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it.each(['pointerup', 'pointercancel'])('should announce that the handle was released when the gesture ends with %s', async fin => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    whenTheGestureEndsWith(fin);
+
+    thenTheHandleWasReleased(1);
+  });
+
+  it('should announce no release when a pointer ends over the handle without having grabbed it', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenTheGestureEndsWith('pointerup');
+
+    thenTheHandleWasReleased(0);
+  });
+
+  it('should announce the release of a disabled handle never, since it cannot be grabbed', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { desactivee: true, bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    whenTheGestureEndsWith('pointerup');
+
+    thenTheHandleWasReleased(0);
   });
 
   it('should not follow the pointer on a disabled handle', async () => {
@@ -2730,6 +2782,9 @@ describe('Frise of a dossier', () => {
     fixture.componentInstance.selectionDemandee.subscribe(demandee => requestedSelections.push(demandee));
     fixture.componentInstance.deplacementDemande.subscribe(demande => requestedMoves.push(demande));
     fixture.componentInstance.placementDemande.subscribe(demande => requestedPlacements.push(demande));
+    fixture.componentInstance.poigneeRelachee.subscribe(() => {
+      handleReleases += 1;
+    });
     await fixture.whenStable();
   };
 
@@ -2860,6 +2915,10 @@ describe('Frise of a dossier', () => {
 
   const thenTheKeyIsLeftToTheBrowser = (touche: KeyboardEvent): void => {
     expect(touche.defaultPrevented).toBe(false);
+  };
+
+  const thenTheHandleWasReleased = (expected: number): void => {
+    expect(handleReleases).toBe(expected);
   };
 
   const thenTheMovesAsked = (expected: readonly DemandeDeDeplacement[]): void => {

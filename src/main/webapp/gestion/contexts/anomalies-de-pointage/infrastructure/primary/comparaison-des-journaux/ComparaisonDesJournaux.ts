@@ -16,6 +16,7 @@ export class ComparaisonDesJournaux {
   readonly avant = input.required<DossierAnomalie>();
   readonly apres = input.required<DossierAnomalie>();
   readonly now = input.required<Date>();
+  readonly avecMotif = input(true);
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly remplacementDe = remplacementDe;
   protected readonly detailDuPointage = detailDuPointage;

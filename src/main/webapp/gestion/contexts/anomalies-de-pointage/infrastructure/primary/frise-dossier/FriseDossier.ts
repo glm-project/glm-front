@@ -36,6 +36,7 @@ export class FriseDossier {
   readonly selectionDemandee = output<SelectionDuDossier>();
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
+  readonly poigneeRelachee = output();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly estSelectionne = (selection: SelectionDuDossier): boolean => memeSelection(selection, this.selection());
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -84,7 +85,9 @@ export class FriseDossier {
   }
 
   protected relache(): void {
+    if (this.prise === undefined) return;
     this.prise = undefined;
+    this.poigneeRelachee.emit();
   }
 
   protected clique(clic: MouseEvent, plan: HTMLElement, barre: BarreFrise): void {

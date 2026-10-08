@@ -15,7 +15,7 @@
             [avecGeste]="true"
           />
           @if (pointage.annulation; as annulation) {
-          <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
+          <p class="text-danger">{{ libelles.annule }} @if (avecMotif()) { · {{ annulation.motif }} }</p>
           } @if (pointage.regularisation) {
           <p>{{ libelles.regularisation }}</p>
           }
@@ -35,7 +35,7 @@
             [avecGeste]="true"
           />
           @if (pointage.annulation; as annulation) {
-          <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
+          <p class="text-danger">{{ libelles.annule }} @if (avecMotif()) { · {{ annulation.motif }} }</p>
           } @if (pointage.remplace; as original) {
           <p>{{ remplacementDe(apres().journal, original.pointage, now()) }}</p>
           } @if (pointage.regularisation) {

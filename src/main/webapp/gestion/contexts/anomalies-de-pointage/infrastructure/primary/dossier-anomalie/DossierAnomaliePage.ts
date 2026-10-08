@@ -6,6 +6,7 @@ import {
 } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
 import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
+import { NgComponentOutlet } from '@angular/common';
 import {
   afterNextRender,
   Component,
@@ -69,12 +70,15 @@ import {
 import { SectionDeFrise } from '../section-de-frise/SectionDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 import { StatutDeLOperation } from '../statut-de-l-operation/StatutDeLOperation';
+import { LectureDuDossier } from './vues-de-resolution/LectureDuDossier';
+import { Aiguillage, AiguillageSimple, aiguiller } from './vues-de-resolution/VuesDeResolution';
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 
 @Component({
   selector: 'glm-dossier-anomalie',
   imports: [
+    NgComponentOutlet,
     RouterLink,
     ChronologiePointagesPipe,
     InstantDatetimePipe,
@@ -106,6 +110,7 @@ export class DossierAnomaliePage {
   protected readonly now = new Date();
   protected readonly preparation = inject(PreparationActe);
   protected readonly libelles = LIBELLES_ANOMALIES;
+  protected readonly libellesResolution = LIBELLES_ANOMALIES.resolution;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
   protected readonly actionsDirectes = (dossier: DossierAnomalie) => ActionsDirectes.depuis(dossier).actions;
@@ -130,6 +135,10 @@ export class DossierAnomaliePage {
   protected readonly gesteDuFait = gesteDuFait;
   protected readonly erreursALire = erreursALire;
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
+  private readonly cleDeLAdresse = computed(() => {
+    const adresse = this.adresse();
+    return adresse === undefined ? '' : `${adresse.suivi.suivi}/${adresse.pointage.pointage}`;
+  });
   protected readonly retour = computed(() => ({
     nature: this.parametres().get('nature'),
     operateur: this.parametres().get('operateur'),
@@ -164,6 +173,27 @@ export class DossierAnomaliePage {
     const selection = this.selection();
     return selection?.kind === 'ACTIVITE' ? this.dossier()?.activites.find(activite => activite.id.activite === selection.id) : undefined;
   });
+  protected readonly aiguillage = linkedSignal<
+    { readonly cle: string; readonly dossier: DossierAnomalie | undefined },
+    Aiguillage | undefined
+  >({
+    source: () => ({ cle: this.cleDeLAdresse(), dossier: this.dossier() }),
+    computation: ({ cle, dossier }, precedent) => {
+      const fige = precedent?.source.cle === cle ? precedent.value : undefined;
+      return fige ?? (dossier === undefined ? undefined : aiguiller(dossier));
+    },
+  });
+  protected readonly vueSimple = computed(() => {
+    const aiguillage = this.aiguillage();
+    return aiguillage?.kind === 'SIMPLE' ? aiguillage : undefined;
+  });
+  protected readonly sortieAConfirmer = signal(false);
+  protected readonly lectureDuDossier: LectureDuDossier = {
+    relire: adresse => this.relire(adresse),
+    remplacerPar: dossier => {
+      this.remplacerPar(dossier);
+    },
+  };
   private readonly maintenant = signal(new Date().toISOString());
   protected readonly saisie = computed(() => this.preparation.resolution().saisie);
   protected readonly proposition = computed(() => this.saisie().proposition);
@@ -203,6 +233,37 @@ export class DossierAnomaliePage {
   private contextChanged(): void {
     this.preparation.contextChanged();
     this.choixSelectionne.set(undefined);
+    this.sortieAConfirmer.set(false);
+  }
+
+  protected demanderUneAutreCorrection(vue: AiguillageSimple): void {
+    if (this.saisie().heureDifferenteDe(vue.choix.saisie)) this.sortieAConfirmer.set(true);
+    else this.passerALaVueComplete(vue);
+  }
+
+  protected passerALaVueComplete(vue: AiguillageSimple): void {
+    this.contextChanged();
+    this.aiguillage.set({ kind: 'COMPLETE', vueSimple: vue });
+  }
+
+  protected revenirALaVueSimple(vue: AiguillageSimple): void {
+    this.contextChanged();
+    this.aiguillage.set(vue);
+  }
+
+  private async relire(adresse: AdresseDossier): Promise<DossierAnomalie | undefined> {
+    try {
+      const lecture = await this.port.read(adresse);
+      this.lecture.value.set(lecture);
+      return lecture.kind === 'DOSSIER' ? lecture.dossier : undefined;
+    } catch {
+      this.lecture.reload();
+      return undefined;
+    }
+  }
+
+  private remplacerPar(dossier: DossierAnomalie): void {
+    this.lecture.value.set({ kind: 'DOSSIER', dossier });
   }
 
   protected poigneeDe(dossier: DossierAnomalie): PoigneeDeFrise | undefined {
@@ -338,9 +399,7 @@ export class DossierAnomaliePage {
 
   private refreshAfterConfirmation(): void {
     const resultat = this.preparation.operation();
-    if (resultat.kind === 'APPLIQUE') {
-      this.lecture.value.set({ kind: 'DOSSIER', dossier: resultat.dossier });
-    }
+    if (resultat.kind === 'APPLIQUE') this.remplacerPar(resultat.dossier);
     this.refreshAfterConcurrency();
   }
 

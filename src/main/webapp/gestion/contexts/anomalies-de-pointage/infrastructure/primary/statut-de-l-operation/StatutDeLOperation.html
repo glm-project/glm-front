@@ -1,4 +1,4 @@
-@let etat = operation(); @if (etat.kind !== 'REPOS') {
+@let etat = operation(); @if (etat.kind !== 'REPOS' && etat.kind !== 'APERCU_EN_ARRIERE_PLAN') {
 <p class="mt-4 text-body-sm" role="status" data-selector="anomalie-operation">{{ libelles.operation[etat.kind] }}</p>
 @if (etat.kind === 'REFUS') {
 <p class="mt-2 text-body-sm text-danger" data-selector="anomalie-refus">{{ libelles.refus[etat.code] }}</p>

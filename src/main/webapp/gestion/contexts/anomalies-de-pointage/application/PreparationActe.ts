@@ -13,7 +13,9 @@ import { ChangementSaisie, SaisieActe } from '../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../domain/dossier/DossierAnomalie';
 
 export type EtatPreparationActe =
-  | { readonly kind: 'REPOS' | 'PREVISUALISATION' | 'CONFIRMATION' | 'CONCURRENCE' | 'ISSUE_INCONNUE' | 'ERREUR' }
+  | {
+      readonly kind: 'REPOS' | 'PREVISUALISATION' | 'APERCU_EN_ARRIERE_PLAN' | 'CONFIRMATION' | 'CONCURRENCE' | 'ISSUE_INCONNUE' | 'ERREUR';
+    }
   | RefusActe
   | { readonly kind: 'APPLIQUE'; readonly dossier: DossierAnomalie; readonly origine: DossierAnomalie };
 
@@ -79,13 +81,21 @@ export class PreparationActe {
     }
   }
 
-  async preview(dossier: DossierAnomalie): Promise<void> {
+  preview(dossier: DossierAnomalie): Promise<void> {
+    return this.requestPreview(dossier, 'PREVISUALISATION');
+  }
+
+  previewInBackground(dossier: DossierAnomalie): Promise<void> {
+    return this.requestPreview(dossier, 'APERCU_EN_ARRIERE_PLAN');
+  }
+
+  private async requestPreview(dossier: DossierAnomalie, kind: 'PREVISUALISATION' | 'APERCU_EN_ARRIERE_PLAN'): Promise<void> {
     if (this.confirmationOutcomeIsPending()) return;
     const saisie = this.actuelle().saisie;
     const acte = saisie.command(CadreDuFait.depuis(dossier.activites, new Date().toISOString()));
     if (acte === undefined) return;
     this.actuelle.set(ResolutionDeLAnomalie.prepare(saisie));
-    this.operationActuelle.set({ kind: 'PREVISUALISATION' });
+    this.operationActuelle.set({ kind });
     const demande = Symbol('prévisualisation');
     this.demande = demande;
     try {

@@ -24,12 +24,18 @@ export class SectionDeFrise {
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
   readonly apercu = input<ApercuDeFrise | undefined>(undefined);
+  readonly lectureSeule = input(false);
   readonly selectionDemandee = output<SelectionDuDossier>();
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
+  readonly poigneeRelachee = output();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly jourDeLaJournee = jourDeLaJournee;
   protected readonly phraseDeContexte = contexteDuSuivi;
+
+  protected aideDePlacement(): string {
+    return this.lectureSeule() ? this.libelles.frise.placerLaFinReelle : this.libelles.frise.placerLHeure;
+  }
 
   protected libelleDeLaJournee(): string {
     return this.libelles.voirLaJournee(this.operateur() ?? this.libelles.frise.contexte.operateurInconnu);

@@ -11,6 +11,11 @@ export const elementFinAutomatiqueFixture = '71000000-0000-0000-0000-00000000000
 export const finRegulariseeFixture = '71000000-0000-0000-0000-000000000007';
 export const finCorrigeeFixture = '71000000-0000-0000-0000-000000000008';
 export const activiteFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000009';
+export const passageFinAutomatiqueFixture = '71000000-0000-0000-0000-00000000000a';
+export const ouvrantSuivantFixture = '71000000-0000-0000-0000-00000000000b';
+export const activiteSuivanteFixture = '71000000-0000-0000-0000-00000000000c';
+export const debutSuivantFixture = instantLocalFixture(new Date(2026, 8, 14, 9, 0));
+export const echeanceSuivanteFixture = instantLocalFixture(new Date(2026, 8, 14, 22, 0));
 export const debutFinAutomatiqueFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0));
 export const echeanceFinAutomatiqueFixture = instantLocalFixture(new Date(2026, 8, 14, 21, 0));
 export const instantRegulariseLocalFixture = new Date(2026, 8, 14, 17, 0);
@@ -22,6 +27,7 @@ export const instantTardifLendemainFixture = instantLocalFixture(new Date(2026, 
 export const motifFinAutomatiqueFixture = 'Fin tardive confirmée avec l’opérateur';
 
 const adresseFixture = { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture };
+const adresseSuivanteFixture = { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantSuivantFixture };
 
 const ouvertureFixture = (sansPoste = false): components['schemas']['RestEvenementDAtelier'] => ({
   id: ouvrantFinAutomatiqueFixture,
@@ -114,6 +120,66 @@ export const dossierFinAutomatiqueFixture = (sansPoste = false): components['sch
   ],
   continuations: [],
 });
+
+const choixRegulariserFinFixture = (pointage: string, activite: string): components['schemas']['RestChoixDeResolution'] => ({
+  code: 'REGULARISER_FIN',
+  kind: 'REGULARISATION',
+  pointage,
+  fait: { ...finARegulariserFixture(), activiteVisee: activite },
+});
+
+export const dossierFinAutomatiqueEtConflitFixture = (): components['schemas']['RestDossierAnomalie'] => {
+  const dossier = dossierFinAutomatiqueFixture();
+  const passage: components['schemas']['RestEvenementDAtelier'] = {
+    ...finTardiveRecueFixture,
+    id: passageFinAutomatiqueFixture,
+    type: 'NON_CONFORMITE',
+    intention: 'TRANSITION',
+    dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 12, 0)),
+  };
+  return {
+    ...dossier,
+    perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture, passageFinAutomatiqueFixture]),
+    suivi: suiviFixture([ouvertureFixture(), passage]),
+    choix: [...(dossier.choix ?? []), { code: 'ANNULER_TRANSITION', kind: 'ANNULATION', pointage: passageFinAutomatiqueFixture }],
+  };
+};
+
+const ouvertureSuivanteFixture: components['schemas']['RestEvenementDAtelier'] = {
+  ...ouvertureFixture(),
+  id: ouvrantSuivantFixture,
+  activite: activiteSuivanteFixture,
+  dateDeSurvenue: debutSuivantFixture,
+  dateDEnregistrement: '2026-09-14T09:00:01Z',
+};
+
+const activiteSuivanteEchueFixture: components['schemas']['RestActiviteDuDossier'] = {
+  ...activiteEchueFixture(false),
+  evenement: ouvrantSuivantFixture,
+  activite: activiteSuivanteFixture,
+  debut: debutSuivantFixture,
+  fin: echeanceSuivanteFixture,
+  duree: 'PT13H',
+};
+
+export const dossierDeuxFinsAutomatiquesFixture = (
+  ancre: 'PREMIERE' | 'SUIVANTE' = 'PREMIERE',
+): components['schemas']['RestDossierAnomalie'] => {
+  const dossier = dossierFinAutomatiqueFixture();
+  const premiere = ancre === 'PREMIERE';
+  return {
+    ...dossier,
+    adresse: premiere ? adresseFixture : adresseSuivanteFixture,
+    perimetre: perimetreFixture([ouvrantFinAutomatiqueFixture, ouvrantSuivantFixture]),
+    suivi: suiviFixture([ouvertureFixture(), ouvertureSuivanteFixture]),
+    activites: [activiteEchueFixture(false), activiteSuivanteEchueFixture],
+    choix: [
+      premiere
+        ? choixRegulariserFinFixture(ouvrantFinAutomatiqueFixture, activiteFinAutomatiqueFixture)
+        : choixRegulariserFinFixture(ouvrantSuivantFixture, activiteSuivanteFixture),
+    ],
+  };
+};
 
 export const dossierFinTardiveFixture = (
   code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE' = 'CORRIGER_FIN_TARDIVE',
