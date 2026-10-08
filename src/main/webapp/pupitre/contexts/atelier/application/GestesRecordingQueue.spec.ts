@@ -35,7 +35,7 @@ const vueFixture: JournalDuPupitre = {
         nom: 'PR-2026-000015',
         reference: '1015',
         etat: 'EN_COURS',
-        type: 'PRODUIT',
+        categorie: 'MOULE',
         activites: [
           {
             ouverture: 'activite-fixture-30',
@@ -49,6 +49,7 @@ const vueFixture: JournalDuPupitre = {
         evenements: [],
       },
     ],
+    categories: [],
   },
 };
 

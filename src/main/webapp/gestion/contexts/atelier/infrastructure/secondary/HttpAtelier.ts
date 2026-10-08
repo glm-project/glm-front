@@ -9,6 +9,7 @@ import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { ActeDAtelier } from '../../domain/ActeDAtelier';
 import { AtelierPort } from '../../domain/AtelierPort';
+import { CategorieDElementEngage } from '../../domain/CategorieDElementEngage';
 import { ElementALAtelier } from '../../domain/ElementALAtelier';
 import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricationIntrouvable';
 import { ElementDejaALAtelier } from '../../domain/ElementDejaALAtelier';
@@ -31,7 +32,7 @@ const toElement = (suivi: RestSuivi): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi.id), {
     element: new ElementEngageId(suivi.element),
     nom: new NomDElementEngage(suivi.nom),
-    type: suivi.type,
+    categorie: new CategorieDElementEngage(suivi.categorie),
     etat: suivi.etat,
     engagement: new ActeDAtelier(new InstantDAtelier(suivi.engageLe), suivi.engagePar),
     cloture: toCloture(suivi),

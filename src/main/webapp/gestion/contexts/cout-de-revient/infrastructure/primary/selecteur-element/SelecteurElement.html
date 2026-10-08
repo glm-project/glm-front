@@ -18,7 +18,8 @@
   [(opened)]="ouvert"
 >
   <span pickerIdentity id="cout-identite" data-selector="cout-identite"
-    >@if (identite(); as element) { {{ libelles.identite(element.type, element.numero()) }} } @else { {{ libelles.choisirElement }} }</span
+    >@if (identite(); as element) { {{ libelles.identite(element.categorie, element.numero()) }} } @else { {{ libelles.choisirElement }}
+    }</span
   >
   <ul class="element-options">
     @for (element of propositions(); track element.id.value) {
@@ -31,7 +32,7 @@
         [attr.data-element]="element.id.value"
         [attr.aria-current]="element.id.value === elementCourant() ? 'true' : null"
       >
-        {{ libelles.identite(element.identite.type, element.identite.nom) }} @if (element.id.value === elementCourant()) {
+        {{ libelles.identite(element.identite.categorie, element.identite.nom) }} @if (element.id.value === elementCourant()) {
         <span class="text-body-sm text-ink-muted">{{ libelles.elementCourant }}</span> }
       </button>
     </li>

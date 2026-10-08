@@ -142,7 +142,7 @@ describe('Cost of manufacture of an element at the workshop', () => {
 
   const whenVisitingReferential = (): void => {
     cy.viewport(1280, 900);
-    cy.visit('/moules-et-of');
+    cy.visit('/produits');
     cy.wait('@elementsRead');
   };
 

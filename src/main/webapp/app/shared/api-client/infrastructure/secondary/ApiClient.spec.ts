@@ -41,6 +41,7 @@ const UN_SUIVI = {
   id: SUIVI_ID,
   journal: [],
   nom: 'OF-1',
+  categorie: 'OF',
   type: 'ORDRE_DE_FABRICATION',
 } satisfies components['schemas']['RestSuiviDAtelier'];
 

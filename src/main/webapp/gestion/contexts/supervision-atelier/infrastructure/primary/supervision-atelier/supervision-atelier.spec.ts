@@ -6,6 +6,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
@@ -47,10 +48,10 @@ const instantFixture = (heure: number, minute = 0, jour = 13): Instant => new In
 const veilleFixture = (heure: number, minute = 0): Instant => instantFixture(heure, minute, 12);
 
 const mouleFixture = (reference: string, nom = 'PRD-2026-000001'): ElementTravaille =>
-  new ElementTravaille({ type: 'PRODUIT', nom, reference: new ReferenceDElement(reference) });
+  new ElementTravaille({ categorie: new CategorieDElement('MOULE'), nom, reference: new ReferenceDElement(reference) });
 const ofFixture = (reference: string, nom = 'OF-2026-000042'): ElementTravaille =>
-  new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom, reference: new ReferenceDElement(reference) });
-const ofSansReferenceFixture = (nom: string): ElementTravaille => new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom });
+  new ElementTravaille({ categorie: new CategorieDElement('OF'), nom, reference: new ReferenceDElement(reference) });
+const ofSansReferenceFixture = (nom: string): ElementTravaille => new ElementTravaille({ categorie: new CategorieDElement('OF'), nom });
 
 interface ActiviteFixture {
   readonly id: string;
@@ -423,7 +424,7 @@ describe('Supervision atelier component', () => {
       activites: [
         activiteFixture(aliceFixture, {
           id: 'conflict-perso',
-          objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+          objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
           debut: instantFixture(8),
         }),
         activiteFixture(aliceFixture, {
@@ -534,7 +535,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite], sequencesEnConflit: [sequence] });
 
     expect(activitiesOf('alice').map(({ element }) => element)).toEqual(['OF 3004']);
-    expect(signal('supervision-sequence-en-conflit')).toBe('Séquence en conflit · Fraiseuse 1 Moule 1015 · À résoudre');
+    expect(signal('supervision-sequence-en-conflit')).toBe('Séquence en conflit · Fraiseuse 1 MOULE 1015 · À résoudre');
     expect(signal('supervision-signal-nc')).toBe('0 en NC');
     expect(signal('supervision-signal-a-verifier')).toBe('1 à vérifier : Martin Alice');
     thenLanesAre([
@@ -584,7 +585,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive(atelierFixture);
 
     expect(activitiesOf('op-aubert').map(({ element, poste, debut }) => ({ element, poste, debut }))).toEqual([
-      { element: 'Moule 1015', poste: 'Fraiseuse 1 · Fraisage', debut: 'depuis 07:05' },
+      { element: 'MOULE 1015', poste: 'Fraiseuse 1 · Fraisage', debut: 'depuis 07:05' },
       { element: 'OF 3004', poste: 'Tour 1 · Tournage', debut: 'depuis 09:40' },
     ]);
   });
@@ -609,7 +610,7 @@ describe('Supervision atelier component', () => {
       activites: [
         activiteFixture(aubertFixture, {
           id: 'act-perso',
-          objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+          objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
           poste: posteFixture('Tour 3', 'Tournage'),
           debut: instantFixture(7, 45),
         }),

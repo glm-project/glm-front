@@ -9,6 +9,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
 import { ActeDAtelier } from '../../../domain/ActeDAtelier';
 import { AtelierPort } from '../../../domain/AtelierPort';
+import { CategorieDElementEngage } from '../../../domain/CategorieDElementEngage';
 import { ElementALAtelier } from '../../../domain/ElementALAtelier';
 import { ElementEngageId } from '../../../domain/ElementEngageId';
 import { InstantDAtelier } from '../../../domain/InstantDAtelier';
@@ -23,7 +24,7 @@ class DialogHostFixture {}
 const mouleFixture = new ElementALAtelier(new SuiviId('suivi-1'), {
   element: new ElementEngageId('element-1'),
   nom: new NomDElementEngage('PRD-2026-000001'),
-  type: 'PRODUIT',
+  categorie: new CategorieDElementEngage('MOULE'),
   etat: 'EN_COURS',
   engagement: new ActeDAtelier(new InstantDAtelier(ENGAGEMENT_FIXTURE), AUTEUR_FIXTURE),
   cloture: undefined,

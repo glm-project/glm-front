@@ -2,12 +2,12 @@ import { DureeTravaillee } from '@/gestion/contexts/releve-des-heures/domain/dur
 import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { ActiviteDuReleve } from '@/gestion/contexts/releve-des-heures/domain/element/ActiviteDuReleve';
 import { CategorieDActivite } from '@/gestion/contexts/releve-des-heures/domain/element/CategorieDActivite';
+import { CategorieDElement } from '@/gestion/contexts/releve-des-heures/domain/element/CategorieDElement';
 import { ElementDuReleve } from '@/gestion/contexts/releve-des-heures/domain/element/ElementDuReleve';
 import { ElementReleveId } from '@/gestion/contexts/releve-des-heures/domain/element/ElementReleveId';
 import { IntervalleDActivite } from '@/gestion/contexts/releve-des-heures/domain/element/IntervalleDActivite';
 import { PosteDeLElement } from '@/gestion/contexts/releve-des-heures/domain/element/PosteDeLElement';
 import { PosteReleveId } from '@/gestion/contexts/releve-des-heures/domain/element/PosteReleveId';
-import { TypeDElement } from '@/gestion/contexts/releve-des-heures/domain/element/TypeDElement';
 import { ActiviteReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '@/gestion/contexts/releve-des-heures/domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '@/gestion/contexts/releve-des-heures/domain/releve/IdentiteOperateur';
@@ -105,7 +105,7 @@ export interface TotauxFixture {
 
 export interface ElementFixture {
   readonly id?: string;
-  readonly type?: TypeDElement;
+  readonly categorie?: string;
   readonly nom?: string;
   readonly reference?: string;
   readonly description?: string;
@@ -117,7 +117,7 @@ export interface ElementFixture {
 export const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId(fiche.id ?? 'element-1'),
-    type: fiche.type ?? 'PRODUIT',
+    categorie: new CategorieDElement(fiche.categorie ?? 'MOULE'),
     nom: fiche.nom ?? 'PRD-2026-000015',
     reference: fiche.reference,
     description: fiche.description,

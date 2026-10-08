@@ -5,6 +5,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { inject, Injectable } from '@angular/core';
 import { ActiviteDeSupervision, DescriptionActivite } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
@@ -34,7 +35,7 @@ const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
 
 const toElement = (element: RestElement): ElementTravaille =>
   new ElementTravaille({
-    type: element.type,
+    categorie: new CategorieDElement(element.categorie),
     nom: element.nom,
     ...(element.reference === undefined ? {} : { reference: new ReferenceDElement(element.reference) }),
   });

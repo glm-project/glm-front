@@ -50,13 +50,13 @@ const serveurFixture: AtelierExchangePort = {
 };
 
 const baseSuivis: SuiviDuPupitre[] = [
-  ...Array.from({ length: 12 }, (_, index) => ({
+  ...Array.from({ length: 48 }, (_, index) => ({
     conflits: [],
     id: `moule-${index + 1}`,
     nom: `PR-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(1015 + index),
     etat: 'EN_ATTENTE' as const,
-    type: 'PRODUIT' as const,
+    categorie: 'MOULE',
     activites: [],
     evenements: [],
   })),
@@ -66,7 +66,7 @@ const baseSuivis: SuiviDuPupitre[] = [
     nom: `OF-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(204 + index),
     etat: 'EN_ATTENTE' as const,
-    type: 'ORDRE_DE_FABRICATION' as const,
+    categorie: 'OF',
     activites: [],
     evenements: [],
   })),
@@ -86,6 +86,7 @@ const referentielFixture = {
     },
   ],
   suivis: baseSuivis,
+  categories: ['MOULE', 'OF'],
 };
 
 const parameters = new URLSearchParams(location.search);

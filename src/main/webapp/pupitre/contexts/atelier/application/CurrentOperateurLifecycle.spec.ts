@@ -24,6 +24,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { setTimeout as roundTrip } from 'node:timers';
 import { EtatHorsLigneDuPupitre } from './EtatHorsLigneDuPupitre';
@@ -48,7 +49,7 @@ const operateurAjouteFixture: OperateurDuPupitre = {
 };
 const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', identifiant: '050' };
 
-const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
+const referentielFixture = { operateurs: [operateurFixture], suivis: [], categories: [] };
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -173,7 +174,7 @@ describe('Designation du pupitre', () => {
     await whenTimePasses(10_000);
 
     thenOperatorIsDesignated();
-    expect(designation.pointage()?.moules[0]?.isActive()).toBe(false);
+    expect(elementsDeLaZoneFixture(designation.pointage(), 'MOULE')[0]?.isActive()).toBe(false);
     expect((await journal.read(Entreprise.of('atelier'))).evenements).toEqual([]);
   });
 
@@ -206,7 +207,7 @@ describe('Designation du pupitre', () => {
         {
           id: 'piece',
           nom: 'Piece',
-          type: 'PRODUIT' as const,
+          categorie: 'MOULE' as const,
           etat: 'EN_COURS' as const,
           evenements: [],
           conflits: [],
@@ -628,7 +629,7 @@ describe('Designation du pupitre', () => {
   });
 
   const givenAnOperateurAddedToTheServerReferential = (): void => {
-    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [] };
+    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [], categories: [] };
   };
   const givenAHangingServerExchange = (): void => {
     serveur.suspendExchanges();

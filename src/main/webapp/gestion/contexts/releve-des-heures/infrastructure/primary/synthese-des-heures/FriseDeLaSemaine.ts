@@ -137,7 +137,7 @@ const alertesDeLigne = (ligne: LigneDeFrise, jour: JourSurSonAxe, rang: number):
         .map(barre => ({
           jour: jour.jour.jour.value,
           jourLibelle: LIBELLES.jour(jour.jour.jour),
-          element: `${ligne.type} ${ligne.numero}`,
+          element: `${ligne.categorie} ${ligne.numero}`,
           etat: barre.etat,
         })),
   );

@@ -24,6 +24,7 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -76,7 +77,7 @@ const referenceFixture: ReferentielDuPupitre = {
     {
       id: 'piece',
       nom: 'OF-1',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       etat: 'EN_COURS',
       activites: [
         {
@@ -92,10 +93,12 @@ const referenceFixture: ReferentielDuPupitre = {
       evenements: [],
     },
   ],
+  categories: [],
 };
 const publicationFixture = {
   id: 'piece',
   nom: 'OF-1',
+  categorie: 'MOULE',
   type: 'PRODUIT',
   etat: 'EN_COURS',
   element: 'element',
@@ -114,7 +117,7 @@ const independentReferenceFixture: ReferentielDuPupitre = {
     {
       id: 'piece-independante',
       nom: 'OF-2',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       etat: 'EN_COURS',
       activites: [
         {
@@ -131,7 +134,7 @@ const independentReferenceFixture: ReferentielDuPupitre = {
     {
       id: 'conflit-independant',
       nom: 'OF-3',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       etat: 'EN_ATTENTE',
       activites: [],
       conflits: [independentConflictFixture],
@@ -146,6 +149,7 @@ const resolvedReferenceFixture = {
     {
       id: 'piece',
       nom: 'OF-1',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       etat: 'EN_COURS',
       activites: [
@@ -163,6 +167,7 @@ const resolvedReferenceFixture = {
     {
       id: 'piece-independante',
       nom: 'OF-2',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       etat: 'EN_COURS',
       activites: [
@@ -179,12 +184,14 @@ const resolvedReferenceFixture = {
     {
       id: 'conflit-independant',
       nom: 'OF-3',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       etat: 'EN_ATTENTE',
       activites: [],
       conflits: [{ operateur: 'jean', activites: [], pointages: ['contradiction-independante'] }],
     },
   ],
+  categories: ['MOULE', 'OF'],
 } satisfies components['schemas']['RestReferentielDuPupitre'];
 
 describe('Durable pupitre HTTP exchange', () => {
@@ -333,10 +340,11 @@ describe('Durable pupitre HTTP exchange', () => {
     expect(afterResolution.evenements).toEqual(beforeResolution.evenements);
     expect(afterResolution.referentiel?.suivis[0]?.evenements).toEqual([finFixture.id]);
     expect(afterResolutionView.conflits.map(conflit => conflit.id)).toEqual(['conflit-independant']);
-    expect(afterResolutionView.moules.filter(element => element.isActive()).map(element => element.id)).toEqual([
-      'piece',
-      'piece-independante',
-    ]);
+    expect(
+      elementsDeLaZoneFixture(afterResolutionView, 'MOULE')
+        .filter(element => element.isActive())
+        .map(element => element.id),
+    ).toEqual(['piece', 'piece-independante']);
     expect(canonicalFinish).toEqual([
       {
         nature: 'POINTAGE',
@@ -452,7 +460,7 @@ describe('Durable pupitre HTTP exchange', () => {
       {
         id: 'piece',
         nom: `OF-${company}`,
-        type: 'PRODUIT',
+        categorie: 'MOULE',
         etat: 'EN_COURS',
         activites: [
           {
@@ -467,8 +475,9 @@ describe('Durable pupitre HTTP exchange', () => {
         conflits: [],
         evenements: [],
       },
-      { id: 'autre-piece', nom: `Conflit-${company}`, type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], conflits: [], evenements: [] },
+      { id: 'autre-piece', nom: `Conflit-${company}`, categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], conflits: [], evenements: [] },
     ],
+    categories: [],
   });
   const afterAcceptingLastCompanyGesture = (before: JournalDuPupitre): JournalDuPupitre => ({
     ...before,

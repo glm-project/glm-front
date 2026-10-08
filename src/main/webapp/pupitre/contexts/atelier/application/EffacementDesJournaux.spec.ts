@@ -31,6 +31,7 @@ const referentielFixture: JournalDuPupitre = {
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
     suivis: [],
+    categories: [],
   },
 };
 

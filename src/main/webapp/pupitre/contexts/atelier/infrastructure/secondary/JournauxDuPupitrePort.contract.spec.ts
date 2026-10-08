@@ -12,6 +12,7 @@ import { IndexedDbLocalStorage } from '@/pupitre/shared/local-storage/infrastruc
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory, IDBObjectStore, IDBRequest } from 'fake-indexeddb';
@@ -19,15 +20,17 @@ import { FenetreOperateur } from '../../domain/designation/fenetre-operateur/Fen
 import { Identifiant } from '../../domain/designation/Identifiant';
 import { IdentiteDeFenetre } from '../../domain/designation/IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from '../../domain/designation/IntentionGlobaleInitiee';
+import { keyFor } from './local/ClesDesJournaux';
 import { IndexedDbJournauxDuPupitre } from './local/IndexedDbJournauxDuPupitre';
 
-const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
+const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
 const refreshedReferenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [
-    { conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'PRODUIT', activites: [], evenements: [] },
-    { conflits: [], id: 'autre-piece', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'PRODUIT', activites: [], evenements: [] },
+    { conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
+    { conflits: [], id: 'autre-piece', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
   ],
+  categories: [],
 };
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -312,6 +315,29 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
     expect(state).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   });
 
+  it('should read the category of every element in a reference stored before categories existed', async () => {
+    await givenAReferenceStoredBeforeCategories();
+
+    const state = await whenReadingCompany('entreprise-a');
+
+    expect(state.referentiel?.suivis.map(suivi => [suivi.id, suivi.categorie])).toEqual([
+      ['moule', 'MOULE'],
+      ['of', 'OF'],
+    ]);
+    expect(state.referentiel?.categories).toEqual([]);
+  });
+
+  it('should store the category of every element once a reference stored before categories existed changes', async () => {
+    await givenAReferenceStoredBeforeCategories();
+
+    const state = await journal.markDisconnected(Entreprise.of('entreprise-a'));
+
+    expect(state.referentiel?.suivis.map(suivi => [suivi.id, suivi.categorie])).toEqual([
+      ['moule', 'MOULE'],
+      ['of', 'OF'],
+    ]);
+  });
+
   it('should discard only the obsolete workshop documents and preserve credentials and new company journals', async () => {
     await givenALegacyAcceptedArrival();
     await givenOtherCompanyAndDeviceDocuments();
@@ -429,7 +455,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       { intention: 'FIN', cible: 'a', type: 'FIN' },
       { intention: 'FIN', cible: 'b', type: 'FIN', posteId: 'fraiseuse' },
     ]);
-    expect(restoredWindow.pointage().moules[0]?.isActive()).toBe(true);
+    expect(elementsDeLaZoneFixture(restoredWindow.pointage(), 'MOULE')[0]?.isActive()).toBe(true);
     expect(restoredWindow.commandesGlobales().permet('PAUSE')).toBe(true);
   });
 
@@ -477,7 +503,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
         {
           id: 'piece',
           nom: 'OF-1',
-          type: 'PRODUIT',
+          categorie: 'MOULE',
           etat: 'EN_COURS',
           activites: [
             {
@@ -494,6 +520,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
           evenements: [],
         },
       ],
+      categories: [],
     });
     await journal.append(Entreprise.of('entreprise-a'), [suspensionFixture]);
     return journal.read(Entreprise.of('entreprise-a'));
@@ -545,6 +572,21 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       ],
     };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
+  };
+  const givenAReferenceStoredBeforeCategories = async (): Promise<void> => {
+    const suivi = { conflits: [], nom: 'OF-1', etat: 'EN_ATTENTE', activites: [], evenements: [] };
+    const avantLesCategories = {
+      connecte: true,
+      evenements: [],
+      referentiel: {
+        operateurs: [],
+        suivis: [
+          { ...suivi, id: 'moule', type: 'PRODUIT' },
+          { ...suivi, id: 'of', type: 'ORDRE_DE_FABRICATION' },
+        ],
+      },
+    };
+    await storage.update(keyFor(Entreprise.of('entreprise-a')), avantLesCategories, () => avantLesCategories);
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
   const whenHoldingStorageLock = (

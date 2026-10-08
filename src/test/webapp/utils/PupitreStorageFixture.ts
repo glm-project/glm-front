@@ -59,7 +59,7 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
   cy.window().then(window =>
     persistPupitreFixture(window, {
       entreprise: fixture.entreprise,
-      referentiel: { operateurs: [], suivis: [] },
+      referentiel: { operateurs: [], suivis: [], categories: [] },
       evenements: [
         {
           etat: 'EN_ATTENTE',

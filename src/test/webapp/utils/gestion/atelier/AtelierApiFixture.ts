@@ -6,7 +6,7 @@ export interface SuiviEnregistre {
   id: string;
   element: string;
   nom: string;
-  type: NonNullable<RestSuivi['type']>;
+  categorie: string;
   etat: NonNullable<RestSuivi['etat']>;
   clotureLe?: string;
   cloturePar?: string;
@@ -15,7 +15,7 @@ export interface SuiviEnregistre {
 export interface EngageableEnregistre {
   id: string;
   nom: string;
-  type: NonNullable<RestSuivi['type']>;
+  categorie: string;
 }
 
 const ROUTE = '/api/atelier/suivis';
@@ -85,7 +85,7 @@ export class AtelierApiFixture {
         id: `suivi-cree-${String(this.suivant)}`,
         element: engageable.id,
         nom: engageable.nom,
-        type: engageable.type,
+        categorie: engageable.categorie,
         etat: 'EN_ATTENTE',
       };
       this.suivis.push(suivi);
@@ -108,7 +108,13 @@ export class AtelierApiFixture {
         request.reply({ statusCode: 404, body: { type: `${URN}suivi-d-atelier-introuvable` } });
         return;
       }
-      this.remplace(id, suivi => ({ id: suivi.id, element: suivi.element, nom: suivi.nom, type: suivi.type, etat: 'EN_ATTENTE' }));
+      this.remplace(id, suivi => ({
+        id: suivi.id,
+        element: suivi.element,
+        nom: suivi.nom,
+        categorie: suivi.categorie,
+        etat: 'EN_ATTENTE',
+      }));
       request.reply({ statusCode: 200, body: {} });
     }).as('atelierReouverture');
   }
@@ -132,6 +138,9 @@ const etatsDemandes = (url: string): string[] => {
 
 const identifiantDans = (url: string): string => url.split('/').slice(-2)[0] ?? '';
 
+const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
+  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
+
 const corpsDe = (suivi: SuiviEnregistre): RestSuivi => ({
   activitesEnCours: [],
   element: suivi.element,
@@ -140,7 +149,8 @@ const corpsDe = (suivi: SuiviEnregistre): RestSuivi => ({
   etat: suivi.etat,
   id: suivi.id,
   nom: suivi.nom,
-  type: suivi.type,
+  categorie: suivi.categorie,
+  type: typeDeLaCategorie(suivi.categorie),
   ...(suivi.clotureLe === undefined ? {} : { clotureLe: suivi.clotureLe }),
   ...(suivi.cloturePar === undefined ? {} : { cloturePar: suivi.cloturePar }),
 });
@@ -150,7 +160,7 @@ export const suivisFixture = (nombre: number): SuiviEnregistre[] =>
     id: 'suivi-' + String(index + 1),
     element: 'element-' + String(index + 1),
     nom: 'PRD-2026-' + numeroteSur6(index + 1),
-    type: index % 2 === 0 ? ('PRODUIT' as const) : ('ORDRE_DE_FABRICATION' as const),
+    categorie: index % 2 === 0 ? 'MOULE' : 'OF',
     etat: 'EN_COURS' as const,
   }));
 
@@ -158,7 +168,7 @@ export const engageablesFixture = (nombre: number): EngageableEnregistre[] =>
   Array.from({ length: nombre }, (_, index) => ({
     id: 'element-' + String(index + 1),
     nom: 'PRD-2026-' + numeroteSur6(index + 1),
-    type: index % 2 === 0 ? ('PRODUIT' as const) : ('ORDRE_DE_FABRICATION' as const),
+    categorie: index % 2 === 0 ? 'MOULE' : 'OF',
   }));
 
 const numeroteSur6 = (rang: number): string => ('000000' + String(rang)).slice(-6);

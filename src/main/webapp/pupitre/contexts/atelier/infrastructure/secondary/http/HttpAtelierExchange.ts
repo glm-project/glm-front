@@ -55,7 +55,7 @@ const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => (
   id: suivi.id,
   nom: suivi.nom,
   etat: suivi.etat,
-  type: suivi.type,
+  categorie: suivi.categorie,
   evenements: [],
   activites: suivi.activites.map(toActivite),
   conflits: suivi.conflits.map(toConflit),
@@ -79,7 +79,11 @@ export class HttpAtelierExchange extends AtelierExchangePort {
   override async referentiel(): Promise<ReferentielDuPupitre> {
     this.requireAuthorization();
     const referentiel = await this.api.read('/api/pupitre/referentiel', {});
-    return { operateurs: referentiel.operateurs.map(toOperateur), suivis: referentiel.suivis.map(toSuivi) };
+    return {
+      operateurs: referentiel.operateurs.map(toOperateur),
+      suivis: referentiel.suivis.map(toSuivi),
+      categories: referentiel.categories,
+    };
   }
 
   override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {

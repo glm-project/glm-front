@@ -43,7 +43,7 @@ const referenceFixture: ReferentielDuPupitre = {
     {
       id: 'piece',
       nom: 'OF-1',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       etat: 'EN_COURS',
       activites: [
         {
@@ -59,6 +59,7 @@ const referenceFixture: ReferentielDuPupitre = {
       evenements: [],
     },
   ],
+  categories: [],
 };
 const openingBodyFixture = {
   id: 'arrivee-originale',
@@ -200,7 +201,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
       journal: [],
       id: 'piece',
       nom: 'OF-1',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       etat: 'EN_ATTENTE',
       element: 'element',
       engageLe: '2026-09-05T07:00:00Z',

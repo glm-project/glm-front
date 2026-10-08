@@ -4,27 +4,26 @@ import { TextField } from '@/gestion/shared/design-system/infrastructure/primary
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
-import { CommandeElement, FormulaireElementDeFabrication } from '../../../domain/FormulaireElementDeFabrication';
-import { RefusModificationElement } from '../../../domain/RefusModificationElement';
-import { TypeDElementDeFabrication } from '../../../domain/TypeDElementDeFabrication';
+import { CommandeElement, FormulaireElementDeFabrication, RefusDeCommande } from '../../../domain/FormulaireElementDeFabrication';
 import { LIBELLES_ELEMENTS_DE_FABRICATION, LIBELLES_FORMULAIRE_ELEMENT } from '../LibellesElementsDeFabrication';
 
 export interface ElementFormDialogData {
-  readonly type: TypeDElementDeFabrication;
+  readonly categorie: CategorieDeProduit;
   readonly element: ElementDeFabrication | null;
 }
 
 const formulairePour = (data: ElementFormDialogData): FormulaireElementDeFabrication =>
   data.element === null
-    ? FormulaireElementDeFabrication.pourCreation(data.type)
+    ? FormulaireElementDeFabrication.pourCreation(data.categorie)
     : FormulaireElementDeFabrication.pourModification(data.element);
 
 const titrePour = (data: ElementFormDialogData): string =>
   data.element === null
-    ? LIBELLES_ELEMENTS_DE_FABRICATION.creations[data.type]
-    : LIBELLES_ELEMENTS_DE_FABRICATION.modification(data.element.type, data.element.numero());
+    ? LIBELLES_ELEMENTS_DE_FABRICATION.creation(data.categorie)
+    : LIBELLES_ELEMENTS_DE_FABRICATION.modification(data.element.numero());
 
 @Component({
   selector: 'glm-element-form-dialog',
@@ -82,7 +81,7 @@ export class ElementFormDialog {
     }
   }
 
-  private execute(commande: CommandeElement): Promise<Result<void, RefusModificationElement>> {
+  private execute(commande: CommandeElement): Promise<Result<void, RefusDeCommande>> {
     return commande.kind === 'MODIFICATION' ? this.port.modifier(commande) : this.port.creer(commande);
   }
 }

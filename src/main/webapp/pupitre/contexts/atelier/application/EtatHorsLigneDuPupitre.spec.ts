@@ -110,6 +110,7 @@ describe('EtatHorsLigneDuPupitre', () => {
       referentiel: {
         operateurs: [{ id: 'op1', identifiant: '123', nom: 'Durand', prenom: 'Paul', postes: [] }],
         suivis: [],
+        categories: [],
       },
     };
 

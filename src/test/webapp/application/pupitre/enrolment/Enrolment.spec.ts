@@ -234,7 +234,7 @@ describe('Pupitre enrolment', () => {
 
 const givenAWorkshopBehindTheAuthorizationServer = (): void => {
   cy.intercept('GET', '/api/pupitre/referentiel', {
-    body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [OPERATEUR], suivis: [] },
+    body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [OPERATEUR], suivis: [], categories: [] },
   }).as('workshop');
   cy.intercept('POST', `${OPENID_CONNECT}/logout`, { statusCode: 204, body: {} }).as('logout');
 };
@@ -245,7 +245,7 @@ const givenAnApprovedPupitreWithAnUnresponsiveWorkshop = (): void => {
   cy.intercept('POST', `${OPENID_CONNECT}/token`, theGrantedTokensFixture()).as('tokenClaim');
   cy.intercept('GET', '/api/pupitre/referentiel', {
     delay: 60_000,
-    body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [OPERATEUR], suivis: [] },
+    body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [OPERATEUR], suivis: [], categories: [] },
   }).as('workshop');
 };
 
@@ -293,7 +293,7 @@ const givenAnEnrolledPupitre = (): void => {
   givenAnAuthorizationServerAnswering('authorization_pending');
   cy.visit('/');
   cy.wait('@deviceAuthorization');
-  givenEnrolledPupitreFixture({ entreprise: ENTREPRISE, referentiel: { operateurs: [OPERATEUR], suivis: [] } });
+  givenEnrolledPupitreFixture({ entreprise: ENTREPRISE, referentiel: { operateurs: [OPERATEUR], suivis: [], categories: [] } });
   cy.reload();
   cy.wait('@workshop');
   cy.tick(0);

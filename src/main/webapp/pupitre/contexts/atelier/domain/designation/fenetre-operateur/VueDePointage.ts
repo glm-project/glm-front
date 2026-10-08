@@ -25,8 +25,35 @@ export class ElementDePointage {
   }
 }
 
+export interface ZoneDePointage {
+  readonly categorie: string;
+  readonly elements: readonly ElementDePointage[];
+}
+
+export interface ElementCategorise {
+  readonly element: ElementDePointage;
+  readonly categorie: string;
+}
+
 export interface VueDePointage {
   readonly conflits: readonly { readonly id: string; readonly numero: NumeroDElement }[];
-  readonly moules: readonly ElementDePointage[];
-  readonly ordresDeFabrication: readonly ElementDePointage[];
+  readonly zones: readonly ZoneDePointage[];
 }
+
+const rangDans =
+  (ordre: readonly string[]) =>
+  (categorie: string): number => {
+    const rang = ordre.indexOf(categorie);
+    return rang === -1 ? ordre.length : rang;
+  };
+
+const comparerDans =
+  (ordre: readonly string[]) =>
+  (gauche: string, droite: string): number =>
+    rangDans(ordre)(gauche) - rangDans(ordre)(droite) || gauche.localeCompare(droite);
+
+export const zonesDePointage = (elements: readonly ElementCategorise[], ordre: readonly string[]): readonly ZoneDePointage[] =>
+  [...new Set(elements.map(({ categorie }) => categorie))].sort(comparerDans(ordre)).map(categorie => ({
+    categorie,
+    elements: elements.filter(candidat => candidat.categorie === categorie).map(({ element }) => element),
+  }));

@@ -183,7 +183,7 @@
         <div class="ligne element" role="row" data-selector="synthese-element-ligne">
           <span class="etiquette" role="rowheader">
             <span class="titre">
-              <span class="gestion-type" data-selector="synthese-element-type">{{ ligne.type }}</span>
+              <span class="gestion-type" data-selector="synthese-element-categorie">{{ ligne.categorie }}</span>
               <a
                 class="numero text-body font-semibold"
                 [routerLink]="['/couts-de-revient', ligne.cle]"
@@ -276,7 +276,7 @@
             @for (ligne of detail.lignes; track ligne.cle) {
             <div class="ligne element">
               <span class="etiquette"
-                ><span class="text-body font-semibold">{{ ligne.type }} {{ ligne.numero }}</span
+                ><span class="text-body font-semibold">{{ ligne.categorie }} {{ ligne.numero }}</span
                 ><span class="text-body-sm text-ink-muted">{{ ligne.libelle }}</span></span
               >
               @for (cellule of ligne.cellules; track $index) {

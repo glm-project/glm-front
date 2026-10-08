@@ -1,3 +1,4 @@
+import { CategorieDElementChiffre } from './CategorieDElementChiffre';
 import { ElementChiffre } from './ElementChiffre';
 
 describe('ElementChiffre', () => {
@@ -5,17 +6,17 @@ describe('ElementChiffre', () => {
     [{ reference: 'M24-0655', libelle: 'Support latéral' }, 'M24-0655'],
     [{}, 'OF-2026-000001'],
   ])('should designate the element by its company reference or its internal name %j', (designation, expected) => {
-    const element = new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION', designation);
+    const element = new ElementChiffre('OF-2026-000001', new CategorieDElementChiffre('OF'), designation);
 
     expect(element.numero()).toBe(expected);
   });
-  it('should carry the name and the type the report resolved', () => {
-    const element = new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION');
+  it('should carry the name and the category the report resolved', () => {
+    const element = new ElementChiffre('OF-2026-000001', new CategorieDElementChiffre('OF'));
 
-    expect([element.nom, element.type]).toEqual(['OF-2026-000001', 'ORDRE_DE_FABRICATION']);
+    expect([element.nom, element.categorie.value]).toEqual(['OF-2026-000001', 'OF']);
   });
 
   it.each(['', '   '])('should refuse the empty name %p, which designates nothing', nom => {
-    expect(() => new ElementChiffre(nom, 'PRODUIT')).toThrow('Le nom de l’élément reçu du serveur est vide.');
+    expect(() => new ElementChiffre(nom, new CategorieDElementChiffre('MOULE'))).toThrow('Le nom de l’élément reçu du serveur est vide.');
   });
 });

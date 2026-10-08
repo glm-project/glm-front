@@ -1,5 +1,6 @@
 import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { CategorieDElement } from './CategorieDElement';
 import { ElementDuReleve } from './ElementDuReleve';
 import { ElementReleveId } from './ElementReleveId';
 import { PosteDeLElement } from './PosteDeLElement';
@@ -11,7 +12,7 @@ const posteFixture = (id: string, libelle: string, nature?: string): PosteDeLEle
 const elementFixture = (postes: readonly PosteDeLElement[]): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId('carter'),
-    type: 'PRODUIT',
+    categorie: new CategorieDElement('MOULE'),
     nom: 'PRD-2026-000015',
     reference: undefined,
     description: undefined,

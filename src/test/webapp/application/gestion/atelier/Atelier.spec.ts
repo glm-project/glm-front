@@ -18,7 +18,7 @@ describe('Putting moules and OF at the workshop from gestion', () => {
     whenOpeningEngagement();
     whenEngagingFirstCandidate();
 
-    thenElementIsAtWorkshop('PRD-2026-000001', 'Moule', 'En attente');
+    thenElementIsAtWorkshop('PRD-2026-000001', 'MOULE', 'En attente');
     thenEngagementCarriedOnlyTheElement(api);
   });
 
@@ -36,7 +36,7 @@ describe('Putting moules and OF at the workshop from gestion', () => {
     whenSendingFirstElementToWorkshop();
     whenConfirmingAimedEngagement();
 
-    thenElementIsAtWorkshop('PRD-2026-000001', 'Moule', 'En attente');
+    thenElementIsAtWorkshop('PRD-2026-000001', 'MOULE', 'En attente');
   });
 
   it('should explain that an element already at the workshop cannot be put there twice', () => {
@@ -64,7 +64,7 @@ describe('Putting moules and OF at the workshop from gestion', () => {
     whenShowingClosedElements();
     whenReopeningFirstElement();
 
-    thenElementIsAtWorkshop('PRD-2026-000001', 'Moule', 'En attente');
+    thenElementIsAtWorkshop('PRD-2026-000001', 'MOULE', 'En attente');
   });
 
   it('should paginate the workshop without asking for any period', () => {
@@ -92,7 +92,7 @@ const whenVisitingWorkshop = (): void => {
 };
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);
-  cy.visit('/moules-et-of');
+  cy.visit('/produits');
   cy.wait('@elementsRead');
 };
 const whenOpeningFromTheMenu = (): void => {
@@ -140,9 +140,9 @@ const thenWorkshopIsVisible = (): void => {
   cy.get(dataSelector('atelier-page')).should('be.visible');
   cy.get(dataSelector('atelier-empty')).should('contain.text', 'Aucun élément à l’atelier');
 };
-const thenElementIsAtWorkshop = (nom: string, type: string, etat: string): void => {
+const thenElementIsAtWorkshop = (nom: string, categorie: string, etat: string): void => {
   cy.get(dataSelector('atelier-engagement-introduction')).should('not.exist');
-  cy.get(dataSelector('atelier-row')).contains(nom).closest('tr').should('contain.text', type).and('contain.text', etat);
+  cy.get(dataSelector('atelier-row')).contains(nom).closest('tr').should('contain.text', categorie).and('contain.text', etat);
 };
 const thenEngagementCarriedOnlyTheElement = (api: AtelierApiFixture): void => {
   cy.wrap(api.engagements).should('deep.equal', [{ element: 'element-1' }]);

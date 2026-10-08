@@ -1,16 +1,17 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { CategorieDElementChiffre } from '../../../domain/element/CategorieDElementChiffre';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../../domain/element/ElementDisponible';
 import { SelecteurElement } from './SelecteurElement';
 
 const elementsFixture: readonly ElementDisponible[] = [
-  { id: new ElementChiffreId('of'), identite: new ElementChiffre('Ébauche', 'ORDRE_DE_FABRICATION') },
-  { id: new ElementChiffreId('z'), identite: new ElementChiffre('Zulu', 'PRODUIT') },
-  { id: new ElementChiffreId('moule'), identite: new ElementChiffre('Ébauche', 'PRODUIT') },
-  { id: new ElementChiffreId('a'), identite: new ElementChiffre('Alpha', 'PRODUIT') },
+  { id: new ElementChiffreId('of'), identite: new ElementChiffre('Ébauche', new CategorieDElementChiffre('OF')) },
+  { id: new ElementChiffreId('z'), identite: new ElementChiffre('Zulu', new CategorieDElementChiffre('MOULE')) },
+  { id: new ElementChiffreId('moule'), identite: new ElementChiffre('Ébauche', new CategorieDElementChiffre('MOULE')) },
+  { id: new ElementChiffreId('a'), identite: new ElementChiffre('Alpha', new CategorieDElementChiffre('MOULE')) },
 ];
 
 describe('Element selector projection and output', () => {
@@ -43,10 +44,10 @@ describe('Element selector projection and output', () => {
 
     await whenRendered();
 
-    expect(textOf('cout-identite')).toBe('Moule · Nouveau nom');
+    expect(textOf('cout-identite')).toBe('MOULE · Nouveau nom');
   });
 
-  it('should sort matching names by their displayed type without mutating the collection', async () => {
+  it('should sort matching names by their displayed category without mutating the collection', async () => {
     await whenRendered();
 
     await whenSearching('  EBAUCHE ');
@@ -91,7 +92,7 @@ describe('Element selector projection and output', () => {
   });
 
   const givenReportIdentity = (): void => {
-    fixture.componentRef.setInput('identite', new ElementChiffre('Nouveau nom', 'PRODUIT'));
+    fixture.componentRef.setInput('identite', new ElementChiffre('Nouveau nom', new CategorieDElementChiffre('MOULE')));
   };
   const whenRendered = async (): Promise<void> => {
     fixture.detectChanges();

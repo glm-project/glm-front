@@ -11,10 +11,18 @@ const CONFIRMATION_PRESS_FIXTURE_MS = 1_000;
 
 const pointageFixture: VueDePointage = {
   conflits: [],
-  moules: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
-  ordresDeFabrication: [
-    new ElementDePointage('of-204', NumeroDElement.assigned('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
-    new ElementDePointage('of-generated', NumeroDElement.generated('OF-2026-000042'), undefined),
+  zones: [
+    {
+      categorie: 'MOULE',
+      elements: [new ElementDePointage('moule-1015', NumeroDElement.assigned('1015'), { categorie: 'TRAVAIL', dureeMs: 8_040_000 })],
+    },
+    {
+      categorie: 'OF',
+      elements: [
+        new ElementDePointage('of-204', NumeroDElement.assigned('204'), { categorie: 'NON_CONFORMITE', dureeMs: 1_320_000 }),
+        new ElementDePointage('of-generated', NumeroDElement.generated('OF-2026-000042'), undefined),
+      ],
+    },
   ],
 };
 
@@ -472,16 +480,16 @@ describe('Pointage screen', () => {
     whenTimePasses(CONFIRMATION_PRESS_FIXTURE_MS);
     release(pressed);
   };
+  const zoneHeadings = (): string[] =>
+    Array.from(root().querySelectorAll(dataSelector('pointage-zone-titre')), heading => heading.textContent.trim());
   const thenThePersonalPointageViewIsRendered = (): void => {
-    expect(root().querySelector(dataSelector('moules-zone'))).not.toBeNull();
-    expect(root().querySelector(dataSelector('of-zone'))).not.toBeNull();
+    expect(zoneHeadings()).toEqual(['MOULE', 'OF']);
     expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('BON');
     expect(requiredElement(root().querySelector(dataSelector('tile-moule-1015')), 'active tile').textContent).toContain('depuis 2 h 14');
     expect(requiredElement(root().querySelector(dataSelector('tile-of-generated')), 'inactive tile').textContent).toContain('DÉMARRER');
   };
   const thenNoZoneIsRendered = (): void => {
-    expect(root().querySelector(dataSelector('moules-zone'))).toBeNull();
-    expect(root().querySelector(dataSelector('of-zone'))).toBeNull();
+    expect(zoneHeadings()).toEqual([]);
   };
   const thenOnlyThePressedTileIsBusy = (): void => {
     expect(targetsFor('moule-1015').every(target => target.disabled)).toBe(true);
@@ -553,8 +561,7 @@ describe('Pointage screen', () => {
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const givenAConflictWithoutCurrentActivity = (): void => {
     fixture.componentRef.setInput('vue', {
-      moules: [new ElementDePointage('piece', NumeroDElement.assigned('1015'), undefined)],
-      ordresDeFabrication: [],
+      zones: [{ categorie: 'MOULE', elements: [new ElementDePointage('piece', NumeroDElement.assigned('1015'), undefined)] }],
       conflits: [{ id: 'piece', numero: NumeroDElement.assigned('1015') }],
     } satisfies VueDePointage);
   };

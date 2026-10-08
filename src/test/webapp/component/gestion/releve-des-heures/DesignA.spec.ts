@@ -51,7 +51,7 @@ const givenLargeCatalogue = (): void => {
 const givenRecognizableCostReport = (): void => {
   new CoutDeRevientApiFixture().install();
   new ElementsApiFixture([
-    { id: 'element-1', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000001', reference: 'M24-0655', description: 'Support latéral' },
+    { id: 'element-1', categorie: 'OF', nom: 'OF-2026-000001', reference: 'M24-0655', description: 'Support latéral' },
   ]).install();
 };
 const whenConsultingSunday = (): void => {
@@ -59,7 +59,7 @@ const whenConsultingSunday = (): void => {
   cy.visit('/operateurs/op-1/heures?annee=2026&semaine=38&jour=2026-09-20');
 };
 const whenVisitingCatalogue = (): void => {
-  cy.visit('/moules-et-of');
+  cy.visit('/produits');
 };
 const whenSearching = (value: string): void => {
   cy.get(dataSelector('elements-search')).type(value);

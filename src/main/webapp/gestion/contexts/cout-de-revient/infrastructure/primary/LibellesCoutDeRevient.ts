@@ -4,7 +4,7 @@ import {
   formatInstantTime,
   localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { TypeDElementChiffre } from '../../domain/element/TypeDElementChiffre';
+import { CategorieDElementChiffre } from '../../domain/element/CategorieDElementChiffre';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
@@ -21,11 +21,6 @@ import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
 import { TempsPasse } from '../../domain/temps/TempsPasse';
 import { TotalDeTemps } from '../../domain/temps/TotalDeTemps';
-
-const TYPES: Record<TypeDElementChiffre, string> = {
-  ORDRE_DE_FABRICATION: 'OF',
-  PRODUIT: 'Moule',
-};
 
 const EUROS = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -180,7 +175,6 @@ export const LIBELLES_COUT_DE_REVIENT = {
   sousTitre:
     'Le temps passé sur cet élément et ce qu’il a coûté, par nature d’opération. Le rapport est recalculé à chaque lecture ; seules les activités terminées, y compris automatiquement, sont comptabilisées. Les activités en cours sont exclues du temps, du coût et du partage humain.',
 
-  types: TYPES,
   sansPoste: SANS_POSTE,
   evaluation: (instant: InstantDeTravail): string => `Rapport évalué le ${formatInstantShortDateTime(instant.value)}`,
   activitesExclues: (activites: ActivitesEnCoursExclues): string =>
@@ -253,7 +247,7 @@ export const LIBELLES_COUT_DE_REVIENT = {
   sansTravailDetails:
     'Cet élément est à l’atelier, mais personne n’y a encore pointé. Son coût de revient apparaîtra quand une activité sera terminée.',
 
-  identite: (type: TypeDElementChiffre, nom: string): string => `${TYPES[type]} · ${nom}`,
+  identite: (categorie: CategorieDElementChiffre, nom: string): string => `${categorie.value} · ${nom}`,
   montant: formatMontant,
   duree: formatDuree,
   dureeCertaine: formatDureeCertaine,

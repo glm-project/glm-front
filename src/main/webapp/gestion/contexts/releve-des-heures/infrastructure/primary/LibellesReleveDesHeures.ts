@@ -12,7 +12,6 @@ import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
 import { CategorieDActivite } from '../../domain/element/CategorieDActivite';
 import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
-import { TypeDElement } from '../../domain/element/TypeDElement';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
 import { IntentionDePointage, PointageDElement } from '../../domain/releve/PointageDElement';
 import { TypeDePointage } from '../../domain/releve/TypeDePointage';
@@ -28,9 +27,7 @@ const debutDOrigine = (debut: InstantDeReleve, jour: JourCalendaire): string =>
 
 const MINUTES_PAR_HEURE = 60;
 
-const TYPES_D_ELEMENT: Record<TypeDElement, string> = { PRODUIT: 'Moule', ORDRE_DE_FABRICATION: 'OF' };
-
-const nomDeLElement = (element: ElementDuReleve): string => `${TYPES_D_ELEMENT[element.type]} ${element.numero()}`;
+const nomDeLElement = (element: ElementDuReleve): string => `${element.categorie.value} ${element.numero()}`;
 
 const POINTAGES: Record<TypeDePointage, string> = {
   DEBUT: 'Début',
@@ -84,10 +81,10 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   retour: 'Opérateurs',
   semaineConsultee: 'Semaine consultée',
   retourAria: 'Revenir au référentiel des opérateurs',
-  sousTitre: 'Une ligne par moule ou OF pointé dans la semaine.',
+  sousTitre: 'Une ligne par produit pointé dans la semaine.',
   sansPoste: 'Sans poste',
   operationnel: 'Temps opérationnel',
-  operationnelPrecision: 'pointé sur les moules et OF',
+  operationnelPrecision: 'pointé sur les produits',
   colonneElement: 'Élément',
   colonneSemaine: 'Semaine',
 
@@ -146,7 +143,6 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     return lecture.complete ? `NC ${formatDuree(lecture.valeur)}` : 'NC Incomplet';
   },
   jour: (jour: JourCalendaire): string => formatCalendarDayShort(jour.value),
-  typeDElement: (type: TypeDElement): string => TYPES_D_ELEMENT[type],
   nomDElement: nomDeLElement,
   heure,
   libelleDePointage: (type: TypeDePointage): string => POINTAGES[type],

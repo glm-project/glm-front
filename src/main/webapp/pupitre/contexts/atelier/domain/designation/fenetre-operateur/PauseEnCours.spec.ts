@@ -21,7 +21,7 @@ const suiviFixture = (id: string, activites: readonly ActiviteDuPupitre[]): Suiv
   id,
   nom: id,
   etat: activites.length === 0 ? 'EN_ATTENTE' : 'EN_COURS',
-  type: 'ORDRE_DE_FABRICATION',
+  categorie: 'OF',
   activites,
   evenements: [],
 });
@@ -39,6 +39,7 @@ const referentielFixture: ReferentielDuPupitre = {
     },
   ],
   suivis: [suiviFixture('of-204', [travailAuTourFixture])],
+  categories: [],
 };
 const suspensionFixture = (
   suiviId: string,

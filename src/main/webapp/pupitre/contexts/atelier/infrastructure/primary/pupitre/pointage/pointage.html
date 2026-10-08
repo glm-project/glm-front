@@ -7,20 +7,11 @@
   >
     {{ conflit.numero }} : {{ labels.conflit }}
   </p>
-  } @if (vue().moules.length > 0) {
-  <section class="zone" data-selector="moules-zone">
-    <h2 class="mb-2 text-label uppercase text-ink-muted">{{ labels.zones.PRODUIT }}</h2>
-    <div class="tiles tiles--moules">
-      @for (element of vue().moules; track element.id) {
-      <ng-container [ngTemplateOutlet]="tile" [ngTemplateOutletContext]="{ $implicit: element }" />
-      }
-    </div>
-  </section>
-  } @if (vue().ordresDeFabrication.length > 0) {
-  <section class="zone" data-selector="of-zone">
-    <h2 class="mb-2 text-label uppercase text-ink-muted">{{ labels.zones.ORDRE_DE_FABRICATION }}</h2>
+  } @for (zone of vue().zones; track zone.categorie) {
+  <section class="zone" [attr.data-selector]="'zone-' + zone.categorie">
+    <h2 class="mb-2 text-label uppercase text-ink-muted" data-selector="pointage-zone-titre">{{ zone.categorie }}</h2>
     <div class="tiles">
-      @for (element of vue().ordresDeFabrication; track element.id) {
+      @for (element of zone.elements; track element.id) {
       <ng-container [ngTemplateOutlet]="tile" [ngTemplateOutletContext]="{ $implicit: element }" />
       }
     </div>

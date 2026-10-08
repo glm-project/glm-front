@@ -10,6 +10,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { keyFor } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/ClesDesJournaux';
+import { JournalStocke, toJournalDuPupitre } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/JournalStocke';
 import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
 import { inject, Injectable } from '@angular/core';
 
@@ -19,8 +20,8 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
 
   override async read(entreprise: Entreprise): Promise<JournalDuPupitre> {
     await this.stockage.discardDocumentsWithPrefix('atelier:');
-    const stored = await this.stockage.read<JournalDuPupitre>(keyFor(entreprise));
-    return stored === undefined ? EMPTY_JOURNAL_DU_PUPITRE : stored;
+    const stored = await this.stockage.read<JournalStocke>(keyFor(entreprise));
+    return stored === undefined ? EMPTY_JOURNAL_DU_PUPITRE : toJournalDuPupitre(stored);
   }
 
   override async append(entreprise: Entreprise, gestes: readonly GesteDePointage[], repriseAEffacer?: string): Promise<void> {
@@ -57,6 +58,9 @@ export class IndexedDbJournauxDuPupitre extends JournauxDuPupitrePort {
 
   private async update(entreprise: Entreprise, change: (current: JournalDuPupitre) => JournalDuPupitre): Promise<JournalDuPupitre> {
     await this.stockage.discardDocumentsWithPrefix('atelier:');
-    return this.stockage.update<JournalDuPupitre>(keyFor(entreprise), EMPTY_JOURNAL_DU_PUPITRE, change);
+    const stored = await this.stockage.update<JournalStocke>(keyFor(entreprise), EMPTY_JOURNAL_DU_PUPITRE, current =>
+      change(toJournalDuPupitre(current)),
+    );
+    return toJournalDuPupitre(stored);
   }
 }

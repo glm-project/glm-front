@@ -43,8 +43,8 @@ export const routes: Routes = [
     providers: atelierProvider,
   },
   {
-    path: 'moules-et-of',
-    loadComponent: () => import('./contexts/element-de-fabrication/infrastructure/primary/moules-et-of/MoulesEtOf').then(m => m.MoulesEtOf),
+    path: 'produits',
+    loadComponent: () => import('./contexts/element-de-fabrication/infrastructure/primary/produits/Produits').then(m => m.Produits),
     providers: elementsDeFabricationProvider,
   },
   {

@@ -52,10 +52,10 @@
     } @else {
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
       <table mat-table [dataSource]="etat().elements" [attr.aria-label]="libelles.tableau">
-        <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
+        <ng-container matColumnDef="categorie">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.categorie }}</th>
           <td mat-cell *matCellDef="let element">
-            <span class="gestion-type" data-selector="atelier-type-cell">{{ libelleDuType(element) }}</span>
+            <span class="gestion-type" data-selector="atelier-categorie-cell">{{ element.categorie.value }}</span>
           </td>
         </ng-container>
         <ng-container matColumnDef="nom">

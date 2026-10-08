@@ -8,6 +8,8 @@ import { buildPageFrom } from '@/app/shared/pagination/infrastructure/secondary/
 import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
+import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieInconnue } from '../../domain/CategorieInconnue';
 import { CommandeCreationElement } from '../../domain/CommandeCreationElement';
 import { CommandeModificationElement } from '../../domain/CommandeModificationElement';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
@@ -18,6 +20,8 @@ import { LibelleDElement } from '../../domain/LibelleDElement';
 import { NomDElement } from '../../domain/NomDElement';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
+import { ReferentielDesProduits } from '../../domain/ReferentielDesProduits';
+import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteElements } from '../../domain/RequeteElements';
 
@@ -33,7 +37,7 @@ const toLibelle = (description: string | undefined): LibelleDElement | undefined
 
 const toElement = (element: RestElement): ElementDeFabrication =>
   new ElementDeFabrication(new ElementDeFabricationId(required(element.id, 'element.id')), {
-    type: required(element.type, 'element.type'),
+    categorie: new CategorieDeProduit(required(element.categorie, 'element.categorie')),
     nom: new NomDElement(required(element.nom, 'element.nom')),
     reference: toReference(element.reference),
     libelle: toLibelle(element.description),
@@ -46,11 +50,15 @@ const toFiche = (
   ...(commande.libelle === undefined ? {} : { description: commande.libelle.value }),
 });
 
-const refusCreation = (urn: string | undefined): ReferenceDejaUtilisee | undefined => {
-  if (urn === 'urn:glm:erreur:element-de-fabrication:reference-deja-utilisee') {
-    return new ReferenceDejaUtilisee();
+const refusCreation = (urn: string | undefined): RefusCreationElement | undefined => {
+  switch (urn) {
+    case 'urn:glm:erreur:element-de-fabrication:reference-deja-utilisee':
+      return new ReferenceDejaUtilisee();
+    case 'urn:glm:erreur:element-de-fabrication:categorie-inconnue':
+      return new CategorieInconnue();
+    default:
+      return undefined;
   }
-  return undefined;
 };
 
 const refusModification = (urn: string | undefined): RefusModificationElement | undefined => {
@@ -69,12 +77,19 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  override async referentiel(): Promise<readonly ElementDeFabrication[]> {
+  override async referentiel(): Promise<ReferentielDesProduits> {
     try {
-      return await collectAllPages(
-        (page, size) => this.elements(new RequeteElements(page, size)),
-        entry => entry.id.value,
-      );
+      const [categories, elements] = await Promise.all([
+        collectAllPages(
+          (page, size) => this.categories(page, size),
+          categorie => categorie.value,
+        ),
+        collectAllPages(
+          (page, size) => this.elements(new RequeteElements(page, size)),
+          entry => entry.id.value,
+        ),
+      ]);
+      return new ReferentielDesProduits(categories, elements);
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
@@ -88,9 +103,14 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
     return buildPageFrom(response, toElement, requete);
   }
 
-  override creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {
+  private async categories(page: number, taille: number): Promise<Page<CategorieDeProduit>> {
+    const response = await this.api.read('/api/categories-de-produit', { queryParams: { page, size: taille } });
+    return buildPageFrom(response, categorie => new CategorieDeProduit(categorie.code), { page, taille });
+  }
+
+  override creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {
     return this.execute(
-      this.api.write('/api/elements-de-fabrication', { body: { type: commande.type, ...toFiche(commande) } }),
+      this.api.write('/api/elements-de-fabrication', { body: { categorie: commande.categorie.value, ...toFiche(commande) } }),
       refusCreation,
     );
   }

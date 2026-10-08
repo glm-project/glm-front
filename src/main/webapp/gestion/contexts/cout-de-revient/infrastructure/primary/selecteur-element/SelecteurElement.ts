@@ -26,12 +26,12 @@ export class SelecteurElement {
   protected readonly propositions = computed(() =>
     this.elements()
       .filter(element =>
-        normalizeSearch(this.libelles.identite(element.identite.type, element.identite.nom)).includes(normalizeSearch(this.saisie())),
+        normalizeSearch(this.libelles.identite(element.identite.categorie, element.identite.nom)).includes(normalizeSearch(this.saisie())),
       )
       .sort(
         (first, second) =>
           first.identite.nom.localeCompare(second.identite.nom, 'fr')
-          || this.libelles.types[first.identite.type].localeCompare(this.libelles.types[second.identite.type], 'fr'),
+          || first.identite.categorie.value.localeCompare(second.identite.categorie.value, 'fr'),
       ),
   );
   protected readonly ouvert = linkedSignal({ source: this.elementCourant, computation: () => false });

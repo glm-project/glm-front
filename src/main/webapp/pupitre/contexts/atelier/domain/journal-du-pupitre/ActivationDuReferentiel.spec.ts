@@ -6,12 +6,13 @@ const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]
   suivis: ['piece', 'autre'].map(id => ({
     id,
     nom: id,
-    type: 'PRODUIT',
+    categorie: 'MOULE',
     etat: 'EN_ATTENTE',
     activites: [],
     conflits: [],
     evenements: evenementsRecus[id] ?? [],
   })),
+  categories: [],
 });
 
 const ouverture = (id: string, operateurId = 'jean', suiviId = 'piece'): GesteDePointage => ({

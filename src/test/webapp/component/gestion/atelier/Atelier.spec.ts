@@ -101,7 +101,7 @@ const givenFailedRead = (): void => {
 };
 const givenRefusedReopening = (): void => {
   const api = givenWorkshop(1, 0);
-  api.suivis = [{ id: 'suivi-1', element: 'element-1', nom: 'PRD-2026-000001', type: 'PRODUIT', etat: 'CLOTURE' }];
+  api.suivis = [{ id: 'suivi-1', element: 'element-1', nom: 'PRD-2026-000001', categorie: 'MOULE', etat: 'CLOTURE' }];
   api.failWrite = true;
 };
 const givenPendingEngagement = (): ReturnType<typeof interceptForever> =>

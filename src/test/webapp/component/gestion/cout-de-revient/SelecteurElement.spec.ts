@@ -185,7 +185,7 @@ describe('Element choice in the cost report', () => {
       { method: 'GET', pathname: '/api/elements-de-fabrication' },
       {
         body: {
-          content: [{ id: 'element-1', nom: 'OF Alpha', type: 'ORDRE_DE_FABRICATION' }],
+          content: [{ id: 'element-1', nom: 'OF Alpha', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' }],
           currentPage: 0,
           pageSize: 100,
           totalElementsCount: 1,
@@ -291,7 +291,7 @@ describe('Element choice in the cost report', () => {
           ? { statusCode: 500, body: {} }
           : {
               body: {
-                content: [{ id: 'element-1', nom: 'OF Alpha', type: 'ORDRE_DE_FABRICATION' }],
+                content: [{ id: 'element-1', nom: 'OF Alpha', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' }],
                 currentPage: 0,
                 pageSize: 100,
                 totalElementsCount: 1,
@@ -328,7 +328,7 @@ describe('Element choice in the cost report', () => {
   const thenTheDisplayedTypeMatches = (type: string): void => {
     cy.get(dataSelector('cout-element-option'))
       .should('have.length', 1)
-      .and('contain.text', type === 'OF' ? 'OF · OF Alpha' : 'Moule · Ébauche');
+      .and('contain.text', type === 'OF' ? 'OF · OF Alpha' : 'MOULE · Ébauche');
   };
   const thenOnlyTheCollectionWasRetried = (): void => {
     cy.get(dataSelector('cout-element-trigger')).should('be.enabled');
@@ -366,13 +366,18 @@ describe('Element choice in the cost report', () => {
     givenAReportWithAvailableElements();
     api.rapport = {
       ...api.rapport,
-      element: { id: 'element-1', nom: 'OF avec une désignation très longue '.repeat(8).trim(), type: 'ORDRE_DE_FABRICATION' },
+      element: {
+        id: 'element-1',
+        nom: 'OF avec une désignation très longue '.repeat(8).trim(),
+        categorie: 'OF',
+        type: 'ORDRE_DE_FABRICATION',
+      },
     };
     cy.intercept('GET', '/api/elements-de-fabrication*', {
       body: {
         content: [
-          { id: 'element-1', nom: 'OF avec une désignation très longue '.repeat(8).trim(), type: 'ORDRE_DE_FABRICATION' },
-          { id: 'element-2', nom: 'Ébauche '.repeat(20).trim(), type: 'PRODUIT' },
+          { id: 'element-1', nom: 'OF avec une désignation très longue '.repeat(8).trim(), categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
+          { id: 'element-2', nom: 'Ébauche '.repeat(20).trim(), categorie: 'MOULE', type: 'PRODUIT' },
         ],
         currentPage: 0,
         pageSize: 100,
@@ -445,7 +450,7 @@ describe('Element choice in the cost report', () => {
     cy.get(dataSelector('cout-element-search')).type(search);
   };
   const thenOnlyTheMatchingElementIsOffered = (): void => {
-    cy.get(dataSelector('cout-element-option')).should('have.length', 1).and('contain.text', 'Moule · Ébauche');
+    cy.get(dataSelector('cout-element-option')).should('have.length', 1).and('contain.text', 'MOULE · Ébauche');
     cy.get('@elementsRead.all').should('have.length', 1);
     cy.get('@coutDeRevientRead.all').should('have.length', 1);
   };
@@ -468,8 +473,8 @@ describe('Element choice in the cost report', () => {
     cy.intercept('GET', '/api/elements-de-fabrication*', {
       body: {
         content: [
-          { id: 'element-1', nom: 'OF Alpha', type: 'ORDRE_DE_FABRICATION' },
-          { id: 'element-2', nom: 'Ébauche', type: 'PRODUIT' },
+          { id: 'element-1', nom: 'OF Alpha', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
+          { id: 'element-2', nom: 'Ébauche', categorie: 'MOULE', type: 'PRODUIT' },
         ],
         currentPage: 0,
         pageSize: 100,
