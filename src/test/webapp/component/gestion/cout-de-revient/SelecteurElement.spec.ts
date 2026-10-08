@@ -328,7 +328,7 @@ describe('Element choice in the cost report', () => {
   const thenTheDisplayedTypeMatches = (type: string): void => {
     cy.get(dataSelector('cout-element-option'))
       .should('have.length', 1)
-      .and('contain.text', type === 'OF' ? 'OF · OF Alpha' : 'Moule · Ébauche');
+      .and('contain.text', type === 'OF' ? 'OF · OF Alpha' : 'MOULE · Ébauche');
   };
   const thenOnlyTheCollectionWasRetried = (): void => {
     cy.get(dataSelector('cout-element-trigger')).should('be.enabled');
@@ -445,7 +445,7 @@ describe('Element choice in the cost report', () => {
     cy.get(dataSelector('cout-element-search')).type(search);
   };
   const thenOnlyTheMatchingElementIsOffered = (): void => {
-    cy.get(dataSelector('cout-element-option')).should('have.length', 1).and('contain.text', 'Moule · Ébauche');
+    cy.get(dataSelector('cout-element-option')).should('have.length', 1).and('contain.text', 'MOULE · Ébauche');
     cy.get('@elementsRead.all').should('have.length', 1);
     cy.get('@coutDeRevientRead.all').should('have.length', 1);
   };

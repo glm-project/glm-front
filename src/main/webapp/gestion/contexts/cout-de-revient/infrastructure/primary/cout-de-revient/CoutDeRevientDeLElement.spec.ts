@@ -6,9 +6,9 @@ import { CoutDeRevientFixture } from '@test/unit/fixtures/gestion/cout-de-revien
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { CategorieDElementChiffre } from '../../../domain/element/CategorieDElementChiffre';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
-import { TypeDElementChiffre } from '../../../domain/element/TypeDElementChiffre';
 import { Cout } from '../../../domain/montant/Cout';
 import { Montant } from '../../../domain/montant/Montant';
 import { TotalDeMontant } from '../../../domain/montant/TotalDeMontant';
@@ -102,12 +102,8 @@ const ligneFixture = (fixture: Partial<LigneFixture> = {}, fiche: Partial<FicheD
   });
 };
 
-const rapportFixture = (
-  lignes: readonly LigneDeCout[],
-  type: TypeDElementChiffre = 'ORDRE_DE_FABRICATION',
-  fiche: Partial<FicheDuRapport> = {},
-): CoutDeRevient =>
-  new CoutDeRevient(new ElementChiffre('OF-2026-000001', type), {
+const rapportFixture = (lignes: readonly LigneDeCout[], categorie = 'OF', fiche: Partial<FicheDuRapport> = {}): CoutDeRevient =>
+  new CoutDeRevient(new ElementChiffre('OF-2026-000001', new CategorieDElementChiffre(categorie)), {
     lignes,
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(0),
@@ -128,7 +124,7 @@ const montantFixture = (euros: number | undefined): TotalDeMontant =>
   euros === undefined ? TotalDeMontant.incomplet() : TotalDeMontant.complet(new Montant(euros));
 
 const haasFixture = new ActiviteCitee(
-  new ElementCite(new ElementChiffreId('element-192'), 'OF-2026-000192', 'ORDRE_DE_FABRICATION'),
+  new ElementCite(new ElementChiffreId('element-192'), 'OF-2026-000192', new CategorieDElementChiffre('OF')),
   new PosteCite('poste-haas', 'Haas VF-2'),
   new NatureDOperation('Fraisage'),
 );
@@ -333,7 +329,7 @@ describe('Cout de revient component', () => {
   });
 
   it('should show the server evaluation in the browser time zone', async () => {
-    givenNouveauRapport(rapportFixture([ligneFixture()], 'ORDRE_DE_FABRICATION', { evaluation: instantFixture(22, 15) }));
+    givenNouveauRapport(rapportFixture([ligneFixture()], 'OF', { evaluation: instantFixture(22, 15) }));
 
     await whenEcranAffiche();
 
@@ -455,7 +451,9 @@ describe('Cout de revient component', () => {
   };
 
   const givenAvailableElements = (): void => {
-    portFixture.elements = [{ id: new ElementChiffreId('element-b'), identite: new ElementChiffre('OF-B', 'ORDRE_DE_FABRICATION') }];
+    portFixture.elements = [
+      { id: new ElementChiffreId('element-b'), identite: new ElementChiffre('OF-B', new CategorieDElementChiffre('OF')) },
+    ];
   };
   const whenChoosingAvailableElement = async (): Promise<void> => {
     requis('cout-element-trigger').click();
@@ -508,11 +506,11 @@ describe('Cout de revient component', () => {
   });
 
   it('should name a mould by the word the company uses', async () => {
-    givenRapportDe([ligneFixture()], 'PRODUIT');
+    givenRapportDe([ligneFixture()], 'MOULE');
 
     await whenEcranAffiche();
 
-    expect(texte('cout-identite')).toBe('Moule · OF-2026-000001');
+    expect(texte('cout-identite')).toBe('MOULE · OF-2026-000001');
   });
 
   it('should display one row per operation nature, in the order the server sent them', async () => {
@@ -910,7 +908,7 @@ describe('Cout de revient component', () => {
       ),
     });
     const ligne = ligneFixture({}, { temps, cout, pointages: automatique ? [arreteAutomatiquement] : [] });
-    return rapportFixture([ligne], 'ORDRE_DE_FABRICATION', { temps, cout });
+    return rapportFixture([ligne], 'OF', { temps, cout });
   };
 
   const givenAutreElementTermine = (): void => {
@@ -918,7 +916,7 @@ describe('Cout de revient component', () => {
     const ligne = ligneFixture({}, { temps: rapport.temps, cout: rapport.cout });
     portFixture.rapports.set(
       'element-b',
-      new CoutDeRevient(new ElementChiffre('OF-B', 'ORDRE_DE_FABRICATION'), {
+      new CoutDeRevient(new ElementChiffre('OF-B', new CategorieDElementChiffre('OF')), {
         lignes: [ligne],
         temps: rapport.temps,
         cout: rapport.cout,
@@ -941,7 +939,7 @@ describe('Cout de revient component', () => {
     );
     portFixture.rapports.set(
       'element-b',
-      new CoutDeRevient(new ElementChiffre('OF-B', 'ORDRE_DE_FABRICATION'), {
+      new CoutDeRevient(new ElementChiffre('OF-B', new CategorieDElementChiffre('OF')), {
         lignes: [],
         temps,
         cout,
@@ -966,7 +964,7 @@ describe('Cout de revient component', () => {
       TotalDeMontant.complet(new Montant(0)),
       TotalDeMontant.complet(new Montant(0)),
     );
-    givenNouveauRapport(rapportFixture([], 'ORDRE_DE_FABRICATION', { temps, cout, activitesEnCours: new ActivitesEnCoursExclues(nombre) }));
+    givenNouveauRapport(rapportFixture([], 'OF', { temps, cout, activitesEnCours: new ActivitesEnCoursExclues(nombre) }));
   };
 
   const givenFinAutomatique = (): void => {
@@ -977,15 +975,15 @@ describe('Cout de revient component', () => {
     const temps = new TempsPasse(TotalDeTemps.complet(new DureePassee('PT5H')), TotalDeTemps.incomplet(), TotalDeTemps.incomplet());
     const cout = new Cout(TotalDeMontant.complet(new Montant(300)), TotalDeMontant.incomplet(), TotalDeMontant.incomplet());
     const ligne = ligneFixture({}, { temps, cout });
-    portFixture.rapports.set(ELEMENT, rapportFixture([ligne], 'ORDRE_DE_FABRICATION', { temps, cout }));
+    portFixture.rapports.set(ELEMENT, rapportFixture([ligne], 'OF', { temps, cout }));
   };
 
   const givenRapport = (lignes: readonly LigneDeCout[]): void => {
     portFixture.rapports.set(ELEMENT, rapportFixture(lignes));
   };
 
-  const givenRapportDe = (lignes: readonly LigneDeCout[], type: TypeDElementChiffre): void => {
-    portFixture.rapports.set(ELEMENT, rapportFixture(lignes, type));
+  const givenRapportDe = (lignes: readonly LigneDeCout[], categorie: string): void => {
+    portFixture.rapports.set(ELEMENT, rapportFixture(lignes, categorie));
   };
 
   const givenElementInconnu = (): void => {

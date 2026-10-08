@@ -1,3 +1,4 @@
+import { CategorieDElementChiffre } from '../element/CategorieDElementChiffre';
 import { ElementChiffre } from '../element/ElementChiffre';
 import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
@@ -14,7 +15,7 @@ import { CoutDeRevient } from './CoutDeRevient';
 import { LigneDeCout } from './LigneDeCout';
 import { NatureDOperation } from './NatureDOperation';
 
-const ELEMENT = new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION');
+const ELEMENT = new ElementChiffre('OF-2026-000001', new CategorieDElementChiffre('OF'));
 
 const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCout =>
   new PointageDeCout({

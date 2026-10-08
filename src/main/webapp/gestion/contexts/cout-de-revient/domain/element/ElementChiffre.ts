@@ -1,4 +1,4 @@
-import { TypeDElementChiffre } from './TypeDElementChiffre';
+import { CategorieDElementChiffre } from './CategorieDElementChiffre';
 
 interface DesignationDElement {
   readonly reference?: string | undefined;
@@ -10,7 +10,7 @@ export class ElementChiffre {
   readonly libelle: string | undefined;
   constructor(
     readonly nom: string,
-    readonly type: TypeDElementChiffre,
+    readonly categorie: CategorieDElementChiffre,
     designation: DesignationDElement = {},
   ) {
     this.reference = designation.reference;

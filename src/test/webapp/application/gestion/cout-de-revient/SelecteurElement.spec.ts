@@ -469,7 +469,7 @@ describe('Navigation between cost reports', () => {
   const thenTheMouldReportIsAddressedAndDisplayed = (): void => {
     cy.location('pathname').should('equal', '/couts-de-revient/element-2');
     cy.location('search').should('equal', '');
-    cy.get(dataSelector('cout-identite')).invoke('text').invoke('trim').should('equal', 'Moule · Moule Beta');
+    cy.get(dataSelector('cout-identite')).invoke('text').invoke('trim').should('equal', 'MOULE · Moule Beta');
     cy.get(dataSelector('cout-total')).should('contain.text', '520,00');
     cy.get(dataSelector('cout-evaluation')).should('contain.text', '12 mai 2026');
     cy.get(dataSelector('cout-element-panel')).should('not.exist');

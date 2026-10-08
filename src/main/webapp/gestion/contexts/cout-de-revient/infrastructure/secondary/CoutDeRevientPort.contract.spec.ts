@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { CoutDeRevientFixture } from '@test/unit/fixtures/gestion/cout-de-revient/CoutDeRevientFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
+import { CategorieDElementChiffre } from '../../domain/element/CategorieDElementChiffre';
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
@@ -77,6 +78,9 @@ const PERIODE = { debut: '2026-05-11T09:00:00Z', fin: '2026-05-11T11:00:00Z' };
 const TOTAL = { travail: 'PT2H', nonConformite: 'PT30M', total: 'PT2H30M' };
 const COUT_TOTAL = { machine: 90, mainDOeuvre: 40, total: 130 };
 
+const typeDeLaCategorie = (categorie: CategorieDElementChiffre): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
+  categorie.value === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
+
 const completFixture = <T>(valeur: T): { complete: true; valeur: T } => ({ complete: true, valeur });
 
 const toRestLigne = (ligne: LigneFixture): RestLigne => ({
@@ -128,7 +132,7 @@ const toDomainLigne = (ligne: LigneFixture): LigneDeCout =>
   });
 
 const toDomain = (lignes: readonly LigneFixture[]): CoutDeRevient =>
-  new CoutDeRevient(new ElementChiffre('OF-2026-000001', 'ORDRE_DE_FABRICATION'), {
+  new CoutDeRevient(new ElementChiffre('OF-2026-000001', new CategorieDElementChiffre('OF')), {
     lignes: lignes.map(toDomainLigne),
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(0),
@@ -183,7 +187,11 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
         return new HttpResponse({
           status: 200,
           body: {
-            content: this.elements.map(element => ({ id: element.id.value, nom: element.identite.nom, type: element.identite.type })),
+            content: this.elements.map(element => ({
+              id: element.id.value,
+              nom: element.identite.nom,
+              type: typeDeLaCategorie(element.identite.categorie),
+            })),
             currentPage: 0,
             pageSize: 100,
             totalElementsCount: this.elements.length,
@@ -292,8 +300,8 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
 
   it('should return the opaque identities and both types available for navigation', async () => {
     const elements: readonly ElementDisponible[] = [
-      { id: new ElementChiffreId('of'), identite: new ElementChiffre('OF A', 'ORDRE_DE_FABRICATION') },
-      { id: new ElementChiffreId('moule'), identite: new ElementChiffre('Moule B', 'PRODUIT') },
+      { id: new ElementChiffreId('of'), identite: new ElementChiffre('OF A', new CategorieDElementChiffre('OF')) },
+      { id: new ElementChiffreId('moule'), identite: new ElementChiffre('Moule B', new CategorieDElementChiffre('MOULE')) },
     ];
     harness.seedElements(elements);
 
@@ -321,7 +329,7 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
 
     const rapport = await port.rapport(DEMANDE);
 
-    expect(rapport?.element).toMatchObject({ nom: 'OF-2026-000001', type: 'ORDRE_DE_FABRICATION' });
+    expect([rapport?.element.nom, rapport?.element.categorie.value]).toEqual(['OF-2026-000001', 'OF']);
   });
 
   it('should return one line per operation nature, valued in machine and labour', async () => {
@@ -586,7 +594,10 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     const elements = await result;
 
     expect(elements).toHaveLength(101);
-    expect(elements.at(-1)).toEqual({ id: new ElementChiffreId('last'), identite: new ElementChiffre('Dernier moule', 'PRODUIT') });
+    expect(elements.at(-1)).toEqual({
+      id: new ElementChiffreId('last'),
+      identite: new ElementChiffre('Dernier moule', new CategorieDElementChiffre('MOULE')),
+    });
   });
 
   const whenNextPageStarts = async (): Promise<void> => {
@@ -722,7 +733,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
         mainDOeuvre: TotalDeMontant.complet(new Montant(26.25)),
         paralleles: [
           new ActiviteCitee(
-            new ElementCite(new ElementChiffreId('element-2'), 'OF-2026-000192', 'ORDRE_DE_FABRICATION'),
+            new ElementCite(new ElementChiffreId('element-2'), 'OF-2026-000192', new CategorieDElementChiffre('OF')),
             new PosteCite('poste-haas', 'Haas VF-2'),
             new NatureDOperation('Fraisage'),
           ),
