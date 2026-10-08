@@ -92,7 +92,7 @@ const whenVisitingWorkshop = (): void => {
 };
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);
-  cy.visit('/moules-et-of');
+  cy.visit('/produits');
   cy.wait('@elementsRead');
 };
 const whenOpeningFromTheMenu = (): void => {

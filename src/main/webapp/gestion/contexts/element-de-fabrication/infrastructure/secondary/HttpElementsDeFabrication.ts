@@ -19,6 +19,7 @@ import { LibelleDElement } from '../../domain/LibelleDElement';
 import { NomDElement } from '../../domain/NomDElement';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
+import { ReferentielDesProduits } from '../../domain/ReferentielDesProduits';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteElements } from '../../domain/RequeteElements';
 
@@ -70,12 +71,19 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  override async referentiel(): Promise<readonly ElementDeFabrication[]> {
+  override async referentiel(): Promise<ReferentielDesProduits> {
     try {
-      return await collectAllPages(
-        (page, size) => this.elements(new RequeteElements(page, size)),
-        entry => entry.id.value,
-      );
+      const [categories, elements] = await Promise.all([
+        collectAllPages(
+          (page, size) => this.categories(page, size),
+          categorie => categorie.value,
+        ),
+        collectAllPages(
+          (page, size) => this.elements(new RequeteElements(page, size)),
+          entry => entry.id.value,
+        ),
+      ]);
+      return new ReferentielDesProduits(categories, elements);
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
@@ -87,6 +95,11 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
       queryParams: { ...PERIODE_DEPUIS_TOUJOURS, page: requete.page, size: requete.taille },
     });
     return buildPageFrom(response, toElement, requete);
+  }
+
+  private async categories(page: number, taille: number): Promise<Page<CategorieDeProduit>> {
+    const response = await this.api.read('/api/categories-de-produit', { queryParams: { page, size: taille } });
+    return buildPageFrom(response, categorie => new CategorieDeProduit(categorie.code), { page, taille });
   }
 
   override creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {

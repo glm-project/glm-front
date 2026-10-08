@@ -1,8 +1,9 @@
 # Élément de fabrication
 
 Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des éléments de fabrication —
-les moules et les OF — que le dirigeant ou son assistante créent et tiennent à jour, bien avant qu'un
-élément soit mis à l'atelier.
+les produits, rangés dans les catégories que l'entreprise déclare — que le dirigeant ou son assistante
+créent et tiennent à jour, bien avant qu'un élément soit mis à l'atelier. L'écran s'appelle « Produits »
+(`/produits`).
 
 ## Langage
 
@@ -40,6 +41,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - **CommandeModificationElement** : commande de modification, portant l'identifiant et les attributs
   facultatifs validés. La catégorie n'y figure pas : elle ne se change pas.
 - **RequeteElements** : objet de requête paginée (`page`, `taille`).
+- **ReferentielDesProduits** : acquisition complète de l'écran — les catégories déclarées, dans l'ordre
+  choisi par l'entreprise, et tous les éléments. `estSansCategorie()` dit qu'aucun produit ne peut encore
+  être créé.
 - **FormulaireElementDeFabrication** : modèle riche d'interaction pour la création et la modification, qui
   valide les saisies, produit la commande adéquate et efface le refus de doublon dès que la référence est
   modifiée.
@@ -56,8 +60,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   (`urn:glm:erreur:element-de-fabrication:reference-deja-utilisee`) se reporte sur le champ référence sans
   fermer le formulaire.
 - Le nom n'est jamais saisi ni envoyé : le domaine du back le produit à la création.
-- La catégorie est obligatoire à la création et immuable ensuite. Un bouton par catégorie la porte et ouvre
-  le même formulaire, catégorie pré-remplie et non affichée.
+- La catégorie est obligatoire à la création et immuable ensuite. Un bouton par catégorie déclarée la porte
+  et ouvre le même formulaire, catégorie pré-remplie et non affichée. Boutons et filtres suivent l'ordre des
+  catégories ; sans catégorie, l'écran invite à en déclarer une et ne propose aucune création.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la
   clôture de son suivi d'atelier, qui appartient à un autre contexte.
@@ -88,8 +93,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 
 ## Recherche du référentiel
 
-Le port fournit `referentiel()` comme acquisition complète pour la recherche de l'écran. Le secondaire
-parcourt les pages avec la taille commune et refuse les échos de page, tailles, totaux, troncatures et
+Le port fournit `referentiel()` comme acquisition complète pour la recherche de l'écran : les catégories
+de `GET /api/categories-de-produit` et les éléments, lus en parallèle. Le secondaire parcourt les pages de
+chaque collection avec la taille commune et refuse les échos de page, tailles, totaux, troncatures et
 doublons incohérents. Il signale une panne une seule fois et ne présente jamais une collection partielle
 comme résultat complet. La page cherche sans casse ni accents, puis pagine localement les résultats.
 Une nouvelle recherche ou un changement de catégorie repart de la première page. Actualiser et les écritures

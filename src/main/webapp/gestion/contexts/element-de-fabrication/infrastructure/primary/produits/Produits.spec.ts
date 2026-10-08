@@ -37,6 +37,7 @@ describe('Produits page', () => {
   let port: ElementsDeFabricationFixture;
   beforeEach(() => {
     port = new ElementsDeFabricationFixture();
+    port.categories = [new CategorieDeProduit('MOULE'), new CategorieDeProduit('OF')];
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -99,7 +100,7 @@ describe('Produits page', () => {
     current.resolve(new Page([ofSansReferenceFixture], 1));
     await whenViewSettles();
 
-    expect(loading).toContain('Chargement des moules et OF');
+    expect(loading).toContain('Chargement des produits');
     expect(failure).toBe('');
     expect(texts('element-nom-cell')).toEqual(['OF-2026-000042']);
   });
@@ -142,17 +143,36 @@ describe('Produits page', () => {
     deferred.resolve(new Page([], 0));
     await whenViewSettles();
 
-    expect(loading).toContain('Chargement des moules et OF');
+    expect(loading).toContain('Chargement des produits');
     expect(empty).toBe('');
   });
 
-  it('should offer both creations when the referential is empty', async () => {
+  it('should offer one creation per declared category when the referential is empty', async () => {
     await whenOpening();
 
-    expect(text('elements-empty')).toContain('Aucun moule ni OF');
+    expect(text('elements-empty')).toContain('Aucun produit');
     expect(text('elements-empty-create-MOULE')).toContain('MOULE');
     expect(text('elements-empty-create-OF')).toContain('OF');
     expect(text('elements-pagination')).toContain('0 élément');
+  });
+
+  it('should invite to declare a category, and offer no creation, while the company has declared none', async () => {
+    givenNoCategory();
+
+    await whenOpening();
+
+    expect(text('elements-sans-categorie')).toContain('Aucune catégorie de produit');
+    expect(creations()).toEqual([]);
+  });
+
+  it('should offer the creations and the filters in the order the company chose for its categories', async () => {
+    givenCategories(['PIECE', 'OF', 'MOULE']);
+    givenReferential();
+
+    await whenOpening();
+
+    expect(creations()).toEqual(['PIECE', 'OF', 'MOULE']);
+    expect(buttonsIn('elements-filtres')).toEqual(['Tous', 'PIECE', 'OF', 'MOULE']);
   });
 
   it('should name each element by its screen words, its numbers and its label', async () => {
@@ -203,7 +223,7 @@ describe('Produits page', () => {
 
     await whenClicking('elements-retry');
 
-    expect(failure).toContain('Impossible de charger les moules et OF');
+    expect(failure).toContain('Impossible de charger les produits');
     expect(texts('element-row')).toHaveLength(2);
   });
 
@@ -257,6 +277,15 @@ describe('Produits page', () => {
     expect(texts('element-reference-cell')).toEqual(['1016']);
   });
 
+  const givenNoCategory = (): void => {
+    port.categories = [];
+  };
+  const givenCategories = (codes: readonly string[]): void => {
+    port.categories = codes.map(code => new CategorieDeProduit(code));
+  };
+  const creations = (): string[] => buttonsIn('elements-creations');
+  const buttonsIn = (selector: string): string[] =>
+    Array.from(document.querySelector(dataSelector(selector))?.querySelectorAll('button') ?? [], button => button.textContent.trim());
   const givenReferential = (): void => {
     port.liste = [mouleFixture, ofSansReferenceFixture];
   };

@@ -16,7 +16,7 @@ const ECRANS: [string, unknown][] = [
   ['anomalies', ListeAnomalies],
   ['', SupervisionAtelier],
   ['atelier', Atelier],
-  ['moules-et-of', Produits],
+  ['produits', Produits],
   ['postes-de-travail', PostesDeTravail],
   ['operateurs', Operateurs],
   ['operateurs/:operateur/heures', SyntheseDesHeures],

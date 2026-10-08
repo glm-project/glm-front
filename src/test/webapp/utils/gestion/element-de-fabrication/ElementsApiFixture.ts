@@ -12,10 +12,12 @@ interface ElementEnregistre {
 }
 
 const ROUTE = '/api/elements-de-fabrication';
+const CATEGORIES = '/api/categories-de-produit';
 const URN = 'urn:glm:erreur:element-de-fabrication:';
 
 export class ElementsApiFixture {
   elements: ElementEnregistre[];
+  categories: string[] = ['MOULE', 'OF'];
   failRead = false;
   failWrite = false;
   readonly writes: (Creation | Modification)[] = [];
@@ -25,6 +27,7 @@ export class ElementsApiFixture {
   }
 
   install(): void {
+    this.installCategories();
     this.installSingleRead();
     cy.intercept({ method: 'GET', pathname: ROUTE }, request => {
       if (this.failRead) {
@@ -42,6 +45,23 @@ export class ElementsApiFixture {
     }).as('elementsRead');
     this.installCreation();
     this.installModification();
+  }
+
+  private installCategories(): void {
+    cy.intercept({ method: 'GET', pathname: CATEGORIES }, request => {
+      if (this.failRead) {
+        request.reply({ statusCode: 500, body: {} });
+        return;
+      }
+      const page = Number(request.query['page'] ?? 0);
+      const size = Number(request.query['size'] ?? 20);
+      request.reply({
+        content: this.categories.slice(page * size, (page + 1) * size).map(code => ({ code })),
+        currentPage: page,
+        pageSize: size,
+        totalElementsCount: this.categories.length,
+      });
+    }).as('categoriesRead');
   }
 
   private installSingleRead(): void {

@@ -94,7 +94,7 @@ describe('FormulaireElementDeFabrication', () => {
     const formulaire = initial.avecRefus(new ReferenceDejaUtilisee());
 
     expect(initial.estValide()).toBe(true);
-    expect(formulaire.erreurReference()).toBe('Un autre moule ou OF porte déjà cette référence.');
+    expect(formulaire.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
     expect(formulaire.produireCommande().ok).toBe(false);
   });
 
@@ -104,21 +104,21 @@ describe('FormulaireElementDeFabrication', () => {
 
     expect(corrige.erreurReference()).toBeUndefined();
     expect(corrige.estValide()).toBe(true);
-    expect(refuse.erreurReference()).toBe('Un autre moule ou OF porte déjà cette référence.');
+    expect(refuse.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
   });
 
   it('should keep the duplicate refusal while the label alone is edited', () => {
     const refuse = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
     const modifie = refuse.avecLibelle('Moule de capot');
 
-    expect(modifie.erreurReference()).toBe('Un autre moule ou OF porte déjà cette référence.');
+    expect(modifie.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
   });
 
   it('should keep the duplicate refusal when the company number is retyped identically', () => {
     const refuse = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
     const inchange = refuse.avecReference('1015');
 
-    expect(inchange.erreurReference()).toBe('Un autre moule ou OF porte déjà cette référence.');
+    expect(inchange.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
   });
 
   it('should report a vanished element on the saving line rather than on a field', () => {

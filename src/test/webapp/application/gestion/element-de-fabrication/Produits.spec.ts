@@ -72,7 +72,7 @@ const givenReferential = (nombre = 0): ElementsApiFixture => {
 };
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);
-  cy.visit('/moules-et-of');
+  cy.visit('/produits');
 };
 const whenOpeningFromTheMenu = (): void => {
   cy.visit('/');
@@ -112,9 +112,9 @@ const whenGoingToNextPage = (): void => {
   cy.get(dataSelector('elements-pagination')).find('button[aria-label="Page suivante"]').click();
 };
 const thenReferentialIsVisible = (): void => {
-  cy.location('pathname').should('eq', '/moules-et-of');
+  cy.location('pathname').should('eq', '/produits');
   cy.get(dataSelector('elements-page')).should('be.visible');
-  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun moule ni OF');
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit');
 };
 const thenElementIsListed = (reference: string, categorie: string, libelle: string): void => {
   cy.get(dataSelector('element-form')).should('not.exist');

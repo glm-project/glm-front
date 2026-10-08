@@ -121,7 +121,7 @@ describe('ElementFormDialog', () => {
     const remainedOpen = closed.length;
     await whenEntering('element-reference', '1016');
 
-    expect(duplicate).toBe('Un autre moule ou OF porte déjà cette référence.');
+    expect(duplicate).toBe('Un autre produit porte déjà cette référence.');
     expect(remainedOpen).toBe(0);
     expect(text('element-reference-error')).toBe('');
   });

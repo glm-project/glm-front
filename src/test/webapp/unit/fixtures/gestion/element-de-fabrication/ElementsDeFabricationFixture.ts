@@ -1,5 +1,6 @@
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { ok, Result } from '@/app/shared/result/domain/Result';
+import { CategorieDeProduit } from '@/gestion/contexts/element-de-fabrication/domain/CategorieDeProduit';
 import { CommandeCreationElement } from '@/gestion/contexts/element-de-fabrication/domain/CommandeCreationElement';
 import { CommandeModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/CommandeModificationElement';
 import { ElementDeFabrication } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabrication';
@@ -7,6 +8,7 @@ import { ElementDeFabricationId } from '@/gestion/contexts/element-de-fabricatio
 import { ElementsDeFabricationPort } from '@/gestion/contexts/element-de-fabrication/domain/ElementsDeFabricationPort';
 import { NomDElement } from '@/gestion/contexts/element-de-fabrication/domain/NomDElement';
 import { ReferenceDejaUtilisee } from '@/gestion/contexts/element-de-fabrication/domain/ReferenceDejaUtilisee';
+import { ReferentielDesProduits } from '@/gestion/contexts/element-de-fabrication/domain/ReferentielDesProduits';
 import { RefusModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusModificationElement';
 import { RequeteElements } from '@/gestion/contexts/element-de-fabrication/domain/RequeteElements';
 
@@ -15,6 +17,7 @@ import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 const NOM_ATTRIBUE = 'PRD-2026-000001';
 
 export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
+  categories: readonly CategorieDeProduit[] = [];
   liste: readonly ElementDeFabrication[] = [];
   readonly enregistrements: (CommandeCreationElement | CommandeModificationElement)[] = [];
   creation: Result<void, ReferenceDejaUtilisee> = ok(undefined);
@@ -30,8 +33,9 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     return this.lectureSignal.promise;
   }
 
-  override async referentiel(): Promise<readonly ElementDeFabrication[]> {
-    return (await this.elements(new RequeteElements(0, Number.MAX_SAFE_INTEGER))).elements;
+  override async referentiel(): Promise<ReferentielDesProduits> {
+    const page = await this.elements(new RequeteElements(0, Number.MAX_SAFE_INTEGER));
+    return new ReferentielDesProduits(this.categories, page.elements);
   }
 
   override elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>> {

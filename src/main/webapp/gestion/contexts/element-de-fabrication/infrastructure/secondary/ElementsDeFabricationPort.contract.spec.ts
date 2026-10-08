@@ -37,6 +37,7 @@ interface ElementFixture {
 }
 
 const ROUTE = '/api/elements-de-fabrication';
+const CATEGORIES = '/api/categories-de-produit';
 const NOM_ATTRIBUE = 'PRD-2026-000001';
 
 const mouleFixture: ElementFixture = {
@@ -66,6 +67,7 @@ const projeter = (element: ElementDeFabrication): ProjectionElement => ({
 
 class ElementsHttpBackendFixture implements HttpBackend {
   elements: ElementFixture[] = [];
+  categories: string[] = [];
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     return defer(() => this.answer(request)).pipe(
@@ -90,20 +92,20 @@ class ElementsHttpBackendFixture implements HttpBackend {
   }
 
   private handleGet(pathname: string, searchParams: URLSearchParams): HttpResponse<unknown> | HttpErrorResponse {
-    if (pathname !== ROUTE) {
-      return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
-    }
     const page = Number(searchParams.get('page') ?? '0');
     const size = Number(searchParams.get('size') ?? '20');
-    return new HttpResponse({
-      status: 200,
-      body: {
-        content: this.elements.slice(page * size, (page + 1) * size).map(corpsDe),
-        currentPage: page,
-        pageSize: size,
-        totalElementsCount: this.elements.length,
-      },
-    });
+    switch (pathname) {
+      case ROUTE:
+        return pageOf(this.elements.map(corpsDe), page, size);
+      case CATEGORIES:
+        return pageOf(
+          this.categories.map(code => ({ code })),
+          page,
+          size,
+        );
+      default:
+        return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
+    }
   }
 
   private handlePost(pathname: string, body: CorpsDeFiche & { categorie: string }): HttpResponse<unknown> | HttpErrorResponse {
@@ -127,6 +129,12 @@ class ElementsHttpBackendFixture implements HttpBackend {
   }
 }
 
+const pageOf = (entries: readonly object[], page: number, size: number): HttpResponse<unknown> =>
+  new HttpResponse({
+    status: 200,
+    body: { content: entries.slice(page * size, (page + 1) * size), currentPage: page, pageSize: size, totalElementsCount: entries.length },
+  });
+
 const corpsDe = (element: ElementFixture): RestElement => ({
   ...element,
   type: element.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
@@ -140,6 +148,7 @@ const ficheOf = (body: CorpsDeFiche): CorpsDeFiche => ({
 interface ElementsHarness {
   readonly port: ElementsDeFabricationPort;
   seed(elements: readonly ElementFixture[]): void;
+  declare(categories: readonly string[]): void;
 }
 
 const createHttpHarness = (): ElementsHarness => {
@@ -159,6 +168,9 @@ const createHttpHarness = (): ElementsHarness => {
     seed: (elements: readonly ElementFixture[]) => {
       backend.elements = [...elements];
     },
+    declare: (categories: readonly string[]) => {
+      backend.categories = [...categories];
+    },
   };
 };
 
@@ -176,6 +188,9 @@ const createFixtureHarness = (): ElementsHarness => {
     port: fixture,
     seed: (elements: readonly ElementFixture[]) => {
       fixture.liste = elements.map(toDomain);
+    },
+    declare: (categories: readonly string[]) => {
+      fixture.categories = categories.map(code => new CategorieDeProduit(code));
     },
   };
 };
@@ -197,9 +212,34 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   it('should return the complete referential across server pages', async () => {
     givenManyElements(125);
 
-    const entries = await port.referentiel();
+    const referentiel = await port.referentiel();
 
-    expect(entries).toHaveLength(125);
+    expect(referentiel.elements).toHaveLength(125);
+  });
+
+  it('should return the declared categories in the order the company chose, across server pages', async () => {
+    givenCategories([
+      'OF',
+      ...Array.from(
+        { length: 120 },
+        (_, index) => `C${String.fromCharCode(65 + (index % 26))}${String.fromCharCode(65 + Math.floor(index / 26))}`,
+      ),
+      'MOULE',
+    ]);
+
+    const referentiel = await port.referentiel();
+
+    expect(referentiel.categories).toHaveLength(122);
+    expect(referentiel.categories[0]?.value).toBe('OF');
+    expect(referentiel.categories.at(-1)?.value).toBe('MOULE');
+  });
+
+  it('should tell that the company has declared no category yet', async () => {
+    givenCategories([]);
+
+    const referentiel = await port.referentiel();
+
+    expect(referentiel.estSansCategorie()).toBe(true);
   });
 
   it('should return the requested page with domain values and the total count', async () => {
@@ -279,6 +319,10 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     harness.seed(elements);
   };
 
+  const givenCategories = (categories: readonly string[]): void => {
+    harness.declare(categories);
+  };
+
   const givenManyElements = (count: number): void => {
     harness.seed(
       Array.from({ length: count }, (_, index) => ({
@@ -356,6 +400,14 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
     expect(request.request.params.get('fin')).toBe('2999-12-31T23:59:59Z');
     expect(request.request.params.get('page')).toBe('0');
     expect(request.request.params.get('size')).toBe('20');
+  });
+
+  it('should report a failed category read once and reject the referential', async () => {
+    const result = port.referentiel().catch((failure: unknown) => failure);
+    await whenCategoryReadFails();
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
   });
 
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
@@ -453,6 +505,15 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   const whenReadFails = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
     server.expectOne(candidate => candidate.method === 'GET' && candidate.url === ROUTE).flush({}, { status: 500, statusText: 'Failure' });
+    server
+      .expectOne(candidate => candidate.url === CATEGORIES)
+      .flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
+  };
+
+  const whenCategoryReadFails = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(candidate => candidate.url === CATEGORIES).flush({}, { status: 500, statusText: 'Failure' });
+    server.expectOne(candidate => candidate.url === ROUTE).flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
   };
 
   const whenWriteAnswers = async (url: string, status: number, body: object | null): Promise<TestRequest> => {

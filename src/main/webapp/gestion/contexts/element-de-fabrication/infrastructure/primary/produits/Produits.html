@@ -4,8 +4,8 @@
       <h1 id="elements-heading" class="text-title">{{ libelles.titre }}</h1>
       <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
     </div>
-    <div class="flex flex-wrap gap-2">
-      @for (categorie of categories; track categorie.value) {
+    <div class="flex flex-wrap gap-2" data-selector="elements-creations">
+      @for (categorie of etat().categories; track categorie.value) {
       <button
         mat-stroked-button
         (click)="openCreation(categorie)"
@@ -30,7 +30,7 @@
         data-selector="elements-search"
       />
     </label>
-    <div class="gestion-segments" role="group" [attr.aria-label]="libelles.filtrerCategorie">
+    <div class="gestion-segments" role="group" [attr.aria-label]="libelles.filtrerCategorie" data-selector="elements-filtres">
       <button
         class="gestion-segment"
         type="button"
@@ -40,7 +40,7 @@
       >
         {{ libelles.tous }}
       </button>
-      @for (categorie of categories; track categorie.value) {
+      @for (categorie of etat().categories; track categorie.value) {
       <button
         class="gestion-segment"
         type="button"
@@ -67,12 +67,17 @@
       retrySelector="elements-retry"
       (retryRequested)="reload()"
     />
+    } @else if (etat().sansCategorie) {
+    <div class="px-6 py-16 text-center" data-selector="elements-sans-categorie">
+      <h2 class="text-section">{{ libelles.sansCategorie }}</h2>
+      <p class="mx-auto mt-2 max-w-lg text-body text-ink-muted">{{ libelles.sansCategorieDetails }}</p>
+    </div>
     } @else if (etat().totalElementsCount === 0) {
     <div class="px-6 py-16 text-center" data-selector="elements-empty">
       <h2 class="text-section">{{ libelles.vide }}</h2>
       <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">{{ libelles.videDetails }}</p>
       <div class="flex flex-wrap justify-center gap-2">
-        @for (categorie of categories; track categorie.value) {
+        @for (categorie of etat().categories; track categorie.value) {
         <button
           mat-stroked-button
           (click)="openCreation(categorie)"

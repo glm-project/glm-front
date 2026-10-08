@@ -14,10 +14,12 @@ import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog
 import { LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
 
 interface EtatElements {
+  readonly categories: readonly CategorieDeProduit[];
   readonly elements: readonly ElementDeFabrication[];
   readonly totalElementsCount: number;
   readonly page: number;
   readonly taille: number;
+  readonly sansCategorie: boolean;
   readonly chargement: boolean;
   readonly echec: boolean;
 }
@@ -54,15 +56,16 @@ export class Produits implements OnInit {
   protected readonly libelles = LIBELLES_ELEMENTS_DE_FABRICATION;
   protected readonly colonnes = ['categorie', 'reference', 'nom', 'libelle', 'actions'];
   protected readonly etat = signal<EtatElements>({
+    categories: [],
     elements: [],
     totalElementsCount: 0,
     page: 0,
     taille: 20,
+    sansCategorie: false,
     chargement: false,
     echec: false,
   });
 
-  protected readonly categories: readonly CategorieDeProduit[] = [new CategorieDeProduit('MOULE'), new CategorieDeProduit('OF')];
   protected readonly filtre = signal<CategorieDeProduit | undefined>(undefined);
 
   protected choisirCategorie(categorie: CategorieDeProduit | undefined): void {
@@ -141,12 +144,14 @@ export class Produits implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const entries = await this.port.referentiel();
+      const referentiel = await this.port.referentiel();
       if (lecture === this.lecture) {
         this.etat.update(etat => ({
           ...etat,
-          elements: entries,
-          totalElementsCount: entries.length,
+          categories: referentiel.categories,
+          sansCategorie: referentiel.estSansCategorie(),
+          elements: referentiel.elements,
+          totalElementsCount: referentiel.elements.length,
         }));
         this.etat.update(etat => ({
           ...etat,

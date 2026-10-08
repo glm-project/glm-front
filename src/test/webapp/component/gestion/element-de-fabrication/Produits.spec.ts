@@ -100,11 +100,11 @@ const givenPendingCreation = (): ReturnType<typeof interceptForever> =>
   );
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);
-  cy.visit('/moules-et-of');
+  cy.visit('/produits');
 };
 const whenVisitingMobileReferential = (): void => {
   cy.viewport(390, 844);
-  cy.visit('/moules-et-of');
+  cy.visit('/produits');
   cy.get(dataSelector('element-row')).should('have.length', 2);
   cy.screenshot('elements-mobile', { capture: 'viewport' });
 };
@@ -159,7 +159,7 @@ const thenCreationIsDismissed = (api: ElementsApiFixture): void => {
   cy.wrap(api.writes).should('be.empty');
 };
 const thenDuplicateRefusalIsVisible = (): void => {
-  cy.get(dataSelector('element-reference-error')).should('contain.text', 'Un autre moule ou OF porte déjà cette référence.');
+  cy.get(dataSelector('element-reference-error')).should('contain.text', 'Un autre produit porte déjà cette référence.');
   cy.get(dataSelector('element-form')).should('be.visible');
   cy.screenshot('elements-duplicate', { capture: 'viewport' });
 };

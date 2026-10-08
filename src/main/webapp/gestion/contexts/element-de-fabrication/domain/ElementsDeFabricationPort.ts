@@ -4,11 +4,12 @@ import { CommandeCreationElement } from './CommandeCreationElement';
 import { CommandeModificationElement } from './CommandeModificationElement';
 import { ElementDeFabrication } from './ElementDeFabrication';
 import { ReferenceDejaUtilisee } from './ReferenceDejaUtilisee';
+import { ReferentielDesProduits } from './ReferentielDesProduits';
 import { RefusModificationElement } from './RefusModificationElement';
 import { RequeteElements } from './RequeteElements';
 
 export abstract class ElementsDeFabricationPort {
-  abstract referentiel(): Promise<readonly ElementDeFabrication[]>;
+  abstract referentiel(): Promise<ReferentielDesProduits>;
   abstract elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>>;
   abstract creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>>;
   abstract modifier(commande: CommandeModificationElement): Promise<Result<void, RefusModificationElement>>;
