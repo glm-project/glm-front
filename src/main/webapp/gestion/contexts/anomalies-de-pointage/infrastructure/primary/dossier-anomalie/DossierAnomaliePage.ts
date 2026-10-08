@@ -6,7 +6,6 @@ import {
 } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { provideGestionDateAdapter } from '@/gestion/shared/design-system/infrastructure/primary/date-adapter/gestion-date.provider';
 import { DateTimeField } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
-import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   Component,
@@ -28,17 +27,13 @@ import { ChangementSaisie, SaisieActe } from '../../../domain/acte/SaisieActe';
 import { ActionDirecte, ActionsDirectes } from '../../../domain/dossier/ActionsDirectes';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { AdresseDossier, ChoixGuide, DossierAnomalie, LigneConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { IssueDeLActe } from '../../../domain/dossier/IssueDeLActe';
+import { AdresseDossier, ChoixGuide, DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
-import { contexteDuSuivi } from '../ContexteDuSuivi';
 import { etatDeLecture } from '../EtatDeLecture';
-import { jourDeLaJournee } from '../JourneeDeLOperateur';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { phrasesDuProbleme } from '../PhrasesDuProbleme';
 import {
   detailDuPointage,
   erreursALire,
@@ -50,16 +45,18 @@ import {
   libelleActivite,
   libelleDeLAction,
   libelleDuGeste,
-  referencePointage,
   remplacementDe,
   selectionInitiale,
   tempsActivite,
 } from '../PresentationDossier';
 import { operateurDeLActe, operateurDuDossier, operateurPresente, posteDeLActe, postePresente } from '../PresentationIdentites';
 import { SelectionDuDossier } from '../SelectionDuDossier';
+import { ApercuDeLActe } from '../apercu-de-l-acte/ApercuDeLActe';
 import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
+import { ContinuationsDuDossier } from '../continuations-du-dossier/ContinuationsDuDossier';
+import { DetailDuPointage } from '../detail-du-pointage/DetailDuPointage';
+import { EnTeteDuDossier } from '../en-tete-du-dossier/EnTeteDuDossier';
 import { instantDeplace, peutDeplacer } from '../frise-dossier/DeplacementDeLaPoignee';
-import { FriseDossier } from '../frise-dossier/FriseDossier';
 import {
   bornesDuDeplacement,
   DeplacementDemande,
@@ -69,7 +66,9 @@ import {
   PoigneeDeFrise,
   poigneeDuDossier,
 } from '../frise-dossier/PoigneeDeFrise';
+import { SectionDeFrise } from '../section-de-frise/SectionDeFrise';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
+import { StatutDeLOperation } from '../statut-de-l-operation/StatutDeLOperation';
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 
@@ -84,31 +83,31 @@ const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
     InstantTimeAndLongDayWithSecondsPipe,
     DateTimeField,
     SelecteurOperateurAnomalie,
-    NgTemplateOutlet,
-    FriseDossier,
+    EnTeteDuDossier,
+    SectionDeFrise,
+    StatutDeLOperation,
+    ContinuationsDuDossier,
+    ApercuDeLActe,
+    DetailDuPointage,
   ],
   templateUrl: './DossierAnomaliePage.html',
-  styleUrl: './DossierAnomaliePage.css',
+  styleUrls: ['../Boutons.css', './DossierAnomaliePage.css'],
   providers: [PreparationActe, ...provideGestionDateAdapter()],
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
-  private readonly apercuHeading = viewChild<ElementRef<HTMLHeadingElement>>('apercuHeading');
+  private readonly apercuDeLActe = viewChild<ApercuDeLActe>('apercuDeLActe');
   private readonly propositionHeading = viewChild<ElementRef<HTMLHeadingElement>>('propositionHeading');
   private readonly port = inject(AnomaliesReadPort);
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
-  private readonly instantLongDay = new InstantLongDayPipe();
   private precedente: AdresseDossier | undefined;
   protected readonly now = new Date();
   protected readonly preparation = inject(PreparationActe);
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
-  protected readonly jourDeLaJournee = jourDeLaJournee;
-  protected readonly problemes = phrasesDuProbleme;
   protected readonly actionsDirectes = (dossier: DossierAnomalie) => ActionsDirectes.depuis(dossier).actions;
   protected readonly identifiantsDesPointagesTardifs = identifiantsDesPointagesTardifs;
   protected readonly peutDeplacer = peutDeplacer;
@@ -174,14 +173,8 @@ export class DossierAnomaliePage {
     ['PREVISUALISATION', 'CONFIRMATION', 'ISSUE_INCONNUE'].includes(this.preparation.operation().kind),
   );
 
-  protected contexte(dossier: DossierAnomalie): string | undefined {
-    return contexteDuSuivi(dossier, this.now, operateurDuDossier(dossier, this.referentielConnu()));
-  }
-
-  protected libelleDeLaJournee(dossier: DossierAnomalie): string {
-    return this.libelles.voirLaJournee(
-      operateurDuDossier(dossier, this.referentielConnu()) ?? this.libelles.frise.contexte.operateurInconnu,
-    );
+  protected nomDeLOperateur(dossier: DossierAnomalie): string | undefined {
+    return operateurDuDossier(dossier, this.referentielConnu());
   }
 
   protected libelleChoix(choix: ChoixGuide): string {
@@ -190,17 +183,6 @@ export class DossierAnomaliePage {
 
   protected explicationChoix(choix: ChoixGuide): string {
     return choix.code === undefined ? choix.explication : this.libelles.choix[choix.code].explication;
-  }
-
-  protected libelleContinuation(ligne: LigneConflit): string {
-    return (
-      ligne.explication
-      || `${ligne.designation} · ${operateurPresente(ligne.operateur)} · ${this.instantLongDay.transform(ligne.date, this.now)} · ${ligne.nombrePointages} pointages`
-    );
-  }
-
-  protected libelleDuPointage(journal: readonly PointageAnomalie[], identifiant: string): string {
-    return referencePointage(journal, identifiant, this.now).libelle;
   }
 
   private read(adresse: AdresseDossier | undefined) {
@@ -245,7 +227,7 @@ export class DossierAnomaliePage {
     this.propositionsFaites.update(faites => faites + 1);
     this.detail.set(false);
     this.choixSelectionne.set(choix);
-    this.focusHeading(this.propositionHeading);
+    this.focusAfterNextRender(() => this.propositionHeading()?.nativeElement.focus());
   }
 
   protected chooseGuide(choix: ChoixGuide): void {
@@ -337,11 +319,11 @@ export class DossierAnomaliePage {
   protected async preview(dossier: DossierAnomalie): Promise<void> {
     await this.preparation.preview(dossier);
     this.refreshAfterConcurrency();
-    this.focusHeading(this.apercuHeading);
+    this.focusAfterNextRender(() => this.apercuDeLActe()?.focusTitre());
   }
 
-  private focusHeading(heading: () => ElementRef<HTMLHeadingElement> | undefined): void {
-    afterNextRender(() => heading()?.nativeElement.focus(), { injector: this.injector });
+  private focusAfterNextRender(focus: () => void): void {
+    afterNextRender(focus, { injector: this.injector });
   }
 
   protected async confirm(): Promise<void> {

@@ -19,12 +19,10 @@
   overflow-wrap: anywhere;
   scroll-margin-top: 6rem;
 }
-h2[tabindex],
 h3[tabindex] {
   scroll-margin-top: 6rem;
   overflow-wrap: anywhere;
 }
-h2[tabindex]:focus-visible,
 h3[tabindex]:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
@@ -81,82 +79,24 @@ h3[tabindex]:focus-visible {
   font: inherit;
   font-size: var(--text-body-sm);
 }
-.bouton {
-  display: inline-flex;
-  min-height: var(--spacing-touch);
-  align-items: center;
-  justify-content: center;
-  padding: 0.625rem 1rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-control);
-  font: inherit;
-  font-size: var(--text-body-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-.bouton:hover {
-  background: var(--color-sunken);
-}
-.bouton-principal {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-.bouton-principal:hover {
-  background: color-mix(in srgb, var(--color-accent) 90%, var(--color-ink));
-}
-.bouton:focus-visible,
 .champ:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
 }
-.bouton:disabled,
 .choix:disabled,
 .champ:disabled {
   cursor: default;
   opacity: 0.6;
 }
-.comparaison {
-  display: grid;
-  overflow-wrap: anywhere;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-}
 .apercu-resolution {
   grid-column: 1 / -1;
-  padding: 1.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-surface);
-  background: var(--color-surface);
 }
 @media (max-width: 47.999rem) {
-  .comparaison {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .dossier-grille {
     grid-template-columns: minmax(0, 1fr);
   }
   .panneau-selection,
-  .panneau-correction,
-  .apercu-resolution {
+  .panneau-correction {
     padding: 1rem;
   }
-}
-.lien-journee {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--spacing-touch);
-  border-radius: var(--radius-control);
-  color: var(--color-accent);
-  font-size: var(--text-body-sm);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-.lien-journee:hover {
-  color: color-mix(in srgb, var(--color-accent) 80%, var(--color-ink));
-}
-.lien-journee:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
 }

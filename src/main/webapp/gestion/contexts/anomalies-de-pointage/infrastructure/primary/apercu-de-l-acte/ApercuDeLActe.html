@@ -1,0 +1,86 @@
+@let courant = apercu();
+<section aria-labelledby="apercu-heading" data-selector="anomalie-apercu">
+  <h2 #titre id="apercu-heading" class="text-section" tabindex="-1" data-selector="anomalie-apercu-titre">{{ libelles.apercu }}</h2>
+  <div class="mt-4 text-body-sm" data-selector="anomalie-apercu-acte">
+    <p class="font-semibold">{{ libelles.actes[courant.acte.kind] }}</p>
+    @if (courant.acte.kind !== 'REGULARISATION') {
+    <p>{{ libelleDuPointage(courant.avant.journal, courant.acte.pointage) }} · {{ courant.acte.motif }}</p>
+    } @if (courant.acte.kind !== 'ANNULATION') {
+    <p>{{ libelleDuGeste(courant.acte.fait) }} · {{ courant.acte.fait.instant | instantLongDayWithSeconds: now() }}</p>
+    @if (courant.acte.fait.activiteVisee) {
+    <p>{{ libelles.cible }} {{ labelForActivite(courant.acte.fait.activiteVisee, courant.apres, now()) }}</p>
+    }
+    <p>
+      {{ libelles.operateur }} : {{ operateurDeLActe(courant.acte.fait.operateur, courant.apres.journal) }} · {{ libelles.poste }} : {{
+      posteDeLActe(courant.acte.fait.poste, courant.apres.journal) }}
+    </p>
+    }
+  </div>
+  @if (courant.apres.consequences.length > 0) {
+  <div class="mt-4" data-selector="anomalie-apercu-consequences">
+    <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
+    @for (consequence of courant.apres.consequences; track consequence) {
+    <p class="mt-2 text-body-sm">{{ consequence }}</p>
+    }
+  </div>
+  }
+  <p class="mt-4 text-body font-semibold">{{ libelles.issue.apercu[issueDe(courant.avant, courant.apres).kind] }}</p>
+  <button
+    type="button"
+    class="bouton bouton-principal mt-4"
+    data-selector="anomalie-confirmer"
+    [disabled]="!confirmable()"
+    (click)="confirmationDemandee.emit()"
+  >
+    {{ libelles.confirmer }}
+  </button>
+  <details class="mt-6 border-t border-border pt-3" data-selector="anomalie-apercu-journal">
+    <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="anomalie-apercu-journal-ouvrir">
+      {{ libelles.comparerJournal }}
+    </summary>
+    <div class="comparaison">
+      <div>
+        <h4 class="text-body-sm font-semibold">{{ libelles.avant }}</h4>
+        <ol class="mt-4 list-none p-0">
+          @for (pointage of courant.avant.journal | chronologiePointages; track pointage.id.pointage) {
+          <li class="border-t border-border py-3 text-body-sm" [attr.data-selector]="'anomalie-apercu-fait-avant-' + pointage.id.pointage">
+            <glm-detail-du-pointage
+              [detail]="detailDuPointage(pointage, courant.avant, now())"
+              classeEntete="font-semibold"
+              classeLigne=""
+              [avecGeste]="true"
+            />
+            @if (pointage.annulation; as annulation) {
+            <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
+            } @if (pointage.regularisation) {
+            <p>{{ libelles.regularisation }}</p>
+            }
+          </li>
+          }
+        </ol>
+      </div>
+      <div>
+        <h4 class="text-body-sm font-semibold">{{ libelles.apres }}</h4>
+        <ol class="mt-4 list-none p-0">
+          @for (pointage of courant.apres.journal | chronologiePointages; track pointage.id.pointage) {
+          <li class="border-t border-border py-3 text-body-sm" [attr.data-selector]="'anomalie-apercu-fait-apres-' + pointage.id.pointage">
+            <glm-detail-du-pointage
+              [detail]="detailDuPointage(pointage, courant.apres, now())"
+              classeEntete="font-semibold"
+              classeLigne=""
+              [avecGeste]="true"
+            />
+            @if (pointage.annulation; as annulation) {
+            <p class="text-danger">{{ libelles.annule }} · {{ annulation.motif }}</p>
+            } @if (pointage.remplace; as original) {
+            <p>{{ remplacementDe(courant.apres.journal, original.pointage, now()) }}</p>
+            } @if (pointage.regularisation) {
+            <p>{{ libelles.regularisation }}</p>
+            }
+          </li>
+          }
+        </ol>
+      </div>
+    </div>
+  </details>
+</section>

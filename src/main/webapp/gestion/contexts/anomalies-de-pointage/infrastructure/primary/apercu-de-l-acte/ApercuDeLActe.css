@@ -1,0 +1,28 @@
+h2[tabindex] {
+  scroll-margin-top: 6rem;
+  overflow-wrap: anywhere;
+}
+h2[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+section {
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+}
+.comparaison {
+  display: grid;
+  overflow-wrap: anywhere;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 47.999rem) {
+  .comparaison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  section {
+    padding: 1rem;
+  }
+}

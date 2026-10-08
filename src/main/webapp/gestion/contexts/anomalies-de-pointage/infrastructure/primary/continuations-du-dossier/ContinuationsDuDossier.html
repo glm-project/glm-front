@@ -1,0 +1,15 @@
+@if (continuations().length > 0) {
+<nav class="mt-5 border-t border-border pt-4" [attr.aria-label]="libelles.continuation">
+  <p class="mb-2 text-body-sm font-semibold">{{ libelles.continuation }}</p>
+  @for (suite of continuations(); track suite.adresse.pointage.pointage) {
+  <a
+    class="bouton mt-2 text-accent underline"
+    data-selector="conflit-continuation"
+    [routerLink]="['/anomalies', suite.adresse.suivi.suivi]"
+    [queryParams]="{ pointage: suite.adresse.pointage.pointage }"
+    queryParamsHandling="merge"
+    >{{ libelleContinuation(suite) }}</a
+  >
+  }
+</nav>
+}
