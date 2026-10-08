@@ -24,7 +24,7 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   et après. Toute modification de la saisie l'invalide.
 - **Aperçu d'arrière-plan** : aperçu qu'une vue de résolution demande d'elle-même (`PreparationActe.previewInBackground`, état
   `APERCU_EN_ARRIERE_PLAN`), distinct de la prévisualisation du gestionnaire (`PREVISUALISATION`). Il n'est pas une opération qui
-  occupe la saisie : le champ, la poignée et le clic sur la barre restent actifs, le focus ne bouge pas, et seules la confirmation
+  occupe la saisie : la poignée et le clic sur la barre restent actifs, le focus ne bouge pas, et seules la confirmation
   et l'issue inconnue bloquent la saisie. Une réponse périmée est écartée par le jeton `demande`, puis par `afterPreview`.
 - **Proposition confirmable** : adresse, commande, version attendue, acte exact, empreinte des conséquences
   et identité prospective de l'événement pour une correction ou une régularisation ; une annulation
@@ -67,9 +67,10 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   elle n'invente aucune fin ni aucune heure (la fin proposée est la saisie du gestionnaire, pas une déduction).
 - **Sélection** : le pointage ou l'activité choisi sur la frise, détaillé dans le panneau du même nom ; sélectionner n'est pas
   choisir un acte.
-- **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie de
-  plus, qui émet un instant comme le champ date et heure. En ligne, avant toute heure, elle se tient « sans heure » (« Heure ? ») sur
-  la fin reçue de la barre : elle ne porte alors aucune heure et n'est pas un `slider`.
+- **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie qui
+  émet un instant, à côté du champ date et heure dans la vue complète, seule saisie de l'heure dans la vue de résolution. En ligne,
+  avant toute heure, elle se tient « sans heure » (« Heure ? ») sur la fin reçue de la barre : elle ne porte alors aucune heure ;
+  une flèche la pose sur cette fin reçue, Origine et Fin aux bornes.
 - **Cadre du fait** : Value Object du domaine (`CadreDuFait`) qui porte le début reçu de chaque activité et l'heure courante,
   et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
   autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
@@ -94,7 +95,9 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   reçu qui remplace le dossier lu ne la fait donc pas basculer). Une vue de résolution s'affiche si et seulement si le dossier
   est une fin automatique (`finAutomatique`), n'a pas de conflit à expliquer (`conflitAExpliquer`), porte **exactement un** choix,
   que ce choix vise l'activité dont l'`ouvrant` est le pointage de l'adresse, et que son code a une vue au registre
-  (`choixDeResolution`, `domain/dossier/`). Sinon la vue complète s'affiche, comme pour une adresse annulée, remplacée ou
+  (`choixDeResolution`, `domain/dossier/`). Une régularisation (`REGULARISER_FIN`) exige en plus que la frise se lise en ligne
+  (`seLitEnLigne`, `VuesDeResolution.ts`) : en rangées, elle n'a pas de poignée « Heure ? », et la vue de résolution, sans champ,
+  n'offrirait au clavier aucun accès à l'heure. Sinon la vue complète s'affiche, comme pour une adresse annulée, remplacée ou
   résolue. Un dossier de fin automatique qui porte aussi un choix de conflit (`RATTACHER_FIN_A_ACTIVITE_REMPLACANTE`,
   `ANNULER_TRANSITION`) retombe donc sur la vue complète.
 - **Solutions** : dans la vue complète, « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur,
@@ -259,8 +262,8 @@ ouvrant, activité absente de l'après, autre activité modifiée, aucune poign�
 des rangées, inchangé. Déplacer la poignée retire l'aperçu, donc l'état reçu de la barre.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
-`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
-date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
+`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une saisie qui émet un instant, avec le champ date et
+heure de la vue complète. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
 n'invente aucune heure et l'aperçu reste indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
 qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
@@ -268,17 +271,20 @@ résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'a
 ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
 comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. En ligne, la rangée de placement est
 celle de la barre visée (`surLaBarreDe`), sans rangée propre, et trois gestes placent l'heure. **Poignée sans heure** : si la barre visée a
-une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, décorative (`aria-hidden`, `tabindex="-1"`, ni
-`aria-valuenow` ni `aria-valuetext`) et marquée `data-sans-heure` ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
+une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, marquée `data-sans-heure` : un `slider` dans
+l'ordre de tabulation, sans `aria-valuenow`, que `aria-valuetext` dit « Aucune heure posée » ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
 poignée, si bien que le nœud, donc la capture du pointeur, survit au premier mouvement qui donne une heure au fait. Appuyer puis glisser
 émet un `PlacementDemande` au premier mouvement (instant sous le pointeur, arrondi à 5 minutes), puis des déplacements `VERS` une fois
-l'heure posée ; un appui relâché sans mouvement n'émet rien ; elle est désactivée avec `placement.desactivee` et n'a aucun clavier (le
-champ). Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
+l'heure posée ; un appui relâché sans mouvement n'émet rien. Au clavier, la frise émet la demande sans la résoudre : une flèche (avec
+ou sans Maj) un `PlacementDemande` `VERS` la fin reçue qu'elle tient, Origine et Fin un `BORNE`, que la page résout avec l'horloge lue à
+l'action (`instantDeplace`, qui ramène aussi un `VERS` à la minute entière), puis la poignée, gardant le focus, se déplace comme toute poignée ; elle est
+désactivée avec `placement.desactivee`. Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
 ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
 l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
 (`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
 tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
-comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
+comme pour un passage. Au clavier, la poignée, « Heure ? » comprise, place l'heure ; dans la vue complète, le champ en est un second
+accès, et dans la vue de résolution, qui n'a pas de champ, la poignée et le clic sur la barre sont les seuls. Elle est inactive
 pendant une opération. La frise a un **mode lecture seule** (entrée `lectureSeule`, faux par défaut) : les repères et les barres y sont des images (`role="img"`, `div`),
 sans `aria-pressed`, hors de l'ordre de tabulation, et ne demandent jamais de sélection ; ils gardent leur nom, leur symbole, leur heure et leurs
 badges. Ils laissent passer le pointeur (`pointer-events: none`) : pendant le placement, un clic au pointeur sur la barre visée tombe sur la rangée
@@ -297,7 +303,7 @@ qu'une opération est en cours (l'aperçu d'arrière-plan d'une vue de résoluti
 (jamais pour une poignée désactivée ni un appui qui ne l'a pas saisie) : la vue de résolution y lance l'aperçu. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu (`finDeLaPortee`),
 sans dépasser l'heure courante des bornes (jamais en deçà de l'échelle normale) ; elle ne s'élargit jamais pour couvrir une heure
 saisie. La borne haute de la poignée et de la rangée de placement est la plus proche de l'heure courante et de cette portée : au-delà,
-l'heure se saisit au champ. Une heure saisie hors des bornes du fait (`INSTANT_AVANT_CIBLE`, `INSTANT_FUTUR`) ou hors de la portée garde
+l'heure se saisit au champ de la vue complète. Une heure saisie hors des bornes du fait (`INSTANT_AVANT_CIBLE`, `INSTANT_FUTUR`) ou hors de la portée garde
 sa poignée, tenue à la borne la plus proche sur l'échelle (`aria-valuenow`), avec l'heure saisie pour texte ; le champ dit
 pourquoi, et le premier déplacement ramène l'heure dans les bornes. L'heure d'origine du
 pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
@@ -450,14 +456,15 @@ La page affiche la vue de résolution que `aiguiller` (`vues-de-resolution/VuesD
 (`LectureDuDossier` : `relire`, qui lit l'adresse sans repasser par l'état de chargement, et `remplacerPar`, qui installe le
 dossier d'un reçu). On étend le registre sans retoucher la page. Les trois vues (`ResolutionRegulariserFin`,
 `ResolutionCorrigerFinTardive`, `ResolutionCorrigerTransitionTardive`) habillent le composant commun `ResolutionDeFin`
-(`vues-de-resolution/resolution-de-fin/`, logique et gabarit) de leur `VarianteDeResolution` : libellés du champ et du bouton, motif
-fixé et ligne sur l'activité ouverte :
+(`vues-de-resolution/resolution-de-fin/`, logique et gabarit) de leur `VarianteDeResolution` : libellés du bouton, motif fixé et ligne
+sur l'activité ouverte. La vue n'a pas de champ date et heure : la poignée, au pointeur comme au clavier, et le clic sur la barre
+sont les seuls accès à l'heure.
 
-| Code                          | Vue                                   | Poignée au départ         | Champ            | Bouton                         | Motif envoyé (caché)                                            |
-| ----------------------------- | ------------------------------------- | ------------------------- | ---------------- | ------------------------------ | --------------------------------------------------------------- |
-| `REGULARISER_FIN`             | `ResolutionRegulariserFin`            | « Heure ? », sans heure   | Fin réelle       | « Valider la fin à HH:MM »     | aucun                                                           |
-| `CORRIGER_FIN_TARDIVE`        | `ResolutionCorrigerFinTardive`        | l'heure reçue du pointage | Fin réelle       | « Valider la fin à HH:MM »     | « Arrêt pointé après l'échéance : heure vérifiée en gestion »   |
-| `CORRIGER_TRANSITION_TARDIVE` | `ResolutionCorrigerTransitionTardive` | l'heure reçue du pointage | Heure du passage | « Valider le passage à HH:MM » | « Passage pointé après l'échéance : heure vérifiée en gestion » |
+| Code                          | Vue                                   | Poignée au départ         | Bouton                         | Motif envoyé (caché)                                            |
+| ----------------------------- | ------------------------------------- | ------------------------- | ------------------------------ | --------------------------------------------------------------- |
+| `REGULARISER_FIN`             | `ResolutionRegulariserFin`            | « Heure ? », sans heure   | « Valider la fin à HH:MM »     | aucun                                                           |
+| `CORRIGER_FIN_TARDIVE`        | `ResolutionCorrigerFinTardive`        | l'heure reçue du pointage | « Valider la fin à HH:MM »     | « Arrêt pointé après l'échéance : heure vérifiée en gestion »   |
+| `CORRIGER_TRANSITION_TARDIVE` | `ResolutionCorrigerTransitionTardive` | l'heure reçue du pointage | « Valider le passage à HH:MM » | « Passage pointé après l'échéance : heure vérifiée en gestion » |
 
 Pour la transition, une ligne de plus (`anomalie-resolution-activite-ouverte`) dit ce que l'heure ouvre : « La non-conformité
 commencera à cette heure. » (passage en NC) ou « Le travail reprendra à cette heure. » (retour en bon).
@@ -466,18 +473,18 @@ commencera à cette heure. » (passage en NC) ou « Le travail reprendra à cett
 défaut ». Elle montre, dans l'ordre : l'en-tête et la phrase du problème ; la ligne « 1 autre fin automatique sur cet élément »
 (accordée au pluriel) qui fait lien vers l'adresse de la première autre activité échue (`activite.ouvrant`), avec les
 paramètres de liste conservés comme les liens de fin restante ; la frise en lecture seule (repères et barres en images, clic au
-pointeur sur la barre qui place l'heure, poignée qui se glisse et se pilote au clavier, aide « Tirez le bout de la barre ou
-cliquez dessus pour placer la fin réelle, ou saisissez-la ») ; le statut d'opération du socle (refus sous la frise, issue
-inconnue avec « Vérifier » et « Reprendre », puis le reçu) ; le champ « Fin réelle », toujours visible, chemin du clavier et des
-lecteurs d'écran, avec l'erreur d'une borne locale (`CadreDuFait`, heure future) ; l'aperçu en une ligne, par exemple « Travail 13 h →
+pointeur sur la barre qui place l'heure, poignée qui se glisse et se pilote au clavier, « Heure ? » comprise, chemin du clavier et
+des lecteurs d'écran, aide « Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle ») ; le statut d'opération du
+socle (refus sous la frise, issue inconnue avec « Vérifier » et « Reprendre », puis le reçu) ; l'erreur d'une borne locale
+(`CadreDuFait`), qu'une heure reçue hors bornes peut seule produire puisque la poignée s'y tient ; l'aperçu en une ligne, par exemple « Travail 13 h →
 9 h · anomalie traitée » ou « … · 1 fin automatique restante » (`resumeDeLApercu`), dont « Voir le détail » déplie les conséquences et la
 comparaison des journaux sans aucun motif ; le bouton « Valider la fin à HH:MM » ; le lien discret « Autre correction… ». On ne
 pré-remplit jamais d'heure pour `REGULARISER_FIN`, et le motif n'existe pas pour une régularisation ; une correction pose aussitôt son
 motif fixé (`change({ motif })`) et son heure reçue, et lance son aperçu dès l'ouverture, puisqu'une heure existe. « Voir la journée de … » reste
-sur la frise. Une fois le reçu affiché, le champ, la poignée, « Valider » et « Autre correction… » disparaissent.
+sur la frise. Une fois le reçu affiché, la poignée, « Valider » et « Autre correction… » disparaissent.
 
 L'aperçu part tout seul (`ApercuAutomatique`, fourni par la vue, minuterie en primaire) : à la **libération** de la poignée, **400 ms**
-après la dernière frappe du champ ou la dernière touche sur la poignée, ou après un clic sur la barre (même délai) ; « Réessayer
+après la dernière touche sur la poignée, ou après un clic sur la barre (même délai) ; « Réessayer
 l'aperçu » le relance aussitôt après une erreur réseau (`ERREUR`). Aucune requête ne part tant que les pré-contrôles locaux
 échouent. La minuterie est annulée au changement d'adresse, à la destruction de la vue et au clic sur « Valider ». Après `CONCURRENCE`
 (à l'aperçu comme à la confirmation), la vue relit le dossier (`relire`) et relance l'aperçu une fois par lancement ; si la relecture

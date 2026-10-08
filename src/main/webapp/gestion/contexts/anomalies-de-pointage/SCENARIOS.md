@@ -127,25 +127,26 @@ bougent pas. Corriger et Annuler du panneau préparent la proposition exactement
 ## Vue de résolution d'une fin automatique
 
 Un dossier de fin automatique sans conflit à expliquer, qui porte un seul choix (`REGULARISER_FIN`, `CORRIGER_FIN_TARDIVE` ou
-`CORRIGER_TRANSITION_TARDIVE`) visant l'activité que son adresse ouvre, s'ouvre dans une vue de résolution : la phrase du problème, la frise en lecture seule, le champ « Fin réelle », l'aperçu en
+`CORRIGER_TRANSITION_TARDIVE`) visant l'activité que son adresse ouvre, s'ouvre dans une vue de résolution : la phrase du problème, la frise en lecture seule et sa poignée, sans champ d'heure, l'aperçu en
 une ligne, « Valider la fin à HH:MM » et « Autre correction… ». La page choisit la vue à l'ouverture de l'adresse et la fige
 jusqu'au changement d'adresse : le reçu qui remplace le dossier ne la fait pas basculer. Tout autre dossier (un conflit, un choix de
-conflit en plus de la fin, un choix qui vise une autre activité) garde la vue complète.
+conflit en plus de la fin, un choix qui vise une autre activité, une régularisation dont la frise se lit en rangées, donc sans poignée
+« Heure ? » à piloter au clavier) garde la vue complète.
 
 Pour une correction tardive (`CORRIGER_FIN_TARDIVE`, `CORRIGER_TRANSITION_TARDIVE`), la vue s'ouvre sur l'heure reçue du pointage
-tardif : le champ, la poignée et le bouton « Valider la fin à HH:MM » (« Valider le passage à HH:MM » pour une transition, avec
-le champ « Heure du passage » et une ligne « La non-conformité commencera à cette heure. » ou « Le travail reprendra à cette heure. »)
+tardif : la poignée et le bouton « Valider la fin à HH:MM » (« Valider le passage à HH:MM » pour une transition, avec
+une ligne « La non-conformité commencera à cette heure. » ou « Le travail reprendra à cette heure. »)
 la portent, et l'aperçu part dès l'ouverture, sans que le gestionnaire ait rien touché. Le motif découle du cas (« Arrêt pointé
 après l'échéance : heure vérifiée en gestion », « Passage pointé après l'échéance : heure vérifiée en gestion ») : il part avec
 l'acte et le journal le garde, mais la vue ne le montre nulle part, « Voir le détail » compris. Valider sans rien changer est
 légitime : l'activité se termine alors au-delà de l'échéance. « Autre correction… » ne demande de confirmation que si l'heure
 diffère de l'heure reçue.
 
-Pour `REGULARISER_FIN`, la vue ne pré-remplit aucune heure. Le gestionnaire la place en tirant la poignée « Heure ? », en cliquant sur la barre ou en la
-saisissant au champ. L'aperçu part seul : au relâcher de la poignée, 400 ms après la dernière frappe ou touche, ou après un clic
-sur la barre ; il ne désactive ni le champ, ni la poignée, ni le clic sur la barre, et ne déplace pas le focus. Une heure hors des
-bornes locales (future, avant le début de l'activité) ne part pas au serveur et se dit sous le champ ; un refus du serveur se dit sous
-la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
+Pour `REGULARISER_FIN`, la vue ne pré-remplit aucune heure. Le gestionnaire la place en tirant la poignée « Heure ? », en cliquant sur la barre ou au
+clavier sur la poignée : une flèche la pose sur la fin reçue, Origine et Fin aux bornes. L'aperçu part seul : au relâcher de la poignée, 400 ms
+après la dernière touche, ou après un clic sur la barre ; il ne désactive ni la poignée ni le clic sur la barre, et ne déplace pas le
+focus. La poignée reste dans les bornes locales (début de l'activité, et la plus proche de l'heure courante et de trois heures
+après le dernier instant reçu) : une heure plus lointaine passe par « Autre correction… » et le champ de la vue complète ; un refus du serveur se dit sous la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
 reçu, à jour et sans refus. Après `CONCURRENCE`, la vue relit le dossier et relance l'aperçu avec la même heure.
 
 Le reçu s'affiche dans la vue (« Anomalie traitée », ou « Acte enregistré, anomalie restante » avec un lien par fin automatique
@@ -330,14 +331,14 @@ l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans s
 flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
 décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, et la plus proche de l'heure
 courante lue à l'action et de trois heures après le dernier instant reçu, en minutes entières à la nanoseconde près) ; un bouton
-est désactivé à la borne. L'échelle ne va pas au-delà de ces trois heures : une heure plus lointaine se saisit au champ. Chaque
+est désactivé à la borne. L'échelle ne va pas au-delà de ces trois heures : une heure plus lointaine se saisit au champ de la vue complète. Chaque
 déplacement transmet l'instant avec l'offset local et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure au
 champ déplace la poignée. Une heure saisie hors des bornes (avant le début de l'activité visée, dans le futur ou au-delà de la
 portée) garde sa poignée, tenue à la borne la plus proche : le champ dit pourquoi, l'aperçu reste indisponible, et le premier
 déplacement ramène l'heure dans les bornes. Un fait
 sans activité visée, un démarrage ou une annulation n'ont pas de poignée ; une régularisation sans heure n'en a pas en rangées, et en ligne
-n'a qu'une poignée « Heure ? » sans heure ni `slider` : la régularisation d'une fin sans heure reçoit son heure au clic sur la barre ou au
-glissé de cette poignée (« Fin automatique »). L'heure reçue du
+n'a qu'une poignée « Heure ? » sans heure, dans l'ordre de tabulation : la régularisation d'une fin sans heure reçoit son heure au clic sur la
+barre, au glissé de cette poignée ou à sa première touche, une flèche la posant sur la fin reçue, Origine et Fin aux bornes (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
 qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
 traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 64 px.

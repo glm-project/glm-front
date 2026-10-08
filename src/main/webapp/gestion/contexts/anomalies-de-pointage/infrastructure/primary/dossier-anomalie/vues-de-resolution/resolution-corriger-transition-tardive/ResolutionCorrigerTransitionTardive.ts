@@ -33,7 +33,6 @@ export class ResolutionCorrigerTransitionTardive {
   readonly referentiel = input<ReferentielAnomalies | undefined>(undefined);
   readonly lecture = input.required<LectureDuDossier>();
   protected readonly variante: VarianteDeResolution = {
-    champ: LIBELLES_ANOMALIES.resolution.champPassage,
     validerA: LIBELLES_ANOMALIES.resolution.validerLePassage,
     validerSansHeure: LIBELLES_ANOMALIES.resolution.validerLePassageSansHeure,
     motif: LIBELLES_ANOMALIES.resolution.motifs.passageTardif,

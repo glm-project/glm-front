@@ -124,10 +124,8 @@ const CHAMP_INSTANT = {
 } as const;
 
 const RESOLUTION = {
-  champFin: { ...CHAMP_INSTANT, legend: 'Fin réelle' },
   validerLaFin: (heure: string) => `Valider la fin à ${heure}`,
   validerLaFinSansHeure: 'Valider la fin',
-  champPassage: { ...CHAMP_INSTANT, legend: 'Heure du passage' },
   validerLePassage: (heure: string) => `Valider le passage à ${heure}`,
   validerLePassageSansHeure: 'Valider le passage',
   motifs: {
@@ -342,8 +340,9 @@ export const LIBELLES_ANOMALIES = {
     pointages: 'Pointages',
     poignee: 'Heure proposée du fait',
     heureInconnue: 'Heure ?',
+    aucuneHeure: 'Aucune heure posée',
     placerLHeure: 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait, ou saisissez-la.',
-    placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, ou saisissez-la.',
+    placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.',
     badgeRegularise: 'R',
     badgeTardif: '!',
     symboles: SYMBOLES_DES_GESTES,

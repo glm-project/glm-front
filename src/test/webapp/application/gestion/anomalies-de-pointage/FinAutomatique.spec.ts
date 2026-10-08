@@ -36,7 +36,6 @@ import {
   pageFinsAutomatiquesFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 import {
-  CHAMP_DE_LA_VUE_DE_RESOLUTION,
   thenTheInstantFieldsAreEmpty,
   thenTheInstantFieldsShow,
   whenTypingTheInstant,
@@ -46,6 +45,11 @@ import {
   thenTheHoursOpenOnTheDay,
   whenFollowingTheLinkToTheDayOfTheOperator,
 } from '../../../utils/gestion/anomalies-de-pointage/JourneeDeLOperateur';
+import {
+  thenTheHandleHolds,
+  thenTheHandleHoldsNoHour,
+  whenPlacingTheHourWithTheHandleAt,
+} from '../../../utils/gestion/anomalies-de-pointage/PoigneeDeLaFrise';
 import {
   thenActivityIsSelected,
   whenSelectingActivity,
@@ -91,7 +95,7 @@ describe('Automatic end of an activity in Gestion', () => {
     givenAnAutomaticEndRegularisedByTheBackend();
 
     whenOpeningTheAutomaticEnd();
-    whenPlacingTheEndByTyping();
+    whenPlacingTheEndWithTheHandle();
     whenValidatingTheEndRegularisation();
 
     thenTheAnomalyIsProcessedFromTheReceipt();
@@ -129,8 +133,7 @@ describe('Automatic end of an activity in Gestion', () => {
   });
 
   const thenNoHourIsInventedAndTheValidationIsUnavailable = (): void => {
-    thenTheInstantFieldsAreEmpty(CHAMP_DE_LA_VUE_DE_RESOLUTION);
-    cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
+    thenTheHandleHoldsNoHour();
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
     cy.get(dataSelector('anomalie-frise-aide')).should('be.visible');
   };
@@ -146,8 +149,8 @@ describe('Automatic end of an activity in Gestion', () => {
   };
 
   const thenThePreviewWasAskedForTheClickedHour = (): void => {
-    thenTheInstantFieldsShow(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
-    cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
+    thenTheHandleHolds(instantRegulariseLocalFixture);
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible');
     cy.wait('@apercu').its('request.body.acte.fait.instant').should('eq', instantRegulariseSaisiFixture);
   };
 
@@ -169,13 +172,12 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
   };
 
-  const whenPlacingTheEndByTyping = (): void => {
+  const whenPlacingTheEndWithTheHandle = (): void => {
     cy.get(dataSelector('anomalie-probleme'))
       .should('have.length', 1)
       .and('have.text', 'Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 21:00.');
-    thenTheInstantFieldsAreEmpty(CHAMP_DE_LA_VUE_DE_RESOLUTION);
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
-    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    whenPlacingTheHourWithTheHandleAt(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 9 h · anomalie traitée');
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider la fin à 17:00');
   };
@@ -254,7 +256,6 @@ describe('Automatic end of an activity in Gestion', () => {
       .and('not.contain', 'heure proposée');
     cy.get(dataSelector('anomalie-poignee')).should('not.exist');
     cy.get(dataSelector('anomalie-resolution-valider')).should('not.exist');
-    cy.get(dataSelector('anomalie-resolution-instant-date')).should('not.exist');
     cy.get(dataSelector('anomalie-resolution-autre-correction')).should('not.exist');
     thenTheRegularisationWasAskedAndConfirmed();
   };
@@ -272,13 +273,13 @@ describe('Automatic end of an activity in Gestion', () => {
     givenAnActivityWithoutWorkstationRegularisedByTheBackend();
 
     whenOpeningTheAutomaticEnd();
-    whenPlacingTheEndByTypingWithoutWorkstation();
+    whenPlacingTheEndWithoutWorkstation();
 
     thenTheRegularisationNamesNoWorkstation();
   });
 
-  const whenPlacingTheEndByTypingWithoutWorkstation = (): void => {
-    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+  const whenPlacingTheEndWithoutWorkstation = (): void => {
+    whenPlacingTheHourWithTheHandleAt(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled');
   };
 
@@ -368,7 +369,7 @@ describe('Automatic end of an activity in Gestion', () => {
   };
 
   const whenValidatingTheLateEndCorrection = (): void => {
-    thenTheInstantFieldsShow(instantTardifLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(instantTardifLocalFixture);
     cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 15 h · anomalie traitée');
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider la fin à 23:00').click();
   };
@@ -465,8 +466,7 @@ describe('Automatic end of an activity in Gestion', () => {
   };
 
   const thenTheLateTransitionIsCorrectedOnItsOwnHour = (): void => {
-    thenTheInstantFieldsShow(instantTardifLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
-    cy.get(dataSelector('anomalie-resolution-instant-date')).closest('fieldset').find('legend').should('have.text', 'Heure du passage');
+    thenTheHandleHolds(instantTardifLocalFixture);
     cy.get(dataSelector('anomalie-resolution-activite-ouverte')).should('have.text', 'La non-conformité commencera à cette heure.');
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider le passage à 23:00');
     cy.get(dataSelector('anomalie-choix')).should('not.exist');
@@ -487,7 +487,7 @@ describe('Automatic end of an activity in Gestion', () => {
       givenAPreviewRefusedWith(statut, code, message);
 
       whenOpeningTheAutomaticEnd();
-      whenTypingTheEnd();
+      whenPlacingTheEnd();
 
       thenTheRefusalIsExplainedAndTheEndIsKept(libelle);
     });
@@ -498,8 +498,8 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.intercept('POST', urlApercu, { statusCode: statut, body: { type: `urn:glm:erreur:atelier:${code}`, message } });
   };
 
-  const whenTypingTheEnd = (): void => {
-    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+  const whenPlacingTheEnd = (): void => {
+    whenPlacingTheHourWithTheHandleAt(instantRegulariseLocalFixture);
   };
 
   const thenTheRefusalIsExplainedAndTheEndIsKept = (libelle: string): void => {
@@ -509,7 +509,7 @@ describe('Automatic end of an activity in Gestion', () => {
       .and('not.match', /[0-9a-f]{8}-[0-9a-f]{4}-/i);
     cy.get(dataSelector('anomalie-resolution-apercu')).should('not.exist');
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
-    thenTheInstantFieldsShow(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-probleme')).should('be.visible');
   };
 
@@ -517,7 +517,7 @@ describe('Automatic end of an activity in Gestion', () => {
     givenAConfirmationWhoseConsequencesBecameObsolete();
 
     whenOpeningTheAutomaticEnd();
-    whenPlacingTheEndByTyping();
+    whenPlacingTheEndWithTheHandle();
     whenValidatingTheEndRegularisation();
 
     thenTheSameEndIsPreviewedAgainOnTheCurrentDossier();
@@ -545,7 +545,7 @@ describe('Automatic end of an activity in Gestion', () => {
   const thenTheSameEndIsPreviewedAgainOnTheCurrentDossier = (): void => {
     cy.get('@dossierCourant.all').should('have.length', 2);
     cy.get('@apercu.all').should('have.length', 2);
-    thenTheInstantFieldsShow(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-resolution-apercu')).should('be.visible');
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled');
   };
@@ -719,7 +719,7 @@ describe('Automatic end of an activity in Gestion', () => {
     const adresse = `/anomalies/${suiviFinAutomatiqueFixture}`;
     const requete = filters === '' ? '?' : `${filters}&`;
     cy.visit(`${adresse}${requete}pointage=${ouvrantFinAutomatiqueFixture}`);
-    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    whenPlacingTheHourWithTheHandleAt(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').click();
     cy.get(dataSelector('anomalie-resultat')).should('be.visible');
   };

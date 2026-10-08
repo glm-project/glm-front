@@ -339,16 +339,10 @@ export class DossierAnomaliePage {
     });
   }
 
-  protected placer(dossier: DossierAnomalie, { instant, placement }: PlacementDemande): void {
+  protected placer(dossier: DossierAnomalie, { demande, placement }: PlacementDemande): void {
     this.lireLHorloge();
     this.change({
-      fait: {
-        instant: instantDeplace(
-          { kind: 'VERS', instant },
-          this.maintenant(),
-          bornesDuDeplacement(this.cadreDe(dossier), dossier, placement),
-        ),
-      },
+      fait: { instant: instantDeplace(demande, this.maintenant(), bornesDuDeplacement(this.cadreDe(dossier), dossier, placement)) },
     });
   }
 

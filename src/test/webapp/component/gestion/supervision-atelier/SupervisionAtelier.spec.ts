@@ -83,7 +83,7 @@ const whenFocusingRefresh = (): void => {
 const whenOpeningSupervisionWithPollingClock = (): void => {
   cy.clock(DEMONSTRATION.getTime(), ['Date', 'setInterval', 'clearInterval']);
   cy.visit('/');
-  cy.get(dataSelector('supervision-refresh')).should('not.be.disabled');
+  cy.get(dataSelector('supervision-plateau')).should('be.visible');
 };
 
 const whenReachingTheNextAnomalyThreshold = (): void => {

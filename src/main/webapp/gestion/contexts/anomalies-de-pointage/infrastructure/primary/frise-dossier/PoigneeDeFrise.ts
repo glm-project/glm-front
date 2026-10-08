@@ -23,7 +23,7 @@ export interface PlacementDeLInstant {
 }
 
 export interface PlacementDemande {
-  readonly instant: number;
+  readonly demande: DemandeDeDeplacement;
   readonly placement: PlacementDeLInstant;
 }
 

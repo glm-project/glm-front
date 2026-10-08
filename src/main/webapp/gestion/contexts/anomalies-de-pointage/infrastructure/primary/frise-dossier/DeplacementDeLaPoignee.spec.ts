@@ -24,6 +24,12 @@ describe('Move of the handle of the proposed instant', () => {
       courant: instantAt('10:00', 37),
       expected: '2026-09-14T10:01:00-03:00',
     },
+    {
+      cas: 'to an instant with seconds, dropping them',
+      demande: { kind: 'VERS', instant: Date.parse(instantAt('10:00', 37)) },
+      courant: instantAt('09:00'),
+      expected: '2026-09-14T10:00:00-03:00',
+    },
   ])('should move $cas', ({ demande, courant, expected }) => {
     expect(instantDeplace(demande, courant, BORNES)).toBe(expected);
   });

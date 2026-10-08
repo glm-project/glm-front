@@ -6,18 +6,25 @@ import {
   ApercuDeFrise,
   BarreFrise,
   dispositionDeFrise,
-  PositionAvecHeure,
   PositionDePoignee,
+  PositionSansHeure,
   RangeeDePlacement,
   VueDeFrise,
 } from './DispositionFrise';
 import { instantSousLePointeur, positionSur } from './EchelleFrise';
-import { demandeDeLaTouche, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
+import {
+  DemandeDeDeplacement,
+  demandeDeLaTouche,
+  DeplacementDemande,
+  PlacementDeLInstant,
+  PlacementDemande,
+  PoigneeDeFrise,
+} from './PoigneeDeFrise';
 
 const LARGEUR_DE_REFERENCE_PX = 1214;
 
-const sePlaceAuClavier = (position: PositionDePoignee): position is PositionAvecHeure =>
-  position.heure === 'AVEC_HEURE' && !position.desactivee;
+const placementAuClavier = (demande: DemandeDeDeplacement, position: PositionSansHeure): DemandeDeDeplacement =>
+  demande.kind === 'BORNE' ? demande : { kind: 'VERS', instant: position.instant };
 
 @Component({
   selector: 'glm-frise-dossier',
@@ -77,7 +84,7 @@ export class FriseDossier {
     if (this.prise === undefined) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: position.source });
-    else this.placementDemande.emit({ instant, placement: position.source });
+    else this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: position.source });
   }
 
   private mesure(largeur: number): void {
@@ -104,14 +111,19 @@ export class FriseDossier {
   protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {
     if (rangee.desactivee) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
-    this.placementDemande.emit({ instant, placement: rangee.source });
+    this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: rangee.source });
   }
 
   protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
-    if (!sePlaceAuClavier(position)) return;
+    if (position.desactivee) return;
     const demande = demandeDeLaTouche(touche);
     if (demande === undefined) return;
     touche.preventDefault();
-    this.deplacementDemande.emit({ demande, poignee: position.source });
+    if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande, poignee: position.source });
+    else
+      this.placementDemande.emit({
+        demande: placementAuClavier(demande, position),
+        placement: position.source,
+      });
   }
 }

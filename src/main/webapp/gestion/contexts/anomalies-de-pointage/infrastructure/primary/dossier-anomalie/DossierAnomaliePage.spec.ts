@@ -4488,14 +4488,52 @@ describe('Anomaly dossier page', () => {
       thenTheFriseIsReadOnly();
     });
 
-    it('should leave the end field empty and the handle without hour, and tell how to place the end', async () => {
+    it('should leave the handle without hour, and tell how to place the end', async () => {
       givenAnAutomaticEndWithAResolutionView();
 
       await whenRendering();
 
-      thenTheEndFieldsShow('', '');
       thenTheHandleHoldsNoHour();
-      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, ou saisissez-la.');
+      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.');
+    });
+
+    it('should offer no field for the hour, the handle being the way to place the end', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenTheResolutionViewOffersNoField();
+    });
+
+    it('should place the end at the automatic end with the first key pressed on the handle, then preview it', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPressingOnTheHandle('ArrowLeft');
+      await whenTheTypingPauses();
+
+      thenTheHandleHoldsTheEndAt('21:00');
+      thenThePreviewsWereAskedForTheHours(['21:00']);
+    });
+
+    it('should place the end at the start of the activity when Home is pressed on the hourless handle', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPressingOnTheHandle('Home');
+
+      thenTheHandleHoldsTheEndAt('08:00');
+    });
+
+    it('should place the end at the whole minute of the clock read at the key when End is pressed on the hourless handle', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      whenTheClockIs(new Date(2026, 8, 14, 22, 10, 30));
+      await whenRendering();
+      whenTheClockIs(new Date(2026, 8, 14, 22, 12, 10));
+
+      await whenPressingOnTheHandle('End');
+
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 22, 12));
     });
 
     it('should offer a validation that waits for the end', async () => {
@@ -4526,20 +4564,20 @@ describe('Anomaly dossier page', () => {
       thenAbsent(selector);
     });
 
-    it('should ask for no preview while the manager is still typing the end', async () => {
+    it('should ask for no preview while the manager is still moving the handle', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
 
-      await whenTypingTheEnd('14/09/2026', '17:00');
+      await whenTakingTheHandleTo('17:00');
 
       thenNoPreviewWasAsked();
     });
 
-    it('should preview the end once the typing paused, and say the outcome in one line', async () => {
+    it('should preview the end once the keys paused, and say the outcome in one line', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
 
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenTheOutcomeReads('Travail 13 h → 9 h · anomalie traitée');
       thenTextContains('anomalie-resolution-valider', 'Valider la fin à 17:00');
@@ -4547,12 +4585,12 @@ describe('Anomaly dossier page', () => {
       expect(preview.actes).toEqual([acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00')]);
     });
 
-    it('should preview again once the typing of another hour paused', async () => {
+    it('should preview again once the keys moving to another hour paused', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
-      await whenPlacingTheEndAt('14/09/2026', '16:30');
+      await whenPlacingTheEndAt('16:30');
 
       thenThePreviewsWereAskedForTheHours(['17:00', '16:30']);
     });
@@ -4560,9 +4598,9 @@ describe('Anomaly dossier page', () => {
     it('should withdraw the outcome and the validation as soon as the hour changes', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
-      await whenTypingTheEnd('14/09/2026', '16:30');
+      await whenTakingTheHandleTo('16:30');
 
       thenAbsent('anomalie-resolution-apercu');
       thenDisabled('anomalie-resolution-valider');
@@ -4571,7 +4609,7 @@ describe('Anomaly dossier page', () => {
     it('should preview the hour a key moved the handle to once the key pressing paused', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenPressingOnTheHandle('ArrowRight');
       await whenTheTypingPauses();
@@ -4592,7 +4630,7 @@ describe('Anomaly dossier page', () => {
     it('should not preview while the handle is dragged, however long the gesture lasts', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenDraggingTheHandleForAWhile({ from: 500, to: 400 });
 
@@ -4602,32 +4640,12 @@ describe('Anomaly dossier page', () => {
     it('should preview as soon as the handle is released', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenDraggingTheHandle({ from: 500, to: 400 });
 
       await whenReleasingTheHandle();
 
       thenThePreviewsWereAskedForTheHours(['17:00', '15:20']);
-    });
-
-    it('should preview nothing and say why while the hour lies in the future', async () => {
-      givenTheRegularisationOfTheEndWillBeAccepted();
-      await whenRendering();
-
-      await whenPlacingTheEndAt('06/10/2026', '10:00');
-
-      thenNoPreviewWasAsked();
-      thenTheEndValidationReads(['La date et l’heure du fait ne peuvent pas être dans le futur.']);
-    });
-
-    it('should preview nothing and say why while the hour precedes the start of the activity', async () => {
-      givenTheRegularisationOfTheEndWillBeAccepted();
-      await whenRendering();
-
-      await whenPlacingTheEndAt('14/09/2026', '07:00');
-
-      thenNoPreviewWasAsked();
-      thenTheEndValidationReads(['Le fait ne peut pas précéder le début de l’activité qu’il termine.']);
     });
 
     it('should say nothing of the missing hour before the manager gives one', async () => {
@@ -4643,11 +4661,11 @@ describe('Anomaly dossier page', () => {
       preview.result = { kind: 'REFUS', code: 'date-de-survenue-future' };
       await whenRendering();
 
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenTextContains('anomalie-refus', 'La date et l’heure du fait ne peuvent pas être dans le futur.');
       thenTheRefusalComesAfterTheFrise();
-      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+      thenTheHandleHoldsTheEndAt('17:00');
       thenDisabled('anomalie-resolution-valider');
     });
 
@@ -4655,7 +4673,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       preview.failure = new Error('Réseau indisponible');
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       preview.failure = undefined;
 
       await whenClicking('anomalie-resolution-reessayer');
@@ -4667,7 +4685,7 @@ describe('Anomaly dossier page', () => {
     it('should offer no retry while the preview has not failed', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenAbsent('anomalie-resolution-reessayer');
     });
@@ -4677,7 +4695,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       givenTheDossierWillBeRereadWithAnotherVersion();
 
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       expect(read.demandes).toHaveLength(2);
       thenThePreviewsWereAskedForTheHours(['17:00', '17:00']);
@@ -4685,17 +4703,17 @@ describe('Anomaly dossier page', () => {
       thenEnabled('anomalie-resolution-valider');
     });
 
-    it('should keep the field and the handle usable while the preview is on its way', async () => {
+    it('should keep the handle usable while the preview is on its way', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       const attente = new PendingResponseFixture<ResultatApercu>();
       preview.replies.pending = attente;
       await whenRendering();
-      await whenTypingTheEnd('14/09/2026', '17:00');
+      await whenTakingTheHandleTo('17:00');
 
       await whenThePreviewIsOnItsWay(attente);
 
       thenTextContains('anomalie-resolution-verification', 'Vérification des conséquences…');
-      thenTheFieldAndTheHandleStayUsable();
+      thenTheHandleStaysUsable();
     });
 
     it('should keep the focus where it is while the preview comes back', async () => {
@@ -4703,13 +4721,13 @@ describe('Anomaly dossier page', () => {
       const attente = new PendingResponseFixture<ResultatApercu>();
       preview.replies.pending = attente;
       await whenRendering();
-      await whenTypingTheEnd('14/09/2026', '17:00');
-      whenFocusingTheHour();
+      await whenTakingTheHandleTo('17:00');
+      whenFocusingTheHandle();
       await whenThePreviewIsOnItsWay(attente);
 
       await whenResponseArrives(attente, preview.result);
 
-      thenTheFocusStaysOnTheHour();
+      thenTheFocusStaysOnTheHandle();
     });
 
     it('should keep the validation disabled while the preview is on its way', async () => {
@@ -4717,7 +4735,7 @@ describe('Anomaly dossier page', () => {
       const attente = new PendingResponseFixture<ResultatApercu>();
       preview.replies.pending = attente;
       await whenRendering();
-      await whenTypingTheEnd('14/09/2026', '17:00');
+      await whenTakingTheHandleTo('17:00');
 
       await whenThePreviewIsOnItsWay(attente);
 
@@ -4729,7 +4747,7 @@ describe('Anomaly dossier page', () => {
       const attente = new PendingResponseFixture<ResultatApercu>();
       preview.replies.pending = attente;
       await whenRendering();
-      await whenTypingTheEnd('14/09/2026', '17:00');
+      await whenTakingTheHandleTo('17:00');
       await whenThePreviewIsOnItsWay(attente);
 
       await whenResponseArrives(attente, preview.result);
@@ -4738,10 +4756,10 @@ describe('Anomaly dossier page', () => {
       thenAbsent('anomalie-resolution-verification');
     });
 
-    it('should neither preview nor keep a pending preview when the address changes before the typing paused', async () => {
+    it('should neither preview nor keep a pending preview when the address changes before the keys paused', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenTypingTheEnd('14/09/2026', '17:00');
+      await whenTakingTheHandleTo('17:00');
       read.result = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
 
       await whenAddressChanges('fin-18');
@@ -4753,7 +4771,7 @@ describe('Anomaly dossier page', () => {
     it('should fold the detail of the preview, and unfold the consequences and the journals without any reason', async () => {
       givenTheRegularisationOfTheEndWillBeAcceptedWithConsequences();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenTheDetailIsFolded();
       thenTheDetailReads('Durée du travail recalculée', 'Pointage annulé');
@@ -4763,18 +4781,18 @@ describe('Anomaly dossier page', () => {
     it('should record the end from the resolution view and keep the link to the day of the operator beside the receipt', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
-      thenAbsent('anomalie-resolution-instant-date');
+      thenAbsent('anomalie-resolution-valider');
       thenTextContains('anomalie-frise-journee', 'Voir la journée de Camille Martin');
     });
 
     it('should draw no handle on the frise once the end is recorded', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
@@ -4785,7 +4803,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'CONCURRENCE' };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       givenTheDossierWillBeRereadWithAnotherVersion();
       preview.result = apercuDeLaRegularisationFixture(dossierRelu(), dossierRegulariseFixture());
 
@@ -4793,7 +4811,7 @@ describe('Anomaly dossier page', () => {
 
       expect(read.demandes).toHaveLength(2);
       thenThePreviewsWereAskedForTheHours(['17:00', '17:00']);
-      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+      thenTheHandleHoldsTheEndAt('17:00');
       thenEnabled('anomalie-resolution-valider');
     });
 
@@ -4801,23 +4819,22 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'REFUS', code: 'suivi-d-atelier-cloture' };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
       thenTextContains('anomalie-refus', 'Ce suivi d’atelier est clôturé : il n’accepte plus de décision.');
-      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+      thenTheHandleHoldsTheEndAt('17:00');
     });
 
     it('should block the end while the outcome of the confirmation is unknown, and offer to check or resume', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'ISSUE_INCONNUE' };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
-      expect(field('anomalie-resolution-instant-heure').disabled).toBe(true);
       thenTheHandleIsLocked();
       thenDisabled('anomalie-resolution-valider');
       expect(present('anomalie-verifier') && present('anomalie-reprendre-confirmation')).toBe(true);
@@ -4828,7 +4845,7 @@ describe('Anomaly dossier page', () => {
       application.result = { kind: 'ISSUE_INCONNUE' };
       application.verification = { kind: 'ATTESTE', dossier: dossierRegulariseFixture() };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenValidatingTheEnd();
 
       await whenClicking('anomalie-verifier');
@@ -4840,7 +4857,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'ISSUE_INCONNUE' };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenValidatingTheEnd();
       application.result = { kind: 'APPLIQUE', dossier: dossierRegulariseFixture() };
 
@@ -4871,7 +4888,7 @@ describe('Anomaly dossier page', () => {
     it('should ask for a confirmation before leaving to the full view when an hour was entered', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenClicking('anomalie-resolution-autre-correction');
 
@@ -4882,19 +4899,19 @@ describe('Anomaly dossier page', () => {
     it('should stay in the resolution view, hour kept, when the manager refuses to leave', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenClicking('anomalie-resolution-autre-correction');
 
       await whenClicking('anomalie-resolution-sortie-annuler');
 
       thenAbsent('anomalie-resolution-sortie');
-      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+      thenTheHandleHoldsTheEndAt('17:00');
     });
 
     it('should leave to the full view with no hour and no act when the manager confirms the exit', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenClicking('anomalie-resolution-autre-correction');
 
       await whenClicking('anomalie-resolution-sortie-confirmer');
@@ -4911,7 +4928,7 @@ describe('Anomaly dossier page', () => {
       await whenClicking('anomalie-resolution-retour-simple');
 
       thenTheResolutionViewIsShown();
-      thenTheEndFieldsShow('', '');
+      thenTheHandleHoldsNoHour();
     });
 
     it('should offer no way back to the resolution view once another act was recorded from the full view', async () => {
@@ -4930,7 +4947,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'ISSUE_INCONNUE' };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
@@ -4946,7 +4963,7 @@ describe('Anomaly dossier page', () => {
     it('should offer no other correction once the end is recorded', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
@@ -4992,7 +5009,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       read.followingResults.push({ kind: 'SANS_ANOMALIE', journal: [] });
 
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenTextContains('anomalie-adresse-obsolete', 'Ce pointage ne relève plus d’une anomalie.');
       thenThePreviewsWereAskedForTheHours(['17:00']);
@@ -5003,7 +5020,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       givenTheDossierCannotBeReread();
 
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenTextContains('anomalie-retry', 'Réessayer');
       thenAbsent('anomalie-resolution');
@@ -5013,13 +5030,21 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAcceptedOnceTheDossierIsReread();
       await whenRendering();
       givenTheDossierCannotBeReread();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       givenTheDossierCanBeReadAgain();
 
       await whenClicking('anomalie-retry');
 
       thenTheResolutionViewIsShown();
-      thenTheEndFieldsShow('', '');
+      thenTheHandleHoldsNoHour();
+    });
+
+    it('should keep the full view for a regularisation whose frise is read in rows, where no hourless handle gives the keyboard a way to the hour', async () => {
+      read.result = { kind: 'DOSSIER', dossier: dossierDeResolutionLuEnRangeesFixture() };
+
+      await whenRendering();
+
+      thenTheFullViewIsShown();
     });
 
     it('should keep the full view for a choice that carries no code', async () => {
@@ -5037,7 +5062,7 @@ describe('Anomaly dossier page', () => {
     it('should not preview again when the handle is pressed and released without moving', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenPressingAndReleasingTheHandleWithoutMoving();
 
@@ -5048,7 +5073,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'CONCURRENCE' };
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       read.failure = new Error('Dossier courant indisponible');
 
       await whenValidatingTheEnd();
@@ -5107,7 +5132,7 @@ describe('Anomaly dossier page', () => {
     it('should keep the resolution view when the receipt replaces the dossier by one that carries no choice', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
@@ -5117,7 +5142,7 @@ describe('Anomaly dossier page', () => {
     it('should link no automatic end in the receipt of an automatic end that is still the one the manager is on', async () => {
       givenAnAutomaticEndStillExpiredAfterItsRegularisation();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
@@ -5129,7 +5154,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
 
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       thenAbsent('anomalie-resolution-suivante');
     });
@@ -5137,7 +5162,7 @@ describe('Anomaly dossier page', () => {
     it('should offer the next anomaly with the receipt', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
 
       await whenValidatingTheEnd();
 
@@ -5148,7 +5173,7 @@ describe('Anomaly dossier page', () => {
       givenAnotherAutomaticEndRemainingAfterTheRegularisation();
       givenTheAddressComesFromTheList();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenValidatingTheEnd();
 
       await whenAskingForTheNextAnomaly();
@@ -5162,7 +5187,7 @@ describe('Anomaly dossier page', () => {
       givenTheAddressComesFromTheList();
       read.lignesDeLaListe = [uneLigneDeLaListe('suivi-autre', 'debut-12')];
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenValidatingTheEnd();
 
       await whenAskingForTheNextAnomaly();
@@ -5175,7 +5200,7 @@ describe('Anomaly dossier page', () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       givenTheAddressComesFromTheList();
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenValidatingTheEnd();
 
       await whenAskingForTheNextAnomaly();
@@ -5188,7 +5213,7 @@ describe('Anomaly dossier page', () => {
       givenTheAddressComesFromTheList();
       read.listFailure = new Error('lecture impossible');
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenPlacingTheEndAt('17:00');
       await whenValidatingTheEnd();
 
       await whenAskingForTheNextAnomaly();
@@ -5216,7 +5241,6 @@ describe('Anomaly dossier page', () => {
       readonly type: FaitPropose['type'];
       readonly intention: FaitPropose['intention'];
       readonly motif: string;
-      readonly champ: string;
       readonly bouton: string;
       readonly ligne?: string;
     }
@@ -5226,7 +5250,6 @@ describe('Anomaly dossier page', () => {
       type: 'FIN',
       intention: 'FIN',
       motif: MOTIF_FIN_TARDIVE,
-      champ: 'Fin réelle',
       bouton: 'Valider la fin à',
     };
     const PASSAGE_EN_NC_TARDIF: CorrectionTardiveFixture = {
@@ -5234,7 +5257,6 @@ describe('Anomaly dossier page', () => {
       type: 'NON_CONFORMITE',
       intention: 'TRANSITION',
       motif: MOTIF_PASSAGE_TARDIF,
-      champ: 'Heure du passage',
       bouton: 'Valider le passage à',
       ligne: 'La non-conformité commencera à cette heure.',
     };
@@ -5243,7 +5265,6 @@ describe('Anomaly dossier page', () => {
       type: 'DEBUT',
       intention: 'TRANSITION',
       motif: MOTIF_PASSAGE_TARDIF,
-      champ: 'Heure du passage',
       bouton: 'Valider le passage à',
       ligne: 'Le travail reprendra à cette heure.',
     };
@@ -5310,14 +5331,13 @@ describe('Anomaly dossier page', () => {
       application.result = { kind: 'APPLIQUE', dossier: apres };
     };
 
-    it('should open the resolution view of a late end with its received hour in the field, on the handle and on the button', async () => {
+    it('should open the resolution view of a late end with its received hour on the handle and on the button', async () => {
       givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
 
       await whenRendering();
 
       thenTheResolutionViewIsShown();
-      thenTheEndFieldsShow('14/09/2026', '23:00:00');
-      thenTheHandleHoldsAt(new Date(2026, 8, 14, 23, 0));
+      thenTheHandleHoldsTheEndAt('23:00');
       thenTextContains('anomalie-resolution-valider', 'Valider la fin à 23:00');
     });
 
@@ -5336,13 +5356,12 @@ describe('Anomaly dossier page', () => {
     );
 
     it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])(
-      'should label the field "$champ" and the button "$bouton 23:00" ($code $type)',
+      'should label the button "$bouton 23:00" ($code $type)',
       async cas => {
         givenALateCorrectionWillBeAccepted(cas);
 
         await whenRendering();
 
-        thenTheLegendOfTheHourReads(cas.champ);
         thenTextContains('anomalie-resolution-valider', `${cas.bouton} 23:00`);
       },
     );
@@ -5387,7 +5406,7 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
       await whenThePreviewOfTheOpeningArrives();
 
-      await whenPlacingTheEndAt('14/09/2026', '22:30');
+      await whenPlacingTheEndAt('22:30');
 
       expect(preview.actes).toEqual([
         actePourLaCorrectionTardiveFixture(FIN_TARDIVE),
@@ -5395,6 +5414,18 @@ describe('Anomaly dossier page', () => {
       ]);
       thenThePreviewsWereAskedForTheHours(['23:00', '22:30']);
       thenTextContains('anomalie-resolution-valider', 'Valider la fin à 22:30');
+    });
+
+    it('should say why and preview nothing when the received hour lies after the clock', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      whenTheClockIs(new Date(2026, 8, 14, 22, 0));
+
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      thenTheEndValidationReads(['La date et l’heure du fait ne peuvent pas être dans le futur.']);
+      thenNoPreviewWasAsked();
+      thenDisabled('anomalie-resolution-valider');
     });
 
     it('should keep the validation disabled until the preview of the opening comes back', async () => {
@@ -5406,7 +5437,7 @@ describe('Anomaly dossier page', () => {
       await attente.arrival;
 
       thenDisabled('anomalie-resolution-valider');
-      thenTheFieldAndTheHandleStayUsable();
+      thenTheHandleStaysUsable();
     });
 
     it('should offer to retry the preview of the opening after a network failure', async () => {
@@ -5456,7 +5487,7 @@ describe('Anomaly dossier page', () => {
     it('should ask a confirmation before leaving to the full view once the manager changed the received hour', async () => {
       givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '22:30');
+      await whenPlacingTheEndAt('22:30');
 
       await whenClicking('anomalie-resolution-autre-correction');
 
@@ -5467,8 +5498,8 @@ describe('Anomaly dossier page', () => {
     it('should ask no confirmation when the manager comes back to the received hour', async () => {
       givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
       await whenRendering();
-      await whenPlacingTheEndAt('14/09/2026', '22:30');
-      await whenPlacingTheEndAt('14/09/2026', '23:00');
+      await whenPlacingTheEndAt('22:30');
+      await whenPlacingTheEndAt('23:00');
 
       await whenClicking('anomalie-resolution-autre-correction');
 
@@ -5511,14 +5542,6 @@ describe('Anomaly dossier page', () => {
           },
         },
       };
-    };
-
-    const thenTheLegendOfTheHourReads = (expected: string): void => {
-      const legende = requiredFixture(
-        element('anomalie-resolution-instant-date').closest('fieldset')?.querySelector('legend'),
-        'legend of the hour field',
-      );
-      expect(legende.textContent.trim()).toBe(expected);
     };
 
     const thenNoTextOfTheViewContains = (texte: string): void => {
@@ -5820,6 +5843,18 @@ describe('Anomaly dossier page', () => {
     };
   };
 
+  const dossierDeResolutionLuEnRangeesFixture = (): DossierAnomalie => {
+    const dossier = dossierDeResolutionFixture();
+    const ouvrant = requiredFixture(dossier.journal[0], 'opening pointage');
+    const annule: PointageAnomalie = {
+      ...ouvrant,
+      id: new PointageAnomalieId('debut-annule-7'),
+      annulation: { motif: 'Erreur de saisie', auteur: 'camille', instant: INSTANT_ENREGISTREMENT },
+    };
+    const journal = [...dossier.journal, annule];
+    return { ...dossier, journal, perimetre: new PerimetreDuDossier(journal.map(pointage => pointage.id)) };
+  };
+
   const givenAnAutomaticEndWithAResolutionView = (): void => {
     read.result = { kind: 'DOSSIER', dossier: dossierDeResolutionFixture() };
   };
@@ -5831,13 +5866,21 @@ describe('Anomaly dossier page', () => {
     application.result = { kind: 'APPLIQUE', dossier: apres };
   };
 
-  const whenTypingTheEnd = async (date: string, time: string): Promise<void> => {
-    await whenEntering('anomalie-resolution-instant-date', date);
-    await whenEntering('anomalie-resolution-instant-heure', time);
+  const minutesFromTheHandleTo = (heure: string): number => {
+    const cible = new Date(2026, 8, 14, Number(heure.slice(0, 2)), Number(heure.slice(3))).getTime();
+    return (cible - Number(element('anomalie-poignee').getAttribute('aria-valuenow'))) / 60_000;
   };
 
-  const whenPlacingTheEndAt = async (date: string, time: string): Promise<void> => {
-    await whenTypingTheEnd(date, time);
+  const whenTakingTheHandleTo = async (heure: string): Promise<void> => {
+    if (element('anomalie-poignee').hasAttribute('data-sans-heure')) await whenPressingOnTheHandle('ArrowLeft');
+    for (let ecart = minutesFromTheHandleTo(heure); ecart !== 0; ecart = minutesFromTheHandleTo(heure)) {
+      await whenPressingOnTheHandle(ecart > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(ecart) >= 15);
+      if (minutesFromTheHandleTo(heure) === ecart) throw new Error(`The handle cannot reach ${heure}: it stays ${ecart} minutes away.`);
+    }
+  };
+
+  const whenPlacingTheEndAt = async (heure: string): Promise<void> => {
+    await whenTakingTheHandleTo(heure);
     await whenTheTypingPauses();
   };
 
@@ -5890,9 +5933,12 @@ describe('Anomaly dossier page', () => {
     await whenClicking('anomalie-resolution-valider');
   };
 
-  const thenTheEndFieldsShow = (date: string, time: string): void => {
-    thenFieldValueIs('anomalie-resolution-instant-date', date);
-    thenFieldValueIs('anomalie-resolution-instant-heure', time);
+  const thenTheResolutionViewOffersNoField = (): void => {
+    expect(element('anomalie-resolution').querySelector('input')).toBeNull();
+  };
+
+  const thenTheHandleHoldsTheEndAt = (heure: string): void => {
+    thenTheHandleHoldsAt(new Date(2026, 8, 14, Number(heure.slice(0, 2)), Number(heure.slice(3))));
   };
 
   const thenTheFriseIsReadOnly = (): void => {
@@ -5986,7 +6032,7 @@ describe('Anomaly dossier page', () => {
   const thenTheRefusalComesAfterTheFrise = (): void => {
     expect(element('anomalie-frise').compareDocumentPosition(element('anomalie-refus')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
-      element('anomalie-refus').compareDocumentPosition(element('anomalie-resolution-instant-date')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      element('anomalie-refus').compareDocumentPosition(element('anomalie-resolution-valider')) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   };
 
@@ -6054,17 +6100,16 @@ describe('Anomaly dossier page', () => {
     await attente.arrival;
   };
 
-  const whenFocusingTheHour = (): void => {
-    element('anomalie-resolution-instant-heure').focus();
+  const whenFocusingTheHandle = (): void => {
+    element('anomalie-poignee').focus();
   };
 
-  const thenTheFieldAndTheHandleStayUsable = (): void => {
-    expect(field('anomalie-resolution-instant-heure').disabled).toBe(false);
+  const thenTheHandleStaysUsable = (): void => {
     expect(element('anomalie-poignee').getAttribute('aria-disabled')).toBe('false');
   };
 
-  const thenTheFocusStaysOnTheHour = (): void => {
-    expect(document.activeElement).toBe(element('anomalie-resolution-instant-heure'));
+  const thenTheFocusStaysOnTheHandle = (): void => {
+    expect(document.activeElement).toBe(element('anomalie-poignee'));
   };
 
   const thenTheResolutionViewIsShown = (): void => {
