@@ -15,11 +15,8 @@ import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
-import { IntentionDePointage, PointageDElement } from './PointageDElement';
+import { PointageDElement } from './PointageDElement';
 import { FicheDuReleve, ReleveDesHeures } from './ReleveDesHeures';
-
-const intentionFixture = (type: string): IntentionDePointage =>
-  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } : { type: 'OUVERTURE' };
 
 const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
   fin === undefined
@@ -43,7 +40,6 @@ const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   elements: [],
   jours,
   operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT57H30M')),
-  conflits: [],
 });
 
 const instantDe = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
@@ -80,7 +76,6 @@ const pointageDElementFixture = (element: string, poste: string): PointageDEleme
     type: 'DEBUT',
     instant: instantDe('08:00'),
     cible: new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)),
-    intention: intentionFixture('DEBUT'),
   });
 
 const releveDes = (lundi: {
@@ -96,7 +91,6 @@ const releveDes = (lundi: {
   return new ReleveDesHeures(SEMAINE, {
     ...ficheFixture([jourAvecFaits, ...semaineCompleteFixture().slice(1)]),
     elements: [elementFixture('carter'), elementFixture('bride')],
-    conflits: [],
   });
 };
 
@@ -236,7 +230,6 @@ describe('ReleveDesHeures', () => {
               type: 'DEBUT',
               instant: instantDe('08:00'),
               cible: new CibleDePointage(new ElementReleveId('carter'), undefined),
-              intention: intentionFixture('DEBUT'),
             }),
           ],
         }),

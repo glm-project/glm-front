@@ -5,7 +5,6 @@ import { SemaineISO } from '../semaine/SemaineISO';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { JourDeReleve } from './JourDeReleve';
-import { SequenceEnConflit } from './SequenceEnConflit';
 
 const memesJours = (attendus: readonly { readonly value: string }[], jours: readonly JourDeReleve[]): boolean =>
   attendus.every((attendu, rang) => jours[rang]?.jour.value === attendu.value);
@@ -41,7 +40,6 @@ export interface FicheDuReleve {
   readonly elements: readonly ElementDuReleve[];
   readonly jours: readonly JourDeReleve[];
   readonly operationnelTotal: TotalDeDuree;
-  readonly conflits: readonly SequenceEnConflit[];
 }
 
 export class ReleveDesHeures {
@@ -49,16 +47,14 @@ export class ReleveDesHeures {
   readonly elements: readonly ElementDuReleve[];
   readonly jours: readonly JourDeReleve[];
   readonly operationnelTotal: TotalDeDuree;
-  readonly conflits: readonly SequenceEnConflit[];
 
   constructor(semaine: SemaineISO, fiche: FicheDuReleve) {
     ReleveDesHeures.verifieLesSeptJours(semaine, fiche.jours);
-    ReleveDesHeures.verifieLesReferences(fiche.elements, fiche.jours, fiche.conflits);
+    ReleveDesHeures.verifieLesReferences(fiche.elements, fiche.jours);
     this.operateur = fiche.operateur;
     this.elements = [...fiche.elements];
     this.jours = [...fiche.jours];
     this.operationnelTotal = fiche.operationnelTotal;
-    this.conflits = [...fiche.conflits];
   }
 
   elementDe(id: ElementReleveId): ElementDuReleve {
@@ -70,18 +66,11 @@ export class ReleveDesHeures {
     return intervalles.some((intervalle, rang) => intervalles.slice(rang + 1).some(autre => intervalle.chevauche(autre)));
   }
 
-  private static verifieLesReferences(
-    elements: readonly ElementDuReleve[],
-    jours: readonly JourDeReleve[],
-    conflits: readonly SequenceEnConflit[],
-  ): void {
-    const cibles = [
-      ...conflits.map(conflit => conflit.cible),
-      ...jours.flatMap(jour => [
-        ...jour.intervalles.map(intervalle => intervalle.cible()),
-        ...jour.pointages.map(pointage => pointage.cible),
-      ]),
-    ];
+  private static verifieLesReferences(elements: readonly ElementDuReleve[], jours: readonly JourDeReleve[]): void {
+    const cibles = jours.flatMap(jour => [
+      ...jour.intervalles.map(intervalle => intervalle.cible()),
+      ...jour.pointages.map(pointage => pointage.cible),
+    ]);
     for (const cible of cibles) {
       verifieLePoste(cible, elementDe(cible.element, elements));
     }

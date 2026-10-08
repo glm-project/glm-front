@@ -6,17 +6,13 @@ import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
-import { ActiviteReleveId } from './ActiviteReleveId';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
 import { JourAOuvrir, jourOuvert } from './JourOuvert';
-import { IntentionDePointage, PointageDElement } from './PointageDElement';
+import { PointageDElement } from './PointageDElement';
 import { ReleveDesHeures } from './ReleveDesHeures';
-
-const intentionFixture = (type: string): IntentionDePointage =>
-  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } : { type: 'OUVERTURE' };
 
 const elementFixture = (): ElementDuReleve =>
   new ElementDuReleve({
@@ -49,7 +45,6 @@ const jourFixture = (jour: JourCalendaire, fiche: { pointe?: boolean; couvert?: 
               type: 'DEBUT',
               instant: instant,
               cible: new CibleDePointage(new ElementReleveId('element-1'), undefined),
-              intention: intentionFixture('DEBUT'),
             }),
           ]
         : [],
@@ -62,7 +57,6 @@ const releveFixture = (semaine: SemaineISO, jours: Readonly<Record<number, { poi
     elements: [elementFixture()],
     operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
     jours: semaine.jours().map((jour, rang) => jourFixture(jour, jours[rang] ?? {})),
-    conflits: [],
   });
 
 describe('jourOuvert', () => {

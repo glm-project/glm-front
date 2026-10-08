@@ -10,11 +10,8 @@ import { ActiviteReleveId } from './ActiviteReleveId';
 import { CibleDePointage } from './CibleDePointage';
 import { InstantDeReleve } from './InstantDeReleve';
 import { FicheDuJour, JourDeReleve } from './JourDeReleve';
-import { IntentionDePointage, PointageDElement } from './PointageDElement';
+import { PointageDElement } from './PointageDElement';
 import { TypeDePointage } from './TypeDePointage';
-
-const intentionFixture = (type: string): IntentionDePointage =>
-  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } : { type: 'OUVERTURE' };
 
 const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
   fin === undefined
@@ -30,7 +27,6 @@ const pointageFixture = (type: TypeDePointage, heure: number, minute: number): P
     type: type,
     instant: instantFixture(heure, minute),
     cible: new CibleDePointage(new ElementReleveId('element-1'), undefined),
-    intention: intentionFixture(type),
   });
 
 const intervalleFixture = (element: string, debut: [number, number], fin: [number, number], poste?: string): IntervalleDActivite =>
@@ -50,7 +46,6 @@ const pointageDElementFixture = (type: TypeDePointage, element: string, heure: n
     type: type,
     instant: instantFixture(heure, minute),
     cible: new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)),
-    intention: intentionFixture(type),
   });
 
 const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({

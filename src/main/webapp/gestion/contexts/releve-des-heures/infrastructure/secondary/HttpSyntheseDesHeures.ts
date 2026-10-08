@@ -25,7 +25,6 @@ import { PointageDElement } from '../../domain/releve/PointageDElement';
 import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
 import { PointageReleveId } from '../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
-import { SequenceEnConflit } from '../../domain/releve/SequenceEnConflit';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
@@ -64,10 +63,6 @@ const toPointage = (pointage: RestPointage): PointageDeReleve =>
     type: pointage.type,
     instant: new InstantDeReleve(pointage.dateDeSurvenue),
     cible: toCible(pointage),
-    intention:
-      pointage.intention === 'OUVERTURE'
-        ? { type: 'OUVERTURE' }
-        : { type: pointage.intention, activiteVisee: new ActiviteReleveId(required(pointage.cible, 'pointage.cible')) },
   });
 
 const toTotal = (duree: components['schemas']['RestDureeDeSynthese']): TotalDeDuree =>
@@ -99,16 +94,9 @@ const toActivite = (activite: components['schemas']['RestActiviteInterpreteeDeLa
     case 'EN_COURS':
       return { ...commun, etat: activite.etat };
     case 'A_RESOUDRE':
-      return { ...commun, etat: activite.etat, finAuPlusTard: toFin(activite.finAuPlusTard) };
+      throw new Error('Une activité à résoudre n’a pas de fin : le relevé ne peut pas être établi.');
   }
 };
-
-const toConflit = (conflit: components['schemas']['RestConflitDeSynthese']): SequenceEnConflit =>
-  new SequenceEnConflit(
-    new CibleDePointage(new ElementReleveId(conflit.element), conflit.poste === undefined ? undefined : new PosteReleveId(conflit.poste)),
-    conflit.activites.map(id => new ActiviteReleveId(id)),
-    conflit.pointages.map(id => new PointageReleveId(id)),
-  );
 
 const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
   new IntervalleDActivite({
@@ -179,7 +167,6 @@ const toReleve = (synthese: RestSynthese, feuille: RestFeuille, demandee: Semain
     elements: synthese.elements.map(toElement),
     jours: toJours(synthese, feuille),
     operationnelTotal: toTotal(synthese.dureeOperationnelleTotale),
-    conflits: synthese.conflits.map(toConflit),
   });
 };
 

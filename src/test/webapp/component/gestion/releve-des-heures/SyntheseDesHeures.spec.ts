@@ -117,7 +117,7 @@ const semaineIncompleteFixture = (): SemaineSemee => {
                   element: 'element-1',
                   categorie: 'TRAVAIL',
                   debut: heure(14, 8),
-                  activite: { id: 'a', debut: heure(14, 8), etat: 'A_RESOUDRE', finAuPlusTard: heure(14, 17) },
+                  activite: { id: 'a', debut: heure(14, 8), etat: 'EN_COURS' },
                 },
               ],
             }
@@ -585,7 +585,7 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-operationnel-total')).should('have.text', 'Incomplet');
     cy.get(dataSelector('synthese-element-total')).should('contain.text', 'Incomplet');
     cy.get(dataSelector('synthese-element-nc')).should('have.text', 'NC 1 h 00');
-    cy.get(dataSelector('synthese-activite-etat')).should('contain.text', 'À résoudre');
+    cy.get(dataSelector('synthese-activite-etat')).should('contain.text', 'En cours');
   };
 
   const thenKeepLoadingVisibleUntilBothReceivedReportsAreAvailable = (): void => {

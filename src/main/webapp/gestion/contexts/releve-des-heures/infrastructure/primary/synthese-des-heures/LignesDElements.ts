@@ -11,7 +11,7 @@ import { JourSurSonAxe } from './JourSurSonAxe';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
 
-export type StyleDeBarreDActivite = 'travail' | 'nc' | 'en-cours' | 'a-resoudre';
+export type StyleDeBarreDActivite = 'travail' | 'nc' | 'en-cours';
 
 export interface BarreDActivite {
   readonly style: StyleDeBarreDActivite;
@@ -63,22 +63,6 @@ const MARQUES: Record<TypeDePointage, TypeDeMarque> = { DEBUT: 'debut', NON_CONF
 
 const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, intervalle: IntervalleDActivite): BarreDActivite => {
   const gauche = axe.pourcentDe(minutesDeDebut(intervalle.debut));
-  if (intervalle.activite.etat === 'A_RESOUDRE') {
-    return {
-      style: 'a-resoudre',
-      gauche,
-      largeur: undefined,
-      fin: undefined,
-      automatique: false,
-      etat: LIBELLES.legende.aResoudre,
-      enonce: LIBELLES.enonceDActiviteAResoudre({
-        element,
-        jour: jour.jour,
-        categorie: intervalle.categorie,
-        debut: intervalle.activite.debut,
-      }),
-    };
-  }
   if (intervalle.estEnCours()) {
     const enonce = LIBELLES.enonceDActiviteEnCours({
       element,
