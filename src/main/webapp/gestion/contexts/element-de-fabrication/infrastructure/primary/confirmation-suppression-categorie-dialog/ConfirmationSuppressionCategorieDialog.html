@@ -1,0 +1,15 @@
+<glm-confirmation-content
+  [title]="libelles.titre"
+  [cancelLabel]="libelles.annuler"
+  [confirmLabel]="libelles.confirmer"
+  [pendingLabel]="libelles.encours"
+  [pending]="suppression()"
+  [destructive]="true"
+  [technicalErrorMessage]="erreurTechnique() ? libelles.erreurTechnique : undefined"
+  [refusalMessage]="refus()?.message"
+  selectorPrefix="categorie-delete"
+  (cancelRequested)="dialog.close(false)"
+  (confirmRequested)="confirm()"
+>
+  <p class="text-body" data-selector="categorie-delete-description">{{ libelles.description(categorie) }}</p>
+</glm-confirmation-content>

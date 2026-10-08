@@ -56,6 +56,41 @@ describe('Manufacturing element referential in gestion', () => {
     thenElementIsListed('1099', 'MOULE', '—');
   });
 
+  it('should create a product in a category declared from the category management', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenDeclaringCategory('piece');
+    whenCreating('elements-new-PIECE', '2001', 'Insert');
+
+    thenElementIsListed('2001', 'PIECE', 'Insert');
+  });
+
+  it('should offer the creations in the order chosen in the category management', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenMovingCategoryDown('MOULE');
+
+    thenCreationsAreOffered(['OF', 'MOULE']);
+  });
+
+  it('should stop offering the creation in a category removed from the management', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenRemovingCategory('MOULE');
+    whenClosingCategoryManagement();
+
+    thenCreationsAreOffered(['OF']);
+  });
+
+  it('should keep the category management open on the refusal to remove a category in use', () => {
+    const api = givenReferential();
+    givenCategoryInUse(api, 'MOULE');
+    whenVisitingReferential();
+    whenRemovingCategory('MOULE');
+
+    thenRemovalIsRefused();
+  });
+
   it('should paginate the referential without asking for any period', () => {
     givenReferential(21);
     whenVisitingReferential();
@@ -69,6 +104,44 @@ const givenReferential = (nombre = 0): ElementsApiFixture => {
   const api = new ElementsApiFixture(elementsFixture(nombre));
   api.install();
   return api;
+};
+const whenDeclaringCategory = (code: string): void => {
+  cy.get(dataSelector('elements-categories')).click();
+  cy.get(dataSelector('categorie-item')).should('have.length', 2);
+  cy.get(dataSelector('categorie-code')).type(code);
+  cy.get(dataSelector('categorie-declare')).click();
+  cy.get(dataSelector('categorie-item')).should('contain.text', code.toUpperCase());
+  cy.get(dataSelector('categories-close')).click();
+};
+const whenMovingCategoryDown = (code: string): void => {
+  cy.get(dataSelector('elements-categories')).click();
+  cy.get(dataSelector(`categorie-descendre-${code}`)).click();
+  cy.wait('@categoriesReorder');
+  cy.get(dataSelector('categories-close')).click();
+};
+const thenCreationsAreOffered = (codes: readonly string[]): void => {
+  cy.get(dataSelector('elements-creations'))
+    .find('button')
+    .should(buttons => {
+      expect(Array.from(buttons, button => button.textContent.trim())).to.deep.equal(codes);
+    });
+};
+const givenCategoryInUse = (api: ElementsApiFixture, code: string): void => {
+  api.categoriesUtilisees = [code];
+};
+const whenRemovingCategory = (code: string): void => {
+  cy.get(dataSelector('elements-categories')).click();
+  cy.get(dataSelector(`categorie-supprimer-${code}`)).click();
+  cy.get(dataSelector('categorie-delete-confirm')).click();
+  cy.wait('@categorieDelete');
+};
+const whenClosingCategoryManagement = (): void => {
+  cy.get(dataSelector('categorie-delete-confirm')).should('not.exist');
+  cy.get(dataSelector('categories-close')).click();
+};
+const thenRemovalIsRefused = (): void => {
+  cy.get(dataSelector('categorie-delete-refusal')).should('contain.text', 'Des produits sont rangés dans cette catégorie');
+  cy.get(dataSelector('categories-title')).should('exist');
 };
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);

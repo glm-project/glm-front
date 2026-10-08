@@ -44,6 +44,38 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   },
 } as const;
 
+export const LIBELLES_CATEGORIES_DE_PRODUIT = {
+  ouvrir: 'Catégories',
+  titre: 'Catégories de produit',
+  introduction: 'Les produits se créent dans une catégorie. Son code s’affiche tel quel et préfixe le nom des produits.',
+  chargement: 'Chargement des catégories…',
+  erreur: 'Impossible de charger les catégories. Vérifiez la connexion puis réessayez.',
+  reessayer: 'Réessayer',
+  vide: 'Aucune catégorie déclarée.',
+  liste: 'Catégories, dans l’ordre des boutons de création',
+  monter: (categorie: CategorieDeProduit): string => `Monter ${categorie.value}`,
+  descendre: (categorie: CategorieDeProduit): string => `Descendre ${categorie.value}`,
+  supprimer: (categorie: CategorieDeProduit): string => `Supprimer ${categorie.value}`,
+  erreurDeplacement: 'Le déplacement a échoué. Vérifiez la connexion puis réessayez.',
+  nouvelle: 'Nouvelle catégorie',
+  nouvelleComplement: '(code de 1 à 10 lettres)',
+  aideCode: 'Le code ne pourra plus être modifié : il préfixe le nom des produits de la catégorie.',
+  declarer: 'Déclarer',
+  declaration: 'Déclaration…',
+  erreurTechnique: 'La déclaration a échoué. Vérifiez la connexion puis réessayez.',
+  fermer: 'Fermer',
+} as const;
+
+export const LIBELLES_SUPPRESSION_CATEGORIE = {
+  titre: 'Supprimer la catégorie ?',
+  description: (categorie: CategorieDeProduit): string =>
+    `La catégorie ${categorie.value} sera retirée des boutons de création, des filtres et du pupitre. Cette action est définitive.`,
+  annuler: 'Annuler',
+  confirmer: 'Supprimer',
+  encours: 'Suppression…',
+  erreurTechnique: 'La suppression a échoué. Vérifiez la connexion puis réessayez.',
+} as const;
+
 export const LIBELLES_FORMULAIRE_ELEMENT = {
   introduction: 'Les deux champs sont facultatifs : un produit se réduit légitimement à son seul numéro, attribué automatiquement.',
   reference: 'Référence',

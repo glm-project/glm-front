@@ -49,6 +49,17 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   modifiée.
 - **ElementsDeFabricationPort** : port secondaire exposant la consultation paginée, la création et la
   modification, les écritures rendant un `Result<T, Refus>`.
+- **FormulaireCategorieDeProduit** : modèle de la déclaration d'une catégorie. Il met la saisie en
+  majuscules, vérifie le motif (`^[A-Z]{1,10}$`, porté par `CategorieDeProduit.erreur`) et garde le refus
+  `CategorieDejaExistante` sur le champ tant que le même code est saisi.
+- **CategoriesDeProduitPort** : port secondaire de la gestion des catégories (`/api/categories-de-produit`) :
+  lecture dans l'ordre de l'entreprise, déclaration, réordonnancement et suppression.
+- **OrdreDesCategories** : l'ordre des catégories et ses déplacements d'une place (`apresMontee`,
+  `apresDescente`). Chaque déplacement envoie l'ordre complet ; s'il ne nomme plus toutes les catégories,
+  le refus `OrdreIncomplet` (409 `ordre-incomplet`) s'affiche et l'overlay relit la liste.
+- **Refus de suppression d'une catégorie** : `CategorieUtilisee` (409 `categorie-utilisee`, des produits y sont
+  rangés) et `CategorieIntrouvable` (404). La suppression passe par une confirmation destructive, qui garde le
+  refus affiché sans se fermer.
 - **Refus de commande** : `ReferenceDejaUtilisee` (unicité de référence en création et en modification),
   `CategorieInconnue` (catégorie supprimée entre la lecture et la création, 409
   `urn:glm:erreur:element-de-fabrication:categorie-inconnue`) et `ElementDeFabricationIntrouvable` (élément
@@ -68,6 +79,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la
   clôture de son suivi d'atelier, qui appartient à un autre contexte.
+- **Les catégories se gèrent dans un overlay de la page Produits**, ouvert par « Catégories » ou depuis
+  l'état sans catégorie. Une catégorie se déclare et ne se renomme jamais : son code préfixe le nom des
+  produits, et l'overlay le rappelle. À sa fermeture, la page relit son référentiel.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
 
 ## Relations de contexte
