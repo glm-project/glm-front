@@ -80,9 +80,13 @@ const whenFocusingRefresh = (): void => {
   cy.get(dataSelector('supervision-refresh')).should('not.be.disabled').focus();
 };
 
+const ignoreVisibilityChanges = (window: Window): void => {
+  window.addEventListener('visibilitychange', event => event.stopImmediatePropagation(), true);
+};
+
 const whenOpeningSupervisionWithPollingClock = (): void => {
   cy.clock(DEMONSTRATION.getTime(), ['Date', 'setInterval', 'clearInterval']);
-  cy.visit('/');
+  cy.visit('/', { onBeforeLoad: ignoreVisibilityChanges });
   cy.get(dataSelector('supervision-plateau')).should('be.visible');
 };
 
