@@ -86,7 +86,7 @@ export class FriseDossier {
     if (this.prise === undefined) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: position.source });
-    else this.placementDemande.emit({ instant, placement: position.source });
+    else this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: position.source });
   }
 
   private mesure(largeur: number): void {
@@ -113,7 +113,7 @@ export class FriseDossier {
   protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {
     if (rangee.desactivee) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
-    this.placementDemande.emit({ instant, placement: rangee.source });
+    this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: rangee.source });
   }
 
   protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
@@ -122,6 +122,10 @@ export class FriseDossier {
     if (demande === undefined) return;
     touche.preventDefault();
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande, poignee: position.source });
-    else this.placementDemande.emit({ instant: instantPlaceAuClavier(demande, position), placement: position.source });
+    else
+      this.placementDemande.emit({
+        demande: { kind: 'VERS', instant: instantPlaceAuClavier(demande, position) },
+        placement: position.source,
+      });
   }
 }

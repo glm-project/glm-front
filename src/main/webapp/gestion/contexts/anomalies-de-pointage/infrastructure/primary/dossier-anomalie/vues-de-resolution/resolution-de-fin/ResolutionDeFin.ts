@@ -120,12 +120,10 @@ export class ResolutionDeFin implements OnInit {
     if (demande.kind !== 'VERS') this.apercuAutomatique.apresFrappe(this.dossier(), this.relire);
   }
 
-  protected placer({ instant, placement }: PlacementDemande): void {
+  protected placer({ demande, placement }: PlacementDemande): void {
     this.lireLHorloge();
     this.changer({
-      fait: {
-        instant: instantDeplace({ kind: 'VERS', instant }, this.maintenant(), bornesDuDeplacement(this.cadre(), this.dossier(), placement)),
-      },
+      fait: { instant: instantDeplace(demande, this.maintenant(), bornesDuDeplacement(this.cadre(), this.dossier(), placement)) },
     });
     this.apercuAutomatique.apresFrappe(this.dossier(), this.relire);
   }

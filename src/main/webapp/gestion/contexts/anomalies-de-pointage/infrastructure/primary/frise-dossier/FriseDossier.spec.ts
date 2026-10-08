@@ -2931,7 +2931,7 @@ describe('Frise of a dossier', () => {
   };
 
   const thenThePlacementsAsked = (expected: readonly number[]): void => {
-    expect(requestedPlacements.map(demande => demande.instant)).toEqual(expected);
+    expect(requestedPlacements.map(placement => placement.demande)).toEqual(expected.map(instant => ({ kind: 'VERS', instant })));
   };
 
   const whenTheGestureEndsWith = (type: string, pointerId = 1): void => {
