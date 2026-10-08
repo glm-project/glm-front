@@ -33,7 +33,7 @@
     class="mt-4"
     fieldId="instant-resolution"
     selector="anomalie-resolution-instant"
-    [labels]="libelles.champFin"
+    [labels]="variante().champ"
     [value]="instant()"
     [disabled]="occupe()"
     (valueChanged)="saisirLInstant($event)"
