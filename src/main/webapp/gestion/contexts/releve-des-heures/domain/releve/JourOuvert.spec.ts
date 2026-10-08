@@ -1,6 +1,7 @@
 import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
+import { CategorieDElement } from '../element/CategorieDElement';
 import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
@@ -20,7 +21,7 @@ const intentionFixture = (type: string): IntentionDePointage =>
 const elementFixture = (): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId('element-1'),
-    type: 'PRODUIT',
+    categorie: new CategorieDElement('MOULE'),
     nom: 'Moule',
     reference: undefined,
     description: undefined,
