@@ -6,6 +6,8 @@
 
 The hold was first set to 1.5 s and has been shortened to 1 s; the rest of the decision is unchanged.
 
+- `Amended by 0053: molds no longer sit two per row; every pupitre zone, one per product category, shares the common grid.`
+
 ## Context
 
 On the pupitre's pointage screen a single tap on a tile target, a global command or a workstation choice declared a

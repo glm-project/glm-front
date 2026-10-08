@@ -10,7 +10,7 @@ créent et tiennent à jour, bien avant qu'un élément soit mis à l'atelier. L
 **Élément de fabrication** : mot de repli, employé uniquement quand on ne présume pas de la catégorie —
 page de détail, état vide, message d'erreur venu du back. Il ne titre jamais un écran.
 
-**Catégorie de produit** : famille dans laquelle l'entreprise range ce qu'elle fabrique (`MOULE`, `OF`…).
+**Catégorie de produit** ([ADR 0053](../../../../../../documentation/adr/0053-replace-the-element-type-with-company-categories.md)) : famille dans laquelle l'entreprise range ce qu'elle fabrique (`MOULE`, `OF`…).
 Chaque entreprise déclare les siennes ; le **code est son propre libellé** et s'affiche tel quel. La
 catégorie est une **valeur portée par l'élément**, pas une hiérarchie ni plusieurs référentiels.
 
