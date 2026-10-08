@@ -147,10 +147,7 @@ export class ElementsApiFixture {
   }
 }
 
-const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
-  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
-
-const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element, type: typeDeLaCategorie(element.categorie) });
+const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element });
 
 const numeroteSur6 = (rang: number): string => ('000000' + String(rang)).slice(-6);
 

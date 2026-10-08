@@ -70,7 +70,6 @@ const suiviFixture = (journal: components['schemas']['RestEvenementDAtelier'][])
   element: elementFinAutomatiqueFixture,
   nom: 'M24-0655',
   categorie: 'OF',
-  type: 'ORDRE_DE_FABRICATION',
   engageLe: '2026-09-14T06:00:00Z',
   engagePar: 'gestionnaire',
   etat: 'EN_COURS',

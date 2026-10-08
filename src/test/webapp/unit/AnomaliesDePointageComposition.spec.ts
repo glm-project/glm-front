@@ -58,7 +58,6 @@ const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number):
     element: 'moule-42',
     nom: 'M-042',
     categorie: 'MOULE',
-    type: 'PRODUIT',
     engageLe: '2026-09-14T06:00:00Z',
     engagePar: 'gestionnaire',
     etat: 'EN_ATTENTE',
@@ -179,7 +178,7 @@ describe('Real conflict resolution composition', () => {
     server
       .expectOne(request => request.url === '/api/elements-de-fabrication' && request.params.get('page') === '0')
       .flush({
-        content: [{ id: 'element-bielle', nom: 'Bielle', reference: 'OF M24-0655', categorie: 'MOULE', type: 'PRODUIT' }],
+        content: [{ id: 'element-bielle', nom: 'Bielle', reference: 'OF M24-0655', categorie: 'MOULE' }],
         currentPage: 0,
         pageSize: 100,
         totalElementsCount: 1,

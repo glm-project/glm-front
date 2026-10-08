@@ -52,7 +52,7 @@ export const givenTheReferentielFinsAutomatiques = (): void => {
 
 export const givenTheElementsFinsAutomatiques = (): void => {
   interceptElements([
-    { id: elementFinAutomatiqueFixture, nom: 'OF M24-0655', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
-    { id: autreElementFinAutomatiqueFixture, nom: 'Bielle', reference: 'B-12', categorie: 'MOULE', type: 'PRODUIT' },
+    { id: elementFinAutomatiqueFixture, nom: 'OF M24-0655', categorie: 'OF' },
+    { id: autreElementFinAutomatiqueFixture, nom: 'Bielle', reference: 'B-12', categorie: 'MOULE' },
   ]);
 };

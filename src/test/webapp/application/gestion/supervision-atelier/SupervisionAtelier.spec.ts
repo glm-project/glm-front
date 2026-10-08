@@ -13,7 +13,7 @@ const connectedWorkshopFixture: RestSupervision = {
     {
       id: 'opening-connected-of',
       operateurId: 'op-connected-serin',
-      element: { id: 'connected-of', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF connecté', reference: 'AT-42' },
+      element: { id: 'connected-of', categorie: 'OF', nom: 'OF connecté', reference: 'AT-42' },
       categorie: 'TRAVAIL',
       debut: new Date(2026, 8, 23, 21).toISOString(),
       echeance: new Date(2026, 8, 24, 10).toISOString(),
@@ -37,7 +37,7 @@ const workshopWithWarningsFixture: RestSupervision = {
     {
       id: 'opening-to-correct',
       operateurId: 'op-connected-serin',
-      element: { id: 'of-to-correct', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF à corriger' },
+      element: { id: 'of-to-correct', categorie: 'OF', nom: 'OF à corriger' },
       categorie: 'TRAVAIL',
       debut: new Date(2026, 8, 23, 8).toISOString(),
       echeance: new Date(2026, 8, 23, 21).toISOString(),

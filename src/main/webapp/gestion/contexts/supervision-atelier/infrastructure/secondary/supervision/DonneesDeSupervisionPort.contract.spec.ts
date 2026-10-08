@@ -133,7 +133,7 @@ const fabricationOrderFixture: SceneFixture = {
       {
         id: 'opening-of',
         operateurId: 'op-serin',
-        element: { id: 'of-42', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042', reference: '3004' },
+        element: { id: 'of-42', categorie: 'OF', nom: 'OF-2026-000042', reference: '3004' },
         categorie: 'TRAVAIL',
         debut: '2026-09-13T08:30:00Z',
         echeance: '2026-09-13T21:30:00Z',
@@ -171,7 +171,7 @@ const mouldFixture: SceneFixture = {
       {
         id: 'opening-mould',
         operateurId: 'op-legrand',
-        element: { id: 'moule-personnel', categorie: 'MOULE', type: 'PRODUIT', nom: 'Moule personnel' },
+        element: { id: 'moule-personnel', categorie: 'MOULE', nom: 'Moule personnel' },
         categorie: 'NON_CONFORMITE',
         debut: '2026-09-13T09:15:00Z',
         echeance: '2026-09-13T22:15:00Z',
@@ -205,7 +205,7 @@ const automaticEndFixture: SceneFixture = {
       {
         id: 'automatic-end',
         operateurId: 'op-serin',
-        element: { id: 'of-perso', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' },
+        element: { id: 'of-perso', categorie: 'OF', nom: 'OF Perso' },
         categorie: 'TRAVAIL',
         debut: '2026-09-12T08:00:00Z',
         echeance: '2026-09-12T21:00:00Z',
@@ -286,7 +286,7 @@ const conflictFixture: SceneFixture = {
           {
             id: 'opening-conflict-perso',
             operateurId: 'op-serin',
-            element: { id: 'of-perso', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' },
+            element: { id: 'of-perso', categorie: 'OF', nom: 'OF Perso' },
             categorie: 'NON_CONFORMITE',
             debut: '2026-09-12T08:00:00Z',
             echeance: '2026-09-12T21:00:00Z',
@@ -294,7 +294,7 @@ const conflictFixture: SceneFixture = {
           {
             id: 'opening-conflict-mould',
             operateurId: 'op-serin',
-            element: { id: 'moule-1015', categorie: 'MOULE', type: 'PRODUIT', nom: 'PRD-2026-000015', reference: '1015' },
+            element: { id: 'moule-1015', categorie: 'MOULE', nom: 'PRD-2026-000015', reference: '1015' },
             categorie: 'TRAVAIL',
             debut: '2026-09-12T09:00:00Z',
             echeance: '2026-09-12T22:00:00Z',

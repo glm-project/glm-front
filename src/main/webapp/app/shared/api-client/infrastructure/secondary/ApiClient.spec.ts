@@ -42,7 +42,6 @@ const UN_SUIVI = {
   journal: [],
   nom: 'OF-1',
   categorie: 'OF',
-  type: 'ORDRE_DE_FABRICATION',
 } satisfies components['schemas']['RestSuiviDAtelier'];
 
 describe('ApiClient', () => {

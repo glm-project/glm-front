@@ -42,14 +42,10 @@ const projeter = (element: ElementEngageable): ProjectionEngageable => ({
   categorie: element.categorie.value,
 });
 
-const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
-  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
-
 const toRest = (element: EngageableFixture): RestElement => ({
   id: element.id,
   nom: element.nom,
   categorie: element.categorie,
-  type: typeDeLaCategorie(element.categorie),
   ...(element.reference === undefined ? {} : { reference: element.reference }),
 });
 

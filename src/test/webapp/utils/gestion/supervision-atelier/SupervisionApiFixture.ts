@@ -14,14 +14,12 @@ export const EVALUATION_SUPERVISION = instantFixture(9, 10);
 const moule = (reference: string, nom: string): RestElement => ({
   id: `moule-${reference}`,
   categorie: 'MOULE',
-  type: 'PRODUIT',
   nom,
   reference,
 });
 const of = (reference: string, nom: string): RestElement => ({
   id: `of-${reference}`,
   categorie: 'OF',
-  type: 'ORDRE_DE_FABRICATION',
   nom,
   reference,
 });
@@ -34,8 +32,8 @@ const OF_3001 = of('3001', 'OF-2026-000039');
 const OF_3004 = of('3004', 'OF-2026-000042');
 const OF_3005 = of('3005', 'OF-2026-000043');
 const OF_3006 = of('3006', 'OF-2026-000044');
-const OF_PERSO: RestElement = { id: 'of-perso', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' };
-const OF_SANS_REFERENCE: RestElement = { id: 'of-sans-reference', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000048' };
+const OF_PERSO: RestElement = { id: 'of-perso', categorie: 'OF', nom: 'OF Perso' };
+const OF_SANS_REFERENCE: RestElement = { id: 'of-sans-reference', categorie: 'OF', nom: 'OF-2026-000048' };
 
 const FRAISEUSE_1 = poste('poste-fraiseuse-1', 'Fraiseuse 1', 'Fraisage');
 const FRAISEUSE_2 = poste('poste-fraiseuse-2', 'Fraiseuse 2', 'Fraisage');

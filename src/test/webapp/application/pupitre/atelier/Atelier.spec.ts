@@ -205,7 +205,6 @@ describe('Pupitre workshop journey', () => {
           nom: suivi.nom,
           etat: suivi.etat,
           categorie: suivi.categorie,
-          type: suivi.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
           ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
           activites: suivi.activites.map(activite => ({
             operateur: activite.operateurId,
@@ -241,7 +240,6 @@ describe('Pupitre workshop journey', () => {
         id: new URL(request.url).pathname.split('/')[4],
         nom: 'OF-1',
         categorie: 'OF',
-        type: 'ORDRE_DE_FABRICATION',
         element: 'element',
         engageLe: '2026-09-05T07:00:00Z',
         engagePar: 'gestionnaire',
