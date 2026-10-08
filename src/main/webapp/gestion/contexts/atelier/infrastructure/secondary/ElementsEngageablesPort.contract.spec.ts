@@ -7,12 +7,12 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ElementsEngageablesFixture } from '@test/unit/fixtures/gestion/atelier/ElementsEngageablesFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
+import { CategorieDElementEngage } from '../../domain/CategorieDElementEngage';
 import { DesignationDElement } from '../../domain/DesignationDElement';
 import { ElementEngageable } from '../../domain/ElementEngageable';
 import { ElementEngageId } from '../../domain/ElementEngageId';
 import { ElementsEngageablesPort } from '../../domain/ElementsEngageablesPort';
 import { RequeteEngageables } from '../../domain/RequeteEngageables';
-import { TypeDElementEngage } from '../../domain/TypeDElementEngage';
 import { HttpElementsEngageables } from './HttpElementsEngageables';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
@@ -23,36 +23,39 @@ const INTROUVABLE = 'urn:glm:erreur:element-de-fabrication:element-de-fabricatio
 interface EngageableFixture {
   readonly id: string;
   readonly nom: string;
-  readonly type: TypeDElementEngage;
+  readonly categorie: string;
   readonly reference?: string;
 }
 
-const mouleFixture: EngageableFixture = { id: 'moule-1', nom: 'PRD-2026-000001', type: 'PRODUIT', reference: '1015' };
-const ofSansReferenceFixture: EngageableFixture = { id: 'of-1', nom: 'OF-2026-000042', type: 'ORDRE_DE_FABRICATION' };
+const mouleFixture: EngageableFixture = { id: 'moule-1', nom: 'PRD-2026-000001', categorie: 'MOULE', reference: '1015' };
+const ofSansReferenceFixture: EngageableFixture = { id: 'of-1', nom: 'OF-2026-000042', categorie: 'OF' };
 
 interface ProjectionEngageable {
   readonly id: string;
   readonly designation: string;
-  readonly type: string;
+  readonly categorie: string;
 }
 
 const projeter = (element: ElementEngageable): ProjectionEngageable => ({
   id: element.id.value,
   designation: element.designation.value,
-  type: element.type,
+  categorie: element.categorie.value,
 });
+
+const typeDeLaCategorie = (categorie: string): NonNullable<RestElement['type']> =>
+  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
 
 const toRest = (element: EngageableFixture): RestElement => ({
   id: element.id,
   nom: element.nom,
-  type: element.type,
+  type: typeDeLaCategorie(element.categorie),
   ...(element.reference === undefined ? {} : { reference: element.reference }),
 });
 
 const toDomain = (element: EngageableFixture): ElementEngageable =>
   new ElementEngageable(new ElementEngageId(element.id), {
     designation: new DesignationDElement(element.reference, element.nom),
-    type: element.type,
+    categorie: new CategorieDElementEngage(element.categorie),
   });
 
 class EngageablesHttpBackendFixture implements HttpBackend {
@@ -152,8 +155,8 @@ describe.each(adapters)('ElementsEngageablesPort contract, honoured by %s', (_ad
 
     expect(page.totalCount).toBe(2);
     expect(page.elements.map(projeter)).toEqual([
-      { id: 'moule-1', designation: '1015', type: 'PRODUIT' },
-      { id: 'of-1', designation: 'OF-2026-000042', type: 'ORDRE_DE_FABRICATION' },
+      { id: 'moule-1', designation: '1015', categorie: 'MOULE' },
+      { id: 'of-1', designation: 'OF-2026-000042', categorie: 'OF' },
     ]);
   });
 
@@ -184,7 +187,7 @@ describe.each(adapters)('ElementsEngageablesPort contract, honoured by %s', (_ad
     expect(element === undefined ? undefined : projeter(element)).toEqual({
       id: 'of-1',
       designation: 'OF-2026-000042',
-      type: 'ORDRE_DE_FABRICATION',
+      categorie: 'OF',
     });
   });
 
@@ -205,7 +208,7 @@ describe.each(adapters)('ElementsEngageablesPort contract, honoured by %s', (_ad
       Array.from({ length: count }, (_, index) => ({
         id: `e-${String(index)}`,
         nom: `PRD-2026-${String(index)}`,
-        type: 'PRODUIT' as const,
+        categorie: 'MOULE',
       })),
     );
   };

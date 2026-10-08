@@ -31,7 +31,7 @@ l'expression.
 
 ## Modèle de domaine
 
-- **ElementALAtelier** : agrégat racine, adressé par son seul `suivi`. Il porte son nom et son type copiés à
+- **ElementALAtelier** : agrégat racine, adressé par son seul `suivi`. Il porte son nom et sa catégorie copiés à
   l'engagement, son état, son acte d'engagement, son acte de clôture éventuel, et l'identifiant de l'élément
   engagé — qu'aucun acte n'emploie, seulement le lien vers le coût de revient. `estCloture()` répond à la
   question « peut-on encore pointer dessus ».
@@ -43,14 +43,15 @@ l'expression.
   L'agrégat le porte pour ce lien, et pour lui seul. `RestSuiviDAtelierEnGrille` expose les deux — ne pas
   confondre `id` et `element` en lisant la réponse.
 - **NomDElementEngage** : Value Object du nom **copié à l'engagement**, non vide.
-- **TypeDElementEngage** : union des deux valeurs du type, structurellement compatible avec l'énum de l'API.
+- **CategorieDElementEngage** : Value Object du code de la catégorie de produit **copié à l'engagement**
+  (`MOULE`, `OF`…), non vide. Le code est son propre libellé : aucune table ne le traduit.
 - **EtatALAtelier** : union des quatre états déduits par le back.
 - **InstantDAtelier** : Value Object d'un instant reçu du back, refusé s'il n'est pas une date valide.
 - **ActeDAtelier** : Value Object d'un acte du gestionnaire — son instant et son auteur.
 - **FiltreDAtelier** : union des deux intentions de lecture.
 - **RequeteAtelier** : objet de requête paginée. `etats()` traduit le filtre métier en états de l'API.
 - **ElementEngageable** : vue minimale d'un élément du référentiel, réduite à son identifiant, sa désignation
-  et son type.
+  et sa catégorie.
 - **RequeteEngageables** : objet de requête paginée du référentiel engageable.
 - **AtelierPort** : port secondaire des deux actes et de la lecture paginée.
 - **ElementsEngageablesPort** : port secondaire de lecture du référentiel, propre à ce contexte.
@@ -65,7 +66,7 @@ l'expression.
 - **Clôturer envoie un corps vide.** L'API accepte une `dateDeSurvenue` ; l'écran ne l'envoie pas. Un champ de
   date sur l'acte le plus courant rouvrirait la planification et hériterait du 409 « journal postérieur ». Le
   déplacement d'une clôture appartient à la correction d'un pointage.
-- **`nom` et `type` sont une photographie.** Copiés à l'engagement, ils divergent du référentiel après un
+- **`nom` et `categorie` sont une photographie.** Copiés à l'engagement, ils divergent du référentiel après un
   renommage — c'est l'invariant que cet acte rend possible. Ne jamais aller les rafraîchir.
 - **L'élément de fabrication ne porte pas de statut propre.** Son activité se lit par la présence d'un suivi
   non clôturé. C'est cet écran qui rend lisible le « actifs seulement » du client ; le référentiel reste le
@@ -100,5 +101,6 @@ l'expression.
   pas envoyée : ne pas y reproduire l'amplitude inventée par `element-de-fabrication`.
 - **Clôturer demande une confirmation, pas la réouverture.** La clôture retire l'élément des écrans opérateurs
   et mérite un geste délibéré ; la rouvrir ne coûte rien à personne.
-- Tous les mots affichés vivent dans `LibellesAtelier`, indexés par les valeurs du type et de l'état. Aucun mot
-  en dur dans un template.
+- Tous les mots affichés vivent dans `LibellesAtelier`, indexés par les valeurs de l'état. Aucun mot en dur dans
+  un template. La catégorie fait exception : chaque entreprise déclare les siennes, et leur code s'affiche tel
+  quel.

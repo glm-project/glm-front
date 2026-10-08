@@ -17,6 +17,7 @@ import {
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { ActeDAtelier } from '../../domain/ActeDAtelier';
 import { AtelierPort } from '../../domain/AtelierPort';
+import { CategorieDElementEngage } from '../../domain/CategorieDElementEngage';
 import { ElementALAtelier } from '../../domain/ElementALAtelier';
 import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricationIntrouvable';
 import { ElementDejaALAtelier } from '../../domain/ElementDejaALAtelier';
@@ -28,7 +29,6 @@ import { RefusMiseALAtelier } from '../../domain/RefusMiseALAtelier';
 import { RequeteAtelier } from '../../domain/RequeteAtelier';
 import { SuiviId } from '../../domain/SuiviId';
 import { SuiviIntrouvable } from '../../domain/SuiviIntrouvable';
-import { TypeDElementEngage } from '../../domain/TypeDElementEngage';
 import { HttpAtelier } from './HttpAtelier';
 
 type RestSuivi = components['schemas']['RestSuiviDAtelierEnGrille'];
@@ -40,7 +40,7 @@ interface SuiviFixture {
   readonly id: string;
   readonly element: string;
   readonly nom: string;
-  readonly type: TypeDElementEngage;
+  readonly categorie: string;
   readonly etat: EtatALAtelier;
   readonly clotureLe?: string;
   readonly cloturePar?: string;
@@ -50,37 +50,37 @@ const mouleEnCoursFixture: SuiviFixture = {
   id: 'suivi-1',
   element: 'moule-1',
   nom: 'PRD-2026-000001',
-  type: 'PRODUIT',
+  categorie: 'MOULE',
   etat: 'EN_COURS',
 };
 const ofEnAttenteFixture: SuiviFixture = {
   id: 'suivi-2',
   element: 'of-1',
   nom: 'OF-2026-000042',
-  type: 'ORDRE_DE_FABRICATION',
+  categorie: 'OF',
   etat: 'EN_ATTENTE',
 };
 const mouleClotureFixture: SuiviFixture = {
   id: 'suivi-3',
   element: 'moule-2',
   nom: 'PRD-2026-000002',
-  type: 'PRODUIT',
+  categorie: 'MOULE',
   etat: 'CLOTURE',
   clotureLe: CLOTURE_FIXTURE,
   cloturePar: AUTEUR_FIXTURE,
 };
 
 const referentielFixture: [string, PhotographieDElement][] = [
-  ['moule-1', { nom: 'PRD-2026-000001', type: 'PRODUIT' }],
-  ['moule-2', { nom: 'PRD-2026-000002', type: 'PRODUIT' }],
-  ['of-1', { nom: 'OF-2026-000042', type: 'ORDRE_DE_FABRICATION' }],
-  ['moule-9', { nom: 'PRD-2026-000009', type: 'PRODUIT' }],
+  ['moule-1', { nom: 'PRD-2026-000001', categorie: 'MOULE' }],
+  ['moule-2', { nom: 'PRD-2026-000002', categorie: 'MOULE' }],
+  ['of-1', { nom: 'OF-2026-000042', categorie: 'OF' }],
+  ['moule-9', { nom: 'PRD-2026-000009', categorie: 'MOULE' }],
 ];
 
 interface ProjectionSuivi {
   readonly suivi: string;
   readonly nom: string;
-  readonly type: string;
+  readonly categorie: string;
   readonly etat: string;
   readonly cloture: string | undefined;
 }
@@ -88,7 +88,7 @@ interface ProjectionSuivi {
 const projeter = (element: ElementALAtelier): ProjectionSuivi => ({
   suivi: element.suivi.value,
   nom: element.nom.value,
-  type: element.type,
+  categorie: element.categorie.value,
   etat: element.etat,
   cloture: element.cloture?.instant.value.toISOString(),
 });
@@ -101,7 +101,7 @@ const toRest = (suivi: SuiviFixture): RestSuivi => ({
   etat: suivi.etat,
   id: suivi.id,
   nom: suivi.nom,
-  type: suivi.type,
+  type: suivi.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
   ...(suivi.clotureLe === undefined ? {} : { clotureLe: suivi.clotureLe }),
   ...(suivi.cloturePar === undefined ? {} : { cloturePar: suivi.cloturePar }),
 });
@@ -110,7 +110,7 @@ const toDomain = (suivi: SuiviFixture): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi.id), {
     element: new ElementEngageId(suivi.element),
     nom: new NomDElementEngage(suivi.nom),
-    type: suivi.type,
+    categorie: new CategorieDElementEngage(suivi.categorie),
     etat: suivi.etat,
     engagement: new ActeDAtelier(new InstantDAtelier(ENGAGEMENT_FIXTURE), AUTEUR_FIXTURE),
     cloture: suivi.clotureLe === undefined ? undefined : new ActeDAtelier(new InstantDAtelier(suivi.clotureLe), AUTEUR_FIXTURE),
@@ -178,7 +178,7 @@ class AtelierHttpBackendFixture implements HttpBackend {
       id: `suivi-cree-${String(this.suivant)}`,
       element: body.element,
       nom: photographie.nom,
-      type: photographie.type,
+      categorie: photographie.categorie,
       etat: 'EN_ATTENTE',
     };
     this.suivis = [...this.suivis, cree];
@@ -203,7 +203,7 @@ class AtelierHttpBackendFixture implements HttpBackend {
   }
 
   private ouvre(suivi: SuiviFixture): SuiviFixture {
-    return { id: suivi.id, element: suivi.element, nom: suivi.nom, type: suivi.type, etat: 'EN_ATTENTE' };
+    return { id: suivi.id, element: suivi.element, nom: suivi.nom, categorie: suivi.categorie, etat: 'EN_ATTENTE' };
   }
 }
 
@@ -293,8 +293,8 @@ describe.each(adapters)('AtelierPort contract, honoured by %s', (_adapter, creat
 
     expect(page.totalCount).toBe(2);
     expect(page.elements.map(projeter)).toEqual([
-      { suivi: 'suivi-1', nom: 'PRD-2026-000001', type: 'PRODUIT', etat: 'EN_COURS', cloture: undefined },
-      { suivi: 'suivi-2', nom: 'OF-2026-000042', type: 'ORDRE_DE_FABRICATION', etat: 'EN_ATTENTE', cloture: undefined },
+      { suivi: 'suivi-1', nom: 'PRD-2026-000001', categorie: 'MOULE', etat: 'EN_COURS', cloture: undefined },
+      { suivi: 'suivi-2', nom: 'OF-2026-000042', categorie: 'OF', etat: 'EN_ATTENTE', cloture: undefined },
     ]);
   });
 
@@ -305,7 +305,7 @@ describe.each(adapters)('AtelierPort contract, honoured by %s', (_adapter, creat
 
     expect(page.totalCount).toBe(1);
     expect(page.elements.map(projeter)).toEqual([
-      { suivi: 'suivi-3', nom: 'PRD-2026-000002', type: 'PRODUIT', etat: 'CLOTURE', cloture: CLOTURE_FIXTURE },
+      { suivi: 'suivi-3', nom: 'PRD-2026-000002', categorie: 'MOULE', etat: 'CLOTURE', cloture: CLOTURE_FIXTURE },
     ]);
   });
 
@@ -325,7 +325,7 @@ describe.each(adapters)('AtelierPort contract, honoured by %s', (_adapter, creat
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing('ACTIFS')).toEqual([
-      { suivi: 'suivi-cree-1', nom: 'PRD-2026-000009', type: 'PRODUIT', etat: 'EN_ATTENTE', cloture: undefined },
+      { suivi: 'suivi-cree-1', nom: 'PRD-2026-000009', categorie: 'MOULE', etat: 'EN_ATTENTE', cloture: undefined },
     ]);
   });
 
@@ -352,7 +352,7 @@ describe.each(adapters)('AtelierPort contract, honoured by %s', (_adapter, creat
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing('ACTIFS')).toEqual([
-      { suivi: 'suivi-cree-1', nom: 'PRD-2026-000002', type: 'PRODUIT', etat: 'EN_ATTENTE', cloture: undefined },
+      { suivi: 'suivi-cree-1', nom: 'PRD-2026-000002', categorie: 'MOULE', etat: 'EN_ATTENTE', cloture: undefined },
     ]);
   });
 
@@ -380,7 +380,7 @@ describe.each(adapters)('AtelierPort contract, honoured by %s', (_adapter, creat
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing('ACTIFS')).toEqual([
-      { suivi: 'suivi-3', nom: 'PRD-2026-000002', type: 'PRODUIT', etat: 'EN_ATTENTE', cloture: undefined },
+      { suivi: 'suivi-3', nom: 'PRD-2026-000002', categorie: 'MOULE', etat: 'EN_ATTENTE', cloture: undefined },
     ]);
   });
 

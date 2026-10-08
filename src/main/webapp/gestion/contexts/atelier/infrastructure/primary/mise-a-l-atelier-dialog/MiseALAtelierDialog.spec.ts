@@ -11,22 +11,25 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
 import { AtelierPort } from '../../../domain/AtelierPort';
+import { CategorieDElementEngage } from '../../../domain/CategorieDElementEngage';
 import { DesignationDElement } from '../../../domain/DesignationDElement';
 import { ElementDejaALAtelier } from '../../../domain/ElementDejaALAtelier';
 import { ElementEngageable } from '../../../domain/ElementEngageable';
 import { ElementEngageId } from '../../../domain/ElementEngageId';
 import { ElementsEngageablesPort } from '../../../domain/ElementsEngageablesPort';
-import { TypeDElementEngage } from '../../../domain/TypeDElementEngage';
 import { MiseALAtelierDialog, MiseALAtelierDialogData } from './MiseALAtelierDialog';
 
 @Component({ template: '' })
 class DialogHostFixture {}
 
-const engageable = (id: string, reference: string | undefined, nom: string, type: TypeDElementEngage): ElementEngageable =>
-  new ElementEngageable(new ElementEngageId(id), { designation: new DesignationDElement(reference, nom), type });
+const engageable = (id: string, reference: string | undefined, nom: string, categorie: string): ElementEngageable =>
+  new ElementEngageable(new ElementEngageId(id), {
+    designation: new DesignationDElement(reference, nom),
+    categorie: new CategorieDElementEngage(categorie),
+  });
 
-const mouleFixture = engageable('moule-1', '1015', 'PRD-2026-000001', 'PRODUIT');
-const ofFixture = engageable('of-1', undefined, 'OF-2026-000042', 'ORDRE_DE_FABRICATION');
+const mouleFixture = engageable('moule-1', '1015', 'PRD-2026-000001', 'MOULE');
+const ofFixture = engageable('of-1', undefined, 'OF-2026-000042', 'OF');
 
 describe('MiseALAtelierDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
@@ -77,14 +80,14 @@ describe('MiseALAtelierDialog', () => {
     givenReferential();
     await whenOpening(undefined);
 
-    expect(texts('engageable-type-cell')).toEqual(['Moule', 'OF']);
+    expect(texts('engageable-categorie-cell')).toEqual(['MOULE', 'OF']);
     expect(texts('engageable-designation-cell')).toEqual(['1015', 'OF-2026-000042']);
   });
 
   it('should say the referential is empty rather than show a bare table', async () => {
     await whenOpening(undefined);
 
-    expect(text('atelier-engagement-empty')).toContain('Aucun moule ni OF');
+    expect(text('atelier-engagement-empty')).toContain('Aucun produit');
     expect(text('atelier-engagement-pagination')).toContain('0 élément');
   });
 
@@ -146,7 +149,7 @@ describe('MiseALAtelierDialog', () => {
     givenPhotographs();
     await whenOpening(new ElementEngageId('of-1'));
 
-    expect(text('atelier-candidat-type')).toBe('OF');
+    expect(text('atelier-candidat-categorie')).toBe('OF');
     expect(text('atelier-candidat-designation')).toBe('OF-2026-000042');
     expect(texts('engageable-row')).toEqual([]);
   });
@@ -183,12 +186,12 @@ describe('MiseALAtelierDialog', () => {
   };
   const givenManyElements = (count: number): void => {
     referentiel.liste = Array.from({ length: count }, (_, index) =>
-      engageable(`e-${String(index)}`, undefined, `PRD-2026-${String(index)}`, 'PRODUIT'),
+      engageable(`e-${String(index)}`, undefined, `PRD-2026-${String(index)}`, 'MOULE'),
     );
   };
   const givenPhotographs = (): void => {
-    atelier.photographies.set('moule-1', { nom: 'PRD-2026-000001', type: 'PRODUIT' });
-    atelier.photographies.set('of-1', { nom: 'OF-2026-000042', type: 'ORDRE_DE_FABRICATION' });
+    atelier.photographies.set('moule-1', { nom: 'PRD-2026-000001', categorie: 'MOULE' });
+    atelier.photographies.set('of-1', { nom: 'OF-2026-000042', categorie: 'OF' });
   };
   const givenElementAlreadyAtWorkshop = (): void => {
     atelier.liste = [];

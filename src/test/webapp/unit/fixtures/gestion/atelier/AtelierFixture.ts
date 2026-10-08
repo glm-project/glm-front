@@ -2,6 +2,7 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { ActeDAtelier } from '@/gestion/contexts/atelier/domain/ActeDAtelier';
 import { AtelierPort } from '@/gestion/contexts/atelier/domain/AtelierPort';
+import { CategorieDElementEngage } from '@/gestion/contexts/atelier/domain/CategorieDElementEngage';
 import { ElementALAtelier } from '@/gestion/contexts/atelier/domain/ElementALAtelier';
 import { ElementDeFabricationIntrouvable } from '@/gestion/contexts/atelier/domain/ElementDeFabricationIntrouvable';
 import { ElementDejaALAtelier } from '@/gestion/contexts/atelier/domain/ElementDejaALAtelier';
@@ -12,13 +13,12 @@ import { RefusMiseALAtelier } from '@/gestion/contexts/atelier/domain/RefusMiseA
 import { RequeteAtelier } from '@/gestion/contexts/atelier/domain/RequeteAtelier';
 import { SuiviId } from '@/gestion/contexts/atelier/domain/SuiviId';
 import { SuiviIntrouvable } from '@/gestion/contexts/atelier/domain/SuiviIntrouvable';
-import { TypeDElementEngage } from '@/gestion/contexts/atelier/domain/TypeDElementEngage';
 
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 
 export interface PhotographieDElement {
   readonly nom: string;
-  readonly type: TypeDElementEngage;
+  readonly categorie: string;
 }
 
 export const AUTEUR_FIXTURE = 'gestionnaire.impeccmold';
@@ -102,7 +102,7 @@ export class AtelierFixture extends AtelierPort {
     return new ElementALAtelier(suivi, {
       element,
       nom: new NomDElementEngage(photographie.nom),
-      type: photographie.type,
+      categorie: new CategorieDElementEngage(photographie.categorie),
       etat: 'EN_ATTENTE',
       engagement: new ActeDAtelier(new InstantDAtelier(ENGAGEMENT_FIXTURE), AUTEUR_FIXTURE),
       cloture: undefined,
@@ -113,7 +113,7 @@ export class AtelierFixture extends AtelierPort {
     return new ElementALAtelier(element.suivi, {
       element: element.element,
       nom: element.nom,
-      type: element.type,
+      categorie: element.categorie,
       etat: 'CLOTURE',
       engagement: element.engagement,
       cloture: new ActeDAtelier(new InstantDAtelier(CLOTURE_FIXTURE), AUTEUR_FIXTURE),
@@ -124,7 +124,7 @@ export class AtelierFixture extends AtelierPort {
     return new ElementALAtelier(element.suivi, {
       element: element.element,
       nom: element.nom,
-      type: element.type,
+      categorie: element.categorie,
       etat: 'EN_ATTENTE',
       engagement: element.engagement,
       cloture: undefined,

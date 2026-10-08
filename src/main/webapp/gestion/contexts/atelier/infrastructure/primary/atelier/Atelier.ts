@@ -63,7 +63,7 @@ export class Atelier implements OnInit {
 
   protected readonly libelles = LIBELLES_ATELIER;
   protected readonly filtres: readonly FiltreDAtelier[] = ['ACTIFS', 'CLOTURES'];
-  protected readonly colonnes = ['type', 'nom', 'etat', 'engagement', 'cloture', 'actions'];
+  protected readonly colonnes = ['categorie', 'nom', 'etat', 'engagement', 'cloture', 'actions'];
   protected readonly refusAction = signal<SuiviIntrouvable | undefined>(undefined);
   protected readonly erreurAction = signal(false);
   protected readonly etat = signal<EtatAtelier>({
@@ -100,10 +100,6 @@ export class Atelier implements OnInit {
 
   protected libelleDuFiltre(filtre: FiltreDAtelier): string {
     return this.libelles.filtres[filtre];
-  }
-
-  protected libelleDuType(element: ElementALAtelier): string {
-    return this.libelles.types[element.type];
   }
 
   protected libelleDeLEtat(element: ElementALAtelier): string {
