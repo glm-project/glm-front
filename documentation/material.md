@@ -37,16 +37,6 @@ tokens and project role utilities.
 Tailwind preflight resets heading elements to inherit. Give headings an explicit project typography role;
 `.mat-typography` is not the source of page hierarchy.
 
-## Dates and times are fed by the shared convention
-
-Gestion's `DateAdapter` is not Material's native one: `provideGestionDateAdapter()` (in
-`gestion/shared/design-system`) parses `JJ/MM/AAAA` strictly, accepts `HH:MM` and `HH:MM:SS`, starts the week
-on Monday and reads its input formats from `app/shared/date-format`. Register it in the `providers` of the lazy
-component that renders a datepicker or timepicker, never on a route (`app.route.ts` is in the initial bundle) and
-never in `main.ts`. A format a field needs is added to the shared
-module, not declared next to the field. See
-[ADR 0051](adr/0051-format-dates-through-one-shared-convention.md).
-
 ## Verify intent and computed result
 
 `DesignTokensTest` checks that every bridge declaration references a declared project token.

@@ -132,8 +132,8 @@ something stays, with a status that says what died.
 
 - [0051 — Format dates through one shared convention](0051-format-dates-through-one-shared-convention.md) —
   `app/shared/date-format` owns locale, hour cycle and named formats (instant in local time, calendar day in
-  UTC), gestion's Material adapter parses strictly, skipped hours are refused, and lint closes `Intl`,
-  `toLocale*String`, `DatePipe` and the `date` pipe elsewhere
+  UTC), and lint closes `Intl`, `toLocale*String`, `DatePipe` and the `date` pipe elsewhere; the Material date
+  adapter it described was removed on 2026-10-08
 
 - [0052 — Réserver les anomalies au gestionnaire par les rôles de la session](0052-reserve-anomalies-to-the-gestionnaire.md) —
   un `RolesPort` à promesse qui reste en attente si l'authentification échoue, un garde `canMatch` qui ne renvoie

@@ -4,8 +4,8 @@
 
 `Accepted`
 
-- `Complements 0011: Material stays in gestion, and the date and time pickers it brings are fed by the shared convention, not by a second one.`
 - `Complements 0037: only the formats a production file calls exist in the shared module.`
+- `Amended on 2026-10-08 (lot B2a of #254): the Material date adapter, the date and time field and the skipped-hour refusal of a typed time are removed, with the only screen that used them. What still holds: the shared module, the instant / calendar day signatures, toOffsetIsoString and the lint that closes the other doors. A date or time picker added later is fed by this module again, and a new record decides its adapter.`
 
 ## Context
 
@@ -56,7 +56,7 @@ instant typed in a field as `2026-10-01T09:41:22-03:00`, local offset, no fracti
 orders it, and never reads the ambient zone. The year is written only when it differs from the current one:
 `formatInstantLongDay(instant, now)` receives `now`, so a spec fixes it.
 
-**Gestion's Material adapter follows the convention.** `gestion/shared/design-system` provides
+**Removed on 2026-10-08, see Status. Gestion's Material adapter followed the convention.** `gestion/shared/design-system` provides
 `provideGestionDateAdapter()`, which installs a `GestionDateAdapter` extending `NativeDateAdapter`:
 
 - `parse` accepts `JJ/MM/AAAA` only and refuses an impossible day (31/02) instead of rolling it over;
@@ -76,7 +76,7 @@ The provider is registered on the lazy component that renders the field, not on 
 view container and inherit the component's providers. The other screens do not pay for the adapter. Pupitre loads no
 Material ([ADR 0011](0011-give-each-front-its-own-header.md)) and never sees the adapter.
 
-**Daylight saving time.** A typed local time that the clock skips (02:30 on the last Sunday of March in Paris)
+**Daylight saving time (the refusal below went with the field, the first-occurrence behaviour of `Date` remains).** A typed local time that the clock skips (02:30 on the last Sunday of March in Paris)
 is refused with its own message, « Cette heure n'existe pas ce jour-là, à cause du changement d'heure. »,
 rather than silently shifted to 03:30. A time that happens twice (02:30 on the last Sunday of October) takes
 its first occurrence, the one `Date` builds. `DateFormats.spec.ts` proves both by setting `process.env.TZ` to
