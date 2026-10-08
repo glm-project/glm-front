@@ -8,7 +8,6 @@ const referentielFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [
     {
-      conflits: [],
       id: 'piece-1',
       nom: '204',
       etat: 'EN_ATTENTE',

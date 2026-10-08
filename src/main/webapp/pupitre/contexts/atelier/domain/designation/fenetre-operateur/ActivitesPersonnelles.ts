@@ -23,7 +23,7 @@ export class ActivitesPersonnelles {
     operateur: OperateurDesigne,
     private readonly instants: { readonly ouverture: number; readonly evaluation: number },
   ) {
-    this.activites = suivi.activites.filter(activite => this.isActionnable(activite, suivi, operateur));
+    this.activites = suivi.activites.filter(activite => this.isActionnable(activite, operateur));
     const [premiere, ...suivantes] = this.activites;
     this.etat = premiere === undefined ? { kind: 'INACTIF' } : { kind: 'ACTIF', premiere, suivantes };
   }
@@ -32,12 +32,8 @@ export class ActivitesPersonnelles {
     return this.activites;
   }
 
-  private isActionnable(activite: ActiviteDuPupitre, suivi: SuiviDuPupitre, operateur: OperateurDesigne): boolean {
-    return (
-      operateur.owns(activite.operateurId)
-      && this.instants.evaluation < Date.parse(activite.echeance)
-      && !suivi.conflits.some(conflit => conflit.activites.includes(activite.ouverture))
-    );
+  private isActionnable(activite: ActiviteDuPupitre, operateur: OperateurDesigne): boolean {
+    return operateur.owns(activite.operateurId) && this.instants.evaluation < Date.parse(activite.echeance);
   }
 
   snapshot(): ActiviteDePointage | undefined {

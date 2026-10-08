@@ -39,8 +39,8 @@ const activiteFixture = {
 const referentielActifFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [
-    { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
-    { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
+    { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture] },
+    { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture] },
   ],
   categories: [],
 };

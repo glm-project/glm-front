@@ -47,7 +47,6 @@ const referentielFixture: ReferentielDuPupitre = {
 };
 const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' };
 const pointageFixture: VueDePointage = {
-  conflits: [],
   zones: [{ categorie: 'OF', elements: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)] }],
 };
 

@@ -59,7 +59,6 @@ const vueFixture: JournalDuPupitre = {
     ],
     suivis: [
       {
-        conflits: [],
         id: 'moule-1015',
         nom: 'PR-2026-000015',
         reference: '1015',
@@ -85,7 +84,6 @@ const vueFixture: JournalDuPupitre = {
         evenements: [],
       },
       {
-        conflits: [],
         id: 'of-204',
         nom: 'OF-2026-000204',
         reference: '204',
@@ -118,7 +116,6 @@ const vueFixture: JournalDuPupitre = {
         evenements: [],
       },
       {
-        conflits: [],
         id: 'of-1015',
         nom: 'OF-2026-000042',
         etat: 'EN_ATTENTE',
@@ -159,32 +156,6 @@ describe('FenetreOperateur', () => {
     ];
 
     expect(deadlines).toEqual([Date.parse('2026-09-05T19:00:00Z'), Date.parse('2026-09-05T21:30:00Z'), undefined]);
-  });
-
-  it('should keep another operator conflict separate from the designated operator and unresolved conflicts', () => {
-    const reference = requiredFixture(vueFixture.referentiel, 'reference');
-    const owners = ['jean', 'marie', undefined];
-    const window = givenAWindowOpenedOn({
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        ...reference,
-        suivis: reference.suivis.map((suivi, index) => ({
-          ...suivi,
-          activites: [],
-          conflits: [
-            {
-              ...(owners[index] === undefined ? {} : { operateurId: owners[index] }),
-              activites: [],
-              pointages: ['conflit-' + suivi.id],
-            },
-          ],
-        })),
-      },
-    });
-
-    const pointage = window.pointage();
-
-    expect(pointage.conflits.map(conflit => conflit.id)).toEqual(['moule-1015', 'of-1015']);
   });
 
   it('should request no resumption invalidation when accepting an ordinary opening', () => {
@@ -269,7 +240,7 @@ describe('FenetreOperateur', () => {
     ]);
   });
 
-  it('should pause only known interpretable nonexpired activities while retaining conflict diagnostics', () => {
+  it('should pause only known nonexpired activities', () => {
     const journal = structuredClone(vueFixture);
     const reference = requiredFixture(journal.referentiel, 'reference');
     const first = requiredFixture(reference.suivis[0], 'first item');
@@ -283,9 +254,7 @@ describe('FenetreOperateur', () => {
             activites: [
               travailAuTourFixture,
               { ...travailAuTourFixture, ouverture: 'encore-active', posteId: 'fraiseuse', echeance: '2026-09-05T22:00:00Z' },
-              { ...travailAuTourFixture, ouverture: 'contradictoire', echeance: '2026-09-05T22:00:00Z' },
             ],
-            conflits: [{ operateurId: 'jean', activites: ['contradictoire'], pointages: ['contradiction'] }],
           },
         ],
       },
@@ -299,59 +268,6 @@ describe('FenetreOperateur', () => {
 
     expect(gestes).toMatchObject([{ intention: 'FIN', cible: 'encore-active', posteId: 'fraiseuse' }]);
     expect(gestes).toHaveLength(1);
-    expect(window.pointage().conflits.map(conflit => conflit.numero.toString())).toEqual([first.reference ?? first.nom]);
-  });
-
-  it('should allow only a new opening for an activity in conflict while keeping another workstation actionable', () => {
-    const reference = requiredFixture(vueFixture.referentiel, 'reference');
-    const suivi = requiredFixture(
-      reference.suivis.find(item => item.id === 'moule-1015'),
-      'item',
-    );
-    const window = givenAWindowOpenedOn({
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        ...reference,
-        suivis: [
-          {
-            ...suivi,
-            activites: [travailAuTourFixture],
-            conflits: [{ operateurId: 'jean', activites: [travailAuTourFixture.ouverture], pointages: ['contradiction'] }],
-          },
-        ],
-      },
-    });
-
-    const decision = window.afterDeciding(suivi.id, 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
-
-    expect(captureGestures(decision.decision)).toMatchObject([{ intention: 'OUVERTURE', type: 'NON_CONFORMITE' }]);
-    expect(window.pointage().conflits).toHaveLength(1);
-  });
-
-  it('should expose a conflict without an activity or a workstation and omit another operator conflict', () => {
-    const reference = requiredFixture(vueFixture.referentiel, 'reference');
-    const suivi = requiredFixture(reference.suivis[0], 'item');
-    const window = givenAWindowOpenedOn({
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        ...reference,
-        suivis: [
-          {
-            ...suivi,
-            activites: [],
-            conflits: [
-              { activites: [], pointages: ['inconnu'] },
-              { operateurId: 'marie', activites: [], pointages: ['autre'] },
-            ],
-          },
-        ],
-      },
-    });
-
-    const pointage = window.pointage();
-
-    expect(pointage.conflits).toEqual([{ id: suivi.id, numero: NumeroDElement.from(suivi) }]);
-    expect(elementsDeLaZone(pointage, 'MOULE')[0]?.isActive()).toBe(false);
   });
 
   it('should resolve the operator from the company referential', () => {
@@ -793,7 +709,6 @@ describe('FenetreOperateur', () => {
     [[], ['MOULE', 'OF', 'PIECE']],
   ])('should order the zones as the reference orders the categories %j, unknown ones last by code', (categories, attendu) => {
     const element = (id: string, categorie: string) => ({
-      conflits: [],
       id,
       nom: id,
       etat: 'EN_ATTENTE' as const,
@@ -822,7 +737,6 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
-            conflits: [],
             id: 'of-nc',
             nom: 'OF-NC',
             etat: 'EN_COURS',
@@ -868,7 +782,6 @@ describe('FenetreOperateur', () => {
         ],
         suivis: [
           {
-            conflits: [],
             id: 'of-multi-nc',
             nom: 'OF-MULTI',
             etat: 'EN_COURS',
@@ -919,9 +832,9 @@ describe('FenetreOperateur', () => {
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
-          { conflits: [], id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
-          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
-          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
         ],
         categories: [],
       },
@@ -940,7 +853,6 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
-            conflits: [],
             id: 'of-1',
             nom: 'OF-1',
             reference: 'M-30',
@@ -949,9 +861,8 @@ describe('FenetreOperateur', () => {
             activites: [],
             evenements: [],
           },
-          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
           {
-            conflits: [],
             id: 'of-3',
             nom: 'OF-3',
             reference: 'M-4',
@@ -1094,7 +1005,7 @@ describe('FenetreOperateur', () => {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-        suivis: [{ conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
+        suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
         categories: [],
       },
     };
@@ -1382,7 +1293,7 @@ describe('FenetreOperateur', () => {
     expect(elementsDeLaZone(pointage, 'MOULE')[0]?.dureeMs()).toBe(0);
   };
   const thenPointageViewIsEmpty = (): void => {
-    expect(fenetre.pointage()).toEqual({ conflits: [], zones: [] });
+    expect(fenetre.pointage()).toEqual({ zones: [] });
   };
   const thenWindowIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);

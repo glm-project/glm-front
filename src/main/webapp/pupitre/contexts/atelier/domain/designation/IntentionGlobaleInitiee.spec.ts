@@ -8,7 +8,6 @@ import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 
 const racineFixture = { id: '11111111-2222-4333-8444-55550000000a', dateDeSurvenue: '2026-09-05T12:00:00.000Z' };
 const suiviFixture = (id: string, activites: SuiviDuPupitre['activites']): SuiviDuPupitre => ({
-  conflits: [],
   id,
   nom: id,
   etat: activites.length === 0 ? 'EN_ATTENTE' : 'EN_COURS',

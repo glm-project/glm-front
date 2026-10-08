@@ -18,13 +18,6 @@ export interface ActiviteDuPupitre {
   readonly posteId?: string;
 }
 
-export interface ConflitDuPupitre {
-  readonly operateurId?: string;
-  readonly posteId?: string;
-  readonly activites: readonly string[];
-  readonly pointages: readonly string[];
-}
-
 export interface SuiviDuPupitre {
   readonly id: string;
   readonly nom: string;
@@ -32,7 +25,6 @@ export interface SuiviDuPupitre {
   readonly etat: EtatDAtelier;
   readonly categorie: string;
   readonly activites: readonly ActiviteDuPupitre[];
-  readonly conflits: readonly ConflitDuPupitre[];
   readonly evenements: readonly string[];
 }
 
@@ -83,7 +75,6 @@ export interface EvenementEnAttente {
 export interface EvenementAccepte {
   readonly geste: GesteDePointage;
   readonly etat: 'ACCEPTE';
-  readonly conflits?: readonly ConflitDuPupitre[];
   readonly refus?: never;
 }
 
@@ -108,16 +99,9 @@ const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal =>
       ? { ...evenement.geste, suspension: { ...evenement.geste.suspension } }
       : { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
-  if (evenement.etat === 'ACCEPTE')
-    return { geste, etat: 'ACCEPTE', ...(evenement.conflits === undefined ? {} : { conflits: evenement.conflits.map(snapshotConflit) }) };
+  if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
   return { geste, etat: 'EN_ATTENTE' };
 };
-
-const snapshotConflit = (conflit: ConflitDuPupitre): ConflitDuPupitre => ({
-  ...conflit,
-  activites: [...conflit.activites],
-  pointages: [...conflit.pointages],
-});
 
 export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre => ({
   connecte: journal.connecte,
@@ -134,7 +118,6 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
           suivis: journal.referentiel.suivis.map(suivi => ({
             ...suivi,
             activites: suivi.activites.map(activite => ({ ...activite })),
-            conflits: suivi.conflits.map(snapshotConflit),
             evenements: [...suivi.evenements],
           })),
           categories: [...journal.referentiel.categories],
@@ -171,11 +154,7 @@ export class EvenementsDuJournal {
   }
 }
 
-export const acceptPublication = (geste: GesteDePointage, conflits: readonly ConflitDuPupitre[]): EvenementAccepte => ({
-  geste,
-  etat: 'ACCEPTE',
-  ...(conflits.length === 0 ? {} : { conflits: conflits.map(snapshotConflit) }),
-});
+export const acceptPublication = (geste: GesteDePointage): EvenementAccepte => ({ geste, etat: 'ACCEPTE' });
 
 export const refusePublication = (geste: GesteDePointage, refus: EvenementRefuse['refus']): EvenementRefuse => ({
   geste,

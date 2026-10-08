@@ -3,7 +3,7 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { decideReplay, ReplayDecision } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { provideHttpClient } from '@angular/common/http';
@@ -60,10 +60,7 @@ const suiviAvecReferenceFixture = {
       depuis: '2026-09-05T08:00:00Z',
     },
   ],
-  conflits: [
-    { operateur: 'jean', activites: [], pointages: ['conflit-reference'] },
-    { operateur: 'marie', poste: 'tour', activites: ['remplacante'], pointages: ['fin'] },
-  ],
+  conflits: [],
 } satisfies RestSuiviDuPupitre;
 const referentielFixture = {
   genereLe: '2026-09-05T08:05:00Z',
@@ -155,37 +152,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     });
   });
 
-  it.each([200, 201])('should retain conflict diagnostics from an accepted publication with status %s', async status => {
-    const sent = whenSending(ouvertureFixture);
-
-    await whenServerAcceptsConflict([{ activites: ['ancienne-ouverture', 'remplacante'], pointages: ['geste'] }], status);
-
-    await expect(sent).resolves.toEqual({
-      ok: true,
-      value: {
-        conflits: [{ activites: ['ancienne-ouverture', 'remplacante'], pointages: ['geste'] }],
-      },
-    });
-  });
-
-  it('should translate resolved operator and workstation identities from publication conflicts', async () => {
-    const sent = whenSending(ouvertureFixture);
-
-    await whenServerAcceptsConflict([
-      {
-        operateur: { id: 'jean', nom: 'Dupont', prenom: 'Jean' },
-        poste: { id: 'tour', libelle: 'Tour' },
-        activites: [],
-        pointages: ['geste'],
-      },
-    ]);
-
-    await expect(sent).resolves.toEqual({
-      ok: true,
-      value: { conflits: [{ operateurId: 'jean', posteId: 'tour', activites: [], pointages: ['geste'] }] },
-    });
-  });
-
   it('should never send the pause a finish belongs to, the pause living on the pupitre', async () => {
     const fin = whenSending({
       ...ouvertureFixture,
@@ -263,20 +229,13 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     return operation;
   };
   const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
-  const whenSending = (geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> =>
-    observeRejection(serveur.send(geste));
+  const whenSending = (geste: GesteDePointage): Promise<Result<void, RefusDePublication>> => observeRejection(serveur.send(geste));
   const whenRereading = (geste: GesteDePointage): Promise<void> => serveur.reread(geste);
   const whenServerReturnsTheReference = async (): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne('/api/pupitre/referentiel');
     request.flush(referentielFixture);
     return request;
-  };
-  const whenServerAcceptsConflict = async (conflits: RestSuiviDAtelier['conflits'], status = 200): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve));
-    http
-      .expectOne('/api/atelier/suivis/piece/pointages')
-      .flush({ ...suiviDetailleFixture, conflits } satisfies RestSuiviDAtelier, { status, statusText: 'Accepted' });
   };
   const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
     await new Promise(resolve => setTimeout(resolve));
@@ -302,12 +261,12 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     expect(request.request.params.keys()).toEqual([]);
   };
   const thenWriteSucceededWith = async (
-    write: Promise<Result<PublicationAcceptee, RefusDePublication>>,
+    write: Promise<Result<void, RefusDePublication>>,
     request: ReturnType<HttpTestingController['expectOne']>,
     body: unknown,
   ): Promise<void> => {
     expect(request.request.body).toEqual(body);
-    await expect(write).resolves.toEqual({ ok: true, value: { conflits: [] } });
+    await expect(write).resolves.toEqual({ ok: true, value: undefined });
   };
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
@@ -317,7 +276,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       { id: 'marie', nom: 'Martin', prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },
     ]);
     expect(reference.suivis[0]).toEqual({
-      conflits: [],
       id: 'piece',
       nom: 'PR-2026-000001',
       etat: 'EN_ATTENTE',
@@ -326,10 +284,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       evenements: [],
     });
     expect(reference.suivis[1]).toEqual({
-      conflits: [
-        { operateurId: 'jean', activites: [], pointages: ['conflit-reference'] },
-        { operateurId: 'marie', posteId: 'tour', activites: ['remplacante'], pointages: ['fin'] },
-      ],
       id: 'piece-2',
       nom: 'PR-2026-000002',
       reference: 'M-1187',
@@ -362,13 +316,13 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       await expect(operation).rejects.toBeInstanceOf(Error);
     }
   };
-  const thenBusinessRefusalIs = async (operation: Promise<Result<PublicationAcceptee, RefusDePublication>>): Promise<void> => {
+  const thenBusinessRefusalIs = async (operation: Promise<Result<void, RefusDePublication>>): Promise<void> => {
     const result = await operation;
     expect(result.ok).toBe(false);
     expect(result).toMatchObject({ error: { code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' } });
   };
   const thenReplayDecisionIs = async (
-    operation: Promise<Result<PublicationAcceptee, RefusDePublication>>,
+    operation: Promise<Result<void, RefusDePublication>>,
     code: string,
     decision: ReplayDecision,
   ): Promise<void> => {

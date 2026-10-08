@@ -21,12 +21,11 @@ export interface LigneFixture {
   readonly debut: Date;
   readonly fin?: Date;
   readonly automatique?: boolean;
-  readonly aVerifier?: boolean;
 }
 
-const etatFixture = ({ fin, automatique = false, aVerifier = false }: LigneFixture): EtatDeLigne => {
+const etatFixture = ({ fin, automatique = false }: LigneFixture): EtatDeLigne => {
   if (fin !== undefined) return { etat: automatique ? 'TERMINEE_AUTOMATIQUEMENT' : 'TERMINEE', fin };
-  return { etat: aVerifier ? 'A_RESOUDRE' : 'EN_COURS' };
+  return { etat: 'EN_COURS' };
 };
 
 export const ligneFixture = (ligne: LigneFixture): LigneDePointage =>

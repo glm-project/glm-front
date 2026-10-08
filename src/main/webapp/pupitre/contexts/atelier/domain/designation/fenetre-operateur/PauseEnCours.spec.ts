@@ -17,7 +17,6 @@ const travailAuTourFixture: ActiviteDuPupitre = {
   posteId: 'tour',
 };
 const suiviFixture = (id: string, activites: readonly ActiviteDuPupitre[]): SuiviDuPupitre => ({
-  conflits: [],
   id,
   nom: id,
   etat: activites.length === 0 ? 'EN_ATTENTE' : 'EN_COURS',
@@ -258,36 +257,16 @@ describe('PauseEnCours', () => {
     thenThereIsNoPause(pause);
   });
 
-  it('should not resume a suspension diagnosed as a conflict by the canonical reference', () => {
-    const suspension = suspensionFixture('of-204', { posteId: 'tour' });
-    const referentiel = withSuivis(referentielFixture, [
-      {
-        ...suiviFixture('of-204', []),
-        evenements: [suspension.id],
-        conflits: [{ operateurId: 'jean', activites: [], pointages: [suspension.id] }],
-      },
-      suiviFixture('of-205', []),
-    ]);
-    const journal = givenJournal(referentiel, accepted(suspension));
-
-    const pause = whenReadingThePauseOf(journal, 'jean');
-
-    thenThereIsNoPause(pause);
-  });
-
-  it.each(['expired', 'conflicting'])('should preserve resumption when another known activity is %s', kind => {
+  it('should preserve resumption when another known activity is expired', () => {
     const suspension = suspensionFixture('of-204', { posteId: 'tour' });
     const otherActivity = {
       ...travailAuTourFixture,
       ouverture: 'autre-ouverture',
-      echeance: kind === 'expired' ? '2026-09-05T12:00:00Z' : travailAuTourFixture.echeance,
+      echeance: '2026-09-05T12:00:00Z',
     };
     const referentiel = withSuivis(referentielFixture, [
       { ...suiviFixture('of-204', []), evenements: [suspension.id] },
-      {
-        ...suiviFixture('of-206', [otherActivity]),
-        conflits: kind === 'conflicting' ? [{ operateurId: 'jean', activites: [otherActivity.ouverture], pointages: ['autre-fin'] }] : [],
-      },
+      suiviFixture('of-206', [otherActivity]),
     ]);
     const journal = givenJournal(referentiel, accepted(suspension));
 

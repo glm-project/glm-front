@@ -5,7 +5,7 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
@@ -136,7 +136,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
     return barrier;
   }
 
-  override async send(): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(): Promise<Result<void, RefusDePublication>> {
     this.tokenDuringReplay = this.authentication().currentToken();
     const barrier = this.nextSend;
     this.nextSend = undefined;
@@ -144,10 +144,10 @@ class AtelierExchangeFixture extends AtelierExchangePort {
       this.chronology.push('replay-started');
       await barrier.hold();
       this.chronology.push('replay-finished');
-      return ok({ conflits: [] });
+      return ok(undefined);
     }
     this.chronology.push('replay');
-    return ok({ conflits: [] });
+    return ok(undefined);
   }
 
   override reread(): Promise<void> {

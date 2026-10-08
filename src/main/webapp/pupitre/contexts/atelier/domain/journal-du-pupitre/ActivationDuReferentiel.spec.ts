@@ -9,7 +9,6 @@ const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]
     categorie: 'MOULE',
     etat: 'EN_ATTENTE',
     activites: [],
-    conflits: [],
     evenements: evenementsRecus[id] ?? [],
   })),
   categories: [],

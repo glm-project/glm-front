@@ -12,7 +12,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { BilanDePublication } from '@/pupitre/contexts/atelier/domain/synchronisation/BilanDePublication';
 import { decideReplay } from '@/pupitre/contexts/atelier/domain/synchronisation/GesteReplayPolicy';
 import { err, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
@@ -147,7 +147,7 @@ export class PupitreSynchronization {
         await this.authentication.synchronizeSession();
         return this.push(entreprise, evenement.geste);
       });
-      return result.ok ? acceptPublication(evenement.geste, result.value.conflits) : refusePublication(evenement.geste, result.error);
+      return result.ok ? acceptPublication(evenement.geste) : refusePublication(evenement.geste, result.error);
     } catch (failure: unknown) {
       this.errorHandler.handleError(failure);
       await this.markDisconnected(entreprise, publish);
@@ -167,7 +167,7 @@ export class PupitreSynchronization {
     publish(entreprise, await this.journal.saveResult(entreprise, result));
   }
 
-  private async push(entreprise: Entreprise, geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  private async push(entreprise: Entreprise, geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     this.requireExchange(entreprise);
     const result = await this.serveur.send(geste);
     if (result.ok) {
@@ -179,10 +179,7 @@ export class PupitreSynchronization {
     return err(result.error);
   }
 
-  private async retryAfterConcurrence(
-    entreprise: Entreprise,
-    geste: GesteDePointage,
-  ): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  private async retryAfterConcurrence(entreprise: Entreprise, geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     this.requireExchange(entreprise);
     await this.serveur.reread(geste);
     this.requireExchange(entreprise);

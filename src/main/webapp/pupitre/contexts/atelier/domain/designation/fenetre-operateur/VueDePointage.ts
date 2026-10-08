@@ -36,7 +36,6 @@ export interface ElementCategorise {
 }
 
 export interface VueDePointage {
-  readonly conflits: readonly { readonly id: string; readonly numero: NumeroDElement }[];
   readonly zones: readonly ZoneDePointage[];
 }
 

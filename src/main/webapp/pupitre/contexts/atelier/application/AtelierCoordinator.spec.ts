@@ -15,7 +15,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
@@ -44,7 +44,7 @@ const referenceFixture: ReferentielDuPupitre = {
       postes: [{ id: 'tour', libelle: 'Tour' }],
     },
   ],
-  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
   categories: [],
 };
 const ouvertureFixture: GesteDePointage = {
@@ -198,7 +198,7 @@ class ServerFixture extends AtelierExchangePort {
     }
     return this.reference;
   }
-  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     this.chronology.push(geste.id);
     this.beforeSend?.();
@@ -211,7 +211,7 @@ class ServerFixture extends AtelierExchangePort {
       throw failure;
     }
     this.journal.push(structuredClone(geste));
-    return ok({ conflits: [] });
+    return ok(undefined);
   }
   override async reread(): Promise<void> {
     await roundTrip();
@@ -1386,7 +1386,6 @@ describe('AtelierCoordinator', () => {
               posteId: 'tour',
             },
           ],
-          conflits: [],
         },
         {
           ...suivi,
@@ -1402,7 +1401,6 @@ describe('AtelierCoordinator', () => {
               posteId: 'fraiseuse',
             },
           ],
-          conflits: [],
         },
       ],
     };

@@ -1,7 +1,5 @@
 import {
   ActiviteDuPupitre,
-  ConflitDuPupitre,
-  EvenementAccepte,
   EvenementDuJournal,
   GesteDePointage,
   JournalDuPupitre,
@@ -12,35 +10,10 @@ import {
 const matchesPair = (activite: ActiviteDuPupitre, geste: GesteDePointage): boolean =>
   activite.operateurId === geste.operateurId && activite.posteId === geste.posteId;
 
-const conflictWithReplacement = (
-  suivi: SuiviDuPupitre,
-  geste: Exclude<GesteDePointage, { readonly intention: 'OUVERTURE' }>,
-): SuiviDuPupitre => {
-  const remplacantes = suivi.activites.filter(
-    activite => matchesPair(activite, geste) && Date.parse(activite.depuis) < Date.parse(geste.dateDeSurvenue),
-  );
-  if (remplacantes.length === 0) return suivi;
-  const activites = suivi.activites.filter(activite => !remplacantes.includes(activite));
-  return {
-    ...suivi,
-    activites,
-    etat: etatFor(activites.length),
-    conflits: [
-      ...suivi.conflits,
-      {
-        operateurId: geste.operateurId,
-        ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
-        activites: [geste.cible, ...remplacantes.map(activite => activite.ouverture)],
-        pointages: [geste.id],
-      },
-    ],
-  };
-};
-
 const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
   if (geste.intention !== 'OUVERTURE') {
     const cible = suivi.activites.find(activite => activite.ouverture === geste.cible);
-    if (cible === undefined) return conflictWithReplacement(suivi, geste);
+    if (cible === undefined) return suivi;
   }
   const activites = suivi.activites.filter(activite =>
     geste.intention === 'OUVERTURE' ? !matchesPair(activite, geste) : activite.ouverture !== geste.cible,
@@ -78,19 +51,6 @@ const isAlreadyProjectedOrUnrelated = (suivi: SuiviDuPupitre, geste: GesteDePoin
 const applyToMatching = <T>(items: readonly T[], matches: (item: T) => boolean, transform: (item: T) => T): T[] =>
   items.map(item => (matches(item) ? transform(item) : item));
 
-const hasConflictDiagnostics = (
-  evenement: EvenementDuJournal,
-): evenement is EvenementAccepte & { readonly conflits: readonly ConflitDuPupitre[] } =>
-  evenement.etat === 'ACCEPTE' && evenement.conflits !== undefined;
-
-const applyPublication = (suivi: SuiviDuPupitre, evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>): SuiviDuPupitre => {
-  const projected = applyPointage(suivi, evenement.geste);
-  if (!hasConflictDiagnostics(evenement)) return projected;
-  const conflits = evenement.conflits;
-  const activites = projected.activites.filter(activite => !conflits.some(conflit => conflit.activites.includes(activite.ouverture)));
-  return { ...projected, conflits, activites, etat: etatFor(activites.length) };
-};
-
 const projectPointage = (
   suivis: readonly SuiviDuPupitre[],
   evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>,
@@ -98,7 +58,7 @@ const projectPointage = (
   applyToMatching(
     suivis,
     suivi => !isAlreadyProjectedOrUnrelated(suivi, evenement.geste),
-    suivi => applyPublication(suivi, evenement),
+    suivi => applyPointage(suivi, evenement.geste),
   );
 
 const applyEvenement = (referentiel: ReferentielDuPupitre, evenement: EvenementDuJournal): ReferentielDuPupitre => {

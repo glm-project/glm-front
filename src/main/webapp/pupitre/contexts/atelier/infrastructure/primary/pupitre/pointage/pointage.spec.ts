@@ -10,7 +10,6 @@ import { Pointage } from './pointage';
 const CONFIRMATION_PRESS_FIXTURE_MS = 1_000;
 
 const pointageFixture: VueDePointage = {
-  conflits: [],
   zones: [
     {
       categorie: 'MOULE',
@@ -60,14 +59,6 @@ describe('Pointage screen', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  it('should state the conflict and the possible new opening even without any current activity', async () => {
-    givenAConflictWithoutCurrentActivity();
-
-    await whenRendering();
-
-    thenConflictIsExplainedWithoutDuration();
   });
 
   it('should declare no tile intention before its target has been held for one second', async () => {
@@ -370,7 +361,7 @@ describe('Pointage screen', () => {
   });
 
   const givenAnEmptyWorkshop = (): void => {
-    fixture.componentRef.setInput('vue', { conflits: [], moules: [], ordresDeFabrication: [] });
+    fixture.componentRef.setInput('vue', { moules: [], ordresDeFabrication: [] });
   };
   const givenThePupitreIsOffline = (): void => {
     fixture.componentRef.setInput('connected', false);
@@ -559,18 +550,6 @@ describe('Pointage screen', () => {
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(`workstation-${posteId}`)), 'workstation');
   const button = (selector: string): HTMLButtonElement =>
     requiredElement(root().querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
-  const givenAConflictWithoutCurrentActivity = (): void => {
-    fixture.componentRef.setInput('vue', {
-      zones: [{ categorie: 'MOULE', elements: [new ElementDePointage('piece', NumeroDElement.assigned('1015'), undefined)] }],
-      conflits: [{ id: 'piece', numero: NumeroDElement.assigned('1015') }],
-    } satisfies VueDePointage);
-  };
-  const thenConflictIsExplainedWithoutDuration = (): void => {
-    const notice = root().querySelector(dataSelector('pointage-conflict-piece'));
-    expect(notice?.textContent).toContain('1015');
-    expect(notice?.textContent).toContain('En conflit — nouvelle ouverture possible');
-    expect(root().querySelector(dataSelector('duration'))).toBeNull();
-  };
   const root = (): HTMLElement => fixture.nativeElement as HTMLElement;
 });
 

@@ -30,7 +30,7 @@ const finishFixture: GesteDePointage = {
 const acceptedFinishFixture = { geste: finishFixture, etat: 'ACCEPTE' } as const;
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-  suivis: [{ conflits: [], id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] }],
+  suivis: [{ id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] }],
   categories: [],
 };
 const otherCompanyFixture = 'entreprise-b';
@@ -61,7 +61,6 @@ const otherCompanyReferenceFixture: ReferentielDuPupitre = {
           echeance: '2026-09-05T22:00:00Z',
         },
       ],
-      conflits: [],
       evenements: [],
     },
   ],

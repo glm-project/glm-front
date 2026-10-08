@@ -27,8 +27,8 @@ const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], cat
 const refreshedReferenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [
-    { conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
-    { conflits: [], id: 'autre-piece', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
+    { id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
+    { id: 'autre-piece', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
   ],
   categories: [],
 };
@@ -516,7 +516,6 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
             },
             ...activites,
           ],
-          conflits: [],
           evenements: [],
         },
       ],

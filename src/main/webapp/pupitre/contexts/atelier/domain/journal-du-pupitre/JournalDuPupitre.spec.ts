@@ -47,14 +47,13 @@ describe('JournalDuPupitre', () => {
     expect(journal.pausesArretees).toEqual(['pause-ancienne']);
   });
 
-  it('should copy the stopped pauses and accepted conflict diagnostics independently', () => {
+  it('should copy the stopped pauses and accepted events independently', () => {
     const journal: JournalDuPupitre = {
       connecte: true,
       pausesArretees: ['pause'],
       evenements: [
         {
           etat: 'ACCEPTE',
-          conflits: [{ activites: ['ouverture'], pointages: ['contradiction'] }],
           geste: {
             id: 'contradiction',
             dateDeSurvenue: '2026-09-05T09:00:00Z',
@@ -76,7 +75,6 @@ describe('JournalDuPupitre', () => {
     expect(copy.evenements[0]).not.toBe(journal.evenements[0]);
     const event = copy.evenements[0];
     expect(event?.etat).toBe('ACCEPTE');
-    expect(event).toMatchObject({ conflits: [{ activites: ['ouverture'], pointages: ['contradiction'] }] });
   });
 
   it('should copy accepted events', () => {
@@ -107,7 +105,6 @@ describe('JournalDuPupitre', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
-            conflits: [],
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
@@ -141,7 +138,6 @@ describe('JournalDuPupitre', () => {
         ],
         suivis: [
           {
-            conflits: [],
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',

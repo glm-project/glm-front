@@ -37,23 +37,18 @@ describe('PointagesDeLaSemaine', () => {
     expect(pointages.jourParDefaut(new JourCalendaire(aujourdhui))?.jour.value).toBe(attendu);
   });
 
-  it.each<[string, LigneDePointage, readonly [number, boolean, boolean]]>([
-    ['an ongoing activity', ligne, [1, false, false]],
+  it.each<[string, LigneDePointage, readonly [number, boolean]]>([
+    ['an ongoing activity', ligne, [1, false]],
     [
       'an automatic end',
       new LigneDePointage({ ...ligne.activite }, { etat: 'TERMINEE_AUTOMATIQUEMENT', fin: new Date(2026, 9, 5, 20) }),
-      [0, true, false],
+      [0, true],
     ],
-    ['a clocking to check', new LigneDePointage({ ...ligne.activite }, { etat: 'A_RESOUDRE' }), [0, false, true]],
-    [
-      'a finished clocking',
-      new LigneDePointage({ ...ligne.activite }, { etat: 'TERMINEE', fin: new Date(2026, 9, 5, 8) }),
-      [0, false, false],
-    ],
-  ])('should tell what a day holding %s still needs', (_cas, ligneDuJour, [enCours, finAutomatique, aVerifier]) => {
+    ['a finished clocking', new LigneDePointage({ ...ligne.activite }, { etat: 'TERMINEE', fin: new Date(2026, 9, 5, 8) }), [0, false]],
+  ])('should tell what a day holding %s still needs', (_cas, ligneDuJour, [enCours, finAutomatique]) => {
     const jour = new JourDePointages(SEMAINE.lundi(), TotalDeDuree.incomplet(), [ligneDuJour]);
 
-    expect([jour.activitesEnCours(), jour.aUneFinAutomatique(), jour.aUnPointageAVerifier()]).toEqual([enCours, finAutomatique, aVerifier]);
+    expect([jour.activitesEnCours(), jour.aUneFinAutomatique()]).toEqual([enCours, finAutomatique]);
   });
 
   it.each([

@@ -18,7 +18,6 @@ describe('LigneDePointage', () => {
       { heures: 13, minutesRestantes: 0 },
     ],
     [{ etat: 'EN_COURS' }, undefined],
-    [{ etat: 'A_RESOUDRE' }, undefined],
   ])('should give a duration only to a finished portion (%o)', (etat, attendu) => {
     const ligne = new LigneDePointage(activite, etat);
 

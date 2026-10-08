@@ -20,8 +20,4 @@ export class JourDePointages {
   aUneFinAutomatique(): boolean {
     return this.lignes.some(ligne => ligne.etat.etat === 'TERMINEE_AUTOMATIQUEMENT');
   }
-
-  aUnPointageAVerifier(): boolean {
-    return this.lignes.some(ligne => ligne.etat.etat === 'A_RESOUDRE');
-  }
 }

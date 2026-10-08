@@ -11,7 +11,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
@@ -40,10 +40,7 @@ class ServerFixture extends AtelierExchangePort {
   private readonly heldReferences: ReferentielExchangeFixture[] = [];
   onReferentiel: (() => Promise<ReferentielDuPupitre> | ReferentielDuPupitre) | undefined;
   onSend:
-    | ((
-        geste: GesteDePointage,
-      ) =>
-        Promise<Result<PublicationAcceptee, RefusDePublication> | undefined> | Result<PublicationAcceptee, RefusDePublication> | undefined)
+    | ((geste: GesteDePointage) => Promise<Result<void, RefusDePublication> | undefined> | Result<void, RefusDePublication> | undefined)
     | undefined;
 
   override async referentiel(): Promise<ReferentielDuPupitre> {
@@ -65,7 +62,7 @@ class ServerFixture extends AtelierExchangePort {
     return exchange;
   }
 
-  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     if (this.onSend !== undefined) {
       const result = await this.onSend(geste);
@@ -74,7 +71,7 @@ class ServerFixture extends AtelierExchangePort {
       }
     }
     this.received.push(structuredClone(geste));
-    return ok({ conflits: [] });
+    return ok(undefined);
   }
 
   override async reread(geste: GesteDePointage): Promise<void> {
@@ -218,11 +215,9 @@ describe('PupitreSynchronization', () => {
     }).get(PupitreSynchronization);
   });
 
-  it('should persist accepted conflicts and keep them after the complete reference refresh fails', async () => {
+  it('should persist accepted gestures and keep the reference after the complete reference refresh fails', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
-    const conflits = [{ operateurId: 'jean', activites: ['arrivee'], pointages: ['arrivee'] }];
-    server.onSend = () => ok({ conflits });
     server.onReferentiel = () => {
       throw new Error('référentiel indisponible');
     };
@@ -230,7 +225,7 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     const stored = await journal.read(Entreprise.of('entreprise-a'));
-    expect(stored.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', conflits }]);
+    expect(stored.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE' }]);
     expect(stored.referentiel).toEqual(referenceFixture);
     expect(stored.connecte).toBe(true);
     expect(server.rereadGestes).toEqual([]);

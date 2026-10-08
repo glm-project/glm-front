@@ -25,7 +25,7 @@ const operateurJeanFixture: OperateurDuPupitre = {
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [operateurJeanFixture],
-  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
   categories: [],
 };
 const debutGesteFixture: GesteDePointage = {
@@ -39,71 +39,6 @@ const debutGesteFixture: GesteDePointage = {
 };
 const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
 describe('JournalDuPupitreProjection', () => {
-  it.each([undefined, 'tour'])(
-    'should expose the stale target and replacement at workstation %s without applying FIN to the replacement',
-    posteId => {
-      const state: JournalDuPupitre = {
-        ...givenEvents([]),
-        referentiel: {
-          ...referenceFixture,
-          suivis: [
-            {
-              ...requiredFixture(referenceFixture.suivis[0], 'element'),
-              activites: [
-                {
-                  operateurId: 'jean',
-                  categorie: 'TRAVAIL',
-                  depuis: '2026-09-05T10:00:00Z',
-                  ...(posteId === undefined ? {} : { posteId }),
-                  ouverture: 'b',
-                  echeance: '2026-09-05T23:00:00Z',
-                },
-                {
-                  operateurId: 'marie',
-                  categorie: 'TRAVAIL',
-                  ouverture: 'autre-operateur',
-                  depuis: '2026-09-05T10:00:00Z',
-                  echeance: '2026-09-05T23:00:00Z',
-                  ...(posteId === undefined ? {} : { posteId }),
-                },
-                {
-                  operateurId: 'jean',
-                  categorie: 'NON_CONFORMITE',
-                  ouverture: 'autre-poste',
-                  posteId: 'fraiseuse',
-                  depuis: '2026-09-05T10:00:00Z',
-                  echeance: '2026-09-05T23:00:00Z',
-                },
-              ],
-            },
-          ],
-        },
-        evenements: [
-          {
-            etat: 'EN_ATTENTE',
-            geste: {
-              ...debutGesteFixture,
-              ...(posteId === undefined ? {} : { posteId }),
-              id: 'fin-a',
-              intention: 'FIN',
-              type: 'FIN',
-              cible: 'a',
-              dateDeSurvenue: '2026-09-05T11:00:00Z',
-            },
-          },
-        ],
-      };
-
-      const projection = whenProjecting(state);
-
-      expect(projection?.suivis[0]?.conflits).toStrictEqual([
-        { operateurId: 'jean', ...(posteId === undefined ? {} : { posteId }), activites: ['a', 'b'], pointages: ['fin-a'] },
-      ]);
-      expect(projection?.suivis[0]?.activites.map(activite => activite.ouverture)).toEqual(['autre-operateur', 'autre-poste']);
-      expect(projection?.suivis[0]?.etat).toBe('EN_COURS');
-    },
-  );
-
   it.each(['2026-09-05T11:00:00Z', '2026-09-05T11:01:00Z'])(
     'should not interpret an opening at %s as replacing a target strictly before FIN at 11:00',
     depuis => {
@@ -139,64 +74,20 @@ describe('JournalDuPupitreProjection', () => {
       const projected = whenProjecting(state);
 
       expect(projected?.suivis[0]?.activites).toEqual([replacement]);
-      expect(projected?.suivis[0]?.conflits).toEqual([]);
     },
   );
 
-  it('should retain unrelated current activities when an accepted publication diagnoses only some of them', () => {
-    const activity = (ouverture: string, operateurId: string) => ({
-      operateurId,
-      ouverture,
-      categorie: 'TRAVAIL' as const,
-      depuis: '2026-09-05T08:00:00Z',
-      echeance: '2026-09-05T21:00:00Z',
-    });
-    const preserved = activity('c', 'lea');
-    const conflits = [
-      { activites: ['b'], pointages: ['fin-a'] },
-      { activites: ['ailleurs'], pointages: ['autre-pointage'] },
-    ];
-    const state: JournalDuPupitre = {
-      ...givenEvents([
-        { etat: 'ACCEPTE', conflits, geste: { ...debutGesteFixture, id: 'fin-a', intention: 'FIN', type: 'FIN', cible: 'a' } },
-      ]),
-      referentiel: {
-        ...referenceFixture,
-        suivis: [
-          { ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [activity('a', 'jean'), activity('b', 'marie'), preserved] },
-        ],
-      },
-    };
-
-    const projected = whenProjecting(state);
-
-    expect(projected?.suivis[0]?.activites).toEqual([preserved]);
-    expect(projected?.suivis[0]?.conflits).toEqual(conflits);
-    expect(projected?.suivis[0]?.etat).toBe('EN_COURS');
-  });
-
-  it('should retain the accepted publication conflict before a canonical refresh and suppress its optimistic activity', () => {
-    const conflit = { activites: ['debut'], pointages: ['debut'] };
-    const state = givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE', conflits: [conflit] }]);
-
-    const projection = whenProjecting(state);
-
-    expect(projection?.suivis[0]?.conflits).toEqual([conflit]);
-    expect(projection?.suivis[0]?.activites).toEqual([]);
-  });
-
-  it('should ignore an old accepted conflict once the canonical reference contains its gesture', () => {
+  it('should ignore an accepted event once the canonical reference contains its gesture', () => {
     const state = {
-      ...givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE', conflits: [{ activites: ['debut'], pointages: ['debut'] }] }]),
+      ...givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE' }]),
       referentiel: {
         ...referenceFixture,
-        suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), evenements: ['debut'], conflits: [] }],
+        suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), evenements: ['debut'] }],
       },
     };
 
     const projected = whenProjecting(state);
 
-    expect(projected?.suivis[0]?.conflits).toEqual([]);
     expect(projected?.suivis[0]?.activites).toEqual([]);
   });
 
@@ -211,7 +102,6 @@ describe('JournalDuPupitreProjection', () => {
     const projected = whenProjecting(state);
 
     expect(projected?.suivis[0]?.activites).toEqual([]);
-    expect(projected?.suivis[0]?.conflits).toEqual([]);
   });
 
   it('should reconstruct an offline activity and its original starting time', () => {

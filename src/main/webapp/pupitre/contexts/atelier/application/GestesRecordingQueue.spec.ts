@@ -30,7 +30,6 @@ const vueFixture: JournalDuPupitre = {
     ],
     suivis: [
       {
-        conflits: [],
         id: 'moule-1015',
         nom: 'PR-2026-000015',
         reference: '1015',

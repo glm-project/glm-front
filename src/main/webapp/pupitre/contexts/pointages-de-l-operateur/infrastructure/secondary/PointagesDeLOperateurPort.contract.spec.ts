@@ -220,7 +220,7 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
     ]);
   });
 
-  it('should transport an automatic end and a clocking to check as such', async () => {
+  it('should transport an automatic end as such', async () => {
     harness.seed(
       semaineFixture(SEMAINE, {
         2: {
@@ -233,7 +233,6 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
               fin: new Date('2026-10-07T17:00:00Z'),
               automatique: true,
             }),
-            ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-07T18:00:00Z'), aVerifier: true }),
           ],
         },
       }),
@@ -249,10 +248,6 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
                     ...activiteFixture('2026-10-07T04:00:00Z', '2026-10-07T17:00:00Z'),
                     activite: { id: 'auto', debut: '2026-10-07T04:00:00Z', fin: '2026-10-07T17:00:00Z', etat: 'TERMINEE_AUTOMATIQUEMENT' },
                   },
-                  {
-                    ...activiteFixture('2026-10-07T18:00:00Z', undefined),
-                    activite: { id: 'conflit', debut: '2026-10-07T18:00:00Z', finAuPlusTard: '2026-10-08T07:00:00Z', etat: 'A_RESOUDRE' },
-                  },
                 ]
               : [],
         })),
@@ -263,7 +258,6 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
 
     expect(pointages.joursPointes()[0]?.lignes.map(ligne => ligne.etat)).toEqual([
       { etat: 'TERMINEE_AUTOMATIQUEMENT', fin: new Date('2026-10-07T17:00:00Z') },
-      { etat: 'A_RESOUDRE' },
     ]);
   });
 
@@ -330,6 +324,24 @@ describe('Beyond the contract: HttpPointagesDeLOperateur', () => {
         jours: [{ jour: '2026-10-07', activites: [{ ...activiteFixture('2026-10-07T05:00:00Z', undefined), poste: 'fraiseuse' }] }],
       }),
       'cite le poste fraiseuse, absent de la synthèse des heures',
+    ],
+    [
+      'a clocking to resolve',
+      feuille => ({
+        ...feuille,
+        jours: [
+          {
+            jour: '2026-10-07',
+            activites: [
+              {
+                ...activiteFixture('2026-10-07T05:00:00Z', undefined),
+                activite: { id: 'a-resoudre', debut: '2026-10-07T05:00:00Z', finAuPlusTard: '2026-10-08T07:00:00Z', etat: 'A_RESOUDRE' },
+              },
+            ],
+          },
+        ],
+      }),
+      'pointage à résoudre',
     ],
   ])('should reject and report once a time sheet with %s', async (_cas, transforme, message) => {
     backend.feuille = transforme(feuilleFixture());

@@ -51,7 +51,6 @@ const serveurFixture: AtelierExchangePort = {
 
 const baseSuivis: SuiviDuPupitre[] = [
   ...Array.from({ length: 48 }, (_, index) => ({
-    conflits: [],
     id: `moule-${index + 1}`,
     nom: `PR-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(1015 + index),
@@ -61,7 +60,6 @@ const baseSuivis: SuiviDuPupitre[] = [
     evenements: [],
   })),
   ...Array.from({ length: new URLSearchParams(location.search).has('many') ? 72 : 21 }, (_, index) => ({
-    conflits: [],
     id: `of-${index + 1}`,
     nom: `OF-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(204 + index),

@@ -45,6 +45,9 @@ const libelleDe = (libelles: ReadonlyMap<string, string>, id: string, nature: st
 
 const toEtat = (activite: RestActivite): EtatDeLigne => {
   const etat = activite.activite.etat;
+  if (etat === 'A_RESOUDRE') {
+    throw new Error('Le serveur a rendu un pointage à résoudre, état que le pupitre ne présente plus.');
+  }
   return etat === 'TERMINEE' || etat === 'TERMINEE_AUTOMATIQUEMENT' ? { etat, fin: new Date(required(activite.fin, 'fin')) } : { etat };
 };
 

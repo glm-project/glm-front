@@ -55,7 +55,6 @@ const referenceFixture: ReferentielDuPupitre = {
           echeance: '2026-09-05T21:00:00Z',
         },
       ],
-      conflits: [],
       evenements: [],
     },
   ],

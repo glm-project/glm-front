@@ -9,7 +9,7 @@ const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-    suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
+    suivis: [{ id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
     categories: [],
   },
 };

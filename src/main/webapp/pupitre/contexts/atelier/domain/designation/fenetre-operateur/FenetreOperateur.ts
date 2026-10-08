@@ -124,20 +124,7 @@ export class FenetreOperateur {
       categorie: suivi.categorie,
     }));
     const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
-    return {
-      conflits: this.conflitsPersonnels(),
-      zones: zonesDePointage(sorted, referentiel?.categories ?? []),
-    };
-  }
-
-  private conflitsPersonnels(): VueDePointage['conflits'] {
-    return (projectReferentiel(this.etat.vue)?.suivis ?? [])
-      .filter(suivi => suivi.conflits.some(conflit => this.conflitConcerneOperateur(conflit.operateurId)))
-      .map(suivi => ({ id: suivi.id, numero: NumeroDElement.from(suivi) }));
-  }
-
-  private conflitConcerneOperateur(operateurId: string | undefined): boolean {
-    return operateurId === undefined || this.etat.operateurDesigne.owns(operateurId);
+    return { zones: zonesDePointage(sorted, referentiel?.categories ?? []) };
   }
 
   afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste, instant: number): DecisionResult {

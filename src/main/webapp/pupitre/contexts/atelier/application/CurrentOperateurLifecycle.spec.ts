@@ -210,7 +210,6 @@ describe('Designation du pupitre', () => {
           categorie: 'MOULE' as const,
           etat: 'EN_COURS' as const,
           evenements: [],
-          conflits: [],
           activites: [
             {
               operateurId: 'jean',

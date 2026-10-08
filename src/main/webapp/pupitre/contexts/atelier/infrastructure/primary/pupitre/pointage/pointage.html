@@ -1,13 +1,5 @@
 <main class="min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-4" data-selector="pointage-grid">
-  @for (conflit of vue().conflits; track conflit.id) {
-  <p
-    class="mb-3 rounded border border-warn bg-surface px-3 py-2 text-body text-ink"
-    role="status"
-    [attr.data-selector]="'pointage-conflict-' + conflit.id"
-  >
-    {{ conflit.numero }} : {{ labels.conflit }}
-  </p>
-  } @for (zone of vue().zones; track zone.categorie) {
+  @for (zone of vue().zones; track zone.categorie) {
   <section class="zone" [attr.data-selector]="'zone-' + zone.categorie">
     <h2 class="mb-2 text-label uppercase text-ink-muted" data-selector="pointage-zone-titre">{{ zone.categorie }}</h2>
     <div class="tiles">
