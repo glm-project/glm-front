@@ -100,7 +100,6 @@ export class ResolutionDeFin implements OnInit {
   ngOnInit(): void {
     this.lireLHorloge();
     this.preparation.choose(this.saisieDeDepart());
-    if (new InstantPointage(this.instant()).isValid()) void this.apercuAutomatique.lancer(this.dossier(), this.relire);
   }
 
   protected deplacer({ demande, poignee }: DeplacementDemande): void {
