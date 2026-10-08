@@ -131,7 +131,7 @@ export class Produits implements OnInit {
   protected openCategories(): void {
     const dialogRef = this.dialogs.open(CategoriesDeProduitDialog, {
       viewContainerRef: this.viewContainerRef,
-      autoFocus: '#categorie-code',
+      autoFocus: 'dialog',
       width: '32rem',
       maxWidth: 'calc(100vw - 2rem)',
     });

@@ -96,8 +96,8 @@
   <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="categories-refus">{{ refus.message }}</p>
   } @if (erreurDeplacement()) {
   <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="categories-technical-error">{{ libelles.erreurDeplacement }}</p>
-  }
-  <form novalidate (submit)="declarer($event)" data-selector="categorie-form">
+  } @if (ajout()) {
+  <form novalidate (submit)="declarer($event)" (keydown.escape)="fermerAjout($event)" data-selector="categorie-form">
     <fieldset [disabled]="enregistrement()">
       <glm-text-field
         fieldId="categorie-code"
@@ -115,10 +115,21 @@
     @if (erreurTechnique()) {
     <p role="alert" class="mt-2 text-body-sm text-danger" data-selector="categorie-technical-error">{{ libelles.erreurTechnique }}</p>
     }
-    <button mat-flat-button type="submit" class="mt-4" [disabled]="enregistrement()" data-selector="categorie-declare">
-      {{ enregistrement() ? libelles.declaration : libelles.declarer }}
-    </button>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button mat-flat-button type="submit" [disabled]="enregistrement()" data-selector="categorie-declare">
+        {{ enregistrement() ? libelles.declaration : libelles.declarer }}
+      </button>
+      <button mat-button type="button" (click)="fermerAjout()" [disabled]="enregistrement()" data-selector="categorie-cancel">
+        {{ libelles.annulerAjout }}
+      </button>
+    </div>
   </form>
+  } @else {
+  <button mat-button type="button" (click)="ouvrirAjout()" data-selector="categorie-new">
+    <glm-icon name="plus" />
+    {{ libelles.nouvelle }}
+  </button>
+  }
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button type="button" [mat-dialog-close]="true" data-selector="categories-close">{{ libelles.fermer }}</button>

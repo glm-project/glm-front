@@ -55,27 +55,63 @@ describe('CategoriesDeProduitDialog', () => {
     expect(text('categories-empty')).toBe('Aucune catégorie déclarée.');
   });
 
-  it('should remind that the code can no longer be changed', async () => {
+  it('should offer the declaration at the bottom of the list, without showing the field yet', async () => {
+    givenCategories(['MOULE']);
+
     await whenOpening();
 
+    expect(text('categorie-new')).toContain('Nouvelle catégorie');
+    expect(text('categorie-form')).toBe('');
+  });
+
+  it('should open the field with the focus, reminding that the code can no longer be changed', async () => {
+    await whenOpening();
+
+    await whenOpeningDeclaration();
+
+    expect(focused()).toBe('categorie-code');
     expect(text('categorie-form')).toContain('Le code ne pourra plus être modifié');
+  });
+
+  it('should close the field and forget the typing when the declaration is cancelled', async () => {
+    await whenOpening();
+    await whenOpeningDeclaration();
+    await whenEntering('categorie-code', 'piece');
+
+    await whenClicking('categorie-cancel');
+    await whenOpeningDeclaration();
+
+    expect(input('categorie-code').value).toBe('');
+    expect(port.declarations).toEqual([]);
+  });
+
+  it('should close the field on Escape without closing the category management', async () => {
+    await whenOpening();
+    await whenOpeningDeclaration();
+
+    await whenPressingEscape('categorie-code');
+
+    expect(text('categorie-form')).toBe('');
+    expect(openDialogs()).toBe(1);
   });
 
   it('should declare the typed code in capital letters and list it last', async () => {
     givenCategories(['MOULE']);
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'piece');
     await whenSubmitting();
 
     expect(port.declarations).toEqual([new CategorieDeProduit('PIECE')]);
     expect(texts('categorie-item')).toEqual(['MOULE', 'PIECE']);
-    expect(input('categorie-code').value).toBe('');
+    expect(text('categorie-form')).toBe('');
   });
 
   it('should refuse a code outside the pattern on the field, without declaring it', async () => {
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'pièce');
     await whenSubmitting();
 
@@ -87,6 +123,7 @@ describe('CategoriesDeProduitDialog', () => {
     givenCategories(['MOULE']);
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'moule');
     await whenSubmitting();
 
@@ -97,6 +134,7 @@ describe('CategoriesDeProduitDialog', () => {
     const pending = new DeferredFixture<Result<void, CategorieDejaExistante>>();
     givenDeclarationIsPending(pending);
     await whenOpening();
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'piece');
 
     await whenSubmitting();
@@ -110,6 +148,7 @@ describe('CategoriesDeProduitDialog', () => {
     givenWritingFails();
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'piece');
     await whenSubmitting();
 
@@ -298,6 +337,13 @@ describe('CategoriesDeProduitDialog', () => {
   const whenOpening = async (): Promise<void> => {
     const dialog: MatDialogRef<CategoriesDeProduitDialog> = TestBed.inject(MatDialog).open(CategoriesDeProduitDialog);
     fermeture = firstValueFrom(dialog.afterClosed());
+    await fixture.whenStable();
+  };
+  const whenOpeningDeclaration = async (): Promise<void> => {
+    await whenClicking('categorie-new');
+  };
+  const whenPressingEscape = async (selector: string): Promise<void> => {
+    input(selector).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     await fixture.whenStable();
   };
   const whenEntering = async (selector: string, value: string): Promise<void> => {

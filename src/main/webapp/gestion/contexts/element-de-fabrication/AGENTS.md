@@ -84,7 +84,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   clôture de son suivi d'atelier, qui appartient à un autre contexte.
 - **Les catégories se gèrent dans un overlay de la page Produits**, ouvert par « Catégories » ou depuis
   l'état sans catégorie. Une catégorie se déclare et ne se renomme jamais : son code préfixe le nom des
-  produits, et l'overlay le rappelle. À sa fermeture, la page relit son référentiel.
+  produits, et l'overlay le rappelle. La déclaration s'ouvre sur place, par « Nouvelle catégorie » en bas de la
+  liste : Entrée déclare, Échap ou Annuler referme le champ sans fermer l'overlay. À sa fermeture, la page relit
+  son référentiel.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
 
 ## Relations de contexte

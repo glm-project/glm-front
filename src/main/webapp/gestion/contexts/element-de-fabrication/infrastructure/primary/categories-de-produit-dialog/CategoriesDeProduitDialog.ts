@@ -28,6 +28,7 @@ export class CategoriesDeProduitDialog implements OnInit {
   private readonly port = inject(CategoriesDeProduitPort);
   private readonly errors = inject(ErrorHandlerPort);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly libelles = LIBELLES_CATEGORIES_DE_PRODUIT;
   protected readonly libellesSuppression = LIBELLES_SUPPRESSION_CATEGORIE;
@@ -38,6 +39,7 @@ export class CategoriesDeProduitDialog implements OnInit {
   protected readonly erreurDeplacement = signal(false);
   protected readonly chargement = signal(true);
   protected readonly echec = signal(false);
+  protected readonly ajout = signal(false);
   protected readonly formulaire = signal(FormulaireCategorieDeProduit.vide());
   protected readonly soumis = signal(false);
   protected readonly enregistrement = signal(false);
@@ -56,6 +58,21 @@ export class CategoriesDeProduitDialog implements OnInit {
 
   protected reload(): void {
     this.errors.observe(this.load());
+  }
+
+  protected ouvrirAjout(): void {
+    this.ajout.set(true);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLInputElement>('#categorie-code')?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  protected fermerAjout(event?: Event): void {
+    event?.stopPropagation();
+    this.ajout.set(false);
+    this.formulaire.set(FormulaireCategorieDeProduit.vide());
+    this.soumis.set(false);
+    this.erreurTechnique.set(false);
   }
 
   protected changeCode(code: string): void {
@@ -166,8 +183,7 @@ export class CategoriesDeProduitDialog implements OnInit {
     try {
       const resultat = await this.port.declarer(categorie.value);
       if (resultat.ok) {
-        this.formulaire.set(FormulaireCategorieDeProduit.vide());
-        this.soumis.set(false);
+        this.fermerAjout();
         await this.load();
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));

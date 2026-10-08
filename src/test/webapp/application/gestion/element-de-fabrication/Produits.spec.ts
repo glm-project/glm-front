@@ -107,8 +107,8 @@ const givenReferential = (nombre = 0): ElementsApiFixture => {
 const whenDeclaringCategory = (code: string): void => {
   cy.get(dataSelector('elements-categories')).click();
   cy.get(dataSelector('categorie-item')).should('have.length', 2);
-  cy.get(dataSelector('categorie-code')).type(code);
-  cy.get(dataSelector('categorie-declare')).click();
+  cy.get(dataSelector('categorie-new')).click();
+  cy.get(dataSelector('categorie-code')).type(`${code}{enter}`);
   cy.get(dataSelector('categorie-item')).should('contain.text', code.toUpperCase());
   cy.get(dataSelector('categories-close')).click();
 };
