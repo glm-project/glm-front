@@ -1,6 +1,7 @@
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { CategorieDejaExistante } from '@/gestion/contexts/element-de-fabrication/domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '@/gestion/contexts/element-de-fabrication/domain/CategorieDeProduit';
+import { CategorieGeree } from '@/gestion/contexts/element-de-fabrication/domain/CategorieGeree';
 import { CategorieIntrouvable } from '@/gestion/contexts/element-de-fabrication/domain/CategorieIntrouvable';
 import { CategoriesDeProduitPort } from '@/gestion/contexts/element-de-fabrication/domain/CategoriesDeProduitPort';
 import { CategorieUtilisee } from '@/gestion/contexts/element-de-fabrication/domain/CategorieUtilisee';
@@ -18,9 +19,9 @@ export class CategoriesDeProduitFixture extends CategoriesDeProduitPort {
   ecritureFailure: Error | undefined;
   declarationDifferee: Promise<Result<void, CategorieDejaExistante>> | undefined;
 
-  override categories(): Promise<readonly CategorieDeProduit[]> {
+  override categories(): Promise<readonly CategorieGeree[]> {
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
-    return Promise.resolve([...this.liste]);
+    return Promise.resolve(this.liste.map(categorie => new CategorieGeree(categorie, !this.utilisees.includes(categorie.value))));
   }
 
   override async declarer(categorie: CategorieDeProduit): Promise<Result<void, CategorieDejaExistante>> {

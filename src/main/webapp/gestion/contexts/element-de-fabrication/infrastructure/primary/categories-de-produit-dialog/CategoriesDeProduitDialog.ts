@@ -28,6 +28,7 @@ export class CategoriesDeProduitDialog implements OnInit {
 
   protected readonly libelles = LIBELLES_CATEGORIES_DE_PRODUIT;
   protected readonly ordre = signal(new OrdreDesCategories([]));
+  private readonly supprimables = signal<readonly CategorieDeProduit[]>([]);
   protected readonly deplacement = signal(false);
   protected readonly refusDeplacement = signal<OrdreIncomplet | undefined>(undefined);
   protected readonly erreurDeplacement = signal(false);
@@ -58,6 +59,10 @@ export class CategoriesDeProduitDialog implements OnInit {
     this.errors.observe(this.reorder(this.ordre().apresDescente(categorie)));
   }
 
+  protected estSupprimable(categorie: CategorieDeProduit): boolean {
+    return this.supprimables().some(supprimable => supprimable.estLaMeme(categorie));
+  }
+
   protected supprimer(categorie: CategorieDeProduit): void {
     const dialogRef = this.dialogs.open<ConfirmationSuppressionCategorieDialog, ConfirmationSuppressionCategorieDialogData, boolean>(
       ConfirmationSuppressionCategorieDialog,
@@ -79,7 +84,9 @@ export class CategoriesDeProduitDialog implements OnInit {
     this.chargement.set(true);
     this.echec.set(false);
     try {
-      this.ordre.set(new OrdreDesCategories(await this.port.categories()));
+      const categories = await this.port.categories();
+      this.ordre.set(new OrdreDesCategories(categories.map(geree => geree.categorie)));
+      this.supprimables.set(categories.filter(geree => geree.supprimable).map(geree => geree.categorie));
     } catch {
       this.echec.set(true);
     } finally {

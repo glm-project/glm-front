@@ -40,6 +40,7 @@
         >
           <glm-icon name="chevronDown" />
         </button>
+        @if (estSupprimable(categorie)) {
         <button
           mat-icon-button
           type="button"
@@ -50,6 +51,9 @@
         >
           <glm-icon name="trash2" />
         </button>
+        } @else {
+        <span class="size-touch" aria-hidden="true" data-selector="categorie-sans-suppression"></span>
+        }
       </span>
     </li>
     }

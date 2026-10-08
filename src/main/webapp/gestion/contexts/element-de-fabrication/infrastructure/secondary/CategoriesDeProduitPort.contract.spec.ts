@@ -8,6 +8,7 @@ import { CategoriesDeProduitFixture } from '@test/unit/fixtures/gestion/element-
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { CategorieDejaExistante } from '../../domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieGeree } from '../../domain/CategorieGeree';
 import { CategorieIntrouvable } from '../../domain/CategorieIntrouvable';
 import { CategoriesDeProduitPort } from '../../domain/CategoriesDeProduitPort';
 import { CategorieUtilisee } from '../../domain/CategorieUtilisee';
@@ -52,7 +53,7 @@ class CategoriesHttpBackendFixture implements HttpBackend {
     return new HttpResponse({
       status: 200,
       body: {
-        content: this.codes.slice(page * size, (page + 1) * size).map(code => ({ code })),
+        content: this.codes.slice(page * size, (page + 1) * size).map(code => ({ code, utilisee: this.utilisees.includes(code) })),
         currentPage: page,
         pageSize: size,
         totalElementsCount: this.codes.length,
@@ -84,7 +85,7 @@ class CategoriesHttpBackendFixture implements HttpBackend {
       return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}categorie-deja-existante` } });
     }
     this.codes = [...this.codes, body.code];
-    return new HttpResponse({ status: 201, body: { code: body.code } });
+    return new HttpResponse({ status: 201, body: { code: body.code, utilisee: false } });
   }
 }
 
@@ -130,6 +131,8 @@ const createFixtureHarness = (): CategoriesHarness => {
   };
 };
 
+const codesOf = (categories: readonly CategorieGeree[]): string[] => categories.map(geree => geree.categorie.value);
+
 const ordreFixture = (...codes: string[]): OrdreDesCategories => new OrdreDesCategories(codes.map(code => new CategorieDeProduit(code)));
 
 const adapters: [string, () => CategoriesHarness][] = [
@@ -149,7 +152,19 @@ describe.each(adapters)('CategoriesDeProduitPort contract, honoured by %s', (_ad
 
     const categories = await harness.port.categories();
 
-    expect(categories.map(categorie => categorie.value)).toEqual(['OF', 'MOULE', 'PIECE']);
+    expect(codesOf(categories)).toEqual(['OF', 'MOULE', 'PIECE']);
+  });
+
+  it('should tell which categories can be removed because no product uses them', async () => {
+    harness.declare(['MOULE', 'OF']);
+    harness.use(['MOULE']);
+
+    const categories = await harness.port.categories();
+
+    expect(categories).toEqual([
+      new CategorieGeree(new CategorieDeProduit('MOULE'), false),
+      new CategorieGeree(new CategorieDeProduit('OF'), true),
+    ]);
   });
 
   it('should declare a new category after the existing ones', async () => {
@@ -158,7 +173,7 @@ describe.each(adapters)('CategoriesDeProduitPort contract, honoured by %s', (_ad
     const resultat = await harness.port.declarer(new CategorieDeProduit('PIECE'));
 
     expect(resultat).toEqual({ ok: true, value: undefined });
-    expect((await harness.port.categories()).map(categorie => categorie.value)).toEqual(['MOULE', 'PIECE']);
+    expect(codesOf(await harness.port.categories())).toEqual(['MOULE', 'PIECE']);
   });
 
   it('should keep the order the manager chose', async () => {
@@ -167,7 +182,7 @@ describe.each(adapters)('CategoriesDeProduitPort contract, honoured by %s', (_ad
     const resultat = await harness.port.reordonner(ordreFixture('PIECE', 'MOULE', 'OF'));
 
     expect(resultat).toEqual({ ok: true, value: undefined });
-    expect((await harness.port.categories()).map(categorie => categorie.value)).toEqual(['PIECE', 'MOULE', 'OF']);
+    expect(codesOf(await harness.port.categories())).toEqual(['PIECE', 'MOULE', 'OF']);
   });
 
   it('should refuse an order that no longer names every category', async () => {
@@ -184,7 +199,7 @@ describe.each(adapters)('CategoriesDeProduitPort contract, honoured by %s', (_ad
     const resultat = await harness.port.supprimer(new CategorieDeProduit('MOULE'));
 
     expect(resultat).toEqual({ ok: true, value: undefined });
-    expect((await harness.port.categories()).map(categorie => categorie.value)).toEqual(['OF']);
+    expect(codesOf(await harness.port.categories())).toEqual(['OF']);
   });
 
   it('should refuse to remove a category that products use', async () => {

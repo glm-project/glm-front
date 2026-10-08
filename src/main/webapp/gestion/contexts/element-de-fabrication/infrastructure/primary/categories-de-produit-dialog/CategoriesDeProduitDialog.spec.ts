@@ -169,6 +169,15 @@ describe('CategoriesDeProduitDialog', () => {
     expect(errors.errors).toHaveLength(1);
   });
 
+  it('should offer to remove only a category no product uses', async () => {
+    givenCategories(['MOULE', 'OF']);
+    givenProductsUse('MOULE');
+
+    await whenOpening();
+
+    expect(removals()).toEqual(['categorie-supprimer-OF']);
+  });
+
   it('should list the categories again once one is removed', async () => {
     givenCategories(['MOULE', 'OF']);
     await whenOpening();
@@ -203,6 +212,9 @@ describe('CategoriesDeProduitDialog', () => {
 
   const givenCategories = (codes: readonly string[]): void => {
     port.liste = codes.map(code => new CategorieDeProduit(code));
+  };
+  const givenProductsUse = (code: string): void => {
+    port.utilisees = [code];
   };
   const givenAnotherManagerDeclared = (code: string): void => {
     port.liste = [...port.liste, new CategorieDeProduit(code)];
@@ -254,6 +266,11 @@ describe('CategoriesDeProduitDialog', () => {
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
+  const removals = (): string[] =>
+    Array.from(
+      document.querySelectorAll('[data-selector^="categorie-supprimer-"]'),
+      element => element.getAttribute('data-selector') ?? '',
+    );
   const texts = (selector: string): string[] =>
     Array.from(document.querySelectorAll(dataSelector(selector)), element => element.textContent.trim());
 });

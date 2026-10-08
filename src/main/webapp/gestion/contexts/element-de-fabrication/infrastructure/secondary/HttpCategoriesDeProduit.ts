@@ -8,6 +8,7 @@ import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CategorieDejaExistante } from '../../domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieGeree } from '../../domain/CategorieGeree';
 import { CategorieIntrouvable } from '../../domain/CategorieIntrouvable';
 import { CategoriesDeProduitPort } from '../../domain/CategoriesDeProduitPort';
 import { CategorieUtilisee } from '../../domain/CategorieUtilisee';
@@ -39,11 +40,11 @@ export class HttpCategoriesDeProduit extends CategoriesDeProduitPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  override async categories(): Promise<readonly CategorieDeProduit[]> {
+  override async categories(): Promise<readonly CategorieGeree[]> {
     try {
       return await collectAllPages(
         (page, size) => this.page(page, size),
-        categorie => categorie.value,
+        geree => geree.categorie.value,
       );
     } catch (failure) {
       this.errors.handleError(failure);
@@ -66,9 +67,12 @@ export class HttpCategoriesDeProduit extends CategoriesDeProduitPort {
     return this.execute(this.api.delete('/api/categories-de-produit/{code}', { pathParams: { code: categorie.value } }), refusSuppression);
   }
 
-  private async page(page: number, taille: number): Promise<Page<CategorieDeProduit>> {
+  private async page(page: number, taille: number): Promise<Page<CategorieGeree>> {
     const response = await this.api.read('/api/categories-de-produit', { queryParams: { page, size: taille } });
-    return buildPageFrom(response, categorie => new CategorieDeProduit(categorie.code), { page, taille });
+    return buildPageFrom(response, categorie => new CategorieGeree(new CategorieDeProduit(categorie.code), !categorie.utilisee), {
+      page,
+      taille,
+    });
   }
 
   private async execute<Refus>(
