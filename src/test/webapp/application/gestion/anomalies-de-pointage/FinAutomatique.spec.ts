@@ -288,10 +288,21 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.wait('@apercu').its('request.body.acte.fait').should('not.have.property', 'poste');
   };
 
-  it('should correct the end pointed after the due time with its own time and a reason', () => {
+  it('should correct the end pointed after the due time from its resolution view, on its own time, through preview, validation and receipt', () => {
     givenALateEndCorrectedByTheBackend();
 
     whenOpeningTheAutomaticEnd();
+    whenValidatingTheLateEndCorrection();
+
+    thenTheLateEndCorrectionIsRecordedWithItsFixedReason();
+  });
+
+  it('should leave to the full view through the other correction, and correct the late end there with a reason of the manager', () => {
+    givenALateEndCorrectedByTheBackend();
+
+    whenOpeningTheAutomaticEnd();
+    whenTheOpeningPreviewIsDone();
+    whenAskingForAnotherCorrection();
     whenChoosingTheLateEndCorrection();
     whenGivingTheReasonOfTheCorrection();
     whenPreviewingTheCorrection();
@@ -343,6 +354,38 @@ describe('Automatic end of an activity in Gestion', () => {
       .and('have.text', 'L’arrêt de 23:00 vise le travail, déjà terminé automatiquement à 21:00.');
   };
 
+  const whenTheOpeningPreviewIsDone = (): void => {
+    cy.wait('@apercu');
+  };
+
+  const whenValidatingTheLateEndCorrection = (): void => {
+    thenTheInstantFieldsShow(instantTardifLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 15 h · anomalie traitée');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider la fin à 23:00').click();
+  };
+
+  const thenTheLateEndCorrectionIsRecordedWithItsFixedReason = (): void => {
+    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('not.exist');
+    cy.get(dataSelector('anomalie-motif')).should('not.exist');
+    cy.wait('@apercu')
+      .its('request.body.acte')
+      .should('deep.equal', {
+        kind: 'CORRECTION',
+        pointage: finTardiveFixture,
+        motif: 'Arrêt pointé après l’échéance : heure vérifiée en gestion',
+        fait: {
+          type: 'FIN',
+          intention: 'FIN',
+          activiteVisee: activiteFinAutomatiqueFixture,
+          operateur: operateurFinAutomatiqueFixture,
+          poste: posteFinAutomatiqueFixture,
+          instant: instantTardifFixture,
+        },
+      });
+    cy.wait('@confirmation').its('request.body').should('deep.include', { evenement: finCorrigeeFixture });
+  };
+
   const whenChoosingTheLateEndCorrection = (): void => {
     cy.get(dataSelector('anomalie-choix')).should('contain.text', 'Corriger la fin pointée après l’échéance').click();
     thenTheInstantFieldsShow(instantTardifLocalFixture);
@@ -380,16 +423,47 @@ describe('Automatic end of an activity in Gestion', () => {
       });
   };
 
-  it('should offer the correction of a transition pointed after the due time instead of an end regularisation', () => {
+  it('should open the correction of a transition pointed after the due time in its resolution view instead of an end regularisation', () => {
     givenALateTransition();
 
     whenOpeningTheAutomaticEnd();
+
+    thenTheLateTransitionIsCorrectedOnItsOwnHour();
+  });
+
+  it('should offer only the correction of the transition pointed after the due time in the full view', () => {
+    givenALateTransition();
+
+    whenOpeningTheAutomaticEnd();
+    whenAskingForAnotherCorrection();
 
     thenOnlyTheLateTransitionCorrectionIsOffered();
   });
 
   const givenALateTransition = (): void => {
     cy.intercept('GET', urlDossier, { body: dossierFinTardiveFixture('CORRIGER_TRANSITION_TARDIVE') });
+    cy.intercept('POST', urlApercu, request => {
+      const demande = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: apercuFixture(
+          demande,
+          dossierFinTardiveFixture('CORRIGER_TRANSITION_TARDIVE'),
+          dossierApresCorrectionFixture(),
+          finCorrigeeFixture,
+        ),
+      });
+    }).as('apercu');
+  };
+
+  const thenTheLateTransitionIsCorrectedOnItsOwnHour = (): void => {
+    thenTheInstantFieldsShow(instantTardifLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    cy.get(dataSelector('anomalie-resolution-instant-date')).closest('fieldset').find('legend').should('have.text', 'Heure du passage');
+    cy.get(dataSelector('anomalie-resolution-activite-ouverte')).should('have.text', 'La non-conformité commencera à cette heure.');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider le passage à 23:00');
+    cy.get(dataSelector('anomalie-choix')).should('not.exist');
+    cy.wait('@apercu')
+      .its('request.body.acte')
+      .should('include', { kind: 'CORRECTION', motif: 'Passage pointé après l’échéance : heure vérifiée en gestion' });
   };
 
   const thenOnlyTheLateTransitionCorrectionIsOffered = (): void => {

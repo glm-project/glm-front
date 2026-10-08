@@ -93,7 +93,9 @@ export class SaisieActe {
   }
 
   heureDifferenteDe(depart: SaisieActe): boolean {
-    return this.fait()?.instant !== depart.fait()?.instant;
+    const saisi = this.instantDuFait();
+    const initial = depart.instantDuFait();
+    return saisi !== initial && !this.memeInstant(saisi, initial);
   }
 
   changesGuidedFact(changement: ChangementSaisie): boolean {
@@ -176,6 +178,12 @@ export class SaisieActe {
 
   private targetIsMissing(fait: SaisieFait): boolean {
     return termineUneActivite(fait) && fait.activiteVisee.trim() === '';
+  }
+
+  private memeInstant(left: string, right: string): boolean {
+    const gauche = new InstantPointage(left);
+    const droite = new InstantPointage(right);
+    return gauche.isValid() && droite.isValid() && gauche.compareTo(droite) === 0;
   }
 
   private sameFact(left: FaitPropose, right: FaitPropose): boolean {

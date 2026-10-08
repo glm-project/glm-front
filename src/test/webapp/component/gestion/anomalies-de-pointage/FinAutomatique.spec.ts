@@ -256,9 +256,109 @@ describe('Resolution view of an automatic end in Gestion', () => {
   };
 });
 
+describe('Resolution view of a pointage pointed after the deadline in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+  const MOTIF_FIN_TARDIVE = 'Arrêt pointé après l’échéance : heure vérifiée en gestion';
+  const MOTIF_PASSAGE_TARDIF = 'Passage pointé après l’échéance : heure vérifiée en gestion';
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+  });
+
+  it('should open a late end on its received hour and preview its correction by itself, with the reason fixed and hidden', () => {
+    givenALateGesture('CORRIGER_FIN_TARDIVE');
+
+    whenOpeningTheResolutionView();
+
+    whenUnfoldingTheDetailOfThePreview();
+
+    thenTheEndStandsOnTheReceivedHour();
+    thenThePreviewWasAskedWithTheReason(MOTIF_FIN_TARDIVE);
+    thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider la fin à 23:00');
+    thenNoReasonIsShown(MOTIF_FIN_TARDIVE);
+  });
+
+  it('should label a late passage and say what its hour starts', () => {
+    givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
+
+    whenOpeningTheResolutionView();
+
+    thenTheFieldIsLabelled('Heure du passage');
+    thenTheOpenActivityIsSaid('La non-conformité commencera à cette heure.');
+    thenThePreviewWasAskedWithTheReason(MOTIF_PASSAGE_TARDIF);
+    thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider le passage à 23:00');
+  });
+
+  it('should leave to the full view with no act chosen when the manager asks for another correction', () => {
+    givenALateGesture('CORRIGER_FIN_TARDIVE');
+    whenOpeningTheResolutionView();
+
+    whenAskingForAnotherCorrection();
+
+    thenTheFullViewOffersTheCorrectionWithoutChoosingIt();
+  });
+
+  const whenAskingForAnotherCorrection = (): void => {
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
+  };
+
+  const whenUnfoldingTheDetailOfThePreview = (): void => {
+    cy.get(dataSelector('anomalie-resolution-detail-ouvrir')).click();
+  };
+
+  const thenTheFieldIsLabelled = (legende: string): void => {
+    cy.get(dataSelector('anomalie-resolution-instant-date')).closest('fieldset').find('legend').should('have.text', legende);
+  };
+
+  const thenTheOpenActivityIsSaid = (ligne: string): void => {
+    cy.get(dataSelector('anomalie-resolution-activite-ouverte')).should('have.text', ligne);
+  };
+
+  const thenTheFullViewOffersTheCorrectionWithoutChoosingIt = (): void => {
+    cy.get(dataSelector('anomalie-choix')).should('have.length', 1).and('have.attr', 'aria-pressed', 'false');
+    cy.get(dataSelector('anomalie-acte')).should('not.exist');
+  };
+
+  const givenALateGesture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
+    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveFixture(code) });
+    cy.intercept('POST', `${suiviUrl}/apercus`, request => {
+      const demande = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: apercuFixture(demande, dossierFinTardiveFixture(code), dossierApresCorrectionFixture(), finCorrigeeFixture),
+      });
+    }).as('apercu');
+  };
+
+  const thenTheEndStandsOnTheReceivedHour = (): void => {
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 23, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    abscisseDeLHeure(23).then(abscisse => {
+      cy.get(dataSelector('anomalie-poignee')).should(poignee => {
+        expect(centreDe(requiredFixture(poignee[0], 'poignée'))).to.be.closeTo(abscisse, 1);
+      });
+    });
+  };
+
+  const thenThePreviewWasAskedWithTheReason = (motif: string): void => {
+    cy.wait('@apercu').its('request.body.acte').should('include', { kind: 'CORRECTION', pointage: finTardiveFixture, motif });
+  };
+
+  const thenTheOutcomeIsInOneLineAndTheValidationIsOpen = (bouton: string): void => {
+    cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 15 h · anomalie traitée');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', bouton);
+  };
+
+  const thenNoReasonIsShown = (motif: string): void => {
+    cy.get(dataSelector('anomalie-motif')).should('not.exist');
+    cy.get(dataSelector('anomalie-resolution')).should('not.contain.text', motif);
+    cy.get(dataSelector('anomalie-resolution')).should('not.contain.text', motifFinAutomatiqueFixture);
+  };
+});
+
 const whenOpeningTheDossierAndChoosing = (): void => {
   cy.viewport(1280, 900);
   cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
   cy.get(dataSelector('anomalie-choix')).click();
 };
 
@@ -758,7 +858,7 @@ describe('Pointage pointed after the deadline on the frise in Gestion', () => {
     it(`should say in the selection that the pointage the ${code} choice corrects was pointed after the deadline`, () => {
       givenALateGestureCorrectedBy(code);
 
-      whenOpeningTheLateGesture();
+      whenOpeningTheFullViewOfTheLateGesture();
       whenSelectingPointage(finTardiveFixture);
 
       thenTheSelectionSaysTheGestureWasPointedAfterTheDeadline();
@@ -776,6 +876,11 @@ describe('Pointage pointed after the deadline on the frise in Gestion', () => {
   const whenOpeningTheLateGesture = (): void => {
     cy.viewport(1280, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  };
+
+  const whenOpeningTheFullViewOfTheLateGesture = (): void => {
+    whenOpeningTheLateGesture();
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
   };
 
   const thenOnlyTheLatePointageIsMarkedOnTheFrise = (): void => {
@@ -809,7 +914,7 @@ describe('Geometry of the frise in Gestion', () => {
   it('should stretch the graduations from the left edge to the right edge of the frise', () => {
     givenTheDossier(dossierFinTardiveFixture());
 
-    whenOpeningTheFrise();
+    whenOpeningTheFullViewFrise();
 
     thenTheGraduationsSpanThePlan();
   });
@@ -882,6 +987,12 @@ describe('Geometry of the frise in Gestion', () => {
   const whenOpeningTheFrise = (): void => {
     cy.viewport(1280, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+    cy.get(dataSelector('anomalie-frise')).should('be.visible');
+  };
+
+  const whenOpeningTheFullViewFrise = (): void => {
+    whenOpeningTheFrise();
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
     cy.get(dataSelector('anomalie-frise')).should('be.visible');
   };
 

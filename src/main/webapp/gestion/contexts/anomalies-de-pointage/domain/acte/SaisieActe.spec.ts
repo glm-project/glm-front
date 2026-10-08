@@ -411,6 +411,20 @@ describe('Time entered on top of a starting entry', () => {
     expect(saisie.heureDifferenteDe(depart)).toBe(true);
   });
 
+  it('should not be entered when a correction carries the received time written with another offset', () => {
+    const depart = SaisieActe.correct('fin-23', { ...faitFixture, instant: '2026-09-14T15:00:00Z' });
+
+    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T12:00:00-03:00' } });
+
+    expect(saisie.heureDifferenteDe(depart)).toBe(false);
+  });
+
+  it('should be entered when a correction now carries no readable time', () => {
+    const depart = SaisieActe.correct('fin-23', faitFixture);
+
+    expect(depart.afterChange({ fait: { instant: '' } }).heureDifferenteDe(depart)).toBe(true);
+  });
+
   it('should not be entered while a correction keeps the received time, whatever its motif', () => {
     const depart = SaisieActe.correct('fin-23', faitFixture);
 

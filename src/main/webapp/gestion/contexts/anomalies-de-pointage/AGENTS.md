@@ -81,7 +81,8 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   « Votre décision » et le formulaire du fait. Elle sert tous les dossiers, conflits compris, et de repli à toute vue de résolution.
 - **Vue de résolution** : écran minimal d'un dossier de fin automatique, un composant par code de choix du serveur
   (`vues-de-resolution/`, registre `VuesDeResolution.ts`). Elle ne montre ni Sélection, ni carte de choix, ni actions directes, ni
-  formulaire détaillé, ni −5/+5, ni motif. Le gestionnaire place l'heure et valide.
+  formulaire détaillé, ni −5/+5, ni motif. Le gestionnaire place l'heure et valide. Dans une vue de résolution, le motif d'une
+  correction découle du cas : il est fixé par la vue, caché partout (« Voir le détail » compris) et envoyé avec l'acte.
 - **Aiguillage** : la page choisit la vue à l'ouverture d'une adresse et la **fige** jusqu'au changement d'adresse (le dossier du
   reçu qui remplace le dossier lu ne la fait donc pas basculer). Une vue de résolution s'affiche si et seulement si le dossier
   est une fin automatique (`finAutomatique`), n'a pas de conflit à expliquer (`conflitAExpliquer`), porte **exactement un** choix,
@@ -422,8 +423,7 @@ durée reçus dans le panneau Sélection, et la clôture dans l'en-tête, sans l
 un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :
 `REGULARISER_FIN` prérempli sans heure, que le gestionnaire saisit (aucune heure n'est inventée) ;
 `CORRIGER_FIN_TARDIVE` et `CORRIGER_TRANSITION_TARDIVE` reprenant l'heure du pointage tardif, le motif
-restant à saisir dans la vue complète. Seul `REGULARISER_FIN` a une vue de résolution pour l'instant : une correction tardive
-s'ouvre en vue complète. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
+restant à saisir dans la vue complète (une vue de résolution le fixe). Les trois choix ont une vue de résolution. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
 reprise et obsolescence restent ceux de toute saisie.
 
 Le reçu fournit le dossier canonique courant depuis le périmètre reçu, même à une ancre annulée. Une lecture
@@ -441,7 +441,19 @@ devenue obsolète conserve son résultat explicite.
 La page affiche la vue de résolution que `aiguiller` (`vues-de-resolution/VuesDeResolution.ts`) retourne pour un dossier, par
 `NgComponentOutlet`, avec le dossier, l'unique choix, `now`, les paramètres de retour, le référentiel et la lecture du dossier
 (`LectureDuDossier` : `relire`, qui lit l'adresse sans repasser par l'état de chargement, et `remplacerPar`, qui installe le
-dossier d'un reçu). On étend le registre sans retoucher la page. Aujourd'hui `REGULARISER_FIN` a `ResolutionRegulariserFin`.
+dossier d'un reçu). On étend le registre sans retoucher la page. Les trois vues (`ResolutionRegulariserFin`,
+`ResolutionCorrigerFinTardive`, `ResolutionCorrigerTransitionTardive`) habillent le composant commun `ResolutionDeFin`
+(`vues-de-resolution/resolution-de-fin/`, logique et gabarit) de leur `VarianteDeResolution` : libellés du champ et du bouton, motif
+fixé et ligne sur l'activité ouverte :
+
+| Code                          | Vue                                   | Poignée au départ         | Champ            | Bouton                         | Motif envoyé (caché)                                            |
+| ----------------------------- | ------------------------------------- | ------------------------- | ---------------- | ------------------------------ | --------------------------------------------------------------- |
+| `REGULARISER_FIN`             | `ResolutionRegulariserFin`            | « Heure ? », sans heure   | Fin réelle       | « Valider la fin à HH:MM »     | aucun                                                           |
+| `CORRIGER_FIN_TARDIVE`        | `ResolutionCorrigerFinTardive`        | l'heure reçue du pointage | Fin réelle       | « Valider la fin à HH:MM »     | « Arrêt pointé après l'échéance : heure vérifiée en gestion »   |
+| `CORRIGER_TRANSITION_TARDIVE` | `ResolutionCorrigerTransitionTardive` | l'heure reçue du pointage | Heure du passage | « Valider le passage à HH:MM » | « Passage pointé après l'échéance : heure vérifiée en gestion » |
+
+Pour la transition, une ligne de plus (`anomalie-resolution-activite-ouverte`) dit ce que l'heure ouvre : « La non-conformité
+commencera à cette heure. » (passage en NC) ou « Le travail reprendra à cette heure. » (retour en bon).
 
 À l'ouverture, la vue prend la saisie du choix (`choose(choix.saisie)`) : c'est l'exception assumée à « aucun acte n'est choisi par
 défaut ». Elle montre, dans l'ordre : l'en-tête et la phrase du problème ; la ligne « 1 autre fin automatique sur cet élément »
@@ -453,7 +465,8 @@ inconnue avec « Vérifier » et « Reprendre », puis le reçu) ; le champ « F
 lecteurs d'écran, avec l'erreur d'une borne locale (`CadreDuFait`, heure future) ; l'aperçu en une ligne, par exemple « Travail 13 h →
 9 h · anomalie traitée » ou « … · 1 fin automatique restante » (`resumeDeLApercu`), dont « Voir le détail » déplie les conséquences et la
 comparaison des journaux sans aucun motif ; le bouton « Valider la fin à HH:MM » ; le lien discret « Autre correction… ». On ne
-pré-remplit jamais d'heure pour `REGULARISER_FIN`, et le motif n'existe pas pour une régularisation. « Voir la journée de … » reste
+pré-remplit jamais d'heure pour `REGULARISER_FIN`, et le motif n'existe pas pour une régularisation ; une correction pose aussitôt son
+motif fixé (`change({ motif })`) et son heure reçue, et lance son aperçu dès l'ouverture, puisqu'une heure existe. « Voir la journée de … » reste
 sur la frise. Une fois le reçu affiché, le champ, la poignée, « Valider » et « Autre correction… » disparaissent.
 
 L'aperçu part tout seul (`ApercuAutomatique`, fourni par la vue, minuterie en primaire) : à la **libération** de la poignée, **400 ms**
@@ -465,7 +478,8 @@ l'aperçu » le relance aussitôt après une erreur réseau (`ERREUR`). Aucune r
 
 « Autre correction… » passe à la vue complète, avec un lien « Revenir à la vue simple », sans garder cet état dans l'URL. Le
 passage vide la saisie : la vue complète redémarre sans acte choisi ni motif. Une confirmation en ligne (« Passer à la vue
-complète » / « Rester ici ») n'est demandée que si une heure a été **saisie** (`SaisieActe.heureDifferenteDe` le choix de départ). Le
+complète » / « Rester ici ») n'est demandée que si une heure a été **saisie** (`SaisieActe.heureDifferenteDe` le choix de départ : une heure posée en régularisation,
+ou, en correction, un instant différent de l'instant reçu, comparé comme instant et non comme texte). Le
 lien est désactivé pendant la confirmation et l'issue inconnue. Revenir à la vue simple rouvre une vue neuve.
 
 La composition utilise uniquement `HttpAnomalies`, y compris dans les parcours Cypress. Les réponses

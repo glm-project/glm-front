@@ -127,6 +127,17 @@ const RESOLUTION = {
   champFin: { ...CHAMP_INSTANT, legend: 'Fin réelle' },
   validerLaFin: (heure: string) => `Valider la fin à ${heure}`,
   validerLaFinSansHeure: 'Valider la fin',
+  champPassage: { ...CHAMP_INSTANT, legend: 'Heure du passage' },
+  validerLePassage: (heure: string) => `Valider le passage à ${heure}`,
+  validerLePassageSansHeure: 'Valider le passage',
+  motifs: {
+    finTardive: 'Arrêt pointé après l’échéance : heure vérifiée en gestion',
+    passageTardif: 'Passage pointé après l’échéance : heure vérifiée en gestion',
+  },
+  activiteOuverte: {
+    NON_CONFORMITE: 'La non-conformité commencera à cette heure.',
+    TRAVAIL: 'Le travail reprendra à cette heure.',
+  },
   autresFinsAutomatiques: (nombre: number) =>
     nombre === 1 ? '1 autre fin automatique sur cet élément' : `${nombre} autres fins automatiques sur cet élément`,
   autreCorrection: 'Autre correction…',

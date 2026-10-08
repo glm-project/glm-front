@@ -30,6 +30,8 @@ export interface VarianteDeResolution {
   readonly champ: DateTimeFieldLabels;
   readonly validerA: (heure: string) => string;
   readonly validerSansHeure: string;
+  readonly motif?: string;
+  readonly activiteOuverte?: (choix: ChoixGuide) => string;
 }
 
 @Component({
@@ -86,12 +88,16 @@ export class ResolutionDeFin implements OnInit {
     this.dossier().activites.filter(activite => this.estUneAutreFinAutomatique(activite)),
   );
   protected readonly autreFinAutomatique = computed(() => this.autresFinsAutomatiques()[0]);
+  protected readonly activiteOuverte = computed(() => this.variante().activiteOuverte?.(this.choix()));
   protected readonly echec = computed(() => this.operation().kind === 'ERREUR');
   protected readonly libellesDesErreurs = LIBELLES_ANOMALIES.erreurs;
 
   ngOnInit(): void {
     this.lireLHorloge();
     this.preparation.choose(this.choix().saisie);
+    const motif = this.variante().motif;
+    if (motif !== undefined) this.changer({ motif });
+    if (new InstantPointage(this.instant()).isValid()) void this.apercuAutomatique.lancer(this.dossier(), this.relire);
   }
 
   protected saisirLInstant(instant: string): void {
