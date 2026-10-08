@@ -7,6 +7,7 @@ import { ElementDeFabricationId } from './ElementDeFabricationId';
 import { ErreursFormulaireElement } from './ErreursFormulaireElement';
 import { LibelleDElement } from './LibelleDElement';
 import { ReferenceDElement } from './ReferenceDElement';
+import { RefusCreationElement } from './RefusCreationElement';
 import { RefusModificationElement } from './RefusModificationElement';
 
 interface SaisieElement {
@@ -18,10 +19,12 @@ interface EtatFormulaireElement {
   readonly categorie: CategorieDeProduit;
   readonly saisie: SaisieElement;
   readonly id: ElementDeFabricationId | undefined;
-  readonly refus: RefusModificationElement | undefined;
+  readonly refus: RefusDeCommande | undefined;
 }
 
 export type CommandeElement = CommandeCreationElement | CommandeModificationElement;
+
+export type RefusDeCommande = RefusCreationElement | RefusModificationElement;
 
 const SAISIE_VIDE: SaisieElement = { reference: '', libelle: '' };
 
@@ -29,7 +32,7 @@ export class FormulaireElementDeFabrication {
   readonly categorie: CategorieDeProduit;
   readonly saisie: SaisieElement;
   readonly id: ElementDeFabricationId | undefined;
-  private readonly refus: RefusModificationElement | undefined;
+  private readonly refus: RefusDeCommande | undefined;
 
   private constructor(etat: EtatFormulaireElement) {
     this.categorie = etat.categorie;
@@ -86,7 +89,7 @@ export class FormulaireElementDeFabrication {
     });
   }
 
-  avecRefus(refus: RefusModificationElement): FormulaireElementDeFabrication {
+  avecRefus(refus: RefusDeCommande): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({ categorie: this.categorie, saisie: this.saisie, id: this.id, refus });
   }
 
@@ -102,7 +105,7 @@ export class FormulaireElementDeFabrication {
   }
 
   erreurEnregistrement(): string | undefined {
-    return this.refus?.code === 'element-introuvable' ? this.refus.message : undefined;
+    return this.refus === undefined || this.refus.code === 'reference-deja-utilisee' ? undefined : this.refus.message;
   }
 
   private erreurs(): ErreursFormulaireElement {
@@ -113,7 +116,7 @@ export class FormulaireElementDeFabrication {
     };
   }
 
-  private refusApresReference(reference: string): RefusModificationElement | undefined {
+  private refusApresReference(reference: string): RefusDeCommande | undefined {
     return this.doublonCorrige(reference) ? undefined : this.refus;
   }
 

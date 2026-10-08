@@ -7,8 +7,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
-import { CommandeElement, FormulaireElementDeFabrication } from '../../../domain/FormulaireElementDeFabrication';
-import { RefusModificationElement } from '../../../domain/RefusModificationElement';
+import { CommandeElement, FormulaireElementDeFabrication, RefusDeCommande } from '../../../domain/FormulaireElementDeFabrication';
 import { LIBELLES_ELEMENTS_DE_FABRICATION, LIBELLES_FORMULAIRE_ELEMENT } from '../LibellesElementsDeFabrication';
 
 export interface ElementFormDialogData {
@@ -82,7 +81,7 @@ export class ElementFormDialog {
     }
   }
 
-  private execute(commande: CommandeElement): Promise<Result<void, RefusModificationElement>> {
+  private execute(commande: CommandeElement): Promise<Result<void, RefusDeCommande>> {
     return commande.kind === 'MODIFICATION' ? this.port.modifier(commande) : this.port.creer(commande);
   }
 }

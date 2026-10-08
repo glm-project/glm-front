@@ -9,6 +9,7 @@ import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondar
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieInconnue } from '../../domain/CategorieInconnue';
 import { CommandeCreationElement } from '../../domain/CommandeCreationElement';
 import { CommandeModificationElement } from '../../domain/CommandeModificationElement';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
@@ -20,6 +21,7 @@ import { NomDElement } from '../../domain/NomDElement';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
 import { ReferentielDesProduits } from '../../domain/ReferentielDesProduits';
+import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteElements } from '../../domain/RequeteElements';
 
@@ -48,11 +50,15 @@ const toFiche = (
   ...(commande.libelle === undefined ? {} : { description: commande.libelle.value }),
 });
 
-const refusCreation = (urn: string | undefined): ReferenceDejaUtilisee | undefined => {
-  if (urn === 'urn:glm:erreur:element-de-fabrication:reference-deja-utilisee') {
-    return new ReferenceDejaUtilisee();
+const refusCreation = (urn: string | undefined): RefusCreationElement | undefined => {
+  switch (urn) {
+    case 'urn:glm:erreur:element-de-fabrication:reference-deja-utilisee':
+      return new ReferenceDejaUtilisee();
+    case 'urn:glm:erreur:element-de-fabrication:categorie-inconnue':
+      return new CategorieInconnue();
+    default:
+      return undefined;
   }
-  return undefined;
 };
 
 const refusModification = (urn: string | undefined): RefusModificationElement | undefined => {
@@ -102,7 +108,7 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
     return buildPageFrom(response, categorie => new CategorieDeProduit(categorie.code), { page, taille });
   }
 
-  override creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {
+  override creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {
     return this.execute(
       this.api.write('/api/elements-de-fabrication', { body: { categorie: commande.categorie.value, ...toFiche(commande) } }),
       refusCreation,

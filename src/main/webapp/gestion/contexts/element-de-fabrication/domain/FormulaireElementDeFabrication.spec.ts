@@ -1,4 +1,5 @@
 import { CategorieDeProduit } from './CategorieDeProduit';
+import { CategorieInconnue } from './CategorieInconnue';
 import { ElementDeFabrication } from './ElementDeFabrication';
 import { ElementDeFabricationId } from './ElementDeFabricationId';
 import { ElementDeFabricationIntrouvable } from './ElementDeFabricationIntrouvable';
@@ -129,6 +130,22 @@ describe('FormulaireElementDeFabrication', () => {
     expect(formulaire.erreurEnregistrement()).toBe('Cet élément n’existe plus. Actualisez la liste.');
     expect(formulaire.erreurReference()).toBeUndefined();
     expect(formulaire.produireCommande().ok).toBe(false);
+  });
+
+  it('should report a category that no longer exists on the saving line rather than on a field', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new CategorieInconnue());
+
+    expect(formulaire.erreurEnregistrement()).toBe('Cette catégorie n’existe plus. Actualisez la liste.');
+    expect(formulaire.erreurReference()).toBeUndefined();
+    expect(formulaire.produireCommande().ok).toBe(false);
+  });
+
+  it('should show no saving error while only the company number is refused', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE)
+      .avecReference('1015')
+      .avecRefus(new ReferenceDejaUtilisee());
+
+    expect(formulaire.erreurEnregistrement()).toBeUndefined();
   });
 
   it('should keep a vanished element refusal while the company number is corrected', () => {

@@ -49,8 +49,10 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   modifiée.
 - **ElementsDeFabricationPort** : port secondaire exposant la consultation paginée, la création et la
   modification, les écritures rendant un `Result<T, Refus>`.
-- **Refus de commande** : `ReferenceDejaUtilisee` (unicité de référence en création et en modification) et
-  `ElementDeFabricationIntrouvable` (élément disparu en modification).
+- **Refus de commande** : `ReferenceDejaUtilisee` (unicité de référence en création et en modification),
+  `CategorieInconnue` (catégorie supprimée entre la lecture et la création, 409
+  `urn:glm:erreur:element-de-fabrication:categorie-inconnue`) et `ElementDeFabricationIntrouvable` (élément
+  disparu en modification). Les deux derniers s'affichent sur la ligne d'enregistrement, pas sur un champ.
 
 ## Responsabilités et invariants
 

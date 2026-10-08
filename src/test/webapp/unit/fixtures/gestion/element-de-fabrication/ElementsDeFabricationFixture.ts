@@ -7,8 +7,8 @@ import { ElementDeFabrication } from '@/gestion/contexts/element-de-fabrication/
 import { ElementDeFabricationId } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '@/gestion/contexts/element-de-fabrication/domain/ElementsDeFabricationPort';
 import { NomDElement } from '@/gestion/contexts/element-de-fabrication/domain/NomDElement';
-import { ReferenceDejaUtilisee } from '@/gestion/contexts/element-de-fabrication/domain/ReferenceDejaUtilisee';
 import { ReferentielDesProduits } from '@/gestion/contexts/element-de-fabrication/domain/ReferentielDesProduits';
+import { RefusCreationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusCreationElement';
 import { RefusModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusModificationElement';
 import { RequeteElements } from '@/gestion/contexts/element-de-fabrication/domain/RequeteElements';
 
@@ -20,12 +20,12 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
   categories: readonly CategorieDeProduit[] = [];
   liste: readonly ElementDeFabrication[] = [];
   readonly enregistrements: (CommandeCreationElement | CommandeModificationElement)[] = [];
-  creation: Result<void, ReferenceDejaUtilisee> = ok(undefined);
+  creation: Result<void, RefusCreationElement> = ok(undefined);
   modification: Result<void, RefusModificationElement> = ok(undefined);
   lectureFailure: Error | undefined;
   ecritureFailure: Error | undefined;
   lectureDifferee: Promise<Page<ElementDeFabrication>> | undefined;
-  creationDifferee: Promise<Result<void, ReferenceDejaUtilisee>> | undefined;
+  creationDifferee: Promise<Result<void, RefusCreationElement>> | undefined;
   private lectureSignal: SignalFixture | undefined;
 
   signalLecture(): Promise<void> {
@@ -48,7 +48,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     );
   }
 
-  override async creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {
+  override async creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {

@@ -10,6 +10,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieInconnue } from '../../domain/CategorieInconnue';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../domain/ElementDeFabricationId';
 import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricationIntrouvable';
@@ -18,6 +19,7 @@ import { LibelleDElement } from '../../domain/LibelleDElement';
 import { NomDElement } from '../../domain/NomDElement';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
+import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteElements } from '../../domain/RequeteElements';
 import { HttpElementsDeFabrication } from './HttpElementsDeFabrication';
@@ -345,7 +347,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     code: string,
     reference: string | undefined,
     libelle: string | undefined,
-  ): Promise<Result<void, ReferenceDejaUtilisee>> =>
+  ): Promise<Result<void, RefusCreationElement>> =>
     port.creer({
       kind: 'CREATION',
       categorie: new CategorieDeProduit(code),
@@ -432,6 +434,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
 
   it.each([
     ['creer', ROUTE, 409, 'reference-deja-utilisee', new ReferenceDejaUtilisee()],
+    ['creer', ROUTE, 409, 'categorie-inconnue', new CategorieInconnue()],
     ['modifier', `${ROUTE}/moule-1`, 409, 'reference-deja-utilisee', new ReferenceDejaUtilisee()],
     ['modifier', `${ROUTE}/moule-1`, 404, 'element-de-fabrication-introuvable', new ElementDeFabricationIntrouvable()],
   ] as const)('should translate the %s refusal into the domain', async (action, url, status, code, refus) => {
