@@ -67,9 +67,7 @@ export const LIBELLES_CATEGORIES_DE_PRODUIT = {
 } as const;
 
 export const LIBELLES_SUPPRESSION_CATEGORIE = {
-  titre: 'Supprimer la catégorie ?',
-  description: (categorie: CategorieDeProduit): string =>
-    `La catégorie ${categorie.value} sera retirée des boutons de création, des filtres et du pupitre. Cette action est définitive.`,
+  question: (categorie: CategorieDeProduit): string => `Supprimer ${categorie.value} ?`,
   annuler: 'Annuler',
   confirmer: 'Supprimer',
   encours: 'Suppression…',

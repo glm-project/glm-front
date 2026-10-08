@@ -178,24 +178,86 @@ describe('CategoriesDeProduitDialog', () => {
     expect(removals()).toEqual(['categorie-supprimer-OF']);
   });
 
+  it('should ask for the removal in the row, without opening another dialog', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+
+    await whenClicking('categorie-supprimer-MOULE');
+
+    expect(text('categorie-delete-question')).toBe('Supprimer MOULE ?');
+    expect(texts('categorie-item')).toEqual(['OF']);
+    expect(openDialogs()).toBe(1);
+  });
+
+  it('should move the focus to the cancellation of the removal', async () => {
+    givenCategories(['MOULE']);
+    await whenOpening();
+
+    await whenClicking('categorie-supprimer-MOULE');
+
+    expect(focused()).toBe('categorie-delete-cancel');
+  });
+
   it('should list the categories again once one is removed', async () => {
     givenCategories(['MOULE', 'OF']);
     await whenOpening();
     await whenClicking('categorie-supprimer-MOULE');
 
-    await whenAnsweringConfirmation('categorie-delete-confirm');
+    await whenClicking('categorie-delete-confirm');
 
+    expect(port.suppressions).toEqual([new CategorieDeProduit('MOULE')]);
     expect(texts('categorie-item')).toEqual(['OF']);
+    expect(text('categorie-delete')).toBe('');
   });
 
-  it('should keep the list when the removal is cancelled', async () => {
+  it('should restore the row when the removal is cancelled', async () => {
     givenCategories(['MOULE', 'OF']);
     await whenOpening();
     await whenClicking('categorie-supprimer-MOULE');
 
-    await whenAnsweringConfirmation('categorie-delete-cancel');
+    await whenClicking('categorie-delete-cancel');
 
+    expect(port.suppressions).toEqual([]);
     expect(texts('categorie-item')).toEqual(['MOULE', 'OF']);
+    expect(removals()).toEqual(['categorie-supprimer-MOULE', 'categorie-supprimer-OF']);
+  });
+
+  it('should explain under the row a removal refused because a product arrived meanwhile, then hide the trash', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+    givenProductsUse('MOULE');
+
+    await whenClicking('categorie-delete-confirm');
+
+    expect(text('categorie-delete-refusal')).toBe('Des produits sont rangés dans cette catégorie : elle ne peut pas être supprimée.');
+    expect(texts('categorie-item')).toEqual(['MOULE', 'OF']);
+    expect(removals()).toEqual(['categorie-supprimer-OF']);
+  });
+
+  it('should forget a removal refusal when another removal is asked', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+    givenProductsUse('MOULE');
+    await whenClicking('categorie-delete-confirm');
+
+    await whenClicking('categorie-supprimer-OF');
+
+    expect(text('categorie-delete-refusal')).toBe('');
+  });
+
+  it('should report a technical removal failure and keep the question open', async () => {
+    givenCategories(['MOULE']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+    givenWritingFails();
+
+    await whenClicking('categorie-delete-confirm');
+
+    expect(text('categorie-delete-technical-error')).toContain('La suppression a échoué');
+    expect(text('categorie-delete-question')).toBe('Supprimer MOULE ?');
+    expect(errors.errors).toHaveLength(1);
   });
 
   it('should offer a retry after a failed read', async () => {
@@ -250,13 +312,6 @@ describe('CategoriesDeProduitDialog', () => {
     );
     await fixture.whenStable();
   };
-  const whenAnsweringConfirmation = async (selector: string): Promise<void> => {
-    const confirmation = requiredFixture(TestBed.inject(MatDialog).openDialogs.at(-1), 'confirmation dialog');
-    const fermee = firstValueFrom(confirmation.afterClosed());
-    await whenClicking(selector);
-    await fermee;
-    await fixture.whenStable();
-  };
   const whenClicking = async (selector: string): Promise<void> => {
     requiredFixture(document.querySelector<HTMLElement>(dataSelector(selector)), selector).click();
     await fixture.whenStable();
@@ -266,6 +321,8 @@ describe('CategoriesDeProduitDialog', () => {
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
+  const openDialogs = (): number => TestBed.inject(MatDialog).openDialogs.length;
+  const focused = (): string | null | undefined => document.activeElement?.getAttribute('data-selector');
   const removals = (): string[] =>
     Array.from(
       document.querySelectorAll('[data-selector^="categorie-supprimer-"]'),

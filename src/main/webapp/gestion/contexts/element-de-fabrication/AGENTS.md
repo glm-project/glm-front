@@ -57,9 +57,12 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - **OrdreDesCategories** : l'ordre des catégories et ses déplacements d'une place (`apresMontee`,
   `apresDescente`). Chaque déplacement envoie l'ordre complet ; s'il ne nomme plus toutes les catégories,
   le refus `OrdreIncomplet` (409 `ordre-incomplet`) s'affiche et l'overlay relit la liste.
-- **Refus de suppression d'une catégorie** : `CategorieUtilisee` (409 `categorie-utilisee`, des produits y sont
-  rangés) et `CategorieIntrouvable` (404). La suppression passe par une confirmation destructive, qui garde le
-  refus affiché sans se fermer.
+- **CategorieGeree** : une catégorie telle que l'overlay la gère, avec `supprimable` (aucun produit n'y est rangé,
+  champ `utilisee` de l'API). La corbeille n'apparaît que sur une catégorie supprimable ; ailleurs, sa place reste
+  vide pour aligner les lignes.
+- **Refus de suppression d'une catégorie** : `CategorieUtilisee` (409 `categorie-utilisee`, un produit est arrivé
+  entre la lecture et la confirmation) et `CategorieIntrouvable` (404). La suppression se confirme dans la ligne
+  (« Supprimer CODE ? »), sans seconde modale ; un refus s'affiche sous la ligne et la liste est relue.
 - **Refus de commande** : `ReferenceDejaUtilisee` (unicité de référence en création et en modification),
   `CategorieInconnue` (catégorie supprimée entre la lecture et la création, 409
   `urn:glm:erreur:element-de-fabrication:categorie-inconnue`) et `ElementDeFabricationIntrouvable` (élément
