@@ -18,7 +18,7 @@ const elementFixture = {
   id: 'piece-1',
   nom: '204',
   etat: 'EN_ATTENTE',
-  type: 'ORDRE_DE_FABRICATION',
+  categorie: 'OF',
   activites: [],
   evenements: [],
 } as const;
@@ -201,7 +201,7 @@ describe('Pupitre workshop journey', () => {
           id: suivi.id,
           nom: suivi.nom,
           etat: suivi.etat,
-          type: suivi.type,
+          type: suivi.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
           ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
           activites: suivi.activites.map(activite => ({
             operateur: activite.operateurId,

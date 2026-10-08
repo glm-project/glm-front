@@ -111,7 +111,7 @@ describe('JournalDuPupitre', () => {
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
-            type: 'ORDRE_DE_FABRICATION',
+            categorie: 'OF',
             activites: [],
             evenements: ['EVT-1', 'EVT-2'],
           },
@@ -144,7 +144,7 @@ describe('JournalDuPupitre', () => {
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
-            type: 'ORDRE_DE_FABRICATION',
+            categorie: 'OF',
             activites: [
               {
                 ouverture: 'activite-fixture-4',

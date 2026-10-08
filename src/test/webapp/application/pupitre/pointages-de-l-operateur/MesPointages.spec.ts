@@ -12,7 +12,7 @@ const referentielFixture: ReferentielDuPupitre = {
       id: 'piece-1',
       nom: '204',
       etat: 'EN_ATTENTE',
-      type: 'ORDRE_DE_FABRICATION',
+      categorie: 'OF',
       activites: [],
       evenements: [],
     },

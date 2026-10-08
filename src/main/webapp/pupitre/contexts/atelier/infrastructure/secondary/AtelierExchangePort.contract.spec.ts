@@ -319,7 +319,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       id: 'piece',
       nom: 'PR-2026-000001',
       etat: 'EN_ATTENTE',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       activites: [],
       evenements: [],
     });
@@ -332,7 +332,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       nom: 'PR-2026-000002',
       reference: 'M-1187',
       etat: 'EN_ATTENTE',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       activites: [
         {
           ouverture: 'activite-fixture-36',

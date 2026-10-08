@@ -1,5 +1,4 @@
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
-export type TypeDElement = 'ORDRE_DE_FABRICATION' | 'PRODUIT';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
 
 export interface OperateurDuPupitre {
@@ -31,7 +30,7 @@ export interface SuiviDuPupitre {
   readonly nom: string;
   readonly reference?: string;
   readonly etat: EtatDAtelier;
-  readonly type: TypeDElement;
+  readonly categorie: string;
   readonly activites: readonly ActiviteDuPupitre[];
   readonly conflits: readonly ConflitDuPupitre[];
   readonly evenements: readonly string[];

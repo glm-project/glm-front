@@ -51,11 +51,13 @@ const toConflit = (conflit: components['schemas']['RestConflitDuPupitre']): Suiv
   ...(conflit.poste === undefined ? {} : { posteId: conflit.poste }),
 });
 
+const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
+
 const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => ({
   id: suivi.id,
   nom: suivi.nom,
   etat: suivi.etat,
-  type: suivi.type,
+  categorie: CATEGORIE_DU_TYPE[suivi.type],
   evenements: [],
   activites: suivi.activites.map(toActivite),
   conflits: suivi.conflits.map(toConflit),

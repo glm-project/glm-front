@@ -22,6 +22,7 @@ import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -43,7 +44,7 @@ const referenceFixture: ReferentielDuPupitre = {
       postes: [{ id: 'tour', libelle: 'Tour' }],
     },
   ],
-  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
 };
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -1028,9 +1029,21 @@ describe('AtelierCoordinator', () => {
     await whenReleasingLocalWrite(storage, finishing, pausing);
     const gestures = await readQueuedGestures();
 
-    expect(atDeadline?.moules.find(element => element.id === 'piece-tour')?.isActive()).toBe(false);
-    expect(atDeadline?.moules.find(element => element.id === 'piece-fraiseuse')?.isActive()).toBe(true);
-    expect(atDeadline?.moules.find(element => element.id === 'piece-fraiseuse')?.dureeMs()).toBe(44_999_999);
+    expect(
+      elementsDeLaZoneFixture(atDeadline, 'MOULE')
+        .find(element => element.id === 'piece-tour')
+        ?.isActive(),
+    ).toBe(false);
+    expect(
+      elementsDeLaZoneFixture(atDeadline, 'MOULE')
+        .find(element => element.id === 'piece-fraiseuse')
+        ?.isActive(),
+    ).toBe(true);
+    expect(
+      elementsDeLaZoneFixture(atDeadline, 'MOULE')
+        .find(element => element.id === 'piece-fraiseuse')
+        ?.dureeMs(),
+    ).toBe(44_999_999);
     expect(gestures).toEqual([
       {
         nature: 'POINTAGE',
@@ -1554,12 +1567,12 @@ describe('AtelierCoordinator', () => {
   };
   const thenPointageRecordingFailedWithoutAdvancing = (): void => {
     expect(pupitre.echecCaptureLocale()).toBe(true);
-    expect(designation.pointage()?.moules[0]?.isActive()).toBe(false);
+    expect(elementsDeLaZoneFixture(designation.pointage(), 'MOULE')[0]?.isActive()).toBe(false);
   };
   const thenPointageRecordingRecoveredAndAdvanced = (): void => {
     expect(pupitre.echecCaptureLocale()).toBe(false);
     expect(designation.refusAtelier()).toBeUndefined();
-    expect(designation.pointage()?.moules[0]?.isActive()).toBe(true);
+    expect(elementsDeLaZoneFixture(designation.pointage(), 'MOULE')[0]?.isActive()).toBe(true);
   };
   const thenNoGestureExistsBeforeChoice = async (): Promise<void> => {
     await thenQueueHas(0);

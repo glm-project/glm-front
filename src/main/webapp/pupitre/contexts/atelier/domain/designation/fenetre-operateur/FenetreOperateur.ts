@@ -32,7 +32,7 @@ import {
 import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
-import { ElementDePointage, VueDePointage } from './VueDePointage';
+import { ElementDePointage, VueDePointage, zonesDePointage } from './VueDePointage';
 
 const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
   posteId === undefined ? { intention: 'OUVERTURE', type: reouverture } : { intention: 'OUVERTURE', type: reouverture, posteId };
@@ -120,13 +120,12 @@ export class FenetreOperateur {
   pointage(): VueDePointage {
     const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({
       element: new ElementDePointage(suivi.id, NumeroDElement.from(suivi), this.activitesFor(suivi).snapshot()),
-      type: suivi.type,
+      categorie: suivi.categorie,
     }));
     const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
     return {
       conflits: this.conflitsPersonnels(),
-      moules: sorted.filter(({ type }) => type === 'PRODUIT').map(({ element }) => element),
-      ordresDeFabrication: sorted.filter(({ type }) => type === 'ORDRE_DE_FABRICATION').map(({ element }) => element),
+      zones: zonesDePointage(sorted),
     };
   }
 

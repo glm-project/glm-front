@@ -15,6 +15,7 @@ import { CommandesGlobales } from './CommandesGlobales';
 import { IntentionGlobaleDAtelier } from './ContexteDeGesteDAtelier';
 import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
+import { ElementDePointage, VueDePointage } from './VueDePointage';
 
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
@@ -63,7 +64,7 @@ const vueFixture: JournalDuPupitre = {
         nom: 'PR-2026-000015',
         reference: '1015',
         etat: 'EN_COURS',
-        type: 'PRODUIT',
+        categorie: 'MOULE',
         activites: [
           {
             ouverture: 'activite-fixture-16',
@@ -89,7 +90,7 @@ const vueFixture: JournalDuPupitre = {
         nom: 'OF-2026-000204',
         reference: '204',
         etat: 'EN_COURS',
-        type: 'ORDRE_DE_FABRICATION',
+        categorie: 'OF',
         activites: [
           {
             ouverture: 'activite-fixture-18',
@@ -121,13 +122,16 @@ const vueFixture: JournalDuPupitre = {
         id: 'of-1015',
         nom: 'OF-2026-000042',
         etat: 'EN_ATTENTE',
-        type: 'ORDRE_DE_FABRICATION',
+        categorie: 'OF',
         activites: [],
         evenements: [],
       },
     ],
   },
 };
+
+const elementsDeLaZone = (vue: VueDePointage, categorie: string): readonly ElementDePointage[] =>
+  vue.zones.find(zone => zone.categorie === categorie)?.elements ?? [];
 
 describe('FenetreOperateur', () => {
   let fenetre: FenetreOperateur;
@@ -235,9 +239,8 @@ describe('FenetreOperateur', () => {
     const reevaluated = window.afterEvaluatingActivities(Date.parse('2026-09-05T18:59:59.999Z'));
 
     expect(
-      reevaluated
-        .pointage()
-        .moules.find(element => element.id === 'moule-1015')
+      elementsDeLaZone(reevaluated.pointage(), 'MOULE')
+        .find(element => element.id === 'moule-1015')
         ?.dureeMs(),
     ).toBe(3 * 60 * 60 * 1000);
     expect(reevaluated.prochaineEcheance()).toBe(Date.parse('2026-09-05T19:00:00Z'));
@@ -347,7 +350,7 @@ describe('FenetreOperateur', () => {
     const pointage = window.pointage();
 
     expect(pointage.conflits).toEqual([{ id: suivi.id, numero: NumeroDElement.from(suivi) }]);
-    expect(pointage.moules[0]?.isActive()).toBe(false);
+    expect(elementsDeLaZone(pointage, 'MOULE')[0]?.isActive()).toBe(false);
   });
 
   it('should resolve the operator from the company referential', () => {
@@ -784,7 +787,7 @@ describe('FenetreOperateur', () => {
             id: 'of-nc',
             nom: 'OF-NC',
             etat: 'EN_COURS',
-            type: 'ORDRE_DE_FABRICATION',
+            categorie: 'OF',
             activites: [
               {
                 ouverture: 'activite-fixture-22',
@@ -803,7 +806,7 @@ describe('FenetreOperateur', () => {
 
     const pointage = whenReadingPointage(onlyNcWindow);
 
-    expect(pointage.ordresDeFabrication[0]?.isNonConforme()).toBe(true);
+    expect(elementsDeLaZone(pointage, 'OF')[0]?.isNonConforme()).toBe(true);
   });
 
   it('should resume only non conforming activities preserving their respective workstations', () => {
@@ -829,7 +832,7 @@ describe('FenetreOperateur', () => {
             id: 'of-multi-nc',
             nom: 'OF-MULTI',
             etat: 'EN_COURS',
-            type: 'ORDRE_DE_FABRICATION',
+            categorie: 'OF',
             activites: [
               {
                 ouverture: 'activite-fixture-23',
@@ -875,9 +878,9 @@ describe('FenetreOperateur', () => {
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
-          { conflits: [], id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { conflits: [], id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
         ],
       },
     };
@@ -885,7 +888,7 @@ describe('FenetreOperateur', () => {
 
     const pointage = whenReadingPointage(sortWindow);
 
-    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['OF-1', 'OF-2', 'OF-10']);
+    expect(elementsDeLaZone(pointage, 'OF').map(element => element.numero.toString())).toEqual(['OF-1', 'OF-2', 'OF-10']);
   });
 
   it('should sort elements on their company reference rather than on their generated name', () => {
@@ -900,18 +903,18 @@ describe('FenetreOperateur', () => {
             nom: 'OF-1',
             reference: 'M-30',
             etat: 'EN_ATTENTE',
-            type: 'ORDRE_DE_FABRICATION',
+            categorie: 'OF',
             activites: [],
             evenements: [],
           },
-          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
+          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
           {
             conflits: [],
             id: 'of-3',
             nom: 'OF-3',
             reference: 'M-4',
             etat: 'EN_ATTENTE',
-            type: 'ORDRE_DE_FABRICATION',
+            categorie: 'OF',
             activites: [],
             evenements: [],
           },
@@ -922,7 +925,7 @@ describe('FenetreOperateur', () => {
 
     const pointage = whenReadingPointage(sortWindow);
 
-    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
+    expect(elementsDeLaZone(pointage, 'OF').map(element => element.numero.toString())).toEqual(['M-4', 'M-30', 'OF-2']);
   });
 
   it('should capture an opening when confirming a workstation choice', () => {
@@ -1047,9 +1050,7 @@ describe('FenetreOperateur', () => {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-        suivis: [
-          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], evenements: [] },
-        ],
+        suivis: [{ conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
       },
     };
     const initialWindow = givenAWindowOpenedOn(inactiveJournalFixture);
@@ -1271,19 +1272,23 @@ describe('FenetreOperateur', () => {
     expect(id).toBe('jean');
   };
   const thenPointageViewIsPersonalAndFrozen = (pointage: ReturnType<FenetreOperateur['pointage']>): void => {
-    expect(pointage.moules.map(element => ({ id: element.id, numero: element.numero.toString(), dureeMs: element.dureeMs() }))).toEqual([
-      { id: 'moule-1015', numero: '1015', dureeMs: 10_800_000 },
-    ]);
-    expect(pointage.moules[0]?.isNonConforme()).toBe(false);
-    expect(pointage.moules[0]?.numero.isRepliSurNom()).toBe(false);
-    expect(pointage.ordresDeFabrication.map(element => element.numero.toString())).toEqual(['204', 'OF-2026-000042']);
-    expect(pointage.ordresDeFabrication[0]?.isNonConforme()).toBe(true);
-    expect(pointage.ordresDeFabrication[0]?.numero.isRepliSurNom()).toBe(false);
-    expect(pointage.ordresDeFabrication[0]?.dureeMs()).toBe(1_800_000);
-    expect(pointage.ordresDeFabrication[1]?.numero.isRepliSurNom()).toBe(true);
-    expect(pointage.ordresDeFabrication[1]?.isActive()).toBe(false);
-    expect(pointage.ordresDeFabrication[1]?.isNonConforme()).toBe(false);
-    expect(pointage.ordresDeFabrication[1]?.dureeMs()).toBe(0);
+    expect(
+      elementsDeLaZone(pointage, 'MOULE').map(element => ({
+        id: element.id,
+        numero: element.numero.toString(),
+        dureeMs: element.dureeMs(),
+      })),
+    ).toEqual([{ id: 'moule-1015', numero: '1015', dureeMs: 10_800_000 }]);
+    expect(elementsDeLaZone(pointage, 'MOULE')[0]?.isNonConforme()).toBe(false);
+    expect(elementsDeLaZone(pointage, 'MOULE')[0]?.numero.isRepliSurNom()).toBe(false);
+    expect(elementsDeLaZone(pointage, 'OF').map(element => element.numero.toString())).toEqual(['204', 'OF-2026-000042']);
+    expect(elementsDeLaZone(pointage, 'OF')[0]?.isNonConforme()).toBe(true);
+    expect(elementsDeLaZone(pointage, 'OF')[0]?.numero.isRepliSurNom()).toBe(false);
+    expect(elementsDeLaZone(pointage, 'OF')[0]?.dureeMs()).toBe(1_800_000);
+    expect(elementsDeLaZone(pointage, 'OF')[1]?.numero.isRepliSurNom()).toBe(true);
+    expect(elementsDeLaZone(pointage, 'OF')[1]?.isActive()).toBe(false);
+    expect(elementsDeLaZone(pointage, 'OF')[1]?.isNonConforme()).toBe(false);
+    expect(elementsDeLaZone(pointage, 'OF')[1]?.dureeMs()).toBe(0);
   };
   const thenPointageTypesAre = (decision: DecisionDePointage, types: string[]): void => {
     expect(pointagesOf(decision).map(geste => geste.type)).toEqual(types);
@@ -1329,10 +1334,10 @@ describe('FenetreOperateur', () => {
     expect(failure).toHaveProperty('message', expect.stringContaining('déjà actif'));
   };
   const thenFutureActivityStartsAtZero = (pointage: ReturnType<FenetreOperateur['pointage']>): void => {
-    expect(pointage.moules[0]?.dureeMs()).toBe(0);
+    expect(elementsDeLaZone(pointage, 'MOULE')[0]?.dureeMs()).toBe(0);
   };
   const thenPointageViewIsEmpty = (): void => {
-    expect(fenetre.pointage()).toEqual({ conflits: [], moules: [], ordresDeFabrication: [] });
+    expect(fenetre.pointage()).toEqual({ conflits: [], zones: [] });
   };
   const thenWindowIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);

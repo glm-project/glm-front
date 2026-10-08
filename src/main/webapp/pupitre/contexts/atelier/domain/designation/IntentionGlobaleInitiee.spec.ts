@@ -12,7 +12,7 @@ const suiviFixture = (id: string, activites: SuiviDuPupitre['activites']): Suivi
   id,
   nom: id,
   etat: activites.length === 0 ? 'EN_ATTENTE' : 'EN_COURS',
-  type: 'ORDRE_DE_FABRICATION',
+  categorie: 'OF',
   activites,
   evenements: [],
 });

@@ -6,7 +6,7 @@ const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]
   suivis: ['piece', 'autre'].map(id => ({
     id,
     nom: id,
-    type: 'PRODUIT',
+    categorie: 'MOULE',
     etat: 'EN_ATTENTE',
     activites: [],
     conflits: [],

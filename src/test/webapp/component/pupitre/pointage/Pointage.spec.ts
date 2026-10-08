@@ -8,10 +8,10 @@ describe('Pointage screen in a browser', () => {
     cy.viewport(1920, 1080);
   });
 
-  it('should present molds two per row and preserve the two tactile targets', () => {
+  it('should present each category in its own zone and preserve the two tactile targets', () => {
     givenThePointageScreen();
 
-    thenMoldsArePresentedTwoPerRow();
+    thenEachCategoryHasItsOwnZone();
     thenEachTileHasTwoPermanentTouchTargets();
     thenTheCompleteScreenChromeIsVisible();
   });
@@ -131,16 +131,9 @@ describe('Pointage screen in a browser', () => {
     releaseTouchFixture();
     return cy.get<FillFixture>('@fill');
   };
-  const thenMoldsArePresentedTwoPerRow = (): void => {
-    cy.get(dataSelector('moules-zone')).should(zones => {
-      const zone = requiredFixture(zones[0], 'molds zone');
-      const first = tileBounds(zone, 'moule-1');
-      const second = tileBounds(zone, 'moule-2');
-      const third = tileBounds(zone, 'moule-3');
-      expect(second.top, 'second mold on the first row').to.equal(first.top);
-      expect(second.left, 'second mold beside the first').to.be.greaterThan(first.right);
-      expect(third.top, 'third mold on the next row').to.be.at.least(first.bottom);
-      expect(third.left, 'third mold under the first').to.equal(first.left);
+  const thenEachCategoryHasItsOwnZone = (): void => {
+    cy.get(dataSelector('pointage-zone-titre')).should(titres => {
+      expect(Array.from(titres, titre => titre.textContent.trim())).to.deep.equal(['MOULE', 'OF']);
     });
   };
   const thenEachTileHasTwoPermanentTouchTargets = (): void => {
@@ -207,8 +200,6 @@ describe('Pointage screen in a browser', () => {
     });
     cy.get(dataSelector('tile-of-72')).should('exist');
   };
-  const tileBounds = (zone: HTMLElement, id: string): DOMRect =>
-    requiredFixture(zone.querySelector<HTMLElement>(dataSelector(`tile-${id}`)), id).getBoundingClientRect();
   const positionInGrid = (tile: HTMLElement): GridPositionFixture => {
     const grid = requiredFixture(tile.closest<HTMLElement>(dataSelector('pointage-grid')), 'pointage grid');
     const tileBox = tile.getBoundingClientRect();

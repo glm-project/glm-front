@@ -9,11 +9,6 @@ describe('LibellesAtelier', () => {
     expect(LIBELLES_POINTAGE.duree(120 * 60_000)).toBe('depuis 2 h 00');
   });
 
-  it('should map workshop zone labels to natural shop-floor names', () => {
-    expect(LIBELLES_POINTAGE.zones.PRODUIT).toBe('Moules');
-    expect(LIBELLES_POINTAGE.zones.ORDRE_DE_FABRICATION).toBe('OF');
-  });
-
   it('should resolve gesture context labels for elements and global commands', () => {
     expect(toLibelleContexteAtelier({ kind: 'ELEMENT', numero: NumeroDElement.assigned('OF-42') })).toBe('OF-42');
     expect(toLibelleContexteAtelier({ kind: 'COMMANDE_GLOBALE', intention: 'PAUSE' })).toBe('PAUSE');
